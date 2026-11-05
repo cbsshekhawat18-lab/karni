@@ -465,3 +465,31 @@ class Folder(TreeModel, BaseModel) without its own parent field, or keep the fie
 opt out with # karni: allow(hand-written-tree): <reason> above the class."""
 mechanical = false
 migration = "migrations/0.5.md#tree-models-experimental"
+
+[[change]]
+id = "api-cache-header-renamed"
+kind = "api-change"
+symbol = "X-Karni-Cache response header"
+replacement = "X-Cache"
+summary = """\
+A cached API response says how it was served in `X-Cache` (`HIT`, `MISS` or `BYPASS`). \
+`X-Karni-Cache` (`hit` or `miss`) is still sent next to it, with a KarniDeprecationWarning \
+once per process, and goes in 1.0. Read `X-Cache` in tests and tools that check the cache, \
+then set KARNI_API_CACHE_LEGACY_HEADER = False."""
+removed_in = "1.0"
+mechanical = false
+migration = "migrations/0.5.md#response-caching-is-stable"
+
+[[change]]
+id = "api-cache-shared-by-role"
+kind = "behaviour"
+symbol = "KARNI_API_CACHE"
+summary = """\
+With KARNI_API_CACHE on, callers with the same roles share a cached response when the \
+viewset's read access depends on roles alone. Every write Karni's querysets, imports and \
+admin bulk actions make now invalidates it, and karni check refuses a cached viewset that \
+reads an external or unmanaged model, or one on another database (karni.E410), without \
+Cache(ttl=...) or Uncached(...). A response that differs per user in a way Karni cannot \
+see needs get_cache_scope on its viewset."""
+mechanical = false
+migration = "migrations/0.5.md#response-caching-is-stable"

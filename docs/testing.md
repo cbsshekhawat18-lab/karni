@@ -643,6 +643,13 @@ they test. The throttles' cache stays fresh with `karni_project_cache` too.
 To keep the shared cache for throttles as well, define an autouse fixture
 named `_karni_fresh_throttles` in `conftest.py` that does nothing.
 
+The [response cache](api.md#response-caching) starts empty in every test too,
+while `KARNI_API_CACHE` is on: a test's rows roll back, but the cache would
+keep what it stored, and a later test could be served rows that no longer
+exist. `X-Cache` (`HIT`, `MISS`) says how a response was served, so a test can
+check that a write invalidates. To keep cached responses across tests, define
+an autouse fixture named `_karni_fresh_response_cache` that does nothing.
+
 ## Queued listeners and Celery tasks
 
 A `queued=True` listener (or any task) dispatches on commit and runs in a

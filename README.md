@@ -312,7 +312,7 @@ A viewset declares `model` and `access`. Everything else has a default you can o
 - `stable` Query budgets: a list endpoint that runs more queries than declared fails its test
 - `stable` CSV and XLSX export of any list (`/export/?format=`)
 - `stable` Import from CSV or XLSX with a mandatory preview (`/import/`)
-- `experimental` Response caching per viewset (`Cache`, `Uncached`)
+- `stable` Response caching per viewset (`Cache`, `Uncached`, `KARNI_API_CACHE`): entries shared only by callers with the same access, invalidated on every write, `X-Cache`
 - `experimental` Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier
 - `experimental` Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier
 - `experimental` A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier

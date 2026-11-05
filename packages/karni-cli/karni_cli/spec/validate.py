@@ -15,9 +15,10 @@ Three passes, each reporting every problem it finds:
    between them (``C230`` to ``C242``), then the keys of external tables and
    other databases (``C251`` to ``C253``), the renames written with
    ``was`` (``C254``), the keys of a tree (``C460``), the menu
-   (``navigation``, ``C640`` to ``C642``) and the taxonomies
-   (``C700`` to ``C703``). Whether a ``database`` is one of the project's
-   aliases is checked when the caller knows them (``karni plan`` does).
+   (``navigation``, ``C640`` to ``C642``), the taxonomies (``C700`` to
+   ``C703``) and response caching (``C520``, ``C521``). Whether a ``database``
+   is one of the project's aliases is checked when the caller knows them
+   (``karni plan`` does).
 
 An issue carries the code, the 1-based line (the YAML parser's), the dotted
 path of the key, the message and the fix. ``karni explain <code>`` prints
@@ -387,10 +388,12 @@ class _Meaning:
             self.storage(entity)
             self.renames(entity)
             self.tree(entity)
+            self.cache(entity)
         for entity in self.entities.values():
             self.taxonomies(entity)
         self.roles()
         self.features()
+        self.stale_reads()
         self.modules_()
         self.requirements()
         self.pages()
@@ -987,6 +990,63 @@ class _Meaning:
                 continue
             entity.taxonomy_targets[key] = target
 
+    def cache(self, entity: _Entity) -> None:
+        """``cache:``: a lifetime in seconds, or ``false`` (``C520``)."""
+        value = entity.entity.cache
+        if value is None or value is False:
+            return
+        if value is True or value <= 0:
+            self.add(
+                "C520",
+                (*entity.path, "cache"),
+                f"{entity.name}.cache is {_show_value(value)}, but it takes how many seconds a "
+                "cached response lives (a whole number above 0), or false.",
+                "Write cache: 60 (any number of seconds), or cache: false to never cache "
+                f"{entity.name}. Leave the key out to follow KARNI_API_CACHE_TTL.",
+            )
+
+    def stale_reads(self) -> None:
+        """A cached entity that reads a table Karni does not see written (``C521``)."""
+        if not self.spec.features.api_cache:
+            return
+        for entity in self.entities.values():
+            if entity.entity.cache is not None:
+                continue
+            found = self.unseen(entity)
+            if found is None:
+                continue
+            self.add(
+                "C521",
+                entity.path,
+                f"{entity.name} reads {found}, and api_cache is on. Another system may write "
+                "that table without Karni seeing the write, so a cached response of "
+                f"{entity.name} could stay stale until its lifetime ends.",
+                f"Say how stale it may be: cache: 60 (seconds) on {entity.name}, or cache: "
+                "false to never cache it.",
+            )
+
+    def unseen(self, entity: _Entity) -> str | None:
+        """What ``entity`` reads that Karni cannot invalidate, through 2 levels of relations."""
+        if entity.entity.external:
+            return "its own table, which is external"
+        if entity.entity.database not in (None, DEFAULT_DATABASE):
+            return f"its own table, on the database {entity.entity.database}"
+        seen = {entity.label}
+        level = [entity]
+        for _depth in range(2):  # KARNI_API_MAX_EXPAND_DEPTH's default: ?expand= reaches 2 deep
+            following: list[_Entity] = []
+            for current in level:
+                for target in current.targets.values():
+                    other = self.entities.get(target)
+                    if other is None or target in seen:
+                        continue
+                    seen.add(target)
+                    if other.entity.external:
+                        return f"{other.name} (through ?expand=), an external table"
+                    following.append(other)
+            level = following
+        return None
+
     def renames(self, entity: _Entity) -> None:
         """``was`` on the entity and its fields (``C254``)."""
         e, path = entity.entity, entity.path
@@ -1259,6 +1319,15 @@ class _Meaning:
                 ("features", "social_login"),
                 "social_login names a provider twice.",
                 "List each provider once.",
+            )
+        api_cache = self.spec.features.api_cache
+        if isinstance(api_cache, schema.ApiCache) and api_cache.ttl <= 0:
+            self.add(
+                "C219",
+                ("features", "api_cache", "ttl"),
+                f"api_cache.ttl is {api_cache.ttl}, but it is how many seconds a cached response "
+                "lives (KARNI_API_CACHE_TTL), a whole number above 0.",
+                "Write e.g. api_cache: {ttl: 300}, or api_cache: true for the default (300).",
             )
         terms = self.spec.features.terms
         if terms is None:
@@ -1656,6 +1725,12 @@ def _field_message(exc: CliError) -> str:
     return f"{exc.message} (karni make model {exc.code})" if exc.code else exc.message
 
 
+def _show_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return repr(value)
+
+
 def _json_type(value: Any) -> str:
     if value is None:
         return "null"
@@ -1721,3 +1796,4 @@ def iter_codes() -> Iterator[str]:
     yield from ("C640", "C641", "C642")
     yield from ("C700", "C701", "C702", "C703")
     yield from ("C500", "C501", "C502")
+    yield from ("C520", "C521")

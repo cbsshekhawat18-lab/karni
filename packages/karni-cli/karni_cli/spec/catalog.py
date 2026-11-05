@@ -8,8 +8,9 @@ names are the ``KARNI_<MODULE>_*`` settings its manifest lists, lowercased,
 without the prefix, with the JSON types the manifest gives them.
 Credentials (``STRIPE_SECRET_KEY`` and the like) are never options: they
 stay in the environment. :data:`FEATURES` holds the built-in features
-``features:`` takes, and :data:`SOCIAL_PROVIDERS` the providers the
-``social_login`` manifest offers.
+``features:`` takes, :data:`SOCIAL_PROVIDERS` the providers the
+``social_login`` manifest offers, and :data:`DEFAULT_CACHE_TTL` the
+lifetime the ``api_cache`` manifest gives a cached response.
 
 Override / escape hatch: a module of your own joins the spec by shipping a
 manifest (docs/modules.md#the-module-catalog). One without is added with
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
     from karni.catalog import Ask, Manifest
 
 __all__ = [
+    "DEFAULT_CACHE_TTL",
     "FEATURES",
     "MODULES",
     "OTHER_MODELS",
@@ -143,3 +145,15 @@ def _providers() -> tuple[str, ...]:
 
 #: Experimental. ``karni.accounts.social_token.BUILTIN_PROVIDERS``: the names ``social_login`` takes.
 SOCIAL_PROVIDERS: Final = _providers()
+
+
+def _cache_ttl() -> int:
+    feature = _CATALOG.get("api_cache")
+    for ask in feature.asks if feature is not None else ():
+        if ask.setting == "KARNI_API_CACHE_TTL" and isinstance(ask.default, int):
+            return ask.default
+    return 300
+
+
+#: Experimental. ``KARNI_API_CACHE_TTL``'s default: the lifetime ``api_cache: true`` means.
+DEFAULT_CACHE_TTL: Final = _cache_ttl()

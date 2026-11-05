@@ -353,7 +353,12 @@ class Importer:
         label: str = "",
         meta: dict[str, Any] | None = None,
     ) -> ImportResult:
-        """Create or update one row per line; roll everything back when ``dry_run``."""
+        """Create or update one row per line; roll everything back when ``dry_run``.
+
+        The API response cache of every model written is invalidated once, at
+        the end of the run (never for a dry run): not once per row.
+        """
+        from karni.api.caching import invalidation_batch
         from karni.audit.capture import change_batch
 
         result = ImportResult(rows_total=len(rows))
@@ -368,7 +373,7 @@ class Importer:
         self.check_id_options()
         self.kept_ids = 0
         batch_id: int | None = None
-        with transaction.atomic():
+        with invalidation_batch(discard=dry_run), transaction.atomic():
             batch = (
                 nullcontext()
                 if dry_run

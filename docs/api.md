@@ -744,26 +744,74 @@ Every list is paginated by a `karni.pagination.KarniPagination` subclass:
 
 ### Response caching
 
-Off by default. **One setting turns it on**: `KARNI_API_CACHE = True` (env).
-Then the data of every successful `GET` `list` and `retrieve` of every
-`BaseViewSet` is cached (`X-Karni-Cache: hit|miss`) for `KARNI_API_CACHE_TTL`
-seconds (300) in the `KARNI_API_CACHE_ALIAS` cache (`"default"`).
+Off by default. **One setting turns it on**: `KARNI_API_CACHE = True` (env),
+or `features: api_cache: true` in [karni.yaml](app-spec.md#features). Then
+the data of every successful `GET` `list` and `retrieve` of every
+`BaseViewSet` is cached for `KARNI_API_CACHE_TTL` seconds (300) in the
+`KARNI_API_CACHE_ALIAS` cache (`"default"`). Keep that cache one every
+process shares (Redis): with a per-process cache a write in one worker never
+reaches the entries of another (`karni.W580` warns with `DEBUG` off).
 
-- **Invalidation is automatic**: a save, delete or M2M change of any model
-  the response reads replaces that model's version token (and the row's, for
-  details), so every affected entry becomes unreachable at once. The models a
-  response reads are the models of the optimiser's plan, the models crossed
-  by `Owned` paths, plus `Cache(depends_on=[...])`. Details are invalidated
+**Who shares an entry.** A key is `karni:api:r:<app_label.model>:<sha256>`,
+for example `karni:api:r:shop.product:9f2c41…`. The hash covers the viewset
+and its action, the scheme, host and path, the query string normalised
+(parameters sorted by name, empty values dropped, the comma lists of
+`?expand=` and of `__in` filters sorted; `?ordering=` and `?search=` keep
+their order, which matters), the API version, the language, the caller's
+access scope and the version tokens of every model the response reads. So
+`?page=2&expand=tags,category` and `?expand=category,tags&page=2` share one
+entry.
+
+The access scope decides who shares. When the viewset's read access depends
+on roles alone, every caller with the same roles (and the same superuser and
+staff flags) shares one entry: `Public()`, `Authenticated()`, `HasRole(...)`,
+and `Granted()` or `Can(...)` whose grants all have the scope `all`, on the
+viewset and on every related resource the response embeds. Otherwise the
+entry is the caller's own: an `Owned(...)` path, a `Where(...)` rule, a grant
+scoped `own`, `related:` or `custom:`, an overridden `get_queryset`,
+`get_access`, `get_serializer_class` or `filter_queryset_for_user`, or a
+hand-written serializer with a `SerializerMethodField` or its own
+`to_representation`. Anonymous callers share one entry. The access gate runs
+before the cache is read, and details are cached only for viewsets whose gate
+is the `Access` declaration alone (extra `permission_classes` would be skipped
+on a hit).
+
+**Invalidation.** Each model has a version token and each row an object
+token, kept in the cache. A write replaces the tokens it touches, so every
+entry that read them becomes unreachable at once: no key scan, any backend.
+The models a response reads are its serializer's relations (the optimiser's
+plan, `?expand=` included), the models its `read` rule crosses (`Owned`
+paths, scope paths), and `Cache(depends_on=[...])`.
+`karni.api.caching.dependencies(ViewSet)` lists them for every `?expand=`
+path the viewset allows. Karni sees these writes:
+
+- `save()`, `delete()` and many-to-many changes of any model, in every
+  process (web, Celery worker, management command). Details are invalidated
   per row.
-- **Per requester**: keys include the full URL (host, `?page=`, `?expand=`,
-  filters), the user, the user's roles and the language. The access gate
-  runs before the cache is read. Details are cached only for viewsets whose
-  gate is the `Access` declaration alone (extra `permission_classes` would be
-  skipped on a hit).
-- **Not seen**: `QuerySet.update()`, `bulk_create()`/`bulk_update()` and raw
-  SQL send no signals, so call `karni.api.caching.invalidate(Model, pk=None)`
-  after them. A `SerializerMethodField` reading a model the serializer does
-  not render needs `cache = Cache(depends_on=[ThatModel])`.
+- Karni's querysets: `update()`, `delete()` (soft and `hard_delete()`),
+  `bulk_create()` and `bulk_update()`, once per call, every row of the model.
+- An [import](import-export.md) or a content load (`karni load`), once per
+  import and never for a dry run, and the admin's bulk actions, once per
+  action. `with invalidation_batch(): ...` does the same for a loop of your
+  own.
+
+A write inside a transaction replaces the tokens at once and again when it
+commits, so a request that read the old rows in between cannot keep them.
+Raw SQL and another system's writes send nothing: call
+`karni.api.caching.invalidate(Model)` (every row) or `invalidate(Model, pk)`
+after them. `karni check` refuses a cached viewset that reads an external or
+unmanaged model, or one on another database (`karni.E410`), unless it
+declares `cache = Cache(ttl=...)` (the most it may be stale) or
+`cache = Uncached(reason=...)`.
+
+**Headers.** Every cacheable response says how it was served: `X-Cache: HIT`,
+`MISS` or `BYPASS`. A staff user's request with `X-Bypass-Cache: 1` neither
+reads nor writes the cache. The header is ignored for anyone else.
+`X-Karni-Cache: hit|miss` is deprecated and goes in 1.0. Until then it is
+sent too, with one `KarniDeprecationWarning` per process, unless
+`KARNI_API_CACHE_LEGACY_HEADER = False`.
+
+**Per viewset:**
 
 ```python
 class StockViewSet(BaseViewSet):
@@ -775,7 +823,34 @@ class CatalogueViewSet(BaseViewSet):
     model = Product
     access = Access(read=Public(), write=HasRole("ops"))
     cache = Cache(ttl=3600, depends_on=[Price])             # tune
+
+class WishlistViewSet(BaseViewSet):
+    model = Product
+    access = Access(read=Authenticated(), write=HasRole("ops"))
+    serializer_class = ProductWithFavouriteSerializer
+
+    def get_cache_scope(self) -> str:                       # who shares an entry
+        return f"user:{self.request.user.pk}"
 ```
+
+`depends_on` names a model whose data the serializer reads without
+rendering it as a relation (a `SerializerMethodField`, an aggregate).
+`get_cache_scope` is for a response that differs per caller in a way Karni
+cannot see. Return anything that differs between callers who must not share.
+
+**Clearing.** `karni.api.caching.clear()` drops every cached response and
+`clear(Model)` one resource's. With a backend that has `delete_pattern`
+(django-redis) the entries are deleted. Otherwise the version tokens are
+replaced and the old entries expire by their TTL. The admin's
+[API cache screen](admin.md#the-api-cache-screen) does the same with two
+buttons, and shows the backend and the flush schedule. For a daily full
+flush through Celery beat, set `KARNI_API_CACHE_FLUSH = "03:30"` (in
+Celery's timezone) or `"03:30 Europe/Paris"`: the schedule
+`karni-flush-api-cache` runs `karni.tasks.flush_api_cache`.
+
+**In tests** the pytest plugin starts every test with no cached response
+while `KARNI_API_CACHE` is on, and so does `override_settings` turning it
+on: rows a test wrote roll back, the cache would keep them.
 
 ## Search
 

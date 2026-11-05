@@ -92,6 +92,8 @@ class KarniSettingsModel(BaseModel):
     KARNI_API_CACHE_TTL: Any = 300
     KARNI_API_CACHE_ALIAS: Any = "default"
     KARNI_AGGREGATE_MAX_GROUPS: int = Field(default=1000, ge=1)
+    KARNI_API_CACHE_FLUSH: Any = None
+    KARNI_API_CACHE_LEGACY_HEADER: bool = True
     KARNI_EVENTS_AUTODISCOVER: bool = True
     KARNI_SCHEDULES_AUTODISCOVER: bool = True
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)
@@ -357,6 +359,13 @@ class KarniSettingsModel(BaseModel):
                 f"KARNI_API_CACHE_ALIAS {self.KARNI_API_CACHE_ALIAS!r} is not a CACHES alias "
                 f"(known: {', '.join(sorted(self.CACHES))})"
             )
+        from karni.api.caching import parse_flush
+        from karni.exceptions import KarniImproperlyConfigured
+
+        try:
+            parse_flush(self.KARNI_API_CACHE_FLUSH)
+        except KarniImproperlyConfigured as exc:
+            errors.append(f"{exc.code}: {exc.message}")
         return errors
 
     def _check_accounts(self) -> list[str]:

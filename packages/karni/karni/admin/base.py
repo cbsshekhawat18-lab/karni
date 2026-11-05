@@ -380,6 +380,18 @@ class KarniAdminMixin(admin.ModelAdmin):
                 found.pop(name, None)
         return found
 
+    def response_action(self, request: HttpRequest, queryset: models.QuerySet[Any]) -> Any:
+        """Run the chosen bulk action, invalidating the API response cache once, at its end.
+
+        Every write the action makes (row by row or in bulk) is collected by
+        :func:`karni.api.caching.invalidation_batch`, so a delete of 500 rows
+        replaces the model's cache tokens once, not 500 times.
+        """
+        from karni.api.caching import invalidation_batch
+
+        with invalidation_batch():
+            return super().response_action(request, queryset)
+
     # -- field-level visibility (ADR 0002, P3) --------------------------------
 
     def hidden_fields(self, request: HttpRequest) -> frozenset[str]:

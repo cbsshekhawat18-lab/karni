@@ -302,6 +302,77 @@ def test_an_aggregate_is_an_option_without_a_migration(base: Project) -> None:
     assert _only(same, "shop.Product aggregate").detail == "none -> by tag"
 
 
+def test_api_cache_and_entity_cache(base: Project) -> None:
+    plan = _plan(
+        _edit(
+            ("app: {name: Plan Base}\n", "app: {name: Plan Base}\nfeatures: {api_cache: true}\n"),
+            ("        search: name\n", "        search: name\n        cache: 60\n"),
+            ("      Supplier:\n", "      Supplier:\n        cache: false\n"),
+            (
+                "pages:\n",
+                "      Brand:\n        fields: {name: str}\n        cache: false\npages:\n",
+            ),
+        ),
+        base,
+    )
+    assert _only(plan, "api_cache").detail == "KARNI_API_CACHE"
+    assert _only(plan, "shop.Product cache").detail == "none -> 60"
+    assert _only(plan, "shop.Supplier cache").detail == "none -> false"
+    assert _only(plan, "shop.Brand").detail == "(name str) cache false"
+    assert "shop" in [c.target for c in plan.changes if c.area == "migrations"]  # Brand only
+    assert not plan.risky
+    # the change lands in the Karni-owned viewset file, so adopting that file unmanages it
+    spec = validate_text(
+        _edit(("        search: name\n", "        search: name\n        cache: 60\n"))
+    ).spec
+    assert spec is not None
+    for adopted, managed in ((frozenset(), True), (frozenset({"shop/karni/api.py"}), False)):
+        owned = plan_mod.Managed(entities=frozenset({"shop.Product"}), adopted=adopted)
+        found = plan_project(spec, base.facts, base.root, file="karni.yaml", managed=owned)
+        assert _only(found, "shop.Product cache").managed is managed
+    ttl = _plan(
+        _edit(
+            (
+                "app: {name: Plan Base}\n",
+                "app: {name: Plan Base}\nfeatures:\n  api_cache: {ttl: 45}\n",
+            )
+        ),
+        base,
+    )
+    assert _only(ttl, "api_cache").detail == "KARNI_API_CACHE, KARNI_API_CACHE_TTL 45"
+
+
+def test_the_cache_of_a_project_is_exported_and_plans_nothing(base: Project) -> None:
+    facts = json.loads(json.dumps(base.facts))
+    facts["settings"] |= {"KARNI_API_CACHE": True, "KARNI_API_CACHE_TTL": 45}
+    for viewset in facts["viewsets"]:
+        if viewset["model"] == "shop.Product":
+            viewset["cache"] = {"ttl": 60, "depends_on": []}
+        elif viewset["model"] == "shop.Supplier":
+            viewset["cache"] = {"uncached": "spec"}
+    text = _edit(
+        ("app: {name: Plan Base}\n", "app: {name: Plan Base}\nfeatures: {api_cache: {ttl: 45}}\n"),
+        ("        search: name\n", "        search: name\n        cache: 60\n"),
+        ("      Supplier:\n", "      Supplier:\n        cache: false\n"),
+    )
+    report = validate_text(text)
+    assert report.ok and report.spec is not None, report.issues
+    assert plan_project(report.spec, facts, base.root, file="karni.yaml").changes == []
+    off = validate_text(BASE)
+    assert off.spec is not None
+    changes = plan_project(off.spec, facts, base.root, file="karni.yaml").changes
+    assert {(c.target, c.detail) for c in changes} == {
+        ("api_cache", "KARNI_API_CACHE"),
+        ("shop.Product cache", "60 -> none"),
+        ("shop.Supplier cache", "false -> none"),
+    }
+    assert [c.action for c in changes if c.target == "api_cache"] == ["remove"]
+    longer = validate_text(text.replace("{ttl: 45}", "{ttl: 120}"))
+    assert longer.spec is not None
+    (change,) = plan_project(longer.spec, facts, base.root, file="karni.yaml").changes
+    assert (change.action, change.detail) == ("change", "KARNI_API_CACHE_TTL 45 -> 120")
+
+
 # risky changes ----------------------------------------------------------------------
 
 #: (edit, target, reason fragment, rows counted from ROWS)

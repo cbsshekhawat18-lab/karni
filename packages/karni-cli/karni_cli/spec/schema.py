@@ -39,9 +39,11 @@ __all__ = [
     "AGGREGATE_BUCKETS",
     "AGGREGATE_METRICS",
     "SCHEMA_URL",
+    "UNCACHED_REASON",
     "VERSION",
     "Access",
     "Aggregate",
+    "ApiCache",
     "App",
     "AppInfo",
     "Entity",
@@ -60,6 +62,9 @@ __all__ = [
 VERSION: Final = 1
 #: Experimental. Where the JSON Schema is published (the docs site serves docs/assets/).
 SCHEMA_URL: Final = "https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json"
+
+#: Experimental. The reason of the ``Uncached(reason=...)`` an entity's ``cache: false`` means.
+UNCACHED_REASON: Final = "spec"
 
 APP_LABEL: Final = r"[a-z][a-z0-9_]*"
 ENTITY_NAME: Final = r"[A-Z][A-Za-z0-9]*"
@@ -127,6 +132,35 @@ class Terms(_Node):
     exempt: list[str] | None = Field(None, description="URL prefixes the gate leaves open.")
 
 
+class ApiCache(_Node):
+    """Experimental. ``features.api_cache`` as a mapping: on, with its lifetime."""
+
+    ttl: int = Field(
+        description="KARNI_API_CACHE_TTL: the seconds a cached response lives (default 300)."
+    )
+
+
+def _api_cache_member(value: Any) -> str:
+    return "=bool" if isinstance(value, bool) else "=ttl"
+
+
+ApiCacheValue = Annotated[
+    Annotated[bool, Tag("=bool")] | Annotated[ApiCache, Tag("=ttl")],
+    Discriminator(_api_cache_member),
+]
+
+
+def _cache_member(value: Any) -> str:
+    return "=bool" if isinstance(value, bool) else "=ttl"
+
+
+#: An entity's ``cache:``: a lifetime in seconds, or ``false`` (never cached).
+CacheValue = Annotated[
+    Annotated[bool, Tag("=bool")] | Annotated[int, Tag("=ttl")],
+    Discriminator(_cache_member),
+]
+
+
 class Features(_Node):
     """Experimental. ``features:``: built-in options, each switched by a setting."""
 
@@ -143,6 +177,13 @@ class Features(_Node):
     terms: Terms | None = Field(None, description="KARNI_TERMS: the terms acceptance gate.")
     user_grants: bool = Field(
         False, description="KARNI_USER_GRANTS: per-user grants next to the role grants."
+    )
+    api_cache: ApiCacheValue = Field(
+        False,
+        description=(
+            "KARNI_API_CACHE: cached list and detail responses, invalidated on every write. "
+            "true, or {ttl: <seconds>} to set KARNI_API_CACHE_TTL too."
+        ),
     )
 
 
@@ -355,6 +396,13 @@ class Entity(_Node):
         description=(
             "What GET <resource>/aggregate/ may group by and sum (Karni.aggregate): group_by, "
             "values, metrics."
+        ),
+    )
+    cache: CacheValue | None = Field(
+        None,
+        description=(
+            "The viewset's response caching: a lifetime in seconds (Cache(ttl=...)), or false "
+            '(Uncached(reason="spec")). Default: KARNI_API_CACHE and KARNI_API_CACHE_TTL.'
         ),
     )
 

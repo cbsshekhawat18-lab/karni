@@ -481,7 +481,7 @@ Top level:
 | `distribution` | module | no | the PyPI name, `karni-<name>` by default |
 | `switch` | feature | yes | the setting that turns it on (on while it holds a value) |
 | `extra` | feature | no | the karni extra it needs, e.g. `karni[2fa]` |
-| `in_spec` | feature | no | `false` when karni.yaml has no key for it yet (`api_cache`) |
+| `in_spec` | feature | no | `false` when karni.yaml has no key for it yet (every built-in feature has one) |
 
 `[provides]`, what it adds:
 

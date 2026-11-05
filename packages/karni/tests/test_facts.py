@@ -10,6 +10,7 @@ import pytest
 from django.core.management import call_command
 from django.test import override_settings
 
+from karni import facts as facts_mod
 from karni.facts import count_rows, project_apps, project_facts
 
 
@@ -33,6 +34,31 @@ def test_facts_describe_models_viewsets_and_settings() -> None:
     assert all("access" in viewset for viewset in routes.values())
     assert set(facts["settings"]) >= {"KARNI_ROLES", "KARNI_2FA", "KARNI_TERMS"}
     assert facts["user_model"] == "karni_accounts.User"
+
+
+@override_settings(KARNI_FACTS_APPS=["testapp"], KARNI_API_CACHE=True, KARNI_API_CACHE_TTL=45)
+def test_facts_report_the_response_caching() -> None:
+    from karni.api import Cache, Uncached
+    from tests.testapp.models import Venue
+
+    facts = project_facts()
+    assert facts["settings"]["KARNI_API_CACHE"] is True
+    assert facts["settings"]["KARNI_API_CACHE_TTL"] == 45
+    assert all("cache" in viewset for viewset in facts["viewsets"])
+
+    class Tuned:
+        cache = Cache(ttl=60, depends_on=(Venue, "testapp.Event"))
+
+    class Never:
+        cache = Uncached(reason="levels change every second")
+
+    class Plain:
+        cache = None
+
+    assert facts_mod._cache(Tuned) == {"ttl": 60, "depends_on": ["testapp.Venue", "testapp.Event"]}
+    assert facts_mod._cache(Never) == {"uncached": "levels change every second"}
+    assert facts_mod._cache(Plain) is None
+    assert json.loads(json.dumps(facts_mod._cache(Tuned))) == facts_mod._cache(Tuned)
 
 
 @override_settings(KARNI_FACTS_APPS=["testapp"])

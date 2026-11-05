@@ -268,6 +268,23 @@ Experimental now:
   `karni.yaml`, and `FacetPanel`, `useResourceFacets` and `ResourceTable`'s
   `facets` in `@karni/ui`.
 
+Stable since 0.4.1:
+
+- [Response caching](api.md#response-caching): `Cache`, `Uncached`,
+  `karni.api.caching` (`invalidate`, `invalidation_batch`, `clear`,
+  `access_scope`, `dependencies`, `normalized_query`, `cache_enabled`,
+  `flush_time`, `FlushTime`, `CACHE_HEADER` and `BYPASS_HEADER`),
+  `BaseViewSet.cache`, `get_cache_scope` and `get_response_cache`, the
+  `KARNI_API_CACHE`, `KARNI_API_CACHE_TTL`, `KARNI_API_CACHE_ALIAS` and
+  `KARNI_API_CACHE_FLUSH` settings, the `X-Cache` response header and the
+  `X-Bypass-Cache` request header, the `karni.E410`, `E411` and `W580`
+  checks, the `karni-flush-api-cache` schedule and its task
+  `karni.tasks.flush_api_cache`, and `karni.admin.cache` (the *API cache*
+  screen). The `X-Karni-Cache` header is deprecated and goes in 1.0, with
+  the transitional setting `KARNI_API_CACHE_LEGACY_HEADER`. The spec's keys
+  for it (`features: api_cache`, an entity's `cache:`) follow the app spec,
+  which is experimental.
+
 ## Supported platforms
 
 | Component | Supported |

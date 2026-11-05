@@ -171,6 +171,82 @@ def check_viewsets(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckM
     return messages
 
 
+@checks.register(checks.Tags.urls, checks.Tags.caches)
+def check_api_cache(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E410: a cached viewset reads a model no write Karni sees can invalidate.
+
+    Runs while ``KARNI_API_CACHE`` is on. A model that is external, unmanaged
+    or on another database is written by someone else, so its rows change
+    without a signal and a cached response that read them stays stale until
+    its TTL ends. ``Cache(ttl=...)`` on the viewset accepts that bound, and
+    ``Uncached(reason=...)`` opts the viewset out.
+    """
+    from django.conf import settings
+    from django.utils.module_loading import import_string
+
+    from karni.api.caching import Cache, Uncached, cache_enabled, cannot_invalidate, dependencies
+    from karni.api.routers import DEFAULT_ROUTER_FACTORY, resolve_router
+    from karni.api.viewsets import BaseViewSet
+
+    if not cache_enabled():
+        return []
+    try:
+        import_string(getattr(settings, "KARNI_API_ROUTER", DEFAULT_ROUTER_FACTORY))
+    except ImportError:
+        return []  # check_viewsets reports it (E128)
+    messages: list[checks.CheckMessage] = []
+    seen: set[type[Any]] = set()
+    for _prefix, viewset, _basename in getattr(resolve_router(), "registry", ()):
+        if viewset in seen or not (isinstance(viewset, type) and issubclass(viewset, BaseViewSet)):
+            continue
+        seen.add(viewset)
+        declared = getattr(viewset, "cache", None)
+        if isinstance(declared, Uncached) or (isinstance(declared, Cache) and declared.ttl):
+            continue
+        found = [
+            f"{model._meta.label} ({why})"
+            for model in sorted(dependencies(viewset), key=lambda m: m._meta.label)
+            if (why := cannot_invalidate(model)) is not None
+        ]
+        if found:
+            messages.append(
+                check_error(
+                    "E410",
+                    f"{viewset.__name__} is cached, but it reads {', '.join(found)}. Karni "
+                    "sees no write to such a model, so a cached response would stay stale "
+                    "for the whole KARNI_API_CACHE_TTL.",
+                    hint=_fix("E410"),
+                    obj=viewset,
+                )
+            )
+    return messages
+
+
+@checks.register(checks.Tags.caches)
+def check_api_cache_backend(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.W580: with DEBUG off, cached responses must live in a cache every process shares."""
+    from django.conf import settings
+
+    from karni.api.caching import cache_alias, cache_enabled
+
+    if settings.DEBUG or not cache_enabled():
+        return []
+    alias = cache_alias()
+    backend = str((getattr(settings, "CACHES", None) or {}).get(alias, {}).get("BACKEND", ""))
+    if not backend.endswith(".LocMemCache"):
+        return []
+    return [
+        check_warning(
+            "W580",
+            f"KARNI_API_CACHE is on and CACHES[{alias!r}] is {backend}, which is private to "
+            "each process: a write handled by one worker does not reach the responses another "
+            "worker has cached.",
+            hint=_fix("W580"),
+            obj=backend,
+        )
+    ]
+
+
 @checks.register(checks.Tags.urls)
 def check_open_writes(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
     """karni.W102: a routed viewset any self-registered user may write to, every row.

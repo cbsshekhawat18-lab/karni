@@ -531,6 +531,10 @@ BASE: dict[str, Any] = {
     "KARNI_API_CACHE_ALIAS": env("KARNI_API_CACHE_ALIAS", default="default"),
     # The most groups one GET <resource>/aggregate/ returns (karni.aggregation, experimental).
     "KARNI_AGGREGATE_MAX_GROUPS": env.int("KARNI_AGGREGATE_MAX_GROUPS", default=1000),
+    # A daily full flush through Celery beat: "03:30" or "03:30 Europe/Paris". Off by default.
+    "KARNI_API_CACHE_FLUSH": env("KARNI_API_CACHE_FLUSH", default=None),
+    # Transitional until 1.0: also send the deprecated X-Karni-Cache header (X-Cache replaces it).
+    "KARNI_API_CACHE_LEGACY_HEADER": env.bool("KARNI_API_CACHE_LEGACY_HEADER", default=True),
     # --- Admin (karni.admin + django-unfold) --------------------------------
     "UNFOLD": {
         "SITE_TITLE": _ADMIN_TITLE,

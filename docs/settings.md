@@ -92,10 +92,12 @@ reads it on every request.
 | <a id="karni_query_budget_mode"></a>`KARNI_QUERY_BUDGET_MODE` | `KARNI_QUERY_BUDGET_MODE` | `"off"` | `off`, `warn` (log an exceeded budget) or `raise` (fail the request, which is what the pytest plugin sets). |
 | <a id="karni_query_log"></a>`KARNI_QUERY_LOG` | `KARNI_QUERY_LOG` | `False` | Log each request's query count, duplicates and SQL time (`QueryLogMiddleware`). |
 | <a id="karni_seed_logins"></a>`KARNI_SEED_LOGINS` | `KARNI_SEED_LOGINS` | `{}` | Extra `karni seed` logins with their roles, as JSON: `{"organizer@example.com": ["organizer"]}`. |
-| <a id="karni_api_cache"></a>`KARNI_API_CACHE` | `KARNI_API_CACHE` | `False` | Cache `BaseViewSet` list and retrieve responses (`karni.api.caching`). |
+| <a id="karni_api_cache"></a>`KARNI_API_CACHE` | `KARNI_API_CACHE` | `False` | Cache `BaseViewSet` list and retrieve responses, invalidated on every write. See [response caching](api.md#response-caching). |
 | <a id="karni_api_cache_ttl"></a>`KARNI_API_CACHE_TTL` | `KARNI_API_CACHE_TTL` | `300` | Seconds a cached response lives. |
 | <a id="karni_api_cache_alias"></a>`KARNI_API_CACHE_ALIAS` | `KARNI_API_CACHE_ALIAS` | `"default"` | The Django cache alias responses are stored in. |
 | <a id="karni_aggregate_max_groups"></a>`KARNI_AGGREGATE_MAX_GROUPS` | `KARNI_AGGREGATE_MAX_GROUPS` | `1000` | Experimental. The most groups one `GET <resource>/aggregate/` returns. A request that makes more is refused (`E387`): send `top` or narrow it with filters. See [aggregations](aggregations.md). |
+| <a id="karni_api_cache_flush"></a>`KARNI_API_CACHE_FLUSH` | `KARNI_API_CACHE_FLUSH` | `None` | A daily full flush of the response cache through Celery beat: `"HH:MM"`, or `"HH:MM Area/City"` for a timezone other than Celery's. `None` (the default) schedules nothing. |
+| <a id="karni_api_cache_legacy_header"></a>`KARNI_API_CACHE_LEGACY_HEADER` | `KARNI_API_CACHE_LEGACY_HEADER` | `True` | Also send the deprecated `X-Karni-Cache` header, with a deprecation warning once per process. `X-Cache` replaces it. Set it to `False` once nothing reads the old header. Removed with the header in 1.0. |
 | **Admin (karni.admin + django-unfold)** | | | |
 | <a id="karni_admin_autodiscover"></a>`KARNI_ADMIN_AUTODISCOVER` | `KARNI_ADMIN_AUTODISCOVER` | `True` | Register every unregistered model in the admin at startup (`karni.admin`). |
 | <a id="karni_admin_grants_open_pages"></a>`KARNI_ADMIN_GRANTS_OPEN_PAGES` | `KARNI_ADMIN_GRANTS_OPEN_PAGES` | `True` | A role's grant (`app.model:<action>`) opens that model's admin page for that action, inside the grant's scope. `False` restores the 0.4.0 rule: only Django's model permissions open pages. Signing in to the admin still needs `is_staff`. See [admin](admin.md#who-may-open-a-page). |

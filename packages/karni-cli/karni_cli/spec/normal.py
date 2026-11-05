@@ -10,10 +10,12 @@ spec does not say, none for an external entity), ``database: default`` as
 no database, an entity's pages in list, detail, form order, a taxonomy's
 tree entity as ``app.Name`` (experimental), the site module listed whenever
 the kind has a site, ``navigation`` as the ``KARNI_NAVIGATION`` list it
-gives (``None`` without it), and an ``aggregate`` with every metric written
-out when it lists none. What carries meaning in its order stays in order:
-fields, pages, the menu, search fields, the ordering and an aggregate's
-groups (the first is what the query-scaling check groups by).
+gives (``None`` without it), an ``aggregate`` with every metric written out
+when it lists none, and ``api_cache`` either ``false`` or ``{ttl: <seconds>}``
+(``true`` is ``{ttl: 300}``, the default lifetime). What carries meaning in
+its order stays in order: fields, pages, the menu, search fields, the
+ordering and an aggregate's groups (the first is what the query-scaling check
+groups by).
 
 ``was`` is dropped: it says how the project gets to the spec (a rename),
 not what the spec describes. ``karni plan`` reads it from the
@@ -34,6 +36,7 @@ from karni_cli.generators.fields import ALIASES, parse_field
 from karni_cli.generators.lifecycle_fields import _states
 from karni_cli.project import CliError
 from karni_cli.spec import navigation
+from karni_cli.spec.catalog import DEFAULT_CACHE_TTL
 from karni_cli.spec.schema import AGGREGATE_METRICS, Spec
 
 __all__ = ["canonical_field", "normalise", "role_name"]
@@ -166,4 +169,6 @@ def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
     data["navigation"] = navigation.menu(spec)
     social = data["features"]["social_login"]
     data["features"]["social_login"] = sorted(set(social))
+    if data["features"]["api_cache"] is True:
+        data["features"]["api_cache"] = {"ttl": DEFAULT_CACHE_TTL}
     return data

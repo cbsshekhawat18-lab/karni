@@ -72,14 +72,14 @@ def _get(viewset: type[Any], action: str = "list", user: Any = None, **kwargs: A
 
 def test_caching_is_off_by_default(novel: Novel) -> None:
     with override_settings(KARNI_API_CACHE=False):
-        assert "X-Karni-Cache" not in _get(NovelViewSet)
+        assert "X-Cache" not in _get(NovelViewSet)
 
 
 def test_list_is_served_from_the_cache(novel: Novel) -> None:
     first = _get(NovelViewSet)
-    assert first["X-Karni-Cache"] == "miss" and first.queries > 0
+    assert first["X-Cache"] == "MISS" and first.queries > 0
     second = _get(NovelViewSet)
-    assert second["X-Karni-Cache"] == "hit"
+    assert second["X-Cache"] == "HIT"
     assert second.queries == 0
     assert second.data == first.data
 
@@ -89,7 +89,7 @@ def test_save_and_delete_invalidate_lists(novel: Novel) -> None:
     novel.title = "Renamed"
     novel.save()
     response = _get(NovelViewSet)
-    assert response["X-Karni-Cache"] == "miss"
+    assert response["X-Cache"] == "MISS"
     assert response.data["results"][0]["title"] == "Renamed"
     novel.delete()  # soft delete: a save, so it invalidates too
     assert _get(NovelViewSet).data["count"] == 0
@@ -112,7 +112,7 @@ def test_detail_keys_use_the_canonical_pk(novel: Novel) -> None:
     novel.title = "Changed"
     novel.save()
     response = _get(NovelViewSet, "retrieve", pk=str(novel.pk).upper())
-    assert response["X-Karni-Cache"] == "miss" and response.data["title"] == "Changed"
+    assert response["X-Cache"] == "MISS" and response.data["title"] == "Changed"
 
 
 def test_detail_invalidation_is_per_row(novel: Novel) -> None:
@@ -120,11 +120,11 @@ def test_detail_invalidation_is_per_row(novel: Novel) -> None:
     _get(NovelViewSet, "retrieve", pk=str(novel.pk))
     other.title = "Two!"
     other.save()
-    assert _get(NovelViewSet, "retrieve", pk=str(novel.pk))["X-Karni-Cache"] == "hit"
+    assert _get(NovelViewSet, "retrieve", pk=str(novel.pk))["X-Cache"] == "HIT"
     novel.title = "One!"
     novel.save()
     response = _get(NovelViewSet, "retrieve", pk=str(novel.pk))
-    assert response["X-Karni-Cache"] == "miss" and response.data["title"] == "One!"
+    assert response["X-Cache"] == "MISS" and response.data["title"] == "One!"
 
 
 def test_entries_never_cross_users(novel: Novel) -> None:
@@ -140,15 +140,15 @@ def test_entries_never_cross_users(novel: Novel) -> None:
     invalidate(Novel)  # QuerySet.update() sends no signal
     assert _get(OwnNovels, user=ann).data["count"] == 1
     response = _get(OwnNovels, user=bob)
-    assert response["X-Karni-Cache"] == "miss" and response.data["count"] == 0
-    assert _get(OwnNovels, user=ann)["X-Karni-Cache"] == "hit"
+    assert response["X-Cache"] == "MISS" and response.data["count"] == 0
+    assert _get(OwnNovels, user=ann)["X-Cache"] == "HIT"
 
 
 def test_uncached_opts_out_with_a_reason(novel: Novel) -> None:
     class Live(NovelViewSet):
         cache = Uncached(reason="stock levels change every second")
 
-    assert "X-Karni-Cache" not in _get(Live)
+    assert "X-Cache" not in _get(Live)
     with pytest.raises(ImproperlyConfigured, match="reason"):
         Uncached(reason="")
 
@@ -158,8 +158,8 @@ def test_retrieve_with_extra_permissions_is_not_cached(novel: Novel) -> None:
         permission_classes = (IsAuthenticated,)
 
     user = get_user_model().objects.create_user(email="u@example.com", password="pw-123456789")
-    assert "X-Karni-Cache" not in _get(Guarded, "retrieve", user=user, pk=str(novel.pk))
-    assert _get(Guarded, user=user)["X-Karni-Cache"] == "miss"  # lists still are
+    assert "X-Cache" not in _get(Guarded, "retrieve", user=user, pk=str(novel.pk))
+    assert _get(Guarded, user=user)["X-Cache"] == "MISS"  # lists still are
 
 
 def test_declaration_validation() -> None:

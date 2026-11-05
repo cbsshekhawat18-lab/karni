@@ -28,6 +28,10 @@ configured Django project it only reseeds factory randomness:
   not use up each other's limits, and a run never inherits the counters of
   an earlier run from Redis. A test that checks a limit still sees it work.
   This holds with the project's own cache too.
+* **A fresh response cache per test.** While ``KARNI_API_CACHE`` is on,
+  every test starts with no cached API response
+  (:func:`karni.api.caching.clear`): a test's rolled-back rows never come
+  back from another test's cache entry.
 * **Tables for external models** (experimental). Once a test database is
   migrated, every external model routed to it (``class Karni: external =
   True``, :mod:`karni.db`) whose table or view is missing gets a table built
@@ -52,8 +56,9 @@ table for external models, ``pytest --karni-query-budget=warn`` (or ``off``)
 for one run, ``karni_query_budget_mode = warn`` in the pytest ini file for the
 project, ``-p no:karni`` to disable the plugin entirely. Define a fixture
 named ``_karni_fresh_throttles`` in ``conftest.py`` to replace the per-test
-throttle cache (an empty one that does nothing keeps the shared cache), or
-one named ``_karni_test_cache`` to replace the per-test cache.
+throttle cache (an empty one that does nothing keeps the shared cache), one named
+``_karni_test_cache`` to replace the per-test cache, and one named
+``_karni_fresh_response_cache`` to keep cached responses across tests.
 """
 
 from __future__ import annotations
@@ -286,6 +291,24 @@ def _karni_fresh_throttles(monkeypatch: pytest.MonkeyPatch) -> None:
     throttle_cache = LocMemCache("karni-test-throttles", {})
     throttle_cache.clear()
     monkeypatch.setattr(SimpleRateThrottle, "cache", throttle_cache)
+
+
+@pytest.fixture(autouse=True)
+def _karni_fresh_response_cache() -> None:
+    """Start the test with no cached API response while ``KARNI_API_CACHE`` is on.
+
+    A test's database writes roll back, but the cache keeps what it stored:
+    without this, a later test could be served rows that no longer exist.
+    """
+    try:
+        from django.conf import settings
+    except ImportError:  # pragma: no cover - Django is a karni dependency
+        return
+    if not settings.configured or not getattr(settings, "KARNI_API_CACHE", False):
+        return
+    from karni.api.caching import clear
+
+    clear()
 
 
 @pytest.fixture(autouse=True)

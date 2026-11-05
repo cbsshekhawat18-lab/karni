@@ -8,7 +8,7 @@ Django manages it, whether it is a tree (``tree``: ``None``, ``"tree"`` for a
 ``TreeModel`` or ``"ordered"`` for an ``OrderedTreeModel``), its taxonomies
 (``taxonomies``: key to ``{"to", "generated"}``, a generated many-to-many
 left out of the fields), each viewset's
-route and ``describe()``d access, the settings the spec's features and roles
+route, ``describe()``d access and ``cache`` declaration, the settings the spec's features and roles
 come from, the database aliases, and every installed module's settings next
 to the module's defaults. Every value is JSON-safe: a function or class
 becomes its dotted path, a ``Decimal`` a string, an enum member its value.
@@ -50,6 +50,8 @@ FEATURE_SETTINGS: tuple[str, ...] = (
     "KARNI_TERMS",
     "KARNI_USER_GRANTS",
     "KARNI_NAVIGATION",
+    "KARNI_API_CACHE",
+    "KARNI_API_CACHE_TTL",
     "KARNI_ROLES",
     "KARNI_ACCOUNTS_DEFAULT_ROLES",
     "KARNI_PK",
@@ -256,6 +258,21 @@ def _access(viewset: type) -> dict[str, Any]:
     return {"missing": True}
 
 
+def _cache(viewset: type) -> dict[str, Any] | None:
+    """The viewset's ``cache``: ``{ttl, depends_on}``, ``{uncached: reason}`` or ``None``."""
+    from karni.api.caching import Cache, Uncached
+
+    declared = getattr(viewset, "cache", None)
+    if isinstance(declared, Uncached):
+        return {"uncached": str(declared.reason)}
+    if isinstance(declared, Cache):
+        depends_on = [
+            item if isinstance(item, str) else item._meta.label for item in declared.depends_on
+        ]
+        return {"ttl": declared.ttl, "depends_on": depends_on}
+    return None
+
+
 def _viewsets() -> list[dict[str, Any]]:
     from django.utils.module_loading import import_string
 
@@ -272,6 +289,7 @@ def _viewsets() -> list[dict[str, Any]]:
                 "model": getattr(getattr(model, "_meta", None), "label", None),
                 "access": _access(viewset),
                 "search_fields": [str(name) for name in getattr(viewset, "search_fields", ())],
+                "cache": _cache(viewset),
             }
         )
     return found

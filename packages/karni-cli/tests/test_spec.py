@@ -74,6 +74,7 @@ def test_a_minimal_spec_and_its_defaults() -> None:
         "social_login": [],
         "terms": None,
         "user_grants": False,
+        "api_cache": False,
     }
 
 
@@ -218,6 +219,18 @@ INVALID: list[tuple[str, str, int | None]] = [
      8),
     ("C502", SHOP + "        fields: {name: str}\n        aggregate: {group_by: ['name:year']}\n", 8),
     ("C502", SHOP + "        fields: {on: date}\n        aggregate: {group_by: ['on:week']}\n", 8),
+    ("C213", HEAD + "features: {api_cache: 60}\n", 3),
+    ("C213", SHOP + "        cache: soon\n", 7),
+    ("C219", HEAD + "features:\n  api_cache: {ttl: 0}\n", 4),
+    ("C520", SHOP + "        cache: true\n", 7),
+    ("C520", SHOP + "        cache: -5\n", 7),
+    ("C521", HEAD + "features: {api_cache: true}\napps:\n  shop:\n    entities:\n"
+     "      Sale: {external: true, table: sales}\n", 7),
+    ("C521", HEAD + "features: {api_cache: true}\napps:\n  shop:\n    entities:\n"
+     "      Stock: {database: warehouse}\n", 7),
+    ("C521", HEAD + "features: {api_cache: true}\napps:\n  shop:\n    entities:\n"
+     "      Sale: {external: true, table: sales, cache: 30}\n"
+     "      Line: {fields: {sale: fk:Sale}}\n", 8),
 ]  # fmt: skip
 
 
@@ -234,13 +247,13 @@ def test_every_code_is_tested_and_registered() -> None:
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
     # The spec's own codes, C324 (the module catalog's requires and conflicts), the trees' C460-C479,
-    # the tree scope's C620-C639, navigation's C640-C659, the aggregations' C500-C519 and the
-    # taxonomies' C700-C719.
+    # the aggregations' C500-C519, response caching's C520-C539, the tree scope's C620-C639,
+    # navigation's C640-C659 and the taxonomies' C700-C719.
     assert all(
         200 <= int(code[1:]) <= 269
         or code == "C324"
         or 460 <= int(code[1:]) <= 479
-        or 500 <= int(code[1:]) <= 519
+        or 500 <= int(code[1:]) <= 539
         or 620 <= int(code[1:]) <= 639
         or 640 <= int(code[1:]) <= 659
         or 700 <= int(code[1:]) <= 719
@@ -617,6 +630,7 @@ features:
   social_login: [google, apple]
   terms: {version: "2026-11", url: /terms/}
   user_grants: true
+  api_cache: {ttl: 90}
 roles:
   staff: {name: Staff, system: true, grants: {"*": all}}
   instructor: {grants: {classes.session: own, classes.studio:view: all}}
@@ -639,6 +653,7 @@ apps:
         key: slug
         search: name
         access: {read: public, write: "role:staff"}
+        cache: 600
       Session:
         fields:
           studio: fk:Studio
@@ -681,6 +696,7 @@ apps:
         groups: {Booking: [session, member, status], Notes: [note]}
         scope_paths: {studio: session__studio}
         access: {read: authenticated, write: authenticated}
+        cache: false
   shop:
     entities:
       Tag:
@@ -774,6 +790,17 @@ def _build_from_spec(root: Path, spec: schema.Spec) -> None:
             if entity.groups:
                 sets = [(title, {"fields": names}) for title, names in entity.groups.items()]
                 _insert(models, name, "AdminMeta", [f"extra = {{'fieldsets': {sets!r}}}"])
+            if entity.cache is not None:
+                viewsets = root / label / "viewsets.py"
+                line = (
+                    'cache = Uncached(reason="spec")'
+                    if entity.cache is False
+                    else f"cache = Cache(ttl={entity.cache})"
+                )
+                text = viewsets.read_text().replace(
+                    f"    model = {name}\n", f"    model = {name}\n    {line}\n"
+                )
+                viewsets.write_text("from karni.api import Cache, Uncached\n" + text)
             if entity.access == "code":
                 viewsets = root / label / "viewsets.py"
                 text = viewsets.read_text().replace(
@@ -819,6 +846,12 @@ def _build_from_spec(root: Path, spec: schema.Spec) -> None:
         + repr({name: {"client_ids": ["test"]} for name in features.social_login}),
         f"KARNI_TERMS = {features.terms.model_dump(exclude_none=True)!r}" if features.terms else "",
         f"KARNI_USER_GRANTS = {features.user_grants!r}",
+        "KARNI_API_CACHE = True" if features.api_cache else "",
+        (
+            f"KARNI_API_CACHE_TTL = {features.api_cache.ttl}"
+            if isinstance(features.api_cache, schema.ApiCache)
+            else ""
+        ),
         *(
             f"{catalog.module_setting(module, option)} = {value!r}"
             for module, options in spec.modules.items()
@@ -846,6 +879,104 @@ def test_round_trip_build_export_compare(tmp_path: Path, monkeypatch: pytest.Mon
     again = validate_text(exported.text())
     assert again.ok and again.spec is not None, [i.render("export") for i in again.issues]
     assert normalise(again.spec) == normalise(original.spec)
+
+
+def test_api_cache_and_entity_cache() -> None:
+    on = check(HEAD + "features: {api_cache: true}\n")
+    ttl = check(HEAD + "features:\n  api_cache: {ttl: 300}\n")
+    assert on.spec is not None and ttl.spec is not None, ttl.issues
+    assert on.spec.features.api_cache is True
+    assert normalise(on.spec)["features"]["api_cache"] == {"ttl": catalog.DEFAULT_CACHE_TTL}
+    assert normalise(on.spec) == normalise(ttl.spec)  # true is the default lifetime
+    off = check(HEAD + "features: {api_cache: false}\n")
+    assert off.spec is not None and normalise(off.spec)["features"]["api_cache"] is False
+    cached = check(SHOP + "        cache: 60\n      Note:\n        cache: false\n")
+    assert cached.ok and cached.spec is not None, cached.issues
+    entities = normalise(cached.spec)["apps"]["shop"]["entities"]
+    assert entities["Product"]["cache"] == 60 and entities["Note"]["cache"] is False
+    plain = check(SHOP + "        fields: {name: str}\n")
+    assert plain.spec is not None
+    assert normalise(plain.spec)["apps"]["shop"]["entities"]["Product"]["cache"] is None
+    # an entity may say cache: without the feature (KARNI_API_CACHE may come from the environment)
+    assert check(SHOP + "        {external: true, table: sales, cache: 30}\n").ok
+    # without the feature, an external entity needs nothing: nothing is cached
+    assert check(SHOP + "        {external: true, table: sales}\n").ok
+    # the user and a module's model are tables Karni sees written
+    assert check(
+        HEAD + "features: {api_cache: true}\nmodules: {payments: {}}\napps:\n  shop:\n"
+        "    entities:\n      Order: {fields: {buyer: fk:User, payment: fk:karni_payments.Payment}}\n"
+    ).ok
+    (issue,) = validate_text(
+        HEAD + "features: {api_cache: true}\napps:\n  shop:\n    entities:\n"
+        "      Sale: {external: true, table: sales, cache: false}\n"
+        "      Line: {fields: {sale: fk:Sale}}\n"
+    ).issues
+    assert issue.code == "C521" and issue.path == "apps.shop.entities.Line"
+    assert "Sale (through ?expand=)" in issue.message and "cache: 60" in issue.fix
+
+
+def test_export_reads_the_cache_settings_and_declarations(tmp_path: Path) -> None:
+    facts = _facts()
+    facts["settings"] |= {"KARNI_API_CACHE": True, "KARNI_API_CACHE_TTL": 300}
+    assert build(facts, tmp_path).data["features"] == {"api_cache": True}
+    facts["settings"]["KARNI_API_CACHE_TTL"] = 45
+    assert build(facts, tmp_path).data["features"] == {"api_cache": {"ttl": 45}}
+    facts["settings"]["KARNI_API_CACHE"] = False
+    assert "features" not in build(facts, tmp_path).data
+    model = {
+        "name": "Product",
+        "label": "shop.Product",
+        "base_model": True,
+        "pk": "uuid",
+        "managed": True,
+        "db_table": "shop_product",
+        "proxy": False,
+        "fields": [],
+        "ordering": [],
+        "karni": {},
+        "admin_meta": {},
+        "api_meta": [],
+    }
+    facts["apps"] = [
+        {
+            "label": "shop",
+            "name": "shop",
+            "models": [
+                model,
+                {**model, "name": "Price", "label": "shop.Price", "db_table": "shop_price"},
+                {**model, "name": "Stock", "label": "shop.Stock", "db_table": "shop_stock"},
+                {**model, "name": "Note", "label": "shop.Note", "db_table": "shop_note"},
+            ],
+        }
+    ]
+    granted = {"read": {"granted": True}, "write": {"granted": True}}
+
+    def viewset(name: str, cache: Any) -> dict[str, Any]:
+        return {
+            "class": f"shop.viewsets.{name}ViewSet",
+            "route": name.lower() + "s",
+            "model": f"shop.{name}",
+            "access": granted,
+            "search_fields": [],
+            "cache": cache,
+        }
+
+    facts["viewsets"] = [
+        viewset("Product", {"ttl": 60, "depends_on": []}),
+        viewset("Price", {"ttl": None, "depends_on": ["shop.Stock"]}),
+        viewset("Stock", {"uncached": "spec"}),
+        viewset("Note", {"uncached": "levels change every second"}),
+    ]
+    exported = build(facts, tmp_path)
+    entities = exported.data["apps"]["shop"]["entities"]
+    assert entities["Product"]["cache"] == 60
+    assert "cache" not in entities["Price"]  # Cache() without a ttl follows the setting
+    assert entities["Stock"]["cache"] is False and entities["Note"]["cache"] is False
+    assert exported.left_out == [
+        "shop.Price: Cache depends_on shop.Stock",
+        'shop.Note: the reason of Uncached, "levels change every second" (the spec writes "spec")',
+    ]
+    assert validate_text(exported.text()).ok
 
 
 def test_was_pk_and_database_in_the_normal_form() -> None:

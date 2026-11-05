@@ -112,7 +112,7 @@ from karni.api.access import (
     trace,
     validate_access,
 )
-from karni.api.caching import Cache, ResponseCache, Uncached, response_cache
+from karni.api.caching import Cache, ResponseCache, Uncached, access_scope, response_cache
 from karni.api.expansion import collect_expand_param, validate_expand
 from karni.api.filters import KarniFilterBackend, KarniOrderingFilter, KarniSearchFilter
 from karni.api.honeypot import honeypot_field, honeypot_filled
@@ -1364,6 +1364,16 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         Override / escape hatch: return ``None`` to skip caching per request.
         """
         return response_cache(self)
+
+    def get_cache_scope(self) -> str:
+        """Who may share this request's cached response (:func:`karni.api.caching.access_scope`).
+
+        The role set when the read access depends on roles alone, else the
+        user. Override / escape hatch: return a value that differs between
+        callers who must not share an entry, e.g. ``f"user:{self.request.user.pk}"``
+        when the response renders something per user that Karni cannot see.
+        """
+        return access_scope(self)
 
     # list/retrieve: DRF's, served from the response cache when it is enabled.
     # No docstrings on purpose — drf-spectacular would publish them as every

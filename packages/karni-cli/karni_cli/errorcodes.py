@@ -1246,6 +1246,28 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Remove taxonomies from the external entity, or remove external and let Karni own the "
         "table.",
     ),
+    # C520-C539 response caching in karni.yaml (experimental)
+    _c(
+        "C520",
+        "An entity's cache value is not valid",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "cache: on an entity is its viewset's response caching: how many seconds a cached "
+        "response lives (Cache(ttl=...)), or false (Uncached). true says nothing the setting "
+        "does not, and a lifetime of 0 or less caches nothing.",
+        "Write cache: 60 (any whole number of seconds above 0), or cache: false to never cache "
+        "the entity. Leave the key out to follow KARNI_API_CACHE_TTL.",
+    ),
+    _c(
+        "C521",
+        "A cached entity reads a table Karni does not see written",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "With api_cache on, a cached response is cleared when Karni sees a write to a table it "
+        "reads. An external table, a table on another database, or an external entity reached "
+        "through ?expand= is written by another system, so its cached responses would stay "
+        "stale until they expire. karni check refuses the same viewset in the project.",
+        "Add cache: <seconds> to the entity (how stale a response may be), or cache: false to "
+        "never cache it.",
+    ),
 )
 
 

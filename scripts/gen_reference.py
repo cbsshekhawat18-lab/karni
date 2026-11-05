@@ -182,7 +182,12 @@ CAPABILITIES: tuple[Capability, ...] = (
         "Import from CSV or XLSX with a mandatory preview (`/import/`)",
         ((f"{SL}/frontend/src/pages/leads.tsx", "<ResourceImport"),),
     ),
-    Capability("api", "Response caching per viewset (`Cache`, `Uncached`)"),
+    Capability(
+        "api",
+        "Response caching per viewset (`Cache`, `Uncached`, `KARNI_API_CACHE`): entries shared "
+        "only by callers with the same access, invalidated on every write, `X-Cache`",
+        ((f"{EH}/events/viewsets.py", "cache = Cache("),),
+    ),
     Capability(
         "api",
         "Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode "

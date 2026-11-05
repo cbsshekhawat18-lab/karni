@@ -3,8 +3,8 @@
 The backend facts come from ``manage.py karni_facts`` through the project's
 interpreter (the CLI never imports project code): each model's fields with
 their class and ``deconstruct()`` arguments, ``Meta.ordering``, ``class
-Karni`` and ``AdminMeta``, each viewset's access and search fields, the
-settings behind roles and features, the installed modules' settings and the
+Karni`` and ``AdminMeta``, each viewset's access, search fields and
+response caching, the settings behind roles and features, the installed modules' settings and the
 seeders. The pages come from ``frontend/src/routes.tsx`` and the page files
 it imports, read as text. ``navigation`` (experimental) comes from a
 ``KARNI_NAVIGATION`` list: each item names the page whose route it links to
@@ -18,7 +18,9 @@ in the spec and is listed as a note. A field whose column the syntax cannot
 make (a ``SearchField``, Django's own ``EmailField``, a ``MoneyField`` with
 other digits) is left out and listed. So are access declarations other than
 the spec's shapes (written ``access: code``), ``class Karni`` options the
-spec has no key for, hand-written pages and grants the spec cannot name. The
+spec has no key for, a ``Cache``'s ``depends_on`` and an ``Uncached``'s
+reason (the spec writes ``cache: <ttl>`` or ``cache: false``), hand-written
+pages and grants the spec cannot name. The
 list is printed, and written as comments at the top of the file.
 
 An entity is a model on ``BaseModel`` or ``BigIntBaseModel`` (its ``pk``
@@ -50,7 +52,13 @@ from karni_cli.generators.naming import default_route, snake
 from karni_cli.kinds import project_kind
 from karni_cli.project import CliError
 from karni_cli.spec import emit, navigation, schema
-from karni_cli.spec.catalog import MODULES, OTHER_MODELS, SOCIAL_PROVIDERS, module_setting
+from karni_cli.spec.catalog import (
+    DEFAULT_CACHE_TTL,
+    MODULES,
+    OTHER_MODELS,
+    SOCIAL_PROVIDERS,
+    module_setting,
+)
 from karni_cli.spec.normal import role_name
 from karni_cli.spec.schema import AGGREGATE_METRICS
 from karni_cli.spec.validate import TREE_FIELDS
@@ -669,6 +677,9 @@ def _entity(
     access = _access(viewset, label, ctx.left_out)
     if access is not None:
         entity["access"] = access
+    cache = _cache(viewset, label, ctx.left_out)
+    if cache is not None:
+        entity["cache"] = cache
     _drop_unknown(entity, label, ctx.left_out)
     return entity
 
@@ -708,6 +719,26 @@ def aggregate_of(declared: Any) -> dict[str, Any] | None:
     if lists["metrics"] and set(lists["metrics"]) != set(AGGREGATE_METRICS):
         found["metrics"] = list(lists["metrics"])
     return found
+
+
+def _cache(viewset: dict[str, Any] | None, label: str, left_out: list[str]) -> int | bool | None:
+    """``cache:`` from the viewset's ``cache`` declaration: its ttl, ``false``, or none."""
+    declared = (viewset or {}).get("cache")
+    if not isinstance(declared, dict):
+        return None
+    if "uncached" in declared:
+        reason = declared["uncached"]
+        if reason != schema.UNCACHED_REASON:
+            left_out.append(
+                f'{label}: the reason of Uncached, "{reason}" '
+                f'(the spec writes "{schema.UNCACHED_REASON}")'
+            )
+        return False
+    depends_on = declared.get("depends_on") or []
+    if depends_on:
+        left_out.append(f"{label}: Cache depends_on {', '.join(map(str, depends_on))}")
+    ttl = declared.get("ttl")
+    return ttl if isinstance(ttl, int) and not isinstance(ttl, bool) and ttl > 0 else None
 
 
 def _drop_unknown(entity: dict[str, Any], label: str, left_out: list[str]) -> None:
@@ -778,6 +809,10 @@ def _features(settings: dict[str, Any], left_out: list[str]) -> dict[str, Any]:
         features["terms"] = written
     if settings.get("KARNI_USER_GRANTS"):
         features["user_grants"] = True
+    if settings.get("KARNI_API_CACHE") is True:
+        ttl = settings.get("KARNI_API_CACHE_TTL")
+        custom = isinstance(ttl, int) and not isinstance(ttl, bool) and ttl != DEFAULT_CACHE_TTL
+        features["api_cache"] = {"ttl": ttl} if custom else True
     return features
 
 
