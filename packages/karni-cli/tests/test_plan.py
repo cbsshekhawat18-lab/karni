@@ -572,6 +572,14 @@ def test_the_reports_module_is_planned_with_its_options(base: Project) -> None:
     assert asked == [[{"model": "karni_reports.GeneratedReport"}]]
 
 
+def test_the_ai_module_plans_with_its_provider_only(base: Project) -> None:
+    """karni-ai's option in karni.yaml is the provider. Its model and key stay in .env."""
+    added = _plan(BASE.replace("roles:\n", "modules: {ai: {provider: anthropic}}\nroles:\n"), base)
+    change = _only(added, "ai")
+    assert change.area == "modules" and change.action == "add" and not change.risky
+    assert change.line() == "  + ai: provider anthropic"
+
+
 def test_counts_say_why_when_the_database_does_not_answer(
     base: Project, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

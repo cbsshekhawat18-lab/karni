@@ -149,14 +149,16 @@ published file differs from the code: regenerate it with
 
 Each key is a module `karni add <name>` installs, one of the modules of
 [the module catalog](modules.md#the-module-catalog) (`karni modules list`):
-Karni's `approvals`, `charts`, `impersonation`, `payments`, `reports` and `site`, and any
-module installed next to karni-cli that ships a manifest. The value is a mapping of
+Karni's `ai`, `approvals`, `charts`, `impersonation`, `payments`, `reports` and `site`, and
+any module installed next to karni-cli that ships a manifest. The value is a mapping of
 the module's options, or nothing. An option is one of the module's own
 settings its manifest lists, lowercased and without its prefix, with the
 type the manifest gives it: `payments: {provider: stripe}` is
 `KARNI_PAYMENTS_PROVIDER = "stripe"`. Credentials such as
-`STRIPE_SECRET_KEY` are never options: they stay in `.env`. A kind with a
-site (`site`, `site+app`) has the `site` module without listing it. What a
+`STRIPE_SECRET_KEY` are never options: they stay in `.env`, and so do
+`ai`'s key and model name (`ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`, or the
+`OPENAI_*` pair). A kind with a site (`site`, `site+app`) has the `site`
+module without listing it. What a
 listed module or feature requires must be listed too, and two that conflict
 cannot both be (`C324`).
 

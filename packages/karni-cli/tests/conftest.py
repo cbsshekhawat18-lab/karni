@@ -18,6 +18,7 @@ MODULES = (
     "karni-site",
     "karni-charts",
     "karni-reports",
+    "karni-ai",
 )
 #: Set where every module is installed (CI's Python jobs): a test that needs a
 #: module fails without it instead of skipping, so the coverage cannot drop out.

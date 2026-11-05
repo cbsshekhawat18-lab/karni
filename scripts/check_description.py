@@ -73,6 +73,10 @@ PREFIXES = {
         "Reports for Karni: a row printed to PDF from an HTML template in the background, "
         "cached by template and data, served only to users who may see the row."
     ),
+    "modules/karni-ai/pyproject.toml": (
+        "Structured extraction for Karni: rows for any resource read from text, a web page "
+        "or a PDF by a language model, always through the import preview."
+    ),
     "packages/karni-ui/package.json": (
         "React components for Karni: schema-driven tables, forms, detail views and auth."
     ),
@@ -90,6 +94,10 @@ PREFIXES = {
     ),
     "modules/karni-reports/ui/package.json": (
         "React components for the Karni reports module: ReportButton and its useReport hook."
+    ),
+    "modules/karni-ai/ui/package.json": (
+        "React components for the Karni AI extraction module: ExtractButton and the useExtract "
+        "hook."
     ),
 }
 

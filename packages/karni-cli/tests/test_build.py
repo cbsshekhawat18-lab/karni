@@ -218,6 +218,36 @@ def test_a_spec_builds_an_empty_project_that_passes_its_tests_and_check(harbour:
     assert record.pending(root) == {}
 
 
+def test_the_ai_module_is_added_wired_and_checked(
+    copy: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``modules: ai`` adds karni-ai with its provider; karni check passes with the test one."""
+    require_modules("karni-ai")
+    monkeypatch.setitem(run.STEP_RUNNERS, "check", run._check)  # the fixture skips it
+    for name in ("KARNI_AI_PROVIDER", "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL"):
+        monkeypatch.delenv(name, raising=False)
+    _edit(copy / "karni.yaml", ("modules:\n", "modules:\n  ai: {provider: test}\n"))
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "  + ai: provider test" in plan
+    code, out = _build()
+    assert code == 0, out
+    steps = {
+        line.split()[0]: line for line in out.splitlines() if line[:1].isalpha() and "  " in line
+    }
+    assert steps["modules"].endswith("karni add ai")
+    settings = (copy / "config" / "settings.py").read_text()
+    apps_block = settings[: settings.index("# karni:apps")]
+    assert '"karni_ai",' in apps_block[apps_block.rindex("INSTALLED_APPS") :]
+    block = settings[settings.index("# karni:spec start") : settings.index("# karni:spec end")]
+    assert 'KARNI_AI_PROVIDER = "test"' in block
+    assert "ANTHROPIC" not in block and "MODEL" not in block
+    assert '"karni-ai' in (copy / "pyproject.toml").read_text()
+    assert (copy / ".karni" / "modules" / "ai.md").is_file()
+    assert _rows(copy, "select count(*) from karni_ai_aicall") == [(0,)]
+    # karni check runs the module's checks: the test provider needs no key and no model.
+    assert steps["check"].split() == ["check", "ok"], out
+
+
 def test_a_second_build_writes_nothing(copy: Path) -> None:
     before = _files(copy)
     code, out = _build()

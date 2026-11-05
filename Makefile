@@ -32,7 +32,8 @@ PY_PACKAGES := \
 	modules/karni-impersonation:karni_impersonation \
 	modules/karni-site:karni_site \
 	modules/karni-charts:karni_charts \
-	modules/karni-reports:karni_reports
+	modules/karni-reports:karni_reports \
+	modules/karni-ai:karni_ai
 
 # Order matters: modules/karni-payments/ui resolves @karni/ui from source,
 # which needs packages/karni-ui/node_modules installed first.
@@ -43,8 +44,11 @@ PY_PACKAGES := $(filter packages/%,$(PY_PACKAGES))
 endif
 
 UI_PACKAGES := packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui modules/karni-reports/ui
+UI_PACKAGES += modules/karni-ai/ui
 
 KARNI_EXTRAS := s3,images,sentry,social,social-token,2fa
+# karni-ai's provider tests run the real SDKs against mocked HTTP: install-py adds its extras.
+KARNI_AI_EXTRAS := anthropic,openai
 # ruff is pinned to .pre-commit-config.yaml's rev: one version decides the format
 # (0.17 started formatting Python blocks inside Markdown).
 PY_DEV_TOOLS := pytest pytest-django factory-boy Pillow ruff==0.16.9 mypy types-PyYAML pre-commit
@@ -68,6 +72,7 @@ install-py:
 		-e "packages/karni[$(KARNI_EXTRAS)]" \
 		$(foreach p,$(filter-out packages/karni:karni,$(PY_PACKAGES)),-e $(call pkg_dir,$(p))) \
 		$(PY_DEV_TOOLS)
+	$(if $(filter modules/karni-ai:karni_ai,$(PY_PACKAGES)),$(PY) -m pip install -e "modules/karni-ai[$(KARNI_AI_EXTRAS)]")
 
 install-ui:
 	@set -e; for d in $(UI_PACKAGES); do \

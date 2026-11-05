@@ -1037,6 +1037,10 @@ PROCEDURES: tuple[Procedure, ...] = (
             "Run `karni context`. The module must appear under MODULES, and `karni rules` now "
             "includes its guidance.",
             "Configure only the settings the module documents. Do not patch its internals.",
+            "For `ai` (rows read from text, a web page or a PDF by a language model): the "
+            "provider goes in karni.yaml (`modules: ai: {provider: ...}`), the API key and the "
+            "model name in .env only (`ANTHROPIC_*` or `OPENAI_*`), and `karni check` fails "
+            "until they are set. Use the `test` provider in tests and CI.",
             "To take it out again: `karni remove <module>` (it never drops the tables).",
             "To create a new reusable module instead: `karni make module <name>` "
             "(modules/karni-<name>/, docs/modules.md).",

@@ -102,6 +102,7 @@ nav:
       - Modules: modules.md
       - "Saved charts (karni-charts)": charts.md
       - Reports (PDF): reports.md
+      - "AI extraction (karni-ai)": ai-extraction.md
       - "App spec (karni.yaml)": app-spec.md
       - Recipes:
           - All recipes: recipes/index.md

@@ -36,7 +36,7 @@ jobs:
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dist \
             --pattern '*.whl' --pattern '*.tar.gz'
           version="${TAG#v}"
-          for project in karni karni_cli karni_payments karni_approvals karni_impersonation karni_site karni_charts karni_reports; do
+          for project in karni karni_cli karni_payments karni_approvals karni_impersonation karni_site karni_charts karni_reports karni_ai; do
             mkdir -p "pypi/$project"
             mv dist/"$project-$version"[-.]* "pypi/$project/"
           done
@@ -107,6 +107,10 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: pypi/karni_reports/
+      - name: karni-ai
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: pypi/karni_ai/
           skip-existing: true
           password: ${{ secrets.PYPI_API_TOKEN }}
           attestations: ${{ steps.auth.outputs.attest }}

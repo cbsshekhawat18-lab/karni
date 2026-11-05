@@ -50,6 +50,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | CSV and XLSX export of any list (`/export/?format=`) | `stable` | [test_leads.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/tests/test_leads.py) |
 | Import from CSV or XLSX with a mandatory preview (`/import/`) | `stable` | [leads.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/frontend/src/pages/leads.tsx) |
 | Response caching per viewset (`Cache`, `Uncached`, `KARNI_API_CACHE`): entries shared only by callers with the same access, invalidated on every write, `X-Cache` | `stable` | [viewsets.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/viewsets.py) |
+| Rows of any resource read from text, a web page or a PDF by a language model, always through the import preview (`karni add ai`, `POST /api/ai/extract/`, usage, costs and budgets). Experimental tier | `experimental` | Karni's own tests |
 | Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier | `experimental` | Karni's own tests |
 | Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier | `experimental` | Karni's own tests |
 | A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier | `experimental` | Karni's own tests |
@@ -1895,6 +1896,32 @@ class Lead(BaseModel):
 | `KARNI_SEED_LEDGER` |  | `True` | Experimental. `karni seed` records the row count each table holds after a run in `.karni/local/seeded.json`, and `--volume` refuses a table holding rows no seed run left there. `False` turns it off, a path moves it. |
 | `KARNI_EXPLAIN_SEQ_SCAN_ROWS` |  | `1000` | Experimental. `karni queries --explain` flags each sequential scan on a table of this many rows or more, with the index that would serve it (PostgreSQL). |
 
+### Module: karni-ai
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_AI_PROVIDER` | `KARNI_AI_PROVIDER` | `""` | The provider: "anthropic", "openai", "test" (deterministic, no network), or the dotted path of a karni_ai.providers.base.Provider subclass. Empty until a project sets it: karni check fails (AI001) without one. |
+| `KARNI_AI_TIMEOUT` | `KARNI_AI_TIMEOUT` | `60` | Whole seconds one provider call may take before it fails (AI006). |
+| `KARNI_AI_MAX_RETRIES` | `KARNI_AI_MAX_RETRIES` | `1` | Retries of a provider call that failed on a rate limit, an overload or the network. |
+| `KARNI_AI_MAX_OUTPUT_TOKENS` | `KARNI_AI_MAX_OUTPUT_TOKENS` | `16000` | The most tokens one answer may use. A longer answer is cut off (AI007). |
+| `KARNI_AI_MAX_ROWS` | `KARNI_AI_MAX_ROWS` | `50` | Rows kept from one answer. The rest are left out, with a problem. |
+| `KARNI_AI_MAX_SOURCE_CHARS` | `KARNI_AI_MAX_SOURCE_CHARS` | `100_000` | The longest source text, in characters. A longer one is refused (AI010). |
+| `KARNI_AI_MAX_UPLOAD_BYTES` | `KARNI_AI_MAX_UPLOAD_BYTES` | `10 * 1024 * 1024` | The largest PDF upload, in bytes (AI010). |
+| `KARNI_AI_MAX_PDF_PAGES` | `KARNI_AI_MAX_PDF_PAGES` | `50` | The most pages read from one PDF (AI010). |
+| `KARNI_AI_FETCH_TIMEOUT` | `KARNI_AI_FETCH_TIMEOUT` | `10` | Whole seconds a URL fetch may take: connecting, redirects and reading (AI012). |
+| `KARNI_AI_FETCH_MAX_BYTES` | `KARNI_AI_FETCH_MAX_BYTES` | `5 * 1024 * 1024` | The largest response a URL fetch reads, in bytes (AI012). |
+| `KARNI_AI_FETCH_MAX_REDIRECTS` | `KARNI_AI_FETCH_MAX_REDIRECTS` | `3` | Redirects a URL fetch follows, each checked like the first address (AI011). |
+| `KARNI_AI_FETCH_PORTS` | `KARNI_AI_FETCH_PORTS` | `[80, 443]` | The ports a URL may name (AI011). |
+| `KARNI_AI_FETCHER` | `KARNI_AI_FETCHER` | `"karni_ai.services.fetch.Fetcher"` | The dotted path of the class that fetches a URL (karni_ai.services.fetch.Fetcher). |
+| `KARNI_AI_EXTRACTOR` | `KARNI_AI_EXTRACTOR` | `"karni_ai.extraction.Extractor"` | The dotted path of the class that runs an extraction (karni_ai.extraction.Extractor). |
+| `KARNI_AI_PRICES` |  | `{}` | Prices per million tokens, by model name: {"&lt;model&gt;": {"input": "1.00", "output": "4.00"}}. A model missing from the table logs no cost. |
+| `KARNI_AI_MONTHLY_TOKENS_PER_USER` | `KARNI_AI_MONTHLY_TOKENS_PER_USER` | `None` | Tokens one user may spend in a calendar month (None: no budget, AI013). |
+| `KARNI_AI_MONTHLY_TOKENS` | `KARNI_AI_MONTHLY_TOKENS` | `None` | Tokens the whole project may spend in a calendar month (None: no budget, AI014). |
+| `ANTHROPIC_API_KEY` | `ANTHROPIC_API_KEY` | `""` | The anthropic provider's API key. From the environment only (AI004). |
+| `ANTHROPIC_MODEL` | `ANTHROPIC_MODEL` | `""` | The model the anthropic provider asks. No default: name one (AI005). |
+| `OPENAI_API_KEY` | `OPENAI_API_KEY` | `""` | The openai provider's API key. From the environment only (AI004). |
+| `OPENAI_MODEL` | `OPENAI_MODEL` | `""` | The model the openai provider asks. No default: name one (AI005). |
+
 ### Module: karni-approvals
 
 | Setting | Env | Default | What it controls |
@@ -2214,6 +2241,7 @@ Optional apps for anything with a RAM cost or a separate service. `karni add <na
 
 | Module | Status | Install | UI package | Scope |
 |---|---|---|---|---|
+| [`karni-ai`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-ai) | experimental | `karni add ai` | `@karni/ai-ui` | Rows for any resource read from text, a web page or a PDF by a language model, always through the import preview. |
 | [`karni-approvals`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-approvals) | experimental | `karni add approvals` | `@karni/approvals-ui` | A second person approves high-value changes before they are written, with a queue, an API and an audit trail. |
 | [`karni-charts`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-charts) | experimental | `karni add charts` | `@karni/charts-ui` | Charts defined and previewed in the admin, served through each resource's aggregate action under its access. |
 | [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail. |
@@ -2483,6 +2511,22 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 
 | Code | Kind | Meaning |
 |---|---|---|
+| [`AI001`](errors.md#ai001) | check | KARNI_AI_PROVIDER is not set |
+| [`AI002`](errors.md#ai002) | exception | KARNI_AI_PROVIDER cannot be loaded |
+| [`AI003`](errors.md#ai003) | check | The provider's SDK is not installed |
+| [`AI004`](errors.md#ai004) | check | The provider's API key is not set |
+| [`AI005`](errors.md#ai005) | check | The provider's model name is not set |
+| [`AI006`](errors.md#ai006) | api | The provider call failed |
+| [`AI007`](errors.md#ai007) | api | The model's answer cannot be used |
+| [`AI008`](errors.md#ai008) | api | The resource cannot be extracted into |
+| [`AI009`](errors.md#ai009) | api | You may not create rows of this resource |
+| [`AI010`](errors.md#ai010) | api | The source cannot be read |
+| [`AI011`](errors.md#ai011) | api | The URL is refused |
+| [`AI012`](errors.md#ai012) | api | The URL's response is refused |
+| [`AI013`](errors.md#ai013) | api | Your monthly token budget is spent |
+| [`AI014`](errors.md#ai014) | api | The project's monthly token budget is spent |
+| [`AI015`](errors.md#ai015) | api | The resource has no field extraction can fill |
+| [`AI016`](errors.md#ai016) | exception | KARNI_AI_EXTRACTOR or KARNI_AI_FETCHER cannot be loaded |
 | [`APR001`](errors.md#apr001) | api | The change was sent for approval instead of being written |
 | [`APR002`](errors.md#apr002) | api | The maker cannot be the checker |
 | [`APR003`](errors.md#apr003) | api | This user may not decide this pending change |

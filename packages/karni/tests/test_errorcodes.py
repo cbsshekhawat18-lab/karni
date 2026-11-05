@@ -56,6 +56,7 @@ MODULES = [
     Module("site", "SITE", REPO / "modules" / "karni-site" / "karni_site"),
     Module("charts", "CHART", REPO / "modules" / "karni-charts" / "karni_charts"),
     Module("reports", "REPORT", REPO / "modules" / "karni-reports" / "karni_reports"),
+    Module("ai", "AI", REPO / "modules" / "karni-ai" / "karni_ai"),
 ]
 SOURCES = [PACKAGE, *(module.source for module in MODULES)]
 #: Set where every module is installed (CI's Python jobs): a missing module
@@ -218,7 +219,7 @@ def _codes_in_source(roots: Iterable[Path]) -> dict[str, list[str]]:
             ):
                 found = _literal(node.value)
             if found and re.match(
-                r"^(?:[EW]\d{3}|PAY\d{3}|APR\d{3}|IMP\d{3}|SITE\d{3}|REPORT\d{3})$", found
+                r"^(?:[EW]\d{3}|PAY\d{3}|APR\d{3}|IMP\d{3}|SITE\d{3}|REPORT\d{3}|AI\d{3})$", found
             ):
                 used.setdefault(found, []).append(f"{_rel(path)}:{node.lineno}")  # type: ignore[attr-defined]
     return used

@@ -36,6 +36,7 @@ PYTHON_PACKAGES = (
     "modules/karni-site",
     "modules/karni-charts",
     "modules/karni-reports",
+    "modules/karni-ai",
 )
 MODULES = (
     "modules/karni-payments",
@@ -44,6 +45,7 @@ MODULES = (
     "modules/karni-site",
     "modules/karni-charts",
     "modules/karni-reports",
+    "modules/karni-ai",
 )
 #: The modules that ship a React package in ui/.
 UI_MODULES = (
@@ -52,6 +54,7 @@ UI_MODULES = (
     "modules/karni-impersonation",
     "modules/karni-charts",
     "modules/karni-reports",
+    "modules/karni-ai",
 )
 NPM_PACKAGES = ("packages/karni-ui", *(f"{module}/ui" for module in UI_MODULES))
 TAG = re.compile(r"^v(?P<version>\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?)$")

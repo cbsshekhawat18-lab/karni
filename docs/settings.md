@@ -166,6 +166,32 @@ from its `conf.py`. They apply once the module is installed (`karni add <module>
 Assign them in `config/settings.py`. A module's README says more about each.
 `karni explain <SETTING>` prints any setting on this page.
 
+### karni-ai
+
+| Setting | Env | Default | What it does |
+|---|---|---|---|
+| <a id="karni_ai_provider"></a>`KARNI_AI_PROVIDER` | `KARNI_AI_PROVIDER` | `""` | The provider: "anthropic", "openai", "test" (deterministic, no network), or the dotted path of a karni_ai.providers.base.Provider subclass. Empty until a project sets it: karni check fails (AI001) without one. |
+| <a id="karni_ai_timeout"></a>`KARNI_AI_TIMEOUT` | `KARNI_AI_TIMEOUT` | `60` | Whole seconds one provider call may take before it fails (AI006). |
+| <a id="karni_ai_max_retries"></a>`KARNI_AI_MAX_RETRIES` | `KARNI_AI_MAX_RETRIES` | `1` | Retries of a provider call that failed on a rate limit, an overload or the network. |
+| <a id="karni_ai_max_output_tokens"></a>`KARNI_AI_MAX_OUTPUT_TOKENS` | `KARNI_AI_MAX_OUTPUT_TOKENS` | `16000` | The most tokens one answer may use. A longer answer is cut off (AI007). |
+| <a id="karni_ai_max_rows"></a>`KARNI_AI_MAX_ROWS` | `KARNI_AI_MAX_ROWS` | `50` | Rows kept from one answer. The rest are left out, with a problem. |
+| <a id="karni_ai_max_source_chars"></a>`KARNI_AI_MAX_SOURCE_CHARS` | `KARNI_AI_MAX_SOURCE_CHARS` | `100_000` | The longest source text, in characters. A longer one is refused (AI010). |
+| <a id="karni_ai_max_upload_bytes"></a>`KARNI_AI_MAX_UPLOAD_BYTES` | `KARNI_AI_MAX_UPLOAD_BYTES` | `10 * 1024 * 1024` | The largest PDF upload, in bytes (AI010). |
+| <a id="karni_ai_max_pdf_pages"></a>`KARNI_AI_MAX_PDF_PAGES` | `KARNI_AI_MAX_PDF_PAGES` | `50` | The most pages read from one PDF (AI010). |
+| <a id="karni_ai_fetch_timeout"></a>`KARNI_AI_FETCH_TIMEOUT` | `KARNI_AI_FETCH_TIMEOUT` | `10` | Whole seconds a URL fetch may take: connecting, redirects and reading (AI012). |
+| <a id="karni_ai_fetch_max_bytes"></a>`KARNI_AI_FETCH_MAX_BYTES` | `KARNI_AI_FETCH_MAX_BYTES` | `5 * 1024 * 1024` | The largest response a URL fetch reads, in bytes (AI012). |
+| <a id="karni_ai_fetch_max_redirects"></a>`KARNI_AI_FETCH_MAX_REDIRECTS` | `KARNI_AI_FETCH_MAX_REDIRECTS` | `3` | Redirects a URL fetch follows, each checked like the first address (AI011). |
+| <a id="karni_ai_fetch_ports"></a>`KARNI_AI_FETCH_PORTS` | `KARNI_AI_FETCH_PORTS` | `[80, 443]` | The ports a URL may name (AI011). |
+| <a id="karni_ai_fetcher"></a>`KARNI_AI_FETCHER` | `KARNI_AI_FETCHER` | `"karni_ai.services.fetch.Fetcher"` | The dotted path of the class that fetches a URL (karni_ai.services.fetch.Fetcher). |
+| <a id="karni_ai_extractor"></a>`KARNI_AI_EXTRACTOR` | `KARNI_AI_EXTRACTOR` | `"karni_ai.extraction.Extractor"` | The dotted path of the class that runs an extraction (karni_ai.extraction.Extractor). |
+| <a id="karni_ai_prices"></a>`KARNI_AI_PRICES` |  | `{}` | Prices per million tokens, by model name: {"<model>": {"input": "1.00", "output": "4.00"}}. A model missing from the table logs no cost. |
+| <a id="karni_ai_monthly_tokens_per_user"></a>`KARNI_AI_MONTHLY_TOKENS_PER_USER` | `KARNI_AI_MONTHLY_TOKENS_PER_USER` | `None` | Tokens one user may spend in a calendar month (None: no budget, AI013). |
+| <a id="karni_ai_monthly_tokens"></a>`KARNI_AI_MONTHLY_TOKENS` | `KARNI_AI_MONTHLY_TOKENS` | `None` | Tokens the whole project may spend in a calendar month (None: no budget, AI014). |
+| <a id="anthropic_api_key"></a>`ANTHROPIC_API_KEY` | `ANTHROPIC_API_KEY` | `""` | The anthropic provider's API key. From the environment only (AI004). |
+| <a id="anthropic_model"></a>`ANTHROPIC_MODEL` | `ANTHROPIC_MODEL` | `""` | The model the anthropic provider asks. No default: name one (AI005). |
+| <a id="openai_api_key"></a>`OPENAI_API_KEY` | `OPENAI_API_KEY` | `""` | The openai provider's API key. From the environment only (AI004). |
+| <a id="openai_model"></a>`OPENAI_MODEL` | `OPENAI_MODEL` | `""` | The model the openai provider asks. No default: name one (AI005). |
+
 ### karni-approvals
 
 | Setting | Env | Default | What it does |

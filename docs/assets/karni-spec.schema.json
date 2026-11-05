@@ -852,6 +852,7 @@
         "anyOf": [
           {
             "enum": [
+              "ai",
               "approvals",
               "charts",
               "impersonation",
