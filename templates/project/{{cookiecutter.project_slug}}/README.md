@@ -54,6 +54,7 @@ curl http://localhost:8000/health/ready/
 # {"status": "ok", "checks": {"database": ..., "cache": ..., "celery": ...}}
 ```
 
+Probes: `/healthz` (the process answers) and `/readyz` (database, cache and broker).
 Other endpoints: liveness at `/health/`, admin at `/admin/`, OpenAPI schema at
 `/api/schema/`, Swagger UI at `/api/docs/`.
 {%- if cookiecutter.staff_app == "yes" %}

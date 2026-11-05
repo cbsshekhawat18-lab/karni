@@ -1114,3 +1114,20 @@ def check_taxonomies(app_configs: Any = None, **kwargs: Any) -> list[checks.Chec
                     code, message = found
                     messages.append(check_error(code, message, hint=_fix(code), obj=model))
     return messages
+
+
+@checks.register(checks.Tags.urls)
+def check_api_versions(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E590 / E591 / W660: the API version settings (experimental).
+
+    E590 is a bad ``KARNI_API_VERSION`` or ``KARNI_API_VERSIONS``, E591 a bad
+    ``KARNI_API_UNVERSIONED``, and W660 a version past its sunset date.
+    """
+    from karni.api.versions import problems
+
+    return [
+        check_error(code, message, hint=hint, obj="settings")
+        if code.startswith("E")
+        else check_warning(code, message, hint=hint, obj="settings")
+        for code, message, hint in problems()
+    ]

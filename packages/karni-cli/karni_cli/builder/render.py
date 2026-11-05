@@ -705,6 +705,8 @@ def settings_block(spec: schema.Spec, line: int) -> str:
         rows.append("KARNI_API_CACHE = True")
         if isinstance(features.api_cache, schema.ApiCache):
             rows.append(f"KARNI_API_CACHE_TTL = {features.api_cache.ttl}")
+    if spec.app.api_version:
+        rows.append(f"KARNI_API_VERSION = {pystr(spec.app.api_version)}")
     for module, options in spec.modules.items():
         for option, value in (options or {}).items():
             rows.append(_literal(value, "", line, f"{catalog.module_setting(module, option)} = "))

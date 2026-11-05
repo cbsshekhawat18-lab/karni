@@ -266,6 +266,7 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C680", SHOP + "        fields: {name: str}\n        column_sets: {default: [name, name]}\n", 8),
     ("C681", SHOP + "        fields: {name: str}\n        column_sets: {default: []}\n", 8),
     ("C681", SHOP + "        fields: {name: str}\n        column_sets: {Money: [name]}\n", 8),
+    ("C740", "version: 1\napp: {name: X, api_version: V1}\n", 2),
 ]  # fmt: skip
 
 
@@ -282,13 +283,13 @@ def test_every_code_is_tested_and_registered() -> None:
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
     # The spec's own codes, C324 (the module catalog's requires and conflicts), C720 (the storage
-    # module's protected fields), the trees' C460-C479,
+    # module's protected fields), C740 (app.api_version), the trees' C460-C479,
     # the aggregations' C500-C519, response caching's C520-C539, global_search's C540-C559, the
     # page blocks' C560-C579, the tree scope's C620-C639, navigation's C640-C659, wide models'
     # C680-C699 and the taxonomies' C700-C719.
     assert all(
         200 <= int(code[1:]) <= 269
-        or code in ("C324", "C720")
+        or code in ("C324", "C720", "C740")
         or 460 <= int(code[1:]) <= 479
         or 500 <= int(code[1:]) <= 579
         or 620 <= int(code[1:]) <= 659
@@ -1122,3 +1123,32 @@ def test_was_pk_and_database_in_the_normal_form() -> None:
     assert check(SHOP + "        {database: warehouse}\n").ok  # validate alone cannot tell
     found = validate_text(SHOP + "        database: warehouse\n", databases=["default"]).issues
     assert [issue.code for issue in found] == ["C252"]
+
+
+# app.api_version (experimental): the API's current version
+
+
+def test_api_version_is_valid_for_a_version_name_and_refused_otherwise() -> None:
+    ok = validate_text("version: 1\napp: {name: X, api_version: v1}\n")
+    assert ok.ok and ok.spec is not None and ok.spec.app.api_version == "v1"
+    assert validate_text("version: 1\napp: {name: X}\n").spec.app.api_version is None  # type: ignore[union-attr]
+    for bad in ("V1", "api v1", "v1/", "a" * 17, '""'):
+        report = validate_text(f"version: 1\napp: {{name: X, api_version: {bad}}}\n")
+        assert [i.code for i in report.issues] == ["C740"], bad
+    wrong_type = validate_text("version: 1\napp: {name: X, api_version: 1}\n")
+    assert [i.code for i in wrong_type.issues] == ["C213"]
+
+
+def test_api_version_is_in_the_published_schema_with_its_pattern() -> None:
+    node = schema.json_schema()["$defs"]["AppInfo"]["properties"]["api_version"]
+    assert node["pattern"] == "^[a-z0-9][a-z0-9-]{0,15}$"
+    assert "KARNI_API_VERSION" in node["description"]
+
+
+def test_api_version_is_normalised_and_left_out_when_unset() -> None:
+    spec = validate_text("version: 1\napp: {name: X, api_version: v1}\n").spec
+    assert spec is not None
+    assert normalise(spec)["app"]["api_version"] == "v1"
+    bare = validate_text("version: 1\napp: {name: X}\n").spec
+    assert bare is not None
+    assert "api_version" not in normalise(bare)["app"]

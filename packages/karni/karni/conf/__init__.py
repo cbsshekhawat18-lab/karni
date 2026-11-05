@@ -37,7 +37,7 @@ from karni.conf.base import (
     env,
 )
 from karni.conf.dev import DEV
-from karni.conf.logging import build_logging
+from karni.conf.logging import DEFAULT_QUIET_PATHS, build_logging
 from karni.conf.prod import PROD
 from karni.conf.sentry import maybe_init_sentry
 from karni.exceptions import KarniImproperlyConfigured
@@ -555,6 +555,16 @@ def karni_settings(
         if isinstance(rates, dict) and isinstance(auth_rates, dict):
             rates.update(auth_rates)
 
+    # A versioned API reads the version from the URL (DRF's URLPathVersioning), so a view
+    # sees request.version, and /api/ without one is the current version.
+    current_version = str(final("KARNI_API_VERSION") or "")
+    if rest_framework_is_karni and (current_version or final("KARNI_API_VERSIONS")):
+        rest_framework = namespace["REST_FRAMEWORK"]
+        rest_framework.setdefault(
+            "DEFAULT_VERSIONING_CLASS", "rest_framework.versioning.URLPathVersioning"
+        )
+        rest_framework.setdefault("DEFAULT_VERSION", current_version or None)
+
     if bool(final("KARNI_SOCIAL_AUTH")):
         _ensure_request_context_processor(namespace.get("TEMPLATES"))
 
@@ -563,7 +573,8 @@ def karni_settings(
 
     if "LOGGING" not in namespace:
         namespace["LOGGING"] = build_logging(
-            json=bool(namespace.get("KARNI_JSON_LOGS", profile == "prod"))
+            json=bool(namespace.get("KARNI_JSON_LOGS", profile == "prod")),
+            quiet_paths=tuple(namespace.get("KARNI_LOG_QUIET_PATHS", DEFAULT_QUIET_PATHS)),
         )
 
     # KARNI_ADMIN_LOGO → UNFOLD["SITE_LOGO"/"SITE_ICON"], read per request so

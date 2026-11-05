@@ -1,8 +1,9 @@
 """URL configuration for {{ cookiecutter.project_name }}.
 
 Routes: Django admin, the OpenAPI schema and Swagger UI (drf-spectacular),
-Karni's auth endpoints (/api/auth/), the auto-routed API (/api/), Karni's
-health endpoints (/health/ liveness, /health/ready/ readiness) and, last,
+Karni's auth endpoints (/api/auth/), the auto-routed API (/api/, or /api/v1/ once
+KARNI_API_VERSION is set), Karni's health endpoints (/healthz and /readyz for probes,
+/health/ and /health/ready/ as before) and, last,
 the welcome page at "/" while DEBUG is on. Swagger UI is the split view: its
 start-up script is a file, so the content security policy allows no inline
 script on that page either. Add project routes to
@@ -16,6 +17,8 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerSplitView
+from karni.api.versions import api_urls
+from karni.health.probe_urls import urlpatterns as probe_urls
 from karni.welcome import media_urls, welcome_urls
 
 urlpatterns = [
@@ -28,8 +31,11 @@ urlpatterns = [
         name="swagger-ui",
     ),
     path("api/auth/", include("karni.accounts.urls")),
-    path("api/", include("karni.api.urls")),
+    # /api/, or a mount per version once KARNI_API_VERSION is set.
+    *api_urls(),
     path("health/", include("karni.health.urls")),
+    # /healthz (liveness) and /readyz (database, cache, broker): what compose asks.
+    *probe_urls,
     # Uploads under MEDIA_URL while DEBUG is on and storage is local (dev only).
     *media_urls(),
     # Project routes that `karni make` wires (a public site's include goes here).

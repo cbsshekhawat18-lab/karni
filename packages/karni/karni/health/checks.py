@@ -34,6 +34,13 @@ DEFAULT_HEALTH_CHECKS: tuple[str, ...] = (
 )
 """Dotted paths used when the ``KARNI_HEALTH_CHECKS`` setting is absent."""
 
+DEFAULT_READY_CHECKS: tuple[str, ...] = (
+    "karni.health.checks.check_database",
+    "karni.health.checks.check_cache",
+    "karni.health.checks.check_broker",
+)
+"""Experimental. Dotted paths ``/readyz`` runs when ``KARNI_READYZ_CHECKS`` is absent."""
+
 #: Cache key written and read back by :func:`check_cache`.
 CACHE_KEY: str = "karni-health"
 
@@ -81,3 +88,16 @@ def check_celery() -> CheckResult:
     if not replies:
         return False, f"no Celery worker replied within {timeout:g}s"
     return True, f"{len(replies)} worker(s) replied"
+
+
+def check_broker() -> CheckResult:
+    """Experimental. Open a connection to the Celery broker and close it.
+
+    Retries once within ``KARNI_HEALTH_TIMEOUT`` seconds (default 3), so a
+    broker that is down fails the check instead of hanging the probe. It asks
+    the broker only. ``check_celery`` also needs a worker to answer.
+    """
+    timeout = float(getattr(settings, "KARNI_HEALTH_TIMEOUT", 3.0))
+    with current_app.connection_for_write() as connection:
+        connection.ensure_connection(max_retries=1, timeout=timeout)
+    return True, "broker responding"

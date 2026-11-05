@@ -1851,6 +1851,17 @@ class Lead(BaseModel):
 |---|---|---|---|
 | `KARNI_HEALTH_CHECKS` | `KARNI_HEALTH_CHECKS` | `[ "karni.health.checks.check_database", "karni.health.checks.check_cache", "karni.health.checks.check_celery"]` | Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default), comma-separated in the environment. A deployment without a Celery worker leaves `karni.health.checks.check_celery` out. |
 | `KARNI_HEALTH_CELERY_TIMEOUT` |  | `1.0` | Seconds the readiness check waits for a Celery worker to answer. |
+| `KARNI_READYZ_CHECKS` | `KARNI_READYZ_CHECKS` | `[ "karni.health.checks.check_database", "karni.health.checks.check_cache", "karni.health.checks.check_broker"]` | Dotted paths of the checks `/readyz` runs: the database, the cache and the Celery broker by default, comma-separated in the environment. Experimental. See [deploy](deploy.md#health-checks). |
+| `KARNI_HEALTH_TIMEOUT` | `KARNI_HEALTH_TIMEOUT` | `3.0` | Seconds each readiness check may take before it counts as failed (`/readyz` and `/health/ready/`). Experimental. |
+| `KARNI_LOG_QUIET_PATHS` | `KARNI_LOG_QUIET_PATHS` | `["/healthz", "/readyz", "/health/"]` | Paths whose healthy requests the request log skips, comma-separated in the environment (`/healthz`, `/readyz` and `/health/` by default). A request that answers 400 or more is still logged. Empty logs all. Experimental. |
+
+### API versions (karni.api.versions, experimental)
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_API_VERSION` | `KARNI_API_VERSION` | `""` | The current API version, such as `v1`: the API is mounted at `/api/v1/` when `config/urls.py` uses `karni.api.versions.api_urls()`. Empty (the default) leaves the API unversioned. Experimental. See [API versions](api.md#api-versions). |
+| `KARNI_API_VERSIONS` | `KARNI_API_VERSIONS` | `{}` | More versions and what to say about them, as a dict (JSON in the environment): `{"v0": {"deprecated": "2026-06-01", "sunset": "2027-01-31", "notes": "https://..."}, "v2": {"router": "myproject.api.v2_router"}}`. A deprecated version sends `Deprecation`, `Sunset` and `Link` headers. Experimental. See [API versions](api.md#api-versions). |
+| `KARNI_API_UNVERSIONED` | `KARNI_API_UNVERSIONED` | `"keep"` | What `/api/` without a version does once a version is set: `keep` (the default, it serves the current version), `redirect` (308 to the current version) or `remove` (404). Experimental. See [API versions](api.md#api-versions). |
 | `KARNI_THUMBNAILER` |  | `"karni.storage.thumbnails.make_thumbnail"` | Dotted path of the function `karni.storage.thumbnails` renders thumbnails with. |
 | `KARNI_VALIDATE` |  | `True` | Validate the merged settings at startup (`karni.conf.validation`). `False` skips it. |
 | `KARNI_PHONE_COUNTRY_CODE` | `KARNI_PHONE_COUNTRY_CODE` | `None` | The country code a national phone number gets in a `PhoneField` (digits, e.g. `"44"`): `"01234 000 111"` is stored as `+441234000111`. Unset, only international numbers (`+` or `00`) are accepted. See [fields](fields.md#phonefield). |
@@ -2453,7 +2464,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E572`](errors.md#e572) | check | The field a taxonomy adopts is not a many-to-many to its tree |
 | [`E573`](errors.md#e573) | api | A taxonomy filter or endpoint got a parameter it cannot use |
 | [`W580`](errors.md#w580) | warning | Cached responses live in a cache private to each process |
+| [`E590`](errors.md#e590) | check | The API version settings cannot work |
 | [`W590`](errors.md#w590) | warning | A field cross-model search searches has no trigram index |
+| [`E591`](errors.md#e591) | check | KARNI_API_UNVERSIONED is not usable |
 | [`W591`](errors.md#w591) | warning | A model declares Karni.search but no routed viewset serves it |
 | [`E601`](errors.md#e601) | test | The resource under test is not routed |
 | [`E602`](errors.md#e602) | test | The API does not behave as its access declaration promises |
@@ -2479,6 +2492,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`W620`](errors.md#w620) | warning | A role grant of a tree scope gives its members no node |
 | [`W630`](errors.md#w630) | warning | The database menu could not be read |
 | [`W631`](errors.md#w631) | warning | No frontend pages file to compare the menu with |
+| [`W660`](errors.md#w660) | warning | An API version is past its sunset date |
+| [`W661`](errors.md#w661) | warning | API versions are set, but the URLconf does not mount them |
 | [`E701`](errors.md#e701) | exception | karni.rules.py is invalid |
 | [`E702`](errors.md#e702) | exception | karni check found violations |
 | [`E703`](errors.md#e703) | exception | A source file cannot be parsed |
@@ -2788,6 +2803,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C581`](errors.md#c581) | cli | git cannot say which files changed |
 | [`C582`](errors.md#c582) | cli | The project's karni has no check cache |
 | [`C720`](errors.md#c720) | cli | A protected file field needs the storage module |
+| [`C740`](errors.md#c740) | cli | app.api_version is not a version name |
 
 ### Agent rules (`K`)
 

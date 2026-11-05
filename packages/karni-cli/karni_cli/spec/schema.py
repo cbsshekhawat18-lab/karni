@@ -73,6 +73,8 @@ UNCACHED_REASON: Final = "spec"
 
 APP_LABEL: Final = r"[a-z][a-z0-9_]*"
 ENTITY_NAME: Final = r"[A-Z][A-Za-z0-9]*"
+#: Experimental. A name for ``app.api_version``: a URL segment (core's ``VERSION_NAME``).
+API_VERSION: Final = r"[a-z0-9][a-z0-9-]{0,15}"
 FIELD_NAME: Final = r"[a-z][a-z0-9_]*"
 ROLE_SLUG: Final = r"[A-Za-z0-9][A-Za-z0-9_.-]*"
 PAGE_NAME: Final = r"[a-z][a-z0-9-]*"
@@ -122,6 +124,14 @@ class AppInfo(_Node):
     )
     recipe: str | None = Field(
         None, description="The recipe the spec started from. For the record only."
+    )
+    api_version: str | None = Field(
+        None,
+        description=(
+            "KARNI_API_VERSION: the API's current version, e.g. v1. The API is then mounted at "
+            "/api/v1/ (karni.api.versions). Leave it out for an unversioned API."
+        ),
+        json_schema_extra={"pattern": f"^{API_VERSION}$"},
     )
 
 

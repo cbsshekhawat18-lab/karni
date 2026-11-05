@@ -144,6 +144,7 @@ published file differs from the code: regenerate it with
 | `name` | text, required | `karni new "<name>"` |
 | `kind` | `site`, `app` (default) or `site+app` | `karni new --kind` |
 | `recipe` | text | the recipe the spec started from, for the record only |
+| `api_version` | a version name such as `v1` (lower case letters, digits and `-`, at most 16 characters). Experimental | `KARNI_API_VERSION`: the API is mounted at `/api/v1/`, with a document and a client per version ([API versions](api.md#api-versions)) |
 
 ### `modules`
 
@@ -620,6 +621,7 @@ means. `karni explain <code>` prints any code's entry.
 | [C563](errors.md#c563) | a related tab listed twice |
 | [C680](errors.md#c680) | a column set names a field the entity does not have, or one twice |
 | [C681](errors.md#c681) | a column set with no columns, or a name that is not snake_case |
+| [C740](errors.md#c740) | `app.api_version` is not a version name |
 | [C324](errors.md#c324) | a module or feature without one it requires, or next to one it conflicts with |
 | [C500](errors.md#c500) | `aggregate` names a field or path the entity does not have |
 | [C501](errors.md#c501) | `aggregate` names a metric that is not one |
@@ -1054,9 +1056,10 @@ The settings block sits right above `karni_settings(globals())`, where every
 setting takes effect, `KARNI_2FA` included. It sets every feature of the
 spec (`KARNI_2FA`, `KARNI_EMAIL_OTP`, `KARNI_SOCIAL_TOKEN_PROVIDERS`,
 `KARNI_TERMS`, and `KARNI_API_CACHE` with `KARNI_API_CACHE_TTL` while
-`api_cache` is on), `KARNI_ROLES` and `KARNI_ACCOUNTS_DEFAULT_ROLES` when the
-spec has roles, `KARNI_NAVIGATION` when it has `navigation`, and each module
-option. A social provider's client ids come
+`api_cache` is on), `KARNI_API_VERSION` when the spec has `app.api_version`,
+`KARNI_ROLES` and `KARNI_ACCOUNTS_DEFAULT_ROLES` when the spec has roles,
+`KARNI_NAVIGATION` when it has `navigation`, and each module option. A social
+provider's client ids come
 from the environment: `KARNI_SOCIAL_GOOGLE_CLIENT_IDS` (comma-separated) for
 `google`, and so on. A setting assigned again below the call wins over the
 block, so leave the spec's settings to the spec.

@@ -185,6 +185,18 @@
             }
           ],
           "description": "The recipe the spec started from. For the record only."
+        },
+        "api_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "KARNI_API_VERSION: the API's current version, e.g. v1. The API is then mounted at /api/v1/ (karni.api.versions). Leave it out for an unversioned API.",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,15}$"
         }
       },
       "required": [

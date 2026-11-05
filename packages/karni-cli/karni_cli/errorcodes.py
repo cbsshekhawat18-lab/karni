@@ -1380,6 +1380,16 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Add the module: modules: {storage: {provider: aws}} in karni.yaml, or karni add "
         "storage for karni make model. Or make the field a plain file or image.",
     ),
+    # C74x production proof (API versions, deploy)
+    _c(
+        "C740",
+        "app.api_version is not a version name",
+        "karni spec validate (karni_cli.spec.validate)",
+        "app.api_version is the API's current version. karni build writes it as KARNI_API_VERSION, "
+        "and the API is then mounted at /api/<version>/. The name is a URL segment: lower case "
+        "letters, digits and -, starting with a letter or digit, at most 16 characters, such as v1.",
+        "Write a name like v1 or 2026-11, or leave the key out for an unversioned API.",
+    ),
 )
 
 

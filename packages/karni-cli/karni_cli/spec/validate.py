@@ -400,6 +400,7 @@ class _Meaning:
         for entity in self.entities.values():
             self.taxonomies(entity)
         self.roles()
+        self.api_version()
         self.features()
         self.stale_reads()
         self.modules_()
@@ -1466,6 +1467,16 @@ class _Meaning:
                         "Start each prefix with /, e.g. /api/.",
                     )
 
+    def api_version(self) -> None:
+        version = self.spec.app.api_version
+        if version is not None and not re.fullmatch(schema.API_VERSION, version):
+            self.add(
+                "C740",
+                ("app", "api_version"),
+                f"app.api_version {version!r} is not a version name.",
+                "Use lower case letters, digits and -, at most 16 characters, such as v1.",
+            )
+
     def modules_(self) -> None:
         for name, options in self.spec.modules.items():
             known = MODULES.get(name)
@@ -1993,3 +2004,4 @@ def iter_codes() -> Iterator[str]:
     yield from ("C500", "C501", "C502")
     yield from ("C520", "C521")
     yield "C720"  # file:protected / image:protected without the storage module
+    yield "C740"

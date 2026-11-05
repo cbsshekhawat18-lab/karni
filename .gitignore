@@ -39,3 +39,4 @@ storybook-static/
 
 # MkDocs build output
 site/
+.github/ci/prod_e2e/test-results/

@@ -635,6 +635,13 @@ def _app(ctx: _Context) -> None:
         old, new = ctx.current["app"].get(key), ctx.desired["app"].get(key)
         if old != new:
             ctx.add(Change("app", "change", key, f"{old} -> {new}"))
+    old, new = ctx.current["app"].get("api_version"), ctx.desired["app"].get("api_version")
+    if old != new:
+        action = "add" if old is None else "remove" if new is None else "change"
+        detail = {"add": f"KARNI_API_VERSION {new}", "remove": "KARNI_API_VERSION"}.get(
+            action, f"KARNI_API_VERSION {old} -> {new}"
+        )
+        ctx.add(Change("app", action, "api_version", detail))
 
 
 def _modules(ctx: _Context) -> None:

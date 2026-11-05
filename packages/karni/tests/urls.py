@@ -22,6 +22,8 @@ urlpatterns = [
     path("admin/", _admin_site.urls),
     path("api/auth/", include("karni.accounts.urls")),
     path("api/", include("karni.api.urls")),
+    path("health/", include("karni.health.urls")),
+    path("", include("karni.health.probe_urls")),
     path(
         "model-layer/venues/sync/",
         model_layer_views.create_venue,

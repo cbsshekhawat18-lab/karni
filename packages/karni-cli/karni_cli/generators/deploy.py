@@ -75,6 +75,9 @@ class Options:
     db: bool = True
     redis: bool = True
     auth_mode: str = "jwt"
+    #: The path django's health check asks: ``/readyz`` when the project mounts
+    #: ``karni.health.probe_urls`` (every new project does), else ``/health/``.
+    ready_path: str = "/health/"
 
     @property
     def app(self) -> bool:
@@ -112,6 +115,13 @@ def _depends(options: Options, *, release: bool = True, django: bool = False) ->
     for service, condition in entries:
         out += [f"      {service}:", f"        condition: {condition}"]
     return out
+
+
+def _django_probe(options: Options) -> list[str]:
+    command = '"python", "-m", "karni.deploy.healthcheck", "--quiet"'
+    if options.ready_path != "/health/":
+        command = f'"python", "-m", "karni.deploy.healthcheck", "http://127.0.0.1:8000{options.ready_path}", "--quiet"'
+    return [f'      test: ["CMD", {command}]']
 
 
 def _limits(variable: str, default: str) -> list[str]:
@@ -202,8 +212,8 @@ def compose(options: Options) -> str:
         "      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}",
         *_depends(options),
         "    healthcheck:",
-        "      # /health/ with an allowed Host and X-Forwarded-Proto: https, as caddy asks.",
-        '      test: ["CMD", "python", "-m", "karni.deploy.healthcheck", "--quiet"]',
+        f"      # {options.ready_path} with an allowed Host and X-Forwarded-Proto: https, as caddy asks.",
+        *_django_probe(options),
         "      interval: 10s",
         "      timeout: 5s",
         "      retries: 6",
@@ -481,7 +491,7 @@ def caddyfile(options: Options) -> str:
             "",
             "\t# Django answers the API, /health/ and the admin (KARNI_ADMIN_PATH). Add any",
             "\t# other path Django serves here.",
-            "\t@django path /api/* /health/* /{$KARNI_ADMIN_PATH}*",
+            "\t@django path /api/* /health/* /healthz /readyz /{$KARNI_ADMIN_PATH}*",
             "\thandle @django {",
             "\t\timport django",
             "\t}",
@@ -507,7 +517,7 @@ def caddyfile(options: Options) -> str:
             "{$APP_DOMAIN} {",
             "\tencode zstd gzip",
             "",
-            "\t@django path /api/* /health/*",
+            "\t@django path /api/* /health/* /healthz /readyz",
             "\thandle @django {",
             "\t\timport django",
             "\t}",
@@ -742,7 +752,9 @@ def plan(ws: Workspace, options: Options) -> None:
 
 def defaults(ws: Workspace, *, domain: str | None = None) -> Options:
     example = ws.read(".env.example")
+    urls = ws.read("config/urls.py") or ""
     return Options(
+        ready_path="/readyz" if "karni.health.probe_urls" in urls else "/health/",
         slug=project_slug(ws),
         domain=domain or _env_value(example, "DOMAIN") or DEFAULT_DOMAIN,
         auth_mode=_env_value(example, "KARNI_AUTH_MODE") or "jwt",

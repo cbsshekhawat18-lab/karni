@@ -526,6 +526,9 @@ def build(facts: dict[str, Any], root: Path) -> Exported:
     left_out: list[str] = []
     kind = project_kind(root)
     app_info: dict[str, Any] = {"name": _project_name(root), "kind": kind.kind if kind else "app"}
+    api_version = facts["settings"].get("KARNI_API_VERSION")
+    if isinstance(api_version, str) and api_version:
+        app_info["api_version"] = api_version
     data: dict[str, Any] = {"version": schema.VERSION, "app": app_info}
     # every model the spec can name: the entities, the added modules' models, Django's two
     entities: dict[str, dict[str, Any]] = {}

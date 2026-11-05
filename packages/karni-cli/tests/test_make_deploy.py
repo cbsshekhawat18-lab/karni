@@ -10,8 +10,11 @@ definition and helpers are checked at the end.
 from __future__ import annotations
 
 import importlib.util
+import json
 import re
 import sys
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -123,7 +126,14 @@ def test_a_new_project_gets_the_production_stack(project: Path) -> None:
     }
     django = services["django"]
     assert "uvicorn_worker.UvicornWorker" in django["command"]
-    assert django["healthcheck"]["test"][:4] == ["CMD", "python", "-m", "karni.deploy.healthcheck"]
+    assert django["healthcheck"]["test"] == [
+        "CMD",
+        "python",
+        "-m",
+        "karni.deploy.healthcheck",
+        "http://127.0.0.1:8000/readyz",
+        "--quiet",
+    ]
     assert services["backup"]["build"]["target"] == "backup"
     assert services["backup"]["volumes"] == ["app_data:/data", "backups:/backups"]
     assert data["x-app"]["build"]["args"]["KARNI_APP_PATH"] == "/app/"
@@ -211,7 +221,7 @@ def test_the_staff_app_at_the_root(project: Path) -> None:
     services = check_stack(project)
     assert "KARNI_ADMIN_PATH" in services["caddy"]["environment"]
     caddyfile = (project / "Caddyfile").read_text()
-    assert "@django path /api/* /health/* /{$KARNI_ADMIN_PATH}*" in caddyfile
+    assert "@django path /api/* /health/* /healthz /readyz /{$KARNI_ADMIN_PATH}*" in caddyfile
     assert f"root * {deploy.WEB_ROOT}/app" in caddyfile
     assert load(project)["x-app"]["build"]["args"]["KARNI_APP_PATH"] == "/"
 
@@ -380,3 +390,154 @@ def test_the_smoke_helpers() -> None:
     lines = '{"Service": "db", "State": "running", "Health": "healthy"}\n{"Service": "release", "State": "exited", "ExitCode": 0}\n'
     assert [s["Service"] for s in smoke.compose_states(lines)] == ["db", "release"]
     assert smoke.compose_states('[{"Service": "db"}]') == [{"Service": "db"}]
+
+
+def test_a_project_without_the_probe_urls_keeps_asking_health(project: Path) -> None:
+    """``karni make deploy compose`` in an older project: ``/readyz`` would be a 404 there."""
+    urls = project / "config" / "urls.py"
+    urls.write_text(urls.read_text().replace("karni.health.probe_urls", "karni.health.urls"))
+    result = make("compose", "--force")
+    assert result.exit_code == 0, result.output
+    django = load(project)["services"]["django"]
+    assert django["healthcheck"]["test"] == [
+        "CMD",
+        "python",
+        "-m",
+        "karni.deploy.healthcheck",
+        "--quiet",
+    ]
+
+
+def test_the_ci_job_migrates_seeds_and_runs_the_smoke_and_the_browser_test() -> None:
+    text = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    steps = yaml.safe_load(text)["jobs"]["production-stack"]["steps"]
+    runs = [step.get("run", "") for step in steps]
+    order = [
+        next(i for i, run in enumerate(runs) if needle in run)
+        for needle in ("manage.py migrate --noinput", "karni_seed --force", '"$SMOKE" check')
+    ]
+    assert order == sorted(order), "migrate, then seed, then the smoke script"
+    smoke = next(run for run in runs if '"$SMOKE" check' in run)
+    for needed in ("--worker-check", "--user", "--api-version v1", "--deprecated-version v0"):
+        assert needed in smoke, needed
+    playwright = next(step for step in steps if step.get("run") == "npx playwright test")
+    assert playwright["working-directory"] == ".github/ci/prod_e2e"
+    assert playwright["env"]["E2E_BASE_URL"] == "https://localhost/app/"
+    for name in ("signin.spec.ts", "playwright.config.ts", "package.json"):
+        assert (REPO_ROOT / ".github" / "ci" / "prod_e2e" / name).is_file()
+    assert "karni make model Product" in "\n".join(runs)
+
+
+class _Stack(BaseHTTPRequestHandler):
+    """A stand-in for the stack's HTTP surface: what the smoke script reads."""
+
+    deprecated = True
+
+    def log_message(self, *args: object) -> None:
+        pass
+
+    def _send(self, status: int, body: object, headers: dict[str, str] | None = None) -> None:
+        raw = body if isinstance(body, str) else json.dumps(body)
+        self.send_response(status)
+        for name, value in (headers or {}).items():
+            self.send_header(name, value)
+        self.end_headers()
+        self.wfile.write(raw.encode())
+
+    def do_POST(self) -> None:
+        length = int(self.headers.get("Content-Length", 0))
+        sent = json.loads(self.rfile.read(length) or b"{}")
+        ok = self.path == "/api/auth/login/" and sent.get("password") == "pw"
+        self._send(200 if ok else 401, {"access": "token"} if ok else {})
+
+    def do_GET(self) -> None:
+        signed_in = self.headers.get("Authorization") == "Bearer token"
+        path = self.path
+        if path in ("/readyz", "/health/ready/"):
+            checks = {"database": {"ok": True}, "cache": {"ok": True}, "broker": {"ok": True}}
+            checks["celery"] = {"ok": True}
+            self._send(200, {"status": "ok", "failing": [], "checks": checks})
+        elif path == "/healthz":
+            self._send(200, {"status": "ok"})
+        elif path.startswith("/api/") and path.endswith("/things/"):
+            if not signed_in:
+                self._send(401, {})
+                return
+            marked = {"Deprecation": "@1780272000"} if path.startswith("/api/v0/") else {}
+            self._send(200, {"results": [{"id": 1}]}, marked)
+        elif path == "/":
+            self._send(200, "<title>Home</title>")
+        elif path == "/admin/login/":
+            self._send(200, '<input name="csrfmiddlewaretoken">')
+        elif path == "/app/":
+            self._send(200, '<div id="root"></div><script src="/app/a.js"></script>')
+        elif path == "/app/a.js":
+            self._send(200, "x", {"Content-Type": "text/javascript"})
+        elif path == "/app/some/deep/link":
+            self._send(200, '<div id="root"></div>')
+        else:
+            self._send(404, "")
+
+
+def _run_smoke(*extra: str) -> tuple[int, str]:
+    import contextlib
+    import io
+
+    server = HTTPServer(("127.0.0.1", 0), _Stack)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    out = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(out):
+            code = _smoke().main(
+                [
+                    "check",
+                    "--base-url",
+                    f"http://127.0.0.1:{server.server_port}",
+                    "--admin-path",
+                    "admin/",
+                    "--no-headers",
+                    "--no-static",
+                    "--app-path",
+                    "/app/",
+                    "--wait",
+                    "5",
+                    *extra,
+                ]
+            )
+    finally:
+        server.shutdown()
+    return code, out.getvalue()
+
+
+def test_the_smoke_script_signs_in_reads_a_list_and_checks_the_versions() -> None:
+    code, output = _run_smoke(
+        "--user", "a@example.com", "--password", "pw", "--list-path", "/api/things/",
+        "--api-version", "v1", "--deprecated-version", "v0", "--worker-check",
+        "--expect-check", "broker",
+    )  # fmt: skip
+    assert code == 0, output
+    for line in (
+        "ok   /readyz reports every check ok",
+        "ok   /readyz runs the broker check",
+        "ok   /healthz answers",
+        "ok   a Celery worker answers /health/ready/",
+        "ok   sign in as a@example.com",
+        "ok   /api/things/ refuses anonymous",
+        "ok   /api/v1/things/ lists at least 1 row(s)",
+        "ok   /api/v0/things/ answers with a Deprecation header",
+        "ok   /api/v1/things/ is not deprecated",
+        "ok   staff app /app/",
+    ):
+        assert line in output, line
+
+
+def test_the_smoke_script_fails_on_a_wrong_password_and_a_missing_deprecation() -> None:
+    code, output = _run_smoke("--user", "a@example.com", "--password", "nope")
+    assert code == 1 and "FAIL sign in as a@example.com" in output
+    code, output = _run_smoke(
+        "--user", "a@example.com", "--password", "pw", "--list-path", "/api/things/",
+        "--deprecated-version", "v1",
+    )  # fmt: skip
+    assert code == 1
+    assert "FAIL /api/v1/things/ answers with a Deprecation header" in output

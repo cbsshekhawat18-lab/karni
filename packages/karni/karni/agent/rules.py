@@ -381,7 +381,9 @@ RULES: tuple[Rule, ...] = (
             "whether the project has it, its options and the questions to ask. Add a module "
             "with `karni add <name>` (or `modules:` in karni.yaml), turn a feature on with its "
             "setting (or `features:`), and take a module out with `karni remove <name>`, which "
-            "never drops its tables."
+            "never drops its tables. A mobile client needs a URL that does not move: set "
+            "`api_version:` under `app:` in karni.yaml (`KARNI_API_VERSION`) for `/api/v1/`, "
+            "deprecation headers and a client per version, and never write `/v1/` routes by hand."
         ),
         rationale=(
             "Code that would be written more than once belongs in Karni, never per project. "

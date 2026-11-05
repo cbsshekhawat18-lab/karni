@@ -1109,3 +1109,16 @@ def test_a_large_seed_count_is_planned_with_its_time_and_seeded_in_bulk(copy: Pa
     used = {row[0] for row in _rows(copy, "select distinct studio_id from classes_visit")}
     assert used <= studios and len(used) == len(studios)  # drawn from the studios there are
     assert "count = 2500" in (copy / "classes/karni/seeds.py").read_text()
+
+
+def test_the_settings_block_writes_the_api_version_only_when_set() -> None:
+    from karni_cli.builder import render
+    from karni_cli.spec.validate import validate_text
+
+    def block(text: str) -> str:
+        spec = validate_text(text).spec
+        assert spec is not None
+        return render.settings_block(spec, 100)
+
+    assert "KARNI_API_VERSION" not in block("version: 1\napp: {name: X}\n")
+    assert 'KARNI_API_VERSION = "v1"' in block("version: 1\napp: {name: X, api_version: v1}\n")

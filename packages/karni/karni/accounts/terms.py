@@ -424,8 +424,11 @@ def _always_open(view_func: Any) -> bool:
     Only class-based views count: Karni's admin pages (functions and admin
     methods) follow ``paths`` like any page. The schema is per role
     metadata, not data, and @karni/ui reads the auth mode from it before
-    anyone can accept anything.
+    anyone can accept anything. A probe (``karni.health.views.probe``, the health views) is open
+    too, wherever ``paths`` reaches.
     """
+    if getattr(view_func, "karni_probe", False):
+        return True
     view = getattr(view_func, "cls", None) or getattr(view_func, "view_class", None)
     if not isinstance(view, type):
         return False

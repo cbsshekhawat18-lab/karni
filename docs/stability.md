@@ -365,6 +365,17 @@ Stable since 0.4.1:
   `application/vnd.karni.upload` reference part, `manage.py
   karni_thumbnails`, the `file:protected` and `image:protected` field types,
   and everything in `@karni/storage-ui`.
+- [API versions](api.md#api-versions): the `KARNI_API_VERSION`,
+  `KARNI_API_VERSIONS` and `KARNI_API_UNVERSIONED` settings, `karni.api.versions`
+  (with `api_urls`, `ApiVersionHeadersMiddleware` and `VersionedSchemaGenerator`),
+  the `x-karni-api-versions` extension, `app.api_version` in `karni.yaml`, and
+  a client per version from `karni types`.
+- [Health checks](deploy.md#12-health-checks): `/healthz` and `/readyz`
+  (`karni.health.probe_urls`, `karni.health.views.readyz`,
+  `karni.health.checks.check_broker`), the `KARNI_READYZ_CHECKS`,
+  `KARNI_HEALTH_TIMEOUT` and `KARNI_LOG_QUIET_PATHS` settings, and
+  `karni.conf.logging.QuietPaths`. The older `/health/` and `/health/ready/`
+  keep the promise.
 
 ## Supported platforms
 
