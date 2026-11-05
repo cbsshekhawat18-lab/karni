@@ -95,8 +95,12 @@ def test_the_full_crud_surface_of_an_owned_resource() -> None:
 
 def test_the_list_check_finds_the_row_on_a_later_page_of_a_table_that_already_holds_rows() -> None:
     # A seeded database: more venues than one page, so the new row is not on page one.
+    later = timezone.now() + timedelta(days=1)  # listed before a new row, each at its own instant
     Venue.objects.bulk_create([Venue(name=f"Seeded {n}", city="Oslo") for n in range(120)])
-    Venue.objects.update(created_at=timezone.now() + timedelta(days=1))  # listed before a new row
+    seeded = list(Venue.objects.all())
+    for n, venue in enumerate(seeded):
+        venue.created_at = later + timedelta(seconds=n)
+    Venue.objects.bulk_update(seeded, ["created_at"])
     report = assert_crud(crud_urls.VenueViewSet, "staff")
     assert "list" in report.passed and not report.failures
 
