@@ -1,0 +1,28 @@
+# Terms acceptance: a built-in feature of karni (karni.accounts.terms).
+name = "terms"
+kind = "feature"
+title = "Terms acceptance"
+purpose = "A versioned terms gate: the API refuses until the user accepts."
+status = "experimental"
+use_when = ["terms of service", "EULA", "accept the terms", "privacy policy acceptance", "consent"]
+switch = "KARNI_TERMS"
+docs = "docs/accounts.md#terms-acceptance"
+
+[provides]
+models = ["TermsAcceptance"]
+endpoints = ["/api/auth/terms/", "/api/auth/terms/accept/"]
+settings = { KARNI_TERMS = ["object", "null"] }
+
+[[asks]]
+question = "What is the current version of the terms (for example 2026-11)?"
+setting = "KARNI_TERMS.version"
+
+[[asks]]
+question = "Where are the terms published (for example /terms/)?"
+setting = "KARNI_TERMS.url"
+
+[[asks]]
+question = "Must everyone accept them before using the API?"
+setting = "KARNI_TERMS.required"
+options = [true, false]
+default = true

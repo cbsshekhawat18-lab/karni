@@ -12,7 +12,7 @@ def run_checks() -> list[str]:
     from django.apps import apps
     from karni.accounts.roles import declared_roles
     from karni.meta import karni_option
-    from karni.models import BaseModel
+    from karni.models import BaseModel, BigIntBaseModel
 
     from karni_approvals.meta import approval_policy
 
@@ -25,9 +25,10 @@ def run_checks() -> list[str]:
         if not karni_option(model, "requires_approval", None):
             continue
         label = model._meta.label
-        if not issubclass(model, BaseModel):
+        if not issubclass(model, BaseModel | BigIntBaseModel):
             failures.append(
-                f"{label} declares requires_approval but is not a karni.models.BaseModel, so its "
+                f"{label} declares requires_approval but is not a karni.models.BaseModel (or "
+                "BigIntBaseModel), so its "
                 "writes send no pre_write signal and are never held (APR007)."
             )
             continue

@@ -199,6 +199,23 @@ def _captured_user(record: Mapping[str, Any]) -> Any:
             "exists. Replay as someone else with --as <email|username|pk>, or --anonymous.",
             code="E924",
         )
+    # Integer ids come back after a database reset: the id alone may now name someone
+    # else, so the captured email (or username) must still belong to it.
+    for name in ("email", "username"):
+        expected = captured.get(name)
+        if not expected:
+            continue
+        actual = getattr(user, name, None)
+        if str(actual or "").casefold() != str(expected).casefold():
+            raise KarniCommandError(
+                f"The captured user was id {captured.get('id')} with {name} {expected!r}, but "
+                f"id {captured.get('id')} is now {actual!r}: the database changed since the "
+                "capture (a reset reuses integer ids), so the replay would run as someone "
+                f"else. Replay with --as {expected}, as someone else with --as "
+                "<email|username|pk>, or with --anonymous.",
+                code="E924",
+            )
+        break
     return user
 
 

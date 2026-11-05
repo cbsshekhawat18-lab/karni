@@ -21,7 +21,7 @@ SHIPPED_ROLES: dict[str, dict[str, Any]] = {
 }
 
 _RELATION_CALLS = frozenset({"ForeignKey", "OneToOneField", "ManyToManyField"})
-_AUDIT_BASES = frozenset({"BaseModel", "AuditedModel"})
+_AUDIT_BASES = frozenset({"BaseModel", "BigIntBaseModel", "AuditedModel"})
 
 
 @dataclass(frozen=True)
@@ -250,6 +250,42 @@ def _role_names_in(node: ast.AST) -> list[str]:
     return found
 
 
+def read_slot(cls: ast.ClassDef) -> ast.AST | None:
+    """The ``read=`` argument of the class's ``Access(...)`` (``None``: no such call)."""
+    for node in ast.walk(cls):
+        if isinstance(node, ast.Call) and _call_name(node) == "Access":
+            for keyword in node.keywords:
+                if keyword.arg == "read":
+                    return keyword.value
+    return None
+
+
+def owned_reads(cls: ast.ClassDef) -> list[str]:
+    """The ``Owned("...")`` paths that scope the class's reads.
+
+    Those of ``Access(read=...)``, or every one in the body when the class
+    declares no ``Access(...)`` (an ``Owned`` read is then the whole rule).
+    """
+    read = read_slot(cls)
+    if read is None:
+        return owned_paths(cls)
+    return [
+        node.args[0].value
+        for node in ast.walk(read)
+        if isinstance(node, ast.Call)
+        and _call_name(node) == "Owned"
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+        and isinstance(node.args[0].value, str)
+    ]
+
+
+def reading_roles(cls: ast.ClassDef) -> list[str]:
+    """The ``HasRole("...")`` names in ``Access(read=...)``: roles that read every row."""
+    read = read_slot(cls)
+    return _role_names_in(read) if read is not None else []
+
+
 def granted_reads(cls: ast.ClassDef) -> bool:
     """Whether the class body calls ``Granted()`` — the roles' grants decide its rows."""
     return any(
@@ -272,6 +308,45 @@ def declared_roles(ws: Workspace) -> dict[str, dict[str, Any]]:
                 return {}  # computed at runtime: unknown here
             return value if isinstance(value, dict) else {}
     return dict(SHIPPED_ROLES)
+
+
+#: The key types ``karni make model`` writes (``KARNI_PK``, ``--pk``), and the base of each.
+PK_BASES: dict[str, str] = {"uuid": "BaseModel", "bigint": "BigIntBaseModel"}
+
+
+def declared_pk(ws: Workspace) -> tuple[str, str | None]:
+    """``(key type, note)``: ``KARNI_PK`` from config/settings.py when it is a literal.
+
+    The last plain assignment wins, as in Python. Absent, it is ``uuid``
+    (karni.conf.base's default). A computed value cannot be read without
+    Django, so it is ``uuid`` with a note saying to pass ``--pk``. A value
+    other than ``uuid`` or ``bigint`` is refused (``C106``).
+    """
+    text = ws.read(SETTINGS)
+    if text is None:
+        return "uuid", None
+    found: Any = None
+    for node in parse(ws, ws.rel(SETTINGS), text).body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == "KARNI_PK" for target in node.targets
+        ):
+            found = node.value
+    if found is None:
+        return "uuid", None
+    try:
+        value = ast.literal_eval(found)
+    except ValueError:
+        return "uuid", (
+            "note: KARNI_PK in config/settings.py is computed, so karni make model cannot read "
+            "it and writes a UUID key. Pass --pk bigint for an integer key."
+        )
+    if value not in PK_BASES:
+        raise CliError(
+            f"KARNI_PK = {value!r} in config/settings.py: the key type karni make model writes "
+            f"is one of {', '.join(PK_BASES)} (uuid: BaseModel, bigint: BigIntBaseModel).",
+            code="C106",
+        )
+    return str(value), None
 
 
 def grant_scopes(roles: dict[str, dict[str, Any]], key: str) -> dict[str, str]:

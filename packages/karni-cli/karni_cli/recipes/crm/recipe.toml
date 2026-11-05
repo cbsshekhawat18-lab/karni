@@ -1,0 +1,18 @@
+name = "crm"
+title = "CRM"
+purpose = "Companies, contacts and deals through a sales pipeline, with activities."
+use_when = [
+    "crm",
+    "sales deals",
+    "sales pipeline",
+    "sales team",
+    "customer relationships",
+    "leads",
+    "contacts and companies",
+]
+usually_changed = [
+    "the pipeline stages of a deal",
+    "the company and contact fields",
+    "what the sales and manager roles may see",
+    "the currency of a deal's value",
+]

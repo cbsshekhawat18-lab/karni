@@ -23,14 +23,15 @@ traceback. `KARNI_DB_CHECK=false` skips the check.
 
 ## Contents
 
-- **Project**: [new](#karni-new), [add](#karni-add), [upgrade](#karni-upgrade), [doctor](#karni-doctor), [config](#karni-config)
+- **Project**: [new](#karni-new), [add](#karni-add), [remove](#karni-remove), [modules](#karni-modules), [upgrade](#karni-upgrade), [doctor](#karni-doctor), [config](#karni-config)
 - **Frontend**: [ui](#karni-ui)
 - **Agents and checks**: [context](#karni-context), [rules](#karni-rules), [check](#karni-check), [explain](#karni-explain), [types](#karni-types), [mcp](#karni-mcp)
 - **Debugging**: [queries](#karni-queries)
 - **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [schema](#karni-schema), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [load](#karni-load), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
 - **Debugging**: [why](#karni-why), [why-empty](#karni-why-empty)
-- **Generators**: [make](#karni-make), [import](#karni-import), [design](#karni-design)
+- **Generators**: [make](#karni-make), [import](#karni-import), [design](#karni-design), [spec](#karni-spec), [plan](#karni-plan), [build](#karni-build)
 - **Debugging**: [trace](#karni-trace), [replay](#karni-replay)
+- **Other**: [recipes](#karni-recipes)
 
 ## Project
 
@@ -42,10 +43,18 @@ Every kind has the API, the admin, PostgreSQL, Redis, Celery, the security defau
 
 With --design, the site is built from a designer's pages, and the next steps say what is left: the models, the real content and the loops (karni rules --procedure site-from-design).
 
+With --recipe (experimental), the app starts from a recipe's karni.yaml, and karni build makes it: the models and the API, the recipe's own domain code, seeds and tests, the migrations, demo data, the tests and karni check.
+
 Example:
 
 ```sh
 karni new "Crumb Bakery" --kind site --design ../design
+```
+
+Example:
+
+```sh
+karni new "Corner Shop" --recipe shop
 ```
 
 ```
@@ -62,6 +71,7 @@ karni new [OPTIONS] NAME
 | `--staff-app/--no-staff-app` |  | The React staff app in frontend/. An app always has it. A site has it unless --no-staff-app, and then staff work in the admin. |
 | `--site-app` TEXT | `website` | The label of the site app a kind with a site gets. |
 | `--git/--no-git` | on | Make the project a git repository with a first commit of what karni new wrote. Skipped inside an existing repository and when git is not installed. |
+| `--recipe` TEXT |  | Experimental. Start the app from a recipe (karni recipes list, or blank): its karni.yaml with this name, then karni build, which also writes the recipe's own domain code, seeds and tests and runs the tests and karni check. Without the project's interpreter or database it stops after karni.yaml: run karni build next. |
 
 ### `karni add`
 
@@ -74,6 +84,57 @@ karni add MODULE
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `MODULE` (required) |  | Module short name, e.g. "payments" |
+
+### `karni remove`
+
+Take a module out again: what karni add wired, never its data
+
+```
+karni remove [OPTIONS] MODULE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `MODULE` (required) |  | Module short name, e.g. "payments" |
+| `--dry-run` |  | Print every change and each table's rows. Write nothing. |
+| `--keep-tables` |  | Take the module out although its tables exist: they stay in the database. |
+
+### `karni modules`
+
+The module catalog (experimental): every module and built-in feature, added or not, with what it provides and the questions to ask (list, show).
+
+```
+karni modules COMMAND [ARGS]...
+```
+
+#### `karni modules list`
+
+Experimental. Every module and built-in feature: kind, status, state, purpose, questions.
+
+Modules first, then features. A module is added (in the # karni:apps block), installed (the project's interpreter has it) or available. Each question names the setting its answer goes to.
+
+```
+karni modules list [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--json` |  | Print the entries as JSON (every manifest key, plus state). |
+
+#### `karni modules show`
+
+Experimental. One module or feature: what it provides, the questions, the wiring.
+
+For a module: what karni add writes (apps, middleware, context processors, the kind) and prints (the URL include, extras), which karni remove takes out again. For a feature: the setting that turns it on and the extra it needs.
+
+```
+karni modules show [OPTIONS] NAME
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | A module or feature, e.g. payments or two_factor. |
+| `--json` |  | Print the entries as JSON (every manifest key, plus state). |
 
 ### `karni upgrade`
 
@@ -284,7 +345,7 @@ karni types [OPTIONS]
 
 ### `karni mcp`
 
-Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp])
+Serve context, rules, check, the debugging tools and the app-builder flow (recipes, questions, answer, plan, build) as MCP tools (needs karni-cli[mcp])
 
 ```
 karni mcp [OPTIONS]
@@ -742,13 +803,15 @@ karni make app [OPTIONS] NAME
 
 #### `karni make model`
 
-Add `class NAME(BaseModel)` with FIELDS to APP/models.py.
+Add `class NAME(BaseModel)` with FIELDS to APP/models.py (BigIntBaseModel with --pk bigint).
 
 Example:
 
 ```sh
 karni make model Event title:str:200 starts_at:datetime "status:choice:draft|live" organizer:fk:User 'venue:fk:Venue?' -a --access owned:organizer
 ```
+
+Experimental: karni make model Sale --external --table reporting.sales [--database warehouse] [--writable] writes a plain models.Model over that existing table or view from its columns (Meta.managed = False, class Karni: external = True), and its viewset. The database must be reachable.
 
 ```
 karni make model [OPTIONS] NAME [FIELDS...]
@@ -762,9 +825,14 @@ karni make model [OPTIONS] NAME [FIELDS...]
 | `--all`, `-a` |  | Also generate the viewset, the pages and the API test. |
 | `--access` TEXT |  | With viewset: granted\|authenticated\|public-read[:&lt;role&gt;]\|public-create[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. public-create: anyone creates (a public form), only that role reads and writes. |
 | `--search` TEXT (repeatable) |  | With viewset: search_fields (comma-separated). |
+| `--external` |  | Experimental. A model over a table or view another system owns, written from the columns of --table (Meta.managed = False, class Karni: external = True), with its viewset. It reads the database, which must be reachable. |
+| `--table` TEXT |  | With --external: the table or view, e.g. sales or reporting.sales. |
+| `--database` TEXT |  | With --external: the DATABASES alias the table lives in (class Karni: database). |
+| `--writable` |  | With --external: let the API and the admin write it (class Karni: writable). |
 | `--migrate` |  | Run `karni make migration` for the app afterwards. |
 | `--order` TEXT |  | Order rows by this field (Meta.ordering), e.g. position or -created_at. |
 | `--key` TEXT |  | The field karni load and imports match rows on (Karni.import_key). Rows nested under a parent are matched on the parent plus this field, e.g. position. |
+| `--pk` TEXT |  | The primary key: uuid (BaseModel) or bigint (BigIntBaseModel, experimental). Default: KARNI_PK in config/settings.py, else uuid. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
@@ -1127,7 +1195,7 @@ karni make form [OPTIONS] NAME [FIELDS...]
 
 Create modules/karni-NAME/, a reusable module per docs/modules.md.
 
-The karni-NAME distribution with the karni_NAME app, a range-pinned karni dependency, the karni.settings fragment, AGENTS.fragment.md and a standalone test suite. Works outside a project too.
+The karni-NAME distribution with the karni_NAME app, a range-pinned karni dependency, the karni.settings fragment, AGENTS.fragment.md, the catalog entry karni.module.toml and a standalone test suite. Works outside a project too.
 
 ```
 karni make module [OPTIONS] NAME
@@ -1232,6 +1300,99 @@ karni design extract [OPTIONS] DIRECTORY
 | `--dry-run` |  | Print what would be written and write nothing. |
 | `--keep-paths` |  | Point image paths into the design folder instead of copying the images next to the output file (files/). |
 
+### `karni spec`
+
+The app spec, karni.yaml (experimental): check it (validate), write it from an existing project (export), or answer a question of karni plan --questions (answer).
+
+```
+karni spec COMMAND [ARGS]...
+```
+
+#### `karni spec validate`
+
+Experimental. Check a karni.yaml: every problem with its code, line and fix.
+
+It checks the YAML, every key and value (unknown keys are errors, keys that start with x- are kept and ignored), each field through karni make model's own parser, and every reference: relations, roles named in access, grants, pages, modules, field groups, keys and owners. Codes are C211 to C242 (karni explain &lt;code&gt;). Exit status 1 when there is a problem.
+
+```
+karni spec validate [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+| `--json` |  | Print {file, valid, issues: [{code, line, path, message, fix}]}. |
+
+#### `karni spec export`
+
+Experimental. Write the spec of this project from its code (manage.py karni_facts).
+
+The models become entities (each field in the field syntax when its type makes the same column), the viewsets their access and search, KARNI_ROLES the roles, the settings the features, the installed modules and their changed settings the modules, frontend/src/routes.tsx the pages, and the seeders the seed counts. What the spec cannot express is listed, and kept as comments at the top of the file. The file starts with a yaml-language-server line naming the JSON Schema, for editors.
+
+```
+karni spec export [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `-o`, `--output` PATH |  | Write the spec to this file. Default: print it. |
+| `--force` |  | Replace the output file if it exists. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+#### `karni spec answer`
+
+Experimental. Write the answer to a question of karni plan --questions into karni.yaml.
+
+The answer goes to the key the question names, and every other line of the file stays as it was: comments, order and layout. The question is then settled and karni plan --questions no longer asks it. Editing the file by hand settles it the same way. An id that is not an open question (C400) and a value the question does not take (C401) are refused, and so is an answer that cannot be written without changing anything else (C402): nothing is written then.
+
+```
+karni spec answer [OPTIONS] QUESTION_ID VALUE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `QUESTION_ID` (required) |  | The question's id, as karni plan --questions prints it. |
+| `VALUE` (required) |  | One of its options (several comma-separated when it takes several), or a value of its type when it has none. |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+
+### `karni plan`
+
+Compare karni.yaml with the project: what karni build would change
+
+```
+karni plan [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+| `--json` |  | Print {version, file, valid, issues, changes: [{area, action, target, detail, risky, reason, rows}], summary, row_counts} (docs/assets/karni-plan.schema.json). |
+| `--offline` |  | Do not open the database: risky changes show no row counts. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+| `--questions` |  | Print the questions to ask the user before karni build instead of the plan: the gaps of karni.yaml, most impact first. Reads only the spec. With --json, docs/assets/karni-questions.schema.json. |
+| `--max` INT RANGE |  | With --questions: show at most N (default 5, 0 shows them all). |
+
+### `karni build`
+
+Make the project match karni.yaml, without touching hand-written code
+
+```
+karni build [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+| `--dry-run` |  | Print the plan and the files it would write. Write nothing. |
+| `--allow-destructive` |  | Apply the risky (!) changes too: a field or entity removed, a type narrowed, access widened. Without it they stop the build (C270), each named with its rows. |
+| `--force` |  | Replace Karni-owned files edited by hand, keeping each as &lt;file&gt;.orig. |
+| `--adopt` TEXT (repeatable) |  | Hand a Karni-owned file (or config/settings.py, frontend/src/routes.tsx for their blocks) to the project: karni build stops managing it. Repeatable. |
+| `--json` |  | Print {version, file, valid, issues, status, code, message, plan, files, hand_edits, adopted, steps, next} (docs/assets/karni-build.schema.json). |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
 ## Debugging
 
 ### `karni trace`
@@ -1268,3 +1429,43 @@ karni replay [OPTIONS] REQUEST_ID
 | `--json` |  | Print the result as JSON. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+## Other
+
+### `karni recipes`
+
+Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show).
+
+```
+karni recipes COMMAND [ARGS]...
+```
+
+#### `karni recipes list`
+
+Experimental. Every recipe, or with --match the best few for a request, and the blank start.
+
+--match compares the words of the request with each recipe's use_when and purpose, after lowercasing, making plurals singular and leaving out words that name no app (a, the, app, with ...). A recipe scores 2 for each word one of its use_when phrases has and 1 for each word only its purpose has. The recipes that score 2 or more come back, best first, at most 3. When none does, start from the blank start: karni.yaml with the version and the app's name, nothing else.
+
+```
+karni recipes list [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--match` TEXT |  | A one-line request: the best few recipes for it, with their scores (2 for each word of the request a use_when phrase has, 1 for each one only the purpose has). |
+| `--json` |  | Print {version, request, threshold, recipes, blank, next, problems} (docs/assets/karni-recipes.schema.json). |
+
+#### `karni recipes show`
+
+Experimental. One recipe: what it is for, what people usually change, its files and spec.
+
+blank shows the blank start: karni.yaml with the version and the app's name, nothing else, where an app starts when no recipe fits.
+
+```
+karni recipes show [OPTIONS] NAME
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | A recipe, or blank for the blank start. |
+| `--json` |  | Print {version, request, threshold, recipes, blank, next, problems} (docs/assets/karni-recipes.schema.json). |

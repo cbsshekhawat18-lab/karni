@@ -1,0 +1,16 @@
+name = "lms"
+title = "Online courses"
+purpose = "Courses with lessons in order, enrolments and a student's progress."
+use_when = [
+    "online courses",
+    "learning platform",
+    "e-learning",
+    "lessons",
+    "students and instructors",
+    "teach a course",
+]
+usually_changed = [
+    "the course and lesson fields",
+    "who may enrol (anyone signed in, or staff only)",
+    "whether lessons are open to everyone signed in",
+]

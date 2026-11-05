@@ -16,7 +16,10 @@ settings reference (packages/karni/karni/conf/reference.py and the base.py it
 reads -> karni_cli/_settings), which `karni explain <SETTING>` reads, and
 @karni/ui's token stylesheet (packages/karni-ui/src/styles.css ->
 karni_cli/_ui/styles.css), whose defaults `karni ui detect` lists when a
-project has neither @karni/ui installed nor a monorepo checkout.
+project has neither @karni/ui installed nor a monorepo checkout. And the
+module catalog (packages/karni/karni/catalog -> karni_cli/_catalog, with a
+copy of each module's karni.module.toml under _catalog/modules/), so
+`karni modules list` shows the modules a project has not installed.
 """
 
 from __future__ import annotations
@@ -54,6 +57,15 @@ class TemplateBundleHook(BuildHookInterface):
         self._bundle_karni(pkg_root, "agent", "_agent", "agent rules", build_data)
         self._bundle_karni(pkg_root, "changelog", "_changelog", "changelog", build_data)
         self._bundle_karni(pkg_root, "errorcodes", "_errorcodes", "error codes", build_data)
+        self._bundle_karni(pkg_root, "catalog", "_catalog", "module catalog", build_data)
+        manifests = sorted(pkg_root.parent.parent.glob("modules/*/karni_*/karni.module.toml"))
+        bundled_modules = pkg_root / "karni_cli" / "_catalog" / "modules"
+        if manifests:
+            bundled_modules.mkdir(parents=True, exist_ok=True)
+            for manifest in manifests:
+                shutil.copy2(manifest, bundled_modules / f"{manifest.parent.parent.name}.toml")
+        elif not bundled_modules.is_dir():
+            raise RuntimeError("No module manifests to bundle into karni_cli/_catalog/modules.")
         # karni.links (every published URL, stdlib only) rides inside the
         # errorcodes bundle: the registry loads it by path when karni is absent.
         links = pkg_root.parent / "karni" / "karni" / "links.py"

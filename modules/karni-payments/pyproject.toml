@@ -43,6 +43,11 @@ Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migratio
 stripe = ["stripe>=10"]
 razorpay = ["razorpay>=1.4"]
 
+# The catalog entry, karni_payments/karni.module.toml: `karni modules`, `karni add`
+# and `karni remove` read it.
+[project.entry-points."karni.modules"]
+payments = "karni_payments"
+
 # The module's settings fragment: karni_settings() merges these defaults for
 # every project that installs karni-payments (new top-level names only).
 [project.entry-points."karni.settings"]
@@ -63,11 +68,11 @@ dev = [
 packages = ["karni_payments"]
 # Pin the agent-guidance fragment into the wheel explicitly — `karni add`
 # reads it through importlib.resources after install.
-artifacts = ["karni_payments/AGENTS.fragment.md"]
+artifacts = ["karni_payments/AGENTS.fragment.md", "karni_payments/karni.module.toml"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["ui/", "tests/"]
-artifacts = ["karni_payments/AGENTS.fragment.md"]
+artifacts = ["karni_payments/AGENTS.fragment.md", "karni_payments/karni.module.toml"]
 
 [tool.ruff]
 target-version = "py312"

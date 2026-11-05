@@ -1,0 +1,17 @@
+name = "marketplace"
+title = "Marketplace"
+purpose = "Sellers list items, buyers order them, sellers get paid out after a fee."
+use_when = [
+    "marketplace",
+    "sellers and buyers",
+    "multi-vendor",
+    "vendors",
+    "commission",
+    "payouts",
+]
+usually_changed = [
+    "the listing fields",
+    "the fee (MARKETPLACE_FEE_PERCENT in config/settings.py)",
+    "the order states",
+    "the payment provider and the currency",
+]

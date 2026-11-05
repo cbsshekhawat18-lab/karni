@@ -320,3 +320,19 @@ def test_an_admin_user_who_cannot_open_the_changelist_proves_nothing(world: Worl
         assert_admin_row_hidden(world.alice, world.theirs)  # not staff
     message = str(caught.value)
     assert "E616" in message and "the user cannot open it" in message
+
+
+def test_an_exported_row_is_matched_by_its_exact_id_never_a_substring() -> None:
+    """A short integer id must not match ``15``, ``5.5`` or a count that equals it."""
+    from karni.testing.hidden import _names_key, _table_names_row
+
+    assert _names_key("5", 5) and _names_key("3|5|8", 5)
+    assert not any(_names_key(text, 5) for text in ("15", "51", "5.5", "-5", "v5", "x5y"))
+    headers = ["id", "title", "capacity"]
+    assert not _table_names_row(headers, [["15", "Gig", "5"]], 5, "id")  # the id column decides
+    assert _table_names_row(headers, [["15", "Gig", "5"], ["5", "Hidden", "0"]], 5, "id")
+    # Without an id column, a cell holding the id as a whole value counts.
+    assert _table_names_row(["title", "related"], [["Gig", "3|5"]], 5, "id")
+    assert not _table_names_row(["title", "related"], [["Gig", "35|57"]], 5, "id")
+    uuid_key = "8b0c8c1e-4a8e-4f53-9a38-0c3f0a0b6a11"
+    assert _table_names_row(["venue"], [[uuid_key]], uuid_key, "id")

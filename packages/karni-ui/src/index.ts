@@ -305,7 +305,51 @@ export type { PermissionHelpers } from "./auth/usePermission";
 export { createLocalStorageTokenStorage, createMemoryTokenStorage } from "./auth/storage";
 export type { TokenStorage } from "./auth/storage";
 
-export type { KarniUser, AuthStatus, LoginResult } from "./auth/types";
+export type {
+  KarniUser,
+  AuthStatus,
+  LoginResult,
+  OtpLoginResult,
+  OtpSendResult,
+  SocialLoginResult,
+  SocialSignInOptions,
+  AuthTerms,
+  TermsClientInfo,
+} from "./auth/types";
+
+// sign-in with an ID token (experimental)
+export { useSocialLogin } from "./auth/useSocialLogin";
+export type { SocialLoginStatus, UseSocialLoginResult } from "./auth/useSocialLogin";
+
+export { SocialButton, defaultSocialButtonSlots, describeSocialError } from "./auth/SocialButton";
+export type {
+  SocialButtonProps,
+  SocialButtonSlots,
+  SocialButtonErrorProps,
+  SocialButtonApprovalProps,
+  SocialIdToken,
+} from "./auth/SocialButton";
+
+// sign-in with a code sent by email (experimental)
+export { useOtpLogin } from "./auth/useOtpLogin";
+export type {
+  OtpLoginStatus,
+  OtpLoginStep,
+  UseOtpLoginOptions,
+  UseOtpLoginResult,
+} from "./auth/useOtpLogin";
+
+export { OtpLoginForm, defaultOtpLoginFormSlots, describeOtpError } from "./auth/OtpLoginForm";
+export type {
+  OtpLoginFormProps,
+  OtpLoginFormSlots,
+  OtpLoginFormErrorProps,
+  OtpLoginFormApprovalProps,
+} from "./auth/OtpLoginForm";
+
+// terms acceptance (experimental)
+export { TermsGate, defaultTermsGateSlots } from "./auth/TermsGate";
+export type { TermsGateProps, TermsGateSlots, TermsGatePanelProps } from "./auth/TermsGate";
 
 // support components
 export { Page, defaultPageSlots } from "./components/page/page";

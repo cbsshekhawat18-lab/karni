@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cbsshekhawat18-lab.github.io/karni/assets/karni-recipes.schema.json",
+  "title": "karni recipes list|show --json",
+  "description": "Experimental. The output of karni recipes list|show --json.",
+  "$defs": {
+    "_BlankOut": {
+      "additionalProperties": false,
+      "description": "The blank start: where an app starts when no recipe fits.",
+      "properties": {
+        "name": {
+          "const": "blank",
+          "description": "blank: karni recipes show blank.",
+          "type": "string"
+        },
+        "spec": {
+          "description": "karni.yaml with the version and the app's name, nothing else.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "spec"
+      ],
+      "type": "object"
+    },
+    "_RecipeOut": {
+      "additionalProperties": false,
+      "description": "One recipe.",
+      "properties": {
+        "name": {
+          "description": "The recipe's name: karni recipes show <name>.",
+          "type": "string"
+        },
+        "title": {
+          "description": "A short human name.",
+          "type": "string"
+        },
+        "purpose": {
+          "description": "What the app does, in one line.",
+          "type": "string"
+        },
+        "use_when": {
+          "description": "What someone asks for when it fits.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "usually_changed": {
+          "description": "What people usually change after starting.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "source": {
+          "description": "built in, or the entry point (karni.recipes) it comes from.",
+          "type": "string"
+        },
+        "files": {
+          "description": "Its own domain code, seeds and tests, at the paths they take in the project.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "spec": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Its karni.yaml (karni recipes show). null in a list."
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "With --match: 2 for each word of the request a use_when phrase has, 1 for each one only the purpose has. null without --match."
+        },
+        "matched": {
+          "description": "With --match: the words that scored.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "title",
+        "purpose",
+        "use_when",
+        "usually_changed",
+        "source",
+        "files",
+        "spec",
+        "score",
+        "matched"
+      ],
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1,
+      "description": "The version of this output: 1.",
+      "type": "integer"
+    },
+    "request": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The request given to --match. null otherwise."
+    },
+    "threshold": {
+      "description": "The lowest score --match returns.",
+      "type": "integer"
+    },
+    "recipes": {
+      "description": "Every recipe, the best few for the request (highest score first), or the one shown. Empty when none matches.",
+      "items": {
+        "$ref": "#/$defs/_RecipeOut"
+      },
+      "type": "array"
+    },
+    "blank": {
+      "$ref": "#/$defs/_BlankOut",
+      "description": "The blank start."
+    },
+    "next": {
+      "description": "What to do next.",
+      "type": "string"
+    },
+    "problems": {
+      "description": "Recipes left out because they cannot be used (C421), each with the reason.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "version",
+    "request",
+    "threshold",
+    "recipes",
+    "blank",
+    "next",
+    "problems"
+  ],
+  "type": "object"
+}

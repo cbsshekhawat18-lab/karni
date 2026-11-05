@@ -242,17 +242,17 @@ def test_ordering_by_a_hidden_field_is_ignored(staff: Any, member: Any) -> None:
     rich = _customer("Rich", salary=Decimal("9000.00"))
     poor = _customer("Poor", salary=Decimal("1.00"))  # newer: first by default
     default = [str(poor.pk), str(rich.pk)]
-    assert [row["id"] for row in _list(CustomerViewSet, member)] == default
-    assert [row["id"] for row in _list(CustomerViewSet, member, ordering="salary")] == default
-    assert [row["id"] for row in _list(CustomerViewSet, staff, ordering="salary")] == [
+    assert [str(row["id"]) for row in _list(CustomerViewSet, member)] == default
+    assert [str(row["id"]) for row in _list(CustomerViewSet, member, ordering="salary")] == default
+    assert [str(row["id"]) for row in _list(CustomerViewSet, staff, ordering="salary")] == [
         str(poor.pk),
         str(rich.pk),
     ]
-    assert [row["id"] for row in _list(CustomerViewSet, staff, ordering="-salary")] == [
+    assert [str(row["id"]) for row in _list(CustomerViewSet, staff, ordering="-salary")] == [
         str(rich.pk),
         str(poor.pk),
     ]
-    assert [row["id"] for row in _list(CustomerViewSet, member, ordering="name")] == [
+    assert [str(row["id"]) for row in _list(CustomerViewSet, member, ordering="name")] == [
         str(poor.pk),
         str(rich.pk),
     ]

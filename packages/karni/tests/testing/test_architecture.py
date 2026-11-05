@@ -173,6 +173,27 @@ def test_plain_model_flagged(monkeypatch) -> None:
     assert len(violations) == 1 and "Rogue" in violations[0].message
 
 
+@isolate_apps("tests.testapp")
+def test_an_integer_key_base_or_mixin_passes(monkeypatch) -> None:
+    from karni.models import BigIntBaseModel, IntegerKeyModel, TimestampedModel
+
+    class Reading(BigIntBaseModel):  # noqa: DJ008
+        class Meta:
+            app_label = "testapp"
+
+    class Tick(IntegerKeyModel, TimestampedModel):  # noqa: DJ008
+        class Meta:
+            app_label = "testapp"
+
+    class Bare(IntegerKeyModel):  # noqa: DJ008
+        class Meta:
+            app_label = "testapp"
+
+    cfg = SimpleNamespace(get_models=lambda: [Reading, Tick, Bare], name="testapp", label="testapp")
+    monkeypatch.setattr(architecture, "project_app_configs", lambda: [cfg])
+    assert architecture.check_model_base() == []
+
+
 # viewset-base
 
 

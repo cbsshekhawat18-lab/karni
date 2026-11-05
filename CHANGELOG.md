@@ -85,6 +85,341 @@ apply codemods and list the manual steps. This file is the human summary.
   design` puts the tag where the design's head tags were and gives the
   design's images their width and height and smaller WebP copies in a
   `srcset`. [docs/public-site.md](docs/public-site.md#seo-by-default).
+- **Five recipes, and `karni new --recipe` (experimental).** `shop`,
+  `booking`, `crm`, `lms` and `marketplace` ship in karni-cli. Each is a
+  `karni.yaml` that leaves no question open, with the modules and features
+  that suit it and demo volumes, plus the little domain code a spec cannot
+  express, with tests of its own: an order's total and checkout, a slot
+  that never takes more bookings than its capacity, a deal pipeline, a
+  course's completion for a student, a payout after a fee from a setting.
+  `karni new "<Name>" --recipe <name>` renders the project, writes the
+  recipe's spec with the project's name and runs `karni build`, which
+  writes the recipe's files over its own stubs before it migrates, seeds
+  with the recipe's seeders, runs the tests and `karni check`. Without an
+  interpreter or a database for the project it stops after the spec and
+  says to run `karni build`. A recipe's file replaces a stub only while it
+  is exactly what build wrote, else the build stops with `C441` and writes
+  nothing. `C420` now names the closest recipes, a recipe with a file where
+  karni build writes its own code is `C421`, and `C440` refuses `--recipe`
+  with `--design`, `--kind site` or `--no-staff-app`. `karni build` now
+  writes the settings block before the apps, so the test of a `Granted()`
+  entity acts as a role the spec declares. A new `recipes` CI job builds
+  each recipe from scratch. [docs/recipes/index.md](docs/recipes/index.md).
+- **The /new-app flow (experimental): from a one-line request to a running
+  app.** A new procedure, `new-app`, takes an agent through the flow: a
+  recipe or the blank start (`karni recipes list --match`), the questions
+  of `karni plan --questions` and only those, `karni spec answer`, `karni
+  plan`, `karni build`, then only the domain logic that is left, in the
+  project's own files. `karni rules sync` renders it into every adapter: a
+  `/new-app` slash command for Claude Code, Cursor, Windsurf and Copilot,
+  and a line in AGENTS.md and the other instruction files for tools without
+  slash commands. A new rule, `K311`, says never to hand-write what
+  karni.yaml can express (`karni rules` grows by 19 tokens, to 603). The
+  welcome page's first prompt and the last lines of `karni new` are now
+  this flow: describe the app in one line, then `/new-app`. Run `karni
+  rules sync` in an existing project for the new command and rule.
+  [docs/agents.md](docs/agents.md#agents-the-new-app-flow).
+- **Recipes (experimental): `karni recipes list [--match "<request>"]` and
+  `karni recipes show <name>`.** A recipe is a folder with a `karni.yaml`, a
+  `recipe.toml` (name, title, purpose, `use_when`, `usually_changed`) and
+  optional files of its own. Karni's live in karni-cli, and others join
+  through the `karni.recipes` entry point group. `--match` ranks them by
+  plain word overlap with the request (2 for a `use_when` word, 1 for a
+  purpose word), with no language model, and when none scores 2 it names
+  the blank start: a karni.yaml with the version and the app's name. Five
+  recipes ship with it (above). `--json` follows the published
+  `docs/assets/karni-recipes.schema.json`, `recipe.toml` follows
+  `docs/assets/karni-recipe.schema.json`, and `C420` and `C421` are new.
+  [docs/app-spec.md](docs/app-spec.md#recipes).
+- **MCP tools for the flow (experimental).** `karni mcp` adds `recipes`,
+  `spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`,
+  each returning the JSON its command prints, as published in
+  `docs/assets/karni-mcp.schema.json`. `build` never forces or adopts a
+  Karni-owned file edited by hand: it returns `C273` with the three ways
+  on, for the user to choose. [docs/app-spec.md](docs/app-spec.md#mcp-tools).
+- **Clarifying questions (experimental): `karni plan --questions` and
+  `karni spec answer`.** Before `karni build`, `karni plan --questions
+  [--json] [--max N]` lists the few questions to ask the user, at most 5
+  by default, decided by fixed rules over `karni.yaml` and the module
+  manifests, never by a language model: an entity related to the user
+  without `owner`, an entity without `access` (the `--access` presets that
+  fit it), roles without a `default` for sign-ups, no `app.kind`, and each
+  unanswered ask of a listed module or of a feature the spec turns on.
+  The data model and access come first, then the kind and the modules,
+  then the features, and the same spec always gives the same questions.
+  Each has a stable id, one sentence, its options, a default and the key it
+  sets. `karni spec answer <id> <value>` writes the answer into karni.yaml
+  and keeps every other line, comments included. An unknown id (`C400`), a
+  value the question does not take (`C401`) and an answer that cannot be
+  written cleanly (`C402`) are refused. It reads only the spec, so it works
+  before the project exists. `--json` follows the published
+  `docs/assets/karni-questions.schema.json`. A new agent rule, `K310`,
+  tells agents to ask only these questions before `karni build`.
+  [docs/app-spec.md](docs/app-spec.md#questions).
+- **`karni build` (experimental): the spec applied in one command,
+  idempotently, without touching hand-written code.** `karni build
+  [--spec karni.yaml] [--dry-run] [--allow-destructive] [--json] [--force]
+  [--adopt <file>...]` computes `karni plan`, refuses risky changes without
+  `--allow-destructive` (`C270`), a key type switch (`C272`) and a module
+  removal (`C271`), checks that no Karni-owned file was edited by hand
+  (`C273`), then runs `karni add` for new modules, writes the files,
+  `manage.py karni_makemigrations`, migrate, seed (only the tables it
+  created, only while empty), `karni types`, `karni test` and `karni check`.
+  It stops at the first failure with its code (`C270` to `C285`), and the
+  next run continues from there. A second run with no change writes
+  nothing. Karni's code lives in files of its own (`<app>/karni/models.py`
+  as abstract classes, `api.py` as viewset bases, `seeds.py`,
+  `<app>/tests/karni/`, `frontend/src/pages/karni/`, and the `karni:spec`
+  blocks of `config/settings.py` and `routes.tsx`), fingerprinted in
+  `.karni/build.json`. The project's `models.py`, `viewsets.py` and
+  `seeds.py` hold a subclass per entity, created once. `--force` keeps a
+  `.orig` copy, and `--adopt` hands a file to the project. `--json` follows
+  the published `docs/assets/karni-build.schema.json`.
+  [docs/app-spec.md](docs/app-spec.md#karni-build).
+- **`manage.py karni_makemigrations` (experimental).** Django's
+  `makemigrations` without questions, with the renames written first as
+  `RenameModel` and `RenameField` (so the data stays when the type changes
+  too), and a required field added to an empty table without a one-off
+  value.
+- **`karni plan` marks what karni build manages.** Each change gains
+  `managed` (and the summary `not_managed`): a change on a model, viewset
+  or page the project wrote by hand is printed `(not managed)`. `access:
+  code` now matches any access the project declares, the planned API tests
+  are `<app>/tests/karni/test_<entity>.py` (none for an external entity or
+  one on another database), and a module option at its default no longer
+  shows as a change. A page of kind `code` (`- reports: code`) is a page of
+  the project's own, and `karni spec export` writes one so.
+- **`karni make test` checks isolation only where reads are owned.** An
+  `Owned(...)` in `write=` alone no longer gives `assert_isolated`, and a
+  role the read rule admits outright (`HasRole("staff")` next to
+  `Owned(...)`) no longer runs it: the check acts as a signed-in user. Both
+  generated tests failed with `E605` before.
+- **The query-scaling rule measures a model on another database there**
+  (`Karni.database`), instead of failing on the test database's guard.
+- **The module catalog and `karni remove` (experimental).** Every module
+  describes itself in `karni.module.toml` inside its package, found through
+  the new `karni.modules` entry point group, and every built-in feature
+  (`two_factor`, `email_code_login`, `social_login`, `terms`, `api_cache`)
+  has a manifest in `karni/catalog/features/`: purpose, what it provides
+  (models, endpoints, pages, settings with their types), the questions to
+  ask (each mapped to a setting, with options and a default), requires,
+  conflicts, services, status and, for a module, the wiring `karni add`
+  performs. `karni.catalog` parses and checks them. `karni modules list
+  [--json]` and `karni modules show <name> [--json]` print the catalog,
+  installed or not (karni-cli bundles a copy of each of Karni's manifests),
+  and `karni context` prints a `CATALOG:` line per module and feature with
+  whether the project has it (the backend adds a `FEATURES:` line). `karni
+  add` reads the manifest for what it wires, with the same result for
+  Karni's four modules: the URL include it prints comes from the manifest
+  (none for approvals), and it adds the extras and the services the module
+  needs, and refuses a module that conflicts with one the project has
+  (`C315`). The new `karni remove <name> [--dry-run] [--keep-tables]` takes
+  out what `karni add` wired, byte for byte, refuses while another module
+  requires it (`C316`), and never drops data: it counts each table's rows
+  through `manage.py karni_rows` and, while a table exists, stops with the
+  `karni migrate <app> zero` command to run deliberately first (`C319`).
+  The app spec reads its modules, their options, its features and the
+  social sign-in providers from the catalog, replacing A1's hand-made
+  table, and `karni spec validate` checks requires and conflicts (`C324`).
+  `karni.testing.assert_module_manifest` checks a module's manifest against
+  its entry point, settings fragment and models, and `karni make module`
+  writes a manifest with that test. Rule K307 and the add-module procedure
+  point agents at the catalog. New codes `C313` to `C319`, `C324` and `E310`.
+  [docs/modules.md](docs/modules.md#the-module-catalog).
+
+- **`karni plan` (experimental): what `karni build` would change, writing
+  nothing.** `karni plan [--spec karni.yaml] [--json] [--offline]` validates
+  the spec, reads the project the way `karni spec export` does, compares
+  both in the spec's normal form and prints one line per change, grouped by
+  area (app, modules, features, roles, apps, entities, fields, access, pages,
+  migrations, seed, tests), with `+`, `~`, `-` and `!` for a risky change and
+  a summary line. Risky changes (a field or entity removed, a type changed,
+  a shorter length, a field that becomes required, a relation pointed
+  elsewhere, a module removed, a key type switched, an entity moved to
+  another database, access or a grant widened) name the rows they affect,
+  counted by the new `manage.py karni_rows` (`karni.facts.count_rows`, only
+  `SELECT COUNT`), and `karni build` will refuse them without
+  `--allow-destructive`. `--json` follows the published
+  `docs/assets/karni-plan.schema.json`. `C250` when the project cannot be
+  read. [docs/app-spec.md](docs/app-spec.md#karni-plan).
+- **The app spec's `pk`, `external`, `table`, `writable`, `database` and
+  `was` (experimental).** The entity keys reserved by `C224` are keys now:
+  `pk: uuid|bigint` (default: the project's `KARNI_PK`), `external: true`
+  with `table` and `writable`, and `database: <alias>`. `was: <old name>` on
+  an entity, or on a field written as `{type, was}`, makes a rename explicit
+  and keeps the data. New codes `C251` to `C254` check them, `karni spec
+  export` writes them back (a model on `BigIntBaseModel`, an external model,
+  a model Karni manages on another database), and `manage.py karni_facts`
+  adds each model's key type, table and `managed`, the database aliases and
+  `KARNI_PK`. Its `base_model` is now true for `BigIntBaseModel` too, and
+  the fields of Karni's model mixins are left out of every model's
+  `fields`, not only of `BaseModel`'s.
+- **The app spec, `karni.yaml` (experimental).** One small file describes an
+  app in the terms `karni make`, `karni add` and the settings already use:
+  `app` (name, kind), `modules` (each with its settings as options),
+  `features` (`two_factor`, `email_code_login`, `social_login`, `terms`),
+  `roles` (`KARNI_ROLES` with Karni's scopes, and `default` for
+  `KARNI_ACCOUNTS_DEFAULT_ROLES`), `apps` with their entities (fields in
+  `karni make model`'s syntax, `key`, `search`, `owner`, `audit`, `groups`,
+  `order`, `scope_paths`, and `access` in Karni's `Access` vocabulary, or
+  `access: code`), `pages` and `seed`. Unknown keys are errors, keys that
+  start with `x-` are kept and ignored, and the keys of later features are
+  reserved. `karni spec validate [--spec karni.yaml] [--json]` reports every
+  problem with its code (`C210` to `C246`), line, path and fix, checking each
+  field with the generator's own parser and every reference between the
+  parts. `karni spec export [-o karni.yaml]` writes the spec of an existing
+  project from its models, viewsets, settings, modules, seeders and frontend
+  routes, lists what the spec cannot express, and starts the file with the
+  `yaml-language-server` line naming the JSON Schema, published as
+  `docs/assets/karni-spec.schema.json`. The backend side is the new
+  `manage.py karni_facts` (`karni.facts`). karni-cli now depends on Pydantic
+  2, which Karni already requires. `karni make model`'s field rendering is one
+  function per field (`render_field`), with no change to what it writes.
+  [docs/app-spec.md](docs/app-spec.md).
+- **Experimental names: a tier of the stability promise.** A new public name
+  may ship as experimental first: marked `Experimental.` in its docstring, by
+  an *Experimental* note in its docs and by *Experimental tier* in the
+  reference. It may change or be removed in a minor release without the
+  deprecation cycle, each change noted here and in the migration notes, and
+  it becomes stable once a reference application uses it. Error codes stay
+  permanent. [docs/stability.md](docs/stability.md#experimental-names).
+- **Sign in with a Google, Microsoft or Apple ID token (experimental).** A
+  mobile app or a single-page app posts the ID token its provider's SDK
+  returned to `POST api/auth/social/<provider>/` and gets what `login/`
+  gives: a token pair in JWT mode, a session in session mode, or the 2FA
+  gate. Karni verifies the token offline against the provider's key set
+  (cached, fetched again on a rotated key at most once a minute), with the
+  audience among the configured client ids, the issuer (Microsoft's per
+  tenant, with a `tenants` allowlist), the expiry and the nonce (raw or
+  SHA-256). Providers are small classes a project can add to or replace
+  (`IdTokenProvider`). `KARNI_SOCIAL_TOKEN_SIGNUP` (`open`, `approval` for
+  accounts an administrator activates, or `existing`) and
+  `KARNI_SOCIAL_TOKEN_LINK_VERIFIED` decide who gets in. Linked identities
+  live in the new `SocialIdentity` model (run `karni migrate`), shown
+  read-only in the admin, and a link survives an email change. A Microsoft
+  address counts as verified only with the `xms_edov` claim or a tenant in
+  `trusted_tenants`. Each refusal has a code, `E215` to `E227`, and the
+  endpoint its own throttle scope, `auth.social`. Needs `pip install
+  'karni[social-token]'` (`E509` without it). It works in both modes and does
+  not need `KARNI_SOCIAL_AUTH`, which stays session-only. `@karni/ui` adds
+  `useSocialLogin(provider)` and `SocialButton` (the app's own provider SDK
+  supplies the token: Karni bundles none).
+  [docs/accounts.md](docs/accounts.md#sign-in-with-an-id-token-google-microsoft-apple).
+- **Sign in with a code sent by email (experimental).** With
+  `KARNI_EMAIL_OTP = True`, `POST api/auth/otp/send/ {"email"}` emails a
+  numeric code and `POST api/auth/otp/verify/ {"email", "code"}` answers what
+  `login/` gives: a token pair in JWT mode, a session in session mode, or the
+  2FA gate. No password is involved. The send answer is the same 200 for
+  every address, and every failure of a code is the same `E235`, so neither
+  reveals whether an address has an account. Codes come from `secrets`, are
+  stored only as an HMAC-SHA256 keyed by `SECRET_KEY` in the new `LoginCode`
+  model (run `karni migrate`), and die after one use, `KARNI_EMAIL_OTP_TTL`
+  (600 seconds) or `KARNI_EMAIL_OTP_MAX_ATTEMPTS` wrong guesses (5). A new
+  code replaces the old one. `KARNI_EMAIL_OTP_SIGNUP` takes the same three
+  policies as sign-in with an ID token (`open`, `approval` with `E224`,
+  `existing`), an inactive account answers `E226`, and the routes answer
+  `E236` once the setting is off. New throttle scopes: `auth.otp_send` (per
+  IP), `auth.otp_send_email` (per address) and `auth.otp_verify`. The email
+  is the `login_code` template through `KARNI_ACCOUNTS_EMAIL_BACKEND`, and an
+  hourly schedule, `karni-flush-login-codes`, deletes expired codes. A code,
+  like an ID token, now also verifies an account's address, and an account
+  never verified loses its password (`karni.accounts.services.prove_address`).
+  `@karni/ui` adds `useOtpLogin()`, `OtpLoginForm` and `LoginForm`'s
+  `codeSignIn` switch.
+  [docs/accounts.md](docs/accounts.md#sign-in-with-a-code-sent-by-email).
+- **A versioned terms acceptance gate (experimental).** With `KARNI_TERMS =
+  {"version": "2026-11", "url": "/terms/", "required": True}`, every
+  signed-in user must accept that version before using the API: until they
+  do, every request under `KARNI_TERMS["paths"]` (default `["/api/"]`)
+  answers 403 `E245` with the version and the url. Staff and superusers are
+  gated too. The auth mount (`login/`, `refresh/`, `me/` and the rest), the
+  OpenAPI schema and `KARNI_TERMS["exempt"]` stay open, anonymous requests
+  pass to the view, and the admin and a public site are not under `/api/`.
+  `GET api/auth/terms/` answers the terms and whether the user accepted them,
+  `POST api/auth/terms/accept/ {"version", "client"?}` records the acceptance
+  with the IP (read like the throttles, honouring `NUM_PROXIES`), the user
+  agent and the app's own `client` object, and another version is refused
+  with `E246`. `me/` (and so `login/`) carries `terms` while the setting is
+  set, and is unchanged otherwise. The record is the new append-only
+  `TermsAcceptance` model (run `karni migrate`): rewriting a row raises
+  `E247`, and the admin lists it read-only with a filter by version and an
+  export. The gate is `karni.accounts.terms.TermsGateMiddleware`, which
+  `karni_settings()` lists after authentication and which leaves the chain at
+  startup unless the setting requires acceptance. Its answer is cached per
+  (user, version), so a gated request costs no query after the first, and a
+  new version makes everyone accept again. `karni.E248` reports a gate
+  missing from `MIDDLEWARE`, `E249` the routes once the setting is unset.
+  `@karni/ui` adds `TermsGate` and `useAuth()`'s `terms`, `termsRequired`
+  (from `/me/` and from the gate's 403 on any request, through the client's
+  new `onError` hook) and `acceptTerms(client)`.
+  [docs/accounts.md](docs/accounts.md#terms-acceptance).
+- **Integer primary keys, next to UUIDs (experimental).** `BigIntBaseModel`
+  is `BaseModel` on a 64-bit integer key (`BigAutoField`), with the same
+  timestamps, soft delete, audit users, guards, managers and `pre_write`.
+  Both bases share one private core, so they never drift. The key type is in
+  each model's class line, so one project mixes both, and Karni's own models
+  and the modules keep their UUIDs and their migrations. `IntegerKeyModel`
+  is the mixin on its own. `karni make model --pk bigint|uuid` picks it per
+  model, and `KARNI_PK = "bigint"` in `config/settings.py` makes it the
+  default. A project's own user model can redeclare `id` as a `BigAutoField`
+  on `AbstractKarniUser`: login, JWT and session mode, `me/`, roles, 2FA,
+  sign-in with an ID token or a code and the terms gate work with it.
+  Integer keys can be guessed: `karni.W530` warns for a resource on integer
+  keys that anyone may read (fix: a UUID key or a slug lookup; silence one
+  viewset with `# karni: allow(public-integer-key): <reason>`). Ids stay JSON
+  numbers. `karni context` prints each model's key type on a `KEYS:` line.
+  `karni seed --reset` restarts the sequences it wipes, so the same seed gives
+  the same integer ids. [docs/models.md](docs/models.md#choosing-the-key-type).
+- **The primary key is no longer a derived filter.** `?id=`, `?id__gte=` and
+  `?id__lte=` are not derived any more, for either key type. Declare them in
+  `filterset_fields` where clients need them. A relation to an integer-keyed
+  model filters with the new `IntegerFilter`, which refuses `1.5`.
+  [Migration note](docs/migrations/0.5.md#the-primary-key-is-no-longer-a-derived-filter).
+- **Imports match ids only when asked.** An upload's `id` column matches
+  existing rows only with the new `match_ids` option, so an export from one
+  environment cannot update unrelated rows in another, and `keep_ids` creates
+  rows with the file's ids (legacy data, for a role that may create rows
+  anywhere), then moves the PostgreSQL sequence past them. `karni load` moves
+  the sequence after writing integer ids too. A relation cell names a target
+  with a natural key by that key alone, so a numeric natural key is never
+  read as an id. A row outside the scope reads "not found or not in your
+  scope", whether it exists or not. The admin's map step has both options.
+  Migration `karni_transfer.0002_importjob_id_options`.
+  [docs/import-export.md](docs/import-export.md#ids).
+- **Smaller fixes for integer keys.** `assert_row_hidden`'s export checks
+  match an id exactly, never as a substring. `check_schema` probes a detail
+  URL a numeric `lookup_value_regex` accepts. `karni replay` refuses (`E924`)
+  when the captured id now belongs to another email. Ids show without
+  thousands separators in `ResourceDetail` and `ResourceTable`. A capacity,
+  overlap or state error on an unsaved row no longer names `None` as its id.
+- **External tables, SQL views and a second database (experimental).** A
+  model over a table or view another system owns declares `class Karni:
+  external = True` with `Meta.managed = False`, on plain `models.Model`: the
+  `model-base` rule accepts it, Karni runs no DDL for it, its viewset answers
+  every write and the import endpoints with 405 (and the OpenAPI document
+  leaves them out), its admin is read-only, it keeps no change history, and
+  seeding and the query-scaling check skip it. `writable = True` lets the API
+  and the admin write it, with a primary key the database does not generate
+  sent on create. Access, role grants, row scope and field roles work as on
+  any model, and a PostgreSQL table in another schema is `db_table =
+  'reporting"."sales'`. `class Karni: database = "<alias>"` routes a model's
+  reads, writes and migrations to that alias through `karni.db.DatabaseRouter`,
+  which `karni_settings()` appends to `DATABASE_ROUTERS` after the project's
+  own routers. On such an alias only the models routed there migrate, and
+  relations across aliases are refused. Startup checks: `E270`, `E271`,
+  `E275`, `E276`, `W541`, `W542`. `karni check` compares each external model
+  with its table or view where the database answers: `E272` to `E274`, and
+  `W540` when it does not answer. Karni's pytest plugin creates the tables of
+  external models (and their PostgreSQL schema) in each test database
+  (`--karni-external-tables=off` turns it off), and `assert_crud` checks a
+  read-only model's refusals by itself (`read_only=`). `karni make model
+  <Name> --external --table <[schema.]table> [--database <alias>]
+  [--writable]` writes the model from the table's columns with Django's
+  `inspectdb` machinery (`manage.py karni_inspect`), and its viewset (`C140`
+  to `C142`). Generated factories now give a primary key the model does not
+  generate a distinct value per row, and the role sync after `migrate` skips
+  a database the role tables are not routed to.
+  [docs/models.md](docs/models.md#external-tables-views-and-a-second-database).
 - **The admin is light only by default.** `KARNI_ADMIN_THEME` (default
   `"light"`) pins unfold's light palette and hides its light / dark / system
   switch, read on every request. `"auto"` brings the switch back and

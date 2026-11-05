@@ -127,6 +127,22 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/.github/ci
         run: python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
 
+      # Integer keys (BigIntBaseModel, experimental): the core suite once more
+      # with the test app's API models on integer keys (KARNI_TEST_PK=bigint),
+      # on sqlite and on PostgreSQL. One Python is enough: the key type, not
+      # the interpreter, is what changes.
+      - name: Test packages/karni with integer keys (sqlite, then PostgreSQL 16)
+        if: matrix.python == '3.12'
+        working-directory: packages/karni
+        env:
+          KARNI_TEST_PK: bigint
+          KARNI_REQUIRE_MODULES: "1"
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/karni
+          PYTHONPATH: ${{ github.workspace }}/.github/ci
+        run: |
+          python -m pytest -q -ra
+          python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
+
       # The modules' suites pin sqlite the same way, and the same overlay
       # serves them: it imports the working directory's tests.settings.
       # karni-approvals and karni-impersonation have an unmigrated
@@ -247,6 +263,44 @@ jobs:
         run: |
           python .github/ci/quickstart.py \
             --install "pip install -q -e ${{ github.workspace }}/packages/karni -e ${{ github.workspace }}/packages/karni-cli pytest pytest-django"
+
+  # ---------------------------------------------------------------------------
+  # Recipes (docs/recipes/): each built-in recipe built from scratch, so none
+  # rots. `karni new --recipe <name>` with this checkout's packages, then the
+  # build it runs: the module, the models, the recipe's own files, the
+  # migrations, the demo data, the project's tests and `karni check`, on
+  # SQLite with a local-memory cache (tests/test_recipe_builds.py).
+  # ---------------------------------------------------------------------------
+  recipes:
+    name: Recipe ${{ matrix.recipe }} (karni new --recipe, built from scratch)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        recipe: [shop, booking, crm, lms, marketplace]
+    env:
+      PYTHON: python
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      # every module installed: a recipe test that needs one fails instead of skipping
+      KARNI_REQUIRE_MODULES: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/karni/pyproject.toml
+            packages/karni-cli/pyproject.toml
+            modules/karni-payments/pyproject.toml
+            modules/karni-approvals/pyproject.toml
+            modules/karni-impersonation/pyproject.toml
+            modules/karni-site/pyproject.toml
+      - name: Install Karni and its modules from this checkout (editable)
+        run: make install-py
+      - name: karni new --recipe ${{ matrix.recipe }}, its tests and karni check
+        working-directory: packages/karni-cli
+        run: python -m pytest -q -p no:cacheprovider -m recipes -k ${{ matrix.recipe }} tests/test_recipe_builds.py
 
   # ---------------------------------------------------------------------------
   # The documentation site (Material for MkDocs): built strictly on every

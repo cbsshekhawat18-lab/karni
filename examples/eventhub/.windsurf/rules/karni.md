@@ -16,14 +16,16 @@ framework, and a React 18 + TypeScript app in `frontend/` on @karni/ui. Screens 
 Before any work, run these two commands and follow what they return:
 
 1. `karni context` prints the live inventory: apps, models, viewsets, UI components,
-   hooks, pages and installed modules.
+   hooks, pages, and every Karni module and built-in feature with whether the
+   project has it (details: `karni modules show <name>`).
 2. `karni rules` prints the conventions, each with a stable code (K###, or P### for
    the project's own).
 
 While you work:
 
 - Run `karni rules --check <file>` on every file you write and fix each violation it prints.
-- Use `karni rules --procedure <name>` for routine tasks: new-model, new-page, add-module, new-module, site-from-design.
+- Use `karni rules --procedure <name>` for routine tasks: new-model, new-page, add-module, new-module, site-from-design, new-app.
+- To build an app from a one-line request, run `/new-app <the request>` where your tool has slash commands, else follow `karni rules --procedure new-app`: karni.yaml first, then `karni build` (rule K311).
 - Run `karni check` before committing. Every enforced rule fails the build.
 
 If the `karni` command is unavailable, say so and stop. Do not guess the conventions.

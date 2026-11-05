@@ -230,6 +230,8 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 |---|---|
 | [`karni new`](docs/REFERENCE.md#karni-new) | Create a project: a public website, an app, or both |
 | [`karni add`](docs/REFERENCE.md#karni-add) | Install an optional module and wire it into settings |
+| [`karni remove`](docs/REFERENCE.md#karni-remove) | Take a module out again: what karni add wired, never its data |
+| [`karni modules`](docs/REFERENCE.md#karni-modules) | The module catalog (experimental): every module and built-in feature, added or not, with what it provides and the questions to ask (list, show): [list](docs/REFERENCE.md#karni-modules-list), [show](docs/REFERENCE.md#karni-modules-show) |
 | [`karni upgrade`](docs/REFERENCE.md#karni-upgrade) | Upgrade across Karni versions: codemods, diff, manual-change report |
 | [`karni doctor`](docs/REFERENCE.md#karni-doctor) | Report the environment: project, interpreter, Node, adapters, history |
 | [`karni config`](docs/REFERENCE.md#karni-config) | Read and write Karni settings in the project's .karni/config.toml (committed) or, with --global, in ~/.config/karni/config.toml: [get](docs/REFERENCE.md#karni-config-get), [set](docs/REFERENCE.md#karni-config-set), [list](docs/REFERENCE.md#karni-config-list) |
@@ -239,7 +241,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni check`](docs/REFERENCE.md#karni-check) | Run architecture and system checks |
 | [`karni explain`](docs/REFERENCE.md#karni-explain) | Explain an error code (E104, C101, PAY004, K106), or a pasted traceback or log line (karni explain -): class, cause, where, fix |
 | [`karni types`](docs/REFERENCE.md#karni-types) | Generate TS types and typed hooks from the backend OpenAPI |
-| [`karni mcp`](docs/REFERENCE.md#karni-mcp) | Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp]) |
+| [`karni mcp`](docs/REFERENCE.md#karni-mcp) | Serve context, rules, check, the debugging tools and the app-builder flow (recipes, questions, answer, plan, build) as MCP tools (needs karni-cli[mcp]) |
 | [`karni queries`](docs/REFERENCE.md#karni-queries) | Run one endpoint in-process as a user and report its queries |
 | [`karni serve`](docs/REFERENCE.md#karni-serve) | Start the dev stack |
 | [`karni migrate`](docs/REFERENCE.md#karni-migrate) | Apply migrations |
@@ -260,8 +262,12 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni make`](docs/REFERENCE.md#karni-make) | Generate project code: apps, models, viewsets, tasks, schedules, listeners, pages: [app](docs/REFERENCE.md#karni-make-app), [model](docs/REFERENCE.md#karni-make-model), [viewset](docs/REFERENCE.md#karni-make-viewset), [serializer](docs/REFERENCE.md#karni-make-serializer), [migration](docs/REFERENCE.md#karni-make-migration), [test](docs/REFERENCE.md#karni-make-test), [factory](docs/REFERENCE.md#karni-make-factory), [seeder](docs/REFERENCE.md#karni-make-seeder), [task](docs/REFERENCE.md#karni-make-task), [schedule](docs/REFERENCE.md#karni-make-schedule), [event](docs/REFERENCE.md#karni-make-event), [listener](docs/REFERENCE.md#karni-make-listener), [command](docs/REFERENCE.md#karni-make-command), [service](docs/REFERENCE.md#karni-make-service), [middleware](docs/REFERENCE.md#karni-make-middleware), [page](docs/REFERENCE.md#karni-make-page), [component](docs/REFERENCE.md#karni-make-component), [site](docs/REFERENCE.md#karni-make-site), [view](docs/REFERENCE.md#karni-make-view), [deploy](docs/REFERENCE.md#karni-make-deploy), [form](docs/REFERENCE.md#karni-make-form), [module](docs/REFERENCE.md#karni-make-module) |
 | [`karni import`](docs/REFERENCE.md#karni-import) | Import a designer's files into the project: [design](docs/REFERENCE.md#karni-import-design) |
 | [`karni design`](docs/REFERENCE.md#karni-design) | Read a designer's pages: the models their content needs, and the content itself: [analyze](docs/REFERENCE.md#karni-design-analyze), [extract](docs/REFERENCE.md#karni-design-extract) |
+| [`karni spec`](docs/REFERENCE.md#karni-spec) | The app spec, karni.yaml (experimental): check it (validate), write it from an existing project (export), or answer a question of karni plan --questions (answer): [validate](docs/REFERENCE.md#karni-spec-validate), [export](docs/REFERENCE.md#karni-spec-export), [answer](docs/REFERENCE.md#karni-spec-answer) |
+| [`karni plan`](docs/REFERENCE.md#karni-plan) | Compare karni.yaml with the project: what karni build would change |
+| [`karni build`](docs/REFERENCE.md#karni-build) | Make the project match karni.yaml, without touching hand-written code |
 | [`karni trace`](docs/REFERENCE.md#karni-trace) | Follow a captured request: its tasks, retries, email, webhooks, audit |
 | [`karni replay`](docs/REFERENCE.md#karni-replay) | Re-run a captured request against the current code, as any user |
+| [`karni recipes`](docs/REFERENCE.md#karni-recipes) | Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show): [list](docs/REFERENCE.md#karni-recipes-list), [show](docs/REFERENCE.md#karni-recipes-show) |
 <!-- /generated:commands -->
 
 </details>
@@ -277,15 +283,17 @@ Project models inherit `karni.models.BaseModel`. Optional settings for Karni's l
 
 <!-- generated:models -->
 - `stable` `BaseModel`: UUID key, created and updated timestamps, soft delete, `created_by` and `updated_by`
+- `experimental` `BigIntBaseModel`: the same base on a 64-bit integer key, chosen per model (`karni make model --pk bigint`, `KARNI_PK`), with legacy ids in imports and `karni load`, and `karni.W530` for a public resource. Experimental tier
 - `stable` Realistic, connected seed data (`karni seed`, `<app>/seeds.py`)
 - `experimental` Real content from a JSON or YAML file, created or updated by natural key (`karni load`)
 - `experimental` Models and real rows from a designer's pages: the repeated content, its fields and relations (`karni design analyze`, `karni design extract`)
 - `stable` Model events and listeners, optionally queued to Celery (`@on_updated`)
 - `stable` Field-level change history (`class Karni: audit = True`)
 - `experimental` Scheduled tasks (`<app>/schedules.py`, `karni schedule`)
+- `experimental` External tables, SQL views and a second database as models Karni reads (`class Karni: external`, `writable`, `database`, `karni make model --external`). Experimental tier
 - `planned` A tenant scope on every model (the `karni-tenancy` module)
 
-Base classes: `AuditedModel`, `BaseModel`, `GuardedModel`, `SoftDeleteModel`, `TimestampedModel`, `UUIDModel`.
+Base classes: `AuditedModel`, `BaseModel`, `BigIntBaseModel`, `GuardedModel`, `IntegerKeyModel`, `SoftDeleteModel`, `TimestampedModel`, `UUIDModel`.
 <!-- /generated:models -->
 
 Full reference: [base classes](docs/REFERENCE.md#base-classes) and [`class Karni` keys](docs/REFERENCE.md#model-metadata-class-karni).
@@ -303,6 +311,9 @@ A viewset declares `model` and `access`. Everything else has a default you can o
 - `stable` CSV and XLSX export of any list (`/export/?format=`)
 - `stable` Import from CSV or XLSX with a mandatory preview (`/import/`)
 - `experimental` Response caching per viewset (`Cache`, `Uncached`)
+- `experimental` Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier
+- `experimental` Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier
+- `experimental` A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier
 - `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
 
 Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
@@ -338,10 +349,13 @@ Full reference: [karni.admin](docs/REFERENCE.md#karniadmin).
 - `stable` Import screen with column mapping and preview (`ResourceImport`)
 - `stable` Page building blocks: `Page`, `Layout`, `Stat`, `Modal`, `Toaster`, `EmptyState`
 - `experimental` `ChangeHistory`, `DataChart` and `FileUpload`
+- `experimental` `SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own SDK. Experimental tier
+- `experimental` `OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as `LoginForm`'s `codeSignIn` switch. Experimental tier
+- `experimental` `TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once the user accepts the current terms. Experimental tier
 - `experimental` `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui components as Karni's primitives
 - `experimental` `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions
 
-59 components and 17 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`. The hooks are `useDelayedFlag`, `useOnlineStatus`, `useTheme`, `useKarniPrimitives`, `useUnsavedChangesGuard`, `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useKarniClient`, `useSchema`, `useAuth`, `usePermission`, `useToast`.
+62 components and 19 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`. The hooks are `useDelayedFlag`, `useOnlineStatus`, `useTheme`, `useKarniPrimitives`, `useUnsavedChangesGuard`, `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useKarniClient`, `useSchema`, `useAuth`, `usePermission`, `useSocialLogin`, `useOtpLogin`, `useToast`.
 <!-- /generated:ui -->
 
 Full reference: [components and hooks](docs/REFERENCE.md#components-and-hooks).
@@ -395,10 +409,16 @@ The same rule set produces every adapter file, so the tools never disagree.
 - `stable` Adapter files for every supported agent tool from one rule set (`karni rules sync`)
 - `stable` Slash commands for the routine tasks (`/new-model`, `/new-page`, …)
 - `experimental` `karni explain <code>`: why an error happens and the fix, offline
+- `experimental` The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` (every problem with its code and line), `karni spec export` (the spec of an existing project) and `karni plan` (what `karni build` would change, risky changes with their row counts). Experimental tier
+- `experimental` Clarifying questions: `karni plan --questions` lists the few gaps of `karni.yaml` worth asking the user (owners, access, the sign-up role, the kind, each module's and feature's asks), chosen by fixed rules, and `karni spec answer` writes an answer keeping the file's comments. Experimental tier
+- `experimental` `karni build`: the spec applied in one command, idempotently. Karni's code in files of its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and `karni check`. Experimental tier
+- `experimental` The module catalog: a manifest per module and built-in feature, `karni modules list` and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from the manifest and `karni remove`, which never drops data. Experimental tier
+- `experimental` The `/new-app` flow, from a one-line request to a running app: recipes (`karni recipes list --match`, `show`, the `karni.recipes` entry points, the blank start), the `new-app` procedure and rule K311 in every adapter, and the MCP tools `recipes`, `spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`, each returning JSON with a published schema. Experimental tier
+- `experimental` Five recipes, `shop`, `booking`, `crm`, `lms` and `marketplace`, and `karni new "<Name>" --recipe <name>`: the recipe's karni.yaml, then `karni build`, which writes the recipe's domain code, seeds and tests over its own stubs, never over the project's code, and runs the tests and `karni check`. Each is built from scratch in CI. Experimental tier
 - `experimental` `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it
 - `experimental` MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools
 
-Slash commands: `/new-model`, `/new-page`, `/add-module`, `/new-module`, `/site-from-design`.
+Slash commands: `/new-model`, `/new-page`, `/add-module`, `/new-module`, `/site-from-design`, `/new-app`.
 <!-- /generated:agents -->
 
 Full reference: [slash commands](docs/REFERENCE.md#slash-commands) and [agent rules](docs/REFERENCE.md#agent-rules-k).
@@ -418,7 +438,7 @@ Full reference: [slash commands](docs/REFERENCE.md#slash-commands) and [agent ru
 - `experimental` `assert_pages`: a public site's pages, their title, description, alt text and links, in one call
 - `stable` Architecture rules that fail the build (`karni check`, the ESLint preset)
 
-Helpers: `APITestCase`, `assert_admin_row_hidden`, `assert_crud`, `assert_isolated`, `assert_pages`, `assert_row_hidden`, `assert_schema_snapshot`, `client_as`, `load_content`, `query_budget`, `user_with_roles`.
+Helpers: `APITestCase`, `assert_admin_row_hidden`, `assert_crud`, `assert_isolated`, `assert_module_manifest`, `assert_pages`, `assert_row_hidden`, `assert_schema_snapshot`, `client_as`, `create_external_tables`, `load_content`, `query_budget`, `user_with_roles`.
 <!-- /generated:testing -->
 
 Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
@@ -429,19 +449,22 @@ Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
 An agent in a Karni project extends the framework instead of rewriting it:
 
 - **`karni context`** prints the project in a few lines: apps, models, viewsets, roles, components, hooks and pages.
-- **`karni rules`** prints the 44 conventions, each with a code, in 561 tokens (cl100k). `karni rules --check <file>` checks one file.
+- **`karni rules`** prints the 46 conventions, each with a code, in 603 tokens (cl100k). `karni rules --check <file>` checks one file.
 - **Adapter files.** `karni new` writes the file each tool reads, from one rule set: AGENTS.md, CLAUDE.md, Cursor, Copilot, Windsurf, Cline, Aider and Junie, plus slash commands such as `/new-model`.
-- **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools.
+- **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools, and the `/new-app` flow as `recipes`, `questions`, `answer`, `plan` and `build`.
 - **Your prompts, kept (optional).** [Gigai Chronicle](https://github.com/cbsshekhawat18-lab/gigai-chronicle) records every prompt you give an agent inside your repository, and `karni context --with-history <file>` reads it back to brief the next agent. It is MIT licensed, local-only, and made by Karni's author.
 
-When an agent writes a serializer or a raw `<table>` by hand, `karni check` fails the build and names the component to use. The first prompt, as a new project's welcome page shows it:
+When an agent writes a serializer or a raw `<table>` by hand, `karni check` fails the build and names the component to use. The first prompt, as a new project's welcome page shows it: describe the app in one line, and give it to the `/new-app` slash command.
 
 ```text
-You are working in the Karni project `ticket_shop`. Run `karni context` and
-`karni rules` first and follow them. Then add an Event model (title, starts_at)
-with its viewset and test using `karni make`, run `make migrate && karni types`,
-and run `karni check`. Never write serializers, routers, admin classes or
-permission checks by hand: Karni derives them.
+/new-app a booking app for a yoga studio, with online payments
+```
+
+The agent writes `karni.yaml`, asks you only the questions `karni plan --questions` lists, and runs `karni build`. In a tool without slash commands, the same flow is one prompt:
+
+```text
+You are working in the Karni project `ticket_shop`. Run `karni rules --procedure
+new-app` and follow every step for: <the app in one line>
 ```
 
 Karni works the same without any AI tool: nothing in it calls a language model, and every generator is a command you run. See [building with an agent](docs/guide/with-ai.md) and [without one](docs/guide/without-ai.md).

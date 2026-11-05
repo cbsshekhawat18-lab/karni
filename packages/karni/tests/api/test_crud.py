@@ -62,7 +62,7 @@ def test_list_returns_paginated_events(client: APIClient) -> None:
     response = client.get(reverse(LIST_URL))
     assert response.status_code == 200
     assert response.data["count"] == 2
-    assert {row["id"] for row in response.data["results"]} == {str(first.pk), str(second.pk)}
+    assert {str(row["id"]) for row in response.data["results"]} == {str(first.pk), str(second.pk)}
 
 
 def test_retrieve_serializes_every_api_field(client: APIClient) -> None:
@@ -71,7 +71,7 @@ def test_retrieve_serializes_every_api_field(client: APIClient) -> None:
     response = client.get(_detail_url(event.pk))
     assert response.status_code == 200
     data = response.data
-    assert data["id"] == str(event.pk)
+    assert str(data["id"]) == str(event.pk)
     assert data["title"] == "Show"
     assert data["description"] == "Loud."
     assert data["capacity"] == 100
@@ -192,7 +192,7 @@ def test_patch_cannot_move_read_only_fields(client: APIClient) -> None:
     event.refresh_from_db()
     assert event.created_at == original_created
     assert event.status == Event.Status.DRAFT
-    assert response.data["id"] == str(event.pk)
+    assert str(response.data["id"]) == str(event.pk)
 
 
 def test_delete(client: APIClient) -> None:

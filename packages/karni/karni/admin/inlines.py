@@ -44,6 +44,7 @@ from django.http import HttpRequest
 from unfold.admin import TabularInline
 
 from karni.admin.derive import admin_meta, password_field_names
+from karni.db import is_read_only
 from karni.exceptions import KarniImproperlyConfigured
 
 __all__ = ["KarniInlineMixin", "build_inline", "collect_inlines"]
@@ -162,4 +163,15 @@ def build_inline(model: type[models.Model], fk_name: str) -> type[TabularInline]
     passwords = password_field_names(model)
     if passwords:
         attrs["exclude"] = list(passwords)
+    if is_read_only(model):
+        # An external table Karni only reads (experimental): its rows show, none changes.
+        attrs.update(
+            has_add_permission=_refuse,
+            has_change_permission=_refuse,
+            has_delete_permission=_refuse,
+        )
     return type(f"{model.__name__}Inline", (KarniInlineMixin, TabularInline), attrs)
+
+
+def _refuse(self: Any, request: Any, obj: Any = None) -> bool:
+    return False

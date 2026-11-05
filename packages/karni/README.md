@@ -21,6 +21,7 @@ pip install 'karni[s3]'      # + S3-compatible storage (django-storages, boto3)
 pip install 'karni[images]'  # + thumbnailing (Pillow)
 pip install 'karni[sentry]'  # + Sentry (sentry-sdk)
 pip install 'karni[social]'  # + social login (django-allauth)
+pip install 'karni[social-token]'  # + sign-in with a Google, Microsoft or Apple ID token (experimental)
 pip install 'karni[2fa]'     # + TOTP two-factor auth (django-otp)
 ```
 

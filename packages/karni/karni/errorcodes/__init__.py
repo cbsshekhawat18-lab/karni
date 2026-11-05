@@ -22,7 +22,8 @@ accounts · ``E3xx`` admin · ``E4xx`` events, listeners, schedules, Celery ·
 why``, request ids, the development capture, ``karni trace``, ``karni replay``,
 ``karni queries``) · ``E96x``/``E97x`` typed fields and database guarantees
 (``karni.fields``) · ``E98x``/``W98x`` lifecycle and limited resources
-(``StateField``, capacity, ``no_overlap``).
+(``StateField``, capacity, ``no_overlap``) · ``E27x``/``W54x`` external
+tables, SQL views and a second database (``karni.db``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -774,6 +775,371 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "'workspace__members'`, or the scope path), teach the custom scope the new model, "
         "or narrow the grant's pattern so it does not cover the model.",
     ),
+    # E215-E227 sign-in with an ID token (karni.accounts.social_token, experimental)
+    _e(
+        "E215",
+        "The ID token is not valid",
+        "api",
+        "karni.accounts.social_token.verify_id_token (POST <auth>/social/<provider>/)",
+        "Karni verifies an ID token offline: a JWT signed with one of the provider's published "
+        "keys, with the algorithm the provider uses, carrying exp, iat, iss, aud and sub. A token "
+        "that is malformed, signed with another key or algorithm, missing one of those claims, or "
+        "issued in the future (iat or nbf past the leeway) proves nothing, so the answer is a 401.",
+        "Send the ID token itself (not the access token, and not the authorization code) exactly "
+        "as the provider's SDK returned it, and get a fresh one. A token issued in the future "
+        "means the server's clock is off: fix the clock, or raise KARNI_SOCIAL_TOKEN_LEEWAY.",
+    ),
+    _e(
+        "E216",
+        "The ID token was issued for another application",
+        "api",
+        "karni.accounts.social_token.verify_id_token",
+        "A token's aud claim names the client id it was issued to. Accepting a token issued to "
+        "another application would let any app that signs its users in with the same provider "
+        "sign them in here too, so aud must be one of the configured client ids (401).",
+        "Add the client id the app uses to KARNI_SOCIAL_TOKEN_PROVIDERS[<provider>]['client_ids']: "
+        "the web client id, and each iOS and Android client id (for Apple, the service id and "
+        "the bundle id).",
+    ),
+    _e(
+        "E217",
+        "The ID token comes from another issuer or tenant",
+        "api",
+        "karni.accounts.social_token.verify_id_token",
+        "Each provider has its own issuer: accounts.google.com, "
+        "https://appleid.apple.com, or for Microsoft "
+        "https://login.microsoftonline.com/<tenant id>/v2.0 with the token's own tid. A "
+        "Microsoft token from a tenant the 'tenants' setting does not allow is refused the same "
+        "way (401).",
+        "Check that the token comes from the provider of the URL it was posted to. For "
+        "Microsoft, request a v2.0 token and list its tenant (or 'common', 'organizations' or "
+        "'consumers') in KARNI_SOCIAL_TOKEN_PROVIDERS['microsoft']['tenants'].",
+    ),
+    _e(
+        "E218",
+        "The ID token has expired",
+        "api",
+        "karni.accounts.social_token.verify_id_token",
+        "ID tokens live minutes to an hour. Karni accepts one up to its exp claim plus "
+        "KARNI_SOCIAL_TOKEN_LEEWAY seconds (401 after that).",
+        "Get a fresh token from the provider's SDK right before posting it. Do not store ID "
+        "tokens for later.",
+    ),
+    _e(
+        "E219",
+        "The ID token's signing key is unknown",
+        "api",
+        "karni.accounts.social_token.signing_key",
+        "Karni looks the token's kid up in the provider's key set (JWKS), cached for "
+        "KARNI_SOCIAL_TOKEN_JWKS_TTL seconds. An unknown kid fetches the key set again, at most "
+        "once a minute per provider, so a rotated key works within a minute. A kid that is still "
+        "missing answers 401. A key set that cannot be fetched answers 503.",
+        "Send a token the provider issued recently. A 503 means the server cannot reach the "
+        "provider's JWKS URL: check its outbound network, or the fetcher named in "
+        "KARNI_SOCIAL_TOKEN_JWKS_FETCHER.",
+    ),
+    _e(
+        "E220",
+        "The ID token's nonce does not match",
+        "api",
+        "karni.accounts.social_token.verify_id_token",
+        "A nonce binds the token to one sign-in attempt, so a stolen token cannot be replayed. "
+        "When the request sends a nonce, the token's nonce claim must equal it, or its SHA-256 "
+        "hex digest (Apple's convention: the app passes the hash to Apple and the raw value to "
+        "Karni). A provider with 'require_nonce' refuses a request without one (401).",
+        "Post the nonce the app generated for this sign-in, the raw value. Generate a new one "
+        "for every attempt.",
+    ),
+    _e(
+        "E221",
+        "The ID token carries no email address",
+        "api",
+        "karni.accounts.social_token.sign_in",
+        "A token whose identity is not linked yet is matched to an account by its email. Without "
+        "an email claim (for Microsoft, email or an email-shaped preferred_username) there is "
+        "nothing to match or create (400).",
+        "Request the email scope. Apple sends the email only on the first sign-in of a user, so "
+        "that first answer must reach Karni.",
+    ),
+    _e(
+        "E222",
+        "The provider did not verify the email address",
+        "api",
+        "karni.accounts.social_token.sign_in",
+        "Karni creates an account from a token, or links a token to the account with the same "
+        "email, only when the provider says it verified the address. Otherwise anyone could put "
+        "someone else's address in a token and take over their account. Microsoft tokens count "
+        "as verified only with the xms_edov claim true or a tenant listed in 'trusted_tenants' "
+        "(400). An identity already linked signs in without this check.",
+        "For Microsoft, add the xms_edov optional claim to the app registration, or list your "
+        "organisation's tenant id in KARNI_SOCIAL_TOKEN_PROVIDERS['microsoft']['trusted_tenants']. "
+        "Otherwise the user signs in with a password, or with a provider that verified the "
+        "address.",
+    ),
+    _e(
+        "E223",
+        "Sign-up with an ID token is closed",
+        "api",
+        "karni.accounts.social_token.sign_in",
+        "KARNI_SOCIAL_TOKEN_SIGNUP is 'existing' (the default while KARNI_ACCOUNTS_REGISTRATION "
+        "is False): only an identity already linked, or an account with the token's email, may "
+        "sign in. Nobody else gets an account (400).",
+        "Create the account first (in the admin, or let staff invite the user), then sign in "
+        "with the token. To let anyone in, set KARNI_SOCIAL_TOKEN_SIGNUP = 'open', or "
+        "'approval' to create accounts an administrator activates.",
+    ),
+    _e(
+        "E224",
+        "The account awaits an administrator's approval",
+        "api",
+        "karni.accounts.social_token.sign_in; karni.accounts.otp.verify_code",
+        "With KARNI_SOCIAL_TOKEN_SIGNUP = 'approval', a token without an account creates an "
+        "inactive one. The answer is a 202 with this code and no credentials, again on each "
+        "sign-in until an administrator activates the account. With KARNI_EMAIL_OTP_SIGNUP = "
+        "'approval', the code that creates the account answers the same 202. A later code for "
+        "the inactive account answers E226.",
+        "An administrator ticks 'Active' on the user's page in the admin. The next sign-in then "
+        "succeeds.",
+    ),
+    _e(
+        "E225",
+        "This sign-in provider is not configured",
+        "api",
+        "karni.accounts.api.views.SocialTokenLoginView",
+        "Each provider named in KARNI_SOCIAL_TOKEN_PROVIDERS gets its own social/<provider>/ "
+        "route. A provider the setting does not name answers 404.",
+        "Add the provider with its client ids to KARNI_SOCIAL_TOKEN_PROVIDERS, or post to the "
+        "route of a configured one.",
+    ),
+    _e(
+        "E226",
+        "The account is inactive",
+        "api",
+        "karni.accounts.social_token.sign_in; karni.accounts.otp.verify_code",
+        "An inactive user never signs in, by password, by token or by a code sent by email "
+        "(401). Sign-in by code says so only after a right code, so the answer tells nothing to "
+        "someone who does not read that mailbox.",
+        "An administrator activates the account in the admin, if it should sign in.",
+    ),
+    _e(
+        "E227",
+        "An account with this email exists and is not linked",
+        "api",
+        "karni.accounts.social_token.sign_in",
+        "KARNI_SOCIAL_TOKEN_LINK_VERIFIED is False, so a token is never linked to an existing "
+        "account that has a password, even when the provider verified the email (400).",
+        "Sign in with the password. Linking a provider from a signed-in session is not built "
+        "yet. To link on a verified email, set KARNI_SOCIAL_TOKEN_LINK_VERIFIED = True (the "
+        "default).",
+    ),
+    # E235-E236 sign-in with a code sent by email (karni.accounts.otp, experimental)
+    _e(
+        "E235",
+        "The sign-in code is wrong or has expired",
+        "api",
+        "karni.accounts.otp.verify_code (POST <auth>/otp/verify/)",
+        "One answer covers every failure of a code, so it tells nobody whether an address has an "
+        "account: a wrong code, one past KARNI_EMAIL_OTP_TTL, one already used, one replaced by a "
+        "newer code, one locked after KARNI_EMAIL_OTP_MAX_ATTEMPTS wrong guesses, an address no "
+        "code was sent to, and an address that may not sign up (KARNI_EMAIL_OTP_SIGNUP = "
+        "'existing'). The precise reason is only in the accounts.otp.refused log event (401).",
+        "Ask for a new code with POST otp/send/ and type the newest one. Only the latest code of "
+        "an address works. Check the reason in the log when one user keeps failing.",
+    ),
+    _e(
+        "E236",
+        "Sign-in with a code is turned off",
+        "api",
+        "karni.accounts.api.views.OtpSendView; karni.accounts.api.views.OtpVerifyView",
+        "otp/send/ and otp/verify/ are mounted only while KARNI_EMAIL_OTP is True. A URLconf "
+        "built while it was True answers 404 with this code once the setting is False.",
+        "Set KARNI_EMAIL_OTP = True (or KARNI_EMAIL_OTP=True in the environment) to offer "
+        "sign-in with a code, or sign in with login/.",
+    ),
+    # E245-E249 terms acceptance (karni.accounts.terms, experimental)
+    _e(
+        "E245",
+        "The signed-in user has not accepted the current terms",
+        "api",
+        "karni.accounts.terms.TermsGateMiddleware",
+        "KARNI_TERMS requires every signed-in user to accept its current version before using "
+        "the API. The gate answers 403 with this code, the version and the terms url to a "
+        "signed-in user who has not accepted that version, on every request under "
+        "KARNI_TERMS['paths'] (default ['/api/']) outside the auth mount and "
+        "KARNI_TERMS['exempt']. Staff and superusers are gated like everyone. A new version "
+        "makes everyone accept again.",
+        "Show the terms at the url in the answer, then POST <auth mount>/terms/accept/ with "
+        '{"version": "<the version in the answer>"}. @karni/ui\'s TermsGate does both. To keep '
+        "a path open before acceptance, add its prefix to KARNI_TERMS['exempt'].",
+    ),
+    _e(
+        "E246",
+        "The accepted terms version is not the current one",
+        "api",
+        "karni.accounts.terms.accept (POST <auth>/terms/accept/)",
+        "terms/accept/ records acceptance of KARNI_TERMS['version'] only. A client that sends "
+        "another version showed the user other terms (an old copy, or the version changed after "
+        "the page loaded), so nothing is recorded (400). The answer carries the current version "
+        "and url.",
+        "Show the terms at the url in the answer and send the version in the answer. GET "
+        "terms/ returns the current version too.",
+    ),
+    _e(
+        "E247",
+        "A terms acceptance is a permanent record",
+        "exception",
+        "karni.accounts.models.TermsAcceptance",
+        "Each TermsAcceptance row records that a user accepted a version of the terms, when, "
+        "from which IP and with which client. The table is append-only: saving an existing row, "
+        "deleting one (soft or hard) and update() or delete() on a queryset of them would "
+        "rewrite that record, so each one raises.",
+        "Record a new acceptance with karni.accounts.terms.accept(), or POST terms/accept/. To "
+        "make everyone accept again, change KARNI_TERMS['version']. A user's rows go only with "
+        "the user: user.hard_delete() deletes them.",
+    ),
+    _e(
+        "E248",
+        "The terms gate is not in MIDDLEWARE, or runs before authentication",
+        "check",
+        "karni.checks.check_terms_middleware",
+        "KARNI_TERMS requires acceptance, but karni.accounts.terms.TermsGateMiddleware (or a "
+        "subclass) is missing from MIDDLEWARE, so nothing is gated, or it comes before "
+        "django.contrib.auth's AuthenticationMiddleware, so it cannot see the session user. "
+        "karni_settings() lists it, so this happens when MIDDLEWARE is replaced after the call.",
+        "Add 'karni.accounts.terms.TermsGateMiddleware' to MIDDLEWARE after "
+        "'django.contrib.auth.middleware.AuthenticationMiddleware', or extend MIDDLEWARE "
+        "instead of replacing it.",
+    ),
+    _e(
+        "E249",
+        "Terms acceptance is turned off",
+        "api",
+        "karni.accounts.api.views.TermsView; karni.accounts.api.views.TermsAcceptView",
+        "terms/ and terms/accept/ are mounted only while KARNI_TERMS is set. A URLconf built "
+        "while it was set answers 404 with this code once it is unset.",
+        'Set KARNI_TERMS = {"version": "<version>", "url": "<where the terms are>"} to ask '
+        "users to accept terms, or remove the client's call.",
+    ),
+    # E270-E279 / W540-W549 external tables, SQL views and a second database
+    # (karni.db, experimental)
+    _e(
+        "E270",
+        "An external model is managed by Django",
+        "check",
+        "karni.db.checks.check_database_options",
+        "`class Karni: external = True` says another system owns the table or view, so Karni "
+        "must never create, change or drop it. Django still migrates a model unless "
+        "`Meta.managed = False`, so `migrate` would try to create or alter that table. The two "
+        "declarations go together.",
+        "Add `managed = False` to the model's `class Meta`, or remove `external = True` if "
+        "Django should own the table.",
+    ),
+    _e(
+        "E271",
+        "Karni.database names a database that is not in DATABASES",
+        "check",
+        "karni.db.checks.check_database_options",
+        "`class Karni: database = '<alias>'` sends the model's reads, writes and migrations to "
+        "that alias of the DATABASES setting. An alias Django does not know fails on the first "
+        "query.",
+        "Add the alias to DATABASES (for example DATABASES['warehouse'] = "
+        "env.db_url('WAREHOUSE_DATABASE_URL')), or fix the name in `class Karni`.",
+    ),
+    _e(
+        "E272",
+        "The table or view of an external model does not exist",
+        "check",
+        "karni.db.checks.check_external_tables (karni check)",
+        "An external model reads a table or view another system owns, and Karni never creates "
+        "it. `karni check` connected to the model's database and found no table or view with "
+        "the model's Meta.db_table, so every query on the model would fail.",
+        "Create the table or view in that database (a SQL view the project owns can come from "
+        "a RunSQL migration), or fix Meta.db_table. A PostgreSQL table in another schema is "
+        "written db_table = 'schema\".\"table'. Where the table cannot exist (a CI database), "
+        "add 'karni.E272' to SILENCED_SYSTEM_CHECKS in that environment's settings.",
+    ),
+    _e(
+        "E273",
+        "An external model has a column its table or view lacks",
+        "check",
+        "karni.db.checks.check_external_tables (karni check)",
+        "Every concrete field of an external model is a column Karni selects. A field whose "
+        "column (its name, or db_column) is missing from the table or view makes every query "
+        "on the model fail.",
+        "Fix the field's name or db_column to match the column, remove the field, or "
+        "regenerate the model from the table with `karni make model <Name> --external "
+        "--table <table>` and keep what you need.",
+    ),
+    _e(
+        "E274",
+        "An external model's field type does not match its column",
+        "check",
+        "karni.db.checks.check_external_tables (karni check)",
+        "The database reports a column type that cannot hold the field's values, for example "
+        "a DateTimeField over a text column or an IntegerField over a date. Karni compares "
+        "broad kinds only (numbers, text, dates, times, booleans, UUIDs, JSON, binary), and "
+        "skips columns whose type the database does not report, so a reported mismatch is a "
+        "real one.",
+        "Change the field to the column's type (`karni make model <Name> --external --table "
+        "<table> --dry-run` shows the type Django infers), or cast the column in the view.",
+    ),
+    _e(
+        "E275",
+        "class Karni: external, writable or database has a value of the wrong type",
+        "check",
+        "karni.db.checks.check_database_options",
+        "`external` and `writable` are True or False, and `database` is the name of a "
+        "DATABASES alias. Another value would be read in a way the code does not say.",
+        "Write external = True, writable = True or database = '<alias>' (a non-empty string).",
+    ),
+    _e(
+        "E276",
+        "A relation joins models on different databases",
+        "check",
+        "karni.db.checks.check_database_options",
+        "A foreign key, one-to-one or many-to-many field needs both tables in one database: "
+        "Django joins them in SQL, and Karni's router refuses to relate rows across "
+        "databases. A model on another database that inherits BaseModel has this problem "
+        "too, because AuditedModel's created_by and updated_by point at the user table.",
+        "Keep related models on the same database (the same Karni.database), or store the "
+        "other row's key in a plain field. For a model Karni manages on another database, "
+        "compose UUIDModel, TimestampedModel and SoftDeleteModel instead of BaseModel.",
+    ),
+    _e(
+        "W540",
+        "The database of an external model cannot be reached",
+        "warning",
+        "karni.db.checks.check_external_tables (karni check)",
+        "`karni check` compares each external model with its table or view when the model's "
+        "database answers. This one did not, so nothing was compared for it. That is not an "
+        "error: the database may be outside this machine's reach (CI, a laptop).",
+        "Check the alias in DATABASES (host, port, credentials, network) and run `karni "
+        "check` again where the database is reachable. Add 'karni.W540' to "
+        "SILENCED_SYSTEM_CHECKS where it never is.",
+    ),
+    _e(
+        "W541",
+        "Karni.writable on a model that is not external",
+        "warning",
+        "karni.db.checks.check_database_options",
+        "`writable = True` only lifts the read-only default of an external model. Every other "
+        "model is writable already, so the declaration does nothing.",
+        "Remove `writable = True`, or add `external = True` (with Meta.managed = False) if "
+        "another system owns the table.",
+    ),
+    _e(
+        "W542",
+        "Karni.database is declared but Karni's database router is not installed",
+        "warning",
+        "karni.db.checks.check_database_router",
+        "A model declares `class Karni: database`, but DATABASE_ROUTERS does not list "
+        "karni.db.DatabaseRouter (or a subclass), so Django sends the model to the default "
+        "database. karni_settings() lists the router, so this happens when DATABASE_ROUTERS is "
+        "replaced after the call.",
+        "Add 'karni.db.DatabaseRouter' to DATABASE_ROUTERS, after your own routers (the first "
+        "router with an answer wins). If your own router routes these models, add "
+        "'karni.W542' to SILENCED_SYSTEM_CHECKS.",
+    ),
     # E3xx admin
     _e(
         "E301",
@@ -801,6 +1167,41 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "files unfold can serve.",
         "Set KARNI_ADMIN_LOGO = 'karni' for Karni's mark, or {'light': '<static path>', 'dark': "
         "..., 'icon': ...} with at least 'light'. Leave it unset for a text header.",
+    ),
+    # E304-E305 manage.py karni_makemigrations (karni build, experimental)
+    _e(
+        "E304",
+        "karni_makemigrations --renames is not a rename list",
+        "exception",
+        "karni.management.commands.karni_makemigrations",
+        'karni build passes the renames of the plan as JSON: {"models": [[app, old, new]], '
+        '"fields": [[app, model, old, new]]}. Anything else cannot be written as a migration.',
+        "Pass a JSON object with models and fields lists, or run karni build, which writes it.",
+    ),
+    _e(
+        "E305",
+        "An app has more than one latest migration, so the renames have no place",
+        "exception",
+        "karni.management.commands.karni_makemigrations.write_renames",
+        "A rename migration follows the app's latest migration. Two migrations that both claim "
+        "to be latest (two branches) leave no single one to follow.",
+        "Run manage.py makemigrations --merge for the app, then karni build again.",
+    ),
+    # E31x the module catalog
+    _e(
+        "E310",
+        "A module's manifest does not match the module",
+        "test",
+        "karni.testing.assert_module_manifest",
+        "karni.module.toml is what karni modules, karni add, karni remove and the app spec "
+        "read about a module. assert_module_manifest checks it parses, that the karni.modules "
+        "entry point names the package, that its settings are the DEFAULTS fragment's, and "
+        "that its models are the app's. Each listed line is one mismatch.",
+        "Fix the manifest or the module as the line says: list every KARNI_<NAME>_* setting of "
+        "conf.DEFAULTS under [provides.settings] with its type, list the app's models under "
+        'provides.models, and add [project.entry-points."karni.modules"] <name> = '
+        '"karni_<name>" to pyproject.toml, then reinstall the module. docs/modules.md lists '
+        "every key.",
     ),
     # E4xx events, listeners, schedules, Celery
     _e(
@@ -983,6 +1384,16 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "replacing it.",
     ),
     _e(
+        "E509",
+        "Sign-in with an ID token needs the cryptography package",
+        "exception",
+        "karni.conf.validation (at startup), karni.accounts.social_token",
+        "Google, Microsoft and Apple sign their ID tokens with RS256 (an EC key uses ES256). "
+        "PyJWT verifies those only with the cryptography package, which a plain install of "
+        "Karni leaves out.",
+        "Run pip install 'karni[social-token]', or empty KARNI_SOCIAL_TOKEN_PROVIDERS.",
+    ),
+    _e(
         "W510",
         "DEBUG is on in a deployment",
         "warning",
@@ -1116,6 +1527,21 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         '("Example Site <noreply@example.com>") in the production environment (.env.prod). '
         ".env.prod.example lists them. A project that sends no email adds 'karni.W520' to "
         "SILENCED_SYSTEM_CHECKS.",
+    ),
+    # W53x integer primary keys (karni.models.BigIntBaseModel, experimental)
+    _e(
+        "W530",
+        "Anyone may read a resource whose ids can be guessed",
+        "warning",
+        "karni.checks.check_public_integer_keys",
+        "The model has an integer primary key (BigIntBaseModel or an AutoField), its detail "
+        "route looks rows up by that key, and its read access admits anonymous callers. "
+        "Integer ids are sequential, so a visitor learns how many rows there are and can walk "
+        "the detail URLs one id after the other, including rows no list links to.",
+        "Give the model a UUID key (inherit BaseModel) or look rows up by a slug "
+        '(lookup_field = "slug" on the viewset). When the ids may be public, write '
+        "`# karni: allow(public-integer-key): <reason>` above the viewset class, or add "
+        "'karni.W530' to SILENCED_SYSTEM_CHECKS for the whole project.",
     ),
     # E52x running in production (karni.deploy)
     _e(
@@ -1563,7 +1989,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "exception",
         "karni.debug.replay; karni replay --as",
         "A replay runs as the captured user, or the user --as names (a primary key, an "
-        "email or a username). That user must exist in the database the replay uses.",
+        "email or a username). That user must exist in the database the replay uses, and "
+        "the captured id must still belong to the captured email: after a reset, integer "
+        "ids are reused by other users.",
         "Pass --as with an existing user's email, username or primary key, or pass --anonymous. "
         "Do not pass both.",
     ),

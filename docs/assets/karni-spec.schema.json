@@ -1,0 +1,576 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json",
+  "title": "karni.yaml",
+  "description": "Experimental. A whole ``karni.yaml``.",
+  "$defs": {
+    "Access": {
+      "additionalProperties": false,
+      "description": "Experimental. ``access:`` of an entity: the viewset's ``Access(...)``.\n\nEach slot takes ``public``, ``authenticated``, ``granted``,\n``role:<slug>``, ``owned:<field>``, or a list of them (any of them\nadmits). ``read`` and ``write`` default to ``granted``, ``create`` to\n``write``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "read": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Who sees which rows (list, detail)."
+        },
+        "write": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Who changes and deletes which rows."
+        },
+        "create": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Who creates rows (default: write)."
+        }
+      },
+      "type": "object"
+    },
+    "App": {
+      "additionalProperties": false,
+      "description": "Experimental. One Django app of ``apps:`` and its entities.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "entities": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Entity"
+          },
+          "description": "Entity name (PascalCase) -> entity.",
+          "propertyNames": {
+            "pattern": "^(?:x-.*|[A-Z][A-Za-z0-9]*)$"
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "AppInfo": {
+      "additionalProperties": false,
+      "description": "Experimental. ``app:``: what the project is.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "name": {
+          "description": "The project's name, as given to karni new.",
+          "type": "string"
+        },
+        "kind": {
+          "default": "app",
+          "description": "The project's kind, as karni new --kind: site, app or site+app.",
+          "enum": [
+            "site",
+            "app",
+            "site+app"
+          ],
+          "type": "string"
+        },
+        "recipe": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The recipe the spec started from. For the record only."
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "Entity": {
+      "additionalProperties": false,
+      "description": "Experimental. One entity: a model on BaseModel or BigIntBaseModel, its viewset and options.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "fields": {
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/FieldEntry"
+              }
+            ]
+          },
+          "description": "Field name -> type, in karni make model's syntax (types: str text int float decimal bool date datetime url file image uuid choice state daterange datetimerange capacity fk m2m o2o money percent quantity email slug phone country currency json array), a trailing ? for optional. Or {type, was} to rename a field and keep its rows.",
+          "propertyNames": {
+            "pattern": "^(?:x-.*|[a-z][a-z0-9_]*)$"
+          },
+          "type": "object"
+        },
+        "was": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The entity's old name in the same app: a rename that keeps the table's rows."
+        },
+        "pk": {
+          "anyOf": [
+            {
+              "enum": [
+                "uuid",
+                "bigint"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The key type: uuid (BaseModel) or bigint (BigIntBaseModel). Default: the project's KARNI_PK."
+        },
+        "external": {
+          "default": false,
+          "description": "A table or view another system owns: Meta.managed = False and class Karni: external = True. No migration changes it, and it is read-only unless writable.",
+          "type": "boolean"
+        },
+        "table": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "With external: the table or view, as [schema.]table (Meta.db_table)."
+        },
+        "writable": {
+          "default": false,
+          "description": "With external: the API and the admin may write it (Karni.writable).",
+          "type": "boolean"
+        },
+        "database": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The DATABASES alias its reads, writes and migrations go to (Karni.database). Default: default."
+        },
+        "key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The natural key imports match rows on (Karni.import_key)."
+        },
+        "search": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "The viewset's search_fields."
+        },
+        "owner": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The owner field the own scope uses (Karni.owner_field)."
+        },
+        "audit": {
+          "default": false,
+          "description": "Change history (Karni.audit): true, or a list of fields.",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "groups": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "Field groups: title -> fields (the admin form's fieldsets).",
+          "type": "object"
+        },
+        "order": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Default ordering (Meta.ordering), - for descending."
+        },
+        "scope_paths": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Keys the related:<key> scope uses -> lookup path (Karni.scope_paths).",
+          "type": "object"
+        },
+        "access": {
+          "description": "Who reads and writes: a mapping {read, write, create}, or code.",
+          "oneOf": [
+            {
+              "const": "code",
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/Access"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "Features": {
+      "additionalProperties": false,
+      "description": "Experimental. ``features:``: built-in options, each switched by a setting.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "two_factor": {
+          "default": false,
+          "description": "KARNI_2FA. Needs karni[2fa].",
+          "type": "boolean"
+        },
+        "email_code_login": {
+          "default": false,
+          "description": "KARNI_EMAIL_OTP: sign-in with a code.",
+          "type": "boolean"
+        },
+        "social_login": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "KARNI_SOCIAL_TOKEN_PROVIDERS: the providers, of google, microsoft, apple. Their client ids stay in settings or .env. Needs karni[social-token]."
+        },
+        "terms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Terms"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "KARNI_TERMS: the terms acceptance gate."
+        }
+      },
+      "type": "object"
+    },
+    "FieldEntry": {
+      "additionalProperties": false,
+      "description": "Experimental. A field written as a mapping, to say what it was called before.\n\n``title: {type: \"str:200\", was: name}`` is the field ``title`` of type\n``str:200``, which ``karni plan`` and ``karni build`` treat as the field\n``name`` renamed: the column keeps its rows.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "type": {
+          "description": "The field's type, as in the short form (str:200, fk:Studio).",
+          "type": "string"
+        },
+        "was": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The field's old name: a rename that keeps the column and its rows."
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "Role": {
+      "additionalProperties": false,
+      "description": "Experimental. One role of ``roles:``: an entry of ``KARNI_ROLES``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The role's name (default: from the slug)."
+        },
+        "description": {
+          "default": "",
+          "description": "What the role is for.",
+          "type": "string"
+        },
+        "system": {
+          "default": false,
+          "description": "A system role cannot be deleted in the admin.",
+          "type": "boolean"
+        },
+        "default": {
+          "type": "boolean",
+          "default": false,
+          "description": "Every self-registered user gets it (KARNI_ACCOUNTS_DEFAULT_ROLES)."
+        },
+        "grants": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Permission pattern -> scope. Patterns: \"*\", app.entity, app.entity:action, with * for a part. Scopes: all, own, own:<owner field>, related:<scope path key>, custom:<registered name>.",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "Terms": {
+      "additionalProperties": false,
+      "description": "Experimental. ``features.terms``: ``KARNI_TERMS``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "version": {
+          "description": "The current terms version, e.g. 2026-11.",
+          "type": "string"
+        },
+        "url": {
+          "description": "Where the terms are, e.g. /terms/.",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "description": "False keeps the routes and gates nothing.",
+          "type": "boolean"
+        },
+        "paths": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "URL prefixes the gate covers (default [\"/api/\"])."
+        },
+        "exempt": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "URL prefixes the gate leaves open."
+        }
+      },
+      "required": [
+        "version",
+        "url"
+      ],
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "patternProperties": {
+    "^x-": {}
+  },
+  "properties": {
+    "version": {
+      "const": 1,
+      "description": "The format version: 1.",
+      "type": "integer"
+    },
+    "app": {
+      "$ref": "#/$defs/AppInfo",
+      "description": "What the project is."
+    },
+    "modules": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "description": "karni add <name>, with the module's options (its KARNI_<MODULE>_* settings).",
+      "propertyNames": {
+        "anyOf": [
+          {
+            "enum": [
+              "approvals",
+              "impersonation",
+              "payments",
+              "site"
+            ]
+          },
+          {
+            "pattern": "^x-"
+          }
+        ]
+      },
+      "type": "object"
+    },
+    "features": {
+      "$ref": "#/$defs/Features",
+      "description": "Built-in options."
+    },
+    "roles": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Role"
+      },
+      "description": "KARNI_ROLES: slug -> role.",
+      "propertyNames": {
+        "pattern": "^(?:x-.*|[A-Za-z0-9][A-Za-z0-9_.-]*)$"
+      },
+      "type": "object"
+    },
+    "apps": {
+      "additionalProperties": {
+        "$ref": "#/$defs/App"
+      },
+      "description": "App label -> app.",
+      "propertyNames": {
+        "pattern": "^(?:x-.*|[a-z][a-z0-9_]*)$"
+      },
+      "type": "object"
+    },
+    "pages": {
+      "description": "karni make page, in navigation order. Each item is one key: an entity with its pages (list, detail, form), or a page name with its kind (dashboard, blank, login, or code: a page of the project's own at /<name>, which karni build leaves alone).",
+      "items": {
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "type": "object",
+        "minProperties": 1,
+        "maxProperties": 1
+      },
+      "type": "array"
+    },
+    "seed": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "description": "Entity -> demo rows per karni seed run (a Seeder's Meta.count).",
+      "propertyNames": {
+        "pattern": "^(?:x-.*|[A-Z][A-Za-z0-9]*)$"
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "version",
+    "app"
+  ],
+  "type": "object"
+}

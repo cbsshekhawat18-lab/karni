@@ -179,6 +179,29 @@ def _body(response: Any) -> bytes:
     return content
 
 
+def _names_key(text: str, key: Any) -> bool:
+    """Whether ``text`` holds ``key`` as a whole value, never inside a longer number or word.
+
+    A UUID is unique wherever it appears, but a short integer id is not:
+    ``5`` must not match ``15``, ``5.5`` or ``-5``.
+    """
+    return re.search(rf"(?<![\w.-]){re.escape(str(key))}(?![\w.-])", text) is not None
+
+
+def _table_names_row(headers: list[str], rows: list[list[Any]], pk: Any, pk_name: str) -> bool:
+    """Whether an exported table writes the row ``pk``: by its id column when there is one.
+
+    Without an id column, a cell that holds the id as a whole value counts
+    (a to-many cell joins ids with ``|``).
+    """
+    wanted = str(pk)
+    for name in dict.fromkeys(("id", pk_name)):
+        if name in headers:
+            index = headers.index(name)
+            return any(index < len(row) and str(row[index]) == wanted for row in rows)
+    return any(_names_key(str(cell), wanted) for row in rows for cell in row)
+
+
 def _mask(text: str, key: Any) -> str:
     """``text`` with ``key`` (a lookup value) replaced wherever it stands as a whole token."""
     return re.sub(rf"(?<![\w-]){re.escape(str(key))}(?![\w-])", "<id>", text)
@@ -855,9 +878,7 @@ class HiddenRowProbe:
                 break
             headers, rows = table
             label = f"GET {url}?format={fmt}" + "".join(f"&{k}={v}" for k, v in params.items())
-            ids = self._column(headers, rows, "id")
-            hidden = str(self.row.pk)
-            if hidden in ids or (not ids and any(hidden in map(str, row) for row in rows)):
+            if _table_names_row(headers, rows, self.row.pk, self.model._meta.pk.name):
                 self.fail("export", f"{label} writes the hidden row: {FIX_SCOPE}.")
             listed = base.complete and base.status == 200
             if not params and listed and len(rows) != len(base.ids):
@@ -1155,15 +1176,10 @@ class AdminHiddenRowProbe:
             )
             if response.status_code != 200:
                 continue
-            body = _body(response)
-            if action == "export_xlsx":
-                from karni.transfer.formats import read_table
+            from karni.transfer.formats import read_table
 
-                _headers, rows = read_table(io.BytesIO(body), "xlsx")
-                text = json.dumps(rows, default=str)
-            else:
-                text = body.decode("utf-8", "replace")
-            if str(self.row.pk) in text:
+            headers, rows = read_table(io.BytesIO(_body(response)), action.removeprefix("export_"))
+            if _table_names_row(headers, rows, self.row.pk, self.model._meta.pk.name):
                 self.fail(
                     "export",
                     f"POST {url} action={action} with the hidden row selected exports it: "

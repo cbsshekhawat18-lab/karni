@@ -833,11 +833,17 @@
           "id": {
             "type": "string"
           },
+          "keep_ids": {
+            "type": "boolean"
+          },
           "mapping": {
             "additionalProperties": {
               "type": "string"
             },
             "type": "object"
+          },
+          "match_ids": {
+            "type": "boolean"
           },
           "model": {
             "nullable": true,
@@ -874,7 +880,9 @@
           "file_name",
           "format",
           "id",
+          "keep_ids",
           "mapping",
+          "match_ids",
           "model",
           "problems",
           "result",
@@ -885,13 +893,19 @@
         "type": "object"
       },
       "ImportMappingRequest": {
-        "description": "``POST \u2026/import/<job>/preview/``: header \u2192 field (``\"\"`` ignores a column).",
+        "description": "``POST \u2026/import/<job>/preview/``: header \u2192 field (``\"\"`` ignores a column), id options.\n\n``match_ids`` matches existing rows by the file's id column and\n``keep_ids`` creates rows with the file's ids. Both are off unless sent,\nand a value sent is kept for the job's commit.",
         "properties": {
+          "keep_ids": {
+            "type": "boolean"
+          },
           "mapping": {
             "additionalProperties": {
               "type": "string"
             },
             "type": "object"
+          },
+          "match_ids": {
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -2941,7 +2955,7 @@
     },
     "/api/contacts/import/{job}/preview/": {
       "post": {
-        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\n``\"match_ids\": true`` matches existing rows by the file's id column, and\n``\"keep_ids\": true`` creates rows with the file's ids (both off by default).\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
         "operationId": "contacts_import_preview_create",
         "parameters": [
           {
@@ -3780,7 +3794,7 @@
     },
     "/api/lead-activities/import/{job}/preview/": {
       "post": {
-        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\n``\"match_ids\": true`` matches existing rows by the file's id column, and\n``\"keep_ids\": true`` creates rows with the file's ids (both off by default).\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
         "operationId": "lead_activities_import_preview_create",
         "parameters": [
           {
@@ -4950,7 +4964,7 @@
     },
     "/api/leads/import/{job}/preview/": {
       "post": {
-        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\n``\"match_ids\": true`` matches existing rows by the file's id column, and\n``\"keep_ids\": true`` creates rows with the file's ids (both off by default).\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
         "operationId": "leads_import_preview_create",
         "parameters": [
           {
@@ -6656,7 +6670,7 @@
     },
     "/api/workspaces/import/{job}/preview/": {
       "post": {
-        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\n``\"match_ids\": true`` matches existing rows by the file's id column, and\n``\"keep_ids\": true`` creates rows with the file's ids (both off by default).\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
         "operationId": "workspaces_import_preview_create",
         "parameters": [
           {

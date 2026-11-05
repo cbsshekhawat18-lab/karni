@@ -7,6 +7,7 @@ import typer
 from karni_cli import __version__
 from karni_cli.commands.add import add
 from karni_cli.commands.beat import beat
+from karni_cli.commands.build import build
 from karni_cli.commands.check import check
 from karni_cli.commands.config import config_app
 from karni_cli.commands.context import context
@@ -20,8 +21,12 @@ from karni_cli.commands.make import make_app, register_aliases
 from karni_cli.commands.manage_passthrough import manage
 from karni_cli.commands.mcp import mcp
 from karni_cli.commands.migrate import migrate
+from karni_cli.commands.modules import modules_app
 from karni_cli.commands.new import new
+from karni_cli.commands.plan import plan
 from karni_cli.commands.queries import queries
+from karni_cli.commands.recipes import recipes_app
+from karni_cli.commands.remove import remove
 from karni_cli.commands.replay import replay
 from karni_cli.commands.routes import routes
 from karni_cli.commands.rules import rules_app
@@ -31,6 +36,7 @@ from karni_cli.commands.schema import schema
 from karni_cli.commands.seed import seed
 from karni_cli.commands.serve import serve
 from karni_cli.commands.shell import shell
+from karni_cli.commands.spec import spec_app
 from karni_cli.commands.sync_roles import sync_roles
 from karni_cli.commands.trace import trace
 from karni_cli.commands.types import types
@@ -77,14 +83,21 @@ def _root(
 # `karni new --help` is its docstring: the kinds, --design, examples.
 app.command()(new)
 app.command(help="Install an optional module and wire it into settings")(add)
+app.command(help="Take a module out again: what karni add wired, never its data")(remove)
+app.add_typer(modules_app, name="modules")
 app.command(help="Generate TS types and typed hooks from the backend OpenAPI")(types)
 app.add_typer(ui_app, name="ui")
 app.command(help="Print a compact machine-readable project inventory")(context)
 app.command(help="Run architecture and system checks")(check)
 app.command(help="Upgrade across Karni versions: codemods, diff, manual-change report")(upgrade)
 app.add_typer(rules_app, name="rules")
+app.add_typer(spec_app, name="spec")
+app.command(help="Compare karni.yaml with the project: what karni build would change")(plan)
+app.command(help="Make the project match karni.yaml, without touching hand-written code")(build)
+app.add_typer(recipes_app, name="recipes")
 app.command(
-    help="Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp])"
+    help="Serve context, rules, check, the debugging tools and the app-builder flow (recipes, "
+    "questions, answer, plan, build) as MCP tools (needs karni-cli[mcp])"
 )(mcp)
 app.command(help="Report the environment: project, interpreter, Node, adapters, history")(doctor)
 app.command(

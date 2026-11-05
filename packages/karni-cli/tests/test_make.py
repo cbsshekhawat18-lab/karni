@@ -345,7 +345,31 @@ def test_the_generated_test_acts_as_the_role_that_writes(project: Path) -> None:
     result = ok("make", "test", "Venue")
     test = (project / "events" / "tests" / "test_venue.py").read_text()
     assert '        self.assert_crud(VenueViewSet, "editor")\n' in test
-    assert "test: VenueViewSet as role 'editor' + owner isolation" in result.output
+    # reads are by role, so every reader sees every row: nothing isolates, and no check claims it
+    assert "test: VenueViewSet as role 'editor'\n" in result.output
+    assert "assert_isolated" not in test
+
+
+def test_the_isolation_check_follows_the_read_rule(project: Path) -> None:
+    """Owned(...) in write= alone isolates nothing, and a role the read rule admits sees all."""
+    ok("make", "app", "events")
+    ok("make", "model", "Venue", "name:str", "owner:fk:User")
+    viewsets = project / "events" / "viewsets.py"
+    head = "from karni.api import Access, BaseViewSet, HasRole, Owned, Public\n"
+    head += "from events.models import Venue\n\n\nclass VenueViewSet(BaseViewSet):\n"
+    head += "    model = Venue\n"
+    viewsets.write_text(head + '    access = Access(read=Public(), write=Owned("owner"))\n')
+    ok("make", "test", "Venue")
+    test = project / "events" / "tests" / "test_venue.py"
+    assert "assert_isolated" not in test.read_text()
+    viewsets.write_text(
+        head
+        + '    access = Access(read=Owned("owner") | HasRole("staff"), write=HasRole("staff"))\n'
+    )
+    ok("make", "test", "Venue", "--force")
+    text = test.read_text()
+    assert '        self.assert_crud(VenueViewSet, "staff")\n' in text
+    assert "        self.assert_isolated(VenueViewSet)\n" in text  # as a user staff does not cover
 
 
 def test_model_force_replaces_only_that_class(project: Path) -> None:

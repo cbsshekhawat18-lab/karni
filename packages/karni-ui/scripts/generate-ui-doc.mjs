@@ -44,8 +44,22 @@ const GROUPS = [
       "KarniMark",
     ],
   ],
-  ["Auth", ["AuthProvider", "AuthGuard", "LoginForm", "KarniProvider"]],
+  [
+    "Auth",
+    [
+      "AuthProvider",
+      "AuthGuard",
+      "LoginForm",
+      "SocialButton",
+      "OtpLoginForm",
+      "TermsGate",
+      "KarniProvider",
+    ],
+  ],
 ];
+
+/** Components and hooks under the experimental tier (docs/stability.md#experimental-names). */
+const EXPERIMENTAL = new Set(["SocialButton", "OtpLoginForm", "TermsGate"]);
 
 const HOOKS = {
   useResourceList:
@@ -62,8 +76,13 @@ const HOOKS = {
   useSchema: "The parsed OpenAPI schema of one resource (fields, operations, access).",
   useKarniClient:
     "The `KarniClient` behind every hook, with `client.request(path, { method, body, query })` for custom actions.",
-  useAuth: "`{ user, status, login(email, password), logout, refresh }` from `AuthProvider`.",
+  useAuth:
+    "`{ user, status, login(email, password), logout, refresh }` from `AuthProvider`, and (experimental) `{ terms, termsRequired, acceptTerms(client) }` for terms acceptance.",
   usePermission: "`{ hasRole(...names), isAuthenticated }` for gating UI on roles.",
+  useOtpLogin:
+    "Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).",
+  useSocialLogin:
+    "Experimental. `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).",
   useToast: "Show a toast through the mounted `Toaster`.",
   useUnsavedChangesGuard:
     "`{ dirty, setDirty, isDirty, shouldBlock }` for warning before leaving a dirty form. Give `shouldBlock` to your router's blocker and `setDirty` to ResourceForm's `onDirtyChange`.",
@@ -95,7 +114,10 @@ export function render(manifest) {
     for (const name of present) {
       placed.add(name);
       const role = Object.entries(manifest.roles).find(([, component]) => component === name)?.[0];
-      lines.push(`- \`${name}\`${role ? ` (role \`${role}\`)` : ""}`);
+      const notes = [role ? `role \`${role}\`` : "", EXPERIMENTAL.has(name) ? "experimental" : ""]
+        .filter(Boolean)
+        .join(", ");
+      lines.push(`- \`${name}\`${notes ? ` (${notes})` : ""}`);
     }
     lines.push("");
   }

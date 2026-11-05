@@ -37,6 +37,8 @@ MARKER_LINE = (
 MODULES_DIR = Path(".karni") / "modules"
 BACKUP_DIR = Path(".karni") / "backup"
 _TEMPLATES = ("instructions", "import", "command")
+#: The procedure that builds an app from a one-line request (rule K311).
+NEW_APP = "new-app"
 _YAML_PLAIN = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9 _./()-]*$")
 
 
@@ -211,7 +213,8 @@ def instructions_body(
         "Before any work, run these two commands and follow what they return:",
         "",
         "1. `karni context` prints the live inventory: apps, models, viewsets, UI components,",
-        "   hooks, pages and installed modules.",
+        "   hooks, pages, and every Karni module and built-in feature with whether the",
+        "   project has it (details: `karni modules show <name>`).",
         "2. `karni rules` prints the conventions, each with a stable code (K###, or P### for",
         "   the project's own).",
         "",
@@ -220,6 +223,12 @@ def instructions_body(
         "- Run `karni rules --check <file>` on every file you write and fix each violation it prints.",
         f"- Use `karni rules --procedure <name>` for routine tasks: {_procedure_names(data)}.",
     ]
+    if any(p["name"] == NEW_APP for p in data.procedures):
+        lines.append(
+            "- To build an app from a one-line request, run `/new-app <the request>` where your "
+            "tool has slash commands, else follow `karni rules --procedure new-app`: karni.yaml "
+            "first, then `karni build` (rule K311)."
+        )
     if kind is None:
         lines.append(
             "- App screens go in `frontend/src/pages/` (`karni make page`). A public, "

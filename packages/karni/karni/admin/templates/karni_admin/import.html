@@ -79,6 +79,13 @@
             {% endfor %}
           </tbody>
         </table></div>
+        <fieldset class="karni-options">
+          <legend>{% translate "Ids" %}</legend>
+          <label><input type="checkbox" name="match_ids" {% if job.match_ids %}checked{% endif %}> {% translate "Match existing rows by the id column" %}</label>
+          <p class="karni-note">{% translate "Off, the id column never matches, so a file exported from another environment cannot update unrelated rows here." %}</p>
+          <label><input type="checkbox" name="keep_ids" {% if job.keep_ids %}checked{% endif %}> {% translate "Create rows with the ids in the file" %}</label>
+          <p class="karni-note">{% translate "For legacy data: needs a role that may create rows anywhere." %}</p>
+        </fieldset>
         <div class="karni-toolbar">
           <button type="submit" class="karni-button">{% translate "Preview" %}</button>
           <a class="karni-button karni-button-secondary" href="{{ upload_url }}">{% translate "Upload another file" %}</a>

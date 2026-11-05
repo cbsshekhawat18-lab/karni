@@ -7,6 +7,10 @@ pages for the resource (linked to each other), its API test, an explicit
 factory and a seeder. ``-a/--all`` chains viewset, page and test — factories
 and seeders are overrides of what Karni already generates, so they are only
 written when asked for.
+
+``--external --table <[schema.]table>`` (experimental) writes a model over a
+table or view another system owns, from its columns instead of a field DSL
+(:mod:`karni_cli.generators.external`), and always the viewset with it.
 """
 
 from __future__ import annotations
@@ -16,6 +20,7 @@ import typer
 from karni_cli import project as project_mod
 from karni_cli import pyproject_edit
 from karni_cli.generators import apitest as test_gen
+from karni_cli.generators import external as external_gen
 from karni_cli.generators import factory as factory_gen
 from karni_cli.generators import migration as migration_gen
 from karni_cli.generators import page as page_gen
@@ -43,7 +48,13 @@ from karni_cli.generators.fields import (
     relation_name,
     render_model_body,
 )
-from karni_cli.generators.introspect import models_file, models_in, viewset_for
+from karni_cli.generators.introspect import (
+    PK_BASES,
+    declared_pk,
+    models_file,
+    models_in,
+    viewset_for,
+)
 from karni_cli.generators.naming import default_route, kebab, require_pascal
 from karni_cli.generators.pysource import Import, ensure_imports, pystr, replace_or_append
 from karni_cli.project import CliError
@@ -153,13 +164,16 @@ def plan(
     *,
     order: str | None = None,
     key: str | None = None,
+    pk: str | None = None,
 ) -> str:
     """Plan the model class in ``<app>/models.py``; returns the class name.
 
     ``order`` writes ``Meta.ordering``, ``key`` writes ``Karni.import_key``: the
     field ``karni load`` and imports match rows on (for rows nested under a
-    parent, the parent plus that field).
+    parent, the parent plus that field). ``pk`` (``uuid`` or ``bigint``, else
+    ``KARNI_PK``) picks the base: ``BaseModel`` or ``BigIntBaseModel``.
     """
+    base = _base_class(ws, pk)
     model = require_pascal(name, "Model name")
     specs = parse_fields(field_tokens)
     try:
@@ -177,7 +191,7 @@ def plan(
         resolve=_targets(ws, app, model, specs),
         line_length=ws.line_length,
     )
-    lines = [f"class {model}(BaseModel):"]
+    lines = [f"class {model}({base}):"]
     if body.inner:
         lines += [*body.inner, ""]
     lines += body.lines
@@ -199,13 +213,28 @@ def plan(
     if len(lines) == 1:
         lines.append("    pass")
     text = ws.read(path) or ""
-    text = ensure_imports(ws, rel, text, [Import("karni.models", "BaseModel"), *body.imports])
+    text = ensure_imports(ws, rel, text, [Import("karni.models", base), *body.imports])
     ws.write(path, replace_or_append(ws, rel, text, model, "\n".join(lines)))
     for note in body.notes:
         ws.note(note)
     if body.images:
         plan_images_extra(ws, body.images)
     return model
+
+
+def _base_class(ws: Workspace, pk: str | None) -> str:
+    """The base class for ``--pk`` (``uuid``/``bigint``), else for the project's ``KARNI_PK``."""
+    if pk is None:
+        pk, note = declared_pk(ws)
+        if note:
+            ws.note(note)
+    if pk not in PK_BASES:
+        raise CliError(
+            f"--pk {pk}: the key type is one of {', '.join(PK_BASES)} (uuid: BaseModel, "
+            "bigint: BigIntBaseModel).",
+            code="C106",
+        )
+    return PK_BASES[pk]
 
 
 def plan_chain(
@@ -290,6 +319,26 @@ def command(
     search: list[str] | None = typer.Option(
         None, "--search", help="With viewset: search_fields (comma-separated)."
     ),
+    external: bool = typer.Option(
+        False,
+        "--external",
+        help="Experimental. A model over a table or view another system owns, written from "
+        "the columns of --table (Meta.managed = False, class Karni: external = True), with "
+        "its viewset. It reads the database, which must be reachable.",
+    ),
+    table: str | None = typer.Option(
+        None, "--table", help="With --external: the table or view, e.g. sales or reporting.sales."
+    ),
+    database: str | None = typer.Option(
+        None,
+        "--database",
+        help="With --external: the DATABASES alias the table lives in (class Karni: database).",
+    ),
+    writable: bool = typer.Option(
+        False,
+        "--writable",
+        help="With --external: let the API and the admin write it (class Karni: writable).",
+    ),
     migrate: bool = typer.Option(
         False, "--migrate", help="Run `karni make migration` for the app afterwards."
     ),
@@ -304,18 +353,39 @@ def command(
         help="The field karni load and imports match rows on (Karni.import_key). Rows nested "
         "under a parent are matched on the parent plus this field, e.g. position.",
     ),
+    pk: str | None = typer.Option(
+        None,
+        "--pk",
+        help="The primary key: uuid (BaseModel) or bigint (BigIntBaseModel, experimental). "
+        "Default: KARNI_PK in config/settings.py, else uuid.",
+    ),
     app: str | None = APP_OPTION,
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
 ) -> None:
-    """Add `class NAME(BaseModel)` with FIELDS to APP/models.py.
+    """Add `class NAME(BaseModel)` with FIELDS to APP/models.py (BigIntBaseModel with --pk bigint).
 
     Example: karni make model Event title:str:200 starts_at:datetime
     "status:choice:draft|live" organizer:fk:User 'venue:fk:Venue?' -a
     --access owned:organizer
+
+    Experimental: karni make model Sale --external --table reporting.sales
+    [--database warehouse] [--writable] writes a plain models.Model over that
+    existing table or view from its columns (Meta.managed = False, class Karni:
+    external = True), and its viewset. The database must be reachable.
     """
     ws = project_workspace(force)
+    external_gen.check_options(
+        external=external,
+        table=table,
+        database=database,
+        writable=writable,
+        fields=fields or [],
+        key=key,
+    )
     chain = resolve_chain(with_ or [], all_)
+    if external and "viewset" not in chain:
+        chain = ["viewset", *chain]  # an external model always gets its viewset
     if (access or search) and "viewset" not in chain:
         raise CliError(
             "--access/--search configure the viewset: add --with viewset (or -a).", code="C004"
@@ -324,14 +394,24 @@ def command(
     if all_ and not ws.is_dir("frontend"):
         chain = [item for item in chain if item != "page"]
         ws.note("note: no frontend/ directory, so pages are skipped.")
-    model = plan(ws, target, name, fields or [], order=order, key=key)
+    if external and table is not None:
+        model = external_gen.plan(
+            ws, target, name, table=table, database=database, writable=writable, order=order
+        )
+    else:
+        model = plan(ws, target, name, fields or [], order=order, key=key, pk=pk)
     expand = [
         spec.name
         for spec in parse_fields(fields or [])
         if spec.is_relation and not is_user_target(relation_name(spec))
     ]
     plan_chain(ws, target, model, chain, access=access, search=split_csv(search), expand=expand)
-    if not migrate:
+    if external and not migrate:
+        ws.note(
+            f"next: karni make migration --app {target.label} records the model with "
+            "managed=False (no SQL ever runs for it), and karni check compares it with the table"
+        )
+    elif not migrate:
         ws.note(f"next: karni make migration --app {target.label}")
     ws.commit(dry_run=dry_run)
     if migrate and not dry_run:

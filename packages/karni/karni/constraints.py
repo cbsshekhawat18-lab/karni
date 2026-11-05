@@ -343,7 +343,11 @@ class NoOverlap(ExclusionConstraint):  # type: ignore[misc]
         self, model: type[models.Model], instance: models.Model | None, using: str, detail: str = ""
     ) -> OverlapConflict:
         existing = self.conflicting(model, instance, using) if instance is not None else None
-        subject = f"{model.__name__} {instance.pk}" if instance is not None else model.__name__
+        subject = (
+            f"{model.__name__} {instance.pk}"
+            if instance is not None and instance.pk is not None
+            else model.__name__
+        )
         resource = ", ".join(self.resource) or "the table"
         if existing is not None:
             what = f"it overlaps {self.describe(model, existing)}"

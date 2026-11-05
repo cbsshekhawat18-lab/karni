@@ -23,7 +23,8 @@ at the same version ([releasing](releasing.md)).
 
 ## The promise
 
-For everything listed as public below:
+For everything listed as public below, except the names marked
+[experimental](#experimental-names):
 
 1. **Nothing breaks without warning.** A public name is deprecated for at
    least one minor release before it is removed. While deprecated, it keeps
@@ -121,6 +122,96 @@ and a codemod or detector is included where possible.
 - The scaffold's templates (`templates/project/`). They generate *your*
   files, and changing them never changes an existing project. Project-level
   migrations, where needed, ship as `karni upgrade` codemods.
+
+## Experimental names
+
+A new public name can ship as **experimental** first. An experimental name is
+public and documented, but it may change or be removed in a minor release
+without the deprecation cycle above. Every such change is noted in the
+[CHANGELOG](https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md)
+and in the migration notes of that release, so an upgrade never changes one
+silently.
+
+A name is experimental only when it is marked, and the mark is visible
+wherever you meet the name:
+
+- its docstring (Python) or doc comment (TypeScript) starts with
+  `Experimental.`,
+- the docs section that describes it opens with an *Experimental* note,
+- its capability in the [reference](REFERENCE.md#capabilities-and-status)
+  has the status `experimental` and says *Experimental tier*. The status
+  `experimental` alone only means that no reference application uses the
+  capability yet: those names keep the promise.
+
+Some parts never become experimental. An error code keeps its meaning forever
+and is never reused, also for an experimental feature. A change to the
+database schema of an experimental model always comes with a migration.
+
+An experimental name becomes stable in a minor release, once a reference
+application uses it. The CHANGELOG entry of that release says so, and from
+then on the promise above applies in full.
+
+Experimental now:
+
+- [Sign-in with an ID token (Google, Microsoft, Apple)](accounts.md#sign-in-with-an-id-token-google-microsoft-apple):
+  the `social/<provider>/` endpoint, the `KARNI_SOCIAL_TOKEN_*` settings,
+  `karni.accounts.social_token`, the `SocialIdentity` model, and
+  `useSocialLogin` and `SocialButton` in `@karni/ui`.
+- [Sign-in with a code sent by email](accounts.md#sign-in-with-a-code-sent-by-email):
+  the `otp/send/` and `otp/verify/` endpoints, the `KARNI_EMAIL_OTP*`
+  settings, the `auth.otp_*` throttle scopes, `karni.accounts.otp`, the
+  `LoginCode` model, `karni.accounts.services.prove_address`, and
+  `useOtpLogin`, `OtpLoginForm` and `LoginForm`'s `codeSignIn` in `@karni/ui`.
+- [Terms acceptance](accounts.md#terms-acceptance): the `terms/` and
+  `terms/accept/` endpoints, the `KARNI_TERMS` setting, `karni.accounts.terms`
+  (with `TermsGateMiddleware`), the `TermsAcceptance` model, the `terms` field
+  of `me/`, the client's `onError` hook, and `TermsGate` and `useAuth()`'s
+  `terms`, `termsRequired` and `acceptTerms` in `@karni/ui`.
+- [Integer primary keys](models.md#choosing-the-key-type):
+  `karni.models.BigIntBaseModel` and `IntegerKeyModel`, the `KARNI_PK`
+  setting, `karni make model --pk`, `karni.api.filters.IntegerFilter`, the
+  import options `match_ids` and `keep_ids` (with the `ImportJob` fields of
+  the same names), and the `KEYS:` line of `karni context`.
+- [External tables, views and a second database](models.md#external-tables-views-and-a-second-database):
+  the `class Karni` options `external`, `writable` and `database`, `karni.db`
+  (with `DatabaseRouter`, `karni.db.checks` and `karni.db.introspection`),
+  `BaseViewSet.is_read_only` and `read_only_refused_actions`,
+  `KarniModelAdmin.is_read_only`, `assert_crud`'s `read_only`,
+  `karni.testing.create_external_tables`, the pytest option
+  `--karni-external-tables`, `manage.py karni_inspect` and `karni make model
+  --external`.
+- [The app spec](app-spec.md): the `karni.yaml` format and its JSON Schema,
+  `karni spec validate`, `karni spec export`, `manage.py karni_facts`,
+  `karni.facts` and the `karni_cli.spec` package.
+- [Clarifying questions](app-spec.md#questions): `karni plan --questions`
+  (its `--max`, its `--json` output and schema, the question ids and the
+  rules that choose them), `karni spec answer`, `karni_cli.spec.questions`
+  and `karni_cli.spec.edit`.
+- [`karni build`](app-spec.md#karni-build): the command, its `--json` output
+  and schema, the layout of the files it writes (`<app>/karni/`,
+  `<app>/tests/karni/`, `frontend/src/pages/karni/`, the `karni:spec`
+  blocks), `.karni/build.json`, `manage.py karni_makemigrations` and the
+  `karni_cli.builder` package.
+- [The module catalog](modules.md#the-module-catalog): the `karni.module.toml`
+  manifest format and the feature manifests, the `karni.modules` entry point
+  group, `karni.catalog` (with `python -m karni.catalog`),
+  `karni.testing.assert_module_manifest`, `karni modules list` and `show`,
+  `karni remove`, the `CATALOG:` lines of `karni context`, the `FEATURES:`
+  line of `manage.py karni_context`, and `karni_cli.catalog`.
+- [The /new-app flow](agents.md#agents-the-new-app-flow): the `new-app`
+  procedure and rule K311, [recipes](app-spec.md#recipes) (`karni recipes
+  list` and `show`, `--match` and its ranking, the blank start, the
+  `recipe.toml` format and its schema, the `karni.recipes` entry point group,
+  `karni recipes --json` and its schema, `karni_cli.recipes`), and [the MCP
+  tools](app-spec.md#mcp-tools) `recipes`, `spec_validate`, `questions`,
+  `answer`, `plan`, `build` and `modules` with their results' schema
+  (`karni_cli.agent_tools`).
+- [The built-in recipes](recipes/index.md): `shop`, `booking`, `crm`, `lms`
+  and `marketplace` (their specs, files and names), `karni new --recipe`,
+  the `recipe` key of `.karni/build.json` (`Record.recipe`), the stub rule
+  (`karni_cli.recipes.apply`, `karni_cli.builder.render.is_stub_file`,
+  `karni_cli.recipes.karni_owned`) and the `recipes` pytest marker of
+  karni-cli's suite.
 
 ## Supported platforms
 

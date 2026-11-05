@@ -23,12 +23,14 @@ The file maps model labels to lists of rows::
   updated, or created when nothing matches. The key is ``Karni.import_key``,
   else ``Karni.natural_key`` (declared, or the first unique slug, char or
   email field), else the fields of the model's first unique constraint,
-  else the primary key. Every row carries its key.
-* **Relations** name their target by the target's natural key (or primary
-  key): one value for a foreign key, a list for a many-to-many field. A
-  foreign key's target comes earlier in the file or already exists. An
-  optional many-to-many field is applied once every row of the file exists,
-  so two models may point at each other.
+  else the primary key. Every row carries its key. A row keyed by an
+  integer id is created with that id, and the database sequence is moved
+  past the largest id once the load commits.
+* **Relations** name their target by the target's natural key, or by its
+  primary key when it has none: one value for a foreign key, a list for a
+  many-to-many field. A foreign key's target comes earlier in the file or
+  already exists. An optional many-to-many field is applied once every row
+  of the file exists, so two models may point at each other.
 * **Files.** A file or image field holds a path relative to the content
   file. It is uploaded when the row has no file yet, or again with
   ``--refresh-files``. An empty string leaves the field alone. Each file is
@@ -90,7 +92,13 @@ from rest_framework import serializers
 from karni.errorcodes import KarniError
 from karni.middleware import current_user
 from karni.transfer.fields import ColumnSpec
-from karni.transfer.imports import MAX_PROBLEMS, Importer, ImportResult, _blank
+from karni.transfer.imports import (
+    MAX_PROBLEMS,
+    Importer,
+    ImportResult,
+    _blank,
+    advance_sequences,
+)
 
 __all__ = [
     "ContentImporter",
@@ -623,6 +631,14 @@ class _Loader:
             self.count()
             if self.dry_run or self.report.problems:
                 transaction.set_rollback(True)
+            else:
+                # Rows created with their file's integer id leave PostgreSQL's
+                # sequence behind: move it on, so the next insert works.
+                advance_sequences(
+                    list(
+                        {plan.model: None for plan in self.plans.values() if plan.importer.kept_ids}
+                    )
+                )
         self.report.seconds = time.perf_counter() - started
         if self.report.problems:
             total = len(self.report.problems)
@@ -657,7 +673,7 @@ class _Loader:
             if plan.position_key is not None and plan.position_key not in values:
                 values[plan.position_key] = index + 1
             if plan.parent is not None:
-                values[plan.parent] = parent.pk
+                values[plan.parent] = parent  # resolved already: never looked up by natural key
             missing = [name for name in plan.keys if name not in values]
             if missing:
                 self.report.problem(

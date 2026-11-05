@@ -50,7 +50,7 @@ IMPORT_MARKER = "// karni:page-imports"
 ROUTE_MARKER = "// karni:routes"
 
 _PATH = re.compile(r"^/([A-Za-z0-9_.$-]+(/[A-Za-z0-9_.$-]+)*)?$")
-_ROUTE_PATH = re.compile(r"""path:\s*["']([^"']+)["']""")
+ROUTE_PATH = re.compile(r"""path:\s*["']([^"']+)["']""")
 _SUFFIXES = ("-detail", "-form", "-list", "-page")
 
 
@@ -123,7 +123,7 @@ def spec_for(
 
 def known_routes(ws: Workspace) -> set[str]:
     text = ws.read(ROUTES) or ""
-    return set(_ROUTE_PATH.findall(text))
+    return set(ROUTE_PATH.findall(text))
 
 
 def _routed_resources(ws: Workspace) -> set[str]:
@@ -301,7 +301,7 @@ def plan(
 def _register(ws: Workspace, spec: PageSpec, existing: set[str]) -> None:
     text = ws.read(ROUTES)
     manual = f'import {spec.component} from "./pages/{spec.name}";\n' + "\n".join(
-        _route_line(spec, p) for p in spec.paths
+        route_line(spec, p) for p in spec.paths
     )
     if text is None or IMPORT_MARKER not in text or ROUTE_MARKER not in text:
         raise CliError(
@@ -329,11 +329,12 @@ def _register(ws: Workspace, spec: PageSpec, existing: set[str]) -> None:
             continue
         index = next(i for i, ln in enumerate(lines) if ROUTE_MARKER in ln)
         indent = lines[index][: len(lines[index]) - len(lines[index].lstrip())]
-        lines.insert(index, indent + _route_line(spec, path).strip())
+        lines.insert(index, indent + route_line(spec, path).strip())
     ws.write(ROUTES, "\n".join(lines) + "\n")
 
 
-def _route_line(spec: PageSpec, path: str) -> str:
+def route_line(spec: PageSpec, path: str) -> str:
+    """The ``createRoute(...)`` entry of one of ``spec``'s paths (``karni build`` reuses it)."""
     return (
         f'    createRoute({{ getParentRoute: () => root, path: "{path}", '
         f"component: {spec.component} }}),"

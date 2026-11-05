@@ -28,7 +28,7 @@ carries it, and `pytest
 
 | Rule id | Fails when | Fix |
 |---|---|---|
-| `model-base` | a concrete model inherits `django.db.models.Model` directly | inherit `karni.models.BaseModel` / `SoftDeleteModel` |
+| `model-base` | a concrete model inherits `django.db.models.Model` directly | inherit `karni.models.BaseModel` (or `BigIntBaseModel`, or compose the mixins) |
 | `viewset-base` | a GenericViewSet subclass bypasses `BaseViewSet` | inherit `karni.api.BaseViewSet` |
 | `viewset-access` | a `BaseViewSet` serving a model (`model`/`queryset` set, or routed) has no `access` (inherited declarations and an overridden `get_access()` count) | add `access = Access(read=..., write=...)`, or `Unscoped(reason=...)` |
 | `access-override` | a class overrides `filter_queryset_for_user` | express the row rule in `access` (`Where(...)`), or opt out with the reason |
@@ -41,6 +41,13 @@ carries it, and `pytest
 | `audited-bulk-write` | `<AuditedModel>.objects…update()` or `.bulk_update()` in project code. Signals do not fire, so no change-history entry is written | save the instances, or opt out with the reason |
 | `duplicate` | ≥ `min_statements` structurally identical statements in two places | reuse the named Karni API, or extract one implementation |
 | `opt-out-reason` | any opt-out marker without a reason | write the reason |
+
+`model-base` and `query-scaling` (experimental) leave out a model over a
+table or view another system owns: `class Karni: external = True` together
+with `Meta.managed = False` on a plain `models.Model`. Without
+`managed = False` the model still fails `model-base`, and `karni.E270` says
+why. See [external tables, views and a second
+database](models.md#external-tables-views-and-a-second-database).
 
 Opt-out goes on the same line, the line above a class or method, or the line
 above its first decorator. `opt-out-reason` itself cannot be suppressed:
@@ -108,6 +115,35 @@ KARNI_ARCHITECTURE = {
     "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]},
 }
 ```
+
+## Integer keys on a public resource
+
+!!! warning "Experimental"
+    `karni.W530` belongs to [integer keys](models.md#choosing-the-key-type),
+    which are [experimental](stability.md#experimental-names).
+
+`karni check` (and every `manage.py check`) warns with `karni.W530` for a
+routed `BaseViewSet` whose model has an integer primary key
+(`BigIntBaseModel`, an `AutoField`), whose detail route looks rows up by that
+key, and whose `read` access lets anonymous callers in (`Public()`, alone or
+in an `|`). Integer ids are sequential, so a visitor learns how many rows
+there are and can walk `/readings/1/`, `/readings/2/`, ..., including rows no
+list links to. It is a warning: `karni check` prints it and passes, and
+`karni check --deploy` fails on it.
+
+The fix is a UUID key (`BaseModel`) or a slug lookup
+(`lookup_field = "slug"`). When the ids may be public, say why above the
+viewset class, with the same marker as the rules above:
+
+```python
+# karni: allow(public-integer-key): order numbers are printed on every receipt
+class OrderViewSet(BaseViewSet):
+    model = Order
+    access = Access(read=Public(), write=HasRole("staff"))
+```
+
+A marker without a reason does not silence it. `'karni.W530'` in
+`SILENCED_SYSTEM_CHECKS` silences it for the whole project.
 
 ## Frontend rules
 

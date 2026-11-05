@@ -28,6 +28,13 @@ configured Django project it only reseeds factory randomness:
   not use up each other's limits, and a run never inherits the counters of
   an earlier run from Redis. A test that checks a limit still sees it work.
   This holds with the project's own cache too.
+* **Tables for external models** (experimental). Once a test database is
+  migrated, every external model routed to it (``class Karni: external =
+  True``, :mod:`karni.db`) whose table or view is missing gets a table built
+  from its fields, and on PostgreSQL the schema its ``db_table`` names
+  (:func:`karni.testing.external.create_external_tables`). A table or view
+  that exists already is left alone. ``--karni-external-tables=off`` (or
+  ``karni_external_tables = off`` in the ini file) turns it off.
 * **Fixture** ``query_budget`` — :func:`karni.testing.performance.query_budget`::
 
       def test_report(client, query_budget):
@@ -40,7 +47,8 @@ configured Django project it only reseeds factory randomness:
       def test_cancel(client_as):
           assert client_as("organizer").post(url).status_code == 200
 
-Override / escape hatches: ``pytest --karni-query-budget=warn`` (or ``off``)
+Override / escape hatches: ``pytest --karni-external-tables=off`` to create no
+table for external models, ``pytest --karni-query-budget=warn`` (or ``off``)
 for one run, ``karni_query_budget_mode = warn`` in the pytest ini file for the
 project, ``-p no:karni`` to disable the plugin entirely. Define a fixture
 named ``_karni_fresh_throttles`` in ``conftest.py`` to replace the per-test
@@ -79,6 +87,11 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default="locmem",
     )
     parser.addini(
+        "karni_external_tables",
+        "Create the tables of external models in each test database: create (default) or off.",
+        default="create",
+    )
+    parser.addini(
         "karni_seed",
         "Seed for factory/Faker randomness, reseeded per test (default 0, 'off' to disable).",
         default="0",
@@ -96,6 +109,14 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         dest="karni_seed",
         default=None,
         help="Seed for generated test data this run (overrides the karni_seed ini option).",
+    )
+    group.addoption(
+        "--karni-external-tables",
+        dest="karni_external_tables",
+        choices=("create", "off"),
+        default=None,
+        help="Create the tables of external models in each test database (overrides the ini "
+        "option).",
     )
     group.addoption(
         "--karni-update-snapshots",
@@ -116,6 +137,28 @@ def pytest_configure(config: pytest.Config) -> None:
         from karni.testing import schema
 
         schema.UPDATE_SNAPSHOTS = True
+    _external_tables(config)
+
+
+def _external_tables(config: pytest.Config) -> None:
+    """Create the tables of external models after each test database's migrate (unless off)."""
+    mode = config.getoption("karni_external_tables", default=None) or config.getini(
+        "karni_external_tables"
+    )
+    if str(mode).strip().lower() not in {"create", "off"}:
+        raise pytest.UsageError(
+            f"karni_external_tables = {mode!r} is not valid. Set it (or "
+            "--karni-external-tables) to create or off."
+        )
+    if str(mode).strip().lower() == "off":
+        return
+    try:
+        from django.db.models.signals import post_migrate
+    except ImportError:  # pragma: no cover - Django is a karni dependency
+        return
+    from karni.testing.external import after_migrate
+
+    post_migrate.connect(after_migrate, dispatch_uid="karni.testing.external.after_migrate")
 
 
 def _mode(config: pytest.Config) -> str:

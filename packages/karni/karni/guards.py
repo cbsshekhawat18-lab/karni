@@ -335,15 +335,20 @@ def state_moved(
     moved = {name: value for name, value in current.items() if value != expected[name]}
     attname, now = next(iter(moved.items())) if moved else next(iter(current.items()))
     before = expected[attname]
+    shown = (
+        f"{type(instance).__name__} {instance.pk}"
+        if instance.pk is not None
+        else (type(instance).__name__)
+    )
     return StateConflict(
-        f"{type(instance).__name__} {instance.pk}: {attname} is {now!r} in the database, not "
+        f"{shown}: {attname} is {now!r} in the database, not "
         f"{before!r} as when this instance was loaded. Another transaction changed it, so "
         "nothing was written. Reload the row (refresh_from_db()) and decide again from "
         f"{now!r}.",
         field=attname,
         details={
             "resource": instance._meta.label,
-            "id": str(instance.pk),
+            "id": str(instance.pk) if instance.pk is not None else None,
             "field": attname,
             "expected": before,
             "current": now,

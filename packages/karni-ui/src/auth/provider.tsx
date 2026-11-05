@@ -26,6 +26,11 @@
  * provider invalidates the cached schema, so tables, forms and detail views
  * follow the new user's field set without any per-role component code.
  *
+ * Terms acceptance (experimental): `terms`, `termsRequired` and
+ * `acceptTerms(client?)` mirror the engine. `termsRequired` comes from `/me/`
+ * and from the terms gate's 403 (`E245`) on any request made through the
+ * client, so terms bumped mid-session are caught. `TermsGate` uses them.
+ *
  * Known limitations (D6): browser tabs do not coordinate refreshes. With
  * refresh-token rotation, a refresh in one tab can log another tab out on
  * its next refresh. Identity changes also do not auto-invalidate resource
@@ -47,7 +52,17 @@ import { karniKeys } from "../hooks/keys";
 import { useKarniClient } from "../schema/provider";
 import { AuthEngine } from "./engine";
 import { createLocalStorageTokenStorage, type TokenStorage } from "./storage";
-import type { AuthStatus, KarniUser, LoginResult } from "./types";
+import type {
+  AuthStatus,
+  AuthTerms,
+  KarniUser,
+  LoginResult,
+  OtpLoginResult,
+  OtpSendResult,
+  SocialLoginResult,
+  SocialSignInOptions,
+  TermsClientInfo,
+} from "./types";
 
 export interface AuthProviderProps {
   /**
@@ -79,6 +94,43 @@ export interface AuthContextValue {
    * mode), e.g. after starting or stopping an impersonated session.
    */
   adoptTokens(access: string | null, refresh: string | null): Promise<void>;
+  /**
+   * Experimental. Signs in with a provider's ID token (`POST
+   * <authBasePath>/social/<provider>/`). Optional so a hand-built context
+   * value (stories, tests) stays valid. `AuthProvider` always provides it.
+   * Use it through `useSocialLogin` or `SocialButton`.
+   */
+  socialLogin?: (
+    provider: string,
+    idToken: string,
+    options?: SocialSignInOptions,
+  ) => Promise<SocialLoginResult>;
+  /**
+   * Experimental. Asks the server to email a sign-in code (`POST
+   * <authBasePath>/otp/send/`). Optional like `socialLogin`. Use it through
+   * `useOtpLogin` or `OtpLoginForm`.
+   */
+  otpSend?: (email: string) => Promise<OtpSendResult>;
+  /**
+   * Experimental. Signs in with the emailed code (`POST
+   * <authBasePath>/otp/verify/`). Optional like `socialLogin`.
+   */
+  otpVerify?: (email: string, code: string) => Promise<OtpLoginResult>;
+  /**
+   * Experimental. The terms the server asks the signed-in user to accept
+   * (`KARNI_TERMS`), or null when it asks for none. Optional like `socialLogin`.
+   */
+  terms?: AuthTerms | null;
+  /**
+   * Experimental. True while the API refuses the user until they accept
+   * `terms`: from `/me/`, or from the terms gate's 403 (`E245`) on any request.
+   */
+  termsRequired?: boolean;
+  /**
+   * Experimental. Accepts `terms.version` (`POST <authBasePath>/terms/accept/`),
+   * with what the app says about itself as `client`. Use it through `TermsGate`.
+   */
+  acceptTerms?: (client?: TermsClientInfo) => Promise<AuthTerms>;
 }
 
 /**
@@ -146,6 +198,12 @@ export function AuthProvider({
       logout: () => engine.logout(),
       refresh: () => engine.refresh(),
       adoptTokens: (access, refresh) => engine.adoptTokens(access, refresh),
+      socialLogin: (provider, idToken, options) => engine.socialLogin(provider, idToken, options),
+      otpSend: (email) => engine.otpSend(email),
+      otpVerify: (email, code) => engine.otpVerify(email, code),
+      terms: snapshot.terms,
+      termsRequired: snapshot.termsRequired,
+      acceptTerms: (client) => engine.acceptTerms(client),
     }),
     [engine, snapshot],
   );

@@ -103,6 +103,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "models",
+        "`BigIntBaseModel`: the same base on a 64-bit integer key, chosen per model "
+        "(`karni make model --pk bigint`, `KARNI_PK`), with legacy ids in imports and "
+        "`karni load`, and `karni.W530` for a public resource. Experimental tier",
+    ),
+    Capability(
+        "models",
         "Realistic, connected seed data (`karni seed`, `<app>/seeds.py`)",
         ((f"{EH}/events/seeds.py", "Seeder"),),
     ),
@@ -126,6 +132,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         ((f"{SL}/crm/models.py", "audit = True"),),
     ),
     Capability("models", "Scheduled tasks (`<app>/schedules.py`, `karni schedule`)"),
+    Capability(
+        "models",
+        "External tables, SQL views and a second database as models Karni reads (`class Karni: "
+        "external`, `writable`, `database`, `karni make model --external`). Experimental tier",
+    ),
     Capability(
         "models",
         "A tenant scope on every model (the `karni-tenancy` module)",
@@ -160,6 +171,22 @@ CAPABILITIES: tuple[Capability, ...] = (
         ((f"{SL}/frontend/src/pages/leads.tsx", "<ResourceImport"),),
     ),
     Capability("api", "Response caching per viewset (`Cache`, `Uncached`)"),
+    Capability(
+        "api",
+        "Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode "
+        "(`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier",
+    ),
+    Capability(
+        "api",
+        "Sign-in with a one-time code sent by email, in JWT and session mode "
+        "(`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier",
+    ),
+    Capability(
+        "api",
+        "A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user "
+        "accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). "
+        "Experimental tier",
+    ),
     Capability(
         "api",
         "TypeScript types and typed hooks from the OpenAPI document (`karni types`)",
@@ -209,6 +236,21 @@ CAPABILITIES: tuple[Capability, ...] = (
         ((f"{EH}/frontend/src/pages/event-dashboard.tsx", "<Stat"),),
     ),
     Capability("ui", "`ChangeHistory`, `DataChart` and `FileUpload`"),
+    Capability(
+        "ui",
+        "`SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own "
+        "SDK. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as "
+        "`LoginForm`'s `codeSignIn` switch. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once "
+        "the user accepts the current terms. Experimental tier",
+    ),
     Capability(
         "ui",
         "`karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or "
@@ -283,6 +325,49 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability("agents", "`karni explain <code>`: why an error happens and the fix, offline"),
     Capability(
         "agents",
+        "The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` "
+        "(every problem with its code and line), `karni spec export` (the spec of an "
+        "existing project) and `karni plan` (what `karni build` would change, risky changes "
+        "with their row counts). Experimental tier",
+    ),
+    Capability(
+        "agents",
+        "Clarifying questions: `karni plan --questions` lists the few gaps of `karni.yaml` worth "
+        "asking the user (owners, access, the sign-up role, the kind, each module's and "
+        "feature's asks), chosen by fixed rules, and `karni spec answer` writes an answer "
+        "keeping the file's comments. Experimental tier",
+    ),
+    Capability(
+        "agents",
+        "`karni build`: the spec applied in one command, idempotently. Karni's code in files of "
+        "its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit "
+        "found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and "
+        "`karni check`. Experimental tier",
+    ),
+    Capability(
+        "agents",
+        "The module catalog: a manifest per module and built-in feature, `karni modules list` "
+        "and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from "
+        "the manifest and `karni remove`, which never drops data. Experimental tier",
+    ),
+    Capability(
+        "agents",
+        "The `/new-app` flow, from a one-line request to a running app: recipes (`karni recipes "
+        "list --match`, `show`, the `karni.recipes` entry points, the blank start), the "
+        "`new-app` procedure and rule K311 in every adapter, and the MCP tools `recipes`, "
+        "`spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`, each returning "
+        "JSON with a published schema. Experimental tier",
+    ),
+    Capability(
+        "agents",
+        "Five recipes, `shop`, `booking`, `crm`, `lms` and `marketplace`, and `karni new "
+        '"<Name>" --recipe <name>`: the recipe\'s karni.yaml, then `karni build`, which writes '
+        "the recipe's domain code, seeds and tests over its own stubs, never over the "
+        "project's code, and runs the tests and `karni check`. Each is built from scratch in "
+        "CI. Experimental tier",
+    ),
+    Capability(
+        "agents",
         "`karni why` / `karni why-empty`: why a row, field or action is refused or missing for "
         "a user, from the code that decides it",
     ),
@@ -346,7 +431,10 @@ STATUS_NOTE = (
     "`stable`: public under the [stability promise](stability.md) and used by a reference "
     "application (EventHub or the social-leads example). `experimental`: public and "
     "covered by Karni's own tests, but no reference application uses it yet, so expect "
-    "rough edges. `planned`: documented as coming, but not in the code."
+    "rough edges. A capability that also says *Experimental tier* has names that may change "
+    "in a minor release without the deprecation cycle "
+    "([experimental names](stability.md#experimental-names)). Every other capability keeps "
+    "the promise. `planned`: documented as coming, but not in the code."
 )
 
 

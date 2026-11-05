@@ -412,3 +412,44 @@ a row the client adds appears in the menu. Menus already in the database keep th
 items."""
 mechanical = false
 migration = "migrations/0.5.md#menus-that-list-a-models-rows"
+
+[[change]]
+id = "pk-filters-not-derived"
+kind = "behaviour"
+symbol = "karni.api.filters.KarniFilterBackend (?id=, ?id__gte=, ?id__lte=)"
+summary = """\
+The derived filterset no longer filters on the model's own primary key, for UUID and \
+integer keys alike: an integer key range (?id__gte=) would page through the table by \
+key. A project whose clients send ?id=, ?id__gte= or ?id__lte= declares them, e.g. \
+filterset_fields = {"id": ["exact", "gte", "lte"]} on the viewset. A relation to an \
+integer-keyed model filters with IntegerFilter (whole numbers only) instead of \
+NumberFilter."""
+mechanical = false
+migration = "migrations/0.5.md#the-primary-key-is-no-longer-a-derived-filter"
+
+[[change]]
+id = "import-ids-are-explicit"
+kind = "behaviour"
+symbol = "karni.transfer imports: the id column and relation cells"
+summary = """\
+An upload matches existing rows by its id column only with the new match_ids option \
+(it was implicit), so an export from one environment cannot update unrelated rows in \
+another. A relation cell names a target with a natural key by that key alone, never \
+also by its id. keep_ids creates rows with the file's ids. karni_transfer migration \
+0002 adds both options to ImportJob: run `karni migrate`."""
+mechanical = false
+migration = "migrations/0.5.md#imports-match-ids-only-when-asked"
+
+[[change]]
+id = "agent-files-new-app"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+A new procedure, new-app, takes an agent from a one-line request to a running app \
+through karni.yaml (a recipe or the blank start, karni plan --questions, karni spec \
+answer, karni plan, karni build), and rule K311 says never to hand-write what \
+karni.yaml can express. `karni rules sync` writes its slash command files and a line \
+for it in the adapters. Until then `karni rules sync --check` (and make check) \
+reports the files as stale."""
+mechanical = false
+migration = "migrations/0.5.md#a-procedure-from-one-line-to-an-app-run-karni-rules-sync"

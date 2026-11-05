@@ -21,19 +21,21 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 
 ## Capabilities and status
 
-`stable`: public under the [stability promise](stability.md) and used by a reference application (EventHub or the social-leads example). `experimental`: public and covered by Karni's own tests, but no reference application uses it yet, so expect rough edges. `planned`: documented as coming, but not in the code.
+`stable`: public under the [stability promise](stability.md) and used by a reference application (EventHub or the social-leads example). `experimental`: public and covered by Karni's own tests, but no reference application uses it yet, so expect rough edges. A capability that also says *Experimental tier* has names that may change in a minor release without the deprecation cycle ([experimental names](stability.md#experimental-names)). Every other capability keeps the promise. `planned`: documented as coming, but not in the code.
 
 ### Models
 
 | Capability | Status | Evidence |
 |---|---|---|
 | `BaseModel`: UUID key, created and updated timestamps, soft delete, `created_by` and `updated_by` | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/models.py) |
+| `BigIntBaseModel`: the same base on a 64-bit integer key, chosen per model (`karni make model --pk bigint`, `KARNI_PK`), with legacy ids in imports and `karni load`, and `karni.W530` for a public resource. Experimental tier | `experimental` | Karni's own tests |
 | Realistic, connected seed data (`karni seed`, `<app>/seeds.py`) | `stable` | [seeds.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/seeds.py) |
 | Real content from a JSON or YAML file, created or updated by natural key (`karni load`) | `experimental` | Karni's own tests |
 | Models and real rows from a designer's pages: the repeated content, its fields and relations (`karni design analyze`, `karni design extract`) | `experimental` | Karni's own tests |
 | Model events and listeners, optionally queued to Celery (`@on_updated`) | `stable` | [listeners.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/listeners.py) |
 | Field-level change history (`class Karni: audit = True`) | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/models.py) |
 | Scheduled tasks (`<app>/schedules.py`, `karni schedule`) | `experimental` | Karni's own tests |
+| External tables, SQL views and a second database as models Karni reads (`class Karni: external`, `writable`, `database`, `karni make model --external`). Experimental tier | `experimental` | Karni's own tests |
 | A tenant scope on every model (the `karni-tenancy` module) | `planned` | [documented](models.md#scopes-the-filters-every-default-manager-applies) |
 
 ### API
@@ -46,6 +48,9 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | CSV and XLSX export of any list (`/export/?format=`) | `stable` | [test_leads.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/tests/test_leads.py) |
 | Import from CSV or XLSX with a mandatory preview (`/import/`) | `stable` | [leads.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/frontend/src/pages/leads.tsx) |
 | Response caching per viewset (`Cache`, `Uncached`) | `experimental` | Karni's own tests |
+| Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier | `experimental` | Karni's own tests |
+| Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier | `experimental` | Karni's own tests |
+| A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier | `experimental` | Karni's own tests |
 | TypeScript types and typed hooks from the OpenAPI document (`karni types`) | `stable` | [Makefile](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/Makefile) |
 
 ### Admin
@@ -67,6 +72,9 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Import screen with column mapping and preview (`ResourceImport`) | `stable` | [leads.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/frontend/src/pages/leads.tsx) |
 | Page building blocks: `Page`, `Layout`, `Stat`, `Modal`, `Toaster`, `EmptyState` | `stable` | [event-dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/frontend/src/pages/event-dashboard.tsx) |
 | `ChangeHistory`, `DataChart` and `FileUpload` | `experimental` | Karni's own tests |
+| `SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own SDK. Experimental tier | `experimental` | Karni's own tests |
+| `OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as `LoginForm`'s `codeSignIn` switch. Experimental tier | `experimental` | Karni's own tests |
+| `TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once the user accepts the current terms. Experimental tier | `experimental` | Karni's own tests |
 | `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui components as Karni's primitives | `experimental` | Karni's own tests |
 | `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions | `experimental` | Karni's own tests |
 
@@ -94,6 +102,12 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Adapter files for every supported agent tool from one rule set (`karni rules sync`) | `stable` | [AGENTS.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/AGENTS.md), [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.cursor/commands/new-model.md) |
 | Slash commands for the routine tasks (`/new-model`, `/new-page`, …) | `stable` | [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.claude/commands/new-model.md) |
 | `karni explain <code>`: why an error happens and the fix, offline | `experimental` | Karni's own tests |
+| The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` (every problem with its code and line), `karni spec export` (the spec of an existing project) and `karni plan` (what `karni build` would change, risky changes with their row counts). Experimental tier | `experimental` | Karni's own tests |
+| Clarifying questions: `karni plan --questions` lists the few gaps of `karni.yaml` worth asking the user (owners, access, the sign-up role, the kind, each module's and feature's asks), chosen by fixed rules, and `karni spec answer` writes an answer keeping the file's comments. Experimental tier | `experimental` | Karni's own tests |
+| `karni build`: the spec applied in one command, idempotently. Karni's code in files of its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and `karni check`. Experimental tier | `experimental` | Karni's own tests |
+| The module catalog: a manifest per module and built-in feature, `karni modules list` and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from the manifest and `karni remove`, which never drops data. Experimental tier | `experimental` | Karni's own tests |
+| The `/new-app` flow, from a one-line request to a running app: recipes (`karni recipes list --match`, `show`, the `karni.recipes` entry points, the blank start), the `new-app` procedure and rule K311 in every adapter, and the MCP tools `recipes`, `spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`, each returning JSON with a published schema. Experimental tier | `experimental` | Karni's own tests |
+| Five recipes, `shop`, `booking`, `crm`, `lms` and `marketplace`, and `karni new "<Name>" --recipe <name>`: the recipe's karni.yaml, then `karni build`, which writes the recipe's domain code, seeds and tests over its own stubs, never over the project's code, and runs the tests and `karni check`. Each is built from scratch in CI. Experimental tier | `experimental` | Karni's own tests |
 | `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it | `experimental` | Karni's own tests |
 | MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools | `experimental` | Karni's own tests |
 
@@ -123,10 +137,18 @@ Every kind has the API, the admin, PostgreSQL, Redis, Celery, the security defau
 
 With --design, the site is built from a designer's pages, and the next steps say what is left: the models, the real content and the loops (karni rules --procedure site-from-design).
 
+With --recipe (experimental), the app starts from a recipe's karni.yaml, and karni build makes it: the models and the API, the recipe's own domain code, seeds and tests, the migrations, demo data, the tests and karni check.
+
 Example:
 
 ```sh
 karni new "Crumb Bakery" --kind site --design ../design
+```
+
+Example:
+
+```sh
+karni new "Corner Shop" --recipe shop
 ```
 
 ```
@@ -143,6 +165,7 @@ karni new [OPTIONS] NAME
 | `--staff-app/--no-staff-app` |  | The React staff app in frontend/. An app always has it. A site has it unless --no-staff-app, and then staff work in the admin. |
 | `--site-app` TEXT | `website` | The label of the site app a kind with a site gets. |
 | `--git/--no-git` | on | Make the project a git repository with a first commit of what karni new wrote. Skipped inside an existing repository and when git is not installed. |
+| `--recipe` TEXT |  | Experimental. Start the app from a recipe (karni recipes list, or blank): its karni.yaml with this name, then karni build, which also writes the recipe's own domain code, seeds and tests and runs the tests and karni check. Without the project's interpreter or database it stops after karni.yaml: run karni build next. |
 
 #### `karni add`
 
@@ -155,6 +178,57 @@ karni add MODULE
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `MODULE` (required) |  | Module short name, e.g. "payments" |
+
+#### `karni remove`
+
+Take a module out again: what karni add wired, never its data
+
+```
+karni remove [OPTIONS] MODULE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `MODULE` (required) |  | Module short name, e.g. "payments" |
+| `--dry-run` |  | Print every change and each table's rows. Write nothing. |
+| `--keep-tables` |  | Take the module out although its tables exist: they stay in the database. |
+
+#### `karni modules`
+
+The module catalog (experimental): every module and built-in feature, added or not, with what it provides and the questions to ask (list, show).
+
+```
+karni modules COMMAND [ARGS]...
+```
+
+##### `karni modules list`
+
+Experimental. Every module and built-in feature: kind, status, state, purpose, questions.
+
+Modules first, then features. A module is added (in the # karni:apps block), installed (the project's interpreter has it) or available. Each question names the setting its answer goes to.
+
+```
+karni modules list [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--json` |  | Print the entries as JSON (every manifest key, plus state). |
+
+##### `karni modules show`
+
+Experimental. One module or feature: what it provides, the questions, the wiring.
+
+For a module: what karni add writes (apps, middleware, context processors, the kind) and prints (the URL include, extras), which karni remove takes out again. For a feature: the setting that turns it on and the extra it needs.
+
+```
+karni modules show [OPTIONS] NAME
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | A module or feature, e.g. payments or two_factor. |
+| `--json` |  | Print the entries as JSON (every manifest key, plus state). |
 
 #### `karni upgrade`
 
@@ -365,7 +439,7 @@ karni types [OPTIONS]
 
 #### `karni mcp`
 
-Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp])
+Serve context, rules, check, the debugging tools and the app-builder flow (recipes, questions, answer, plan, build) as MCP tools (needs karni-cli[mcp])
 
 ```
 karni mcp [OPTIONS]
@@ -823,13 +897,15 @@ karni make app [OPTIONS] NAME
 
 ##### `karni make model`
 
-Add `class NAME(BaseModel)` with FIELDS to APP/models.py.
+Add `class NAME(BaseModel)` with FIELDS to APP/models.py (BigIntBaseModel with --pk bigint).
 
 Example:
 
 ```sh
 karni make model Event title:str:200 starts_at:datetime "status:choice:draft|live" organizer:fk:User 'venue:fk:Venue?' -a --access owned:organizer
 ```
+
+Experimental: karni make model Sale --external --table reporting.sales [--database warehouse] [--writable] writes a plain models.Model over that existing table or view from its columns (Meta.managed = False, class Karni: external = True), and its viewset. The database must be reachable.
 
 ```
 karni make model [OPTIONS] NAME [FIELDS...]
@@ -843,9 +919,14 @@ karni make model [OPTIONS] NAME [FIELDS...]
 | `--all`, `-a` |  | Also generate the viewset, the pages and the API test. |
 | `--access` TEXT |  | With viewset: granted\|authenticated\|public-read[:&lt;role&gt;]\|public-create[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. public-create: anyone creates (a public form), only that role reads and writes. |
 | `--search` TEXT (repeatable) |  | With viewset: search_fields (comma-separated). |
+| `--external` |  | Experimental. A model over a table or view another system owns, written from the columns of --table (Meta.managed = False, class Karni: external = True), with its viewset. It reads the database, which must be reachable. |
+| `--table` TEXT |  | With --external: the table or view, e.g. sales or reporting.sales. |
+| `--database` TEXT |  | With --external: the DATABASES alias the table lives in (class Karni: database). |
+| `--writable` |  | With --external: let the API and the admin write it (class Karni: writable). |
 | `--migrate` |  | Run `karni make migration` for the app afterwards. |
 | `--order` TEXT |  | Order rows by this field (Meta.ordering), e.g. position or -created_at. |
 | `--key` TEXT |  | The field karni load and imports match rows on (Karni.import_key). Rows nested under a parent are matched on the parent plus this field, e.g. position. |
+| `--pk` TEXT |  | The primary key: uuid (BaseModel) or bigint (BigIntBaseModel, experimental). Default: KARNI_PK in config/settings.py, else uuid. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
@@ -1208,7 +1289,7 @@ karni make form [OPTIONS] NAME [FIELDS...]
 
 Create modules/karni-NAME/, a reusable module per docs/modules.md.
 
-The karni-NAME distribution with the karni_NAME app, a range-pinned karni dependency, the karni.settings fragment, AGENTS.fragment.md and a standalone test suite. Works outside a project too.
+The karni-NAME distribution with the karni_NAME app, a range-pinned karni dependency, the karni.settings fragment, AGENTS.fragment.md, the catalog entry karni.module.toml and a standalone test suite. Works outside a project too.
 
 ```
 karni make module [OPTIONS] NAME
@@ -1313,6 +1394,99 @@ karni design extract [OPTIONS] DIRECTORY
 | `--dry-run` |  | Print what would be written and write nothing. |
 | `--keep-paths` |  | Point image paths into the design folder instead of copying the images next to the output file (files/). |
 
+#### `karni spec`
+
+The app spec, karni.yaml (experimental): check it (validate), write it from an existing project (export), or answer a question of karni plan --questions (answer).
+
+```
+karni spec COMMAND [ARGS]...
+```
+
+##### `karni spec validate`
+
+Experimental. Check a karni.yaml: every problem with its code, line and fix.
+
+It checks the YAML, every key and value (unknown keys are errors, keys that start with x- are kept and ignored), each field through karni make model's own parser, and every reference: relations, roles named in access, grants, pages, modules, field groups, keys and owners. Codes are C211 to C242 (karni explain &lt;code&gt;). Exit status 1 when there is a problem.
+
+```
+karni spec validate [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+| `--json` |  | Print {file, valid, issues: [{code, line, path, message, fix}]}. |
+
+##### `karni spec export`
+
+Experimental. Write the spec of this project from its code (manage.py karni_facts).
+
+The models become entities (each field in the field syntax when its type makes the same column), the viewsets their access and search, KARNI_ROLES the roles, the settings the features, the installed modules and their changed settings the modules, frontend/src/routes.tsx the pages, and the seeders the seed counts. What the spec cannot express is listed, and kept as comments at the top of the file. The file starts with a yaml-language-server line naming the JSON Schema, for editors.
+
+```
+karni spec export [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `-o`, `--output` PATH |  | Write the spec to this file. Default: print it. |
+| `--force` |  | Replace the output file if it exists. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+##### `karni spec answer`
+
+Experimental. Write the answer to a question of karni plan --questions into karni.yaml.
+
+The answer goes to the key the question names, and every other line of the file stays as it was: comments, order and layout. The question is then settled and karni plan --questions no longer asks it. Editing the file by hand settles it the same way. An id that is not an open question (C400) and a value the question does not take (C401) are refused, and so is an answer that cannot be written without changing anything else (C402): nothing is written then.
+
+```
+karni spec answer [OPTIONS] QUESTION_ID VALUE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `QUESTION_ID` (required) |  | The question's id, as karni plan --questions prints it. |
+| `VALUE` (required) |  | One of its options (several comma-separated when it takes several), or a value of its type when it has none. |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+
+#### `karni plan`
+
+Compare karni.yaml with the project: what karni build would change
+
+```
+karni plan [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+| `--json` |  | Print {version, file, valid, issues, changes: [{area, action, target, detail, risky, reason, rows}], summary, row_counts} (docs/assets/karni-plan.schema.json). |
+| `--offline` |  | Do not open the database: risky changes show no row counts. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+| `--questions` |  | Print the questions to ask the user before karni build instead of the plan: the gaps of karni.yaml, most impact first. Reads only the spec. With --json, docs/assets/karni-questions.schema.json. |
+| `--max` INT RANGE |  | With --questions: show at most N (default 5, 0 shows them all). |
+
+#### `karni build`
+
+Make the project match karni.yaml, without touching hand-written code
+
+```
+karni build [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+| `--dry-run` |  | Print the plan and the files it would write. Write nothing. |
+| `--allow-destructive` |  | Apply the risky (!) changes too: a field or entity removed, a type narrowed, access widened. Without it they stop the build (C270), each named with its rows. |
+| `--force` |  | Replace Karni-owned files edited by hand, keeping each as &lt;file&gt;.orig. |
+| `--adopt` TEXT (repeatable) |  | Hand a Karni-owned file (or config/settings.py, frontend/src/routes.tsx for their blocks) to the project: karni build stops managing it. Repeatable. |
+| `--json` |  | Print {version, file, valid, issues, status, code, message, plan, files, hand_edits, adopted, steps, next} (docs/assets/karni-build.schema.json). |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
 ### Debugging
 
 #### `karni trace`
@@ -1350,6 +1524,46 @@ karni replay [OPTIONS] REQUEST_ID
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
+### Other
+
+#### `karni recipes`
+
+Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show).
+
+```
+karni recipes COMMAND [ARGS]...
+```
+
+##### `karni recipes list`
+
+Experimental. Every recipe, or with --match the best few for a request, and the blank start.
+
+--match compares the words of the request with each recipe's use_when and purpose, after lowercasing, making plurals singular and leaving out words that name no app (a, the, app, with ...). A recipe scores 2 for each word one of its use_when phrases has and 1 for each word only its purpose has. The recipes that score 2 or more come back, best first, at most 3. When none does, start from the blank start: karni.yaml with the version and the app's name, nothing else.
+
+```
+karni recipes list [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--match` TEXT |  | A one-line request: the best few recipes for it, with their scores (2 for each word of the request a use_when phrase has, 1 for each one only the purpose has). |
+| `--json` |  | Print {version, request, threshold, recipes, blank, next, problems} (docs/assets/karni-recipes.schema.json). |
+
+##### `karni recipes show`
+
+Experimental. One recipe: what it is for, what people usually change, its files and spec.
+
+blank shows the blank start: karni.yaml with the version and the app's name, nothing else, where an app starts when no recipe fits.
+
+```
+karni recipes show [OPTIONS] NAME
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | A recipe, or blank for the blank start. |
+| `--json` |  | Print {version, request, threshold, recipes, blank, next, problems} (docs/assets/karni-recipes.schema.json). |
+
 ## Base classes
 
 The public names of the four packages a project builds on, from their `__all__`. *What you get* is read from the class itself: the fields and managers a model inherits, the attributes a viewset declares and the endpoints it serves, the admin hooks it overrides, a function's signature.
@@ -1360,7 +1574,9 @@ The public names of the four packages a project builds on, from their `__all__`.
 |---|---|---|---|
 | `AuditedModel` | model | `created_by` / `updated_by`, stamped from the current user on save. | fields `created_by`, `updated_by` and managers `objects` (ManagerFromAuditedQuerySet) |
 | `BaseModel` | model | The base every Karni project model inherits: all four mixins (plus `GuardedModel`). | fields `id`, `created_at`, `updated_at`, `deleted_at`, `created_by`, `updated_by` and managers `objects` (BaseManager), `all_objects` |
+| `BigIntBaseModel` | model | Experimental. `BaseModel` with a 64-bit integer key (`IntegerKeyModel`). | fields `id`, `created_at`, `updated_at`, `deleted_at`, `created_by`, `updated_by` and managers `objects` (BaseManager), `all_objects` |
 | `GuardedModel` | model | The model half of `StateField`, `CapacityField` and `no_overlap`. |  |
+| `IntegerKeyModel` | model | Experimental. A 64-bit auto-incrementing integer primary key (`BigAutoField`). | fields `id` |
 | `SoftDeleteManager` | manager | Default manager of `karni.models.SoftDeleteModel`. |  |
 | `SoftDeleteModel` | model | Rows are hidden by `delete()` instead of removed. | fields `deleted_at` and managers `objects` (SoftDeleteManager), `all_objects` |
 | `SoftDeleteQuerySet` | queryset | QuerySet whose `delete()` soft-deletes by stamping `deleted_at`. | methods `delete`, `hard_delete`, `restore`, `alive`, `dead` |
@@ -1373,7 +1589,7 @@ The public names of the four packages a project builds on, from their `__all__`.
 |---|---|---|---|
 | `Access` | class | A viewset's access declaration: `access = Access(read=..., write=..., create=...)`. | `Access(*, read: Predicate, write: Predicate, create: Predicate \| None = None) -> None` |
 | `Authenticated` | class | Any authenticated user, on every row. | methods `allows`, `rows`, `facts`, `describe` |
-| `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `pagination`, `cache`, `throttle`, `scope_exempt`, `scope_exempt_reason`, `write_or_create_actions`, `unbudgeted_actions` and get the endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
+| `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `pagination`, `cache`, `throttle`, `scope_exempt`, `scope_exempt_reason`, `read_only_refused_actions`, `write_or_create_actions`, `unbudgeted_actions` and get the endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
 | `Budget` | class | `query_budget = Budget(list=25, reason="...")`: a viewset's own query budgets. | `Budget(*, reason: str, default: Any = …, **actions: int \| None) -> None` |
 | `Cache` | class | `cache = Cache(ttl=60, depends_on=[Price])`: tune caching for one viewset. | `Cache(*, ttl: int \| None = None, depends_on: tuple[type[Model] \| str, ...] = ()) -> None` |
 | `Can` | class | The requesting user holds a grant for **any** of the named permissions (ADR 0002). | `Can(*keys: str) -> None` |
@@ -1405,12 +1621,14 @@ The public names of the four packages a project builds on, from their `__all__`.
 |---|---|---|---|
 | `APITestCase` | class | DRF's `APITestCase` with clients per role and the one-call checks. | methods `user_as`, `client_as`, `assert_crud`, `assert_isolated`, `assert_row_hidden`, `assert_admin_row_hidden`, `assert_pages` |
 | `assert_admin_row_hidden` | function | Assert `row` behaves as "does not exist" in the admin for `client`'s staff user. | `assert_admin_row_hidden(client: Any, row: models.Model, *, visible: models.Model \| None = None, checks: Iterable[str] \| None = None, skip: Iterable[str] = (), site: Any = None, search: str \| None = None, probe: type[AdminHiddenRowProbe] \| None = None) -> HiddenRowReport` |
-| `assert_crud` | function | Assert the full CRUD surface of `resource` for `role` (see the module docstring). | `assert_crud(resource: Any, role: str \| None = None, *, user: Any = None, values: Mapping[str, Any] \| None = None, payload: Mapping[str, Any] \| None = None, expect: Mapping[str, int] \| None = None, skip: Iterable[str] = ()) -> CrudReport` |
+| `assert_crud` | function | Assert the full CRUD surface of `resource` for `role` (see the module docstring). | `assert_crud(resource: Any, role: str \| None = None, *, user: Any = None, values: Mapping[str, Any] \| None = None, payload: Mapping[str, Any] \| None = None, expect: Mapping[str, int] \| None = None, skip: Iterable[str] = (), read_only: bool \| None = None) -> CrudReport` |
 | `assert_isolated` | function | Assert `role` cannot reach another owner's (or scope's) rows of `resource`. | `assert_isolated(resource: Any, role: str \| None = None, *, by: str \| tuple[str, ...] \| None = None, owner: str \| None = None, values: Mapping[str, Any] \| None = None) -> IsolationReport` |
+| `assert_module_manifest` | function | Experimental. Check `<package>/karni.module.toml` against the module; return it. | `assert_module_manifest(package: str) -> Manifest` |
 | `assert_pages` | function | Assert that every page in `urls` passes the page checks (see the module docstring). | `assert_pages(client: Any, urls: Iterable[str], *, follow: bool = False, check_links: bool = True, require_title: bool = True, require_description: bool = True, require_alt: bool = True, not_found_url: str \| None = '/karni-assert-pages-404/', ignore: Iterable[str \| re.Pattern[str]] = (), hosts: Iterable[str] = (), parser: type[PageParser] \| None = None) -> PagesReport` |
 | `assert_row_hidden` | function | Assert `row` is hidden from `client` on every API surface of `resource`. | `assert_row_hidden(client: Any, resource: Any, row: models.Model, *, visible: models.Model \| None = None, checks: Iterable[str] \| None = None, skip: Iterable[str] = (), search: str \| None = None, formats: Iterable[str] = ('csv', 'xlsx'), probe: type[HiddenRowProbe] \| None = None) -> HiddenRowReport` |
 | `assert_schema_snapshot` | function | Fail when the generated OpenAPI schema differs from the committed snapshot. | `assert_schema_snapshot(path: str \| Path \| None = None, *, update: bool \| None = None, urlconf: str \| None = None, hint: str = '') -> None` |
 | `client_as` | function | A client authenticated as a new user holding `roles` (`None` alone: anonymous). | `client_as(*roles: str \| None, user: Any = None) -> KarniAPIClient` |
+| `create_external_tables` | function | Experimental. Create the missing table of each external model routed to `using`. | `create_external_tables(using: str = 'default', models: Iterable[type[Model]] \| None = None) -> list[str]` |
 | `load_content` | function | Load the content file at `path` into the test database and return the report. | `load_content(path: str \| Path = 'content/site.json', *, missing_ok: bool = False, **options: Any) -> Any` |
 | `query_budget` | function | Fail with the grouped duplicate report if the block runs more than `limit` queries. | `query_budget(limit: int, *, label: str = 'block', using: str \| None = None) -> Iterator[QueryRecorder]` |
 | `user_with_roles` | function | A new user (generated factory, or the explicit one) holding `roles` (Django groups). | `user_with_roles(*roles: str, **fields: Any) -> Any` |
@@ -1445,6 +1663,9 @@ class Lead(BaseModel):
 | `financial` | karni | inferred | Whether the model holds money for the CASCADE check. It is inferred from money fields and payments-like model names. | `financial = True` |
 | `not_money` | karni | `{}` | FloatFields whose money-like name is not money, each with what it is (silences `karni.E960` for that field). | `not_money = {"total_score": "a game score"}` |
 | `no_overlap` | karni | `None` | Rows that may not overlap in time per resource: a `NoOverlap(...)`, a tuple of the resource field(s) then the range, or a list of them. PostgreSQL enforces it with an `EXCLUDE` constraint the model's migration creates. Soft-deleted rows never block. | `no_overlap = NoOverlap("room", "during", ignore={"status": ["cancelled"]})` |
+| `external` | karni | `False` | Experimental. Another system owns the table or view: with `Meta.managed = False`, the model may inherit plain `models.Model`, Karni runs no DDL for it, the API answers its writes with 405 and the admin shows it read-only ([models: external tables](models.md#external-tables-views-and-a-second-database)). | `external = True` |
+| `writable` | karni | `False` | Experimental. Let the API and the admin write an external model's table. | `writable = True` |
+| `database` | karni | `None` (the default database) | Experimental. The `DATABASES` alias the model's reads, writes and migrations go to (`karni.db.DatabaseRouter`). | `database = "warehouse"` |
 | `requires_approval` | karni-approvals | unset: never held | Hold changes for a second person's approval: a list of guarded fields, or `True` for any change, create and delete included. | `requires_approval = ["amount", "status"]` |
 | `approvals_required` | karni-approvals | `KARNI_APPROVALS_REQUIRED` (1) | Approvals a pending change needs before it is applied. | `approvals_required = 2` |
 | `approver_roles` | karni-approvals | `KARNI_APPROVALS_APPROVER_ROLES` | Roles that may approve, on top of holding the approve permission. | `approver_roles = ["finance"]` |
@@ -1466,8 +1687,20 @@ class Lead(BaseModel):
 | `KARNI_2FA` | `KARNI_2FA` | `False` | Enable TOTP two-factor auth with `django-otp` (needs `karni[2fa]`). |
 | `KARNI_SOCIAL_AUTH` | `KARNI_SOCIAL_AUTH` | `False` | Enable social login through django-allauth (`karni[social]`, session mode only). |
 | `KARNI_SOCIAL_PROVIDERS` | `KARNI_SOCIAL_PROVIDERS` | `[]` | Comma-separated allauth providers to enable, e.g. `google,github`. |
+| `KARNI_SOCIAL_TOKEN_PROVIDERS` | `KARNI_SOCIAL_TOKEN_PROVIDERS` | `{}` | Experimental. The providers whose ID tokens sign users in, in both auth modes and without `KARNI_SOCIAL_AUTH`: `{"google": {"client_ids": [...]}, "microsoft": {"client_ids": [...], "tenants": [...], "trusted_tenants": [...]}, "apple": {"client_ids": [...]}}`, each with optional `require_nonce` and `class` (a dotted `IdTokenProvider` path). Each one mounts `social/<provider>/`. Needs `karni[social-token]`. See [sign-in with an ID token](accounts.md#sign-in-with-an-id-token-google-microsoft-apple). |
+| `KARNI_SOCIAL_TOKEN_SIGNUP` | `KARNI_SOCIAL_TOKEN_SIGNUP` | `None` | Experimental. What a token without an account does: `open` creates the account, `approval` creates it inactive until an administrator activates it, `existing` refuses (`E223`). `None` is `open` while `KARNI_ACCOUNTS_REGISTRATION` is on, else `existing`. |
+| `KARNI_SOCIAL_TOKEN_LINK_VERIFIED` | `KARNI_SOCIAL_TOKEN_LINK_VERIFIED` | `True` | Experimental. Link a token to the existing account with its email when the provider verified the address. `False` refuses an account that has a password (`E227`). |
+| `KARNI_SOCIAL_TOKEN_LEEWAY` | `KARNI_SOCIAL_TOKEN_LEEWAY` | `60` | Experimental. Seconds of clock skew allowed on a token's `exp`, `iat` and `nbf` (0 to 300). |
+| `KARNI_SOCIAL_TOKEN_JWKS_TTL` | `KARNI_SOCIAL_TOKEN_JWKS_TTL` | `21600` | Experimental. Seconds a provider's signing keys (JWKS) stay in the default cache. An unknown key id fetches them again, at most once a minute per provider. |
+| `KARNI_SOCIAL_TOKEN_JWKS_FETCHER` |  | `"karni.accounts.social_token.fetch_jwks"` | Experimental. Dotted path of the function `(url) -> dict` that fetches a key set (HTTPS, 5 second timeout by default). |
+| `KARNI_EMAIL_OTP` | `KARNI_EMAIL_OTP` | `False` | Experimental. Sign-in with a code sent by email, in both auth modes: mounts `otp/send/` and `otp/verify/`. Off, both answer 404 and are absent from the OpenAPI schema. See [sign in with a code](accounts.md#sign-in-with-a-code-sent-by-email). |
+| `KARNI_EMAIL_OTP_TTL` | `KARNI_EMAIL_OTP_TTL` | `600` | Experimental. Seconds a sign-in code lives (60 to 3600). |
+| `KARNI_EMAIL_OTP_LENGTH` | `KARNI_EMAIL_OTP_LENGTH` | `6` | Experimental. Digits in a sign-in code (4 to 10). |
+| `KARNI_EMAIL_OTP_MAX_ATTEMPTS` | `KARNI_EMAIL_OTP_MAX_ATTEMPTS` | `5` | Experimental. Guesses a sign-in code takes before it dies (1 to 10). A wrong guess that reaches the cap kills the code. |
+| `KARNI_EMAIL_OTP_SIGNUP` | `KARNI_EMAIL_OTP_SIGNUP` | `None` | Experimental. What a code for an address without an account does: `open` creates the account when the code is verified, `approval` creates it inactive until an administrator activates it (`E224`), `existing` sends no code. `None` is `open` while `KARNI_ACCOUNTS_REGISTRATION` is on, else `existing`. |
+| `KARNI_TERMS` | `KARNI_TERMS` | `None` | Experimental. A versioned terms acceptance gate, as a dict (JSON in the environment): `{"version": "2026-11", "url": "/terms/", "required": True}`, with optional `paths` (the URL prefixes it covers, default `["/api/"]`) and `exempt` (more prefixes it leaves open). Set, it mounts `terms/` and `terms/accept/` and adds `terms` to `me/`. While it requires acceptance, a signed-in user gets 403 `E245` under `paths` until they accept the current version, staff included. `None` gates nothing. See [terms acceptance](accounts.md#terms-acceptance). |
 | `KARNI_FRONTEND_URL` | `KARNI_FRONTEND_URL` | `"http://localhost:5173"` | The SPA's origin. It is used in account emails and, in session mode, added to `CSRF_TRUSTED_ORIGINS`, so the browser's origin must match it. |
-| `KARNI_ACCOUNTS_EMAIL_BACKEND` |  | `"karni.accounts.emails.DjangoEmailBackend"` | Dotted path of the `AccountsEmailBackend` that sends verification and reset emails. |
+| `KARNI_ACCOUNTS_EMAIL_BACKEND` |  | `"karni.accounts.emails.DjangoEmailBackend"` | Dotted path of the `AccountsEmailBackend` that sends every account email: verification, password reset, email change and the sign-in code. |
 | `KARNI_ACCOUNTS_AUTO_LOGIN` |  | `False` | Sign a user in right after registration (skips email verification as a gate). |
 | `KARNI_ACCOUNTS_REGISTRATION` | `KARNI_ACCOUNTS_REGISTRATION` | `True` | Whether anyone may open an account through `register/`. `False` leaves the route out (404) and out of the OpenAPI schema, for a project whose staff create every account. While it is `True`, `karni.W102` warns for a viewset that lets every signed-in user change and delete every row. See [closing registration](accounts.md#closing-registration). |
 | `KARNI_ACCOUNTS_DEFAULT_ROLES` | `KARNI_ACCOUNTS_DEFAULT_ROLES` | `[]` | Roles (Django groups) every self-registered user starts with, e.g. `attendee`. |
@@ -1531,7 +1764,7 @@ class Lead(BaseModel):
 | `KARNI_ADMIN_SEARCH_MAX` |  | `5` | Fields a derived admin searches at most. |
 | `KARNI_ADMIN_SITE` |  | `"django.contrib.admin.site"` | Dotted path of the admin site models are registered on. |
 | `KARNI_ADMIN_BASE` |  | `"unfold.admin.ModelAdmin"` | Dotted path of the `ModelAdmin` every derived admin is built on. |
-| `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_audit", "karni_transfer", "karni_accounts.OneTimeToken", "karni_accounts.Permission"]` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
+| `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_audit", "karni_transfer", "karni_accounts.OneTimeToken", "karni_accounts.Permission", "karni_accounts.SocialIdentity", "karni_accounts.LoginCode"]` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
 
 ### Security headers (karni.security)
 
@@ -1585,6 +1818,7 @@ class Lead(BaseModel):
 |---|---|---|---|
 | `KARNI_EVENTS_AUTODISCOVER` | `KARNI_EVENTS_AUTODISCOVER` | `True` | Import every app's `events.py` and `listeners.py` at startup. |
 | `KARNI_SCHEDULES_AUTODISCOVER` | `KARNI_SCHEDULES_AUTODISCOVER` | `True` | Import every app's `schedules.py` at startup. |
+| `KARNI_PK` |  | `"uuid"` | Experimental. The primary key `karni make model` writes: `uuid` (`BaseModel`) or `bigint` (`BigIntBaseModel`). The CLI reads it from a plain `KARNI_PK = "bigint"` line in `config/settings.py`, and `--pk` overrides it per model. Nothing else reads it: each model's class line decides its key. See [choosing the key type](models.md#choosing-the-key-type). |
 | `KARNI_ARCHITECTURE` |  | `{ "skip_apps": [], "sql_allowed": ["*/sql/*", "*/migrations/*"], "http_allowed": ["*/services/*", "*/providers/*", "*/tests/*", "conftest.py"], "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]}}` | Configuration of the architecture rules: `skip_apps`, `sql_allowed`, `http_allowed`, `dup`. See [enforcement](enforcement.md). |
 
 ### Module: karni-approvals
@@ -1735,6 +1969,9 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `AuthProvider` |  | Rendered inside `KarniProvider`, it holds the signed-in user and attaches credentials (JWT or session) to every request. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/provider.tsx) |
 | `AuthGuard` |  | Renders its children only for a signed-in user, optionally with one of the given roles, and otherwise says why. | [AuthGuard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/AuthGuard.tsx) |
 | `LoginForm` |  | Email and password sign-in form with inline errors and a callback for the two-factor step. | [LoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/LoginForm.tsx) |
+| `SocialButton` | `provider: string`, `getIdToken: () => Promise<string \| SocialIdToken \| null>` | Experimental. A "Continue with &lt;provider&gt;" button that signs in with the provider's ID token. | [SocialButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/SocialButton.tsx) |
+| `OtpLoginForm` |  | Experimental. Passwordless sign-in: an email step, then a code step with one input for the code. | [OtpLoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/OtpLoginForm.tsx) |
+| `TermsGate` |  | Experimental. Renders its children once the signed-in user has accepted the current terms, and the terms with an accept button until then. | [TermsGate.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/TermsGate.tsx) |
 | `Page` | `title: React.ReactNode` | Standard page chrome: an `<h1>` title row with an actions slot, then the content. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
 | `Layout` |  | App shell: sidebar navigation + header slot + content area. | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
 | `KarniMark` |  | The Karni mark as inline SVG, so there is no asset to load or bundle. | [karni-mark.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/brand/karni-mark.tsx) |
@@ -1769,6 +2006,8 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `useSchema` | `resource: string` | Returns one resource's parsed schema (fields, types, relations, operations) from the backend's OpenAPI document, fetched once per app. | [useSchema.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/useSchema.ts) |
 | `useAuth` |  | Returns the signed-in user, auth status, `login` and `logout`, and throws a descriptive error outside `AuthProvider`. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/provider.tsx) |
 | `usePermission` |  | `isAuthenticated` and `hasRole(...names)` for the signed-in user. | [usePermission.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/usePermission.ts) |
+| `useSocialLogin` | `provider: string` | Experimental. Sign in with a provider's ID token: `{ signIn, status, error, reset }`. | [useSocialLogin.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/useSocialLogin.ts) |
+| `useOtpLogin` | `options?: UseOtpLoginOptions` | Experimental. Sign in with a code sent by email: `{ step, send, verify, resend, back, status }`. | [useOtpLogin.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/useOtpLogin.ts) |
 | `useToast` |  | Imperative toast API + the live toast list. | [use-toast.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/toast/use-toast.ts) |
 
 ### Functions and constants
@@ -1811,6 +2050,11 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `defaultLoginFormSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [LoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/LoginForm.tsx) |
 | `createLocalStorageTokenStorage` | function | The default storage, which keeps the refresh token in localStorage. | [storage.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/storage.ts) |
 | `createMemoryTokenStorage` | function | In-memory adapter: most secure (nothing persisted anywhere), but a page reload logs the user out. | [storage.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/storage.ts) |
+| `defaultSocialButtonSlots` | constant | Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. | [SocialButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/SocialButton.tsx) |
+| `describeSocialError` | function | Experimental. A SocialButton failure in plain words, from the Karni code of the refusal (E215 to E227), never a status code. | [SocialButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/SocialButton.tsx) |
+| `defaultOtpLoginFormSlots` | constant | Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. | [OtpLoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/OtpLoginForm.tsx) |
+| `describeOtpError` | function | Experimental. A sign-in-by-code failure in plain words, from the Karni code of the refusal (E235, E226, E236), never a status code. | [OtpLoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/OtpLoginForm.tsx) |
+| `defaultTermsGateSlots` | constant | Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. | [TermsGate.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/TermsGate.tsx) |
 | `defaultPageSlots` | constant | The default pieces of the page chrome, for wrapping one. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
 | `defaultLayoutSlots` | constant | The default pieces of the shell, which you spread to wrap one (`{ ...defaultLayoutSlots }`). | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
 | `isSignInRoute` | function | A sign-in page: a path whose last segment is `login` or `sign-in` (`/login`, `/staff/login`). | [route-nav.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/route-nav.ts) |
@@ -1903,9 +2147,39 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E212`](errors.md#e212) | check | Karni.field_roles is malformed, names a missing field or an undeclared role |
 | [`E213`](errors.md#e213) | api | The permission matrix refused a change |
 | [`E214`](errors.md#e214) | check | A role's scope names a path the model does not have |
+| [`E215`](errors.md#e215) | api | The ID token is not valid |
+| [`E216`](errors.md#e216) | api | The ID token was issued for another application |
+| [`E217`](errors.md#e217) | api | The ID token comes from another issuer or tenant |
+| [`E218`](errors.md#e218) | api | The ID token has expired |
+| [`E219`](errors.md#e219) | api | The ID token's signing key is unknown |
+| [`E220`](errors.md#e220) | api | The ID token's nonce does not match |
+| [`E221`](errors.md#e221) | api | The ID token carries no email address |
+| [`E222`](errors.md#e222) | api | The provider did not verify the email address |
+| [`E223`](errors.md#e223) | api | Sign-up with an ID token is closed |
+| [`E224`](errors.md#e224) | api | The account awaits an administrator's approval |
+| [`E225`](errors.md#e225) | api | This sign-in provider is not configured |
+| [`E226`](errors.md#e226) | api | The account is inactive |
+| [`E227`](errors.md#e227) | api | An account with this email exists and is not linked |
+| [`E235`](errors.md#e235) | api | The sign-in code is wrong or has expired |
+| [`E236`](errors.md#e236) | api | Sign-in with a code is turned off |
+| [`E245`](errors.md#e245) | api | The signed-in user has not accepted the current terms |
+| [`E246`](errors.md#e246) | api | The accepted terms version is not the current one |
+| [`E247`](errors.md#e247) | exception | A terms acceptance is a permanent record |
+| [`E248`](errors.md#e248) | check | The terms gate is not in MIDDLEWARE, or runs before authentication |
+| [`E249`](errors.md#e249) | api | Terms acceptance is turned off |
+| [`E270`](errors.md#e270) | check | An external model is managed by Django |
+| [`E271`](errors.md#e271) | check | Karni.database names a database that is not in DATABASES |
+| [`E272`](errors.md#e272) | check | The table or view of an external model does not exist |
+| [`E273`](errors.md#e273) | check | An external model has a column its table or view lacks |
+| [`E274`](errors.md#e274) | check | An external model's field type does not match its column |
+| [`E275`](errors.md#e275) | check | class Karni: external, writable or database has a value of the wrong type |
+| [`E276`](errors.md#e276) | check | A relation joins models on different databases |
 | [`E301`](errors.md#e301) | exception | KARNI_ADMIN_BASE is not a ModelAdmin class |
 | [`E302`](errors.md#e302) | exception | AdminMeta.inline_on is invalid |
 | [`E303`](errors.md#e303) | exception | KARNI_ADMIN_LOGO is not a logo declaration |
+| [`E304`](errors.md#e304) | exception | karni_makemigrations --renames is not a rename list |
+| [`E305`](errors.md#e305) | exception | An app has more than one latest migration, so the renames have no place |
+| [`E310`](errors.md#e310) | test | A module's manifest does not match the module |
 | [`E401`](errors.md#e401) | exception | A queued listener is not a module-level function |
 | [`E402`](errors.md#e402) | exception | A listener registration is invalid |
 | [`E403`](errors.md#e403) | exception | A Celery task cannot be found |
@@ -1923,6 +2197,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E506`](errors.md#e506) | exception | A setting names a dotted path that cannot be imported |
 | [`E507`](errors.md#e507) | exception | KARNI_CACHE names an unknown cache backend |
 | [`E508`](errors.md#e508) | check | A setting is assigned where it cannot take effect |
+| [`E509`](errors.md#e509) | exception | Sign-in with an ID token needs the cryptography package |
 | [`W510`](errors.md#w510) | warning | DEBUG is on in a deployment |
 | [`W511`](errors.md#w511) | warning | SECRET_KEY is weak or a development key |
 | [`W512`](errors.md#w512) | warning | ALLOWED_HOSTS is empty or allows every host |
@@ -1936,6 +2211,10 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`W520`](errors.md#w520) | warning | Production email is not set up |
 | [`E520`](errors.md#e520) | exception | The deploy checks failed when the container started |
 | [`E521`](errors.md#e521) | exception | A backup failed |
+| [`W530`](errors.md#w530) | warning | Anyone may read a resource whose ids can be guessed |
+| [`W540`](errors.md#w540) | warning | The database of an external model cannot be reached |
+| [`W541`](errors.md#w541) | warning | Karni.writable on a model that is not external |
+| [`W542`](errors.md#w542) | warning | Karni.database is declared but Karni's database router is not installed |
 | [`E601`](errors.md#e601) | test | The resource under test is not routed |
 | [`E602`](errors.md#e602) | test | The API does not behave as its access declaration promises |
 | [`E603`](errors.md#e603) | exception | checks=/skip= names unknown checks |
@@ -2089,6 +2368,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C121`](errors.md#c121) | cli | The content map cannot be used |
 | [`C122`](errors.md#c122) | cli | The content map has decisions left |
 | [`C123`](errors.md#c123) | cli | A content map is there already |
+| [`C140`](errors.md#c140) | cli | The database to read the table from cannot be used |
+| [`C141`](errors.md#c141) | cli | The table or view is not in the database |
+| [`C142`](errors.md#c142) | cli | These options do not go with --external |
 | [`C124`](errors.md#c124) | cli | A content map option has a value extract does not know |
 | [`C199`](errors.md#c199) | cli | Internal error in karni |
 | [`C201`](errors.md#c201) | cli | karni upgrade needs a clean git work tree |
@@ -2098,6 +2380,58 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C205`](errors.md#c205) | cli | The agent adapter configuration is invalid |
 | [`C206`](errors.md#c206) | cli | The OpenAPI schema cannot be turned into types |
 | [`C207`](errors.md#c207) | cli | karni add cannot edit pyproject.toml |
+| [`C210`](errors.md#c210) | cli | No spec file |
+| [`C211`](errors.md#c211) | cli | The spec is not valid YAML |
+| [`C212`](errors.md#c212) | cli | Unknown key in the spec |
+| [`C213`](errors.md#c213) | cli | A spec value has the wrong type, or a required key is missing |
+| [`C214`](errors.md#c214) | cli | Unknown spec version |
+| [`C215`](errors.md#c215) | cli | A name in the spec is not valid |
+| [`C216`](errors.md#c216) | cli | A field's type is not valid |
+| [`C217`](errors.md#c217) | cli | An access rule is not valid |
+| [`C218`](errors.md#c218) | cli | A role grant is not valid |
+| [`C219`](errors.md#c219) | cli | A feature's value is not valid |
+| [`C220`](errors.md#c220) | cli | A page entry is not valid |
+| [`C221`](errors.md#c221) | cli | A module option is not valid |
+| [`C222`](errors.md#c222) | cli | A key is written twice |
+| [`C223`](errors.md#c223) | cli | A seed count is not valid |
+| [`C224`](errors.md#c224) | cli | A key reserved for a later release |
+| [`C225`](errors.md#c225) | cli | The app kind and the modules disagree |
+| [`C230`](errors.md#c230) | cli | A relation names an entity that does not exist |
+| [`C231`](errors.md#c231) | cli | A relation name is ambiguous |
+| [`C232`](errors.md#c232) | cli | Access names a role the spec does not declare |
+| [`C233`](errors.md#c233) | cli | A grant names an entity the spec does not have |
+| [`C234`](errors.md#c234) | cli | A grant's scope does not fit the entity |
+| [`C235`](errors.md#c235) | cli | A page names an entity that does not exist |
+| [`C236`](errors.md#c236) | cli | A module Karni does not know |
+| [`C237`](errors.md#c237) | cli | A field group names a field the entity does not have |
+| [`C238`](errors.md#c238) | cli | An entity option names a field the entity does not have |
+| [`C239`](errors.md#c239) | cli | owner does not lead to the user |
+| [`C240`](errors.md#c240) | cli | owned:&lt;path&gt; in access does not lead to the user |
+| [`C241`](errors.md#c241) | cli | seed names an entity that does not exist |
+| [`C242`](errors.md#c242) | cli | Two pages share a route |
+| [`C245`](errors.md#c245) | cli | karni spec export cannot read the project |
+| [`C246`](errors.md#c246) | cli | The output file exists |
+| [`C250`](errors.md#c250) | cli | karni plan cannot read the project |
+| [`C251`](errors.md#c251) | cli | An external entity's keys do not fit |
+| [`C252`](errors.md#c252) | cli | database names an alias the project does not have |
+| [`C253`](errors.md#c253) | cli | A relation joins two databases |
+| [`C254`](errors.md#c254) | cli | A rename (was) is not valid |
+| [`C270`](errors.md#c270) | cli | A risky change without --allow-destructive |
+| [`C271`](errors.md#c271) | cli | A module removal |
+| [`C272`](errors.md#c272) | cli | A key type switch |
+| [`C273`](errors.md#c273) | cli | A Karni-owned file was edited by hand |
+| [`C274`](errors.md#c274) | cli | --adopt names a file karni build does not own |
+| [`C275`](errors.md#c275) | cli | The project's code is in the way |
+| [`C276`](errors.md#c276) | cli | A module karni build added is not installed |
+| [`C277`](errors.md#c277) | cli | makemigrations failed |
+| [`C278`](errors.md#c278) | cli | migrate failed |
+| [`C279`](errors.md#c279) | cli | Seeding failed |
+| [`C280`](errors.md#c280) | cli | karni types failed |
+| [`C281`](errors.md#c281) | cli | The project's tests fail |
+| [`C282`](errors.md#c282) | cli | karni check fails |
+| [`C283`](errors.md#c283) | cli | A project class karni build must change has code of its own |
+| [`C284`](errors.md#c284) | cli | A marker karni build writes at is missing |
+| [`C285`](errors.md#c285) | cli | The build record cannot be read |
 | [`C301`](errors.md#c301) | cli | No frontend found |
 | [`C302`](errors.md#c302) | cli | A generated file was edited, so karni ui detect does not overwrite it |
 | [`C303`](errors.md#c303) | cli | A theme source cannot be read |
@@ -2105,10 +2439,18 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C310`](errors.md#c310) | cli | karni why: the target is malformed |
 | [`C311`](errors.md#c311) | cli | karni why: --as is missing |
 | [`C312`](errors.md#c312) | cli | karni why: the project's karni is too old |
+| [`C313`](errors.md#c313) | cli | No module or feature of that name in the catalog |
+| [`C314`](errors.md#c314) | cli | A module manifest is not valid |
+| [`C315`](errors.md#c315) | cli | The module conflicts with one the project has |
+| [`C316`](errors.md#c316) | cli | Another module requires the one being removed |
+| [`C317`](errors.md#c317) | cli | The module is not in this project |
+| [`C318`](errors.md#c318) | cli | A built-in feature is switched by a setting, not added or removed |
+| [`C319`](errors.md#c319) | cli | The module's tables exist in the database |
 | [`C320`](errors.md#c320) | cli | karni explain needs a code or --failure, not both |
 | [`C321`](errors.md#c321) | cli | A --set value is not FIELD=VALUE |
 | [`C322`](errors.md#c322) | cli | The project's karni has no debugging commands |
 | [`C323`](errors.md#c323) | cli | A debugging command failed in the project |
+| [`C324`](errors.md#c324) | cli | A module or feature needs another, or cannot be next to one |
 | [`C340`](errors.md#c340) | cli | Nothing to explain |
 | [`C341`](errors.md#c341) | cli | The project's karni has no karni_queries command |
 | [`C360`](errors.md#c360) | cli | A typed-field argument in the model DSL is invalid |
@@ -2119,6 +2461,13 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C373`](errors.md#c373) | cli | No such setting |
 | [`C374`](errors.md#c374) | cli | No such template tag |
 | [`C375`](errors.md#c375) | cli | No such content map key |
+| [`C400`](errors.md#c400) | cli | No open question has this id |
+| [`C401`](errors.md#c401) | cli | The value is not an answer the question takes |
+| [`C402`](errors.md#c402) | cli | The answer cannot be written into karni.yaml |
+| [`C420`](errors.md#c420) | cli | No recipe of that name |
+| [`C421`](errors.md#c421) | cli | A recipe cannot be used |
+| [`C440`](errors.md#c440) | cli | karni new --recipe with an option it cannot go with |
+| [`C441`](errors.md#c441) | cli | A recipe's file would replace code of the project's |
 
 ### Agent rules (`K`)
 
@@ -2165,9 +2514,11 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K304`](errors.md#k304) | rule | No extra state/form/table/HTTP/CSS library. |
 | [`K305`](errors.md#k305) | rule | Per entity: models.py and viewsets.py. |
 | [`K306`](errors.md#k306) | rule | App pages: frontend/src/pages/. Public site pages: K309. |
-| [`K307`](errors.md#k307) | rule | Cross-project code: a Karni module. |
+| [`K307`](errors.md#k307) | rule | Cross-project code: a Karni module (karni modules list). |
 | [`K308`](errors.md#k308) | rule | Modules: configure via settings. |
 | [`K309`](errors.md#k309) | rule | Public site: a site app with Django views and templates. |
+| [`K310`](errors.md#k310) | rule | Before karni build: ask only karni plan --questions. |
+| [`K311`](errors.md#k311) | rule | New app: /new-app. Never hand-write what karni.yaml expresses. |
 
 ### ESLint plugin (`karni/…`)
 
@@ -2212,6 +2563,7 @@ One per routine task, written for each agent tool by `karni new` and `karni rule
 | `/add-module` | `<module> (e.g. payments)` | Install an optional Karni module and wire it into settings |
 | `/new-module` | `<app_name>` | Create a new local Django app following Karni conventions |
 | `/site-from-design` | `<design folder> [site app]` | Build the public site from a designer's pages, with models and real content |
+| `/new-app` | `<the app in one line>` | Build an app from a one-line request: karni.yaml, then karni build |
 
 | Tool | Written to |
 |---|---|

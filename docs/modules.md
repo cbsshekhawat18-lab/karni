@@ -1,5 +1,5 @@
 ---
-description: "The Karni module contract: how an installable app plugs into a project with one command and one URL include, with karni-payments as the reference implementation."
+description: "The Karni module contract: how an installable app plugs into a project with one command and one URL include, the module catalog every module and built-in feature describes itself in, and karni remove, with karni-payments as the reference implementation."
 ---
 
 # The Karni module contract
@@ -40,6 +40,7 @@ karni-<x>/
     __init__.py
     apps.py                # AppConfig, label karni_<x>
     conf.py                # DEFAULTS fragment + get() accessor
+    karni.module.toml      # the catalog entry: what karni modules, add and remove read
     models.py              # on karni.models.BaseModel / SoftDeleteModel
     viewsets.py            # on karni.api.BaseViewSet (auto-registered)
     migrations/            # real, committed migrations
@@ -293,20 +294,252 @@ A module's UI package (`@karni/<x>-ui` or your own scope):
 
 ## Wiring lifecycle (what `karni add <x>` does)
 
-1. Adds `karni-<x>` to `[project].dependencies` in the project's
-   `pyproject.toml` (idempotent, parsed, never string-matched).
-2. Inserts `"karni_<x>"` into the `# karni:apps` marker block in
+`karni add` reads what to wire from the module's manifest
+([the module catalog](#the-module-catalog)). A module without a manifest is
+wired by the naming convention alone (`karni-<x>`, `karni_<x>`).
+
+1. Adds the distribution (`karni-<x>`) to `[project].dependencies` in the
+   project's `pyproject.toml` (idempotent, parsed, never string-matched).
+2. Inserts each of `wiring.apps` into the `# karni:apps` marker block in
    `config/settings.py` (idempotent).
-3. Records `AGENTS.fragment.md` as `.karni/modules/<x>.md` and refreshes the
+3. Inserts each of `wiring.middleware` into the `# karni:middleware` block
+   and each of `wiring.context_processors` into a `# karni:context_processors`
+   block it appends once, unless the entry says `manual = true`, in which
+   case it prints the entry for you to add. With `wiring.kind = "site"`, an
+   app project becomes a site+app.
+4. Records `AGENTS.fragment.md` as `.karni/modules/<x>.md` and refreshes the
    agent adapters, so `karni rules` and `AGENTS.md` carry the module's
    guidance. It reads the fragment through the project interpreter and
    prints "run again after installing" when the module is not importable yet.
-4. Prints the `urls.py` include line and the install + `make migrate`
-   reminder. `karni add` never touches the network. The user installs.
+5. Prints the `wiring.urls` include line, the extras, the services the
+   module needs, anything it requires that the project lacks, and the
+   install + `make migrate` reminder. `karni add` never touches the network.
+   The user installs. It refuses (`C315`) a module that conflicts with one
+   the project has.
 
 Settings then arrive via the entry-point fragment at the next process start,
 and migrations apply with `make migrate`. Total project diff for a new module:
 one dependency line, one `INSTALLED_APPS` entry, one optional include line.
+
+## Taking a module out (`karni remove <x>`)
+
+!!! warning "Experimental"
+    `karni remove` is [experimental](stability.md#experimental-names).
+
+`karni remove <x> [--dry-run] [--keep-tables]` reverses `karni add`: the
+dependency, the apps, the middleware and context processors (any entry
+inside the module's package, so a hand-added one goes too), the context
+processors block once it is empty, the module's include in config/urls.py,
+the kind it gave the project (a site+app goes back to an app) and
+`.karni/modules/<x>.md`, then it refreshes the agent files. Adding and
+removing a module gives back the project's files byte for byte.
+
+It refuses (`C316`) while another added module requires it. It never drops
+data. It counts the rows of each of the module's tables through `manage.py
+karni_rows`, before it unwires anything:
+
+```text
+Its tables (nothing is dropped):
+  karni_payments_payment (karni_payments.Payment): 12 rows
+  karni_payments_refund (karni_payments.Refund): 0 rows
+```
+
+Django can drop a module's tables only while the module is in
+`INSTALLED_APPS`, so while a table exists `karni remove` stops (`C319`) and
+prints the command that drops them, for you to run deliberately:
+
+```bash
+karni migrate karni_payments zero   # deletes the tables and their rows
+karni remove payments               # then take the module out
+```
+
+`--keep-tables` takes the module out and leaves the tables in the database.
+When the database does not answer, it says so and goes on, since unwiring
+drops nothing. Last, it names the files of your own that still mention the
+module, the settings in config/settings.py that still set its options, and
+the step that uninstalls the package (`uv pip uninstall karni-<x>`, or
+`docker compose build`). Features are not removed (`C318`): their setting,
+or their key under `features:` in karni.yaml, turns them off.
+
+## The module catalog
+
+!!! warning "Experimental"
+    The manifest format, the `karni.modules` entry point group,
+    `karni.catalog`, `karni.testing.assert_module_manifest`, `karni modules`
+    and `karni remove` are [experimental](stability.md#experimental-names).
+
+Every module, and every option Karni ships built in (a **feature**), has a
+manifest: what it is for, what it provides, the questions to ask before
+turning it on, what it requires or conflicts with, the services it needs
+and, for a module, the wiring `karni add` performs. An agent reads the whole
+catalog without searching:
+
+- `karni context` prints a `CATALOG:` line per module and feature, with
+  whether the project has it and its purpose.
+- `karni modules list [--json]` prints every entry, added or not, with its
+  status and its questions. `karni modules show <name> [--json]` prints one
+  entry in full.
+- The app spec reads its module names, module options, feature names and
+  social sign-in providers from the catalog, and `karni spec validate`
+  checks what the listed modules and features require and conflict with
+  (`C324`).
+
+A module is **added** when its app is in the `# karni:apps` block,
+**installed** when the project's interpreter has it, and **available**
+otherwise. karni-cli bundles a copy of each manifest in Karni's repository,
+so a module shows before it is installed. A third-party module joins the
+catalog with its own manifest and entry point.
+
+### Where a manifest lives
+
+A module ships `karni.module.toml` inside its Python package, pinned as
+package data, and names the package in the `karni.modules` entry point
+group. `karni make module` writes both:
+
+```toml
+# pyproject.toml
+[project.entry-points."karni.modules"]
+payments = "karni_payments"
+
+[tool.hatch.build.targets.wheel]
+artifacts = ["karni_payments/AGENTS.fragment.md", "karni_payments/karni.module.toml"]
+```
+
+Karni's features have theirs in `karni/catalog/features/<name>.toml`.
+`python -m karni.catalog` prints the manifests of the modules installed in
+an environment, which is how a CLI outside the project's environment sees
+them.
+
+### An example
+
+```toml
+name = "payments"
+kind = "module"
+title = "Payments"
+purpose = "Hosted checkout, refunds and signed webhooks for Stripe and Razorpay."
+status = "stable"
+use_when = ["payments", "checkout", "refunds", "taking card payments", "Stripe", "Razorpay"]
+services = ["a Celery worker: webhook state changes run as tasks"]
+
+[provides]
+models = ["Payment", "Refund", "WebhookEvent"]
+endpoints = ["/api/payments/", "/api/payments/checkout/", "/payments/webhook/<provider>/"]
+ui = "@karni/payments-ui"
+
+[provides.settings]
+KARNI_PAYMENTS_PROVIDER = "string"
+KARNI_PAYMENTS_CURRENCY = "string"
+
+[[asks]]
+question = "Which payment provider: Stripe or Razorpay?"
+setting = "KARNI_PAYMENTS_PROVIDER"
+options = ["stripe", "razorpay", "test"]
+default = "stripe"
+
+[wiring]
+apps = ["karni_payments"]
+settings = "karni_payments.conf:DEFAULTS"
+urls = 'path("payments/", include("karni_payments.urls"))'
+
+[wiring.extras]
+stripe = "the Stripe provider"
+```
+
+A feature has no `wiring`. It names the setting that turns it on and its
+extra instead:
+
+```toml
+name = "two_factor"
+kind = "feature"
+title = "Two-factor sign-in"
+purpose = "TOTP codes from an authenticator app as a second sign-in step."
+status = "stable"
+use_when = ["two-factor sign-in", "2FA", "TOTP"]
+switch = "KARNI_2FA"
+extra = "karni[2fa]"
+
+[provides]
+settings = { KARNI_2FA = "boolean" }
+```
+
+### Every key
+
+Top level:
+
+| Key | For | Required | Takes |
+|---|---|---|---|
+| `name` | both | yes | the name `karni add` takes (`payments`), or the feature's key under `features:` in karni.yaml. Lowercase letters, digits and `_` |
+| `kind` | both | yes | `module` or `feature` |
+| `title` | both | yes | a short human name |
+| `purpose` | both | yes | one line, at most 80 characters (`karni context` prints it) |
+| `status` | both | yes | `stable` or `experimental` |
+| `use_when` | both | yes | plain phrases of what someone asks for, e.g. `["payments", "checkout"]` |
+| `requires` | both | no | modules or features that must be there too. A feature requires features only: Karni's core never depends on a module |
+| `conflicts` | both | no | modules or features that cannot be there too |
+| `services` | both | no | what it needs to run, in plain words: a worker, Redis, a provider account |
+| `docs` | both | no | where to read more: a docs page, a README path or a URL |
+| `distribution` | module | no | the PyPI name, `karni-<name>` by default |
+| `switch` | feature | yes | the setting that turns it on (on while it holds a value) |
+| `extra` | feature | no | the karni extra it needs, e.g. `karni[2fa]` |
+| `in_spec` | feature | no | `false` when karni.yaml has no key for it yet (`api_cache`) |
+
+`[provides]`, what it adds:
+
+| Key | Takes |
+|---|---|
+| `models` | model class names. The module's tests check them against the app's models |
+| `endpoints` | URL paths |
+| `pages` | admin pages, templates or screens, in plain words |
+| `settings` | setting name to its JSON type (`string`, `integer`, `boolean`, `array`, `object`, `null`) or a list of types. A module's `KARNI_<NAME>_*` settings are its options in karni.yaml, lowercased without the prefix. Credentials may be listed and are never options |
+| `ui` | the npm package of its React components |
+
+`[[asks]]`, the questions to settle before adding it, one table each:
+
+| Key | Required | Takes |
+|---|---|---|
+| `question` | yes | the question, in plain words |
+| `setting` | yes | the setting the answer goes to, one of `provides.settings` (or the switch), with `.key` for a key of a dict setting (`KARNI_TERMS.version`) |
+| `options` | no | the answers to choose from. None: a free value |
+| `default` | no | the answer when nobody says otherwise, one of `options` |
+| `multiple` | no | `true` when the answer is a list of options |
+
+For a module or a feature listed in karni.yaml, each ask whose answer the
+spec does not set is one of the [questions](app-spec.md#questions) `karni
+plan --questions` lists, in the manifest's order. Order the asks by how much
+the answer matters.
+
+`[wiring]`, modules only, what `karni add` writes and `karni remove` takes out:
+
+| Key | Required | Takes |
+|---|---|---|
+| `apps` | yes | the entries of the `# karni:apps` block, the module's app first |
+| `settings` | no | the settings fragment, `module:DEFAULTS`, which `karni_settings()` merges (no edit) |
+| `middleware` | no | entries of the `# karni:middleware` block: a dotted path, or a table with `path`, `why` (a few words, printed) and `manual` (`true`: `karni add` prints it for you to add) |
+| `context_processors` | no | entries of the `# karni:context_processors` block, written like `middleware` |
+| `urls` | no | the `path(..., include(...))` line `karni add` prints for config/urls.py |
+| `kind` | no | `"site"`: an app project becomes a site+app |
+| `extras` | no | extra name to what it is for (`stripe = "the Stripe provider"`) |
+
+### Checking a manifest
+
+`karni.catalog.parse_text` checks a manifest and raises `ManifestError`
+with every problem, each naming its key. A module's own suite checks its
+manifest against the module in one call:
+
+```python
+from karni.testing import assert_module_manifest
+
+
+def test_the_manifest_matches_the_module() -> None:
+    assert_module_manifest("karni_payments")
+```
+
+It checks the format, the `karni.modules` entry point (once the module is
+installed), that every listed setting is in the `DEFAULTS` fragment and
+every `KARNI_<NAME>_*` key of it is listed, and that `provides.models` are
+the app's models, and fails with [`E310`](errors.md#e310) listing each
+mismatch. `karni make module` writes this test. An invalid manifest
+in the catalog is reported by `karni modules list` as `C314` and left out.
 
 ## Patterns worth copying from karni-payments
 
@@ -353,6 +586,8 @@ one dependency line, one `INSTALLED_APPS` entry, one optional include line.
       read back through `conf.get()`
 - [ ] `AGENTS.fragment.md` ≤15 lines, inside the package, pinned as
       package data
+- [ ] `karni.module.toml` with its `karni.modules` entry point, pinned as
+      package data, checked by `assert_module_manifest`
 - [ ] optional `urls.py` with the include line documented in README +
       fragment
 - [ ] standalone test suite (own settings, sqlite, eager Celery, service

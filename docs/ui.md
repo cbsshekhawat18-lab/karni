@@ -42,6 +42,9 @@ is a few lines that compose them (see the [tutorial](tutorial.md)).
 - `AuthProvider`
 - `AuthGuard` (role `auth-guard`)
 - `LoginForm` (role `login-form`)
+- `SocialButton` (role `social-sign-in`, experimental)
+- `OtpLoginForm` (role `code-sign-in`, experimental)
+- `TermsGate` (role `terms-gate`, experimental)
 - `KarniProvider`
 
 ## Primitives
@@ -52,7 +55,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 
 ## Hooks
 
-- `useAuth`: `{ user, status, login(email, password), logout, refresh }` from `AuthProvider`.
+- `useAuth`: `{ user, status, login(email, password), logout, refresh }` from `AuthProvider`, and (experimental) `{ terms, termsRequired, acceptTerms(client) }` for terms acceptance.
 - `useChangeHistory`: One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).
 - `useDelayedFlag`: See the package README.
 - `useImportActions`: `upload`, `preview` (the dry run) and `commit` mutations of an import.
@@ -61,11 +64,13 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useKarniClient`: The `KarniClient` behind every hook, with `client.request(path, { method, body, query })` for custom actions.
 - `useKarniPrimitives`: See the package README.
 - `useOnlineStatus`: See the package README.
+- `useOtpLogin`: Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).
 - `usePermission`: `{ hasRole(...names), isAuthenticated }` for gating UI on roles.
 - `useResourceItem`: One row by id, optionally expanded.
 - `useResourceList`: A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.
 - `useResourceMutations`: `create`, `update` and `remove` for a resource. On success they invalidate the resource's queries.
 - `useSchema`: The parsed OpenAPI schema of one resource (fields, operations, access).
+- `useSocialLogin`: Experimental. `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).
 - `useTheme`: See the package README.
 - `useToast`: Show a toast through the mounted `Toaster`.
 - `useUnsavedChangesGuard`: `{ dirty, setDirty, isDirty, shouldBlock }` for warning before leaving a dirty form. Give `shouldBlock` to your router's blocker and `setDirty` to ResourceForm's `onDirtyChange`.
@@ -81,6 +86,7 @@ role that another component holds (compose it instead), and `karni context` list
 | `auth-guard` | `AuthGuard` |
 | `change-history` | `ChangeHistory` |
 | `chart` | `DataChart` |
+| `code-sign-in` | `OtpLoginForm` |
 | `dashboard` | `Dashboard` |
 | `data-table` | `ResourceTable` |
 | `detail-view` | `ResourceDetail` |
@@ -94,6 +100,8 @@ role that another component holds (compose it instead), and `karni context` list
 | `permission-denied` | `PermissionDenied` |
 | `resource-form` | `ResourceForm` |
 | `resource-import` | `ResourceImport` |
+| `social-sign-in` | `SocialButton` |
 | `stat` | `Stat` |
+| `terms-gate` | `TermsGate` |
 | `theme-toggle` | `ThemeToggle` |
 | `toast` | `Toaster` |

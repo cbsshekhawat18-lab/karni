@@ -70,16 +70,24 @@ def _class_violation(cls: type, rule: str, message: str, hint: str = "") -> list
 
 
 def check_model_base() -> list[Violation]:
-    from karni.models import AuditedModel, SoftDeleteModel, TimestampedModel, UUIDModel
+    from karni.models import (
+        AuditedModel,
+        IntegerKeyModel,
+        SoftDeleteModel,
+        TimestampedModel,
+        UUIDModel,
+    )
 
-    # BaseModel or any composition of Karni's mixins counts; only a model
-    # built on django.db.models.Model alone is a violation.
-    karni_bases = (UUIDModel, TimestampedModel, SoftDeleteModel, AuditedModel)
+    # BaseModel, BigIntBaseModel or any composition of Karni's mixins counts;
+    # only a model built on django.db.models.Model alone is a violation.
+    karni_bases = (UUIDModel, IntegerKeyModel, TimestampedModel, SoftDeleteModel, AuditedModel)
 
     violations: list[Violation] = []
     for cfg in project_app_configs():
         for model in cfg.get_models():
             if model._meta.auto_created or model._meta.proxy:
+                continue
+            if _is_external_table(model):
                 continue
             if issubclass(model, karni_bases):
                 continue
@@ -90,6 +98,17 @@ def check_model_base() -> list[Violation]:
                 "inherit karni.models.BaseModel (or compose its mixins)",
             )
     return violations
+
+
+def _is_external_table(model: type) -> bool:
+    """A table or view another system owns (``karni.db``, experimental): model-base accepts it.
+
+    Both declarations are needed: ``class Karni: external = True`` and
+    ``Meta.managed = False`` (``karni.E270`` reports the first without the second).
+    """
+    from karni.db import is_external
+
+    return is_external(model) and not model._meta.managed  # type: ignore[attr-defined]
 
 
 # viewset-base

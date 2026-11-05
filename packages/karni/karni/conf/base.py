@@ -73,6 +73,10 @@ AUTH_THROTTLE_DEFAULTS: dict[str, str | None] = {
     "auth.verify": "10/hour",
     "auth.email_change": "5/hour",
     "auth.2fa": "10/min",
+    "auth.social": "10/min",
+    "auth.otp_send": "10/hour",
+    "auth.otp_send_email": "5/hour",
+    "auth.otp_verify": "20/min",
 }
 """Default per-scope throttle rates for the ``karni.accounts`` endpoints.
 
@@ -247,6 +251,10 @@ BASE: dict[str, Any] = {
         # Backs AuditedModel.created_by/updated_by; resolves the user lazily,
         # so JWT users authenticated later inside DRF views are seen too.
         "karni.middleware.CurrentUserMiddleware",
+        # The terms gate (experimental): 403 E245 under KARNI_TERMS["paths"] until a
+        # signed-in user accepts the current version. Removed from the chain at
+        # startup unless KARNI_TERMS requires acceptance. After authentication.
+        "karni.accounts.terms.TermsGateMiddleware",
         "django.contrib.messages.middleware.MessageMiddleware",
         "django.middleware.clickjacking.XFrameOptionsMiddleware",
         "django_structlog.middlewares.RequestMiddleware",
@@ -291,6 +299,37 @@ BASE: dict[str, Any] = {
     "KARNI_2FA": env.bool("KARNI_2FA", default=False),
     "KARNI_SOCIAL_AUTH": env.bool("KARNI_SOCIAL_AUTH", default=False),
     "KARNI_SOCIAL_PROVIDERS": env.list("KARNI_SOCIAL_PROVIDERS", default=[]),
+    # Sign-in with a Google, Microsoft or Apple ID token (experimental), in both
+    # auth modes and independent of KARNI_SOCIAL_AUTH: {name: {"client_ids": [...]}}.
+    # Each configured name mounts social/<name>/. Needs karni[social-token].
+    "KARNI_SOCIAL_TOKEN_PROVIDERS": env.json("KARNI_SOCIAL_TOKEN_PROVIDERS", default={}),
+    # Who a token without an account may become: "open", "approval" or "existing".
+    # None follows KARNI_ACCOUNTS_REGISTRATION ("open" while it is on, else "existing").
+    "KARNI_SOCIAL_TOKEN_SIGNUP": env("KARNI_SOCIAL_TOKEN_SIGNUP", default=None),
+    # Link a token to an existing account with its email (only a provider-verified one).
+    "KARNI_SOCIAL_TOKEN_LINK_VERIFIED": env.bool("KARNI_SOCIAL_TOKEN_LINK_VERIFIED", default=True),
+    # Seconds of clock skew allowed on exp, iat and nbf.
+    "KARNI_SOCIAL_TOKEN_LEEWAY": env.int("KARNI_SOCIAL_TOKEN_LEEWAY", default=60),
+    # Seconds a provider's key set (JWKS) stays in the default cache.
+    "KARNI_SOCIAL_TOKEN_JWKS_TTL": env.int("KARNI_SOCIAL_TOKEN_JWKS_TTL", default=21600),
+    # Dotted path of the function that fetches a key set: (url) -> dict.
+    "KARNI_SOCIAL_TOKEN_JWKS_FETCHER": "karni.accounts.social_token.fetch_jwks",
+    # Sign-in with a code sent by email (experimental), in both auth modes: mounts
+    # otp/send/ and otp/verify/ while True. The code goes through the accounts email backend.
+    "KARNI_EMAIL_OTP": env.bool("KARNI_EMAIL_OTP", default=False),
+    # Seconds a code lives (60 to 3600).
+    "KARNI_EMAIL_OTP_TTL": env.int("KARNI_EMAIL_OTP_TTL", default=600),
+    # Digits in a code (4 to 10).
+    "KARNI_EMAIL_OTP_LENGTH": env.int("KARNI_EMAIL_OTP_LENGTH", default=6),
+    # Guesses a code takes before it dies (1 to 10).
+    "KARNI_EMAIL_OTP_MAX_ATTEMPTS": env.int("KARNI_EMAIL_OTP_MAX_ATTEMPTS", default=5),
+    # Who an address without an account may become: "open", "approval" or "existing".
+    # None follows KARNI_ACCOUNTS_REGISTRATION ("open" while it is on, else "existing").
+    "KARNI_EMAIL_OTP_SIGNUP": env("KARNI_EMAIL_OTP_SIGNUP", default=None),
+    # A versioned terms (EULA) acceptance gate (experimental): {"version": "2026-11",
+    # "url": "/terms/", "required": True}, plus "paths" (default ["/api/"]) and "exempt".
+    # Set, it mounts terms/ and terms/accept/. None (the default) gates nothing.
+    "KARNI_TERMS": env.json("KARNI_TERMS", default=None),
     "KARNI_FRONTEND_URL": env("KARNI_FRONTEND_URL", default="http://localhost:5173"),
     "KARNI_ACCOUNTS_EMAIL_BACKEND": "karni.accounts.emails.DjangoEmailBackend",
     "KARNI_ACCOUNTS_AUTO_LOGIN": False,
@@ -334,6 +373,9 @@ BASE: dict[str, Any] = {
     "DATABASES": {
         "default": env.db_url("DATABASE_URL", default="postgres://karni:karni@db:5432/karni"),
     },
+    # Experimental: class Karni: database = "<alias>" sends a model to another alias. A
+    # project's own routers go before this one (karni_settings() appends it after them).
+    "DATABASE_ROUTERS": ["karni.db.DatabaseRouter"],
     # "redis" (the default cache at REDIS_URL) or "locmem" (a host run without Redis).
     "KARNI_CACHE": env("KARNI_CACHE", default="redis"),
     "CACHES": _caches(env),
@@ -602,6 +644,8 @@ BASE: dict[str, Any] = {
             "karni_transfer",
             "karni_accounts.OneTimeToken",
             "karni_accounts.Permission",
+            "karni_accounts.SocialIdentity",
+            "karni_accounts.LoginCode",
         ],
     ),
     # --- Security headers (karni.security) ----------------------------------
@@ -661,6 +705,10 @@ BASE: dict[str, Any] = {
     # autodiscovered at startup; set False to wire them yourself.
     "KARNI_EVENTS_AUTODISCOVER": env.bool("KARNI_EVENTS_AUTODISCOVER", default=True),
     "KARNI_SCHEDULES_AUTODISCOVER": env.bool("KARNI_SCHEDULES_AUTODISCOVER", default=True),
+    # The key type `karni make model` writes (experimental): "uuid" (BaseModel) or
+    # "bigint" (BigIntBaseModel). Read by the CLI from config/settings.py, nothing
+    # else: each model's class line decides its key.
+    "KARNI_PK": "uuid",
     # Architecture-rule configuration (karni.testing); checks fall back to the
     # same defaults when this setting is absent, so non-karni.conf projects work.
     "KARNI_ARCHITECTURE": {

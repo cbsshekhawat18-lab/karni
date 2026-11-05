@@ -13,7 +13,6 @@ one-line helper.
 from __future__ import annotations
 
 import io
-import uuid
 from collections.abc import Iterator
 from typing import Any
 
@@ -27,6 +26,7 @@ from django.utils import timezone
 from karni.accounts.roles import sync_roles
 from karni.testing import client_as, user_with_roles
 from karni.transfer.formats import read_table
+from tests.keys import missing_pk
 from tests.testapp.models import Event, Tag, Venue
 from tests.testing import hidden_urls
 from tests.testing.hidden_urls import HiddenEventViewSet, World, make_world
@@ -72,7 +72,7 @@ def _ids(response: Any) -> list[str]:
 
 def test_every_verb_on_a_hidden_row_answers_like_a_missing_row(world: World) -> None:
     me = client_as(user=world.alice)
-    hidden, missing = world.theirs.pk, uuid.uuid4()
+    hidden, missing = world.theirs.pk, missing_pk(Event)
     before = Event.objects.filter(pk=hidden).values().first()
     for method in ("get", "patch", "put", "delete"):
         call = getattr(me, method)
@@ -86,7 +86,7 @@ def test_every_verb_on_a_hidden_row_answers_like_a_missing_row(world: World) -> 
 def test_the_history_action_hides_the_row_too(world: World) -> None:
     me = client_as(user=world.alice)
     hidden = me.get(f"/api/prices/{world.pound.pk}/history/")
-    absent = me.get(f"/api/prices/{uuid.uuid4()}/history/")
+    absent = me.get(f"/api/prices/{missing_pk(type(world.pound))}/history/")
     assert hidden.status_code == absent.status_code == 404
     assert hidden.json() == absent.json()
     assert me.get(f"/api/prices/{world.euro.pk}/history/").status_code == 200
@@ -201,7 +201,7 @@ def test_a_relation_filter_does_not_confirm_a_hidden_row_exists(
     naples = Venue.objects.create(name="San Carlo", city="Naples")  # hidden, unreferenced
     me = client_as(user=world.alice)
     hidden = me.get("/api/events/", {"venue": str(naples.pk)})
-    absent = me.get("/api/events/", {"venue": str(uuid.uuid4())})
+    absent = me.get("/api/events/", {"venue": str(missing_pk(Venue))})
     assert hidden.status_code == absent.status_code == 400
     assert hidden.json() == absent.json()
     readable = me.get("/api/events/", {"venue": str(world.berlin.pk)})
@@ -298,7 +298,7 @@ def test_the_admin_treats_a_row_outside_the_scope_as_missing(world: World) -> No
             send = getattr(client, method)
             args = (data,) if method == "post" else ()
             hidden = send(f"/admin/testapp/event/{world.theirs.pk}/{view}/", *args)
-            absent = send(f"/admin/testapp/event/{uuid.uuid4()}/{view}/", *args)
+            absent = send(f"/admin/testapp/event/{missing_pk(Event)}/{view}/", *args)
             assert hidden.status_code == absent.status_code == 302, (view, method)
             assert hidden["Location"] == absent["Location"] == "/admin/", (view, method)
     assert Event.objects.filter(pk=world.theirs.pk).values().first() == before

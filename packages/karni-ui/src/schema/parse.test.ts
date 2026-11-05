@@ -281,18 +281,23 @@ describe("parseOpenApi — resilience", () => {
   });
 });
 
-// D9 snapshot guard
+// D9 snapshot guard: one generated snapshot per key type of the testapp models
 
-const SNAPSHOT_PATH = join(process.cwd(), "tests", "fixtures", "schema.testapp.json");
-const snapshotPresent = existsSync(SNAPSHOT_PATH);
+const SNAPSHOTS = [
+  { keys: "uuid", file: "schema.testapp.json" },
+  { keys: "bigint", file: "schema.testapp.bigint.json" },
+] as const;
 
-describe("parseOpenApi — generated testapp snapshot (D9)", () => {
+describe.each(SNAPSHOTS)("parseOpenApi — generated testapp snapshot, $keys keys (D9)", (snap) => {
+  const snapshotPath = join(process.cwd(), "tests", "fixtures", snap.file);
+  const snapshotPresent = existsSync(snapshotPath);
+
   it.skipIf(!snapshotPresent)(
     "parses the testapp Event resource with the pinned field facts " +
-      "(schema.testapp.json absent? copy it from packages/karni tests/api/fixtures — " +
+      `(${snap.file} absent? copy it from packages/karni tests/api/fixtures — ` +
       "see tests/fixtures/README.md)",
     () => {
-      const parsed = parseOpenApi(JSON.parse(readFileSync(SNAPSHOT_PATH, "utf8")));
+      const parsed = parseOpenApi(JSON.parse(readFileSync(snapshotPath, "utf8")));
 
       const event = Object.values(parsed.resources).find((resource) =>
         resource.fields.some((field) => field.name === "internal_note"),
@@ -321,11 +326,12 @@ describe("parseOpenApi — generated testapp snapshot (D9)", () => {
       const organizer = fieldOf(event, "organizer");
       expect(organizer.kind).toBe("relation");
       expect(organizer.relation?.many).toBe(false);
-      expect(organizer.relationValueType).toBe("uuid"); // testapp pks are UUIDs
+      expect(organizer.relationValueType).toBe("uuid"); // the user model keeps UUIDs
 
       const venue = fieldOf(event, "venue");
       expect(venue.kind).toBe("relation");
       expect(venue.relation?.many).toBe(false);
+      expect(venue.relationValueType).toBe(snap.keys === "uuid" ? "uuid" : "integer");
 
       // Tag has no viewset in the testapp, so the backend omits
       // x-karni-relation (B13: unrouted target) — tags must degrade to a
@@ -339,7 +345,13 @@ describe("parseOpenApi — generated testapp snapshot (D9)", () => {
       expect(note.readOnly).toBe(false);
 
       expect(fieldOf(event, "title").required).toBe(true);
-      expect(fieldOf(event, "id").readOnly).toBe(true);
+      const id = fieldOf(event, "id");
+      expect(id.readOnly).toBe(true);
+      expect(id.kind).toBe(snap.keys === "uuid" ? "string" : "integer");
+      // The primary key is never a derived filter (?id__gte= would walk integer keys).
+      expect(event.operations.list?.queryParams).not.toContain("id");
+      expect(event.operations.list?.queryParams).not.toContain("id__gte");
+      expect(event.operations.list?.queryParams).toContain("venue");
     },
   );
 });

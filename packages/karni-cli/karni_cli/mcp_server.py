@@ -6,7 +6,10 @@ violations for one file), and, for debugging, ``why`` / ``why_empty`` (``karni
 why``: an access decision explained by the code that makes it), ``trace``,
 ``replay`` and ``explain_failure`` (the development capture under ``.karni/``),
 ``explain_text`` (``karni explain -`` on a pasted traceback or log line) and
-``queries`` (``karni queries``: one endpoint's queries grouped by cause). The tool functions are plain functions so they are
+``queries`` (``karni queries``: one endpoint's queries grouped by cause). For
+the app-builder flow (experimental, :mod:`karni_cli.agent_tools`), tools that
+return JSON: ``recipes``, ``spec_validate``, ``questions``, ``answer``,
+``plan``, ``build`` and ``modules``. The tool functions are plain functions so they are
 testable without a client; :func:`build_server` registers them on the
 official MCP Python SDK server (``pip install 'karni-cli[mcp]'``): ``MCPServer``
 in mcp 2.x, ``FastMCP`` in mcp 1.x.
@@ -17,7 +20,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from karni_cli import agent_data
+from karni_cli import agent_data, agent_tools
 from karni_cli import explain_text as explain_text_mod
 from karni_cli.adapters import module_fragments
 from karni_cli.commands.context import build_context_text
@@ -30,7 +33,8 @@ INSTRUCTIONS = (
     "Karni project tools. Call `context` and `rules` before any work and follow what they "
     "return. Call `check` on every file you write. When a row, field or action is "
     "unexpectedly missing or refused, call `why` (or `why_empty`) before reading the access "
-    "layer."
+    "layer. To build an app from a one-line request, follow procedure new-app: `recipes`, "
+    "karni.yaml, `questions` and `answer`, `plan`, `build`."
 )
 
 _project_override: Path | None = None
@@ -244,6 +248,68 @@ def queries_tool(
 
 
 TOOLS |= {"explain_text": explain_text_tool, "queries": queries_tool}
+
+
+# the app-builder flow (experimental): karni.yaml to a running app, as JSON
+# (karni_cli.agent_tools, docs/assets/karni-mcp.schema.json)
+
+
+def recipes_tool(match: str = "", name: str = "") -> dict[str, Any]:
+    """Recipes: ready-made karni.yaml files. ``match``: a one-line request, the best few
+    recipes for it with their scores (plain word overlap), empty when none fits. ``name``: one
+    recipe with its spec, or ``blank``: the blank start (version and app name only). Neither:
+    every recipe. Each result has the blank start."""
+    return agent_tools.run(lambda: agent_tools.recipes(_project(), match, name))
+
+
+def spec_validate_tool(path: str = "") -> dict[str, Any]:
+    """Check karni.yaml (``path``: another spec file): every problem with its code, line and
+    fix."""
+    return agent_tools.run(lambda: agent_tools.spec_validate(_project(), path))
+
+
+def questions_tool(spec: str = "", max: int = 5) -> dict[str, Any]:
+    """The questions to ask the user before ``build``, most impact first, at most ``max`` (0:
+    all). Ask only these, then ``answer`` each. Reads only the spec."""
+    return agent_tools.run(lambda: agent_tools.questions(_project(), spec, max))
+
+
+def answer_tool(id: str, value: str, spec: str = "") -> dict[str, Any]:
+    """Write the user's answer to question ``id`` into karni.yaml (``value``: one of its
+    options, several comma-separated when it takes several). Every other line is kept."""
+    return agent_tools.run(lambda: agent_tools.answer(_project(), id, value, spec))
+
+
+def plan_tool(spec: str = "") -> dict[str, Any]:
+    """What ``build`` would change to make the project match karni.yaml, risky changes with
+    the rows they touch. Writes nothing."""
+    return agent_tools.run(lambda: agent_tools.plan(_project(), spec))
+
+
+def build_tool(
+    spec: str = "", dry_run: bool = False, allow_destructive: bool = False
+) -> dict[str, Any]:
+    """Make the project match karni.yaml: modules, Karni's files, migrations, migrate, seed,
+    types, tests, karni check. ``allow_destructive`` only after the user agrees to the risky
+    changes. A Karni-owned file edited by hand stops it (C273): ask the user which way on."""
+    return agent_tools.run(lambda: agent_tools.build(_project(), spec, dry_run, allow_destructive))
+
+
+def modules_tool(name: str = "") -> dict[str, Any]:
+    """The module catalog: every module and built-in feature in a line (purpose, use_when,
+    whether the project has it), or ``name`` in full with the questions it asks."""
+    return agent_tools.run(lambda: agent_tools.modules(_project(), name))
+
+
+TOOLS |= {
+    "recipes": recipes_tool,
+    "spec_validate": spec_validate_tool,
+    "questions": questions_tool,
+    "answer": answer_tool,
+    "plan": plan_tool,
+    "build": build_tool,
+    "modules": modules_tool,
+}
 
 
 def _server_class() -> Any:

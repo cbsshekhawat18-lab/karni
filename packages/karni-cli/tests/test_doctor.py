@@ -88,7 +88,7 @@ def test_doctor_reports_the_environment(runner, project: Path) -> None:
     ]
     assert "node-9.9.9 (npm npm-9.9.9)" in result.stdout
     assert "manifest absent" in result.stdout
-    assert "stale (28 files)" in result.stdout  # no adapters generated in this bare project
+    assert "stale (32 files)" in result.stdout  # no adapters generated in this bare project
     assert "no store detected (installed: gigai-chronicle)" in result.stdout
     assert TIP_FIRST_LINE not in result.output
 

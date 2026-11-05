@@ -30,7 +30,7 @@ from karni.testing.factories import DEFAULT_PASSWORD, factory_for
 from karni.testing.values import SAFE_DOMAINS, ValueInference
 from tests.perfapp.models import Chapter, Genre, Loop, Novel, Publisher, Specimen, Writer
 from tests.perfapp.seeds import PublisherSeeder, WriterSeeder
-from tests.testapp.models import Event, Tag, Venue
+from tests.testapp.models import Event, Part, Reading, Shelf, Tag, Venue
 
 pytestmark = pytest.mark.django_db
 
@@ -103,7 +103,9 @@ def test_seed_logins_exist_with_their_roles(settings) -> None:
 
 def test_the_same_seed_reproduces_the_same_rows() -> None:
     plan = [Venue, Tag, Event, get_user_model()]
-    seed(models=EVENTS, count=6, seed=42, now=NOW)
+    # --reset both times: integer keys (KARNI_TEST_PK=bigint) come from the sequence,
+    # which PostgreSQL never rolls back between tests, and --reset restarts it.
+    seed(models=EVENTS, count=6, seed=42, now=NOW, reset=True)
     first = _dump(*plan)
     report = seed(models=EVENTS, count=6, seed=42, now=NOW, reset=True)
     assert report.reset == ["testapp.Event", "testapp.Venue", "testapp.Tag"]  # children first
@@ -112,6 +114,21 @@ def test_the_same_seed_reproduces_the_same_rows() -> None:
     assert _dump(*plan) == first
     seed(models=EVENTS, count=6, seed=7, now=NOW, reset=True)
     assert _dump(*plan)["testapp.Event"] != first["testapp.Event"]
+
+
+def test_integer_keys_give_the_same_rows_after_a_reset() -> None:
+    """--reset restarts the sequences of the tables it wipes, so integer ids repeat too."""
+    plan = [Part, Reading]
+    seed(models=["testapp.Part", "testapp.Reading"], count=5, seed=3, now=NOW, reset=True)
+    first = _dump(*plan)
+    ids = [row["id"] for row in first["testapp.Reading"]]
+    assert ids == [str(n) for n in range(1, 6)], ids
+    again = seed(models=["testapp.Part", "testapp.Reading"], count=5, seed=3, now=NOW, reset=True)
+    assert again.reset == ["testapp.Reading", "testapp.Part"]  # children first
+    assert _dump(*plan) == first
+    # Without --reset the sequence goes on: new rows, new ids.
+    seed(models=["testapp.Reading"], count=2, seed=3, now=NOW)
+    assert Reading.objects.count() == 7 and max(Reading.objects.values_list("pk", flat=True)) == 7
 
 
 def test_without_reset_a_run_adds_rows_and_keeps_uniques_unique() -> None:
@@ -127,14 +144,14 @@ def test_a_seeded_uuid_key_an_earlier_run_used_is_replaced() -> None:
     # Each `karni seed` is a new process, so the same seed draws the same UUID
     # keys again; a key already in the table must give way to a fresh one, or
     # re-running fails with E612 on the primary key.
-    declaration = SeedBuilder(ValueInference(now=NOW)).declaration(Venue, Venue._meta.pk)
+    declaration = SeedBuilder(ValueInference(now=NOW)).declaration(Shelf, Shelf._meta.pk)
     reseed_random(0)
     key = declaration.function()
-    factory_for(Venue).create(pk=key)
+    factory_for(Shelf).create(pk=key)
     reseed_random(0)
     again = declaration.function()
     assert again != key
-    assert not Venue.objects.filter(pk=again).exists()
+    assert not Shelf.objects.filter(pk=again).exists()
 
 
 def test_seeders_pin_counts_values_and_take_over_creation() -> None:

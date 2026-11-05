@@ -17,8 +17,10 @@ follow what they return.
 
 | Command | What it returns |
 |---|---|
-| `karni context` | Live inventory: APPS, MODELS, VIEWSETS, COMPONENTS, HOOKS, PAGES, SITE (the public site's routes), MODULES, BASES |
-| `karni rules` | Every convention as `CODE summary` (about 560 tokens for Karni's own rules, measured) |
+| `karni context` | Live inventory: APPS, MODELS, VIEWSETS, COMPONENTS, HOOKS, PAGES, SITE (the public site's routes), MODULES, CATALOG (a line per module and built-in feature, with whether the project has it: [the module catalog](modules.md#the-module-catalog)), BASES |
+| `karni modules list` / `show NAME` | The module catalog: every module and feature with its options and the questions to ask (experimental) |
+| `karni recipes list --match "<request>"` / `show NAME` | The recipes a new app starts from, ranked for a one-line request, and the blank start ([the /new-app flow](#agents-the-new-app-flow), experimental) |
+| `karni rules` | Every convention as `CODE summary` (about 600 tokens for Karni's own rules, measured) |
 | `karni rules --explain K101` | One rule in full: statement, why, fix, enforcing rule id |
 | `karni rules --procedure new-model` | The steps of a standard procedure |
 | `karni rules --check FILE [--check FILE…]` | Static violations with code, line, message and fix. Exit 1 if any |
@@ -32,7 +34,7 @@ follow what they return.
 | `karni explain --failure last` | A captured crash as a brief: request, user, failing frame with locals, SQL, next steps ([debugging](debugging/trace-and-replay.md)) |
 | `karni trace <request-id>` | One request's story in order: its tasks and retries, email, webhooks, change-log entries |
 | `karni replay <request-id> --as USER` | Re-run a captured request against the current code ("was 403, now 200") |
-| `karni mcp` | The same surface as MCP tools: `context`, `rules`, `check`, and for debugging `why`, `why_empty`, `explain_text`, `queries`, `trace`, `replay`, `explain_failure` |
+| `karni mcp` | The same surface as MCP tools: `context`, `rules`, `check`, for debugging `why`, `why_empty`, `explain_text`, `queries`, `trace`, `replay`, `explain_failure`, and for the [/new-app flow](#agents-the-new-app-flow) `recipes`, `spec_validate`, `questions`, `answer`, `plan`, `build`, `modules` |
 
 `karni context` and `karni rules` together are enough to start work without
 reading files. `karni rules --check` is a fast single-file subset of the real
@@ -131,8 +133,8 @@ it was verified against (2026-10-02).
 | Aider | `CONVENTIONS.md` | Markdown. Load with `aider --read CONVENTIONS.md` or `read:` in `.aider.conf.yml` |
 | JetBrains Junie | `.junie/AGENTS.md` | Markdown, and carries module guidance |
 
-Slash commands for `new-model`, `new-page`, `add-module`, `new-module` and
-`site-from-design` come from the same procedure data:
+Slash commands for `new-model`, `new-page`, `add-module`, `new-module`,
+`site-from-design` and `new-app` come from the same procedure data:
 
 | Tool | Files |
 |---|---|
@@ -200,6 +202,12 @@ traceback or log line) and `queries(endpoint, as_user="", method="GET",
 data="", explain=False)` (`karni queries`). Rules K013 and K014 tell an agent
 to call them before reading a traceback or hunting an N+1 by hand.
 
+For the [/new-app flow](#agents-the-new-app-flow) (experimental):
+`recipes(match="", name="")`, `spec_validate(path="")`, `questions(spec="",
+max=5)`, `answer(id, value, spec="")`, `plan(spec="")`, `build(spec="",
+dry_run=False, allow_destructive=False)` and `modules(name="")`. Each returns
+JSON that follows a published schema: [the MCP tools](app-spec.md#mcp-tools).
+
 Claude Code:
 
 ```sh
@@ -220,6 +228,69 @@ Cursor, `.cursor/mcp.json`:
 
 The server is built on the official MCP Python SDK (`MCPServer` in mcp 2.x,
 `FastMCP` in mcp 1.x).
+
+## Agents: the /new-app flow
+
+!!! warning "Experimental"
+    The `new-app` procedure, rule K311, `karni recipes`, the recipe format
+    and the MCP tools of the flow are
+    [experimental](stability.md#experimental-names).
+
+Most apps start as one line: "a booking app for a yoga studio, with online
+payments". The agent turns that line into a small spec, `karni.yaml`, and
+Karni turns the spec into code with `karni build`, without a language model.
+The agent writes by hand only the domain logic that is left.
+
+Describe the app in one line and give it to `/new-app` (Claude Code, Cursor,
+Windsurf, Copilot):
+
+```text
+/new-app a booking app for a yoga studio, with online payments
+```
+
+In a tool without slash commands, the same flow is one prompt:
+
+```text
+Run `karni rules --procedure new-app` and follow every step for: <the app in one line>
+```
+
+The steps, as the [procedure](#new-app-build-an-app-from-a-one-line-request-karniyaml-then-karni-build)
+gives them:
+
+1. **A recipe, or the blank start.** `karni recipes list --match "<the
+   request>"` ranks the [recipes](app-spec.md#recipes) by the words they
+   share with the request. The agent starts `karni.yaml` from the closest
+   one, or from the blank start (the version and the app's name, nothing
+   else) when none fits, and writes in it what the request asks for.
+2. **The questions.** `karni plan --questions` lists the few questions for
+   the user ([questions](app-spec.md#questions)). The agent asks those and
+   only those.
+3. **The answers.** `karni spec answer <id> <value>` writes each one into
+   `karni.yaml`, keeping its comments and layout.
+4. **The plan.** `karni plan` shows what will change, risky changes first.
+5. **The build.** `karni build` writes Karni's code, runs the migrations,
+   seeds, types, tests and `karni check`. A Karni-owned file edited by hand
+   stops it, and the agent asks the user which of the three ways on to take.
+6. **The domain logic.** The agent writes only what `karni.yaml` cannot
+   express, in the project's own files: methods in `<app>/models.py`,
+   actions in `<app>/viewsets.py`, `<app>/seeds.py`, its own pages and
+   tests.
+7. **Done** when `karni check` and `karni test` pass.
+
+A new project can also start from a recipe with its domain code in place:
+`karni new "<Name>" --recipe <name>` writes the recipe's `karni.yaml` and
+runs `karni build`, which writes the recipe's own methods, actions, seeders
+and tests too ([recipes](recipes/index.md)). The flow then goes on from the
+questions, for what the request changes.
+
+Rule K311 says it in every adapter: never hand-write what `karni.yaml` can
+express. Change `karni.yaml` and run `karni build` again. `karni new` ends
+with the same two lines, and so does the welcome page of a new project.
+
+With the MCP server, the tools `recipes`, `spec_validate`, `questions`,
+`answer`, `plan` and `build` do the same as the commands and return JSON
+([the MCP tools](app-spec.md#mcp-tools)). The MCP `build` never forces or
+adopts a file edited by hand: those stay the user's call.
 
 ## Migrating an existing project
 
@@ -243,8 +314,9 @@ changelog. See [migrating to 0.2](migrations/0.2.md#agent-guidance-files).
 ## Plain-language prompts
 
 For tools without slash commands, these prompts do the same as `/new-model`,
-`/new-page`, `/add-module`, `/new-module` and `/site-from-design`. The block
-below is generated from the procedure data (a test fails when it is stale).
+`/new-page`, `/add-module`, `/new-module`, `/site-from-design` and `/new-app`.
+The block below is generated from the procedure data (a test fails when it is
+stale).
 
 <!-- karni:procedures:start (generated: `karni rules --prompts-doc`) -->
 <!-- karni:procedures:start (generated: `karni rules --prompts-doc`) -->
@@ -302,13 +374,15 @@ What `karni rules --procedure` returns:
 ```text
 Install Karni module: <module> (e.g. payments)
 
-1. Run `karni add <module>`. It adds the `karni-<module>` dependency to pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked `# karni:apps` in config/settings.py, and (once installed) records the module's agent guidance.
-2. Rebuild/install: `docker compose build` (or `uv pip install -r pyproject.toml` in a host venv), then `make migrate`. Run `karni add <module>` again if it asked you to.
-3. Run `karni context`. The module must appear under MODULES, and `karni rules` now includes its guidance.
-4. Configure only the settings the module documents. Do not patch its internals.
-5. To create a new reusable module instead: `karni make module <name>` (modules/karni-<name>/, docs/modules.md).
+1. Run `karni modules show <module>`: what it provides, what it needs and the questions to settle first, each with the setting its answer goes to.
+2. Run `karni add <module>`. It adds the `karni-<module>` dependency to pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked `# karni:apps` in config/settings.py (with any middleware its manifest wires), and (once installed) records the module's agent guidance. It prints the URL include to add, if any.
+3. Rebuild/install: `docker compose build` (or `uv pip install -r pyproject.toml` in a host venv), then `make migrate`. Run `karni add <module>` again if it asked you to.
+4. Run `karni context`. The module must appear under MODULES, and `karni rules` now includes its guidance.
+5. Configure only the settings the module documents. Do not patch its internals.
+6. To take it out again: `karni remove <module>` (it never drops the tables).
+7. To create a new reusable module instead: `karni make module <name>` (modules/karni-<name>/, docs/modules.md).
 
-Rules that apply: K009, K308
+Rules that apply: K009, K307, K308
 ```
 
 ### `new-module`: Create a new local Django app following Karni conventions
@@ -358,6 +432,30 @@ Build the public site from the design: <design folder> [site app]
 Nothing is retyped and nothing is invented: every value comes from the design through extract and load, and a new version of the design is extract and load again.
 
 Rules that apply: K009, K309, K003, K301
+```
+
+### `new-app`: Build an app from a one-line request: karni.yaml, then karni build
+
+Prompt for tools without slash commands (replace the placeholder):
+
+> Run `karni rules --procedure new-app` and follow every step for: `<the app in one line>`
+
+What `karni rules --procedure` returns:
+
+```text
+Build this app: <the app in one line>
+
+1. `karni recipes list --match "<the request>"` ranks the recipes by the words they share with the request. Start karni.yaml from the closest one that fits (`karni recipes show <name>` prints its spec and what people usually change) or, when none does, from the blank start it prints. Write in it what the request asks for: apps, entities and fields, roles, modules (`karni modules list`), features, pages. `karni spec validate` checks it.
+2. `karni plan --questions` lists the questions for the user, most impact first. Ask the user those and only those, with their options and defaults, in one message. Names, labels and the rest are yours to choose.
+3. Write each answer with `karni spec answer <id> <value>` (a question the user leaves to you takes its default). Edit karni.yaml by hand only for what no question covers. Run `karni plan --questions` again until none is open.
+4. `karni plan` shows what `karni build` will change. Check that it is what the request asks for, and ask the user before any risky (!) change.
+5. `karni build` makes the project match karni.yaml: modules, models, viewsets, migrations, seeds, types, tests and `karni check`. It stops at the first failure with its code and what to do next. A Karni-owned file edited by hand stops it (C273): ask the user which of the three ways on to take.
+6. Write only the domain logic that is left, where the project owns the code: methods on the subclasses in `<app>/models.py`, custom actions in `<app>/viewsets.py`, demo values in `<app>/seeds.py`, your own pages and tests. Never edit `<app>/karni/` or the `karni:spec` blocks: `karni build` rewrites them.
+7. Done when `karni check` and `karni test` pass.
+
+Never hand-write what karni.yaml can express: change karni.yaml and run `karni build` again. The MCP tools recipes, questions, answer, plan and build do the same as these commands.
+
+Rules that apply: K311, K310, K305, K301
 ```
 
 <!-- karni:procedures:end -->

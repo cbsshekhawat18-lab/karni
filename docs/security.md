@@ -71,14 +71,33 @@ tokens are short-lived JWTs (15 minutes) with refresh rotation and
 blacklisting on logout and password reset. Cookie sessions with the CSRF
 bootstrap are the alternative. One-time tokens are stored hashed, single-use,
 per purpose, with TTLs. There is an email-verification gate, plus optional
-TOTP 2FA and social login. See [accounts](accounts.md).
+TOTP 2FA, social login, and (experimental) [sign-in with a Google, Microsoft
+or Apple ID token](accounts.md#sign-in-with-an-id-token-google-microsoft-apple),
+verified offline against the audience, issuer, nonce and verified email. Also
+experimental, [sign-in with a code sent by
+email](accounts.md#sign-in-with-a-code-sent-by-email) stores only an HMAC of
+each code, keyed by `SECRET_KEY`, and kills a code after one use, its TTL or
+`KARNI_EMAIL_OTP_MAX_ATTEMPTS` wrong guesses. See [accounts](accounts.md).
+
+**Terms acceptance.** With `KARNI_TERMS` (experimental), the API refuses every
+signed-in user, staff and superusers included, with a 403 (`E245`) until
+they accept the current version of the terms
+([terms acceptance](accounts.md#terms-acceptance)). The record is
+append-only: each acceptance keeps the version, the time, the IP (read like
+the throttles read it, so `NUM_PROXIES` must be right here too) and the user
+agent, and code that tries to change or delete one gets `E247`. The IP and
+the user agent are personal data, so name them in your privacy policy. The
+gate covers `/api/` by default: the admin and a public site are not gated
+unless `KARNI_TERMS["paths"]` lists them. It is a legal record, not an
+access control: grant access with `access` and roles.
 
 **Abuse.** Every auth endpoint has per-IP throttles, and login has a
-per-account throttle as well (`KARNI_AUTH_THROTTLE_RATES`). `NUM_PROXIES` is
+per-account throttle as well (`KARNI_AUTH_THROTTLE_RATES`). Sign-in with a
+code adds a per-address throttle on the codes one address receives. `NUM_PROXIES` is
 set for the shipped Caddy (`KARNI_NUM_PROXIES`, default 1). Set it to `0`
 whenever Django is exposed without a proxy that rewrites `X-Forwarded-For`,
 or a spoofed header defeats the per-IP throttles. The password-reset endpoint
-never reveals whether an address exists. Registration has a honeypot
+and sign-in with a code never reveal whether an address exists. Registration has a honeypot
 (`KARNI_ACCOUNTS_HONEYPOT_FIELD`), and `karni.W501` warns when the throttle
 counters would live in a per-process cache in production. A public form of
 your own (`create=Public()`) is limited to 10 creates an hour per caller

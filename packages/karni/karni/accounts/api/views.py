@@ -10,7 +10,8 @@ DRF ``ValidationError`` for input problems themselves).
 
 Security posture baked in here:
 
-* per-IP scoped throttles plus the per-account login throttle (amendment A5),
+* per-IP scoped throttles plus the per-account login throttle (amendment A5)
+  and the per-address throttle of sign-in by code,
 * CSRF bootstrap for SPAs: ``ensure_csrf_cookie`` on login and the dedicated
   ``csrf/`` endpoint (amendment A4),
 * a password change blacklists every outstanding refresh token while session
@@ -59,12 +60,21 @@ from karni.accounts.api.serializers import (
     LogoutSerializer,
     MeSerializer,
     OneTimeTokenSerializer,
+    OtpSendSerializer,
+    OtpVerifySerializer,
     PasswordChangeSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetSerializer,
     RegisterSerializer,
+    SocialTokenLoginSerializer,
+    TermsAcceptSerializer,
+    TermsStatusSerializer,
 )
-from karni.accounts.api.throttles import AccountRateThrottle, AuthScopedRateThrottle
+from karni.accounts.api.throttles import (
+    AccountRateThrottle,
+    AuthScopedRateThrottle,
+    OtpEmailRateThrottle,
+)
 from karni.accounts.tokens import TokenError
 
 __all__ = [
@@ -78,11 +88,16 @@ __all__ = [
     "LoginView",
     "LogoutView",
     "MeView",
+    "OtpSendView",
+    "OtpVerifyView",
     "PasswordChangeView",
     "PasswordResetConfirmView",
     "PasswordResetView",
     "RefreshView",
     "RegisterView",
+    "SocialTokenLoginView",
+    "TermsAcceptView",
+    "TermsView",
     "auth_mode",
 ]
 
@@ -260,6 +275,312 @@ class LoginView(APIView):
         _log().info("accounts.login.ok", user_id=str(user.pk), mode=auth_mode())
         data["user"] = MeSerializer(user, context={"request": request}).data
         return Response(data)
+
+
+@extend_schema(
+    request=SocialTokenLoginSerializer,
+    responses={200: OpenApiTypes.OBJECT, 202: OpenApiTypes.OBJECT},
+)
+@method_decorator(ensure_csrf_cookie, name="dispatch")
+class SocialTokenLoginView(APIView):
+    """Experimental. ``POST social/<provider>/``: sign in with a provider's ID token (both modes).
+
+    The body is ``{"id_token", "nonce"?, "name"?}`` (see
+    :class:`SocialTokenLoginSerializer`). The token is verified offline by
+    :func:`karni.accounts.social_token.verify_id_token` and the account
+    chosen by :func:`karni.accounts.social_token.sign_in`. The answer is the
+    one ``login/`` gives: ``{"access", "refresh", "user"}`` in JWT mode, a
+    session plus ``{"user"}`` in session mode, or the 2FA gate payload. A
+    refusal is ``{"code", "detail"}`` with a 400 or 401 (404 ``E225`` for a
+    provider that is not configured, 503 ``E219`` when its keys cannot be
+    fetched), and a new account awaiting approval is a 202 with ``E224`` and
+    no credentials.
+
+    ``karni.accounts.urls`` mounts one route per configured provider and
+    passes its name as ``provider``. Override / escape hatch: subclass and
+    declare ``path("api/auth/social/<provider>/", ...)`` before the include,
+    or set ``throttle_classes`` / ``throttle_scope`` (``auth.social``).
+    """
+
+    permission_classes: ClassVar[list[type]] = [AllowAny]
+    throttle_classes: ClassVar[list[type]] = [AuthScopedRateThrottle]
+    throttle_scope = "auth.social"
+    serializer_class = SocialTokenLoginSerializer
+
+    def post(self, request: Request, provider: str = "") -> Response:
+        from karni.accounts import social_token
+
+        try:
+            idp = social_token.get_provider(provider)
+            if idp is None:
+                raise social_token.SocialTokenRefused(
+                    "provider_not_configured",
+                    f"No sign-in provider {provider!r} is configured in "
+                    "KARNI_SOCIAL_TOKEN_PROVIDERS.",
+                    code="E225",
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            serializer = self.serializer_class(data=request.data, context={"request": request})
+            serializer.is_valid(raise_exception=True)
+            body = serializer.validated_data
+            claims = social_token.verify_id_token(idp, body["id_token"], nonce=body.get("nonce"))
+            result = social_token.sign_in(idp, claims, name=body.get("name"))
+        except social_token.SocialTokenRefused as exc:
+            _log().warning(
+                "accounts.social.refused",
+                provider=provider,
+                reason=exc.reason,
+                code=exc.code,
+                **({"email": email_fingerprint(exc.email)} if exc.email else {}),
+            )
+            return Response(exc.payload(), status=exc.status)
+
+        user = result.user
+        if result.awaiting_approval:
+            refused = social_token.SocialTokenRefused(
+                "awaiting_approval",
+                "The account was created and awaits an administrator's approval.",
+                code="E224",
+                status=status.HTTP_202_ACCEPTED,
+            )
+            _log().info(
+                "accounts.social.refused",
+                provider=provider,
+                reason=refused.reason,
+                code=refused.code,
+                user_id=str(user.pk),
+            )
+            return Response(refused.payload(), status=refused.status)
+
+        gate = _twofa_gate_payload(user)
+        if gate is not None:
+            _log().info("accounts.social.2fa_required", provider=provider, user_id=str(user.pk))
+            return Response(gate)
+
+        data: dict[str, Any] = {}
+        if auth_mode() == MODE_JWT:
+            data.update(_issue_jwt_pair(user))
+        else:
+            _session_login(request, user)
+        social_token.mark_used(result.identity)
+        _log().info(
+            "accounts.social.ok",
+            provider=provider,
+            user_id=str(user.pk),
+            mode=auth_mode(),
+            created=result.created,
+            linked=result.linked,
+        )
+        data["user"] = MeSerializer(user, context={"request": request}).data
+        return Response(data)
+
+
+@extend_schema(request=OtpSendSerializer, responses={200: OpenApiTypes.OBJECT})
+@method_decorator(ensure_csrf_cookie, name="dispatch")
+class OtpSendView(APIView):
+    """Experimental. ``POST otp/send/`` ``{email}``: email a sign-in code, enumeration-silent.
+
+    Always the same 200 and the same body (:func:`karni.accounts.otp.send_answer`:
+    ``{"detail", "length", "expires_in"}``), whether the address has an
+    account, is inactive, or may not sign up. :func:`karni.accounts.otp.send_code`
+    does the same work on every path and sends the email after the
+    transaction commits. A malformed address is a plain 400. While
+    ``KARNI_EMAIL_OTP`` is off the route is not mounted, and a URLconf built
+    earlier answers 404 ``E236``.
+
+    Throttled per IP (``auth.otp_send``) and per address
+    (``auth.otp_send_email``). Override / escape hatch: subclass and declare
+    ``path("api/auth/otp/send/", ...)`` before the include, or change
+    ``throttle_classes`` / ``throttle_scope``.
+    """
+
+    permission_classes: ClassVar[list[type]] = [AllowAny]
+    throttle_classes: ClassVar[list[type]] = [AuthScopedRateThrottle, OtpEmailRateThrottle]
+    throttle_scope = "auth.otp_send"
+    serializer_class = OtpSendSerializer
+
+    def post(self, request: Request) -> Response:
+        from karni.accounts import otp
+
+        if not otp.enabled():
+            refused = otp.turned_off()
+            return Response(refused.payload(), status=refused.status)
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        otp.send_code(serializer.validated_data["email"])
+        return Response(otp.send_answer())
+
+
+@extend_schema(
+    request=OtpVerifySerializer,
+    responses={200: OpenApiTypes.OBJECT, 202: OpenApiTypes.OBJECT},
+)
+@method_decorator(ensure_csrf_cookie, name="dispatch")
+class OtpVerifyView(APIView):
+    """Experimental. ``POST otp/verify/`` ``{email, code}``: sign in with the emailed code.
+
+    The answer is the one ``login/`` gives: ``{"access", "refresh", "user"}``
+    in JWT mode, a session plus ``{"user"}`` in session mode, or the 2FA gate
+    payload (:func:`_twofa_gate_payload`). A refused code is a 401 ``E235``
+    whatever went wrong (wrong, expired, used, locked, or an address nobody
+    sent a code to), an inactive account a 401 ``E226`` after a right code,
+    and a new account under the ``approval`` policy a 202 ``E224`` with no
+    credentials. Refusals are returned, not raised, so a guess spent on a
+    wrong code stays spent even with ``ATOMIC_REQUESTS``.
+
+    Throttled per IP (``auth.otp_verify``), on top of the attempt cap of each
+    code. Override / escape hatch: subclass and declare
+    ``path("api/auth/otp/verify/", ...)`` before the include.
+    """
+
+    permission_classes: ClassVar[list[type]] = [AllowAny]
+    throttle_classes: ClassVar[list[type]] = [AuthScopedRateThrottle]
+    throttle_scope = "auth.otp_verify"
+    serializer_class = OtpVerifySerializer
+
+    def post(self, request: Request) -> Response:
+        from karni.accounts import otp
+
+        if not otp.enabled():
+            refused = otp.turned_off()
+            return Response(refused.payload(), status=refused.status)
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        body = serializer.validated_data
+        try:
+            result = otp.verify_code(body["email"], body["code"])
+        except otp.LoginCodeRefused as exc:
+            _log().warning(
+                "accounts.otp.refused",
+                step="verify",
+                reason=exc.reason,
+                code=exc.code,
+                email=email_fingerprint(body["email"]),
+            )
+            return Response(exc.payload(), status=exc.status)
+
+        user = result.user
+        if result.awaiting_approval:
+            waiting = otp.LoginCodeRefused(
+                "awaiting_approval",
+                "The account was created and awaits an administrator's approval.",
+                code="E224",
+                status=status.HTTP_202_ACCEPTED,
+            )
+            _log().info(
+                "accounts.otp.refused",
+                step="verify",
+                reason=waiting.reason,
+                code=waiting.code,
+                user_id=str(user.pk),
+            )
+            return Response(waiting.payload(), status=waiting.status)
+
+        gate = _twofa_gate_payload(user)
+        if gate is not None:
+            _log().info("accounts.otp.2fa_required", user_id=str(user.pk))
+            return Response(gate)
+
+        data: dict[str, Any] = {}
+        if auth_mode() == MODE_JWT:
+            data.update(_issue_jwt_pair(user))
+        else:
+            _session_login(request, user)
+        _log().info(
+            "accounts.otp.verified", user_id=str(user.pk), mode=auth_mode(), created=result.created
+        )
+        data["user"] = MeSerializer(user, context={"request": request}).data
+        return Response(data)
+
+
+@extend_schema(responses={200: TermsStatusSerializer, 404: OpenApiTypes.OBJECT})
+class TermsView(APIView):
+    """Experimental. ``GET terms/``: the current terms, and whether the user accepted them.
+
+    ``{"version", "url", "required", "accepted", "accepted_at"}``
+    (:func:`karni.accounts.terms.status`). 401 without a signed-in user. The
+    route exists while ``KARNI_TERMS`` is set, and a URLconf built earlier
+    answers 404 ``E249`` once it is unset. The terms gate never refuses it.
+
+    Override / escape hatch: subclass and declare ``path("api/auth/terms/",
+    ...)`` before the include.
+    """
+
+    permission_classes: ClassVar[list[type]] = [IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
+        from karni.accounts import terms
+
+        if not terms.configured():
+            refused = terms.turned_off()
+            return Response(refused.payload(), status=refused.status)
+        return Response(TermsStatusSerializer(terms.status(request.user)).data)
+
+
+@extend_schema(
+    request=TermsAcceptSerializer,
+    responses={
+        200: TermsStatusSerializer,
+        201: TermsStatusSerializer,
+        400: OpenApiTypes.OBJECT,
+        404: OpenApiTypes.OBJECT,
+    },
+)
+class TermsAcceptView(APIView):
+    """Experimental. ``POST terms/accept/`` ``{version, client?}``: accept the current terms.
+
+    Records the acceptance (:func:`karni.accounts.terms.accept`) with the
+    client's IP (read like the throttles read it, honouring ``NUM_PROXIES``),
+    its ``User-Agent`` and the optional ``client`` object, and answers 201
+    with the ``terms/`` body. The same version again answers 200 and changes
+    nothing. Another version is a 400 ``E246`` carrying the current
+    ``version`` and ``url``, and nothing is recorded. 401 without a signed-in
+    user, 404 ``E249`` from a URLconf built while ``KARNI_TERMS`` was set.
+
+    Override / escape hatch: subclass and declare
+    ``path("api/auth/terms/accept/", ...)`` before the include, or call
+    :func:`karni.accounts.terms.accept` from a view of your own.
+    """
+
+    permission_classes: ClassVar[list[type]] = [IsAuthenticated]
+    serializer_class = TermsAcceptSerializer
+
+    def post(self, request: Request) -> Response:
+        from karni.accounts import terms
+
+        if not terms.configured():
+            refused = terms.turned_off()
+            return Response(refused.payload(), status=refused.status)
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        body = serializer.validated_data
+        try:
+            _row, created = terms.accept(
+                request.user,
+                body["version"],
+                ip=terms.client_ip(request),
+                user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                client=body.get("client"),
+            )
+        except terms.TermsRefused as exc:
+            _log().warning(
+                "accounts.terms.refused",
+                user_id=str(request.user.pk),
+                code=exc.code,
+                sent=body["version"],
+                current=exc.version,
+            )
+            return Response(exc.payload(), status=exc.status)
+        _log().info(
+            "accounts.terms.accepted",
+            user_id=str(request.user.pk),
+            version=body["version"],
+            created=created,
+        )
+        return Response(
+            TermsStatusSerializer(terms.status(request.user)).data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
 
 
 class LogoutView(APIView):

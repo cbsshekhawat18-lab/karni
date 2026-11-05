@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <body style="margin:0;padding:24px;background:#f3f4f6;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#030712;">
+    <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;padding:32px;">
+      <p style="margin:0 0 16px;">Hi{% if user.first_name %} {{ user.first_name }}{% endif %},</p>
+      <p style="margin:0 0 16px;">Your sign-in code is:</p>
+      <p style="margin:0 0 24px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:28px;font-weight:600;letter-spacing:6px;">{{ code }}</p>
+      <p style="margin:0 0 16px;">
+        Enter it on the sign-in page. It expires in {{ ttl_minutes }}
+        minute{{ ttl_minutes|pluralize }} and works once.
+      </p>
+      <p style="margin:16px 0 0;font-size:13px;color:#646a77;">
+        If you did not ask to sign in, you can ignore this email. Nobody can
+        sign in without the code.
+      </p>
+    </div>
+  </body>
+</html>

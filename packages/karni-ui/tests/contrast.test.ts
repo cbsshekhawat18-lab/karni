@@ -110,6 +110,7 @@ const TEXT: ReadonlyArray<readonly [string, string, string]> = [
   ["destructive", "destructive-subtle", "error banners"],
   ["foreground@0.9/background", "background", "toast description"],
   ["foreground@0.9/muted", "muted", "info toast description"],
+  ["foreground", "muted", "SocialButton and OtpLoginForm approval message"],
 ];
 
 const NON_TEXT: ReadonlyArray<readonly [string, string, string]> = [

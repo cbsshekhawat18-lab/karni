@@ -19,6 +19,7 @@ nested class, next to ``Meta``, ``APIMeta`` and ``AdminMeta``::
             import_transform = "shop.imports.clean_order_row"
             after_import = "shop.imports.reindex"
             no_overlap = ("room", "during")     # one live row per room and slot (PostgreSQL)
+            # external = True, writable = True, database = "warehouse": karni.db (experimental)
 
 Every option has a default, so a model with no ``Karni`` class behaves
 sensibly: owned by whoever created it, no extra scope paths, the four
@@ -200,6 +201,29 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "resource field(s) then the range, or a list of them. PostgreSQL enforces it with an "
         "`EXCLUDE` constraint the model's migration creates. Soft-deleted rows never block.",
         'no_overlap = NoOverlap("room", "during", ignore={"status": ["cancelled"]})',
+    ),
+    # external tables, SQL views and a second database (karni.db, experimental)
+    Option(
+        "external",
+        "`False`",
+        "Experimental. Another system owns the table or view: with `Meta.managed = False`, "
+        "the model may inherit plain `models.Model`, Karni runs no DDL for it, the API answers "
+        "its writes with 405 and the admin shows it read-only "
+        "([models: external tables](models.md#external-tables-views-and-a-second-database)).",
+        "external = True",
+    ),
+    Option(
+        "writable",
+        "`False`",
+        "Experimental. Let the API and the admin write an external model's table.",
+        "writable = True",
+    ),
+    Option(
+        "database",
+        "`None` (the default database)",
+        "Experimental. The `DATABASES` alias the model's reads, writes and migrations go to "
+        "(`karni.db.DatabaseRouter`).",
+        'database = "warehouse"',
     ),
 )
 

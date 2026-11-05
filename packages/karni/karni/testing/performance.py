@@ -14,10 +14,10 @@ Three layers, all on by default in a Karni project's test run:
                client.get("/dashboard/")
 
 3. **The scaling check** (N-independence): for every routed project
-   ``BaseViewSet``, ``list`` is measured with 2 and with 12 rows and
-   ``retrieve`` with 2 and with 12 related rows per to-many relation the
-   serializer renders; the query count must not grow. An absolute budget
-   cannot see an N+1 in a one-row test — this can. Rows come from
+   ``BaseViewSet`` (an external model's aside, :mod:`karni.db`), ``list`` is
+   measured with 2 and with 12 rows and ``retrieve`` with 2 and with 12
+   related rows per to-many relation the serializer renders; the query count
+   must not grow. An absolute budget cannot see an N+1 in a one-row test — this can. Rows come from
    :mod:`karni.testing.factories` (explicit ``<app>/factories.py`` factories
    win), the requester gets every role the ``read`` predicate names and owns
    the rows its ``Owned`` paths name. It runs as part of the architecture
@@ -173,6 +173,8 @@ def scaling_cases() -> list[ScalingCase]:
             continue
         if not viewset.__module__.startswith(prefixes):
             continue
+        if _serves_external(viewset):
+            continue
         seen.add(viewset)
         opted_out, error = _optout(viewset)
         if opted_out:
@@ -184,6 +186,18 @@ def scaling_cases() -> list[ScalingCase]:
         if expand and callable(getattr(viewset, "list", None)):
             cases.append(ScalingCase(viewset, "list", error, expand=expand))
     return cases
+
+
+def _serves_external(viewset: type[Any]) -> bool:
+    """A viewset over an external table or view (``karni.db``, experimental): not measured.
+
+    Another system fills that table, so the check cannot seed rows the way
+    the table really holds them.
+    """
+    from karni.db import is_external
+
+    model = viewset.model if viewset.model is not None else getattr(viewset.queryset, "model", None)
+    return model is not None and is_external(model)
 
 
 def expansions(viewset: type[Any]) -> tuple[str, ...]:
@@ -392,11 +406,27 @@ def pytest_generate_tests(metafunc: Any) -> None:
     """Parametrise the scaling test with :func:`scaling_cases` (empty without Django)."""
     if "karni_scaling_case" not in metafunc.fixturenames:
         return
+    import pytest
     from django.apps import apps
     from django.conf import settings
 
     cases = scaling_cases() if settings.configured and apps.ready else []
-    metafunc.parametrize("karni_scaling_case", cases, ids=[case.id for case in cases])
+    metafunc.parametrize(
+        "karni_scaling_case",
+        [pytest.param(case, id=case.id, marks=_database_marks(case)) for case in cases],
+    )
+
+
+def _database_marks(case: ScalingCase) -> list[Any]:
+    """A model on another database (``Karni.database``) is measured on that alias too."""
+    import pytest
+    from django.db import router
+
+    model = getattr(case.viewset, "model", None)
+    alias = router.db_for_read(model) if model is not None else "default"
+    if alias in (None, "default"):
+        return []
+    return [pytest.mark.django_db(databases=["default", alias])]
 
 
 def test_list_and_retrieve_queries_do_not_grow_with_rows(

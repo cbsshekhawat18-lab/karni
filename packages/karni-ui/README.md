@@ -329,6 +329,9 @@ holds Karni's own, so a project can wrap one instead of rewriting it. Every
 | `ChangeHistory`  | `Loading`, `Error`, `Empty`, `Entry`                                                     |
 | `LoginForm`      | `Error` (+ `id` for `aria-describedby`, and `described`: the failure worded for sign-in) |
 | `AuthGuard`      | `Anonymous` (not signed in: a sign-in prompt), `Denied` (signed in, role lacks access)   |
+| `SocialButton`   | `Error` (+ `id` and `described`), `Approval` (a new account awaits approval)             |
+| `OtpLoginForm`   | `Error` (+ `id` and `described`), `Approval` (a new account awaits approval)             |
+| `TermsGate`      | `Panel` (the terms and the accept button, with `accepting` and the `error` worded)       |
 
 Loading placeholders take the real layout from the start (ResourceDetail
 draws one row per field the schema declares, plus the title and action
@@ -739,6 +742,92 @@ and a dropped connection. The message is announced. Both fields point at it
 (`aria-describedby`) and are marked invalid when they are the problem. The
 email stays after a failure, and wrong credentials clear and focus the password.
 The email field takes focus on mount (`autoFocus={false}` turns that off).
+
+### Sign-in with an ID token (experimental)
+
+`SocialButton` signs in with a Google, Microsoft or Apple ID token, against
+the backend's `POST <authBasePath>/social/<provider>/` ([accounts: sign-in with
+an ID token](https://cbsshekhawat18-lab.github.io/karni/accounts/#sign-in-with-an-id-token-google-microsoft-apple)).
+Karni bundles no provider SDK: `getIdToken` is your own call into Google
+Identity Services, MSAL or Sign in with Apple JS, and resolves with the ID
+token (and the nonce you generated), or `null` when the user closed the
+provider's window.
+
+```tsx
+<SocialButton
+  provider="google"
+  getIdToken={async () => ({ idToken: await askGoogleForAnIdToken(nonce), nonce })}
+  onSuccess={(user) => navigate("/")}
+  on2FA={(ephemeralToken) => navigate(`/2fa?token=${ephemeralToken}`)}
+/>
+```
+
+The button shows progress, says in plain words why a sign-in was refused
+(from the Karni code: an unverified email, sign-up closed, an inactive
+account, ...), and shows a new account that waits for an administrator as its
+own state (`onAwaitingApproval`). For a button of your own, use the hook:
+`const { signIn, status, error } = useSocialLogin("google")`. `signIn(idToken,
+{ nonce, name })` adopts the token pair in JWT mode, re-syncs the session
+user in session mode, and resolves `{ ok, user }`, `{ requires2fa,
+ephemeralToken }` (LoginForm's 2FA step) or `{ awaitingApproval, detail }`.
+Both names are experimental: they may change in a minor release.
+
+### Sign-in with a code sent by email (experimental)
+
+`OtpLoginForm` signs in without a password, against the backend's `POST
+<authBasePath>/otp/send/` and `otp/verify/` ([accounts: sign in with a code
+sent by email](https://cbsshekhawat18-lab.github.io/karni/accounts/#sign-in-with-a-code-sent-by-email)),
+which exist while `KARNI_EMAIL_OTP` is on.
+
+```tsx
+<OtpLoginForm
+  onSuccess={(user) => navigate("/")}
+  on2FA={(ephemeralToken) => navigate(`/2fa?token=${ephemeralToken}`)}
+/>
+```
+
+The email step sends the code. The code step has one input for the whole
+code, sized to the length the server answered (`inputMode="numeric"`,
+`autocomplete="one-time-code"`, so a phone offers the code from the email), a
+"Send a new code" button that waits `resendCooldown` seconds (30 by default),
+and "Use another email" to go back. A wrong code is cleared and focused, an
+inactive account and throttling are worded plainly, and a new account that
+waits for an administrator is its own state (`onAwaitingApproval`). To offer
+it next to the password, pass `codeSignIn` to `LoginForm`: a "Sign in with a
+code" switch shows `OtpLoginForm` in place of the password fields.
+
+For a form of your own, use the hook: `const { step, send, verify, resend,
+back, status, error, cooldown, length } = useOtpLogin({ resendCooldown: 30 })`.
+`verify(code)` adopts the token pair in JWT mode, re-syncs the session user
+in session mode, and resolves `{ ok, user }`, `{ requires2fa, ephemeralToken }`
+or `{ awaitingApproval, detail }`, like `useSocialLogin`. These names are
+experimental: they may change in a minor release.
+
+### Terms acceptance (experimental)
+
+`TermsGate` renders its children only once the signed-in user has accepted
+the current terms, against the backend's `KARNI_TERMS` ([accounts: terms
+acceptance](https://cbsshekhawat18-lab.github.io/karni/accounts/#terms-acceptance)).
+Wrap the part of the app that calls the API, inside `AuthProvider`:
+
+```tsx
+<AuthProvider>
+  <TermsGate client={{ platform: "web", app_version: "4.1.0" }}>
+    <RouterProvider router={router} />
+  </TermsGate>
+</AuthProvider>
+```
+
+Until the user accepts, it renders the terms in place of its children: a link
+to their url, or the page in a frame with `embed` (the page must allow being
+framed), and an "Accept and continue" button. Accepting posts
+`<authBasePath>/terms/accept/` with the version and the optional `client`
+object (or a function that returns it), then the children render. `useAuth()` carries `terms`, `termsRequired` and
+`acceptTerms(client)`: `termsRequired` comes from `/me/` and from the API
+gate's 403 (`E245`) on any request made through the client, so terms bumped
+mid-session bring the gate back. If the version changed again before the user
+accepts (`E246`), the gate shows the new one. The `Panel` slot replaces the
+whole panel. These names are experimental: they may change in a minor release.
 
 In JWT mode the refresh token is stored through a pluggable `TokenStorage`.
 The default is `localStorage`, which is simple but readable by any XSS on your

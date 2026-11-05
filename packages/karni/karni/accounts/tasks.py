@@ -2,6 +2,8 @@
 
 ``karni.conf`` schedules :func:`flush_expired_tokens` daily under the
 ``CELERY_BEAT_SCHEDULE`` key ``"karni-flush-expired-tokens"``.
+``karni.accounts.schedules`` declares :func:`flush_login_codes` hourly, as
+``"karni-flush-login-codes"``, while ``KARNI_EMAIL_OTP`` is on.
 
 Override / escape hatch: projects may remove or replace that schedule key in
 their ``settings.py`` after calling ``karni_settings()``, point the schedule
@@ -13,7 +15,7 @@ from __future__ import annotations
 
 from celery import shared_task
 
-__all__ = ["flush_expired_tokens"]
+__all__ = ["flush_expired_tokens", "flush_login_codes"]
 
 
 @shared_task(name="karni.accounts.tasks.flush_expired_tokens")
@@ -46,3 +48,16 @@ def flush_expired_tokens() -> dict[str, int | bool]:
     ).filter(expires_at__lt=timezone.now())
     deleted, _per_model = expired.hard_delete()
     return {"jwt_blacklist_flushed": blacklist_flushed, "one_time_tokens_deleted": deleted}
+
+
+@shared_task(name="karni.accounts.tasks.flush_login_codes")
+def flush_login_codes() -> dict[str, int]:
+    """Experimental. Delete the sign-in codes past their expiry (sign-in with a code).
+
+    Each send already deletes the earlier codes of its address and every
+    expired one. This hourly sweep removes what no later send reached, so no
+    address stays in the table longer than its code lived plus an hour.
+    """
+    from karni.accounts.otp import flush_expired_codes
+
+    return {"login_codes_deleted": flush_expired_codes()}

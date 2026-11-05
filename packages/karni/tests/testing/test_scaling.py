@@ -208,7 +208,9 @@ def test_generate_tests_parametrises_the_cases(monkeypatch: pytest.MonkeyPatch) 
         parametrize=lambda *args, **kwargs: calls.append((*args, kwargs)),
     )
     performance.pytest_generate_tests(metafunc)
-    assert calls == [("karni_scaling_case", [case], {"ids": ["NovelViewSet.list"]})]
+    ((name, params, _kwargs),) = calls
+    assert name == "karni_scaling_case"
+    assert [(p.values, p.id, list(p.marks)) for p in params] == [((case,), "NovelViewSet.list", [])]
 
 
 def test_the_architecture_suite_carries_the_scaling_check() -> None:

@@ -61,7 +61,7 @@ describe("generate-manifest role scan", () => {
     const result = runScript();
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/wrote \d+ components, \d+ hooks, 20 roles/);
+    expect(result.stdout).toMatch(/wrote \d+ components, \d+ hooks, 23 roles/);
 
     const manifest = JSON.parse(
       readFileSync(resolve(packageRoot, "dist/manifest.json"), "utf8"),
@@ -72,6 +72,7 @@ describe("generate-manifest role scan", () => {
       "async-select": "ResourceSelect",
       "auth-guard": "AuthGuard",
       "change-history": "ChangeHistory",
+      "code-sign-in": "OtpLoginForm",
       "resource-import": "ResourceImport",
       chart: "DataChart",
       dashboard: "Dashboard",
@@ -86,7 +87,9 @@ describe("generate-manifest role scan", () => {
       "page-shell": "Page",
       "permission-denied": "PermissionDenied",
       "resource-form": "ResourceForm",
+      "social-sign-in": "SocialButton",
       stat: "Stat",
+      "terms-gate": "TermsGate",
       "theme-toggle": "ThemeToggle",
       toast: "Toaster",
     });

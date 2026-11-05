@@ -112,6 +112,7 @@ describe("package self-registrations", () => {
       "async-select": "ResourceSelect",
       "auth-guard": "AuthGuard",
       "change-history": "ChangeHistory",
+      "code-sign-in": "OtpLoginForm",
       "resource-import": "ResourceImport",
       chart: "DataChart",
       dashboard: "Dashboard",
@@ -126,7 +127,9 @@ describe("package self-registrations", () => {
       "page-shell": "Page",
       "permission-denied": "PermissionDenied",
       "resource-form": "ResourceForm",
+      "social-sign-in": "SocialButton",
       stat: "Stat",
+      "terms-gate": "TermsGate",
       "theme-toggle": "ThemeToggle",
       toast: "Toaster",
     });

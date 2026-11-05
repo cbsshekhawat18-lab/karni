@@ -1,0 +1,73 @@
+# yaml-language-server: $schema=https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json
+version: 1
+app:
+  name: Courses
+  kind: app
+  recipe: lms
+features:
+  email_code_login: true
+roles:
+  staff: {name: Staff, system: true, grants: {"*": all}}
+  instructor:
+    name: Instructor
+    description: Writes their own courses and lessons, and sees who is enrolled.
+    default: false
+    grants: {courses.course: own:instructor, courses.lesson: own}
+  student:
+    name: Student
+    description: Enrols in courses and marks lessons done.
+    default: true
+    grants: {courses.enrolment: own, courses.lessonprogress: own}
+apps:
+  courses:
+    entities:
+      Course:
+        fields:
+          title: "str:200"
+          slug: "slug:title"
+          summary: "text?"
+          instructor: fk:User
+          published: bool
+        owner: instructor
+        key: slug
+        search: [title, summary]
+        order: title
+        access:
+          read: public
+          write: ["owned:instructor", "role:staff"]
+          create: ["role:instructor", "role:staff"]
+      Lesson:
+        fields:
+          course: fk:Course
+          title: "str:200"
+          body: text
+          position: int
+        owner: course__instructor
+        order: [course, position]
+        access:
+          read: authenticated
+          write: ["owned:course__instructor", "role:staff"]
+      Enrolment:
+        fields:
+          course: fk:Course
+          student: fk:User
+        owner: student
+        audit: true
+        access:
+          read: ["owned:student", "owned:course__instructor", "role:staff"]
+          write: ["owned:student", "role:staff"]
+      LessonProgress:
+        fields:
+          enrolment: fk:Enrolment
+          lesson: fk:Lesson
+          completed_at: "datetime?"
+        owner: enrolment__student
+        access:
+          read: ["owned:enrolment__student", "owned:enrolment__course__instructor", "role:staff"]
+          write: ["owned:enrolment__student", "role:staff"]
+pages:
+  - home: dashboard
+  - Course: [list, detail, form]
+  - Lesson: [list, detail, form]
+  - Enrolment: [list, detail]
+seed: {Course: 6, Lesson: 36, Enrolment: 40, LessonProgress: 120}

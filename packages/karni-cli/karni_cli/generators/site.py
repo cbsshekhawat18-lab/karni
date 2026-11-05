@@ -59,7 +59,13 @@ from karni_cli.generators.pysource import (
     top_level,
 )
 from karni_cli.project import CliError
-from karni_cli.settings_edit import MARKER, MIDDLEWARE_MARKER, add_entry, block_entries
+from karni_cli.settings_edit import (
+    MARKER,
+    add_entry,
+    block_entries,
+    processors_block,
+    wire_entries,
+)
 from karni_cli.urls_edit import URLS_MARKER, add_route, marker_line, routes
 
 NAME = "site"
@@ -82,14 +88,11 @@ HANDLERS = (
 REDIRECT_MIDDLEWARE = "karni_site.middleware.RedirectMiddleware"
 #: The context processor that puts the site's details (`site`) in every template.
 SITE_PROCESSOR = "karni_site.context_processors.site"
-PROCESSORS_SETTING = 'TEMPLATES[0]["OPTIONS"]["context_processors"]'
-PROCESSORS_MARKER = "# karni:context_processors"
-PROCESSORS_BLOCK = (
-    "# --- Public site (karni-site): `site`, the site's details, in every template ----\n"
-    f"{PROCESSORS_SETTING} += [  # noqa: F821\n"
-    f'    "{SITE_PROCESSOR}",\n'
-    f"]  {PROCESSORS_MARKER}\n"
-)
+#: What karni-site's manifest (karni_site/karni.module.toml) says each one is for.
+REDIRECT_WHY = "the admin's redirects"
+PROCESSOR_WHY = "`site`, the site's details, in every template"
+PROCESSORS_HEADING = "# --- Public site (karni-site)"
+PROCESSORS_BLOCK = processors_block(SITE_PROCESSOR, f"{PROCESSORS_HEADING}: {PROCESSOR_WHY} ----")
 #: karni_site's own URLs (robots.txt, sitemap.xml, the form view), included at "" before the site.
 SITE_URLS = "karni_site.urls"
 #: The line in tests/test_pages.py that `karni make view` inserts page URLs above.
@@ -486,41 +489,16 @@ def wire_site_settings(text: str, filename: str) -> tuple[str, list[str]]:
     The middleware goes into the ``# karni:middleware`` block, the context
     processor into a ``# karni:context_processors`` block appended once. Each
     is added only when the text does not name it yet. Returns the text and
-    what changed (or what to add by hand).
+    what changed (or what to add by hand). ``karni add site`` does the same
+    from karni-site's manifest (:func:`karni_cli.settings_edit.wire_entries`).
     """
-    notes: list[str] = []
-    if REDIRECT_MIDDLEWARE not in text:
-        try:
-            updated = add_entry(
-                text,
-                REDIRECT_MIDDLEWARE,
-                setting="MIDDLEWARE",
-                marker=MIDDLEWARE_MARKER,
-                filename=filename,
-            )
-        except CliError:
-            notes.append(
-                f"add {REDIRECT_MIDDLEWARE!r} to MIDDLEWARE in {filename} yourself (no "
-                f"`{MIDDLEWARE_MARKER}` block): the admin's redirects need it."
-            )
-        else:
-            if updated is not None:
-                text = updated
-                notes.append(f"{REDIRECT_MIDDLEWARE}: added to MIDDLEWARE (the admin's redirects)")
-    if SITE_PROCESSOR not in text:
-        if PROCESSORS_MARKER in text:
-            updated = add_entry(
-                text,
-                SITE_PROCESSOR,
-                setting=PROCESSORS_SETTING,
-                marker=PROCESSORS_MARKER,
-                filename=filename,
-            )
-            text = updated if updated is not None else text
-        else:
-            text = text.rstrip("\n") + "\n\n" + PROCESSORS_BLOCK
-        notes.append(f"{SITE_PROCESSOR}: added to the context processors (`site` in templates)")
-    return text, notes
+    return wire_entries(
+        text,
+        filename,
+        middleware=[(REDIRECT_MIDDLEWARE, REDIRECT_WHY)],
+        processors=[(SITE_PROCESSOR, PROCESSOR_WHY)],
+        heading=PROCESSORS_HEADING,
+    )
 
 
 def wire_site_module(ws: Workspace) -> bool:

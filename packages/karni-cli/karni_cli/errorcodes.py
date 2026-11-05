@@ -298,6 +298,38 @@ CODES: Final[tuple[CliCode, ...]] = (
         "over it would lose those edits.",
         "Write the draft to another file, or pass --force to replace the map.",
     ),
+    # C140-C149 karni make model --external (experimental)
+    _c(
+        "C140",
+        "The database to read the table from cannot be used",
+        "karni make model --external",
+        "`karni make model <Name> --external --table <table>` writes the model from the table's "
+        "columns, so it reads them from the database (manage.py karni_inspect, in the project's "
+        "interpreter). The database did not answer, the alias is not in DATABASES, or the "
+        "project's karni has no karni_inspect command.",
+        "Start the database or fix its settings (the message names the alias and the error), "
+        "pass the alias with --database, or upgrade the project's karni. Then run the command "
+        "again.",
+    ),
+    _c(
+        "C141",
+        "The table or view is not in the database",
+        "karni make model --external",
+        "The database answered, but has no table or view of that name, or the name has a schema "
+        "(schema.table) on a database other than PostgreSQL, which has none.",
+        "Check the name and the alias (--database). A PostgreSQL table in another schema is "
+        "written schema.table, e.g. --table reporting.sales.",
+    ),
+    _c(
+        "C142",
+        "These options do not go with --external",
+        "karni make model --external",
+        "An external model's fields come from the table, so it takes no field list and needs "
+        "--table. --table, --database and --writable describe an external model, so they need "
+        "--external. Imports never write a read-only table, so --key does not apply.",
+        "Run karni make model <Name> --external --table <[schema.]table> [--database <alias>] "
+        "[--writable], with no fields.",
+    ),
     _c(
         "C124",
         "A content map option has a value extract does not know",
@@ -370,6 +402,371 @@ CODES: Final[tuple[CliCode, ...]] = (
         "karni add manages the [project].dependencies table of the project's pyproject.toml.",
         "Add the table (or the dependency) by hand, then re-run.",
     ),
+    # C21x-C24x karni spec (experimental): karni.yaml
+    _c(
+        "C210",
+        "No spec file",
+        "karni spec validate",
+        "karni spec validate reads a karni.yaml: by default the project root's, else the current directory's.",
+        "Write one (docs/app-spec.md), export the project's with karni spec export -o karni.yaml, or pass --spec <file>.",
+    ),
+    _c(
+        "C211",
+        "The spec is not valid YAML",
+        "karni spec validate (karni_cli.spec.validate)",
+        "The spec is YAML. A syntax error stops everything else, and the parser names the line.",
+        "Fix the line the message names: indent with spaces, and quote a value that holds ': ' or starts with *, &, !, %, @ or a backtick.",
+    ),
+    _c(
+        "C212",
+        "Unknown key in the spec",
+        "karni spec validate (karni_cli.spec.validate)",
+        "Every key of the format means one thing, so a misspelt key would be ignored without a word. A key that starts with x- is kept and ignored, for notes of your own.",
+        "Fix the spelling (the message lists the keys that mapping takes), remove the key, or prefix it with x-.",
+    ),
+    _c(
+        "C213",
+        "A spec value has the wrong type, or a required key is missing",
+        "karni spec validate (karni_cli.spec.validate)",
+        "Values are never coerced: a list where a string is expected, or a number written for a text, is an error rather than a guess. version and app.name are required.",
+        "Write the value in the form docs/app-spec.md shows for the key. Quote a value YAML would read as a date, a number or true/false.",
+    ),
+    _c(
+        "C214",
+        "Unknown spec version",
+        "karni spec validate (karni_cli.spec.validate)",
+        "version moves only for a breaking change of the format, and this karni reads version 1.",
+        "Write version: 1, or upgrade karni-cli when the spec comes from a newer release.",
+    ),
+    _c(
+        "C215",
+        "A name in the spec is not valid",
+        "karni spec validate (karni_cli.spec.validate)",
+        "Names become code: app labels are Python packages, entities classes, pages file names and roles the slugs HasRole checks.",
+        "Use snake_case app labels (not one Django, Karni or a module takes), PascalCase entities, kebab-case page names, and role slugs of letters, digits, _, . and -.",
+    ),
+    _c(
+        "C216",
+        "A field's type is not valid",
+        "karni spec validate (karni_cli.spec.validate)",
+        "Fields use karni make model's own syntax and are checked by its own parser and renderer, so the spec and the generator accept exactly the same fields. The message is the generator's, with its code.",
+        "Write name: type[:arg...], a trailing ? for optional (karni make model --help lists the types and their arguments).",
+    ),
+    _c(
+        "C217",
+        "An access rule is not valid",
+        "karni spec validate (karni_cli.spec.validate)",
+        "An entity's access maps onto Karni's Access(read=..., write=..., create=...): each slot takes public, authenticated, granted, role:<slug> or owned:<field>, or a list of them, any of which admits.",
+        "Use those forms, or write access: code and declare the viewset's Access(...) by hand (Where, Can, &, a computed get_access).",
+    ),
+    _c(
+        "C218",
+        "A role grant is not valid",
+        "karni spec validate (karni_cli.spec.validate)",
+        "Grants map onto KARNI_ROLES: a pattern app.entity[:action] (with * for a part, or * alone) to a scope all, own, own:<owner field>, related:<scope path key> or custom:<name>. A spec grants the standard actions view, add, change and delete.",
+        "Fix the pattern or the scope. An entity's own actions, and a grant on a model outside the spec, go in KARNI_ROLES by hand.",
+    ),
+    _c(
+        "C219",
+        "A feature's value is not valid",
+        "karni spec validate (karni_cli.spec.validate)",
+        "Each feature is one setting: social_login names the built-in providers of KARNI_SOCIAL_TOKEN_PROVIDERS, and terms is KARNI_TERMS (a version of at most 100 characters, URL path prefixes that start with /).",
+        "Name google, microsoft or apple (a provider class of your own goes in settings), and fix the terms value the message names.",
+    ),
+    _c(
+        "C220",
+        "A page entry is not valid",
+        "karni spec validate (karni_cli.spec.validate)",
+        "Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form), or a page name with its kind (dashboard for the scaffold's home, blank, login).",
+        "Write e.g. - Session: [list, detail, form], - about: blank or - home: dashboard, each entity or page once.",
+    ),
+    _c(
+        "C221",
+        "A module option is not valid",
+        "karni spec validate (karni_cli.spec.validate)",
+        "A module's options are its settings: the option provider of payments is KARNI_PAYMENTS_PROVIDER. An option the module does not have, or a value of the wrong type, would be lost.",
+        "Use an option the message lists, with the type its setting takes (the module's README has the table). Credentials stay in .env.",
+    ),
+    _c(
+        "C222",
+        "A key is written twice",
+        "karni spec validate (karni_cli.spec.validate)",
+        "YAML keeps the last of two equal keys in a mapping and drops the first without a word, so half of what was written would be lost.",
+        "Keep one of the two and merge what the other said into it.",
+    ),
+    _c(
+        "C223",
+        "A seed count is not valid",
+        "karni spec validate (karni_cli.spec.validate)",
+        "seed sets each entity's demo rows per karni seed run (a Seeder's Meta.count), where 0 skips the entity.",
+        "Write a whole number, 0 or more.",
+    ),
+    _c(
+        "C224",
+        "A key reserved for a later release",
+        "karni spec validate (karni_cli.spec.validate)",
+        "Some keys are reserved for features Karni adds later (trees, taxonomies, aggregation, cross-entity search, markdown fields), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now.",
+        "Remove the key, and write that part by hand in the project until the feature ships.",
+    ),
+    _c(
+        "C225",
+        "The app kind and the modules disagree",
+        "karni spec validate (karni_cli.spec.validate)",
+        "karni add site turns an app into a site+app, so a spec of kind app with the site module describes a project that cannot exist.",
+        "Write kind: site+app (karni new --kind site+app adds the site module by itself), or drop the module.",
+    ),
+    _c(
+        "C230",
+        "A relation names an entity that does not exist",
+        "karni spec validate (karni_cli.spec.validate)",
+        "A fk, m2m or o2o field must point at something karni make model can import: an entity of the spec, the user model, or a model of a module the spec adds.",
+        "Fix the name, add the entity, add the module, or point at User. A model of the project outside the spec cannot be named.",
+    ),
+    _c(
+        "C231",
+        "A relation name is ambiguous",
+        "karni spec validate (karni_cli.spec.validate)",
+        "Two apps of the spec define an entity of that name, so the bare name could mean either.",
+        "Write app.Name, e.g. fk:shop.Product.",
+    ),
+    _c(
+        "C232",
+        "Access names a role the spec does not declare",
+        "karni spec validate (karni_cli.spec.validate)",
+        'role:<slug> becomes HasRole("<slug>"), which nobody would hold if no role of that slug exists. Without roles, the spec has Karni\'s shipped roles (staff, user, customer), plus the roles of the modules it adds.',
+        "Declare the role under roles, or fix the slug.",
+    ),
+    _c(
+        "C233",
+        "A grant names an entity the spec does not have",
+        "karni spec validate (karni_cli.spec.validate)",
+        "A grant pattern that matches no model grants nothing, and Karni refuses it at startup (E206).",
+        "Name an entity as app.entity (lowercase or as written), or add the module whose model it names.",
+    ),
+    _c(
+        "C234",
+        "A grant's scope does not fit the entity",
+        "karni spec validate (karni_cli.spec.validate)",
+        "own compares the entity's owner field with the user, and related:<key> its scope path <key> with the user's attribute <key>. own:<field> must name that owner field, and related:<key> a scope path the entity declares.",
+        "Set owner: on the entity, add scope_paths: {<key>: <lookup>}, or change the scope.",
+    ),
+    _c(
+        "C235",
+        "A page names an entity that does not exist",
+        "karni spec validate (karni_cli.spec.validate)",
+        "An entity's pages compose its API resource, which only an entity of the spec has.",
+        "Name an entity of the spec (app.Name when two apps define it), or add it.",
+    ),
+    _c(
+        "C236",
+        "A module Karni does not know",
+        "karni spec validate (karni_cli.spec.validate)",
+        "modules lists what karni add installs: the modules of the catalog (karni modules list), which are Karni's own (approvals, impersonation, payments and site) and any module installed next to karni-cli that ships a manifest.",
+        "Fix the name. A module of your own joins the spec once it ships a karni.module.toml (docs/modules.md). Without one, add it with karni add and leave it out of the spec.",
+    ),
+    _c(
+        "C237",
+        "A field group names a field the entity does not have",
+        "karni spec validate (karni_cli.spec.validate)",
+        "groups become the admin form's fieldsets, and a name that is not a field (or a field in two groups) makes that form fail to render.",
+        "Name the entity's fields, each in one group.",
+    ),
+    _c(
+        "C238",
+        "An entity option names a field the entity does not have",
+        "karni spec validate (karni_cli.spec.validate)",
+        "key, search, order, audit and scope_paths each name fields of the entity (key, search and order may also name id, created_at and updated_at).",
+        "Name a field the entity declares, or add it under fields.",
+    ),
+    _c(
+        "C239",
+        "owner does not lead to the user",
+        "karni spec validate (karni_cli.spec.validate)",
+        "The own scope compares the owner field with the signed-in user, so it must be a relation to the user or a path through relations ending at one.",
+        "Name a relation to the user (member: fk:User, then owner: member) or a path such as workspace__members.",
+    ),
+    _c(
+        "C240",
+        "owned:<path> in access does not lead to the user",
+        "karni spec validate (karni_cli.spec.validate)",
+        'owned:<path> becomes Owned("<path>"), which keeps the rows whose path points at the signed-in user.',
+        "Name a relation to the user (owned:member) or a path through relations (owned:session__instructor).",
+    ),
+    _c(
+        "C241",
+        "seed names an entity that does not exist",
+        "karni spec validate (karni_cli.spec.validate)",
+        "seed counts demo rows per entity of the spec.",
+        "Name an entity of the spec (app.Name when two apps define it).",
+    ),
+    _c(
+        "C242",
+        "Two pages share a route",
+        "karni spec validate (karni_cli.spec.validate)",
+        "Each page karni make page writes has a route (an entity's list at /<route>, its detail at /<route>/$id, its form at /<route>/new and /<route>/$id/edit, a named page at /<name>), and two pages cannot answer the same path.",
+        "Rename the page or drop one of them.",
+    ),
+    _c(
+        "C245",
+        "karni spec export cannot read the project",
+        "karni spec export",
+        "The export reads the project through manage.py karni_facts, run by the project's interpreter, which needs this karni (the command is new in it).",
+        "Upgrade the project's karni, then fix what the message shows (the command's last output lines): a settings error, a model that fails to import, or output printed at startup.",
+    ),
+    _c(
+        "C246",
+        "The output file exists",
+        "karni spec export",
+        "karni spec export does not overwrite a spec: it may hold edits of your own.",
+        "Pass --force to replace it, or write to another file with -o.",
+    ),
+    _c(
+        "C250",
+        "karni plan cannot read the project",
+        "karni plan",
+        "The plan compares the spec with the project as karni spec export reads it: through manage.py karni_facts, run by the project's interpreter, which needs this karni.",
+        "Upgrade the project's karni, then fix what the message shows (the command's last output lines): a settings error, a model that fails to import, or output printed at startup.",
+    ),
+    _c(
+        "C251",
+        "An external entity's keys do not fit",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "external: true is a table another system owns, so it needs table, its key is the table's own column (no pk), and karni seed skips it. table and writable mean nothing without external.",
+        "Add table: <[schema.]table> to an external entity, remove pk and its seed count, or add external: true where table or writable is written.",
+    ),
+    _c(
+        "C252",
+        "database names an alias the project does not have",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "database sends an entity's reads, writes and migrations to an alias of DATABASES (class Karni: database). karni plan checks the name against the project's DATABASES, and karni spec validate checks that it is an alias name.",
+        'Add the alias to config/settings.py (DATABASES["warehouse"] = env.db_url("WAREHOUSE_DATABASE_URL")), or fix the name.',
+    ),
+    _c(
+        "C253",
+        "A relation joins two databases",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "Django joins related tables in one database, so a fk, m2m or o2o between entities on different databases cannot work (karni.E276 at startup). The user and the modules' models are on the default database.",
+        "Keep both entities on one database, or store the other row's key in a plain field and look it up in code.",
+    ),
+    _c(
+        "C254",
+        "A rename (was) is not valid",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "was: <old name> on a field or an entity tells karni plan and karni build to rename it and keep its data. The old name must be a valid name, differ from the new one, no longer be declared, and be claimed by one field or entity only.",
+        "Write the old name once, on the field or entity that takes over the data, and remove the old declaration.",
+    ),
+    _c(
+        "C270",
+        "A risky change without --allow-destructive",
+        "karni build (karni_cli.builder)",
+        "A risky change can lose data or open it to more people: a field or an entity removed, a type narrowed, a choice dropped, a relation pointed elsewhere, access widened. karni plan marks each with ! and the rows it affects, and karni build applies none of them without being told.",
+        "Check each change karni plan lists (a rename keeps its rows: write was: on the field or the entity), then run karni build --allow-destructive, or change karni.yaml.",
+    ),
+    _c(
+        "C271",
+        "A module removal",
+        "karni build (karni_cli.builder)",
+        "karni.yaml no longer lists a module the project has. Removing a module drops its tables, and karni remove (with the module catalog) is not built yet, so karni build refuses it.",
+        "Put the module back in karni.yaml, or remove it by hand: migrate its app to zero, then take it out of the karni:apps block and its dependency out of pyproject.toml.",
+    ),
+    _c(
+        "C272",
+        "A key type switch",
+        "karni build (karni_cli.builder)",
+        "Switching an entity's pk between uuid and bigint rewrites every row and every relation to it: a data migration karni build does not write.",
+        "Put pk back in karni.yaml. docs/models.md (choosing the key type) says how to write that migration by hand.",
+    ),
+    _c(
+        "C273",
+        "A Karni-owned file was edited by hand",
+        "karni build (karni_cli.builder)",
+        "karni build rewrites its own files (<app>/karni/, <app>/tests/karni/, frontend/src/pages/karni/, the karni:spec blocks) on every build, and records a sha256 of each in .karni/build.json. A file whose content no longer matches was edited by hand, and a build must not silently lose the edit. The message names the file and the changed lines, and nothing is written.",
+        "Move the change into the project's own file (<app>/models.py, viewsets.py or seeds.py: the subclass of each class, a page or test of your own) or into karni.yaml, then run karni build. Or karni build --force replaces the file and keeps your copy as <file>.orig. Or karni build --adopt <file> makes it the project's: karni build stops managing it and says so on every run.",
+    ),
+    _c(
+        "C274",
+        "--adopt names a file karni build does not own",
+        "karni build (karni_cli.builder)",
+        "--adopt hands a Karni-owned file or block to the project. The files karni build owns are the ones .karni/build.json lists. Any other file is the project's already.",
+        "Name a file the record lists (classes/karni/api.py), or config/settings.py and frontend/src/routes.tsx for their karni:spec blocks.",
+    ),
+    _c(
+        "C275",
+        "The project's code is in the way",
+        "karni build (karni_cli.builder)",
+        "karni.yaml asks for something the project already has as code of its own: a model of that name outside the spec, a class of that name in models.py, viewsets.py or seeds.py that does not extend Karni's, or a route a page of the project's holds. karni build never replaces the project's code.",
+        "Rename the entity or page in karni.yaml, or rename (or remove) the project's own class or route. A page of the project's can stay in the spec as - <name>: code.",
+    ),
+    _c(
+        "C276",
+        "A module karni build added is not installed",
+        "karni build (karni_cli.builder)",
+        "karni build adds a new module the way karni add does: the dependency in pyproject.toml and the app in INSTALLED_APPS. The project's interpreter must have it installed before Django can start with it.",
+        "Install the project's dependencies (uv pip install -r pyproject.toml, or docker compose build), then run karni build again: it continues from where it stopped.",
+    ),
+    _c(
+        "C277",
+        "makemigrations failed",
+        "karni build (karni_cli.builder)",
+        "karni build writes the migrations with manage.py karni_makemigrations: the renames first, then Django's makemigrations. A required field added to a table that holds rows needs values Django cannot invent.",
+        "Read the output it shows. For a required field on a table with rows: add it as optional first (str?), fill it, then make it required. Then run karni build again.",
+    ),
+    _c(
+        "C278",
+        "migrate failed",
+        "karni build (karni_cli.builder)",
+        "karni build applies the migrations on the default database and on every alias its entities name.",
+        "Read the output it shows (a database that does not answer, a constraint the rows break), fix it, then run karni build again.",
+    ),
+    _c(
+        "C279",
+        "Seeding failed",
+        "karni build (karni_cli.builder)",
+        "karni build seeds only the tables it created in this build, and only while they hold no row, so demo rows never mix with real data.",
+        "Read the output it shows, fix it (karni seed --help), then run karni build again: it continues from seed.",
+    ),
+    _c(
+        "C280",
+        "karni types failed",
+        "karni build (karni_cli.builder)",
+        "karni build writes the TypeScript types and hooks from the API schema, as karni types does. It needs the backend to print its schema and Node for openapi-typescript.",
+        "Read the output it shows. Install Node (and npm install in frontend/), then run karni build again.",
+    ),
+    _c(
+        "C281",
+        "The project's tests fail",
+        "karni build (karni_cli.builder)",
+        "karni build runs the project's own tests (karni test) after it built the code, including the API tests it wrote in <app>/tests/karni/.",
+        "Run karni test to see every failure, fix the code (the project's files or karni.yaml), then run karni build again: it continues from test.",
+    ),
+    _c(
+        "C282",
+        "karni check fails",
+        "karni build (karni_cli.builder)",
+        "karni build ends with karni check: the architecture rules, the system checks and the frontend's lint. The code it writes passes them, so a failure comes from the project's code or its environment.",
+        "Run karni check to see every finding, fix them, then run karni build again: it continues from check.",
+    ),
+    _c(
+        "C283",
+        "A project class karni build must change has code of its own",
+        "karni build (karni_cli.builder)",
+        "karni.yaml removes an entity, and the project's subclass of it (in models.py, viewsets.py or seeds.py) holds code of its own. karni build removes such a class only while it is still the one it wrote.",
+        "Move that code elsewhere or delete the class, then run karni build again.",
+    ),
+    _c(
+        "C284",
+        "A marker karni build writes at is missing",
+        "karni build (karni_cli.builder)",
+        "The settings block goes right above karni_settings(globals()) in config/settings.py, where every setting takes effect. The pages' routes go before the // karni:page-imports and // karni:routes markers of frontend/src/routes.tsx.",
+        "Restore the call or the markers (see the scaffold's files), or pass --adopt for the block and keep those settings or routes yourself.",
+    ),
+    _c(
+        "C285",
+        "The build record cannot be read",
+        "karni build (karni_cli.builder)",
+        ".karni/build.json holds the fingerprints of the files karni build owns. It is missing a part, is not JSON, or comes from a newer karni-cli.",
+        "Restore it from version control, or upgrade karni-cli. Deleting it makes karni build treat every Karni-owned file as new: it stops on each one that exists (C273), and --force or --adopt settles them.",
+    ),
     # C3xx karni ui
     _c(
         "C301",
@@ -434,6 +831,73 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Upgrade karni in the project (pip install -U karni, or rebuild the image), then ask "
         "again.",
     ),
+    # C313-C319 the module catalog: karni modules, karni add, karni remove
+    _c(
+        "C313",
+        "No module or feature of that name in the catalog",
+        "karni modules show, karni remove (karni_cli.catalog)",
+        "The catalog holds Karni's modules and built-in features, the copies karni-cli bundles "
+        "and the manifests (karni.module.toml) of the modules the project has installed.",
+        "Run `karni modules list` for the names. A module of your own joins the catalog with a "
+        "karni.module.toml and a karni.modules entry point (docs/modules.md).",
+    ),
+    _c(
+        "C314",
+        "A module manifest is not valid",
+        "karni modules, karni add, karni remove (karni.catalog)",
+        "Each module describes itself in karni.module.toml: its purpose, what it provides, the "
+        "questions to ask and the wiring karni add performs. A manifest that does not follow "
+        "the format, or that names a module or feature the catalog does not have, cannot be "
+        "used.",
+        "Fix the key the message names (docs/modules.md lists every key), then run `karni "
+        "modules show <name>`. A module's own tests check it with "
+        "karni.testing.assert_module_manifest.",
+    ),
+    _c(
+        "C315",
+        "The module conflicts with one the project has",
+        "karni add",
+        "A module's manifest lists the modules and features it cannot work next to "
+        "(conflicts). karni add refuses before it writes anything.",
+        "Remove the other one first (karni remove <name>, or turn the feature off), or choose "
+        "another module.",
+    ),
+    _c(
+        "C316",
+        "Another module requires the one being removed",
+        "karni remove",
+        "A module's manifest lists what it needs (requires). Removing a module another added "
+        "module needs would leave that one broken.",
+        "Remove the module that requires it first (the message names it), then this one.",
+    ),
+    _c(
+        "C317",
+        "The module is not in this project",
+        "karni remove",
+        "karni remove takes out what karni add wrote: the dependency in pyproject.toml, the app "
+        "in the # karni:apps block, its middleware, context processors and URL include, and "
+        "its recorded agent guidance. None of that is in this project.",
+        "Check the name with `karni modules list` (an added module says added).",
+    ),
+    _c(
+        "C318",
+        "A built-in feature is switched by a setting, not added or removed",
+        "karni add, karni remove",
+        "Features (two_factor, terms, api_cache and the others) ship with karni. There is no "
+        "package to add and nothing to take out: one setting turns each on or off.",
+        "Turn it on or off with its key under features: in karni.yaml, or its setting (karni "
+        "modules show <name> names both).",
+    ),
+    _c(
+        "C319",
+        "The module's tables exist in the database",
+        "karni remove",
+        "karni remove never drops data. Once the module is out of INSTALLED_APPS, Django can no "
+        "longer drop its tables, so the choice is made now: drop them while the module is "
+        "still added, or keep them.",
+        "To drop the tables and their rows, run the printed `karni migrate <app> zero`, then "
+        "karni remove again. To keep them in the database, run karni remove --keep-tables.",
+    ),
     # C32x debugging: trace, replay, explain --failure
     _c(
         "C320",
@@ -470,6 +934,16 @@ CODES: Final[tuple[CliCode, ...]] = (
         "error, usually because Django could not start (settings, imports, the database).",
         "Run the command it names with `karni manage ...` to see the full output, fix what "
         "it reports, then retry.",
+    ),
+    # C324-C339 the module catalog in karni.yaml
+    _c(
+        "C324",
+        "A module or feature needs another, or cannot be next to one",
+        "karni spec validate (karni_cli.spec.validate)",
+        "The catalog's manifests say what each module and feature requires and conflicts with. "
+        "The spec lists one without what it requires, or two that conflict.",
+        "Add what the message says is required (under modules: or features:), or leave one of "
+        "the two that conflict out. karni modules show <name> lists both.",
     ),
     # C34x debugging: karni explain -, karni queries
     _c(
@@ -573,6 +1047,82 @@ CODES: Final[tuple[CliCode, ...]] = (
         "source of docs/design-content.md's tables.",
         "Run `karni explain map` for every key by level, then `karni explain map.<key>` or "
         "`map.<level>.<key>` (map.source.key, map.value.by).",
+    ),
+    # C400-C419 clarifying questions: karni plan --questions, karni spec answer
+    _c(
+        "C400",
+        "No open question has this id",
+        "karni spec answer (karni_cli.spec.questions)",
+        "karni spec answer writes the answer to a question karni plan --questions asks. The id "
+        "is not one of them: it is mistyped, or karni.yaml settles that question already (an "
+        "answered question is gone, and so is one the file was edited to settle).",
+        "Run karni plan --questions --max 0 for the open ids, then karni spec answer <id> "
+        "<value> with one of them.",
+    ),
+    _c(
+        "C401",
+        "The value is not an answer the question takes",
+        "karni spec answer (karni_cli.spec.questions)",
+        "A question with options takes one of them (several, comma-separated, when it says "
+        "so). A question without options takes a value of the types it lists (string, "
+        "integer, boolean, null, array).",
+        "Pass one of the options karni plan --questions prints under the question, or a value "
+        "of its type.",
+    ),
+    _c(
+        "C402",
+        "The answer cannot be written into karni.yaml",
+        "karni spec answer (karni_cli.spec.edit)",
+        "karni spec answer changes only the key the question names and keeps every other line "
+        "of the file. It writes nothing when it cannot: an anchor or alias shares the key, the "
+        "key sits in a layout it cannot place a key in, or the result would not pass karni "
+        "spec validate.",
+        "Set the key the message names in karni.yaml by hand, then run karni spec validate and "
+        "karni plan --questions.",
+    ),
+    # C42x recipes and the app-builder MCP tools
+    _c(
+        "C420",
+        "No recipe of that name",
+        "karni recipes show, the MCP tool recipes (karni_cli.recipes)",
+        "Recipes are the folders built into karni-cli and the karni.recipes entry points of "
+        "its environment. blank is the blank start, the one name that is always there.",
+        'Run karni recipes list for the names, or karni recipes list --match "<the request>" '
+        "for the closest. A recipe of your own joins with a recipe.toml, a karni.yaml and an "
+        "entry point (docs/app-spec.md#recipes).",
+    ),
+    _c(
+        "C421",
+        "A recipe cannot be used",
+        "karni recipes list, karni recipes show, the MCP tool recipes (karni_cli.recipes)",
+        "A recipe is a folder with a recipe.toml that follows its schema, a name that is the "
+        "folder's (or the entry point's), and a karni.yaml. One that does not, or whose name "
+        "another recipe has already, is left out and reported.",
+        "Fix the key the message names (docs/app-spec.md#recipes lists every key), or rename "
+        "the recipe, then run karni recipes show <name>.",
+    ),
+    # C440-C459 a new project from a recipe: karni new --recipe
+    _c(
+        "C440",
+        "karni new --recipe with an option it cannot go with",
+        "karni new --recipe (karni_cli.commands.new)",
+        "A recipe is an app: its karni.yaml has entities, roles and pages for signed-in users. "
+        "--design builds a public site from a designer's pages instead, and --kind site or "
+        "--no-staff-app leave out the React app the recipe's pages live in.",
+        "Leave the option out (--kind app or site+app go with a recipe), or make the project "
+        "without --recipe and start karni.yaml from karni recipes show <name>.",
+    ),
+    _c(
+        "C441",
+        "A recipe's file would replace code of the project's",
+        "karni build after karni new --recipe (karni_cli.recipes.apply)",
+        "The first karni build after karni new --recipe writes the recipe's own files (its "
+        "domain code, seeds and tests) over the stubs it writes itself. It never writes over "
+        "anything else: a file that holds code of the project's stops the build, and nothing "
+        "is written.",
+        "Move your code out of the way (rename the file), run karni build again, then put your "
+        "code back into the recipe's file. To build without the recipe's files, delete "
+        '"recipe" from .karni/build.json.',
     ),
 )
 

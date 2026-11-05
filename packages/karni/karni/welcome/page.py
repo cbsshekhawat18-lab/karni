@@ -239,14 +239,20 @@ def _first_model_section() -> str:
     )
 
 
-def _agent_section(inventory: Inventory) -> str:
-    prompt = (
-        f"You are working in the Karni project `{inventory.project}`. Run `karni context` and "
-        "`karni rules` first and follow them. Then add an Event model (title, starts_at) with "
-        "its viewset and test using `karni make`, run `make migrate && karni types`, and run "
-        "`karni check`. Never write serializers, routers, admin classes or permission checks "
-        "by hand: Karni derives them."
+#: The slash command of the new-app flow, for the tools that have slash commands.
+_NEW_APP_COMMAND = "/new-app <the app in one line>"
+
+
+def _new_app_prompt(project: str) -> str:
+    """The first prompt, for an agent without slash commands: the new-app flow, in plain words."""
+    return (
+        f"You are working in the Karni project `{project}`. Run `karni rules --procedure "
+        "new-app` and follow every step for: <the app in one line>"
     )
+
+
+def _agent_section(inventory: Inventory) -> str:
+    prompt = _new_app_prompt(inventory.project)
     present = [adapter for adapter in inventory.adapters if adapter.present]
     missing = [adapter for adapter in inventory.adapters if not adapter.present]
     adapters_html = ""
@@ -274,8 +280,15 @@ def _agent_section(inventory: Inventory) -> str:
         "<p>An agent that reads this project's context and rules writes only the domain code. "
         "The live output of <code>karni context</code> for this project right now:</p>"
         + _block("context", inventory.context)
-        + "<p>The first prompt to paste into your agent:</p>"
+        + "<p>Describe the app in one line, for example <em>a booking app for a yoga studio, "
+        "with online payments</em>. In Claude Code, Cursor, Windsurf or Copilot, give it to the "
+        "slash command:</p>"
+        + _block("new-app", _NEW_APP_COMMAND)
+        + "<p>In any other agent, the first prompt to paste, with your line at the end:</p>"
         + _block("prompt", prompt)
+        + "<p>The agent writes <code>karni.yaml</code>, asks you only the questions "
+        "<code>karni plan --questions</code> lists, and runs <code>karni build</code>. It "
+        "writes by hand only the domain logic that is left.</p>"
         + "<p>Adapter files generated for this project, and the tools they cover:</p>"
         + adapters_html
         + "<p>The rules an agent works to, and the check it runs on each file it touches:</p>"

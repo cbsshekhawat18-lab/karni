@@ -28,6 +28,7 @@ __all__ = [
     "PREVIEW",
     "COMMIT",
     "create_job",
+    "importer_for",
     "inline_rows",
     "job_state",
     "max_import_rows",
@@ -104,19 +105,54 @@ def create_job(
     return job
 
 
-def set_mapping(job: ImportJob, request: Any, mapping: dict[str, Any]) -> ImportJob:
-    """Validate and store the mapping; a change after a preview needs a new preview."""
-    importer = Importer(job.model_class, request)
-    importer.validate_mapping(list(job.columns), mapping)
+def importer_for(job: ImportJob, request: Any) -> Importer:
+    """The importer a job runs with: its model, the user behind ``request``, its id options."""
+    return Importer(job.model_class, request, match_ids=job.match_ids, keep_ids=job.keep_ids)
+
+
+def set_mapping(
+    job: ImportJob,
+    request: Any,
+    mapping: dict[str, Any],
+    *,
+    match_ids: bool | None = None,
+    keep_ids: bool | None = None,
+) -> ImportJob:
+    """Validate and store the mapping and the id options; a change needs a new preview.
+
+    ``match_ids`` matches existing rows by the file's id column, ``keep_ids``
+    creates rows with the file's ids (``None`` keeps the job's current value).
+    """
+    options = (job.match_ids, job.keep_ids)
+    if match_ids is not None:
+        job.match_ids = bool(match_ids)
+    if keep_ids is not None:
+        job.keep_ids = bool(keep_ids)
+    try:
+        importer_for(job, request).validate_mapping(list(job.columns), mapping)
+    except KarniValueError:
+        job.match_ids, job.keep_ids = options
+        raise
     normalised = {header: str(mapping.get(header, "") or "") for header in job.columns}
-    changed = normalised != job.mapping
+    changed = normalised != job.mapping or options != (job.match_ids, job.keep_ids)
     job.mapping = normalised
     if changed and job.status in (ImportJob.Status.PREVIEWED, ImportJob.Status.FAILED):
         job.status = ImportJob.Status.UPLOADED
         job.result = None
         job.problems = []
         job.error = ""
-    job.save(update_fields=["mapping", "status", "result", "problems", "error", "updated_at"])
+    job.save(
+        update_fields=[
+            "mapping",
+            "match_ids",
+            "keep_ids",
+            "status",
+            "result",
+            "problems",
+            "error",
+            "updated_at",
+        ]
+    )
     ColumnMapping.remember(getattr(request, "user", None), job.model_class, normalised)
     return job
 
@@ -163,7 +199,7 @@ def run_stage(job: ImportJob, stage: str, user: Any) -> ImportJob:
     try:
         with current_user(user), job.file.open("rb") as handle:
             headers, rows = read_table(handle, job.format)
-            importer = Importer(job.model_class, request)
+            importer = importer_for(job, request)
             result = importer.run(
                 headers,
                 rows,
@@ -219,6 +255,8 @@ def job_state(job: ImportJob, request: Any | None = None) -> dict[str, Any]:
         "format": job.format,
         "columns": list(job.columns),
         "mapping": dict(job.mapping),
+        "match_ids": job.match_ids,
+        "keep_ids": job.keep_ids,
         "rows_total": job.rows_total,
         "rows_done": rows_done,
         "async": job.rows_total > inline_rows(),
@@ -229,6 +267,6 @@ def job_state(job: ImportJob, request: Any | None = None) -> dict[str, Any]:
         "created_at": job.created_at.isoformat() if job.created_at else None,
     }
     if request is not None:
-        importer = Importer(job.model_class, request)
+        importer = importer_for(job, request)
         state["fields"] = [spec.to_dict() for spec in importer.importable()]
     return state

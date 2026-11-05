@@ -15,6 +15,7 @@ wires it in so that it runs without project code:
 | [`assert_row_hidden`, `assert_admin_row_hidden`](#hidden-rows-the-row-scope-check) | one line proving a row outside a client's row scope behaves as "does not exist" on every API surface, and in the admin |
 | [`assert_pages`](#public-pages-assert_pages) | every page of a public site answers, has a title, a description and alt text, and links only to URLs that exist |
 | [`assert_schema_snapshot`](#schema-snapshot) | an accidental API break fails CI |
+| [`assert_module_manifest`](modules.md#checking-a-manifest) | a module's `karni.module.toml` matches its entry point, settings and models (experimental) |
 | [`karni.testing.factories`](#automatic-factories-karnitestingfactories) | a valid factory-boy factory for any model, with realistic values. `<app>/factories.py` overrides it |
 | [`karni.testing.performance`](#query-budgets-and-n1-karnitestingperformance) | the `query_budget` fixture, per-endpoint budgets that raise, the N+1 scaling check |
 | the `karni` pytest plugin | loaded automatically (`pytest11` entry point) wherever `karni` is installed |
@@ -149,6 +150,25 @@ role that may write, as the example above does with `"organizer"`. When the
 refusals are the point of the test, pin them with `expect={"create": 403,
 ...}` and the warning stays quiet.
 
+### A read-only resource
+
+!!! warning "Experimental"
+    `assert_crud`'s `read_only` argument is [experimental](stability.md#experimental-names).
+
+For an [external model](models.md#external-tables-views-and-a-second-database)
+that is not writable (`class Karni: external = True` without `writable =
+True`), `assert_crud` checks what the API promises for it: list, retrieve,
+pagination, filtering and field visibility as usual, and `POST`, `PUT`,
+`PATCH` and `DELETE` answering 405 to the role, to anonymous callers and to a
+user without the role, with nothing written, and absent from the OpenAPI
+document. It picks this by itself. `read_only=True` asks for it on any
+resource, and `read_only=False` checks writes instead.
+
+```python
+def test_sales(db):
+    assert_crud(SaleViewSet, "analyst")  # read-only: every write answers 405
+```
+
 ### Rows the role cannot see
 
 When the rows `assert_crud` creates for the role are missing from the list,
@@ -227,7 +247,7 @@ Every check compares the hidden row with a primary key that does not exist:
 | `search` | stay out of `?search=` with a word of it. With `search="<term>"` (a term only the row matches), the search must find nothing |
 | `ordering` | not change which rows or how many come back for any orderable response field (no row repeated or dropped). A model field the response does not show must not reorder the list |
 | `expand` | not be embedded by any resource relating to it, through `?expand=` or a list of primary keys, on a read or in a `PATCH` response |
-| `export` | not be written by `export/` in any format (also when filtered or searched for), nor named by its natural key in an export of a row pointing at it |
+| `export` | not be written by `export/` in any format (also when filtered or searched for), nor named by its natural key in an export of a row pointing at it. A row is recognised by the exact value of the `id` column (without one, by a cell holding the id as a whole value), so a short integer id never matches `15` or a count of 5 |
 
 The admin counterpart checks that the changelist (and its search) leaves the
 row out, and that the change, history and delete views, read or posted to,
@@ -423,6 +443,17 @@ Escape hatches:
   `client=` passes another one, for example a signed-in client for pages
   behind a login.
 
+## Integer keys
+
+Every helper on this page works for models on
+[integer keys](models.md#choosing-the-key-type) (`BigIntBaseModel`) as for
+UUIDs: `assert_crud` probes a detail URL its route accepts (a numeric
+`lookup_value_regex` gets `0`), `assert_isolated` and `assert_row_hidden`
+compare a missing id of the model's own key type, and the leak checks match
+an id exactly. Karni's own suite runs these tests once per key type
+(`KARNI_TEST_PK=bigint` puts its test app's API models on integer keys), on
+SQLite and on PostgreSQL.
+
 ## Schema snapshot
 
 ```python
@@ -445,6 +476,36 @@ commit the file. A `karni make` command that changes the API (`karni make
 viewset`, `karni make form`, `karni make serializer`, `karni make model` for
 a model a viewset serves, or with `--with viewset`) says so when the project
 has a snapshot, with that command.
+
+## External tables
+
+!!! warning "Experimental"
+    The table creation, `--karni-external-tables` and
+    `karni.testing.create_external_tables` are
+    [experimental](stability.md#experimental-names).
+
+An external model's table belongs to another system, so neither migrations
+nor `--no-migrations` create it in a test database. Karni's pytest plugin
+does, once each test database is migrated: every external model routed to
+that database whose table or view is missing gets a table built from its
+fields, and on PostgreSQL the schema its `'schema"."table'` name points at.
+A table or view that exists already, such as a view your own migration
+creates, is left alone. Factories and `assert_crud` then write rows to it as
+to any table. Test a model on another database with
+`@pytest.mark.django_db(databases=["default", "warehouse"])`.
+
+- Off for a run: `pytest --karni-external-tables=off`, or
+  `karni_external_tables = off` in the pytest ini file.
+- By hand: `create_external_tables(using="warehouse", models=[Stock])` from
+  `karni.testing`, outside a transaction (a session fixture), returns the
+  tables it created.
+- SQLite has no schemas, so a schema-qualified table is skipped there with a
+  warning. Run the tests that use it on PostgreSQL.
+- Rows a `transaction=True` test writes stay until the session ends: Django's
+  flush empties only the tables it manages.
+
+Seeding and the [scaling check](#3-the-scaling-check) leave external models
+out.
 
 ## Automatic factories (`karni.testing.factories`)
 

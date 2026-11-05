@@ -13,9 +13,12 @@ from django.utils import timezone
 from django_filters.rest_framework import FilterSet
 from rest_framework.test import APIRequestFactory
 
-from karni.api.filters import KarniFilterBackend
-from tests.testapp.models import Event, Venue
+from karni.api.filters import IntegerFilter, KarniFilterBackend
+from tests.testapp.models import TEST_PK, Event, Part, Reading, Stamp, Venue
 from tests.testapp.viewsets import EventViewSet
+
+#: The derived filter of a relation to the testapp API models (KARNI_TEST_PK).
+TESTAPP_PK_FILTER = django_filters.UUIDFilter if TEST_PK == "uuid" else IntegerFilter
 
 
 @pytest.fixture(autouse=True)
@@ -59,7 +62,7 @@ def _event(title: str = "Event", **kwargs: Any) -> Event:
 
 def _result_ids(response: Any) -> set[str]:
     assert response.status_code == 200, response.data
-    return {row["id"] for row in response.data["results"]}
+    return {str(row["id"]) for row in response.data["results"]}
 
 
 # derivation rules (no database needed)
@@ -107,9 +110,40 @@ def test_write_only_field_is_not_filterable() -> None:
 
 def test_relation_filters_use_target_pk_type_not_model_choice() -> None:
     base = _derived(Event).base_filters
+    assert isinstance(base["organizer"], django_filters.UUIDFilter)  # the user model: UUIDs
+    assert type(base["venue"]) is TESTAPP_PK_FILTER
     for name in ("venue", "organizer"):
-        assert isinstance(base[name], django_filters.UUIDFilter), name
         assert not isinstance(base[name], django_filters.ModelChoiceFilter), name
+
+
+@pytest.mark.parametrize("model", [Event, Part, Stamp], ids=lambda m: m.__name__)
+def test_the_primary_key_gets_no_derived_filter(model: type[models.Model]) -> None:
+    """No ?id=, ?id__gte= or ?id__lte=, whatever the key type: integer ranges walk the table."""
+    base = _derived(model).base_filters
+    assert not any(name == "id" or name.startswith("id__") for name in base), sorted(base)
+
+
+def test_an_integer_key_relation_filter_takes_whole_numbers_only() -> None:
+    base = _derived(Reading).base_filters
+    assert type(base["part"]) is IntegerFilter
+    filterset = _derived(Reading)
+    assert filterset({"part": "12"}, queryset=Reading.objects.none()).is_valid()
+    refused = filterset({"part": "1.5"}, queryset=Reading.objects.none())
+    assert not refused.is_valid() and "part" in refused.errors
+
+
+@pytest.mark.django_db
+def test_a_declared_id_filter_still_works() -> None:
+    class ExplicitView(_OptInView):
+        filterset_fields = {"id": ["exact", "gte"]}
+
+    filterset = KarniFilterBackend().get_filterset_class(
+        ExplicitView(), Reading._default_manager.all()
+    )
+    assert filterset is not None and {"id", "id__gte"} <= set(filterset.base_filters)
+    low, high = Reading.objects.create(value=1), Reading.objects.create(value=2)
+    found = filterset({"id__gte": str(high.pk)}, queryset=Reading.objects.all()).qs
+    assert list(found) == [high] and low not in found
 
 
 def test_m2m_field_is_not_derived() -> None:
@@ -122,7 +156,7 @@ def test_soft_delete_state_is_not_filterable_but_audit_users_are() -> None:
     base = _derived(Event).base_filters
     assert not any(name.startswith("deleted_at") for name in base)
     for name in ("created_by", "updated_by"):
-        assert isinstance(base[name], django_filters.UUIDFilter), name
+        assert isinstance(base[name], django_filters.UUIDFilter), name  # the user model
 
 
 def test_user_model_sensitive_fields_are_not_filterable() -> None:

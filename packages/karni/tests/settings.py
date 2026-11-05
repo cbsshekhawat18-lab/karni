@@ -8,6 +8,7 @@ else falls back to Karni's dev-profile defaults.
 
 from __future__ import annotations
 
+import os
 import tempfile
 
 from karni.conf import karni_settings
@@ -16,6 +17,12 @@ from karni.conf import karni_settings
 SECRET_KEY = "karni-tests-secret-key-not-for-production"
 DATABASES = {
     "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
+    },
+    # The second database of the external tables suite (tests.externalapp,
+    # class Karni: database = "second"). Created only for tests that ask for it.
+    "second": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
     },
@@ -61,4 +68,18 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     "tests.uploadsapp",
     # Content loading (karni load): no viewsets, so the API never sees it.
     "tests.contentapp",
+    # External tables, a SQL view and a second database (karni.db): viewsets
+    # mounted by its own URLconf only.
+    "tests.externalapp",
 ]
+
+# An integer-keyed user model (tests/intuserapp), for the accounts flows that
+# tests/accounts/test_integer_user.py runs in a subprocess with this variable.
+if os.environ.get("KARNI_TEST_USER_PK") == "bigint":
+    INSTALLED_APPS += ["tests.intuserapp"]  # type: ignore[name-defined]  # noqa: F821
+    AUTH_USER_MODEL = "intuserapp.User"
+    # The 2FA login gate is one of the flows: its apps, when karni[2fa] is installed.
+    import importlib.util
+
+    if importlib.util.find_spec("django_otp") is not None:
+        INSTALLED_APPS += ["django_otp", "django_otp.plugins.otp_totp"]  # type: ignore[name-defined]  # noqa: F821

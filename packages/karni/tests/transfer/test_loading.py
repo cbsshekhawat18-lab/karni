@@ -16,7 +16,7 @@ from django.test import override_settings
 from karni.audit.models import ChangeBatch
 from karni.transfer.loading import ContentImporter, LoadError, load_content
 from tests.contentapp.models import Category, Member, Project, ProjectImage, Service, Slide
-from tests.testapp.models import Event
+from tests.testapp.models import TEST_PK, Event
 
 pytestmark = pytest.mark.django_db
 
@@ -192,7 +192,7 @@ class TestRelations:
         with pytest.raises(LoadError) as caught:
             load_content(_write(tmp_path, site))
         assert caught.value.code == "E805"
-        assert "contentapp.Project (slug='nexus'): category: no category with slug or id " in (
+        assert "contentapp.Project (slug='nexus'): category: no category with slug " in (
             caught.value.message
         )
         assert "'offices'." in caught.value.message and "visible" not in caught.value.message
@@ -394,7 +394,7 @@ class TestRoutedModels:
             "testapp.Tag": [{"name": "jazz"}],
             "testapp.Event": [
                 {
-                    "id": "8b0c8c1e-4a8e-4f53-9a38-0c3f0a0b6a11",
+                    "id": "8b0c8c1e-4a8e-4f53-9a38-0c3f0a0b6a11" if TEST_PK == "uuid" else 4242,
                     "title": "Gig",
                     "starts_at": "2026-02-01T10:00:00Z",
                     "venue": "Arena",

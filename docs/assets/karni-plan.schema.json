@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cbsshekhawat18-lab.github.io/karni/assets/karni-plan.schema.json",
+  "title": "karni plan --json",
+  "description": "Experimental. The output of karni plan --json.",
+  "$defs": {
+    "_ChangeOut": {
+      "additionalProperties": false,
+      "description": "One change karni build would make.",
+      "properties": {
+        "area": {
+          "description": "Where the change is: app, modules, features, roles, apps, entities, fields, access, pages, migrations, seed, tests.",
+          "enum": [
+            "app",
+            "modules",
+            "features",
+            "roles",
+            "apps",
+            "entities",
+            "fields",
+            "access",
+            "pages",
+            "migrations",
+            "seed",
+            "tests"
+          ],
+          "type": "string"
+        },
+        "action": {
+          "description": "What it does.",
+          "enum": [
+            "add",
+            "change",
+            "rename",
+            "remove"
+          ],
+          "type": "string"
+        },
+        "target": {
+          "description": "What it changes: a module, a role, app.Entity, app.Entity.field, ...",
+          "type": "string"
+        },
+        "detail": {
+          "description": "The new value, or old -> new. Empty when nothing to add.",
+          "type": "string"
+        },
+        "risky": {
+          "description": "It can lose data or open it to more people: karni build refuses it without --allow-destructive.",
+          "type": "boolean"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Why it is risky, or a note. null when none."
+        },
+        "rows": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The rows it affects, when the database was counted. null when not counted."
+        },
+        "managed": {
+          "description": "false: the project's own code holds it (a hand-written model, viewset or page, a module to remove), and karni build leaves it to the project.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "area",
+        "action",
+        "target",
+        "detail",
+        "risky",
+        "reason",
+        "rows",
+        "managed"
+      ],
+      "type": "object"
+    },
+    "_IssueOut": {
+      "additionalProperties": false,
+      "description": "A problem in the spec, as karni spec validate --json reports it.",
+      "properties": {
+        "code": {
+          "description": "The error code (karni explain <code>).",
+          "type": "string"
+        },
+        "line": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The 1-based line, when known."
+        },
+        "path": {
+          "description": "The dotted path of the key.",
+          "type": "string"
+        },
+        "message": {
+          "description": "What is wrong.",
+          "type": "string"
+        },
+        "fix": {
+          "description": "How to fix it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "line",
+        "path",
+        "message",
+        "fix"
+      ],
+      "type": "object"
+    },
+    "_RowCountsOut": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "description": "counted, offline (--offline), unreachable (a database did not answer), or not needed (no risky change to count).",
+          "enum": [
+            "counted",
+            "offline",
+            "unreachable",
+            "not needed"
+          ],
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Why counts are missing. null when none."
+        }
+      },
+      "required": [
+        "status",
+        "note"
+      ],
+      "type": "object"
+    },
+    "_SummaryOut": {
+      "additionalProperties": false,
+      "properties": {
+        "changes": {
+          "description": "How many changes.",
+          "type": "integer"
+        },
+        "risky": {
+          "description": "How many of them are risky.",
+          "type": "integer"
+        },
+        "not_managed": {
+          "description": "How many of them karni build leaves to the project.",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "changes",
+        "risky",
+        "not_managed"
+      ],
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1,
+      "description": "The version of this output: 1.",
+      "type": "integer"
+    },
+    "file": {
+      "description": "The spec file, as given.",
+      "type": "string"
+    },
+    "valid": {
+      "description": "false when the spec has problems: then issues lists them.",
+      "type": "boolean"
+    },
+    "issues": {
+      "description": "The spec's problems (karni spec validate's).",
+      "items": {
+        "$ref": "#/$defs/_IssueOut"
+      },
+      "type": "array"
+    },
+    "changes": {
+      "description": "The changes, grouped by area in plan order.",
+      "items": {
+        "$ref": "#/$defs/_ChangeOut"
+      },
+      "type": "array"
+    },
+    "summary": {
+      "$ref": "#/$defs/_SummaryOut"
+    },
+    "row_counts": {
+      "$ref": "#/$defs/_RowCountsOut"
+    }
+  },
+  "required": [
+    "version",
+    "file",
+    "valid",
+    "issues",
+    "changes",
+    "summary",
+    "row_counts"
+  ],
+  "type": "object"
+}

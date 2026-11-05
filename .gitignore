@@ -20,6 +20,7 @@ packages/karni-cli/karni_cli/_agent/
 packages/karni-cli/karni_cli/_changelog/
 packages/karni-cli/karni_cli/_errorcodes/
 packages/karni-cli/karni_cli/_settings/
+packages/karni-cli/karni_cli/_catalog/
 packages/karni-cli/karni_cli/_ui/
 
 # Node

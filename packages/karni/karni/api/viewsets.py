@@ -38,6 +38,10 @@ usual):
 * ``expandable_fields`` — restrict/alias what ``?expand=`` may name.
 * ``expand_depth`` — per-viewset override of ``KARNI_API_MAX_EXPAND_DEPTH``.
 * ``auto_register`` / ``route`` — steer (or opt out of) router autodiscovery.
+* ``is_read_only()`` / ``read_only_refused_actions`` (experimental) — a
+  viewset over an external model (``class Karni: external = True``,
+  :mod:`karni.db`) answers its writes with 405 unless the model is
+  ``writable``; override to decide per viewset.
 * ``filter_backends`` / ``filterset_fields`` / ``search_fields`` /
   ``ordering_fields`` — standard DRF/django-filter attributes.
 
@@ -73,7 +77,7 @@ from django.db.models import Model, Prefetch, QuerySet
 from django.db.models.expressions import Combinable
 from django.http import Http404, HttpRequest
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import MethodNotAllowed, NotFound
 from rest_framework.pagination import BasePagination
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
@@ -268,6 +272,24 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     scope_exempt: ClassVar[bool] = False
     scope_exempt_reason: ClassVar[str] = ""
 
+    #: Experimental. The actions a viewset answers with 405 while :meth:`is_read_only` (a
+    #: model with ``class Karni: external = True`` and no ``writable = True``): the writes
+    #: and the import screens. The OpenAPI document leaves them out. Override / escape
+    #: hatch: a subclass narrows or widens the set.
+    read_only_refused_actions: ClassVar[frozenset[str]] = frozenset(
+        {
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+            "import_data",
+            "import_template",
+            "import_job",
+            "import_preview",
+            "import_commit",
+        }
+    )
+
     #: Actions governed by ``access.create`` **or** ``access.write`` (an
     #: import creates some rows and changes others); the action decides per
     #: row. ``import_data = False`` on a subclass removes the import routes.
@@ -341,6 +363,55 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             "override get_queryset()/get_serializer_class()).",
             code="E110",
         )
+
+    def is_read_only(self) -> bool:
+        """Experimental. Whether this viewset only reads (:func:`karni.db.is_read_only`).
+
+        True for a model with ``class Karni: external = True`` that does not
+        declare ``writable = True``: :attr:`read_only_refused_actions` then
+        answer 405 and are not in the OpenAPI document.
+
+        Override / escape hatch: return ``False`` to serve writes from this
+        viewset alone, or ``True`` to make any viewset read-only.
+        """
+        from karni.db import is_read_only
+
+        try:
+            model = self.get_model()
+        except ImproperlyConfigured:
+            return False
+        return is_read_only(model)
+
+    def refuses_read_only(self, action: str | None) -> bool:
+        """Experimental. Whether ``action`` answers 405 here because the viewset only reads."""
+        return action in self.read_only_refused_actions and self.is_read_only()
+
+    def initial(self, request: Request, *args: Any, **kwargs: Any) -> None:
+        """DRF's checks, after refusing a write to a read-only model with 405 (for everyone)."""
+        if self.refuses_read_only(getattr(self, "action", None)):
+            model = self.get_model()
+            raise MethodNotAllowed(
+                request.method or "",
+                detail=(
+                    f"{model.__name__} is read-only: another system owns its table (class "
+                    "Karni: external = True), so the API only reads it. Declare class Karni: "
+                    "writable = True on the model to allow writes."
+                ),
+            )
+        super().initial(request, *args, **kwargs)
+
+    @property
+    def allowed_methods(self) -> list[str]:
+        """DRF's ``Allow`` methods, without the writes a read-only model refuses."""
+        methods: list[str] = list(super().allowed_methods)
+        if not self.is_read_only():
+            return methods
+        mapping = getattr(self, "action_map", None) or {}
+        return [
+            method
+            for method in methods
+            if mapping.get(method.lower()) not in self.read_only_refused_actions
+        ]
 
     def get_access(self) -> Access | Unscoped | None:
         """The viewset's access declaration (the class attribute ``access``).
@@ -727,6 +798,9 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     ) -> Response:
         """``POST /<resource>/import/<job>/preview/``: the dry run, with ``{"mapping": …}``.
 
+        ``"match_ids": true`` matches existing rows by the file's id column, and
+        ``"keep_ids": true`` creates rows with the file's ids (both off by default).
+
         Every row is validated and written inside a transaction that is
         rolled back, so the counts and the per-row errors are exactly what
         the commit will do. Large files run in Celery: poll the job.
@@ -739,7 +813,13 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         body.is_valid(raise_exception=True)
         mapping = body.validated_data.get("mapping")
         try:
-            set_mapping(found, request, mapping if mapping is not None else found.mapping)
+            set_mapping(
+                found,
+                request,
+                mapping if mapping is not None else found.mapping,
+                match_ids=body.validated_data.get("match_ids"),
+                keep_ids=body.validated_data.get("keep_ids"),
+            )
             started = start_stage(found, request, PREVIEW)
         except KarniValueError as exc:
             return self._refused(exc)

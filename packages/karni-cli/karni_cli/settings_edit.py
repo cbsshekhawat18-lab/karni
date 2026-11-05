@@ -1,7 +1,10 @@
 """Marker-based edits to a project's config/settings.py.
 
 ``karni add`` and ``karni make app`` manage the ``# karni:apps`` block,
-``karni make middleware`` the ``# karni:middleware`` block. Two accepted
+``karni make middleware`` the ``# karni:middleware`` block, ``karni add``
+the ``# karni:context_processors`` block a module's manifest asks for
+(:func:`wire_entries`), and ``karni remove`` takes entries out again
+(:func:`remove_entry`, :func:`remove_block`). Two accepted
 shapes of a marked block (``SETTING`` is ``INSTALLED_APPS`` / ``MIDDLEWARE``):
 
     SETTING += [  # noqa: F821
@@ -23,6 +26,9 @@ from karni_cli.project import CliError
 
 MARKER = "# karni:apps"
 MIDDLEWARE_MARKER = "# karni:middleware"
+#: The setting and marker of the context processors block a module appends (karni-site's).
+PROCESSORS_SETTING = 'TEMPLATES[0]["OPTIONS"]["context_processors"]'
+PROCESSORS_MARKER = "# karni:context_processors"
 
 _QUOTED = re.compile(r"""["']([^"']+)["']""")
 
@@ -126,3 +132,117 @@ def add_app(settings_path: Path, app: str) -> bool:
         return False
     settings_path.write_text(updated)
     return True
+
+
+def remove_entry(text: str, entry: str, *, setting: str, marker: str) -> str | None:
+    """``text`` without ``entry`` in the marked block; ``None`` when the block does not hold it.
+
+    The reverse of :func:`add_entry`: the entry's own line goes (an entry that
+    shares a line keeps the line and loses the entry), and a single-line block
+    keeps its shape.
+    """
+    lines = text.splitlines()
+    found = _locate(lines, setting, marker)
+    if found is None or found[0] < 0:
+        return None
+    open_idx, marker_idx = found
+    quoted = re.compile(rf"""\s*["']{re.escape(entry)}["']\s*,?""")
+    if open_idx == marker_idx:
+        single = _single_line(setting).match(lines[marker_idx])
+        if single is None:
+            return None
+        entries = _QUOTED.findall(single.group("body"))
+        if entry not in entries:
+            return None
+        kept = ", ".join(f'"{name}"' for name in entries if name != entry)
+        lines[marker_idx] = f"{single.group('head')}[{kept}]  {single.group('tail')}"
+        return "\n".join(lines) + "\n"
+    for index in range(open_idx + 1, marker_idx):
+        line = lines[index]
+        if line.strip().startswith("#") or entry not in _QUOTED.findall(line):
+            continue
+        if _QUOTED.findall(line) == [entry]:
+            del lines[index]
+        else:
+            lines[index] = quoted.sub("", line, count=1)
+        return "\n".join(lines) + "\n"
+    return None
+
+
+def remove_block(text: str, setting: str, marker: str) -> str | None:
+    """``text`` without the marked block and the ``# ---`` heading above it, once it is empty.
+
+    ``None`` when there is no such block or it still holds an entry. A block
+    at the end of the file leaves the file ending where it ended before the
+    block was appended.
+    """
+    lines = text.splitlines()
+    found = _locate(lines, setting, marker)
+    if found is None or found[0] < 0 or block_entries(text, setting, marker):
+        return None
+    start, end = found
+    if start > 0 and lines[start - 1].startswith("# ---"):
+        start -= 1
+    before, after = lines[:start], lines[end + 1 :]
+    if not "".join(after).strip():
+        return "\n".join(before).rstrip("\n") + "\n"
+    if before and not before[-1].strip() and after and not after[0].strip():
+        after = after[1:]
+    return "\n".join(before + after) + "\n"
+
+
+def processors_block(entry: str, heading: str) -> str:
+    """The ``# karni:context_processors`` block, under its ``# ---`` heading, with one entry."""
+    return (
+        f"{heading}\n"
+        f"{PROCESSORS_SETTING} += [  # noqa: F821\n"
+        f'    "{entry}",\n'
+        f"]  {PROCESSORS_MARKER}\n"
+    )
+
+
+def wire_entries(
+    text: str,
+    filename: str,
+    *,
+    middleware: list[tuple[str, str]] | tuple[()] = (),
+    processors: list[tuple[str, str]] | tuple[()] = (),
+    heading: str = "",
+) -> tuple[str, list[str]]:
+    """Settings ``text`` with each ``(path, why)`` middleware and context processor wired.
+
+    A middleware goes into the ``# karni:middleware`` block, a context
+    processor into the ``# karni:context_processors`` block, which is
+    appended once under ``heading`` with ``why`` after it. Each is added only
+    when the text does not name it yet. Returns the text and what changed (or
+    what to add by hand).
+    """
+    notes: list[str] = []
+    for path, why in middleware:
+        if path in text:
+            continue
+        try:
+            updated = add_entry(
+                text, path, setting="MIDDLEWARE", marker=MIDDLEWARE_MARKER, filename=filename
+            )
+        except CliError:
+            notes.append(
+                f"add {path!r} to MIDDLEWARE in {filename} yourself (no `{MIDDLEWARE_MARKER}` "
+                f"block): {why} need it."
+            )
+            continue
+        if updated is not None:
+            text = updated
+            notes.append(f"{path}: added to MIDDLEWARE ({why})")
+    for path, why in processors:
+        if path in text:
+            continue
+        if PROCESSORS_MARKER in text:
+            updated = add_entry(
+                text, path, setting=PROCESSORS_SETTING, marker=PROCESSORS_MARKER, filename=filename
+            )
+            text = updated if updated is not None else text
+        else:
+            text = text.rstrip("\n") + "\n\n" + processors_block(path, f"{heading}: {why} ----")
+        notes.append(f"{path}: added to the context processors ({why})")
+    return text, notes

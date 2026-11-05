@@ -59,7 +59,9 @@ _SKIP_FIELDS: frozenset[str] = frozenset(
 #: Karni base classes, versioned with this package (guarded by an import test).
 BASES: tuple[str, ...] = (
     "BaseModel",
+    "BigIntBaseModel",
     "UUIDModel",
+    "IntegerKeyModel",
     "TimestampedModel",
     "SoftDeleteModel",
     "AuditedModel",
@@ -113,6 +115,46 @@ def models_section() -> str | None:
     if len(entries) > MODEL_CAP:
         parts.append(f"+{len(entries) - MODEL_CAP} more")
     return "MODELS: " + " ".join(parts)
+
+
+def key_type(model: type[models.Model]) -> str:
+    """The primary key's type in a word: ``uuid``, ``bigint``, ``int``, ``str`` or the field's."""
+    pk = model._meta.pk
+    if isinstance(pk, models.OneToOneField) and pk.related_model is not None:
+        return key_type(pk.related_model)  # a multi-table child shares its parent's key
+    if isinstance(pk, models.UUIDField):
+        return "uuid"
+    if isinstance(pk, models.BigAutoField | models.BigIntegerField):
+        return "bigint"
+    if isinstance(pk, models.AutoField | models.IntegerField):
+        return "int"
+    if isinstance(pk, models.CharField):
+        return "str"
+    return pk.get_internal_type().removesuffix("Field").lower() if pk is not None else "none"
+
+
+def keys_section() -> str | None:
+    """Each domain model's primary-key type: ``KEYS: uuid(all)``, or the exceptions named.
+
+    The most common type is printed as ``(all)`` or ``(rest)``, every other
+    type with its models, so each model's key type is stated in one short line.
+    """
+    entries = _domain_models()
+    if not entries:
+        return None
+    groups: dict[str, list[str]] = {}
+    for shown, model in entries:
+        groups.setdefault(key_type(model), []).append(shown)
+    common = max(groups, key=lambda name: (len(groups[name]), name == "uuid"))
+    parts = [
+        f"{name}({','.join(models_[:MODEL_CAP])}"
+        + (f",+{len(models_) - MODEL_CAP}" if len(models_) > MODEL_CAP else "")
+        + ")"
+        for name, models_ in sorted(groups.items())
+        if name != common
+    ]
+    parts.append(f"{common}({'rest' if parts else 'all'})")
+    return "KEYS: " + " ".join(parts)
 
 
 def _capped(names: list[str]) -> str:
@@ -230,6 +272,24 @@ def modules_section() -> str | None:
     return "MODULES: " + " ".join(sorted(found)) if found else None
 
 
+def features_section() -> str | None:
+    """Experimental. The built-in features that are on (``FEATURES: two_factor terms``).
+
+    A feature is on when the setting its manifest names as the switch
+    (:func:`karni.catalog.features`) holds a value. ``none`` when none is on,
+    so ``karni context`` can tell an older karni (no line) from no feature.
+    """
+    from karni.catalog import ManifestError, features
+
+    try:
+        found = features()
+    except ManifestError as exc:  # inventory must degrade, never crash
+        sys.stderr.write(f"WARNING: feature inventory unavailable: {exc}\n")
+        return None
+    on = [manifest.name for manifest in found if getattr(settings, manifest.switch, None)]
+    return "FEATURES: " + (" ".join(on) if on else "none")
+
+
 def module_distribution(module: str) -> str:
     """Distribution that ships ``module`` (metadata first, karni-<x> convention fallback)."""
     dists = packages_distributions().get(module)
@@ -302,11 +362,13 @@ def build_context() -> str:
     """The full inventory, one section per line, empty sections omitted."""
     sections = [
         models_section(),
+        keys_section(),
         scopes_section(),
         viewsets_section(),
         roles_section(),
         visibility_section(),
         performance_section(),
+        features_section(),
         modules_section(),
         "BASES: " + " ".join(BASES),
     ]

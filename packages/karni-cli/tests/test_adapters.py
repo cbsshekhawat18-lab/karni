@@ -34,7 +34,7 @@ ADAPTER_FILES = {
     "CONVENTIONS.md",
     ".junie/AGENTS.md",
 }
-PROCEDURES = ("new-model", "new-page", "add-module", "new-module", "site-from-design")
+PROCEDURES = ("new-model", "new-page", "add-module", "new-module", "site-from-design", "new-app")
 COMMAND_FILES = {
     f"{directory}/{name}{suffix}"
     for directory, suffix in (
@@ -74,7 +74,7 @@ def new_project(runner, tmp_path: Path, monkeypatch) -> Path:
     monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
     result = runner.invoke(app, ["new", "Acme Board", "-o", str(tmp_path)])
     assert result.exit_code == 0, result.output
-    assert "28 agent adapter files" in result.output
+    assert "32 agent adapter files" in result.output
     project = tmp_path / "acme_board"
     monkeypatch.chdir(project)
     return project
@@ -157,6 +157,33 @@ def test_every_adapter_says_the_same_thing(new_project: Path) -> None:
     # Thin: ~15 lines of guidance, and the project's kind and stack in a paragraph.
     assert 15 <= body.count("\n") <= 30
     assert "The stack is set, so never ask which technology" in body
+
+
+def test_the_new_app_flow_reaches_every_adapter(new_project: Path) -> None:
+    """/new-app where a tool has slash commands, the plain prompt in every instruction file."""
+    files = _generated(new_project)
+    for rel, token in (
+        (".claude/commands/new-app.md", "$ARGUMENTS"),
+        (".cursor/commands/new-app.md", "the request typed after the command"),
+        (".windsurf/workflows/new-app.md", "the request typed after the command"),
+        (".github/prompts/new-app.prompt.md", "${input:request:what to add}"),
+    ):
+        command = files[rel]
+        assert f"Build this app: {token}" in command, rel
+        steps = [line for line in command.splitlines() if line[:2] in {f"{n}." for n in "1234567"}]
+        assert len(steps) == 7, rel
+        assert 'karni recipes list --match "<the request>"' in steps[0], rel
+        assert "`karni plan --questions`" in steps[1] and "`karni build`" in steps[4], rel
+        assert "Rules that apply: K311, K310, K305, K301" in command, rel
+    line = (
+        "- To build an app from a one-line request, run `/new-app <the request>` where your "
+        "tool has slash commands, else follow `karni rules --procedure new-app`: karni.yaml "
+        "first, then `karni build` (rule K311)."
+    )
+    for rel in ADAPTER_FILES - {"CLAUDE.md"}:
+        assert line in files[rel], rel
+        assert "new-app" in files[rel].split("for routine tasks: ")[1].splitlines()[0], rel
+    assert files["CLAUDE.md"].splitlines()[-1] == "@AGENTS.md"  # it reads AGENTS.md's line
 
 
 def test_registry_records_verified_sources() -> None:

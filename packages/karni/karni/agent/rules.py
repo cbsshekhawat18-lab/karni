@@ -362,12 +362,24 @@ RULES: tuple[Rule, ...] = (
         code="K307",
         category="architecture",
         severity="should",
-        summary="Cross-project code: a Karni module.",
+        summary="Cross-project code: a Karni module (karni modules list).",
         rule=(
             "Anything reusable across projects belongs in a Karni module (a `karni_<name>` "
-            "package), not in this project. Say so instead of building it."
+            "package), not in this project. Say so instead of building it. Read the catalog "
+            "first: the CATALOG lines of `karni context`, `karni modules list` and `karni "
+            "modules show <name>` list every module and built-in feature (payments, approvals, "
+            "login as a user, a public site, two-factor sign-in, sign-in with a code or with "
+            "Google, Microsoft or Apple, terms acceptance, response caching), whether the "
+            "project has it, its options and the questions to ask. Add a module with `karni "
+            "add <name>` (or `modules:` in karni.yaml), turn a feature on with its setting (or "
+            "`features:`), and take a module out with `karni remove <name>`, which never drops "
+            "its tables."
         ),
-        rationale="Code that would be written more than once belongs in Karni, never per project.",
+        rationale=(
+            "Code that would be written more than once belongs in Karni, never per project. "
+            "Each catalog entry is tested, and rebuilding one costs more tokens than adding it."
+        ),
+        fix="Run `karni modules show <name>`, answer its questions, then `karni add <name>`.",
     ),
     Rule(
         code="K308",
@@ -424,6 +436,54 @@ RULES: tuple[Rule, ...] = (
             "editable content, SEO and public forms."
         ),
     ),
+    Rule(
+        code="K310",
+        category="architecture",
+        severity="must",
+        summary="Before karni build: ask only karni plan --questions.",
+        rule=(
+            "When the app is described in karni.yaml, run `karni plan --questions` before "
+            "`karni build` and ask the user only the questions it prints, in its order, with "
+            "their options and defaults. Write each answer with `karni spec answer <id> "
+            "<value>` (or in karni.yaml), and run it again until none is open. Never ask about "
+            "anything karni.yaml already settles, nor about the stack, names, labels, colours "
+            "or page titles: those are yours to choose."
+        ),
+        rationale=(
+            "Karni chooses the questions with fixed rules over the spec and the module "
+            "manifests (owners, access, the sign-up role, the kind, each module's and feature's "
+            "asks), so every agent asks the same few, and the user is never asked what the "
+            "spec or Karni's defaults already decide."
+        ),
+        fix=(
+            "Run `karni plan --questions`, ask the user those questions only, then `karni spec "
+            "answer <id> <value>` for each answer."
+        ),
+    ),
+    Rule(
+        code="K311",
+        category="architecture",
+        severity="must",
+        summary="New app: /new-app. Never hand-write what karni.yaml expresses.",
+        rule=(
+            "To build an app from a request, follow the new-app procedure (`/new-app <the app "
+            "in one line>`, or `karni rules --procedure new-app`): a recipe or the blank start, "
+            "karni.yaml, `karni plan --questions`, `karni plan`, `karni build`. Never hand-write "
+            "what karni.yaml can express (apps, entities, fields, owners, access, roles, "
+            "modules, features, pages, seed counts): change karni.yaml and run `karni build` "
+            "again. Write only the domain logic that is left, in the project's own files."
+        ),
+        rationale=(
+            "karni build turns the spec into models, viewsets, migrations, seeds, tests, types "
+            "and settings without a language model, so the agent writes a short YAML file "
+            "instead of thousands of lines, and a later change to the spec updates the app "
+            "without touching the code written by hand."
+        ),
+        fix=(
+            "Move the hand-written entity, field, access, role or setting into karni.yaml, then "
+            "run `karni build`."
+        ),
+    ),
     # backend
     Rule(
         code="K101",
@@ -435,13 +495,19 @@ RULES: tuple[Rule, ...] = (
             "`SoftDeleteModel` + `AuditedModel`), or compose those mixins directly when a "
             "model should not have all four (e.g. an append-only log: "
             "`UUIDModel, TimestampedModel`). Declare `APIMeta` / `AdminMeta` only for "
-            "fields that must be hidden, read-only or write-only."
+            "fields that must be hidden, read-only or write-only. "
+            "`BigIntBaseModel` (experimental) is the same with an integer `id`, chosen per "
+            "model in its class line; `karni context` shows each model's key type."
         ),
         rationale=(
-            "The mixins supply uuid ids, timestamps, soft delete, audit stamping and the "
-            "managers the derived API/admin rely on."
+            "The mixins supply the primary key (a UUID, or an integer with "
+            "`BigIntBaseModel`), timestamps, soft delete, audit stamping and the "
+            "managers the derived API/admin rely on. The exception is a table or view another "
+            "system owns: a plain `models.Model` with `class Meta: managed = False` and `class "
+            "Karni: external = True` (experimental, `karni make model <Name> --external "
+            "--table <table>`), which Karni only reads unless `writable = True`."
         ),
-        fix="Inherit karni.models.BaseModel (or compose its mixins).",
+        fix="Inherit karni.models.BaseModel or BigIntBaseModel (or compose its mixins).",
         enforced_by=("model-base",),
     ),
     Rule(
@@ -884,20 +950,24 @@ PROCEDURES: tuple[Procedure, ...] = (
         argument_hint="<module> (e.g. payments)",
         intro="Install Karni module: {arguments}",
         steps=(
+            "Run `karni modules show <module>`: what it provides, what it needs and the "
+            "questions to settle first, each with the setting its answer goes to.",
             "Run `karni add <module>`. It adds the `karni-<module>` dependency to "
             "pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked "
-            "`# karni:apps` in config/settings.py, and (once installed) records the "
-            "module's agent guidance.",
+            "`# karni:apps` in config/settings.py (with any middleware its manifest wires), "
+            "and (once installed) records the module's agent guidance. It prints the URL "
+            "include to add, if any.",
             "Rebuild/install: `docker compose build` (or `uv pip install -r pyproject.toml` "
             "in a host venv), then `make migrate`. Run `karni add <module>` again if it "
             "asked you to.",
             "Run `karni context`. The module must appear under MODULES, and `karni rules` now "
             "includes its guidance.",
             "Configure only the settings the module documents. Do not patch its internals.",
+            "To take it out again: `karni remove <module>` (it never drops the tables).",
             "To create a new reusable module instead: `karni make module <name>` "
             "(modules/karni-<name>/, docs/modules.md).",
         ),
-        rules=("K009", "K308"),
+        rules=("K009", "K307", "K308"),
     ),
     Procedure(
         name="new-module",
@@ -1014,6 +1084,43 @@ PROCEDURES: tuple[Procedure, ...] = (
             "through extract and load, and a new version of the design is extract and load again."
         ),
         rules=("K009", "K309", "K003", "K301"),
+    ),
+    Procedure(
+        name="new-app",
+        description="Build an app from a one-line request: karni.yaml, then karni build",
+        argument_hint="<the app in one line>",
+        intro="Build this app: {arguments}",
+        steps=(
+            '`karni recipes list --match "<the request>"` ranks the recipes by the words they '
+            "share with the request. Start karni.yaml from the closest one that fits (`karni "
+            "recipes show <name>` prints its spec and what people usually change) or, when none "
+            "does, from the blank start it prints. Write in it what the request asks for: apps, "
+            "entities and fields, roles, modules (`karni modules list`), features, pages. `karni "
+            "spec validate` checks it.",
+            "`karni plan --questions` lists the questions for the user, most impact first. Ask "
+            "the user those and only those, with their options and defaults, in one message. "
+            "Names, labels and the rest are yours to choose.",
+            "Write each answer with `karni spec answer <id> <value>` (a question the user leaves "
+            "to you takes its default). Edit karni.yaml by hand only for what no question "
+            "covers. Run `karni plan --questions` again until none is open.",
+            "`karni plan` shows what `karni build` will change. Check that it is what the "
+            "request asks for, and ask the user before any risky (!) change.",
+            "`karni build` makes the project match karni.yaml: modules, models, viewsets, "
+            "migrations, seeds, types, tests and `karni check`. It stops at the first failure "
+            "with its code and what to do next. A Karni-owned file edited by hand stops it "
+            "(C273): ask the user which of the three ways on to take.",
+            "Write only the domain logic that is left, where the project owns the code: methods "
+            "on the subclasses in `<app>/models.py`, custom actions in `<app>/viewsets.py`, "
+            "demo values in `<app>/seeds.py`, your own pages and tests. Never edit "
+            "`<app>/karni/` or the `karni:spec` blocks: `karni build` rewrites them.",
+            "Done when `karni check` and `karni test` pass.",
+        ),
+        outro=(
+            "Never hand-write what karni.yaml can express: change karni.yaml and run `karni "
+            "build` again. The MCP tools recipes, questions, answer, plan and build do the same "
+            "as these commands."
+        ),
+        rules=("K311", "K310", "K305", "K301"),
     ),
 )
 

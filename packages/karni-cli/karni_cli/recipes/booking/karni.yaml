@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json
+version: 1
+app:
+  name: Booking
+  kind: app
+  recipe: booking
+modules:
+  payments: {provider: stripe, currency: usd}
+features:
+  email_code_login: true
+roles:
+  staff: {name: Staff, system: true, grants: {"*": all}}
+  member: {name: Member, default: true, grants: {bookings.booking: own}}
+apps:
+  bookings:
+    entities:
+      Resource:
+        fields:
+          name: "str:120"
+          slug: "slug:name"
+          description: "text?"
+          price: "money:USD"
+        key: slug
+        search: [name]
+        order: name
+        access: {read: public, write: "role:staff"}
+      Slot:
+        fields:
+          resource: fk:Resource
+          starts_at: datetime
+          ends_at: datetime
+          capacity: int
+          remaining: "capacity:capacity"
+        order: starts_at
+        access: {read: public, write: "role:staff"}
+      Booking:
+        fields:
+          slot: fk:Slot
+          member: fk:User
+          status: "state:pending>confirmed|pending>cancelled|confirmed>cancelled"
+          note: "text?"
+          payment: "fk:karni_payments.Payment?"
+        owner: member
+        audit: [status]
+        order: -created_at
+        access: {read: ["owned:member", "role:staff"], write: "owned:member"}
+pages:
+  - home: dashboard
+  - Resource: [list, detail, form]
+  - Slot: [list, form]
+  - Booking: [list, detail]
+seed: {Resource: 4, Slot: 30, Booking: 60}

@@ -224,6 +224,96 @@ def check_open_writes(app_configs: Any = None, **kwargs: Any) -> list[checks.Che
     return messages
 
 
+#: The opt-out marker of ``karni.W530``: ``# karni: allow(public-integer-key): <reason>``.
+PUBLIC_INTEGER_KEY_RULE = "public-integer-key"
+
+
+def has_integer_key(model: type[Any]) -> bool:
+    """Whether ``model``'s primary key is an integer (an ``AutoField`` or ``IntegerField``)."""
+    from django.db import models
+
+    pk = model._meta.pk
+    if isinstance(pk, models.OneToOneField) and pk.related_model is not None:
+        return has_integer_key(pk.related_model)
+    return isinstance(pk, models.AutoField | models.IntegerField)
+
+
+def _key_marker(viewset: type[Any]) -> tuple[bool, str]:
+    """``(silenced, note)`` from a ``public-integer-key`` marker above the viewset class."""
+    from karni.testing._source import class_marker_lines, find_allow
+
+    marked = class_marker_lines(viewset)
+    if marked is None:
+        return False, ""
+    allow = find_allow(marked[0], PUBLIC_INTEGER_KEY_RULE, marked[1])
+    if allow is None:
+        return False, ""
+    if allow.reason:
+        return True, ""
+    return False, (
+        f" The marker on line {allow.line} has no reason, so it does not silence this: "
+        f"write `# karni: allow({PUBLIC_INTEGER_KEY_RULE}): <why the ids may be public>`."
+    )
+
+
+@checks.register(checks.Tags.urls)
+def check_public_integer_keys(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.W530 (experimental): anyone may read a resource whose ids can be guessed.
+
+    Reported for every routed :class:`~karni.api.viewsets.BaseViewSet`
+    whose model has an integer primary key (``BigIntBaseModel``, an
+    ``AutoField``), whose detail route looks rows up by that key, and whose
+    ``read`` predicate admits anonymous callers
+    (:func:`~karni.api.access.admits_anyone`). Integer ids are sequential, so
+    a visitor can count the rows and walk the detail URLs. Only the declared
+    ``access`` attribute is read (a ``get_access()`` override is computed
+    per request), and ``Unscoped`` is not inspected. Silence it for one
+    viewset with ``# karni: allow(public-integer-key): <reason>`` above the
+    class, or for the project with ``'karni.W530'`` in
+    ``SILENCED_SYSTEM_CHECKS``.
+    """
+    from django.conf import settings
+    from django.utils.module_loading import import_string
+
+    from karni.api.access import Access, admits_anyone
+    from karni.api.routers import DEFAULT_ROUTER_FACTORY, resolve_router
+    from karni.api.viewsets import BaseViewSet
+
+    try:
+        import_string(getattr(settings, "KARNI_API_ROUTER", DEFAULT_ROUTER_FACTORY))
+    except ImportError:
+        return []
+    messages: list[checks.CheckMessage] = []
+    seen: set[type[Any]] = set()
+    for _prefix, viewset, _basename in getattr(resolve_router(), "registry", ()):
+        if viewset in seen or not (isinstance(viewset, type) and issubclass(viewset, BaseViewSet)):
+            continue
+        seen.add(viewset)
+        declaration = getattr(viewset, "access", None)
+        if not isinstance(declaration, Access) or not admits_anyone(declaration.read):
+            continue
+        model = viewset.model or getattr(viewset.queryset, "model", None)
+        if model is None or not has_integer_key(model):
+            continue
+        lookup = str(getattr(viewset, "lookup_field", "pk") or "pk")
+        if lookup not in ("pk", model._meta.pk.name, model._meta.pk.attname):
+            continue
+        silenced, note = _key_marker(viewset)
+        if silenced:
+            continue
+        messages.append(
+            check_warning(
+                "W530",
+                f"{viewset.__name__} lets anyone read {model.__name__} rows by an integer id "
+                f"(read={declaration.read!r}), so a visitor can count them and walk "
+                f"/{_prefix}/1/, /{_prefix}/2/, ...{note}",
+                hint=_fix("W530"),
+                obj=viewset,
+            )
+        )
+    return messages
+
+
 def _write_only_search(viewset: type[Any], model: type[Any]) -> list[checks.CheckMessage]:
     """E131 when ``search_fields`` names a field the API never reads back."""
     write_only = frozenset(getattr(getattr(model, "APIMeta", None), "write_only", None) or ())
@@ -518,6 +608,71 @@ def check_request_id_middleware(
     ]
 
 
+_TERMS_MIDDLEWARE = "karni.accounts.terms.TermsGateMiddleware"
+_AUTHENTICATION_MIDDLEWARE = "django.contrib.auth.middleware.AuthenticationMiddleware"
+
+
+def _is_terms_gate(entry: str) -> bool:
+    """Whether a ``MIDDLEWARE`` entry is the terms gate or a subclass of it."""
+    if entry == _TERMS_MIDDLEWARE:
+        return True
+    from django.utils.module_loading import import_string
+
+    from karni.accounts.terms import TermsGateMiddleware
+
+    try:
+        found = import_string(entry)
+    except ImportError:
+        return False
+    return isinstance(found, type) and issubclass(found, TermsGateMiddleware)
+
+
+@checks.register()
+def check_terms_middleware(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E248: while ``KARNI_TERMS`` requires acceptance, its gate runs after authentication.
+
+    ``karni_settings()`` lists ``TermsGateMiddleware`` in ``MIDDLEWARE``. A
+    project that replaces ``MIDDLEWARE`` after the call loses it, and the gate
+    then refuses nobody. Listed before ``AuthenticationMiddleware`` it cannot
+    see a session user. A subclass counts as the gate.
+    """
+    from django.conf import settings
+
+    from karni.accounts.terms import gate_on
+
+    if not gate_on():
+        return []
+    middleware = [str(entry) for entry in getattr(settings, "MIDDLEWARE", None) or []]
+    gate = next((index for index, entry in enumerate(middleware) if _is_terms_gate(entry)), None)
+    fix = (
+        f"Add '{_TERMS_MIDDLEWARE}' to MIDDLEWARE after '{_AUTHENTICATION_MIDDLEWARE}', or extend "
+        "MIDDLEWARE instead of replacing it."
+    )
+    if gate is None:
+        return [
+            check_error(
+                "E248",
+                "KARNI_TERMS requires acceptance, but MIDDLEWARE has no TermsGateMiddleware: "
+                "nobody is asked to accept the terms.",
+                hint=fix,
+                obj="MIDDLEWARE",
+            )
+        ]
+    if _AUTHENTICATION_MIDDLEWARE in middleware and gate < middleware.index(
+        _AUTHENTICATION_MIDDLEWARE
+    ):
+        return [
+            check_error(
+                "E248",
+                f"{middleware[gate]} comes before {_AUTHENTICATION_MIDDLEWARE} in MIDDLEWARE, so "
+                "the terms gate cannot see a user signed in by session.",
+                hint=f"Move {middleware[gate]} below {_AUTHENTICATION_MIDDLEWARE}.",
+                obj="MIDDLEWARE",
+            )
+        ]
+    return []
+
+
 @checks.register()
 def check_schedules(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
     """karni.E404 / E405 / E406: every ``<app>/schedules.py`` declaration, at boot.
@@ -624,4 +779,7 @@ def _stand_in_user(user_model: Any) -> Any:
 # lifecycle and limited resources, E986 / E987 / E988 / W980 (karni.guard_checks),
 # and the typed field layer, E960-E970 / W964-W967 (karni.fields.checks).
 from karni import guard_checks as _guard_checks  # noqa: E402,F401
+
+# External tables, SQL views and a second database, E270-E276 / W541 / W542 (karni.db.checks).
+from karni.db import checks as _db_checks  # noqa: E402,F401
 from karni.fields import checks as _field_checks  # noqa: E402,F401

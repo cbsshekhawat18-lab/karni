@@ -612,6 +612,276 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Give the model the path the scope expects (`class Karni: owner_field = 'workspace__members'`, or the scope path), teach the custom scope the new model, or narrow the grant's pattern so it does not cover the model.
 
+<a id="e215"></a>
+
+#### E215: The ID token is not valid
+
+*API 400 response* · from `karni.accounts.social_token.verify_id_token (POST <auth>/social/<provider>/)`
+
+**Why Karni objects.** Karni verifies an ID token offline: a JWT signed with one of the provider's published keys, with the algorithm the provider uses, carrying exp, iat, iss, aud and sub. A token that is malformed, signed with another key or algorithm, missing one of those claims, or issued in the future (iat or nbf past the leeway) proves nothing, so the answer is a 401.
+
+**Fix.** Send the ID token itself (not the access token, and not the authorization code) exactly as the provider's SDK returned it, and get a fresh one. A token issued in the future means the server's clock is off: fix the clock, or raise KARNI_SOCIAL_TOKEN_LEEWAY.
+
+<a id="e216"></a>
+
+#### E216: The ID token was issued for another application
+
+*API 400 response* · from `karni.accounts.social_token.verify_id_token`
+
+**Why Karni objects.** A token's aud claim names the client id it was issued to. Accepting a token issued to another application would let any app that signs its users in with the same provider sign them in here too, so aud must be one of the configured client ids (401).
+
+**Fix.** Add the client id the app uses to KARNI_SOCIAL_TOKEN_PROVIDERS[<provider>]['client_ids']: the web client id, and each iOS and Android client id (for Apple, the service id and the bundle id).
+
+<a id="e217"></a>
+
+#### E217: The ID token comes from another issuer or tenant
+
+*API 400 response* · from `karni.accounts.social_token.verify_id_token`
+
+**Why Karni objects.** Each provider has its own issuer: accounts.google.com, https://appleid.apple.com, or for Microsoft https://login.microsoftonline.com/<tenant id>/v2.0 with the token's own tid. A Microsoft token from a tenant the 'tenants' setting does not allow is refused the same way (401).
+
+**Fix.** Check that the token comes from the provider of the URL it was posted to. For Microsoft, request a v2.0 token and list its tenant (or 'common', 'organizations' or 'consumers') in KARNI_SOCIAL_TOKEN_PROVIDERS['microsoft']['tenants'].
+
+<a id="e218"></a>
+
+#### E218: The ID token has expired
+
+*API 400 response* · from `karni.accounts.social_token.verify_id_token`
+
+**Why Karni objects.** ID tokens live minutes to an hour. Karni accepts one up to its exp claim plus KARNI_SOCIAL_TOKEN_LEEWAY seconds (401 after that).
+
+**Fix.** Get a fresh token from the provider's SDK right before posting it. Do not store ID tokens for later.
+
+<a id="e219"></a>
+
+#### E219: The ID token's signing key is unknown
+
+*API 400 response* · from `karni.accounts.social_token.signing_key`
+
+**Why Karni objects.** Karni looks the token's kid up in the provider's key set (JWKS), cached for KARNI_SOCIAL_TOKEN_JWKS_TTL seconds. An unknown kid fetches the key set again, at most once a minute per provider, so a rotated key works within a minute. A kid that is still missing answers 401. A key set that cannot be fetched answers 503.
+
+**Fix.** Send a token the provider issued recently. A 503 means the server cannot reach the provider's JWKS URL: check its outbound network, or the fetcher named in KARNI_SOCIAL_TOKEN_JWKS_FETCHER.
+
+<a id="e220"></a>
+
+#### E220: The ID token's nonce does not match
+
+*API 400 response* · from `karni.accounts.social_token.verify_id_token`
+
+**Why Karni objects.** A nonce binds the token to one sign-in attempt, so a stolen token cannot be replayed. When the request sends a nonce, the token's nonce claim must equal it, or its SHA-256 hex digest (Apple's convention: the app passes the hash to Apple and the raw value to Karni). A provider with 'require_nonce' refuses a request without one (401).
+
+**Fix.** Post the nonce the app generated for this sign-in, the raw value. Generate a new one for every attempt.
+
+<a id="e221"></a>
+
+#### E221: The ID token carries no email address
+
+*API 400 response* · from `karni.accounts.social_token.sign_in`
+
+**Why Karni objects.** A token whose identity is not linked yet is matched to an account by its email. Without an email claim (for Microsoft, email or an email-shaped preferred_username) there is nothing to match or create (400).
+
+**Fix.** Request the email scope. Apple sends the email only on the first sign-in of a user, so that first answer must reach Karni.
+
+<a id="e222"></a>
+
+#### E222: The provider did not verify the email address
+
+*API 400 response* · from `karni.accounts.social_token.sign_in`
+
+**Why Karni objects.** Karni creates an account from a token, or links a token to the account with the same email, only when the provider says it verified the address. Otherwise anyone could put someone else's address in a token and take over their account. Microsoft tokens count as verified only with the xms_edov claim true or a tenant listed in 'trusted_tenants' (400). An identity already linked signs in without this check.
+
+**Fix.** For Microsoft, add the xms_edov optional claim to the app registration, or list your organisation's tenant id in KARNI_SOCIAL_TOKEN_PROVIDERS['microsoft']['trusted_tenants']. Otherwise the user signs in with a password, or with a provider that verified the address.
+
+<a id="e223"></a>
+
+#### E223: Sign-up with an ID token is closed
+
+*API 400 response* · from `karni.accounts.social_token.sign_in`
+
+**Why Karni objects.** KARNI_SOCIAL_TOKEN_SIGNUP is 'existing' (the default while KARNI_ACCOUNTS_REGISTRATION is False): only an identity already linked, or an account with the token's email, may sign in. Nobody else gets an account (400).
+
+**Fix.** Create the account first (in the admin, or let staff invite the user), then sign in with the token. To let anyone in, set KARNI_SOCIAL_TOKEN_SIGNUP = 'open', or 'approval' to create accounts an administrator activates.
+
+<a id="e224"></a>
+
+#### E224: The account awaits an administrator's approval
+
+*API 400 response* · from `karni.accounts.social_token.sign_in; karni.accounts.otp.verify_code`
+
+**Why Karni objects.** With KARNI_SOCIAL_TOKEN_SIGNUP = 'approval', a token without an account creates an inactive one. The answer is a 202 with this code and no credentials, again on each sign-in until an administrator activates the account. With KARNI_EMAIL_OTP_SIGNUP = 'approval', the code that creates the account answers the same 202. A later code for the inactive account answers E226.
+
+**Fix.** An administrator ticks 'Active' on the user's page in the admin. The next sign-in then succeeds.
+
+<a id="e225"></a>
+
+#### E225: This sign-in provider is not configured
+
+*API 400 response* · from `karni.accounts.api.views.SocialTokenLoginView`
+
+**Why Karni objects.** Each provider named in KARNI_SOCIAL_TOKEN_PROVIDERS gets its own social/<provider>/ route. A provider the setting does not name answers 404.
+
+**Fix.** Add the provider with its client ids to KARNI_SOCIAL_TOKEN_PROVIDERS, or post to the route of a configured one.
+
+<a id="e226"></a>
+
+#### E226: The account is inactive
+
+*API 400 response* · from `karni.accounts.social_token.sign_in; karni.accounts.otp.verify_code`
+
+**Why Karni objects.** An inactive user never signs in, by password, by token or by a code sent by email (401). Sign-in by code says so only after a right code, so the answer tells nothing to someone who does not read that mailbox.
+
+**Fix.** An administrator activates the account in the admin, if it should sign in.
+
+<a id="e227"></a>
+
+#### E227: An account with this email exists and is not linked
+
+*API 400 response* · from `karni.accounts.social_token.sign_in`
+
+**Why Karni objects.** KARNI_SOCIAL_TOKEN_LINK_VERIFIED is False, so a token is never linked to an existing account that has a password, even when the provider verified the email (400).
+
+**Fix.** Sign in with the password. Linking a provider from a signed-in session is not built yet. To link on a verified email, set KARNI_SOCIAL_TOKEN_LINK_VERIFIED = True (the default).
+
+<a id="e235"></a>
+
+#### E235: The sign-in code is wrong or has expired
+
+*API 400 response* · from `karni.accounts.otp.verify_code (POST <auth>/otp/verify/)`
+
+**Why Karni objects.** One answer covers every failure of a code, so it tells nobody whether an address has an account: a wrong code, one past KARNI_EMAIL_OTP_TTL, one already used, one replaced by a newer code, one locked after KARNI_EMAIL_OTP_MAX_ATTEMPTS wrong guesses, an address no code was sent to, and an address that may not sign up (KARNI_EMAIL_OTP_SIGNUP = 'existing'). The precise reason is only in the accounts.otp.refused log event (401).
+
+**Fix.** Ask for a new code with POST otp/send/ and type the newest one. Only the latest code of an address works. Check the reason in the log when one user keeps failing.
+
+<a id="e236"></a>
+
+#### E236: Sign-in with a code is turned off
+
+*API 400 response* · from `karni.accounts.api.views.OtpSendView; karni.accounts.api.views.OtpVerifyView`
+
+**Why Karni objects.** otp/send/ and otp/verify/ are mounted only while KARNI_EMAIL_OTP is True. A URLconf built while it was True answers 404 with this code once the setting is False.
+
+**Fix.** Set KARNI_EMAIL_OTP = True (or KARNI_EMAIL_OTP=True in the environment) to offer sign-in with a code, or sign in with login/.
+
+<a id="e245"></a>
+
+#### E245: The signed-in user has not accepted the current terms
+
+*API 400 response* · from `karni.accounts.terms.TermsGateMiddleware`
+
+**Why Karni objects.** KARNI_TERMS requires every signed-in user to accept its current version before using the API. The gate answers 403 with this code, the version and the terms url to a signed-in user who has not accepted that version, on every request under KARNI_TERMS['paths'] (default ['/api/']) outside the auth mount and KARNI_TERMS['exempt']. Staff and superusers are gated like everyone. A new version makes everyone accept again.
+
+**Fix.** Show the terms at the url in the answer, then POST <auth mount>/terms/accept/ with {"version": "<the version in the answer>"}. @karni/ui's TermsGate does both. To keep a path open before acceptance, add its prefix to KARNI_TERMS['exempt'].
+
+<a id="e246"></a>
+
+#### E246: The accepted terms version is not the current one
+
+*API 400 response* · from `karni.accounts.terms.accept (POST <auth>/terms/accept/)`
+
+**Why Karni objects.** terms/accept/ records acceptance of KARNI_TERMS['version'] only. A client that sends another version showed the user other terms (an old copy, or the version changed after the page loaded), so nothing is recorded (400). The answer carries the current version and url.
+
+**Fix.** Show the terms at the url in the answer and send the version in the answer. GET terms/ returns the current version too.
+
+<a id="e247"></a>
+
+#### E247: A terms acceptance is a permanent record
+
+*exception* · from `karni.accounts.models.TermsAcceptance`
+
+**Why Karni objects.** Each TermsAcceptance row records that a user accepted a version of the terms, when, from which IP and with which client. The table is append-only: saving an existing row, deleting one (soft or hard) and update() or delete() on a queryset of them would rewrite that record, so each one raises.
+
+**Fix.** Record a new acceptance with karni.accounts.terms.accept(), or POST terms/accept/. To make everyone accept again, change KARNI_TERMS['version']. A user's rows go only with the user: user.hard_delete() deletes them.
+
+<a id="e248"></a>
+
+#### E248: The terms gate is not in MIDDLEWARE, or runs before authentication
+
+*system check (error)* · from `karni.checks.check_terms_middleware`
+
+**Why Karni objects.** KARNI_TERMS requires acceptance, but karni.accounts.terms.TermsGateMiddleware (or a subclass) is missing from MIDDLEWARE, so nothing is gated, or it comes before django.contrib.auth's AuthenticationMiddleware, so it cannot see the session user. karni_settings() lists it, so this happens when MIDDLEWARE is replaced after the call.
+
+**Fix.** Add 'karni.accounts.terms.TermsGateMiddleware' to MIDDLEWARE after 'django.contrib.auth.middleware.AuthenticationMiddleware', or extend MIDDLEWARE instead of replacing it.
+
+<a id="e249"></a>
+
+#### E249: Terms acceptance is turned off
+
+*API 400 response* · from `karni.accounts.api.views.TermsView; karni.accounts.api.views.TermsAcceptView`
+
+**Why Karni objects.** terms/ and terms/accept/ are mounted only while KARNI_TERMS is set. A URLconf built while it was set answers 404 with this code once it is unset.
+
+**Fix.** Set KARNI_TERMS = {"version": "<version>", "url": "<where the terms are>"} to ask users to accept terms, or remove the client's call.
+
+<a id="e270"></a>
+
+#### E270: An external model is managed by Django
+
+*system check (error)* · from `karni.db.checks.check_database_options`
+
+**Why Karni objects.** `class Karni: external = True` says another system owns the table or view, so Karni must never create, change or drop it. Django still migrates a model unless `Meta.managed = False`, so `migrate` would try to create or alter that table. The two declarations go together.
+
+**Fix.** Add `managed = False` to the model's `class Meta`, or remove `external = True` if Django should own the table.
+
+<a id="e271"></a>
+
+#### E271: Karni.database names a database that is not in DATABASES
+
+*system check (error)* · from `karni.db.checks.check_database_options`
+
+**Why Karni objects.** `class Karni: database = '<alias>'` sends the model's reads, writes and migrations to that alias of the DATABASES setting. An alias Django does not know fails on the first query.
+
+**Fix.** Add the alias to DATABASES (for example DATABASES['warehouse'] = env.db_url('WAREHOUSE_DATABASE_URL')), or fix the name in `class Karni`.
+
+<a id="e272"></a>
+
+#### E272: The table or view of an external model does not exist
+
+*system check (error)* · from `karni.db.checks.check_external_tables (karni check)`
+
+**Why Karni objects.** An external model reads a table or view another system owns, and Karni never creates it. `karni check` connected to the model's database and found no table or view with the model's Meta.db_table, so every query on the model would fail.
+
+**Fix.** Create the table or view in that database (a SQL view the project owns can come from a RunSQL migration), or fix Meta.db_table. A PostgreSQL table in another schema is written db_table = 'schema"."table'. Where the table cannot exist (a CI database), add 'karni.E272' to SILENCED_SYSTEM_CHECKS in that environment's settings.
+
+<a id="e273"></a>
+
+#### E273: An external model has a column its table or view lacks
+
+*system check (error)* · from `karni.db.checks.check_external_tables (karni check)`
+
+**Why Karni objects.** Every concrete field of an external model is a column Karni selects. A field whose column (its name, or db_column) is missing from the table or view makes every query on the model fail.
+
+**Fix.** Fix the field's name or db_column to match the column, remove the field, or regenerate the model from the table with `karni make model <Name> --external --table <table>` and keep what you need.
+
+<a id="e274"></a>
+
+#### E274: An external model's field type does not match its column
+
+*system check (error)* · from `karni.db.checks.check_external_tables (karni check)`
+
+**Why Karni objects.** The database reports a column type that cannot hold the field's values, for example a DateTimeField over a text column or an IntegerField over a date. Karni compares broad kinds only (numbers, text, dates, times, booleans, UUIDs, JSON, binary), and skips columns whose type the database does not report, so a reported mismatch is a real one.
+
+**Fix.** Change the field to the column's type (`karni make model <Name> --external --table <table> --dry-run` shows the type Django infers), or cast the column in the view.
+
+<a id="e275"></a>
+
+#### E275: class Karni: external, writable or database has a value of the wrong type
+
+*system check (error)* · from `karni.db.checks.check_database_options`
+
+**Why Karni objects.** `external` and `writable` are True or False, and `database` is the name of a DATABASES alias. Another value would be read in a way the code does not say.
+
+**Fix.** Write external = True, writable = True or database = '<alias>' (a non-empty string).
+
+<a id="e276"></a>
+
+#### E276: A relation joins models on different databases
+
+*system check (error)* · from `karni.db.checks.check_database_options`
+
+**Why Karni objects.** A foreign key, one-to-one or many-to-many field needs both tables in one database: Django joins them in SQL, and Karni's router refuses to relate rows across databases. A model on another database that inherits BaseModel has this problem too, because AuditedModel's created_by and updated_by point at the user table.
+
+**Fix.** Keep related models on the same database (the same Karni.database), or store the other row's key in a plain field. For a model Karni manages on another database, compose UUIDModel, TimestampedModel and SoftDeleteModel instead of BaseModel.
+
 ### 3xx · Admin
 
 <a id="e301"></a>
@@ -643,6 +913,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** The admin logo is wired into UNFOLD from this one setting, so it must name static files unfold can serve.
 
 **Fix.** Set KARNI_ADMIN_LOGO = 'karni' for Karni's mark, or {'light': '<static path>', 'dark': ..., 'icon': ...} with at least 'light'. Leave it unset for a text header.
+
+<a id="e304"></a>
+
+#### E304: karni_makemigrations --renames is not a rename list
+
+*exception* · from `karni.management.commands.karni_makemigrations`
+
+**Why Karni objects.** karni build passes the renames of the plan as JSON: {"models": [[app, old, new]], "fields": [[app, model, old, new]]}. Anything else cannot be written as a migration.
+
+**Fix.** Pass a JSON object with models and fields lists, or run karni build, which writes it.
+
+<a id="e305"></a>
+
+#### E305: An app has more than one latest migration, so the renames have no place
+
+*exception* · from `karni.management.commands.karni_makemigrations.write_renames`
+
+**Why Karni objects.** A rename migration follows the app's latest migration. Two migrations that both claim to be latest (two branches) leave no single one to follow.
+
+**Fix.** Run manage.py makemigrations --merge for the app, then karni build again.
+
+<a id="e310"></a>
+
+#### E310: A module's manifest does not match the module
+
+*test failure* · from `karni.testing.assert_module_manifest`
+
+**Why Karni objects.** karni.module.toml is what karni modules, karni add, karni remove and the app spec read about a module. assert_module_manifest checks it parses, that the karni.modules entry point names the package, that its settings are the DEFAULTS fragment's, and that its models are the app's. Each listed line is one mismatch.
+
+**Fix.** Fix the manifest or the module as the line says: list every KARNI_<NAME>_* setting of conf.DEFAULTS under [provides.settings] with its type, list the app's models under provides.models, and add [project.entry-points."karni.modules"] <name> = "karni_<name>" to pyproject.toml, then reinstall the module. docs/modules.md lists every key.
 
 ### 4xx · Events, listeners, schedules and Celery
 
@@ -818,6 +1118,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Move the assignment above the `karni_settings(globals())` line, pass it as a keyword (`karni_settings(globals(), KARNI_AUTH_MODE='session')`) or set its environment variable in .env. For the logo, change UNFOLD in place instead of replacing it.
 
+<a id="e509"></a>
+
+#### E509: Sign-in with an ID token needs the cryptography package
+
+*exception* · from `karni.conf.validation (at startup), karni.accounts.social_token`
+
+**Why Karni objects.** Google, Microsoft and Apple sign their ID tokens with RS256 (an EC key uses ES256). PyJWT verifies those only with the cryptography package, which a plain install of Karni leaves out.
+
+**Fix.** Run pip install 'karni[social-token]', or empty KARNI_SOCIAL_TOKEN_PROVIDERS.
+
 <a id="w510"></a>
 
 #### W510: DEBUG is on in a deployment
@@ -947,6 +1257,46 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A backup that fails quietly is found missing on the day it is needed, so the backup service reports the failure in its log, and its health check turns unhealthy until a backup succeeds.
 
 **Fix.** Read the line after E521: it names the step (pg_dump, pg_restore, psql, the media archive, S3) and its error. Check DATABASE_URL, that the client tools match the database's major version (the backup image's POSTGRES_VERSION), the free space in KARNI_BACKUP_DIR and, with KARNI_BACKUP_S3_BUCKET, the AWS_* credentials. Then run `docker compose -f docker-compose.prod.yml exec backup karni-backup run`.
+
+<a id="w530"></a>
+
+#### W530: Anyone may read a resource whose ids can be guessed
+
+*system check (warning)* · from `karni.checks.check_public_integer_keys`
+
+**Why Karni objects.** The model has an integer primary key (BigIntBaseModel or an AutoField), its detail route looks rows up by that key, and its read access admits anonymous callers. Integer ids are sequential, so a visitor learns how many rows there are and can walk the detail URLs one id after the other, including rows no list links to.
+
+**Fix.** Give the model a UUID key (inherit BaseModel) or look rows up by a slug (lookup_field = "slug" on the viewset). When the ids may be public, write `# karni: allow(public-integer-key): <reason>` above the viewset class, or add 'karni.W530' to SILENCED_SYSTEM_CHECKS for the whole project.
+
+<a id="w540"></a>
+
+#### W540: The database of an external model cannot be reached
+
+*system check (warning)* · from `karni.db.checks.check_external_tables (karni check)`
+
+**Why Karni objects.** `karni check` compares each external model with its table or view when the model's database answers. This one did not, so nothing was compared for it. That is not an error: the database may be outside this machine's reach (CI, a laptop).
+
+**Fix.** Check the alias in DATABASES (host, port, credentials, network) and run `karni check` again where the database is reachable. Add 'karni.W540' to SILENCED_SYSTEM_CHECKS where it never is.
+
+<a id="w541"></a>
+
+#### W541: Karni.writable on a model that is not external
+
+*system check (warning)* · from `karni.db.checks.check_database_options`
+
+**Why Karni objects.** `writable = True` only lifts the read-only default of an external model. Every other model is writable already, so the declaration does nothing.
+
+**Fix.** Remove `writable = True`, or add `external = True` (with Meta.managed = False) if another system owns the table.
+
+<a id="w542"></a>
+
+#### W542: Karni.database is declared but Karni's database router is not installed
+
+*system check (warning)* · from `karni.db.checks.check_database_router`
+
+**Why Karni objects.** A model declares `class Karni: database`, but DATABASE_ROUTERS does not list karni.db.DatabaseRouter (or a subclass), so Django sends the model to the default database. karni_settings() lists the router, so this happens when DATABASE_ROUTERS is replaced after the call.
+
+**Fix.** Add 'karni.db.DatabaseRouter' to DATABASE_ROUTERS, after your own routers (the first router with an answer wins). If your own router routes these models, add 'karni.W542' to SILENCED_SYSTEM_CHECKS.
 
 ### 6xx · Testing and seeding
 
@@ -1372,7 +1722,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni.debug.replay; karni replay --as`
 
-**Why Karni objects.** A replay runs as the captured user, or the user --as names (a primary key, an email or a username). That user must exist in the database the replay uses.
+**Why Karni objects.** A replay runs as the captured user, or the user --as names (a primary key, an email or a username). That user must exist in the database the replay uses, and the captured id must still belong to the captured email: after a reset, integer ids are reused by other users.
 
 **Fix.** Pass --as with an existing user's email, username or primary key, or pass --anonymous. Do not pass both.
 
@@ -2396,6 +2746,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write the draft to another file, or pass --force to replace the map.
 
+<a id="c140"></a>
+
+### C140: The database to read the table from cannot be used
+
+*karni command* · from `karni make model --external`
+
+**Why Karni objects.** `karni make model <Name> --external --table <table>` writes the model from the table's columns, so it reads them from the database (manage.py karni_inspect, in the project's interpreter). The database did not answer, the alias is not in DATABASES, or the project's karni has no karni_inspect command.
+
+**Fix.** Start the database or fix its settings (the message names the alias and the error), pass the alias with --database, or upgrade the project's karni. Then run the command again.
+
+<a id="c141"></a>
+
+### C141: The table or view is not in the database
+
+*karni command* · from `karni make model --external`
+
+**Why Karni objects.** The database answered, but has no table or view of that name, or the name has a schema (schema.table) on a database other than PostgreSQL, which has none.
+
+**Fix.** Check the name and the alias (--database). A PostgreSQL table in another schema is written schema.table, e.g. --table reporting.sales.
+
+<a id="c142"></a>
+
+### C142: These options do not go with --external
+
+*karni command* · from `karni make model --external`
+
+**Why Karni objects.** An external model's fields come from the table, so it takes no field list and needs --table. --table, --database and --writable describe an external model, so they need --external. Imports never write a read-only table, so --key does not apply.
+
+**Fix.** Run karni make model <Name> --external --table <[schema.]table> [--database <alias>] [--writable], with no fields.
+
 <a id="c124"></a>
 
 ### C124: A content map option has a value extract does not know
@@ -2486,6 +2866,526 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Add the table (or the dependency) by hand, then re-run.
 
+<a id="c210"></a>
+
+### C210: No spec file
+
+*karni command* · from `karni spec validate`
+
+**Why Karni objects.** karni spec validate reads a karni.yaml: by default the project root's, else the current directory's.
+
+**Fix.** Write one (docs/app-spec.md), export the project's with karni spec export -o karni.yaml, or pass --spec <file>.
+
+<a id="c211"></a>
+
+### C211: The spec is not valid YAML
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** The spec is YAML. A syntax error stops everything else, and the parser names the line.
+
+**Fix.** Fix the line the message names: indent with spaces, and quote a value that holds ': ' or starts with *, &, !, %, @ or a backtick.
+
+<a id="c212"></a>
+
+### C212: Unknown key in the spec
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Every key of the format means one thing, so a misspelt key would be ignored without a word. A key that starts with x- is kept and ignored, for notes of your own.
+
+**Fix.** Fix the spelling (the message lists the keys that mapping takes), remove the key, or prefix it with x-.
+
+<a id="c213"></a>
+
+### C213: A spec value has the wrong type, or a required key is missing
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Values are never coerced: a list where a string is expected, or a number written for a text, is an error rather than a guess. version and app.name are required.
+
+**Fix.** Write the value in the form docs/app-spec.md shows for the key. Quote a value YAML would read as a date, a number or true/false.
+
+<a id="c214"></a>
+
+### C214: Unknown spec version
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** version moves only for a breaking change of the format, and this karni reads version 1.
+
+**Fix.** Write version: 1, or upgrade karni-cli when the spec comes from a newer release.
+
+<a id="c215"></a>
+
+### C215: A name in the spec is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Names become code: app labels are Python packages, entities classes, pages file names and roles the slugs HasRole checks.
+
+**Fix.** Use snake_case app labels (not one Django, Karni or a module takes), PascalCase entities, kebab-case page names, and role slugs of letters, digits, _, . and -.
+
+<a id="c216"></a>
+
+### C216: A field's type is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Fields use karni make model's own syntax and are checked by its own parser and renderer, so the spec and the generator accept exactly the same fields. The message is the generator's, with its code.
+
+**Fix.** Write name: type[:arg...], a trailing ? for optional (karni make model --help lists the types and their arguments).
+
+<a id="c217"></a>
+
+### C217: An access rule is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** An entity's access maps onto Karni's Access(read=..., write=..., create=...): each slot takes public, authenticated, granted, role:<slug> or owned:<field>, or a list of them, any of which admits.
+
+**Fix.** Use those forms, or write access: code and declare the viewset's Access(...) by hand (Where, Can, &, a computed get_access).
+
+<a id="c218"></a>
+
+### C218: A role grant is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Grants map onto KARNI_ROLES: a pattern app.entity[:action] (with * for a part, or * alone) to a scope all, own, own:<owner field>, related:<scope path key> or custom:<name>. A spec grants the standard actions view, add, change and delete.
+
+**Fix.** Fix the pattern or the scope. An entity's own actions, and a grant on a model outside the spec, go in KARNI_ROLES by hand.
+
+<a id="c219"></a>
+
+### C219: A feature's value is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Each feature is one setting: social_login names the built-in providers of KARNI_SOCIAL_TOKEN_PROVIDERS, and terms is KARNI_TERMS (a version of at most 100 characters, URL path prefixes that start with /).
+
+**Fix.** Name google, microsoft or apple (a provider class of your own goes in settings), and fix the terms value the message names.
+
+<a id="c220"></a>
+
+### C220: A page entry is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form), or a page name with its kind (dashboard for the scaffold's home, blank, login).
+
+**Fix.** Write e.g. - Session: [list, detail, form], - about: blank or - home: dashboard, each entity or page once.
+
+<a id="c221"></a>
+
+### C221: A module option is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** A module's options are its settings: the option provider of payments is KARNI_PAYMENTS_PROVIDER. An option the module does not have, or a value of the wrong type, would be lost.
+
+**Fix.** Use an option the message lists, with the type its setting takes (the module's README has the table). Credentials stay in .env.
+
+<a id="c222"></a>
+
+### C222: A key is written twice
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** YAML keeps the last of two equal keys in a mapping and drops the first without a word, so half of what was written would be lost.
+
+**Fix.** Keep one of the two and merge what the other said into it.
+
+<a id="c223"></a>
+
+### C223: A seed count is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** seed sets each entity's demo rows per karni seed run (a Seeder's Meta.count), where 0 skips the entity.
+
+**Fix.** Write a whole number, 0 or more.
+
+<a id="c224"></a>
+
+### C224: A key reserved for a later release
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Some keys are reserved for features Karni adds later (trees, taxonomies, aggregation, cross-entity search, markdown fields), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now.
+
+**Fix.** Remove the key, and write that part by hand in the project until the feature ships.
+
+<a id="c225"></a>
+
+### C225: The app kind and the modules disagree
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** karni add site turns an app into a site+app, so a spec of kind app with the site module describes a project that cannot exist.
+
+**Fix.** Write kind: site+app (karni new --kind site+app adds the site module by itself), or drop the module.
+
+<a id="c230"></a>
+
+### C230: A relation names an entity that does not exist
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** A fk, m2m or o2o field must point at something karni make model can import: an entity of the spec, the user model, or a model of a module the spec adds.
+
+**Fix.** Fix the name, add the entity, add the module, or point at User. A model of the project outside the spec cannot be named.
+
+<a id="c231"></a>
+
+### C231: A relation name is ambiguous
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Two apps of the spec define an entity of that name, so the bare name could mean either.
+
+**Fix.** Write app.Name, e.g. fk:shop.Product.
+
+<a id="c232"></a>
+
+### C232: Access names a role the spec does not declare
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** role:<slug> becomes HasRole("<slug>"), which nobody would hold if no role of that slug exists. Without roles, the spec has Karni's shipped roles (staff, user, customer), plus the roles of the modules it adds.
+
+**Fix.** Declare the role under roles, or fix the slug.
+
+<a id="c233"></a>
+
+### C233: A grant names an entity the spec does not have
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** A grant pattern that matches no model grants nothing, and Karni refuses it at startup (E206).
+
+**Fix.** Name an entity as app.entity (lowercase or as written), or add the module whose model it names.
+
+<a id="c234"></a>
+
+### C234: A grant's scope does not fit the entity
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** own compares the entity's owner field with the user, and related:<key> its scope path <key> with the user's attribute <key>. own:<field> must name that owner field, and related:<key> a scope path the entity declares.
+
+**Fix.** Set owner: on the entity, add scope_paths: {<key>: <lookup>}, or change the scope.
+
+<a id="c235"></a>
+
+### C235: A page names an entity that does not exist
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** An entity's pages compose its API resource, which only an entity of the spec has.
+
+**Fix.** Name an entity of the spec (app.Name when two apps define it), or add it.
+
+<a id="c236"></a>
+
+### C236: A module Karni does not know
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** modules lists what karni add installs: the modules of the catalog (karni modules list), which are Karni's own (approvals, impersonation, payments and site) and any module installed next to karni-cli that ships a manifest.
+
+**Fix.** Fix the name. A module of your own joins the spec once it ships a karni.module.toml (docs/modules.md). Without one, add it with karni add and leave it out of the spec.
+
+<a id="c237"></a>
+
+### C237: A field group names a field the entity does not have
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** groups become the admin form's fieldsets, and a name that is not a field (or a field in two groups) makes that form fail to render.
+
+**Fix.** Name the entity's fields, each in one group.
+
+<a id="c238"></a>
+
+### C238: An entity option names a field the entity does not have
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** key, search, order, audit and scope_paths each name fields of the entity (key, search and order may also name id, created_at and updated_at).
+
+**Fix.** Name a field the entity declares, or add it under fields.
+
+<a id="c239"></a>
+
+### C239: owner does not lead to the user
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** The own scope compares the owner field with the signed-in user, so it must be a relation to the user or a path through relations ending at one.
+
+**Fix.** Name a relation to the user (member: fk:User, then owner: member) or a path such as workspace__members.
+
+<a id="c240"></a>
+
+### C240: owned:<path> in access does not lead to the user
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** owned:<path> becomes Owned("<path>"), which keeps the rows whose path points at the signed-in user.
+
+**Fix.** Name a relation to the user (owned:member) or a path through relations (owned:session__instructor).
+
+<a id="c241"></a>
+
+### C241: seed names an entity that does not exist
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** seed counts demo rows per entity of the spec.
+
+**Fix.** Name an entity of the spec (app.Name when two apps define it).
+
+<a id="c242"></a>
+
+### C242: Two pages share a route
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Each page karni make page writes has a route (an entity's list at /<route>, its detail at /<route>/$id, its form at /<route>/new and /<route>/$id/edit, a named page at /<name>), and two pages cannot answer the same path.
+
+**Fix.** Rename the page or drop one of them.
+
+<a id="c245"></a>
+
+### C245: karni spec export cannot read the project
+
+*karni command* · from `karni spec export`
+
+**Why Karni objects.** The export reads the project through manage.py karni_facts, run by the project's interpreter, which needs this karni (the command is new in it).
+
+**Fix.** Upgrade the project's karni, then fix what the message shows (the command's last output lines): a settings error, a model that fails to import, or output printed at startup.
+
+<a id="c246"></a>
+
+### C246: The output file exists
+
+*karni command* · from `karni spec export`
+
+**Why Karni objects.** karni spec export does not overwrite a spec: it may hold edits of your own.
+
+**Fix.** Pass --force to replace it, or write to another file with -o.
+
+<a id="c250"></a>
+
+### C250: karni plan cannot read the project
+
+*karni command* · from `karni plan`
+
+**Why Karni objects.** The plan compares the spec with the project as karni spec export reads it: through manage.py karni_facts, run by the project's interpreter, which needs this karni.
+
+**Fix.** Upgrade the project's karni, then fix what the message shows (the command's last output lines): a settings error, a model that fails to import, or output printed at startup.
+
+<a id="c251"></a>
+
+### C251: An external entity's keys do not fit
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** external: true is a table another system owns, so it needs table, its key is the table's own column (no pk), and karni seed skips it. table and writable mean nothing without external.
+
+**Fix.** Add table: <[schema.]table> to an external entity, remove pk and its seed count, or add external: true where table or writable is written.
+
+<a id="c252"></a>
+
+### C252: database names an alias the project does not have
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** database sends an entity's reads, writes and migrations to an alias of DATABASES (class Karni: database). karni plan checks the name against the project's DATABASES, and karni spec validate checks that it is an alias name.
+
+**Fix.** Add the alias to config/settings.py (DATABASES["warehouse"] = env.db_url("WAREHOUSE_DATABASE_URL")), or fix the name.
+
+<a id="c253"></a>
+
+### C253: A relation joins two databases
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** Django joins related tables in one database, so a fk, m2m or o2o between entities on different databases cannot work (karni.E276 at startup). The user and the modules' models are on the default database.
+
+**Fix.** Keep both entities on one database, or store the other row's key in a plain field and look it up in code.
+
+<a id="c254"></a>
+
+### C254: A rename (was) is not valid
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** was: <old name> on a field or an entity tells karni plan and karni build to rename it and keep its data. The old name must be a valid name, differ from the new one, no longer be declared, and be claimed by one field or entity only.
+
+**Fix.** Write the old name once, on the field or entity that takes over the data, and remove the old declaration.
+
+<a id="c270"></a>
+
+### C270: A risky change without --allow-destructive
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** A risky change can lose data or open it to more people: a field or an entity removed, a type narrowed, a choice dropped, a relation pointed elsewhere, access widened. karni plan marks each with ! and the rows it affects, and karni build applies none of them without being told.
+
+**Fix.** Check each change karni plan lists (a rename keeps its rows: write was: on the field or the entity), then run karni build --allow-destructive, or change karni.yaml.
+
+<a id="c271"></a>
+
+### C271: A module removal
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** karni.yaml no longer lists a module the project has. Removing a module drops its tables, and karni remove (with the module catalog) is not built yet, so karni build refuses it.
+
+**Fix.** Put the module back in karni.yaml, or remove it by hand: migrate its app to zero, then take it out of the karni:apps block and its dependency out of pyproject.toml.
+
+<a id="c272"></a>
+
+### C272: A key type switch
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** Switching an entity's pk between uuid and bigint rewrites every row and every relation to it: a data migration karni build does not write.
+
+**Fix.** Put pk back in karni.yaml. docs/models.md (choosing the key type) says how to write that migration by hand.
+
+<a id="c273"></a>
+
+### C273: A Karni-owned file was edited by hand
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** karni build rewrites its own files (<app>/karni/, <app>/tests/karni/, frontend/src/pages/karni/, the karni:spec blocks) on every build, and records a sha256 of each in .karni/build.json. A file whose content no longer matches was edited by hand, and a build must not silently lose the edit. The message names the file and the changed lines, and nothing is written.
+
+**Fix.** Move the change into the project's own file (<app>/models.py, viewsets.py or seeds.py: the subclass of each class, a page or test of your own) or into karni.yaml, then run karni build. Or karni build --force replaces the file and keeps your copy as <file>.orig. Or karni build --adopt <file> makes it the project's: karni build stops managing it and says so on every run.
+
+<a id="c274"></a>
+
+### C274: --adopt names a file karni build does not own
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** --adopt hands a Karni-owned file or block to the project. The files karni build owns are the ones .karni/build.json lists. Any other file is the project's already.
+
+**Fix.** Name a file the record lists (classes/karni/api.py), or config/settings.py and frontend/src/routes.tsx for their karni:spec blocks.
+
+<a id="c275"></a>
+
+### C275: The project's code is in the way
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** karni.yaml asks for something the project already has as code of its own: a model of that name outside the spec, a class of that name in models.py, viewsets.py or seeds.py that does not extend Karni's, or a route a page of the project's holds. karni build never replaces the project's code.
+
+**Fix.** Rename the entity or page in karni.yaml, or rename (or remove) the project's own class or route. A page of the project's can stay in the spec as - <name>: code.
+
+<a id="c276"></a>
+
+### C276: A module karni build added is not installed
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** karni build adds a new module the way karni add does: the dependency in pyproject.toml and the app in INSTALLED_APPS. The project's interpreter must have it installed before Django can start with it.
+
+**Fix.** Install the project's dependencies (uv pip install -r pyproject.toml, or docker compose build), then run karni build again: it continues from where it stopped.
+
+<a id="c277"></a>
+
+### C277: makemigrations failed
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** karni build writes the migrations with manage.py karni_makemigrations: the renames first, then Django's makemigrations. A required field added to a table that holds rows needs values Django cannot invent.
+
+**Fix.** Read the output it shows. For a required field on a table with rows: add it as optional first (str?), fill it, then make it required. Then run karni build again.
+
+<a id="c278"></a>
+
+### C278: migrate failed
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** karni build applies the migrations on the default database and on every alias its entities name.
+
+**Fix.** Read the output it shows (a database that does not answer, a constraint the rows break), fix it, then run karni build again.
+
+<a id="c279"></a>
+
+### C279: Seeding failed
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** karni build seeds only the tables it created in this build, and only while they hold no row, so demo rows never mix with real data.
+
+**Fix.** Read the output it shows, fix it (karni seed --help), then run karni build again: it continues from seed.
+
+<a id="c280"></a>
+
+### C280: karni types failed
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** karni build writes the TypeScript types and hooks from the API schema, as karni types does. It needs the backend to print its schema and Node for openapi-typescript.
+
+**Fix.** Read the output it shows. Install Node (and npm install in frontend/), then run karni build again.
+
+<a id="c281"></a>
+
+### C281: The project's tests fail
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** karni build runs the project's own tests (karni test) after it built the code, including the API tests it wrote in <app>/tests/karni/.
+
+**Fix.** Run karni test to see every failure, fix the code (the project's files or karni.yaml), then run karni build again: it continues from test.
+
+<a id="c282"></a>
+
+### C282: karni check fails
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** karni build ends with karni check: the architecture rules, the system checks and the frontend's lint. The code it writes passes them, so a failure comes from the project's code or its environment.
+
+**Fix.** Run karni check to see every finding, fix them, then run karni build again: it continues from check.
+
+<a id="c283"></a>
+
+### C283: A project class karni build must change has code of its own
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** karni.yaml removes an entity, and the project's subclass of it (in models.py, viewsets.py or seeds.py) holds code of its own. karni build removes such a class only while it is still the one it wrote.
+
+**Fix.** Move that code elsewhere or delete the class, then run karni build again.
+
+<a id="c284"></a>
+
+### C284: A marker karni build writes at is missing
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** The settings block goes right above karni_settings(globals()) in config/settings.py, where every setting takes effect. The pages' routes go before the // karni:page-imports and // karni:routes markers of frontend/src/routes.tsx.
+
+**Fix.** Restore the call or the markers (see the scaffold's files), or pass --adopt for the block and keep those settings or routes yourself.
+
+<a id="c285"></a>
+
+### C285: The build record cannot be read
+
+*karni command* · from `karni build (karni_cli.builder)`
+
+**Why Karni objects.** .karni/build.json holds the fingerprints of the files karni build owns. It is missing a part, is not JSON, or comes from a newer karni-cli.
+
+**Fix.** Restore it from version control, or upgrade karni-cli. Deleting it makes karni build treat every Karni-owned file as new: it stops on each one that exists (C273), and --force or --adopt settles them.
+
 <a id="c301"></a>
 
 ### C301: No frontend found
@@ -2556,6 +3456,76 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Upgrade karni in the project (pip install -U karni, or rebuild the image), then ask again.
 
+<a id="c313"></a>
+
+### C313: No module or feature of that name in the catalog
+
+*karni command* · from `karni modules show, karni remove (karni_cli.catalog)`
+
+**Why Karni objects.** The catalog holds Karni's modules and built-in features, the copies karni-cli bundles and the manifests (karni.module.toml) of the modules the project has installed.
+
+**Fix.** Run `karni modules list` for the names. A module of your own joins the catalog with a karni.module.toml and a karni.modules entry point (docs/modules.md).
+
+<a id="c314"></a>
+
+### C314: A module manifest is not valid
+
+*karni command* · from `karni modules, karni add, karni remove (karni.catalog)`
+
+**Why Karni objects.** Each module describes itself in karni.module.toml: its purpose, what it provides, the questions to ask and the wiring karni add performs. A manifest that does not follow the format, or that names a module or feature the catalog does not have, cannot be used.
+
+**Fix.** Fix the key the message names (docs/modules.md lists every key), then run `karni modules show <name>`. A module's own tests check it with karni.testing.assert_module_manifest.
+
+<a id="c315"></a>
+
+### C315: The module conflicts with one the project has
+
+*karni command* · from `karni add`
+
+**Why Karni objects.** A module's manifest lists the modules and features it cannot work next to (conflicts). karni add refuses before it writes anything.
+
+**Fix.** Remove the other one first (karni remove <name>, or turn the feature off), or choose another module.
+
+<a id="c316"></a>
+
+### C316: Another module requires the one being removed
+
+*karni command* · from `karni remove`
+
+**Why Karni objects.** A module's manifest lists what it needs (requires). Removing a module another added module needs would leave that one broken.
+
+**Fix.** Remove the module that requires it first (the message names it), then this one.
+
+<a id="c317"></a>
+
+### C317: The module is not in this project
+
+*karni command* · from `karni remove`
+
+**Why Karni objects.** karni remove takes out what karni add wrote: the dependency in pyproject.toml, the app in the # karni:apps block, its middleware, context processors and URL include, and its recorded agent guidance. None of that is in this project.
+
+**Fix.** Check the name with `karni modules list` (an added module says added).
+
+<a id="c318"></a>
+
+### C318: A built-in feature is switched by a setting, not added or removed
+
+*karni command* · from `karni add, karni remove`
+
+**Why Karni objects.** Features (two_factor, terms, api_cache and the others) ship with karni. There is no package to add and nothing to take out: one setting turns each on or off.
+
+**Fix.** Turn it on or off with its key under features: in karni.yaml, or its setting (karni modules show <name> names both).
+
+<a id="c319"></a>
+
+### C319: The module's tables exist in the database
+
+*karni command* · from `karni remove`
+
+**Why Karni objects.** karni remove never drops data. Once the module is out of INSTALLED_APPS, Django can no longer drop its tables, so the choice is made now: drop them while the module is still added, or keep them.
+
+**Fix.** To drop the tables and their rows, run the printed `karni migrate <app> zero`, then karni remove again. To keep them in the database, run karni remove --keep-tables.
+
 <a id="c320"></a>
 
 ### C320: karni explain needs a code or --failure, not both
@@ -2595,6 +3565,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** The command ran in the project's interpreter and failed without a coded Karni error, usually because Django could not start (settings, imports, the database).
 
 **Fix.** Run the command it names with `karni manage ...` to see the full output, fix what it reports, then retry.
+
+<a id="c324"></a>
+
+### C324: A module or feature needs another, or cannot be next to one
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** The catalog's manifests say what each module and feature requires and conflicts with. The spec lists one without what it requires, or two that conflict.
+
+**Fix.** Add what the message says is required (under modules: or features:), or leave one of the two that conflict out. karni modules show <name> lists both.
 
 <a id="c340"></a>
 
@@ -2695,6 +3675,76 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A content map key is written at one level of the map (the map, a model, a source, a key, a value), and karni explain reads them from karni_cli/design/mapref.py, the source of docs/design-content.md's tables.
 
 **Fix.** Run `karni explain map` for every key by level, then `karni explain map.<key>` or `map.<level>.<key>` (map.source.key, map.value.by).
+
+<a id="c400"></a>
+
+### C400: No open question has this id
+
+*karni command* · from `karni spec answer (karni_cli.spec.questions)`
+
+**Why Karni objects.** karni spec answer writes the answer to a question karni plan --questions asks. The id is not one of them: it is mistyped, or karni.yaml settles that question already (an answered question is gone, and so is one the file was edited to settle).
+
+**Fix.** Run karni plan --questions --max 0 for the open ids, then karni spec answer <id> <value> with one of them.
+
+<a id="c401"></a>
+
+### C401: The value is not an answer the question takes
+
+*karni command* · from `karni spec answer (karni_cli.spec.questions)`
+
+**Why Karni objects.** A question with options takes one of them (several, comma-separated, when it says so). A question without options takes a value of the types it lists (string, integer, boolean, null, array).
+
+**Fix.** Pass one of the options karni plan --questions prints under the question, or a value of its type.
+
+<a id="c402"></a>
+
+### C402: The answer cannot be written into karni.yaml
+
+*karni command* · from `karni spec answer (karni_cli.spec.edit)`
+
+**Why Karni objects.** karni spec answer changes only the key the question names and keeps every other line of the file. It writes nothing when it cannot: an anchor or alias shares the key, the key sits in a layout it cannot place a key in, or the result would not pass karni spec validate.
+
+**Fix.** Set the key the message names in karni.yaml by hand, then run karni spec validate and karni plan --questions.
+
+<a id="c420"></a>
+
+### C420: No recipe of that name
+
+*karni command* · from `karni recipes show, the MCP tool recipes (karni_cli.recipes)`
+
+**Why Karni objects.** Recipes are the folders built into karni-cli and the karni.recipes entry points of its environment. blank is the blank start, the one name that is always there.
+
+**Fix.** Run karni recipes list for the names, or karni recipes list --match "<the request>" for the closest. A recipe of your own joins with a recipe.toml, a karni.yaml and an entry point (docs/app-spec.md#recipes).
+
+<a id="c421"></a>
+
+### C421: A recipe cannot be used
+
+*karni command* · from `karni recipes list, karni recipes show, the MCP tool recipes (karni_cli.recipes)`
+
+**Why Karni objects.** A recipe is a folder with a recipe.toml that follows its schema, a name that is the folder's (or the entry point's), and a karni.yaml. One that does not, or whose name another recipe has already, is left out and reported.
+
+**Fix.** Fix the key the message names (docs/app-spec.md#recipes lists every key), or rename the recipe, then run karni recipes show <name>.
+
+<a id="c440"></a>
+
+### C440: karni new --recipe with an option it cannot go with
+
+*karni command* · from `karni new --recipe (karni_cli.commands.new)`
+
+**Why Karni objects.** A recipe is an app: its karni.yaml has entities, roles and pages for signed-in users. --design builds a public site from a designer's pages instead, and --kind site or --no-staff-app leave out the React app the recipe's pages live in.
+
+**Fix.** Leave the option out (--kind app or site+app go with a recipe), or make the project without --recipe and start karni.yaml from karni recipes show <name>.
+
+<a id="c441"></a>
+
+### C441: A recipe's file would replace code of the project's
+
+*karni command* · from `karni build after karni new --recipe (karni_cli.recipes.apply)`
+
+**Why Karni objects.** The first karni build after karni new --recipe writes the recipe's own files (its domain code, seeds and tests) over the stubs it writes itself. It never writes over anything else: a file that holds code of the project's stops the build, and nothing is written.
+
+**Fix.** Move your code out of the way (rename the file), run karni build again, then put your code back into the recipe's file. To build without the recipe's files, delete "recipe" from .karni/build.json.
 
 ## Agent rules (`K`)
 
@@ -2874,11 +3924,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `model-base`
 
-**Rule.** Models inherit `karni.models.BaseModel` (= `UUIDModel` + `TimestampedModel` + `SoftDeleteModel` + `AuditedModel`), or compose those mixins directly when a model should not have all four (e.g. an append-only log: `UUIDModel, TimestampedModel`). Declare `APIMeta` / `AdminMeta` only for fields that must be hidden, read-only or write-only.
+**Rule.** Models inherit `karni.models.BaseModel` (= `UUIDModel` + `TimestampedModel` + `SoftDeleteModel` + `AuditedModel`), or compose those mixins directly when a model should not have all four (e.g. an append-only log: `UUIDModel, TimestampedModel`). Declare `APIMeta` / `AdminMeta` only for fields that must be hidden, read-only or write-only. `BigIntBaseModel` (experimental) is the same with an integer `id`, chosen per model in its class line; `karni context` shows each model's key type.
 
-**Why Karni objects.** The mixins supply uuid ids, timestamps, soft delete, audit stamping and the managers the derived API/admin rely on.
+**Why Karni objects.** The mixins supply the primary key (a UUID, or an integer with `BigIntBaseModel`), timestamps, soft delete, audit stamping and the managers the derived API/admin rely on. The exception is a table or view another system owns: a plain `models.Model` with `class Meta: managed = False` and `class Karni: external = True` (experimental, `karni make model <Name> --external --table <table>`), which Karni only reads unless `writable = True`.
 
-**Fix.** Inherit karni.models.BaseModel (or compose its mixins).
+**Fix.** Inherit karni.models.BaseModel or BigIntBaseModel (or compose its mixins).
 
 <a id="k102"></a>
 
@@ -3194,15 +4244,15 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="k307"></a>
 
-### K307: Cross-project code: a Karni module.
+### K307: Cross-project code: a Karni module (karni modules list).
 
 *agent rule, should* · enforced by `review`
 
-**Rule.** Anything reusable across projects belongs in a Karni module (a `karni_<name>` package), not in this project. Say so instead of building it.
+**Rule.** Anything reusable across projects belongs in a Karni module (a `karni_<name>` package), not in this project. Say so instead of building it. Read the catalog first: the CATALOG lines of `karni context`, `karni modules list` and `karni modules show <name>` list every module and built-in feature (payments, approvals, login as a user, a public site, two-factor sign-in, sign-in with a code or with Google, Microsoft or Apple, terms acceptance, response caching), whether the project has it, its options and the questions to ask. Add a module with `karni add <name>` (or `modules:` in karni.yaml), turn a feature on with its setting (or `features:`), and take a module out with `karni remove <name>`, which never drops its tables.
 
-**Why Karni objects.** Code that would be written more than once belongs in Karni, never per project.
+**Why Karni objects.** Code that would be written more than once belongs in Karni, never per project. Each catalog entry is tested, and rebuilding one costs more tokens than adding it.
 
-**Fix.** 
+**Fix.** Run `karni modules show <name>`, answer its questions, then `karni add <name>`.
 
 <a id="k308"></a>
 
@@ -3227,6 +4277,30 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A marketing site must be crawlable and faithful to the client's design, which the app-screen rules forbid for good reason. One Django app with plain views keeps the API, the admin and the access layer as the only write path.
 
 **Fix.** Run `karni make site <app>`, then `karni import design <dir> --app <app> --editable` for a designer's pages or `karni make view <name> --app <app>` per page, and `karni make form` for each form. Karni's docs page public-site covers editable content, SEO and public forms.
+
+<a id="k310"></a>
+
+### K310: Before karni build: ask only karni plan --questions.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** When the app is described in karni.yaml, run `karni plan --questions` before `karni build` and ask the user only the questions it prints, in its order, with their options and defaults. Write each answer with `karni spec answer <id> <value>` (or in karni.yaml), and run it again until none is open. Never ask about anything karni.yaml already settles, nor about the stack, names, labels, colours or page titles: those are yours to choose.
+
+**Why Karni objects.** Karni chooses the questions with fixed rules over the spec and the module manifests (owners, access, the sign-up role, the kind, each module's and feature's asks), so every agent asks the same few, and the user is never asked what the spec or Karni's defaults already decide.
+
+**Fix.** Run `karni plan --questions`, ask the user those questions only, then `karni spec answer <id> <value>` for each answer.
+
+<a id="k311"></a>
+
+### K311: New app: /new-app. Never hand-write what karni.yaml expresses.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** To build an app from a request, follow the new-app procedure (`/new-app <the app in one line>`, or `karni rules --procedure new-app`): a recipe or the blank start, karni.yaml, `karni plan --questions`, `karni plan`, `karni build`. Never hand-write what karni.yaml can express (apps, entities, fields, owners, access, roles, modules, features, pages, seed counts): change karni.yaml and run `karni build` again. Write only the domain logic that is left, in the project's own files.
+
+**Why Karni objects.** karni build turns the spec into models, viewsets, migrations, seeds, tests, types and settings without a language model, so the agent writes a short YAML file instead of thousands of lines, and a later change to the spec updates the app without touching the code written by hand.
+
+**Fix.** Move the hand-written entity, field, access, role or setting into karni.yaml, then run `karni build`.
 
 ## ESLint rules (`@karni/ui/eslint-plugin`)
 
