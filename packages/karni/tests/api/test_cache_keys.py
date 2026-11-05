@@ -209,6 +209,24 @@ def test_grants_share_only_when_every_scope_is_all(event: Event, settings: Any) 
     assert _get(GrantedEvents, user=bob)["X-Cache"] == "MISS"
 
 
+def test_a_user_grant_written_after_a_cached_response_shows_in_the_next(
+    event: Event, settings: Any
+) -> None:
+    from karni.accounts import grants
+
+    settings.KARNI_USER_GRANTS = True
+    settings.KARNI_ROLES = {"author": {"grants": {"testapp.event:view": "own"}}}
+    sync_roles()
+    ann = _user("ann@example.com", "author")
+    first = _get(GrantedEvents, user=ann)
+    assert first["X-Cache"] == "MISS" and first.data["results"] == []
+    assert _get(GrantedEvents, user=ann)["X-Cache"] == "HIT"
+    grants.grant(None, ann, "testapp.event:view", "all", reason="a test")
+    grants.forget(ann)
+    after = _get(GrantedEvents, user=ann)
+    assert after["X-Cache"] == "MISS" and len(after.data["results"]) == 1
+
+
 def test_the_scope_is_overridable_per_viewset(event: Event) -> None:
     class PerUser(ReaderEvents):
         def get_cache_scope(self) -> str:
