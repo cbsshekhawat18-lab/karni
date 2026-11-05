@@ -117,6 +117,7 @@ def test_the_feature_manifests_name_real_settings_and_extras() -> None:
         "social_login",
         "terms",
         "two_factor",
+        "user_grants",
     ]
     extras = tomllib.loads(PYPROJECT.read_text())["project"]["optional-dependencies"]
     for feature in features:

@@ -199,6 +199,19 @@
           ],
           "description": "The DATABASES alias its reads, writes and migrations go to (Karni.database). Default: default."
         },
+        "tree": {
+          "default": false,
+          "description": "Experimental. A hierarchy: true inherits TreeModel (a parent field and the tree endpoints), ordered inherits OrderedTreeModel (also a position among siblings).",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "const": "ordered",
+              "type": "string"
+            }
+          ]
+        },
         "key": {
           "anyOf": [
             {
@@ -337,6 +350,11 @@
             }
           ],
           "description": "KARNI_TERMS: the terms acceptance gate."
+        },
+        "user_grants": {
+          "default": false,
+          "description": "KARNI_USER_GRANTS: per-user grants next to the role grants.",
+          "type": "boolean"
         }
       },
       "type": "object"
@@ -406,7 +424,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Permission pattern -> scope. Patterns: \"*\", app.entity, app.entity:action, with * for a part. Scopes: all, own, own:<owner field>, related:<scope path key>, custom:<registered name>.",
+          "description": "Permission pattern -> scope. Patterns: \"*\", app.entity, app.entity:action, with * for a part. Scopes: all, own, own:<owner field>, related:<scope path key>, custom:<registered name>, tree:<path to a tree entity> (experimental).",
           "type": "object"
         }
       },

@@ -1,5 +1,5 @@
 ---
-description: "karni.models: BaseModel and its four mixins (UUID primary key, timestamps, soft delete, audit fields), BigIntBaseModel for integer keys, the managers, related lookups, external tables, SQL views and a second database, and what each mixin does alone."
+description: "karni.models: BaseModel and its four mixins (UUID primary key, timestamps, soft delete, audit fields), BigIntBaseModel for integer keys, the managers, related lookups, external tables, SQL views and a second database, tree models, and what each mixin does alone."
 ---
 
 # Models
@@ -527,3 +527,171 @@ factories, `assert_crud` and your own tests can write rows. `pytest
 --karni-external-tables=off` (or `karni_external_tables = off` in the pytest
 ini file) turns it off, and `karni.testing.create_external_tables(using,
 models)` does it by hand. See [testing](testing.md#external-tables).
+
+## Tree models
+
+!!! warning "Experimental"
+    Everything in this section is [experimental](stability.md#experimental-names):
+    `karni.models.TreeModel` and `OrderedTreeModel`, `karni.managers.TreeQuerySet`
+    and `TreeManager`, `karni.tree`, the tree endpoints and filters of
+    `BaseViewSet` (`karni.api.tree`, `tree_max_nodes`, `tree_default_depth`,
+    `tree_max_depth`, `tree_top_level()`, `get_tree_node_serializer_class()`),
+    the `x-karni-tree` extension, the tree changelist (`karni.admin.tree`,
+    `tree_changelist_max_rows`), the `tree` key of `karni.yaml`, and
+    `TreeView`, `TreeSelect`, `TreeBreadcrumb` and the tree hooks in
+    `@karni/ui`. They may change in a minor release.
+
+A hierarchy (a region tree, product categories, organisation units, a menu)
+is one declaration. List `TreeModel` before the base:
+
+```python
+from django.db import models
+from karni.models import BaseModel, OrderedTreeModel, TreeModel
+
+class Region(TreeModel, BaseModel):
+    name = models.CharField(max_length=100)
+
+class Category(OrderedTreeModel, BaseModel):  # siblings have a position
+    name = models.CharField(max_length=100)
+```
+
+`TreeModel` adds `parent`, a nullable foreign key to the model itself
+(`on_delete=PROTECT`, `related_name="children"`, indexed). A node without a
+parent is a root. `OrderedTreeModel` also adds `position`, the order among
+siblings. Both work with `BaseModel` and `BigIntBaseModel`. With the base
+listed first, the base's `objects` wins and the walks below are missing:
+`karni.E344` says so. In `karni.yaml` the entity key `tree: true` or
+`tree: ordered` builds the same class line (see
+[the app spec](app-spec.md#trees)).
+
+### The walks
+
+`Region.objects` is a `TreeManager`. Each method that walks the tree runs
+one recursive query:
+
+| Method | Returns |
+|---|---|
+| `roots()` | the nodes without a parent, in sibling order |
+| `children(node)` | the direct children, in sibling order |
+| `descendants(nodes, include_self=False, max_depth=None)` | every node below, as a lazy queryset |
+| `ancestors(node, include_self=False)` | the nodes above, root first |
+| `subtree_ids(ids)` | the keys of every subtree under `ids`, the roots included, as a set |
+| `walk(nodes, up=False, include_self=False, max_depth=None, limit=None)` | `(key, parent key, depth)` for each node of one walk |
+
+`nodes` is a row, a key, a list of either or a queryset of the model.
+`descendants()` stays lazy and chains like any queryset:
+`Region.objects.descendants(europe).filter(name__icontains="lake")`.
+`subtree_ids()` takes any number of starting nodes in one query, for a check
+such as "is this row inside a branch the user may see". Siblings sort by
+`Meta.ordering`, else by `created_at` and the key. An ordered tree sorts by
+`position` first. Override the classmethod `tree_ordering()` to change it.
+
+Real data contains cycles: an import, a hand edit or a bug elsewhere can
+make a node its own ancestor. No walk ever loops:
+
+- on PostgreSQL the query uses the `CYCLE` clause (PostgreSQL 14 and later),
+  so a row that closes a cycle is marked and not walked again;
+- on SQLite the query carries the path of keys walked so far, and a step
+  never enters a key already on it.
+
+A walk follows only the rows of the queryset it starts from. On
+`Region.objects` those are the live rows. On a filtered queryset a row the
+filter leaves out ends the walk there, so filter after the walk when you
+want the whole branch narrowed. `Region.objects.without("soft_delete",
+reason=...)` walks deleted rows too.
+
+### Writes
+
+`save()` refuses a parent that is the node itself or one of its descendants
+(`E340`). It walks up from the new parent in one query, and only when the
+parent changed. `clean()` reports the same as a form error on `parent`.
+
+`node.move_to(parent, position=None)` reparents the node (`parent` is a row,
+a key or `None` for a root) in one transaction. On an `OrderedTreeModel`
+`position` places it among its new siblings (`None`: last), and the old and
+the new siblings are renumbered from 0. A new ordered node without a
+position goes after its last sibling. `bulk_create` stores position 0.
+
+### Soft delete hides a branch
+
+A soft-deleted node hides its whole branch: every walk, `tree/` and
+`?descendants_of=` follow live nodes only, so the live nodes below a deleted
+one drop out of the tree with it. Because of that:
+
+- `delete()` refuses a node that still has live children (`E341`, HTTP 409
+  in the API, the body counts them). Deleting one would hide them without
+  anyone deciding it. Move the children first, or delete the branch.
+- `node.delete_branch()` soft-deletes the node and every live node below it
+  in one `UPDATE`, on purpose. Every row gets the same `deleted_at`. It sends
+  `pre_write` once, for the node, and like any bulk soft delete no deletion
+  signals and no per-row history.
+- `restore()` restores one row. Restore the parent too, or the row stays
+  hidden below its deleted parent.
+- `hard_delete()` of a node with any children (deleted ones too) fails with
+  Django's `ProtectedError`, because `parent` is `PROTECT`.
+
+### The API
+
+A `BaseViewSet` whose model is a tree model gets these routes with no
+declaration:
+
+| Route | Answer |
+|---|---|
+| `GET tree/?root=<key>&depth=<n>` | `{"results": [...], "truncated": bool}`: the roots (or the children of `root`) and `depth` levels below them, nested |
+| `GET <key>/children/` | the children, paginated, in sibling order |
+| `GET <key>/ancestors/` | the nodes above, root first (a plain list) |
+| `POST <key>/move/` | `{"parent": <key or null>, "position": <n>}`: the moved node |
+| `DELETE <key>/?branch=true` | deletes the node and its branch (`delete_branch()`) |
+| `GET access/?permission=<pattern>` | the requester's access forest: the nodes their `tree:<path>` grants name, with their ancestors and every other root ([the tree scope](accounts.md#the-access-forest)) |
+
+The list also takes `?parent=<key>`, `?parent=null` (the roots) and
+`?descendants_of=<key>`, which combine with every other filter. Each node in
+these answers is the row as the list shows it, plus `has_children` and
+`children` (`null` where the children were not loaded). `tree/` returns 2
+levels unless `?depth=` asks for up to `tree_max_depth` (10), and at most
+`tree_max_nodes` (1,000) nodes: a level that does not fit is left out whole
+and `truncated` is true. A client loads a branch when it is opened. Set
+these as attributes on the viewset.
+
+Access applies to every route. Each walk follows the live rows the requester
+may read, so a node out of their read scope hides its branch. `tree/`
+without `root` starts from the roots, and, for a requester who reads only
+part of the tree, also from each readable node whose parent is live but out
+of their scope (override `tree_top_level()` to change that). `?root=`,
+`children/` and `ancestors/` answer 404 for a node they cannot read.
+`move/` needs write access to the node and a readable new parent. `DELETE
+?branch=true` needs write access to every node of the branch (403
+otherwise). `Granted()` maps `move` to the `change` permission.
+
+On an ordered tree `position` is read-only in the API: `move/` sets it. Query
+counts do not grow with the tree: `tree/` runs one walk and one fetch, plus
+the serializer's prefetches, and the `query-scaling` rule passes.
+
+The OpenAPI document marks a tree model's schema, and every foreign key or
+many-to-many field that points at one, with `x-karni-tree: {"parent":
+"parent", "ordered": bool}`. `karni types` writes a `use<Name>Tree` hook for
+each tree resource.
+
+### The UI and the admin
+
+`@karni/ui` reads `x-karni-tree`. `ResourceForm` shows a `TreeSelect` for a
+foreign key or many-to-many field to a tree, and `ResourceDetail` shows a
+breadcrumb from `ancestors/` above a tree resource's record. `TreeView`
+shows a whole tree, loads a branch when it is opened, searches, and follows
+the WAI-ARIA tree keyboard pattern. See [the UI](ui.md).
+
+The admin lists a tree model's rows in tree order, a parent and then its
+branch, with the name indented by depth. Filters and search still apply. A
+list sorted by a column is flat, and so is one longer than
+`tree_changelist_max_rows` (10,000) rows.
+
+### Checks and codes
+
+| Code | When |
+|---|---|
+| [E340](errors.md#e340) | a parent is the node itself or below it |
+| [E341](errors.md#e341) | `delete()` of a node with live children |
+| [E342](errors.md#e342) | a tree endpoint got a parameter it cannot use |
+| [E343](errors.md#e343) | a tree method got an argument it cannot use |
+| [E344](errors.md#e344) | the default manager has no walks (the base listed first) |
+| [E345](errors.md#e345) | `parent` is not a nullable foreign key to the model |

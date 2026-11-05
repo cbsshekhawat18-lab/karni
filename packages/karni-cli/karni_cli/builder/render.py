@@ -10,7 +10,9 @@ so ``karni build`` and ``karni make`` write the same code.
 For one entity, ``Session`` in the app ``classes``::
 
     classes/karni/models.py     class Session(BaseModel): the fields, Meta, Karni, AdminMeta
-                                (abstract: Django migrates the project's subclass)
+                                (abstract: Django migrates the project's subclass;
+                                tree: true lists TreeModel first, tree: ordered
+                                OrderedTreeModel)
     classes/models.py           class Session(karni.Session): the project's methods
     classes/karni/api.py        class SessionViewSet(BaseViewSet): model, access, search
     classes/viewsets.py         class SessionViewSet(karni.SessionViewSet): the project's actions
@@ -64,6 +66,7 @@ from karni_cli.generators.pysource import (
 )
 from karni_cli.project import CliError
 from karni_cli.spec import catalog, schema
+from karni_cli.spec.validate import TREE_FIELDS
 
 __all__ = [
     "BLOCK_END",
@@ -180,16 +183,22 @@ def _db_table(table: str) -> str:
 
 
 def _base(entity: schema.Entity, pk: str) -> tuple[str, list[str], str]:
-    """``(class bases, names to import from karni.models, Meta's base)``."""
+    """``(class bases, names to import from karni.models, Meta's base)``.
+
+    A tree lists ``TreeModel`` (or ``OrderedTreeModel``) first, so its
+    ``objects`` is the tree manager (experimental).
+    """
     if entity.external:
         return "models.Model", [], ""
     key = entity.pk or pk
+    tree = [] if not entity.tree else ["TreeModel" if entity.tree is True else "OrderedTreeModel"]
     if entity.database not in (None, "default"):
         # the audit users point at the user table on default: compose the mixins without them
         mixin = "UUIDModel" if key == "uuid" else "IntegerKeyModel"
-        return f"{mixin}, TimestampedModel", [mixin, "TimestampedModel"], ""
+        names = [*tree, mixin, "TimestampedModel"]
+        return ", ".join(names), names, ""
     base = "BaseModel" if key == "uuid" else "BigIntBaseModel"
-    return base, [base], f"{base}.Meta"
+    return ", ".join([*tree, base]), [*tree, base], f"{base}.Meta"
 
 
 def _literal(value: Any, indent: str, line_length: int, head: str = "") -> str:
@@ -269,7 +278,8 @@ def _model_class(
             (title, {"fields": list(names)}) for title, names in entity.groups.items()
         ]
         grouped = {member for names in entity.groups.values() for member in names}
-        rest = [s.name for s in specs if s.name not in grouped]
+        own = [s.name for s in specs] + list(TREE_FIELDS.get(entity.tree, ()))
+        rest = [name for name in own if name not in grouped]
         if rest:
             sets.append((None, {"fields": rest}))
         lines += ["", "    class AdminMeta:"]
@@ -642,6 +652,7 @@ def settings_block(spec: schema.Spec, line: int) -> str:
     if terms is not None and terms.get("required") is True:
         terms.pop("required")
     rows.append(_literal(terms, "", line, "KARNI_TERMS = "))
+    rows.append(f"KARNI_USER_GRANTS = {features.user_grants!r}")
     for module, options in spec.modules.items():
         for option, value in (options or {}).items():
             rows.append(_literal(value, "", line, f"{catalog.module_setting(module, option)} = "))

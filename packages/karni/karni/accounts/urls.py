@@ -25,6 +25,11 @@ mode). Only the optional feature blocks are conditional at import time:
   :class:`~karni.accounts.api.views.TermsAcceptView`). The terms gate
   (:class:`karni.accounts.terms.TermsGateMiddleware`) leaves every route of
   this URLconf open, wherever it is mounted;
+* ``permissions/grants/``, ``permissions/grants/<id>/`` and
+  ``permissions/grants/bulk/`` (experimental) exist while
+  ``KARNI_USER_GRANTS`` is ``True``: per-user grants
+  (:mod:`karni.accounts.api.grants`). Off, they answer 404 and are absent
+  from the OpenAPI schema.
 * ``2fa/...`` is included from :mod:`karni.accounts.twofa` when ``KARNI_2FA``
   is enabled — the module is referenced by dotted path so core installs
   (without the ``karni[2fa]`` extra) never import it;
@@ -171,17 +176,43 @@ def _social_token_urlpatterns() -> list[URLPattern | URLResolver]:
     ]
 
 
+def _grant_patterns() -> list[URLPattern | URLResolver]:
+    """The per-user grants routes (experimental), imported only while the switch is on."""
+    from karni.accounts.api import grants as grant_views
+
+    return [
+        path(
+            "permissions/grants/",
+            grant_views.UserGrantListView.as_view(),
+            name="karni-accounts-user-grants",
+        ),
+        path(
+            "permissions/grants/bulk/",
+            grant_views.UserGrantBulkView.as_view(),
+            name="karni-accounts-user-grants-bulk",
+        ),
+        path(
+            "permissions/grants/<str:pk>/",
+            grant_views.UserGrantDetailView.as_view(),
+            name="karni-accounts-user-grant",
+        ),
+    ]
+
+
 def build_urlpatterns() -> list[URLPattern | URLResolver]:
     """The auth URL patterns for the current settings (what ``urlpatterns`` holds).
 
     ``register/`` is present while ``KARNI_ACCOUNTS_REGISTRATION`` is true,
     ``otp/send/`` and ``otp/verify/`` while ``KARNI_EMAIL_OTP`` is,
-    ``terms/`` and ``terms/accept/`` while ``KARNI_TERMS`` is set, ``2fa/``
+    ``terms/`` and ``terms/accept/`` while ``KARNI_TERMS`` is set,
+    ``permissions/grants/`` while ``KARNI_USER_GRANTS`` is, ``2fa/``
     while ``KARNI_2FA`` is, ``social/<provider>/`` for each provider
     in ``KARNI_SOCIAL_TOKEN_PROVIDERS``, and allauth's ``social/`` while
     ``KARNI_SOCIAL_AUTH`` is.
     """
     patterns: list[URLPattern | URLResolver] = list(_PERMISSION_PATTERNS)
+    if getattr(settings, "KARNI_USER_GRANTS", False):
+        patterns += _grant_patterns()
     if getattr(settings, "KARNI_ACCOUNTS_REGISTRATION", True):
         patterns.append(
             path("register/", views.RegisterView.as_view(), name="karni-accounts-register")

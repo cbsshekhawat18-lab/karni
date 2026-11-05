@@ -99,7 +99,9 @@ need `events.event:view`, `create` needs `add`, and writes need `change` /
 `class Karni: actions` is its own permission (an undeclared unsafe one is
 `E211`). The rows are the union of the matching grants' scopes (`all`,
 `own`, `related:<key>`, `custom:<name>`, see [roles as data](accounts.md#roles-as-data)),
-so an agent writing a viewset gets row scoping without naming it. Bare
+so an agent writing a viewset gets row scoping without naming it. With
+[per-user grants](accounts.md#per-user-grants) on, a user's own grants join
+their role grants in that union. Bare
 `access = Granted()` is `Access(read=Granted(), write=Granted())`, and it
 combines like any predicate (`read=Granted() | HasRole("auditor")`). The
 [admin](admin.md#row-scope) applies the same grants to its rows.
@@ -378,6 +380,21 @@ and leaves them out of the OpenAPI document and the `Allow` header. Reads,
 `?expand=`, filters and export work as usual. `read_only_refused_actions`
 lists the refused actions, and `is_read_only()` decides per viewset:
 override it to serve writes from one viewset.
+
+## Tree models
+
+!!! warning "Experimental"
+    The tree endpoints and filters are [experimental](stability.md#experimental-names).
+
+A viewset whose model is a [tree model](models.md#tree-models) also serves
+`tree/` (nested, a few levels at a time), `<id>/children/`,
+`<id>/ancestors/`, `<id>/move/` and `access/` (the requester's access forest,
+[the tree scope](accounts.md#the-tree-scope)), and its list takes `?parent=<id>`,
+`?parent=null` and `?descendants_of=<id>`. A node with live children
+answers `DELETE` with 409 (`E341`) unless the request says `?branch=true`.
+Access applies to each of them, and `tree_max_nodes`, `tree_default_depth`
+and `tree_max_depth` bound `tree/`. See
+[the API of tree models](models.md#the-api).
 
 ## Deferred writes
 

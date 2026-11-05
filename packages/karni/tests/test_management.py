@@ -87,7 +87,8 @@ def test_models_section_covers_testapp_and_skips_framework() -> None:
 
     # The other test apps push the suite past MODEL_CAP; this test is about testapp.
     with override_settings(
-        KARNI_CONTEXT_SKIP_APPS=CONTEXT_SKIP_APPS | {"adminapp", "perfapp", "externalapp"}
+        KARNI_CONTEXT_SKIP_APPS=CONTEXT_SKIP_APPS
+        | {"adminapp", "perfapp", "externalapp", "contentapp"}
     ):
         output = build_context()
     models_line = _sections(output)["MODELS"]

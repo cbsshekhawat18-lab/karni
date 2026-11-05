@@ -25,6 +25,7 @@ import { singularNoun } from "../nouns";
 import { formatNumberValue } from "../number-value";
 import { offlineError, useRetryUnlessClientError, useRetryWhenOnline } from "../query-state";
 import { evaluateAccess } from "../table/access";
+import { TreeBreadcrumb, type TreeBreadcrumbProps } from "../tree/TreeBreadcrumb";
 import {
   DefaultTransitions,
   TransitionConfirm,
@@ -124,7 +125,12 @@ export interface ResourceDetailSlots {
   Deleted: React.ComponentType<ResourceDetailDeletedProps>;
   /** The lifecycle buttons of one StateField (see the `transitions` prop). */
   Transitions: React.ComponentType<ResourceDetailTransitionsProps>;
+  /** Experimental. The path above a node of a tree resource (see the `breadcrumb` prop). */
+  Breadcrumb: React.ComponentType<TreeBreadcrumbProps>;
 }
+
+/** Experimental. Links for the breadcrumb of a tree resource's record. */
+export type ResourceDetailBreadcrumbOptions = Pick<TreeBreadcrumbProps, "href" | "onNavigate">;
 
 export interface ResourceDetailProps {
   resource: string;
@@ -161,6 +167,12 @@ export interface ResourceDetailProps {
   transitions?: boolean | ResourceDetailTransitionOptions;
   /** Called after a lifecycle move succeeded, with the record as the server returned it. */
   onTransition?: (item: Item, field: string, target: string) => void;
+  /**
+   * Experimental. On a tree resource (`x-karni-tree`), the path from the root
+   * to this record above it, from `ancestors/`. Default true. `false` hides
+   * it, and an object gives its ancestors links (`href`, `onNavigate`).
+   */
+  breadcrumb?: boolean | ResourceDetailBreadcrumbOptions;
   /** Replace parts of the view: Loading, Error, NotFound, EmptyValue, DeleteDialog, Deleted. */
   slots?: Partial<ResourceDetailSlots>;
   className?: string;
@@ -458,6 +470,7 @@ export const defaultResourceDetailSlots: ResourceDetailSlots = {
   DeleteDialog: DefaultDeleteDialog,
   Deleted: DefaultDeleted,
   Transitions: DefaultTransitions,
+  Breadcrumb: TreeBreadcrumb,
 };
 
 function DetailRow(props: {
@@ -575,6 +588,7 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
     onDeleted,
     transitions = true,
     onTransition,
+    breadcrumb = true,
     slots,
     className,
   } = props;
@@ -826,6 +840,31 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
     </div>
   ) : null;
 
+  const breadcrumbLinks: ResourceDetailBreadcrumbOptions =
+    typeof breadcrumb === "object" ? breadcrumb : {};
+  const path =
+    breadcrumb !== false &&
+    schema?.tree !== undefined &&
+    schema.operations.ancestors !== undefined ? (
+      <Slots.Breadcrumb
+        resource={resource}
+        id={id}
+        item={item}
+        resourceLabel={{ singular: label }}
+        {...breadcrumbLinks}
+      />
+    ) : null;
+  // The path sits close above the title, not a section apart.
+  const top =
+    path !== null && header !== null ? (
+      <div className="space-y-2">
+        {path}
+        {header}
+      </div>
+    ) : (
+      (path ?? header)
+    );
+
   const appended =
     sections !== undefined && sections.length > 0 ? (
       <div className="space-y-6">
@@ -845,7 +884,7 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
         <span role="status" aria-label="Loading details" className="sr-only">
           {slow ? `Loading this ${label}…` : ""}
         </span>
-        {header}
+        {top}
         <Slots.Loading fields={placeholder?.domain} auditFields={placeholder?.audit} slow={slow} />
         {appended}
       </div>
@@ -855,7 +894,7 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
   const { domain, audit } = domainAndAudit;
   return (
     <div className={cn("space-y-6", className)}>
-      {header}
+      {top}
       <span role="status" className="sr-only">
         {moved}
       </span>

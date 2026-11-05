@@ -520,7 +520,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The role declaration is the single source of what each role may do. A malformed entry cannot be reconciled into the role tables.
 
-**Fix.** Write KARNI_ROLES = {'<slug>': {'name': ..., 'description': ..., 'system': bool, 'grants': {'app_label.model:action': '<scope>'}}}. A pattern may use '*' for the model or the action (or '*' alone). A scope is 'all', 'own', 'related:<key>' or 'custom:<name>'.
+**Fix.** Write KARNI_ROLES = {'<slug>': {'name': ..., 'description': ..., 'system': bool, 'grants': {'app_label.model:action': '<scope>'}}}. A pattern may use '*' for the model or the action (or '*' alone). A scope is 'all', 'own', 'related:<key>', 'custom:<name>' or 'tree:<path>'.
 
 <a id="e206"></a>
 
@@ -944,6 +944,126 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Fix the manifest or the module as the line says: list every KARNI_<NAME>_* setting of conf.DEFAULTS under [provides.settings] with its type, list the app's models under provides.models, and add [project.entry-points."karni.modules"] <name> = "karni_<name>" to pyproject.toml, then reinstall the module. docs/modules.md lists every key.
 
+<a id="e340"></a>
+
+#### E340: A tree node's new parent is the node itself or a node below it
+
+*exception* · from `karni.models.TreeModel.check_parent (save, clean, move_to); the API answers 400`
+
+**Why Karni objects.** A parent below the node would make the branch its own ancestor: a cycle. Every walk stays safe on such data, but the nodes on the cycle drop out of the tree, so Karni refuses the write before any SQL.
+
+**Fix.** Choose a parent outside the node's branch (or None for a root). To swap two nodes, move the lower one out of the branch first. In the API, POST <id>/move/ with another parent.
+
+<a id="e341"></a>
+
+#### E341: A tree node with live children cannot be deleted alone
+
+*exception* · from `karni.models.TreeModel.delete; the API answers 409`
+
+**Why Karni objects.** A soft-deleted node hides its whole branch. Deleting a node that still has live children would hide them too, without anyone deciding that, so delete() refuses and the answer counts the children.
+
+**Fix.** Move the children to another parent first, or delete the whole branch on purpose: node.delete_branch(), or DELETE <id>/?branch=true in the API (write access to every node of the branch).
+
+<a id="e342"></a>
+
+#### E342: A tree endpoint got a parameter it cannot use
+
+*API 400 response* · from `karni.api.tree (tree/, move/, ?parent=, ?descendants_of=, ?branch=)`
+
+**Why Karni objects.** The tree endpoints take keys of the model (?root=, ?parent=, ?descendants_of=, the parent of move/), a whole number of levels (?depth=, from 1 to the viewset's tree_max_depth) and true or false (?branch=). A key must name a node the requester may read.
+
+**Fix.** Send a key of the model (or null for ?parent= and move/'s parent), a depth within the limit the message names, and branch=true or branch=false.
+
+<a id="e343"></a>
+
+#### E343: A tree method got an argument it cannot use
+
+*exception* · from `karni.managers.TreeQuerySet (walk, descendants, ancestors, subtree_ids); karni.models.TreeModel.move_to`
+
+**Why Karni objects.** A walk starts from rows of the model, their keys or a queryset of the model. A row of another model, an unsaved row or a malformed key names no node. move_to() takes a position only on an OrderedTreeModel, as a whole number from 0.
+
+**Fix.** Pass saved rows of the model or their keys. Drop the position on a TreeModel, or inherit OrderedTreeModel to order siblings.
+
+<a id="e344"></a>
+
+#### E344: A tree model's default manager has no tree walks
+
+*system check (error)* · from `karni.checks.check_tree_models`
+
+**Why Karni objects.** TreeModel's manager (karni.managers.TreeManager) carries roots(), children(), ancestors(), descendants() and subtree_ids(), and the tree endpoints use them. A base listed before TreeModel (class Region(BaseModel, TreeModel)) supplies its own `objects` first, so the walks are missing.
+
+**Fix.** List TreeModel first: class Region(TreeModel, BaseModel). A custom manager must be built on karni.managers.TreeQuerySet, the way TreeManager is.
+
+<a id="e345"></a>
+
+#### E345: A tree model's parent is not a foreign key to the model itself
+
+*system check (error)* · from `karni.checks.check_tree_models`
+
+**Why Karni objects.** Every walk joins a node to its parent through the `parent` column, so `parent` must stay a nullable ForeignKey to the same model.
+
+**Fix.** Remove the redeclared `parent` field, or declare it as models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT, related_name='children').
+
+<a id="e360"></a>
+
+#### E360: A user grant's permission pattern matches no permission
+
+*exception* · from `karni.accounts.grants.check`
+
+**Why Karni objects.** A user grant names its permission as a KARNI_ROLES grant does: 'app_label.model:action', with '*' for either part, or '*' alone. A pattern that is malformed or matches no permission of the project would grant nothing, so it is refused when the grant is written (the API, the admin, karni.accounts.grants.grant or full_clean()).
+
+**Fix.** Write the key as karni context or GET permissions/matrix/ lists it (e.g. 'shop.order:view'), and declare a model's extra actions in `class Karni: actions = [...]` before granting them.
+
+<a id="e361"></a>
+
+#### E361: A user grant's scope does not fit the permissions it covers
+
+*exception* · from `karni.accounts.grants.check`
+
+**Why Karni objects.** The scope is one a role grant takes: 'all', 'own', 'related:<key>', 'custom:<name>' or 'tree:<path>'. 'own' needs the model's owner field, 'related:<key>' its Karni.scope_paths[key], 'custom:<name>' a scope registered with register_scope() and 'tree:<path>' a path from the model to a tree model. An explicit key whose model lacks it is refused, and a wildcard pattern must keep at least one model that has it.
+
+**Fix.** Pick a scope from the model's options in GET permissions/matrix/, declare the owner field or scope path in `class Karni`, or register the custom scope at startup.
+
+<a id="e362"></a>
+
+#### E362: A user grant's targets are invalid
+
+*exception* · from `karni.accounts.grants.check`
+
+**Why Karni objects.** targets lists the row ids a scope that points at rows reaches: a 'related:<key>' grant with targets reaches the rows whose Karni.scope_paths[key] is one of them, and a 'tree:<path>' grant the rows under those nodes of the tree. Targets are a list of ids (text, integers or UUIDs), only for such a scope, and each must be a value the scope path's field takes.
+
+**Fix.** Pass a list of ids of the related model, e.g. targets=[3, 7] for an integer key, drop targets for an 'all', 'own' or 'custom:' grant, or grant 'related:<key>' instead.
+
+<a id="e363"></a>
+
+#### E363: The operator may not give this user grant
+
+*API 400 response* · from `karni.accounts.grants.refusals`
+
+**Why Karni objects.** Nobody grants what they do not hold, as in the permission matrix: the operator must hold every permission the pattern reaches, at scope 'all' or at the same scope, and for a grant with targets their own targets under that scope must include each one. Nothing was written. Superusers and code that passes operator=None are not checked.
+
+**Fix.** Ask someone who holds the permission at that scope (or 'all') to give the grant, narrow the pattern, the scope or the targets to what you hold, or grant it from code with operator=None.
+
+<a id="e364"></a>
+
+#### E364: Per-user grants are turned off
+
+*API 400 response* · from `karni.accounts.api.grants`
+
+**Why Karni objects.** permissions/grants/ and its routes are mounted only while KARNI_USER_GRANTS is True. A URLconf built while it was True answers 404 with this code once it is False. While it is False, user grants are not read and grant nothing.
+
+**Fix.** Set KARNI_USER_GRANTS = True (or features: user_grants: true in karni.yaml, then karni build) to use per-user grants.
+
+<a id="e365"></a>
+
+#### E365: karni.accounts.grants.change() was given a field it does not set
+
+*exception* · from `karni.accounts.grants.change`
+
+**Why Karni objects.** change() sets a grant's permission, scope, targets, expires_at and reason. The user a grant belongs to, granted_by and the timestamps are not changed this way: a grant for another user is a new grant, and granted_by follows the operator.
+
+**Fix.** Pass only permission, scope, targets, expires_at or reason. To move access to another user, revoke() this grant and grant() a new one.
+
 ### 4xx · Events, listeners, schedules and Celery
 
 <a id="e401"></a>
@@ -1025,6 +1145,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** `karni schedule run` executes the task in-process so failures show immediately.
 
 **Fix.** Read the task's own error in the message and fix the task. Then re-run it with `karni schedule run <name>`.
+
+<a id="e490"></a>
+
+#### E490: A tree:<path> scope does not end at a tree model
+
+*system check (error)* · from `karni.accounts.tree_scope.resolve_path; karni.checks.check_tree_scopes (KARNI_ROLES); tree_scope() in a Where`
+
+**Why Karni objects.** tree:<path> reaches the rows whose <path> is a node the user holds or a node below it, so each step of the path must be a relation of the model before it (a foreign key, a one-to-one, a many-to-many or a reverse relation) and the last one must point at a model on karni.models.TreeModel. A path that does not resolve could only ever reach no row, so Karni refuses it at startup, in KARNI_ROLES and wherever tree_scope() names it.
+
+**Fix.** Name the row's relation to the tree model, through relations when needed: tree:region, tree:product__categories. Make the target a tree model (class Region(TreeModel, BaseModel)), or grant another scope.
+
+<a id="e491"></a>
+
+#### E491: The access/ endpoint of a tree resource got a parameter it cannot use
+
+*API 400 response* · from `karni.api.tree (GET <resource>/access/?permission=)`
+
+**Why Karni objects.** ?permission= keeps the grants of the permissions it matches, written as a KARNI_ROLES pattern: 'app_label.model:action' with '*' for either part, or '*' alone. Anything else would match no grant and answer an empty forest without saying why.
+
+**Fix.** Send a permission key such as ?permission=shop.order:view (or a pattern such as shop.order:*), or leave the parameter out to count every tree grant.
 
 ### 5xx · Settings and optional dependencies
 
@@ -1489,6 +1629,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** With no page to request, every check would pass without checking anything.
 
 **Fix.** Pass the site's pages, for example assert_pages(client, ["/", "/about/"]).
+
+<a id="w620"></a>
+
+#### W620: A role grant of a tree scope gives its members no node
+
+*system check (warning)* · from `karni.checks.check_tree_scopes (karni check)`
+
+**Why Karni objects.** A role grant of tree:<path> reaches the rows under the node the user holds in the attribute named after the path's last step (tree:region and tree:store__region read user.region), as related:<key> compares user.<key>. The user model has no such attribute, so the role gives each member no node and no row. A tree grant never falls back to every row.
+
+**Fix.** Give the user model the attribute (a field or a property holding a node of the tree, e.g. region), or give each user their nodes with user grants of the same scope (features: user_grants, then karni.accounts.grants.grant(..., targets=[...])). Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] when user grants give the nodes on purpose.
 
 ### 7xx · Agent tooling: karni check, karni.rules.py, changelog
 
@@ -2952,7 +3102,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** Grants map onto KARNI_ROLES: a pattern app.entity[:action] (with * for a part, or * alone) to a scope all, own, own:<owner field>, related:<scope path key> or custom:<name>. A spec grants the standard actions view, add, change and delete.
+**Why Karni objects.** Grants map onto KARNI_ROLES: a pattern app.entity[:action] (with * for a part, or * alone) to a scope all, own, own:<owner field>, related:<scope path key>, custom:<name> or tree:<path>. A spec grants the standard actions view, add, change and delete.
 
 **Fix.** Fix the pattern or the scope. An entity's own actions, and a grant on a model outside the spec, go in KARNI_ROLES by hand.
 
@@ -3746,6 +3896,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Move your code out of the way (rename the file), run karni build again, then put your code back into the recipe's file. To build without the recipe's files, delete "recipe" from .karni/build.json.
 
+<a id="c460"></a>
+
+### C460: A tree entity's keys do not fit
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** tree: true makes the entity a TreeModel, which adds a parent field (tree: ordered makes it an OrderedTreeModel, which adds position too). Karni adds that column, so it cannot be a table another system owns, and the entity cannot declare a field of that name.
+
+**Fix.** Remove tree from an external entity, and remove parent (and position) from the fields of a tree entity, or rename a field that means something else.
+
+<a id="c620"></a>
+
+### C620: A role grant's tree:<path> does not lead to a tree entity
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** tree:<path> reaches the rows whose <path> is a node the user holds or a node below it. The path follows the entity's relation fields (fk, m2m, o2o), each to an entity of the spec, and the last one must point at an entity with tree: true or tree: ordered. Karni refuses any other path at startup (E490).
+
+**Fix.** Name the entity's relation to the tree, through relations when needed: tree:region, tree:product__categories. Add tree: true to the entity the path ends at, or grant another scope.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -4032,7 +4202,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `access-override`
 
-**Rule.** Express who sees which rows in `access` (`Where(...)` for custom logic, `@action(..., access=...)` for one action). An overridden `get_queryset` is still read-scoped, so never use it to widen. Overriding `filter_queryset_for_user` needs `# karni: allow(access-override): <why>`.
+**Rule.** Express who sees which rows in `access` (`Where(...)` for custom logic, `@action(..., access=...)` for one action). An overridden `get_queryset` is still read-scoped, so never use it to widen. Overriding `filter_queryset_for_user` needs `# karni: allow(access-override): <why>`. Rows under the nodes of a tree a user was granted are the `tree:<path>` scope of a grant, never a hand-written subtree filter.
 
 **Why Karni objects.** The queryset is the authoritative layer: lists, details, actions, relation PKs and ?expand= all go through the read scope, so a bypass leaks everywhere.
 
@@ -4188,7 +4358,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Never write auth flows, user models, admin registration, serializers, routers, settings, Docker/Compose config, Celery config, HTML tables, forms, or detail views. Karni provides all of these. If you think you need one, you need an override on an existing Karni base instead. The tables, forms and detail views meant here are app screens. A public server-rendered site (K309) is the one place for hand-written HTML pages, and its forms still post to a BaseViewSet.
+**Rule.** Never write auth flows, user models, admin registration, serializers, routers, settings, Docker/Compose config, Celery config, HTML tables, forms, or detail views. Karni provides all of these. Never write a table of per-user permissions either: access given to one user is a per-user grant (`features: user_grants`, `karni.accounts.grants`), which Granted() already reads. If you think you need one, you need an override on an existing Karni base instead. The tables, forms and detail views meant here are app screens. A public server-rendered site (K309) is the one place for hand-written HTML pages, and its forms still post to a BaseViewSet.
 
 **Why Karni objects.** Each of these ships in Karni with tested defaults and override points. A public site is the client's own markup, so it has its own rule.
 
@@ -4248,7 +4418,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, should* · enforced by `review`
 
-**Rule.** Anything reusable across projects belongs in a Karni module (a `karni_<name>` package), not in this project. Say so instead of building it. Read the catalog first: the CATALOG lines of `karni context`, `karni modules list` and `karni modules show <name>` list every module and built-in feature (payments, approvals, login as a user, a public site, two-factor sign-in, sign-in with a code or with Google, Microsoft or Apple, terms acceptance, response caching), whether the project has it, its options and the questions to ask. Add a module with `karni add <name>` (or `modules:` in karni.yaml), turn a feature on with its setting (or `features:`), and take a module out with `karni remove <name>`, which never drops its tables.
+**Rule.** Anything reusable across projects belongs in a Karni module (a `karni_<name>` package), not in this project. Say so instead of building it. Read the catalog first: the CATALOG lines of `karni context`, `karni modules list` and `karni modules show <name>` list every module and built-in feature (payments, approvals, login as a user, a public site, two-factor sign-in, sign-in with a code or with Google, Microsoft or Apple, terms acceptance, per-user grants, response caching), whether the project has it, its options and the questions to ask. Add a module with `karni add <name>` (or `modules:` in karni.yaml), turn a feature on with its setting (or `features:`), and take a module out with `karni remove <name>`, which never drops its tables.
 
 **Why Karni objects.** Code that would be written more than once belongs in Karni, never per project. Each catalog entry is tested, and rebuilding one costs more tokens than adding it.
 
@@ -4301,6 +4471,18 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** karni build turns the spec into models, viewsets, migrations, seeds, tests, types and settings without a language model, so the agent writes a short YAML file instead of thousands of lines, and a later change to the spec updates the app without touching the code written by hand.
 
 **Fix.** Move the hand-written entity, field, access, role or setting into karni.yaml, then run `karni build`.
+
+<a id="k312"></a>
+
+### K312: Trees: TreeModel.
+
+*agent rule, error* · enforced by `hand-written-tree`
+
+**Rule.** A hierarchy (categories, regions, organisation units, a menu) is a tree model: `class Region(TreeModel, BaseModel)`, or `OrderedTreeModel` when siblings have an order, or `tree: true` / `tree: ordered` in karni.yaml. Never declare a `parent` foreign key to the model itself, never write recursive SQL or a loop over `.parent`, and never write a tree endpoint or a tree component. `Model.objects.descendants()`, `ancestors()` and `subtree_ids()` walk it, the API serves tree/, children/, ancestors/ and move/, and @karni/ui shows TreeView and TreeSelect.
+
+**Why Karni objects.** Hand-written trees loop on cyclic data, cost one query per level and repeat the same endpoints and widgets in every project. TreeModel's walks are one cycle-safe query each.
+
+**Fix.** Inherit TreeModel first and drop the parent field, or opt out with the reason.
 
 ## ESLint rules (`@karni/ui/eslint-plugin`)
 

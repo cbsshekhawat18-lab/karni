@@ -179,8 +179,21 @@ def _who(verdict: Verdict, user: Any) -> list[str]:
         if getattr(user, "is_superuser", False)
         else ""
     )
+    count = _user_grant_count(user)
+    if count:
+        verdict.data["user_grants"] = count
+        note += f" + {count} user grant{'s' if count != 1 else ''}"
     verdict.add("roles", (", ".join(roles) or "none") + note)
     return roles
+
+
+def _user_grant_count(user: Any) -> int:
+    """How many live per-user grants ``user`` holds (0 while ``KARNI_USER_GRANTS`` is off)."""
+    from karni.accounts import grants
+
+    if not grants.enabled() or getattr(user, "is_superuser", False):
+        return 0
+    return len(grants.live_rows(user))
 
 
 # the declaration
@@ -375,7 +388,12 @@ def _gate(verdict: Verdict, probe: Probe) -> tuple[AccessEvent | None, list[Leaf
     return event, leaves
 
 
-def _grants(verdict: Verdict, probe: Probe, trees: Iterable[Explained | None]) -> None:
+def _grants(
+    verdict: Verdict,
+    probe: Probe,
+    trees: Iterable[Explained | None],
+    row: Model | None = None,
+) -> None:
     seen: set[str] = set()
     lines: list[str] = []
     data: list[dict[str, Any]] = []
@@ -387,7 +405,7 @@ def _grants(verdict: Verdict, probe: Probe, trees: Iterable[Explained | None]) -
             if not isinstance(leaf.predicate, Can):
                 continue
             any_can = True
-            for line in grant_lines(leaf, user=probe.user, model=probe.resource.model):
+            for line in grant_lines(leaf, user=probe.user, model=probe.resource.model, row=row):
                 if line.key in seen:
                     continue
                 seen.add(line.key)
@@ -710,7 +728,7 @@ def _build(verdict: Verdict, probe: Probe) -> Verdict:
         }
     if row is not None and row_state is not None and row_state.state == "present":
         _row_section(verdict, probe, row, [*read_leaves, *write_leaves])
-    _grants(verdict, probe, [gate_tree, read_tree, write_tree])
+    _grants(verdict, probe, [gate_tree, read_tree, write_tree], row)
 
     if probe.status == 404:
         return _not_found(verdict, probe, row_state, read_event, read_leaves, access_at)

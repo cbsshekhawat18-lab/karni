@@ -156,6 +156,118 @@ apply codemods and list the manual steps. This file is the human summary.
   `docs/assets/karni-questions.schema.json`. A new agent rule, `K310`,
   tells agents to ask only these questions before `karni build`.
   [docs/app-spec.md](docs/app-spec.md#questions).
+
+- **Tree models (experimental): a hierarchy is one declaration.**
+  `class Region(TreeModel, BaseModel)` adds `parent` (a nullable foreign
+  key to the model itself, `PROTECT`, `related_name="children"`), and
+  `OrderedTreeModel` adds `position` for the order of siblings. Both work
+  with `BaseModel` and `BigIntBaseModel`. `objects` is a `TreeManager`:
+  `roots()`, `children(node)`, `ancestors(node)`, `descendants(nodes,
+  include_self, max_depth)`, `subtree_ids(ids)` and `walk(...)`, each one
+  recursive query that never loops on cyclic data (the `CYCLE` clause on
+  PostgreSQL, a path of keys on SQLite). `save()`, `clean()` and
+  `move_to(parent, position=None)` refuse a parent at or below the node
+  (`E340`), and `move_to()` renumbers the old and new siblings of an
+  ordered tree in the same transaction. A soft-deleted node hides its
+  branch: `delete()` refuses a node with live children (`E341`, HTTP 409),
+  and `delete_branch()` soft-deletes a whole branch in one statement.
+  New codes `E340` to `E345`, system checks `E344` (the base listed before
+  `TreeModel`) and `E345` (a redeclared `parent`).
+  [docs/models.md](docs/models.md#tree-models).
+- **Tree endpoints (experimental).** A `BaseViewSet` whose model is a tree
+  model serves `tree/?root=&depth=` (nested and lazy: each node has
+  `has_children`, and `children` is `null` where not loaded, bounded by
+  `tree_max_depth` and `tree_max_nodes`), `<id>/children/` (paginated),
+  `<id>/ancestors/` and `<id>/move/`, and its list takes `?parent=<id>`,
+  `?parent=null` and `?descendants_of=<id>`. `DELETE ?branch=true` deletes a
+  branch with write access to every node in it. Every walk follows the
+  rows the requester may read, and the query counts do not grow with the
+  tree. `Granted()` maps `move` to `change`. On an ordered tree `position`
+  is read-only in the API. The OpenAPI document marks a tree model's schema
+  and every relation to one with `x-karni-tree`.
+- **The admin lists a tree model in tree order (experimental)**, each name
+  indented by depth, with no declaration (`tree_changelist_max_rows`).
+- **`karni check`'s new `hand-written-tree` rule (experimental) and agent
+  rule `K312`.** A project model with a `parent` (or `parent_*`) foreign key
+  to itself that is not a `TreeModel` fails the check. Inherit `TreeModel`
+  first and drop the field, or opt out with `# karni: allow(hand-written-tree):
+  <reason>`. `karni rules` lists 45 rules in 575 tokens.
+- **`karni.yaml`: an entity takes `tree: true` (TreeModel) or `tree:
+  ordered` (OrderedTreeModel) (experimental).** `karni spec validate`
+  refuses a tree on an external entity, or a tree entity that declares
+  `parent` or `position` (`C460`). `karni spec export` writes the key,
+  `karni plan` shows it, and making an entity a tree or flat again, or
+  dropping `ordered`, is a risky change. `karni build` lists `TreeModel` or
+  `OrderedTreeModel` first in the model base. `manage.py karni_facts` gives
+  each model's `tree` (`null`, `"tree"` or `"ordered"`) and leaves the tree's
+  own fields out of `fields`. [docs/app-spec.md](docs/app-spec.md#trees).
+- **`karni types` writes a `use<Name>Tree` hook** for each resource whose
+  schema carries `x-karni-tree` (experimental).
+- **@karni/ui: trees (experimental).** `TreeView` shows a tree resource
+  with lazy branches, search and the WAI-ARIA tree keyboard pattern.
+  `TreeSelect` picks one node or several, and `ResourceForm` uses it for
+  every foreign key or many-to-many whose schema carries `x-karni-tree`.
+  `TreeBreadcrumb` shows the path from the root, and `ResourceDetail` shows
+  it above a tree resource's record (new `breadcrumb` prop and `Breadcrumb`
+  slot). `useResourceTree`, `useResourceChildren`, `useResourceAncestors`
+  and `useTreeMutations` wrap the endpoints, and the schema parser reads
+  `x-karni-tree` into `ResourceSchema.tree` and `FieldDef.tree`. New
+  component roles `tree-view`, `tree-select` and `tree-breadcrumb`, and the
+  theme tokens `--karni-tree-indent` and `--karni-tree-max-height`.
+- **Per-user grants (experimental): access given to one user, next to the
+  role grants.** `UserGrant` in `karni.accounts` (migration `0009`) holds a
+  permission pattern and a scope written as in `KARNI_ROLES`, `targets` (row
+  ids for a `related:<key>` scope, in place of `user.<key>`), `expires_at`,
+  `granted_by` and `reason`, with every change in the history. While
+  `KARNI_USER_GRANTS` is on (default off), `grants_for` adds a user's live
+  grants to their role grants, so `Granted()`, `Can`, `user.can`,
+  `@requires`, the admin's row scope and imports answer with the union, for
+  one more query per request however many checks it makes. Off, no grant row
+  is read. `karni.accounts.grants` writes them (`grant`, `bulk_grant`,
+  `change`, `expire`, `revoke`), refusing a bad pattern, scope or targets
+  (`E360`, `E361`, `E362`), a grant the operator does not hold (`E363`) and
+  a field `change()` does not set (`E365`),
+  and `scope_targets(user, scope, permission=...)` gives the target ids a
+  user's roles and user grants hold, with the grant behind each, for the
+  tree scope and the menus to come. The admin edits a user's grants on their
+  page and lists them all under *User grants* (with *Expire selected*), the
+  effective permissions mark each source as a role or a user grant, and
+  `api/auth/permissions/grants/` lists, adds, changes, revokes and
+  bulk-grants them (`E364` once switched off). `karni why` and `karni
+  why-empty` name the user grant that decided, with its id, reason and
+  expiry. `features: user_grants: true` in `karni.yaml` turns it on through
+  `karni plan` and `karni build`. `Grant` gains `targets` and `grant_id`,
+  and `GrantSource` the user grant's fields, all defaulting to empty.
+  [docs/accounts.md](docs/accounts.md#per-user-grants).
+- **The tree scope (experimental): a grant on a node reaches every row under
+  it.** `tree:<path>` is a new scope for `KARNI_ROLES`, user grants,
+  `Granted()`, `Can`, `user.can` and the admin's row scope. `<path>` is the
+  row's foreign key or many-to-many to a tree model, through relations when
+  needed (`tree:region`, `tree:product__categories`). A user grant's targets
+  are its nodes, and a role grant (or a user grant without targets) reaches
+  the node in the user attribute named after the path's last step
+  (`user.region`). No node gives no row, never every row. The rows compile
+  to one subquery, the cycle-safe walk of the tree models started from every
+  granted node at once, and the nodes are read once per request, so list,
+  detail, custom actions, export, import relation lookups and the admin keep
+  flat query counts. `karni.accounts.tree_scope` holds `resolve_path`,
+  `subtree_rows`, `tree_rows`, `granted_targets`, `SubtreeKeys`, `tree_scope()`
+  for a `Where`, `access_forest` and `explain_row`. `RolePermission.scope`
+  takes `tree` (migration `0010`, choices and help texts only), `tree` joins
+  `TARGETED_SCOPES`, a user who holds a node may grant a node below it, and
+  the permission matrix offers `tree:<field>` for each relation to a tree
+  model. A path that does not end at a tree model is `E490` at startup, and
+  a role grant whose members have no such attribute is the warning `W620`.
+  A tree resource serves `GET access/?permission=`: the requester's granted
+  nodes, their ancestors and every other root, each flagged `granted`
+  (`E491` for a bad pattern). `karni why` and `karni why-empty` name the
+  grant and the node: "user grant 12 targets Europe, and this row's region
+  Lyon is under it". In `karni.yaml` a role grant takes `tree:<path>`,
+  checked against the spec's tree entities (`C620`), and `karni plan` and
+  `karni build` carry it into `KARNI_ROLES`. `@karni/ui` adds
+  `useResourceAccessForest`, and `TreeView` takes `access` to show the
+  forest, granted nodes selectable and their ancestors greyed.
+  [docs/accounts.md](docs/accounts.md#the-tree-scope).
 - **`karni build` (experimental): the spec applied in one command,
   idempotently, without touching hand-written code.** `karni build
   [--spec karni.yaml] [--dry-run] [--allow-destructive] [--json] [--force]

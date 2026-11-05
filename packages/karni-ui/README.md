@@ -61,14 +61,14 @@ the schema root (`x-karni-auth-mode`). Override it with `mode="jwt" | "session"`
 Every visual value in every component resolves from a `--karni-*` CSS custom
 property defined in `@karni/ui/styles.css`:
 
-| Family             | What it holds                                                                                                                                                                                                            |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--karni-color-*`  | colours: background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, overlay, chart-1 … chart-5, and the derived `-foreground`, `-hover`, `-subtle` and `-border` shades |
-| `--karni-space-*`  | the spacing scale: `--karni-space-unit` (0.25rem), or any step `--karni-space-<n>` (`--karni-space-4` is 1rem)                                                                                                           |
-| `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                           |
-| `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                        |
-| `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                             |
-| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box)       |
+| Family             | What it holds                                                                                                                                                                                                                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--karni-color-*`  | colours: background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, overlay, chart-1 … chart-5, and the derived `-foreground`, `-hover`, `-subtle` and `-border` shades                                                           |
+| `--karni-space-*`  | the spacing scale: `--karni-space-unit` (0.25rem), or any step `--karni-space-<n>` (`--karni-space-4` is 1rem)                                                                                                                                                                     |
+| `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                                                                                     |
+| `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                                                                                  |
+| `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                                                                                       |
+| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box), `--karni-tree-indent` and `--karni-tree-max-height` (TreeView) |
 
 The Tailwind preset maps its scales onto these properties, so `bg-primary`,
 `p-4` or `rounded-md`, in a component or in your own code, reads them. Import
@@ -695,6 +695,51 @@ guards a form of your own.
   `aria-describedby`, `aria-invalid` and `aria-required` make it a form field.
   `slots` replaces `Option`, `Chip`, `Loading`, `Empty` and `Error`
   (`defaultResourceSelectSlots`).
+
+### Tree models (experimental)
+
+A resource whose model is a Karni `TreeModel` carries `x-karni-tree` in the
+schema, and so does every FK or M2M that points at one. The components read
+it, so a tree needs no code of its own:
+
+- `ResourceForm` edits a relation to a tree with `TreeSelect`: a button that
+  opens the tree at the chosen node. One choice closes it, `multiple` keeps it
+  open and shows chips. On an ordered tree `position` is read-only, so the
+  form leaves it to the move action.
+- `ResourceDetail` shows the path from the root above a tree resource's
+  record (`TreeBreadcrumb`, from `ancestors/`). `breadcrumb={false}` hides it,
+  and `breadcrumb={{ href, onNavigate }}` links the ancestors.
+- `TreeView` shows the tree itself:
+
+```tsx
+<TreeView
+  resource="regions"
+  value={regionId}
+  onChange={(id) => setRegionId(id)}
+  onActivate={(node) => navigate(`/regions/${node.id}`)}
+/>
+```
+
+- It loads two levels (`depth`) from `tree/` and each deeper branch when it is
+  opened, so a tree of 10,000 nodes costs one request per opened branch. When
+  the server's node limit cuts a level, the tree says so.
+- The search field asks the list's `?search=` and shows the matches flat.
+  Without `search_fields` it narrows the loaded nodes instead.
+- It follows the WAI-ARIA tree pattern: one tab stop, Up and Down, Right opens
+  or enters a branch, Left closes it or goes to the parent, Home and End,
+  Enter activates, Space selects, `*` opens every sibling, and typing jumps to
+  the next node whose label starts with the typed text.
+- `reveal` opens the path to a node, `root` starts below one, `slots` replaces
+  `Node`, `Loading`, `Empty` and `Error` (`defaultTreeViewSlots`).
+- `access` (experimental) shows the requester's access forest instead
+  (`GET /<resource>/access/`, the `tree:<path>` scope): granted nodes and the
+  nodes below them can be chosen, their ancestors and the other roots are
+  greyed (`aria-disabled`). `access={{ permission: "shop.order:view" }}`
+  keeps one permission's grants.
+- `useResourceTree`, `useResourceChildren`, `useResourceAncestors`,
+  `useResourceAccessForest` and `useTreeMutations` (`move`, `removeBranch`)
+  are the hooks underneath.
+  `--karni-tree-indent` and `--karni-tree-max-height` theme it.
 
 ## Hooks
 

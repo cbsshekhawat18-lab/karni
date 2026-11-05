@@ -180,6 +180,12 @@ Experimental now:
   `karni.testing.create_external_tables`, the pytest option
   `--karni-external-tables`, `manage.py karni_inspect` and `karni make model
   --external`.
+- [Per-user grants](accounts.md#per-user-grants): the `KARNI_USER_GRANTS`
+  setting, the `UserGrant` model, `karni.accounts.grants`, the `targets` and
+  `grant_id` of `karni.accounts.roles.Grant` and the user-grant fields of
+  `GrantSource` and of the effective permissions, the `permissions/grants/`
+  endpoints, the grants inline and admin (`karni.accounts.admin.grant_form`),
+  and `features: user_grants` in `karni.yaml`.
 - [The app spec](app-spec.md): the `karni.yaml` format and its JSON Schema,
   `karni spec validate`, `karni spec export`, `manage.py karni_facts`,
   `karni.facts` and the `karni_cli.spec` package.
@@ -212,6 +218,25 @@ Experimental now:
   (`karni_cli.recipes.apply`, `karni_cli.builder.render.is_stub_file`,
   `karni_cli.recipes.karni_owned`) and the `recipes` pytest marker of
   karni-cli's suite.
+- [Tree models](models.md#tree-models): `karni.models.TreeModel` and
+  `OrderedTreeModel`, `karni.managers.TreeQuerySet` and `TreeManager`,
+  `karni.tree`, `karni.api.tree` (the `tree/`, `children/`, `ancestors/` and
+  `move/` endpoints, `?parent=`, `?descendants_of=` and `DELETE ?branch=`),
+  `BaseViewSet.serves_tree`, `tree_actions`, `tree_max_nodes`,
+  `tree_default_depth`, `tree_max_depth`, `tree_top_level()` and
+  `get_tree_node_serializer_class()`, the `x-karni-tree` extension,
+  `karni.admin.tree` and `tree_changelist_max_rows`, the `hand-written-tree`
+  rule, the `tree` key of `karni.yaml` and the `tree` fact, the
+  `use<Name>Tree` hooks of `karni types`, and `TreeView`, `TreeSelect`,
+  `TreeBreadcrumb`, `useResourceTree`, `useResourceChildren`,
+  `useResourceAncestors` and `useTreeMutations` in `@karni/ui`.
+- [The tree scope](accounts.md#the-tree-scope): the `tree:<path>` scope (with
+  the `tree` value of `RolePermission.scope`), `karni.accounts.tree_scope`,
+  `karni.accounts.grants.user_key`, the `access/` endpoint of a tree
+  resource (`BaseViewSet.access_forest`, `karni.api.tree.tree_access_serializer`),
+  the `tree:<field>` options of the permission matrix, the `tree` entry of a
+  `karni why` grant in `--json`, `tree:<path>` in a `karni.yaml` role grant,
+  and `useResourceAccessForest` and `TreeView`'s `access` in `@karni/ui`.
 
 ## Supported platforms
 

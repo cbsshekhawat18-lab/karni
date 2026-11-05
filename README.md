@@ -291,9 +291,10 @@ Project models inherit `karni.models.BaseModel`. Optional settings for Karni's l
 - `stable` Field-level change history (`class Karni: audit = True`)
 - `experimental` Scheduled tasks (`<app>/schedules.py`, `karni schedule`)
 - `experimental` External tables, SQL views and a second database as models Karni reads (`class Karni: external`, `writable`, `database`, `karni make model --external`). Experimental tier
+- `experimental` Tree models: `TreeModel` and `OrderedTreeModel` with cycle-safe walks (`roots`, `children`, `ancestors`, `descendants`, `subtree_ids`), `move_to()` and `delete_branch()`, and the tree changelist in the admin. Experimental tier
 - `planned` A tenant scope on every model (the `karni-tenancy` module)
 
-Base classes: `AuditedModel`, `BaseModel`, `BigIntBaseModel`, `GuardedModel`, `IntegerKeyModel`, `SoftDeleteModel`, `TimestampedModel`, `UUIDModel`.
+Base classes: `AuditedModel`, `BaseModel`, `BigIntBaseModel`, `GuardedModel`, `IntegerKeyModel`, `OrderedTreeModel`, `SoftDeleteModel`, `TimestampedModel`, `TreeModel`, `UUIDModel`.
 <!-- /generated:models -->
 
 Full reference: [base classes](docs/REFERENCE.md#base-classes) and [`class Karni` keys](docs/REFERENCE.md#model-metadata-class-karni).
@@ -314,6 +315,7 @@ A viewset declares `model` and `access`. Everything else has a default you can o
 - `experimental` Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier
 - `experimental` Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier
 - `experimental` A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier
+- `experimental` Tree endpoints on a tree model's viewset (`tree/`, `children/`, `ancestors/`, `move/`, `?parent=`, `?descendants_of=`, `DELETE ?branch=true`) and `x-karni-tree` in the OpenAPI document. Experimental tier
 - `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
 
 Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
@@ -352,10 +354,11 @@ Full reference: [karni.admin](docs/REFERENCE.md#karniadmin).
 - `experimental` `SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own SDK. Experimental tier
 - `experimental` `OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as `LoginForm`'s `codeSignIn` switch. Experimental tier
 - `experimental` `TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once the user accepts the current terms. Experimental tier
+- `experimental` `TreeView`, `TreeSelect` (used by `ResourceForm` for a relation to a tree) and `TreeBreadcrumb` (on `ResourceDetail` of a tree), with `useResourceTree`. Experimental tier
 - `experimental` `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui components as Karni's primitives
 - `experimental` `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions
 
-62 components and 19 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`. The hooks are `useDelayedFlag`, `useOnlineStatus`, `useTheme`, `useKarniPrimitives`, `useUnsavedChangesGuard`, `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useKarniClient`, `useSchema`, `useAuth`, `usePermission`, `useSocialLogin`, `useOtpLogin`, `useToast`.
+65 components and 24 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`. The hooks are `useDelayedFlag`, `useOnlineStatus`, `useTheme`, `useKarniPrimitives`, `useUnsavedChangesGuard`, `useResourceTree`, `useResourceChildren`, `useResourceAncestors`, `useResourceAccessForest`, `useTreeMutations`, `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useKarniClient`, `useSchema`, `useAuth`, `usePermission`, `useSocialLogin`, `useOtpLogin`, `useToast`.
 <!-- /generated:ui -->
 
 Full reference: [components and hooks](docs/REFERENCE.md#components-and-hooks).
@@ -372,6 +375,8 @@ All of this is built and tested, including row scope in the admin and import wit
 - `experimental` The `related:<key>` scope (`class Karni: scope_paths`) and `custom:` scopes
 - `stable` Membership through a path: `owner_field = "workspace__members"`
 - `stable` Scope paths that do not resolve fail `karni check` (`E214`) instead of answering 500
+- `experimental` Per-user grants next to the role grants: a pattern and a scope for one user, with targets and an expiry, in the admin and an API (`UserGrant`, `KARNI_USER_GRANTS`). Experimental tier
+- `experimental` The tree scope: a grant on a node of a tree reaches every row under it (`tree:<path>` in `KARNI_ROLES` and user grants, one subtree subquery, the `access/` forest, `TreeView`'s `access`). Experimental tier
 - `experimental` Field visibility per role (`class Karni: field_roles`)
 - `experimental` Row scope in the admin, from the same grants as the API
 - `stable` Change history: who changed which field, when, from what to what
@@ -449,7 +454,7 @@ Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
 An agent in a Karni project extends the framework instead of rewriting it:
 
 - **`karni context`** prints the project in a few lines: apps, models, viewsets, roles, components, hooks and pages.
-- **`karni rules`** prints the 46 conventions, each with a code, in 603 tokens (cl100k). `karni rules --check <file>` checks one file.
+- **`karni rules`** prints the 47 conventions, each with a code, in 611 tokens (cl100k). `karni rules --check <file>` checks one file.
 - **Adapter files.** `karni new` writes the file each tool reads, from one rule set: AGENTS.md, CLAUDE.md, Cursor, Copilot, Windsurf, Cline, Aider and Junie, plus slash commands such as `/new-model`.
 - **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools, and the `/new-app` flow as `recipes`, `questions`, `answer`, `plan` and `build`.
 - **Your prompts, kept (optional).** [Gigai Chronicle](https://github.com/cbsshekhawat18-lab/gigai-chronicle) records every prompt you give an agent inside your repository, and `karni context --with-history <file>` reads it back to brief the next agent. It is MIT licensed, local-only, and made by Karni's author.

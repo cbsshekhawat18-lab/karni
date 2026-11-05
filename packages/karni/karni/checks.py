@@ -764,6 +764,117 @@ def check_role_scope_paths(app_configs: Any = None, **kwargs: Any) -> list[check
     return messages
 
 
+@checks.register(checks.Tags.models)
+def check_tree_models(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E344 / E345: a tree model whose manager or ``parent`` cannot carry the walks."""
+    from django.db import models
+
+    from karni.models import TreeModel
+
+    configs = app_configs if app_configs is not None else apps.get_app_configs()
+    messages: list[checks.CheckMessage] = []
+    for config in configs:
+        for model in config.get_models():
+            if not issubclass(model, TreeModel):
+                continue
+            manager = model._default_manager
+            if not callable(getattr(manager, "descendants", None)):
+                messages.append(
+                    check_error(
+                        "E344",
+                        f"{model.__name__} inherits TreeModel, but its default manager "
+                        f"'{manager.name}' ({type(manager).__name__}) has no tree walks, so "
+                        f"{model.__name__}.objects.descendants() and the tree endpoints fail.",
+                        hint=_fix("E344"),
+                        obj=model,
+                    )
+                )
+            parent = model._meta.get_field("parent")
+            if not (
+                isinstance(parent, models.ForeignKey)
+                and parent.related_model is model
+                and parent.null
+            ):
+                messages.append(
+                    check_error(
+                        "E345",
+                        f"{model.__name__}.parent is {type(parent).__name__}, not a nullable "
+                        f"ForeignKey to {model.__name__}, so no walk can follow it.",
+                        hint=_fix("E345"),
+                        obj=model,
+                    )
+                )
+    return messages
+
+
+@checks.register(checks.Tags.models)
+def check_tree_scopes(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E490 / W620: every ``tree:<path>`` of ``KARNI_ROLES`` ends at a tree model.
+
+    E490 is a path that does not reach a tree model from the model an explicit
+    key names, or from any model a wildcard matches. W620 is a role grant
+    whose members get no node: the user model has no attribute named after
+    the path's last step, the node a role grant of the scope reaches
+    (experimental, :mod:`karni.accounts.tree_scope`).
+    """
+    import fnmatch
+
+    from django.contrib.auth import get_user_model
+
+    from karni.accounts.grants import user_key
+    from karni.accounts.roles import declared_roles, permission_keys
+    from karni.accounts.tree_scope import resolve_path, tree_path
+
+    try:
+        specs = declared_roles()
+        keys = permission_keys()
+    except Exception:  # noqa: BLE001 - KARNI_ROLES itself is validated elsewhere
+        return []
+    user_model = get_user_model()
+    messages: list[checks.CheckMessage] = []
+    for spec in specs:
+        for pattern, scope in spec.grants.items():
+            kind, _, path = str(scope).partition(":")
+            if kind != "tree" or not path:
+                continue
+            glob = "*:*" if pattern == "*" else pattern
+            matched = list(
+                dict.fromkeys(
+                    model for key, model in keys.items() if fnmatch.fnmatchcase(key, glob)
+                )
+            )
+            if not matched:
+                continue  # a pattern that matches nothing is E206
+            where = f"KARNI_ROLES[{spec.slug!r}] grants {pattern!r} with scope 'tree:{path}'"
+            fits = [model for model in matched if tree_path(model, path) is not None]
+            if not fits:
+                if len(matched) == 1:
+                    why = f"{matched[0].__name__} has no path {path!r} to a tree model."
+                    try:
+                        resolve_path(matched[0], path)
+                    except KarniError as exc:
+                        why = exc.message
+                    text = f"{where}: {why}"
+                else:
+                    text = (
+                        f"{where}, but none of the {len(matched)} models it matches has a path "
+                        f"{path!r} to a tree model."
+                    )
+                messages.append(check_error("E490", text, hint=_fix("E490"), obj=matched[0]))
+            elif not hasattr(user_model, user_key("tree", path)):
+                messages.append(
+                    check_warning(
+                        "W620",
+                        f"{where}, but {user_model.__name__} has no attribute "
+                        f"{user_key('tree', path)!r}, so the role gives its members no node and "
+                        "no row.",
+                        hint=_fix("W620"),
+                        obj=fits[0],
+                    )
+                )
+    return messages
+
+
 def _stand_in_user(user_model: Any) -> Any:
     """An unsaved user with a primary key, so related filters on it can be built."""
     import uuid

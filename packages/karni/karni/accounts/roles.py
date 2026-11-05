@@ -17,6 +17,9 @@ either part) to a **scope** — which rows the action reaches:
 ``related:<key>``       rows whose ``Karni.scope_paths[key]`` equals the user's
                         attribute of the same name (``user.branch`` → ``order.branch``)
 ``custom:<name>``       a callable registered with :func:`register_scope`
+``tree:<path>``         rows whose ``<path>`` (a relation to a tree model) is a
+                        node the user holds or a node below it (experimental,
+                        :mod:`karni.accounts.tree_scope`)
 ======================  =====================================================
 
 ``karni sync-roles`` (``manage.py karni_sync_roles``) expands the patterns
@@ -35,6 +38,8 @@ the user instance, so once per request); :func:`user_can` answers the gate
 and :func:`rows_for` compiles the scopes into a ``Q`` for the row filter.
 Nothing here compares a role to a literal: ``staff``/``user``/``customer``
 are only the default *value* of ``KARNI_ROLES``, in ``karni.conf.base``.
+While ``KARNI_USER_GRANTS`` is on (experimental), a user's per-user grants
+(:mod:`karni.accounts.grants`) join their role grants in :func:`grants_for`.
 
 An installed module may declare roles of its own through the ``karni.roles``
 entry point group (:func:`module_roles`): the value is a mapping shaped like
@@ -57,6 +62,7 @@ from importlib import metadata
 from typing import Any, Final
 
 from django.apps import apps
+from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Q
 
@@ -85,7 +91,9 @@ __all__ = [
 SETTING: Final = "KARNI_ROLES"
 #: The entry point group through which an installed module declares roles.
 ENTRY_POINT_GROUP: Final = "karni.roles"
-SCOPES: Final[tuple[str, ...]] = ("all", "own", "related", "custom")
+SCOPES: Final[tuple[str, ...]] = ("all", "own", "related", "custom", "tree")
+#: The scopes written with a path or name after the colon.
+_PATH_SCOPES: Final[tuple[str, ...]] = ("related", "custom", "tree")
 
 #: The scope of a declared grant the permission matrix revoked: a row that
 #: grants nothing, kept so the sync does not restore the declaration.
@@ -119,19 +127,27 @@ class RoleSpec:
 
 @dataclass(frozen=True)
 class Grant:
-    """One resolved grant: ``permission`` (``app.model:action``) reached with ``scope``."""
+    """One resolved grant: ``permission`` (``app.model:action``) reached with ``scope``.
+
+    A role grant leaves ``targets`` and ``grant_id`` empty. A per-user grant
+    (:mod:`karni.accounts.grants`, experimental) carries the row ids its scope
+    points at in ``targets`` and its ``UserGrant`` id in ``grant_id``.
+    """
 
     permission: str
     scope: str
     scope_path: str = ""
+    targets: tuple[str, ...] = ()
+    grant_id: str = ""
 
 
 def _scope_parts(scope: str, where: str) -> tuple[str, str]:
     kind, _, path = str(scope).partition(":")
-    if kind not in SCOPES or (kind in ("related", "custom")) != bool(path):
+    if kind not in SCOPES or (kind in _PATH_SCOPES) != bool(path):
         raise KarniImproperlyConfigured(
             f"{SETTING}: {where} has scope {scope!r}. A scope is 'all', 'own', "
-            "'related:<scope path key>' or 'custom:<registered name>'.",
+            "'related:<scope path key>', 'custom:<registered name>' or 'tree:<path to a tree "
+            "model>'.",
             code="E205",
         )
     return kind, path
@@ -184,7 +200,6 @@ def declared_roles(declaration: Mapping[str, Any] | None = None) -> list[RoleSpe
     (:func:`module_roles`) come first and ``KARNI_ROLES`` wins for a slug
     both name.
     """
-    from django.conf import settings
 
     if declaration is not None:
         raw: Any = declaration
@@ -258,7 +273,8 @@ def expand_grants(spec: RoleSpec, keys: Mapping[str, type[models.Model]]) -> lis
     explicit key whose model cannot carry the scope (``own`` without an owner
     field, ``related:branch`` without that scope path) is an error too; a
     wildcard simply skips such models — ``"*": "own"`` means "everything
-    that can be owned".
+    that can be owned". A ``tree:<path>`` on an explicit key whose model has
+    no such path to a tree model is ``E490``, and a wildcard skips the model.
     """
     resolved: dict[str, Grant] = {}
     for pattern, scope in spec.grants.items():
@@ -293,6 +309,20 @@ def expand_grants(spec: RoleSpec, keys: Mapping[str, type[models.Model]]) -> lis
                     f"{path!r}. Add `class Karni: scope_paths = {{{path!r}: '<lookup>'}}`.",
                     code="E206",
                 )
+            if kind == "tree":
+                from karni.accounts.tree_scope import resolve_path, tree_path
+
+                if tree_path(model, path) is None:
+                    if not explicit:
+                        continue
+                    try:
+                        resolve_path(model, path)
+                    except KarniImproperlyConfigured as exc:
+                        raise KarniImproperlyConfigured(
+                            f"{SETTING}[{spec.slug!r}]: {key!r} is granted with scope "
+                            f"'tree:{path}'. {exc.message}",
+                            code="E490",
+                        ) from exc
             resolved[key] = Grant(key, kind, path)
     return list(resolved.values())
 
@@ -495,7 +525,9 @@ def grants_for(user: Any) -> dict[str, list[Grant]]:
 
     Anonymous users hold nothing. Superusers hold every permission with scope
     ``all`` — the admin's own convention, kept so a superuser is never locked
-    out by an incomplete declaration.
+    out by an incomplete declaration. While ``KARNI_USER_GRANTS`` is on, the
+    user's live per-user grants (:mod:`karni.accounts.grants`) join the role
+    grants, so every check answers with the union: one more query, once.
     """
     if user is None or not getattr(user, "is_authenticated", False):
         return {}
@@ -517,6 +549,11 @@ def grants_for(user: Any) -> dict[str, list[Grant]]:
                 continue  # revoked in the permission matrix: grants nothing
             key = row.permission.key
             found.setdefault(key, []).append(Grant(key, row.scope, row.scope_path))
+        if getattr(settings, "KARNI_USER_GRANTS", False):
+            from karni.accounts.grants import user_grants
+
+            for grant in user_grants(user):  # one more query, with the role grants' cache
+                found.setdefault(grant.permission, []).append(grant)
     setattr(user, _CACHE_ATTR, found)
     return found
 
@@ -538,16 +575,27 @@ def grant_rows(user: Any, model: type[models.Model], grant: Grant) -> Q | bool:
 
     ``all`` → every row; ``own`` → ``Karni.owner_field`` is the user;
     ``related:<key>`` → ``Karni.scope_paths[key]`` equals ``user.<key>`` (no
-    value on the user: no row); ``custom:<name>`` → the registered callable.
+    value on the user: no row); ``custom:<name>`` → the registered callable;
+    ``tree:<path>`` → ``<path>`` is under the grant's nodes (experimental,
+    :mod:`karni.accounts.tree_scope`; no node: no row). A per-user grant with
+    ``targets`` reaches the rows whose scope path is one of them instead.
     :func:`rows_for` unions these, and ``karni why`` shows each one.
     """
     if grant.scope == "all":
         return True
+    if grant.scope == "tree":
+        from karni.accounts.tree_scope import grant_nodes, subtree_rows, tree_path
+
+        if tree_path(model, grant.scope_path) is None:
+            return False  # fail closed: the model has no such path (any more)
+        return subtree_rows(model, grant.scope_path, grant_nodes(user, grant))
     if grant.scope == "own":
         owner = owner_field(model)
         return Q(**{owner: user}) if owner else False
     if grant.scope == "related":
         path = scope_paths(model).get(grant.scope_path)
+        if path is not None and grant.targets:
+            return Q(**{f"{path}__in": list(grant.targets)})
         value = getattr(user, grant.scope_path, None)
         if path is None or value is None:
             return False  # fail closed: the user has no branch to be related through
@@ -567,16 +615,33 @@ def rows_for(user: Any, model: type[models.Model], action: str) -> Q | bool:
     """The rows ``user`` reaches for ``action`` on ``model``: ``True``, ``False`` or a ``Q``.
 
     The union of the user's grants for that permission; no grant → ``False``.
+    The ``tree:<path>`` grants of one path compile together: one subtree
+    subquery from every node they give (:func:`karni.accounts.tree_scope.tree_rows`).
     """
-    grants = grants_for(user).get(permission_key(model, action), [])
+    key = permission_key(model, action)
+    grants = grants_for(user).get(key, [])
     rows: Q | bool = False
+    trees: list[str] = []
     for grant in grants:
+        if grant.scope == "tree":
+            if grant.scope_path not in trees:
+                trees.append(grant.scope_path)
+            continue
         part = grant_rows(user, model, grant)
         if part is True:
             return True
         if part is False:
             continue
         rows = part if rows is False else rows | part
+    if trees:
+        from karni.accounts.tree_scope import tree_path, tree_rows
+
+        for path in trees:
+            if tree_path(model, path) is None:
+                continue  # fail closed, as grant_rows() does
+            part = tree_rows(user, model, path, permission=key)
+            if part is not False:
+                rows = part if rows is False else rows | part
     return rows
 
 
@@ -584,10 +649,12 @@ def rows_for(user: Any, model: type[models.Model], action: str) -> Q | bool:
 class GrantSource:
     """Where one of a user's grants comes from (``karni why``, the effective-permissions view).
 
-    ``role`` is the role slug (``""`` for a superuser's implicit grant),
-    ``origin`` is ``"declared"`` (``KARNI_ROLES``), ``"matrix"`` (the
-    permission matrix) or ``"superuser"``; ``scope`` ``"none"`` is a declared
-    grant the matrix revoked, which grants nothing.
+    ``role`` is the role slug (``""`` for a superuser's implicit grant and
+    for a user grant), ``origin`` is ``"declared"`` (``KARNI_ROLES``),
+    ``"matrix"`` (the permission matrix), ``"superuser"`` or ``"user_grant"``,
+    and ``scope`` ``"none"`` is a declared grant the matrix revoked, which
+    grants nothing. A per-user grant (experimental) is described by
+    ``grant_id``, ``reason``, ``expires_at`` and ``targets``.
     """
 
     permission: str
@@ -596,6 +663,10 @@ class GrantSource:
     scope: str
     scope_path: str
     origin: str
+    grant_id: str = ""
+    reason: str = ""
+    expires_at: Any = None
+    targets: tuple[str, ...] = ()
 
     @property
     def scope_label(self) -> str:
@@ -608,7 +679,8 @@ def grant_sources(user: Any, key: str) -> list[GrantSource]:
     Reads the same ``RolePermission`` rows :func:`grants_for` resolves (a
     superuser holds every permission at scope ``all``), so the answer names
     each role, scope and origin that :func:`user_can` and :func:`rows_for`
-    act on.
+    act on. While ``KARNI_USER_GRANTS`` is on, the user's live user grants
+    for ``key`` follow the roles (origin ``"user_grant"``).
     """
     if user is None or not getattr(user, "is_authenticated", False):
         return []
@@ -628,10 +700,15 @@ def grant_sources(user: Any, key: str) -> list[GrantSource]:
         .select_related("role")
         .order_by("role__slug")
     )
-    return [
+    found = [
         GrantSource(key, row.role.slug, row.role.name, row.scope, row.scope_path, str(row.origin))
         for row in rows
     ]
+    if getattr(settings, "KARNI_USER_GRANTS", False):
+        from karni.accounts.grants import sources
+
+        found.extend(sources(user, key))
+    return found
 
 
 def user_can(

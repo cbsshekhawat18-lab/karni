@@ -173,7 +173,10 @@ class KarniFilterBackend(DjangoFilterBackend):
       want it;
     * everything else — Text, JSON, File/Image, binary, M2M — is skipped, as
       is any field outside the model's ``APIMeta`` policy (see
-      :func:`_api_filterable_names`).
+      :func:`_api_filterable_names`);
+    * a tree model (experimental) gets ``?parent=<key>`` / ``?parent=null``
+      and ``?descendants_of=<key>`` instead of the plain ``parent`` filter
+      (:mod:`karni.api.tree`).
 
     On every other view this backend behaves exactly like the stock
     ``DjangoFilterBackend``, and an explicit ``filterset_class`` or
@@ -311,6 +314,10 @@ class KarniFilterBackend(DjangoFilterBackend):
             lookups = self._lookups_for(field)
             if lookups is not None:
                 meta_fields[field.name] = list(lookups)
+        if "parent" in allowed:
+            from karni.api.tree import tree_filters
+
+            declared.update(tree_filters(model))
         meta = type("Meta", (), {"model": model, "fields": meta_fields})
         return type(
             f"{model.__name__}AutoFilterSet",

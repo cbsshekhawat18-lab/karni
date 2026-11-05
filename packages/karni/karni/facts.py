@@ -4,11 +4,12 @@
 ``karni spec export`` turns it into a ``karni.yaml``. The facts say what the
 code declares, with no opinion on the spec format: each field's class and
 its ``deconstruct()`` arguments, each model's key type, table and whether
-Django manages it, each viewset's route and ``describe()``d access, the
-settings the spec's features and roles come from, the database aliases, and
-every installed module's settings next to the module's defaults. Every value
-is JSON-safe: a function or class becomes its dotted path, a ``Decimal`` a
-string, an enum member its value.
+Django manages it, whether it is a tree (``tree``: ``None``, ``"tree"`` for a
+``TreeModel`` or ``"ordered"`` for an ``OrderedTreeModel``), each viewset's
+route and ``describe()``d access, the settings the spec's features and roles
+come from, the database aliases, and every installed module's settings next
+to the module's defaults. Every value is JSON-safe: a function or class
+becomes its dotted path, a ``Decimal`` a string, an enum member its value.
 
 ``manage.py karni_rows`` prints :func:`count_rows`: the row counts ``karni
 plan`` shows next to a risky change. It is the only part that opens the
@@ -45,6 +46,7 @@ FEATURE_SETTINGS: tuple[str, ...] = (
     "KARNI_EMAIL_OTP",
     "KARNI_SOCIAL_TOKEN_PROVIDERS",
     "KARNI_TERMS",
+    "KARNI_USER_GRANTS",
     "KARNI_ROLES",
     "KARNI_ACCOUNTS_DEFAULT_ROLES",
     "KARNI_PK",
@@ -104,18 +106,39 @@ def _mixin_fields(model: type[models.Model]) -> frozenset[str]:
     from karni.models import (
         AuditedModel,
         IntegerKeyModel,
+        OrderedTreeModel,
         SoftDeleteModel,
         TimestampedModel,
+        TreeModel,
         UUIDModel,
     )
 
-    mixins = (UUIDModel, IntegerKeyModel, TimestampedModel, SoftDeleteModel, AuditedModel)
+    mixins = (
+        UUIDModel,
+        IntegerKeyModel,
+        TimestampedModel,
+        SoftDeleteModel,
+        AuditedModel,
+        TreeModel,
+        OrderedTreeModel,
+    )
     return frozenset(
         field.name
         for mixin in mixins
         if issubclass(model, mixin)
         for field in cast(Any, mixin)._meta.local_fields
     )
+
+
+def _tree_kind(model: type[models.Model]) -> str | None:
+    """``"ordered"`` for an ``OrderedTreeModel``, ``"tree"`` for a ``TreeModel``, else ``None``."""
+    from karni.models import OrderedTreeModel, TreeModel
+
+    if issubclass(model, OrderedTreeModel):
+        return "ordered"
+    if issubclass(model, TreeModel):
+        return "tree"
+    return None
 
 
 def _key_type(model: type[models.Model]) -> str | None:
@@ -179,6 +202,8 @@ def _model(model: type[models.Model], user: type) -> dict[str, Any]:
         # on BaseModel or BigIntBaseModel: the fields of Karni's mixins are left out of "fields"
         "base_model": issubclass(model, BaseModel | BigIntBaseModel),
         "pk": _key_type(model),
+        # TreeModel's parent (and OrderedTreeModel's position) are left out of "fields" too
+        "tree": _tree_kind(model),
         "managed": bool(model._meta.managed),
         "db_table": model._meta.db_table,
         "proxy": bool(model._meta.proxy),

@@ -30,6 +30,7 @@ import type {
   ParsedSchema,
   RelationRef,
   ResourceSchema,
+  TreeRef,
 } from "./types";
 
 // minimal structural OpenAPI types
@@ -188,6 +189,7 @@ interface PropertyInfo {
   binary: boolean;
   transitions?: Readonly<Record<string, readonly string[]>>;
   initial?: readonly string[];
+  tree?: TreeRef;
 }
 
 function normalizeType(schema: SchemaObject): { type: string | undefined; nullable: boolean } {
@@ -208,6 +210,17 @@ function relationFromExtension(schema: SchemaObject): RelationRef | undefined {
     return { resource: ext.resource, many: ext.many === true };
   }
   return undefined;
+}
+
+/**
+ * Experimental. The `x-karni-tree` extension (`{"parent": "parent", "ordered": bool}`)
+ * of a tree model's component schema or of a relation pointing at one, when well formed.
+ */
+export function parseTreeExtension(raw: unknown): TreeRef | undefined {
+  if (raw === true) return { parent: "parent", ordered: false };
+  if (!isRecord(raw)) return undefined;
+  const parent = typeof raw.parent === "string" && raw.parent !== "" ? raw.parent : "parent";
+  return { parent, ordered: raw.ordered === true };
 }
 
 function stringList(value: unknown): string[] | undefined {
@@ -338,6 +351,8 @@ function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo 
     binary: false,
     ...lifecycleFromExtension(resolved),
   };
+  const tree = parseTreeExtension(resolved["x-karni-tree"] ?? raw["x-karni-tree"]);
+  if (tree !== undefined) info.tree = tree;
 
   // drf-spectacular nullable/blank enums: oneOf [XEnum, BlankEnum?, NullEnum?].
   const composition = resolved.oneOf ?? resolved.anyOf;
@@ -494,6 +509,8 @@ function mergeField(
   if (transitions !== undefined) field.transitions = transitions;
   const initial = responseInfo?.initial ?? requestInfo?.initial;
   if (initial !== undefined) field.initial = initial;
+  const tree = requestInfo?.tree ?? responseInfo?.tree;
+  if (tree !== undefined && relation !== undefined) field.tree = tree;
 
   return field;
 }
@@ -664,6 +681,28 @@ export function parseOpenApi(input: unknown): ParsedSchema {
     if (importOp !== undefined) {
       operations.import = operationDef(doc, `${path}import/`, "post", importOp);
     }
+    // Tree models (experimental): tree/ under the list path, the rest under the item path.
+    const treeItem = paths[`${path}tree/`];
+    if (isRecord(treeItem) && isRecord(treeItem.get)) {
+      operations.tree = operationDef(doc, `${path}tree/`, "get", treeItem.get);
+    }
+    const accessItem = paths[`${path}access/`];
+    if (isRecord(accessItem) && isRecord(accessItem.get)) {
+      operations.access = operationDef(doc, `${path}access/`, "get", accessItem.get);
+    }
+    if (itemPath !== undefined) {
+      const base = itemPath.endsWith("/") ? itemPath : `${itemPath}/`;
+      const nested: ReadonlyArray<["children" | "ancestors" | "move", "get" | "post"]> = [
+        ["children", "get"],
+        ["ancestors", "get"],
+        ["move", "post"],
+      ];
+      for (const [name, method] of nested) {
+        const nestedItem = paths[`${base}${name}/`];
+        const op = isRecord(nestedItem) ? nestedItem[method] : undefined;
+        if (isRecord(op)) operations[name] = operationDef(doc, `${base}${name}/`, method, op);
+      }
+    }
     if (itemPath !== undefined && itemItem !== undefined) {
       for (const method of METHODS) {
         const op = itemItem[method];
@@ -707,10 +746,13 @@ export function parseOpenApi(input: unknown): ParsedSchema {
     }
 
     const dashboard = parseDashboard(listOp["x-karni-dashboard"]);
-    resources[resource] =
+    const resourceSchema: ResourceSchema =
       dashboard !== undefined
         ? { resource, operations, fields, dashboard }
         : { resource, operations, fields };
+    const tree = parseTreeExtension(responseSchema?.["x-karni-tree"]);
+    if (tree !== undefined) resourceSchema.tree = tree;
+    resources[resource] = resourceSchema;
   }
 
   const parsed: ParsedSchema = { resources };

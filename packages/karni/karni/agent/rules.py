@@ -297,10 +297,13 @@ RULES: tuple[Rule, ...] = (
         rule=(
             "Never write auth flows, user models, admin registration, serializers, routers, "
             "settings, Docker/Compose config, Celery config, HTML tables, forms, or detail "
-            "views. Karni provides all of these. If you think you need one, you need an "
-            "override on an existing Karni base instead. The tables, forms and detail views "
-            "meant here are app screens. A public server-rendered site (K309) is the one place "
-            "for hand-written HTML pages, and its forms still post to a BaseViewSet."
+            "views. Karni provides all of these. Never write a table of per-user permissions "
+            "either: access given to one user is a per-user grant (`features: user_grants`, "
+            "`karni.accounts.grants`), which Granted() already reads. If you think you need one, "
+            "you need an override on an existing Karni base instead. The tables, forms and "
+            "detail views meant here are app screens. A public server-rendered site (K309) is "
+            "the one place for hand-written HTML pages, and its forms still post to a "
+            "BaseViewSet."
         ),
         rationale=(
             "Each of these ships in Karni with tested defaults and override points. A public "
@@ -369,11 +372,11 @@ RULES: tuple[Rule, ...] = (
             "first: the CATALOG lines of `karni context`, `karni modules list` and `karni "
             "modules show <name>` list every module and built-in feature (payments, approvals, "
             "login as a user, a public site, two-factor sign-in, sign-in with a code or with "
-            "Google, Microsoft or Apple, terms acceptance, response caching), whether the "
-            "project has it, its options and the questions to ask. Add a module with `karni "
-            "add <name>` (or `modules:` in karni.yaml), turn a feature on with its setting (or "
-            "`features:`), and take a module out with `karni remove <name>`, which never drops "
-            "its tables."
+            "Google, Microsoft or Apple, terms acceptance, per-user grants, response caching), "
+            "whether the project has it, its options and the questions to ask. Add a module "
+            "with `karni add <name>` (or `modules:` in karni.yaml), turn a feature on with its "
+            "setting (or `features:`), and take a module out with `karni remove <name>`, which "
+            "never drops its tables."
         ),
         rationale=(
             "Code that would be written more than once belongs in Karni, never per project. "
@@ -484,6 +487,29 @@ RULES: tuple[Rule, ...] = (
             "run `karni build`."
         ),
     ),
+    Rule(
+        code="K312",
+        category="architecture",
+        severity="error",
+        summary="Trees: TreeModel.",
+        rule=(
+            "A hierarchy (categories, regions, organisation units, a menu) is a tree model: "
+            "`class Region(TreeModel, BaseModel)`, or `OrderedTreeModel` when siblings have an "
+            "order, or `tree: true` / `tree: ordered` in karni.yaml. Never declare a `parent` "
+            "foreign key to the model itself, never write recursive SQL or a loop over "
+            "`.parent`, and never write a tree endpoint or a tree component. "
+            "`Model.objects.descendants()`, `ancestors()` and `subtree_ids()` walk it, the "
+            "API serves tree/, children/, ancestors/ and move/, and @karni/ui shows TreeView "
+            "and TreeSelect."
+        ),
+        rationale=(
+            "Hand-written trees loop on cyclic data, cost one query per level and repeat the "
+            "same endpoints and widgets in every project. TreeModel's walks are one cycle-safe "
+            "query each."
+        ),
+        fix="Inherit TreeModel first and drop the parent field, or opt out with the reason.",
+        enforced_by=("hand-written-tree",),
+    ),
     # backend
     Rule(
         code="K101",
@@ -571,7 +597,9 @@ RULES: tuple[Rule, ...] = (
             "Express who sees which rows in `access` (`Where(...)` for custom logic, "
             "`@action(..., access=...)` for one action). An overridden `get_queryset` is still "
             "read-scoped, so never use it to widen. Overriding `filter_queryset_for_user` needs "
-            "`# karni: allow(access-override): <why>`."
+            "`# karni: allow(access-override): <why>`. Rows under the nodes of a tree a user "
+            "was granted are the `tree:<path>` scope of a grant, never a hand-written subtree "
+            "filter."
         ),
         rationale=(
             "The queryset is the authoritative layer: lists, details, actions, relation "

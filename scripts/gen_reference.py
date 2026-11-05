@@ -139,6 +139,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "models",
+        "Tree models: `TreeModel` and `OrderedTreeModel` with cycle-safe walks (`roots`, "
+        "`children`, `ancestors`, `descendants`, `subtree_ids`), `move_to()` and "
+        "`delete_branch()`, and the tree changelist in the admin. Experimental tier",
+    ),
+    Capability(
+        "models",
         "A tenant scope on every model (the `karni-tenancy` module)",
         planned="docs/models.md#scopes-the-filters-every-default-manager-applies",
     ),
@@ -186,6 +192,12 @@ CAPABILITIES: tuple[Capability, ...] = (
         "A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user "
         "accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). "
         "Experimental tier",
+    ),
+    Capability(
+        "api",
+        "Tree endpoints on a tree model's viewset (`tree/`, `children/`, `ancestors/`, `move/`, "
+        "`?parent=`, `?descendants_of=`, `DELETE ?branch=true`) and `x-karni-tree` in the "
+        "OpenAPI document. Experimental tier",
     ),
     Capability(
         "api",
@@ -253,6 +265,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "ui",
+        "`TreeView`, `TreeSelect` (used by `ResourceForm` for a relation to a tree) and "
+        "`TreeBreadcrumb` (on `ResourceDetail` of a tree), with `useResourceTree`. "
+        "Experimental tier",
+    ),
+    Capability(
+        "ui",
         "`karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or "
         "Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui "
         "components as Karni's primitives",
@@ -287,6 +305,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         "permissions",
         "Scope paths that do not resolve fail `karni check` (`E214`) instead of answering 500",
         ((f"{SL}/crm/models.py", 'owner_field = "lead__workspace__members"'),),
+    ),
+    Capability(
+        "permissions",
+        "Per-user grants next to the role grants: a pattern and a scope for one user, with "
+        "targets and an expiry, in the admin and an API (`UserGrant`, `KARNI_USER_GRANTS`). "
+        "Experimental tier",
+    ),
+    Capability(
+        "permissions",
+        "The tree scope: a grant on a node of a tree reaches every row under it (`tree:<path>` "
+        "in `KARNI_ROLES` and user grants, one subtree subquery, the `access/` forest, "
+        "`TreeView`'s `access`). Experimental tier",
     ),
     Capability("permissions", "Field visibility per role (`class Karni: field_roles`)"),
     Capability("permissions", "Row scope in the admin, from the same grants as the API"),

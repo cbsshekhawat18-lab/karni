@@ -23,7 +23,9 @@ why``, request ids, the development capture, ``karni trace``, ``karni replay``,
 ``karni queries``) · ``E96x``/``E97x`` typed fields and database guarantees
 (``karni.fields``) · ``E98x``/``W98x`` lifecycle and limited resources
 (``StateField``, capacity, ``no_overlap``) · ``E27x``/``W54x`` external
-tables, SQL views and a second database (``karni.db``).
+tables, SQL views and a second database (``karni.db``) · ``E34x``/``W55x``
+tree models (``karni.tree``) · ``E49x``/``W62x`` the tree scope
+(``karni.accounts.tree_scope``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -666,8 +668,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "cannot be reconciled into the role tables.",
         "Write KARNI_ROLES = {'<slug>': {'name': ..., 'description': ..., 'system': bool, "
         "'grants': {'app_label.model:action': '<scope>'}}}. A pattern may use '*' for the model "
-        "or the action (or '*' alone). A scope is 'all', 'own', 'related:<key>' or "
-        "'custom:<name>'.",
+        "or the action (or '*' alone). A scope is 'all', 'own', 'related:<key>', "
+        "'custom:<name>' or 'tree:<path>'.",
     ),
     _e(
         "E206",
@@ -1202,6 +1204,196 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         'provides.models, and add [project.entry-points."karni.modules"] <name> = '
         '"karni_<name>" to pyproject.toml, then reinstall the module. docs/modules.md lists '
         "every key.",
+    ),
+    # E340-E359 / W550-W559 tree models (karni.models.TreeModel, karni.tree, experimental)
+    _e(
+        "E340",
+        "A tree node's new parent is the node itself or a node below it",
+        "exception",
+        "karni.models.TreeModel.check_parent (save, clean, move_to); the API answers 400",
+        "A parent below the node would make the branch its own ancestor: a cycle. Every walk "
+        "stays safe on such data, but the nodes on the cycle drop out of the tree, so Karni "
+        "refuses the write before any SQL.",
+        "Choose a parent outside the node's branch (or None for a root). To swap two nodes, "
+        "move the lower one out of the branch first. In the API, POST <id>/move/ with another "
+        "parent.",
+    ),
+    _e(
+        "E341",
+        "A tree node with live children cannot be deleted alone",
+        "exception",
+        "karni.models.TreeModel.delete; the API answers 409",
+        "A soft-deleted node hides its whole branch. Deleting a node that still has live "
+        "children would hide them too, without anyone deciding that, so delete() refuses and "
+        "the answer counts the children.",
+        "Move the children to another parent first, or delete the whole branch on purpose: "
+        "node.delete_branch(), or DELETE <id>/?branch=true in the API (write access to every "
+        "node of the branch).",
+    ),
+    _e(
+        "E342",
+        "A tree endpoint got a parameter it cannot use",
+        "api",
+        "karni.api.tree (tree/, move/, ?parent=, ?descendants_of=, ?branch=)",
+        "The tree endpoints take keys of the model (?root=, ?parent=, ?descendants_of=, the "
+        "parent of move/), a whole number of levels (?depth=, from 1 to the viewset's "
+        "tree_max_depth) and true or false (?branch=). A key must name a node the requester "
+        "may read.",
+        "Send a key of the model (or null for ?parent= and move/'s parent), a depth within the "
+        "limit the message names, and branch=true or branch=false.",
+    ),
+    _e(
+        "E343",
+        "A tree method got an argument it cannot use",
+        "exception",
+        "karni.managers.TreeQuerySet (walk, descendants, ancestors, subtree_ids); "
+        "karni.models.TreeModel.move_to",
+        "A walk starts from rows of the model, their keys or a queryset of the model. A row of "
+        "another model, an unsaved row or a malformed key names no node. move_to() takes a "
+        "position only on an OrderedTreeModel, as a whole number from 0.",
+        "Pass saved rows of the model or their keys. Drop the position on a TreeModel, or "
+        "inherit OrderedTreeModel to order siblings.",
+    ),
+    _e(
+        "E344",
+        "A tree model's default manager has no tree walks",
+        "check",
+        "karni.checks.check_tree_models",
+        "TreeModel's manager (karni.managers.TreeManager) carries roots(), children(), "
+        "ancestors(), descendants() and subtree_ids(), and the tree endpoints use them. A base "
+        "listed before TreeModel (class Region(BaseModel, TreeModel)) supplies its own "
+        "`objects` first, so the walks are missing.",
+        "List TreeModel first: class Region(TreeModel, BaseModel). A custom manager must be "
+        "built on karni.managers.TreeQuerySet, the way TreeManager is.",
+    ),
+    _e(
+        "E345",
+        "A tree model's parent is not a foreign key to the model itself",
+        "check",
+        "karni.checks.check_tree_models",
+        "Every walk joins a node to its parent through the `parent` column, so `parent` must "
+        "stay a nullable ForeignKey to the same model.",
+        "Remove the redeclared `parent` field, or declare it as models.ForeignKey('self', "
+        "null=True, blank=True, on_delete=models.PROTECT, related_name='children').",
+    ),
+    # E360-E379 per-user grants (karni.accounts.grants, experimental)
+    _e(
+        "E360",
+        "A user grant's permission pattern matches no permission",
+        "exception",
+        "karni.accounts.grants.check",
+        "A user grant names its permission as a KARNI_ROLES grant does: 'app_label.model:action', "
+        "with '*' for either part, or '*' alone. A pattern that is malformed or matches no "
+        "permission of the project would grant nothing, so it is refused when the grant is "
+        "written (the API, the admin, karni.accounts.grants.grant or full_clean()).",
+        "Write the key as karni context or GET permissions/matrix/ lists it (e.g. "
+        "'shop.order:view'), and declare a model's extra actions in `class Karni: actions = "
+        "[...]` before granting them.",
+    ),
+    _e(
+        "E361",
+        "A user grant's scope does not fit the permissions it covers",
+        "exception",
+        "karni.accounts.grants.check",
+        "The scope is one a role grant takes: 'all', 'own', 'related:<key>', 'custom:<name>' "
+        "or 'tree:<path>'. 'own' needs the model's owner field, 'related:<key>' its "
+        "Karni.scope_paths[key], 'custom:<name>' a scope registered with register_scope() and "
+        "'tree:<path>' a path from the model to a tree model. "
+        "An explicit key whose model lacks it is refused, and a wildcard pattern must keep at "
+        "least one model that has it.",
+        "Pick a scope from the model's options in GET permissions/matrix/, declare the owner "
+        "field or scope path in `class Karni`, or register the custom scope at startup.",
+    ),
+    _e(
+        "E362",
+        "A user grant's targets are invalid",
+        "exception",
+        "karni.accounts.grants.check",
+        "targets lists the row ids a scope that points at rows reaches: a 'related:<key>' grant "
+        "with targets reaches the rows whose Karni.scope_paths[key] is one of them, and a "
+        "'tree:<path>' grant the rows under those nodes of the tree. Targets are "
+        "a list of ids (text, integers or UUIDs), only for such a scope, and each must be a value "
+        "the scope path's field takes.",
+        "Pass a list of ids of the related model, e.g. targets=[3, 7] for an integer key, drop "
+        "targets for an 'all', 'own' or 'custom:' grant, or grant 'related:<key>' instead.",
+    ),
+    _e(
+        "E363",
+        "The operator may not give this user grant",
+        "api",
+        "karni.accounts.grants.refusals",
+        "Nobody grants what they do not hold, as in the permission matrix: the operator must "
+        "hold every permission the pattern reaches, at scope 'all' or at the same scope, and for "
+        "a grant with targets their own targets under that scope must include each one. "
+        "Nothing was written. Superusers and code that passes operator=None are not checked.",
+        "Ask someone who holds the permission at that scope (or 'all') to give the grant, "
+        "narrow the pattern, the scope or the targets to what you hold, or grant it from code "
+        "with operator=None.",
+    ),
+    _e(
+        "E364",
+        "Per-user grants are turned off",
+        "api",
+        "karni.accounts.api.grants",
+        "permissions/grants/ and its routes are mounted only while KARNI_USER_GRANTS is True. "
+        "A URLconf built while it was True answers 404 with this code once it is False. While "
+        "it is False, user grants are not read and grant nothing.",
+        "Set KARNI_USER_GRANTS = True (or features: user_grants: true in karni.yaml, then karni "
+        "build) to use per-user grants.",
+    ),
+    _e(
+        "E365",
+        "karni.accounts.grants.change() was given a field it does not set",
+        "exception",
+        "karni.accounts.grants.change",
+        "change() sets a grant's permission, scope, targets, expires_at and reason. The user a "
+        "grant belongs to, granted_by and the timestamps are not changed this way: a grant for "
+        "another user is a new grant, and granted_by follows the operator.",
+        "Pass only permission, scope, targets, expires_at or reason. To move access to another "
+        "user, revoke() this grant and grant() a new one.",
+    ),
+    # E490-E499 / W620-W629 the tree scope (karni.accounts.tree_scope, experimental)
+    _e(
+        "E490",
+        "A tree:<path> scope does not end at a tree model",
+        "check",
+        "karni.accounts.tree_scope.resolve_path; karni.checks.check_tree_scopes (KARNI_ROLES); "
+        "tree_scope() in a Where",
+        "tree:<path> reaches the rows whose <path> is a node the user holds or a node below it, "
+        "so each step of the path must be a relation of the model before it (a foreign key, a "
+        "one-to-one, a many-to-many or a reverse relation) and the last one must point at a "
+        "model on karni.models.TreeModel. A path that does not resolve could only ever reach no "
+        "row, so Karni refuses it at startup, in KARNI_ROLES and wherever tree_scope() names it.",
+        "Name the row's relation to the tree model, through relations when needed: "
+        "tree:region, tree:product__categories. Make the target a tree model (class "
+        "Region(TreeModel, BaseModel)), or grant another scope.",
+    ),
+    _e(
+        "E491",
+        "The access/ endpoint of a tree resource got a parameter it cannot use",
+        "api",
+        "karni.api.tree (GET <resource>/access/?permission=)",
+        "?permission= keeps the grants of the permissions it matches, written as a KARNI_ROLES "
+        "pattern: 'app_label.model:action' with '*' for either part, or '*' alone. Anything "
+        "else would match no grant and answer an empty forest without saying why.",
+        "Send a permission key such as ?permission=shop.order:view (or a pattern such as "
+        "shop.order:*), or leave the parameter out to count every tree grant.",
+    ),
+    _e(
+        "W620",
+        "A role grant of a tree scope gives its members no node",
+        "warning",
+        "karni.checks.check_tree_scopes (karni check)",
+        "A role grant of tree:<path> reaches the rows under the node the user holds in the "
+        "attribute named after the path's last step (tree:region and tree:store__region read "
+        "user.region), as related:<key> compares user.<key>. The user model has no such "
+        "attribute, so the role gives each member no node and no row. A tree grant never "
+        "falls back to every row.",
+        "Give the user model the attribute (a field or a property holding a node of the tree, "
+        "e.g. region), or give each user their nodes with user grants of the same scope "
+        "(features: user_grants, then karni.accounts.grants.grant(..., targets=[...])). "
+        "Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] when user grants give the "
+        "nodes on purpose.",
     ),
     # E4xx events, listeners, schedules, Celery
     _e(

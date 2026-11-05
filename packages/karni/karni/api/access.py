@@ -125,6 +125,8 @@ GRANTED_ACTIONS: Final[dict[str, str]] = {
     "update": "change",
     "partial_update": "change",
     "destroy": "delete",
+    # A tree node's move/ (experimental) changes its parent: an update.
+    "move": "change",
 }
 _METHOD_ACTIONS: Final[dict[str, str]] = {
     "POST": "add",
@@ -1129,6 +1131,8 @@ def _validate_granted_actions(view_class: type[Any], declaration: Any, model: ty
                 continue
             if not any(isinstance(p, Granted) for p in _flatten_leaves(governing)):
                 continue
+            if extra.__name__ in GRANTED_ACTIONS:
+                continue  # a Karni action with a standard permission (a tree node's move)
             if extra.__name__ not in model_actions(model):
                 raise KarniImproperlyConfigured(
                     f"{view_class.__name__}.{extra.__name__}: Granted() has no permission for "

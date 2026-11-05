@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -227,6 +228,28 @@ def test_a_second_build_writes_nothing(copy: Path) -> None:
 
 
 # changes --------------------------------------------------------------------------
+
+
+def test_a_feature_turned_on_is_planned_and_written_to_the_settings_block(copy: Path) -> None:
+    spec = copy / "karni.yaml"
+    _edit(
+        spec,
+        (
+            '  terms: {version: "2026-11", url: /terms/}\n',
+            '  terms: {version: "2026-11", url: /terms/}\n  user_grants: true\n',
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "  + user_grants: KARNI_USER_GRANTS" in plan, plan
+    settings = copy / "config" / "settings.py"
+    assert "KARNI_USER_GRANTS = False" in settings.read_text()
+    code, out = _build()
+    assert code == 0, out
+    text = settings.read_text()
+    block = text[text.index("# karni:spec start") : text.index("# karni:spec end")]
+    assert "KARNI_USER_GRANTS = True" in block and "KARNI_USER_GRANTS = False" not in text
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n"
 
 
 def test_an_entity_added_and_fields_changed_and_renamed_keep_the_data(copy: Path) -> None:
@@ -527,6 +550,88 @@ def test_a_project_built_by_hand_gets_only_what_is_new(
     assert product in text and "color" not in text  # the hand-written model is untouched
     assert text.endswith("class Invoice(karni.Invoice):\n" + render.STUB_LINE + "\n")
     assert record.load(root).entities == ["shop.Invoice"]
+
+
+GEO = """\
+    version: 1
+    app: {name: Geo Shop}
+    apps:
+      geo:
+        entities:
+          Region: {fields: {name: str}, tree: true, search: name}
+          Category:
+            fields: {name: str}
+            tree: ordered
+            order: [position]
+            groups: {Main: [name]}
+          Product: {fields: {name: str, category: "fk:Category?", regions: "m2m:Region?"}}
+    pages:
+      - home: dashboard
+      - Region: [list]
+    seed: {Region: 3, Category: 3, Product: 2}
+    """
+
+
+def test_a_tree_scope_grant_is_built_into_the_settings_block(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    roles = (
+        "    roles:\n"
+        '      staff: {name: Staff, system: true, grants: {"*": all}}\n'
+        "      buyer:\n"
+        "        grants: {geo.product:view: 'tree:category', geo.product:change: 'tree:regions'}\n"
+    )
+    root = _project(
+        tmp_path, monkeypatch, "Geo Shop", GEO.replace("    apps:\n", roles + "    apps:\n")
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "+ buyer: grants geo.product:change tree:regions, geo.product:view tree:category" in (
+        plan
+    ), plan
+    code, out = _build()
+    assert code == 0, out
+    text = (root / "config" / "settings.py").read_text()
+    block = text[text.index("# karni:spec start") : text.index("# karni:spec end")]
+    assert '"geo.product:view": "tree:category"' in block, block
+    assert '"geo.product:change": "tree:regions"' in block
+    # the sync after migrate resolved both paths to the tree models (E490 otherwise)
+    assert _rows(
+        root,
+        "select scope, scope_path from karni_accounts_rolepermission r "
+        "join karni_accounts_role o on o.id = r.role_id where o.slug = 'buyer' "
+        "order by scope_path",
+    ) == [("tree", "category"), ("tree", "regions")]
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n"
+
+
+def test_a_tree_entity_builds_a_tree_model_and_a_switch_back_is_risky(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _project(tmp_path, monkeypatch, "Geo Shop", GEO)
+    code, out = _build()
+    assert code == 0, out
+    karni = (root / "geo" / "karni" / "models.py").read_text()
+    assert "from karni.models import BaseModel, OrderedTreeModel, TreeModel\n" in karni
+    assert "class Region(TreeModel, BaseModel):" in karni
+    assert "class Category(OrderedTreeModel, BaseModel):" in karni
+    assert "parent =" not in karni and "position =" not in karni  # the mixins add them
+    assert '(None, {"fields": ["parent", "position"]})' in karni  # the admin form shows them
+    (migration,) = (root / "geo" / "migrations").glob("0001_*.py")
+    text = migration.read_text().replace('"', "'")  # a migration may not be formatted
+    assert len(re.findall(r"\('parent',\s+models\.ForeignKey\(", text)) == 2
+    assert "on_delete=django.db.models.deletion.PROTECT" in text
+    assert "related_name='children'" in text and "to='geo.region'" in text
+    assert re.search(r"\('position',\s+models\.PositiveIntegerField\(", text)
+    assert _rows(root, "select count(*) from geo_region") == [(3,)]
+    assert _rows(root, "select count(*) > 0 from geo_region where parent_id is null") == [(1,)]
+    # the project reads back as the spec: tree is detected, so nothing is left to build
+    assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
+    _edit(root / "karni.yaml", ("tree: true, search: name", "search: name"))
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "! ~ geo.Region tree: true -> false" in plan, plan
+    code, out = _build()
+    assert code == 1 and "error C270" in out, out
 
 
 # the output -----------------------------------------------------------------------

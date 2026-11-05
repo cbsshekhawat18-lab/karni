@@ -62,6 +62,19 @@ def test_facts_name_the_key_type_the_table_and_the_databases() -> None:
     assert "KARNI_PK" in facts["settings"]
 
 
+@override_settings(KARNI_FACTS_APPS=["testapp"])
+def test_facts_name_the_tree_kind_and_leave_the_tree_fields_out() -> None:
+    facts = project_facts()
+    models = {model["label"]: model for app in facts["apps"] for model in app["models"]}
+    region, category = models["testapp.Region"], models["testapp.Category"]
+    assert region["tree"] == "tree" and category["tree"] == "ordered"
+    assert models["testapp.Event"]["tree"] is None and models["testapp.Stamp"]["tree"] is None
+    assert [field["name"] for field in region["fields"]] == ["name", "code"]
+    assert [field["name"] for field in category["fields"]] == ["name"]
+    product = [field["name"] for field in models["testapp.Product"]["fields"]]
+    assert product == ["name", "category", "regions"]  # a relation to a tree is a plain field
+
+
 @pytest.mark.django_db
 def test_count_rows_counts_each_kind_through_the_base_manager() -> None:
     from tests.testapp.models import Book, Label, Part, Shelf

@@ -463,7 +463,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C218",
         "A role grant is not valid",
         "karni spec validate (karni_cli.spec.validate)",
-        "Grants map onto KARNI_ROLES: a pattern app.entity[:action] (with * for a part, or * alone) to a scope all, own, own:<owner field>, related:<scope path key> or custom:<name>. A spec grants the standard actions view, add, change and delete.",
+        "Grants map onto KARNI_ROLES: a pattern app.entity[:action] (with * for a part, or * alone) to a scope all, own, own:<owner field>, related:<scope path key>, custom:<name> or tree:<path>. A spec grants the standard actions view, add, change and delete.",
         "Fix the pattern or the scope. An entity's own actions, and a grant on a model outside the spec, go in KARNI_ROLES by hand.",
     ),
     _c(
@@ -1123,6 +1123,30 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Move your code out of the way (rename the file), run karni build again, then put your "
         "code back into the recipe's file. To build without the recipe's files, delete "
         '"recipe" from .karni/build.json.',
+    ),
+    # C460-C479 tree models in karni.yaml (experimental)
+    _c(
+        "C460",
+        "A tree entity's keys do not fit",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "tree: true makes the entity a TreeModel, which adds a parent field (tree: ordered makes "
+        "it an OrderedTreeModel, which adds position too). Karni adds that column, so it cannot "
+        "be a table another system owns, and the entity cannot declare a field of that name.",
+        "Remove tree from an external entity, and remove parent (and position) from the fields "
+        "of a tree entity, or rename a field that means something else.",
+    ),
+    # C620-C639 the tree scope in karni.yaml (experimental)
+    _c(
+        "C620",
+        "A role grant's tree:<path> does not lead to a tree entity",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "tree:<path> reaches the rows whose <path> is a node the user holds or a node below it. "
+        "The path follows the entity's relation fields (fk, m2m, o2o), each to an entity of the "
+        "spec, and the last one must point at an entity with tree: true or tree: ordered. "
+        "Karni refuses any other path at startup (E490).",
+        "Name the entity's relation to the tree, through relations when needed: tree:region, "
+        "tree:product__categories. Add tree: true to the entity the path ends at, or grant "
+        "another scope.",
     ),
 )
 

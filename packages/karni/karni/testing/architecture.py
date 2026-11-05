@@ -473,6 +473,43 @@ def check_audited_bulk_write() -> list[Violation]:
     return violations
 
 
+# hand-written-tree (tree models, experimental)
+
+
+def _self_parent(model: type) -> str | None:
+    """The name of a ``parent`` foreign key from ``model`` to itself, else ``None``."""
+    for field in model._meta.concrete_fields:  # type: ignore[attr-defined]
+        if not (field.many_to_one and field.related_model is model):
+            continue
+        if field.name == "parent" or field.name.startswith("parent_"):
+            return str(field.name)
+    return None
+
+
+def check_hand_written_tree() -> list[Violation]:
+    """Experimental. A project model with a ``parent`` foreign key to itself, not a tree model."""
+    from karni.models import TreeModel
+
+    violations: list[Violation] = []
+    for cfg in project_app_configs():
+        for model in cfg.get_models():
+            if model._meta.auto_created or model._meta.proxy or issubclass(model, TreeModel):
+                continue
+            name = _self_parent(model)
+            if name is None:
+                continue
+            violations += _class_violation(
+                model,
+                "hand-written-tree",
+                f"{model.__name__}.{name} is a foreign key to {model.__name__} itself: a "
+                "hand-written tree, without cycle-safe queries, tree endpoints or a tree UI",
+                "inherit karni.models.TreeModel first (class "
+                f"{model.__name__}(TreeModel, BaseModel)) and drop the field, or opt out with "
+                "the reason",
+            )
+    return violations
+
+
 ALL_CHECKS = (
     check_model_base,
     check_viewset_base,
@@ -484,6 +521,7 @@ ALL_CHECKS = (
     check_http_client,
     check_redundant_serializer,
     check_audited_bulk_write,
+    check_hand_written_tree,
 )
 
 
@@ -542,3 +580,7 @@ def test_no_redundant_serializers() -> None:
 
 def test_audited_models_are_not_bulk_written() -> None:
     _assert_clean(check_audited_bulk_write())
+
+
+def test_trees_inherit_tree_model() -> None:
+    _assert_clean(check_hand_written_tree())

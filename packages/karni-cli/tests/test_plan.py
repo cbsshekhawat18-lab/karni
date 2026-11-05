@@ -219,6 +219,14 @@ def test_changing_a_field_safely_and_entity_options(base: Project) -> None:
     assert not plan.risky
 
 
+def test_turning_on_per_user_grants_plans_its_setting(base: Project) -> None:
+    plan = _plan(_edit(("roles:\n", "features: {user_grants: true}\nroles:\n")), base)
+    change = _only(plan, "user_grants")
+    assert (change.area, change.action, change.detail) == ("features", "add", "KARNI_USER_GRANTS")
+    assert not change.risky
+    assert "  + user_grants: KARNI_USER_GRANTS" in plan.text().splitlines()
+
+
 # risky changes ----------------------------------------------------------------------
 
 #: (edit, target, reason fragment, rows counted from ROWS)
@@ -512,6 +520,99 @@ def test_pk_external_and_database_changes(base: Project) -> None:
     assert not sale_field.risky and sale_field.reason == "its column stays"
     assert _only(removed, "stock.Mapping").risky  # a table Karni manages is dropped
     assert _only(removed, "stock.Part.sku").risky
+
+
+# trees -------------------------------------------------------------------------------------
+
+
+def _tree_facts(base: Project) -> dict[str, Any]:
+    facts = json.loads(json.dumps(base.facts))
+    facts["apps"].append(
+        {
+            "label": "geo",
+            "name": "geo",
+            "models": [
+                _model("geo.Region", base_model=True, pk="uuid", tree="tree"),
+                _model("geo.Category", base_model=True, pk="uuid", tree="ordered"),
+                _model("geo.Zone", base_model=True, pk="uuid", tree=None),
+            ],
+        }
+    )
+    return facts
+
+
+TREES = """\
+  geo:
+    entities:
+      Region: {fields: {sku: "str:20"}, access: code, tree: true}
+      Category: {fields: {sku: "str:20"}, access: code, tree: ordered, order: [position]}
+      Zone: {fields: {sku: "str:20"}, access: code}
+"""
+
+
+def _tree_plan(base: Project, text: str) -> Plan:
+    facts = _tree_facts(base)
+    facts["apps"][-1]["models"][1]["ordering"] = ["position"]
+    report = validate_text(BASE.replace("pages:\n", text + "pages:\n"))
+    assert report.ok and report.spec is not None, report.issues
+    return plan_project(report.spec, facts, base.root, file="karni.yaml")
+
+
+def test_a_tree_is_exported_and_plans_nothing(base: Project) -> None:
+    exported = build(_tree_facts(base), base.root).data["apps"]["geo"]["entities"]
+    assert exported["Region"]["tree"] is True and exported["Category"]["tree"] == "ordered"
+    assert "tree" not in exported["Zone"]
+    assert _tree_plan(base, TREES).changes == []
+
+
+def test_a_change_between_flat_and_tree_is_risky(base: Project) -> None:
+    text = """\
+  geo:
+    entities:
+      Region: {fields: {sku: "str:20"}, access: code}
+      Category: {fields: {sku: "str:20"}, access: code, tree: true}
+      Zone: {fields: {sku: "str:20"}, access: code, tree: true}
+"""
+    plan = _tree_plan(base, text)
+    flat = _only(plan, "geo.Region tree")
+    assert flat.detail == "true -> false" and flat.risky
+    assert flat.reason == "the parent column is dropped, and every row's place in the tree with it"
+    assert [count.request() for count in flat.counts] == [
+        {"model": "geo.Region", "field": "parent", "kind": "set"}
+    ]
+    unordered = _only(plan, "geo.Category tree")
+    assert unordered.detail == "ordered -> true" and unordered.risky
+    made = _only(plan, "geo.Zone tree")
+    assert made.detail == "false -> true" and made.risky
+    assert made.reason is not None and made.reason.startswith("every row becomes a root")
+    assert [c.target for c in plan.changes if c.area == "migrations"] == ["geo"]
+    ordered = _tree_plan(base, TREES.replace("tree: true}", "tree: ordered}"))
+    added = _only(ordered, "geo.Region tree")
+    assert added.detail == "true -> ordered" and not added.risky  # a position column is added
+    new = _tree_plan(base, TREES + "      Area: {fields: {name: str}, tree: ordered}\n")
+    assert _only(new, "geo.Area").detail == "(name str) tree ordered"
+
+
+def test_a_tree_scope_grant_is_planned_and_checked(base: Project) -> None:
+    store = TREES + "      Store: {fields: {region: fk:Region}, access: code}\n"
+    member = "  member: {name: Member, default: true, grants: {shop.order: own}}\n"
+
+    def planned(scope: str) -> Plan:
+        grant = member.replace("shop.order: own}", f"shop.order: own, geo.store:view: '{scope}'}}")
+        text = BASE.replace(member, grant).replace("pages:\n", store + "pages:\n")
+        report = validate_text(text)
+        assert report.ok and report.spec is not None, report.issues
+        return plan_project(report.spec, _tree_facts(base), base.root, file="karni.yaml")
+
+    added = _only(planned("tree:region"), "member grant geo.store:view")
+    assert (added.action, added.detail, added.risky) == ("add", "tree:region", False)
+    assert "  + member grant geo.store:view: tree:region" in planned("tree:region").text()
+    bad = validate_text(
+        BASE.replace(member, member.replace("own}", "own, geo.store:view: 'tree:sku'}")).replace(
+            "pages:\n", store + "pages:\n"
+        )
+    )
+    assert [issue.code for issue in bad.issues] == ["C620"]
 
 
 def test_database_must_be_an_alias_the_project_has(

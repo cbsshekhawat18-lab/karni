@@ -24,7 +24,7 @@ import { PendingButton } from "../../../states/PendingButton";
 import { AlertIcon } from "../../primitives/icons";
 import { Label } from "../../primitives/label";
 import { resourceNames, type ResourceLabel, type ResourceNames } from "../resource-names";
-import { DefaultFieldControl, KINDS_WITHOUT_ARIA_REQUIRED } from "./field-inputs";
+import { DefaultFieldControl, withoutAriaRequired } from "./field-inputs";
 import {
   FIELD_GAP,
   ResourceFormErrorSummary,
@@ -301,7 +301,7 @@ function FormFieldRow({
             {" *"}
           </span>
         ) : null}
-        {required && KINDS_WITHOUT_ARIA_REQUIRED.has(field.kind) ? (
+        {required && withoutAriaRequired(field) ? (
           <span className="sr-only"> (required)</span>
         ) : null}
       </Label>

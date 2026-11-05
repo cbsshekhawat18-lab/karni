@@ -4,6 +4,10 @@ The item component for each resource is resolved by following the list
 operation's 200 response ``$ref`` through the paginated wrapper to
 ``properties.results.items.$ref`` — never derived from the resource name
 (component names are app-qualified, e.g. ``TestappEvent``).
+
+A resource whose item component carries ``x-karni-tree`` (a tree model,
+experimental) also gets a ``use<Name>Tree`` hook over ``@karni/ui``'s
+``useResourceTree``.
 """
 
 from __future__ import annotations
@@ -59,6 +63,16 @@ def resource_components(doc: dict[str, Any]) -> dict[str, str]:
     return out
 
 
+def tree_resources(doc: dict[str, Any], resources: dict[str, str]) -> set[str]:
+    """Experimental. The resources whose item component carries ``x-karni-tree``."""
+    schemas = doc.get("components", {}).get("schemas", {})
+    return {
+        resource
+        for resource, component in resources.items()
+        if isinstance(schemas.get(component, {}).get("x-karni-tree"), dict)
+    }
+
+
 def _pascal(resource: str) -> str:
     return "".join(part.capitalize() for part in resource.replace("-", "_").split("_"))
 
@@ -67,13 +81,28 @@ def generate_hooks(doc: dict[str, Any]) -> str:
     resources = resource_components(doc)
     if not resources:
         raise CliError("No x-karni-resource list operations found in the schema.", code="C206")
+    trees = tree_resources(doc, resources)
+    if trees:
+        hooks = [
+            "import {",
+            "  useResourceItem,",
+            "  useResourceList,",
+            "  useResourceMutations,",
+            "  useResourceTree,",
+            '} from "@karni/ui";',
+        ]
+    else:
+        hooks = [
+            'import { useResourceItem, useResourceList, useResourceMutations } from "@karni/ui";'
+        ]
     lines = [
         HEADER.rstrip("\n"),
-        'import { useResourceItem, useResourceList, useResourceMutations } from "@karni/ui";',
+        *hooks,
         "import type {",
         "  ResourceItemParams,",
         "  ResourceListParams,",
         "  ResourceMutationsOptions,",
+        *(["  ResourceTreeParams,"] if trees else []),
         '} from "@karni/ui";',
         'import type { components } from "./types";',
         "",
@@ -91,6 +120,12 @@ def generate_hooks(doc: dict[str, Any]) -> str:
             f'  useResourceMutations<{item}>("{resource}", options);',
             "",
         ]
+        if resource in trees:
+            lines += [
+                f"export const use{name}Tree = (params?: ResourceTreeParams) =>",
+                f'  useResourceTree<{item}>("{resource}", params);',
+                "",
+            ]
     return "\n".join(lines)
 
 

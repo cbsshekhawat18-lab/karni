@@ -73,6 +73,7 @@ def test_a_minimal_spec_and_its_defaults() -> None:
         "email_code_login": False,
         "social_login": [],
         "terms": None,
+        "user_grants": False,
     }
 
 
@@ -108,6 +109,15 @@ def test_x_keys_are_kept_and_ignored_everywhere() -> None:
 
 HEAD = "version: 1\napp: {name: Shop}\n"
 SHOP = HEAD + "apps:\n  shop:\n    entities:\n      Product:\n"
+#: A product on a category tree, a listing on a product and a flat tag (the tree scope).
+TREES = (
+    SHOP
+    + "        fields: {category: fk:Category, tags: 'm2m:Tag?'}\n"
+    + "      Category: {fields: {name: str}, tree: true}\n"
+    + "      Tag: {fields: {name: str}}\n"
+    + "      Listing: {fields: {product: fk:Product}}\n"
+    + "roles:\n  buyer:\n    grants:\n"
+)
 
 INVALID: list[tuple[str, str, int | None]] = [
     ("C211", "version: 1\napp: [unclosed\n", 3),
@@ -131,7 +141,7 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C221", HEAD + "modules: {payments: {provider: 3}}\n", 3),
     ("C222", HEAD + "roles:\n  staff: {}\n  staff: {}\n", 5),
     ("C223", SHOP + "        fields: {name: str}\nseed: {Product: -1}\n", 8),
-    ("C224", SHOP + "        tree: true\n", 7),
+    ("C224", SHOP + "        taxonomies: true\n", 7),
     ("C224", SHOP + "        fields: {body: markdown}\n", 7),
     ("C225", HEAD + "modules: {site: {}}\n", 3),
     ("C230", SHOP + "        fields: {maker: fk:Maker}\n", 7),
@@ -160,6 +170,15 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C254", SHOP + "        was: Product\n", 7),
     ("C254", SHOP + "        fields: {title: {type: str, was: name}, name: str}\n", 7),
     ("C254", SHOP + "        fields: {a: {type: str, was: x}, b: {type: str, was: x}}\n", 7),
+    ("C460", SHOP + "        {external: true, table: sales, tree: true}\n", 7),
+    ("C460", SHOP + "        fields: {name: str, parent: 'fk:Product?'}\n        tree: true\n", 7),
+    ("C460", SHOP + "        fields: {position: int}\n        tree: ordered\n", 7),
+    ("C620", TREES + "      shop.product:view: 'tree:tags'\n", 14),
+    ("C620", TREES + "      shop.product:view: 'tree:name'\n", 14),
+    ("C620", TREES + "      shop.listing:view: 'tree:product'\n", 14),
+    ("C620", TREES + "      shop.listing:view: 'tree:product__Category'\n", 14),
+    ("C620", TREES + "      shop.tag:*: 'tree:category'\n", 14),
+    ("C620", TREES + "      shop.*: 'tree:region'\n", 14),
 ]  # fmt: skip
 
 
@@ -176,7 +195,14 @@ def test_every_code_is_tested_and_registered() -> None:
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
     # The spec's own codes, and C324, the module catalog's code for requires and conflicts.
-    assert all(200 <= int(code[1:]) <= 269 or code == "C324" for code in iter_codes())
+    # C460-C479: tree models. C620-C639: the tree scope.
+    assert all(
+        200 <= int(code[1:]) <= 269
+        or code == "C324"
+        or 460 <= int(code[1:]) <= 479
+        or 620 <= int(code[1:]) <= 639
+        for code in iter_codes()
+    )
 
 
 def test_issues_name_the_fix_and_the_path() -> None:
@@ -224,6 +250,59 @@ def test_relations_reach_users_modules_and_other_apps() -> None:
         """
     )
     assert report.ok, report.issues
+
+
+def test_a_tree_entity_its_fields_and_its_normal_form() -> None:
+    report = check(
+        """\
+        version: 1
+        app: {name: Shop}
+        apps:
+          shop:
+            entities:
+              Region: {fields: {name: str}, tree: true, search: [name, parent__name]}
+              Category:
+                fields: {name: str}
+                tree: ordered
+                order: [position]
+                groups: {Main: [name, parent, position]}
+              Product: {fields: {category: fk:Category, regions: "m2m:Region?"}}
+        """
+    )
+    assert report.ok, report.issues
+    assert report.spec is not None
+    entities = normalise(report.spec)["apps"]["shop"]["entities"]
+    assert entities["Region"]["tree"] is True and entities["Category"]["tree"] == "ordered"
+    assert entities["Product"]["tree"] is False
+    # position belongs to an ordered tree only
+    found = codes(
+        SHOP + "        fields: {name: str}\n        tree: true\n        order: [position]\n"
+    )
+    assert [code for code, _line in found] == ["C238"]
+
+
+def test_a_tree_scope_follows_relations_to_a_tree_entity() -> None:
+    text = (
+        TREES
+        + "      shop.product:view: 'tree:category'\n"
+        + "      shop.listing:*: 'tree:product__category'\n"
+        + "      shop.*:view: 'tree:category'\n"
+        + "      '*': 'tree:product__category'\n"
+    )
+    report = check(text)
+    assert report.ok, [issue.render("x") for issue in report.issues]
+    assert report.spec is not None
+    grants = normalise(report.spec)["roles"]["buyer"]["grants"]
+    assert grants["shop.product:view"] == "tree:category"
+    assert grants["shop.listing:*"] == "tree:product__category"
+    (issue,) = check(TREES + "      shop.listing:view: 'tree:product'\n").issues
+    assert "'product' does not lead from Listing to an entity with tree: true" in issue.message
+
+
+def test_a_tree_value_names_the_values_it_takes() -> None:
+    (issue,) = check(SHOP + "        tree: yes please\n").issues
+    assert issue.code == "C213" and issue.line == 7
+    assert "must be true, false or ordered, got a string ('yes please')" in issue.message
 
 
 def test_owner_paths_through_relations() -> None:
@@ -421,6 +500,7 @@ features:
   email_code_login: true
   social_login: [google, apple]
   terms: {version: "2026-11", url: /terms/}
+  user_grants: true
 roles:
   staff: {name: Staff, system: true, grants: {"*": all}}
   instructor: {grants: {classes.session: own, classes.studio:view: all}}
@@ -622,6 +702,7 @@ def _build_from_spec(root: Path, spec: schema.Spec) -> None:
         "KARNI_SOCIAL_TOKEN_PROVIDERS = "
         + repr({name: {"client_ids": ["test"]} for name in features.social_login}),
         f"KARNI_TERMS = {features.terms.model_dump(exclude_none=True)!r}" if features.terms else "",
+        f"KARNI_USER_GRANTS = {features.user_grants!r}",
         *(
             f"{catalog.module_setting(module, option)} = {value!r}"
             for module, options in spec.modules.items()

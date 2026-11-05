@@ -453,3 +453,15 @@ for it in the adapters. Until then `karni rules sync --check` (and make check) \
 reports the files as stale."""
 mechanical = false
 migration = "migrations/0.5.md#a-procedure-from-one-line-to-an-app-run-karni-rules-sync"
+
+[[change]]
+id = "hand-written-tree-rule"
+kind = "behaviour"
+symbol = "karni check: the hand-written-tree rule (karni.testing.architecture)"
+summary = """\
+A project model with a parent (or parent_*) foreign key to the model itself that is \
+not a karni.models.TreeModel fails karni check (experimental). Make it a tree, \
+class Folder(TreeModel, BaseModel) without its own parent field, or keep the field and \
+opt out with # karni: allow(hand-written-tree): <reason> above the class."""
+mechanical = false
+migration = "migrations/0.5.md#tree-models-experimental"

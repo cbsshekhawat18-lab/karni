@@ -537,6 +537,68 @@
         ],
         "type": "object"
       },
+      "PaginatedTestappCategoryList": {
+        "properties": {
+          "count": {
+            "example": 123,
+            "type": "integer"
+          },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TestappCategory"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "type": "object"
+      },
+      "PaginatedTestappCategoryTreeNodeList": {
+        "properties": {
+          "count": {
+            "example": 123,
+            "type": "integer"
+          },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TestappCategoryTreeNode"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "type": "object"
+      },
       "PaginatedTestappEventList": {
         "properties": {
           "count": {
@@ -589,6 +651,99 @@
           "results": {
             "items": {
               "$ref": "#/components/schemas/TestappLooseSlot"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "type": "object"
+      },
+      "PaginatedTestappProductList": {
+        "properties": {
+          "count": {
+            "example": 123,
+            "type": "integer"
+          },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TestappProduct"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "type": "object"
+      },
+      "PaginatedTestappRegionList": {
+        "properties": {
+          "count": {
+            "example": 123,
+            "type": "integer"
+          },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TestappRegion"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "type": "object"
+      },
+      "PaginatedTestappRegionTreeNodeList": {
+        "properties": {
+          "count": {
+            "example": 123,
+            "type": "integer"
+          },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TestappRegionTreeNode"
             },
             "type": "array"
           }
@@ -756,6 +911,33 @@
         },
         "type": "object"
       },
+      "PatchedTestappCategoryRequest": {
+        "description": "Auto-generated serializer for testapp.Category. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "parent": {
+            "nullable": true,
+            "type": "integer",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "categories"
+            },
+            "x-karni-tree": {
+              "ordered": true,
+              "parent": "parent"
+            }
+          }
+        },
+        "type": "object",
+        "x-karni-tree": {
+          "ordered": true,
+          "parent": "parent"
+        }
+      },
       "PatchedTestappEventRequest": {
         "description": "Auto-generated serializer for testapp.Event. See karni.api.serializers.build_serializer.",
         "properties": {
@@ -825,6 +1007,83 @@
           }
         },
         "type": "object"
+      },
+      "PatchedTestappProductRequest": {
+        "description": "Auto-generated serializer for testapp.Product. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "category": {
+            "nullable": true,
+            "type": "integer",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "categories"
+            },
+            "x-karni-tree": {
+              "ordered": true,
+              "parent": "parent"
+            }
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "regions": {
+            "items": {
+              "type": "integer",
+              "x-karni-relation": {
+                "many": false,
+                "resource": "regions"
+              },
+              "x-karni-tree": {
+                "ordered": false,
+                "parent": "parent"
+              }
+            },
+            "type": "array",
+            "x-karni-relation": {
+              "many": true,
+              "resource": "regions"
+            },
+            "x-karni-tree": {
+              "ordered": false,
+              "parent": "parent"
+            }
+          }
+        },
+        "type": "object"
+      },
+      "PatchedTestappRegionRequest": {
+        "description": "Auto-generated serializer for testapp.Region. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "code": {
+            "default": "",
+            "maxLength": 20,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "parent": {
+            "nullable": true,
+            "type": "integer",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "regions"
+            },
+            "x-karni-tree": {
+              "ordered": false,
+              "parent": "parent"
+            }
+          }
+        },
+        "type": "object",
+        "x-karni-tree": {
+          "ordered": false,
+          "parent": "parent"
+        }
       },
       "PatchedTestappSlotRequest": {
         "description": "Auto-generated serializer for testapp.Slot. See karni.api.serializers.build_serializer.",
@@ -916,6 +1175,304 @@
           "published"
         ],
         "type": "string"
+      },
+      "TestappCategory": {
+        "description": "Auto-generated serializer for testapp.Category. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "users"
+            }
+          },
+          "id": {
+            "readOnly": true,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "parent": {
+            "nullable": true,
+            "type": "integer",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "categories"
+            },
+            "x-karni-tree": {
+              "ordered": true,
+              "parent": "parent"
+            }
+          },
+          "position": {
+            "readOnly": true,
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "updated_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "users"
+            }
+          }
+        },
+        "required": [
+          "created_at",
+          "created_by",
+          "id",
+          "name",
+          "position",
+          "updated_at",
+          "updated_by"
+        ],
+        "type": "object",
+        "x-karni-tree": {
+          "ordered": true,
+          "parent": "parent"
+        }
+      },
+      "TestappCategoryAccessForest": {
+        "description": "The requester's access forest: the granted nodes with their ancestors, then every other root. all is true when every node is reached.",
+        "properties": {
+          "all": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TestappCategoryAccessNode"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "truncated": {
+            "readOnly": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "all",
+          "results",
+          "truncated"
+        ],
+        "type": "object"
+      },
+      "TestappCategoryAccessNode": {
+        "description": "A node of the access forest. granted is true for a node a grant names; its ancestors and the other roots are there for navigation.",
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/TestappCategoryAccessNode"
+            },
+            "nullable": true,
+            "readOnly": true,
+            "type": "array"
+          },
+          "granted": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "has_children": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "id": {
+            "readOnly": true,
+            "type": "integer"
+          },
+          "label": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "parent": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "children",
+          "granted",
+          "has_children",
+          "id",
+          "label",
+          "parent"
+        ],
+        "type": "object"
+      },
+      "TestappCategoryMoveRequest": {
+        "description": "Where to move a node: its new parent (null for a root) and position.",
+        "properties": {
+          "parent": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "position": {
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "TestappCategoryRequest": {
+        "description": "Auto-generated serializer for testapp.Category. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "parent": {
+            "nullable": true,
+            "type": "integer",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "categories"
+            },
+            "x-karni-tree": {
+              "ordered": true,
+              "parent": "parent"
+            }
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "x-karni-tree": {
+          "ordered": true,
+          "parent": "parent"
+        }
+      },
+      "TestappCategoryTree": {
+        "description": "The tree: the top level, nested, and whether the node limit cut it.",
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TestappCategoryTreeNode"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "truncated": {
+            "readOnly": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "results",
+          "truncated"
+        ],
+        "type": "object"
+      },
+      "TestappCategoryTreeNode": {
+        "description": "A tree node: TestappCategorySerializer plus has_children and children.",
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/TestappCategoryTreeNode"
+            },
+            "nullable": true,
+            "readOnly": true,
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "users"
+            }
+          },
+          "has_children": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "id": {
+            "readOnly": true,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "parent": {
+            "nullable": true,
+            "type": "integer",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "categories"
+            },
+            "x-karni-tree": {
+              "ordered": true,
+              "parent": "parent"
+            }
+          },
+          "position": {
+            "readOnly": true,
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "updated_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "users"
+            }
+          }
+        },
+        "required": [
+          "children",
+          "created_at",
+          "created_by",
+          "has_children",
+          "id",
+          "name",
+          "position",
+          "updated_at",
+          "updated_by"
+        ],
+        "type": "object",
+        "x-karni-tree": {
+          "ordered": true,
+          "parent": "parent"
+        }
       },
       "TestappEvent": {
         "description": "Auto-generated serializer for testapp.Event. See karni.api.serializers.build_serializer.",
@@ -1152,6 +1709,443 @@
           "starts_at"
         ],
         "type": "object"
+      },
+      "TestappProduct": {
+        "description": "Auto-generated serializer for testapp.Product. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "category": {
+            "nullable": true,
+            "type": "integer",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "categories"
+            },
+            "x-karni-tree": {
+              "ordered": true,
+              "parent": "parent"
+            }
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "users"
+            }
+          },
+          "id": {
+            "readOnly": true,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "regions": {
+            "items": {
+              "type": "integer",
+              "x-karni-relation": {
+                "many": false,
+                "resource": "regions"
+              },
+              "x-karni-tree": {
+                "ordered": false,
+                "parent": "parent"
+              }
+            },
+            "type": "array",
+            "x-karni-relation": {
+              "many": true,
+              "resource": "regions"
+            },
+            "x-karni-tree": {
+              "ordered": false,
+              "parent": "parent"
+            }
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "updated_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "users"
+            }
+          }
+        },
+        "required": [
+          "created_at",
+          "created_by",
+          "id",
+          "name",
+          "updated_at",
+          "updated_by"
+        ],
+        "type": "object"
+      },
+      "TestappProductRequest": {
+        "description": "Auto-generated serializer for testapp.Product. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "category": {
+            "nullable": true,
+            "type": "integer",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "categories"
+            },
+            "x-karni-tree": {
+              "ordered": true,
+              "parent": "parent"
+            }
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "regions": {
+            "items": {
+              "type": "integer",
+              "x-karni-relation": {
+                "many": false,
+                "resource": "regions"
+              },
+              "x-karni-tree": {
+                "ordered": false,
+                "parent": "parent"
+              }
+            },
+            "type": "array",
+            "x-karni-relation": {
+              "many": true,
+              "resource": "regions"
+            },
+            "x-karni-tree": {
+              "ordered": false,
+              "parent": "parent"
+            }
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "TestappRegion": {
+        "description": "Auto-generated serializer for testapp.Region. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "code": {
+            "default": "",
+            "maxLength": 20,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "users"
+            }
+          },
+          "id": {
+            "readOnly": true,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "parent": {
+            "nullable": true,
+            "type": "integer",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "regions"
+            },
+            "x-karni-tree": {
+              "ordered": false,
+              "parent": "parent"
+            }
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "updated_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "users"
+            }
+          }
+        },
+        "required": [
+          "created_at",
+          "created_by",
+          "id",
+          "name",
+          "updated_at",
+          "updated_by"
+        ],
+        "type": "object",
+        "x-karni-tree": {
+          "ordered": false,
+          "parent": "parent"
+        }
+      },
+      "TestappRegionAccessForest": {
+        "description": "The requester's access forest: the granted nodes with their ancestors, then every other root. all is true when every node is reached.",
+        "properties": {
+          "all": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TestappRegionAccessNode"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "truncated": {
+            "readOnly": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "all",
+          "results",
+          "truncated"
+        ],
+        "type": "object"
+      },
+      "TestappRegionAccessNode": {
+        "description": "A node of the access forest. granted is true for a node a grant names; its ancestors and the other roots are there for navigation.",
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/TestappRegionAccessNode"
+            },
+            "nullable": true,
+            "readOnly": true,
+            "type": "array"
+          },
+          "granted": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "has_children": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "id": {
+            "readOnly": true,
+            "type": "integer"
+          },
+          "label": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "parent": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "children",
+          "granted",
+          "has_children",
+          "id",
+          "label",
+          "parent"
+        ],
+        "type": "object"
+      },
+      "TestappRegionMoveRequest": {
+        "description": "Where to move a node: its new parent (null for a root) and position.",
+        "properties": {
+          "parent": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "position": {
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "parent"
+        ],
+        "type": "object"
+      },
+      "TestappRegionRequest": {
+        "description": "Auto-generated serializer for testapp.Region. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "code": {
+            "default": "",
+            "maxLength": 20,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "parent": {
+            "nullable": true,
+            "type": "integer",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "regions"
+            },
+            "x-karni-tree": {
+              "ordered": false,
+              "parent": "parent"
+            }
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "x-karni-tree": {
+          "ordered": false,
+          "parent": "parent"
+        }
+      },
+      "TestappRegionTree": {
+        "description": "The tree: the top level, nested, and whether the node limit cut it.",
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TestappRegionTreeNode"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "truncated": {
+            "readOnly": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "results",
+          "truncated"
+        ],
+        "type": "object"
+      },
+      "TestappRegionTreeNode": {
+        "description": "A tree node: TestappRegionSerializer plus has_children and children.",
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/TestappRegionTreeNode"
+            },
+            "nullable": true,
+            "readOnly": true,
+            "type": "array"
+          },
+          "code": {
+            "default": "",
+            "maxLength": 20,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "users"
+            }
+          },
+          "has_children": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "id": {
+            "readOnly": true,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "parent": {
+            "nullable": true,
+            "type": "integer",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "regions"
+            },
+            "x-karni-tree": {
+              "ordered": false,
+              "parent": "parent"
+            }
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "updated_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "users"
+            }
+          }
+        },
+        "required": [
+          "children",
+          "created_at",
+          "created_by",
+          "has_children",
+          "id",
+          "name",
+          "updated_at",
+          "updated_by"
+        ],
+        "type": "object",
+        "x-karni-tree": {
+          "ordered": false,
+          "parent": "parent"
+        }
       },
       "TestappSlot": {
         "description": "Auto-generated serializer for testapp.Slot. See karni.api.serializers.build_serializer.",
@@ -2070,6 +3064,1120 @@
         "tags": [
           "auth"
         ]
+      }
+    },
+    "/api/categories/": {
+      "get": {
+        "description": "An ordered tree, readable by signed-in users and changed by staff.",
+        "operationId": "categories_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "created_at",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_at__gte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_at__lte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_by",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "descendants_of",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated relations to embed as nested objects instead of primary keys (dotted paths nest deeper, e.g. `a.b`). Allowed keys: parent.",
+            "explode": false,
+            "in": "query",
+            "name": "expand",
+            "schema": {
+              "items": {
+                "enum": [
+                  "parent"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Which field to use when ordering the results.",
+            "in": "query",
+            "name": "ordering",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Number of results to return per page.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "parent",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "position",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "position__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "position__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at__gte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at__lte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_by",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedTestappCategoryList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        },
+        "x-karni-resource": "categories"
+      },
+      "post": {
+        "description": "An ordered tree, readable by signed-in users and changed by staff.",
+        "operationId": "categories_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappCategoryRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappCategoryRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappCategoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappCategory"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "role": [
+            "staff"
+          ]
+        }
+      }
+    },
+    "/api/categories/access/": {
+      "get": {
+        "description": "``GET /<resource>/access/?permission=``: the requester's granted nodes and their paths.\n\nExperimental. The nodes the requester's tree:<path> grants name, their\nancestors and every other root. Any signed-in user may ask about their\nown grants (karni.accounts.tree_scope).",
+        "operationId": "categories_access_retrieve",
+        "parameters": [
+          {
+            "description": "A permission key or pattern (shop.order:view, shop.order:*): only the grants of the permissions it matches count. Default: every tree grant.",
+            "in": "query",
+            "name": "permission",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappCategoryAccessForest"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/categories/export/": {
+      "get": {
+        "description": "``GET /<resource>/export/?format=csv|xlsx``: the list, as a file.\n\nThe same rows the list would show for this request \u2014 its filters,\n``?search=`` and ``?ordering=`` applied, the read scope applied \u2014\nand the columns the requester may read; relations are written as\nthe target's ``Karni.natural_key`` so the file imports back.",
+        "operationId": "categories_export_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/categories/import/": {
+      "get": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "categories_import_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDescribe"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "staff"
+              ]
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      },
+      "post": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "categories_import_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "staff"
+              ]
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/categories/import/template/": {
+      "get": {
+        "description": "``GET /<resource>/import/template/``: headers, an example row, the allowed values.",
+        "operationId": "categories_import_template_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/categories/import/{job}/": {
+      "get": {
+        "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
+        "operationId": "categories_import_by_job_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "staff"
+              ]
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/categories/import/{job}/commit/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/commit/``: write it, after a preview, atomically.",
+        "operationId": "categories_import_commit_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "staff"
+              ]
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/categories/import/{job}/preview/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\n``\"match_ids\": true`` matches existing rows by the file's id column, and\n``\"keep_ids\": true`` creates rows with the file's ids (both off by default).\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "operationId": "categories_import_preview_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "staff"
+              ]
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/categories/tree/": {
+      "get": {
+        "description": "``GET /<resource>/tree/?root=&depth=``: the tree, nested, a few levels at a time.",
+        "operationId": "categories_tree_retrieve",
+        "parameters": [
+          {
+            "description": "Levels to return, from 1 to 10 (default 2).",
+            "in": "query",
+            "name": "depth",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "A node's key: its children are the top level. Default: the roots.",
+            "in": "query",
+            "name": "root",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappCategoryTree"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/categories/{id}/": {
+      "delete": {
+        "description": "An ordered tree, readable by signed-in users and changed by staff.",
+        "operationId": "categories_destroy",
+        "parameters": [
+          {
+            "description": "true deletes the node and every node below it. Without it a node with live children is refused (409, E341).",
+            "in": "query",
+            "name": "branch",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "A unique integer value identifying this category.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "role": [
+            "staff"
+          ]
+        }
+      },
+      "get": {
+        "description": "An ordered tree, readable by signed-in users and changed by staff.",
+        "operationId": "categories_retrieve",
+        "parameters": [
+          {
+            "description": "Comma-separated relations to embed as nested objects instead of primary keys (dotted paths nest deeper, e.g. `a.b`). Allowed keys: parent.",
+            "explode": false,
+            "in": "query",
+            "name": "expand",
+            "schema": {
+              "items": {
+                "enum": [
+                  "parent"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "A unique integer value identifying this category.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappCategory"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      },
+      "patch": {
+        "description": "An ordered tree, readable by signed-in users and changed by staff.",
+        "operationId": "categories_partial_update",
+        "parameters": [
+          {
+            "description": "A unique integer value identifying this category.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedTestappCategoryRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedTestappCategoryRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedTestappCategoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappCategory"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "role": [
+            "staff"
+          ]
+        }
+      },
+      "put": {
+        "description": "An ordered tree, readable by signed-in users and changed by staff.",
+        "operationId": "categories_update",
+        "parameters": [
+          {
+            "description": "A unique integer value identifying this category.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappCategoryRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappCategoryRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappCategoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappCategory"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "role": [
+            "staff"
+          ]
+        }
+      }
+    },
+    "/api/categories/{id}/ancestors/": {
+      "get": {
+        "description": "``GET /<resource>/<id>/ancestors/``: the nodes above it, root first.",
+        "operationId": "categories_ancestors_list",
+        "parameters": [
+          {
+            "description": "A unique integer value identifying this category.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TestappCategoryTreeNode"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/categories/{id}/children/": {
+      "get": {
+        "description": "``GET /<resource>/<id>/children/``: the node's children, paginated.",
+        "operationId": "categories_children_list",
+        "parameters": [
+          {
+            "description": "A unique integer value identifying this category.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Number of results to return per page.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedTestappCategoryTreeNodeList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/categories/{id}/move/": {
+      "post": {
+        "description": "``POST /<resource>/<id>/move/``: a new parent and, on an ordered tree, a position.",
+        "operationId": "categories_move_create",
+        "parameters": [
+          {
+            "description": "A unique integer value identifying this category.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappCategoryMoveRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappCategoryMoveRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappCategoryMoveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappCategoryTreeNode"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "role": [
+            "staff"
+          ]
+        }
       }
     },
     "/api/events/": {
@@ -3722,6 +5830,1891 @@
         ],
         "tags": [
           "loose-slots"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/products/": {
+      "get": {
+        "description": "Points at both trees: its category and regions carry x-karni-tree.",
+        "operationId": "products_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_at",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_at__gte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_at__lte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_by",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated relations to embed as nested objects instead of primary keys (dotted paths nest deeper, e.g. `a.b`). Allowed keys: category, regions.",
+            "explode": false,
+            "in": "query",
+            "name": "expand",
+            "schema": {
+              "items": {
+                "enum": [
+                  "category",
+                  "regions"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Which field to use when ordering the results.",
+            "in": "query",
+            "name": "ordering",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Number of results to return per page.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at__gte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at__lte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_by",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedTestappProductList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "public": true
+        },
+        "x-karni-resource": "products"
+      },
+      "post": {
+        "description": "Points at both trees: its category and regions carry x-karni-tree.",
+        "operationId": "products_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappProductRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappProductRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappProduct"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/products/export/": {
+      "get": {
+        "description": "``GET /<resource>/export/?format=csv|xlsx``: the list, as a file.\n\nThe same rows the list would show for this request \u2014 its filters,\n``?search=`` and ``?ordering=`` applied, the read scope applied \u2014\nand the columns the requester may read; relations are written as\nthe target's ``Karni.natural_key`` so the file imports back.",
+        "operationId": "products_export_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      }
+    },
+    "/api/products/import/": {
+      "get": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "products_import_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDescribe"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      },
+      "post": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "products_import_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/products/import/template/": {
+      "get": {
+        "description": "``GET /<resource>/import/template/``: headers, an example row, the allowed values.",
+        "operationId": "products_import_template_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      }
+    },
+    "/api/products/import/{job}/": {
+      "get": {
+        "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
+        "operationId": "products_import_by_job_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/products/import/{job}/commit/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/commit/``: write it, after a preview, atomically.",
+        "operationId": "products_import_commit_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/products/import/{job}/preview/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\n``\"match_ids\": true`` matches existing rows by the file's id column, and\n``\"keep_ids\": true`` creates rows with the file's ids (both off by default).\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "operationId": "products_import_preview_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/products/{id}/": {
+      "delete": {
+        "description": "Points at both trees: its category and regions carry x-karni-tree.",
+        "operationId": "products_destroy",
+        "parameters": [
+          {
+            "description": "A unique integer value identifying this product.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      },
+      "get": {
+        "description": "Points at both trees: its category and regions carry x-karni-tree.",
+        "operationId": "products_retrieve",
+        "parameters": [
+          {
+            "description": "Comma-separated relations to embed as nested objects instead of primary keys (dotted paths nest deeper, e.g. `a.b`). Allowed keys: category, regions.",
+            "explode": false,
+            "in": "query",
+            "name": "expand",
+            "schema": {
+              "items": {
+                "enum": [
+                  "category",
+                  "regions"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "A unique integer value identifying this product.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappProduct"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      },
+      "patch": {
+        "description": "Points at both trees: its category and regions carry x-karni-tree.",
+        "operationId": "products_partial_update",
+        "parameters": [
+          {
+            "description": "A unique integer value identifying this product.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedTestappProductRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedTestappProductRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedTestappProductRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappProduct"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      },
+      "put": {
+        "description": "Points at both trees: its category and regions carry x-karni-tree.",
+        "operationId": "products_update",
+        "parameters": [
+          {
+            "description": "A unique integer value identifying this product.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappProductRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappProductRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappProduct"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/regions/": {
+      "get": {
+        "description": "A tree model: tree/, children/, ancestors/ and move/ with no declaration.",
+        "operationId": "regions_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "code__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_at",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_at__gte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_at__lte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_by",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "descendants_of",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated relations to embed as nested objects instead of primary keys (dotted paths nest deeper, e.g. `a.b`). Allowed keys: parent.",
+            "explode": false,
+            "in": "query",
+            "name": "expand",
+            "schema": {
+              "items": {
+                "enum": [
+                  "parent"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Which field to use when ordering the results.",
+            "in": "query",
+            "name": "ordering",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Number of results to return per page.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "parent",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A search term.",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at__gte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at__lte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_by",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedTestappRegionList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "public": true
+        },
+        "x-karni-resource": "regions"
+      },
+      "post": {
+        "description": "A tree model: tree/, children/, ancestors/ and move/ with no declaration.",
+        "operationId": "regions_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappRegionRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappRegionRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappRegionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappRegion"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/regions/access/": {
+      "get": {
+        "description": "``GET /<resource>/access/?permission=``: the requester's granted nodes and their paths.\n\nExperimental. The nodes the requester's tree:<path> grants name, their\nancestors and every other root. Any signed-in user may ask about their\nown grants (karni.accounts.tree_scope).",
+        "operationId": "regions_access_retrieve",
+        "parameters": [
+          {
+            "description": "A permission key or pattern (shop.order:view, shop.order:*): only the grants of the permissions it matches count. Default: every tree grant.",
+            "in": "query",
+            "name": "permission",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappRegionAccessForest"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/regions/export/": {
+      "get": {
+        "description": "``GET /<resource>/export/?format=csv|xlsx``: the list, as a file.\n\nThe same rows the list would show for this request \u2014 its filters,\n``?search=`` and ``?ordering=`` applied, the read scope applied \u2014\nand the columns the requester may read; relations are written as\nthe target's ``Karni.natural_key`` so the file imports back.",
+        "operationId": "regions_export_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      }
+    },
+    "/api/regions/import/": {
+      "get": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "regions_import_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDescribe"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      },
+      "post": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "regions_import_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/regions/import/template/": {
+      "get": {
+        "description": "``GET /<resource>/import/template/``: headers, an example row, the allowed values.",
+        "operationId": "regions_import_template_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      }
+    },
+    "/api/regions/import/{job}/": {
+      "get": {
+        "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
+        "operationId": "regions_import_by_job_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/regions/import/{job}/commit/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/commit/``: write it, after a preview, atomically.",
+        "operationId": "regions_import_commit_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/regions/import/{job}/preview/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\n``\"match_ids\": true`` matches existing rows by the file's id column, and\n``\"keep_ids\": true`` creates rows with the file's ids (both off by default).\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "operationId": "regions_import_preview_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/regions/tree/": {
+      "get": {
+        "description": "``GET /<resource>/tree/?root=&depth=``: the tree, nested, a few levels at a time.",
+        "operationId": "regions_tree_retrieve",
+        "parameters": [
+          {
+            "description": "Levels to return, from 1 to 10 (default 2).",
+            "in": "query",
+            "name": "depth",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "A node's key: its children are the top level. Default: the roots.",
+            "in": "query",
+            "name": "root",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappRegionTree"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      }
+    },
+    "/api/regions/{id}/": {
+      "delete": {
+        "description": "A tree model: tree/, children/, ancestors/ and move/ with no declaration.",
+        "operationId": "regions_destroy",
+        "parameters": [
+          {
+            "description": "true deletes the node and every node below it. Without it a node with live children is refused (409, E341).",
+            "in": "query",
+            "name": "branch",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "A unique integer value identifying this region.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      },
+      "get": {
+        "description": "A tree model: tree/, children/, ancestors/ and move/ with no declaration.",
+        "operationId": "regions_retrieve",
+        "parameters": [
+          {
+            "description": "Comma-separated relations to embed as nested objects instead of primary keys (dotted paths nest deeper, e.g. `a.b`). Allowed keys: parent.",
+            "explode": false,
+            "in": "query",
+            "name": "expand",
+            "schema": {
+              "items": {
+                "enum": [
+                  "parent"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "A unique integer value identifying this region.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappRegion"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      },
+      "patch": {
+        "description": "A tree model: tree/, children/, ancestors/ and move/ with no declaration.",
+        "operationId": "regions_partial_update",
+        "parameters": [
+          {
+            "description": "A unique integer value identifying this region.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedTestappRegionRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedTestappRegionRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedTestappRegionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappRegion"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      },
+      "put": {
+        "description": "A tree model: tree/, children/, ancestors/ and move/ with no declaration.",
+        "operationId": "regions_update",
+        "parameters": [
+          {
+            "description": "A unique integer value identifying this region.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappRegionRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappRegionRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappRegionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappRegion"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/regions/{id}/ancestors/": {
+      "get": {
+        "description": "``GET /<resource>/<id>/ancestors/``: the nodes above it, root first.",
+        "operationId": "regions_ancestors_list",
+        "parameters": [
+          {
+            "description": "A unique integer value identifying this region.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TestappRegionTreeNode"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      }
+    },
+    "/api/regions/{id}/children/": {
+      "get": {
+        "description": "``GET /<resource>/<id>/children/``: the node's children, paginated.",
+        "operationId": "regions_children_list",
+        "parameters": [
+          {
+            "description": "A unique integer value identifying this region.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Number of results to return per page.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedTestappRegionTreeNodeList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      }
+    },
+    "/api/regions/{id}/move/": {
+      "post": {
+        "description": "``POST /<resource>/<id>/move/``: a new parent and, on an ordered tree, a position.",
+        "operationId": "regions_move_create",
+        "parameters": [
+          {
+            "description": "A unique integer value identifying this region.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappRegionMoveRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappRegionMoveRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TestappRegionMoveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappRegionTreeNode"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "regions"
         ],
         "x-karni-access": {
           "authenticated": true
