@@ -85,7 +85,7 @@ def test_a_five_model_project_is_made_and_timed(tmp_path: Path) -> None:
     assert result["models"] == 5 and result["apps"] == 2
     assert set(result["times"]) == set(_script().STEPS)
     assert all(seconds > 0 for seconds in result["times"].values())
-    assert result["tests"].startswith("7 passed")  # 5 entity tests and the scaffold's 2
+    assert result["tests"].startswith("8 passed")  # 5 entity tests and the scaffold's 3
     assert json.loads(baseline.read_text()) == result  # --record wrote it
     project = tmp_path / "work" / "bench"
     assert (project / ".karni" / "local" / "check-cache.json").is_file()

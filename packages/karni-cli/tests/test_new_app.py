@@ -207,7 +207,7 @@ def test_one_line_to_a_green_build(flow: Flow) -> None:
     assert (root / "books" / "karni" / "models.py").is_file()
     assert "def is_finished(self) -> bool:" in (root / "books" / "models.py").read_text()
     summary = flow.test.strip().splitlines()[-1]
-    assert summary.startswith("5 passed"), flow.test  # karni build's 4 and the agent's own
+    assert summary.startswith("6 passed"), flow.test  # karni build's 5 and the agent's own
     assert "failed" not in flow.test
     assert [name for name, _seconds in flow.steps] == [
         "karni new",
