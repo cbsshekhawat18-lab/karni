@@ -39,7 +39,7 @@ Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
 
 [project.optional-dependencies]
 # Pillow, for protected image fields and their thumbnails.
-images = ["karni[images]>=0.4,<0.5"]
+images = ["karni[images]>=0.5,<0.6"]
 
 # The catalog entry, karni_storage/karni.module.toml: `karni modules`, `karni add`
 # and `karni remove` read it.
