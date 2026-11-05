@@ -45,6 +45,7 @@ from karni_cli.generators.fields import (
     FieldSpec,
     RelationTarget,
     Rendered,
+    is_protected,
     is_user_target,
     parse_field,
     relation_name,
@@ -392,6 +393,7 @@ class _Meaning:
             self.aggregate(entity)
             self.access(entity)
             self.storage(entity)
+            self.protected_files(entity)
             self.renames(entity)
             self.tree(entity)
             self.cache(entity)
@@ -932,6 +934,26 @@ class _Meaning:
                     "Use public, authenticated, granted, role:<slug> or owned:<field>, or a list "
                     "of them. For anything else write access: code and declare Access(...) in "
                     "the viewset.",
+                )
+
+    def protected_files(self, entity: _Entity) -> None:
+        """``file:protected`` and ``image:protected`` need the storage module (``C720``)."""
+        if "storage" in self.modules:
+            return
+        for spec in entity.fields.values():
+            try:
+                protected = is_protected(spec)
+            except CliError:
+                continue  # C216 reports the argument
+            if protected:
+                self.add(
+                    "C720",
+                    (*entity.path, "fields", spec.name),
+                    f"{entity.name}.{spec.name} is {spec.kind}:protected, which the storage "
+                    "module provides, and the spec does not add it.",
+                    "Add the module: modules: {storage: {provider: aws}} (or r2, minio, "
+                    "spaces, b2, gcs-interop), or make the field a plain "
+                    f"{spec.kind}.",
                 )
 
     def storage(self, entity: _Entity) -> None:
@@ -1970,3 +1992,4 @@ def iter_codes() -> Iterator[str]:
     yield from ("C700", "C701", "C702", "C703")
     yield from ("C500", "C501", "C502")
     yield from ("C520", "C521")
+    yield "C720"  # file:protected / image:protected without the storage module

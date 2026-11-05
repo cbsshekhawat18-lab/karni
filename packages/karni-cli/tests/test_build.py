@@ -506,6 +506,59 @@ def test_a_module_added_to_the_spec_is_wired_with_its_options(copy: Path) -> Non
     assert "karni-reports" in (copy / "pyproject.toml").read_text()
     assert (copy / ".karni" / "modules" / "reports.md").is_file()
     assert _rows(copy, "select count(*) from karni_reports_generatedreport") == [(0,)]
+
+
+def test_the_storage_module_and_a_protected_field_are_built(copy: Path) -> None:
+    require_modules("karni-storage")
+    _edit(
+        copy / "karni.yaml",
+        (
+            "modules:\n  payments:\n    provider: stripe\n",
+            "modules:\n  payments:\n    provider: stripe\n  storage:\n    provider: r2\n",
+        ),
+        (
+            '        fields: {name: "str:120", slug: "slug:name", address: "text?"}\n',
+            (
+                '        fields: {name: "str:120", slug: "slug:name", address: "text?", '
+                'photo: "image:protected?"}\n'
+            ),
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "  + storage: provider r2" in plan, plan
+    assert "  + classes.Studio.photo: image:protected?" in plan, plan
+    code, out = _build()
+    assert code == 0, out
+    settings = (copy / "config" / "settings.py").read_text()
+    apps = settings[settings.index("INSTALLED_APPS") : settings.index("# karni:apps")]
+    assert '"karni_storage"' in apps
+    block = settings[
+        settings.index("# karni:spec start") : settings.index("karni_settings(globals())")
+    ]
+    assert 'KARNI_STORAGE_PROVIDER = "r2"' in block
+    # The build places the module's URL include, so the download path works at once.
+    urls = (copy / "config" / "urls.py").read_text()
+    assert '    path("api/", include("karni_storage.urls")),\n    # karni:urls\n' in urls
+    models = (copy / "classes" / "karni" / "models.py").read_text()
+    assert "from karni_storage.fields import ProtectedImageField" in models
+    assert 'photo = ProtectedImageField(upload_to="classes/studio/", blank=True)' in models
+    assert _rows(copy, "select count(*) from karni_storage_thumbnail") == [(0,)]
+    proc = project_mod.run_manage(
+        copy,
+        [
+            "shell",
+            "-c",
+            (
+                "from classes.models import Studio; from karni_storage.checks import run_checks; "
+                "s = Studio.objects.create(name='North', photo='classes/studio/a/n.png'); "
+                "print(s.photo.url == f'/api/studios/{s.pk}/files/photo/', run_checks())"
+            ),
+        ],
+        docker=False,
+        database=None,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert proc.stdout.strip().endswith("True []"), proc.stdout
     assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
 
 

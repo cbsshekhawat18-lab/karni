@@ -1026,6 +1026,10 @@ PROCEDURES: tuple[Procedure, ...] = (
             "A PDF of one row (an invoice, a product sheet) is the `reports` module: declare a "
             "Report in `<app>/reports.py` (model, template, get_context), never a hand-written "
             "PDF view.",
+            "A file only the row's readers may download (a contract scan, an ID photo) is the "
+            "`storage` module: `ProtectedFileField` or `ProtectedImageField` (karni.yaml: "
+            "`file:protected`), never a hand-written download view, presigned URL or boto3 "
+            "call.",
             "Run `karni add <module>`. It adds the `karni-<module>` dependency to "
             "pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked "
             "`# karni:apps` in config/settings.py (with any middleware its manifest wires), "

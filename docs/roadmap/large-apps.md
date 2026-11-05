@@ -61,8 +61,9 @@ cannot start before the item it names is done.
 | Item | Goal | Depends on | Status |
 |---|---|---|---|
 | 14 | Tooling for 100+ models: scoped context, incremental checks, volume seeding, query plans and a CI benchmark. | none | done |
-| 15 | Optional modules: reports (PDF), ai (structured extraction) and storage (S3). | none | in progress: 15a (reports) and 15b (ai) done |
+| 15 | Optional modules: reports (PDF), ai (structured extraction) and storage (S3). | none | in progress: 15a (reports), 15b (ai) and 15c (storage) done |
 | 15a | The reports module (`karni add reports`): a row printed to PDF from a template in a Celery task, cached by template and data, served only to users who may retrieve the row, with pre-generation, an admin and `@karni/reports-ui`. | none | done |
+| 15c | The storage module (`karni add storage`): protected file fields served only through the row's own viewset by a signed URL, provider presets for AWS, R2, MinIO, Spaces, B2 and GCS, direct uploads with a confirm step, thumbnails and `@karni/storage-ui`. | none | done |
 | 16 | Production proof: a CI job that boots the Docker stack end to end, health and readiness endpoints, API versioning and a deploy guide. | none | planned |
 
 ### Then: the reference app

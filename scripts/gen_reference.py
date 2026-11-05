@@ -236,6 +236,13 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "api",
+        "Protected files (the `storage` module): kept in a private S3-compatible bucket or on "
+        "disk, downloaded only through the row's own viewset by a signed URL, with direct "
+        "uploads and thumbnails (`ProtectedFileField`, `<resource>/<id>/files/<field>/`). "
+        "Experimental tier",
+    ),
+    Capability(
+        "api",
         "TypeScript types and typed hooks from the OpenAPI document (`karni types`)",
         ((f"{EH}/Makefile", "karni types"),),
     ),

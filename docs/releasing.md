@@ -21,12 +21,14 @@ One tag publishes every package at the same version:
 | `karni-site` | PyPI | `modules/karni-site` |
 | `karni-charts` | PyPI | `modules/karni-charts` |
 | `karni-reports` | PyPI | `modules/karni-reports` |
+| `karni-storage` | PyPI | `modules/karni-storage` |
 | `@karni/ui` | npm | `packages/karni-ui` |
 | `@karni/payments-ui` | npm | `modules/karni-payments/ui` |
 | `@karni/approvals-ui` | npm | `modules/karni-approvals/ui` |
 | `@karni/impersonation-ui` | npm | `modules/karni-impersonation/ui` |
 | `@karni/charts-ui` | npm | `modules/karni-charts/ui` |
 | `@karni/reports-ui` | npm | `modules/karni-reports/ui` |
+| `@karni/storage-ui` | npm | `modules/karni-storage/ui` |
 
 Lockstep keeps "which @karni/ui goes with karni 0.4?" from ever being a
 question. A module's range on core (`karni>=0.4,<0.5`, `"@karni/ui": "^0.4.0"`)
@@ -39,8 +41,8 @@ moves with every minor release.
    `docs/migrations/<major.minor>.md` exist and are complete. They are
    written in the pull requests that made the changes (CONTRIBUTING.md), not
    at release time.
-2. **Versions.** Set the new version in all ten manifests: the six
-   `pyproject.toml` files and the four `package.json` files (and their
+2. **Versions.** Set the new version in all twelve manifests: the seven
+   `pyproject.toml` files and the five `package.json` files (and their
    lockfiles). For a minor release, also move the module ranges on core.
 3. **Check locally:**
 
@@ -121,6 +123,7 @@ accepts the same version twice.
   |---|---|
   | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site`, `karni-charts` (one publisher each) |
   | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site`, `karni-reports` (one publisher each) |
+  | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site`, `karni-storage` (one publisher each) |
   | Owner | `cbsshekhawat18-lab` |
   | Repository name | `karni` |
   | Workflow name | `release.yml` |

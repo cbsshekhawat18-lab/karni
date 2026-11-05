@@ -357,6 +357,14 @@ Stable since 0.4.1:
   blocks, `manage.py karni_pregenerate`, and `useReport` and `ReportButton`
   in `@karni/reports-ui`. The six-letter code prefix (`REPORT001`) is not
   experimental: codes keep their meaning.
+- [The `karni-storage` module](storage.md): the whole of `karni_storage`
+  (`ProtectedFileField`, `ProtectedImageField`, the presets, the storage, the
+  tokens, `Thumbnail`, `karni_storage.thumbnails`), the `KARNI_STORAGE_*`
+  settings, the `<resource>/<id>/files/<field>/`, `upload/` and `confirm/`
+  endpoints and their answers, `x-karni-storage` in the schema, the
+  `application/vnd.karni.upload` reference part, `manage.py
+  karni_thumbnails`, the `file:protected` and `image:protected` field types,
+  and everything in `@karni/storage-ui`.
 
 ## Supported platforms
 

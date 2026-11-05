@@ -20,10 +20,9 @@ from karni_cli.spec.validate import validate_text
 
 from .conftest import REPO_ROOT
 
-#: Tokens the CATALOG block of karni context may take with Karni's 7 modules and 6 features
-#: (measured 335 by the four-characters rule, 315 cl100k tokens, with karni-charts, karni-reports,
-#: karni-ai and the user_grants line).
-CATALOG_TOKEN_BUDGET = 340
+#: Tokens the CATALOG block of karni context may take with Karni's 8 modules and 6 features
+#: (karni-charts, karni-reports, karni-ai, karni-storage and the user_grants line).
+CATALOG_TOKEN_BUDGET = 370
 
 CHAT = """
 name = "chat"
@@ -114,6 +113,7 @@ def test_every_manifest_in_the_repo_is_valid() -> None:
         "payments",
         "reports",
         "site",
+        "storage",
     ]
     assert [m.name for m in loaded.features] == [
         "api_cache",
@@ -274,7 +274,8 @@ def test_list_and_show_in_a_project(
 
 
 @pytest.mark.parametrize(
-    "module", ["payments", "approvals", "impersonation", "site", "charts", "reports", "ai"]
+    "module",
+    ["payments", "approvals", "impersonation", "site", "charts", "reports", "ai", "storage"],
 )
 def test_add_then_remove_gives_the_files_back(
     runner, generated_project: Path, monkeypatch, no_docker, counter, module: str

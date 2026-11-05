@@ -3340,6 +3340,178 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Pass setting= or to=. For a setting, add NAME = env.list("NAME", default=[]) to config/settings.py and NAME=team@example.com to .env (karni make form --notify NAME writes both).
 
+## STORE (`STORE`)
+
+<a id="store001"></a>
+
+### STORE001: KARNI_STORAGE_PROVIDER names no preset
+
+*system check (error)* · from `karni_storage.presets`
+
+**Why Karni objects.** The preset gives core's S3 backend the endpoint, region and addressing style of the service. Without one, protected files have nowhere to go.
+
+**Fix.** Set KARNI_STORAGE_PROVIDER to aws, r2, minio, spaces, b2 or gcs-interop (in karni.yaml: modules: {storage: {provider: r2}}). A service no preset knows is minio with its endpoint in AWS_S3_ENDPOINT_URL.
+
+<a id="store002"></a>
+
+### STORE002: The storage provider has no credentials
+
+*system check (error)* · from `karni_storage.presets`
+
+**Why Karni objects.** With KARNI_STORAGE=s3 every upload and every signed download URL is signed with the access key. Without it each one fails in production.
+
+**Fix.** Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in the environment (.env), with the access key of the provider's account (R2, Spaces, B2 and GCS HMAC keys use the same two names). On AWS with an instance or task role, set KARNI_STORAGE_CREDENTIALS=chain instead. Credentials never go in karni.yaml.
+
+<a id="store003"></a>
+
+### STORE003: The storage preset needs a value it does not have
+
+*system check (error)* · from `karni_storage.presets`
+
+**Why Karni objects.** A preset builds the endpoint from the bucket's region (aws, spaces, b2), the account id (r2) or your server's URL (minio). Without it the backend talks to the wrong host.
+
+**Fix.** Set what the message names in the environment: AWS_STORAGE_BUCKET_NAME (or KARNI_STORAGE_BUCKET), AWS_S3_REGION_NAME, R2_ACCOUNT_ID or AWS_S3_ENDPOINT_URL.
+
+<a id="store004"></a>
+
+### STORE004: karni_storage.urls is not included
+
+*system check (error)* · from `karni_storage.checks`
+
+**Why Karni objects.** The API gives each protected file as its download path, <resource>/<id>/files/<field>/. Without the include those paths answer 404 and nothing can be uploaded.
+
+**Fix.** Add path("api/", include("karni_storage.urls")) to config/urls.py, next to path("api/", include("karni.api.urls")).
+
+<a id="store005"></a>
+
+### STORE005: A karni-storage setting has a value it does not take
+
+*system check (error)* · from `karni_storage.checks`
+
+**Why Karni objects.** The module would fail on the first upload or the first thumbnail.
+
+**Fix.** KARNI_STORAGE_UPLOAD_METHOD takes post, put or nothing. KARNI_STORAGE_CREDENTIALS takes keys or chain. KARNI_STORAGE_THUMBNAIL_SIZES maps a name to [width, height] in pixels, e.g. {"small": [160, 160]}. KARNI_STORAGE_THROTTLE_RATES maps download, upload or confirm to a rate such as "120/hour", or None.
+
+<a id="store006"></a>
+
+### STORE006: A model with protected files has no viewset on the API
+
+*system check (error)* · from `karni_storage.checks`
+
+**Why Karni objects.** A protected file is served only after its row is retrieved through the model's own viewset. A model the API does not serve has files nobody can download.
+
+**Fix.** Declare a BaseViewSet for the model (karni make viewset), or use a plain FileField if the files are not meant to be downloaded through the API.
+
+<a id="store010"></a>
+
+### STORE010: No protected file field there
+
+*API 400 response* · from `karni_storage.access (answered with HTTP 404)`
+
+**Why Karni objects.** The path names a resource the API does not route, or a field that is not one of its model's protected fields, or one Karni.field_roles hides from you.
+
+**Fix.** Use the download path the API returned for the field, or the field's own name.
+
+<a id="store011"></a>
+
+### STORE011: The file is larger than the field allows
+
+*API 400 response* · from `karni_storage (upload, confirm and the serializer field)`
+
+**Why Karni objects.** Each protected field has a size limit: its max_size, else KARNI_STORAGE_MAX_SIZE.
+
+**Fix.** Send a smaller file, or raise the field's max_size (ProtectedFileField(max_size=...)) or KARNI_STORAGE_MAX_SIZE.
+
+<a id="store012"></a>
+
+### STORE012: The field does not take files of that type
+
+*API 400 response* · from `karni_storage (upload, confirm and the serializer field)`
+
+**Why Karni objects.** Each protected field lists the content types it takes. An image field takes JPEG, PNG, GIF and WebP by default. SVG is left out because it can carry script.
+
+**Fix.** Send a file of an allowed type, or list the type in the field's content_types.
+
+<a id="store013"></a>
+
+### STORE013: The upload token is not valid
+
+*API 400 response* · from `karni_storage.tokens`
+
+**Why Karni objects.** A direct upload is attached to a row only with the token the upload and confirm steps gave this user for this field. A token that expired, was altered, belongs to someone else or to another field is refused, so nobody can attach another user's object.
+
+**Fix.** Upload the file again: POST <resource>/files/<field>/upload/, send it to the bucket, POST .../confirm/, then save the row with the token confirm returned.
+
+<a id="store014"></a>
+
+### STORE014: The uploaded file is not in the bucket
+
+*API 400 response* · from `karni_storage.views (confirm)`
+
+**Why Karni objects.** Confirm checks the object before any row may point at it.
+
+**Fix.** Send the file to the URL the upload step returned before its expiry, then confirm again.
+
+<a id="store015"></a>
+
+### STORE015: Direct uploads need the bucket
+
+*API 400 response* · from `karni_storage.views (confirm)`
+
+**Why Karni objects.** On local storage (KARNI_STORAGE=local) the upload step answers method 'api': the file goes through the API with the row, so there is nothing to confirm.
+
+**Fix.** Send the file in the row's create or update request (multipart).
+
+<a id="store016"></a>
+
+### STORE016: No thumbnail size of that name
+
+*API 400 response* · from `karni_storage.views (?size=)`
+
+**Why Karni objects.** Thumbnails are made in the sizes KARNI_STORAGE_THUMBNAIL_SIZES names.
+
+**Fix.** Use one of the names the message lists, or add the size to the setting.
+
+<a id="store017"></a>
+
+### STORE017: The thumbnail is not ready
+
+*API 400 response* · from `karni_storage.views (?size=, answered with HTTP 404)`
+
+**Why Karni objects.** Thumbnails are made by a Celery task after the image is confirmed or saved. Until it has run, or for a field that is not a protected image, there is none.
+
+**Fix.** Try again shortly, show the full image meanwhile, and keep a Celery worker running. manage.py karni_thumbnails makes the missing ones.
+
+<a id="store018"></a>
+
+### STORE018: The row has no file in that field
+
+*API 400 response* · from `karni_storage.views (answered with HTTP 404)`
+
+**Why Karni objects.** The field is empty on this row.
+
+**Fix.** Upload a file to the field first.
+
+<a id="store019"></a>
+
+### STORE019: The download link is not valid
+
+*API 400 response* · from `karni_storage.views (answered with HTTP 403)`
+
+**Why Karni objects.** A signed download link opens one file for KARNI_STORAGE_URL_EXPIRY seconds. It expired, was altered, or the file was replaced since.
+
+**Fix.** Ask for a fresh link: GET the download path again.
+
+<a id="store020"></a>
+
+### STORE020: A protected file's download path cannot be built
+
+*exception* · from `karni_storage.fields (ProtectedFieldFile.url)`
+
+**Why Karni objects.** The path is <resource>/<id>/files/<field>/ under karni_storage.urls. It needs the include and a viewset that serves the model.
+
+**Fix.** Add path("api/", include("karni_storage.urls")) to config/urls.py and declare a BaseViewSet for the model. karni check names which is missing (STORE004, STORE006).
+
 ## The karni command (`C`)
 
 <a id="c001"></a>
@@ -4881,6 +5053,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** karni check --changed and --no-cache pass options to manage.py karni_check that the project's karni predates.
 
 **Fix.** Upgrade karni in the project (pip install -U karni), or run karni check without those flags.
+
+<a id="c720"></a>
+
+### C720: A protected file field needs the storage module
+
+*karni command* · from `karni spec validate, karni plan and karni make model (file:protected, image:protected)`
+
+**Why Karni objects.** file:protected and image:protected are ProtectedFileField and ProtectedImageField of the karni-storage module: files stored privately and downloaded only through the row's own viewset. Without the module the model cannot import them.
+
+**Fix.** Add the module: modules: {storage: {provider: aws}} in karni.yaml, or karni add storage for karni make model. Or make the field a plain file or image.
 
 ## Agent rules (`K`)
 

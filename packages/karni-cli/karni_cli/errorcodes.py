@@ -1370,6 +1370,16 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Upgrade karni in the project (pip install -U karni), or run karni check without "
         "those flags.",
     ),
+    _c(
+        "C720",
+        "A protected file field needs the storage module",
+        "karni spec validate, karni plan and karni make model (file:protected, image:protected)",
+        "file:protected and image:protected are ProtectedFileField and ProtectedImageField of "
+        "the karni-storage module: files stored privately and downloaded only through the "
+        "row's own viewset. Without the module the model cannot import them.",
+        "Add the module: modules: {storage: {provider: aws}} in karni.yaml, or karni add "
+        "storage for karni make model. Or make the field a plain file or image.",
+    ),
 )
 
 

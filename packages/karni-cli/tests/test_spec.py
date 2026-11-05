@@ -186,6 +186,8 @@ INVALID: list[tuple[str, str, int | None]] = [
      "      Item: {fields: {stock: fk:Stock}}\n", 7),
     ("C253", SHOP + "        fields: {buyer: fk:User}\n        database: warehouse\n", 7),
     ("C254", SHOP + "        was: Product\n", 7),
+    ("C216", SHOP + "        fields: {manual: 'file:secret'}\n", 7),
+    ("C720", SHOP + "        fields: {manual: 'file:protected?'}\n", 7),
     ("C254", SHOP + "        fields: {title: {type: str, was: name}, name: str}\n", 7),
     ("C254", SHOP + "        fields: {a: {type: str, was: x}, b: {type: str, was: x}}\n", 7),
     ("C460", SHOP + "        {external: true, table: sales, tree: true}\n", 7),
@@ -279,13 +281,14 @@ def test_every_code_is_tested_and_registered() -> None:
     assert set(iter_codes()) == tested
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
-    # The spec's own codes, C324 (the module catalog's requires and conflicts), the trees' C460-C479,
+    # The spec's own codes, C324 (the module catalog's requires and conflicts), C720 (the storage
+    # module's protected fields), the trees' C460-C479,
     # the aggregations' C500-C519, response caching's C520-C539, global_search's C540-C559, the
     # page blocks' C560-C579, the tree scope's C620-C639, navigation's C640-C659, wide models'
     # C680-C699 and the taxonomies' C700-C719.
     assert all(
         200 <= int(code[1:]) <= 269
-        or code == "C324"
+        or code in ("C324", "C720")
         or 460 <= int(code[1:]) <= 479
         or 500 <= int(code[1:]) <= 579
         or 620 <= int(code[1:]) <= 659
@@ -490,6 +493,60 @@ def test_the_reports_module_and_its_options() -> None:
     unknown = validate_text(HEAD + "modules: {reports: {paper: A4}}\n")
     assert [issue.code for issue in unknown.issues] == ["C221"]
     assert "page_size" in unknown.issues[0].render("karni.yaml")
+
+
+def test_the_storage_module_and_protected_fields() -> None:
+    storage = catalog.MODULES["storage"]
+    assert storage.models == ("Thumbnail",)
+    assert storage.setting("provider") == "KARNI_STORAGE_PROVIDER"
+    assert storage.options["provider"] == ("string",)
+    assert storage.options["thumbnail_sizes"] == ("object",)
+    assert storage.options["url_expiry"] == ("integer",)
+    # Credentials and account ids stay in the environment: never options.
+    assert "r2_account_id" not in storage.options and "account_id" not in storage.options
+    text = HEAD + textwrap.dedent(
+        """\
+        modules:
+          storage: {provider: r2, url_expiry: 120}
+        apps:
+          shop:
+            entities:
+              Product:
+                fields: {name: str, manual: "file:protected?", photo: "image:protected?"}
+        """
+    )
+    report = validate_text(text)
+    assert report.ok, [issue.render("x") for issue in report.issues]
+    assert report.spec is not None
+    assert report.spec.modules["storage"] == {"provider": "r2", "url_expiry": 120}
+    without = validate_text(
+        text.replace("modules:\n  storage: {provider: r2, url_expiry: 120}\n", "")
+    )
+    assert [issue.code for issue in without.issues] == ["C720", "C720"]
+    assert "modules: {storage:" in without.issues[0].render("karni.yaml")
+    unknown = validate_text(HEAD + "modules: {storage: {bucket_policy: public}}\n")
+    assert [issue.code for issue in unknown.issues] == ["C221"]
+
+
+def test_export_writes_protected_fields_back_as_protected() -> None:
+    from karni_cli.spec.export import _Ctx, field_token
+
+    ctx = _Ctx(facts={}, names={}, left_out=[])
+
+    def token(cls: str, kwargs: dict[str, Any]) -> tuple[str | None, list[str]]:
+        path = f"karni_storage.fields.{cls}"
+        fact: dict[str, Any] = {"name": "scan", "class": path, "path": path, "kwargs": kwargs}
+        fact |= {"blank": bool(kwargs.get("blank")), "null": False}
+        return field_token(fact, "shop", "Product", ctx, set())
+
+    assert token("ProtectedFileField", {"upload_to": "shop/product/", "blank": True}) == (
+        "file:protected?",
+        [],
+    )
+    assert token("ProtectedImageField", {"upload_to": "shop/product/", "max_size": 10}) == (
+        "image:protected",
+        ["shop.Product.scan: max_size=10"],
+    )
 
 
 def test_owner_paths_through_relations() -> None:

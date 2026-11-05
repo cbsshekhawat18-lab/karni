@@ -285,6 +285,11 @@
       "owner": "karni"
     },
     {
+      "path": "config/urls.py",
+      "action": "modify",
+      "owner": "project"
+    },
+    {
       "path": "classes/__init__.py",
       "action": "create",
       "owner": "project"

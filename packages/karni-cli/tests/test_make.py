@@ -422,6 +422,24 @@ def test_an_image_field_adds_the_images_extra_to_pyproject(
     assert (project / "pyproject.toml").read_text() == after
 
 
+def test_protected_file_fields_need_the_storage_module(
+    project: Path, pillow: list[bool | None]
+) -> None:
+    ok("make", "app", "events")
+    message = fails("make", "model", "Ticket", "scan:file:protected", match="C720")
+    assert "karni add storage" in message
+    fails("make", "model", "Ticket", "scan:file:private", match="takes one argument, protected")
+    settings = project / "config" / "settings.py"
+    settings.write_text(
+        settings.read_text().replace("]  # karni:apps", '    "karni_storage",\n]  # karni:apps')
+    )
+    ok("make", "model", "Ticket", "title:str", "scan:file:protected?", "photo:image:protected")
+    models = (project / "events" / "models.py").read_text()
+    assert "from karni_storage.fields import ProtectedFileField, ProtectedImageField" in models
+    assert 'scan = ProtectedFileField(upload_to="events/ticket/", blank=True)' in models
+    assert 'photo = ProtectedImageField(upload_to="events/ticket/")' in models
+
+
 def test_the_extra_merges_with_extras_and_keeps_the_version_spec(
     project: Path, pillow: list[bool | None]
 ) -> None:

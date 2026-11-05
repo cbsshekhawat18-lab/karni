@@ -858,7 +858,8 @@
               "impersonation",
               "payments",
               "reports",
-              "site"
+              "site",
+              "storage"
             ]
           },
           {

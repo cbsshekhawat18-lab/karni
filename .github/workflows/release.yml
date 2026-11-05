@@ -8,6 +8,10 @@ name: Release
 # karni-impersonation, karni-site and karni-ai to PyPI; @karni/ui,
 # @karni/payments-ui, @karni/approvals-ui, @karni/impersonation-ui and
 # @karni/ai-ui to npm; each with build provenance.
+# karni-impersonation, karni-site and karni-storage to PyPI; @karni/ui,
+# @karni/payments-ui, @karni/approvals-ui, @karni/impersonation-ui and
+# @karni/storage-ui to npm; each with build
+# provenance.
 #
 # Publishing is off until the repository variable KARNI_PUBLISHING names the
 # registries to publish to: "pypi", "npm", "pypi,npm" or "true" (both)
@@ -147,7 +151,7 @@ jobs:
       - name: Build sdists and wheels
         run: |
           set -euo pipefail
-          for d in packages/karni packages/karni-cli modules/karni-payments modules/karni-approvals modules/karni-impersonation modules/karni-site modules/karni-charts modules/karni-reports modules/karni-ai; do
+          for d in packages/karni packages/karni-cli modules/karni-payments modules/karni-approvals modules/karni-impersonation modules/karni-site modules/karni-charts modules/karni-reports modules/karni-ai modules/karni-storage; do
             python -m build --outdir dist "$d"
           done
           python -m twine check --strict dist/*
@@ -184,7 +188,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p npm-dist
-          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui modules/karni-reports/ui modules/karni-ai/ui; do
+          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui modules/karni-reports/ui modules/karni-ai/ui modules/karni-storage/ui; do
             (cd "$d" && npm ci && npm run build && npm publish --dry-run --access public)
             npm pack --pack-destination npm-dist "./$d"
           done
@@ -215,7 +219,7 @@ jobs:
       - name: One directory per project
         run: |
           set -euo pipefail
-          for project in karni karni_cli karni_payments karni_approvals karni_impersonation karni_site karni_charts karni_reports karni_ai; do
+          for project in karni karni_cli karni_payments karni_approvals karni_impersonation karni_site karni_charts karni_reports karni_ai karni_storage; do
             mkdir -p "pypi/$project"
             mv dist/"$project"-[0-9]* "pypi/$project/"
           done
@@ -284,6 +288,10 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: pypi/karni_ai/
+      - name: karni-storage
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: pypi/karni_storage/
           skip-existing: true
           password: ${{ secrets.PYPI_API_TOKEN }}
           attestations: ${{ steps.auth.outputs.attest }}
@@ -324,7 +332,7 @@ jobs:
           else
             echo "No NPM_TOKEN secret: npm trusted publishing."
           fi
-          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui modules/karni-reports/ui modules/karni-ai/ui; do
+          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui modules/karni-reports/ui modules/karni-ai/ui modules/karni-storage/ui; do
             (cd "$d" && npm ci && npm run build && npm publish --provenance --access public)
           done
 

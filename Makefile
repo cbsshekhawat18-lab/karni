@@ -33,7 +33,8 @@ PY_PACKAGES := \
 	modules/karni-site:karni_site \
 	modules/karni-charts:karni_charts \
 	modules/karni-reports:karni_reports \
-	modules/karni-ai:karni_ai
+	modules/karni-ai:karni_ai \
+	modules/karni-storage:karni_storage
 
 # Order matters: modules/karni-payments/ui resolves @karni/ui from source,
 # which needs packages/karni-ui/node_modules installed first.
@@ -44,7 +45,7 @@ PY_PACKAGES := $(filter packages/%,$(PY_PACKAGES))
 endif
 
 UI_PACKAGES := packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui modules/karni-reports/ui
-UI_PACKAGES += modules/karni-ai/ui
+UI_PACKAGES += modules/karni-ai/ui modules/karni-storage/ui
 
 KARNI_EXTRAS := s3,images,sentry,social,social-token,2fa
 # karni-ai's provider tests run the real SDKs against mocked HTTP: install-py adds its extras.

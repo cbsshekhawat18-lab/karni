@@ -302,3 +302,22 @@ Assign them in `config/settings.py`. A module's README says more about each.
 | <a id="karni_site_seo_pixel_ratio"></a>`KARNI_SITE_SEO_PIXEL_RATIO` |  | `2` | karni check --seo: an image is oversized when wider than this many times its width. |
 | <a id="karni_site_seo_ignore"></a>`KARNI_SITE_SEO_IGNORE` |  | `[]` | karni check --seo: regular expressions of paths it never requests. |
 | <a id="karni_site_seo_quiet"></a>`KARNI_SITE_SEO_QUIET` |  | `["django_structlog", "django.request", "django.server", "karni.queries"]` | karni check --seo: the loggers held back while it requests the pages (one or more lines per request). Their errors are counted, and the first is shown. [] keeps them. |
+
+### karni-storage
+
+| Setting | Env | Default | What it does |
+|---|---|---|---|
+| <a id="karni_storage_provider"></a>`KARNI_STORAGE_PROVIDER` | `KARNI_STORAGE_PROVIDER` | `"aws"` | The S3-compatible service the files go to when KARNI_STORAGE is "s3": aws, r2, minio, spaces, b2 or gcs-interop (karni_storage.presets). |
+| <a id="karni_storage_credentials"></a>`KARNI_STORAGE_CREDENTIALS` | `KARNI_STORAGE_CREDENTIALS` | `"keys"` | "keys": AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set. "chain": boto3 finds them itself (an AWS instance or task role, a profile). |
+| <a id="karni_storage_bucket"></a>`KARNI_STORAGE_BUCKET` | `KARNI_STORAGE_BUCKET` | `""` | The bucket of protected files. Empty: AWS_STORAGE_BUCKET_NAME. |
+| <a id="karni_storage_location"></a>`KARNI_STORAGE_LOCATION` | `KARNI_STORAGE_LOCATION` | `"protected"` | The key prefix of protected files inside the bucket. |
+| <a id="karni_storage_root"></a>`KARNI_STORAGE_ROOT` | `KARNI_STORAGE_ROOT` | `""` | The directory of protected files on local storage. Empty: "protected" next to MEDIA_ROOT, so the media URL never serves them. |
+| <a id="karni_storage_url_expiry"></a>`KARNI_STORAGE_URL_EXPIRY` | `KARNI_STORAGE_URL_EXPIRY` | `300` | Seconds a signed download URL lives. |
+| <a id="karni_storage_upload_expiry"></a>`KARNI_STORAGE_UPLOAD_EXPIRY` | `KARNI_STORAGE_UPLOAD_EXPIRY` | `900` | Seconds a direct upload's presigned POST (or PUT) lives. |
+| <a id="karni_storage_upload_method"></a>`KARNI_STORAGE_UPLOAD_METHOD` | `KARNI_STORAGE_UPLOAD_METHOD` | `""` | "post" or "put". Empty: the preset's (POST where the service takes a POST policy). |
+| <a id="karni_storage_max_size"></a>`KARNI_STORAGE_MAX_SIZE` | `KARNI_STORAGE_MAX_SIZE` | `10 * 1024 * 1024` | The size limit of a protected field without max_size, in bytes (10 MiB). |
+| <a id="karni_storage_thumbnail_sizes"></a>`KARNI_STORAGE_THUMBNAIL_SIZES` | `KARNI_STORAGE_THUMBNAIL_SIZES` | `{"small": [160, 160], "medium": [640, 640]}` | Thumbnails of protected images: name -> [width, height] (a bounding box). |
+| <a id="karni_storage_thumbnail_format"></a>`KARNI_STORAGE_THUMBNAIL_FORMAT` | `KARNI_STORAGE_THUMBNAIL_FORMAT` | `"WEBP"` | The format thumbnails are written in (Pillow's name). |
+| <a id="karni_storage_throttle_rates"></a>`KARNI_STORAGE_THROTTLE_RATES` | `KARNI_STORAGE_THROTTLE_RATES` | `{"download": "1000/hour", "upload": "120/hour", "confirm": "120/hour"}` | The rate limits of the three endpoints, per caller: download, upload and confirm (scopes storage.download, ...). A rate under the scope in REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] wins. None turns a limit off. |
+| <a id="karni_storage_alias"></a>`KARNI_STORAGE_ALIAS` | `KARNI_STORAGE_ALIAS` | `"protected"` | The STORAGES alias that, when the project defines it, replaces the module's storage (an escape hatch: any backend). |
+| <a id="r2_account_id"></a>`R2_ACCOUNT_ID` | `R2_ACCOUNT_ID` | `""` | Cloudflare R2's account id: the r2 preset's endpoint is built from it. |

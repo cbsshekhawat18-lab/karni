@@ -455,6 +455,24 @@ def test_the_reports_page_size_is_asked_until_answered() -> None:
     assert "modules.reports.page_size" not in {question.id for question in ask(text)}
 
 
+def test_the_storage_provider_is_asked_until_answered() -> None:
+    storage = "version: 1\napp: {name: X, kind: app}\nmodules: {storage: {}}\n"
+    found = {question.id: question for question in ask(storage)}
+    provider = found["modules.storage.provider"]
+    assert [option.value for option in provider.options] == [
+        "aws",
+        "r2",
+        "minio",
+        "spaces",
+        "b2",
+        "gcs-interop",
+    ]
+    assert provider.default == "aws"
+    text = answer(storage, "modules.storage.provider", "r2")
+    assert "modules: {storage: {provider: r2}}" in text
+    assert "modules.storage.provider" not in {question.id for question in ask(text)}
+
+
 def test_a_hand_edit_settles_a_question() -> None:
     assert "club.Lesson.owner" in ids(GAPS)
     edited = GAPS.replace(
