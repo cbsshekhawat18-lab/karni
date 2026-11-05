@@ -31,10 +31,10 @@ urlpatterns = [
         name="swagger-ui",
     ),
     path("api/auth/", include("karni.accounts.urls")),
-    # /api/, or one mount per version when KARNI_API_VERSION is set (karni.api.versions).
+    # /api/, or a mount per version once KARNI_API_VERSION is set.
     *api_urls(),
     path("health/", include("karni.health.urls")),
-    # /healthz (liveness) and /readyz (database, cache and broker): what compose and a proxy ask.
+    # /healthz (liveness) and /readyz (database, cache, broker): what compose asks.
     *probe_urls,
     # Uploads under MEDIA_URL while DEBUG is on and storage is local (dev only).
     *media_urls(),

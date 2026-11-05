@@ -371,7 +371,7 @@ class VersionedSchemaGenerator(SchemaGenerator):
     """
 
     def parse(self, input_request: Any, public: bool) -> Any:
-        if self.patterns is None and versions():
+        if self.patterns is None and versions():  # type: ignore[has-type]
             urlconf = self.urlconf if self.urlconf is not None else settings.ROOT_URLCONF
             module = import_module(urlconf) if isinstance(urlconf, str) else urlconf
             wanted = self.api_version or current_version()

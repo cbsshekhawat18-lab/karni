@@ -29,7 +29,7 @@ class QuietPaths:
     def __init__(self, paths: Sequence[str]) -> None:
         self.paths = tuple(paths)
 
-    def __call__(self, logger: Any, method: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    def __call__(self, logger: Any, method: str, event_dict: Any) -> Any:
         event = event_dict.get("event")
         if self.paths and event in ("request_started", "request_finished"):
             request = str(event_dict.get("request", ""))
