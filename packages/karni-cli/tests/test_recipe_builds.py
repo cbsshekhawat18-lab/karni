@@ -11,6 +11,7 @@ them) and ``karni check``. npm is stubbed, and so are the frontend tools.
 
 from __future__ import annotations
 
+import json
 import sys
 import time
 from pathlib import Path
@@ -63,3 +64,10 @@ def test_a_recipe_builds_from_scratch_with_its_tests_and_check_green(
     for rel, text in apply.contents(recipe).items():
         assert (root / rel).read_text() == text, rel  # the recipe's own files, as it ships them
     assert record.load(root).recipe == ""  # written: the next build leaves them to the project
+
+    # A fresh recipe follows Karni's patterns, so karni suggest has nothing to say.
+    suggested = CliRunner().invoke(
+        app, ["suggest", "--json", "--no-docker"], catch_exceptions=False
+    )
+    assert suggested.exit_code == 0, suggested.output
+    assert json.loads(suggested.stdout)["suggestions"] == [], suggested.stdout

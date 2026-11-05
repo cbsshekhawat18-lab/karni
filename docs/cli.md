@@ -25,7 +25,7 @@ traceback. `KARNI_DB_CHECK=false` skips the check.
 
 - **Project**: [new](#karni-new), [add](#karni-add), [remove](#karni-remove), [modules](#karni-modules), [upgrade](#karni-upgrade), [doctor](#karni-doctor), [config](#karni-config)
 - **Frontend**: [ui](#karni-ui)
-- **Agents and checks**: [context](#karni-context), [rules](#karni-rules), [check](#karni-check), [explain](#karni-explain), [types](#karni-types), [mcp](#karni-mcp)
+- **Agents and checks**: [context](#karni-context), [rules](#karni-rules), [check](#karni-check), [suggest](#karni-suggest), [explain](#karni-explain), [types](#karni-types), [mcp](#karni-mcp)
 - **Debugging**: [queries](#karni-queries)
 - **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [schema](#karni-schema), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [load](#karni-load), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
 - **Debugging**: [why](#karni-why), [why-empty](#karni-why-empty)
@@ -336,6 +336,20 @@ karni check [OPTIONS] [REF]
 | `--seo` |  | Also run the SEO checks: every page of the public site rendered, and missing or shared titles and descriptions, images without alt, size or smaller copies, broken links and pages missing from the sitemap reported (karni-site, SITE010 to SITE018). |
 | `--changed` |  | Only the files git reports as changed: the working tree and the index against HEAD (or REF), and untracked files. The checks that read the whole project still run. Experimental. |
 | `--no-cache` |  | Check every file again: do not read or write the check cache (.karni/local/check-cache.json) or ESLint's. Experimental. |
+
+### `karni suggest`
+
+What Karni could do that the project does by hand, with the fix of each
+
+```
+karni suggest [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--json` |  | Print {version, enabled, suggestions: [{code, rule, file, line, message, fix, command}]} (docs/assets/karni-suggestions.schema.json). |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
 ### `karni explain`
 

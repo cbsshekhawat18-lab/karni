@@ -29,6 +29,7 @@ match on the code, not on the wording, which improves between releases.
 |---|---|
 | `E` / `W` | Karni itself: exceptions, system checks (`W` = warning), API errors, test failures |
 | `PAY` | the karni-payments module (each module has its own prefix) |
+| `SUG` | suggestions from code, printed by `karni check` and `karni doctor`, never a failure |
 | `C` | the `karni` command |
 | `K` | agent rules, enforced by `karni check` and the architecture tests |
 | `karni/…` | the ESLint plugin shipped with @karni/ui |
@@ -2546,6 +2547,80 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Inherit karni.models.BaseModel (which includes GuardedModel), or add karni.models.GuardedModel to the model's bases.
 
+## Suggestions (`SUG`)
+
+`karni check`, `karni doctor` and `karni suggest` print these after the errors and warnings. A suggestion never fails a run or changes an exit code. Each one names the file and line and the exact change. Silence one with `# karni: allow(<rule>): <reason>`, or all of them with `KARNI_SUGGESTIONS = False`. See [suggestions](enforcement.md#suggestions).
+
+<a id="sug001"></a>
+
+### SUG001: A foreign key to itself, named like a parent, is a hand-written tree
+
+*suggestion* · from `karni.suggestions.suggest_tree_models`
+
+**Why Karni objects.** A model with a foreign key to itself named like a parent (category_parent, parent_category) is a tree written by hand: it has no cycle-safe queries, no tree endpoints and no tree UI. The hand-written-tree architecture rule fails on the names `parent` and `parent_*`, so this suggestion covers the other names.
+
+**Fix.** Inherit karni.models.TreeModel first (class Category(TreeModel, BaseModel)), drop the field and run karni makemigrations. Silence it with a comment on the field line: # karni: allow(suggest-tree-model): <reason>.
+
+<a id="sug002"></a>
+
+### SUG002: A text field that holds markdown is not a MarkdownField
+
+*suggestion* · from `karni.suggestions.suggest_markdown_fields`
+
+**Why Karni objects.** A TextField named *_markdown or *_md, or whose help text says markdown, holds markdown. The API publishes it as plain text, so @karni/ui shows the raw markup.
+
+**Fix.** Use karni.fields.MarkdownField in its place and run karni makemigrations: it is a TextField in the database, so no data changes. Silence it with # karni: allow(suggest-markdown): <reason>.
+
+<a id="sug003"></a>
+
+### SUG003: Raw SQL with GROUP BY, opted out of the raw-sql rule, is an aggregate
+
+*suggestion* · from `karni.suggestions.suggest_aggregate`
+
+**Why Karni objects.** Two or more raw SQL queries with GROUP BY carry a karni: allow(raw-sql) opt-out. Grouped counts and sums are what a model's aggregate declaration gives a resource, under the list's filters and access.
+
+**Fix.** Declare class Karni: aggregate = {'group_by': [...], 'values': [...]} on the model and call GET <resource>/aggregate/?group_by=... (docs/aggregations.md). Silence one query with # karni: allow(suggest-aggregate): <reason> on its line.
+
+<a id="sug004"></a>
+
+### SUG004: Three models with a many-to-many to one tree model need a taxonomy
+
+*suggestion* · from `karni.suggestions.suggest_taxonomies`
+
+**Why Karni objects.** Each model tagged to the same tree model (a region tree, a category tree) needs the same filters, facet counts, import columns and access rule, written once per model.
+
+**Fix.** Declare class Karni: taxonomies = {'region': 'geo.Region'} on each model and drop its many-to-many (a many-to-many you keep is adopted). Silence a model with # karni: allow(suggest-taxonomy): <reason> on its field line.
+
+<a id="sug005"></a>
+
+### SUG005: An added module nothing in the project uses
+
+*suggestion* · from `karni.suggestions.suggest_unused_modules`
+
+**Why Karni objects.** The module is in INSTALLED_APPS, and no project file imports it or renders its templates, no URL beyond the one karni add wrote refers to it, and none of its settings differs from its default. It costs a dependency and, for some, a service.
+
+**Fix.** Run karni remove <name>. It never drops data: it counts each table's rows and stops until you pass --keep-tables or migrate the app to zero. Silence it with # karni: allow(suggest-unused-module): <reason> on its line in config/settings.py.
+
+<a id="sug006"></a>
+
+### SUG006: A module the spec or the README describes is not added
+
+*suggestion* · from `karni_cli.suggest.module_suggestions`
+
+**Why Karni objects.** A phrase of a module's use_when list (payments, PDF reports, a public website) appears in karni.yaml or the README, and the module is not added.
+
+**Fix.** Run karni modules show <name> to read what it does, then karni add <name>. Silence it with # karni: allow(suggest-add-module): <reason> on the line (in the README inside <!-- ... -->).
+
+<a id="sug007"></a>
+
+### SUG007: The project drifted from karni.yaml
+
+*suggestion* · from `karni_cli.suggest.drift_suggestions`
+
+**Why Karni objects.** karni plan is not empty: the project and the spec say different things, so the next karni build would change the project, or the spec is out of date.
+
+**Fix.** Read karni plan. Run karni build to bring the project to the spec, or karni spec export -o karni.yaml to take the code's side. Silence it with # karni: allow(suggest-sync-spec): <reason> on the first line of karni.yaml.
+
 ## AI (`AI`)
 
 <a id="ai001"></a>
@@ -4881,6 +4956,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** karni check --changed and --no-cache pass options to manage.py karni_check that the project's karni predates.
 
 **Fix.** Upgrade karni in the project (pip install -U karni), or run karni check without those flags.
+
+<a id="c780"></a>
+
+### C780: The project's karni predates suggestions
+
+*karni command* · from `karni_cli.suggest.core_suggestions`
+
+**Why Karni objects.** karni suggest and karni doctor ask the project's interpreter for its suggestions (manage.py karni_suggest), and the project's karni does not have that command.
+
+**Fix.** Upgrade karni in the project (pip install -U karni). karni check and karni doctor still run and print the suggestions that read karni.yaml and the README.
+
+<a id="c781"></a>
+
+### C781: manage.py karni_suggest failed
+
+*karni command* · from `karni_cli.suggest.core_suggestions`
+
+**Why Karni objects.** The project could not be started, or something in it prints to stdout at startup, so the command's JSON did not come back.
+
+**Fix.** Run python manage.py karni_suggest --json in the project to see the error. karni check shows the same startup problem.
 
 ## Agent rules (`K`)
 
