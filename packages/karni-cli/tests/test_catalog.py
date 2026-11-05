@@ -21,8 +21,9 @@ from karni_cli.spec.validate import validate_text
 from .conftest import REPO_ROOT
 
 #: Tokens the CATALOG block of karni context may take with Karni's 8 modules and 6 features
-#: (karni-charts, karni-reports, karni-ai, karni-storage and the user_grants line).
-CATALOG_TOKEN_BUDGET = 370
+#: (measured 361 by the four-characters rule, 340 cl100k tokens, with karni-charts, karni-reports,
+#: karni-ai, karni-storage and the user_grants line).
+CATALOG_TOKEN_BUDGET = 365
 
 CHAT = """
 name = "chat"
