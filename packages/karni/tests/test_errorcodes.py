@@ -105,7 +105,7 @@ def test_registry_entries_are_complete_and_well_formed() -> None:
     entries = errorcodes.registry()
     assert errorcodes.problems(entries.values()) == []
     assert len(entries) == len(errorcodes.CODES) + sum(
-        1 for code in entries if not re.match(r"^[EW]\d{3}$", code)
+        1 for code in entries if not re.match(r"^(?:[EW]\d{3}|SUG\d{3})$", code)
     )
 
 
@@ -128,8 +128,11 @@ def _project(module: Module | None) -> str:
 
 
 def test_core_codes_use_the_e_and_w_prefixes() -> None:
-    core = {entry.code for entry in errorcodes.CODES}
+    """Errors and warnings are E and W, and the suggestions (never failures) are SUG."""
+    core = {entry.code for entry in errorcodes.CODES if entry.kind != "suggestion"}
     assert all(re.match(r"^[EW]\d{3}$", code) for code in core)
+    suggestions = {entry.code for entry in errorcodes.CODES if entry.kind == "suggestion"}
+    assert suggestions and all(re.match(r"^SUG\d{3}$", code) for code in suggestions)
 
 
 @pytest.mark.parametrize("module", MODULES, ids=_project)

@@ -192,7 +192,8 @@ def test_the_aggregate_is_not_suggested_for_one_query_or_no_opt_out(
     write_sql(tmp_path, "no marker here")
     assert suggestions.suggest_aggregate() == []  # not an opt-out: the raw-sql rule's
     (tmp_path / "one.py").write_text(
-        'def f(cur):\n    cur.execute("SELECT a, COUNT(*) FROM t GROUP BY a")  # karni: allow(raw-sql): x\n'
+        'def f(cur):\n    cur.execute("SELECT a, COUNT(*) FROM t GROUP BY a")'
+        "  # karni: allow(raw-sql): x\n"
     )
     (tmp_path / "plain.py").write_text(
         'def f(cur):\n    cur.execute("SELECT a FROM t")  # karni: allow(raw-sql): x\n'
