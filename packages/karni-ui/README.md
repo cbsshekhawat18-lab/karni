@@ -61,13 +61,13 @@ the schema root (`x-karni-auth-mode`). Override it with `mode="jwt" | "session"`
 Every visual value in every component resolves from a `--karni-*` CSS custom
 property defined in `@karni/ui/styles.css`:
 
-| Family             | What it holds                                                                                                                                                                                                                                                                      |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--karni-color-*`  | colours: background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, overlay, chart-1 … chart-5, and the derived `-foreground`, `-hover`, `-subtle` and `-border` shades                                                           |
-| `--karni-space-*`  | the spacing scale: `--karni-space-unit` (0.25rem), or any step `--karni-space-<n>` (`--karni-space-4` is 1rem)                                                                                                                                                                     |
-| `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                                                                                     |
-| `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                                                                                  |
-| `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                                                                                       |
+| Family             | What it holds                                                                                                                                                                                                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--karni-color-*`  | colours: background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, overlay, chart-1 … chart-5, and the derived `-foreground`, `-hover`, `-subtle` and `-border` shades                                                                                                  |
+| `--karni-space-*`  | the spacing scale: `--karni-space-unit` (0.25rem), or any step `--karni-space-<n>` (`--karni-space-4` is 1rem)                                                                                                                                                                                                            |
+| `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                                                                                                                            |
+| `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                                                                                                                         |
+| `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                                                                                                                              |
 | other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box), `--karni-tree-indent` and `--karni-tree-max-height` (TreeView), and `--karni-search-*` (GlobalSearch) |
 
 The Tailwind preset maps its scales onto these properties, so `bg-primary`,
@@ -1026,18 +1026,18 @@ function NavLink({ item, href, onClick, ...props }: LayoutNavLinkProps) {
 </Layout>;
 ```
 
-| Component    | Slots                                                                  |
-| ------------ | ---------------------------------------------------------------------- |
-| `Layout`     | `Header`, `Sidebar`, `NavLink`, `NavGroup`, `MobileDrawer`, `SkipLink` |
-| `Page`       | `Header`, `Title`, `Description`, `Actions`                            |
-| `Modal`      | `Header`, `Footer`, `CloseButton`                                      |
-| `Toaster`    | `Title`, `Description`, `CloseButton`                                  |
-| `EmptyState` | `Icon`, `Title`, `Description`, `Actions`                              |
-| `Stat`       | `Label`, `Value`, `Delta`, `Icon`                                      |
-| `Dashboard`  | `Section`, `Counts`, `Count`, `Recent`, `Empty`, `Loading`, `Error`    |
-| `DataChart`  | `Tooltip`, `Legend`, `Empty`, `Loading`                                |
-| `FileUpload` | `Dropzone`, `FileRow`                                                  |
-| `GlobalSearch` | `Trigger`, `ResultLink` |
+| Component      | Slots                                                                  |
+| -------------- | ---------------------------------------------------------------------- |
+| `Layout`       | `Header`, `Sidebar`, `NavLink`, `NavGroup`, `MobileDrawer`, `SkipLink` |
+| `Page`         | `Header`, `Title`, `Description`, `Actions`                            |
+| `Modal`        | `Header`, `Footer`, `CloseButton`                                      |
+| `Toaster`      | `Title`, `Description`, `CloseButton`                                  |
+| `EmptyState`   | `Icon`, `Title`, `Description`, `Actions`                              |
+| `Stat`         | `Label`, `Value`, `Delta`, `Icon`                                      |
+| `Dashboard`    | `Section`, `Counts`, `Count`, `Recent`, `Empty`, `Loading`, `Error`    |
+| `DataChart`    | `Tooltip`, `Legend`, `Empty`, `Loading`                                |
+| `FileUpload`   | `Dropzone`, `FileRow`                                                  |
+| `GlobalSearch` | `Trigger`, `ResultLink`                                                |
 
 Where a slot does what an older prop did, the prop keeps working and the slot
 is preferred: `Layout`'s `renderNavItem` (use `NavLink`), `Page`'s `header`
