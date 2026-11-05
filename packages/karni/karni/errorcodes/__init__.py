@@ -33,6 +33,10 @@ tree models (``karni.tree``) · ``E49x``/``W62x`` the tree scope
 aggregations (``karni.aggregation``) · ``E43x``/``W59x`` cross-model search
 (``karni.global_search``) · ``E55x`` field groups and column sets
 (``karni.layout``).
+``SUG001`` to ``SUG099`` suggestions from code (``karni.suggestions``): what
+``karni check`` and ``karni doctor`` print after the errors and warnings, never a
+failure. The prefix has three letters because the registry's code pattern reads
+a single letter as an error or a warning.
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -102,8 +106,9 @@ ERRORS_PAGE: Final[str] = "errors/"
 
 #: ``exception``: raised for code to fix · ``check``: a Django system check
 #: error (boot fails) · ``warning``: a system check warning · ``api``: a 400
-#: from the API naming the bad parameter · ``test``: a karni.testing failure.
-KINDS: Final[tuple[str, ...]] = ("exception", "check", "warning", "api", "test")
+#: from the API naming the bad parameter · ``test``: a karni.testing failure ·
+#: ``suggestion``: a suggestion from code, never a failure (``SUG``).
+KINDS: Final[tuple[str, ...]] = ("exception", "check", "warning", "api", "test", "suggestion")
 
 _CODE = re.compile(r"^(?:[EW]\d{3}|[A-Z]{2,6}\d{3})$")
 
@@ -2960,6 +2965,88 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "has neither, so search never finds it.",
         "Declare a BaseViewSet for the model in the app's viewsets.py (karni make viewset), or "
         "remove search from its class Karni.",
+    ),
+    # SUGxxx suggestions from code (karni.suggestions): never a failure
+    _e(
+        "SUG001",
+        "A foreign key to itself, named like a parent, is a hand-written tree",
+        "suggestion",
+        "karni.suggestions.suggest_tree_models",
+        "A model with a foreign key to itself named like a parent (category_parent, "
+        "parent_category) is a tree written by hand: it has no cycle-safe queries, no tree "
+        "endpoints and no tree UI. The hand-written-tree architecture rule fails on the names "
+        "`parent` and `parent_*`, so this suggestion covers the other names.",
+        "Inherit karni.models.TreeModel first (class Category(TreeModel, BaseModel)), drop the "
+        "field and run karni makemigrations. Silence it with a comment on the field line: "
+        "# karni: allow(suggest-tree-model): <reason>.",
+    ),
+    _e(
+        "SUG002",
+        "A text field that holds markdown is not a MarkdownField",
+        "suggestion",
+        "karni.suggestions.suggest_markdown_fields",
+        "A TextField named *_markdown or *_md, or whose help text says markdown, holds "
+        "markdown. The API publishes it as plain text, so @karni/ui shows the raw markup.",
+        "Use karni.fields.MarkdownField in its place and run karni makemigrations: it is a "
+        "TextField in the database, so no data changes. Silence it with "
+        "# karni: allow(suggest-markdown): <reason>.",
+    ),
+    _e(
+        "SUG003",
+        "Raw SQL with GROUP BY, opted out of the raw-sql rule, is an aggregate",
+        "suggestion",
+        "karni.suggestions.suggest_aggregate",
+        "Two or more raw SQL queries with GROUP BY carry a karni: allow(raw-sql) opt-out. "
+        "Grouped counts and sums are what a model's aggregate declaration gives a resource, "
+        "under the list's filters and access.",
+        "Declare class Karni: aggregate = {'group_by': [...], 'values': [...]} on the model "
+        "and call GET <resource>/aggregate/?group_by=... (docs/aggregations.md). Silence one "
+        "query with # karni: allow(suggest-aggregate): <reason> on its line.",
+    ),
+    _e(
+        "SUG004",
+        "Three models with a many-to-many to one tree model need a taxonomy",
+        "suggestion",
+        "karni.suggestions.suggest_taxonomies",
+        "Each model tagged to the same tree model (a region tree, a category tree) needs the "
+        "same filters, facet counts, import columns and access rule, written once per model.",
+        "Declare class Karni: taxonomies = {'region': 'geo.Region'} on each model and drop its "
+        "many-to-many (a many-to-many you keep is adopted). Silence a model with "
+        "# karni: allow(suggest-taxonomy): <reason> on its field line.",
+    ),
+    _e(
+        "SUG005",
+        "An added module nothing in the project uses",
+        "suggestion",
+        "karni.suggestions.suggest_unused_modules",
+        "The module is in INSTALLED_APPS, and no project file imports it or renders its "
+        "templates, no URL beyond the one karni add wrote refers to it, and none of its "
+        "settings differs from its default. It costs a dependency and, for some, a service.",
+        "Run karni remove <name>. It never drops data: it counts each table's rows and stops "
+        "until you pass --keep-tables or migrate the app to zero. Silence it with "
+        "# karni: allow(suggest-unused-module): <reason> on its line in config/settings.py.",
+    ),
+    _e(
+        "SUG006",
+        "A module the spec or the README describes is not added",
+        "suggestion",
+        "karni_cli.suggest.module_suggestions",
+        "A phrase of a module's use_when list (payments, PDF reports, a public website) "
+        "appears in karni.yaml or the README, and the module is not added.",
+        "Run karni modules show <name> to read what it does, then karni add <name>. Silence it "
+        "with # karni: allow(suggest-add-module): <reason> on the line (in the README inside "
+        "<!-- ... -->).",
+    ),
+    _e(
+        "SUG007",
+        "The project drifted from karni.yaml",
+        "suggestion",
+        "karni_cli.suggest.drift_suggestions",
+        "karni plan is not empty: the project and the spec say different things, so the next "
+        "karni build would change the project, or the spec is out of date.",
+        "Read karni plan. Run karni build to bring the project to the spec, or karni spec "
+        "export -o karni.yaml to take the code's side. Silence it with "
+        "# karni: allow(suggest-sync-spec): <reason> on the first line of karni.yaml.",
     ),
 )
 

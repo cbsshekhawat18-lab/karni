@@ -66,6 +66,7 @@ match on the code, not on the wording, which improves between releases.
 |---|---|
 | `E` / `W` | Karni itself: exceptions, system checks (`W` = warning), API errors, test failures |
 | `PAY` | the karni-payments module (each module has its own prefix) |
+| `SUG` | suggestions from code, printed by `karni check` and `karni doctor`, never a failure |
 | `C` | the `karni` command |
 | `K` | agent rules, enforced by `karni check` and the architecture tests |
 | `karni/…` | the ESLint plugin shipped with @karni/ui |
@@ -89,6 +90,7 @@ KIND_LABEL: Mapping[str, str] = {
     "api": "API 400 response",
     "test": "test failure",
     "cli": "karni command",
+    "suggestion": "suggestion",
 }
 
 
@@ -116,7 +118,14 @@ def _section(title: str, entries: Iterable[Mapping[str, str]], level: str = "##"
 
 
 def _core_sections(core: Any) -> list[str]:
-    entries = sorted((entry.as_dict() for entry in core.CODES), key=lambda e: e["code"][1:])
+    entries = sorted(
+        (
+            entry.as_dict()
+            for entry in core.CODES
+            if entry.code[0] in "EW" and entry.code[1:].isdigit()
+        ),
+        key=lambda e: e["code"][1:],
+    )
     sections = ["## Karni (`E`, `W`)\n"]
     for index, (start, title) in enumerate(RANGES):
         end = RANGES[index + 1][0] if index + 1 < len(RANGES) else "999"
@@ -128,6 +137,21 @@ def _core_sections(core: Any) -> list[str]:
         section.replace("\n### E", "\n#### E").replace("\n### W", "\n#### W")
         for section in sections
     ]
+
+
+def _suggestion_section(core: Any) -> str:
+    entries = sorted(
+        (entry.as_dict() for entry in core.CODES if entry.kind == "suggestion"),
+        key=lambda e: e["code"],
+    )
+    intro = (
+        "`karni check`, `karni doctor` and `karni suggest` print these after the errors and "
+        "warnings. A suggestion never fails a run or changes an exit code. Each one names the "
+        "file and line and the exact change. Silence one with `# karni: allow(<rule>): "
+        "<reason>`, or all of them with `KARNI_SUGGESTIONS = False`. See "
+        "[suggestions](enforcement.md#suggestions).\n\n"
+    )
+    return _section("Suggestions (`SUG`)", entries).replace("\n\n", "\n\n" + intro, 1)
 
 
 def _module_sections() -> list[str]:
@@ -218,6 +242,7 @@ def render() -> str:
     parts = [
         INTRO,
         *_core_sections(core),
+        _suggestion_section(core),
         *_module_sections(),
         _section("The karni command (`C`)", [code.as_dict() for code in CLI_CODES]),
         _rule_section(),

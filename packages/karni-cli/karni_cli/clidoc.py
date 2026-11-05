@@ -24,7 +24,7 @@ from karni_cli.generators.fields import FIELD_DOCS
 SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Project", ("new", "add", "remove", "modules", "upgrade", "doctor", "config")),
     ("Frontend", ("ui",)),
-    ("Agents and checks", ("context", "rules", "check", "explain", "types", "mcp")),
+    ("Agents and checks", ("context", "rules", "check", "suggest", "explain", "types", "mcp")),
     ("Debugging", ("queries",)),
     (
         "Runners",

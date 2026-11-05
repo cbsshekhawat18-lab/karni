@@ -740,6 +740,8 @@ BASE: dict[str, Any] = {
     # Tooling for large projects (experimental). karni check's cache of per-file
     # results (.karni/local/check-cache.json): False turns it off, a path moves it.
     "KARNI_CHECK_CACHE": True,
+    # Suggestions in karni check and karni doctor (experimental): False turns them off.
+    "KARNI_SUGGESTIONS": True,
     # The rows the scaling check compares, small then large (query_scaling overrides).
     "KARNI_SCALING_ROWS": [2, 12],
     # Rows per model from which karni seed inserts in bulk, and rows per bulk insert.

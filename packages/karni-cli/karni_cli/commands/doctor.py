@@ -30,6 +30,7 @@ import typer
 from karni_cli import agent_data, envfile, services, tips, toolchain
 from karni_cli import history as history_mod
 from karni_cli import project as project_mod
+from karni_cli import suggest as suggest_mod
 from karni_cli.adapters import sync
 from karni_cli.commands.context import find_manifest
 from karni_cli.project import CliError, find_project
@@ -231,6 +232,27 @@ def _history(project: Path) -> list[str]:
     return lines
 
 
+def _suggestions(project: Path, service: str) -> list[str]:
+    """Experimental. The suggestions of ``karni suggest``, as doctor's lines (never an error)."""
+    try:
+        try:
+            core = suggest_mod.core_suggestions(project, service=service)
+        except CliError:
+            core = None
+        data = suggest_mod.collect(project, core, service=service)
+    except Exception:  # noqa: BLE001 - a suggestion must never break karni doctor
+        return []
+    if not data["enabled"]:
+        return [_line("suggestions", "off (KARNI_SUGGESTIONS = False)")]
+    if not data["suggestions"]:
+        return [_line("suggestions", "none")]
+    return [
+        _line("suggestions", f"{len(data['suggestions'])}, they never fail a run"),
+        "",
+        *suggest_mod.render(data).splitlines()[1:],
+    ]
+
+
 def doctor(
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Do not print the optional tip."),
@@ -249,6 +271,8 @@ def doctor(
     typer.echo(_line("ui", _manifest(project)))
     typer.echo(_line("adapters", _adapters(project)))
     _echo_lines("history", _history(project))
+    for line in _suggestions(project, service):
+        typer.echo(line)
     tip = tips.history_tip(project, quiet=quiet)
     if tip:
         typer.echo("")

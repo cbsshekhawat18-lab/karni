@@ -37,6 +37,7 @@ from karni_cli.commands.seed import seed
 from karni_cli.commands.serve import serve
 from karni_cli.commands.shell import shell
 from karni_cli.commands.spec import spec_app
+from karni_cli.commands.suggest import suggest
 from karni_cli.commands.sync_roles import sync_roles
 from karni_cli.commands.trace import trace
 from karni_cli.commands.types import types
@@ -89,6 +90,7 @@ app.command(help="Generate TS types and typed hooks from the backend OpenAPI")(t
 app.add_typer(ui_app, name="ui")
 app.command()(context)
 app.command()(check)
+app.command(help="What Karni could do that the project does by hand, with the fix of each")(suggest)
 app.command(help="Upgrade across Karni versions: codemods, diff, manual-change report")(upgrade)
 app.add_typer(rules_app, name="rules")
 app.add_typer(spec_app, name="spec")
