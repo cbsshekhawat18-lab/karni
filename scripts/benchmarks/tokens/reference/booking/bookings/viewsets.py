@@ -3,14 +3,13 @@ bookings/karni/api.py from karni.yaml: add your actions here.
 """
 
 from bookings.karni import api as karni
+from bookings.serializers import PaymentSerializer
 from django.conf import settings
 from karni_payments.services import create_checkout
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
-
-from bookings.serializers import PaymentSerializer
 
 
 class ResourceViewSet(karni.ResourceViewSet):

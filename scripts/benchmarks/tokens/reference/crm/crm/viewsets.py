@@ -6,7 +6,6 @@ from decimal import Decimal
 from typing import Any
 
 from crm.karni import api as karni
-from crm.models import Deal
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Sum
 from karni.accounts.permissions import has_role
