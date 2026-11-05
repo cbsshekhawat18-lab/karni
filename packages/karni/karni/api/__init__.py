@@ -19,8 +19,9 @@ supporting machinery lives in the submodules — :mod:`karni.api.access` (the
 :mod:`karni.api.routers` / :mod:`karni.api.urls` (autodiscovery) and
 :mod:`karni.api.schema` — each documenting its own escape hatches.
 
-The performance declarations are re-exported here too: ``Budget``
-(:mod:`karni.performance`), ``Unpaginated`` (:mod:`karni.pagination`),
+The performance declarations are re-exported here too: ``Budget`` and the
+experimental ``Scaling`` (:mod:`karni.performance`), ``Unpaginated``
+(:mod:`karni.pagination`),
 ``Cache`` / ``Uncached`` (:mod:`karni.api.caching`).
 
 The re-export is lazy (PEP 562) on purpose: DRF resolves Karni's default
@@ -50,7 +51,7 @@ if TYPE_CHECKING:
     from karni.api.caching import Cache, Uncached
     from karni.api.viewsets import BaseViewSet
     from karni.pagination import Unpaginated
-    from karni.performance import Budget
+    from karni.performance import Budget, Scaling
 
 __all__ = [
     "Access",
@@ -63,6 +64,7 @@ __all__ = [
     "HasRole",
     "Owned",
     "Public",
+    "Scaling",
     "Throttle",
     "Uncached",
     "Unpaginated",
@@ -81,6 +83,7 @@ _LAZY = {
     "HasRole": "karni.api.access",
     "Owned": "karni.api.access",
     "Public": "karni.api.access",
+    "Scaling": "karni.performance",
     "Throttle": "karni.api.throttling",
     "Uncached": "karni.api.caching",
     "Unpaginated": "karni.pagination",

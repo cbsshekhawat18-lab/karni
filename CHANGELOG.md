@@ -243,6 +243,48 @@ apply codemods and list the manual steps. This file is the human summary.
   rule `K201` say the same. A page that writes a raw `<details>` fails the
   lint until it uses `Accordion` or carries a disable comment with a reason.
 
+- **Tooling for large projects (experimental), large-apps item 14.**
+  `karni context --summary` prints one line per app (its models, viewsets
+  and pages, with their counts), `--app LABEL` one app in full (every model,
+  the relations in and out, each viewset with its route and access, the
+  roles, the pages) and `--model NAME` one model in depth (every field in
+  the spec's words, the relations that point at it). `--max-tokens N` cuts
+  the output at whole sections and names what was left out and the command
+  that prints it. Without them the output is unchanged. `karni check` keeps
+  the results of the file checks (the source rules and the duplication
+  fingerprints, Karni's own included) in `.karni/local/check-cache.json`
+  under each file's hash, and ESLint keeps its cache in
+  `.karni/local/eslintcache`, so an unchanged file is not checked again. A
+  cache from another Karni, Django or Python version or from other settings
+  is ignored. `karni check --changed [REF]` checks only the files git
+  reports as changed, while the whole-project checks still run, and
+  `--no-cache` (or `KARNI_CHECK_CACHE = False`) turns the cache off. On the
+  100-model benchmark project a cached `karni check` takes about half the
+  time of a cold one. `karni seed --volume N` writes N rows per model with
+  `bulk_create` in batches (`--batch-size`): relation targets first, foreign
+  keys drawn from existing rows, one-to-one targets used once, a self
+  relation pointing at earlier batches, many-to-many links in bulk, and the
+  rows, time and rate per model in the report. It refuses a table holding
+  rows no seed run left there (a ledger in `.karni/local/seeded.json`,
+  `E473`) unless `--reset` or `--force`. A seed count at
+  `KARNI_SEED_BULK_THRESHOLD` (default 1000) takes the bulk path in a plain
+  run too, so `karni plan` shows a large `seed` count of karni.yaml with its
+  expected time class and `karni build` seeds it in bulk. The scaling check
+  takes its row counts from `KARNI_SCALING_ROWS` and, per viewset, from
+  `query_scaling = Scaling(rows=(5, 500), seconds=0.3)`, whose `seconds` is a
+  time budget at the large count: a failed budget (`E476`) names the
+  endpoint, the rows, the time and the queries. On PostgreSQL `karni queries
+  --explain` now runs `EXPLAIN ANALYZE` of every query inside the request's
+  rolled-back transaction and flags each sequential scan on a table of
+  `KARNI_EXPLAIN_SEQ_SCAN_ROWS` rows or more (`W611`) with the index that
+  would serve it. On another database it keeps its plain `EXPLAIN` of the
+  slowest statements and says so (`W610`). A new CI job times `karni check`,
+  `karni context` and the tests on a 100-model project
+  (`scripts/benchmark/large_project.py`) and fails above 1.5 times the
+  baseline. New codes: E470, E471, E473, E475 to E477, W610, W611, C580 to
+  C582. [docs/enforcement.md](docs/enforcement.md#the-check-cache),
+  [docs/seeding.md](docs/seeding.md#volume-seeding),
+  [docs/debugging/queries.md](docs/debugging/queries.md#query-plans-explain).
 - **Clarifying questions (experimental): `karni plan --questions` and
   `karni spec answer`.** Before `karni build`, `karni plan --questions
   [--json] [--max N]` lists the few questions to ask the user, at most 5

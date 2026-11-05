@@ -318,6 +318,30 @@ Stable since 0.4.1:
   the transitional setting `KARNI_API_CACHE_LEGACY_HEADER`. The spec's keys
   for it (`features: api_cache`, an entity's `cache:`) follow the app spec,
   which is experimental.
+- Tooling for large projects:
+  [context slices](agents.md#large-projects-one-area-at-a-time)
+  (`karni context --summary`, `--app`, `--model` and `--max-tokens`, the
+  same flags of `manage.py karni_context`, `karni.introspect`'s
+  `summary_context`, `app_context`, `model_context`, `field_text`,
+  `resolve_apps` and `resolve_models`),
+  [the check cache](enforcement.md#the-check-cache) (`karni check
+  --changed [REF]` and `--no-cache`, `manage.py karni_check --changed` and
+  `--no-cache`, `.karni/local/check-cache.json`, `.karni/local/eslintcache`,
+  `karni.testing.checkcache` and `KARNI_CHECK_CACHE`),
+  [volume seeding](seeding.md#volume-seeding) (`karni seed --volume` and
+  `--batch-size`, `karni.bulk_seeding`, the `volume`, `bulk` and
+  `batch_size` arguments of `karni.seeding.seed`, `karni.seeding.volume_rows`,
+  the seed ledger `.karni/local/seeded.json`, the report's `volume`, `bulk`
+  and `timings`, `KARNI_SEED_BULK_THRESHOLD`, `KARNI_SEED_BATCH_SIZE` and
+  `KARNI_SEED_LEDGER`), [the scaling settings](testing.md#3-the-scaling-check)
+  (`KARNI_SCALING_ROWS`, `karni.performance.Scaling`, `scaling_rows`,
+  `query_scaling` on a viewset, and `ScalingResult`'s `rows`, `seconds`,
+  `budget`, `endpoint`, `too_slow` and `slow_message()`),
+  [query plans](debugging/queries.md#query-plans-explain) (`karni queries
+  --explain`'s analysis on PostgreSQL, `karni.api.explain`, the `seq_scans`
+  of `--json` and `KARNI_EXPLAIN_SEQ_SCAN_ROWS`), the seed volume of
+  `karni plan` (`karni_cli.spec.plan.seed_time_class`, the `seed_bulk_threshold`
+  fact) and `scripts/benchmark/large_project.py` with its baseline.
 
 ## Supported platforms
 

@@ -117,6 +117,53 @@ KARNI_ARCHITECTURE = {
 }
 ```
 
+## The check cache
+
+!!! warning "Experimental"
+    The check cache, `karni check --changed` and `--no-cache`, `manage.py
+    karni_check --changed` and `--no-cache`, `.karni/local/check-cache.json`,
+    `karni.testing.checkcache` and the setting `KARNI_CHECK_CACHE` are
+    [experimental](stability.md#experimental-names).
+
+On a large project `karni check` would read every file on every run. It keeps
+the results of the checks that read files one by one in
+`.karni/local/check-cache.json` (machine-local, ignored by git), under each
+file's content hash, so an unchanged file is not read again. These checks use
+it: the rules that parse the source (`raw-sql`, `http-client`,
+`access-override`, `unpaginated-action`, `audited-bulk-write`) and the
+duplication check's fingerprints, of the project and of Karni's own source.
+ESLint keeps its own cache in `.karni/local/eslintcache`. The checks that read
+the whole project always run: Django's system checks (the models, the
+migrations, the URL routing), the external tables, the rules that inspect
+classes, jscpd and every `karni.checks` hook of a module.
+
+```sh
+karni check                    # an unchanged file comes from the cache
+karni check --changed          # only the files git reports as changed
+karni check --changed main     # the files changed since main
+karni check --no-cache         # read every file again
+```
+
+The backend says how much it reused: `check cache: 1459 of 1459 file results
+reused`. The cache is ignored whole when another Karni, Django or Python
+version wrote it, or other settings did (every `KARNI_*` setting,
+`INSTALLED_APPS` and the installed check hooks are part of its fingerprint).
+A rule whose other inputs changed (the audited models of `audited-bulk-write`)
+drops its own entries.
+
+`--changed` asks git for the files changed in the working tree and the index
+against `HEAD` (against `REF` with `--changed REF`), plus the untracked files
+git does not ignore. The file checks and ESLint read only those, and every
+check reports only their findings, while the whole-project checks still run
+in full. Outside a git repository, or with a ref git does not know, it stops
+with [C581](errors.md#c581). A project whose karni predates the cache says so
+with [C582](errors.md#c582).
+
+`KARNI_CHECK_CACHE = False` turns the cache off, and a path (relative to the
+project root) moves the file. A module's own `karni.checks` hook can cache
+its per-file work too: `karni.testing.checkcache.active().per_file(name,
+path, compute)`.
+
 ## Integer keys on a public resource
 
 !!! warning "Experimental"

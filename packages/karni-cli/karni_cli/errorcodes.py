@@ -1341,6 +1341,35 @@ CODES: Final[tuple[CliCode, ...]] = (
         "menu (financial reads Financial), and a set without columns shows an empty table.",
         "Name the set in snake_case (default, financial) and list at least one field.",
     ),
+    # C58x/C59x tooling for large projects (experimental)
+    _c(
+        "C580",
+        "The project's karni has no context slices",
+        "karni_cli.commands.context",
+        "karni context --summary, --app and --model ask manage.py karni_context for a slice. "
+        "The project's karni predates them.",
+        "Upgrade karni in the project (pip install -U karni), or run karni context without "
+        "those flags.",
+    ),
+    _c(
+        "C581",
+        "git cannot say which files changed",
+        "karni_cli.commands.check.changed_files; karni check --changed",
+        "karni check --changed asks git for the files changed in the working tree and the "
+        "index (against HEAD or the ref given), plus untracked files. git is missing, the "
+        "project is not in a git repository, or git does not know the ref.",
+        "Run it inside a git repository (git init, then commit), pass a ref git knows (a "
+        "branch, a tag, a commit), or run karni check without --changed.",
+    ),
+    _c(
+        "C582",
+        "The project's karni has no check cache",
+        "karni_cli.commands.check",
+        "karni check --changed and --no-cache pass options to manage.py karni_check that the "
+        "project's karni predates.",
+        "Upgrade karni in the project (pip install -U karni), or run karni check without "
+        "those flags.",
+    ),
 )
 
 

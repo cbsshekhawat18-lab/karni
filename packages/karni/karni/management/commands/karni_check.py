@@ -17,6 +17,15 @@ the same zero-argument callables returning failure messages. They may be
 slow (karni-site's renders every page of the site), so they run only when
 asked for.
 
+The checks that read one file at a time keep their results in a cache
+(:mod:`karni.testing.checkcache`, experimental): an unchanged file is not
+read again. ``--no-cache`` (or ``KARNI_CHECK_CACHE = False``) turns it off.
+``--changed FILE ...`` narrows a run to those files (paths relative to the
+project root): the file checks read only them and every check reports only
+their findings, while the checks that read the whole project (Django's
+system checks, the external tables, every other hook) run in full.
+``karni check --changed`` passes the files git reports as changed.
+
 It also compares every external model (``class Karni: external = True``,
 experimental) with its table or view where the database answers
 (:func:`karni.db.checks.check_external_tables`): ``karni.E272`` to ``E274``
@@ -78,8 +87,31 @@ class Command(BaseCommand):
             "checked.",
         )
 
+        parser.add_argument(
+            "--no-cache",
+            action="store_true",
+            help="Check every file again: do not read or write the check cache. Experimental.",
+        )
+        parser.add_argument(
+            "--changed",
+            nargs="*",
+            default=None,
+            metavar="FILE",
+            help="Only these files (relative to the project root): the file checks read only "
+            "them and every check reports only their findings. Experimental.",
+        )
+
     def handle(self, *args: Any, **options: Any) -> None:
-        deploy = bool(options.get("deploy"))
+        from karni.testing import checkcache
+        from karni.testing._source import project_root
+
+        cache = checkcache.from_settings(
+            project_root(), no_cache=bool(options.get("no_cache")), changed=options.get("changed")
+        )
+        with checkcache.using(cache):
+            self._run(bool(options.get("deploy")), cache, seo=bool(options.get("seo")))
+
+    def _run(self, deploy: bool, cache: Any, *, seo: bool = False) -> None:
         failures: list[str] = []
         # Django's check writes warnings to these streams and raises the
         # failing findings without printing them, so they are printed below.
@@ -128,7 +160,7 @@ class Command(BaseCommand):
             for warning in search_index_failures():
                 self.stdout.write(f"search indexes: {warning}")
 
-        groups = ["karni.checks", *(["karni.checks.seo"] if options.get("seo") else [])]
+        groups = ["karni.checks", *(["karni.checks.seo"] if seo else [])]
         for group in groups:
             for ep in sorted(entry_points(group=group), key=lambda e: e.name):
                 try:
@@ -136,6 +168,10 @@ class Command(BaseCommand):
                     failures.extend(f"{ep.name}: {message}" for message in messages)
                 except Exception as exc:  # noqa: BLE001 - a broken hook is a failure, not a crash
                     failures.append(f"{ep.name}: {exc}")
+        if cache.enabled and not cache.save():
+            self.stderr.write(f"warning: could not write the check cache {cache.path}")
+        if cache.enabled or cache.changed is not None:
+            self.stdout.write(cache.summary())
 
         # Row-scope exemptions are not failures, but they are printed on every
         # run so they never accumulate quietly (ADR 0002, P2).
@@ -155,7 +191,7 @@ class Command(BaseCommand):
             )
         # A stage of `karni check`, which prints the overall verdict once every
         # stage (this one, ESLint, duplication) has run.
-        included = [name for name, on in (("deploy", deploy), ("SEO", options.get("seo"))) if on]
+        included = [name for name, on in (("deploy", deploy), ("SEO", seo)) if on]
         self.stdout.write(
             "backend checks: ok"
             + (f" ({' and '.join(included)} checks included)" if included else "")

@@ -26,6 +26,12 @@ keeping its rows. A field removed and a field of the same type added to one
 entity, without ``was``, is shown as a removal with the hint that it is
 probably a rename.
 
+Volume (experimental): a ``seed`` count at the bulk threshold (the project's
+``KARNI_SEED_BULK_THRESHOLD``, default :data:`SEED_BULK_THRESHOLD`) is
+seeded in bulk by ``karni build`` (``karni.bulk_seeding``), and its change
+says so with the expected time class: ``+ Booking: 200000, 200,000 rows in
+bulk, about a minute``.
+
 Ownership: given :class:`Managed` (what ``.karni/build.json`` records),
 each change is marked ``managed`` or not. ``karni build`` writes Karni's code
 in files of its own (:mod:`karni_cli.builder.layout`), and a change on code the
@@ -73,6 +79,7 @@ __all__ = [
     "json_schema",
     "manage_counter",
     "plan_project",
+    "seed_time_class",
 ]
 
 #: Experimental. The version of the ``--json`` output. It moves only for a breaking change.
@@ -1171,6 +1178,33 @@ def _show_page(name: str, kinds: list[Any], counted: str) -> str:
     return ", ".join(shown) or "none"
 
 
+#: Experimental. Rows per entity from which ``karni seed`` inserts in bulk, unless the
+#: project's facts say otherwise (mirrors ``karni.bulk_seeding.BULK_THRESHOLD``).
+SEED_BULK_THRESHOLD: Final = 1000
+#: Experimental. The bulk path's rows per second, for the time class (``karni.bulk_seeding``).
+SEED_ROWS_PER_SECOND: Final = 4000
+
+
+def seed_time_class(rows: int) -> str:
+    """Experimental. How long seeding ``rows`` takes in words (``karni.bulk_seeding.time_class``)."""
+    seconds = rows / SEED_ROWS_PER_SECOND
+    if seconds < 15:
+        return "seconds"
+    if seconds < 90:
+        return "about a minute"
+    if seconds < 15 * 60:
+        return "minutes"
+    return "an hour or more"
+
+
+def _volume_note(ctx: _Context, count: int) -> str | None:
+    """``bulk insert, about a minute``: a seed count at the bulk threshold, and its time class."""
+    threshold = ctx.facts.get("seed_bulk_threshold") or SEED_BULK_THRESHOLD
+    if not isinstance(count, int) or count < int(threshold):
+        return None
+    return f"{count:,} rows in bulk, {seed_time_class(count)}"
+
+
 def _seed(ctx: _Context) -> None:
     resolve_new = _resolver(_entities(ctx.desired))
     renamed_back = {old: new for new, old in ctx.entity_renames.items()}
@@ -1181,10 +1215,11 @@ def _seed(ctx: _Context) -> None:
     }
     new = {resolve_new(n, ""): (n, c) for n, c in ctx.desired["seed"].items()}
     for label, (name, count) in new.items():
+        note = _volume_note(ctx, count)
         if label not in old:
-            ctx.add(Change("seed", "add", name, str(count)))
+            ctx.add(Change("seed", "add", name, str(count), reason=note))
         elif old[label] != count:
-            ctx.add(Change("seed", "change", name, f"{old[label]} -> {count}"))
+            ctx.add(Change("seed", "change", name, f"{old[label]} -> {count}", reason=note))
     for label, count in old.items():
         if label not in new:
             ctx.add(Change("seed", "remove", label.split(".", 1)[1], str(count)))

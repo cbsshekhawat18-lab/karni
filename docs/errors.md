@@ -1266,6 +1266,66 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Name resources from the response's resources list (the router prefixes, e.g. products), or declare class Karni: search on the model and route a BaseViewSet for it.
 
+<a id="e470"></a>
+
+#### E470: A context slice names no app or model
+
+*exception* · from `karni.introspect.resolve_apps; karni.introspect.resolve_models; karni context`
+
+**Why Karni objects.** karni context --app and --model print one area of the project. The label or name matched no app with models and no model.
+
+**Fix.** Use a name the message lists, or run karni context --summary to see every app and its models. A model is Name or app_label.Name.
+
+<a id="e471"></a>
+
+#### E471: A context slice names a model two apps share
+
+*exception* · from `karni.introspect.resolve_models; karni context --model`
+
+**Why Karni objects.** Two apps have a model of that name, so the bare name could mean either.
+
+**Fix.** Write app_label.Name, one of the labels the message lists.
+
+<a id="e473"></a>
+
+#### E473: A volume seed refused tables that hold rows no seed run left
+
+*exception* · from `manage.py karni_seed --volume; karni.bulk_seeding.Ledger`
+
+**Why Karni objects.** A seed run records how many rows each table holds when it is done (.karni/local/seeded.json). A table that holds another number of rows was written by someone else, and volume rows would mix with that content.
+
+**Fix.** Pass --reset to wipe the project's tables first, --force to add rows anyway, or --model to seed only the tables seed runs filled. Real content belongs in karni load.
+
+<a id="e475"></a>
+
+#### E475: karni seed --volume or --batch-size is not a positive number
+
+*exception* · from `manage.py karni_seed`
+
+**Why Karni objects.** A volume and a batch size are numbers of rows.
+
+**Fix.** Pass 1 or more, e.g. karni seed --volume 100000 --batch-size 2000.
+
+<a id="e476"></a>
+
+#### E476: An endpoint is slower than its time budget at the large row count
+
+*test failure* · from `karni.testing.performance (the scaling check); query_scaling = Scaling(seconds=...)`
+
+**Why Karni objects.** The viewset declares a time budget: the request at the scaling check's large row count (the faster of two runs) must take no longer. It took longer.
+
+**Fix.** Read the statements in the message. karni queries <endpoint> --explain shows each plan on PostgreSQL and names the index a sequential scan wants. Raise Scaling(seconds=...) only when the work is real.
+
+<a id="e477"></a>
+
+#### E477: A scaling declaration or KARNI_SCALING_ROWS is not valid
+
+*exception* · from `karni.performance.Scaling; karni.performance.scaling_rows`
+
+**Why Karni objects.** The scaling check compares two row counts, small then large, and a time budget is a number of seconds.
+
+**Fix.** Write rows=(small, large) with 1 <= small < large, e.g. Scaling(rows=(2, 50), seconds=0.5), and the same pair in KARNI_SCALING_ROWS.
+
 <a id="e490"></a>
 
 #### E490: A tree:<path> scope does not end at a tree model
@@ -1840,6 +1900,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Pass a concrete model class or an 'app_label.Model' string.
 
+<a id="w610"></a>
+
+#### W610: karni queries --explain analyses plans on PostgreSQL only
+
+*system check (warning)* · from `karni.api.diagnose; karni queries --explain`
+
+**Why Karni objects.** EXPLAIN ANALYZE with a plan Karni reads, and the sequential scans it flags, need PostgreSQL. On another database --explain prints that database's plain EXPLAIN of the slowest statements.
+
+**Fix.** Run karni queries --explain against PostgreSQL, with data at a realistic volume (karni seed --volume N).
+
 <a id="e610"></a>
 
 #### E610: A factory cannot generate a value for a field
@@ -1849,6 +1919,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** Values are inferred from field types and names, and some custom fields have no safe default.
 
 **Fix.** Pass the value (create(Model, field=...)) or define an explicit factory in <app>/factories.py.
+
+<a id="w611"></a>
+
+#### W611: A query reads a large table from start to end
+
+*system check (warning)* · from `karni.api.explain; karni queries --explain`
+
+**Why Karni objects.** The plan has a sequential scan on a table of KARNI_EXPLAIN_SEQ_SCAN_ROWS rows or more (default 1000). It reads every row, so it slows down as the table grows.
+
+**Fix.** Add the index the finding names to the model's Meta.indexes and make a migration. When the finding says the filter keeps most rows, narrow the filter or paginate instead: an index would not help.
 
 <a id="e611"></a>
 
@@ -4498,6 +4578,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Name the set in snake_case (default, financial) and list at least one field.
 
+<a id="c580"></a>
+
+### C580: The project's karni has no context slices
+
+*karni command* · from `karni_cli.commands.context`
+
+**Why Karni objects.** karni context --summary, --app and --model ask manage.py karni_context for a slice. The project's karni predates them.
+
+**Fix.** Upgrade karni in the project (pip install -U karni), or run karni context without those flags.
+
+<a id="c581"></a>
+
+### C581: git cannot say which files changed
+
+*karni command* · from `karni_cli.commands.check.changed_files; karni check --changed`
+
+**Why Karni objects.** karni check --changed asks git for the files changed in the working tree and the index (against HEAD or the ref given), plus untracked files. git is missing, the project is not in a git repository, or git does not know the ref.
+
+**Fix.** Run it inside a git repository (git init, then commit), pass a ref git knows (a branch, a tag, a commit), or run karni check without --changed.
+
+<a id="c582"></a>
+
+### C582: The project's karni has no check cache
+
+*karni command* · from `karni_cli.commands.check`
+
+**Why Karni objects.** karni check --changed and --no-cache pass options to manage.py karni_check that the project's karni predates.
+
+**Fix.** Upgrade karni in the project (pip install -U karni), or run karni check without those flags.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -4508,7 +4618,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Run `karni context` before reading any files. It prints the current apps, models, viewsets, UI components, hooks, pages, public site routes and installed modules in a few hundred tokens. Trust it.
+**Rule.** Run `karni context` before reading any files. It prints the current apps, models, viewsets, UI components, hooks, pages, public site routes and installed modules in a few hundred tokens. Trust it. On a large project read one area at a time: `karni context --summary`, then `karni context --app <label>` or `--model <name>` (`--max-tokens N` caps any of them).
 
 **Why Karni objects.** The inventory is derived live from the app registry, the router and the @karni/ui manifest, so it is never stale and costs far fewer tokens than crawling source.
 

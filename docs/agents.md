@@ -18,6 +18,7 @@ follow what they return.
 | Command | What it returns |
 |---|---|
 | `karni context` | Live inventory: APPS, MODELS, VIEWSETS, COMPONENTS, HOOKS, PAGES, SITE (the public site's routes), MODULES, CATALOG (a line per module and built-in feature, with whether the project has it: [the module catalog](modules.md#the-module-catalog)), BASES |
+| `karni context --summary` / `--app LABEL` / `--model NAME` | One area of a large project at a time: a line per app, one app in full, one model in depth. `--max-tokens N` cuts at whole sections (experimental, [below](#large-projects-one-area-at-a-time)) |
 | `karni modules list` / `show NAME` | The module catalog: every module and feature with its options and the questions to ask (experimental) |
 | `karni recipes list --match "<request>"` / `show NAME` | The recipes a new app starts from, ranked for a one-line request, and the blank start ([the /new-app flow](#agents-the-new-app-flow), experimental) |
 | `karni rules` | Every convention as `CODE summary` (about 600 tokens for Karni's own rules, measured) |
@@ -47,6 +48,55 @@ eslint-disable reasons. `karni check` and the `@karni/ui` ESLint preset
 stay authoritative, and cross-file rules (duplicates) are not checked per file.
 Path allowances use the documented defaults (`*/sql/*`, `*/services/*`,
 `src/api/`), matched relative to the project root.
+
+### Large projects: one area at a time
+
+!!! warning "Experimental"
+    `karni context --summary`, `--app`, `--model` and `--max-tokens`, and
+    `manage.py karni_context`'s flags of the same names, are
+    [experimental](stability.md#experimental-names).
+
+On a project with a hundred models or more the inventory caps the models it
+lists. Read one area at a time instead:
+
+```sh
+karni context --summary                  # one line per app: models, viewsets, pages
+karni context --app catalog              # one app in full
+karni context --model catalog.Product    # one model in depth (repeatable)
+karni context --app catalog --max-tokens 1500
+```
+
+`--summary` prints a `SUMMARY` line with the totals, then one `APP` line per
+app with its models (the first 20 named), its viewsets and its pages (those
+named after one of its models), with their counts:
+
+```text
+SUMMARY: 3 apps, 31 models, 29 viewsets. One app: karni context --app <label>. One model: karni context --model <name>.
+APP catalog: 12 models (Category Product Supplier ...), 11 viewsets, 6 pages
+```
+
+`--app LABEL` (repeatable) prints that app in full: every model with up to
+twelve fields, the key types, `RELATIONS` out of the app and `in:` the
+relations from other apps into it, the scopes, each viewset with its route
+and access, the roles and actions that reach the models, the field
+visibility, the declared performance exceptions and the pages. `--model
+NAME` (a name or `app_label.Name`, repeatable) prints one model in depth:
+where the class is, its key and table, every field in the spec's words
+(`str:200`, `fk:Category?`, `decimal:10,2`, `choices(draft,live)`), the
+relations that point at it, its viewsets with their search fields, and its
+pages. An unknown name is [E470](errors.md#e470) with the names that come
+close, and a bare name two apps share is [E471](errors.md#e471).
+
+`--max-tokens N` cuts the output at whole sections (a line with the indented
+lines under it) to about N tokens, four characters each. The last line says
+what was left out and the command that prints it:
+
+```text
+LEFT OUT: VIEWSETS ROLES PERF PAGES BASES (~640 tokens). karni context --app catalog prints them.
+```
+
+Without these flags `karni context` prints what it always printed. A project
+whose karni predates them says so ([C580](errors.md#c580)).
 
 None of this imports Django or project code. `karni.agent` is stdlib-only.
 The CLI finds it, in order: in its own environment (`local`), through the

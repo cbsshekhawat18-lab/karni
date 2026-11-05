@@ -18,10 +18,14 @@ Three layers, all on by default in a Karni project's test run:
    measured with 2 and with 12 rows and ``retrieve`` with 2 and with 12
    related rows per to-many relation the serializer renders; the query count
    must not grow. A viewset with an aggregation (:mod:`karni.aggregation`,
-   experimental) has its ``aggregate`` action measured with 2 and 12 rows
+   experimental) has its ``aggregate`` action measured at the same row counts
    too, grouped by its first declared group, with ``top=1`` and, when it
-   declares a second group, ``stack``. An absolute budget cannot see an N+1
-   in a one-row test — this can. Rows come from
+   declares a second group, ``stack``. The row counts are
+   ``KARNI_SCALING_ROWS`` and, per viewset, ``query_scaling = Scaling(rows=(5,
+   500), seconds=0.3)`` (experimental, :class:`karni.performance.Scaling`),
+   whose ``seconds`` is a time budget for the request at the large count
+   (``E476``). An absolute budget cannot see an N+1 in a one-row test — this
+   can. Rows come from
    :mod:`karni.testing.factories` (explicit ``<app>/factories.py`` factories
    win), the requester gets every role the ``read`` predicate names and owns
    the rows its ``Owned`` paths name. It runs as part of the architecture
@@ -118,22 +122,48 @@ class ScalingCase:
 
 @dataclass(frozen=True)
 class ScalingResult:
-    """Query counts at the small and the large row count, plus the large run's report."""
+    """Query counts at the small and the large row count, plus the large run's report.
+
+    ``rows`` are the row counts compared (experimental), ``seconds`` the time
+    of the request at the large count and ``budget`` the viewset's time
+    budget (``Scaling(seconds=...)``), ``None`` without one.
+    """
 
     case: ScalingCase
     small: int = 0
     large: int = 0
     report: str = ""
     skipped: str = ""
+    rows: tuple[int, int] = (SCALING_SMALL, SCALING_LARGE)
+    seconds: float = 0.0
+    budget: float | None = None
+    endpoint: str = ""
 
     @property
     def grows(self) -> bool:
         return self.large > self.small
 
-    def message(self) -> str:
+    @property
+    def too_slow(self) -> bool:
+        """Experimental. The request at the large row count took longer than the time budget."""
+        return self.budget is not None and self.seconds > self.budget
+
+    def slow_message(self) -> str:
+        """Experimental. What a failed time budget says: the endpoint, rows, time and queries."""
+        where = f" ({self.endpoint})" if self.endpoint else ""
         return (
-            f"{self.case.id}: {self.small} queries with {SCALING_SMALL} rows, {self.large} with "
-            f"{SCALING_LARGE}: the query count grows with the data (N+1).\n{self.report}\n"
+            f"{self.case.id}{where}: {self.rows[1]} rows took {self.seconds:.3f}s against a time "
+            f"budget of {self.budget:g}s, in {self.large} queries.\n{self.report}\n"
+            "Find the slow statement above: karni queries <endpoint> --explain shows its plan on "
+            "PostgreSQL (a sequential scan wants an index). Raise the budget only when the work "
+            f"is real: query_scaling = Scaling(seconds=...) on {self.case.viewset.__name__}."
+        )
+
+    def message(self) -> str:
+        small_rows, large_rows = self.rows
+        return (
+            f"{self.case.id}: {self.small} queries with {small_rows} rows, {self.large} with "
+            f"{large_rows}: the query count grows with the data (N+1).\n{self.report}\n"
             "The optimiser derives select_related/prefetch_related from the serializer, but a "
             "SerializerMethodField or property needs select_related/prefetch_related hints on "
             f"{self.case.viewset.__name__} (or APIMeta.select/prefetch). Opt out only with "
@@ -395,10 +425,16 @@ def check_scaling(case: ScalingCase) -> ScalingResult:
 
     from karni.api.optimizer import plan_for
     from karni.pagination import hard_max_page_size
+    from karni.performance import scaling_rows
     from karni.testing.factories import create
 
     viewset, action = case.viewset, case.action
     model = viewset.model if viewset.model is not None else viewset.queryset.model
+    declared = getattr(viewset, "query_scaling", None)
+    rows_small, rows_large = scaling_rows(declared)
+    budget = getattr(declared, "seconds", None)
+    measured: dict[str, Any] = {"rows": (rows_small, rows_large), "budget": budget}
+    measured["endpoint"] = _endpoint(viewset, action)
     with override_settings(KARNI_QUERY_BUDGET_MODE="off", KARNI_API_CACHE=False):
         user, owner = _requester(viewset, model)
         expand = {"expand": ",".join(case.expand)} if case.expand else {}
@@ -406,49 +442,89 @@ def check_scaling(case: ScalingCase) -> ScalingResult:
         plan = plan_for(serializer_class, model, view.get_serializer_context())
         if action == "aggregate":
             query = aggregate_query(viewset)
-            for _ in range(SCALING_SMALL):
+            for _ in range(rows_small):
                 create(model, **owner)
             _measure(viewset, action, user, query=query)  # warm-up: one-time lookups
             small, response, _report = _measure(viewset, action, user, query=query)
-            for _ in range(SCALING_LARGE - SCALING_SMALL):
+            for _ in range(rows_large - rows_small):
                 create(model, **owner)
-            large, response, report = _measure(viewset, action, user, query=query)
+            large, response, report, seconds = _timed(budget, viewset, action, user, query=query)
             status = response.status_code
         elif action == "list":
             # Rows already present (other fixtures, the requester itself) render in
             # both runs; one page must hold them plus every seeded row.
-            page = {"page_size": model._default_manager.count() + SCALING_LARGE, **expand}
+            page = {"page_size": model._default_manager.count() + rows_large, **expand}
             if page["page_size"] > hard_max_page_size():
                 return ScalingResult(
                     case, skipped=f"{case.id}: too many rows exist before seeding to compare pages"
                 )
-            for _ in range(SCALING_SMALL):
+            for _ in range(rows_small):
                 _seed_children(create(model, **owner), plan, FANOUT, 0)
             _measure(viewset, action, user, query=page)  # warm-up: one-time lookups
             small, response, _report = _measure(viewset, action, user, query=page)
-            for _ in range(SCALING_LARGE - SCALING_SMALL):
+            for _ in range(rows_large - rows_small):
                 _seed_children(create(model, **owner), plan, FANOUT, 0)
-            large, response, report = _measure(viewset, action, user, query=page)
+            large, response, report, seconds = _timed(budget, viewset, action, user, query=page)
             status = response.status_code
-            if status == 200 and _row_count(response) < SCALING_LARGE:
+            if status == 200 and _row_count(response) < rows_large:
                 return ScalingResult(
                     case,
-                    skipped=f"{case.id}: only {_row_count(response)} of {SCALING_LARGE} seeded "
+                    skipped=f"{case.id}: only {_row_count(response)} of {rows_large} seeded "
                     "rows are visible to the generated requester",
                 )
         else:
             few, many = create(model, **owner), create(model, **owner)
-            _seed_children(few, plan, SCALING_SMALL, 0)
-            _seed_children(many, plan, SCALING_LARGE, 0)
+            _seed_children(few, plan, rows_small, 0)
+            _seed_children(many, plan, rows_large, 0)
             _measure(viewset, action, user, few.pk)
             small, response, _report = _measure(viewset, action, user, few.pk)
-            large, response, report = _measure(viewset, action, user, many.pk)
+            large, response, report, seconds = _timed(budget, viewset, action, user, many.pk)
             status = response.status_code
         if status != 200:
             return ScalingResult(
                 case, skipped=f"{case.id}: GET answered {status} for the generated requester"
             )
-    return ScalingResult(case, small=small, large=large, report=report)
+    return ScalingResult(case, small=small, large=large, report=report, seconds=seconds, **measured)
+
+
+def _timed(
+    budget: float | None,
+    viewset: type[Any],
+    action: str,
+    user: Any,
+    pk: Any = None,
+    query: dict[str, Any] | None = None,
+) -> tuple[int, Any, str, float]:
+    """:func:`_measure` with its time; with a time budget the faster of two runs counts."""
+    import time
+
+    started = time.perf_counter()
+    count, response, report = _measure(viewset, action, user, pk, query)
+    seconds = time.perf_counter() - started
+    if budget is not None and seconds > budget:
+        started = time.perf_counter()
+        count, response, report = _measure(viewset, action, user, pk, query)
+        seconds = min(seconds, time.perf_counter() - started)
+    return count, response, report, seconds
+
+
+def _endpoint(viewset: type[Any], action: str) -> str:
+    """``GET /api/events/`` (``{id}/`` for a detail): the route of ``viewset``, when routed."""
+    from django.urls import NoReverseMatch, reverse
+
+    from karni.api.routers import resolve_router
+
+    router = resolve_router()
+    for _prefix, routed, basename in getattr(router, "registry", ()):
+        if routed is viewset:
+            try:
+                if action == "list":
+                    return f"GET {reverse(f'{basename}-list')}"
+                path = reverse(f"{basename}-detail", kwargs={"pk": "0"})
+                return f"GET {path.removesuffix('0/')}{{id}}/"
+            except NoReverseMatch:
+                return f"GET {_prefix}/"
+    return ""
 
 
 def pytest_generate_tests(metafunc: Any) -> None:
@@ -491,3 +567,5 @@ def test_list_and_retrieve_queries_do_not_grow_with_rows(
         pytest.skip(result.skipped)
     if result.grows:
         raise KarniAssertionError(result.message(), code="E129")
+    if result.too_slow:
+        raise KarniAssertionError(result.slow_message(), code="E476")

@@ -128,6 +128,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Five recipes, `shop`, `booking`, `crm`, `lms` and `marketplace`, and `karni new "<Name>" --recipe <name>`: the recipe's karni.yaml, then `karni build`, which writes the recipe's domain code, seeds and tests over its own stubs, never over the project's code, and runs the tests and `karni check`. Each is built from scratch in CI. Experimental tier | `experimental` | Karni's own tests |
 | `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it | `experimental` | Karni's own tests |
 | MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools | `experimental` | Karni's own tests |
+| Large projects, one area at a time: `karni context --summary`, `--app`, `--model` and `--max-tokens`, and a `karni check` that skips unchanged files (a cache per check and file, `--changed [REF]` for the files git reports). Experimental tier | `experimental` | Karni's own tests |
 
 ### Testing
 
@@ -138,6 +139,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | OpenAPI snapshot test (`assert_schema_snapshot`) | `stable` | [test_api_schema.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/tests/test_api_schema.py) |
 | Clients per role (`client_as`) | `stable` | [test_booking_flow.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/tests/test_booking_flow.py) |
 | `query_budget` and `user_with_roles` helpers | `experimental` | Karni's own tests |
+| Performance at volume: `karni seed --volume` (bulk rows that keep their relations), scaling row counts and a time budget per viewset (`Scaling`), `karni queries --explain` with the index a sequential scan wants (PostgreSQL), and a CI benchmark on 100 models. Experimental tier | `experimental` | Karni's own tests |
 | `assert_pages`: a public site's pages, their title, description, alt text and links, in one call | `experimental` | Karni's own tests |
 | Architecture rules that fail the build (`karni check`, the ESLint preset) | `stable` | [Makefile](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/Makefile) |
 
@@ -367,7 +369,15 @@ karni ui detect [OPTIONS]
 
 #### `karni context`
 
-Print a compact machine-readable project inventory
+Print a compact machine-readable project inventory.
+
+On a large project read one area at a time: --summary first, then --app or --model.
+
+Example:
+
+```sh
+karni context --app catalog --max-tokens 1500
+```
 
 ```
 karni context [OPTIONS] [PATH]
@@ -380,6 +390,10 @@ karni context [OPTIONS] [PATH]
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 | `--manifest` PATH |  | Explicit manifest.json path |
+| `--app` TEXT (repeatable) |  | Only this app, in full: every model with its fields, the relations in and out, its viewsets with route and access, its roles and pages (repeatable). Experimental. |
+| `--model` TEXT (repeatable) |  | One model in depth: Name or app_label.Name. Every field, the relations that point at it, its viewsets and pages (repeatable). Experimental. |
+| `--summary` |  | One line per app: its models, viewsets and pages, with their counts. Experimental. |
+| `--max-tokens` INT RANGE |  | Cut the output at whole sections to about N tokens (4 characters each). The last line names what was left out and the command that prints it. Experimental. |
 
 #### `karni rules`
 
@@ -411,20 +425,31 @@ karni rules sync [OPTIONS]
 
 #### `karni check`
 
-Run architecture and system checks
+Run architecture and system checks.
+
+An unchanged file is not checked again: the results of the file checks are cached in .karni/local/ (--no-cache turns that off).
+
+Example:
+
+```sh
+karni check --changed main
+```
 
 ```
-karni check [OPTIONS]
+karni check [OPTIONS] [REF]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
+| `REF` |  | With --changed: the git ref to compare with (a branch, a tag, a commit) instead of HEAD. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 | `--frontend/--no-frontend` |  | Run the frontend checks (eslint and jscpd in frontend/). By default they run when frontend/node_modules is installed, and are skipped with a note when it is not, except in CI. --frontend fails without it, --no-frontend skips them. |
 | `--quiet`, `-q` |  | Do not print the optional tip. |
 | `--deploy` |  | Also run the deploy checks (DEBUG, SECRET_KEY, hosts, HSTS, cookies, admin path, CORS, CSP) and fail on warnings. Run it with the production environment. |
 | `--seo` |  | Also run the SEO checks: every page of the public site rendered, and missing or shared titles and descriptions, images without alt, size or smaller copies, broken links and pages missing from the sitemap reported (karni-site, SITE010 to SITE018). |
+| `--changed` |  | Only the files git reports as changed: the working tree and the index against HEAD (or REF), and untracked files. The checks that read the whole project still run. Experimental. |
+| `--no-cache` |  | Check every file again: do not read or write the check cache (.karni/local/check-cache.json) or ESLint's. Experimental. |
 
 #### `karni explain`
 
@@ -486,7 +511,7 @@ karni queries [OPTIONS] ENDPOINT
 | `--method` TEXT | `GET` | HTTP method. |
 | `--data` TEXT |  | JSON request body (the request's writes are rolled back). |
 | `--json` |  | Machine-readable output. |
-| `--explain` |  | Add EXPLAIN plans for the slowest queries. |
+| `--explain` |  | Add the plans. On PostgreSQL: EXPLAIN ANALYZE of every query, rolled back with the request, and each sequential scan on a table of KARNI_EXPLAIN_SEQ_SCAN_ROWS rows or more (default 1000) with the index that would serve it. Elsewhere: plain EXPLAIN of the slowest queries. |
 | `--all` |  | List every statement, not only repeats. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
@@ -675,6 +700,8 @@ Values come from field names and types (an `email` gets an email, `price` money,
 
 It first prints the models it will write to, and refuses when one of their tables already holds rows (users aside), because demo rows would mix with real content. Pass --reset to wipe the tables first or --force to add rows on top. Real content belongs in `karni load`.
 
+--volume N (experimental) writes N rows per model in bulk, for performance work: relation targets first, foreign keys drawn from existing rows, in batches (--batch-size), with the rows and the time per model. It refuses when a table holds rows no seed run left there, unless --reset or --force. A model whose seed count reaches KARNI_SEED_BULK_THRESHOLD takes the bulk path in a plain run too.
+
 Example:
 
 ```sh
@@ -687,7 +714,7 @@ karni seed [OPTIONS] [ARGS...]
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `ARGS...` |  | Passed to manage.py karni_seed: --count N, --seed S, --reset, --model app.Model, --json, --force. |
+| `ARGS...` |  | Passed to manage.py karni_seed: --count N, --seed S, --reset, --model app.Model, --json, --force, --volume N, --batch-size N. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
@@ -1612,7 +1639,7 @@ The public names of the four packages a project builds on, from their `__all__`.
 |---|---|---|---|
 | `Access` | class | A viewset's access declaration: `access = Access(read=..., write=..., create=...)`. | `Access(*, read: Predicate, write: Predicate, create: Predicate \| None = None) -> None` |
 | `Authenticated` | class | Any authenticated user, on every row. | methods `allows`, `rows`, `facts`, `describe` |
-| `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `pagination`, `cache`, `throttle`, `scope_exempt`, `scope_exempt_reason`, `aggregation`, `read_only_refused_actions`, `tree_actions`, `tree_max_nodes`, `tree_default_depth`, `tree_max_depth`, `taxonomy_actions`, `write_or_create_actions`, `unbudgeted_actions` and get the endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `aggregate`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
+| `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `query_scaling`, `pagination`, `cache`, `throttle`, `scope_exempt`, `scope_exempt_reason`, `aggregation`, `read_only_refused_actions`, `tree_actions`, `tree_max_nodes`, `tree_default_depth`, `tree_max_depth`, `taxonomy_actions`, `write_or_create_actions`, `unbudgeted_actions` and get the endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `aggregate`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
 | `Budget` | class | `query_budget = Budget(list=25, reason="...")`: a viewset's own query budgets. | `Budget(*, reason: str, default: Any = …, **actions: int \| None) -> None` |
 | `Cache` | class | `cache = Cache(ttl=60, depends_on=[Price])`: tune caching for one viewset. | `Cache(*, ttl: int \| None = None, depends_on: tuple[type[Model] \| str, ...] = ()) -> None` |
 | `Can` | class | The requesting user holds a grant for **any** of the named permissions (ADR 0002). | `Can(*keys: str) -> None` |
@@ -1620,6 +1647,7 @@ The public names of the four packages a project builds on, from their `__all__`.
 | `HasRole` | class | The requesting user holds **any** of the named roles (Django groups). | `HasRole(*names: str) -> None` |
 | `Owned` | class | Rows whose `path` points at the requesting user. | `Owned(path: str \| None = None, *, bypass: Predicate \| None = None) -> None` |
 | `Public` | class | Everyone, anonymous included, on every row. The explicit public form. | methods `allows`, `rows`, `describe` |
+| `Scaling` | class | Experimental. `query_scaling = Scaling(rows=(5, 500), seconds=0.3)`: a viewset's scaling. | `Scaling(*, rows: Any = None, seconds: float \| None = None) -> None` |
 | `Throttle` | class | `throttle = Throttle(create="10/hour")`: a rate per action. | `Throttle(**rates: str \| None) -> None` |
 | `Uncached` | class | `cache = Uncached(reason="...")`: never cache this viewset's responses. | `Uncached(*, reason: str) -> None` |
 | `Unpaginated` | class | `pagination = Unpaginated(max_rows=N, reason="...")`: a viewset that returns lists. | `Unpaginated(*, max_rows: int, reason: str) -> None` |
@@ -1859,6 +1887,12 @@ class Lead(BaseModel):
 | `KARNI_SCHEDULES_AUTODISCOVER` | `KARNI_SCHEDULES_AUTODISCOVER` | `True` | Import every app's `schedules.py` at startup. |
 | `KARNI_PK` |  | `"uuid"` | Experimental. The primary key `karni make model` writes: `uuid` (`BaseModel`) or `bigint` (`BigIntBaseModel`). The CLI reads it from a plain `KARNI_PK = "bigint"` line in `config/settings.py`, and `--pk` overrides it per model. Nothing else reads it: each model's class line decides its key. See [choosing the key type](models.md#choosing-the-key-type). |
 | `KARNI_ARCHITECTURE` |  | `{ "skip_apps": [], "sql_allowed": ["*/sql/*", "*/migrations/*"], "http_allowed": ["*/services/*", "*/providers/*", "*/tests/*", "conftest.py"], "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]}}` | Configuration of the architecture rules: `skip_apps`, `sql_allowed`, `http_allowed`, `dup`. See [enforcement](enforcement.md). |
+| `KARNI_CHECK_CACHE` |  | `True` | Experimental. `karni check` keeps each file check's results under the file's hash in `.karni/local/check-cache.json`, so an unchanged file is not checked again. `False` turns it off, a path (relative to the project root) moves it. See [the check cache](enforcement.md#the-check-cache). |
+| `KARNI_SCALING_ROWS` |  | `[2, 12]` | Experimental. The two row counts the scaling check compares, small then large. A viewset's `query_scaling = Scaling(rows=..., seconds=...)` overrides them and sets a time budget. See [the scaling check](testing.md#3-the-scaling-check). |
+| `KARNI_SEED_BULK_THRESHOLD` |  | `1000` | Experimental. Rows per model from which `karni seed` inserts in bulk (a large `seed` count of `karni.yaml`). `karni seed --volume` always does. See [volume seeding](seeding.md#volume-seeding). |
+| `KARNI_SEED_BATCH_SIZE` |  | `2000` | Experimental. Rows per bulk insert of `karni seed` (`--batch-size` overrides it). |
+| `KARNI_SEED_LEDGER` |  | `True` | Experimental. `karni seed` records the row count each table holds after a run in `.karni/local/seeded.json`, and `--volume` refuses a table holding rows no seed run left there. `False` turns it off, a path moves it. |
+| `KARNI_EXPLAIN_SEQ_SCAN_ROWS` |  | `1000` | Experimental. `karni queries --explain` flags each sequential scan on a table of this many rows or more, with the index that would serve it (PostgreSQL). |
 
 ### Module: karni-approvals
 
@@ -2304,6 +2338,12 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E411`](errors.md#e411) | exception | KARNI_API_CACHE_FLUSH is not a time of day |
 | [`E430`](errors.md#e430) | check | Karni.search is malformed or names a field the model does not have |
 | [`E431`](errors.md#e431) | api | ?models= names a resource cross-model search does not cover |
+| [`E470`](errors.md#e470) | exception | A context slice names no app or model |
+| [`E471`](errors.md#e471) | exception | A context slice names a model two apps share |
+| [`E473`](errors.md#e473) | exception | A volume seed refused tables that hold rows no seed run left |
+| [`E475`](errors.md#e475) | exception | karni seed --volume or --batch-size is not a positive number |
+| [`E476`](errors.md#e476) | test | An endpoint is slower than its time budget at the large row count |
+| [`E477`](errors.md#e477) | exception | A scaling declaration or KARNI_SCALING_ROWS is not valid |
 | [`E490`](errors.md#e490) | check | A tree:&lt;path&gt; scope does not end at a tree model |
 | [`E491`](errors.md#e491) | api | The access/ endpoint of a tree resource got a parameter it cannot use |
 | [`E501`](errors.md#e501) | exception | An optional dependency is not installed |
@@ -2361,7 +2401,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E607`](errors.md#e607) | test | There is no OpenAPI schema snapshot yet |
 | [`E608`](errors.md#e608) | test | The OpenAPI schema changed |
 | [`E609`](errors.md#e609) | exception | No factory can be built for this model |
+| [`W610`](errors.md#w610) | warning | karni queries --explain analyses plans on PostgreSQL only |
 | [`E610`](errors.md#e610) | exception | A factory cannot generate a value for a field |
+| [`W611`](errors.md#w611) | warning | A query reads a large table from start to end |
 | [`E611`](errors.md#e611) | exception | Required relations form a loop |
 | [`E612`](errors.md#e612) | exception | Seeding keeps hitting a database constraint |
 | [`E613`](errors.md#e613) | exception | Seeding a row failed |
@@ -2635,6 +2677,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C563`](errors.md#c563) | cli | A related tab is listed twice |
 | [`C680`](errors.md#c680) | cli | A column set names a field the entity does not have, or one twice |
 | [`C681`](errors.md#c681) | cli | A column set has no columns, or a name that is not snake_case |
+| [`C580`](errors.md#c580) | cli | The project's karni has no context slices |
+| [`C581`](errors.md#c581) | cli | git cannot say which files changed |
+| [`C582`](errors.md#c582) | cli | The project's karni has no check cache |
 
 ### Agent rules (`K`)
 

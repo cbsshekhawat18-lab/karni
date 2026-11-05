@@ -12,7 +12,7 @@ def seed(
     args: list[str] | None = typer.Argument(
         None,
         help="Passed to manage.py karni_seed: --count N, --seed S, --reset, --model app.Model, "
-        "--json, --force.",
+        "--json, --force, --volume N, --batch-size N.",
     ),
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
@@ -29,6 +29,13 @@ def seed(
     their tables already holds rows (users aside), because demo rows would
     mix with real content. Pass --reset to wipe the tables first or --force
     to add rows on top. Real content belongs in `karni load`.
+
+    --volume N (experimental) writes N rows per model in bulk, for performance
+    work: relation targets first, foreign keys drawn from existing rows, in
+    batches (--batch-size), with the rows and the time per model. It refuses
+    when a table holds rows no seed run left there, unless --reset or --force.
+    A model whose seed count reaches KARNI_SEED_BULK_THRESHOLD takes the bulk
+    path in a plain run too.
 
     Example: karni seed --count 20 --seed 42 --reset
     """

@@ -25,6 +25,7 @@ else:
     ApiBase = BigIntBaseModel if TEST_PK == "bigint" else BaseModel
 
 
+# karni: allow(hand-written-tree): a plain self-referencing key to group by in the aggregation tests
 class Category(ApiBase):
     """A node of the category tree, named by its ``name``."""
 

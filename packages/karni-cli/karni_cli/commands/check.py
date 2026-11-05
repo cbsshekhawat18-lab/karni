@@ -26,6 +26,16 @@ run, so a pipeline that forgot ``npm ci`` never passes unchecked.
 
 Outside CI, a clean run may end with one tip on stderr (:mod:`karni_cli.tips`,
 at most once per project); ``-q`` suppresses it.
+
+Incremental runs (experimental): the backend's file checks keep their
+results in ``.karni/local/check-cache.json`` (:mod:`karni.testing.checkcache`)
+and ESLint keeps its own cache in ``.karni/local/eslintcache``, so an
+unchanged file is not checked again. ``--no-cache`` turns both off.
+``--changed`` checks only the files git reports as changed (the working tree
+and the index against ``HEAD``, or against ``REF`` with ``--changed REF``,
+plus untracked files): the backend's file checks and ESLint read only those,
+while the checks that read the whole project (Django's system checks, the
+migrations and routing, jscpd's duplication) still run.
 """
 
 from __future__ import annotations
@@ -37,8 +47,8 @@ from pathlib import Path
 
 import typer
 
+from karni_cli import local_state, tips, toolchain
 from karni_cli import project as project_mod
-from karni_cli import tips, toolchain
 from karni_cli.environment import is_ci
 from karni_cli.project import CliError, require_project
 
@@ -104,10 +114,34 @@ def _frontend_duplication(project: Path, capture: list[str] | None = None) -> in
     return _run([str(jscpd), "--config", ".jscpd.json"], frontend, capture)
 
 
-def _frontend_lint(project: Path, capture: list[str] | None = None) -> int:
-    """``eslint .`` in frontend/ with the project's own binary (the @karni/ui rules live there)."""
+#: Experimental. ESLint's cache, next to the backend's check cache (never committed).
+ESLINT_CACHE = local_state.LOCAL_DIR / "eslintcache"
+_LINTED = (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs")
+
+
+def eslint_args(project: Path, *, cache: bool = True, files: list[str] | None = None) -> list[str]:
+    """Experimental. ESLint's arguments: every file, or ``files``, with or without its cache."""
+    args = list(files) if files is not None else ["."]
+    args += ["--max-warnings", "0"]
+    if cache:
+        location = project / ESLINT_CACHE
+        args += ["--cache", "--cache-strategy", "content", "--cache-location", str(location)]
+    return args
+
+
+def _frontend_lint(
+    project: Path,
+    capture: list[str] | None = None,
+    *,
+    cache: bool = True,
+    files: list[str] | None = None,
+) -> int:
+    """``eslint .`` in frontend/ with the project's own binary (the @karni/ui rules live there).
+
+    ``files`` (paths relative to frontend/) lints only those: none, nothing to lint.
+    """
     frontend = project / "frontend"
-    if not frontend.is_dir():
+    if not frontend.is_dir() or files == []:
         return 0
     eslint = frontend / "node_modules" / ".bin" / "eslint"
     if not eslint.exists():
@@ -117,7 +151,76 @@ def _frontend_lint(project: Path, capture: list[str] | None = None) -> int:
             capture,
         )
         return 1
-    return _run([str(eslint), ".", "--max-warnings", "0"], frontend, capture)
+    if cache:
+        local_state.ensure_dir(project)
+    return _run([str(eslint), *eslint_args(project, cache=cache, files=files)], frontend, capture)
+
+
+def _git(project: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            ["git", *args], cwd=project, text=True, capture_output=True, check=False
+        )
+    except FileNotFoundError:
+        raise CliError(
+            "karni check --changed asks git which files changed, and git is not installed. "
+            "Install git, or run karni check without --changed.",
+            code="C581",
+        ) from None
+
+
+def changed_files(project: Path, ref: str | None = None) -> list[str]:
+    """Experimental. The project's files git reports as changed, relative to the project.
+
+    Against ``ref`` when given, else the working tree and the index against
+    ``HEAD`` (the index alone in a repository without a commit), plus the
+    untracked files git does not ignore. Deleted files are left out.
+
+    :raises CliError: ``C581`` outside a git repository, or for a ref git does not know.
+    """
+    inside = _git(project, ["rev-parse", "--is-inside-work-tree"])
+    if inside.returncode != 0 or inside.stdout.strip() != "true":
+        raise CliError(
+            f"karni check --changed asks git which files changed, and {project} is not in a git "
+            "repository. Run git init (and commit), or run karni check without --changed.",
+            code="C581",
+        )
+    base = ref or "HEAD"
+    if ref is None and _git(project, ["rev-parse", "--verify", "-q", "HEAD"]).returncode != 0:
+        diffs = [["diff", "--name-only", "--relative", "--cached"]]
+    else:
+        diffs = [["diff", "--name-only", "--relative", base, "--"]]
+    found: list[str] = []
+    for args in [*diffs, ["ls-files", "--others", "--exclude-standard"]]:
+        proc = _git(project, args)
+        if proc.returncode != 0:
+            raise CliError(
+                f"git could not list the files changed against {base}: "
+                f"{(proc.stderr or proc.stdout).strip()}. Pass a ref git knows "
+                "(a branch, a tag, a commit), or run karni check --changed alone.",
+                code="C581",
+            )
+        found += [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+    return sorted({name for name in found if (project / name).is_file()})
+
+
+def _run_backend(project: Path, args: list[str], *, docker: bool | None, service: str) -> int:
+    """``manage.py karni_check ARGS``, streamed. ``C582`` when its karni predates ARGS' options."""
+    if "--no-cache" not in args and "--changed" not in args:
+        return project_mod.run_manage(
+            project, args, docker=docker, service=service, capture=False
+        ).returncode
+    proc = project_mod.run_manage(project, args, docker=docker, service=service)
+    if proc.returncode != 0 and "unrecognized arguments" in (proc.stderr or ""):
+        raise CliError(
+            "The project's karni has no check cache (--changed, --no-cache): it predates them. "
+            "Upgrade karni in the project (pip install -U karni), or run karni check without "
+            "those flags.",
+            code="C582",
+        )
+    sys.stdout.write(proc.stdout or "")
+    sys.stderr.write(proc.stderr or "")
+    return proc.returncode
 
 
 def run_checks(
@@ -141,6 +244,13 @@ def run_checks(
 
 
 def check(
+    ref: str | None = typer.Argument(
+        None,
+        metavar="[REF]",
+        help="With --changed: the git ref to compare with (a branch, a tag, a commit) instead "
+        "of HEAD.",
+        show_default=False,
+    ),
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
     frontend: bool | None = typer.Option(
@@ -164,13 +274,44 @@ def check(
         "shared titles and descriptions, images without alt, size or smaller copies, broken "
         "links and pages missing from the sitemap reported (karni-site, SITE010 to SITE018).",
     ),
+    changed: bool = typer.Option(
+        False,
+        "--changed",
+        help="Only the files git reports as changed: the working tree and the index against "
+        "HEAD (or REF), and untracked files. The checks that read the whole project still run. "
+        "Experimental.",
+    ),
+    no_cache: bool = typer.Option(
+        False,
+        "--no-cache",
+        help="Check every file again: do not read or write the check cache "
+        "(.karni/local/check-cache.json) or ESLint's. Experimental.",
+    ),
 ) -> None:
+    """Run architecture and system checks.
+
+    An unchanged file is not checked again: the results of the file checks are
+    cached in .karni/local/ (--no-cache turns that off).
+
+    Example: karni check --changed main
+    """
+    if ref is not None and not changed:
+        raise typer.BadParameter("REF is only used with --changed.", param_hint="REF")
     project = require_project()
     args = ["karni_check", *(["--deploy"] if deploy else []), *(["--seo"] if seo else [])]
+    if no_cache:
+        args.append("--no-cache")
+    files: list[str] | None = None
+    if changed:
+        try:
+            files = changed_files(project, ref)
+        except CliError as exc:
+            typer.echo(f"error: {exc}", err=True)
+            raise typer.Exit(1) from None
+        args += ["--changed", *files]
+        typer.echo(f"karni check --changed: {len(files)} changed file(s)", err=True)
     try:
-        backend = project_mod.run_manage(
-            project, args, docker=docker, service=service, capture=False
-        ).returncode
+        backend = _run_backend(project, args, docker=docker, service=service)
     except CliError as exc:
         # The backend cannot start here (no interpreter, no database driver):
         # say why, and still run the frontend checks.
@@ -194,7 +335,16 @@ def check(
             )
     if run_frontend:
         dup = _frontend_duplication(project)
-        lint = _frontend_lint(project)
+        lint_files = (
+            [
+                name.removeprefix("frontend/")
+                for name in files
+                if name.startswith("frontend/") and name.endswith(_LINTED)
+            ]
+            if files is not None
+            else None
+        )
+        lint = _frontend_lint(project, cache=not no_cache, files=lint_files)
     if backend or dup or lint:
         sys.stderr.write("karni check: FAILED\n")
     else:

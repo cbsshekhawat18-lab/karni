@@ -127,6 +127,66 @@ Any class attribute other than `Meta` is a field override, using any
 factory-boy declaration. Override `seed()` for full control. `context.create()`
 builds rows with everything inferred except what you pass.
 
+## Volume seeding
+
+!!! warning "Experimental"
+    `karni seed --volume` and `--batch-size`, `karni.bulk_seeding`, the
+    `volume`, `bulk` and `batch_size` arguments of `karni.seeding.seed()`,
+    the seed ledger (`.karni/local/seeded.json`) and the settings
+    `KARNI_SEED_BULK_THRESHOLD`, `KARNI_SEED_BATCH_SIZE` and
+    `KARNI_SEED_LEDGER` are [experimental](stability.md#experimental-names).
+
+Ten rows per table make the screens look used. A query that slows down at a
+hundred thousand rows needs a hundred thousand rows:
+
+```sh
+karni seed --volume 100000                        # 100,000 rows per model
+karni seed --volume 100000 --model shop.Order     # only these models, and what they need
+karni seed --volume 20000 --batch-size 5000
+```
+
+The models are seeded in the same order, the targets of a relation before
+the model that points at them. Each model's rows are built with the same
+factories, so the inferred values and every override in `<app>/seeds.py`
+apply, then written with `bulk_create` in batches (`--batch-size`, else
+`KARNI_SEED_BATCH_SIZE`, default 2000). A foreign key is drawn from the
+target's existing rows, a one-to-one target is used once, a relation to the
+model itself points at rows of earlier batches (so a tree gets depth), and a
+many-to-many gets zero to three targets per row. Free text repeats from a
+pool of a thousand values per field, because text is the costly value to
+make. The `auto_now` timestamps are spread over the last 60 days. The user
+model gets one user per hundred rows, the demo way, with the demo login. The
+report has the rows, the time and the rate per model:
+
+```text
+Seeded 3 model(s) with seed 0 (volume 100000) in 74.6s:
+  testapp.Tag    100000  (bulk, 16.4s, 6,102 rows/s)
+  testapp.Venue  100000  (bulk, 15.5s, 6,451 rows/s)
+  testapp.Event  100000  (bulk, 38.7s, 2,584 rows/s)
+```
+
+That run is on PostgreSQL on a laptop. `Event` has two foreign keys and a
+many-to-many, so its 100,000 rows bring about 200,000 links.
+
+Bulk rows skip `save()`: no `post_save` is sent, listeners do not run and no
+change history is written for them. A seeder that overrides `Seeder.seed()`
+keeps full control, and its model is seeded row by row through that method.
+
+Volume rows never mix with real content. Every `karni seed` run records, per
+database, how many rows each table holds when it is done, in
+`.karni/local/seeded.json`. `karni seed --volume` refuses
+([E473](errors.md#e473)) when a table holds another number of rows than the
+ledger recorded, because someone else wrote to it, unless `--reset` wipes
+the project's tables first or `--force` adds rows anyway. So a demo seed
+followed by a volume seed, or two volume runs in a row, go through, while a
+table with real rows stops the run. `KARNI_SEED_LEDGER = False` turns the
+ledger off, and a volume run then needs empty tables, as the demo seed does.
+
+A model whose seed count reaches `KARNI_SEED_BULK_THRESHOLD` (default 1000)
+takes the bulk path in a plain `karni seed` too: a seeder's `Meta.count`, or
+a large count in [`karni.yaml`](app-spec.md#seed), which `karni plan` shows
+with how long it takes.
+
 ## Escape hatches
 
 | Need | Do |
@@ -135,4 +195,6 @@ builds rows with everything inferred except what you pass.
 | Different values for one field | A class attribute on the seeder |
 | Different inference everywhere | Subclass `karni.testing.values.ValueInference`, change its `rules`, and pass it to the builder |
 | Seed from your own code | `karni.seeding.seed(count=..., seed=..., models=...)`. It does not refuse: check `karni.seeding.occupied(seed_plan())` yourself |
+| Volume rows of your own | Subclass `karni.bulk_seeding.BulkSeeder` (`rows`, `insert`, `pick_key`, ...) and pass `bulk=` to `karni.seeding.seed(volume=...)` (experimental) |
+| Bulk from another count, or other batches | `KARNI_SEED_BULK_THRESHOLD`, `KARNI_SEED_BATCH_SIZE` (experimental) |
 | Real content, not demo data | A content file and [`karni load`](content-loading.md) |

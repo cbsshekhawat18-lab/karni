@@ -322,7 +322,7 @@ A viewset declares `model` and `access`. Everything else has a default you can o
 - `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
 - `experimental` Grouped counts and sums under the list's filters and access: `GET <resource>/aggregate/` from `class Karni: aggregate`, with date buckets, top N and Other, a second dimension and numbers stored as text (`TextNumber`). Experimental tier
 
-Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
+Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Scaling`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
 <!-- /generated:api -->
 
 Full reference: [karni.api](docs/REFERENCE.md#karniapi).
@@ -436,6 +436,7 @@ The same rule set produces every adapter file, so the tools never disagree.
 - `experimental` Five recipes, `shop`, `booking`, `crm`, `lms` and `marketplace`, and `karni new "<Name>" --recipe <name>`: the recipe's karni.yaml, then `karni build`, which writes the recipe's domain code, seeds and tests over its own stubs, never over the project's code, and runs the tests and `karni check`. Each is built from scratch in CI. Experimental tier
 - `experimental` `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it
 - `experimental` MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools
+- `experimental` Large projects, one area at a time: `karni context --summary`, `--app`, `--model` and `--max-tokens`, and a `karni check` that skips unchanged files (a cache per check and file, `--changed [REF]` for the files git reports). Experimental tier
 
 Slash commands: `/new-model`, `/new-page`, `/add-module`, `/new-module`, `/site-from-design`, `/new-app`.
 <!-- /generated:agents -->
@@ -454,6 +455,7 @@ Full reference: [slash commands](docs/REFERENCE.md#slash-commands) and [agent ru
 - `stable` OpenAPI snapshot test (`assert_schema_snapshot`)
 - `stable` Clients per role (`client_as`)
 - `experimental` `query_budget` and `user_with_roles` helpers
+- `experimental` Performance at volume: `karni seed --volume` (bulk rows that keep their relations), scaling row counts and a time budget per viewset (`Scaling`), `karni queries --explain` with the index a sequential scan wants (PostgreSQL), and a CI benchmark on 100 models. Experimental tier
 - `experimental` `assert_pages`: a public site's pages, their title, description, alt text and links, in one call
 - `stable` Architecture rules that fail the build (`karni check`, the ESLint preset)
 

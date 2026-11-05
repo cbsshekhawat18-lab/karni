@@ -128,6 +128,7 @@ from karni.performance import (
     Budget,
     QueryBudgetExceeded,
     QueryRecorder,
+    Scaling,
     budget_failure,
     budget_mode,
     record_queries,
@@ -269,6 +270,9 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     select_related: ClassVar[Sequence[str]] = ()
     prefetch_related: ClassVar[Sequence[str | Prefetch]] = ()
     query_budget: ClassVar[Budget | None] = None
+    #: Experimental. ``Scaling(rows=(5, 500), seconds=0.3)``: the scaling check's row counts
+    #: and a time budget at the large count (:class:`karni.performance.Scaling`).
+    query_scaling: ClassVar[Scaling | None] = None
     pagination: ClassVar[Unpaginated | None] = None
     cache: ClassVar[Cache | Uncached | None] = None
     #: ``Throttle(create="10/hour")`` limits each caller of the named actions, on

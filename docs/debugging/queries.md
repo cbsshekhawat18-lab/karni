@@ -17,7 +17,7 @@ karni queries EventViewSet.retrieve       # a viewset action (a row the user can
 karni queries 'events?expand=venue&page=2'
 karni queries events --method POST --data '{"title": "Launch"}'   # rolled back
 karni queries events --json               # for agents
-karni queries events --explain            # EXPLAIN plans for the slowest statements
+karni queries events --explain            # each query's plan (EXPLAIN ANALYZE on PostgreSQL)
 karni queries events --all                # every statement, not only the repeated ones
 ```
 
@@ -132,6 +132,50 @@ For a method field that only reads attributes, the better fix is often a
 dotted `source=` (`CharField(source="venue.city")`), which the optimiser
 follows by itself.
 
+## Query plans: `--explain`
+
+!!! warning "Experimental"
+    The analysis `--explain` runs on PostgreSQL, its findings (`seq_scans`
+    in `--json`), `karni.api.explain` and the setting
+    `KARNI_EXPLAIN_SEQ_SCAN_ROWS` are [experimental](../stability.md#experimental-names).
+
+On PostgreSQL, `--explain` runs `EXPLAIN (ANALYZE, FORMAT JSON)` of each
+distinct `SELECT` the endpoint ran, each in a savepoint inside the request's
+transaction, which is rolled back: `ANALYZE` runs the query, and nothing it
+does stays. Each plan prints with the actual rows, loops and time of every
+node. Each sequential scan on a table of `KARNI_EXPLAIN_SEQ_SCAN_ROWS` rows
+or more (default 1000) is a [W611](../errors.md#w611) finding that names the
+index that would serve its filter or its sort, as the line to add to the
+model's `Meta.indexes`:
+
+```text
+EXPLAIN SELECT … FROM "events_event" WHERE ("events_event"."deleted_at" IS NULL AND UPPER("events_event"."title"::…
+  Limit (actual rows=50 loops=1 time=1.500ms)
+    Sort (actual rows=50 loops=1 time=1.497ms)
+      Sort Key: created_at DESC
+      Seq Scan on events_event (actual rows=111 loops=1 time=1.477ms)
+        Filter: ((deleted_at IS NULL) AND (upper((title)::text) ~~ '%GALA%'::text))
+        Rows Removed by Filter: 4889
+  Execution Time: 1.512ms
+
+Sequential scans on large tables (1):
+  W611 Seq Scan on events_event (5,000 rows, 5,000 read, 111 kept) for ((deleted_at IS NULL) AND (upper((title)::text) ~~ '%GALA%'::text)): add GinIndex(OpClass(Upper("title"), name="gin_trgm_ops"), name="event_title_trgm_idx", condition=Q(deleted_at__isnull=True)) to Event.Meta.indexes (GinIndex and OpClass come from django.contrib.postgres, Upper from django.db.models.functions, and the index needs the pg_trgm extension)
+```
+
+The suggestion puts the equality columns of the filter first, then one range
+column. Without either, a `LIKE` (a search, `icontains`) asks for a trigram
+index, and a sort asks for an index on its keys. The soft-delete filter
+becomes the index's `condition`. When the filter keeps most of the rows it
+reads, the finding says an index would not help: narrow the filter or
+paginate. When an index on the column exists and the planner read the table
+anyway, it says to run `ANALYZE` on the table.
+
+Only PostgreSQL has a plan Karni reads. On another database `--explain`
+keeps its plain `EXPLAIN` of the three slowest statements and says so
+([W610](../errors.md#w610)). Run it against PostgreSQL with data at volume
+([`karni seed --volume`](../seeding.md#volume-seeding)) to see where an index
+is missing.
+
 ## Notes
 
 - **Development only.** It runs your view against your database. Writes are
@@ -152,8 +196,10 @@ follows by itself.
 `queries`, `time_ms`, `repeated`, `headline`, `causes` (each with `count`,
 `summary`, `field`, `chain`, `relation`, `kind`, `why`, `fix`, `where` and
 `statements`), `once` (the statements that ran once, with their origin) and
-`notes`. `--explain` adds `explain` and `--all` adds `statements` (every
-statement with its time and origin).
+`notes`. `--explain` adds `explain` (each statement with its plan) and
+`seq_scans` (each finding with `code`, `table`, `model`, `rows`, `scanned`,
+`kept`, `filter`, `sort`, `index`, `why` and `sql`), and `--all` adds
+`statements` (every statement with its time and origin).
 
 ## Errors
 

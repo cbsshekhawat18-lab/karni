@@ -485,6 +485,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         "agents", "MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools"
     ),
+    Capability(
+        "agents",
+        "Large projects, one area at a time: `karni context --summary`, `--app`, `--model` and "
+        "`--max-tokens`, and a `karni check` that skips unchanged files (a cache per check and "
+        "file, `--changed [REF]` for the files git reports). Experimental tier",
+    ),
     # testing
     Capability(
         "testing",
@@ -508,6 +514,13 @@ CAPABILITIES: tuple[Capability, ...] = (
         ((f"{EH}/events/tests/test_booking_flow.py", "client_as"),),
     ),
     Capability("testing", "`query_budget` and `user_with_roles` helpers"),
+    Capability(
+        "testing",
+        "Performance at volume: `karni seed --volume` (bulk rows that keep their relations), "
+        "scaling row counts and a time budget per viewset (`Scaling`), `karni queries --explain` "
+        "with the index a sequential scan wants (PostgreSQL), and a CI benchmark on 100 models. "
+        "Experimental tier",
+    ),
     Capability(
         "testing",
         "`assert_pages`: a public site's pages, their title, description, alt text and links, "

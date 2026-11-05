@@ -149,6 +149,12 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_SCHEDULES_AUTODISCOVER": "Import every app's `schedules.py` at startup.",
     "KARNI_PK": 'Experimental. The primary key `karni make model` writes: `uuid` (`BaseModel`) or `bigint` (`BigIntBaseModel`). The CLI reads it from a plain `KARNI_PK = "bigint"` line in `config/settings.py`, and `--pk` overrides it per model. Nothing else reads it: each model\'s class line decides its key. See [choosing the key type](models.md#choosing-the-key-type).',
     "KARNI_ARCHITECTURE": "Configuration of the architecture rules: `skip_apps`, `sql_allowed`, `http_allowed`, `dup`. See [enforcement](enforcement.md).",
+    "KARNI_CHECK_CACHE": "Experimental. `karni check` keeps each file check's results under the file's hash in `.karni/local/check-cache.json`, so an unchanged file is not checked again. `False` turns it off, a path (relative to the project root) moves it. See [the check cache](enforcement.md#the-check-cache).",
+    "KARNI_SCALING_ROWS": "Experimental. The two row counts the scaling check compares, small then large. A viewset's `query_scaling = Scaling(rows=..., seconds=...)` overrides them and sets a time budget. See [the scaling check](testing.md#3-the-scaling-check).",
+    "KARNI_SEED_BULK_THRESHOLD": "Experimental. Rows per model from which `karni seed` inserts in bulk (a large `seed` count of `karni.yaml`). `karni seed --volume` always does. See [volume seeding](seeding.md#volume-seeding).",
+    "KARNI_SEED_BATCH_SIZE": "Experimental. Rows per bulk insert of `karni seed` (`--batch-size` overrides it).",
+    "KARNI_SEED_LEDGER": "Experimental. `karni seed` records the row count each table holds after a run in `.karni/local/seeded.json`, and `--volume` refuses a table holding rows no seed run left there. `False` turns it off, a path moves it.",
+    "KARNI_EXPLAIN_SEQ_SCAN_ROWS": "Experimental. `karni queries --explain` flags each sequential scan on a table of this many rows or more, with the index that would serve it (PostgreSQL).",
     "KARNI_SCOPES": "The active model scopes in pipeline order. Leaving it unset runs every registered scope. See [models](models.md#scopes-the-filters-every-default-manager-applies).",
     "KARNI_PAYMENTS_PROVIDER": "karni-payments: `stripe`, `razorpay`, `test` or a dotted `PaymentProvider` path.",
 }

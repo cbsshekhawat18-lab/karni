@@ -966,3 +966,32 @@ def test_seeding_skips_a_table_that_holds_rows(copy: Path) -> None:
     assert (
         run._seed(copy, state, run.Options()) == "skipped: the tables it created hold rows already"
     )
+
+
+# a large seed count (experimental): the plan shows its volume, the build seeds it in bulk
+
+
+def test_a_large_seed_count_is_planned_with_its_time_and_seeded_in_bulk(copy: Path) -> None:
+    _edit(
+        copy / "karni.yaml",
+        (
+            "pages:\n",
+            (
+                '      Visit:\n        fields: {studio: fk:Studio, note: "str:80?", '
+                'day: date}\n        access: {read: public, write: "role:staff"}\npages:\n'
+            ),
+        ),
+        ("Booking: 200}", "Booking: 200, Visit: 2500}"),
+    )
+    code, out = _build("--dry-run")
+    assert code == 0, out
+    assert "  + Visit: 2500, 2,500 rows in bulk, seconds" in out
+    code, out = _build()
+    assert code == 0, out
+    seed_line = next(line for line in out.splitlines() if line.startswith("seed "))
+    assert "Visit 2500 in bulk (" in seed_line, seed_line
+    assert _rows(copy, "select count(*) from classes_visit") == [(2500,)]
+    studios = {row[0] for row in _rows(copy, "select id from classes_studio")}
+    used = {row[0] for row in _rows(copy, "select distinct studio_id from classes_visit")}
+    assert used <= studios and len(used) == len(studios)  # drawn from the studios there are
+    assert "count = 2500" in (copy / "classes/karni/seeds.py").read_text()

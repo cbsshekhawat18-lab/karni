@@ -15,7 +15,9 @@ Code ranges
 ``E0xx``/``W0xx`` models, managers, scopes · ``E1xx``/``W1xx`` API (access,
 viewsets, serializers, pagination, budgets, caching, expand) · ``E2xx``
 accounts · ``E3xx`` admin · ``E4xx`` events, listeners, schedules, Celery ·
-``E5xx`` settings, optional dependencies, deploy checks and production
+``E47x``/``E48x``/``W61x`` tooling for large projects (context slices, the
+check cache, volume seeding, scaling budgets, query plans) · ``E5xx``
+settings, optional dependencies, deploy checks and production
 (``karni.deploy``) · ``E6xx`` testing and seeding ·
 ``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog) ·
 ``E8xx`` import and export · ``E90x``–``E94x``/``W92x`` debugging (``karni
@@ -1652,6 +1654,88 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "one worker leaves the other workers serving the old response until the TTL ends.",
         "Point KARNI_API_CACHE_ALIAS at a cache every process shares (Redis, the database "
         "cache) in production, or silence karni.W580 for a single-process deployment.",
+    ),
+    # E47x/E48x/W61x tooling for large projects (experimental): context slices, the
+    # check cache, volume seeding, the scaling budgets and query plans
+    _e(
+        "E470",
+        "A context slice names no app or model",
+        "exception",
+        "karni.introspect.resolve_apps; karni.introspect.resolve_models; karni context",
+        "karni context --app and --model print one area of the project. The label or name "
+        "matched no app with models and no model.",
+        "Use a name the message lists, or run karni context --summary to see every app and "
+        "its models. A model is Name or app_label.Name.",
+    ),
+    _e(
+        "E471",
+        "A context slice names a model two apps share",
+        "exception",
+        "karni.introspect.resolve_models; karni context --model",
+        "Two apps have a model of that name, so the bare name could mean either.",
+        "Write app_label.Name, one of the labels the message lists.",
+    ),
+    _e(
+        "E473",
+        "A volume seed refused tables that hold rows no seed run left",
+        "exception",
+        "manage.py karni_seed --volume; karni.bulk_seeding.Ledger",
+        "A seed run records how many rows each table holds when it is done "
+        "(.karni/local/seeded.json). A table that holds another number of rows was written by "
+        "someone else, and volume rows would mix with that content.",
+        "Pass --reset to wipe the project's tables first, --force to add rows anyway, or "
+        "--model to seed only the tables seed runs filled. Real content belongs in karni load.",
+    ),
+    _e(
+        "E475",
+        "karni seed --volume or --batch-size is not a positive number",
+        "exception",
+        "manage.py karni_seed",
+        "A volume and a batch size are numbers of rows.",
+        "Pass 1 or more, e.g. karni seed --volume 100000 --batch-size 2000.",
+    ),
+    _e(
+        "E476",
+        "An endpoint is slower than its time budget at the large row count",
+        "test",
+        "karni.testing.performance (the scaling check); query_scaling = Scaling(seconds=...)",
+        "The viewset declares a time budget: the request at the scaling check's large row count "
+        "(the faster of two runs) must take no longer. It took longer.",
+        "Read the statements in the message. karni queries <endpoint> --explain shows each plan "
+        "on PostgreSQL and names the index a sequential scan wants. Raise "
+        "Scaling(seconds=...) only when the work is real.",
+    ),
+    _e(
+        "E477",
+        "A scaling declaration or KARNI_SCALING_ROWS is not valid",
+        "exception",
+        "karni.performance.Scaling; karni.performance.scaling_rows",
+        "The scaling check compares two row counts, small then large, and a time budget is a "
+        "number of seconds.",
+        "Write rows=(small, large) with 1 <= small < large, e.g. Scaling(rows=(2, 50), "
+        "seconds=0.5), and the same pair in KARNI_SCALING_ROWS.",
+    ),
+    _e(
+        "W610",
+        "karni queries --explain analyses plans on PostgreSQL only",
+        "warning",
+        "karni.api.diagnose; karni queries --explain",
+        "EXPLAIN ANALYZE with a plan Karni reads, and the sequential scans it flags, need "
+        "PostgreSQL. On another database --explain prints that database's plain EXPLAIN of the "
+        "slowest statements.",
+        "Run karni queries --explain against PostgreSQL, with data at a realistic volume "
+        "(karni seed --volume N).",
+    ),
+    _e(
+        "W611",
+        "A query reads a large table from start to end",
+        "warning",
+        "karni.api.explain; karni queries --explain",
+        "The plan has a sequential scan on a table of KARNI_EXPLAIN_SEQ_SCAN_ROWS rows or more "
+        "(default 1000). It reads every row, so it slows down as the table grows.",
+        "Add the index the finding names to the model's Meta.indexes and make a migration. "
+        "When the finding says the filter keeps most rows, narrow the filter or paginate "
+        "instead: an index would not help.",
     ),
     # E5xx settings and optional dependencies
     _e(

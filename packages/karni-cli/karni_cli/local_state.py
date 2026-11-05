@@ -35,6 +35,19 @@ def read_state(project: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def ensure_dir(project: Path) -> Path | None:
+    """``.karni/local/`` with its ``.gitignore``, created when missing; ``None`` when it cannot be."""
+    directory = project / LOCAL_DIR
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        ignore = directory / ".gitignore"
+        if not ignore.is_file():
+            ignore.write_text(GITIGNORE, encoding="utf-8")
+    except OSError:
+        return None
+    return directory
+
+
 def write_state(project: Path, state: dict[str, Any]) -> bool:
     """Write ``state`` atomically (creating the self-ignoring directory); False on failure."""
     directory = project / LOCAL_DIR

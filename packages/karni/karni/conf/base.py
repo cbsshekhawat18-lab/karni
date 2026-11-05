@@ -737,6 +737,18 @@ BASE: dict[str, Any] = {
         "http_allowed": ["*/services/*", "*/providers/*", "*/tests/*", "conftest.py"],
         "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]},
     },
+    # Tooling for large projects (experimental). karni check's cache of per-file
+    # results (.karni/local/check-cache.json): False turns it off, a path moves it.
+    "KARNI_CHECK_CACHE": True,
+    # The rows the scaling check compares, small then large (query_scaling overrides).
+    "KARNI_SCALING_ROWS": [2, 12],
+    # Rows per model from which karni seed inserts in bulk, and rows per bulk insert.
+    "KARNI_SEED_BULK_THRESHOLD": 1000,
+    "KARNI_SEED_BATCH_SIZE": 2000,
+    # The row counts each seed run leaves (.karni/local/seeded.json): False turns it off.
+    "KARNI_SEED_LEDGER": True,
+    # karni queries --explain flags sequential scans on tables of this many rows or more.
+    "KARNI_EXPLAIN_SEQ_SCAN_ROWS": 1000,
 }
 """Profile-independent defaults merged first by ``karni_settings()``.
 
