@@ -54,6 +54,7 @@ MODULES = [
         "impersonation", "IMP", REPO / "modules" / "karni-impersonation" / "karni_impersonation"
     ),
     Module("site", "SITE", REPO / "modules" / "karni-site" / "karni_site"),
+    Module("storage", "STORE", REPO / "modules" / "karni-storage" / "karni_storage"),
 ]
 SOURCES = [PACKAGE, *(module.source for module in MODULES)]
 #: Set where every module is installed (CI's Python jobs): a missing module

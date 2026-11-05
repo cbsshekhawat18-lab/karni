@@ -43,6 +43,12 @@ from karni_storage import conf
 
 __all__ = ["PRESETS", "Preset", "problems", "s3_options", "upload_method"]
 
+#: The codes of what stops a preset from working (karni check).
+UNKNOWN_CODE: Final = "STORE001"
+CREDENTIALS_CODE: Final = "STORE002"
+MISSING_CODE: Final = "STORE003"
+SETTING_CODE: Final = "STORE005"
+
 
 @dataclass(frozen=True)
 class Preset:
@@ -211,21 +217,23 @@ def problems() -> list[str]:
     found = PRESETS.get(name)
     if found is None:
         out.append(
-            f"STORE001: KARNI_STORAGE_PROVIDER is {name!r}, which no preset has. "
+            f"{UNKNOWN_CODE}: KARNI_STORAGE_PROVIDER is {name!r}, which no preset has. "
             f"Use one of: {', '.join(PRESETS)}."
         )
     method = str(conf.get("KARNI_STORAGE_UPLOAD_METHOD") or "").strip().lower()
     if method and method not in ("post", "put"):
         out.append(
-            f"STORE005: KARNI_STORAGE_UPLOAD_METHOD is {method!r}. Use post, put, or leave it "
-            "empty for the preset's."
+            f"{SETTING_CODE}: KARNI_STORAGE_UPLOAD_METHOD is {method!r}. Use post, put, or "
+            "leave it empty for the preset's."
         )
     if found is None or not conf.on_s3():
         return out
     credentials = str(conf.get("KARNI_STORAGE_CREDENTIALS") or "keys").strip()
     keys = _setting("AWS_ACCESS_KEY_ID") and _setting("AWS_SECRET_ACCESS_KEY")
     if credentials not in ("keys", "chain"):
-        out.append(f"STORE005: KARNI_STORAGE_CREDENTIALS is {credentials!r}. Use keys or chain.")
+        out.append(
+            f"{SETTING_CODE}: KARNI_STORAGE_CREDENTIALS is {credentials!r}. Use keys or chain."
+        )
     elif not keys and not (credentials == "chain" or _has_chain_credentials()):
         how = (
             " Or, on AWS with an instance or task role, set KARNI_STORAGE_CREDENTIALS=chain."
@@ -233,8 +241,9 @@ def problems() -> list[str]:
             else ""
         )
         out.append(
-            f"STORE002: KARNI_STORAGE is s3 and the {found.name} preset has no credentials: "
-            "set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in the environment (.env), with "
+            f"{CREDENTIALS_CODE}: KARNI_STORAGE is s3 and the {found.name} preset has no "
+            "credentials: set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in the environment "
+            "(.env), with "
             f"the access key of your {found.title} account.{how}"
         )
     missing = []
@@ -251,5 +260,7 @@ def problems() -> list[str]:
     if found.endpoint == "setting" and not _setting("AWS_S3_ENDPOINT_URL"):
         missing.append(f"AWS_S3_ENDPOINT_URL: the URL of your {found.title} server")
     for item in missing:
-        out.append(f"STORE003: the {found.name} preset needs {item}. Set it in the environment.")
+        out.append(
+            f"{MISSING_CODE}: the {found.name} preset needs {item}. Set it in the environment."
+        )
     return out

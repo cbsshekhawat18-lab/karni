@@ -115,9 +115,12 @@ class PrivateFileSystemStorage(FileSystemStorage):
     """
 
     def url(self, name: str | None) -> str:
-        raise ValueError(
+        from karni.exceptions import KarniValueError
+
+        raise KarniValueError(
             "Protected files have no public URL: the API serves them at the row's download path "
-            "(<resource>/<id>/files/<field>/)."
+            "(<resource>/<id>/files/<field>/).",
+            code="STORE020",
         )
 
 

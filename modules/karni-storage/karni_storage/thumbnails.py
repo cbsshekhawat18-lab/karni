@@ -19,6 +19,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from karni.exceptions import KarniValueError
+
 from karni_storage import conf
 
 __all__ = ["find", "make", "size_problems", "sizes"]
@@ -26,7 +28,9 @@ __all__ = ["find", "make", "size_problems", "sizes"]
 
 def _parse(raw: Any) -> dict[str, tuple[int, int]]:
     if not isinstance(raw, dict):
-        raise ValueError("KARNI_STORAGE_THUMBNAIL_SIZES must map a name to [width, height].")
+        raise KarniValueError(
+            "KARNI_STORAGE_THUMBNAIL_SIZES must map a name to [width, height].", code="STORE005"
+        )
     out: dict[str, tuple[int, int]] = {}
     for name, box in raw.items():
         if (
@@ -37,9 +41,10 @@ def _parse(raw: Any) -> dict[str, tuple[int, int]]:
             or not all(isinstance(side, int) and not isinstance(side, bool) for side in box)
             or min(box) <= 0
         ):
-            raise ValueError(
+            raise KarniValueError(
                 f"KARNI_STORAGE_THUMBNAIL_SIZES[{name!r}] is {box!r}: give [width, height] in "
-                'pixels, e.g. {"small": [160, 160]}.'
+                'pixels, e.g. {"small": [160, 160]}.',
+                code="STORE005",
             )
         out[name] = (int(box[0]), int(box[1]))
     return out
@@ -54,8 +59,8 @@ def size_problems() -> list[str]:
     """What is wrong with ``KARNI_STORAGE_THUMBNAIL_SIZES``, as ``STORE005`` messages."""
     try:
         sizes()
-    except ValueError as exc:
-        return [f"STORE005: {exc}"]
+    except KarniValueError as exc:
+        return [f"{exc.code}: {exc.message}"]
     return []
 
 

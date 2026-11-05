@@ -18,6 +18,9 @@ from typing import Any
 
 __all__ = ["run_checks"]
 
+INCLUDE_CODE = "STORE004"
+VIEWSET_CODE = "STORE006"
+
 
 def _models_with_protected_fields() -> list[Any]:
     from django.apps import apps
@@ -49,8 +52,8 @@ def run_checks() -> list[str]:
         reverse("karni_storage:upload", kwargs={"resource": "x", "field": "x"})
     except NoReverseMatch:
         found.append(
-            "STORE004: karni_storage.urls is not included, so protected files have no download "
-            'path. Add path("api/", include("karni_storage.urls")) to config/urls.py.'
+            f"{INCLUDE_CODE}: karni_storage.urls is not included, so protected files have no "
+            'download path. Add path("api/", include("karni_storage.urls")) to config/urls.py.'
         )
     from karni_storage.fields import protected_fields
 
@@ -58,8 +61,8 @@ def run_checks() -> list[str]:
         if route_for_model(model) is None:
             names = ", ".join(field.name for field in protected_fields(model))
             found.append(
-                f"STORE006: {model._meta.label}.{names} is protected, but no viewset serves "
-                f"{model.__name__} on the API, so nobody can download its files. Declare a "
+                f"{VIEWSET_CODE}: {model._meta.label}.{names} is protected, but no viewset "
+                f"serves {model.__name__} on the API, so nobody can download its files. Declare a "
                 "BaseViewSet for it."
             )
     return found
