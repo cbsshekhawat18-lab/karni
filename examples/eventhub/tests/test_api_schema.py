@@ -8,6 +8,7 @@ writes a snapshot.
 """
 
 import pytest
+
 from karni.testing import assert_schema_snapshot
 
 

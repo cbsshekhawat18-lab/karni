@@ -30,7 +30,9 @@ class Event(BaseModel):
     description = models.TextField()
     starts_at = models.DateTimeField()
     ends_at = models.DateTimeField()
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.DRAFT
+    )
     organizer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     venue = models.ForeignKey("Venue", on_delete=models.CASCADE)
     cover_image = models.ImageField(upload_to="events/event/", blank=True)
@@ -73,10 +75,8 @@ class Booking(BaseModel):
     quantity = models.IntegerField()
     status = StateField(
         states=Status,
-        transitions={
-            Status.PENDING: [Status.CONFIRMED, Status.CANCELLED],
-            Status.CONFIRMED: [Status.CANCELLED],
-        },
+        transitions={Status.PENDING: [Status.CONFIRMED, Status.CANCELLED],
+                     Status.CONFIRMED: [Status.CANCELLED]},
     )
     payment = models.ForeignKey(
         "karni_payments.Payment", on_delete=models.SET_NULL, null=True, blank=True
@@ -113,8 +113,6 @@ class Booking(BaseModel):
             raise ValidationError({"tier": "This ticket tier belongs to another event."})
         if self.quantity < 1:
             raise ValidationError({"quantity": "Book at least one ticket."})
-        booked = Booking.objects.filter(pk=self.pk).exclude(
-            tier=self.tier_id, quantity=self.quantity
-        )
+        booked = Booking.objects.filter(pk=self.pk).exclude(tier=self.tier_id, quantity=self.quantity)
         if not self._state.adding and booked.exists():
             raise ValidationError({"quantity": "Cancel this booking and book again to change it."})

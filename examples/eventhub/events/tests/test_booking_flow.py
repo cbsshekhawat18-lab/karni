@@ -93,8 +93,7 @@ def test_bookings_never_exceed_the_tier(client_as):
     assert tier.remaining == 3
     again = book(client, tier, quantity=2)
     edit = client.patch(
-        f"/api/bookings/{again.json()['id']}/",
-        json.dumps({"quantity": 3}),
+        f"/api/bookings/{again.json()['id']}/", json.dumps({"quantity": 3}),
         content_type="application/json",
     )
     assert edit.status_code == 400 and "book again" in edit.json()["quantity"][0]

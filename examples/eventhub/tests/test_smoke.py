@@ -1,6 +1,6 @@
 """Project test suite. Karni's architecture rules run separately in CI:
 
-pytest --pyargs karni.testing.architecture
+    pytest --pyargs karni.testing.architecture
 """
 
 import pytest
