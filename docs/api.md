@@ -781,7 +781,9 @@ token, kept in the cache. A write replaces the tokens it touches, so every
 entry that read them becomes unreachable at once: no key scan, any backend.
 The models a response reads are its serializer's relations (the optimiser's
 plan, `?expand=` included), the models its `read` rule crosses (`Owned`
-paths, scope paths), and `Cache(depends_on=[...])`.
+paths, scope paths), `Cache(depends_on=[...])`, and the table of
+[per-user grants](accounts.md#per-user-grants) while `KARNI_USER_GRANTS` is
+on, so a grant written changes the next response.
 `karni.api.caching.dependencies(ViewSet)` lists them for every `?expand=`
 path the viewset allows. Karni sees these writes:
 

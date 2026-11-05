@@ -111,6 +111,7 @@ nav:
           - CRM: recipes/crm.md
           - Online courses: recipes/lms.md
           - Marketplace: recipes/marketplace.md
+          - Data portal: recipes/data-portal.md
   - Debugging:
       - Request ids and capture: debugging/capture.md
       - Trace, replay and failure briefs: debugging/trace-and-replay.md

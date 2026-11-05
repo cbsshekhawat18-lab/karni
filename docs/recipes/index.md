@@ -1,5 +1,5 @@
 ---
-description: "Karni's recipes: ready-made karni.yaml files for a shop, bookings, a CRM, online courses and a marketplace. karni new --recipe builds one with its domain code, demo data and tests."
+description: "Karni's recipes: ready-made karni.yaml files for a shop, bookings, a CRM, online courses, a marketplace and a data portal. karni new --recipe builds one with its domain code, demo data and tests."
 ---
 
 # Recipes
@@ -29,13 +29,14 @@ karni new "Corner Shop" --recipe shop
 | [`crm`](crm.md) | a sales team's deals | Company, Contact, Deal, Activity | two-factor sign-in | 15 lines: the pipeline per stage |
 | [`lms`](lms.md) | online courses | Course, Lesson, Enrolment, LessonProgress | email code login | 52 lines: a student's completion of a course |
 | [`marketplace`](marketplace.md) | sellers and buyers | Seller, Listing, Order, Payout | payments, two-factor sign-in, terms | 58 lines: the payout after the fee |
+| [`data-portal`](data-portal.md) | datasets and indicators by region and sector | Region, Sector, Dataset, Indicator | saved charts, per-user grants, response caching | 139 lines: the trees, datasets, indicators and the saved chart of the demo data |
 
 The domain code counts the lines beyond what `karni build` writes in the
 same files anyway. Each recipe also ships tests of its own rules.
 
 `karni recipes list --match "<the request>"` picks the recipe for a one-line
 request (an online shop, book a class, track sales deals, online courses, a
-marketplace for sellers), and `karni recipes show <name>` prints its spec,
+marketplace for sellers, a data portal), and `karni recipes show <name>` prints its spec,
 its files and what people usually change. Where they come from, the
 `recipe.toml` format and recipes of your own are in [the app
 spec](../app-spec.md#recipes).

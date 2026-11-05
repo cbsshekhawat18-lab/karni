@@ -50,7 +50,7 @@ the item it names is done.
 
 | Item | Goal | Depends on | Status |
 |---|---|---|---|
-| A6 | Recipes: ready-made specs for common apps (shop, booking, crm, lms, marketplace, data-portal), built in CI. | A3 | in progress |
+| A6 | Recipes: ready-made specs for common apps (shop, booking, crm, lms, marketplace, data-portal), built in CI. | A3 | done |
 | A7 | Suggestions from code in `karni check` and `karni doctor`: what Karni could do that the project does by hand. | none | planned |
 
 ### Phase E: proof
@@ -65,9 +65,9 @@ Notes on the order:
   large-apps items 4 to 13 (each one also supported in `karni.yaml`, `karni plan` and
   `karni build`), then the data-portal recipe and A7, then A9 last. The benchmark only means
   something once the rest is stable. See the [large-apps roadmap](large-apps.md).
-- A6 is in progress: the shop, booking, crm, lms and marketplace recipes and
-  `karni new --recipe` are built, each built from scratch in CI. The
-  data-portal recipe follows the large-apps items, whose features it needs.
+- A6 is done: the shop, booking, crm, lms, marketplace and data-portal recipes and
+  `karni new --recipe` are built, each built from scratch in CI. The data-portal recipe
+  came after the large-apps items, whose features it uses.
 - A7's tree, markdown, aggregate and taxonomy suggestions need the large-apps items they point
   to. Its module and drift suggestions do not.
 - A3's code-ownership design (what Karni owns, where hand-written code lives, how a hand edit in

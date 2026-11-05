@@ -1203,7 +1203,7 @@ A recipe is a ready-made `karni.yaml` for a kind of app that many people
 ask for. A new app starts from the closest recipe, or from the blank start
 when none fits, and the agent changes what the request asks for.
 
-Karni ships five: `shop`, `booking`, `crm`, `lms` and `marketplace`
+Karni ships six: `shop`, `booking`, `crm`, `lms`, `marketplace` and `data-portal`
 ([recipes](recipes/index.md) has a page for each). `karni new "<Name>"
 --recipe <name>` makes a new project from one: the recipe's `karni.yaml`
 with the project's name, then `karni build`, which also writes the recipe's

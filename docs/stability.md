@@ -266,8 +266,8 @@ Experimental now:
   tools](app-spec.md#mcp-tools) `recipes`, `spec_validate`, `questions`,
   `answer`, `plan`, `build` and `modules` with their results' schema
   (`karni_cli.agent_tools`).
-- [The built-in recipes](recipes/index.md): `shop`, `booking`, `crm`, `lms`
-  and `marketplace` (their specs, files and names), `karni new --recipe`,
+- [The built-in recipes](recipes/index.md): `shop`, `booking`, `crm`, `lms`,
+  `marketplace` and `data-portal` (their specs, files and names), `karni new --recipe`,
   the `recipe` key of `.karni/build.json` (`Record.recipe`), the stub rule
   (`karni_cli.recipes.apply`, `karni_cli.builder.render.is_stub_file`,
   `karni_cli.recipes.karni_owned`) and the `recipes` pytest marker of

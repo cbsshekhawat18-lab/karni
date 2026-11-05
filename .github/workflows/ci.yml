@@ -341,7 +341,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        recipe: [shop, booking, crm, lms, marketplace]
+        recipe: [shop, booking, crm, lms, marketplace, data-portal]
     env:
       PYTHON: python
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
