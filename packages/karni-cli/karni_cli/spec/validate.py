@@ -779,6 +779,15 @@ class _Meaning:
                 return None
             spec = current.fields.get(part)
             if spec is None:
+                if part in TREE_FIELDS.get(current.entity.tree, ()):
+                    # a tree model's own fields: parent is a relation to the entity itself
+                    if part == "position":
+                        if index == len(parts) - 1:
+                            return "int"
+                    else:
+                        if index == len(parts) - 1:
+                            return "fk"
+                        continue
                 if part in BASE_FIELDS or part in ("created_by", "updated_by"):
                     kind = "datetime" if part in ("created_at", "updated_at") else "key"
                     if index == len(parts) - 1:

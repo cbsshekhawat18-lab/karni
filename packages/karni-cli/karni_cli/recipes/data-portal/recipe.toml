@@ -1,0 +1,19 @@
+name = "data-portal"
+title = "Data portal"
+purpose = "Datasets and indicators by region and sector, read by the regions granted."
+use_when = [
+    "data portal",
+    "open data",
+    "statistics portal",
+    "indicators by region",
+    "datasets and indicators",
+    "publish datasets",
+    "analytics portal",
+]
+usually_changed = [
+    "the region and sector trees, and the nodes seeded",
+    "the dataset fields and their groups",
+    "what an indicator measures: its value, unit and year",
+    "which regions each analyst reads (user grants, written in the admin)",
+    "the saved chart and the groups an indicator may be aggregated by",
+]

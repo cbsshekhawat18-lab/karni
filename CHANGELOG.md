@@ -114,6 +114,25 @@ apply codemods and list the manual steps. This file is the human summary.
   writes the settings block before the apps, so the test of a `Granted()`
   entity acts as a role the spec declares. A new `recipes` CI job builds
   each recipe from scratch. [docs/recipes/index.md](docs/recipes/index.md).
+- **A sixth recipe, `data-portal` (experimental).** Datasets and the
+  indicators they publish by region and sector, in one recipe: Region and
+  Sector as trees, Dataset tagged to both (taxonomies) with markdown fields,
+  field groups and column sets, Indicator rows with an aggregate by year,
+  region, continent, sector and dataset, search across datasets and
+  indicators, related tabs, a dashboard page, the menu from the spec, import
+  and export by natural key, response caching on the trees, and the
+  karni-charts module with one saved chart in the seed. An analyst reads the
+  datasets and indicators of the regions granted to them by per-user grants
+  and the `tree:region` scope, staff read everything and an editor imports
+  and edits. About 3,000 synthetic indicators come from the recipe's seeders.
+  [docs/recipes/data-portal.md](docs/recipes/data-portal.md).
+- **Fixes found building it.** With `KARNI_USER_GRANTS` on, a user grant
+  written after a cached list was not seen until the entry expired, because
+  the cache key holds the caller and not the caller's grants: every cached
+  response now reads the grant table's version token while the feature is
+  on. And `karni spec validate` refuses `region__parent` in an aggregate
+  with `C500` on a tree entity, though the aggregation docs name it: a tree
+  entity's `parent` (and `position` on an ordered tree) is known now.
 - **The /new-app flow (experimental): from a one-line request to a running
   app.** A new procedure, `new-app`, takes an agent through the flow: a
   recipe or the blank start (`karni recipes list --match`), the questions

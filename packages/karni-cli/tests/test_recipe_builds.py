@@ -38,7 +38,7 @@ def test_a_recipe_builds_from_scratch_with_its_tests_and_check_green(
     require_modules("karni-payments")
     recipe = recipes_mod.load(installed=False).get(name)
     assert recipe is not None
-    root = tmp_path / f"demo_{name}"
+    root = tmp_path / f"demo_{name.replace('-', '_')}"  # the project folder is the slug
     monkeypatch.setattr(project_mod, "_running_interpreter", lambda: Path(sys.executable))
     monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{root / 'db.sqlite3'}")

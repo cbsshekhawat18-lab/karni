@@ -461,6 +461,24 @@ def test_an_aggregate_with_paths_buckets_and_metrics() -> None:
     }
 
 
+def test_an_aggregate_may_group_by_the_parent_of_a_tree_entity() -> None:
+    spec = """\
+        version: 1
+        app: {name: Atlas}
+        apps:
+          atlas:
+            entities:
+              Region: {fields: {name: str}, tree: ordered}
+              Place:
+                fields: {region: "fk:Region", name: str}
+                aggregate: {group_by: [region, region__parent, region__parent__name,
+                                       region__position]}
+    """
+    assert check(spec).ok, check(spec).issues
+    flat = spec.replace("tree: ordered", "tree: false")
+    assert [issue.code for issue in check(flat).issues] == ["C500", "C500", "C500"]
+
+
 def test_the_spec_metrics_and_buckets_are_cores() -> None:
     aggregation = pytest.importorskip("karni.aggregation")
     assert schema.AGGREGATE_METRICS == aggregation.METRICS

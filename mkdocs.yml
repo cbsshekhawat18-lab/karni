@@ -112,6 +112,7 @@ nav:
           - CRM: recipes/crm.md
           - Online courses: recipes/lms.md
           - Marketplace: recipes/marketplace.md
+          - Data portal: recipes/data-portal.md
   - Benchmarks:
       - Token benchmark: benchmarks/tokens.md
   - Debugging:

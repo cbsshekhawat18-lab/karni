@@ -39,6 +39,7 @@ from .conftest import TEMPLATE
 RECIPES = {
     "booking": "bookings",
     "crm": "crm",
+    "data-portal": "portal",
     "lms": "courses",
     "marketplace": "market",
     "shop": "shop",
@@ -50,6 +51,7 @@ REQUESTS = {
     "track sales deals": "crm",
     "online courses": "lms",
     "a marketplace for sellers": "marketplace",
+    "a data portal": "data-portal",
 }
 
 STUB_MODELS = '''"""shop models. Each class extends the one karni build writes in shop/karni/models.py
@@ -95,7 +97,7 @@ def _project_interpreter(monkeypatch: pytest.MonkeyPatch) -> None:
 # the built-in recipes -----------------------------------------------------------------
 
 
-def test_the_built_in_recipes_are_the_five() -> None:
+def test_the_built_in_recipes_are_the_six() -> None:
     loaded = recipes_mod.load(installed=False)
     assert loaded.problems == []
     assert sorted(loaded.recipes) == sorted(RECIPES)
@@ -323,8 +325,8 @@ def test_an_unknown_recipe_is_refused_with_the_closest_names(
     result = _new(runner, tmp_path, "--recipe", "shops")
     assert isinstance(result.exception, CliError) and result.exception.code == "C420"
     assert (
-        "There is no recipe 'shops': the closest is shop (there are: booking, crm, lms, "
-        "marketplace, shop, blank)." in str(result.exception)
+        "There is no recipe 'shops': the closest is shop (there are: booking, crm, "
+        "data-portal, lms, marketplace, shop, blank)." in str(result.exception)
     )
     assert not (tmp_path / "corner_shop").exists()
 

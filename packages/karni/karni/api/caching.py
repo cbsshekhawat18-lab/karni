@@ -601,7 +601,22 @@ def _models_read_by(view: Any) -> set[type[Model]]:
     declaration = type(view).cache
     if isinstance(declaration, Cache):
         found |= {_resolve(extra)._meta.concrete_model for extra in declaration.depends_on}
-    return found
+    return found | _grant_models()
+
+
+def _grant_models() -> set[type[Model]]:
+    """``UserGrant`` while ``KARNI_USER_GRANTS`` is on: a grant written changes who sees what.
+
+    A response whose rows follow a per-user scope (``tree:``, ``related:``) is cached per
+    user, and its key does not hold the user's grants. The grant table's version token does.
+    """
+    from karni.accounts import grants
+
+    if not grants.enabled():
+        return set()
+    from karni.accounts.models import UserGrant
+
+    return {UserGrant}
 
 
 def owner_paths_from(declaration: Any, model: type[Model]) -> set[type[Model]]:
