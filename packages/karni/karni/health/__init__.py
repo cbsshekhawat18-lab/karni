@@ -15,8 +15,8 @@ which exposes:
   ``KARNI_HEALTH_CHECKS`` setting (dotted paths) and returns ``200`` only when
   all of them pass, ``503`` otherwise.
 
-Experimental: ``/healthz`` and ``/readyz`` at the root, from
-``path("", include("karni.health.probe_urls"))``. ``/healthz`` is liveness. ``/readyz`` runs
+Experimental: ``/healthz`` and ``/readyz`` at the root, from ``*probe_urls`` (see
+:mod:`karni.health.probe_urls`). ``/healthz`` is liveness. ``/readyz`` runs
 ``KARNI_READYZ_CHECKS`` (database, cache and the Celery broker by default) with
 ``KARNI_HEALTH_TIMEOUT`` seconds per check. Both are never cached, open before the terms are
 accepted and left out of the request log (``KARNI_LOG_QUIET_PATHS``).

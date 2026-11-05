@@ -1,8 +1,13 @@
 """Experimental. ``/healthz`` and ``/readyz``: the probes a proxy or an orchestrator asks.
 
-Mount them at the root of the project's URLconf::
+Add them to the project's URLconf::
 
-    path("", include("karni.health.probe_urls")),
+    from karni.health.probe_urls import urlpatterns as probe_urls
+
+    urlpatterns = [..., *probe_urls]
+
+The two routes are spliced in, not included at ``""``, so ``karni make site`` still finds the
+root free.
 
 ``/healthz`` is liveness (the process answers, no service is touched) and ``/readyz`` is
 readiness (the database, the cache and the Celery broker, each with a short timeout). The

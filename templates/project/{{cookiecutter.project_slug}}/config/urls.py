@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerSplitView
 from karni.api.versions import api_urls
+from karni.health.probe_urls import urlpatterns as probe_urls
 from karni.welcome import media_urls, welcome_urls
 
 urlpatterns = [
@@ -34,7 +35,7 @@ urlpatterns = [
     *api_urls(),
     path("health/", include("karni.health.urls")),
     # /healthz (liveness) and /readyz (database, cache and broker): what compose and a proxy ask.
-    path("", include("karni.health.probe_urls")),
+    *probe_urls,
     # Uploads under MEDIA_URL while DEBUG is on and storage is local (dev only).
     *media_urls(),
     # Project routes that `karni make` wires (a public site's include goes here).

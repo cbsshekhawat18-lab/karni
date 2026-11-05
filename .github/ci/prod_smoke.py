@@ -14,16 +14,25 @@ Three steps, each a subcommand:
 
 ``check``: smoke-test a running production stack over HTTP.
 
-Waits for ``/health/ready/``, then checks a public page, the admin login at its
-private path, the admin's old path answering 404, a static file, the staff app
-and one of its scripts, a deep link into the staff app, the plain-http
-redirect, and the security headers on each page. Every check prints one line,
-and the exit status is 1 when any failed.
+Waits for ``/readyz``, then checks ``/healthz``, a public page, the admin login
+at its private path, the admin's old path answering 404, a static file, the
+staff app and one of its scripts, a deep link into the staff app, the
+plain-http redirect, and the security headers on each page. With ``--user`` it
+also signs in through the API and reads a list endpoint (``--list-path``), at
+``/api/<version>/`` too when ``--api-version`` names a version. Every check
+prints one line, and the exit status is 1 when any failed.
 
 In CI it talks to Caddy, verifying TLS with Caddy's local root certificate::
 
     python .github/ci/prod_smoke.py check --base-url https://localhost --cafile root.crt \
         --admin-path staff-1a2b3c4d/ --app-path /app/ --http-url http://localhost/
+
+Signed in, against a stack seeded with ``manage.py karni_seed`` (its demo login), with the
+built staff app served from another origin (a local ``vite preview``)::
+
+    python .github/ci/prod_smoke.py check --base-url http://127.0.0.1:8611 \
+        --admin-path admin/ --user demo@example.com --password karni-password \
+        --list-path /api/products/ --app-url http://127.0.0.1:4173 --app-path / --no-static
 
 Against gunicorn directly (no proxy), send what the proxy would::
 
@@ -78,10 +87,29 @@ class Smoke:
     headers: dict[str, str]
     context: ssl.SSLContext | None
     failures: list[str] = field(default_factory=list)
+    headers_on: bool = True  # False: skip the security headers (--no-headers)
 
-    def get(self, url: str, timeout: float = 15.0) -> Response:
+    def get(
+        self, url: str, timeout: float = 15.0, headers: Mapping[str, str] | None = None
+    ) -> Response:
+        return self.send("GET", url, timeout=timeout, headers=headers)
+
+    def send(
+        self,
+        method: str,
+        url: str,
+        *,
+        body: object = None,
+        timeout: float = 15.0,
+        headers: Mapping[str, str] | None = None,
+    ) -> Response:
         full = url if "://" in url else self.base.rstrip("/") + url
-        request = urllib.request.Request(full, headers=self.headers)
+        sent = {**self.headers, **(headers or {})}
+        data = None
+        if body is not None:
+            data = json.dumps(body).encode()
+            sent["Content-Type"] = "application/json"
+        request = urllib.request.Request(full, data=data, headers=sent, method=method)
         handlers: list[urllib.request.BaseHandler] = [_NoRedirect()]
         if self.context is not None:
             handlers.append(urllib.request.HTTPSHandler(context=self.context))
@@ -100,6 +128,8 @@ class Smoke:
         return ok
 
     def page_headers(self, what: str, response: Response) -> None:
+        if not self.headers_on:
+            return
         missing = [name for name in PAGE_HEADERS if not response.headers.get(name)]
         self.check(not missing, f"{what} security headers", f"missing {missing}" if missing else "")
         if response.headers.get("Content-Security-Policy-Report-Only"):
@@ -108,36 +138,39 @@ class Smoke:
         self.check(nosniff == "nosniff", f"{what} X-Content-Type-Options", nosniff)
 
 
-def wait_ready(smoke: Smoke, seconds: float) -> Response | None:
+def wait_ready(smoke: Smoke, seconds: float, path: str = "/readyz") -> Response | None:
     deadline = time.monotonic() + seconds
     last = "no answer"
     while time.monotonic() < deadline:
         try:
-            response = smoke.get("/health/ready/", timeout=5)
+            response = smoke.get(path, timeout=5)
             if response.status == 200:
                 return response
             last = f"{response.status} {response.body[:300]}"
         except (OSError, urllib.error.URLError) as exc:
             last = str(exc)
         time.sleep(2)
-    smoke.check(False, f"/health/ready/ within {seconds:g}s", last)
+    smoke.check(False, f"{path} within {seconds:g}s", last)
     return None
 
 
 def run(smoke: Smoke, args: argparse.Namespace) -> None:
-    ready = wait_ready(smoke, args.wait)
+    ready = wait_ready(smoke, args.wait, args.ready_path)
     if ready is None:
         return
-    payload = json.loads(ready.body)
-    checks = payload.get("checks", {})
-    failed = [name for name, entry in checks.items() if not entry.get("ok")]
-    smoke.check(
-        payload.get("status") == "ok" and not failed,
-        "/health/ready/ reports every check ok",
-        ", ".join(sorted(checks)),
-    )
-    for name in args.expect_check:
-        smoke.check(name in checks, f"/health/ready/ runs the {name} check")
+    report_ready(smoke, args.ready_path, ready, args.expect_check)
+    live = smoke.get("/healthz")
+    smoke.check(live.status == 200, "/healthz answers", str(live.status))
+    if args.worker_check:
+        worker = smoke.get("/health/ready/")
+        celery = json.loads(worker.body).get("checks", {}).get("celery", {})
+        smoke.check(
+            worker.status == 200 and celery.get("ok") is True,
+            "a Celery worker answers /health/ready/",
+            str(celery.get("detail", worker.status)),
+        )
+    if args.user:
+        api_checks(smoke, args)
 
     home = smoke.get(args.public_path)
     title = re.search(r"<title>\s*([^<]+?)\s*</title>", home.body)
@@ -165,7 +198,7 @@ def run(smoke: Smoke, args: argparse.Namespace) -> None:
 
     if args.app_path:
         base = "/" + args.app_path.strip("/") + "/" if args.app_path.strip("/") else "/"
-        app = smoke.get(base)
+        app = smoke.get(args.app_url.rstrip("/") + base if args.app_url else base)
         smoke.check(
             app.status == 200 and 'id="root"' in app.body, f"staff app {base}", str(app.status)
         )
@@ -173,14 +206,16 @@ def run(smoke: Smoke, args: argparse.Namespace) -> None:
         script = re.search(r'<script[^>]+src="([^"]+\.js)"', app.body)
         if smoke.check(bool(script), "the staff app loads a script"):
             assert script is not None
-            asset = smoke.get(script.group(1))
+            asset = smoke.get((args.app_url.rstrip("/") if args.app_url else "") + script.group(1))
             kind = asset.headers.get("Content-Type", "")
             smoke.check(
                 asset.status == 200 and "javascript" in kind,
                 f"staff app script {script.group(1)}",
                 f"{asset.status} {kind}",
             )
-        deep = smoke.get(f"{base}some/deep/link")
+        deep = smoke.get(
+            (args.app_url.rstrip("/") if args.app_url else "") + f"{base}some/deep/link"
+        )
         smoke.check(
             deep.status == 200 and 'id="root"' in deep.body,
             "a deep link into the staff app answers its index.html",
@@ -194,6 +229,46 @@ def run(smoke: Smoke, args: argparse.Namespace) -> None:
             redirect.status in (301, 302, 307, 308) and location.startswith("https://"),
             f"{args.http_url} redirects to https",
             f"{redirect.status} {location}",
+        )
+
+
+def report_ready(smoke: Smoke, path: str, ready: Response, expected: list[str]) -> None:
+    payload = json.loads(ready.body)
+    checks = payload.get("checks", {})
+    failed = [name for name, entry in checks.items() if not entry.get("ok")]
+    smoke.check(
+        payload.get("status") == "ok" and not failed and payload.get("failing") in ([], None),
+        f"{path} reports every check ok",
+        ", ".join(sorted(checks)),
+    )
+    for name in expected:
+        smoke.check(name in checks, f"{path} runs the {name} check")
+
+
+def api_checks(smoke: Smoke, args: argparse.Namespace) -> None:
+    """Sign in through the API, then read the list endpoint, unversioned and per version."""
+    login = smoke.send(
+        "POST", args.login_path, body={"email": args.user, "password": args.password}
+    )
+    token = json.loads(login.body).get("access", "") if login.status == 200 else ""
+    smoke.check(bool(token), f"sign in as {args.user}", str(login.status))
+    if not token:
+        return
+    bearer = {"Authorization": f"Bearer {token}"}
+    refused = smoke.get(args.list_path)
+    smoke.check(
+        refused.status in (401, 403), f"{args.list_path} refuses anonymous", str(refused.status)
+    )
+    paths = [args.list_path]
+    if args.api_version:
+        paths.append(args.list_path.replace("/api/", f"/api/{args.api_version}/", 1))
+    for path in paths:
+        listed = smoke.get(path, headers=bearer)
+        rows = json.loads(listed.body).get("results") if listed.status == 200 else None
+        smoke.check(
+            isinstance(rows, list) and len(rows) >= args.min_rows,
+            f"{path} lists at least {args.min_rows} row(s)",
+            f"{listed.status} {len(rows) if isinstance(rows, list) else listed.body[:200]}",
         )
 
 
@@ -312,6 +387,29 @@ def main(argv: list[str] | None = None) -> int:
     check.add_argument("--public-path", default="/", help="a public page (default /)")
     check.add_argument("--app-path", default="", help="where the staff app is, e.g. /app/")
     check.add_argument("--http-url", default="", help="a plain-http URL that must redirect")
+    check.add_argument(
+        "--ready-path", default="/readyz", help="the readiness URL (default /readyz)"
+    )
+    check.add_argument(
+        "--worker-check",
+        action="store_true",
+        help="also require a Celery worker to answer /health/ready/",
+    )
+    check.add_argument("--app-url", default="", help="origin of the staff app, when not --base-url")
+    check.add_argument("--user", default="", help="sign in as this email (needs --password)")
+    check.add_argument("--password", default="")
+    check.add_argument("--login-path", default="/api/auth/login/")
+    check.add_argument(
+        "--list-path", default="/api/users/", help="a list endpoint to read signed in"
+    )
+    check.add_argument("--api-version", default="", help="also read the list at /api/<version>/")
+    check.add_argument(
+        "--no-headers",
+        dest="headers",
+        action="store_false",
+        help="skip the security headers (a development server sends the development ones)",
+    )
+    check.add_argument("--min-rows", type=int, default=1)
     check.add_argument("--cafile", help="the CA that signed the server's certificate")
     check.add_argument("--header", action="append", default=[], metavar="NAME=VALUE")
     check.add_argument("--expect-check", action="append", default=[], metavar="NAME")
@@ -334,6 +432,7 @@ def main(argv: list[str] | None = None) -> int:
     headers: Mapping[str, str] = dict(item.split("=", 1) for item in args.header)
     context = ssl.create_default_context(cafile=args.cafile) if args.cafile else None
     smoke = Smoke(args.base_url, {"User-Agent": "karni-prod-smoke", **headers}, context)
+    smoke.headers_on = args.headers
     run(smoke, args)
     if smoke.failures:
         print(f"{len(smoke.failures)} check(s) failed: {', '.join(smoke.failures)}")
