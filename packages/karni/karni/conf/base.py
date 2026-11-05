@@ -559,6 +559,8 @@ BASE: dict[str, Any] = {
             # staff app loads: one set of brand tokens for both.
             "karni.admin.theme.project_theme_stylesheet",
         ],
+        # Landmarks and accessible names unfold's pages lack (karni.admin.theme).
+        "SCRIPTS": ["karni.admin.theme.a11y_script"],
         "COLORS": {
             # Unfold steps through this neutral scale itself (base-200 borders
             # in light, base-800 in dark), so it holds fixed values: the

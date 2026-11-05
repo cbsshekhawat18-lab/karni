@@ -302,3 +302,24 @@ class Explicit(BaseModel):
 
     def __str__(self) -> str:
         return self.name
+
+
+class Widget(BaseModel):
+    """This docstring loses to ``Karni.help``."""
+
+    name = models.CharField(max_length=100, help_text="What people call it")
+    colour = models.CharField(max_length=30, blank=True)
+    stock = models.IntegerField(default=0, help_text="How many are on the shelf")
+
+    class Karni:
+        help = "Things we sell."
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Gizmo(BaseModel):
+    name = models.CharField(max_length=100)
+
+    def __str__(self) -> str:
+        return self.name

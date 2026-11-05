@@ -165,7 +165,9 @@ def account_links(request: HttpRequest) -> list[dict[str, str]]:
 
     links: list[dict[str, str]] = []
     user = getattr(request, "user", None)
-    if user is not None and user.has_usable_password():
+    if user is None or not user.is_authenticated:
+        return links  # the login page asks too
+    if user.has_usable_password():
         link = _url(admin_site(), "password_change")
         if link:
             links.append({"title": _("Change password"), "link": link})

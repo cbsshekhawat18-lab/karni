@@ -143,13 +143,13 @@ def derive_help(model: type[models.Model]) -> str:
 
     declared = karni_option(model, "help", None)
     if declared:
-        return str(declared).strip()
+        return str(declared).strip().replace("``", "")
     doc = model.__dict__.get("__doc__") or ""
     if not doc or doc.startswith(f"{model.__name__}("):
         return ""
     for line in inspect.cleandoc(doc).splitlines():
         if line.strip():
-            return line.strip()
+            return line.strip().replace("``", "")
     return ""
 
 

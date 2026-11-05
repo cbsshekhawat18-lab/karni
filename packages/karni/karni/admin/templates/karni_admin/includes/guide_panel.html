@@ -21,14 +21,14 @@ The Getting started panel. `guide` holds sections, steps, docs and dismiss_url
         {% for link in guide.docs %}<li><a href="{{ link.url }}">{{ link.title }}</a></li>{% endfor %}
       </ul>
     </div>
-    <div>
-      <h3>{% translate "What each section is for" %}</h3>
+    <details{% if guide.sections|length < 7 %} open{% endif %}>
+      <summary><h3>{% translate "What each section is for" %}</h3></summary>
       <dl>
         {% for section in guide.sections %}
         <dt>{{ section.name }}</dt>
         <dd>{% for entry in section.models %}<a href="{{ entry.url }}">{{ entry.name }}</a>{% if entry.help %}: {{ entry.help }}{% endif %}{% if not forloop.last %}<br>{% endif %}{% endfor %}</dd>
         {% endfor %}
       </dl>
-    </div>
+    </details>
   </div>
 </section>

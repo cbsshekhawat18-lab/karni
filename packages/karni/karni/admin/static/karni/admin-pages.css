@@ -59,7 +59,7 @@
   align-items: center;
   justify-content: center;
   gap: calc(var(--karni-space-unit) * 2);
-  min-height: var(--karni-touch);
+  min-height: var(--karni-touch, calc(var(--karni-space-unit) * 11));
   padding: 0 calc(var(--karni-space-unit) * 5);
   border: var(--karni-border-width) solid transparent;
   border-radius: var(--karni-radius-md);
@@ -99,7 +99,7 @@
 /* Form controls: @karni/ui's Input and Select. 16px text keeps iOS from
    zooming on focus. */
 .karni-field {
-  min-height: var(--karni-touch);
+  min-height: var(--karni-touch, calc(var(--karni-space-unit) * 11));
   min-width: 12rem;
   padding: 0 calc(var(--karni-space-unit) * 3);
   border: var(--karni-border-width) solid var(--karni-color-input);
@@ -338,4 +338,13 @@ td.field-karni_row_actions {
 .karni-guide dd {
   margin: 0;
   color: var(--karni-color-muted-foreground);
+}
+
+.karni-guide summary {
+  cursor: pointer;
+  list-style-position: outside;
+}
+
+.karni-guide summary h3 {
+  display: inline;
 }

@@ -8,7 +8,7 @@ read-only page has Cancel only.
   <div class="karni-bar-inner">
     {% if submit.show_save %}<button type="submit" form="{{ opts.model_name }}_form" name="_save" class="karni-button">{% translate "Save" %}</button>{% endif %}
     {% if submit.show_save_and_add_another %}<button type="submit" form="{{ opts.model_name }}_form" name="_addanother" class="karni-button karni-button-secondary">{% translate "Save and add another" %}</button>{% endif %}
-    {% if submit.show_save_and_continue %}<button type="submit" form="{{ opts.model_name }}_form" name="_continue" class="karni-button karni-button-secondary">{% if can_change %}{% translate "Save and continue editing" %}{% else %}{% translate "Save and view" %}{% endif %}</button>{% endif %}
+    {% if submit.show_save_and_continue %}<button type="submit" form="{{ opts.model_name }}_form" name="_continue" class="karni-button karni-button-secondary">{% if has_change_permission %}{% translate "Save and continue editing" %}{% else %}{% translate "Save and view" %}{% endif %}</button>{% endif %}
     {% if submit.show_save_as_new %}<button type="submit" form="{{ opts.model_name }}_form" name="_saveasnew" class="karni-button karni-button-secondary">{% translate "Save as new" %}</button>{% endif %}
     {% for action in actions_submit_line %}<button type="submit" form="{{ opts.model_name }}_form" name="{{ action.attrs.name|default:action.action_name }}" class="karni-button karni-button-secondary">{{ action.description }}</button>{% endfor %}
     <span class="karni-bar-gap"></span>
