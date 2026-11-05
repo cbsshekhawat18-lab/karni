@@ -1,0 +1,262 @@
+# Production stack for medintel. `karni make deploy compose` wrote this file, and it
+# is yours to edit. docs/deploy.md walks through a server, DNS, updates, rollback
+# and restore.
+#
+#   cp .env.prod.example .env.prod          # fill in every value, never commit it
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# Services: release, django, worker, beat, caddy, db, redis, backup.
+# Every container from the prod image runs `karni check --deploy` before its
+# command and refuses to start while it fails (E520). The image carries the
+# code, named volumes hold the data, and nothing binds source from the host.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+# The production image (the Dockerfile's prod target), shared by every app service.
+x-app: &app
+  image: ${KARNI_IMAGE:-medintel}:${KARNI_TAG:-latest}
+  build:
+    context: .
+    target: prod
+    args:
+      KARNI_SRC: ${KARNI_SRC:-}
+      KARNI_UI_TARBALL: ${KARNI_UI_TARBALL:-}
+      KARNI_APP_PATH: /app/
+  entrypoint: ["python", "-m", "karni.deploy.entrypoint"]
+  env_file: .env.prod
+  restart: unless-stopped
+  volumes:
+    - app_data:/data
+  logging: *logging
+
+services:
+  # Runs to completion before the others start: the deploy checks, the
+  # migrations, collectstatic, then the Caddyfile, the security headers and
+  # the staff app into /data/web for caddy. If it fails, nothing starts.
+  release:
+    <<: *app
+    restart: "no"
+    command:
+      - sh
+      - -c
+      - >-
+        python manage.py migrate --noinput
+        && python manage.py collectstatic --noinput -v 0
+        && python manage.py karni_publish_web --root /data/web
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: ${KARNI_DJANGO_MEMORY:-768M}
+
+  django:
+    <<: *app
+    command:
+      ["gunicorn", "config.asgi:application", "-k", "uvicorn_worker.UvicornWorker",
+       "-b", "0.0.0.0:8000", "--graceful-timeout", "30"]
+    environment:
+      # gunicorn worker processes: about two per CPU core.
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+    depends_on:
+      release:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # /health/ with an allowed Host and X-Forwarded-Proto: https, as caddy asks.
+      test: ["CMD", "python", "-m", "karni.deploy.healthcheck", "--quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: ${KARNI_DJANGO_MEMORY:-768M}
+
+  worker:
+    <<: *app
+    command:
+      ["celery", "-A", "config", "worker", "-l", "info",
+       "--concurrency", "${KARNI_WORKER_CONCURRENCY:-2}"]
+    depends_on:
+      release:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        ["CMD-SHELL", "celery -A config inspect ping -d celery@$$HOSTNAME -t 10 > /dev/null"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 60s
+    # A running task gets this long to finish when the worker stops.
+    stop_grace_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: ${KARNI_WORKER_MEMORY:-768M}
+
+  # One beat only: two would send every scheduled task twice. Never scale it.
+  beat:
+    <<: *app
+    command: ["celery", "-A", "config", "beat", "-l", "info", "--pidfile="]
+    depends_on:
+      release:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # beat has no port: healthy once it runs past the deploy gate.
+      test:
+        ["CMD", "python", "-m", "karni.deploy.healthcheck", "--process", "beat", "--quiet"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: ${KARNI_BEAT_MEMORY:-256M}
+
+  # The web front: automatic TLS for DOMAIN (ports 80 and 443 reachable from the
+  # internet), static and media files from the shared volume, the staff app, and
+  # everything else proxied to django. Its Caddyfile comes from the image through
+  # the release step, so after an update that changes it:
+  #   docker compose -f docker-compose.prod.yml exec caddy caddy reload --config /srv/data/web/Caddyfile
+  caddy:
+    image: caddy:2-alpine
+    command: ["caddy", "run", "--config", "/srv/data/web/Caddyfile", "--adapter", "caddyfile"]
+    restart: unless-stopped
+    ports:
+      - "${KARNI_HTTP_PORT:-80}:80"
+      - "${KARNI_HTTPS_PORT:-443}:443"
+      - "${KARNI_HTTPS_PORT:-443}:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env.prod}
+    volumes:
+      - app_data:/srv/data:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      release:
+        condition: service_completed_successfully
+      django:
+        condition: service_healthy
+    healthcheck:
+      # Caddy's admin API answers inside the container only.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: ${KARNI_CADDY_MEMORY:-256M}
+
+  # PostgreSQL. Not published on the host: only the stack reaches it.
+  # POSTGRES_VERSION is a major version, and changing it on a volume that holds
+  # data needs an upgrade (dump and restore, docs/deploy.md).
+  db:
+    image: postgres:${POSTGRES_VERSION:-16}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-karni}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+      POSTGRES_DB: ${POSTGRES_DB:-karni}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: ${KARNI_DB_MEMORY:-1G}
+
+  # The Celery broker and the cache. Under memory pressure it evicts cache keys
+  # (they expire) and never a queued task.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      ["redis-server", "--appendonly", "yes", "--maxmemory",
+       "${KARNI_REDIS_MAXMEMORY:-200mb}", "--maxmemory-policy", "volatile-lru"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: ${KARNI_REDIS_MEMORY:-256M}
+
+  # Database and media backups (karni-backup, docs/deploy.md#backups): one when
+  # due, every KARNI_BACKUP_INTERVAL_HOURS, the newest KARNI_BACKUP_KEEP kept in
+  # the backups volume and in KARNI_BACKUP_S3_BUCKET when it is set. Unhealthy
+  # while the last backup failed (E521). pg_dump is POSTGRES_VERSION's.
+  backup:
+    image: ${KARNI_IMAGE:-medintel}-backup:${KARNI_TAG:-latest}
+    build:
+      context: .
+      target: backup
+      args:
+        KARNI_SRC: ${KARNI_SRC:-}
+        POSTGRES_VERSION: ${POSTGRES_VERSION:-16}
+    env_file: .env.prod
+    restart: unless-stopped
+    volumes:
+      # Read for each backup, written by a restore (docs/deploy.md#restore).
+      - app_data:/data
+      - backups:/backups
+    depends_on:
+      release:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "karni-backup", "check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: ${KARNI_BACKUP_MEMORY:-512M}
+
+volumes:
+  postgres_data:
+  app_data:
+  caddy_data:
+  caddy_config:
+  redis_data:
+  backups:
