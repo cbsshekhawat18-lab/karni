@@ -1770,7 +1770,7 @@
     }
   },
   "info": {
-    "title": "social_leads API",
+    "title": "social-leads API",
     "version": "0.1.0"
   },
   "openapi": "3.0.3",
@@ -7186,5 +7186,5 @@
       }
     }
   },
-  "x-karni-auth-mode": "jwt"
+  "x-karni-auth-mode": "session"
 }
