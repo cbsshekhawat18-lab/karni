@@ -70,8 +70,18 @@ def test_slots_are_staff_only_and_validated(api):
     assert slot["resource"] == resource["id"]
     start = datetime.now(UTC) + timedelta(days=4)
     body = {"resource": resource["id"], "starts_at": start.isoformat(), "capacity": 2}
-    assert member.post("slots/", {**body, "ends_at": (start + timedelta(hours=1)).isoformat()}).status_code == 403
-    assert staff.post("slots/", {**body, "ends_at": (start - timedelta(hours=1)).isoformat()}).status_code == 400
+    assert (
+        member.post(
+            "slots/", {**body, "ends_at": (start + timedelta(hours=1)).isoformat()}
+        ).status_code
+        == 403
+    )
+    assert (
+        staff.post(
+            "slots/", {**body, "ends_at": (start - timedelta(hours=1)).isoformat()}
+        ).status_code
+        == 400
+    )
     assert staff.post("slots/", {**body, "ends_at": start.isoformat()}).status_code == 400
     late = (start + timedelta(hours=1)).isoformat()
     assert staff.post("slots/", {**body, "capacity": 0, "ends_at": late}).status_code == 400

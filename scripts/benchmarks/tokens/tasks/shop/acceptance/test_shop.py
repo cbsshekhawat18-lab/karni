@@ -57,9 +57,13 @@ def test_staff_manage_the_catalog_and_customers_cannot(api):
     assert customer.patch(f"products/{product['id']}/", {"stock": 99}).status_code == 403
     assert staff.patch(f"products/{product['id']}/", {"stock": 7}).json()["stock"] == 7
     assert staff.post("products/", {"name": "", "price": "1", "stock": 1}).status_code == 400
-    assert staff.post(
-        "products/", {"category": product["category"], "name": unique("p"), "price": "1", "stock": -1}
-    ).status_code == 400
+    assert (
+        staff.post(
+            "products/",
+            {"category": product["category"], "name": unique("p"), "price": "1", "stock": -1},
+        ).status_code
+        == 400
+    )
 
 
 def test_customers_list_and_filter_products(api):
@@ -79,7 +83,9 @@ def test_cart_adds_totals_and_removes(api):
     assert customer.get("cart/").json()["items"] == []
     first = customer.post("cart/items/", {"product": product["id"], "quantity": 2})
     assert first.status_code == 201, first.text
-    assert customer.post("cart/items/", {"product": product["id"], "quantity": 1}).status_code == 201
+    assert (
+        customer.post("cart/items/", {"product": product["id"], "quantity": 1}).status_code == 201
+    )
     customer.post("cart/items/", {"product": other["id"], "quantity": 2})
     cart = customer.get("cart/").json()
     by_product = {i["product"]: i for i in cart["items"]}
@@ -94,8 +100,12 @@ def test_cart_adds_totals_and_removes(api):
 def test_cart_refuses_bad_quantities_and_products(api):
     staff, customer = api("staff"), api("customer")
     product = make_product(staff)
-    assert customer.post("cart/items/", {"product": product["id"], "quantity": 0}).status_code == 400
-    assert customer.post("cart/items/", {"product": product["id"], "quantity": -2}).status_code == 400
+    assert (
+        customer.post("cart/items/", {"product": product["id"], "quantity": 0}).status_code == 400
+    )
+    assert (
+        customer.post("cart/items/", {"product": product["id"], "quantity": -2}).status_code == 400
+    )
     assert customer.post("cart/items/", {"product": 987654321, "quantity": 1}).status_code == 400
 
 

@@ -10,6 +10,7 @@ python scripts/benchmarks/tokens/run.py --resume                # the 30 real ru
 from __future__ import annotations
 
 import argparse
+import os
 import shlex
 import shutil
 import subprocess
@@ -28,8 +29,6 @@ DEFAULT_N = 5
 def resolve_claude(explicit: str | None, fake: bool) -> list[str]:
     if fake:
         return [sys.executable, str(execute.FAKE_CLAUDE)]
-    import os
-
     found = explicit or os.environ.get("KARNI_BENCH_CLAUDE") or shutil.which("claude")
     if not found:
         raise SystemExit("claude is not on PATH: pass --claude PATH or set KARNI_BENCH_CLAUDE")
@@ -106,6 +105,9 @@ def main(argv: list[str] | None = None) -> int:
         "--reference", choices=TASKS, help="build a task's reference, run its tests"
     )
     args = parser.parse_args(argv)
+    # karni-cli prefers VIRTUAL_ENV: a run must never depend on the caller's shell.
+    os.environ.pop("VIRTUAL_ENV", None)
+    os.environ.pop("DJANGO_SETTINGS_MODULE", None)
 
     if args.build_starts:
         for name in starts.CONDITIONS:

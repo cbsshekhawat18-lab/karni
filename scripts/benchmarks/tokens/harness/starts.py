@@ -238,7 +238,10 @@ def _run(argv: list[str], cwd: Path | None = None, env: dict[str, str] | None = 
 
 
 def _npm_env() -> dict[str, str]:
-    return {**os.environ, "PATH": "/opt/homebrew/bin:" + os.environ.get("PATH", ""), "CI": "1"}
+    base = {
+        k: v for k, v in os.environ.items() if k not in ("VIRTUAL_ENV", "DJANGO_SETTINGS_MODULE")
+    }
+    return {**base, "PATH": "/opt/homebrew/bin:" + os.environ.get("PATH", ""), "CI": "1"}
 
 
 def _fresh(base: Path) -> None:

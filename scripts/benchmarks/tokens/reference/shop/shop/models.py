@@ -30,7 +30,9 @@ class Cart(karni.Cart):
         return cls.objects.get_or_create(customer=customer)[0]
 
     def total(self) -> Decimal:
-        return sum((i.line_total() for i in self.cartitem_set.select_related("product")), Decimal(0))
+        return sum(
+            (i.line_total() for i in self.cartitem_set.select_related("product")), Decimal(0)
+        )
 
     @transaction.atomic
     def checkout(self) -> "Order":

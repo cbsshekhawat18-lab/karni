@@ -15,9 +15,7 @@ def make_company(api: Api) -> dict[str, Any]:
 
 
 def make_deal(api: Api, company: dict[str, Any], value: str = "100.00") -> dict[str, Any]:
-    reply = api.post(
-        "deals/", {"title": unique("deal"), "company": company["id"], "value": value}
-    )
+    reply = api.post("deals/", {"title": unique("deal"), "company": company["id"], "value": value})
     assert reply.status_code == 201, reply.text
     return reply.json()
 
@@ -27,9 +25,7 @@ def ids(reply: requests.Response) -> list[Any]:
 
 
 def upload(api: Api, text: str) -> requests.Response:
-    return api.call(
-        "POST", "contacts/import/", files={"file": ("contacts.csv", text, "text/csv")}
-    )
+    return api.call("POST", "contacts/import/", files={"file": ("contacts.csv", text, "text/csv")})
 
 
 def test_sign_in_and_protection(anonymous):
@@ -46,7 +42,12 @@ def test_every_role_works_with_companies_and_sees_all_of_them(api):
     for role in ("sales2", "manager", "admin"):
         assert company["id"] in ids(api(role).get("companies/"))
     assert company["name"] and "website" in company
-    assert api("sales2").patch(f"companies/{company['id']}/", {"website": "https://b.test"}).status_code == 200
+    assert (
+        api("sales2")
+        .patch(f"companies/{company['id']}/", {"website": "https://b.test"})
+        .status_code
+        == 200
+    )
     assert api("sales").get(f"companies/{company['id']}/").json()["website"] == "https://b.test"
 
 
@@ -70,13 +71,25 @@ def test_contacts_validate_and_filter_by_company(api):
     email = f"{unique('c')}@example.test"
     reply = sales.post(
         "contacts/",
-        {"company": company["id"], "first_name": "Ada", "last_name": "L", "email": email, "phone": "1"},
+        {
+            "company": company["id"],
+            "first_name": "Ada",
+            "last_name": "L",
+            "email": email,
+            "phone": "1",
+        },
     )
     assert reply.status_code == 201, reply.text
     contact = reply.json()
     assert contact["email"] == email and contact["company"] == company["id"]
-    assert sales.post("contacts/", {"first_name": "B", "last_name": "B", "email": email}).status_code == 400
-    assert sales.post("contacts/", {"first_name": "B", "last_name": "B", "email": "nope"}).status_code == 400
+    assert (
+        sales.post("contacts/", {"first_name": "B", "last_name": "B", "email": email}).status_code
+        == 400
+    )
+    assert (
+        sales.post("contacts/", {"first_name": "B", "last_name": "B", "email": "nope"}).status_code
+        == 400
+    )
     assert sales.post("contacts/", {"first_name": "B", "last_name": "B"}).status_code == 400
     found = rows(api("manager").get("contacts/", params={"company": company["id"]}))
     assert [c["id"] for c in found] == [contact["id"]]
@@ -88,7 +101,13 @@ def test_a_new_deal_is_a_lead_owned_by_its_creator(api):
     company = make_company(sales)
     reply = sales.post(
         "deals/",
-        {"title": unique("d"), "company": company["id"], "value": "250.00", "stage": "won", "owner": 1},
+        {
+            "title": unique("d"),
+            "company": company["id"],
+            "value": "250.00",
+            "stage": "won",
+            "owner": 1,
+        },
     )
     assert reply.status_code == 201, reply.text
     deal = reply.json()
@@ -98,7 +117,10 @@ def test_a_new_deal_is_a_lead_owned_by_its_creator(api):
     assert deal["id"] in [d["id"] for d in mine]
     assert {d["owner"] for d in mine} == {deal["owner"]}
     assert sales.post("deals/", {"company": company["id"], "value": "1"}).status_code == 400
-    assert sales.post("deals/", {"title": "x", "company": company["id"], "value": "-5"}).status_code == 400
+    assert (
+        sales.post("deals/", {"title": "x", "company": company["id"], "value": "-5"}).status_code
+        == 400
+    )
 
 
 def test_sales_see_only_their_own_deals_managers_and_admins_see_all(api):
@@ -179,8 +201,13 @@ def test_the_pipeline_refuses_other_moves_and_changes_nothing(api):
 
 def test_moving_follows_visibility(api):
     deal = make_deal(api("sales"), make_company(api("sales")))
-    assert api("sales2").post(f"deals/{deal['id']}/move/", {"stage": "qualified"}).status_code in (403, 404)
-    assert api("manager").post(f"deals/{deal['id']}/move/", {"stage": "qualified"}).status_code == 200
+    assert api("sales2").post(f"deals/{deal['id']}/move/", {"stage": "qualified"}).status_code in (
+        403,
+        404,
+    )
+    assert (
+        api("manager").post(f"deals/{deal['id']}/move/", {"stage": "qualified"}).status_code == 200
+    )
 
 
 def test_the_pipeline_report_counts_what_the_user_may_see(api):
@@ -219,16 +246,22 @@ def test_importing_contacts_creates_updates_and_skips_bad_rows(api):
     assert len(companies) == 1
     contacts = rows(api("manager").get("contacts/", params={"company": companies[0]["id"]}))
     assert {c["email"] for c in contacts} == {one, two}
-    again = upload(api("admin"), f"first_name,last_name,email,phone,company\nAnna,One,{one},999,Acme {tag}\n")
+    again = upload(
+        api("admin"), f"first_name,last_name,email,phone,company\nAnna,One,{one},999,Acme {tag}\n"
+    )
     assert again.status_code == 200, again.text
     assert (again.json()["created"], again.json()["updated"]) == (0, 1)
     contacts = rows(api("manager").get("contacts/", params={"company": companies[0]["id"]}))
     changed = next(c for c in contacts if c["email"] == one)
     assert changed["first_name"] == "Anna" and changed["phone"] == "999"
     assert len(contacts) == 2
-    assert len([c for c in rows(api("manager").get("companies/")) if c["name"] == f"Acme {tag}"]) == 1
+    assert (
+        len([c for c in rows(api("manager").get("companies/")) if c["name"] == f"Acme {tag}"]) == 1
+    )
 
 
 def test_sales_cannot_import(api):
-    reply = upload(api("sales"), "first_name,last_name,email,phone,company\nA,B,x@example.test,1,Z\n")
+    reply = upload(
+        api("sales"), "first_name,last_name,email,phone,company\nA,B,x@example.test,1,Z\n"
+    )
     assert reply.status_code == 403

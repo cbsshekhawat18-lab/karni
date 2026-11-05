@@ -32,7 +32,9 @@ class Api:
         reply = self.session.post(
             f"{BASE}/api/auth/login/", json={"email": email, "password": PASSWORD}, timeout=30
         )
-        assert reply.status_code == 200, f"sign-in as {email}: {reply.status_code} {reply.text[:200]}"
+        assert reply.status_code == 200, (
+            f"sign-in as {email}: {reply.status_code} {reply.text[:200]}"
+        )
         body = reply.json()
         token = body.get("access") or body.get("token")
         assert token, f"sign-in as {email}: no access or token in {list(body)}"
@@ -102,4 +104,3 @@ def api() -> Any:
 @pytest.fixture
 def anonymous() -> requests.Session:
     return requests.Session()
-
