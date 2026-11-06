@@ -348,11 +348,8 @@ def test_remove_reports_rows_and_drops_nothing(
     refused = runner.invoke(app, ["remove", "payments"])
     assert refused.exit_code == 1 and _code(refused) == "C319"
     assert "  karni migrate karni_payments zero" in str(refused.exception)
-    assert "  karni_payments_payment (karni_payments.Payment): 12 rows" in refused.output
-    assert "  karni_payments_refund (karni_payments.Refund): 0 rows" in refused.output
-    assert "  karni_payments_webhookevent (karni_payments.WebhookEvent): no table" in (
-        refused.output
-    )
+    assert "Changes:" not in refused.output  # nothing was changed, so nothing is announced
+    assert "karni_payments_payment" in str(refused.exception)
     assert _snapshot(generated_project) == added  # nothing written
 
     dry = runner.invoke(app, ["remove", "payments", "--dry-run"])
@@ -413,11 +410,24 @@ def test_add_prints_what_the_manifest_says(
     assert "include(" not in approvals.output  # no URLs: no include line
     impersonation = runner.invoke(app, ["add", "impersonation"])
     assert (
-        "Add 'karni_impersonation.middleware.ImpersonationMiddleware' to MIDDLEWARE"
+        "karni_impersonation.middleware.ImpersonationMiddleware: added to MIDDLEWARE"
         in impersonation.output
     )
     settings = (generated_project / "config" / "settings.py").read_text()
-    assert "ImpersonationMiddleware" not in settings  # printed, as karni add always did
+    assert "ImpersonationMiddleware" in settings  # written, so karni check never fails IMP007
+
+
+def test_impersonation_middleware_round_trips(
+    runner, generated_project: Path, monkeypatch, no_docker, counter
+) -> None:
+    monkeypatch.chdir(generated_project)
+    before = _snapshot(generated_project)
+    assert runner.invoke(app, ["add", "impersonation"]).exit_code == 0
+    settings = (generated_project / "config" / "settings.py").read_text()
+    assert settings.count("karni_impersonation.middleware.ImpersonationMiddleware") == 1
+    result = runner.invoke(app, ["remove", "impersonation"])
+    assert result.exit_code == 0, result.output
+    assert _snapshot(generated_project) == before  # the middleware line left with the app
 
 
 def test_a_module_without_a_manifest_is_added_and_removed_by_convention(

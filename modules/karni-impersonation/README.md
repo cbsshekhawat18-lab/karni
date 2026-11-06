@@ -15,19 +15,21 @@ karni add impersonation
 karni migrate
 ```
 
-Then wire it twice. The module cannot do this for you, and `karni check`
-fails with `IMP007` until both are in place:
+`karni add impersonation` writes the middleware into the `# karni:middleware`
+block of `config/settings.py`, after Django's own list, so it follows
+`AuthenticationMiddleware`. `karni remove impersonation` takes it out again.
+Without the CLI, add it yourself right after `AuthenticationMiddleware`.
+
+The banner's exit needs the URL include. `karni check` fails with `IMP007`
+until the middleware and the include are both in place:
 
 ```python
-# config/settings.py, right after AuthenticationMiddleware
-MIDDLEWARE.insert(
-    MIDDLEWARE.index("django.contrib.auth.middleware.AuthenticationMiddleware") + 1,
-    "karni_impersonation.middleware.ImpersonationMiddleware",
-)
-
 # config/urls.py: the banner's exit
 path("impersonation/", include("karni_impersonation.urls")),
 ```
+
+If the middleware stays in `MIDDLEWARE` while the app is out of
+`INSTALLED_APPS`, importing it fails with `IMP007` and names both.
 
 Grant the permission to the role that does support:
 

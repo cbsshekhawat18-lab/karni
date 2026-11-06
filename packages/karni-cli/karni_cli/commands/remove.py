@@ -266,6 +266,16 @@ def _default_counter(project: Path) -> Counter:
     return manage_counter(project)
 
 
+def _tables_message(name: str, app: str, tables: list[str]) -> str:
+    return (
+        f"{name}'s tables exist ({', '.join(tables)}), and Django can drop them only while "
+        f"{app} is in INSTALLED_APPS. To drop them and their rows, run deliberately:\n"
+        f"  karni migrate {app} zero\n"
+        f"then karni remove {name} again. To keep them in the database: karni remove {name} "
+        "--keep-tables."
+    )
+
+
 def remove(
     module: str = typer.Argument(..., help='Module short name, e.g. "payments"'),
     dry_run: bool = typer.Option(
@@ -317,6 +327,9 @@ def remove(
         else ([], f"{app} is not in INSTALLED_APPS, so Django does not know its tables")
     )
     tables = [table for table, _, rows in counts if rows is not None]
+    stops = bool(tables) and not keep_tables
+    if stops and not dry_run:
+        raise CliError(_tables_message(name, app, tables), code="C319")
     header = "Would change (--dry-run, nothing written):" if dry_run else "Changes:"
     typer.echo(header)
     for change in removal.changes:
@@ -325,18 +338,9 @@ def remove(
         typer.echo("  the agent files: refreshed (karni rules sync)")
     for line in _table_lines(counts, why):
         typer.echo(line)
-    if tables and not keep_tables:
-        message = (
-            f"{name}'s tables exist ({', '.join(tables)}), and Django can drop them only while "
-            f"{app} is in INSTALLED_APPS. To drop them and their rows, run deliberately:\n"
-            f"  karni migrate {app} zero\n"
-            f"then karni remove {name} again. To keep them in the database: karni remove {name} "
-            "--keep-tables."
-        )
-        if dry_run:
-            typer.echo(f"karni remove would stop here (C319): {message}")
-            return
-        raise CliError(message, code="C319")
+    if stops:
+        typer.echo(f"karni remove would stop here (C319): {_tables_message(name, app, tables)}")
+        return
     if dry_run:
         for note in removal.notes:
             typer.echo(note)
