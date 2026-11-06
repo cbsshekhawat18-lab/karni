@@ -164,12 +164,14 @@ def _email_shaped(value: Any) -> str | None:
     return value.strip() if isinstance(value, str) and _EMAIL_RE.match(value.strip()) else None
 
 
-def _string_list_errors(setting: str, value: Any, *, required: bool) -> list[str]:
+def _string_list_errors(
+    setting: str, value: Any, *, required: bool, allow_empty: bool = False
+) -> list[str]:
     if value is None and not required:
         return []
     if (
         not isinstance(value, list | tuple)
-        or (required and not value)
+        or (required and not value and not allow_empty)
         or not all(isinstance(item, str) and item.strip() for item in value)
     ):
         need = "a non-empty list" if required else "a list"
@@ -210,7 +212,7 @@ class IdTokenProvider:
         """Problems with the entry ``config`` for this provider, as startup validation lines."""
         setting = f"KARNI_SOCIAL_TOKEN_PROVIDERS[{name!r}]"
         errors = _string_list_errors(
-            f"{setting}['client_ids']", config.get("client_ids"), required=True
+            f"{setting}['client_ids']", config.get("client_ids"), required=True, allow_empty=True
         )
         if "require_nonce" in config and not isinstance(config["require_nonce"], bool):
             errors.append(
@@ -579,6 +581,18 @@ def verify_id_token(
     :raises SocialTokenRefused: on any failure.
     """
     _require_cryptography()
+    if not provider.client_ids:
+        # An empty list is a provider the project has not configured yet (the build writes
+        # env.list(..., default=[])): nothing else stops, only signing in with it does.
+        raise _refused(
+            "not_configured",
+            f"Sign-in with {provider.name} is not configured: "
+            f"KARNI_SOCIAL_TOKEN_PROVIDERS[{provider.name!r}]['client_ids'] is empty. Set the "
+            "client ids (for the build's settings block, KARNI_SOCIAL_"
+            f"{provider.name.upper()}_CLIENT_IDS in the environment).",
+            "E216",
+            status=503,
+        )
     try:
         header = jwt.get_unverified_header(token)
     except jwt.PyJWTError as exc:

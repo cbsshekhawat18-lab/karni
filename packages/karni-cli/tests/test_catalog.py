@@ -348,11 +348,8 @@ def test_remove_reports_rows_and_drops_nothing(
     refused = runner.invoke(app, ["remove", "payments"])
     assert refused.exit_code == 1 and _code(refused) == "C319"
     assert "  karni migrate karni_payments zero" in str(refused.exception)
-    assert "  karni_payments_payment (karni_payments.Payment): 12 rows" in refused.output
-    assert "  karni_payments_refund (karni_payments.Refund): 0 rows" in refused.output
-    assert "  karni_payments_webhookevent (karni_payments.WebhookEvent): no table" in (
-        refused.output
-    )
+    assert "Changes:" not in refused.output  # nothing was changed, so nothing is announced
+    assert "karni_payments_payment" in str(refused.exception)
     assert _snapshot(generated_project) == added  # nothing written
 
     dry = runner.invoke(app, ["remove", "payments", "--dry-run"])
@@ -413,23 +410,99 @@ def test_add_prints_what_the_manifest_says(
     assert "include(" not in approvals.output  # no URLs: no include line
     impersonation = runner.invoke(app, ["add", "impersonation"])
     assert (
-        "Add 'karni_impersonation.middleware.ImpersonationMiddleware' to MIDDLEWARE"
+        "karni_impersonation.middleware.ImpersonationMiddleware: added to MIDDLEWARE"
         in impersonation.output
     )
     settings = (generated_project / "config" / "settings.py").read_text()
-    assert "ImpersonationMiddleware" not in settings  # printed, as karni add always did
+    assert "ImpersonationMiddleware" in settings  # written, so karni check never fails IMP007
 
 
-def test_a_module_without_a_manifest_is_added_and_removed_by_convention(
+def test_a_module_ui_package_follows_add_and_remove(
+    runner, generated_project: Path, monkeypatch, no_docker, counter
+) -> None:
+    monkeypatch.chdir(generated_project)
+    package = generated_project / "frontend" / "package.json"
+    assert package.is_file()
+    before = _snapshot(generated_project)
+    added = runner.invoke(app, ["add", "charts"])
+    assert added.exit_code == 0, added.output
+    deps = json.loads(package.read_text())["dependencies"]
+    assert deps["@karni/charts-ui"] == "^0.5.0"
+    assert "@karni/charts-ui: added to frontend/package.json" in added.output
+    assert list(deps) == sorted(deps)
+    again = runner.invoke(app, ["add", "charts"])
+    assert "already in frontend/package.json" in again.output
+    removed = runner.invoke(app, ["remove", "charts"])
+    assert removed.exit_code == 0, removed.output
+    assert "@karni/charts-ui removed from dependencies" in removed.output
+    assert _snapshot(generated_project) == before
+
+
+def test_a_module_ui_package_needs_a_frontend(
+    runner, generated_project: Path, monkeypatch, no_docker, counter
+) -> None:
+    import shutil
+
+    monkeypatch.chdir(generated_project)
+    shutil.rmtree(generated_project / "frontend")
+    added = runner.invoke(app, ["add", "charts"])
+    assert added.exit_code == 0, added.output
+    assert "charts-ui" not in added.output
+    assert not (generated_project / "frontend").exists()
+
+
+def test_impersonation_middleware_round_trips(
     runner, generated_project: Path, monkeypatch, no_docker, counter
 ) -> None:
     monkeypatch.chdir(generated_project)
     before = _snapshot(generated_project)
-    added = runner.invoke(app, ["add", "widgets"])
-    assert added.exit_code == 0, added.output
-    assert 'path("widgets/", include("karni_widgets.urls"))' in added.output
-    assert runner.invoke(app, ["remove", "widgets"]).exit_code == 0
+    assert runner.invoke(app, ["add", "impersonation"]).exit_code == 0
+    settings = (generated_project / "config" / "settings.py").read_text()
+    assert settings.count("karni_impersonation.middleware.ImpersonationMiddleware") == 1
+    result = runner.invoke(app, ["remove", "impersonation"])
+    assert result.exit_code == 0, result.output
+    assert _snapshot(generated_project) == before  # the middleware line left with the app
+
+
+def test_add_refuses_a_name_that_is_not_a_module(
+    runner, generated_project: Path, monkeypatch, no_docker, installed: list[Any]
+) -> None:
+    monkeypatch.chdir(generated_project)
+    before = _snapshot(generated_project)
+    refused = runner.invoke(app, ["add", "paymnets"])
+    assert refused.exit_code == 1 and _code(refused) == "C840"
+    assert "Did you mean payments?" in str(refused.exception)
+    assert _snapshot(generated_project) == before  # nothing wired
+    far = runner.invoke(app, ["add", "bogus"])
+    assert _code(far) == "C840" and "karni modules list" in str(far.exception)
     assert _snapshot(generated_project) == before
+
+
+def test_a_third_party_module_with_a_manifest_is_added_and_removed(
+    runner, generated_project: Path, monkeypatch, no_docker, counter, installed: list[Any]
+) -> None:
+    monkeypatch.chdir(generated_project)
+    installed.append(_module(CHAT.replace("requires", "# requires"), "entry point chat"))
+    before = _snapshot(generated_project)
+    added = runner.invoke(app, ["add", "chat"])
+    assert added.exit_code == 0, added.output
+    assert "karni_chat: wired into INSTALLED_APPS" in added.output
+    assert runner.invoke(app, ["remove", "chat"]).exit_code == 0
+    assert _snapshot(generated_project) == before
+
+
+def test_remove_still_takes_out_a_name_that_was_wired_without_a_manifest(
+    runner, generated_project: Path, monkeypatch, no_docker, counter
+) -> None:
+    """A project wired by an older karni add can still recover with karni remove."""
+    monkeypatch.chdir(generated_project)
+    settings = generated_project / "config" / "settings.py"
+    settings.write_text(
+        settings.read_text().replace("]  # karni:apps", '    "karni_widgets",\n]  # karni:apps', 1)
+    )
+    assert "karni_widgets" in settings.read_text()
+    assert runner.invoke(app, ["remove", "widgets"]).exit_code == 0
+    assert "karni_widgets" not in settings.read_text()
     assert counter == []  # no manifest, no models to count
 
 

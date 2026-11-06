@@ -247,8 +247,8 @@ def test_match_ranks_by_word_overlap_best_first(builtin: Path) -> None:
     found = recipes_mod.load(installed=False).recipes.values()
     ranked = recipes_mod.match(found, "Booking classes at a yoga studio")
     assert [(m.recipe.name, m.score, m.matched) for m in ranked] == [
-        ("studio", 6, ("booking", "class", "studio")),
-        ("clinic", 2, ("booking",)),
+        ("studio", 12, ("booking", "class", "studio")),
+        ("clinic", 4, ("booking",)),
     ]
     # a tie goes to the name, a purpose word scores 1, and below the threshold is nothing
     assert [m.recipe.name for m in recipes_mod.match(found, "booking")] == ["clinic", "studio"]
@@ -281,14 +281,14 @@ def test_list_and_match_through_the_cli(builtin: Path, runner: Any) -> None:
     assert matched.output.splitlines()[:2] == [
         'Recipes for "a studio for yoga classes", best first (score, then name):',
         (
-            "studio   4  Studio: Classes that members book, with instructors and a capacity. "
+            "studio   8  Studio: Classes that members book, with instructors and a capacity. "
             "(matched: studio, class)"
         ),
     ]
     assert "karni recipes show studio prints its spec" in matched.output
     data = _json(runner, "list", "--match", "a studio for yoga classes")
     assert [(r["name"], r["score"], r["matched"]) for r in data["recipes"]] == [
-        ("studio", 4, ["studio", "class"])
+        ("studio", 8, ["studio", "class"])
     ]
     assert data["request"] == "a studio for yoga classes" and data["threshold"] == 2
 
@@ -370,3 +370,19 @@ def test_the_published_recipes_schema_is_current_and_checks_the_output(
 def test_the_built_in_recipes_are_the_folders_next_to_the_loader() -> None:
     """A6 adds a recipe as a folder: nothing else to register."""
     assert Path(str(recipes_mod.builtin_root())) == Path(recipes_mod.__file__).parent
+
+
+@pytest.mark.parametrize(
+    ("request_text", "expected"),
+    [
+        ("a booking app for a yoga studio, with online payments", "booking"),
+        ("an online shop", "shop"),
+        ("book a class", "booking"),
+        ("a marketplace where sellers list items and buyers order them", "marketplace"),
+        ("a CRM for a sales team", "crm"),
+    ],
+)
+def test_the_apps_own_noun_outweighs_a_feature_it_uses(request_text: str, expected: str) -> None:
+    """The documentation's own requests pick the recipe they name (not shop for payments)."""
+    found = recipes_mod.match(recipes_mod.load().recipes.values(), request_text)
+    assert found[0].recipe.name == expected, [(m.recipe.name, m.score) for m in found]

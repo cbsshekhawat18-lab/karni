@@ -285,6 +285,11 @@
       "owner": "karni"
     },
     {
+      "path": "frontend/package.json",
+      "action": "modify",
+      "owner": "project"
+    },
+    {
       "path": "config/urls.py",
       "action": "modify",
       "owner": "project"

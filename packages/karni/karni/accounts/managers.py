@@ -8,6 +8,7 @@ rest of Karni (services, serializers, admin) only ever goes through
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 from django.contrib.auth.base_user import BaseUserManager
@@ -17,6 +18,8 @@ from karni.managers import BaseQuerySet, ScopedManagerMixin
 
 if TYPE_CHECKING:
     from karni.accounts.models import AbstractKarniUser
+
+logger = logging.getLogger(__name__)
 
 
 class KarniUserManager(ScopedManagerMixin, BaseUserManager.from_queryset(BaseQuerySet)):  # type: ignore[misc]
@@ -77,4 +80,35 @@ class KarniUserManager(ScopedManagerMixin, BaseUserManager.from_queryset(BaseQue
             raise KarniValueError("Superusers must have is_staff=True.", code="E203")
         if extra_fields["is_superuser"] is not True:
             raise KarniValueError("Superusers must have is_superuser=True.", code="E203")
-        return self._create_user(email, password, **extra_fields)
+        user = self._create_user(email, password, **extra_fields)
+        self.grant_superuser_roles(user)
+        return user
+
+    def superuser_roles(self) -> list[str]:
+        """The roles a new superuser holds: every role the routed viewsets name.
+
+        The same list ``karni seed`` gives the demo account. Override it to
+        return another list (``[]`` for none).
+        """
+        from karni.accounts.permissions import routed_roles
+
+        return routed_roles()
+
+    def grant_superuser_roles(self, user: AbstractKarniUser) -> None:
+        """Give ``user`` the roles of :meth:`superuser_roles`.
+
+        A superuser passes Granted() checks on its own, but a ``HasRole`` gate
+        (``public-read`` writes, ``staff``, ``role:``) asks for the role. A
+        failure to list the roles (the URLs do not import yet) never blocks
+        creating the account: it is logged, and ``manage.py karni_seed`` or
+        ``assign_role`` gives the roles later.
+        """
+        from karni.accounts.permissions import assign_role
+
+        try:
+            names = self.superuser_roles()
+        except Exception:  # noqa: BLE001 - the account matters more than its roles
+            logger.warning("Could not list the roles for the new superuser.", exc_info=True)
+            return
+        for name in names:
+            assign_role(user, name)

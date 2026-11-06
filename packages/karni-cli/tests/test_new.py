@@ -244,6 +244,22 @@ def test_ui_mount_target() -> None:
     assert ui_mount_target("^0.1.0") == "^0.1.0"
 
 
+def test_a_checkout_found_by_walking_is_used_only_inside_it(
+    runner, tmp_path: Path, monkeypatch
+) -> None:
+    """A CLI run from a checkout must not write that checkout's absolute path elsewhere."""
+    monkeypatch.delenv("KARNI_UI_SRC", raising=False)
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    ui = REPO_ROOT / "packages" / "karni-ui"
+    assert scaffold.resolve_ui_source_for(tmp_path / "proj") is None
+    assert scaffold.resolve_ui_source_for(REPO_ROOT / "examples" / "demo") == ui
+    result = runner.invoke(app, ["new", "Elsewhere", "-o", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    package = json.loads((tmp_path / "elsewhere" / "frontend" / "package.json").read_text())
+    assert package["dependencies"]["@karni/ui"] == "^0.5.0"
+    assert "/" not in package["dependencies"]["@karni/ui"]
+
+
 def test_new_falls_back_to_the_registry(runner, tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
     monkeypatch.setattr(scaffold, "resolve_ui_source", lambda: None)
@@ -451,3 +467,29 @@ def test_without_git_on_path_the_project_is_still_made(runner, tmp_path, monkeyp
     assert result.exit_code == 0, result.output
     assert "git is not installed, so the project is not a git repository" in result.output
     assert not (tmp_path / "out" / "no_git" / ".git").exists()
+
+
+def test_a_new_project_ignores_what_pip_install_leaves(runner, tmp_path: Path, monkeypatch) -> None:
+    """The README's `pip install -e .` writes <slug>.egg-info: not an untracked file."""
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    monkeypatch.setattr(scaffold, "resolve_ui_source", lambda: None)
+    result = runner.invoke(app, ["new", "Egg Info", "-o", str(tmp_path), "--no-git"])
+    assert result.exit_code == 0, result.output
+    ignored = (tmp_path / "egg_info" / ".gitignore").read_text().splitlines()
+    assert "*.egg-info/" in ignored and "__pycache__/" in ignored
+
+
+def test_a_new_project_starts_without_the_legacy_cache_header(
+    runner, tmp_path: Path, monkeypatch
+) -> None:
+    """A fresh app sends only X-Cache, so its first run has no deprecation warning."""
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    monkeypatch.setattr(scaffold, "resolve_ui_source", lambda: None)
+    result = runner.invoke(app, ["new", "Quiet Cache", "-o", str(tmp_path), "--no-git"])
+    assert result.exit_code == 0, result.output
+    text = (tmp_path / "quiet_cache" / "config" / "settings.py").read_text()
+    assert (
+        'KARNI_API_CACHE_LEGACY_HEADER = env.bool("KARNI_API_CACHE_LEGACY_HEADER", default=False)'
+        in text
+    )
+    assert text.index("karni_settings(globals())") < text.index("KARNI_API_CACHE_LEGACY_HEADER")

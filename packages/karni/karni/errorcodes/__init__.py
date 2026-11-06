@@ -813,7 +813,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "sign them in here too, so aud must be one of the configured client ids (401).",
         "Add the client id the app uses to KARNI_SOCIAL_TOKEN_PROVIDERS[<provider>]['client_ids']: "
         "the web client id, and each iOS and Android client id (for Apple, the service id and "
-        "the bundle id).",
+        "the bundle id). An empty list means the provider is not configured: signing in with it "
+        "answers 503 with this code, and every other command and request still works. The "
+        "settings block karni build writes reads the ids from KARNI_SOCIAL_<PROVIDER>_CLIENT_IDS.",
     ),
     _e(
         "E217",
@@ -1415,8 +1417,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Give the user model the attribute (a field or a property holding a node of the tree, "
         "e.g. region), or give each user their nodes with user grants of the same scope "
         "(features: user_grants, then karni.accounts.grants.grant(..., targets=[...])). "
-        "Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] when user grants give the "
-        "nodes on purpose.",
+        "The check is silent while KARNI_USER_GRANTS is on, since the nodes come from the "
+        "grants. Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] otherwise when "
+        "something else gives the nodes on purpose.",
     ),
     # E570-E589 / W650-W659 taxonomy tagging (karni.taxonomy, experimental)
     _e(

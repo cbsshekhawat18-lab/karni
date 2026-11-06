@@ -171,12 +171,17 @@ takes (`karni modules show <name>` prints each one's questions).
 
 | Key | Takes | Setting |
 |---|---|---|
-| `two_factor` | `true` / `false` | `KARNI_2FA` (needs `karni[2fa]`) |
+| `two_factor` | `true` / `false` | `KARNI_2FA`. `karni build` adds `karni[2fa]` to pyproject.toml |
 | `email_code_login` | `true` / `false` | `KARNI_EMAIL_OTP`, [sign-in with a code](accounts.md#sign-in-with-a-code-sent-by-email) |
-| `social_login` | `google`, `microsoft`, `apple`, one or a list | `KARNI_SOCIAL_TOKEN_PROVIDERS`, [sign-in with an ID token](accounts.md#sign-in-with-an-id-token-google-microsoft-apple). The spec names the providers. Their client ids stay in settings or `.env` |
+| `social_login` | `google`, `microsoft`, `apple`, one or a list | `KARNI_SOCIAL_TOKEN_PROVIDERS`, [sign-in with an ID token](accounts.md#sign-in-with-an-id-token-google-microsoft-apple). The spec names the providers. Their client ids stay in settings or `.env` (unset is fine until someone signs in: `E216`, 503). `karni build` adds `karni[social-token]` to pyproject.toml |
 | `terms` | `{version, url}`, plus `required`, `paths`, `exempt` | `KARNI_TERMS`, [terms acceptance](accounts.md#terms-acceptance) |
 | `user_grants` | `true` / `false` | `KARNI_USER_GRANTS`, [per-user grants](accounts.md#per-user-grants). The grants themselves are data, written in the admin or the API |
 | `api_cache` | `true` / `false`, or `{ttl: <seconds>}` | `KARNI_API_CACHE`, and `KARNI_API_CACHE_TTL` with a `ttl`, [response caching](api.md#response-caching). `true` keeps the default lifetime (300 seconds) |
+
+A feature that needs an extra of `karni` gets it named on the `karni` dependency
+when the build turns it on. If the project's interpreter cannot import it, the
+build stops before the migrations with `C841` and the install line, and the next
+`karni build` continues from there.
 
 `api_cache` left out (or `false`) writes no line in the settings block, so
 `KARNI_API_CACHE` follows the environment: a project may cache in production
@@ -1302,8 +1307,11 @@ with no language model, so the same request always gives the same ranking:
    lowercase, letters and digits only, plurals made singular (`bookings` is
    `booking`, `categories` is `category`), and the words that name no app
    left out (`a`, `the`, `app`, `with`, `for`, `want` ...).
-2. Each word of the request scores 2 when one of the recipe's `use_when`
-   phrases has it, else 1 when its purpose has it.
+2. Each word of the request scores 4 when it is the recipe's own noun (its
+   name, or a `use_when` phrase of that one word, like `booking`), else 2 when
+   one of the recipe's `use_when` phrases has it, else 1 when its purpose has
+   it. What the app is outweighs a feature it uses: "a booking app ... with
+   online payments" picks `booking`, not `shop`.
 3. The recipes that score 2 or more come back, the highest first, then by
    name, at most 3, each with its score and the words that scored.
 

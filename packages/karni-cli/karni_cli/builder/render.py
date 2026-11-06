@@ -661,9 +661,6 @@ def settings_block(spec: schema.Spec, line: int) -> str:
         "# karni build: it rewrites the lines between the markers.",
     ]
     features = spec.features
-    if features.social_login:
-        rows.append("from karni.conf import env")
-        rows.append("")
     if spec.roles:
         roles: dict[str, Any] = {}
         for slug, role in spec.roles.items():
@@ -684,7 +681,7 @@ def settings_block(spec: schema.Spec, line: int) -> str:
     rows.append(f"KARNI_2FA = {features.two_factor!r}")
     rows.append(f"KARNI_EMAIL_OTP = {features.email_code_login!r}")
     providers = [
-        f'    {pystr(name)}: {{"client_ids": env.list({pystr(_client_ids(name))})}},'
+        f'    {pystr(name)}: {{"client_ids": env.list({pystr(_client_ids(name))}, default=[])}},'
         for name in features.social_login
     ]
     rows += (
@@ -1043,6 +1040,9 @@ def _render_settings(ws: Workspace, out: Output, inputs: Inputs) -> None:
     updated = splice(
         text, BLOCK_START, BLOCK_END, block, before=call_line or "\0", prefix="#", gap=True
     )
+    if inputs.spec.features.social_login:
+        # At the top with the other imports: inside the block it is an E402 in the project's lint.
+        updated = ensure_imports(ws, SETTINGS, updated, [Import("karni.conf", "env")])
     ws.write(SETTINGS, updated)
 
 

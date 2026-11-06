@@ -308,6 +308,24 @@ def test_wrong_audience(client: APIClient) -> None:
     assert_refused(post(client, "google", token), "E216", 401)
 
 
+def test_a_provider_without_client_ids_fails_only_where_it_signs_in(
+    client: APIClient, settings: Settings, make_settings: Any
+) -> None:
+    """An unset client id (env.list(..., default=[])) must not stop startup or other commands."""
+    settings.KARNI_SOCIAL_TOKEN_PROVIDERS = {"google": {"client_ids": []}}
+    validate_settings(
+        make_settings(
+            "dev",
+            DEBUG=True,
+            KARNI_AUTH_MODE="jwt",
+            KARNI_SOCIAL_TOKEN_PROVIDERS={"google": {"client_ids": []}},
+        )
+    )  # does not raise
+    response = post(client, "google", mint("google"))
+    assert_refused(response, "E216", 503)
+    assert "KARNI_SOCIAL_GOOGLE_CLIENT_IDS" in response.json()["detail"]
+
+
 def test_several_audiences_need_an_azp_that_is_ours(client: APIClient) -> None:
     aud = [idtokens.GOOGLE_CLIENT, "other-client"]
     assert_refused(post(client, "google", mint("google", aud=aud)), "E216", 401)
@@ -740,7 +758,7 @@ def test_id_tokens_work_in_jwt_mode_while_allauth_does_not(make_settings: Any) -
         ({"KARNI_SOCIAL_TOKEN_PROVIDERS": ["google"]}, "must be a dict of provider name"),
         ({"KARNI_SOCIAL_TOKEN_PROVIDERS": {"google": {}}}, "['client_ids'] = None must be"),
         (
-            {"KARNI_SOCIAL_TOKEN_PROVIDERS": {"google": {"client_ids": []}}},
+            {"KARNI_SOCIAL_TOKEN_PROVIDERS": {"google": {"client_ids": [""]}}},
             "must be a non-empty list",
         ),
         (

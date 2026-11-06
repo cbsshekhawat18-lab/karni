@@ -1,7 +1,7 @@
 ## Impersonation (karni-impersonation)
-- "Log in as user" for support. Wire it twice: MIDDLEWARE gets
-  `karni_impersonation.middleware.ImpersonationMiddleware` right after
-  AuthenticationMiddleware, and config/urls.py gets
+- "Log in as user" for support. `karni add` wires MIDDLEWARE
+  (`karni_impersonation.middleware.ImpersonationMiddleware`, after
+  AuthenticationMiddleware) and `karni remove` takes it out. config/urls.py gets
   `path("impersonation/", include("karni_impersonation.urls"))` (`karni check`
   fails without both, IMP007).
 - Starting needs the explicit `karni_impersonation.impersonationsession:impersonate`

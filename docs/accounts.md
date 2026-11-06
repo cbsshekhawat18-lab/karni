@@ -947,7 +947,11 @@ A provider's entry takes:
 - `client_ids` (required): every client id a token may be issued to. For
   Google, the web client id and each iOS and Android client id. For
   Microsoft, the application (client) id of each app registration. For
-  Apple, the service id (the web) and the bundle id (iOS).
+  Apple, the service id (the web) and the bundle id (iOS). An empty list is
+  a provider that is not configured yet: nothing else stops, and signing in
+  with it answers 503 with `E216`. `karni build` writes
+  `env.list("KARNI_SOCIAL_<PROVIDER>_CLIENT_IDS", default=[])`, so a command
+  runs before the ids are in `.env`.
 - `require_nonce` (default `False`): refuse a request without a nonce.
 - `tenants` (Microsoft, default `["common"]`): `common` (any tenant),
   `organizations` (any work or school tenant), `consumers` (personal
@@ -957,7 +961,7 @@ A provider's entry takes:
 - `class`: the dotted path of your own `IdTokenProvider` subclass, to add a
   provider or replace a built-in one.
 
-Startup validation checks every entry: a missing or empty `client_ids`, a
+Startup validation checks every entry: a missing `client_ids` key, a
 key the provider does not read, a tenant that is not a tenant id or one of
 the three names, a provider name that is not a lowercase slug or is
 allauth's (`login`, `signup`), and an unknown provider without `class`.

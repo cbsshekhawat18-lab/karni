@@ -474,7 +474,10 @@ def match(
     """Experimental. The recipes that fit ``request`` best, by plain word overlap.
 
     Each word of the request scores 2 when a ``use_when`` phrase of the recipe
-    has it, else 1 when its purpose has it. Recipes scoring at least
+    has it, else 1 when its purpose has it. A word that is the recipe's own
+    noun (its name, or a ``use_when`` phrase of that one word, such as
+    "booking") scores 4, so what the app is outweighs a feature it uses
+    ("online", "payments"). Recipes scoring at least
     ``threshold`` come back, the highest first (then by name), at most
     ``limit`` of them. An empty list means none fits: start from the blank
     start.
@@ -484,9 +487,13 @@ def match(
     for recipe in recipes:
         wanted = {word for phrase in recipe.use_when for word in words(phrase)}
         described = set(words(recipe.purpose))
+        nouns = {w for phrase in recipe.use_when if len(words(phrase)) == 1 for w in words(phrase)}
+        nouns |= set(words(recipe.name))
         score, matched = 0, []
         for word in asked:
-            if word in wanted:
+            if word in nouns:
+                score += 4
+            elif word in wanted:
                 score += 2
             elif word in described:
                 score += 1

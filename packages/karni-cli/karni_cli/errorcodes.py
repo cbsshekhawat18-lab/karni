@@ -1430,6 +1430,28 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Add the page's route to frontend/src/routes.tsx (karni make page <name> --kind blank "
         "starts one), then run karni build again. The routes are in the message.",
     ),
+    # C840-C849 scaffold, add and remove (self-test fixes)
+    _c(
+        "C841",
+        "A feature's extra is in pyproject.toml but not installed",
+        "karni build",
+        "A feature switched on in karni.yaml (two_factor needs karni[2fa], social_login needs "
+        "karni[social-token]) needs a package the project's interpreter does not have. The build "
+        "names the extra on the karni dependency and stops before the migrations, which would "
+        "fail with a bare ModuleNotFoundError.",
+        "Install the project's dependencies (uv pip install -r pyproject.toml, or docker compose "
+        "build), then run karni build again: it continues from the step that stopped.",
+    ),
+    _c(
+        "C840",
+        "karni add was given a name that is not a module",
+        "karni add",
+        "The name is neither in the module catalog nor a module installed in the project's "
+        "interpreter (a distribution with a karni.module.toml). Wiring it would put an "
+        "app into INSTALLED_APPS that Python cannot import, so every Django command would fail.",
+        "Check the spelling against `karni modules list`. A third-party module is installed "
+        "first (pip install <distribution>), then added.",
+    ),
 )
 
 

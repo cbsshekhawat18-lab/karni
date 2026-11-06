@@ -118,6 +118,23 @@ def resolve_ui_source(start: Path | None = None) -> Path | None:
     return None
 
 
+def resolve_ui_source_for(project: Path) -> Path | None:
+    """The local @karni/ui for a new ``project``, ``None``: use the npm release.
+
+    ``KARNI_UI_SRC`` is a choice, so it always wins. A checkout found only
+    because the CLI itself runs from one is used just for a project inside
+    that checkout (``examples/``), where the path is relative and portable.
+    A project anywhere else gets the registry range, never a path that
+    exists on one machine only.
+    """
+    source = resolve_ui_source()
+    if source is None or os.environ.get("KARNI_UI_SRC"):
+        return source
+    if project.resolve().is_relative_to(source.parent.parent):
+        return source
+    return None
+
+
 def ui_spec(source: Path | None, project: Path | None = None) -> str:
     """The ``@karni/ui`` dependency spec written into frontend/package.json.
 

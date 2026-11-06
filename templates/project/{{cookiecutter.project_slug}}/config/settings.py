@@ -37,6 +37,10 @@ MIDDLEWARE += [  # noqa: F821
     # "myapp.middleware.MyMiddleware",
 ]  # karni:middleware
 
+# A new project never read the deprecated X-Karni-Cache header, so it is not sent.
+# Existing projects keep sending it, with a deprecation warning, until 1.0.
+KARNI_API_CACHE_LEGACY_HEADER = env.bool("KARNI_API_CACHE_LEGACY_HEADER", default=False)  # noqa: F821
+
 # --- Project overrides -------------------------------------------------------
 # Any Django/Karni setting assigned here beats the Karni default, e.g.:
 # REST_FRAMEWORK["PAGE_SIZE"] = 25

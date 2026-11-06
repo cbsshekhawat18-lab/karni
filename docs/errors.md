@@ -631,7 +631,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A token's aud claim names the client id it was issued to. Accepting a token issued to another application would let any app that signs its users in with the same provider sign them in here too, so aud must be one of the configured client ids (401).
 
-**Fix.** Add the client id the app uses to KARNI_SOCIAL_TOKEN_PROVIDERS[&lt;provider>]['client_ids']: the web client id, and each iOS and Android client id (for Apple, the service id and the bundle id).
+**Fix.** Add the client id the app uses to KARNI_SOCIAL_TOKEN_PROVIDERS[&lt;provider>]['client_ids']: the web client id, and each iOS and Android client id (for Apple, the service id and the bundle id). An empty list means the provider is not configured: signing in with it answers 503 with this code, and every other command and request still works. The settings block karni build writes reads the ids from KARNI_SOCIAL_&lt;PROVIDER>_CLIENT_IDS.
 
 <a id="e217"></a>
 
@@ -2059,7 +2059,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A role grant of tree:&lt;path> reaches the rows under the node the user holds in the attribute named after the path's last step (tree:region and tree:store__region read user.region), as related:&lt;key> compares user.&lt;key>. The user model has no such attribute, so the role gives each member no node and no row. A tree grant never falls back to every row.
 
-**Fix.** Give the user model the attribute (a field or a property holding a node of the tree, e.g. region), or give each user their nodes with user grants of the same scope (features: user_grants, then karni.accounts.grants.grant(..., targets=[...])). Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] when user grants give the nodes on purpose.
+**Fix.** Give the user model the attribute (a field or a property holding a node of the tree, e.g. region), or give each user their nodes with user grants of the same scope (features: user_grants, then karni.accounts.grants.grant(..., targets=[...])). The check is silent while KARNI_USER_GRANTS is on, since the nodes come from the grants. Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] otherwise when something else gives the nodes on purpose.
 
 <a id="w630"></a>
 
@@ -5238,6 +5238,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A `code` page in karni.yaml is a page of the project's own: karni build leaves it alone, so a navigation entry that names it links to a route nothing serves until the project writes the page (karni.E533).
 
 **Fix.** Add the page's route to frontend/src/routes.tsx (karni make page &lt;name> --kind blank starts one), then run karni build again. The routes are in the message.
+
+<a id="c841"></a>
+
+### C841: A feature's extra is in pyproject.toml but not installed
+
+*karni command* · from `karni build`
+
+**Why Karni objects.** A feature switched on in karni.yaml (two_factor needs karni[2fa], social_login needs karni[social-token]) needs a package the project's interpreter does not have. The build names the extra on the karni dependency and stops before the migrations, which would fail with a bare ModuleNotFoundError.
+
+**Fix.** Install the project's dependencies (uv pip install -r pyproject.toml, or docker compose build), then run karni build again: it continues from the step that stopped.
+
+<a id="c840"></a>
+
+### C840: karni add was given a name that is not a module
+
+*karni command* · from `karni add`
+
+**Why Karni objects.** The name is neither in the module catalog nor a module installed in the project's interpreter (a distribution with a karni.module.toml). Wiring it would put an app into INSTALLED_APPS that Python cannot import, so every Django command would fail.
+
+**Fix.** Check the spelling against `karni modules list`. A third-party module is installed first (pip install &lt;distribution>), then added.
 
 ## Agent rules (`K`)
 

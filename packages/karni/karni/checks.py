@@ -1014,6 +1014,7 @@ def check_tree_scopes(app_configs: Any = None, **kwargs: Any) -> list[checks.Che
     """
     import fnmatch
 
+    from django.conf import settings
     from django.contrib.auth import get_user_model
 
     from karni.accounts.grants import user_key
@@ -1056,7 +1057,10 @@ def check_tree_scopes(app_configs: Any = None, **kwargs: Any) -> list[checks.Che
                         f"{path!r} to a tree model."
                     )
                 messages.append(check_error("E490", text, hint=_fix("E490"), obj=matched[0]))
-            elif not hasattr(user_model, user_key("tree", path)):
+            elif not hasattr(user_model, user_key("tree", path)) and not getattr(
+                settings, "KARNI_USER_GRANTS", False
+            ):
+                # With per-user grants on, the nodes come from the grants (the hint's own advice).
                 messages.append(
                     check_warning(
                         "W620",

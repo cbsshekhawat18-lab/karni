@@ -553,3 +553,39 @@ The karni command prints a project command's system check warnings as one line \
 full. Set KARNI_SYSTEM_CHECK_OUTPUT=full in the environment to see every warning on each run."""
 mechanical = false
 migration = "migrations/0.5.md#system-check-warnings-print-as-one-line"
+
+[[change]]
+id = "createsuperuser-roles"
+kind = "behaviour"
+symbol = "KarniUserManager.create_superuser"
+summary = """\
+A superuser made by `karni createsuperuser` (or `create_superuser`) now holds every role \
+the routed viewsets' `access` names, the roles `karni seed` gives the demo account, so it \
+passes `public-read`, `staff` and `role:` gates. A superuser created before has none of \
+them: run `karni seed` once for the demo account, or give the roles with `assign_role`. \
+Override `KarniUserManager.superuser_roles` to return another list."""
+mechanical = false
+migration = "migrations/0.5.md#a-new-superuser-holds-the-routed-roles"
+
+[[change]]
+id = "scaffold-gitignore-egg-info"
+kind = "project-files"
+symbol = ".gitignore"
+summary = """\
+The scaffold's .gitignore lists `*.egg-info/`, which `pip install -e .` creates in the \
+project root. A project made before lacks the line, so `karni upgrade` counts the folder \
+among the dirty files. Add the line."""
+mechanical = false
+migration = "migrations/0.5.md#ignore-the-egg-info-folder"
+
+[[change]]
+id = "scaffold-no-legacy-cache-header"
+kind = "project-files"
+symbol = "config/settings.py"
+summary = """\
+The scaffold's config/settings.py sets `KARNI_API_CACHE_LEGACY_HEADER` from the environment, \
+default `False`, so a new project sends only `X-Cache` and starts without the deprecation \
+warning. An existing project keeps the old default (`True`) and its warning until it adds \
+the line or sets the variable."""
+mechanical = false
+migration = "migrations/0.5.md#new-projects-start-without-the-legacy-cache-header"

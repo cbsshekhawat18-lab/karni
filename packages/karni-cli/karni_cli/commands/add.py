@@ -20,16 +20,19 @@ after installing.
 
 from __future__ import annotations
 
+import difflib
+import json
+import re
 import subprocess
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import tomlkit
 import typer
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 
-from karni_cli import agent_data
+from karni_cli import agent_data, scaffold
 from karni_cli.adapters import MODULES_DIR, sync
 from karni_cli.project import (
     CliError,
@@ -76,6 +79,88 @@ def add_dependency_text(text: str, distribution: str) -> str | None:
             continue
     deps.append(distribution)
     return tomlkit.dumps(doc)
+
+
+FRONTEND_PACKAGE = "frontend/package.json"
+
+
+def add_extra_text(text: str, extra: str, package: str = "karni") -> str | None:
+    """``pyproject.toml`` text with ``package[extra]`` in [project].dependencies, ``None`` if there.
+
+    The requirement for ``package`` keeps its version specifier and gains the
+    extra (``"karni"`` becomes ``"karni[2fa]"``). A project that does not list
+    ``package`` is left alone (``None``), as one that already names the extra.
+    """
+    doc = tomlkit.parse(text)
+    try:
+        deps = doc["project"]["dependencies"]
+    except (KeyError, TypeError):
+        return None
+    for index, dep in enumerate(list(deps)):
+        try:
+            requirement = Requirement(str(dep))
+        except InvalidRequirement:
+            continue
+        if canonicalize_name(requirement.name) != canonicalize_name(package):
+            continue
+        if extra in requirement.extras:
+            return None
+        requirement.extras = {*requirement.extras, extra}
+        deps[index] = str(requirement)
+        return tomlkit.dumps(doc)
+    return None
+
+
+def _json_indent(text: str) -> str:
+    match = re.search(r"^([ \t]+)\S", text, re.MULTILINE)
+    return match.group(1) if match else "  "
+
+
+def _dump_package(data: dict[str, Any], original: str) -> str:
+    out = json.dumps(data, indent=_json_indent(original), ensure_ascii=False)
+    return out + ("\n" if original.endswith("\n") else "")
+
+
+def ui_dependency_text(text: str, package: str, spec: str) -> str | None:
+    """``frontend/package.json`` text with ``package`` in dependencies, ``None`` if there.
+
+    The module's UI package (``@karni/charts-ui``) at ``spec``. The entry goes
+    in sorted place when the table is sorted, else last, and the file keeps
+    its indent, so ``karni remove`` gives the original bytes back.
+    """
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    deps = data.get("dependencies")
+    if deps is None:
+        deps = {}
+    if not isinstance(deps, dict) or package in deps:
+        return None
+    was_sorted = list(deps) == sorted(deps)
+    deps[package] = spec
+    data["dependencies"] = dict(sorted(deps.items())) if was_sorted else deps
+    return _dump_package(data, text)
+
+
+def _ui_package(ws: Workspace, manifest: Manifest) -> list[str]:
+    """Add the module's UI package to frontend/package.json, when the project has a frontend."""
+    package = manifest.provides.ui
+    text = ws.read(FRONTEND_PACKAGE)
+    if not package or text is None:
+        return []
+    updated = ui_dependency_text(text, package, scaffold.UI_REGISTRY_SPEC)
+    if updated is None:
+        return [f"{package}: already in {FRONTEND_PACKAGE}"]
+    ws.write(FRONTEND_PACKAGE, updated)
+    return [
+        (
+            f"{package}: added to {FRONTEND_PACKAGE} ({scaffold.UI_REGISTRY_SPEC}), "
+            "run npm install in frontend/ (or rebuild the frontend image)"
+        )
+    ]
 
 
 def _read_agents_fragment(project: Path, app_name: str) -> str | None:
@@ -177,6 +262,18 @@ def find_manifest(project: Path, module: str) -> tuple[Manifest | None, Catalog]
     return found, loaded
 
 
+def _unknown_module_message(module: str, loaded: Catalog) -> str:
+    names = sorted(m.name for m in loaded.modules)
+    close = difflib.get_close_matches(module, names, n=3, cutoff=0.5)
+    hint = f" Did you mean {', '.join(close)}?" if close else ""
+    return (
+        f"{module} is not a module Karni knows: it is not in the catalog and no installed "
+        f"distribution ships a module manifest for it.{hint} `karni modules list` shows the "
+        "names. A third-party module is installed first (pip install <distribution>), then "
+        "added. Nothing was changed."
+    )
+
+
 def _refuse_conflicts(loaded: Catalog, manifest: Manifest) -> None:
     clash = sorted(
         name
@@ -238,10 +335,11 @@ def plan_module(
     installed, so :func:`record_guidance` runs after the write.
     """
     manifest, loaded = found if found is not None else find_manifest(ws.root, module)
-    if manifest is not None:
-        _refuse_conflicts(loaded, manifest)
-    app_name = manifest.app if manifest else f"karni_{module.replace('-', '_')}"
-    distribution = manifest.distribution if manifest else f"karni-{module.replace('_', '-')}"
+    if manifest is None:
+        raise CliError(_unknown_module_message(module, loaded), code="C840")
+    _refuse_conflicts(loaded, manifest)
+    app_name = manifest.app
+    distribution = manifest.distribution
     pyproject = ws.read("pyproject.toml")
     if pyproject is None:
         raise CliError("No pyproject.toml in the project root.", code="C207")
@@ -268,11 +366,11 @@ def plan_module(
         f"{distribution}: {'added to' if with_dependency else 'already in'} pyproject.toml",
         f"{app_name}: {'wired into' if app_added else 'already in'} INSTALLED_APPS",
     ]
-    if manifest is not None:
-        settings, notes = _wire(settings, manifest)
-        lines += notes
+    settings, notes = _wire(settings, manifest)
+    lines += notes
     if settings != ws.read(SETTINGS):
         ws.write(SETTINGS, settings)
+    lines += _ui_package(ws, manifest)
     if manifest is not None and manifest.wiring.kind == "site":
         from karni_cli import kinds
 
@@ -330,7 +428,12 @@ def _site_next(project: Path) -> None:
         )
 
 
-def add(module: str = typer.Argument(..., help='Module short name, e.g. "payments"')) -> None:
+def add(
+    module: str = typer.Argument(
+        ...,
+        help='Module short name, e.g. "payments" (karni modules list). An unknown name is C840.',
+    ),
+) -> None:
     from karni_cli.generators.core import Workspace
 
     project = require_project()

@@ -715,21 +715,9 @@ class _Run:
 
     def roles(self) -> list[str]:
         """Every role a routed viewset's ``access`` names (the demo user gets them all)."""
-        from karni.api.routers import resolve_router
-        from karni.testing.performance import _role_names
+        from karni.accounts.permissions import routed_roles
 
-        found: set[str] = set()
-        for _prefix, viewset, _basename in getattr(resolve_router(), "registry", ()):
-            declaration = getattr(viewset, "access", None)
-            for slot in ("read", "write", "create"):
-                predicate = getattr(declaration, slot, None)
-                if predicate is not None:
-                    found |= _role_names(predicate)
-            for extra in getattr(viewset, "get_extra_actions", list)():
-                override = getattr(extra, "kwargs", {}).get("access")
-                if override is not None:
-                    found |= _role_names(override)
-        return sorted(found)
+        return routed_roles()
 
     # the run
 

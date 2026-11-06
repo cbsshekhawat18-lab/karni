@@ -52,8 +52,8 @@ apps = ["karni_impersonation"]
 settings = "karni_impersonation.conf:DEFAULTS"
 urls = 'path("impersonation/", include("karni_impersonation.urls"))'
 
-# karni add prints this one instead of writing it, as it always has (karni check: IMP007).
+# karni add writes it into the middleware block after Django's own list, so it follows
+# AuthenticationMiddleware (karni check: IMP007). karni remove takes it out again.
 [[wiring.middleware]]
 path = "karni_impersonation.middleware.ImpersonationMiddleware"
 why = "applies the impersonated session, after AuthenticationMiddleware"
-manual = true

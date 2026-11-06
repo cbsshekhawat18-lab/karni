@@ -183,7 +183,7 @@ def test_a_spec_builds_an_empty_project_that_passes_its_tests_and_check(harbour:
     assert "Studio 3, Session 40, Booking 200" in steps["seed"]
     assert " passed in " in steps["test"] and "failed" not in steps["test"]  # the site app's too
     assert steps["check"].split() == ["check", "ok"]
-    assert lines[-1] == "Built: the project matches karni.yaml."
+    assert lines[-1].startswith("Built: the project matches karni.yaml.")  # then the recipe note
     # Karni's code and the project's live in separate files
     karni = (root / "classes" / "karni" / "models.py").read_text()
     assert karni.startswith('"""Written by karni build from karni.yaml. Do not edit it')
@@ -246,6 +246,24 @@ def test_the_ai_module_is_added_wired_and_checked(
     assert _rows(copy, "select count(*) from karni_ai_aicall") == [(0,)]
     # karni check runs the module's checks: the test provider needs no key and no model.
     assert steps["check"].split() == ["check", "ok"], out
+
+
+def test_the_settings_block_passes_the_projects_ruff_and_needs_no_client_ids(copy: Path) -> None:
+    """The env import sits with the imports (no E402), and an unset client id stops nothing."""
+    text = (copy / "config" / "settings.py").read_text()
+    block = text[text.index("# karni:spec start") : text.index("# karni:spec end")]
+    assert "import" not in block
+    assert text.index("from karni.conf import") < text.index("# karni:spec start")
+    assert '"KARNI_SOCIAL_GOOGLE_CLIENT_IDS", default=[]' in block
+    ruff = shutil.which("ruff") or str(Path(sys.executable).parent / "ruff")
+    done = subprocess.run(
+        [ruff, "check", "--isolated", "--select", "E402,F821", "--no-cache", "config/settings.py"],
+        cwd=copy,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert "E402" not in done.stdout, done.stdout
 
 
 def test_a_second_build_writes_nothing(copy: Path) -> None:
@@ -658,7 +676,7 @@ def test_response_caching_from_the_spec(copy: Path) -> None:
     code, out = _build()
     assert code == 0, out
     settings = (copy / "config" / "settings.py").read_text()
-    assert "KARNI_API_CACHE" not in settings
+    assert "KARNI_API_CACHE =" not in settings
 
 
 def test_related_tabs_and_a_dashboard_page_are_built(copy: Path) -> None:
@@ -1137,3 +1155,51 @@ def test_a_menu_link_to_an_unwritten_code_page_is_one_clear_stop() -> None:
     )
     assert run_mod._unserved_routes(out) == ["/insights", "/players"]
     assert run_mod._unserved_routes(out + "\nx: karni.E101: other") == []
+
+
+def test_a_feature_that_needs_an_extra_names_it_and_stops_early_when_it_is_missing(
+    copy: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """two_factor and social_login need karni[2fa] and karni[social-token]: the build says so."""
+    from karni_cli.builder import run as build_run
+    from karni_cli.commands.add import add_extra_text
+    from karni_cli.spec import schema
+
+    assert add_extra_text('[project]\ndependencies = ["karni>=0.5"]\n', "2fa") == (
+        '[project]\ndependencies = ["karni[2fa]>=0.5"]\n'
+    )
+    assert add_extra_text('[project]\ndependencies = ["karni[2fa]"]\n', "2fa") is None
+    spec = schema.Spec.model_validate(
+        {
+            "version": 1,
+            "app": {"name": "x"},
+            "features": {"two_factor": True, "social_login": ["google"]},
+        }
+    )
+    assert build_run.feature_extras(spec) == ["2fa", "social-token"]
+    assert (
+        build_run.feature_extras(schema.Spec.model_validate({"version": 1, "app": {"name": "x"}}))
+        == []
+    )
+
+    monkeypatch.setattr(project_mod, "project_has_module", lambda root, name: False)
+    with pytest.raises(build_run.Stop) as stop:
+        build_run._require_extras(copy, ["2fa"])
+    assert stop.value.code == "C841" and "karni[2fa]" in stop.value.message
+    assert "uv pip install" in (stop.value.next or "")
+    monkeypatch.setattr(project_mod, "project_has_module", lambda root, name: True)
+    build_run._require_extras(copy, ["2fa"])  # installed: nothing to say
+
+
+def test_a_spec_that_names_a_recipe_says_its_domain_code_was_not_written(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The /new-app flow: karni.yaml started from a recipe in an existing project."""
+    recipe = REPO_ROOT / "packages" / "karni-cli" / "karni_cli" / "recipes" / "booking"
+    root = _project(tmp_path, monkeypatch, "Yoga Flow", (recipe / "karni.yaml").read_text())
+    code, out = _build()
+    assert code == 0, out
+    assert "recipe booking's own code" in out and "karni new --recipe booking" in out
+    assert not (root / "bookings" / "tests" / "test_capacity.py").exists()
+    _, again = _build()
+    assert "was not written" not in again  # said once, with the build that wrote the spec
