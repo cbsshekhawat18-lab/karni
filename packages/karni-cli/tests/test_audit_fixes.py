@@ -3,6 +3,7 @@ fallback, SIGTERM forwarding, the pytest hint, the upgrade baseline, ESLint in c
 
 from __future__ import annotations
 
+import contextlib
 import os
 import signal
 import subprocess
@@ -180,3 +181,33 @@ def test_frontend_lint_needs_eslint_and_uses_it(tmp_path: Path) -> None:
     assert (tmp_path / ".karni" / "local" / ".gitignore").is_file()
     assert _frontend_lint(tmp_path, cache=False) == 2
     assert (frontend / "eslint-args").read_text().split() == [".", "--max-warnings", "0"]
+
+
+@pytest.mark.parametrize("name", ["SIGTERM", "SIGALRM", "SIGHUP"])
+def test_a_killed_wrapper_leaves_no_child_behind(tmp_path: Path, name: str) -> None:
+    """F20: karni worker and karni beat left their celery child running when karni was killed."""
+    import time
+
+    pidfile = tmp_path / "child.pid"
+    child = f"import os, time; open({str(pidfile)!r}, 'w').write(str(os.getpid())); time.sleep(60)"
+    wrapper = (
+        "import sys; from pathlib import Path; from karni_cli.project import run_process; "
+        f"run_process([sys.executable, '-c', {child!r}], cwd=Path({str(tmp_path)!r}))"
+    )
+    parent = subprocess.Popen([sys.executable, "-c", wrapper])
+    try:
+        deadline = time.monotonic() + 15
+        while not pidfile.exists() and time.monotonic() < deadline:
+            time.sleep(0.1)
+        time.sleep(0.3)
+        child_pid = int(pidfile.read_text())
+        parent.send_signal(getattr(signal, name))
+        parent.wait(timeout=15)
+        time.sleep(0.2)
+        with pytest.raises(ProcessLookupError):
+            os.kill(child_pid, 0)
+    finally:
+        parent.kill()
+        if pidfile.exists():
+            with contextlib.suppress(ProcessLookupError):
+                os.kill(int(pidfile.read_text()), signal.SIGKILL)
