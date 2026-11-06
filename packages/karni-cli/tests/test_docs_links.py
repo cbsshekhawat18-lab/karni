@@ -2,7 +2,7 @@
 
 A link to a missing file or to a ``#fragment`` the target does not define is a
 dead end for the reader. mkdocs reports a missing anchor at INFO level only,
-so ``mkdocs build --strict`` passes with it; this test fails instead (A6-02).
+so ``mkdocs build --strict`` passes with it. This test fails instead (A6-02).
 
 Targets resolve against the linking file's directory. A fragment must be a
 heading's id or an explicit ``<a id>``, ``id="..."`` or ``{#id}``. Pages under
@@ -56,7 +56,7 @@ def _heading_text(markdown: str) -> str:
     text = re.sub(r"`([^`]*)`", r"\1", markdown)
     text = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", text)
     text = re.sub(r"<[^>]+>", "", text)
-    return text.replace("*", "")  # emphasis; an underscore stays (snake_case names)
+    return text.replace("*", "")  # emphasis. An underscore stays (snake_case names).
 
 
 def site_slug(heading: str) -> str:

@@ -216,7 +216,7 @@ jobs:
       # One upload per project, core first: a project whose trusted publisher
       # is missing stops the job without half-publishing the others, and
       # skip-existing makes a re-run after fixing it safe. Every upload step
-      # has the same `with:` block; .github/ci/check_release.py refuses a
+      # has the same `with:` block, and .github/ci/check_release.py refuses a
       # release whose steps differ or miss a project.
       - name: One directory per project
         run: |
