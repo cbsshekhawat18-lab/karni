@@ -813,7 +813,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "sign them in here too, so aud must be one of the configured client ids (401).",
         "Add the client id the app uses to KARNI_SOCIAL_TOKEN_PROVIDERS[<provider>]['client_ids']: "
         "the web client id, and each iOS and Android client id (for Apple, the service id and "
-        "the bundle id).",
+        "the bundle id). An empty list means the provider is not configured: signing in with it "
+        "answers 503 with this code, and every other command and request still works. The "
+        "settings block karni build writes reads the ids from KARNI_SOCIAL_<PROVIDER>_CLIENT_IDS.",
     ),
     _e(
         "E217",
