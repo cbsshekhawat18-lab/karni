@@ -1547,6 +1547,15 @@ apply codemods and list the manual steps. This file is the human summary.
   `python -m karni.links check` catches the ownerless form too.
   `docs/testing.md` opens with the four fixtures most tests use.
 
+### Fixed (module self-test)
+
+- **History on a resource with query hints.** `GET /<resource>/<id>/history/`
+  no longer applies the viewset's `select_related` hints to the audit entries,
+  so `/api/pending-changes/<id>/history/` answers 200 instead of a 500.
+- **One code and one link in `api_error`.** Passing an already formatted
+  `str(KarniError)` to `api_error` no longer repeats the code and the link
+  (approvals APR005/APR006, impersonation IMP003/IMP004).
+
 ## 0.4.0 (2026-10-22)
 
 - **PostgreSQL is the default, everywhere.** `pip install karni` now brings

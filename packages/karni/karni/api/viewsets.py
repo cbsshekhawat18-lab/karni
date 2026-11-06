@@ -771,7 +771,16 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
                 f"No history is kept for {self.get_model().__name__}: opt in with "
                 "`class Karni: audit = True` on the model."
             )
-        return self.paginated_response(history_for(self.get_object()), ChangeLogSerializer)
+        # Not paginated_response: the viewset's select_related/prefetch hints
+        # and serializer lookups name this resource's relations, and the
+        # queryset here is ChangeLog's (the entries already join the actor).
+        entries = history_for(self.get_object())
+        if not entries.ordered:
+            entries = entries.order_by(*self.ordering)
+        page = self.paginate_queryset(entries)
+        serializer = ChangeLogSerializer(page, many=True, context=self.get_serializer_context())
+        response: Response = self.get_paginated_response(serializer.data)
+        return response
 
     # aggregations (experimental, karni.aggregation)
 

@@ -119,6 +119,12 @@ def api_error(code: str, message: str, *, field: str | None = None) -> Validatio
     """
     from rest_framework.exceptions import ErrorDetail, ValidationError
 
+    # ``str(KarniError)`` is already "CODE: text See <link>": pass it straight
+    # in (``api_error(exc.code, str(exc))``) and it is not prefixed twice.
+    prefix, suffix = f"{code}: ", f" See {docs_url(code)}"
+    message = message.removeprefix(prefix)
+    if message.endswith(suffix):
+        message = message.removesuffix(suffix)
     detail = ErrorDetail(f"{code}: {_with_link(code, message)}", code=code)
     return ValidationError({field: [detail]} if field else [detail], code=code)
 
