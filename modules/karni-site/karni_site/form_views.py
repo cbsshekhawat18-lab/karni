@@ -72,11 +72,26 @@ def _safe_path(request: HttpRequest, url: str | None) -> str | None:
         return None
     parts = urlsplit(url)
     path = urlunsplit(("", "", parts.path or "/", parts.query, parts.fragment))
-    return path if path.startswith("/") and not path.startswith("//") else None
+    if not path.startswith("/") or path.startswith("//"):
+        return None
+    return None if _is_submit_url(parts.path or "/") else path
+
+
+def _is_submit_url(path: str) -> bool:
+    """Whether ``path`` is the form endpoint itself, which answers 405 to a ``GET``."""
+    try:
+        match = resolve(path)
+    except Resolver404:
+        return False
+    return match.func is submit or getattr(match.func, "__wrapped__", None) is submit
 
 
 def page_of(request: HttpRequest) -> str:
-    """The page the form was sent from: ``karni-next``, else the ``Referer``, else ``/``."""
+    """The page the form was sent from: ``karni-next``, else the ``Referer``, else ``/``.
+
+    The form's own address is never the page (a ``GET`` there is a 405): a
+    client that sends it as the ``Referer`` lands on ``/`` instead.
+    """
     return (
         _safe_path(request, request.POST.get(NEXT_FIELD))
         or _safe_path(request, request.headers.get("Referer"))

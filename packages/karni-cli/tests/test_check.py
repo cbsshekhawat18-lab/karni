@@ -174,6 +174,21 @@ def test_a_missing_frontend_install_fails_in_ci_and_with_the_flag(
     assert skipped.exit_code == 0 and "node_modules" not in skipped.output
 
 
+def test_the_build_check_step_agrees_with_karni_check(runner, tmp_path, monkeypatch) -> None:
+    """F4: `karni build` ends in run_checks, which skips a missing install like `karni check`."""
+    _fresh_frontend(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        project_mod, "run_manage", lambda *a, **k: subprocess.CompletedProcess([], 0, "ok", "")
+    )
+    passed, output = check_mod.run_checks(tmp_path)
+    assert passed and "skipped: the frontend checks" in output
+    assert "`(cd frontend && npm install)`" in output
+    assert "not installed" not in output
+    monkeypatch.setenv("CI", "true")
+    passed, output = check_mod.run_checks(tmp_path)
+    assert not passed and "--no-frontend" in output
+
+
 # the check cache and --changed (experimental)
 
 
