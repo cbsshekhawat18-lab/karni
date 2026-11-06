@@ -1598,6 +1598,9 @@ apply codemods and list the manual steps. This file is the human summary.
   does not own. karni-approvals and karni-reports now index those fields
   (migration `0002_index_filtered_fields`), and the check skips models
   outside the project's apps.
+- **An invalid page name in `karni.yaml` is `C215`.** `- About Us: blank`
+  was reported as `C235` "names the entity About Us". A page key that is
+  not a class name is now `C215`, naming the kebab-case form (`about-us`).
 
 ## 0.4.0 (2026-10-22)
 

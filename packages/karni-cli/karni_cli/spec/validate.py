@@ -51,7 +51,7 @@ from karni_cli.generators.fields import (
     relation_name,
     render_field,
 )
-from karni_cli.generators.naming import default_route
+from karni_cli.generators.naming import default_route, words
 from karni_cli.generators.pysource import pystr
 from karni_cli.project import CliError
 from karni_cli.spec import schema
@@ -1667,6 +1667,18 @@ class _Meaning:
                 continue
             seen.add(name)
             paths: list[str] = []
+            if name[:1].isupper() and not re.fullmatch(schema.ENTITY_NAME, name):
+                # Not a class name, so not an entity: say the name is wrong, not missing.
+                suggestion = "-".join(words(name))
+                example = suggestion if re.fullmatch(schema.PAGE_NAME, suggestion) else "about"
+                self.add(
+                    "C215",
+                    where,
+                    f"Page name {name!r} must be kebab-case, or an entity's PascalCase name.",
+                    f"Rename it, e.g. {example} (a named page) or the entity's class name.",
+                    key=True,
+                )
+                continue
             if name[:1].isupper():
                 entity = self.find(name)
                 if not isinstance(entity, _Entity):

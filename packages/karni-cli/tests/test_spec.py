@@ -168,6 +168,8 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C233", HEAD + "roles:\n  staff: {grants: {shop.product: all}}\n", 4),
     ("C234", SHOP + "        fields: {maker: fk:User}\nroles:\n  m: {grants: {shop.product: own:maker}}\n", 9),
     ("C235", HEAD + "pages:\n  - Product: list\n", 4),
+    # Not a class name: an invalid page name (C215), not a missing entity (C235).
+    ("C215", HEAD + "pages:\n  - home: dashboard\n  - About Us: blank\n", 5),
     ("C236", HEAD + "modules: {chat: {}}\n", 3),
     ("C237", SHOP + "        fields: {name: str}\n        groups: {Main: [name, price]}\n", 8),
     ("C237", SHOP + "        fields: {name: str}\n        groups: {A: [name], B: [name]}\n", 8),
