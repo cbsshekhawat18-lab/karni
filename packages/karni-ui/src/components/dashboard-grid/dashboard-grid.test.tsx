@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { KarniApiError } from "../../schema/client";
+import type { AggregateResult } from "../../hooks/useAggregate";
 import { ChartCard } from "./chart-card";
 import { DashboardCard, DashboardGrid, defaultDashboardCardSlots } from "./dashboard-grid";
 import { axeViolations } from "../../../tests/axe";
@@ -128,6 +129,25 @@ describe("ChartCard", () => {
     render(<ChartCard title="Orders" kind="line" series={[{ name: "A", data: [] }]} />);
     expect(screen.getByText("No data to chart yet.")).toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("draws a chart from the aggregate prop and not the empty state", () => {
+    const aggregate: AggregateResult = {
+      group_by: "year",
+      metric: "avg",
+      value: "value",
+      split: null,
+      stacked: false,
+      top: null,
+      categories: [
+        { key: 2020, label: "2020", other: false },
+        { key: 2021, label: "2021", other: false },
+      ],
+      series: [{ key: null, label: "Average", values: [1.5, 2.5] }],
+    };
+    render(<ChartCard title="Average per year" kind="line" aggregate={aggregate} />);
+    expect(screen.queryByText("No data to chart yet.")).not.toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Average per year/ })).toBeInTheDocument();
   });
 
   it("draws a chart-shaped placeholder while loading", () => {

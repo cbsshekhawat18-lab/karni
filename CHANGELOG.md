@@ -1551,6 +1551,17 @@ apply codemods and list the manual steps. This file is the human summary.
   email address, a typed code never fit and "Sign in" sent nothing. Each step
   is now its own form, and the form checks the address and the code itself, so
   a blocked or incomplete submit always shows a message.
+- **Fixed: ChartCard ignored `aggregate`.** A `ChartCard` given only the
+  `aggregate` prop (the `useAggregate` result) said "No data to chart yet."
+  while a bare `DataChart` drew. The card's empty test now reads the aggregate
+  the way the chart does.
+- **Fixed: the export buttons' accessible name did not start with their text.**
+  `Export CSV` and `Export XLSX` carried `aria-label="Export as CSV"`, which
+  fails WCAG 2.5.3 (axe `label-content-name-mismatch`). The label is gone, the
+  visible text names the button. The package's axe pass now checks this rule on
+  every story (jsdom cannot run axe's own version of it), and the icon button
+  story hides its `+` glyph from assistive technology. A project's own test
+  that finds the button by `Export as CSV` needs `Export CSV`.
 
 ## 0.4.0 (2026-10-22)
 

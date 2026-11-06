@@ -14,7 +14,7 @@
  */
 import * as React from "react";
 import { registerComponentRole } from "../../lib/roles";
-import { DataChart, type DataChartProps } from "../chart/data-chart";
+import { aggregateSeries, DataChart, type DataChartProps } from "../chart/data-chart";
 import {
   DashboardCard,
   type DashboardCardLoadingProps,
@@ -54,8 +54,12 @@ export interface ChartCardProps
   chartClassName?: string;
 }
 
-function hasValues(props: Pick<DataChartProps, "data" | "series">): boolean {
-  const series = props.series ?? (props.data !== undefined ? [{ data: props.data }] : []);
+function hasValues(props: Pick<DataChartProps, "data" | "series" | "aggregate">): boolean {
+  // DataChart reads `aggregate` first, so the empty test does too.
+  const series =
+    props.aggregate !== undefined
+      ? aggregateSeries(props.aggregate)
+      : (props.series ?? (props.data !== undefined ? [{ data: props.data }] : []));
   return series.some((entry) => entry.data.some((point) => Number.isFinite(point.value)));
 }
 
