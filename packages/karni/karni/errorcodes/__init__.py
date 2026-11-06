@@ -1406,8 +1406,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Give the user model the attribute (a field or a property holding a node of the tree, "
         "e.g. region), or give each user their nodes with user grants of the same scope "
         "(features: user_grants, then karni.accounts.grants.grant(..., targets=[...])). "
-        "Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] when user grants give the "
-        "nodes on purpose.",
+        "The check is silent while KARNI_USER_GRANTS is on, since the nodes come from the "
+        "grants. Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] otherwise when "
+        "something else gives the nodes on purpose.",
     ),
     # E570-E589 / W650-W659 taxonomy tagging (karni.taxonomy, experimental)
     _e(

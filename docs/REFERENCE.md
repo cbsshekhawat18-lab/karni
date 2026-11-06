@@ -1604,7 +1604,7 @@ karni recipes COMMAND [ARGS]...
 
 Experimental. Every recipe, or with --match the best few for a request, and the blank start.
 
---match compares the words of the request with each recipe's use_when and purpose, after lowercasing, making plurals singular and leaving out words that name no app (a, the, app, with ...). A recipe scores 2 for each word one of its use_when phrases has and 1 for each word only its purpose has. The recipes that score 2 or more come back, best first, at most 3. When none does, start from the blank start: karni.yaml with the version and the app's name, nothing else.
+--match compares the words of the request with each recipe's use_when and purpose, after lowercasing, making plurals singular and leaving out words that name no app (a, the, app, with ...). A recipe scores 2 for each word one of its use_when phrases has and 1 for each word only its purpose has. A word that is the recipe's own noun (its name, or a use_when phrase of that one word) scores 4. The recipes that score 2 or more come back, best first, at most 3. When none does, start from the blank start: karni.yaml with the version and the app's name, nothing else.
 
 ```
 karni recipes list [OPTIONS]
@@ -2830,6 +2830,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C740`](errors.md#c740) | cli | app.api_version is not a version name |
 | [`C780`](errors.md#c780) | cli | The project's karni predates suggestions |
 | [`C781`](errors.md#c781) | cli | manage.py karni_suggest failed |
+| [`C841`](errors.md#c841) | cli | A feature's extra is in pyproject.toml but not installed |
 | [`C840`](errors.md#c840) | cli | karni add was given a name that is not a module |
 
 ### Agent rules (`K`)

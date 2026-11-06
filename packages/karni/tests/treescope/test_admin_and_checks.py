@@ -80,11 +80,17 @@ class TestStartup:
         assert keys == {"testapp.listing:view"}
 
     def test_a_role_grant_whose_members_hold_no_node_is_w620(self) -> None:
-        messages = [m for m in check_tree_scopes() if m.id == "karni.W620"]
+        with override_settings(KARNI_USER_GRANTS=False):
+            messages = [m for m in check_tree_scopes() if m.id == "karni.W620"]
         # The default user model has no category and no regions attribute.
         assert messages and all("gives its members no node" in m.msg for m in messages)
         assert any("'category'" in m.msg for m in messages)
         assert any("'regions'" in m.msg for m in messages)
+
+    def test_w620_is_silent_when_user_grants_supply_the_nodes(self) -> None:
+        """The hint says "or give each user their nodes with user grants": that is not a gap."""
+        with override_settings(KARNI_USER_GRANTS=True):
+            assert [m for m in check_tree_scopes() if m.id == "karni.W620"] == []
 
     def test_tree_scope_in_a_where_checks_its_path_at_once(self) -> None:
         from karni.accounts.tree_scope import tree_scope
