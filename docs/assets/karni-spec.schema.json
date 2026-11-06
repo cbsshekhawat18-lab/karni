@@ -370,7 +370,7 @@
               "type": "null"
             }
           ],
-          "description": "One line that says what the entity is for, shown at the top of its admin list and form (class Karni: help). Without it the admin shows the model's docstring."
+          "description": "One line that says what the entity is for, shown at the top of its admin list and form (class Karni: help). Without it the admin shows no line."
         },
         "search": {
           "anyOf": [

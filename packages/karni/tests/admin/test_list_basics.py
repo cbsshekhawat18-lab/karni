@@ -468,3 +468,51 @@ def test_another_language_keeps_djangos_rule() -> None:
         assert str(Category._meta.verbose_name_plural) == "categorys"
     with translation.override("en"):
         assert str(Category._meta.verbose_name_plural) == "categories"
+
+
+# -- plurals in messages and file names -----------------------------------------------
+
+
+def test_the_plural_reaches_messages_and_export_file_names() -> None:
+    cats = [Category.objects.create(name=f"C{i}") for i in range(3)]
+    client = _client()
+    export = client.post(
+        _list(Category),
+        {"action": "export_csv", "_selected_action": [str(c.pk) for c in cats], "index": "0"},
+    )
+    assert "categories.csv" in export["Content-Disposition"]
+    page = client.post(
+        _list(Category),
+        {"action": "delete_selected", "_selected_action": [str(c.pk) for c in cats]},
+    )
+    assert "Delete 3 categories?" in page.content.decode()
+
+
+# -- AP10: a deleted row offers Restore, not Edit -------------------------------------
+
+
+def test_a_deleted_row_shows_restore_alone_and_a_live_row_edit_and_delete() -> None:
+    live, gone = _notes(2)
+    gone.delete()
+    html = _page(Note, deleted="all")
+    row_gone = html[html.index(f'aria-label="Restore {gone}"') - 400 :]
+    assert f'aria-label="Edit {gone}"' not in html
+    assert f'aria-label="Delete {gone}"' not in html
+    assert f'aria-label="Restore {gone}"' in html
+    assert f'aria-label="Edit {live}"' in html and f'aria-label="Delete {live}"' in html
+    assert row_gone
+
+
+# -- AP11: names axe wants, added by the admin's script -------------------------------
+
+
+def test_the_accessibility_script_names_select2_search_boxes_tooltips_and_blank_headings() -> None:
+    from pathlib import Path
+
+    import karni.admin as admin_package
+
+    script = Path(admin_package.__file__).parent / "static" / "karni" / "admin-a11y.js"
+    text = script.read_text()
+    assert ".select2-search__field" in text  # a label for the many-to-many search box
+    assert ".help-tooltip[aria-label]:not([role])" in text  # aria-label needs a role
+    assert "th:not([data-karni-named])" in text  # blank table headings get text

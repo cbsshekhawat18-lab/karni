@@ -592,13 +592,14 @@ class KarniAdminMixin(admin.ModelAdmin):
             deleted = soft and getattr(obj, "deleted_at", None) is not None
             name = str(obj)
             buttons: list[tuple[str, str, str, str]] = []  # (tag, url, kind, text)
-            if can_change:
-                buttons.append(("a", reverse(f"{stem}_change", args=[key]), "", _("Edit")))
-            elif can_view:
-                buttons.append(("a", reverse(f"{stem}_change", args=[key]), "", _("View")))
             if deleted and can_change:
                 buttons.append(("button", reverse(f"{stem}_restore", args=[key]), "", _("Restore")))
-            elif can_delete and not deleted:
+            elif deleted or not can_change:
+                if can_view:
+                    buttons.append(("a", reverse(f"{stem}_change", args=[key]), "", _("View")))
+            else:
+                buttons.append(("a", reverse(f"{stem}_change", args=[key]), "", _("Edit")))
+            if can_delete and not deleted:
                 buttons.append(("a", reverse(f"{stem}_delete", args=[key]), "danger", _("Delete")))
             return format_html(
                 '<span class="karni-row-actions">{}</span>',
