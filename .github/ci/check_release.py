@@ -333,8 +333,6 @@ def check_module_ranges(version: str) -> list[str]:
                 )
         if module not in UI_MODULES:
             continue  # no npm package (karni-site), so no peer range to check
-        if module not in UI_MODULES:  # karni-site ships no React package
-            continue
         peers = _package_json(f"{module}/ui").get("peerDependencies") or {}
         spec = peers.get("@karni/ui") if isinstance(peers, dict) else None
         if isinstance(spec, str) and not _caret_allows(spec, version):

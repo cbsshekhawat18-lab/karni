@@ -430,3 +430,32 @@ def test_the_release_steps_date_the_changelog() -> None:
     page = (REPO_ROOT / "docs/releasing.md").read_text()
     steps = page.split("## Cutting a release")[1].split("\n## ")[0]
     assert "(unreleased)" in steps and "(YYYY-MM-DD)" in steps
+
+
+# Module ranges on core move with every minor (A6-07, karni-storage after the bump)
+
+
+def test_every_module_range_on_core_includes_the_release() -> None:
+    version = str(_project("packages/karni")["version"])
+    assert check_release.check_module_ranges(version) == []
+
+
+def test_the_release_check_names_a_module_pinned_to_the_previous_minor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = tmp_path / "modules" / "karni-files"
+    (module / "ui").mkdir(parents=True)
+    (module / "pyproject.toml").write_text(
+        '[project]\nname = "karni-files"\nversion = "0.5.0"\n'
+        'dependencies = ["karni[s3]>=0.4,<0.5"]\n'
+    )
+    (module / "ui" / "package.json").write_text(
+        json.dumps({"name": "@karni/files-ui", "peerDependencies": {"@karni/ui": "^0.4.0"}})
+    )
+    monkeypatch.setattr(check_release, "ROOT", tmp_path)
+    monkeypatch.setattr(check_release, "MODULES", ("modules/karni-files",))
+    monkeypatch.setattr(check_release, "UI_MODULES", ("modules/karni-files",))
+    problems = check_release.check_module_ranges("0.5.0")
+    assert len(problems) == 2, problems
+    assert "'karni[s3]>=0.4,<0.5', which excludes karni 0.5.0" in problems[0]
+    assert "@karni/ui '^0.4.0', which excludes 0.5.0" in problems[1]
