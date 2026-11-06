@@ -36,6 +36,7 @@ __all__ = [
     "assign_role",
     "has_role",
     "remove_role",
+    "routed_roles",
     "user_roles",
 ]
 
@@ -50,6 +51,30 @@ def assign_role(user: AbstractBaseUser, name: str) -> Group:
     group, _created = Group.objects.get_or_create(name=name)
     user.groups.add(group)  # type: ignore[attr-defined]
     return group
+
+
+def routed_roles() -> list[str]:
+    """Every role a routed viewset's ``access`` names, sorted.
+
+    What ``karni seed`` gives the demo account and what ``create_superuser``
+    gives a new superuser (:class:`karni.accounts.managers.KarniUserManager`),
+    so the first admin passes the same ``HasRole`` gates the demo account does.
+    """
+    from karni.api.routers import resolve_router
+    from karni.testing.performance import _role_names
+
+    found: set[str] = set()
+    for _prefix, viewset, _basename in getattr(resolve_router(), "registry", ()):
+        declaration = getattr(viewset, "access", None)
+        for slot in ("read", "write", "create"):
+            predicate = getattr(declaration, slot, None)
+            if predicate is not None:
+                found |= _role_names(predicate)
+        for extra in getattr(viewset, "get_extra_actions", list)():
+            override = getattr(extra, "kwargs", {}).get("access")
+            if override is not None:
+                found |= _role_names(override)
+    return sorted(found)
 
 
 def remove_role(user: AbstractBaseUser, name: str) -> None:
