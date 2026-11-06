@@ -500,8 +500,16 @@ def _test_file(ws: Workspace, inputs: Inputs, app: str, name: str, api_text: str
     own = _project_class(ws, f"{app}/viewsets.py", f"{name}ViewSet")
     if own is not None and any(_assigns(stmt, "access") for stmt in own.body):
         cls = own  # access: code, or the project's own declaration: the test reads the project's
+    entity = inputs.spec.apps[app].entities[name]
+    options = {"owner_field": entity.owner, "scope_paths": dict(entity.scope_paths or {})}
     info = ModelInfo(
-        App(app, app, ws.path(app)), name, ws.path(f"{app}/models.py"), {}, frozenset()
+        App(app, app, ws.path(app)),
+        name,
+        ws.path(f"{app}/models.py"),
+        {},
+        # what an own or related grant reaches: the base's created_by, the spec's owner and paths
+        frozenset({"Model"} if entity.external else {"BaseModel"}),
+        {key: value for key, value in options.items() if value},
     )
     choice = test_gen.choose(ws, info, cls, None)
     text = test_gen.render(

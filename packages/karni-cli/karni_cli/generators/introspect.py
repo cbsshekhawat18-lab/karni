@@ -48,6 +48,9 @@ class ModelInfo:
     #: field name -> the called class name (``CharField``, ``ForeignKey`` …)
     fields: dict[str, str]
     bases: frozenset[str]
+    #: The ``class Karni:`` options when the caller knows them (karni build, from the spec);
+    #: ``None`` reads them from the source.
+    karni: dict[str, Any] | None = None
 
     @property
     def import_module(self) -> str:
@@ -401,6 +404,8 @@ def declared_pk(ws: Workspace) -> tuple[str, str | None]:
 
 def karni_options(ws: Workspace, model: ModelInfo) -> dict[str, Any]:
     """The model's ``class Karni:`` options, literal values read (a computed one is ``COMPUTED``)."""
+    if model.karni is not None:
+        return dict(model.karni)
     text = ws.read(model.path) or ""
     for node in parse(ws, ws.rel(model.path), text).body:
         if not (isinstance(node, ast.ClassDef) and node.name == model.name):
