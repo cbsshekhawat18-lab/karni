@@ -148,7 +148,7 @@ def allows_in(path: Path) -> dict[int, list[Allow]]:
     found: dict[int, list[Allow]] = {}
     for i, text in enumerate(_file_lines(str(path)), start=1):
         starts = [m.start() for m in _ALLOW_START.finditer(text)]
-        for begin, end in zip(starts, [*starts[1:], len(text)], strict=True):
+        for begin, end in zip(starts, [*starts[1:], len(text)][: len(starts)], strict=True):
             m = _ALLOW_RE.match(text[begin:end].rstrip())
             if m:
                 rules = tuple(r.strip() for r in m.group(1).split(",") if r.strip())

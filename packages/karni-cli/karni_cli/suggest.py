@@ -74,7 +74,7 @@ def _allows(text: str) -> list[tuple[list[str], str]]:
     """Every marker on one line as ``(rules, reason)``, as :func:`karni.suggestions.allows`."""
     starts = [m.start() for m in _ALLOW_START.finditer(text)]
     found: list[tuple[list[str], str]] = []
-    for begin, end in zip(starts, [*starts[1:], len(text)], strict=True):
+    for begin, end in zip(starts, [*starts[1:], len(text)][: len(starts)], strict=True):
         match = _ALLOW.match(text[begin:end])
         if match is not None:
             names = [n.strip() for n in match.group(1).split(",")]

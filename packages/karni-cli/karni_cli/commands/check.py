@@ -263,8 +263,22 @@ def run_checks(
     except CliError as exc:
         out.append(f"error: {exc}")
         backend = 1
-    dup = _frontend_duplication(project, out)
-    lint = _frontend_lint(project, out)
+    dup = lint = 0
+    if _frontend_not_installed(project):
+        # The same rule as `karni check`: a note outside CI, a failure in CI.
+        if is_ci():
+            out.append(
+                f"karni check: {frontend_install_message()}. Pass --no-frontend to skip them."
+            )
+            dup = 1
+        else:
+            out.append(
+                f"karni check: skipped: {frontend_install_message()}. They run once it is "
+                "installed, and a missing install fails in CI and with --frontend."
+            )
+    else:
+        dup = _frontend_duplication(project, out)
+        lint = _frontend_lint(project, out)
     return not (backend or dup or lint), "\n".join(part.rstrip() for part in out if part.strip())
 
 

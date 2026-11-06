@@ -205,7 +205,7 @@ def test_the_project_setting_turns_every_suggestion_off(
     settings.write_text("DEBUG = True\nKARNI_SUGGESTIONS = False\n")
     assert suggest_mod.turned_off(project)
     data = suggest_mod.collect(project, (True, [CORE_ITEM]))
-    assert data == {"version": 1, "enabled": False, "suggestions": []}
+    assert data == {"version": 1, "enabled": False, "suggestions": [], "problems": []}
     # the project's karni says it is off even when the line is not a plain assignment
     settings.write_text("DEBUG = True\n")
     assert suggest_mod.collect(project, (False, []))["enabled"] is False

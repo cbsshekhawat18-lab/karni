@@ -431,7 +431,7 @@ def _python_optouts(lines: list[str], found: list[tuple[Finding, list[int]]]) ->
     for i, text in enumerate(lines, start=1):
         # A line may carry several markers, each reason running to the next one.
         starts = [m.start() for m in _PY_ALLOW_START.finditer(text)]
-        for begin, end in zip(starts, [*starts[1:], len(text)], strict=True):
+        for begin, end in zip(starts, [*starts[1:], len(text)][: len(starts)], strict=True):
             m = _PY_ALLOW.match(text[begin:end].rstrip())
             if m:
                 rules = {r.strip() for r in m.group(1).split(",") if r.strip()}

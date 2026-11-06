@@ -101,7 +101,7 @@ def allows(text: str) -> list[tuple[list[str], str]]:
     """
     starts = [m.start() for m in _ALLOW_START.finditer(text)]
     found: list[tuple[list[str], str]] = []
-    for begin, end in zip(starts, [*starts[1:], len(text)], strict=True):
+    for begin, end in zip(starts, [*starts[1:], len(text)][: len(starts)], strict=True):
         match = _ALLOW.match(text[begin:end])
         if match is not None:
             found.append(
