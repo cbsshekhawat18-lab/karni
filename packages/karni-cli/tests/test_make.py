@@ -1191,6 +1191,18 @@ def test_a_related_tab_needs_a_fk_as_spec_validate_says(project: Path) -> None:
     assert 'related={["talks.speaker", "talks.cohost", "rooms"]}' in page
 
 
+def test_generated_site_pages_start_with_the_placeholder_karni_site_reports() -> None:
+    """karni check --seo asks for each page's description instead of failing on a duplicate."""
+    from karni_cli.generators.site import PLACEHOLDER_DESCRIPTION
+
+    from .conftest import require_modules
+
+    require_modules("karni-site")
+    from karni_site.checks_seo import PLACEHOLDER_DESCRIPTION as REPORTED
+
+    assert PLACEHOLDER_DESCRIPTION == REPORTED
+
+
 def test_a_dashboard_page_counts_the_routed_resources(project: Path) -> None:
     """Experimental: --kind dashboard composes DashboardGrid and ChartCard with useResourceCounts."""
     ok("make", "app", "shop")

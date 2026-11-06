@@ -101,6 +101,24 @@ def test_shared_titles_and_descriptions(projects: list[Project]) -> None:
     )
 
 
+def test_the_generated_placeholder_description_asks_to_be_written(
+    projects: list[Project],
+) -> None:
+    """Pages karni make site and karni make view write share it: one clear SITE012 each."""
+    for project in projects:
+        project.summary = checks_seo.PLACEHOLDER_DESCRIPTION
+        project.save()
+    failures = checks_seo.SeoCrawl().run()
+    assert codes(failures) == ["SITE012"]  # not SITE013 "2 pages share the description"
+    assert sorted(failures) == [
+        f"SITE012: /projects/{slug}/ still has the placeholder description karni make site "
+        "and karni make view write. Write one sentence about this page in its "
+        "{% block description %}, its row's description, or the admin's Page titles and "
+        "descriptions."
+        for slug in ("market", "wedding")
+    ]
+
+
 def test_a_hidden_page_is_not_a_duplicate(projects: list[Project]) -> None:
     for project in projects:
         project.summary = "Everything we baked."

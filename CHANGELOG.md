@@ -1582,6 +1582,11 @@ apply codemods and list the manual steps. This file is the human summary.
   It is `C830` naming the declared roles (`KARNI_ROLES` and the added modules'
   roles), instead of a test that fails when it runs. A role picked from the
   viewset's access that nobody declares gets a note.
+- **`karni check --seo` asks for each generated page's description.** The
+  pages `karni make site` and `karni make view` write share a placeholder
+  description, so the check failed with `SITE013` "2 pages share the
+  description". It now reports the placeholder as `SITE012` on each page,
+  saying where to write that page's sentence.
 
 ## 0.4.0 (2026-10-22)
 

@@ -208,6 +208,11 @@ def base_source(app: App) -> str:
     )
 
 
+#: The description a generated page starts with. ``karni check --seo`` reports it as one to
+#: write (SITE012), so it must stay karni_site.checks_seo.PLACEHOLDER_DESCRIPTION's text.
+PLACEHOLDER_DESCRIPTION = "One sentence that search engines show under this page's title."
+
+
 def page_source(app: App, title: str, description: str, body: str) -> str:
     return (
         f'{{% extends "{app.label}/base.html" %}}{{% load karni_site %}}\n'
@@ -223,7 +228,7 @@ def home_source(app: App) -> str:
     return page_source(
         app,
         "Home",
-        "One sentence that search engines show under this page's title.",
+        PLACEHOLDER_DESCRIPTION,
         "  <h1>{{ site.name }}</h1>\n"
         "  {# Text a client may change is a block, edited in the admin (karni-site). #}\n"
         '  <p>{% editable "home.intro" %}This page is rendered by Django from '

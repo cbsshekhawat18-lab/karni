@@ -203,7 +203,9 @@ SEO_CODES: Final[tuple[ErrorCode, ...]] = (
         source=f"{_SOURCE}.checks_seo",
         why=(
             'Search results show the <meta name="description"> under the title. Without one '
-            "the search engine picks a fragment of the page, often the menu or a cookie notice."
+            "the search engine picks a fragment of the page, often the menu or a cookie notice. "
+            'The placeholder karni make site and karni make view write ("One sentence that '
+            "search engines show under this page's title.\") counts as none."
         ),
         fix=(
             "Write one sentence about the page: {% block description %} in its template, the "
