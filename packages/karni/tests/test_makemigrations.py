@@ -58,6 +58,48 @@ def test_the_renames_are_written_as_one_migration_after_the_latest(
     sys.modules.pop("renames_migrations", None)
 
 
+def test_a_generated_column_reading_a_renamed_field_is_dropped_first(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """karni build's SearchField over search: makemigrations adds it back over the new name."""
+    for loaded in [name for name in sys.modules if name.startswith("renames_migrations")]:
+        monkeypatch.delitem(sys.modules, loaded)  # an earlier test's migrations, cached
+    package = _migrations(tmp_path, monkeypatch)
+    (package / "0001_initial.py").write_text(
+        "from django.db import migrations, models\n"
+        "from karni.fields import SearchField\n\n\n"
+        "class Migration(migrations.Migration):\n"
+        "    initial = True\n"
+        "    operations = [\n"
+        "        migrations.CreateModel(\n"
+        '            name="Shelf",\n'
+        "            fields=[\n"
+        '                ("id", models.BigAutoField(primary_key=True)),\n'
+        '                ("title", models.CharField(max_length=100)),\n'
+        '                ("code", models.CharField(max_length=10)),\n'
+        '                ("search", SearchField(sources=["title"])),\n'
+        "            ],\n"
+        "        ),\n"
+        "    ]\n"
+    )
+    with override_settings(MIGRATION_MODULES={"testapp": "renames_migrations"}):
+        write_renames(
+            {
+                "fields": [
+                    ["testapp", "Shelf", "code", "ref"],  # nothing generated reads it
+                    ["testapp", "Shelf", "title", "name"],
+                ]
+            }
+        )
+    text = (package / "0002_karni_renames.py").read_text()
+    assert text.count("migrations.RemoveField(") == 1
+    removed = text.index("migrations.RemoveField(")
+    assert "name='search'" in text[removed : removed + 120]
+    assert removed < text.index("old_name='title'")
+    for loaded in [name for name in sys.modules if name.startswith("renames_migrations")]:
+        sys.modules.pop(loaded)
+
+
 def test_two_latest_migrations_have_no_place_for_the_renames(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

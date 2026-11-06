@@ -205,6 +205,7 @@ def _declared(cls: Any) -> dict[str, Any]:
 
 
 def _model(model: type[models.Model], user: type) -> dict[str, Any]:
+    from karni.fields.checks import is_financial
     from karni.models import BaseModel, BigIntBaseModel
 
     inherited = _mixin_fields(model)
@@ -235,6 +236,8 @@ def _model(model: type[models.Model], user: type) -> dict[str, Any]:
         "fields": fields,
         "ordering": [_safe(item) for item in model._meta.ordering],
         "karni": _declared(getattr(model, "Karni", None)),
+        # karni.W965's judgement: karni build writes PROTECT on such a model's required fks
+        "financial": is_financial(model),
         "admin_meta": admin_meta,
         "api_meta": sorted(_declared(getattr(model, "APIMeta", None))),
     }

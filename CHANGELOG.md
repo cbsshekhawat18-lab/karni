@@ -1601,6 +1601,12 @@ apply codemods and list the manual steps. This file is the human summary.
 - **An invalid page name in `karni.yaml` is `C215`.** `- About Us: blank`
   was reported as `C235` "names the entity About Us". A page key that is
   not a class name is now `C215`, naming the kebab-case form (`about-us`).
+- **Models `karni build` writes pass Karni's own checks.** Every recipe's
+  models tripped `karni.W965` and `karni.W967` with hints naming files the
+  build owns. The build now writes a required fk of an audited or financial
+  entity as `on_delete=models.PROTECT`, and a `SearchField` over the fields
+  `search` names, which the default search provider reads through its index.
+  `karni spec export` reads both back as the spec's own.
 
 ## 0.4.0 (2026-10-22)
 

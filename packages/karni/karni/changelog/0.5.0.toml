@@ -542,3 +542,16 @@ PendingChange.action and karni-reports GeneratedReport.status, each in a new mig
 (0002_index_filtered_fields): run karni migrate after upgrading them."""
 mechanical = false
 migration = "migrations/0.5.md#index-advice-covers-the-projects-own-models"
+
+[[change]]
+id = "build-protects-and-indexes-search"
+kind = "behaviour"
+symbol = "karni build"
+summary = """\
+karni build writes a required fk of an audited or financial entity as \
+on_delete=models.PROTECT instead of CASCADE (karni.W965), and a \
+search = SearchField(sources=[...]) over the fields an entity's search names \
+(karni.W967). The next build of a spec-built project writes a migration for both. \
+Hard-deleting a row that such rows point at is then refused while they exist."""
+mechanical = false
+migration = "migrations/0.5.md#karni-build-writes-what-karnis-checks-ask"

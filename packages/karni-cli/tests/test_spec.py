@@ -19,6 +19,7 @@ import yaml
 from typer.testing import CliRunner
 
 from karni_cli import project as project_mod
+from karni_cli.builder import render as build_render
 from karni_cli.builder.render import _search_option
 from karni_cli.errorcodes import CODES
 from karni_cli.generators.naming import default_route
@@ -736,7 +737,9 @@ def test_export_eventhub(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Non
         "payments": {"checkout_validator": "events.payments.validate_checkout"}
     }
     assert {"home": "dashboard"} in data["pages"] and {"login": "login"} in data["pages"]
-    assert any("SearchField" in line for line in exported.left_out)
+    # Event's SearchField over what it searches is what `search` builds: not left out
+    assert events["Event"]["search"] == ["title", "description"]
+    assert not any("SearchField" in line for line in exported.left_out)
     assert any("/events/$id/dashboard" in line for line in exported.left_out)
 
 
@@ -937,6 +940,16 @@ def _build_from_spec(root: Path, spec: schema.Spec) -> None:
                 options.append(f"column_sets = {entity.column_sets!r}")
             if options:
                 _insert(models, name, "Karni", options)
+            if build_render.protects(name, entity, build_render._specs(entity)):
+                # karni build writes PROTECT on an audited or financial entity's fks (W965)
+                text = models.read_text()
+                start = text.index(f"class {name}(")
+                end = text.find("\nclass ", start + 1)
+                end = len(text) if end == -1 else end
+                block = text[start:end].replace(
+                    "on_delete=models.CASCADE", "on_delete=models.PROTECT"
+                )
+                models.write_text(text[:start] + block + text[end:])
             if entity.cache is not None:
                 viewsets = root / label / "viewsets.py"
                 line = (
