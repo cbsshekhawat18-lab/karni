@@ -49,18 +49,24 @@ question. A module's range on core (`karni>=0.5,<0.6` and `"@karni/ui":
    `docs/migrations/<major.minor>.md` exist and are complete. They are
    written in the pull requests that made the changes (CONTRIBUTING.md), not
    at release time.
-2. **Versions.** Set the new version in the manifest of every package in the
+2. **Date the changelog.** While a release is being built, the top section
+   of `CHANGELOG.md` reads `## X.Y.Z (unreleased)`. In the release commit,
+   replace `(unreleased)` with the release date: `## X.Y.Z (YYYY-MM-DD)`.
+   `check_release.py` refuses a tag whose section is not dated. A dry run on
+   a branch, which has no tag, accepts it. After the release, the next
+   change opens `## X.Y.Z (unreleased)` with the next version.
+3. **Versions.** Set the new version in the manifest of every package in the
    table: its `pyproject.toml` or its `package.json` (and its lockfile). A
    Python package's `__version__` reads its distribution's version, so it
    needs no edit. For a minor release, also move the module ranges on core.
-3. **Check locally:**
+4. **Check locally:**
 
    ```sh
    make test lint typecheck PYTHON=.venv/bin/python
    python .github/ci/check_release.py --tag vX.Y.Z --repo <owner>/karni
    ```
 
-4. **Tag and push:**
+5. **Tag and push:**
 
    ```sh
    git tag -s vX.Y.Z -m "Karni X.Y.Z"
@@ -82,8 +88,10 @@ The tag runs `.github/workflows/release.yml`:
    against it), every package's LICENSE equals the root LICENSE, the
    modules' ranges on core include the release, and every package is in
    every build and upload list of the release workflows, with PyPI upload
-   steps that are all alike. A dry run on a branch has
-   no tag, so the version comes from `packages/karni/pyproject.toml`.
+   steps that are all alike, and `CHANGELOG.md` opens with the release's
+   dated section. A dry run on a branch has no tag, so the version comes
+   from `packages/karni/pyproject.toml` and the section may still read
+   `(unreleased)`.
 4. **build-python**: sdists and wheels for every Python package, then
    `twine check --strict`, then the wheels installed into a clean venv where
    `karni --help` and `karni explain E104` must work. Uploaded as the

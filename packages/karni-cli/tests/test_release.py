@@ -116,6 +116,8 @@ def test_the_release_check_runs_the_version_attribute_check(
     monkeypatch.setattr(check_release, "check_repository", lambda repo: [])
     monkeypatch.setattr(check_release, "check_licenses", list)
     monkeypatch.setattr(check_release, "check_module_ranges", lambda version: [])
+    monkeypatch.setattr(check_release, "check_workflows", list)
+    monkeypatch.setattr(check_release, "check_changelog", lambda version, **options: [])
     monkeypatch.setattr(
         check_release, "check_version_attributes", lambda version: [f"stale at {version}"]
     )
@@ -377,3 +379,54 @@ def test_the_pending_publisher_table_names_every_pypi_project_once() -> None:
     rows = re.findall(r"^\s*\| PyPI Project Name \| (.+) \|$", page, re.MULTILINE)
     assert len(rows) == 1, rows
     assert re.findall(r"`([^`]+)`", rows[0]) == _release_names()[0]
+
+
+# The CHANGELOG section of a release: dated in the release commit (A6-09)
+
+
+def _changelog(root: Path, heading: str) -> None:
+    (root / "CHANGELOG.md").write_text(
+        f"# Changelog\n\nIntro.\n\n{heading}\n\n- An entry.\n\n## 0.4.0 (2026-10-22)\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("heading", "version", "allow", "problem"),
+    [
+        ("## 0.5.0 (2026-11-20)", "0.5.0", False, None),
+        ("## 0.5.0 (unreleased)", "0.5.0", True, None),
+        ("## 0.5.0 (unreleased)", "0.5.0rc1", False, None),
+        ("## 0.5.0 (unreleased)", "0.5.0", False, "still reads `## 0.5.0 (unreleased)`"),
+        ("## 0.5.0 (2026-13-01)", "0.5.0", False, "which is not a date"),
+        ("## 0.5.0 (Unreleased)", "0.5.0", True, "not this release's section"),
+        ("## 0.5.1 (unreleased)", "0.5.0", True, "not this release's section"),
+    ],
+)
+def test_the_release_check_reads_the_changelog_heading(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    heading: str,
+    version: str,
+    allow: bool,
+    problem: str | None,
+) -> None:
+    _changelog(tmp_path, heading)
+    monkeypatch.setattr(check_release, "ROOT", tmp_path)
+    problems = check_release.check_changelog(version, allow_unreleased=allow)
+    if problem is None:
+        assert problems == []
+    else:
+        assert len(problems) == 1 and problem in problems[0], problems
+        assert "YYYY-MM-DD" in problems[0]
+
+
+def test_the_changelog_opens_with_the_version_being_built() -> None:
+    """Between releases the newest section is ``## X.Y.Z (unreleased)``, X.Y.Z the manifests'."""
+    version = str(_project("packages/karni")["version"])
+    assert check_release.check_changelog(version, allow_unreleased=True) == []
+
+
+def test_the_release_steps_date_the_changelog() -> None:
+    page = (REPO_ROOT / "docs/releasing.md").read_text()
+    steps = page.split("## Cutting a release")[1].split("\n## ")[0]
+    assert "(unreleased)" in steps and "(YYYY-MM-DD)" in steps

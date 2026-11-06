@@ -124,10 +124,17 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install packaging pyyaml
-      - name: Versions, repository URLs, licences, module ranges, workflow lists
+      # A run on a branch has no tag yet, so CHANGELOG.md may still read
+      # "## X.Y.Z (unreleased)". A tag needs the release date there.
+      - name: Versions, repository URLs, licences, module ranges, workflow lists, changelog
         env:
           TAG: ${{ needs.mode.outputs.tag }}
-        run: python .github/ci/check_release.py --tag "$TAG" --repo "$GITHUB_REPOSITORY"
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          allow=()
+          [[ "$REF" == refs/tags/* ]] || allow=(--allow-unreleased)
+          python .github/ci/check_release.py --tag "$TAG" --repo "$GITHUB_REPOSITORY" "${allow[@]}"
 
   build-python:
     name: Build Python distributions

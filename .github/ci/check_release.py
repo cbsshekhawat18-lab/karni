@@ -16,7 +16,11 @@ This script refuses the release, and names the fix, when:
 - a module's range on core (``karni`` in pyproject.toml, ``@karni/ui`` in
   its ui/package.json) excludes the release;
 - a package is missing from a build or upload list in release.yml or
-  pypi-from-release.yml, or a PyPI upload step differs from the others.
+  pypi-from-release.yml, or a PyPI upload step differs from the others;
+- CHANGELOG.md does not open with the release's section, dated:
+  ``## X.Y.Z (YYYY-MM-DD)``. Until the release commit the section reads
+  ``## X.Y.Z (unreleased)``, which only a dry run without a tag
+  (``--allow-unreleased``) or a pre-release tag accepts.
 
 Usage::
 
@@ -89,6 +93,10 @@ LOOPS = (
     (".github/workflows/pypi-from-release.yml", "publish", "project", "python", "projects"),
     (".github/workflows/release.yml", "build-npm", "d", "npm", "directories"),
     (".github/workflows/release.yml", "publish-npm", "d", "npm", "directories"),
+)
+#: The heading of a CHANGELOG.md section: the version, then its date or "unreleased".
+CHANGELOG_HEADING = re.compile(
+    r"^## (?P<version>\d+\.\d+\.\d+) \((?P<date>\d{4}-\d{2}-\d{2}|unreleased)\)$"
 )
 TAG = re.compile(r"^v(?P<version>\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?)$")
 
@@ -245,6 +253,37 @@ def check_workflows() -> list[str]:
     return problems
 
 
+def check_changelog(version: str, *, allow_unreleased: bool = False) -> list[str]:
+    """CHANGELOG.md opens with this release's section, dated unless ``allow_unreleased``."""
+    import datetime
+
+    release = re.match(r"\d+\.\d+\.\d+", version)
+    assert release is not None
+    base = release[0]
+    allow_unreleased = allow_unreleased or base != version  # a pre-release (rc, a, b)
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    first = next((line for line in text.splitlines() if line.startswith("## ")), None)
+    match = CHANGELOG_HEADING.match(first or "")
+    dated = f"## {base} (YYYY-MM-DD)"
+    if match is None or match["version"] != base:
+        return [
+            f"CHANGELOG.md opens with {first!r}, not this release's section. Put "
+            f"`{dated}` (the release date) above the previous release's section."
+        ]
+    if match["date"] == "unreleased":
+        if allow_unreleased:
+            return []
+        return [
+            f"CHANGELOG.md still reads `## {base} (unreleased)`. Replace (unreleased) with "
+            f"the release date, `{dated}`, in the release commit, then re-tag."
+        ]
+    try:
+        datetime.date.fromisoformat(match["date"])
+    except ValueError:
+        return [f"CHANGELOG.md dates {base} {match['date']!r}, which is not a date (YYYY-MM-DD)."]
+    return []
+
+
 def check_repository(repo: str) -> list[str]:
     https = f"https://github.com/{repo}"
     problems = []
@@ -321,6 +360,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--tag", required=True, help="the pushed tag, e.g. v0.2.0")
     parser.add_argument("--repo", required=True, help="owner/name of the publishing repository")
+    parser.add_argument(
+        "--allow-unreleased",
+        action="store_true",
+        help="accept `## X.Y.Z (unreleased)` in CHANGELOG.md (a dry run without a tag)",
+    )
     args = parser.parse_args(argv)
     match = TAG.match(args.tag)
     if not match:
@@ -334,6 +378,7 @@ def main(argv: list[str] | None = None) -> int:
         *check_licenses(),
         *check_module_ranges(version),
         *check_workflows(),
+        *check_changelog(version, allow_unreleased=args.allow_unreleased),
     ]
     for problem in problems:
         print(f"release check: {problem}")

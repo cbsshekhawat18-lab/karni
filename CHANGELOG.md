@@ -1607,6 +1607,11 @@ apply codemods and list the manual steps. This file is the human summary.
   harness merged. Item 12 and item 15 are done, 15b has its row, and A9 is in
   progress until its runs are published. A test refuses a roadmap item the
   CHANGELOG ships while the roadmap says planned.
+- **A release cannot go out with an undated changelog.** The release check
+  now reads the top of this file: a tag needs `## X.Y.Z (YYYY-MM-DD)` for its
+  version, and a dry run on a branch accepts `## X.Y.Z (unreleased)`.
+  `docs/releasing.md` gains the step that dates the section in the release
+  commit. The 0.5.0 section stays unreleased until that commit.
 
 ## 0.4.0 (2026-10-22)
 
