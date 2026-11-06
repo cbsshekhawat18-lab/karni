@@ -124,6 +124,22 @@ def test_explain_prints_why_and_fix(code: str, fragment: str) -> None:
     assert errorcodes.docs_url(code.upper()) in result.output
 
 
+def test_explain_knows_every_module_code_without_the_module(monkeypatch) -> None:
+    """F6: `karni explain PAY004` works where the module is not installed."""
+    monkeypatch.setattr(errorcodes, "_module_entries", lambda: [])
+    monkeypatch.setattr(errorcodes, "_from_project", lambda code: None)
+    result = runner.invoke(app, ["explain", "PAY004"])
+    assert result.exit_code == 0, result.output
+    assert "STRIPE_SECRET_KEY" in result.output and errorcodes.docs_url("PAY004") in result.output
+    shipped = json.loads((PACKAGE / "module_codes.json").read_text(encoding="utf-8"))
+    docs = (REPO_ROOT / "docs" / "errors.md").read_text(encoding="utf-8")
+    listed = {
+        c.upper()
+        for c in re.findall(r'<a id="((?:ai|apr|chart|imp|pay|report|site|store)\d+)">', docs)
+    }
+    assert listed and listed <= {row["code"] for row in shipped}
+
+
 def test_explain_json() -> None:
     result = runner.invoke(app, ["explain", "E117", "--json"])
     data = json.loads(result.output)
