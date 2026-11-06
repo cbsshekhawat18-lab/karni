@@ -1586,6 +1586,11 @@ apply codemods and list the manual steps. This file is the human summary.
   filter bar used `ResourceSelect` (continents and countries mixed,
   alphabetical) for a relation to a tree model. It now uses `TreeSelect`, as
   `ResourceForm` does.
+- **Fixed: ResourceTable paged 25 rows whatever `KARNI_PAGE_SIZE` said.** The
+  table sent `page_size=25` on every request. It now sends none by default, so
+  the API's page size applies and the table reads it from the first full page.
+  `pageSize` still overrides, and so does the size menu. See
+  [migration](docs/migrations/0.5.md#resourcetable-follows-the-apis-page-size).
 
 ## 0.4.0 (2026-10-22)
 
