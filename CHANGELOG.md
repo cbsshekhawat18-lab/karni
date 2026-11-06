@@ -1567,6 +1567,11 @@ apply codemods and list the manual steps. This file is the human summary.
   rejected it (`C561`) and `karni plan` and `karni build` refused the whole
   project (`C250`). `make page` now refuses it with `C561`, `C562` or `C563`,
   by the same rule `spec validate` applies.
+- **`karni.W101` honours the marker `karni make serializer` writes.** The
+  serializer `make serializer MODEL --reason "..."` wrote tripped `W101` on
+  every Django command. `# karni: allow(redundant-serializer): <reason>` above
+  the class now silences it, as it silences the architecture rule of that
+  name. A marker without a reason still warns and says so.
 
 ## 0.4.0 (2026-10-22)
 

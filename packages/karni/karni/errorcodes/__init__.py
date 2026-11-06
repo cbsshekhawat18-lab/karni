@@ -616,7 +616,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "frontend is generated from.",
         "Delete the serializer and its serializer_class line, and tune the generated one "
         "with APIMeta on the model. Keep serializer_class only for a serializer with custom "
-        "fields or validation.",
+        "fields or validation. When the copy is deliberate, say why on the line above the "
+        "class: # karni: allow(redundant-serializer): <reason> (karni make serializer "
+        "--reason writes it).",
     ),
     _e(
         "W102",

@@ -10,6 +10,7 @@ from rest_framework import serializers
 
 from karni.api.access import Access, Authenticated
 from karni.api.routers import KarniRouter
+from karni.api.serializers import KarniModelSerializer
 from karni.api.viewsets import BaseViewSet
 from karni.checks import check_schedules, check_throttle_cache, check_viewsets
 from karni.errorcodes import docs_url
@@ -46,6 +47,42 @@ class CustomVenueViewSet(BaseViewSet):
     model = Venue
     access = Access(read=Authenticated(), write=Authenticated())
     serializer_class = CustomVenueSerializer
+
+
+# karni: allow(redundant-serializer): a partner feed that must not follow APIMeta changes
+class MarkedVenueSerializer(KarniModelSerializer):
+    """What ``karni make serializer Venue --reason "..."`` writes."""
+
+    class Meta:
+        model = Venue
+        fields = ("id", "name", "created_at", "updated_at")
+        read_only_fields = ("id", "created_at", "updated_at")
+
+
+# karni: allow(redundant-serializer):
+class ReasonlessVenueSerializer(KarniModelSerializer):
+    class Meta:
+        model = Venue
+        fields = ("id", "name")
+
+
+class MarkedVenueViewSet(BaseViewSet):
+    model = Venue
+    access = Access(read=Authenticated(), write=Authenticated())
+    serializer_class = MarkedVenueSerializer
+
+
+class ReasonlessVenueViewSet(BaseViewSet):
+    model = Venue
+    access = Access(read=Authenticated(), write=Authenticated())
+    serializer_class = ReasonlessVenueSerializer
+
+
+def marked_router() -> Any:
+    router = KarniRouter()
+    router.register("marked-venues", MarkedVenueViewSet, basename="marked-venues")
+    router.register("reasonless-venues", ReasonlessVenueViewSet, basename="reasonless-venues")
+    return router
 
 
 def serializer_router() -> Any:
@@ -104,6 +141,15 @@ def test_a_serializer_that_adds_nothing_is_flagged_and_a_custom_one_is_not() -> 
         message.msg
     )
     assert "APIMeta" in message.hint
+
+
+@override_settings(KARNI_API_ROUTER="tests.test_boot_checks.marked_router")
+def test_the_allow_marker_make_serializer_writes_silences_w101() -> None:
+    """``karni make serializer --reason`` writes the marker, so W101 must honour it."""
+    (message,) = check_viewsets()
+    assert message.id == "karni.W101" and message.obj is ReasonlessVenueViewSet
+    assert "has no reason, so it does not silence this" in message.msg
+    assert "# karni: allow(redundant-serializer): <reason>" in message.hint
 
 
 def test_schedule_problems_surface_at_boot(monkeypatch: pytest.MonkeyPatch) -> None:

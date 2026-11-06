@@ -149,7 +149,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Karni generates the serializer from the model (APIMeta tunes it). A copy that declares nothing of its own drifts from the model and from the schema the frontend is generated from.
 
-**Fix.** Delete the serializer and its serializer_class line, and tune the generated one with APIMeta on the model. Keep serializer_class only for a serializer with custom fields or validation.
+**Fix.** Delete the serializer and its serializer_class line, and tune the generated one with APIMeta on the model. Keep serializer_class only for a serializer with custom fields or validation. When the copy is deliberate, say why on the line above the class: # karni: allow(redundant-serializer): <reason> (karni make serializer --reason writes it).
 
 <a id="e102"></a>
 
