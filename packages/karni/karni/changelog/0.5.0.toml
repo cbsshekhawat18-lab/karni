@@ -518,3 +518,28 @@ a raw <details> fails the lint until it uses Accordion or carries \
 `// eslint-disable-next-line karni/no-raw-elements -- <reason>`."""
 mechanical = false
 migration = "migrations/0.5.md#a-raw-details-fails-karnino-raw-elements"
+
+[[change]]
+id = "ui-heading-levels"
+kind = "behaviour"
+symbol = "@karni/ui EmptyState, FacetPanel, ResourceDetail, TermsGate"
+summary = """\
+Headings follow the page's outline. EmptyState's title and FacetPanel's heading are an \
+h2 (were h3), ResourceDetail's title takes `headingLevel` (default 2) and its field groups \
+and Record block the next level (were h3 under any title), and TermsGate's panel is the \
+page's <main> with an h1 (`page={false}` keeps a panel inside a page that has both). \
+Set `headingLevel` where a component sits deeper in your outline. A test that finds one by \
+heading level 3 needs the new level, and a TermsGate inside a Layout needs `page={false}`."""
+mechanical = false
+migration = "migrations/0.5.md#headings-follow-the-pages-outline"
+
+[[change]]
+id = "ui-export-button-names"
+kind = "behaviour"
+symbol = "@karni/ui ResourceTable export buttons"
+summary = """\
+The export buttons are named by their visible text, `Export CSV` and `Export XLSX` (were \
+`Export as CSV` through aria-label), as WCAG 2.5.3 asks. A test or Playwright script that \
+finds the button by its old name needs the new one."""
+mechanical = false
+migration = "migrations/0.5.md#the-export-buttons-name-is-their-visible-text"

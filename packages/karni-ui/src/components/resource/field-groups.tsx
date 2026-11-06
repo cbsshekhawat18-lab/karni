@@ -14,6 +14,7 @@
  * Internal to @karni/ui. The public surface is the `fieldGroups` and
  * `groupLayout` props of ResourceForm and ResourceDetail.
  */
+import { HEADING_TAGS, type HeadingLevel } from "../../lib/heading";
 import * as React from "react";
 import { cn } from "../../lib/cn";
 import type { FieldGroupDef, FieldGroupLayout, ResourceSchema } from "../../schema/types";
@@ -101,16 +102,20 @@ export interface GroupedFieldsProps {
   active?: string;
   onActiveChange?: (key: string) => void;
   className?: string;
+  /** The level of a group's heading on a detail page (`as="section"`). Default 3. */
+  headingLevel?: HeadingLevel;
 }
 
 function PanelBody({
   panel,
   as,
   headingHidden,
+  headingLevel,
 }: {
   panel: GroupPanel;
   as: "fieldset" | "section";
   headingHidden: boolean;
+  headingLevel: HeadingLevel;
 }): React.ReactElement {
   const headingId = React.useId();
   const title = cn(
@@ -125,11 +130,12 @@ function PanelBody({
       </fieldset>
     );
   }
+  const Heading = HEADING_TAGS[headingLevel];
   return (
     <section aria-labelledby={headingId} data-karni-group={panel.label}>
-      <h3 id={headingId} className={cn(title, !headingHidden && "mb-1")}>
+      <Heading id={headingId} className={cn(title, !headingHidden && "mb-1")}>
         {panel.label}
-      </h3>
+      </Heading>
       {panel.content}
     </section>
   );
@@ -137,7 +143,7 @@ function PanelBody({
 
 /** The groups as sections one after another, or as tabs. */
 export function GroupedFields(props: GroupedFieldsProps): React.ReactElement | null {
-  const { layout, panels, as, label, active, onActiveChange, className } = props;
+  const { layout, panels, as, label, active, onActiveChange, className, headingLevel = 3 } = props;
   const [own, setOwn] = React.useState<string | undefined>(undefined);
   const first = panels[0];
   if (first === undefined) return null;
@@ -145,7 +151,13 @@ export function GroupedFields(props: GroupedFieldsProps): React.ReactElement | n
     return (
       <div className={cn(as === "fieldset" ? "space-y-8" : "space-y-6", className)}>
         {panels.map((panel) => (
-          <PanelBody key={panel.key} panel={panel} as={as} headingHidden={false} />
+          <PanelBody
+            key={panel.key}
+            panel={panel}
+            as={as}
+            headingHidden={false}
+            headingLevel={headingLevel}
+          />
         ))}
       </div>
     );
@@ -184,7 +196,7 @@ export function GroupedFields(props: GroupedFieldsProps): React.ReactElement | n
           hidden={panel.key !== value}
           className="mt-4"
         >
-          <PanelBody panel={panel} as={as} headingHidden />
+          <PanelBody panel={panel} as={as} headingHidden headingLevel={headingLevel} />
         </TabsContent>
       ))}
     </Tabs>

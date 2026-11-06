@@ -96,7 +96,7 @@ describe("OtpLoginForm", () => {
     });
     const onSuccess = vi.fn();
     mount({ onSuccess });
-    await sendTo(TEST_OTP_EMAILS[0] ?? "a@example.com");
+    await sendTo(TEST_USER.email);
     const input = screen.getByLabelText("Code");
     expect(input).toHaveValue("");
     const user = userEvent.setup();
@@ -110,7 +110,7 @@ describe("OtpLoginForm", () => {
 
   it("shows a message when the code is incomplete instead of doing nothing", async () => {
     mount();
-    await sendTo(TEST_OTP_EMAILS[0] ?? "a@example.com");
+    await sendTo(TEST_USER.email);
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Code"), "12");
     await user.click(screen.getByRole("button", { name: "Sign in" }));

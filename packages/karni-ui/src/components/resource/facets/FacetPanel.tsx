@@ -2,6 +2,7 @@
  * Experimental. FacetPanel: how many rows each node of a taxonomy counts,
  * as a list of checkboxes that filter the list (`GET /<resource>/facets/`).
  */
+import { HEADING_TAGS, type HeadingLevel } from "../../../lib/heading";
 import * as React from "react";
 import {
   useResourceFacets,
@@ -35,6 +36,8 @@ export interface FacetPanelSlots {
 
 /** Experimental. The props of FacetPanel. */
 export interface FacetPanelProps {
+  /** The panel heading's level. Default 2, the level under a page's `<h1>`. */
+  headingLevel?: HeadingLevel;
   /** The tagged resource: "products". */
   resource: string;
   /** The taxonomy key: "region" (`class Karni: taxonomies`). */
@@ -119,7 +122,18 @@ export function facetRows(nodes: readonly FacetNode[]): Array<FacetNode & { dept
  * follow) and `rollup`.
  */
 export function FacetPanel(props: FacetPanelProps): React.ReactElement {
-  const { resource, taxonomy, value, onChange, query, rollup = true, slots, className } = props;
+  const {
+    resource,
+    taxonomy,
+    value,
+    onChange,
+    query,
+    rollup = true,
+    headingLevel = 2,
+    slots,
+    className,
+  } = props;
+  const Heading = HEADING_TAGS[headingLevel];
   const label = props.label ?? capitalised(taxonomy);
   const Slots: FacetPanelSlots = { ...defaultFacetPanelSlots, ...slots };
   const headingId = React.useId();
@@ -182,9 +196,9 @@ export function FacetPanel(props: FacetPanelProps): React.ReactElement {
       className={cn("flex w-full min-w-0 flex-col gap-2 rounded-md border p-3", className)}
     >
       <div className="flex items-center justify-between gap-2">
-        <h3 id={headingId} className="text-sm font-medium">
+        <Heading id={headingId} className="text-sm font-medium">
           {label}
-        </h3>
+        </Heading>
         {value.length > 0 ? (
           <button
             type="button"

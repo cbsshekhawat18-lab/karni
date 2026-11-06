@@ -45,6 +45,11 @@ export interface TermsGatePanelProps {
   title: React.ReactNode;
   description: React.ReactNode;
   acceptLabel: React.ReactNode;
+  /**
+   * True when the gate is the whole screen: the panel is the page's `<main>`
+   * and its heading is the `<h1>`. False inside a page that has its own.
+   */
+  page: boolean;
   className?: string;
 }
 
@@ -78,6 +83,12 @@ export interface TermsGateProps {
   description?: React.ReactNode;
   /** The button's label. Default "Accept and continue". */
   acceptLabel?: React.ReactNode;
+  /**
+   * The gate replaces the whole app, so by default its panel is the page's
+   * `<main>` with an `<h1>` heading. Pass false when the gate sits inside a
+   * page that already has both (the heading is then an `<h2>`). Default true.
+   */
+  page?: boolean;
   /** Replace the panel: `Panel`. */
   slots?: Partial<TermsGateSlots>;
   /** Merged onto the default panel's root. */
@@ -123,6 +134,7 @@ function DefaultTermsPanel({
   title,
   description,
   acceptLabel,
+  page,
   className,
 }: TermsGatePanelProps): React.ReactElement {
   const id = React.useId();
@@ -140,7 +152,8 @@ function DefaultTermsPanel({
       <span className="sr-only"> (opens in a new tab)</span>
     </a>
   );
-  return (
+  const Heading = page ? "h1" : "h2";
+  const panel = (
     <section
       aria-labelledby={headingId}
       data-terms-version={terms.version}
@@ -150,9 +163,9 @@ function DefaultTermsPanel({
       )}
     >
       <div className="space-y-1">
-        <h2 id={headingId} className="text-lg font-semibold">
+        <Heading id={headingId} className="text-lg font-semibold">
           {title}
-        </h2>
+        </Heading>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       {embed ? (
@@ -188,6 +201,7 @@ function DefaultTermsPanel({
       </PendingButton>
     </section>
   );
+  return page ? <main className="px-4 py-10">{panel}</main> : panel;
 }
 
 /** Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. */
@@ -213,6 +227,7 @@ export function TermsGate({
   title = "Terms of use",
   description,
   acceptLabel = "Accept and continue",
+  page = true,
   slots,
   className,
 }: TermsGateProps): React.ReactElement {
@@ -266,6 +281,7 @@ export function TermsGate({
         )
       }
       acceptLabel={acceptLabel}
+      page={page}
       {...(className !== undefined ? { className } : {})}
     />
   );

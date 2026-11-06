@@ -12,9 +12,14 @@ describe("EmptyState", () => {
         action={<button type="button">Create event</button>}
       />,
     );
-    expect(screen.getByRole("heading", { level: 3, name: "No events yet" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "No events yet" })).toBeInTheDocument();
     expect(screen.getByText("Create your first event to get started.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create event" })).toBeInTheDocument();
+  });
+
+  it("renders the headline at the level it is given", () => {
+    render(<EmptyState title="No rows" headingLevel={4} />);
+    expect(screen.getByRole("heading", { level: 4, name: "No rows" })).toBeInTheDocument();
   });
 
   it("renders the icon slot aria-hidden", () => {

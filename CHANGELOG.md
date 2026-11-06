@@ -1567,6 +1567,13 @@ apply codemods and list the manual steps. This file is the human summary.
   `TreeSelect` button down between the mouse press and the release, so the
   click landed on nothing. The tree now opens on the mouse press, as `Select`
   does (touch and the keyboard are unchanged).
+- **Fixed: heading order and the terms screen's landmark.** `ResourceDetail`'s
+  groups, `FacetPanel` and `EmptyState` put an `<h3>` straight under the page's
+  `<h1>` (axe `heading-order`), and the `TermsGate` screen had no `<main>` and
+  no `<h1>`. The components now start at `<h2>` and take a `headingLevel`
+  (`ResourceDetail` puts its groups under its title), and `TermsGate` renders
+  a `<main>` with an `<h1>` (`page={false}` inside a page that has both). See
+  [migration](docs/migrations/0.5.md#headings-follow-the-pages-outline).
 
 ## 0.4.0 (2026-10-22)
 

@@ -35,6 +35,11 @@ function visibleText(node: Element): string {
   return parts.join(" ");
 }
 
+// The typings of axe-core omit the virtual-node form of the name computation.
+const commonsText = axe.commons.text as unknown as {
+  accessibleTextVirtual(virtualNode: unknown): string;
+};
+
 axe.configure({
   checks: [
     {
@@ -42,7 +47,7 @@ axe.configure({
       evaluate: (node: Element, _options: unknown, virtualNode: unknown) => {
         const visible = words(visibleText(node));
         if (visible === "") return true;
-        const name = words(axe.commons.text.accessibleTextVirtual(virtualNode as never));
+        const name = words(commonsText.accessibleTextVirtual(virtualNode));
         return ` ${name} `.includes(` ${visible} `);
       },
       metadata: {
@@ -64,6 +69,7 @@ axe.configure({
       metadata: {
         description: "Controls whose accessible name starts with their visible text",
         help: "The accessible name must contain the visible text",
+        helpUrl: "https://www.w3.org/WAI/WCAG22/Understanding/label-in-name.html",
       },
     },
   ],

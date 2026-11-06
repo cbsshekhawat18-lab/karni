@@ -226,6 +226,34 @@ describe("ResourceDetail", () => {
     expect(within(record).getByTestId("author")).toHaveTextContent("user 3");
   });
 
+  it("never skips a heading level under the page's h1, with a title or without", () => {
+    mockUseSchema.mockReturnValue({ data: auditedSchema, isLoading: false, error: undefined });
+    mockUseResourceItem.mockReturnValue(queryResult<Row>(auditedRecord));
+    const groups = [
+      { label: "Overview", fields: ["title", "status"] },
+      { label: "Dates", fields: ["starts_at"] },
+    ];
+    const levels = (title?: string): number[] => {
+      const { container, unmount } = render(
+        <div>
+          <h1>Events</h1>
+          <ResourceDetail resource="events" id={1} fieldGroups={groups} title={title} />
+        </div>,
+      );
+      const found = Array.from(container.querySelectorAll("h1, h2, h3, h4, h5, h6")).map((node) =>
+        Number(node.tagName.slice(1)),
+      );
+      unmount();
+      return found;
+    };
+    for (const found of [levels(), levels("Berlin Gig")]) {
+      found.forEach((level, index) => {
+        if (index > 0) expect(level - (found[index - 1] ?? 0)).toBeLessThanOrEqual(1);
+      });
+      expect(found.length).toBeGreaterThan(2);
+    }
+  });
+
   it("omits the Record group when no audit field is visible", () => {
     mockUseSchema.mockReturnValue({ data: auditedSchema, isLoading: false, error: undefined });
     mockUseResourceItem.mockReturnValue(queryResult<Row>(auditedRecord));

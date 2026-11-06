@@ -127,6 +127,31 @@ describe("FacetPanel", () => {
     expect(onChange).toHaveBeenLastCalledWith([]);
   });
 
+  it("titles the panel one level under the page's h1, or at the level it is given", async () => {
+    mount(
+      <div>
+        <h1>Products</h1>
+        <FacetPanel
+          resource="products"
+          taxonomy="regions"
+          label="Regions"
+          value={[]}
+          onChange={() => undefined}
+        />
+        <FacetPanel
+          resource="products"
+          taxonomy="regions"
+          label="Where"
+          headingLevel={3}
+          value={[]}
+          onChange={() => undefined}
+        />
+      </div>,
+    );
+    expect(await screen.findByRole("heading", { level: 2, name: "Regions" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Where" })).toBeInTheDocument();
+  });
+
   it("says when no node counts a row, and when the counts cannot load", async () => {
     mount(
       <FacetPanel
