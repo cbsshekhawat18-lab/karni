@@ -14,7 +14,10 @@ startup loads nothing else.
 
 from __future__ import annotations
 
+from importlib import metadata as _metadata
 from typing import TYPE_CHECKING, Any
+
+__version__ = _metadata.version("karni-reports")  # [project] version in pyproject.toml
 
 if TYPE_CHECKING:
     from karni_reports.registry import get_report, register, reports, unregister

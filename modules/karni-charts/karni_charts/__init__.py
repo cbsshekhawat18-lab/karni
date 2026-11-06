@@ -14,4 +14,6 @@ Experimental, like the aggregations it builds on (docs/charts.md).
 
 from __future__ import annotations
 
-__version__ = "0.4.0"
+from importlib import metadata as _metadata
+
+__version__ = _metadata.version("karni-charts")  # [project] version in pyproject.toml

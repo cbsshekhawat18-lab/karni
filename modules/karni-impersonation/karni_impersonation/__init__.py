@@ -9,3 +9,7 @@ length. The README carries the threat model.
 """
 
 from __future__ import annotations
+
+from importlib import metadata as _metadata
+
+__version__ = _metadata.version("karni-impersonation")  # [project] version in pyproject.toml

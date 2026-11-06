@@ -9,3 +9,7 @@ checker, in code. See the README.
 """
 
 from __future__ import annotations
+
+from importlib import metadata as _metadata
+
+__version__ = _metadata.version("karni-approvals")  # [project] version in pyproject.toml

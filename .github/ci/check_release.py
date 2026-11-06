@@ -20,6 +20,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import sys
@@ -91,6 +92,72 @@ def check_versions(version: str) -> list[str]:
             problems.append(
                 f'{directory}/package.json has "version": {found!r}, the tag says {version!r}. '
                 f'Set "version": "{version}" in every package (lockstep), then re-tag.'
+            )
+    return problems
+
+
+def _version_attribute(init: Path) -> tuple[str, str] | None:
+    """How ``init`` sets ``__version__`` at module level, read without importing it.
+
+    ``("distribution", "karni-ai")`` for ``_metadata.version("karni-ai")`` (or a
+    bare ``version(...)``), ``("literal", "0.5.0")`` for a string, ``("other",
+    source)`` for anything else, ``None`` when nothing sets it.
+    """
+    for node in ast.parse(init.read_text(encoding="utf-8")).body:
+        if isinstance(node, ast.Assign):
+            targets, value = node.targets, node.value
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            targets, value = [node.target], node.value
+        else:
+            continue
+        if not any(
+            isinstance(target, ast.Name) and target.id == "__version__" for target in targets
+        ):
+            continue
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            return "literal", value.value
+        func = value.func if isinstance(value, ast.Call) else None
+        called = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+        if (
+            isinstance(value, ast.Call)
+            and called == "version"
+            and len(value.args) == 1
+            and isinstance(value.args[0], ast.Constant)
+            and isinstance(value.args[0].value, str)
+        ):
+            return "distribution", value.args[0].value
+        return "other", ast.unparse(value)
+    return None
+
+
+def check_version_attributes(version: str) -> list[str]:
+    """Each Python package's ``__version__`` is its own distribution's version."""
+    problems = []
+    for directory in PYTHON_PACKAGES:
+        name = str(_pyproject(directory).get("name"))
+        init = f"{directory}/{name.replace('-', '_')}/__init__.py"
+        fix = (
+            f"Set it from the distribution: `from importlib import metadata as _metadata` and "
+            f'`__version__ = _metadata.version("{name}")`.'
+        )
+        if not (ROOT / init).is_file():
+            problems.append(f"{init} is missing: the import package of {name} is not there.")
+            continue
+        found = _version_attribute(ROOT / init)
+        if found is None:
+            problems.append(f"{init} defines no __version__. {fix}")
+        elif found[0] == "literal" and found[1] != version:
+            problems.append(
+                f"{init} has __version__ = {found[1]!r}, the tag says {version!r}. {fix}"
+            )
+        elif found[0] == "distribution" and found[1] != name:
+            problems.append(
+                f"{init} reads the version of {found[1]!r}, not of its own distribution "
+                f"{name!r}. {fix}"
+            )
+        elif found[0] == "other":
+            problems.append(
+                f"{init} sets __version__ = {found[1]}, which this check cannot read. {fix}"
             )
     return problems
 
@@ -179,6 +246,7 @@ def main(argv: list[str] | None = None) -> int:
     version = match["version"]
     problems = [
         *check_versions(version),
+        *check_version_attributes(version),
         *check_repository(args.repo),
         *check_licenses(),
         *check_module_ranges(version),

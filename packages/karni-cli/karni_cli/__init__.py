@@ -1,3 +1,5 @@
 """karni-cli — the ``karni`` command."""
 
-__version__ = "0.5.0"
+from importlib import metadata as _metadata
+
+__version__ = _metadata.version("karni-cli")  # [project] version in pyproject.toml

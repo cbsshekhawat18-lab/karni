@@ -11,4 +11,6 @@ Karni core never imports this package.
 
 from __future__ import annotations
 
-__version__ = "0.4.0"
+from importlib import metadata as _metadata
+
+__version__ = _metadata.version("karni-ai")  # [project] version in pyproject.toml

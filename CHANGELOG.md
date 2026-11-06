@@ -1557,6 +1557,12 @@ apply codemods and list the manual steps. This file is the human summary.
   `close()`). It passes on redis-py 5.0 with kombu 5.3.0 and on redis-py 8.1
   with kombu 5.7. The development profile's broker socket timeout was right on
   both and is unchanged.
+- **Every package's `__version__` is its release version.** `karni_ai` and
+  `karni_charts` said 0.4.0, `karni_payments` 0.1.0, and four modules had no
+  `__version__`. Each of the ten Python packages now reads it from its own
+  distribution (`importlib.metadata`), so `[project] version` in
+  `pyproject.toml` is the one place it is set. The release check refuses a
+  tag when a package's `__version__` is a literal that differs or is missing.
 
 ## 0.4.0 (2026-10-22)
 

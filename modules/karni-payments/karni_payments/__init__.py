@@ -11,4 +11,6 @@ SDK directly.
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+from importlib import metadata as _metadata
+
+__version__ = _metadata.version("karni-payments")  # [project] version in pyproject.toml
