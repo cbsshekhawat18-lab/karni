@@ -31,6 +31,6 @@ start.mutate({ user: "customer@example.com", reason: "ticket #7" });
   rule and the reason, and its refusal is the mutation's error).
 - `useImpersonation()` is the query behind the banner.
 
-Peer dependencies: `@karni/ui ^0.1`, React 18/19, `@tanstack/react-query` 5.
+Peer dependencies: `@karni/ui` at this package's version (every Karni package is released at one version), React 18/19, `@tanstack/react-query` 5.
 It uses tokens only, and registers the `impersonation-banner` role on `@karni/ui`'s role
 registry when it is present.

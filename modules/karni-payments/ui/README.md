@@ -11,10 +11,10 @@ Ships two components for the `karni_payments` Django app (`karni add payments`):
 ## Install
 
 ```bash
-npm install @karni/payments-ui @karni/ui @tanstack/react-query
+npm install @karni/payments-ui @karni/ui @tanstack/react-query@5
 ```
 
-Peer dependencies: `react` / `react-dom` (`^18 || ^19`), `@karni/ui` (`^0.1.0`),
+Peer dependencies: `react` / `react-dom` (`^18 || ^19`), `@karni/ui` at this package's version (every Karni package is released at one version),
 `@tanstack/react-query` (`^5`). `@karni/ui` is pre-1.0 and its 0.x minors may break,
 so keep the two packages' versions moving together.
 

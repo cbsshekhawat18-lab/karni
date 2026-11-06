@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import json
+import re
 import sys
 import tomllib
 from importlib import metadata
@@ -193,3 +195,114 @@ def test_the_release_check_job_installs_what_the_script_imports() -> None:
     release = yaml.safe_load((REPO_ROOT / ".github/workflows/release.yml").read_text())
     runs = " ".join(str(step.get("run", "")) for step in release["jobs"]["check"]["steps"])
     assert "pip install packaging pyyaml" in runs
+
+
+# The npm READMEs: an install line installs versions the peer ranges allow (A6-06)
+
+Interval = tuple[tuple[int, ...], tuple[int, ...]]
+_NO_UPPER = (10**9,)
+
+
+def _caret(spec: str) -> Interval:
+    """``[low, high)`` of an npm range part: ``^8``, ``^5.1.0``, ``8``, ``>=9.0.0``."""
+    numbers = tuple(int(n) for n in re.findall(r"\d+", spec))
+    low = (numbers + (0, 0, 0))[:3]
+    if spec.startswith(">="):
+        return low, _NO_UPPER
+    if spec.lstrip("^")[:1].isdigit() and not spec.startswith("^") and len(numbers) == 3:
+        return low, (low[0], low[1], low[2] + 1)  # an exact version
+    if low[0] == 0 and len(numbers) >= 2:
+        return low, (0, low[1] + 1, 0)
+    return low, (low[0] + 1, 0, 0)
+
+
+def _intervals(peer_range: str) -> list[Interval]:
+    return [_caret(part.strip()) for part in peer_range.split("||")]
+
+
+def _within(spec: str, peer_range: str) -> bool:
+    low, high = _caret(spec)
+    return any(lo <= low and high <= hi for lo, hi in _intervals(peer_range))
+
+
+def test_the_range_helper_reads_npm_ranges() -> None:
+    assert _within("8", "^8.0.0") and not _within("9", "^8.0.0")
+    assert _within("^5.1", "^3.0.0 || ^5.1.0") and not _within("5", "^3.0.0 || ^5.1.0")
+    assert _within("^4.6.6", "^3.23.0 || ^4.6.6") and not _within("4", "^3.23.0 || ^4.6.6")
+    assert _within("^0.5.0", "^0.5.0") and not _within("^0.4.0", "^0.5.0")
+    assert _within("10", ">=9.0.0")
+
+
+def _package_json(directory: str) -> dict[str, object]:
+    data = json.loads((REPO_ROOT / directory / "package.json").read_text())
+    assert isinstance(data, dict)
+    return data
+
+
+def _peers(directory: str) -> dict[str, str]:
+    peers = _package_json(directory).get("peerDependencies") or {}
+    assert isinstance(peers, dict)
+    return {str(name): str(spec) for name, spec in peers.items()}
+
+
+def _install_lines(readme: Path) -> list[str]:
+    lines, fenced = [], False
+    for line in readme.read_text(encoding="utf-8").splitlines():
+        if line.startswith("```"):
+            fenced = not fenced
+        elif fenced and re.match(r"^\s*npm (install|i) @karni/", line):
+            lines.append(line.strip())
+    return lines
+
+
+def _name_and_spec(word: str) -> tuple[str, str | None]:
+    scope, _, rest = word.partition("/") if word.startswith("@") else ("", "", word)
+    name, _, spec = rest.partition("@")
+    return (f"{scope}/{name}" if scope else name), (spec or None)
+
+
+NPM_DIRECTORIES: tuple[str, ...] = getattr(check_release, "NPM_PACKAGES", ())
+
+
+@pytest.mark.parametrize("directory", NPM_DIRECTORIES)
+def test_the_readme_install_line_agrees_with_the_peer_ranges(directory: str) -> None:
+    """Every peer an install line names carries a version its peer range allows.
+
+    npm installs the latest major of a package named without a version: the
+    install then fails ERESOLVE against the peer range (``@tanstack/react-table``
+    9 against ``^8``). Karni's own packages share one version, so they need none.
+    """
+    readme = REPO_ROOT / directory / "README.md"
+    name = str(_package_json(directory)["name"])
+    peers = _peers(directory)
+    if name != "@karni/ui":
+        peers = {**_peers("packages/karni-ui"), **peers}
+    lines = _install_lines(readme)
+    assert lines, f"{readme.relative_to(REPO_ROOT)} has no `npm install {name}` line"
+    problems = []
+    for line in lines:
+        words = [word for word in line.split()[2:] if not word.startswith("-")]
+        assert name in [_name_and_spec(word)[0] for word in words], line
+        for word in words:
+            package, spec = _name_and_spec(word)
+            if package == name:
+                continue
+            if package not in peers:
+                problems.append(f"{word}: not a peer of {name}")
+            elif spec is None and not package.startswith("@karni/"):
+                problems.append(f"{word}: no version, so npm picks the latest major")
+            elif spec is not None and not _within(spec, peers[package]):
+                problems.append(f"{word}: outside the peer range {peers[package]!r}")
+    assert problems == [], f"{readme.relative_to(REPO_ROOT)}: {problems}"
+
+
+@pytest.mark.parametrize("directory", NPM_DIRECTORIES[1:])
+def test_the_readme_names_no_stale_karni_ui_range(directory: str) -> None:
+    readme = (REPO_ROOT / directory / "README.md").read_text(encoding="utf-8")
+    peer = _peers(directory)["@karni/ui"]
+    stale = [
+        spec
+        for spec in re.findall(r"@karni/ui`?\s*\(?`?(\^\d[\d.]*)", readme)
+        if _intervals(spec) != _intervals(peer)
+    ]
+    assert stale == [], f"{directory}/README.md names @karni/ui {stale}, package.json {peer!r}"

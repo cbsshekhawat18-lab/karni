@@ -21,10 +21,10 @@ may change in a minor release, with a CHANGELOG entry.
 ## Install
 
 ```bash
-npm install @karni/storage-ui @karni/ui @tanstack/react-query react-hook-form
+npm install @karni/storage-ui @karni/ui @tanstack/react-query@5 react-hook-form@7
 ```
 
-Peer dependencies: `react` / `react-dom` (`^18 || ^19`), `@karni/ui` (`^0.4.0`),
+Peer dependencies: `react` / `react-dom` (`^18 || ^19`), `@karni/ui` at this package's version (every Karni package is released at one version),
 `@tanstack/react-query` (`^5`), `react-hook-form` (`^7`).
 
 ## A form with a protected file

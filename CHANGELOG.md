@@ -1570,6 +1570,13 @@ apply codemods and list the manual steps. This file is the human summary.
   `karni-charts`, and a `PYPI_API_TOKEN` secret did not reach them. All ten
   steps are now alike, and the release check refuses a tag when an upload
   step differs or a package is missing from a build or upload list.
+- **The npm install lines in the UI READMEs install what the peers allow.**
+  `@karni/ui`'s README installed `@tanstack/react-table` without a version, so
+  npm picked 9 against the `^8` peer range, and the next install failed with
+  ERESOLVE. The install lines of `@karni/ui`, `@karni/ai-ui`,
+  `@karni/payments-ui` and `@karni/storage-ui` now name a version inside each
+  peer range, and the module UI READMEs no longer name an old `@karni/ui`
+  range. A test holds every README's install line to its `package.json` peers.
 
 ## 0.4.0 (2026-10-22)
 
