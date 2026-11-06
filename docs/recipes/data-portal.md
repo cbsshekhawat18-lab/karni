@@ -114,7 +114,9 @@ export default function Charts() {
 - `portal/seeds.py`: the region and sector trees, a dataset per topic and
   kind tagged with the countries it covers, a value per dataset, country and
   year, and the saved chart. About 140 lines beyond the stubs. The indicators
-  are written in bulk, so a larger demo is a larger `seed` count.
+  are written in bulk, so a larger demo is a larger `seed` count. The
+  seeded slugs are the slugs of the names (`europe`, `france`,
+  `air-annual-survey`), so an import file names a row as it reads.
 - `portal/tests/test_portal.py`: the tree scope limits an analyst to the
   granted regions and a grant ends, the aggregate and the saved chart under
   that scope, the dashboard's counts, search, and an import by `label` and
