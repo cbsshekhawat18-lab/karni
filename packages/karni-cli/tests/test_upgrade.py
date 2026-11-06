@@ -144,6 +144,9 @@ def test_selection_between_versions() -> None:
         "pk-filters-not-derived",
         "import-ids-are-explicit",
         "agent-files-new-app",
+        "createsuperuser-roles",
+        "scaffold-gitignore-egg-info",
+        "scaffold-no-legacy-cache-header",
         "hand-written-tree-rule",
         "api-cache-header-renamed",
         "api-cache-shared-by-role",
@@ -264,7 +267,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     result = runner.invoke(app, ["upgrade"])
     assert result.exit_code == 0, result.output
     out = result.output
-    assert "karni 0.1.0 -> 0.5.0: 73 change(s), 6 mechanical, 67 manual" in out
+    assert "karni 0.1.0 -> 0.5.0: 76 change(s), 6 mechanical, 70 manual" in out
 
     views = (git_project / "library" / "views.py").read_text()
     assert (
