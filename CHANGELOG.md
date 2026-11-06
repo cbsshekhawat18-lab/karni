@@ -1547,6 +1547,17 @@ apply codemods and list the manual steps. This file is the human summary.
   `python -m karni.links check` catches the ownerless form too.
   `docs/testing.md` opens with the four fixtures most tests use.
 
+### Fixed (packaging and release self-test)
+
+- **The broker timeout test runs on redis-py 8 and kombu 5.7.** redis-py 8
+  opens every connection with `HELLO 3`, which the test's fake Redis answered
+  with `+OK`, and kombu 5.7 ships type hints, so mypy saw the test reach into
+  private channel attributes. The fake server now speaks RESP2 and RESP3, and
+  the test drives kombu as a worker does (a consumer, an event loop tick, then
+  `close()`). It passes on redis-py 5.0 with kombu 5.3.0 and on redis-py 8.1
+  with kombu 5.7. The development profile's broker socket timeout was right on
+  both and is unchanged.
+
 ## 0.4.0 (2026-10-22)
 
 - **PostgreSQL is the default, everywhere.** `pip install karni` now brings
