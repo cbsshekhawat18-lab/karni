@@ -1,5 +1,5 @@
 ---
-description: "Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
+description: "Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
 ---
 
 # Karni
@@ -7,8 +7,8 @@ description: "Karni is an open-source Django + React framework for building with
 Karni is an open-source Django + React framework for building with AI coding
 agents. Your agent writes only your domain. The API, admin, permissions and
 React screens come from a package you upgrade, not code it rewrites in each
-project. One rule set covers Claude Code, Cursor and Copilot. The build
-fails when an agent hand-writes what Karni ships.
+project. One rule set covers every coding agent. The build fails when an
+agent hand-writes what Karni ships.
 
 ```python
 class Event(BaseModel):
@@ -39,7 +39,7 @@ records what a large data app still needs in its
 |---|---|
 | See it run in ten minutes | [Quickstart](quickstart.md) |
 | Build a real app step by step | [Tutorial: EventHub](tutorial.md) |
-| Drive Karni from Claude Code, Cursor or another agent | [Building with an AI agent](guide/with-ai.md), [Karni for AI agents](agents.md) |
+| Drive Karni from a coding agent | [Building with an AI agent](guide/with-ai.md), [Karni for AI agents](agents.md) |
 | Build by hand, command by command | [Building without one](guide/without-ai.md) |
 | Put it in production on a server | [Deploying to a server](deploy.md) |
 | Look something up | the Reference section: [Models](models.md), [API](api.md), [the karni command](cli.md), [Error codes](errors.md), … |

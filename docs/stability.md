@@ -255,8 +255,8 @@ Experimental now:
   types in `@karni/ui`.
 - [AI extraction](ai-extraction.md): the karni-ai module (`karni_ai`, its
   `POST /api/ai/extract/` endpoint and answer, `/api/ai/`, the `AICall`
-  model, the `KARNI_AI_*` settings and the providers' `ANTHROPIC_*` and
-  `OPENAI_*` settings, the `ai.extract` throttle scope, `karni_ai.providers`,
+  model, the `KARNI_AI_*` settings and each provider's key and model
+  settings, the `ai.extract` throttle scope, `karni_ai.providers`,
   `karni_ai.extraction`, `karni_ai.schema`, `karni_ai.sources`,
   `karni_ai.services.fetch`, `karni_ai.usage`) and `@karni/ai-ui`
   (`ExtractButton`, `ExtractPreview`, `useExtract`).

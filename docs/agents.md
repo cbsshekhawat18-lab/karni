@@ -407,7 +407,7 @@ Install Karni module: <module> (e.g. payments)
 5. Rebuild/install: `docker compose build` (or `uv pip install -r pyproject.toml` in a host venv), then `make migrate`. Run `karni add <module>` again if it asked you to.
 6. Run `karni context`. The module must appear under MODULES, and `karni rules` now includes its guidance.
 7. Configure only the settings the module documents. Do not patch its internals.
-8. For `ai` (rows read from text, a web page or a PDF by a language model): the provider goes in karni.yaml (`modules: ai: {provider: ...}`), the API key and the model name in .env only (`ANTHROPIC_*` or `OPENAI_*`), and `karni check` fails until they are set. Use the `test` provider in tests and CI.
+8. For `ai` (rows read from text, a web page or a PDF by a language model): the provider goes in karni.yaml (`modules: ai: {provider: ...}`), the API key and the model name in .env only (`karni modules show ai` names them), and `karni check` fails until they are set. Use the `test` provider in tests and CI.
 9. To take it out again: `karni remove <module>` (it never drops the tables).
 10. To create a new reusable module instead: `karni make module <name>` (modules/karni-<name>/, docs/modules.md).
 

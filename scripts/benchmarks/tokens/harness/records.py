@@ -41,7 +41,7 @@ class RunRecord:
     success: bool = False
     error: str = ""
     karni_commit: str = ""
-    claude_version: str = ""
+    agent_version: str = ""
 
     def finish(self) -> None:
         """Set ``success``: the run ended by itself, every test passed and the frontend builds."""

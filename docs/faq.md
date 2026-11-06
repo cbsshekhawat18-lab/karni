@@ -10,7 +10,7 @@ of the page.
 
 ## What is Karni?
 
-Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships.
+Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.
 
 ## How is Karni different from a Django boilerplate or starter template?
 
@@ -23,13 +23,11 @@ mechanical changes and lists the rest by file and line.
 
 ## Which AI coding tools does Karni work with?
 
-A new Karni project contains the instruction files that Claude Code, Cursor,
-GitHub Copilot, Windsurf, Cline, Aider, Junie and the tools that read
-`AGENTS.md` (Codex, Gemini CLI, Zed and others) look for, all generated from
-one rule set by `karni rules sync`. `karni mcp` offers Karni's commands as MCP
+Any coding agent that reads `AGENTS.md`. A new Karni project contains
+`AGENTS.md`, generated from one rule set by `karni rules sync`, with the
+procedures for routine tasks. `karni mcp` offers Karni's commands as MCP
 tools, and `karni context` prints a compact summary of the project for an
-agent. The [agents guide](agents.md) lists every adapter and the file each
-tool reads.
+agent. The [agents guide](agents.md) says what AGENTS.md carries.
 
 ## Does Karni work without AI coding tools?
 

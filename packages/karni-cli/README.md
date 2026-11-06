@@ -51,10 +51,9 @@ subprocess, so the CLI itself never imports Django.
 - `karni rules [--explain CODE | --procedure NAME | --check FILE... | --json]`:
   Karni's conventions from `karni.agent.rules` (no Django needed), and
   static single-file checks (exit 1 on violations).
-- `karni rules sync [--check] [--force]`: regenerate the thin agent adapters
-  (AGENTS.md, CLAUDE.md, Cursor, Windsurf, Copilot, Cline, Aider, Junie) and
-  slash commands from `karni_cli/agent_adapters.toml`. `--check` is the CI
-  staleness gate.
+- `karni rules sync [--check] [--force]`: regenerate AGENTS.md, the agent
+  instructions with the procedures for routine tasks, from
+  `karni_cli/agent_adapters.toml`. `--check` is the CI staleness gate.
 - `karni mcp`: context, rules and check as MCP tools
   (`pip install 'karni-cli[mcp]'`).
 - `karni upgrade [--to VERSION] [--from VERSION] [--dry-run] [--allow-dirty] [--list]`

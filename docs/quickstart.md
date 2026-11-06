@@ -182,7 +182,7 @@ domain, and the framework did the rest. From here:
 - The [tutorial](tutorial.md) builds the reference app, EventHub, with
   payments, a Celery email and four roles, in 617 lines of project code.
 - [Building with an AI agent](guide/with-ai.md) shows the same workflow
-  driven by Claude Code or Cursor.
+  driven by a coding agent.
 - [Building without one](guide/without-ai.md) lists every `karni make`
   command.
 

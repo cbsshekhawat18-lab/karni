@@ -1,7 +1,7 @@
 {
   "name": "@karni/storage-ui",
   "version": "0.5.0",
-  "description": "React components for the Karni storage module: protected uploads straight to the bucket, download links and images. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships.",
+  "description": "React components for the Karni storage module: protected uploads straight to the bucket, download links and images. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.",
   "keywords": [
     "react",
     "django",

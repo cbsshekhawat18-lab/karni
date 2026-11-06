@@ -1,4 +1,4 @@
-"""``karni rules`` — the conventions, file checks, and adapter sync.
+"""``karni rules`` — the conventions, file checks, and AGENTS.md sync.
 
     karni rules                       conventions (code + one line each)
     karni rules --explain K101        full statement, rationale, fix, enforcement
@@ -6,7 +6,7 @@
     karni rules --check FILE...       static violations with fixes (exit 1 if any)
     karni rules --json                the raw data (rules, procedures)
     karni rules sync [--check] [--force]
-                                      regenerate AGENTS.md, CLAUDE.md, ... (CI: --check)
+                                      regenerate AGENTS.md (CI: --check)
 
 Works without Django and, except ``sync``, without a project; inside one,
 ``karni.rules.py`` overrides and ``.karni/modules/`` guidance apply.

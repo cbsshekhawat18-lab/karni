@@ -1,6 +1,6 @@
 """One way to deprecate a Karni public API.
 
-Karni's policy (CLAUDE.md): a public API change warns for one minor release
+Karni's policy (CONTRIBUTING.md): a public API change warns for one minor release
 and is removed at the next major. Every deprecated name calls
 :func:`warn_deprecated`, so every warning has the same shape: what is
 deprecated, its replacement, the Karni version that removes it, and a link

@@ -158,8 +158,8 @@ settings its manifest lists, lowercased and without its prefix, with the
 type the manifest gives it: `payments: {provider: stripe}` is
 `KARNI_PAYMENTS_PROVIDER = "stripe"`. Credentials such as
 `STRIPE_SECRET_KEY` are never options: they stay in `.env`, and so do
-`ai`'s key and model name (`ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`, or the
-`OPENAI_*` pair). A kind with a site (`site`, `site+app`) has the `site`
+`ai`'s key and model name (the provider's pair, listed in
+[AI extraction](ai-extraction.md)). A kind with a site (`site`, `site+app`) has the `site`
 module without listing it. What a
 listed module or feature requires must be listed too, and two that conflict
 cannot both be (`C324`).

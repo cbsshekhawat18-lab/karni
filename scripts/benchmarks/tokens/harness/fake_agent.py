@@ -1,8 +1,8 @@
-"""A stand-in for the claude binary, to test the harness without spending any usage.
+"""A stand-in for the agent CLI, to test the harness without spending any usage.
 
 It prints stream-json lines shaped like the real ones and writes files in its working
-directory. FAKE_CLAUDE_SLEEP=<seconds> makes it hang first (for the time limit),
-FAKE_CLAUDE_EXIT=<code> sets its exit status, FAKE_CLAUDE_ARGV=<file> records its arguments.
+directory. FAKE_AGENT_SLEEP=<seconds> makes it hang first (for the time limit),
+FAKE_AGENT_EXIT=<code> sets its exit status, FAKE_AGENT_ARGV=<file> records its arguments.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ def emit(event: dict[str, object]) -> None:
 
 
 def main(argv: list[str]) -> int:
-    log = os.environ.get("FAKE_CLAUDE_ARGV")
+    log = os.environ.get("FAKE_AGENT_ARGV")
     if log:
         Path(log).write_text(json.dumps(argv))
     emit({"type": "system", "subtype": "init", "model": "fake", "tools": ["Write", "Edit", "Bash"]})
@@ -35,7 +35,7 @@ def main(argv: list[str]) -> int:
         },
     })  # fmt: skip
     Path("fake_note.txt").write_text(note)
-    time.sleep(float(os.environ.get("FAKE_CLAUDE_SLEEP", "0")))
+    time.sleep(float(os.environ.get("FAKE_AGENT_SLEEP", "0")))
     emit({
         "type": "assistant",
         "message": {
@@ -56,7 +56,7 @@ def main(argv: list[str]) -> int:
         "usage": {"input_tokens": 15, "output_tokens": 27,
                   "cache_read_input_tokens": 250, "cache_creation_input_tokens": 50},
     })  # fmt: skip
-    return int(os.environ.get("FAKE_CLAUDE_EXIT", "0"))
+    return int(os.environ.get("FAKE_AGENT_EXIT", "0"))
 
 
 if __name__ == "__main__":

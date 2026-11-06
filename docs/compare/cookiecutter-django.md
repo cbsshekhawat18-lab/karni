@@ -49,9 +49,9 @@ assembling a project by hand.
   Karni upgrades like any dependency, and `karni upgrade` applies code changes
   with codemods ([stability promise](../stability.md)).
 - **AI coding agents.** A generated cookiecutter-django project has no
-  AGENTS.md or CLAUDE.md. A Karni project ships instruction files for eight
-  agent tools from one rule set, an MCP server and lint rules that fail when
-  an agent hand-writes what Karni provides ([agents](../agents.md)).
+  agent instructions file. A Karni project ships AGENTS.md from one rule set,
+  an MCP server and lint rules that fail when an agent hand-writes what Karni
+  provides ([agents](../agents.md)).
 
 ## Who should pick which
 
@@ -75,7 +75,7 @@ framework is an acceptable risk.
 | Row-level permissions | written by hand | declared once per resource |
 | Upgrading an existing project | no official path (cruft or Copier) | `karni upgrade` with codemods |
 | Deployment | Docker + Traefik, Heroku, PythonAnywhere, cloud storage options | Docker Compose on one server, booted in CI |
-| AI agent files in the project | none | AGENTS.md, CLAUDE.md and six more, MCP server |
+| AI agent files in the project | none | AGENTS.md from one rule set, MCP server |
 | Community | Discord, Stack Overflow tag, awesome-django | none yet |
 | Licence | BSD-3-Clause | Apache-2.0 |
 
