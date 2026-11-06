@@ -1573,6 +1573,12 @@ apply codemods and list the manual steps. This file is the human summary.
   slug is the import key. A demo row now leaves it to the field: `europe`,
   with `-2` only when two names clash. A seeder or explicit factory that
   declares the slug wins, and a volume run keeps the numbered values.
+- **An import suggests every column a remembered mapping does not name.**
+  Once a user had confirmed a mapping for a model, the next upload took that
+  mapping whole, so a new column was left unmapped even when its header was
+  the field's name. A required to-many column (`tags`) then failed every
+  create with "This field is required.". The remembered choices now come
+  first and every other header gets the suggestion.
 
 ## 0.4.0 (2026-10-22)
 

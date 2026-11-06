@@ -84,13 +84,11 @@ def create_job(
             code="E803",
         )
     importer = Importer(model, request)
-    remembered = {
-        header: field
-        for header, field in ColumnMapping.remembered(user, model).items()
-        if header in headers and field
-    }
-    suggested = importer.suggest_mapping(headers)
-    chosen = dict(mapping) if mapping else (remembered or suggested)
+    chosen = (
+        dict(mapping)
+        if mapping
+        else _proposed_mapping(importer, headers, ColumnMapping.remembered(user, model))
+    )
     job = ImportJob(
         content_type=ContentType.objects.get_for_model(model),
         original_name=str(getattr(upload, "name", "") or "upload")[:255],
@@ -103,6 +101,37 @@ def create_job(
         job.file.save(f"{job.pk}.{fmt}", ContentFile(content), save=False)
         job.save()
     return job
+
+
+def _proposed_mapping(
+    importer: Importer, headers: list[str], remembered: dict[str, Any]
+) -> dict[str, str]:
+    """The mapping a new job starts with: the user's last choice, then the suggestion.
+
+    A header the remembered mapping names keeps its choice there, an empty one
+    included (the user left that column out). Every other header gets the
+    suggestion by name or label (:meth:`Importer.suggest_mapping`), unless a
+    remembered header already took that field. A remembered field the role
+    can no longer write is dropped.
+    """
+    allowed = {spec.name for spec in importer.importable()}
+    known = {
+        header: str(remembered[header] or "")
+        for header in headers
+        if header in remembered and (not remembered[header] or remembered[header] in allowed)
+    }
+    taken = {name for name in known.values() if name}
+    suggested = importer.suggest_mapping(headers)
+    chosen: dict[str, str] = {}
+    for header in headers:
+        if header in known:
+            chosen[header] = known[header]
+            continue
+        name = suggested.get(header, "")
+        chosen[header] = name if name and name not in taken else ""
+        if chosen[header]:
+            taken.add(name)
+    return chosen
 
 
 def importer_for(job: ImportJob, request: Any) -> Importer:

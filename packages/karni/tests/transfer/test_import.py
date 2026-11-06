@@ -83,7 +83,28 @@ class TestUploadAndMapping:
         set_mapping(job, _request(staff), {"Name": "title", "When": "starts_at"})
         assert ColumnMapping.remembered(staff, Event) == {"Name": "title", "When": "starts_at"}
         again = _job(staff, [["Name", "When", "venue"], ["x", "2026-02-01T10:00:00Z", "Arena"]])
-        assert again.mapping == {"Name": "title", "When": "starts_at", "venue": ""}
+        # A column the remembered mapping never saw is still suggested by its name.
+        assert again.mapping == {"Name": "title", "When": "starts_at", "venue": "venue"}
+
+    def test_a_to_many_column_is_suggested_after_a_file_without_it(self, make_user: Any) -> None:
+        staff = make_user("staff@example.com", "staff")
+        first = _job(staff, [["title", "starts_at"], ["Gig", "2026-02-01T10:00:00Z"]])
+        set_mapping(first, _request(staff), first.mapping)  # remembered: title, starts_at
+        Tag.objects.create(name="music")
+        job = _job(
+            staff,
+            [["title", "starts_at", "tags"], ["Gig", "2026-02-01T10:00:00Z", "music"]],
+        )
+        assert job.mapping == {"title": "title", "starts_at": "starts_at", "tags": "tags"}
+        assert run_stage(job, PREVIEW, staff).result["created"] == 1
+
+    def test_a_remembered_choice_wins_over_the_suggestion(self, make_user: Any) -> None:
+        staff = make_user("staff@example.com", "staff")
+        first = _job(staff, [["Title", "venue", "Notes"], ["Gig", "Arena", "x"]])
+        # Last time this user sent the Title column to venue... and left venue out.
+        set_mapping(first, _request(staff), {"Title": "title", "venue": "", "Notes": ""})
+        again = _job(staff, [["Title", "venue", "capacity"], ["Gig", "Arena", 5]])
+        assert again.mapping == {"Title": "title", "venue": "", "capacity": "capacity"}
 
     def test_a_mapping_to_a_field_the_role_may_not_write_is_refused(self, make_user: Any) -> None:
         staff = make_user("staff@example.com", "staff")
