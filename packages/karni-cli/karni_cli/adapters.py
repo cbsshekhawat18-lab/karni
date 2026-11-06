@@ -383,13 +383,14 @@ def deprecation_warning(paths: Collection[str]) -> str:
     names: list[str] = []
     for parent, rels in groups.items():
         names += [f"{parent}/ ({len(rels)} files)"] if parent and len(rels) > 1 else rels
-    return (
-        f"{DEPRECATED_CODE}: these tool-specific agent files are deprecated: "
-        f"{', '.join(names)}. Karni still updates them in 0.5. They stop being updated, "
-        "and are removed, in 1.0. AGENTS.md is the file to keep: point your tool at it, and "
-        "keep project guidance in karni.rules.py (docs/migrations/0.5.md, "
-        f"`karni explain {DEPRECATED_CODE}`)."
+    notice = CliError(
+        f"these tool-specific agent files are deprecated: {', '.join(names)}. Karni still "
+        "updates them in 0.5. They stop being updated, and are removed, in 1.0. AGENTS.md is "
+        "the file to keep: point your tool at it, and keep project guidance in karni.rules.py "
+        "(docs/migrations/0.5.md).",
+        code="C860",
     )
+    return str(notice)
 
 
 def render_all(
