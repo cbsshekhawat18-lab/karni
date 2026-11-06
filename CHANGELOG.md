@@ -1571,6 +1571,9 @@ apply codemods and list the manual steps. This file is the human summary.
   `sitemap.xml` or offered by the menu item's "goes to" select. One list,
   `karni_site.routes.TECHNICAL_ROUTES`, feeds both, and a project extends it
   with the new `KARNI_SITE_TECHNICAL_ROUTES`.
+- **A sent form without `karni-next`.** When the hidden field is missing and the
+  `Referer` (or the field) names the form's own address, the 303 goes to `/`
+  instead of a page that answers 405.
 
 ## 0.4.0 (2026-10-22)
 
