@@ -31,6 +31,7 @@ aliases against a project's.
 
 from __future__ import annotations
 
+import copy
 import fnmatch
 import keyword
 import re
@@ -333,6 +334,34 @@ def _shape_issues(check: _Checker, error: ValidationError, data: dict[str, Any])
                 "Write the value in the form docs/app-spec.md shows for this key. Quote a "
                 "value that YAML would read as a date, a number or true/false.",
             )
+
+
+def _without_unknown_keys(error: ValidationError, data: dict[str, Any]) -> schema.Spec | None:
+    """The spec without its unknown keys, when those are the only shape problems.
+
+    An unknown key is already reported (``C212``) and changes no meaning, so the
+    meaning pass still runs on the rest and one run lists both kinds of problem.
+    Any other shape error (a wrong type, a missing key) leaves nothing safe to read.
+    """
+    errors = error.errors()
+    if not errors or any(item["type"] != "extra_forbidden" for item in errors):
+        return None
+    pruned = copy.deepcopy(data)
+    for item in errors:
+        path = [p for p in item["loc"] if not (isinstance(p, str) and p.startswith("="))]
+        parent: Any = pruned
+        for part in path[:-1]:
+            try:
+                parent = parent[part]
+            except (KeyError, IndexError, TypeError):
+                parent = None
+                break
+        if isinstance(parent, dict):
+            parent.pop(path[-1], None)
+    try:
+        return schema.Spec.model_validate(pruned)
+    except ValidationError:
+        return None
 
 
 def _value_at(data: Any, path: Loc) -> Any:
@@ -1990,6 +2019,7 @@ def validate_text(text: str, *, databases: Collection[str] | None = None) -> Rep
             spec = schema.Spec.model_validate(data)
         except ValidationError as exc:
             _shape_issues(check, exc, data)
+            spec = _without_unknown_keys(exc, data)
     if spec is not None and not any(issue.code == "C214" for issue in check.issues):
         _Meaning(check, spec, databases).run()
     issues = sorted(check.issues, key=lambda issue: (issue.line or 0, issue.code))

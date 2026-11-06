@@ -270,6 +270,16 @@ INVALID: list[tuple[str, str, int | None]] = [
 ]  # fmt: skip
 
 
+def test_unknown_keys_and_meaning_problems_come_in_one_run() -> None:
+    """F10: the unknown key used to hide every semantic problem until it was fixed."""
+    text = SHOP + "        fields: {name: 'strr:80'}\n        serch: [name]\ncolour: blue\n"
+    found = sorted(code for code, _line in codes(text))
+    assert found == ["C212", "C212", "C216"]
+    # a wrong type leaves nothing safe to read, so only the shape problems come
+    typed = HEAD + "apps: [shop]\ncolour: blue\n"
+    assert sorted(code for code, _line in codes(typed)) == ["C212", "C213"]
+
+
 @pytest.mark.parametrize(("code", "text", "line"), INVALID)
 def test_each_problem_has_its_code_and_line(code: str, text: str, line: int | None) -> None:
     found = [(issue.code, issue.line) for issue in validate_text(text).issues]
