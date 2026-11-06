@@ -105,6 +105,9 @@ export const TreeSelect = React.forwardRef<HTMLButtonElement, TreeSelectProps>(
     const treeId = `${reactId}-tree`;
     const popupId = `${reactId}-popup`;
     const [open, setOpen] = React.useState(false);
+    // A mouse press opens the tree at once (as Select does), so a layout shift between the
+    // press and the release (a validation message above the button) cannot lose the click.
+    const openedByPress = React.useRef(false);
     const [cache, setCache] = React.useState<Record<string, OptionRow>>({});
     const rootRef = React.useRef<HTMLDivElement>(null);
     const contentRef = React.useRef<HTMLDivElement>(null);
@@ -254,6 +257,26 @@ export const TreeSelect = React.forwardRef<HTMLButtonElement, TreeSelectProps>(
                 id={buttonId}
                 type="button"
                 disabled={disabled}
+                onPointerDown={(event) => {
+                  openedByPress.current = false;
+                  if (
+                    event.button !== 0 ||
+                    event.ctrlKey ||
+                    event.pointerType === "touch" ||
+                    open
+                  ) {
+                    return;
+                  }
+                  openedByPress.current = true;
+                  // Keep the button from taking the focus back from the tree it opens.
+                  event.preventDefault();
+                  setOpen(true);
+                }}
+                onClick={(event) => {
+                  // The click that follows the press that opened the tree must not close it again.
+                  if (openedByPress.current && event.detail > 0) event.preventDefault();
+                  openedByPress.current = false;
+                }}
                 aria-haspopup="dialog"
                 aria-expanded={open}
                 aria-controls={open ? popupId : undefined}

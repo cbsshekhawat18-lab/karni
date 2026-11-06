@@ -73,6 +73,29 @@ describe("TreeSelect", () => {
     expect(button).toHaveAccessibleName("Region Nordics");
   });
 
+  it("opens on the press, so a click whose release lands elsewhere is not lost, and stays open after the click", async () => {
+    const user = userEvent.setup();
+    mount(<Picker />);
+    const button = screen.getByRole("button", { name: "Region Choose a region" });
+    // The press only: the page moved under the pointer before the release (a validation message above).
+    await user.pointer({ keys: "[MouseLeft>]", target: button });
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    await user.pointer({ keys: "[/MouseLeft]", target: document.body });
+    await screen.findByRole("tree", { name: "Region" });
+    expect(button).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("still opens with Enter and closes on a second click", async () => {
+    const user = userEvent.setup();
+    mount(<Picker />);
+    const button = screen.getByRole("button", { name: "Region Choose a region" });
+    button.focus();
+    await user.keyboard("{Enter}");
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    await user.click(button);
+    await waitFor(() => expect(button).toHaveAttribute("aria-expanded", "false"));
+  });
+
   it("labels a preselected deep node and opens the tree at it", async () => {
     const user = userEvent.setup();
     const backend = mount(<Picker initial={10} />);

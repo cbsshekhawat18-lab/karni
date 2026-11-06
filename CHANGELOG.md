@@ -1562,6 +1562,11 @@ apply codemods and list the manual steps. This file is the human summary.
   every story (jsdom cannot run axe's own version of it), and the icon button
   story hides its `+` glyph from assistive technology. A project's own test
   that finds the button by `Export as CSV` needs `Export CSV`.
+- **Fixed: the first click on a tree select was lost under a required field.**
+  Leaving a required field empty shows its message, which pushed the
+  `TreeSelect` button down between the mouse press and the release, so the
+  click landed on nothing. The tree now opens on the mouse press, as `Select`
+  does (touch and the keyboard are unchanged).
 
 ## 0.4.0 (2026-10-22)
 
