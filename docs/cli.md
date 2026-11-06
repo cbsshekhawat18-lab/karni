@@ -347,7 +347,7 @@ karni suggest [OPTIONS]
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `--json` |  | Print {version, enabled, suggestions: [{code, rule, file, line, message, fix, command}]} (docs/assets/karni-suggestions.schema.json). |
+| `--json` |  | Print {version, enabled, suggestions: [{code, rule, file, line, message, fix, command}], problems: [...]} (docs/assets/karni-suggestions.schema.json). |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
