@@ -1981,6 +1981,14 @@ apply codemods and list the manual steps. This file is the human summary.
   `karni migrate` takes the grants back from wildcard roles: grant them by
   name to the roles that need them. See
   [migrating](docs/migrations/0.5.md#wildcard-grants-skip-impersonate-approve-and-reject-security).
+- **The admin soft-deletes a row a `PROTECT` foreign key points at.** The
+  row's Delete page and *Delete selected* ran Django's hard-delete collector
+  on soft-delete models, so a row with `PROTECT` children was refused ("Other
+  rows depend on them") while the API soft-deleted it (204). Since `karni build`
+  writes `PROTECT` on the required foreign keys of audited models, no dataset
+  of the data-portal recipe could be deleted from the admin. A soft delete now
+  names only the selected rows, both pages say the rows that refer to them are
+  kept, and *Hard delete selected* keeps the cascade list and the refusal.
 
 ## 0.4.0 (2026-10-22)
 

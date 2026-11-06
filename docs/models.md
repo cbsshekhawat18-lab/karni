@@ -137,8 +137,10 @@ event.hard_delete()                    # real DELETE, Django cascade applies
   Accessing a foreign key directly (`booking.event`) still resolves even when
   the target is soft-deleted, so existing references never break.
 - **No cascade on soft delete.** Soft-deleting a parent leaves its children
-  in place, and no `pre_delete`/`post_delete` signals are sent. `hard_delete()`
-  runs Django's normal cascade, including over soft-deleted children.
+  in place, and no `pre_delete`/`post_delete` signals are sent. A `PROTECT`
+  foreign key does not block it either, in the API or the admin, because the
+  row it protects stays. `hard_delete()` runs Django's normal cascade,
+  including over soft-deleted children, and `PROTECT` refuses it.
 - **No manager-level delete.** `Event.objects.delete()` does not exist. Start
   from a queryset (`Event.objects.filter(...).delete()`).
 - **Unique fields.** A plain `unique=True` (or `UniqueConstraint`) counts

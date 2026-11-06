@@ -144,6 +144,20 @@ class Citation(BaseModel):
         return self.label
 
 
+class Footnote(BaseModel):
+    """Points at the soft-delete ``Note`` with ``PROTECT``.
+
+    A soft delete of the note keeps it, so the admin soft-deletes the note
+    without Django's protected-objects refusal; a hard delete still refuses.
+    """
+
+    text = models.CharField(max_length=200)
+    note = models.ForeignKey(Note, on_delete=models.PROTECT, related_name="footnotes")
+
+    def __str__(self) -> str:
+        return self.text
+
+
 class Tuned(BaseModel):
     """The contract's ``AdminMeta`` example: every override attribute at once."""
 
