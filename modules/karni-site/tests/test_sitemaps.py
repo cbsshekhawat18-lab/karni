@@ -180,3 +180,16 @@ def test_the_sitemap_reads_each_section_once(django_assert_max_num_queries: Any)
     hidden = [sql for sql in statements if "karni_site_pageseo" in sql and "noindex" in sql]
     assert len(hidden) == 1, hidden
     assert len(statements) == len(set(statements)), statements
+
+
+def test_karni_technical_routes_are_not_pages(settings: Settings) -> None:
+    from karni_site import routes
+
+    settings.ROOT_URLCONF = "tests.technical_urls"
+    names = [name for name, _ in routes.site_pages()]
+    assert "home" in names and "pricing" in names and "status" in names
+    for technical in ("readyz", "healthz", "karni-welcome"):
+        assert not [n for n in names if technical in n], technical
+    # A project extends the one list.
+    settings.KARNI_SITE_TECHNICAL_ROUTES = ["status"]
+    assert "status" not in [name for name, _ in routes.site_pages()]

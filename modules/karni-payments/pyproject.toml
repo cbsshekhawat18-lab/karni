@@ -53,6 +53,10 @@ payments = "karni_payments"
 [project.entry-points."karni.settings"]
 payments = "karni_payments.conf:DEFAULTS"
 
+# The payments-admin role (karni.accounts roles): merged under KARNI_ROLES.
+[project.entry-points."karni.roles"]
+payments = "karni_payments.roles:declared"
+
 # Error codes (PAY001...) for `karni explain` and docs/errors.md.
 [project.entry-points."karni.errorcodes"]
 payments = "karni_payments.errorcodes:CODES"

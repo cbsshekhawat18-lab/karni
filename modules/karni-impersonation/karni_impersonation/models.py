@@ -41,6 +41,15 @@ class ImpersonationSession(BaseModel):
     class Meta(BaseModel.Meta):
         ordering: ClassVar[list[str]] = ["-started_at"]
         verbose_name = "impersonation session"
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            # One open session per actor, enforced by the database so two
+            # concurrent starts cannot both succeed (IMP004).
+            models.UniqueConstraint(
+                fields=["actor"],
+                condition=models.Q(ended_at__isnull=True),
+                name="karni_impersonation_one_open_per_actor",
+            )
+        ]
 
     class Karni:
         """Audited; ``impersonate`` is the permission the module is gated on."""

@@ -114,6 +114,29 @@ def test_a_url_is_fetched_and_read(editor_client: APIClient, monkeypatch: Any) -
     assert AICall.objects.get().source == "url"
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://shop.example.com",
+        "https://shop.example.com/",
+        "https://shop.example.com/catalog/",
+        "https://shop.example.com/catalog/can.html?size=2#top",
+    ],
+)
+def test_every_url_shape_gives_the_import_job_a_file_name(
+    editor_client: APIClient, monkeypatch: Any, url: str
+) -> None:
+    page = b"<p>Name: Watering can</p><p>SKU: WC-1</p><p>Price: 7.25</p>"
+    monkeypatch.setattr(
+        Fetcher,
+        "fetch",
+        lambda self, u: Fetched(url=u, content_type="text/html", charset="utf-8", body=page),
+    )
+    response = extract(editor_client, url=url)
+    assert response.status_code == 201, response.content
+    assert response.json()["rows"] == [{"name": "Watering can", "sku": "WC-1", "price": "7.25"}]
+
+
 def test_a_pdf_is_read(editor_client: APIClient) -> None:
     from django.core.files.uploadedfile import SimpleUploadedFile
 

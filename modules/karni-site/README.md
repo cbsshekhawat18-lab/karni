@@ -324,7 +324,10 @@ names (`published`, `is_published`, `is_public`, `public`, `visible`,
 `published`, and a `published_at` must have passed. `sitemap = False`
 leaves a model out. A page or row hidden from search engines in the admin
 is left out, and so is what `KARNI_SITE_SITEMAP_EXCLUDE` names (URL names
-or paths, wildcards allowed). `lastmod` is `updated_at` by default. Past
+or paths, wildcards allowed). Karni's own routes (the health and readiness
+probes and the welcome page) are never listed, here or in the menu item's
+"goes to" choices: add your own technical routes with
+`KARNI_SITE_TECHNICAL_ROUTES`. `lastmod` is `updated_at` by default. Past
 50,000 addresses in a section, sitemap.xml becomes an index of
 `/sitemap-<section>.xml?p=<page>`.
 
@@ -502,7 +505,9 @@ viewset's honeypot field, and loads `karni_site/forms.js` once per page.
 (`forms/<name>/`). The view saves through the viewset's own `create`, so the
 `access` declaration, the public-create rate limit, the honeypot, validation
 and change history are the API's. A sent form redirects (303) back to the page
-with `?sent=<name>`, where the tag shows the success message. A refused one
+with `?sent=<name>`, where the tag shows the success message. The page is
+the hidden `karni-next` field, else the `Referer`, else `/` (never the form's
+own address, which answers 405 to a GET). A refused one
 renders the page again, by its own view, with the values and each field's
 error next to it (400, 429 when rate-limited, 403 when not allowed). A filled
 honeypot looks sent and saves nothing.
@@ -638,6 +643,7 @@ Every setting arrives through the module's settings fragment
 | `KARNI_SITE_ALLOW_INDEXING` | `None` | Whether search engines may index the site. `None`: only where `DJANGO_ENV` is `prod`. |
 | `KARNI_SITE_ROBOTS_DISALLOW` | `[]` | Paths robots.txt asks crawlers to stay out of while indexing is allowed. |
 | `KARNI_SITE_SITEMAP_EXCLUDE` | `[]` | URL names and paths the sitemap leaves out, wildcards allowed. |
+| `KARNI_SITE_TECHNICAL_ROUTES` | `[]` | URL names and paths added to Karni's own technical routes, which neither the sitemap nor the menu's "goes to" choices list. |
 | `KARNI_SITE_SITEMAPS` | `"karni_site.sitemaps.sitemaps"` | The `() -> {name: Sitemap}` function that lists the sitemap's sections. |
 | `KARNI_SITE_PUBLISHED_FIELDS` | `["published", "is_published", ...]` | Boolean fields that mark a row public, for a model in the sitemap without a filter. |
 | `KARNI_SITE_SCHEMA_TYPE` | `"auto"` | The JSON-LD type: `"auto"` (`LocalBusiness` with opening hours, else `Organization`), any schema.org type, or `None`. |

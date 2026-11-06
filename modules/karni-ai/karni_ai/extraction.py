@@ -268,8 +268,11 @@ class Extractor:
         kept = [(position, row) for position, row in enumerate(rows, start=1) if row]
         headers = list(schema.fields)
         lines = csv_lines([headers, *([row.get(name) for name in headers] for _, row in kept)])
+        # Path separators go: a URL ending in "/" (a bare host) would otherwise
+        # leave Django an empty base name (SuspiciousFileOperation).
+        name = f"Extracted from {source.label}".replace("/", " ").replace("\\", " ")
         upload = SimpleUploadedFile(
-            f"Extracted from {source.label}"[:200],
+            " ".join(name.split())[:200],
             "".join(lines).encode("utf-8"),
             content_type="text/csv",
         )

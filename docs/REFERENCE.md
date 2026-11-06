@@ -1742,7 +1742,7 @@ class Lead(BaseModel):
 | `writable` | karni | `False` | Experimental. Let the API and the admin write an external model's table. | `writable = True` |
 | `database` | karni | `None` (the default database) | Experimental. The `DATABASES` alias the model's reads, writes and migrations go to (`karni.db.DatabaseRouter`). | `database = "warehouse"` |
 | `taxonomies` | karni | `{}` | Experimental. Tag the model to tree models: key -&gt; tree model. Each key is a many-to-many of that name (generated, or yours adopted), the list filters `?<key>=` and `?<key>_descendants=`, the `facets/` counts and the `tree:<key>` scope ([models: taxonomies](models.md#taxonomies)). | `taxonomies = {"region": "geo.Region", "category": "catalog.Category"}` |
-| `requires_approval` | karni-approvals | unset: never held | Hold changes for a second person's approval: a list of guarded fields, or `True` for any change, create and delete included. | `requires_approval = ["amount", "status"]` |
+| `requires_approval` | karni-approvals | unset: never held | Hold changes for a second person's approval: a list of guarded fields (holds an update of them, and a create that sets one away from its default, never a delete), or `True` for any change, create and delete included. | `requires_approval = ["amount", "status"]` |
 | `approvals_required` | karni-approvals | `KARNI_APPROVALS_REQUIRED` (1) | Approvals a pending change needs before it is applied. | `approvals_required = 2` |
 | `approver_roles` | karni-approvals | `KARNI_APPROVALS_APPROVER_ROLES` | Roles that may approve, on top of holding the approve permission. | `approver_roles = ["finance"]` |
 | `approval_timeout` | karni-approvals | `KARNI_APPROVALS_TIMEOUT_HOURS` (0: never) | How long a change may wait: a `timedelta`, or hours as an integer. | `approval_timeout = timedelta(hours=48)` |
@@ -2044,6 +2044,7 @@ class Lead(BaseModel):
 | `KARNI_SITE_ALLOW_INDEXING` |  | `None` | Whether search engines may index the site. None: only when DJANGO_ENV is "prod", so a development or staging copy is never indexed. True or False decides for every environment. |
 | `KARNI_SITE_ROBOTS_DISALLOW` |  | `[]` | Paths robots.txt asks crawlers to stay out of while indexing is allowed: ["/search/"]. |
 | `KARNI_SITE_SITEMAP_EXCLUDE` |  | `[]` | URL names and paths the sitemap leaves out, shell wildcards allowed: ["website:thanks", "/drafts/*"]. The admin, the API and redirects are never in it. |
+| `KARNI_SITE_TECHNICAL_ROUTES` |  | `[]` | URL names and paths added to Karni's own technical routes (the health and readiness probes, the welcome page), which no sitemap or menu choice lists: ["status", "/ping"]. |
 | `KARNI_SITE_SITEMAPS` |  | `"karni_site.sitemaps.sitemaps"` | The function that lists the sitemap's sections: () -&gt; {name: Sitemap}. A dotted path. |
 | `KARNI_SITE_PUBLISHED_FIELDS` |  | `["published", "is_published", "is_public", "public", "visible", "is_visible"]` | Boolean fields that mark a row as public, tried in order on a model in the sitemap without a filter of its own (class Karni: sitemap = {"filter": {...}}). |
 | `KARNI_SITE_SCHEMA_TYPE` |  | `"auto"` | The schema.org type of the site's JSON-LD: "auto" (LocalBusiness when the site has opening hours, else Organization), any schema.org type ("Bakery", "Dentist"), or None. |

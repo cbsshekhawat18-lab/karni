@@ -114,3 +114,12 @@ def test_the_schema_documents_the_data_action(chart: Chart) -> None:
     assert "/api/charts/{slug}/data/" in schema["paths"]
     assert "post" not in schema["paths"]["/api/charts/"]
     assert "/api/products/aggregate/" in schema["paths"]
+
+
+@pytest.mark.parametrize("name", ["kind", "name", "slug", "source", "position"])
+def test_a_viewer_filter_named_like_a_chart_field_is_not_a_chart_lookup(
+    chart: Chart, catalog: dict[str, Any], analyst: Any, name: str
+) -> None:
+    """The chart's own list filters must not narrow the lookup of the chart (CHART002, not 404)."""
+    response = client_as(user=analyst).get("/api/charts/launches-per-year/data/", {name: "x"})
+    assert response.status_code == 400 and response.json()["code"] == "CHART002"

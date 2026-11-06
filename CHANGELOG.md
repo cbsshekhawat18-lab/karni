@@ -1614,6 +1614,46 @@ apply codemods and list the manual steps. This file is the human summary.
   `docs/releasing.md` gains the step that dates the section in the release
   commit. The 0.5.0 section stays unreleased until that commit.
 
+### Fixed (module self-test)
+
+- **History on a resource with query hints.** `GET /<resource>/<id>/history/`
+  no longer applies the viewset's `select_related` hints to the audit entries,
+  so `/api/pending-changes/<id>/history/` answers 200 instead of a 500.
+- **One code and one link in `api_error`.** Passing an already formatted
+  `str(KarniError)` to `api_error` no longer repeats the code and the link
+  (approvals APR005/APR006, impersonation IMP003/IMP004).
+- **One open impersonation per actor.** A second `start/` while the actor's first
+  session is open is refused with `IMP004` as the README says, and a unique
+  constraint on open sessions (migration `0002`) makes it safe under two
+  concurrent requests. An unswept expired session no longer blocks.
+- **Chart data with a source field named like a chart field.** `data/?kind=line`
+  (or `name`, `slug`, `source`, `position`) no longer answers 404 because the
+  chart list's filters narrowed the lookup of the chart. The viewer's filters
+  reach the source only, and a refused one is `CHART002`.
+- **Extraction from a bare-host URL.** `https://example.com` and any URL ending
+  in `/` no longer crash the extraction with `SuspiciousFileOperation`: the
+  import job's file name no longer carries path separators.
+- **Karni's own routes out of the sitemap and the menu choices.** The readiness
+  probe, the health probes and the welcome page are no longer listed in
+  `sitemap.xml` or offered by the menu item's "goes to" select. One list,
+  `karni_site.routes.TECHNICAL_ROUTES`, feeds both, and a project extends it
+  with the new `KARNI_SITE_TECHNICAL_ROUTES`.
+- **A sent form without `karni-next`.** When the hidden field is missing and the
+  `Referer` (or the field) names the form's own address, the 303 goes to `/`
+  instead of a page that answers 405.
+- **A test-provider webhook with an unknown status.** A signed event whose
+  `status` is not in `ParsedEventStatus` parses with `status=None` and is
+  recorded as processed with a note, as for any unmapped event, instead of a
+  500 the sender would retry.
+- **The `payments-admin` role ships with the module.** `karni-payments` declares
+  it through the `karni.roles` entry point, so `karni migrate` creates it after
+  `karni add payments` and refunds are reachable without a hand-written
+  `KARNI_ROLES` entry.
+- **`requires_approval` docs.** The README, the docstring, the reference and the
+  agent fragment now say a field list holds updates of those fields and a create
+  that sets one away from its default (never a delete), and `True` holds every
+  change, create and delete.
+
 ## 0.4.0 (2026-10-22)
 
 - **PostgreSQL is the default, everywhere.** `pip install karni` now brings

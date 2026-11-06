@@ -492,3 +492,23 @@ def test_the_plain_render_needs_no_request() -> None:
 def test_forms_module_exports() -> None:
     assert forms.class_names()["field"] == "karni-field"
     assert forms.messages({"success": "Done."})["success"] == "Done."
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {},
+        {"HTTP_REFERER": "http://testserver/forms/appointment_request/"},
+    ],
+)
+def test_a_post_without_a_page_never_redirects_to_the_form_itself(
+    client: Client, extra: dict[str, str]
+) -> None:
+    """The form endpoint answers 405 to a GET, so it is never where a sent form goes back to."""
+    without_next = {k: v for k, v in VALID.items() if k != "karni-next"}
+    response = client.post(FORM, without_next, **extra)
+    assert response.status_code == 303
+    assert response["Location"].startswith("/?sent=appointment_request")
+    assert client.get(response["Location"].split("?")[0]).status_code == 200
+    posted = client.post(FORM, {**VALID, "karni-next": FORM})
+    assert posted["Location"].startswith("/?sent=")

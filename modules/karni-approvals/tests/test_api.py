@@ -99,3 +99,34 @@ def test_the_resource_is_read_only() -> None:
     )
     assert client.patch(f"/api/pending-changes/{pending.pk}/", {}, format="json").status_code == 405
     assert client.delete(f"/api/pending-changes/{pending.pk}/").status_code == 405
+
+
+def test_the_history_action_answers_for_a_pending_change(
+    maker: Any, checker: Any, invoice: Invoice
+) -> None:
+    held = (
+        client_for(maker)
+        .patch(f"/api/invoices/{invoice.pk}/", {"status": "paid"}, format="json")
+        .json()
+    )
+    response = client_for(checker).get(f"/api/pending-changes/{held['id']}/history/")
+    assert response.status_code == 200, response.content
+    assert response.json()["results"]
+
+
+def test_a_refusal_reads_code_text_and_link_once(
+    maker: Any, checker: Any, invoice: Invoice
+) -> None:
+    held = (
+        client_for(maker)
+        .patch(f"/api/invoices/{invoice.pk}/", {"status": "paid"}, format="json")
+        .json()
+    )
+    client_for(checker).post(f"/api/pending-changes/{held['id']}/approve/", {}, format="json")
+    again = client_for(checker).post(
+        f"/api/pending-changes/{held['id']}/reject/", {}, format="json"
+    )
+    assert again.status_code == 400
+    (message,) = again.json()
+    assert message.count("APR005") == 1 and message.count("See ") == 1, message
+    assert message.startswith("APR005: ") and not message.startswith("APR005: APR005")
