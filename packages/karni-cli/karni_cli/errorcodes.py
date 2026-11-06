@@ -1409,6 +1409,17 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Run python manage.py karni_suggest --json in the project to see the error. "
         "karni check shows the same startup problem.",
     ),
+    # C840-C849 scaffold, add and remove (self-test fixes)
+    _c(
+        "C840",
+        "karni add was given a name that is not a module",
+        "karni add",
+        "The name is neither in the module catalog nor a module installed in the project's "
+        "interpreter (a distribution with a karni.module.toml). Wiring it would put an "
+        "app into INSTALLED_APPS that Python cannot import, so every Django command would fail.",
+        "Check the spelling against `karni modules list`. A third-party module is installed "
+        "first (pip install <distribution>), then added.",
+    ),
 )
 
 

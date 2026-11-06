@@ -430,16 +430,45 @@ def test_impersonation_middleware_round_trips(
     assert _snapshot(generated_project) == before  # the middleware line left with the app
 
 
-def test_a_module_without_a_manifest_is_added_and_removed_by_convention(
-    runner, generated_project: Path, monkeypatch, no_docker, counter
+def test_add_refuses_a_name_that_is_not_a_module(
+    runner, generated_project: Path, monkeypatch, no_docker, installed: list[Any]
 ) -> None:
     monkeypatch.chdir(generated_project)
     before = _snapshot(generated_project)
-    added = runner.invoke(app, ["add", "widgets"])
-    assert added.exit_code == 0, added.output
-    assert 'path("widgets/", include("karni_widgets.urls"))' in added.output
-    assert runner.invoke(app, ["remove", "widgets"]).exit_code == 0
+    refused = runner.invoke(app, ["add", "paymnets"])
+    assert refused.exit_code == 1 and _code(refused) == "C840"
+    assert "Did you mean payments?" in str(refused.exception)
+    assert _snapshot(generated_project) == before  # nothing wired
+    far = runner.invoke(app, ["add", "bogus"])
+    assert _code(far) == "C840" and "karni modules list" in str(far.exception)
     assert _snapshot(generated_project) == before
+
+
+def test_a_third_party_module_with_a_manifest_is_added_and_removed(
+    runner, generated_project: Path, monkeypatch, no_docker, counter, installed: list[Any]
+) -> None:
+    monkeypatch.chdir(generated_project)
+    installed.append(_module(CHAT.replace("requires", "# requires"), "entry point chat"))
+    before = _snapshot(generated_project)
+    added = runner.invoke(app, ["add", "chat"])
+    assert added.exit_code == 0, added.output
+    assert "karni_chat: wired into INSTALLED_APPS" in added.output
+    assert runner.invoke(app, ["remove", "chat"]).exit_code == 0
+    assert _snapshot(generated_project) == before
+
+
+def test_remove_still_takes_out_a_name_that_was_wired_without_a_manifest(
+    runner, generated_project: Path, monkeypatch, no_docker, counter
+) -> None:
+    """A project wired by an older karni add can still recover with karni remove."""
+    monkeypatch.chdir(generated_project)
+    settings = generated_project / "config" / "settings.py"
+    settings.write_text(
+        settings.read_text().replace("]  # karni:apps", '    "karni_widgets",\n]  # karni:apps', 1)
+    )
+    assert "karni_widgets" in settings.read_text()
+    assert runner.invoke(app, ["remove", "widgets"]).exit_code == 0
+    assert "karni_widgets" not in settings.read_text()
     assert counter == []  # no manifest, no models to count
 
 

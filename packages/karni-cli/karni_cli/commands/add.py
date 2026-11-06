@@ -20,6 +20,7 @@ after installing.
 
 from __future__ import annotations
 
+import difflib
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -177,6 +178,18 @@ def find_manifest(project: Path, module: str) -> tuple[Manifest | None, Catalog]
     return found, loaded
 
 
+def _unknown_module_message(module: str, loaded: Catalog) -> str:
+    names = sorted(m.name for m in loaded.modules)
+    close = difflib.get_close_matches(module, names, n=3, cutoff=0.5)
+    hint = f" Did you mean {', '.join(close)}?" if close else ""
+    return (
+        f"{module} is not a module Karni knows: it is not in the catalog and no installed "
+        f"distribution ships a module manifest for it.{hint} `karni modules list` shows the "
+        "names. A third-party module is installed first (pip install <distribution>), then "
+        "added. Nothing was changed."
+    )
+
+
 def _refuse_conflicts(loaded: Catalog, manifest: Manifest) -> None:
     clash = sorted(
         name
@@ -238,10 +251,11 @@ def plan_module(
     installed, so :func:`record_guidance` runs after the write.
     """
     manifest, loaded = found if found is not None else find_manifest(ws.root, module)
-    if manifest is not None:
-        _refuse_conflicts(loaded, manifest)
-    app_name = manifest.app if manifest else f"karni_{module.replace('-', '_')}"
-    distribution = manifest.distribution if manifest else f"karni-{module.replace('_', '-')}"
+    if manifest is None:
+        raise CliError(_unknown_module_message(module, loaded), code="C840")
+    _refuse_conflicts(loaded, manifest)
+    app_name = manifest.app
+    distribution = manifest.distribution
     pyproject = ws.read("pyproject.toml")
     if pyproject is None:
         raise CliError("No pyproject.toml in the project root.", code="C207")
