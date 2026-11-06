@@ -518,3 +518,15 @@ a raw <details> fails the lint until it uses Accordion or carries \
 `// eslint-disable-next-line karni/no-raw-elements -- <reason>`."""
 mechanical = false
 migration = "migrations/0.5.md#a-raw-details-fails-karnino-raw-elements"
+
+[[change]]
+id = "impersonation-one-open-session"
+kind = "behaviour"
+symbol = "karni_impersonation.services.start"
+summary = """\
+A second impersonation session for an actor who has one open is refused (IMP004), as the \
+README says, and the database enforces it with a unique constraint on the open sessions \
+(migration 0002 ends older duplicates first). A session past its time limit that was not \
+swept yet is ended when the actor starts a new one."""
+mechanical = false
+migration = "migrations/0.5.md#impersonation-allows-one-open-session-per-actor"

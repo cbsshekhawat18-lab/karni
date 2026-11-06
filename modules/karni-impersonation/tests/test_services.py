@@ -52,6 +52,39 @@ class TestWhoMayImpersonateWhom:
         with pytest.raises(services.ImpersonationError, match="IMP004"):
             services.start(support, support, "myself")
 
+    def test_a_second_open_session_is_refused_and_an_expired_one_does_not_block(
+        self, support: Any, customer: Any, settings: Any
+    ) -> None:
+        from datetime import timedelta
+
+        from django.db import IntegrityError, transaction
+        from django.utils import timezone
+
+        from karni_impersonation.models import ImpersonationSession
+
+        from tests.conftest import make_user
+
+        other = make_user("other@example.com", "customer")
+        finance = other
+        first = services.start(support, customer, "first")
+        with pytest.raises(services.ImpersonationError, match="IMP004"):
+            services.start(support, finance, "again")
+        # The database refuses it too, which is what makes two concurrent starts safe.
+        with pytest.raises(IntegrityError), transaction.atomic():
+            ImpersonationSession.objects.create(
+                actor=support, target=finance, expires_at=timezone.now()
+            )
+        assert ImpersonationSession.objects.filter(actor=support, ended_at=None).count() == 1
+        # Past its limit and never swept: it is over, a new start works.
+        ImpersonationSession.objects.filter(pk=first.pk).update(
+            expires_at=timezone.now() - timedelta(minutes=1)
+        )
+        second = services.start(support, finance, "later")
+        first.refresh_from_db()
+        assert first.end_reason == services.EXPIRED and second.ended_at is None
+        services.stop(second)
+        assert services.start(support, customer, "after stop").ended_at is None
+
     def test_a_reason_is_required_by_default(
         self, support: Any, customer: Any, settings: Any
     ) -> None:

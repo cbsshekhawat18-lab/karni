@@ -17,7 +17,7 @@ from datetime import timedelta
 from typing import Any
 
 from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from karni.accounts.roles import grants_for, user_can
 from karni.audit.capture import change_batch, within_batch
@@ -148,22 +148,37 @@ def start(actor: Any, target: Any, reason: str = "", request: Any = None) -> Imp
     minutes = int(conf.get("KARNI_IMPERSONATION_MAX_MINUTES") or 60)
     now = timezone.now()
     meta = {"target": str(target.pk), "target_email": _email(target), "reason": reason}
-    with transaction.atomic(), current_user(actor):
-        with change_batch(
-            "impersonation", f"{_email(actor)} as {_email(target)}"[:200], meta
-        ) as batch:
-            session = ImpersonationSession.objects.create(
-                actor=actor,
-                target=target,
-                reason=reason,
-                started_at=now,
-                expires_at=now + timedelta(minutes=max(minutes, 1)),
-                ip=_ip(request),
-                user_agent=str(getattr(request, "META", {}).get("HTTP_USER_AGENT", ""))[:255]
-                if request is not None
-                else "",
-                batch_id=int(batch.pk),
-            )
+    # A session past its time limit that nobody swept yet is over: close it so
+    # it does not block a new one.
+    for stale in ImpersonationSession.objects.filter(
+        actor=actor, ended_at__isnull=True, expires_at__lte=now
+    ):
+        stop(stale, EXPIRED)
+    try:
+        with transaction.atomic(), current_user(actor):
+            with change_batch(
+                "impersonation", f"{_email(actor)} as {_email(target)}"[:200], meta
+            ) as batch:
+                session = ImpersonationSession.objects.create(
+                    actor=actor,
+                    target=target,
+                    reason=reason,
+                    started_at=now,
+                    expires_at=now + timedelta(minutes=max(minutes, 1)),
+                    ip=_ip(request),
+                    user_agent=str(getattr(request, "META", {}).get("HTTP_USER_AGENT", ""))[:255]
+                    if request is not None
+                    else "",
+                    batch_id=int(batch.pk),
+                )
+    except IntegrityError as exc:
+        # The one-open-session-per-actor constraint: a session is already open
+        # (or a concurrent start won), and the whole attempt rolled back.
+        if ImpersonationSession.objects.filter(actor=actor, ended_at__isnull=True).exists():
+            raise ImpersonationError(
+                "you already have an impersonation open: stop it first.", code="IMP004"
+            ) from exc
+        raise
     if conf.get("KARNI_IMPERSONATION_NOTIFY_TARGET"):
         from karni_impersonation.tasks import notify_target
 

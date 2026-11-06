@@ -1555,6 +1555,10 @@ apply codemods and list the manual steps. This file is the human summary.
 - **One code and one link in `api_error`.** Passing an already formatted
   `str(KarniError)` to `api_error` no longer repeats the code and the link
   (approvals APR005/APR006, impersonation IMP003/IMP004).
+- **One open impersonation per actor.** A second `start/` while the actor's first
+  session is open is refused with `IMP004` as the README says, and a unique
+  constraint on open sessions (migration `0002`) makes it safe under two
+  concurrent requests. An unswept expired session no longer blocks.
 
 ## 0.4.0 (2026-10-22)
 
