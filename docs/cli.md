@@ -1487,7 +1487,7 @@ karni recipes COMMAND [ARGS]...
 
 Experimental. Every recipe, or with --match the best few for a request, and the blank start.
 
---match compares the words of the request with each recipe's use_when and purpose, after lowercasing, making plurals singular and leaving out words that name no app (a, the, app, with ...). A recipe scores 2 for each word one of its use_when phrases has and 1 for each word only its purpose has. The recipes that score 2 or more come back, best first, at most 3. When none does, start from the blank start: karni.yaml with the version and the app's name, nothing else.
+--match compares the words of the request with each recipe's use_when and purpose, after lowercasing, making plurals singular and leaving out words that name no app (a, the, app, with ...). A recipe scores 2 for each word one of its use_when phrases has and 1 for each word only its purpose has. A word that is the recipe's own noun (its name, or a use_when phrase of that one word) scores 4. The recipes that score 2 or more come back, best first, at most 3. When none does, start from the blank start: karni.yaml with the version and the app's name, nothing else.
 
 ```
 karni recipes list [OPTIONS]
