@@ -20,6 +20,7 @@ import {
   TEST_OTP_EMAILS,
   TEST_USER,
 } from "../../tests/msw/server";
+import { getToasts, resetToastStore } from "../components/toast/toast-store";
 import { createKarniClient, KarniApiError } from "../schema/client";
 import { KarniProvider } from "../schema/provider";
 import { LoginForm, type LoginFormProps } from "./LoginForm";
@@ -106,6 +107,29 @@ describe("OtpLoginForm", () => {
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
     expect(seen).toHaveLength(1);
     server.events.removeAllListeners();
+  });
+
+  it("tells the person when the sign-in removed the password of an unverified account", async () => {
+    const onSuccess = vi.fn();
+    mount({ onSuccess });
+    await sendTo(TEST_OTP_EMAILS.unverified);
+    await enter(TEST_LOGIN_CODE);
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(onSuccess.mock.calls[0]?.[1]).toEqual({ passwordRemoved: true });
+    const notice = getToasts().find((toast) => toast.title === "Your password was removed");
+    expect(notice).toBeDefined();
+    expect(String(notice?.description)).toContain("never been verified");
+    resetToastStore();
+  });
+
+  it("says nothing about the password after an ordinary code sign-in", async () => {
+    const onSuccess = vi.fn();
+    mount({ onSuccess });
+    await sendTo(TEST_USER.email);
+    await enter(TEST_LOGIN_CODE);
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(onSuccess.mock.calls[0]?.[1]).toEqual({ passwordRemoved: false });
+    expect(getToasts()).toHaveLength(0);
   });
 
   it("shows a message when the code is incomplete instead of doing nothing", async () => {

@@ -554,6 +554,7 @@ def test_an_existing_account_signs_in_and_its_address_becomes_verified(
     assert LoginCode.objects.get(email=EMAIL).user == user
     body = assert_signed_in(verify(client, last_code()))
     assert body["user"]["id"] == str(user.pk)
+    assert "password_removed" not in body
     user.refresh_from_db()
     assert user.check_password(PASSWORD)  # a verified account keeps its password
     assert users().count() == 1
@@ -568,7 +569,8 @@ def test_an_unverified_account_is_verified_and_loses_a_password_someone_else_may
     user = users().create_user(email=EMAIL, password=PASSWORD)
     RefreshToken.for_user(user)
     send(client, django_capture_on_commit_callbacks)
-    assert_signed_in(verify(client, last_code()))
+    body = assert_signed_in(verify(client, last_code()))
+    assert body["password_removed"] is True  # the app can tell the person
     user.refresh_from_db()
     assert user.email_verified is True
     assert not user.has_usable_password()

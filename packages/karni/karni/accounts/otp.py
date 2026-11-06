@@ -352,12 +352,14 @@ class CodeSignIn:
 
     ``user`` signs in unless ``awaiting_approval`` (a new, inactive account
     under the ``approval`` policy). ``created`` says whether this sign-in
-    created the account.
+    created the account. ``password_cleared`` says whether it removed the
+    password of an account whose address was never verified.
     """
 
     user: AbstractKarniUser
     created: bool = False
     awaiting_approval: bool = False
+    password_cleared: bool = False
 
 
 def _refused(reason: str, address: str) -> LoginCodeRefused:
@@ -421,8 +423,7 @@ def _sign_in(account: AbstractKarniUser, address: str) -> CodeSignIn:
         raise _refused("deleted", address)
     if not account.is_active:
         raise LoginCodeRefused("inactive", "This account is inactive.", code="E226", email=address)
-    prove_address(account)
-    return CodeSignIn(user=account)
+    return CodeSignIn(user=account, password_cleared=prove_address(account))
 
 
 def verify_code(email: str, code: str) -> CodeSignIn:

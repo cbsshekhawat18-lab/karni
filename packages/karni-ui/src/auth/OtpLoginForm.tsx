@@ -13,6 +13,7 @@ import * as React from "react";
 import { cn } from "../lib/cn";
 import { registerComponentRole } from "../lib/roles";
 import { Button } from "../components/primitives/button";
+import { addToast } from "../components/toast/toast-store";
 import { AlertIcon, OfflineIcon } from "../components/primitives/icons";
 import { Input } from "../components/primitives/input";
 import { Label } from "../components/primitives/label";
@@ -47,8 +48,18 @@ export interface OtpLoginFormSlots {
 }
 
 export interface OtpLoginFormProps {
-  /** Called with the signed-in user. Navigate from here. */
-  onSuccess?: (user: KarniUser) => void;
+  /**
+   * Called with the signed-in user. Navigate from here. The second argument says
+   * whether the sign-in removed the account's password (see `passwordRemovedNotice`).
+   */
+  onSuccess?: (user: KarniUser, info: { passwordRemoved: boolean }) => void;
+  /**
+   * Shown as a toast after a sign-in that removed the password of an account whose
+   * address was never verified (the code proved the address, so the password
+   * someone else may know is gone). It outlives this form, so it is still there
+   * after `onSuccess` navigates away. Needs the app's `<Toaster />`. `null` shows none.
+   */
+  passwordRemovedNotice?: { title: React.ReactNode; description: React.ReactNode } | null;
   /** Called when the account needs a second factor (the token completes it), as in LoginForm. */
   on2FA?: (ephemeralToken: string) => void;
   /** Called when a new account was created and waits for an administrator. */
@@ -69,6 +80,15 @@ export interface OtpLoginFormProps {
   slots?: Partial<OtpLoginFormSlots>;
   className?: string;
 }
+
+/** Worded from docs/accounts.md, "Who gets in": the code proved the address, the password went. */
+const PASSWORD_REMOVED_NOTICE = {
+  title: "Your password was removed",
+  description:
+    "This account's email address had never been verified, and the code you just used proved it is yours. " +
+    "Whoever opened the account may have known its password, so it was removed. " +
+    "Sign in with a code from now on, or reset your password to set a new one.",
+};
 
 /** The label-to-control gap LoginForm uses, the same under Tailwind 3 and 4. */
 const FIELD_GAP = "[&>:not([hidden])~:not([hidden])]:mt-1";
@@ -255,6 +275,7 @@ function minutes(seconds: number): string {
  */
 export function OtpLoginForm({
   onSuccess,
+  passwordRemovedNotice = PASSWORD_REMOVED_NOTICE,
   on2FA,
   onAwaitingApproval,
   resendCooldown = 30,
@@ -327,7 +348,11 @@ export function OtpLoginForm({
       }
       const result = await login.verify(code.trim());
       if ("ok" in result) {
-        onSuccess?.(result.user);
+        const removed = result.passwordRemoved === true;
+        if (removed && passwordRemovedNotice !== null) {
+          addToast({ ...passwordRemovedNotice, variant: "info", duration: 15000 });
+        }
+        onSuccess?.(result.user, { passwordRemoved: removed });
       } else if ("requires2fa" in result) {
         if (on2FA !== undefined) on2FA(result.ephemeralToken);
         else fail(new TwoFactorUnavailable());
