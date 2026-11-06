@@ -1559,6 +1559,10 @@ apply codemods and list the manual steps. This file is the human summary.
   session is open is refused with `IMP004` as the README says, and a unique
   constraint on open sessions (migration `0002`) makes it safe under two
   concurrent requests. An unswept expired session no longer blocks.
+- **Chart data with a source field named like a chart field.** `data/?kind=line`
+  (or `name`, `slug`, `source`, `position`) no longer answers 404 because the
+  chart list's filters narrowed the lookup of the chart. The viewer's filters
+  reach the source only, and a refused one is `CHART002`.
 
 ## 0.4.0 (2026-10-22)
 

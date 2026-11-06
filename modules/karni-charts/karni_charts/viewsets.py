@@ -47,6 +47,17 @@ class ChartViewSet(BaseViewSet):
         predicate = _READERS.get(reader, Authenticated)()
         return Access(read=predicate, write=HasRole("staff"))
 
+    def filter_queryset(self, queryset: Any) -> Any:
+        """The list filters narrow the list only.
+
+        ``data/`` reads query parameters that belong to the chart's *source*
+        (``?kind=line`` may be a source field), so they must not narrow the
+        lookup of the chart itself.
+        """
+        if self.action == "data":
+            return queryset
+        return super().filter_queryset(queryset)
+
     @action(detail=True, methods=["get"], url_path="data")
     def data(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Experimental. The chart's definition and its data, read through the source's aggregate.
