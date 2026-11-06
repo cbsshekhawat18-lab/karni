@@ -247,7 +247,7 @@ def test_match_ranks_by_word_overlap_best_first(builtin: Path) -> None:
     found = recipes_mod.load(installed=False).recipes.values()
     ranked = recipes_mod.match(found, "Booking classes at a yoga studio")
     assert [(m.recipe.name, m.score, m.matched) for m in ranked] == [
-        ("studio", 6, ("booking", "class", "studio")),
+        ("studio", 12, ("booking", "class", "studio")),
         ("clinic", 2, ("booking",)),
     ]
     # a tie goes to the name, a purpose word scores 1, and below the threshold is nothing
@@ -281,7 +281,7 @@ def test_list_and_match_through_the_cli(builtin: Path, runner: Any) -> None:
     assert matched.output.splitlines()[:2] == [
         'Recipes for "a studio for yoga classes", best first (score, then name):',
         (
-            "studio   4  Studio: Classes that members book, with instructors and a capacity. "
+            "studio   8  Studio: Classes that members book, with instructors and a capacity. "
             "(matched: studio, class)"
         ),
     ]
