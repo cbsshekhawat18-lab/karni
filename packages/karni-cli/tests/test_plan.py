@@ -1186,3 +1186,26 @@ def test_the_export_writes_the_current_version_back(base: Project) -> None:
     exported = build(_with_api_version(base, "v1").facts, base.root)
     assert exported.data["app"]["api_version"] == "v1"
     assert "api_version" not in build(base.facts, base.root).data["app"]
+
+
+def test_a_hand_written_pages_place_is_not_a_navigation_change() -> None:
+    """Friction 22: `karni plan` listed `~ navigation` right after a build.
+
+    A `code` page sits where its author put it in routes.tsx (login before the others
+    here), which a rebuild cannot move, so only the Karni-written pages' order counts.
+    """
+    from types import SimpleNamespace
+
+    def pages(*names: str) -> list[dict[str, Any]]:
+        return [{n: ["code"] if n in ("login", "search") else ["list"]} for n in names]
+
+    added: list[Change] = []
+    data = {"apps": {}, "pages": pages("Trial", "Deal", "login", "search")}
+    swapped = {"apps": {}, "pages": pages("Trial", "login", "Deal", "search")}
+    ctx = SimpleNamespace(current=swapped, desired=data, entity_renames={}, add=added.append)
+    plan_mod._pages(ctx)  # type: ignore[arg-type]
+    assert added == []
+    reordered = {"apps": {}, "pages": pages("Deal", "Trial", "login", "search")}
+    ctx = SimpleNamespace(current=reordered, desired=data, entity_renames={}, add=added.append)
+    plan_mod._pages(ctx)  # type: ignore[arg-type]
+    assert [c.target for c in added] == ["navigation"]
