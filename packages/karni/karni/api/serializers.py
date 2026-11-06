@@ -28,8 +28,10 @@ subclasses it is stripped even from an explicit ``APIMeta.fields`` while
 / ``user_permissions`` are forced read-only.
 
 Relations serialize as writable primary keys by default; relations named in
-``expand`` become nested read-only serializers built recursively (a cycle or
-the depth limit stops nesting at the primary key). A writable relation only
+``expand`` become nested read-only serializers built recursively, one level
+per segment of the path. The path bounds the nesting, so a path may come
+back to a model already on it (``?expand=parent.parent`` on a tree), and the
+depth limit stops nesting at the primary key. A writable relation only
 accepts primary keys of rows the requester can read through the target
 model's routed viewset (ADR 0001 Q2.5, see
 :class:`KarniPrimaryKeyRelatedField`), and every related row a generated
@@ -468,10 +470,11 @@ def build_serializer(
     :param expand: validated relation paths (see
         :func:`karni.api.expansion.validate_expand`) to embed as nested
         read-only serializers instead of primary keys.
-    :param _seen: internal recursion guard — the models already on the
-        nesting path. Expanding into a model present here (a cycle) stops at
-        the primary key. Callers pass a non-empty value only when they want
-        an uncached nested build.
+    :param _seen: internal — the models already on the nesting path, which
+        count towards ``max_depth``. A model may appear more than once (a
+        tree's ``parent.parent``): each level consumes one segment of an
+        ``expand`` path, so the paths bound the recursion. Callers pass a
+        non-empty value only when they want an uncached nested build.
     :param max_depth: nesting depth limit; ``None`` reads the
         ``KARNI_API_MAX_EXPAND_DEPTH`` setting (default 2). Reaching the
         limit stops nesting at the primary key.
@@ -706,9 +709,11 @@ def _build_serializer_class(
             # Excluded forward relation: expansion never leaks it back in.
             continue
         related = field.related_model
-        if related is model or related in seen or len(seen) + 1 > max_depth:
-            # Cycle or depth guard: the representation stays at the PK
-            # (reverse relations simply stay absent).
+        if len(seen) + 1 > max_depth:
+            # Depth guard: the representation stays at the PK (reverse
+            # relations simply stay absent). A model already on the path is
+            # no reason to stop: the client named this level (a tree's
+            # ``parent``), and each level consumes one segment of the path.
             continue
         nested_class = _build_serializer_class(
             related, frozenset(sub_paths), (*seen, model), max_depth

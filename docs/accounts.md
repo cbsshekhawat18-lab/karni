@@ -761,6 +761,11 @@ without a node gets an empty list, and an anonymous request is refused.
 `subtree_rows(model, path, nodes)` is the filter for any nodes you choose,
 and `tree_rows(user, model, path)` the filter for a user's nodes.
 
+`?expand=parent` (and `?expand=region.parent` through a relation) embeds a
+parent only when the requester may read it through the tree resource's own
+read scope. A parent above the nodes a grant reaches expands to `null`, and
+nothing of it is in the answer ([expansion](api.md#expansion)).
+
 ### The access forest
 
 A tree resource serves `GET <resource>/access/?permission=<pattern>`: the

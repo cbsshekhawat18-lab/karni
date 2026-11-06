@@ -518,3 +518,16 @@ a raw <details> fails the lint until it uses Accordion or carries \
 `// eslint-disable-next-line karni/no-raw-elements -- <reason>`."""
 mechanical = false
 migration = "migrations/0.5.md#a-raw-details-fails-karnino-raw-elements"
+
+[[change]]
+id = "expand-nests-a-model-already-on-the-path"
+kind = "behaviour"
+symbol = "?expand="
+summary = """\
+An expand path that comes back to a model already on it now nests that level: \
+`?expand=parent` on a tree resource, `?expand=region.parent`, `?expand=events.venue`. \
+In 0.4.0 such a level stayed the key. A parent the requester cannot read expands to null. \
+A client that read the key from an expanded `parent` reads `parent.id`, or leaves `parent` \
+out of `expand`."""
+mechanical = false
+migration = "migrations/0.5.md#expand-nests-a-trees-parent"

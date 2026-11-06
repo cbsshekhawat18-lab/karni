@@ -138,6 +138,54 @@ class TestReads:
         assert count(busy) == few
 
 
+class TestExpandParent:
+    """``?expand=parent`` never embeds a node outside the requester's tree grant.
+
+    The user reads the products under Food (``tree:category``) and the
+    categories whose parent is under Food (``tree:parent``): Fruit, Apples and
+    Dairy. Food itself is outside the category grant, so where it is the
+    parent, the expanded parent is ``null``.
+    """
+
+    CATEGORY_VIEW = "testapp.category:view"
+
+    def user(self, catalog: Catalog) -> Any:
+        user = make_user("expander@example.com")
+        grants.grant(None, user, PRODUCT_VIEW, "tree:category", targets=[catalog.food.pk])
+        grants.grant(None, user, self.CATEGORY_VIEW, "tree:parent", targets=[catalog.food.pk])
+        return fresh(user)
+
+    def test_one_level_on_the_tree_resource(self, catalog: Catalog) -> None:
+        client = client_as(user=self.user(catalog))
+        response = client.get("/api/categories/", {"expand": "parent"})
+        rows = {row["name"]: row for row in ok(response)["results"]}
+        assert sorted(rows) == ["Apples", "Dairy", "Fruit"]
+        assert rows["Apples"]["parent"]["name"] == "Fruit"
+        assert rows["Fruit"]["parent"] is None  # Food: outside the grant
+        assert rows["Dairy"]["parent"] is None
+        # Nothing of Food is embedded. Fruit's own parent, one level below
+        # what was asked, stays the key, as every unexpanded foreign key does.
+        assert '"Food"' not in response.content.decode()
+        assert str(rows["Apples"]["parent"]["parent"]) == str(catalog.food.pk)
+
+    def test_two_levels_on_the_tree_resource(self, catalog: Catalog) -> None:
+        client = client_as(user=self.user(catalog))
+        data = ok(client.get(f"/api/categories/{catalog.apples.pk}/", {"expand": "parent.parent"}))
+        assert data["parent"]["name"] == "Fruit"
+        assert data["parent"]["parent"] is None
+
+    def test_through_a_relation(self, catalog: Catalog) -> None:
+        client = client_as(user=self.user(catalog))
+        response = client.get("/api/products/", {"expand": "category.parent"})
+        rows = {row["name"]: row for row in ok(response)["results"]}
+        assert sorted(rows) == ["Apple pie", "Milk"]
+        assert rows["Apple pie"]["category"]["name"] == "Apples"
+        assert rows["Apple pie"]["category"]["parent"]["name"] == "Fruit"
+        assert rows["Milk"]["category"]["name"] == "Dairy"
+        assert rows["Milk"]["category"]["parent"] is None  # Food: outside the grant
+        assert '"Food"' not in response.content.decode()
+
+
 class TestExportAndImport:
     def test_the_export_holds_the_scoped_rows(self, catalog: Catalog) -> None:
         response = client_as(user=holder(catalog, catalog.food)).get(

@@ -554,7 +554,11 @@ hand-written `filterset_class` declares its own querysets. Give a
   names. Each dotted segment is validated against the model at that level,
   and an unknown key answers 400 listing the allowed keys there.
 - Depth is capped by `KARNI_API_MAX_EXPAND_DEPTH` (env, default 2), and deeper
-  paths answer 400. Cycles stop at the PK.
+  paths answer 400. A path may come back to a model already on it: on a
+  [tree resource](#tree-models) `?expand=parent` nests the parent,
+  `?expand=parent.parent` the grandparent, and `?expand=region.parent` the
+  parent of a row's region. Each segment is one level, so the path bounds
+  the nesting.
 - Expanded relations are just nested serializers to the
   [query optimiser](#query-optimisation). It uses `select_related` for FK/O2O
   paths into targets whose read scope keeps every row, and a scoped `Prefetch`
@@ -564,6 +568,11 @@ hand-written `filterset_class` declares its own querysets. Give a
   its target's read scope (see [Access control](#access-control)), and a
   to-one target outside it renders as `null`. This holds on every response
   that renders the expanded serializer, writes included (`PATCH …?expand=venue`).
+  On a tree, the parent of the highest node a requester may read (under
+  [the tree scope](accounts.md#the-tree-scope), the parent above a grant)
+  expands to `null`, so an expanded `parent: null` does not by itself mean a
+  root. A relation that is not expanded stays its key, readable target or
+  not, so a form that sends a row back keeps the relation.
 
 `karni.api.expansion.related_lookups()` and `scoped_related_lookups()` are
 deprecated (they warn, and they are removed in 1.0). The optimiser derives

@@ -1547,6 +1547,16 @@ apply codemods and list the manual steps. This file is the human summary.
   `python -m karni.links check` catches the ownerless form too.
   `docs/testing.md` opens with the four fixtures most tests use.
 
+### Fixed (backend self-test)
+
+- **`?expand=parent` nests the parent of a tree.** A tree resource accepted
+  `?expand=parent` (E126 listed it) and `?expand=region.parent` through a
+  relation, but answered the key: the serializer stopped at any model already
+  on the path. Every level a client names now nests, the path and
+  `KARNI_API_MAX_EXPAND_DEPTH` bound it, and a parent the requester cannot
+  read (above a tree grant, or outside the tree resource's read scope)
+  expands to `null`, with nothing of it in the answer.
+
 ## 0.4.0 (2026-10-22)
 
 - **PostgreSQL is the default, everywhere.** `pip install karni` now brings
