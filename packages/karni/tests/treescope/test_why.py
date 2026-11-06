@@ -71,9 +71,7 @@ def test_a_role_grant_through_an_attribute_the_user_model_has(
     make_user("holder@example.com", "buyer")
     text = run(f"products/{catalog.milk.pk}", "--as", "holder@example.com")
     assert "role 'buyer' (through holder@example.com.category) gives no node" in text
-    assert fixes(text)[0].startswith(
-        "set holder@example.com.category to the row's category (Dairy"
-    )
+    assert fixes(text)[0].startswith("set holder@example.com.category to the row's category (Dairy")
 
 
 def test_why_empty_names_the_nodes(catalog: Catalog) -> None:
