@@ -736,8 +736,10 @@ class _Run:
     def reset(self, plan: list[type[models.Model]]) -> None:
         from django.core.management.color import no_style
 
-        project = {model for model in _project_models()}
-        wiped = [model for model in reversed(plan) if model in project]
+        # What a seed run writes: the project's models, and any model a seeder names, so the
+        # rows of a module (a saved chart, a per-user grant) go too. The user model never does.
+        owned = {*_project_models(), *seeders()} - {self.user_model}
+        wiped = [model for model in reversed(plan) if model in owned]
         for model in wiped:
             _wipe(model)
         tables = {model._meta.db_table for model in wiped}
