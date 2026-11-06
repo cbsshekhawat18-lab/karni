@@ -1846,7 +1846,7 @@ class Lead(BaseModel):
 | `KARNI_ADMIN_PATH` | `KARNI_ADMIN_PATH` | `"admin/"` | URL path the scaffold mounts the Django admin at (trailing slash). Set it to something unguessable in production. |
 | `KARNI_ADMIN_EXCLUDE` | `KARNI_ADMIN_EXCLUDE` | `[ "sessions", "contenttypes", "admin", "auth.Permission", "django_celery_results.ChordCounter"]` | App labels or `app_label.ModelName` entries the admin leaves out. |
 | `KARNI_ADMIN_BULK_EDIT_MAX` | `KARNI_ADMIN_BULK_EDIT_MAX` | `500` | The most rows the admin's *Edit selected* action changes at once. A larger selection gets a message and nothing changes. See [admin](admin.md#bulk-actions). |
-| `KARNI_ADMIN_GUIDE` | `KARNI_ADMIN_GUIDE` | `True` | Show the *Getting started* panel on the admin home page, and its entry in the user menu. A user can dismiss it. See [admin](admin.md#the-guide). |
+| `KARNI_ADMIN_GUIDE` | `KARNI_ADMIN_GUIDE` | `True` | Show the *Getting started* panel on the admin home page, and its entry in the user menu. A user can dismiss it. See [admin](admin.md#the-home-page-and-the-guide). |
 | `KARNI_ADMIN_PER_PAGE` | `KARNI_ADMIN_PER_PAGE` | `25` | Rows per page on every admin list (25). A model sets its own with `AdminMeta.per_page`, and a reader picks 25, 50 or 100 with `?per_page=`. See [admin](admin.md#the-list-of-a-model). |
 | `KARNI_ADMIN_COUNT_ESTIMATE_ABOVE` | `KARNI_ADMIN_COUNT_ESTIMATE_ABOVE` | `100000` | On PostgreSQL, a table above this many rows shows an estimated count ("about 1,200,000") instead of running `COUNT(*)` on every page. `0` always counts exactly. See [admin](admin.md#the-list-of-a-model). |
 | `KARNI_ADMIN_LIST_DISPLAY_MAX` |  | `6` | Columns a derived admin changelist shows at most. |

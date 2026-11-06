@@ -123,7 +123,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_ADMIN_BULK_EDIT_MAX": "The most rows the admin's *Edit selected* action changes at once. A larger selection gets a message and nothing changes. See [admin](admin.md#bulk-actions).",
     "KARNI_ADMIN_PER_PAGE": "Rows per page on every admin list (25). A model sets its own with `AdminMeta.per_page`, and a reader picks 25, 50 or 100 with `?per_page=`. See [admin](admin.md#the-list-of-a-model).",
     "KARNI_ADMIN_COUNT_ESTIMATE_ABOVE": 'On PostgreSQL, a table above this many rows shows an estimated count ("about 1,200,000") instead of running `COUNT(*)` on every page. `0` always counts exactly. See [admin](admin.md#the-list-of-a-model).',
-    "KARNI_ADMIN_GUIDE": "Show the *Getting started* panel on the admin home page, and its entry in the user menu. A user can dismiss it. See [admin](admin.md#the-guide).",
+    "KARNI_ADMIN_GUIDE": "Show the *Getting started* panel on the admin home page, and its entry in the user menu. A user can dismiss it. See [admin](admin.md#the-home-page-and-the-guide).",
     "KARNI_ADMIN_LIST_DISPLAY_MAX": "Columns a derived admin changelist shows at most.",
     "KARNI_ADMIN_LIST_FILTER_MAX": "Sidebar filters a derived admin shows at most.",
     "KARNI_ADMIN_SEARCH_MAX": "Fields a derived admin searches at most.",
