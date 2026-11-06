@@ -45,6 +45,7 @@ def is_technical(name: str, path: str) -> bool:
     patterns = [*TECHNICAL_ROUTES, *(str(p) for p in conf.get("KARNI_SITE_TECHNICAL_ROUTES") or ())]
     return any(fnmatchcase(name, p) or fnmatchcase(path, p) for p in patterns)
 
+
 #: Apps whose models are framework machinery, never a page a client links to.
 _INTERNAL_APPS = frozenset(
     {

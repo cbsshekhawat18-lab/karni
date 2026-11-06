@@ -29,7 +29,7 @@ from karni.models import BaseModel
 class Invoice(BaseModel):
     ...
     class Karni:
-        requires_approval = ["amount", "status"]   # a list holds changes to those fields and a create
+        requires_approval = ["amount", "status"]   # a list holds updates of those fields, and a create
                                                     # that sets one off its default; True holds
                                                     # every change, create and delete
         approvals_required = 2                      # default KARNI_APPROVALS_REQUIRED (1)

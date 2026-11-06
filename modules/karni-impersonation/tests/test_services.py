@@ -61,7 +61,6 @@ class TestWhoMayImpersonateWhom:
         from django.utils import timezone
 
         from karni_impersonation.models import ImpersonationSession
-
         from tests.conftest import make_user
 
         other = make_user("other@example.com", "customer")
