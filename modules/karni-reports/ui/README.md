@@ -8,7 +8,8 @@ downloads it when ready, and the `useReport` hook behind it.
 npm install @karni/reports-ui
 ```
 
-It peer-depends on `@karni/ui` (`^0.4.0`), React 18 or 19 and
+It peer-depends on `@karni/ui` at its own version (every Karni package is
+released at one version), React 18 or 19 and
 `@tanstack/react-query` 5, and calls the API through the `KarniClient` of
 the nearest `KarniProvider`.
 

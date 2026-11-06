@@ -28,3 +28,10 @@ The README lists the settings and every escape hatch.
 """
 
 from __future__ import annotations
+
+from importlib import metadata as _metadata
+
+try:
+    __version__ = _metadata.version("karni-site")  # [project] version in pyproject.toml
+except _metadata.PackageNotFoundError:  # a source tree on sys.path, never installed
+    __version__ = "0+unknown"

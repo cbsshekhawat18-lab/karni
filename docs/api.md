@@ -228,7 +228,7 @@ after the access object check. Express the rule in `access` instead
 ([migration note](migrations/0.2.md#object_permission_classes)). `karni upgrade`
 lists every viewset that sets it. `IsOwner`,
 `RolePermission` and `ObjectPermissionsMixin` remain for plain DRF views
-(see [accounts](accounts.md#roles-and-object-permissions)).
+(see [accounts](accounts.md#role-helpers-and-object-permissions)).
 
 ## Rate limits
 

@@ -18,6 +18,11 @@ Every default Karni applies can be overridden from the project's own
 overwritten, and values assigned after the call always win.
 """
 
-__version__ = "0.5.0"
+from importlib import metadata as _metadata
+
+try:
+    __version__ = _metadata.version("karni")  # [project] version in pyproject.toml
+except _metadata.PackageNotFoundError:  # a source tree on sys.path, never installed
+    __version__ = "0+unknown"
 
 __all__ = ["__version__"]

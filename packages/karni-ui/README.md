@@ -23,8 +23,12 @@ dependencies are resolved by your bundler or by Node.
 ## Install
 
 ```sh
-npm install @karni/ui @tanstack/react-query @tanstack/react-table react-hook-form @hookform/resolvers zod
+npm install @karni/ui @tanstack/react-query@5 @tanstack/react-table@8 react-hook-form@7 @hookform/resolvers@^5.1 zod@^4.6.6
 ```
+
+The versions in the command are the peer ranges. Without them npm installs each
+package's latest major, which can be newer than `@karni/ui` supports
+(`@tanstack/react-table` 9, for one), and the next install fails with ERESOLVE.
 
 Peer dependencies: `react` / `react-dom` (18 or 19), `@tanstack/react-query` v5,
 `@tanstack/react-table` v8, `react-hook-form` v7, and `zod` 4.6.6 or later with

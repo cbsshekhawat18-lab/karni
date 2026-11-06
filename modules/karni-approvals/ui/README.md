@@ -30,7 +30,7 @@ import { ApprovalsBadge, ApprovalsQueue } from "@karni/approvals-ui";
 - Hooks: `usePendingChanges`, `usePendingCount`, `useDecidePendingChange`
   (invalidates the resource's queries on success).
 
-Peer dependencies: `@karni/ui ^0.1`, React 18/19, `@tanstack/react-query` 5.
+Peer dependencies: `@karni/ui` at this package's version (every Karni package is released at one version), React 18/19, `@tanstack/react-query` 5.
 Styling uses `@karni/ui`'s tokens only. Both components register their
 roles (`approvals-queue`, `approvals-badge`) on `@karni/ui`'s role registry
 when it is present.

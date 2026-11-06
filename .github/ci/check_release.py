@@ -1,16 +1,26 @@
 """Pre-publish checks for a release tag (run by .github/workflows/release.yml).
 
 Karni versions every published package in lockstep: one tag ``vX.Y.Z``
-publishes karni, karni-cli and karni-payments to PyPI and @karni/ui and
-@karni/payments-ui to npm, all at ``X.Y.Z``. This script refuses the release,
-and names the fix, when:
+publishes every package below at ``X.Y.Z``, the Python packages in
+:data:`PYTHON_PACKAGES` to PyPI and the React packages in
+:data:`NPM_PACKAGES` to npm. These two lists are the release:
+docs/releasing.md, the workflows and their tests are checked against them.
+This script refuses the release, and names the fix, when:
 
 - a package's version differs from the tag;
+- a Python package's ``__version__`` is not its distribution's version;
 - a package's repository URL is not the repository publishing it (npm
   provenance is verified against that URL, so a mismatch fails at publish
   time, after the Python packages are already out);
 - a package directory's LICENSE copy differs from the root LICENSE;
-- karni-payments' or @karni/payments-ui's range on core excludes the release.
+- a module's range on core (``karni`` in pyproject.toml, ``@karni/ui`` in
+  its ui/package.json) excludes the release;
+- a package is missing from a build or upload list in release.yml or
+  pypi-from-release.yml, or a PyPI upload step differs from the others;
+- CHANGELOG.md does not open with the release's section, dated:
+  ``## X.Y.Z (YYYY-MM-DD)``. Until the release commit the section reads
+  ``## X.Y.Z (unreleased)``, which only a dry run without a tag
+  (``--allow-unreleased``) or a pre-release tag accepts.
 
 Usage::
 
@@ -20,6 +30,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import sys
@@ -60,6 +71,33 @@ UI_MODULES = (
     "modules/karni-storage",
 )
 NPM_PACKAGES = ("packages/karni-ui", *(f"{module}/ui" for module in UI_MODULES))
+#: Every PyPI upload step passes these besides its own ``packages-dir``: a re-run
+#: skips files PyPI already has, a PYPI_API_TOKEN secret replaces trusted
+#: publishing, and attestations follow whichever of the two is in use.
+UPLOAD_ACTION = "pypa/gh-action-pypi-publish@release/v1"
+UPLOAD_WITH: dict[str, object] = {
+    "skip-existing": True,
+    "password": "${{ secrets.PYPI_API_TOKEN }}",
+    "attestations": "${{ steps.auth.outputs.attest }}",
+}
+#: The jobs that upload to PyPI, one step per project, core first.
+PYPI_JOBS = (
+    (".github/workflows/release.yml", "publish-pypi"),
+    (".github/workflows/pypi-from-release.yml", "publish"),
+)
+#: The shell loops that name every package: (workflow, job, loop variable, "python" or "npm",
+#: and whether the loop names directories or the projects' file-name prefixes).
+LOOPS = (
+    (".github/workflows/release.yml", "build-python", "d", "python", "directories"),
+    (".github/workflows/release.yml", "publish-pypi", "project", "python", "projects"),
+    (".github/workflows/pypi-from-release.yml", "publish", "project", "python", "projects"),
+    (".github/workflows/release.yml", "build-npm", "d", "npm", "directories"),
+    (".github/workflows/release.yml", "publish-npm", "d", "npm", "directories"),
+)
+#: The heading of a CHANGELOG.md section: the version, then its date or "unreleased".
+CHANGELOG_HEADING = re.compile(
+    r"^## (?P<version>\d+\.\d+\.\d+) \((?P<date>\d{4}-\d{2}-\d{2}|unreleased)\)$"
+)
 TAG = re.compile(r"^v(?P<version>\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?)$")
 
 
@@ -93,6 +131,162 @@ def check_versions(version: str) -> list[str]:
                 f'Set "version": "{version}" in every package (lockstep), then re-tag.'
             )
     return problems
+
+
+def _version_attribute(init: Path) -> tuple[str, str] | None:
+    """How ``init`` sets ``__version__`` at module level, read without importing it.
+
+    ``("distribution", "karni-ai")`` for ``_metadata.version("karni-ai")`` (or a
+    bare ``version(...)``), ``("literal", "0.5.0")`` for a string, ``("other",
+    source)`` for anything else, ``None`` when nothing sets it. In a ``try``
+    the body counts and the ``except`` fallback (an uninstalled source tree's
+    ``"0+unknown"``) does not.
+    """
+    statements = []
+    for node in ast.parse(init.read_text(encoding="utf-8")).body:
+        statements.extend(node.body if isinstance(node, ast.Try) else [node])
+    for node in statements:
+        if isinstance(node, ast.Assign):
+            targets, value = node.targets, node.value
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            targets, value = [node.target], node.value
+        else:
+            continue
+        if not any(
+            isinstance(target, ast.Name) and target.id == "__version__" for target in targets
+        ):
+            continue
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            return "literal", value.value
+        func = value.func if isinstance(value, ast.Call) else None
+        called = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+        if (
+            isinstance(value, ast.Call)
+            and called == "version"
+            and len(value.args) == 1
+            and isinstance(value.args[0], ast.Constant)
+            and isinstance(value.args[0].value, str)
+        ):
+            return "distribution", value.args[0].value
+        return "other", ast.unparse(value)
+    return None
+
+
+def check_version_attributes(version: str) -> list[str]:
+    """Each Python package's ``__version__`` is its own distribution's version."""
+    problems = []
+    for directory in PYTHON_PACKAGES:
+        name = str(_pyproject(directory).get("name"))
+        init = f"{directory}/{name.replace('-', '_')}/__init__.py"
+        fix = (
+            f"Set it from the distribution: `from importlib import metadata as _metadata` and "
+            f'`__version__ = _metadata.version("{name}")`.'
+        )
+        if not (ROOT / init).is_file():
+            problems.append(f"{init} is missing: the import package of {name} is not there.")
+            continue
+        found = _version_attribute(ROOT / init)
+        if found is None:
+            problems.append(f"{init} defines no __version__. {fix}")
+        elif found[0] == "literal" and found[1] != version:
+            problems.append(
+                f"{init} has __version__ = {found[1]!r}, the tag says {version!r}. {fix}"
+            )
+        elif found[0] == "distribution" and found[1] != name:
+            problems.append(
+                f"{init} reads the version of {found[1]!r}, not of its own distribution "
+                f"{name!r}. {fix}"
+            )
+        elif found[0] == "other":
+            problems.append(
+                f"{init} sets __version__ = {found[1]}, which this check cannot read. {fix}"
+            )
+    return problems
+
+
+def _file_prefix(directory: str) -> str:
+    """``karni_cli`` for packages/karni-cli: how its sdist and wheel names start."""
+    return str(_pyproject(directory).get("name")).replace("-", "_")
+
+
+def _job_steps(workflow: str, job: str) -> list[dict[str, object]]:
+    import yaml
+
+    data = yaml.safe_load((ROOT / workflow).read_text(encoding="utf-8"))
+    steps = (data.get("jobs") or {}).get(job, {}).get("steps") or []
+    return [step for step in steps if isinstance(step, dict)]
+
+
+def check_workflows() -> list[str]:
+    """Every package is in every build and upload list, and every upload step is alike."""
+    problems = []
+    expected = {
+        ("python", "directories"): list(PYTHON_PACKAGES),
+        ("python", "projects"): [_file_prefix(directory) for directory in PYTHON_PACKAGES],
+        ("npm", "directories"): list(NPM_PACKAGES),
+    }
+    for workflow, job, variable, kind, names in LOOPS:
+        want = expected[(kind, names)]
+        loop = re.compile(rf"\bfor {variable} in ([^;\n]+); do")
+        found = [
+            match[1].split()
+            for step in _job_steps(workflow, job)
+            for match in loop.finditer(str(step.get("run") or ""))
+        ]
+        if found != [want]:
+            problems.append(
+                f"{workflow} job {job}: the `for {variable} in ...` loop lists {found}, "
+                f"expected one loop over {want} (check_release.py lists the release)."
+            )
+    for workflow, job in PYPI_JOBS:
+        steps = [step for step in _job_steps(workflow, job) if step.get("uses") == UPLOAD_ACTION]
+        names = [step.get("name") for step in steps]
+        want_names = [_pyproject(directory).get("name") for directory in PYTHON_PACKAGES]
+        if names != want_names:
+            problems.append(
+                f"{workflow} job {job} uploads {names}, expected one {UPLOAD_ACTION} step per "
+                f"project in this order: {want_names}."
+            )
+        for step, directory in zip(steps, PYTHON_PACKAGES, strict=False):
+            want = {"packages-dir": f"pypi/{_file_prefix(directory)}/", **UPLOAD_WITH}
+            if step.get("with") != want:
+                problems.append(
+                    f"{workflow} job {job} step {step.get('name')!r} has with: "
+                    f"{step.get('with')}, expected {want}. Every upload step passes the same "
+                    "skip-existing, password and attestations."
+                )
+    return problems
+
+
+def check_changelog(version: str, *, allow_unreleased: bool = False) -> list[str]:
+    """CHANGELOG.md opens with this release's section, dated unless ``allow_unreleased``."""
+    import datetime
+
+    release = re.match(r"\d+\.\d+\.\d+", version)
+    assert release is not None
+    base = release[0]
+    allow_unreleased = allow_unreleased or base != version  # a pre-release (rc, a, b)
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    first = next((line for line in text.splitlines() if line.startswith("## ")), None)
+    match = CHANGELOG_HEADING.match(first or "")
+    dated = f"## {base} (YYYY-MM-DD)"
+    if match is None or match["version"] != base:
+        return [
+            f"CHANGELOG.md opens with {first!r}, not this release's section. Put "
+            f"`{dated}` (the release date) above the previous release's section."
+        ]
+    if match["date"] == "unreleased":
+        if allow_unreleased:
+            return []
+        return [
+            f"CHANGELOG.md still reads `## {base} (unreleased)`. Replace (unreleased) with "
+            f"the release date, `{dated}`, in the release commit, then re-tag."
+        ]
+    try:
+        datetime.date.fromisoformat(match["date"])
+    except ValueError:
+        return [f"CHANGELOG.md dates {base} {match['date']!r}, which is not a date (YYYY-MM-DD)."]
+    return []
 
 
 def check_repository(repo: str) -> list[str]:
@@ -144,8 +338,6 @@ def check_module_ranges(version: str) -> list[str]:
                 )
         if module not in UI_MODULES:
             continue  # no npm package (karni-site), so no peer range to check
-        if module not in UI_MODULES:  # karni-site ships no React package
-            continue
         peers = _package_json(f"{module}/ui").get("peerDependencies") or {}
         spec = peers.get("@karni/ui") if isinstance(peers, dict) else None
         if isinstance(spec, str) and not _caret_allows(spec, version):
@@ -171,6 +363,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--tag", required=True, help="the pushed tag, e.g. v0.2.0")
     parser.add_argument("--repo", required=True, help="owner/name of the publishing repository")
+    parser.add_argument(
+        "--allow-unreleased",
+        action="store_true",
+        help="accept `## X.Y.Z (unreleased)` in CHANGELOG.md (a dry run without a tag)",
+    )
     args = parser.parse_args(argv)
     match = TAG.match(args.tag)
     if not match:
@@ -179,9 +376,12 @@ def main(argv: list[str] | None = None) -> int:
     version = match["version"]
     problems = [
         *check_versions(version),
+        *check_version_attributes(version),
         *check_repository(args.repo),
         *check_licenses(),
         *check_module_ranges(version),
+        *check_workflows(),
+        *check_changelog(version, allow_unreleased=args.allow_unreleased),
     ]
     for problem in problems:
         print(f"release check: {problem}")

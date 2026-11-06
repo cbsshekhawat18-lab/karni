@@ -5,13 +5,14 @@ from __future__ import annotations
 import ast
 import json
 import re
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
 from karni_cli import errorcodes
-from karni_cli.errordoc import render
+from karni_cli.errordoc import _entry, render
 from karni_cli.main import app
 from karni_cli.project import CliError
 
@@ -27,6 +28,58 @@ def test_docs_errors_md_is_fresh() -> None:
     assert docs == render(), (
         "docs/errors.md is stale. Regenerate it: python -m karni_cli.errordoc > docs/errors.md"
     )
+
+
+class _Anchors(HTMLParser):
+    """Collects ``id`` attributes the way mkdocs scans a page for anchors."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.ids: set[str] = set()
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.ids.update(value for key, value in attrs if key == "id" and value)
+
+
+def test_every_anchor_on_the_page_is_visible_to_an_html_parser() -> None:
+    """A raw ``<title>`` or ``<textarea>`` hid every anchor after it from mkdocs (A6-01)."""
+    page = render()
+    parser = _Anchors()
+    parser.feed(page)
+    parser.close()
+    assert set(re.findall(r'<a id="([^"]+)"></a>', page)) == parser.ids
+
+
+def test_registry_text_reaches_the_page_without_raw_tags() -> None:
+    entry = {
+        "code": "X001",
+        "title": "A page's <title> is missing",
+        "kind": "check",
+        "source": "app/<name>.py",
+        "why": "Raw `<textarea>` and <script> in <app>/views.py (inside <!-- a comment -->).",
+        "fix": "Use `a < b`, ``x`y``, `plain` and [the docs](errors.md#x001).",
+    }
+    text = _entry(entry)
+    tags = re.findall(r"<(?!a id=|/a>|code>|/code>)[^ >]*", text)
+    assert tags == [], tags
+    assert "A page's &lt;title> is missing" in text
+    assert "from <code>app/&lt;name&gt;.py</code>" in text
+    assert "Raw <code>&lt;textarea&gt;</code> and &lt;script> in &lt;app>/views.py" in text
+    assert "<code>a &lt; b</code>, ``x`y``, `plain` and [the docs](errors.md#x001)." in text
+
+
+def test_escaped_text_renders_as_the_registry_wrote_it() -> None:
+    markdown = pytest.importorskip("markdown")
+    entry = {
+        "code": "X001",
+        "title": "t",
+        "kind": "check",
+        "source": "s",
+        "why": "show a page's <title> in `<app>/views.py`.",
+        "fix": "f",
+    }
+    html = markdown.markdown(_entry(entry))
+    assert "show a page's &lt;title&gt; in <code>&lt;app&gt;/views.py</code>." in html
 
 
 def test_the_page_documents_every_kind_of_code() -> None:

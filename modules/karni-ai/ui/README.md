@@ -13,10 +13,10 @@ Experimental. React components for the Karni AI extraction module
 ## Install
 
 ```bash
-npm install @karni/ai-ui @karni/ui @tanstack/react-query
+npm install @karni/ai-ui @karni/ui @tanstack/react-query@5
 ```
 
-Peer dependencies: `react` / `react-dom` (`^18 || ^19`), `@karni/ui` (`^0.4.0`),
+Peer dependencies: `react` / `react-dom` (`^18 || ^19`), `@karni/ui` at this package's version (every Karni package is released at one version),
 `@tanstack/react-query` (`^5`). Wrap your app in `<KarniProvider>` as the
 `@karni/ui` README describes. The client's `baseUrl` carries `/api`.
 

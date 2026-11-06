@@ -53,7 +53,7 @@ cannot start before the item it names is done.
 | Item | Goal | Depends on | Status |
 |---|---|---|---|
 | 11 | Page blocks beyond CRUD in `@karni/ui`: dashboard grid, chart card, accordion, markdown view, data table, comparison table and related tabs. | none | done |
-| 12 | Markdown fields, field groups and column sets, so a model with 100+ columns still has usable forms, detail pages and tables. | none | planned |
+| 12 | Markdown fields, field groups and column sets, so a model with 100+ columns still has usable forms, detail pages and tables. | none | done |
 | 13 | Navigation from data: a menu each user gets from their roles and grants, edited in the admin. | 6 | done |
 
 ### Phase 4: scale and production
@@ -61,8 +61,9 @@ cannot start before the item it names is done.
 | Item | Goal | Depends on | Status |
 |---|---|---|---|
 | 14 | Tooling for 100+ models: scoped context, incremental checks, volume seeding, query plans and a CI benchmark. | none | done |
-| 15 | Optional modules: reports (PDF), ai (structured extraction) and storage (S3). | none | in progress: 15a (reports), 15b (ai) and 15c (storage) done |
+| 15 | Optional modules: reports (PDF), ai (structured extraction) and storage (S3). | none | done: 15a (reports), 15b (ai) and 15c (storage) |
 | 15a | The reports module (`karni add reports`): a row printed to PDF from a template in a Celery task, cached by template and data, served only to users who may retrieve the row, with pre-generation, an admin and `@karni/reports-ui`. | none | done |
+| 15b | The ai module (`karni add ai`): structured extraction from a text, a web page or a PDF by a language model, into rows that follow the resource's own schema, always through the import preview, with call logs, token budgets and `@karni/ai-ui`. | none | done |
 | 15c | The storage module (`karni add storage`): protected file fields served only through the row's own viewset by a signed URL, provider presets for AWS, R2, MinIO, Spaces, B2 and GCS, direct uploads with a confirm step, thumbnails and `@karni/storage-ui`. | none | done |
 | 16 | Production proof: a CI job that boots the Docker stack end to end, health and readiness endpoints, API versioning and a deploy guide. | none | done, except the README's production-readiness answer, which changes after the first green CI run |
 

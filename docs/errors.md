@@ -97,7 +97,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Lifting a scope shows rows the scope exists to hide (deleted rows, another tenant's rows). The reason is logged so every such query can be audited.
 
-**Fix.** Pass reason="<why this query must see rows the scope hides>", e.g. Model.objects.without("soft_delete", reason="admin: deleted filter").
+**Fix.** Pass reason="&lt;why this query must see rows the scope hides>", e.g. Model.objects.without("soft_delete", reason="admin: deleted filter").
 
 <a id="e005"></a>
 
@@ -107,7 +107,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Scopes are applied when the manager builds the queryset, so a queryset has already filtered by every scope. Lifting one there cannot bring rows back.
 
-**Fix.** Start from the manager: Model.objects.without("<scope>", reason="...").filter(...).
+**Fix.** Start from the manager: Model.objects.without("&lt;scope>", reason="...").filter(...).
 
 <a id="e006"></a>
 
@@ -117,7 +117,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A scope that needs context (the current tenant) has none, typically in a Celery task, management command or test. Karni fails closed instead of returning every tenant's rows.
 
-**Fix.** Bind the context before querying, as the message says (e.g. wrap the task body in the module's context manager), or lift the scope deliberately with Model.objects.without("<scope>", reason="...").
+**Fix.** Bind the context before querying, as the message says (e.g. wrap the task body in the module's context manager), or lift the scope deliberately with Model.objects.without("&lt;scope>", reason="...").
 
 <a id="e007"></a>
 
@@ -169,7 +169,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The viewset's `write` predicate is Authenticated() or Public(), not narrowed with & by HasRole, Granted, Owned or Can, while KARNI_ACCOUNTS_REGISTRATION is True. Anyone who opens an account through register/ can then update and delete every row the viewset routes. A test that acts as any signed-in user passes and confirms it. Karni 0.4.0's `--access public-read` preset generated this declaration.
 
-**Fix.** Tighten write: HasRole("staff") (what `--access public-read` now writes), Granted() (the roles' grants) or Owned("<field>"). create=Authenticated() with an Owned() write is the user-generated-content pattern and is not flagged. If nobody may self-register, set KARNI_ACCOUNTS_REGISTRATION = False. If every signed-in user is trusted, add 'karni.W102' to SILENCED_SYSTEM_CHECKS.
+**Fix.** Tighten write: HasRole("staff") (what `--access public-read` now writes), Granted() (the roles' grants) or Owned("&lt;field>"). create=Authenticated() with an Owned() write is the user-generated-content pattern and is not flagged. If nobody may self-register, set KARNI_ACCOUNTS_REGISTRATION = False. If every signed-in user is trusted, add 'karni.W102' to SILENCED_SYSTEM_CHECKS.
 
 <a id="e103"></a>
 
@@ -429,17 +429,17 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The scaling check runs list and retrieve with few and many rows. More rows must not mean more queries, or the page slows down as the table grows.
 
-**Fix.** Let the optimiser see the relation through the serializer, or add select_related / prefetch_related hints (or APIMeta.select/prefetch) for a SerializerMethodField or property. Opt out only with `# karni: allow(query-scaling): <reason>` above the viewset class.
+**Fix.** Let the optimiser see the relation through the serializer, or add select_related / prefetch_related hints (or APIMeta.select/prefetch) for a SerializerMethodField or property. Opt out only with <code># karni: allow(query-scaling): &lt;reason&gt;</code> above the viewset class.
 
 <a id="e130"></a>
 
 #### E130: An opt-out marker has no reason
 
-*test failure* · from `karni.testing (# karni: allow(<rule>) markers)`
+*test failure* · from <code>karni.testing (# karni: allow(&lt;rule&gt;) markers)</code>
 
 **Why Karni objects.** Opting out of a check must be deliberate and reviewable. The reason is what gets reviewed.
 
-**Fix.** Write the reason after the colon: `# karni: allow(<rule>): <why>`.
+**Fix.** Write the reason after the colon: <code># karni: allow(&lt;rule&gt;): &lt;why&gt;</code>.
 
 <a id="e131"></a>
 
@@ -457,7 +457,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni.api.throttling.Throttle; BaseViewSet.throttle`
 
-**Why Karni objects.** A viewset's throttle declaration names actions of that viewset and gives each a DRF rate, '<number>/<period>' with the period s, sec, second, m, min, minute, h, hour, d or day.
+**Why Karni objects.** A viewset's throttle declaration names actions of that viewset and gives each a DRF rate, '&lt;number>/&lt;period>' with the period s, sec, second, m, min, minute, h, hour, d or day.
 
 **Fix.** Write `throttle = Throttle(create='10/hour')`, naming only actions the viewset has (the standard ones, or a custom @action by its method name).
 
@@ -467,7 +467,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni.dashboard.dashboard_spec; karni.checks.check_dashboards`
 
-**Why Karni objects.** The dashboard declaration is published in the OpenAPI schema and @karni/ui's <Dashboard> counts rows with the list endpoint's filters. A field name with a typo, a value the field does not have or a count without filters would show a wrong number, so the declaration is refused at boot.
+**Why Karni objects.** The dashboard declaration is published in the OpenAPI schema and @karni/ui's &lt;Dashboard> counts rows with the list endpoint's filters. A field name with a typo, a value the field does not have or a count without filters would show a wrong number, so the declaration is refused at boot.
 
 **Fix.** Write dashboard = True, or a dict with the keys label, order, total, new_days, by, values, counts, recent, columns and date_field, naming fields of the model: e.g. dashboard = {'by': 'status', 'counts': {'Due today': {'due_on': 'today'}}, 'recent': 5}.
 
@@ -521,7 +521,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The role declaration is the single source of what each role may do. A malformed entry cannot be reconciled into the role tables.
 
-**Fix.** Write KARNI_ROLES = {'<slug>': {'name': ..., 'description': ..., 'system': bool, 'grants': {'app_label.model:action': '<scope>'}}}. A pattern may use '*' for the model or the action (or '*' alone). A scope is 'all', 'own', 'related:<key>', 'custom:<name>' or 'tree:<path>'.
+**Fix.** Write KARNI_ROLES = {'&lt;slug>': {'name': ..., 'description': ..., 'system': bool, 'grants': {'app_label.model:action': '&lt;scope>'}}}. A pattern may use '*' for the model or the action (or '*' alone). A scope is 'all', 'own', 'related:&lt;key>', 'custom:&lt;name>' or 'tree:&lt;path>'.
 
 <a id="e206"></a>
 
@@ -581,7 +581,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Granted() resolves to the viewset's model and the current action. An unsafe custom @action the model never declared has no permission to check, and a viewset without a model has nothing to resolve against. Evaluating it outside a viewset is the same error.
 
-**Fix.** Add the action to `class Karni: actions = [...]` on the model and grant 'app.model:<action>' in KARNI_ROLES, give the action its own @action(access=...), set `model = ...` on the viewset, or evaluate through action_predicate(view, access).
+**Fix.** Add the action to `class Karni: actions = [...]` on the model and grant 'app.model:&lt;action>' in KARNI_ROLES, give the action its own @action(access=...), set `model = ...` on the viewset, or evaluate through action_predicate(view, access).
 
 <a id="e212"></a>
 
@@ -609,7 +609,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni.checks.check_role_scope_paths`
 
-**Why Karni objects.** A grant's scope becomes a database filter on every request: `own` follows Karni.owner_field, `related:<key>` follows Karni.scope_paths[key], and a `custom:<name>` scope builds its own. A path the model does not have would answer 500 to every user holding the grant. This typically happens after a new model joins a wildcard grant written for its siblings.
+**Why Karni objects.** A grant's scope becomes a database filter on every request: `own` follows Karni.owner_field, <code>related:&lt;key&gt;</code> follows Karni.scope_paths[key], and a <code>custom:&lt;name&gt;</code> scope builds its own. A path the model does not have would answer 500 to every user holding the grant. This typically happens after a new model joins a wildcard grant written for its siblings.
 
 **Fix.** Give the model the path the scope expects (`class Karni: owner_field = 'workspace__members'`, or the scope path), teach the custom scope the new model, or narrow the grant's pattern so it does not cover the model.
 
@@ -617,7 +617,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 #### E215: The ID token is not valid
 
-*API 400 response* · from `karni.accounts.social_token.verify_id_token (POST <auth>/social/<provider>/)`
+*API 400 response* · from <code>karni.accounts.social_token.verify_id_token (POST &lt;auth&gt;/social/&lt;provider&gt;/)</code>
 
 **Why Karni objects.** Karni verifies an ID token offline: a JWT signed with one of the provider's published keys, with the algorithm the provider uses, carrying exp, iat, iss, aud and sub. A token that is malformed, signed with another key or algorithm, missing one of those claims, or issued in the future (iat or nbf past the leeway) proves nothing, so the answer is a 401.
 
@@ -631,7 +631,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A token's aud claim names the client id it was issued to. Accepting a token issued to another application would let any app that signs its users in with the same provider sign them in here too, so aud must be one of the configured client ids (401).
 
-**Fix.** Add the client id the app uses to KARNI_SOCIAL_TOKEN_PROVIDERS[<provider>]['client_ids']: the web client id, and each iOS and Android client id (for Apple, the service id and the bundle id).
+**Fix.** Add the client id the app uses to KARNI_SOCIAL_TOKEN_PROVIDERS[&lt;provider>]['client_ids']: the web client id, and each iOS and Android client id (for Apple, the service id and the bundle id).
 
 <a id="e217"></a>
 
@@ -639,7 +639,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *API 400 response* · from `karni.accounts.social_token.verify_id_token`
 
-**Why Karni objects.** Each provider has its own issuer: accounts.google.com, https://appleid.apple.com, or for Microsoft https://login.microsoftonline.com/<tenant id>/v2.0 with the token's own tid. A Microsoft token from a tenant the 'tenants' setting does not allow is refused the same way (401).
+**Why Karni objects.** Each provider has its own issuer: accounts.google.com, https://appleid.apple.com, or for Microsoft https://login.microsoftonline.com/&lt;tenant id>/v2.0 with the token's own tid. A Microsoft token from a tenant the 'tenants' setting does not allow is refused the same way (401).
 
 **Fix.** Check that the token comes from the provider of the URL it was posted to. For Microsoft, request a v2.0 token and list its tenant (or 'common', 'organizations' or 'consumers') in KARNI_SOCIAL_TOKEN_PROVIDERS['microsoft']['tenants'].
 
@@ -719,7 +719,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *API 400 response* · from `karni.accounts.api.views.SocialTokenLoginView`
 
-**Why Karni objects.** Each provider named in KARNI_SOCIAL_TOKEN_PROVIDERS gets its own social/<provider>/ route. A provider the setting does not name answers 404.
+**Why Karni objects.** Each provider named in KARNI_SOCIAL_TOKEN_PROVIDERS gets its own social/&lt;provider>/ route. A provider the setting does not name answers 404.
 
 **Fix.** Add the provider with its client ids to KARNI_SOCIAL_TOKEN_PROVIDERS, or post to the route of a configured one.
 
@@ -747,7 +747,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 #### E235: The sign-in code is wrong or has expired
 
-*API 400 response* · from `karni.accounts.otp.verify_code (POST <auth>/otp/verify/)`
+*API 400 response* · from <code>karni.accounts.otp.verify_code (POST &lt;auth&gt;/otp/verify/)</code>
 
 **Why Karni objects.** One answer covers every failure of a code, so it tells nobody whether an address has an account: a wrong code, one past KARNI_EMAIL_OTP_TTL, one already used, one replaced by a newer code, one locked after KARNI_EMAIL_OTP_MAX_ATTEMPTS wrong guesses, an address no code was sent to, and an address that may not sign up (KARNI_EMAIL_OTP_SIGNUP = 'existing'). The precise reason is only in the accounts.otp.refused log event (401).
 
@@ -771,13 +771,13 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** KARNI_TERMS requires every signed-in user to accept its current version before using the API. The gate answers 403 with this code, the version and the terms url to a signed-in user who has not accepted that version, on every request under KARNI_TERMS['paths'] (default ['/api/']) outside the auth mount and KARNI_TERMS['exempt']. Staff and superusers are gated like everyone. A new version makes everyone accept again.
 
-**Fix.** Show the terms at the url in the answer, then POST <auth mount>/terms/accept/ with {"version": "<the version in the answer>"}. @karni/ui's TermsGate does both. To keep a path open before acceptance, add its prefix to KARNI_TERMS['exempt'].
+**Fix.** Show the terms at the url in the answer, then POST &lt;auth mount>/terms/accept/ with {"version": "&lt;the version in the answer>"}. @karni/ui's TermsGate does both. To keep a path open before acceptance, add its prefix to KARNI_TERMS['exempt'].
 
 <a id="e246"></a>
 
 #### E246: The accepted terms version is not the current one
 
-*API 400 response* · from `karni.accounts.terms.accept (POST <auth>/terms/accept/)`
+*API 400 response* · from <code>karni.accounts.terms.accept (POST &lt;auth&gt;/terms/accept/)</code>
 
 **Why Karni objects.** terms/accept/ records acceptance of KARNI_TERMS['version'] only. A client that sends another version showed the user other terms (an old copy, or the version changed after the page loaded), so nothing is recorded (400). The answer carries the current version and url.
 
@@ -811,7 +811,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** terms/ and terms/accept/ are mounted only while KARNI_TERMS is set. A URLconf built while it was set answers 404 with this code once it is unset.
 
-**Fix.** Set KARNI_TERMS = {"version": "<version>", "url": "<where the terms are>"} to ask users to accept terms, or remove the client's call.
+**Fix.** Set KARNI_TERMS = {"version": "&lt;version>", "url": "&lt;where the terms are>"} to ask users to accept terms, or remove the client's call.
 
 <a id="e270"></a>
 
@@ -829,7 +829,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni.db.checks.check_database_options`
 
-**Why Karni objects.** `class Karni: database = '<alias>'` sends the model's reads, writes and migrations to that alias of the DATABASES setting. An alias Django does not know fails on the first query.
+**Why Karni objects.** <code>class Karni: database = '&lt;alias&gt;'</code> sends the model's reads, writes and migrations to that alias of the DATABASES setting. An alias Django does not know fails on the first query.
 
 **Fix.** Add the alias to DATABASES (for example DATABASES['warehouse'] = env.db_url('WAREHOUSE_DATABASE_URL')), or fix the name in `class Karni`.
 
@@ -851,7 +851,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Every concrete field of an external model is a column Karni selects. A field whose column (its name, or db_column) is missing from the table or view makes every query on the model fail.
 
-**Fix.** Fix the field's name or db_column to match the column, remove the field, or regenerate the model from the table with `karni make model <Name> --external --table <table>` and keep what you need.
+**Fix.** Fix the field's name or db_column to match the column, remove the field, or regenerate the model from the table with <code>karni make model &lt;Name&gt; --external --table &lt;table&gt;</code> and keep what you need.
 
 <a id="e274"></a>
 
@@ -861,7 +861,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The database reports a column type that cannot hold the field's values, for example a DateTimeField over a text column or an IntegerField over a date. Karni compares broad kinds only (numbers, text, dates, times, booleans, UUIDs, JSON, binary), and skips columns whose type the database does not report, so a reported mismatch is a real one.
 
-**Fix.** Change the field to the column's type (`karni make model <Name> --external --table <table> --dry-run` shows the type Django infers), or cast the column in the view.
+**Fix.** Change the field to the column's type (<code>karni make model &lt;Name&gt; --external --table &lt;table&gt; --dry-run</code> shows the type Django infers), or cast the column in the view.
 
 <a id="e275"></a>
 
@@ -871,7 +871,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** `external` and `writable` are True or False, and `database` is the name of a DATABASES alias. Another value would be read in a way the code does not say.
 
-**Fix.** Write external = True, writable = True or database = '<alias>' (a non-empty string).
+**Fix.** Write external = True, writable = True or database = '&lt;alias>' (a non-empty string).
 
 <a id="e276"></a>
 
@@ -913,7 +913,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The admin logo is wired into UNFOLD from this one setting, so it must name static files unfold can serve.
 
-**Fix.** Set KARNI_ADMIN_LOGO = 'karni' for Karni's mark, or {'light': '<static path>', 'dark': ..., 'icon': ...} with at least 'light'. Leave it unset for a text header.
+**Fix.** Set KARNI_ADMIN_LOGO = 'karni' for Karni's mark, or {'light': '&lt;static path>', 'dark': ..., 'icon': ...} with at least 'light'. Leave it unset for a text header.
 
 <a id="e304"></a>
 
@@ -943,7 +943,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** karni.module.toml is what karni modules, karni add, karni remove and the app spec read about a module. assert_module_manifest checks it parses, that the karni.modules entry point names the package, that its settings are the DEFAULTS fragment's, and that its models are the app's. Each listed line is one mismatch.
 
-**Fix.** Fix the manifest or the module as the line says: list every KARNI_<NAME>_* setting of conf.DEFAULTS under [provides.settings] with its type, list the app's models under provides.models, and add [project.entry-points."karni.modules"] <name> = "karni_<name>" to pyproject.toml, then reinstall the module. docs/modules.md lists every key.
+**Fix.** Fix the manifest or the module as the line says: list every KARNI_&lt;NAME>_* setting of conf.DEFAULTS under [provides.settings] with its type, list the app's models under provides.models, and add [project.entry-points."karni.modules"] &lt;name> = "karni_&lt;name>" to pyproject.toml, then reinstall the module. docs/modules.md lists every key.
 
 <a id="e340"></a>
 
@@ -953,7 +953,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A parent below the node would make the branch its own ancestor: a cycle. Every walk stays safe on such data, but the nodes on the cycle drop out of the tree, so Karni refuses the write before any SQL.
 
-**Fix.** Choose a parent outside the node's branch (or None for a root). To swap two nodes, move the lower one out of the branch first. In the API, POST <id>/move/ with another parent.
+**Fix.** Choose a parent outside the node's branch (or None for a root). To swap two nodes, move the lower one out of the branch first. In the API, POST &lt;id>/move/ with another parent.
 
 <a id="e341"></a>
 
@@ -963,7 +963,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A soft-deleted node hides its whole branch. Deleting a node that still has live children would hide them too, without anyone deciding that, so delete() refuses and the answer counts the children.
 
-**Fix.** Move the children to another parent first, or delete the whole branch on purpose: node.delete_branch(), or DELETE <id>/?branch=true in the API (write access to every node of the branch).
+**Fix.** Move the children to another parent first, or delete the whole branch on purpose: node.delete_branch(), or DELETE &lt;id>/?branch=true in the API (write access to every node of the branch).
 
 <a id="e342"></a>
 
@@ -1021,7 +1021,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni.accounts.grants.check`
 
-**Why Karni objects.** The scope is one a role grant takes: 'all', 'own', 'related:<key>', 'custom:<name>' or 'tree:<path>'. 'own' needs the model's owner field, 'related:<key>' its Karni.scope_paths[key], 'custom:<name>' a scope registered with register_scope() and 'tree:<path>' a path from the model to a tree model. An explicit key whose model lacks it is refused, and a wildcard pattern must keep at least one model that has it.
+**Why Karni objects.** The scope is one a role grant takes: 'all', 'own', 'related:&lt;key>', 'custom:&lt;name>' or 'tree:&lt;path>'. 'own' needs the model's owner field, 'related:&lt;key>' its Karni.scope_paths[key], 'custom:&lt;name>' a scope registered with register_scope() and 'tree:&lt;path>' a path from the model to a tree model. An explicit key whose model lacks it is refused, and a wildcard pattern must keep at least one model that has it.
 
 **Fix.** Pick a scope from the model's options in GET permissions/matrix/, declare the owner field or scope path in `class Karni`, or register the custom scope at startup.
 
@@ -1031,9 +1031,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni.accounts.grants.check`
 
-**Why Karni objects.** targets lists the row ids a scope that points at rows reaches: a 'related:<key>' grant with targets reaches the rows whose Karni.scope_paths[key] is one of them, and a 'tree:<path>' grant the rows under those nodes of the tree. Targets are a list of ids (text, integers or UUIDs), only for such a scope, and each must be a value the scope path's field takes.
+**Why Karni objects.** targets lists the row ids a scope that points at rows reaches: a 'related:&lt;key>' grant with targets reaches the rows whose Karni.scope_paths[key] is one of them, and a 'tree:&lt;path>' grant the rows under those nodes of the tree. Targets are a list of ids (text, integers or UUIDs), only for such a scope, and each must be a value the scope path's field takes.
 
-**Fix.** Pass a list of ids of the related model, e.g. targets=[3, 7] for an integer key, drop targets for an 'all', 'own' or 'custom:' grant, or grant 'related:<key>' instead.
+**Fix.** Pass a list of ids of the related model, e.g. targets=[3, 7] for an integer key, drop targets for an 'all', 'own' or 'custom:' grant, or grant 'related:&lt;key>' instead.
 
 <a id="e363"></a>
 
@@ -1071,7 +1071,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni.aggregation.Aggregation (karni.checks.check_aggregations)`
 
-**Why Karni objects.** class Karni: aggregate on a model, or aggregation on a viewset, says what GET <resource>/aggregate/ may group by and sum. Each name must be a field, a relation path or a declared expression of the model, a bucket (:year, :quarter, :month) needs a date field, and the metrics are count, sum, avg, min, max and distinct_count.
+**Why Karni objects.** class Karni: aggregate on a model, or aggregation on a viewset, says what GET &lt;resource>/aggregate/ may group by and sum. Each name must be a field, a relation path or a declared expression of the model, a bucket (:year, :quarter, :month) needs a date field, and the metrics are count, sum, avg, min, max and distinct_count.
 
 **Fix.** Fix the name the message quotes: {'group_by': ['category', 'launched_on:year'], 'values': ['price'], 'metrics': ['count', 'sum'], 'expressions': {'revenue': TextNumber('revenue_text')}}. Every key but group_by is optional.
 
@@ -1081,7 +1081,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *API 400 response* · from `karni.api.viewsets.BaseViewSet.aggregate`
 
-**Why Karni objects.** Nothing is aggregatable unless declared, so GET <resource>/aggregate/ answers 404 for a model without class Karni: aggregate (and a viewset without aggregation).
+**Why Karni objects.** Nothing is aggregatable unless declared, so GET &lt;resource>/aggregate/ answers 404 for a model without class Karni: aggregate (and a viewset without aggregation).
 
 **Fix.** Declare what may be grouped and summed on the model: class Karni: aggregate = {'group_by': ['region'], 'values': ['price']}.
 
@@ -1113,7 +1113,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Every metric but count reads a value, which must be in the declaration's values and visible to the requester. sum, avg, min and max need a number field or a numeric expression.
 
-**Fix.** Send value=<one of the declared values>. For a number stored as text, declare an expression: 'expressions': {'revenue': TextNumber('revenue_text')}.
+**Fix.** Send value=&lt;one of the declared values>. For a number stored as text, declare an expression: 'expressions': {'revenue': TextNumber('revenue_text')}.
 
 <a id="e385"></a>
 
@@ -1123,7 +1123,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A bucket (:year, :quarter, :month) groups a date or datetime field. Another bucket, or a bucket on another kind of field, cannot be computed.
 
-**Fix.** Send group_by=<date field>:year, :quarter or :month, or group by the field without a bucket.
+**Fix.** Send group_by=&lt;date field>:year, :quarter or :month, or group by the field without a bucket.
 
 <a id="e386"></a>
 
@@ -1143,7 +1143,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A response holds at most KARNI_AGGREGATE_MAX_GROUPS groups (default 1000), so grouping by a field with a value per row cannot fill a chart or the server's memory.
 
-**Fix.** Send top=<n> to keep the largest groups and put the rest in Other, narrow the rows with filters, group by a coarser bucket, or raise KARNI_AGGREGATE_MAX_GROUPS.
+**Fix.** Send top=&lt;n> to keep the largest groups and put the rest in Other, narrow the rows with filters, group by a coarser bucket, or raise KARNI_AGGREGATE_MAX_GROUPS.
 
 ### 4xx · Events, listeners, schedules and Celery
 
@@ -1155,7 +1155,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A queued listener runs on a Celery worker, which finds it by its dotted name. Nested functions and lambdas have none.
 
-**Fix.** Define the listener at the top level of <app>/listeners.py, or queue an existing task with queued('app.tasks.task_name').
+**Fix.** Define the listener at the top level of &lt;app>/listeners.py, or queue an existing task with queued('app.tasks.task_name').
 
 <a id="e402"></a>
 
@@ -1225,7 +1225,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** `karni schedule run` executes the task in-process so failures show immediately.
 
-**Fix.** Read the task's own error in the message and fix the task. Then re-run it with `karni schedule run <name>`.
+**Fix.** Read the task's own error in the message and fix the task. Then re-run it with <code>karni schedule run &lt;name&gt;</code>.
 
 <a id="e410"></a>
 
@@ -1315,7 +1315,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The viewset declares a time budget: the request at the scaling check's large row count (the faster of two runs) must take no longer. It took longer.
 
-**Fix.** Read the statements in the message. karni queries <endpoint> --explain shows each plan on PostgreSQL and names the index a sequential scan wants. Raise Scaling(seconds=...) only when the work is real.
+**Fix.** Read the statements in the message. karni queries &lt;endpoint> --explain shows each plan on PostgreSQL and names the index a sequential scan wants. Raise Scaling(seconds=...) only when the work is real.
 
 <a id="e477"></a>
 
@@ -1325,15 +1325,15 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The scaling check compares two row counts, small then large, and a time budget is a number of seconds.
 
-**Fix.** Write rows=(small, large) with 1 <= small < large, e.g. Scaling(rows=(2, 50), seconds=0.5), and the same pair in KARNI_SCALING_ROWS.
+**Fix.** Write rows=(small, large) with 1 &lt;= small &lt; large, e.g. Scaling(rows=(2, 50), seconds=0.5), and the same pair in KARNI_SCALING_ROWS.
 
 <a id="e490"></a>
 
-#### E490: A tree:<path> scope does not end at a tree model
+#### E490: A tree:&lt;path> scope does not end at a tree model
 
 *system check (error)* · from `karni.accounts.tree_scope.resolve_path; karni.checks.check_tree_scopes (KARNI_ROLES); tree_scope() in a Where`
 
-**Why Karni objects.** tree:<path> reaches the rows whose <path> is a node the user holds or a node below it, so each step of the path must be a relation of the model before it (a foreign key, a one-to-one, a many-to-many or a reverse relation) and the last one must point at a model on karni.models.TreeModel. A path that does not resolve could only ever reach no row, so Karni refuses it at startup, in KARNI_ROLES and wherever tree_scope() names it.
+**Why Karni objects.** tree:&lt;path> reaches the rows whose &lt;path> is a node the user holds or a node below it, so each step of the path must be a relation of the model before it (a foreign key, a one-to-one, a many-to-many or a reverse relation) and the last one must point at a model on karni.models.TreeModel. A path that does not resolve could only ever reach no row, so Karni refuses it at startup, in KARNI_ROLES and wherever tree_scope() names it.
 
 **Fix.** Name the row's relation to the tree model, through relations when needed: tree:region, tree:product__categories. Make the target a tree model (class Region(TreeModel, BaseModel)), or grant another scope.
 
@@ -1341,7 +1341,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 #### E491: The access/ endpoint of a tree resource got a parameter it cannot use
 
-*API 400 response* · from `karni.api.tree (GET <resource>/access/?permission=)`
+*API 400 response* · from <code>karni.api.tree (GET &lt;resource&gt;/access/?permission=)</code>
 
 **Why Karni objects.** ?permission= keeps the grants of the permissions it matches, written as a KARNI_ROLES pattern: 'app_label.model:action' with '*' for either part, or '*' alone. Anything else would match no grant and answer an empty forest without saying why.
 
@@ -1557,7 +1557,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Password resets, account emails and the notifications of a site's forms go out by email. The console, locmem, dummy and file backends deliver nothing, and a sender at localhost (Django's default, webmaster@localhost) is refused by mail servers, so every email is lost without an error.
 
-**Fix.** Set EMAIL_URL to the mail server (smtp+tls://user:password@smtp.example.com:587, smtps:// for SSL) and DEFAULT_FROM_EMAIL to an address of the site's domain ("Example Site <noreply@example.com>") in the production environment (.env.prod). .env.prod.example lists them. A project that sends no email adds 'karni.W520' to SILENCED_SYSTEM_CHECKS.
+**Fix.** Set EMAIL_URL to the mail server (smtp+tls://user:password@smtp.example.com:587, smtps:// for SSL) and DEFAULT_FROM_EMAIL to an address of the site's domain ("Example Site &lt;noreply@example.com>") in the production environment (.env.prod). .env.prod.example lists them. A project that sends no email adds 'karni.W520' to SILENCED_SYSTEM_CHECKS.
 
 <a id="e520"></a>
 
@@ -1587,7 +1587,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The model has an integer primary key (BigIntBaseModel or an AutoField), its detail route looks rows up by that key, and its read access admits anonymous callers. Integer ids are sequential, so a visitor learns how many rows there are and can walk the detail URLs one id after the other, including rows no list links to.
 
-**Fix.** Give the model a UUID key (inherit BaseModel) or look rows up by a slug (lookup_field = "slug" on the viewset). When the ids may be public, write `# karni: allow(public-integer-key): <reason>` above the viewset class, or add 'karni.W530' to SILENCED_SYSTEM_CHECKS for the whole project.
+**Fix.** Give the model a UUID key (inherit BaseModel) or look rows up by a slug (lookup_field = "slug" on the viewset). When the ids may be public, write <code># karni: allow(public-integer-key): &lt;reason&gt;</code> above the viewset class, or add 'karni.W530' to SILENCED_SYSTEM_CHECKS for the whole project.
 
 <a id="e530"></a>
 
@@ -1735,7 +1735,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni.taxonomy.declared_taxonomies (raised when the model class is built)`
 
-**Why Karni objects.** taxonomies maps each key to a tree model. The key becomes a many-to-many field of that name and the list parameters ?<key>= and ?<key>_descendants=, so it must be a field name: no leading underscore, no double underscore, not ending in _descendants. The value names the tree model as 'app_label.Model' or the model class.
+**Why Karni objects.** taxonomies maps each key to a tree model. The key becomes a many-to-many field of that name and the list parameters ?&lt;key>= and ?&lt;key>_descendants=, so it must be a field name: no leading underscore, no double underscore, not ending in _descendants. The value names the tree model as 'app_label.Model' or the model class.
 
 **Fix.** Write taxonomies = {"region": "geo.Region", "category": "catalog.Category"}, with keys that are field names and values that name tree models.
 
@@ -1755,7 +1755,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni.checks.check_taxonomies (karni check)`
 
-**Why Karni objects.** A taxonomy tags rows with the nodes of a hierarchy: ?<key>_descendants=, the facets rolled up to the ancestors, the node counts and the tree:<key> scope all walk the tree from a node to the nodes below it. A model that is not on karni.models.TreeModel has no parent to walk.
+**Why Karni objects.** A taxonomy tags rows with the nodes of a hierarchy: ?&lt;key>_descendants=, the facets rolled up to the ancestors, the node counts and the tree:&lt;key> scope all walk the tree from a node to the nodes below it. A model that is not on karni.models.TreeModel has no parent to walk.
 
 **Fix.** Make the target a tree model (class Region(TreeModel, BaseModel), or tree: true in karni.yaml), or point the key at the tree model you meant. For tags without a hierarchy, declare a plain many-to-many instead of a taxonomy.
 
@@ -1767,15 +1767,15 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** When the model already has an attribute named after a taxonomy key, Karni adopts it instead of generating the many-to-many. Adopting works only for a ManyToManyField to the tree model the key names: the filters, the facets and the scope read its through table.
 
-**Fix.** Declare the field as models.ManyToManyField(<the tree model>, blank=True, ...) under the key's name, rename the other attribute, or remove the field and let Karni generate it.
+**Fix.** Declare the field as models.ManyToManyField(&lt;the tree model>, blank=True, ...) under the key's name, rename the other attribute, or remove the field and let Karni generate it.
 
 <a id="e573"></a>
 
 #### E573: A taxonomy filter or endpoint got a parameter it cannot use
 
-*API 400 response* · from `karni.api.taxonomy (?<key>=, ?<key>_descendants=, facets/, <key>/tagged/)`
+*API 400 response* · from <code>karni.api.taxonomy (?&lt;key&gt;=, ?&lt;key&gt;_descendants=, facets/, &lt;key&gt;/tagged/)</code>
 
-**Why Karni objects.** ?<key>= takes keys of the tree's nodes separated by commas. ?<key>_descendants=, ?rollup= and ?descendants= take true or false. facets/ counts one taxonomy: ?taxonomy= names it, and may be left out only when the model has one.
+**Why Karni objects.** ?&lt;key>= takes keys of the tree's nodes separated by commas. ?&lt;key>_descendants=, ?rollup= and ?descendants= take true or false. facets/ counts one taxonomy: ?taxonomy= names it, and may be left out only when the model has one.
 
 **Fix.** Send node keys (?region=3,7), true or false for the flags, and one of the keys the message lists as ?taxonomy=.
 
@@ -1807,7 +1807,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** On PostgreSQL every searched field needs a GIN trigram index, or each search reads the whole table. Karni adds the index to the model's Meta.indexes, so it exists once the migration that creates it is written and applied.
 
-**Fix.** Run python manage.py makemigrations <app> and python manage.py migrate (karni build writes the migration for an app built from karni.yaml). For a table another system owns, run the CREATE INDEX the message prints in its database. For a table small enough to scan, silence it: SILENCED_SYSTEM_CHECKS = ["karni.W590"].
+**Fix.** Run python manage.py makemigrations &lt;app> and python manage.py migrate (karni build writes the migration for an app built from karni.yaml). For a table another system owns, run the CREATE INDEX the message prints in its database. For a table small enough to scan, silence it: SILENCED_SYSTEM_CHECKS = ["karni.W590"].
 
 <a id="e591"></a>
 
@@ -1839,7 +1839,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** assert_crud tests a resource through its URLs, exactly as clients reach it.
 
-**Fix.** Route the viewset (karni make viewset <Model>, or auto_register), or pass the viewset class or its route name.
+**Fix.** Route the viewset (karni make viewset &lt;Model>, or auto_register), or pass the viewset class or its route name.
 
 <a id="e602"></a>
 
@@ -1889,7 +1889,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** One owner (or tenant) could read or change another's rows, or learn that a row outside their scope exists (a 403 where a missing row gets 404, a count, an expanded or exported related row): a data leak.
 
-**Fix.** Fix what each listed line names: usually the viewset's access (Owned('<owner path>'), a scoped grant, the tenant scope), or custom get_queryset / get_object / serializer / @action code that bypasses it.
+**Fix.** Fix what each listed line names: usually the viewset's access (Owned('&lt;owner path>'), a scoped grant, the tenant scope), or custom get_queryset / get_object / serializer / @action code that bypasses it.
 
 <a id="e607"></a>
 
@@ -1939,7 +1939,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Values are inferred from field types and names, and some custom fields have no safe default.
 
-**Fix.** Pass the value (create(Model, field=...)) or define an explicit factory in <app>/factories.py.
+**Fix.** Pass the value (create(Model, field=...)) or define an explicit factory in &lt;app>/factories.py.
 
 <a id="w611"></a>
 
@@ -1969,7 +1969,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Generated values collided with a unique or check constraint on every attempt.
 
-**Fix.** Give the clashing fields distinct values in a seeder (karni make seeder <Model>), e.g. with factory.Sequence.
+**Fix.** Give the clashing fields distinct values in a seeder (karni make seeder &lt;Model>), e.g. with factory.Sequence.
 
 <a id="e613"></a>
 
@@ -1979,7 +1979,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The model rejected a generated row (model validation or save() logic).
 
-**Fix.** Override Seeder.seed() for the model (karni make seeder <Model>) and create the rows yourself with context.create(..., field=value).
+**Fix.** Override Seeder.seed() for the model (karni make seeder &lt;Model>) and create the rows yourself with context.create(..., field=value).
 
 <a id="e614"></a>
 
@@ -2047,7 +2047,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (warning)* · from `karni.checks.check_tree_scopes (karni check)`
 
-**Why Karni objects.** A role grant of tree:<path> reaches the rows under the node the user holds in the attribute named after the path's last step (tree:region and tree:store__region read user.region), as related:<key> compares user.<key>. The user model has no such attribute, so the role gives each member no node and no row. A tree grant never falls back to every row.
+**Why Karni objects.** A role grant of tree:&lt;path> reaches the rows under the node the user holds in the attribute named after the path's last step (tree:region and tree:store__region read user.region), as related:&lt;key> compares user.&lt;key>. The user model has no such attribute, so the role gives each member no node and no row. A tree grant never falls back to every row.
 
 **Fix.** Give the user model the attribute (a field or a property holding a node of the tree, e.g. region), or give each user their nodes with user grants of the same scope (features: user_grants, then karni.accounts.grants.grant(..., targets=[...])). Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] when user grants give the nodes on purpose.
 
@@ -2087,7 +2087,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (warning)* · from `karni.checks.check_api_versions (karni check)`
 
-**Why Karni objects.** KARNI_API_VERSION or KARNI_API_VERSIONS names versions, and the API is mounted at /api/<version>/ only by karni.api.versions.api_urls(). The URLconf still includes karni.api.urls at api/, so every /api/<version>/ answers 404.
+**Why Karni objects.** KARNI_API_VERSION or KARNI_API_VERSIONS names versions, and the API is mounted at /api/&lt;version>/ only by karni.api.versions.api_urls(). The URLconf still includes karni.api.urls at api/, so every /api/&lt;version>/ answers 404.
 
 **Fix.** In config/urls.py, import api_urls from karni.api.versions and use *api_urls() in place of path("api/", include("karni.api.urls")). A new project already does.
 
@@ -2143,7 +2143,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The mapping names a column the file lacks or a field the role may not write, the file has no header row, a commit was requested before the mandatory preview, or the model's import metadata (Karni.natural_key / import_key / import_lookup / import_transform / after_import) is malformed.
 
-**Fix.** Map columns to importable fields only (GET /<resource>/import/ lists them), preview before committing, and check the names in class Karni against the model.
+**Fix.** Map columns to importable fields only (GET /&lt;resource>/import/ lists them), preview before committing, and check the names in class Karni against the model.
 
 <a id="e802"></a>
 
@@ -2211,11 +2211,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 #### E903: karni why: no request record for that id
 
-*exception* · from `karni.why.resolve.load_record; karni why <status> <request-id>`
+*exception* · from <code>karni.why.resolve.load_record; karni why &lt;status&gt; &lt;request-id&gt;</code>
 
-**Why Karni objects.** The dev server records each request as .karni/requests/<request id>.json, and only while DEBUG is on. Without the record there is nothing to replay.
+**Why Karni objects.** The dev server records each request as .karni/requests/&lt;request id>.json, and only while DEBUG is on. Without the record there is nothing to replay.
 
-**Fix.** Reproduce the request with the dev server running (`karni serve`) and use its request id, or ask about the row directly: karni why <resource>/<id> --as <user> [--action ...].
+**Fix.** Reproduce the request with the dev server running (`karni serve`) and use its request id, or ask about the row directly: karni why &lt;resource>/&lt;id> --as &lt;user> [--action ...].
 
 <a id="e904"></a>
 
@@ -2231,7 +2231,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 #### E905: karni why: the resource has no such field
 
-*exception* · from `karni.why.verdict.explain_field; karni why <resource>.<field>`
+*exception* · from <code>karni.why.verdict.explain_field; karni why &lt;resource&gt;.&lt;field&gt;</code>
 
 **Why Karni objects.** A field question names a model field or a field of the resource's serializer.
 
@@ -2263,9 +2263,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `manage.py karni_why`
 
-**Why Karni objects.** A question names what (a request id after its status, <resource>/<id>, <resource>.<field> or <resource>) and, except for a recorded request, who (--as).
+**Why Karni objects.** A question names what (a request id after its status, &lt;resource>/&lt;id>, &lt;resource>.&lt;field> or &lt;resource>) and, except for a recorded request, who (--as).
 
-**Fix.** Follow the form the message shows, e.g. karni why events/42 --as alice@example.com, karni why 403 <request-id>, or karni why-empty events --as alice@example.com.
+**Fix.** Follow the form the message shows, e.g. karni why events/42 --as alice@example.com, karni why 403 &lt;request-id>, or karni why-empty events --as alice@example.com.
 
 <a id="e920"></a>
 
@@ -2305,7 +2305,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A failure snapshot is written to .karni/failures/ when a request or a Celery task raises an unhandled exception with DEBUG on. The newest KARNI_DEBUG_CAPTURE_KEEP are kept. A request that answered an error status without raising has none.
 
-**Fix.** Use the failure id from the request record or `karni trace <request-id>`, a failed request's id, or `last`. Reproduce the failure with DEBUG on if nothing was captured.
+**Fix.** Use the failure id from the request record or <code>karni trace &lt;request-id&gt;</code>, a failed request's id, or `last`. Reproduce the failure with DEBUG on if nothing was captured.
 
 <a id="e923"></a>
 
@@ -2315,7 +2315,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Capture never stores passwords, tokens or other secrets: they are recorded as '[redacted]'. Replaying that literal could, for example, set a password to it, so the replay stops until the value is supplied.
 
-**Fix.** Pass each value the message lists: --set <field>=<value> (a dotted path into the body, or query:<name> for a query parameter), or leave them out with --drop-redacted.
+**Fix.** Pass each value the message lists: --set &lt;field>=&lt;value> (a dotted path into the body, or query:&lt;name> for a query parameter), or leave them out with --drop-redacted.
 
 <a id="e924"></a>
 
@@ -2333,9 +2333,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni.api.diagnose.resolve_endpoint (manage.py karni_queries)`
 
-**Why Karni objects.** karni queries requests the endpoint in-process, so it must resolve to a URL the project serves: a path, a routed resource (events, events/<id>) or a routed viewset (EventViewSet.list). A detail action named by its viewset needs a row the user can read.
+**Why Karni objects.** karni queries requests the endpoint in-process, so it must resolve to a URL the project serves: a path, a routed resource (events, events/&lt;id>) or a routed viewset (EventViewSet.list). A detail action named by its viewset needs a row the user can read.
 
-**Fix.** Pass a path that `karni routes` lists (/api/events/), a resource prefix it shows, or resource/<id>. The message lists the routed resources or viewsets.
+**Fix.** Pass a path that `karni routes` lists (/api/events/), a resource prefix it shows, or resource/&lt;id>. The message lists the routed resources or viewsets.
 
 <a id="e941"></a>
 
@@ -2375,7 +2375,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A field named like money (price, amount, total, cost, fee, subtotal, tax, balance, ...) is a FloatField. Binary floats cannot represent most cent values, so sums drift (0.1 + 0.2 != 0.3) and totals stop reconciling. No test with round numbers notices.
 
-**Fix.** Use `MoneyField(currency="EUR")` (or `currency_field="currency"`) from karni.fields, a PercentField for a rate, then karni make migration. If the field is not money, declare `class Karni: not_money = {"field": "<what it is>"}`.
+**Fix.** Use `MoneyField(currency="EUR")` (or `currency_field="currency"`) from karni.fields, a PercentField for a rate, then karni make migration. If the field is not money, declare <code>class Karni: not_money = {"field": "&lt;what it is&gt;"}</code>.
 
 <a id="e961"></a>
 
@@ -2435,7 +2435,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** on_delete=CASCADE on a model that holds money (a MoneyField, a money-named decimal, a payments-like model) or keeps history (Karni.audit) means hard-deleting the referenced row silently deletes those rows too: payments, refunds or audit trails vanish.
 
-**Fix.** Choose on_delete deliberately: models.PROTECT (refuse while rows exist) or SET_NULL (null=True), then karni make migration. If the cascade is intended, declare it with the reason: `class Karni: cascade = {"<field>": "<why>"}`.
+**Fix.** Choose on_delete deliberately: models.PROTECT (refuse while rows exist) or SET_NULL (null=True), then karni make migration. If the cascade is intended, declare it with the reason: <code>class Karni: cascade = {"&lt;field&gt;": "&lt;why&gt;"}</code>.
 
 <a id="e966"></a>
 
@@ -2445,7 +2445,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A migration needs an extension (btree_gist, pg_trgm, ...) and the database role may not create it. Trusted extensions (PostgreSQL 13+) need CREATE on the database, and the others need a superuser.
 
-**Fix.** Run the SQL the message prints: `CREATE EXTENSION IF NOT EXISTS <name>;` as a superuser in the project's database, or, for a trusted extension, `GRANT CREATE ON DATABASE "<db>" TO "<role>";`. Then migrate again.
+**Fix.** Run the SQL the message prints: <code>CREATE EXTENSION IF NOT EXISTS &lt;name&gt;;</code> as a superuser in the project's database, or, for a trusted extension, <code>GRANT CREATE ON DATABASE "&lt;db&gt;" TO "&lt;role&gt;";</code>. Then migrate again.
 
 <a id="w967"></a>
 
@@ -2455,7 +2455,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A routed viewset declares search_fields, filterset_fields, ordering_fields or an ordering on a column no index covers, so every such list request reads the whole table. Fast with seed data, slow in production.
 
-**Fix.** Add the index the message names to Meta.indexes (a SearchField for search), then run karni make migration. `karni schema <app>` shows what serves each column. For a table small enough to scan, silence it instead: SILENCED_SYSTEM_CHECKS = ["karni.W967"].
+**Fix.** Add the index the message names to Meta.indexes (a SearchField for search), then run karni make migration. <code>karni schema &lt;app&gt;</code> shows what serves each column. For a table small enough to scan, silence it instead: SILENCED_SYSTEM_CHECKS = ["karni.W967"].
 
 <a id="e968"></a>
 
@@ -2485,7 +2485,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Opt-outs need a reason per field so the next reader knows the choice was deliberate. append_only names columns that only grow.
 
-**Fix.** Write `not_money = {"field": "<what it is>"}`, `cascade = {"field": "<why>"}`, `append_only = True` or a list of existing timestamp columns.
+**Fix.** Write <code>not_money = {"field": "&lt;what it is&gt;"}</code>, <code>cascade = {"field": "&lt;why&gt;"}</code>, `append_only = True` or a list of existing timestamp columns.
 
 <a id="e980"></a>
 
@@ -2495,7 +2495,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A StateField declares its states and the transitions between them. Moving a row along an undeclared transition (out of a terminal state, backwards, or to a value that is not a state) is refused before any SQL: from the ORM, the admin (a form error), the API (a 400 on the field), commands and tasks alike. The column's CHECK constraint refuses an undeclared value from raw SQL too.
 
-**Fix.** Move the row to one of the legal states the message lists (instance.transition('<field>', '<state>'), or allowed_transitions('<field>') to ask), or add the transition to the field's transitions= if the lifecycle should allow it.
+**Fix.** Move the row to one of the legal states the message lists (instance.transition('&lt;field>', '&lt;state>'), or allowed_transitions('&lt;field>') to ask), or add the transition to the field's transitions= if the lifecycle should allow it.
 
 <a id="w980"></a>
 
@@ -2513,7 +2513,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni.models.GuardedModel._do_update (karni.lifecycle.StateConflict)`
 
-**Why Karni objects.** A save that writes a StateField updates the row only if it still holds the state it was loaded with (UPDATE ... WHERE status = '<loaded>'). Another transaction changed it first, so nothing was written. Two concurrent transitions from one state can never both succeed. The API answers 409.
+**Why Karni objects.** A save that writes a StateField updates the row only if it still holds the state it was loaded with (UPDATE ... WHERE status = '&lt;loaded>'). Another transaction changed it first, so nothing was written. Two concurrent transitions from one state can never both succeed. The API answers 409.
 
 **Fix.** Reload the row (refresh_from_db()) and decide again from the state the message names. In a UI, show the new state and let the user retry.
 
@@ -2599,7 +2599,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A model with a foreign key to itself named like a parent (category_parent, parent_category) is a tree written by hand: it has no cycle-safe queries, no tree endpoints and no tree UI. The hand-written-tree architecture rule fails on the names `parent` and `parent_*`, so this suggestion covers the other names.
 
-**Fix.** Inherit karni.models.TreeModel first (class Category(TreeModel, BaseModel)), drop the field and run karni makemigrations. Silence it with a comment on the field line: # karni: allow(suggest-tree-model): <reason>.
+**Fix.** Inherit karni.models.TreeModel first (class Category(TreeModel, BaseModel)), drop the field and run karni makemigrations. Silence it with a comment on the field line: # karni: allow(suggest-tree-model): &lt;reason>.
 
 <a id="sug002"></a>
 
@@ -2609,7 +2609,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A TextField named *_markdown or *_md, or whose help text says markdown, holds markdown. The API publishes it as plain text, so @karni/ui shows the raw markup.
 
-**Fix.** Use karni.fields.MarkdownField in its place and run karni makemigrations: it is a TextField in the database, so no data changes. Silence it with # karni: allow(suggest-markdown): <reason>.
+**Fix.** Use karni.fields.MarkdownField in its place and run karni makemigrations: it is a TextField in the database, so no data changes. Silence it with # karni: allow(suggest-markdown): &lt;reason>.
 
 <a id="sug003"></a>
 
@@ -2619,7 +2619,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Two or more raw SQL queries with GROUP BY carry a karni: allow(raw-sql) opt-out. Grouped counts and sums are what a model's aggregate declaration gives a resource, under the list's filters and access.
 
-**Fix.** Declare class Karni: aggregate = {'group_by': [...], 'values': [...]} on the model and call GET <resource>/aggregate/?group_by=... (docs/aggregations.md). Silence one query with # karni: allow(suggest-aggregate): <reason> on its line.
+**Fix.** Declare class Karni: aggregate = {'group_by': [...], 'values': [...]} on the model and call GET &lt;resource>/aggregate/?group_by=... (docs/aggregations.md). Silence one query with # karni: allow(suggest-aggregate): &lt;reason> on its line.
 
 <a id="sug004"></a>
 
@@ -2629,7 +2629,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Each model tagged to the same tree model (a region tree, a category tree) needs the same filters, facet counts, import columns and access rule, written once per model.
 
-**Fix.** Declare class Karni: taxonomies = {'region': 'geo.Region'} on each model and drop its many-to-many (a many-to-many you keep is adopted). Silence a model with # karni: allow(suggest-taxonomy): <reason> on its field line.
+**Fix.** Declare class Karni: taxonomies = {'region': 'geo.Region'} on each model and drop its many-to-many (a many-to-many you keep is adopted). Silence a model with # karni: allow(suggest-taxonomy): &lt;reason> on its field line.
 
 <a id="sug005"></a>
 
@@ -2639,7 +2639,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The module is in INSTALLED_APPS, and no project file imports it or renders its templates, no URL beyond the one karni add wrote refers to it, and none of its settings differs from its default. It costs a dependency and, for some, a service.
 
-**Fix.** Run karni remove <name>. It never drops data: it counts each table's rows and stops until you pass --keep-tables or migrate the app to zero. Silence it with # karni: allow(suggest-unused-module): <reason> on its line in config/settings.py.
+**Fix.** Run karni remove &lt;name>. It never drops data: it counts each table's rows and stops until you pass --keep-tables or migrate the app to zero. Silence it with # karni: allow(suggest-unused-module): &lt;reason> on its line in config/settings.py.
 
 <a id="sug006"></a>
 
@@ -2649,7 +2649,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A phrase of a module's use_when list (payments, PDF reports, a public website) appears in karni.yaml or the README, and the module is not added. In the README only a phrase of two words or more counts, because single words (checkout, payments) mean other things there.
 
-**Fix.** Run karni modules show <name> to read what it does, then karni add <name>. Silence it with # karni: allow(suggest-add-module): <reason> on the line (in the README inside <!-- ... -->).
+**Fix.** Run karni modules show &lt;name> to read what it does, then karni add &lt;name>. Silence it with # karni: allow(suggest-add-module): &lt;reason> on the line (in the README inside &lt;!-- ... -->).
 
 <a id="sug007"></a>
 
@@ -2659,7 +2659,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** karni plan is not empty: the project and the spec say different things, so the next karni build would change the project, or the spec is out of date.
 
-**Fix.** Read karni plan. Run karni build to bring the project to the spec, or karni spec export -o karni.yaml to take the code's side. Silence it with # karni: allow(suggest-sync-spec): <reason> on the first line of karni.yaml.
+**Fix.** Read karni plan. Run karni build to bring the project to the spec, or karni spec export -o karni.yaml to take the code's side. Silence it with # karni: allow(suggest-sync-spec): &lt;reason> on the first line of karni.yaml.
 
 ## AI (`AI`)
 
@@ -2833,7 +2833,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The model declares requires_approval and the change touches a guarded field, so a pending change holds it until a second person approves. The API answers 202 with the pending change, the admin says so, and code gets KarniWriteDeferred.
 
-**Fix.** Nothing is wrong. Have a checker approve it (the admin queue, /api/pending-changes/, <ApprovalsQueue/>). Trusted code may write inside karni_approvals.interception.bypass(reason=...).
+**Fix.** Nothing is wrong. Have a checker approve it (the admin queue, /api/pending-changes/, &lt;ApprovalsQueue/>). Trusted code may write inside karni_approvals.interception.bypass(reason=...).
 
 <a id="apr002"></a>
 
@@ -3121,7 +3121,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A report is requested by the name its class declares, and none is registered under this one.
 
-**Fix.** Use a name `manage.py karni_pregenerate --list` prints, or declare the report in <app>/reports.py with @register.
+**Fix.** Use a name `manage.py karni_pregenerate --list` prints, or declare the report in &lt;app>/reports.py with @register.
 
 <a id="report002"></a>
 
@@ -3151,7 +3151,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Who may see a row's report is decided by who may retrieve the row through its model's viewset. Without one, nobody can be checked, so the report is refused.
 
-**Fix.** Add a BaseViewSet for the model (karni make viewset <Model>), or set `viewset` on the Report to the viewset class or its dotted path.
+**Fix.** Add a BaseViewSet for the model (karni make viewset &lt;Model>), or set `viewset` on the Report to the viewset class or its dotted path.
 
 <a id="report005"></a>
 
@@ -3191,7 +3191,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The download serves a rendered file. This row's report was never requested, or is still rendering, or failed.
 
-**Fix.** POST /api/reports/<report>/<id>/ to request it, poll its status/ until it says ready, then download.
+**Fix.** POST /api/reports/&lt;report>/&lt;id>/ to request it, poll its status/ until it says ready, then download.
 
 <a id="report009"></a>
 
@@ -3243,7 +3243,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A menu item marks itself current when the request resolved to one of the URL names in its {% ifactive %}. A name that no URL pattern has, after a view was renamed or removed, never matches, so the item is never marked and nothing fails.
 
-**Fix.** Use the name `karni routes` lists for that page (`<app>:<name>`), or remove the name from the tag.
+**Fix.** Use the name `karni routes` lists for that page (<code>&lt;app&gt;:&lt;name&gt;</code>), or remove the name from the tag.
 
 <a id="site003"></a>
 
@@ -3251,7 +3251,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni_site.templatetags.karni_site`
 
-**Why Karni objects.** {% ifactive %} needs at least one URL name or path. {% csp_hash %} takes nothing, or `attribute`. {% csp_allow %} takes arguments like "font-src https://fonts.gstatic.com". {% editable %} and {% editable_image %} take a block key ("home.intro": lowercase words joined by dots, the page first), {% site_image %} a file field of the site's settings, {% site_defaults %} name="value" pairs, and {% get_menu %} a name and `as <variable>`. The template does not compile otherwise. The highlight filter takes a tag with optional classes ("span.accent", "em", or "" for none) and fails the render otherwise.
+**Why Karni objects.** {% ifactive %} needs at least one URL name or path. {% csp_hash %} takes nothing, or `attribute`. {% csp_allow %} takes arguments like "font-src https://fonts.gstatic.com". {% editable %} and {% editable_image %} take a block key ("home.intro": lowercase words joined by dots, the page first), {% site_image %} a file field of the site's settings, {% site_defaults %} name="value" pairs, and {% get_menu %} a name and <code>as &lt;variable&gt;</code>. The template does not compile otherwise. The highlight filter takes a tag with optional classes ("span.accent", "em", or "" for none) and fails the render otherwise.
 
 **Fix.** Write the tag as the message shows. The karni-site README has an example of each.
 
@@ -3261,9 +3261,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni_site.checks`
 
-**Why Karni objects.** `site` (the site's name, logo, contact details, opening hours and social links, edited in the admin) reaches templates through the context processor karni_site.context_processors.site. Without it every {{ site.<field> }} renders empty and nothing fails.
+**Why Karni objects.** `site` (the site's name, logo, contact details, opening hours and social links, edited in the admin) reaches templates through the context processor karni_site.context_processors.site. Without it every {{ site.&lt;field> }} renders empty and nothing fails.
 
-**Fix.** Add 'karni_site.context_processors.site' to TEMPLATES[0]['OPTIONS']['context_processors'] in config/settings.py. `karni make site <app>` adds it.
+**Fix.** Add 'karni_site.context_processors.site' to TEMPLATES[0]['OPTIONS']['context_processors'] in config/settings.py. <code>karni make site &lt;app&gt;</code> adds it.
 
 <a id="site005"></a>
 
@@ -3273,7 +3273,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Redirects a client adds in the admin are answered by karni_site.middleware.RedirectMiddleware. Without it they are stored and never used, and the old addresses answer 404.
 
-**Fix.** Add 'karni_site.middleware.RedirectMiddleware' to the `# karni:middleware` block of config/settings.py. `karni make site <app>` adds it.
+**Fix.** Add 'karni_site.middleware.RedirectMiddleware' to the `# karni:middleware` block of config/settings.py. <code>karni make site &lt;app&gt;</code> adds it.
 
 <a id="site006"></a>
 
@@ -3321,9 +3321,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni_site.checks_seo`
 
-**Why Karni objects.** Search results and browser tabs show a page's <title>. A page without one, or with an empty one, is listed under its address or a title the search engine makes up.
+**Why Karni objects.** Search results and browser tabs show a page's &lt;title>. A page without one, or with an empty one, is listed under its address or a title the search engine makes up.
 
-**Fix.** Give the page a title: {% block title %} in its template, the title of its row (class Karni: seo), or its entry in the admin's Page titles and descriptions. base.html needs {% karni_seo %} around its <title>.
+**Fix.** Give the page a title: {% block title %} in its template, the title of its row (class Karni: seo), or its entry in the admin's Page titles and descriptions. base.html needs {% karni_seo %} around its &lt;title>.
 
 <a id="site011"></a>
 
@@ -3341,7 +3341,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni_site.checks_seo`
 
-**Why Karni objects.** Search results show the <meta name="description"> under the title. Without one the search engine picks a fragment of the page, often the menu or a cookie notice.
+**Why Karni objects.** Search results show the &lt;meta name="description"> under the title. Without one the search engine picks a fragment of the page, often the menu or a cookie notice.
 
 **Fix.** Write one sentence about the page: {% block description %} in its template, the description of its row (class Karni: seo = {"description": "summary"}), its entry in the admin, or the site's tagline as the last default.
 
@@ -3361,7 +3361,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni_site.checks_seo`
 
-**Why Karni objects.** Screen readers read an image's alt text, and search engines index it. An <img> without an alt attribute is announced by its file name.
+**Why Karni objects.** Screen readers read an image's alt text, and search engines index it. An &lt;img> without an alt attribute is announced by its file name.
 
 **Fix.** Describe the image in alt="...", or write alt="" when it only decorates. {% image %} requires alt, and an image a client uploads takes its alt text in the admin.
 
@@ -3423,7 +3423,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The tag finds a form by the name of its model ("enquiry" for Enquiry, "booking_request" for BookingRequest, or "app_label.model"), served by the viewset the API router registered for it, or by an entry in KARNI_SITE_FORMS. A name that matches no model, a model no viewset serves, or several models leaves the page without its form. karni check reports it before a visitor does.
 
-**Fix.** Create the form with karni make form <name> <field:type> ..., use the name of a model a viewset serves, write app_label.model when several apps have the name, or map the name in KARNI_SITE_FORMS = {"<name>": "app.viewsets.SomeViewSet"}.
+**Fix.** Create the form with karni make form &lt;name> &lt;field:type> ..., use the name of a model a viewset serves, write app_label.model when several apps have the name, or map the name in KARNI_SITE_FORMS = {"&lt;name>": "app.viewsets.SomeViewSet"}.
 
 <a id="site021"></a>
 
@@ -3431,7 +3431,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni_site.templatetags.karni_forms`
 
-**Why Karni objects.** The tag takes the form's name and then option="value" pairs it knows: fields, rows, labels, placeholders, widgets, next, id, classes, template, the texts (button, success, invalid, throttled, refused, failed, choose) and a <part>_class per part of the markup. labels, placeholders and widgets are "field: text | field: text", and every field they name must be one a visitor fills.
+**Why Karni objects.** The tag takes the form's name and then option="value" pairs it knows: fields, rows, labels, placeholders, widgets, next, id, classes, template, the texts (button, success, invalid, throttled, refused, failed, choose) and a &lt;part>_class per part of the markup. labels, placeholders and widgets are "field: text | field: text", and every field they name must be one a visitor fills.
 
 **Fix.** Write it like {% karni_form "contact" fields="name,email,message" labels="name: Your name" classes="bootstrap" %}. The karni-site README lists every option.
 
@@ -3493,7 +3493,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni_storage.checks`
 
-**Why Karni objects.** The API gives each protected file as its download path, <resource>/<id>/files/<field>/. Without the include those paths answer 404 and nothing can be uploaded.
+**Why Karni objects.** The API gives each protected file as its download path, &lt;resource>/&lt;id>/files/&lt;field>/. Without the include those paths answer 404 and nothing can be uploaded.
 
 **Fix.** Add path("api/", include("karni_storage.urls")) to config/urls.py, next to path("api/", include("karni.api.urls")).
 
@@ -3555,7 +3555,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A direct upload is attached to a row only with the token the upload and confirm steps gave this user for this field. A token that expired, was altered, belongs to someone else or to another field is refused, so nobody can attach another user's object.
 
-**Fix.** Upload the file again: POST <resource>/files/<field>/upload/, send it to the bucket, POST .../confirm/, then save the row with the token confirm returned.
+**Fix.** Upload the file again: POST &lt;resource>/files/&lt;field>/upload/, send it to the bucket, POST .../confirm/, then save the row with the token confirm returned.
 
 <a id="store014"></a>
 
@@ -3623,7 +3623,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni_storage.fields (ProtectedFieldFile.url)`
 
-**Why Karni objects.** The path is <resource>/<id>/files/<field>/ under karni_storage.urls. It needs the include and a viewset that serves the model.
+**Why Karni objects.** The path is &lt;resource>/&lt;id>/files/&lt;field>/ under karni_storage.urls. It needs the include and a viewset that serves the model.
 
 **Fix.** Add path("api/", include("karni_storage.urls")) to config/urls.py and declare a BaseViewSet for the model. karni check names which is missing (STORE004, STORE006).
 
@@ -3637,7 +3637,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Project commands find the project by walking up to the directory with manage.py (and config/settings.py).
 
-**Fix.** cd into the project (or a directory below it), or create one: karni new <name>.
+**Fix.** cd into the project (or a directory below it), or create one: karni new &lt;name>.
 
 <a id="c002"></a>
 
@@ -3777,7 +3777,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Generators write into a local app listed in the `# karni:apps` block of config/settings.py.
 
-**Fix.** Create one (karni make app <name>), or choose one with --app <label>.
+**Fix.** Create one (karni make app &lt;name>), or choose one with --app &lt;label>.
 
 <a id="c103"></a>
 
@@ -3847,7 +3847,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** BaseViewSet generates the serializer from the model (rule K106), so a hand-written one must say why it exists.
 
-**Fix.** Pass --reason "<why>", or tune the generated serializer with APIMeta instead.
+**Fix.** Pass --reason "&lt;why>", or tune the generated serializer with APIMeta instead.
 
 <a id="c110"></a>
 
@@ -3887,7 +3887,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The map says which structure of the design is which model and which element is which field. Extract follows it exactly, so a model, a field, a relation's target or a selector it cannot follow stops it before anything is written.
 
-**Fix.** Fix each problem the message lists in the map (the field names come from the map's "fields", the selectors are CSS with an optional @attribute), or write a fresh draft with karni design analyze <design> --map <file> --force.
+**Fix.** Fix each problem the message lists in the map (the field names come from the map's "fields", the selectors are CSS with an optional @attribute), or write a fresh draft with karni design analyze &lt;design> --map &lt;file> --force.
 
 <a id="c122"></a>
 
@@ -3915,7 +3915,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni make model --external`
 
-**Why Karni objects.** `karni make model <Name> --external --table <table>` writes the model from the table's columns, so it reads them from the database (manage.py karni_inspect, in the project's interpreter). The database did not answer, the alias is not in DATABASES, or the project's karni has no karni_inspect command.
+**Why Karni objects.** <code>karni make model &lt;Name&gt; --external --table &lt;table&gt;</code> writes the model from the table's columns, so it reads them from the database (manage.py karni_inspect, in the project's interpreter). The database did not answer, the alias is not in DATABASES, or the project's karni has no karni_inspect command.
 
 **Fix.** Start the database or fix its settings (the message names the alias and the error), pass the alias with --database, or upgrade the project's karni. Then run the command again.
 
@@ -3937,7 +3937,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** An external model's fields come from the table, so it takes no field list and needs --table. --table, --database and --writable describe an external model, so they need --external. Imports never write a read-only table, so --key does not apply.
 
-**Fix.** Run karni make model <Name> --external --table <[schema.]table> [--database <alias>] [--writable], with no fields.
+**Fix.** Run karni make model &lt;Name> --external --table &lt;[schema.]table> [--database &lt;alias>] [--writable], with no fields.
 
 <a id="c124"></a>
 
@@ -4037,7 +4037,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** karni spec validate reads a karni.yaml: by default the project root's, else the current directory's.
 
-**Fix.** Write one (docs/app-spec.md), export the project's with karni spec export -o karni.yaml, or pass --spec <file>.
+**Fix.** Write one (docs/app-spec.md), export the project's with karni spec export -o karni.yaml, or pass --spec &lt;file>.
 
 <a id="c211"></a>
 
@@ -4105,7 +4105,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** An entity's access maps onto Karni's Access(read=..., write=..., create=...): each slot takes public, authenticated, granted, role:<slug> or owned:<field>, or a list of them, any of which admits.
+**Why Karni objects.** An entity's access maps onto Karni's Access(read=..., write=..., create=...): each slot takes public, authenticated, granted, role:&lt;slug> or owned:&lt;field>, or a list of them, any of which admits.
 
 **Fix.** Use those forms, or write access: code and declare the viewset's Access(...) by hand (Where, Can, &, a computed get_access).
 
@@ -4115,7 +4115,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** Grants map onto KARNI_ROLES: a pattern app.entity[:action] (with * for a part, or * alone) to a scope all, own, own:<owner field>, related:<scope path key>, custom:<name> or tree:<path>. A spec grants the standard actions view, add, change and delete.
+**Why Karni objects.** Grants map onto KARNI_ROLES: a pattern app.entity[:action] (with * for a part, or * alone) to a scope all, own, own:&lt;owner field>, related:&lt;scope path key>, custom:&lt;name> or tree:&lt;path>. A spec grants the standard actions view, add, change and delete.
 
 **Fix.** Fix the pattern or the scope. An entity's own actions, and a grant on a model outside the spec, go in KARNI_ROLES by hand.
 
@@ -4135,7 +4135,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form, and {detail: {related: [...]}} for a detail page with related tabs), or a page name with its kind (blank, login, code, or dashboard: the scaffold's home at /, or a page of charts at /<name>).
+**Why Karni objects.** Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form, and {detail: {related: [...]}} for a detail page with related tabs), or a page name with its kind (blank, login, code, or dashboard: the scaffold's home at /, or a page of charts at /&lt;name>).
 
 **Fix.** Write e.g. - Session: [list, detail, form], - about: blank, - home: dashboard or - overview: dashboard, each entity or page once.
 
@@ -4215,7 +4215,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** role:<slug> becomes HasRole("<slug>"), which nobody would hold if no role of that slug exists. Without roles, the spec has Karni's shipped roles (staff, user, customer), plus the roles of the modules it adds.
+**Why Karni objects.** role:&lt;slug> becomes HasRole("&lt;slug>"), which nobody would hold if no role of that slug exists. Without roles, the spec has Karni's shipped roles (staff, user, customer), plus the roles of the modules it adds.
 
 **Fix.** Declare the role under roles, or fix the slug.
 
@@ -4235,9 +4235,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** own compares the entity's owner field with the user, and related:<key> its scope path <key> with the user's attribute <key>. own:<field> must name that owner field, and related:<key> a scope path the entity declares.
+**Why Karni objects.** own compares the entity's owner field with the user, and related:&lt;key> its scope path &lt;key> with the user's attribute &lt;key>. own:&lt;field> must name that owner field, and related:&lt;key> a scope path the entity declares.
 
-**Fix.** Set owner: on the entity, add scope_paths: {<key>: <lookup>}, or change the scope.
+**Fix.** Set owner: on the entity, add scope_paths: {&lt;key>: &lt;lookup>}, or change the scope.
 
 <a id="c235"></a>
 
@@ -4291,11 +4291,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="c240"></a>
 
-### C240: owned:<path> in access does not lead to the user
+### C240: owned:&lt;path> in access does not lead to the user
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** owned:<path> becomes Owned("<path>"), which keeps the rows whose path points at the signed-in user.
+**Why Karni objects.** owned:&lt;path> becomes Owned("&lt;path>"), which keeps the rows whose path points at the signed-in user.
 
 **Fix.** Name a relation to the user (owned:member) or a path through relations (owned:session__instructor).
 
@@ -4315,7 +4315,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** Each page karni make page writes has a route (an entity's list at /<route>, its detail at /<route>/$id, its form at /<route>/new and /<route>/$id/edit, a named page at /<name>), and two pages cannot answer the same path.
+**Why Karni objects.** Each page karni make page writes has a route (an entity's list at /&lt;route>, its detail at /&lt;route>/$id, its form at /&lt;route>/new and /&lt;route>/$id/edit, a named page at /&lt;name>), and two pages cannot answer the same path.
 
 **Fix.** Rename the page or drop one of them.
 
@@ -4357,7 +4357,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** external: true is a table another system owns, so it needs table, its key is the table's own column (no pk), and karni seed skips it. table and writable mean nothing without external.
 
-**Fix.** Add table: <[schema.]table> to an external entity, remove pk and its seed count, or add external: true where table or writable is written.
+**Fix.** Add table: &lt;[schema.]table> to an external entity, remove pk and its seed count, or add external: true where table or writable is written.
 
 <a id="c252"></a>
 
@@ -4385,7 +4385,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
 
-**Why Karni objects.** was: <old name> on a field or an entity tells karni plan and karni build to rename it and keep its data. The old name must be a valid name, differ from the new one, no longer be declared, and be claimed by one field or entity only.
+**Why Karni objects.** was: &lt;old name> on a field or an entity tells karni plan and karni build to rename it and keep its data. The old name must be a valid name, differ from the new one, no longer be declared, and be claimed by one field or entity only.
 
 **Fix.** Write the old name once, on the field or entity that takes over the data, and remove the old declaration.
 
@@ -4455,9 +4455,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni build (karni_cli.builder)`
 
-**Why Karni objects.** karni build rewrites its own files (<app>/karni/, <app>/tests/karni/, frontend/src/pages/karni/, the karni:spec blocks) on every build, and records a sha256 of each in .karni/build.json. A file whose content no longer matches was edited by hand, and a build must not silently lose the edit. The message names the file and the changed lines, and nothing is written.
+**Why Karni objects.** karni build rewrites its own files (&lt;app>/karni/, &lt;app>/tests/karni/, frontend/src/pages/karni/, the karni:spec blocks) on every build, and records a sha256 of each in .karni/build.json. A file whose content no longer matches was edited by hand, and a build must not silently lose the edit. The message names the file and the changed lines, and nothing is written.
 
-**Fix.** Move the change into the project's own file (<app>/models.py, viewsets.py or seeds.py: the subclass of each class, a page or test of your own) or into karni.yaml, then run karni build. Or karni build --force replaces the file and keeps your copy as <file>.orig. Or karni build --adopt <file> makes it the project's: karni build stops managing it and says so on every run.
+**Fix.** Move the change into the project's own file (&lt;app>/models.py, viewsets.py or seeds.py: the subclass of each class, a page or test of your own) or into karni.yaml, then run karni build. Or karni build --force replaces the file and keeps your copy as &lt;file>.orig. Or karni build --adopt &lt;file> makes it the project's: karni build stops managing it and says so on every run.
 
 <a id="c274"></a>
 
@@ -4477,7 +4477,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** karni.yaml asks for something the project already has as code of its own: a model of that name outside the spec, a class of that name in models.py, viewsets.py or seeds.py that does not extend Karni's, or a route a page of the project's holds. karni build never replaces the project's code.
 
-**Fix.** Rename the entity or page in karni.yaml, or rename (or remove) the project's own class or route. A page of the project's can stay in the spec as - <name>: code.
+**Fix.** Rename the entity or page in karni.yaml, or rename (or remove) the project's own class or route. A page of the project's can stay in the spec as - &lt;name>: code.
 
 <a id="c276"></a>
 
@@ -4535,7 +4535,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni build (karni_cli.builder)`
 
-**Why Karni objects.** karni build runs the project's own tests (karni test) after it built the code, including the API tests it wrote in <app>/tests/karni/.
+**Why Karni objects.** karni build runs the project's own tests (karni test) after it built the code, including the API tests it wrote in &lt;app>/tests/karni/.
 
 **Fix.** Run karni test to see every failure, fix the code (the project's files or karni.yaml), then run karni build again: it continues from test.
 
@@ -4587,7 +4587,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** karni ui detect reads a frontend: its package.json, stylesheets and theme files. It looks in the current directory, in ./frontend, and in the Karni project's frontend/.
 
-**Fix.** Run it in the frontend directory (the one with package.json), or pass --frontend <dir>.
+**Fix.** Run it in the frontend directory (the one with package.json), or pass --frontend &lt;dir>.
 
 <a id="c302"></a>
 
@@ -4625,9 +4625,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni why, karni why-empty`
 
-**Why Karni objects.** A question names one thing: <resource>/<id> (a row), <resource>.<field> (a field), <resource> (its list), or a status followed by the request id of a recorded request.
+**Why Karni objects.** A question names one thing: &lt;resource>/&lt;id> (a row), &lt;resource>.&lt;field> (a field), &lt;resource> (its list), or a status followed by the request id of a recorded request.
 
-**Fix.** Use one of those forms, e.g. karni why events/42 --as alice@example.com or karni why 403 <request-id>.
+**Fix.** Use one of those forms, e.g. karni why events/42 --as alice@example.com or karni why 403 &lt;request-id>.
 
 <a id="c311"></a>
 
@@ -4667,7 +4667,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Each module describes itself in karni.module.toml: its purpose, what it provides, the questions to ask and the wiring karni add performs. A manifest that does not follow the format, or that names a module or feature the catalog does not have, cannot be used.
 
-**Fix.** Fix the key the message names (docs/modules.md lists every key), then run `karni modules show <name>`. A module's own tests check it with karni.testing.assert_module_manifest.
+**Fix.** Fix the key the message names (docs/modules.md lists every key), then run <code>karni modules show &lt;name&gt;</code>. A module's own tests check it with karni.testing.assert_module_manifest.
 
 <a id="c315"></a>
 
@@ -4677,7 +4677,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A module's manifest lists the modules and features it cannot work next to (conflicts). karni add refuses before it writes anything.
 
-**Fix.** Remove the other one first (karni remove <name>, or turn the feature off), or choose another module.
+**Fix.** Remove the other one first (karni remove &lt;name>, or turn the feature off), or choose another module.
 
 <a id="c316"></a>
 
@@ -4707,7 +4707,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Features (two_factor, terms, api_cache and the others) ship with karni. There is no package to add and nothing to take out: one setting turns each on or off.
 
-**Fix.** Turn it on or off with its key under features: in karni.yaml, or its setting (karni modules show <name> names both).
+**Fix.** Turn it on or off with its key under features: in karni.yaml, or its setting (karni modules show &lt;name> names both).
 
 <a id="c319"></a>
 
@@ -4717,7 +4717,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** karni remove never drops data. Once the module is out of INSTALLED_APPS, Django can no longer drop its tables, so the choice is made now: drop them while the module is still added, or keep them.
 
-**Fix.** To drop the tables and their rows, run the printed `karni migrate <app> zero`, then karni remove again. To keep them in the database, run karni remove --keep-tables.
+**Fix.** To drop the tables and their rows, run the printed <code>karni migrate &lt;app&gt; zero</code>, then karni remove again. To keep them in the database, run karni remove --keep-tables.
 
 <a id="c320"></a>
 
@@ -4725,9 +4725,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni explain`
 
-**Why Karni objects.** karni explain explains one thing: an error code (E104, C101, PAY004, K106) or a captured failure (--failure <id>).
+**Why Karni objects.** karni explain explains one thing: an error code (E104, C101, PAY004, K106) or a captured failure (--failure &lt;id>).
 
-**Fix.** Run `karni explain E104`, or `karni explain --failure <id>` (a failure id, a failed request's id, or `last`).
+**Fix.** Run `karni explain E104`, or <code>karni explain --failure &lt;id&gt;</code> (a failure id, a failed request's id, or `last`).
 
 <a id="c321"></a>
 
@@ -4767,7 +4767,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The catalog's manifests say what each module and feature requires and conflicts with. The spec lists one without what it requires, or two that conflict.
 
-**Fix.** Add what the message says is required (under modules: or features:), or leave one of the two that conflict out. karni modules show <name> lists both.
+**Fix.** Add what the message says is required (under modules: or features:), or leave one of the two that conflict out. karni modules show &lt;name> lists both.
 
 <a id="c500"></a>
 
@@ -4775,7 +4775,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** An entity's aggregate: lists what GET <resource>/aggregate/ may group by (group_by) and read (values). Each name is a field of the entity, or a path through its relations (category__parent), and group_by holds at least one.
+**Why Karni objects.** An entity's aggregate: lists what GET &lt;resource>/aggregate/ may group by (group_by) and read (values). Each name is a field of the entity, or a path through its relations (category__parent), and group_by holds at least one.
 
 **Fix.** Name a field the entity declares, or follow a relation (fk, o2o, m2m) with __ to a field of the entity it points at.
 
@@ -4797,7 +4797,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A group may take a bucket after a colon (launched_on:year) to group a date or datetime field by year, quarter or month. Another bucket, or one on a field that is not a date, cannot be grouped.
 
-**Fix.** Write <date field>:year, :quarter or :month, or the field alone to allow every bucket.
+**Fix.** Write &lt;date field>:year, :quarter or :month, or the field alone to allow every bucket.
 
 <a id="c340"></a>
 
@@ -4807,7 +4807,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** karni explain answers for a code (karni explain E104) or for pasted text: a traceback, a test failure or a log line read from stdin. It got neither: no code, and stdin was a terminal or empty.
 
-**Fix.** Pass a code (karni explain E104), or pipe the text in: karni explain - < traceback.txt, or pbpaste | karni explain -. Agents: the explain_text MCP tool takes the text as an argument.
+**Fix.** Pass a code (karni explain E104), or pipe the text in: karni explain - &lt; traceback.txt, or pbpaste | karni explain -. Agents: the explain_text MCP tool takes the text as an argument.
 
 <a id="c341"></a>
 
@@ -4873,7 +4873,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C373: No such setting
 
-*karni command* · from `karni explain <SETTING>`
+*karni command* · from <code>karni explain &lt;SETTING&gt;</code>
 
 **Why Karni objects.** karni explain reads Karni's settings and every module's from the source docs/settings.md is generated from: Karni's karni/conf/base.py, each module's conf.py (installed next to karni-cli, or in the project), never Django.
 
@@ -4883,7 +4883,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C374: No such template tag
 
-*karni command* · from `karni explain <tag>`
+*karni command* · from <code>karni explain &lt;tag&gt;</code>
 
 **Why Karni objects.** karni explain reads the karni-site module's tags and filters from the source docs/public-site.md's table is rendered from (karni_site/tagref.py): in this checkout, installed next to karni-cli, or in the project.
 
@@ -4893,11 +4893,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C375: No such content map key
 
-*karni command* · from `karni explain map.<key>`
+*karni command* · from <code>karni explain map.&lt;key&gt;</code>
 
 **Why Karni objects.** A content map key is written at one level of the map (the map, a model, a source, a key, a value), and karni explain reads them from karni_cli/design/mapref.py, the source of docs/design-content.md's tables.
 
-**Fix.** Run `karni explain map` for every key by level, then `karni explain map.<key>` or `map.<level>.<key>` (map.source.key, map.value.by).
+**Fix.** Run `karni explain map` for every key by level, then <code>karni explain map.&lt;key&gt;</code> or <code>map.&lt;level&gt;.&lt;key&gt;</code> (map.source.key, map.value.by).
 
 <a id="c400"></a>
 
@@ -4907,7 +4907,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** karni spec answer writes the answer to a question karni plan --questions asks. The id is not one of them: it is mistyped, or karni.yaml settles that question already (an answered question is gone, and so is one the file was edited to settle).
 
-**Fix.** Run karni plan --questions --max 0 for the open ids, then karni spec answer <id> <value> with one of them.
+**Fix.** Run karni plan --questions --max 0 for the open ids, then karni spec answer &lt;id> &lt;value> with one of them.
 
 <a id="c401"></a>
 
@@ -4937,7 +4937,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Recipes are the folders built into karni-cli and the karni.recipes entry points of its environment. blank is the blank start, the one name that is always there.
 
-**Fix.** Run karni recipes list for the names, or karni recipes list --match "<the request>" for the closest. A recipe of your own joins with a recipe.toml, a karni.yaml and an entry point (docs/app-spec.md#recipes).
+**Fix.** Run karni recipes list for the names, or karni recipes list --match "&lt;the request>" for the closest. A recipe of your own joins with a recipe.toml, a karni.yaml and an entry point (docs/app-spec.md#recipes).
 
 <a id="c421"></a>
 
@@ -4947,7 +4947,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A recipe is a folder with a recipe.toml that follows its schema, a name that is the folder's (or the entry point's), and a karni.yaml. One that does not, or whose name another recipe has already, is left out and reported.
 
-**Fix.** Fix the key the message names (docs/app-spec.md#recipes lists every key), or rename the recipe, then run karni recipes show <name>.
+**Fix.** Fix the key the message names (docs/app-spec.md#recipes lists every key), or rename the recipe, then run karni recipes show &lt;name>.
 
 <a id="c440"></a>
 
@@ -4957,7 +4957,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A recipe is an app: its karni.yaml has entities, roles and pages for signed-in users. --design builds a public site from a designer's pages instead, and --kind site or --no-staff-app leave out the React app the recipe's pages live in.
 
-**Fix.** Leave the option out (--kind app or site+app go with a recipe), or make the project without --recipe and start karni.yaml from karni recipes show <name>.
+**Fix.** Leave the option out (--kind app or site+app go with a recipe), or make the project without --recipe and start karni.yaml from karni recipes show &lt;name>.
 
 <a id="c441"></a>
 
@@ -4981,11 +4981,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="c620"></a>
 
-### C620: A role grant's tree:<path> does not lead to a tree entity
+### C620: A role grant's tree:&lt;path> does not lead to a tree entity
 
 *karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
 
-**Why Karni objects.** tree:<path> reaches the rows whose <path> is a node the user holds or a node below it. The path follows the entity's relation fields (fk, m2m, o2o) and taxonomies, each to an entity of the spec, and the last one must point at an entity with tree: true or tree: ordered. Karni refuses any other path at startup (E490).
+**Why Karni objects.** tree:&lt;path> reaches the rows whose &lt;path> is a node the user holds or a node below it. The path follows the entity's relation fields (fk, m2m, o2o) and taxonomies, each to an entity of the spec, and the last one must point at an entity with tree: true or tree: ordered. Karni refuses any other path at startup (E490).
 
 **Fix.** Name the entity's relation to the tree, through relations when needed: tree:region, tree:product__categories. Add tree: true to the entity the path ends at, or grant another scope.
 
@@ -5025,7 +5025,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
 
-**Why Karni objects.** Each key of taxonomies becomes a many-to-many field of that name and the list parameters ?<key>= and ?<key>_descendants=, so it is a lowercase field name that does not end in _descendants, and it is not a field a mixin or the tree already gives the entity.
+**Why Karni objects.** Each key of taxonomies becomes a many-to-many field of that name and the list parameters ?&lt;key>= and ?&lt;key>_descendants=, so it is a lowercase field name that does not end in _descendants, and it is not a field a mixin or the tree already gives the entity.
 
 **Fix.** Rename the key, e.g. taxonomies: {region: Region}.
 
@@ -5035,7 +5035,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
 
-**Why Karni objects.** A taxonomy tags rows with the nodes of a hierarchy, and its filters, facets and the tree:<key> scope walk the tree below a node. The target must be an entity of the spec with tree: true or tree: ordered. Karni refuses another target at startup (E571).
+**Why Karni objects.** A taxonomy tags rows with the nodes of a hierarchy, and its filters, facets and the tree:&lt;key> scope walk the tree below a node. The target must be an entity of the spec with tree: true or tree: ordered. Karni refuses another target at startup (E571).
 
 **Fix.** Point the key at a tree entity (Name or app.Name), or add tree: true to the entity it names. For tags without a hierarchy, declare a plain m2m field instead.
 
@@ -5047,7 +5047,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** When the entity declares a field under a taxonomy's key, Karni adopts that field instead of generating one. Only an m2m to the same tree entity can be adopted (E572).
 
-**Fix.** Remove the field and let the taxonomy generate it, declare it as m2m:<the tree entity>, or rename one of them.
+**Fix.** Remove the field and let the taxonomy generate it, declare it as m2m:&lt;the tree entity>, or rename one of them.
 
 <a id="c703"></a>
 
@@ -5077,7 +5077,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** With api_cache on, a cached response is cleared when Karni sees a write to a table it reads. An external table, a table on another database, or an external entity reached through ?expand= is written by another system, so its cached responses would stay stale until they expire. karni check refuses the same viewset in the project.
 
-**Fix.** Add cache: <seconds> to the entity (how stale a response may be), or cache: false to never cache it.
+**Fix.** Add cache: &lt;seconds> to the entity (how stale a response may be), or cache: false to never cache it.
 
 <a id="c560"></a>
 
@@ -5185,7 +5185,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** app.api_version is the API's current version. karni build writes it as KARNI_API_VERSION, and the API is then mounted at /api/<version>/. The name is a URL segment: lower case letters, digits and -, starting with a letter or digit, at most 16 characters, such as v1.
+**Why Karni objects.** app.api_version is the API's current version. karni build writes it as KARNI_API_VERSION, and the API is then mounted at /api/&lt;version>/. The name is a URL segment: lower case letters, digits and -, starting with a letter or digit, at most 16 characters, such as v1.
 
 **Fix.** Write a name like v1 or 2026-11, or leave the key out for an unversioned API.
 
@@ -5219,7 +5219,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Run `karni context` before reading any files. It prints the current apps, models, viewsets, UI components, hooks, pages, public site routes and installed modules in a few hundred tokens. Trust it. On a large project read one area at a time: `karni context --summary`, then `karni context --app <label>` or `--model <name>` (`--max-tokens N` caps any of them).
+**Rule.** Run `karni context` before reading any files. It prints the current apps, models, viewsets, UI components, hooks, pages, public site routes and installed modules in a few hundred tokens. Trust it. On a large project read one area at a time: `karni context --summary`, then <code>karni context --app &lt;label&gt;</code> or <code>--model &lt;name&gt;</code> (`--max-tokens N` caps any of them).
 
 **Why Karni objects.** The inventory is derived live from the app registry, the router and the @karni/ui manifest, so it is never stale and costs far fewer tokens than crawling source.
 
@@ -5255,7 +5255,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Run `karni rules --check <file>` on files you write and `karni check` before committing. Every enforced rule fails the build, and nothing only warns. It ends with suggestions (`SUG`): read each and apply its fix.
+**Rule.** Run <code>karni rules --check &lt;file&gt;</code> on files you write and `karni check` before committing. Every enforced rule fails the build, and nothing only warns. It ends with suggestions (`SUG`): read each and apply its fix.
 
 **Why Karni objects.** Enforced rules fail CI anyway, so catching them while editing is cheaper.
 
@@ -5267,7 +5267,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `opt-out-reason`, `eslint-comments/require-description`
 
-**Rule.** Opt-outs are inline and REQUIRE a reason. Python: `# karni: allow(<rule-id>): <why>`. ESLint: `// eslint-disable-next-line karni/<rule> -- <why>`. jscpd: `// jscpd:ignore-start -- <why>`.
+**Rule.** Opt-outs are inline and REQUIRE a reason. Python: <code># karni: allow(&lt;rule-id&gt;): &lt;why&gt;</code>. ESLint: <code>// eslint-disable-next-line karni/&lt;rule&gt; -- &lt;why&gt;</code>. jscpd: <code>// jscpd:ignore-start -- &lt;why&gt;</code>.
 
 **Why Karni objects.** Rules without escape hatches cause forks, and a fork is worse than a duplicate. Every exception must still say why, so it can be reviewed.
 
@@ -5279,7 +5279,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, should* · enforced by `review`
 
-**Rule.** Prefer the standard procedures for routine work: new-model, new-page, add-module, new-module, site-from-design. Run one with `karni rules --procedure <name>`, or with the matching slash command where your tool has one.
+**Rule.** Prefer the standard procedures for routine work: new-model, new-page, add-module, new-module, site-from-design. Run one with <code>karni rules --procedure &lt;name&gt;</code>, or with the matching slash command where your tool has one.
 
 **Why Karni objects.** The procedures encode the shortest correct path for routine work.
 
@@ -5291,7 +5291,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, should* · enforced by `review`
 
-**Rule.** Use the project commands (`karni --help` lists them all). `make up` starts the stack. `make migrate` runs makemigrations + migrate. `karni types` regenerates TS types + typed hooks from the API schema. `karni check` runs architecture and system checks. `karni context` prints the inventory. `karni make <type>` scaffolds. Runners like `karni test`, `karni shell`, `karni routes`, `karni worker`, `karni schedule list` wrap manage.py/celery/pytest.
+**Rule.** Use the project commands (`karni --help` lists them all). `make up` starts the stack. `make migrate` runs makemigrations + migrate. `karni types` regenerates TS types + typed hooks from the API schema. `karni check` runs architecture and system checks. `karni context` prints the inventory. <code>karni make &lt;type&gt;</code> scaffolds. Runners like `karni test`, `karni shell`, `karni routes`, `karni worker`, `karni schedule list` wrap manage.py/celery/pytest.
 
 **Why Karni objects.** They run inside the right interpreter (project .venv or compose service).
 
@@ -5303,7 +5303,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Create apps, models, viewsets, serializers, migrations, tasks, schedules, events, listeners, management commands, services, middleware, pages, components, modules, site apps and their views with `karni make <type>` (`karni make --list` lists the types, `--dry-run` previews, `--help` works per type). Never hand-create a file, class or route a generator makes. Run the generator, then edit what it wrote.
+**Rule.** Create apps, models, viewsets, serializers, migrations, tasks, schedules, events, listeners, management commands, services, middleware, pages, components, modules, site apps and their views with <code>karni make &lt;type&gt;</code> (`karni make --list` lists the types, `--dry-run` previews, `--help` works per type). Never hand-create a file, class or route a generator makes. Run the generator, then edit what it wrote.
 
 **Why Karni objects.** Generators emit the conventions in one step (BaseModel, a mandatory access declaration, settings and route markers, ruff-clean imports) and are tested to pass every rule. Hand-written scaffolding drifts.
 
@@ -5327,7 +5327,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Before hunting an N+1 in serializers, run `karni queries <endpoint> --as <user>` (MCP tool `queries`). It runs the endpoint in-process, groups the repeated queries by the serializer field and relation that caused them, says why the optimiser did not fetch them and prints the hint that fixes it.
+**Rule.** Before hunting an N+1 in serializers, run <code>karni queries &lt;endpoint&gt; --as &lt;user&gt;</code> (MCP tool `queries`). It runs the endpoint in-process, groups the repeated queries by the serializer field and relation that caused them, says why the optimiser did not fetch them and prints the hint that fixes it.
 
 **Why Karni objects.** The optimiser derives select_related/prefetch_related itself and records what it cannot see (method fields, properties, to_representation), so the cause and the fix come from the same knowledge instead of guesswork.
 
@@ -5339,7 +5339,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** When a row, field or action is unexpectedly missing or refused (a 403, a 404, an empty list, a field absent from a response), run `karni why <resource>/<id> --as <user> [--action ...]`, `karni why <resource>.<field> --as <user>`, `karni why-empty <resource> --as <user>` or `karni why 403 <request-id>` (MCP: `why`, `why_empty`) before reading viewsets, KARNI_ROLES or the access layer, and act on its verdict.
+**Rule.** When a row, field or action is unexpectedly missing or refused (a 403, a 404, an empty list, a field absent from a response), run <code>karni why &lt;resource&gt;/&lt;id&gt; --as &lt;user&gt; [--action ...]</code>, <code>karni why &lt;resource&gt;.&lt;field&gt; --as &lt;user&gt;</code>, <code>karni why-empty &lt;resource&gt; --as &lt;user&gt;</code> or <code>karni why 403 &lt;request-id&gt;</code> (MCP: `why`, `why_empty`) before reading viewsets, KARNI_ROLES or the access layer, and act on its verdict.
 
 **Why Karni objects.** Access bugs raise no error: the row is just absent. karni why computes the decision with the code that enforces it and prints the user's roles, the grants and where each comes from, the predicate that decided, the row's values, file:line and the fix. That is one call instead of reconstructing the rules from source.
 
@@ -5351,7 +5351,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, should* · enforced by `review`
 
-**Rule.** When a request or task fails in development, run `karni explain --failure <id>` (or `--failure last`) before reading a traceback by hand: it names the failing frame with its locals, the user and their roles, the SQL and the next steps.
+**Rule.** When a request or task fails in development, run <code>karni explain --failure &lt;id&gt;</code> (or `--failure last`) before reading a traceback by hand: it names the failing frame with its locals, the user and their roles, the SQL and the next steps.
 
 **Why Karni objects.** The snapshot was taken when it failed, with secrets redacted. Reconstructing the same context from a traceback and the code costs far more.
 
@@ -5363,7 +5363,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, should* · enforced by `review`
 
-**Rule.** To see what a request set in motion (Celery tasks and their retries, email, webhooks, change-log entries) run `karni trace <request-id>` (its X-Request-ID response header, or `last`) instead of correlating log timestamps.
+**Rule.** To see what a request set in motion (Celery tasks and their retries, email, webhooks, change-log entries) run <code>karni trace &lt;request-id&gt;</code> (its X-Request-ID response header, or `last`) instead of correlating log timestamps.
 
 **Why Karni objects.** The request's tasks, retries, email and audit entries all carry its id, so the trace is exact. Timestamps from several processes are not.
 
@@ -5375,7 +5375,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, should* · enforced by `review`
 
-**Rule.** After changing access, roles or fixing a bug a request hit, confirm it with `karni replay <request-id> [--as <email|username|pk>]`. It re-runs the captured request against the current code and prints what changed ("was 403, now 200"). Writes are rolled back unless you pass `--commit`.
+**Rule.** After changing access, roles or fixing a bug a request hit, confirm it with <code>karni replay &lt;request-id&gt; [--as &lt;email|username|pk&gt;]</code>. It re-runs the captured request against the current code and prints what changed ("was 403, now 200"). Writes are rolled back unless you pass `--commit`.
 
 **Why Karni objects.** Replaying the real request as the real user tests the case that failed, not the one you think failed.
 
@@ -5389,7 +5389,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Rule.** Models inherit `karni.models.BaseModel` (= `UUIDModel` + `TimestampedModel` + `SoftDeleteModel` + `AuditedModel`), or compose those mixins directly when a model should not have all four (e.g. an append-only log: `UUIDModel, TimestampedModel`). Declare `APIMeta` / `AdminMeta` only for fields that must be hidden, read-only or write-only. `BigIntBaseModel` (experimental) is the same with an integer `id`, chosen per model in its class line; `karni context` shows each model's key type.
 
-**Why Karni objects.** The mixins supply the primary key (a UUID, or an integer with `BigIntBaseModel`), timestamps, soft delete, audit stamping and the managers the derived API/admin rely on. The exception is a table or view another system owns: a plain `models.Model` with `class Meta: managed = False` and `class Karni: external = True` (experimental, `karni make model <Name> --external --table <table>`), which Karni only reads unless `writable = True`.
+**Why Karni objects.** The mixins supply the primary key (a UUID, or an integer with `BigIntBaseModel`), timestamps, soft delete, audit stamping and the managers the derived API/admin rely on. The exception is a table or view another system owns: a plain `models.Model` with `class Meta: managed = False` and `class Karni: external = True` (experimental, <code>karni make model &lt;Name&gt; --external --table &lt;table&gt;</code>), which Karni only reads unless `writable = True`.
 
 **Fix.** Inherit karni.models.BaseModel or BigIntBaseModel (or compose its mixins).
 
@@ -5483,7 +5483,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `viewset-access`
 
-**Rule.** Every `BaseViewSet` declares `access`: `Granted()` (the default: the roles' grants for the model, row-scoped) or `Access(read=..., write=...)` built from `Owned("<fk to user>")`, `HasRole(...)`, `Authenticated()`, `Public()` and `Where(lambda request: Q(...))` with `|` / `&`. Reads are public only when you write `Public()`. No `access` denies every request. `Unscoped(reason=...)` is the explicit opt-out.
+**Rule.** Every `BaseViewSet` declares `access`: `Granted()` (the default: the roles' grants for the model, row-scoped) or `Access(read=..., write=...)` built from <code>Owned("&lt;fk to user&gt;")</code>, `HasRole(...)`, `Authenticated()`, `Public()` and `Where(lambda request: Q(...))` with `|` / `&`. Reads are public only when you write `Public()`. No `access` denies every request. `Unscoped(reason=...)` is the explicit opt-out.
 
 **Why Karni objects.** One declaration compiles into both the request gate and the row filter, so neither can be forgotten. A forgotten permission class fails open silently.
 
@@ -5495,7 +5495,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `access-override`
 
-**Rule.** Express who sees which rows in `access` (`Where(...)` for custom logic, `@action(..., access=...)` for one action). An overridden `get_queryset` is still read-scoped, so never use it to widen. Overriding `filter_queryset_for_user` needs `# karni: allow(access-override): <why>`. Rows under the nodes of a tree a user was granted are the `tree:<path>` scope of a grant, never a hand-written subtree filter.
+**Rule.** Express who sees which rows in `access` (`Where(...)` for custom logic, `@action(..., access=...)` for one action). An overridden `get_queryset` is still read-scoped, so never use it to widen. Overriding `filter_queryset_for_user` needs <code># karni: allow(access-override): &lt;why&gt;</code>. Rows under the nodes of a tree a user was granted are the <code>tree:&lt;path&gt;</code> scope of a grant, never a hand-written subtree filter.
 
 **Why Karni objects.** The queryset is the authoritative layer: lists, details, actions, relation PKs and ?expand= all go through the read scope, so a bypass leaks everywhere.
 
@@ -5519,7 +5519,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `audited-bulk-write`
 
-**Rule.** A model with `class Karni: audit = True` keeps field-level change history through save() and delete(). `QuerySet.update()` and `bulk_update()` bypass it and leave no entry. Save the instances instead, or opt out with `# karni: allow(audited-bulk-write): <reason>`.
+**Rule.** A model with `class Karni: audit = True` keeps field-level change history through save() and delete(). `QuerySet.update()` and `bulk_update()` bypass it and leave no entry. Save the instances instead, or opt out with <code># karni: allow(audited-bulk-write): &lt;reason&gt;</code>.
 
 **Why Karni objects.** A silent gap in the history is exactly the bug someone discovers during an audit. The rule names every bulk write on an audited model at build time.
 
@@ -5531,7 +5531,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Declare what a value is with `karni.fields` so the database enforces it: money is `MoneyField(currency="EUR")` or `currency_field=...` (never FloatField: `karni.E960` fails boot), counts that must never go negative are `QuantityField`, rates `PercentField`, ISO codes `CountryField`/`CurrencyField`, phone numbers `PhoneField`, emails `EmailField(unique=True)` (case-insensitive). Uniqueness on soft-deletable models: `unique=True` on a Karni field, or `LiveUniqueConstraint(fields=[...])` in `Meta.constraints`, so a deleted row frees its value. Pick `on_delete` deliberately (`karni.W965` flags CASCADE on financial or audited models). `karni schema <app>` shows every column, constraint and index and why it exists. Long text a page shows formatted is `MarkdownField` (`name:markdown`). A model with many fields declares `class Karni: field_groups` (form and detail sections or tabs) and `column_sets` (table presets) instead of hand-built screens.
+**Rule.** Declare what a value is with `karni.fields` so the database enforces it: money is `MoneyField(currency="EUR")` or `currency_field=...` (never FloatField: `karni.E960` fails boot), counts that must never go negative are `QuantityField`, rates `PercentField`, ISO codes `CountryField`/`CurrencyField`, phone numbers `PhoneField`, emails `EmailField(unique=True)` (case-insensitive). Uniqueness on soft-deletable models: `unique=True` on a Karni field, or `LiveUniqueConstraint(fields=[...])` in `Meta.constraints`, so a deleted row frees its value. Pick `on_delete` deliberately (`karni.W965` flags CASCADE on financial or audited models). <code>karni schema &lt;app&gt;</code> shows every column, constraint and index and why it exists. Long text a page shows formatted is `MarkdownField` (`name:markdown`). A model with many fields declares `class Karni: field_groups` (form and detail sections or tabs) and `column_sets` (table presets) instead of hand-built screens.
 
 **Why Karni objects.** Float money, free-text codes and case-sensitive unique emails pass every test and fail in production. A database constraint is the one layer raw SQL, bulk updates and other services cannot skip.
 
@@ -5555,7 +5555,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Anything with a limited quantity (seats, stock, licences) is a `CapacityField` consumed only with `karni.capacity.reserve(row, n)` / `release()` inside `transaction.atomic()`. Anything that must not overlap in time (rooms, slots, appointments) declares `class Karni: no_overlap = NoOverlap("<resource>", "<range>", ignore={...})`. Never count, compare and then write in Python.
+**Rule.** Anything with a limited quantity (seats, stock, licences) is a `CapacityField` consumed only with `karni.capacity.reserve(row, n)` / `release()` inside `transaction.atomic()`. Anything that must not overlap in time (rooms, slots, appointments) declares <code>class Karni: no_overlap = NoOverlap("&lt;resource&gt;", "&lt;range&gt;", ignore={...})</code>. Never count, compare and then write in Python.
 
 **Why Karni objects.** A read-then-write check never fails in tests and double-books in production: two requests pass it together. The database refuses the oversell or the overlap (CHECK, EXCLUDE) and Karni names it (E985 / E984, a 409).
 
@@ -5567,7 +5567,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `karni/no-raw-elements`
 
-**Rule.** Screens compose `@karni/ui` components (`Page`, `ResourceTable`, `ResourceForm`, `ResourceDetail`, ...). Never hand-roll a table or form: no raw `<table>/<form>/<input>/<select>/<textarea>/<details>`. Dashboards and reports compose `DashboardGrid`, `ChartCard`, `DataTable` (computed rows), `ComparisonTable`, `Accordion` and `MarkdownView`.
+**Rule.** Screens compose `@karni/ui` components (`Page`, `ResourceTable`, `ResourceForm`, `ResourceDetail`, ...). Never hand-roll a table or form: no raw <code>&lt;table&gt;/&lt;form&gt;/&lt;input&gt;/&lt;select&gt;/&lt;textarea&gt;/&lt;details&gt;</code>. Dashboards and reports compose `DashboardGrid`, `ChartCard`, `DataTable` (computed rows), `ComparisonTable`, `Accordion` and `MarkdownView`.
 
 **Why Karni objects.** The components already handle data, validation, a11y and theming.
 
@@ -5651,7 +5651,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Never write auth flows, user models, admin registration, serializers, routers, settings, Docker/Compose config, Celery config, HTML tables, forms, or detail views, nor a search over several models (declare `class Karni: search` on each model: `GET /api/search/` and `<GlobalSearch>` serve it). Karni provides all of these. Never write a table of per-user permissions either: access given to one user is a per-user grant (`features: user_grants`, `karni.accounts.grants`), which Granted() already reads. If you think you need one, you need an override on an existing Karni base instead. The tables, forms and detail views meant here are app screens. A public server-rendered site (K309) is the one place for hand-written HTML pages, and its forms still post to a BaseViewSet.
+**Rule.** Never write auth flows, user models, admin registration, serializers, routers, settings, Docker/Compose config, Celery config, HTML tables, forms, or detail views, nor a search over several models (declare `class Karni: search` on each model: `GET /api/search/` and <code>&lt;GlobalSearch&gt;</code> serve it). Karni provides all of these. Never write a table of per-user permissions either: access given to one user is a per-user grant (`features: user_grants`, `karni.accounts.grants`), which Granted() already reads. If you think you need one, you need an override on an existing Karni base instead. The tables, forms and detail views meant here are app screens. A public server-rendered site (K309) is the one place for hand-written HTML pages, and its forms still post to a BaseViewSet.
 
 **Why Karni objects.** Each of these ships in Karni with tested defaults and override points. A public site is the client's own markup, so it has its own rule.
 
@@ -5687,7 +5687,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Backend code per entity goes in `<app>/models.py` and `<app>/viewsets.py`, nothing else. No admin.py, serializers.py or forms.py. urls.py is only for non-API endpoints such as webhooks and a public site's pages (K309), because viewsets ride the auto-router.
+**Rule.** Backend code per entity goes in <code>&lt;app&gt;/models.py</code> and <code>&lt;app&gt;/viewsets.py</code>, nothing else. No admin.py, serializers.py or forms.py. urls.py is only for non-API endpoints such as webhooks and a public site's pages (K309), because viewsets ride the auto-router.
 
 **Why Karni objects.** Admin, serializers, filters, routes and schema are derived from those two.
 
@@ -5699,7 +5699,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** App screens (the React frontend) live in `frontend/src/pages/`, one file per page, with the route registered alongside the existing pages. Public server-rendered pages do not go there (K309). A menu that differs per user is data, not code: `KARNI_NAVIGATION` (or `navigation:` in karni.yaml) with `<Layout navSource="server">`, never a menu a component filters by role.
+**Rule.** App screens (the React frontend) live in `frontend/src/pages/`, one file per page, with the route registered alongside the existing pages. Public server-rendered pages do not go there (K309). A menu that differs per user is data, not code: `KARNI_NAVIGATION` (or `navigation:` in karni.yaml) with <code>&lt;Layout navSource="server"&gt;</code>, never a menu a component filters by role.
 
 **Why Karni objects.** The page cap (K202) and the inventory (`karni context` PAGES) rely on it.
 
@@ -5711,11 +5711,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, should* · enforced by `review`
 
-**Rule.** Anything reusable across projects belongs in a Karni module (a `karni_<name>` package), not in this project. Say so instead of building it. Read the catalog first: the CATALOG lines of `karni context`, `karni modules list` and `karni modules show <name>` list every module and built-in feature (payments, approvals, login as a user, a public site, two-factor sign-in, sign-in with a code or with Google, Microsoft or Apple, terms acceptance, per-user grants, response caching), whether the project has it, its options and the questions to ask. Add a module with `karni add <name>` (or `modules:` in karni.yaml), turn a feature on with its setting (or `features:`), and take a module out with `karni remove <name>`, which never drops its tables. A mobile client needs a URL that does not move: set `api_version:` under `app:` in karni.yaml (`KARNI_API_VERSION`) for `/api/v1/`, deprecation headers and a client per version, and never write `/v1/` routes by hand.
+**Rule.** Anything reusable across projects belongs in a Karni module (a <code>karni_&lt;name&gt;</code> package), not in this project. Say so instead of building it. Read the catalog first: the CATALOG lines of `karni context`, `karni modules list` and <code>karni modules show &lt;name&gt;</code> list every module and built-in feature (payments, approvals, login as a user, a public site, two-factor sign-in, sign-in with a code or with Google, Microsoft or Apple, terms acceptance, per-user grants, response caching), whether the project has it, its options and the questions to ask. Add a module with <code>karni add &lt;name&gt;</code> (or `modules:` in karni.yaml), turn a feature on with its setting (or `features:`), and take a module out with <code>karni remove &lt;name&gt;</code>, which never drops its tables. A mobile client needs a URL that does not move: set `api_version:` under `app:` in karni.yaml (`KARNI_API_VERSION`) for `/api/v1/`, deprecation headers and a client per version, and never write `/v1/` routes by hand.
 
 **Why Karni objects.** Code that would be written more than once belongs in Karni, never per project. Each catalog entry is tested, and rebuilding one costs more tokens than adding it.
 
-**Fix.** Run `karni modules show <name>`, answer its questions, then `karni add <name>`.
+**Fix.** Run <code>karni modules show &lt;name&gt;</code>, answer its questions, then <code>karni add &lt;name&gt;</code>.
 
 <a id="k308"></a>
 
@@ -5735,11 +5735,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** A public, server-rendered website (SEO-indexed pages in the client's own HTML and CSS) is a site app, not React pages. `karni make site <app>` creates it: function views in `<app>/views.py`, `<app>/urls.py` with `app_name`, included at `path("", ...)` in config/urls.py (which replaces the welcome page), templates in `<app>/templates/<app>/` and the site's CSS and JS in `<app>/static/<app>/`. A designer's static pages go in with `karni import design <dir> --app <app> --editable`, which keeps the markup as written, never by copying them by hand. `karni make view <name> --app <app>` adds a page. Text and images a client may change are `{% editable %}` and `{% editable_image %}` blocks, navigation is `{% get_menu "<name>" as items %}` looped in the design's markup, and the site's name, logo and contact details are `site`: never hard-coded, and never a model or template tag of the project's own. The site's runtime (these tags, `{% ifactive %}`, `{% csp_hash %}`, the error pages, redirects) is the karni-site module, never project code. Views read content through each model's default manager (`Model.objects`, so model scopes apply and soft-deleted rows stay hidden) and filter drafts themselves. A public form (a contact form, a booking request, a sign-up) is `karni make form <name> <field:type> ... [--notify SETTING]` and `{% karni_form "<name>" %}` in the page: it saves through a `BaseViewSet` with `create=Public()`, works without JavaScript, carries the CSRF token and a honeypot, and its script, rate limit and email come from Karni. Never write a form view, a throttle or a form script for it. The site's page test, `<app>/tests/test_pages.py`, passes every page's URL to `assert_pages`: give a page whose path has a capture a real URL there. The React rules (K201, K202, K206) apply to app screens only.
+**Rule.** A public, server-rendered website (SEO-indexed pages in the client's own HTML and CSS) is a site app, not React pages. <code>karni make site &lt;app&gt;</code> creates it: function views in <code>&lt;app&gt;/views.py</code>, <code>&lt;app&gt;/urls.py</code> with `app_name`, included at `path("", ...)` in config/urls.py (which replaces the welcome page), templates in <code>&lt;app&gt;/templates/&lt;app&gt;/</code> and the site's CSS and JS in <code>&lt;app&gt;/static/&lt;app&gt;/</code>. A designer's static pages go in with <code>karni import design &lt;dir&gt; --app &lt;app&gt; --editable</code>, which keeps the markup as written, never by copying them by hand. <code>karni make view &lt;name&gt; --app &lt;app&gt;</code> adds a page. Text and images a client may change are `{% editable %}` and `{% editable_image %}` blocks, navigation is <code>{% get_menu "&lt;name&gt;" as items %}</code> looped in the design's markup, and the site's name, logo and contact details are `site`: never hard-coded, and never a model or template tag of the project's own. The site's runtime (these tags, `{% ifactive %}`, `{% csp_hash %}`, the error pages, redirects) is the karni-site module, never project code. Views read content through each model's default manager (`Model.objects`, so model scopes apply and soft-deleted rows stay hidden) and filter drafts themselves. A public form (a contact form, a booking request, a sign-up) is <code>karni make form &lt;name&gt; &lt;field:type&gt; ... [--notify SETTING]</code> and <code>{% karni_form "&lt;name&gt;" %}</code> in the page: it saves through a `BaseViewSet` with `create=Public()`, works without JavaScript, carries the CSRF token and a honeypot, and its script, rate limit and email come from Karni. Never write a form view, a throttle or a form script for it. The site's page test, <code>&lt;app&gt;/tests/test_pages.py</code>, passes every page's URL to `assert_pages`: give a page whose path has a capture a real URL there. The React rules (K201, K202, K206) apply to app screens only.
 
 **Why Karni objects.** A marketing site must be crawlable and faithful to the client's design, which the app-screen rules forbid for good reason. One Django app with plain views keeps the API, the admin and the access layer as the only write path.
 
-**Fix.** Run `karni make site <app>`, then `karni import design <dir> --app <app> --editable` for a designer's pages or `karni make view <name> --app <app>` per page, and `karni make form` for each form. Karni's docs page public-site covers editable content, SEO and public forms.
+**Fix.** Run <code>karni make site &lt;app&gt;</code>, then <code>karni import design &lt;dir&gt; --app &lt;app&gt; --editable</code> for a designer's pages or <code>karni make view &lt;name&gt; --app &lt;app&gt;</code> per page, and `karni make form` for each form. Karni's docs page public-site covers editable content, SEO and public forms.
 
 <a id="k310"></a>
 
@@ -5747,11 +5747,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** When the app is described in karni.yaml, run `karni plan --questions` before `karni build` and ask the user only the questions it prints, in its order, with their options and defaults. Write each answer with `karni spec answer <id> <value>` (or in karni.yaml), and run it again until none is open. Never ask about anything karni.yaml already settles, nor about the stack, names, labels, colours or page titles: those are yours to choose.
+**Rule.** When the app is described in karni.yaml, run `karni plan --questions` before `karni build` and ask the user only the questions it prints, in its order, with their options and defaults. Write each answer with <code>karni spec answer &lt;id&gt; &lt;value&gt;</code> (or in karni.yaml), and run it again until none is open. Never ask about anything karni.yaml already settles, nor about the stack, names, labels, colours or page titles: those are yours to choose.
 
 **Why Karni objects.** Karni chooses the questions with fixed rules over the spec and the module manifests (owners, access, the sign-up role, the kind, each module's and feature's asks), so every agent asks the same few, and the user is never asked what the spec or Karni's defaults already decide.
 
-**Fix.** Run `karni plan --questions`, ask the user those questions only, then `karni spec answer <id> <value>` for each answer.
+**Fix.** Run `karni plan --questions`, ask the user those questions only, then <code>karni spec answer &lt;id&gt; &lt;value&gt;</code> for each answer.
 
 <a id="k311"></a>
 
@@ -5759,7 +5759,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** To build an app from a request, follow the new-app procedure (`/new-app <the app in one line>`, or `karni rules --procedure new-app`): a recipe or the blank start, karni.yaml, `karni plan --questions`, `karni plan`, `karni build`. Never hand-write what karni.yaml can express (apps, entities, fields, owners, access, roles, modules, features, pages, seed counts): change karni.yaml and run `karni build` again. Write only the domain logic that is left, in the project's own files.
+**Rule.** To build an app from a request, follow the new-app procedure (<code>/new-app &lt;the app in one line&gt;</code>, or `karni rules --procedure new-app`): a recipe or the blank start, karni.yaml, `karni plan --questions`, `karni plan`, `karni build`. Never hand-write what karni.yaml can express (apps, entities, fields, owners, access, roles, modules, features, pages, seed counts): change karni.yaml and run `karni build` again. Write only the domain logic that is left, in the project's own files.
 
 **Why Karni objects.** karni build turns the spec into models, viewsets, migrations, seeds, tests, types and settings without a language model, so the agent writes a short YAML file instead of thousands of lines, and a later change to the spec updates the app without touching the code written by hand.
 
@@ -5783,11 +5783,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Grouped counts, sums, averages, top N with Other, and figures per year, quarter or month for a chart or a report are `class Karni: aggregate = {...}` on the model (`group_by`, `values`, `metrics`, `expressions`) and `GET <resource>/aggregate/` with `useAggregate` and `<DataChart aggregate={...} />`. A number stored as text is `TextNumber`. A chart people edit in the admin is a saved chart (`karni add charts`, `<SavedChart />`). Never write a view, an `@action` or a hook of your own that groups rows.
+**Rule.** Grouped counts, sums, averages, top N with Other, and figures per year, quarter or month for a chart or a report are `class Karni: aggregate = {...}` on the model (`group_by`, `values`, `metrics`, `expressions`) and <code>GET &lt;resource&gt;/aggregate/</code> with `useAggregate` and <code>&lt;DataChart aggregate={...} /&gt;</code>. A number stored as text is `TextNumber`. A chart people edit in the admin is a saved chart (`karni add charts`, <code>&lt;SavedChart /&gt;</code>). Never write a view, an `@action` or a hook of your own that groups rows.
 
 **Why Karni objects.** The aggregate action runs under the list's filters and access, in one query (two with Other), and refuses what the model does not declare. A hand-written GROUP BY view repeats the filters and the access check and is where hidden rows leak into totals.
 
-**Fix.** Declare the groups and values in `class Karni: aggregate`, then call `GET <resource>/aggregate/?group_by=...&metric=...&value=...`. Karni's docs page aggregations lists every parameter.
+**Fix.** Declare the groups and values in `class Karni: aggregate`, then call <code>GET &lt;resource&gt;/aggregate/?group_by=...&amp;metric=...&amp;value=...</code>. Karni's docs page aggregations lists every parameter.
 
 ## ESLint rules (`@karni/ui/eslint-plugin`)
 
@@ -5795,11 +5795,11 @@ Every rule is an error in `karni.configs.recommended`. An opt-out needs an `esli
 
 <a id="karni-no-raw-elements"></a>
 
-### `karni/no-raw-elements`: Raw <table>/<form>/<input>/<select>/<textarea>/<details> in project code
+### `karni/no-raw-elements`: Raw &lt;table>/&lt;form>/&lt;input>/&lt;select>/&lt;textarea>/&lt;details> in project code
 
 **Why Karni objects.** @karni/ui ships these as components (sorting, pagination, validation, export, keyboard and screen-reader support). Rebuilding them per page is the boilerplate Karni exists to remove, and the copies drift.
 
-**Fix.** Compose the component the message names: ResourceTable for a resource's rows, DataTable for rows the page computed, ComparisonTable for entities side by side, Accordion for a <details> disclosure, ResourceForm for <form>, Input / Select / ResourceSelect / Textarea for fields (ResourceForm renders the right field for you). Opt out only with `// eslint-disable-next-line karni/no-raw-elements -- <reason>`.
+**Fix.** Compose the component the message names: ResourceTable for a resource's rows, DataTable for rows the page computed, ComparisonTable for entities side by side, Accordion for a &lt;details> disclosure, ResourceForm for &lt;form>, Input / Select / ResourceSelect / Textarea for fields (ResourceForm renders the right field for you). Opt out only with <code>// eslint-disable-next-line karni/no-raw-elements -- &lt;reason&gt;</code>.
 
 <a id="karni-max-page-lines"></a>
 
@@ -5807,7 +5807,7 @@ Every rule is an error in `karni.configs.recommended`. An opt-out needs an `esli
 
 **Why Karni objects.** Pages compose @karni/ui components. A long page is rebuilding something Karni ships.
 
-**Fix.** Compose Page / ResourceTable / ResourceForm / ResourceDetail, and on a dashboard DashboardGrid / ChartCard / DataTable / ComparisonTable, with their props, or move logic into hooks and components. Opt out only with `/* eslint-disable karni/max-page-lines -- <reason> */`.
+**Fix.** Compose Page / ResourceTable / ResourceForm / ResourceDetail, and on a dashboard DashboardGrid / ChartCard / DataTable / ComparisonTable, with their props, or move logic into hooks and components. Opt out only with <code>/* eslint-disable karni/max-page-lines -- &lt;reason&gt; */</code>.
 
 <a id="karni-no-deep-imports"></a>
 
@@ -5815,7 +5815,7 @@ Every rule is an error in `karni.configs.recommended`. An opt-out needs an `esli
 
 **Why Karni objects.** Only the package root is public API (docs/stability.md). Internals change without notice, and a vendored copy forks the component.
 
-**Fix.** Import from "@karni/ui" and compose or extend the exported component. Opt out only with `// eslint-disable-next-line karni/no-deep-imports -- <reason>`.
+**Fix.** Import from "@karni/ui" and compose or extend the exported component. Opt out only with <code>// eslint-disable-next-line karni/no-deep-imports -- &lt;reason&gt;</code>.
 
 <a id="karni-no-direct-http"></a>
 
@@ -5823,7 +5823,7 @@ Every rule is an error in `karni.configs.recommended`. An opt-out needs an `esli
 
 **Why Karni objects.** The generated typed hooks and KarniClient handle auth, errors, retries and types in one place. Ad-hoc HTTP calls bypass all of it.
 
-**Fix.** Use the generated typed hooks (useResourceList / useResourceItem / useResourceMutations) or createKarniClient from @karni/ui, and keep transports under the api/ directory. Opt out only with `// eslint-disable-next-line karni/no-direct-http -- <reason>`.
+**Fix.** Use the generated typed hooks (useResourceList / useResourceItem / useResourceMutations) or createKarniClient from @karni/ui, and keep transports under the api/ directory. Opt out only with <code>// eslint-disable-next-line karni/no-direct-http -- &lt;reason&gt;</code>.
 
 <a id="karni-no-style-literals"></a>
 
@@ -5831,4 +5831,4 @@ Every rule is an error in `karni.configs.recommended`. An opt-out needs an `esli
 
 **Why Karni objects.** @karni/ui's preset resolves every colour, spacing step, radius, type size, shadow, z-index, opacity and duration from a --karni-* custom property, so one stylesheet (or `karni ui detect`) rethemes every component. A literal (`w-[13px]`, `bg-slate-500`, `bg-primary/90`, `style={{ color: "#333" }}`) is out of the theme's reach.
 
-**Fix.** Use a class from the @karni/ui preset (`bg-primary-hover`, `bg-muted-subtle`, `max-w-96`, `z-popover`), or add the token to styles.css and the preset. @karni/ui enables this rule for its own source. A project opts in with `"karni/no-style-literals": "error"`. Opt out only with `// eslint-disable-next-line karni/no-style-literals -- <reason>`.
+**Fix.** Use a class from the @karni/ui preset (`bg-primary-hover`, `bg-muted-subtle`, `max-w-96`, `z-popover`), or add the token to styles.css and the preset. @karni/ui enables this rule for its own source. A project opts in with `"karni/no-style-literals": "error"`. Opt out only with <code>// eslint-disable-next-line karni/no-style-literals -- &lt;reason&gt;</code>.

@@ -1,8 +1,8 @@
 # Changelog
 
-Every package in this repository (`karni`, `karni-cli`, `karni-payments`,
-`@karni/ui`, `@karni/payments-ui`) is released at one version, in lockstep.
-See [docs/releasing.md](docs/releasing.md).
+Every package in this repository, the Python packages on PyPI and the React
+packages on npm, is released at one version, in lockstep. The list is in
+[docs/releasing.md](docs/releasing.md#lockstep-versions).
 
 Breaking changes and deprecations are recorded in machine-readable form in
 `packages/karni/karni/changelog/<version>.toml` and explained in
@@ -114,7 +114,8 @@ apply codemods and list the manual steps. This file is the human summary.
   design's images their width and height and smaller WebP copies in a
   `srcset`. [docs/public-site.md](docs/public-site.md#seo-by-default).
 
-- **A token benchmark harness (experimental).** `scripts/benchmarks/tokens/` measures the
+- **A token benchmark harness (experimental), app-builder item A9.**
+  `scripts/benchmarks/tokens/` measures the
   same three apps (booking with payments, a CRM with three roles and CSV import, a shop with
   orders and refunds) built by Claude Code with and without Karni: a contract and black-box
   acceptance tests per task, a reference solution built with Karni for each, two starting
@@ -1546,6 +1547,72 @@ apply codemods and list the manual steps. This file is the human summary.
   `github.com/karni`, which is not Karni. It now links to the repository, and
   `python -m karni.links check` catches the ownerless form too.
   `docs/testing.md` opens with the four fixtures most tests use.
+
+### Fixed (packaging and release self-test)
+
+- **The broker timeout test runs on redis-py 8 and kombu 5.7.** redis-py 8
+  opens every connection with `HELLO 3`, which the test's fake Redis answered
+  with `+OK`, and kombu 5.7 ships type hints, so mypy saw the test reach into
+  private channel attributes. The fake server now speaks RESP2 and RESP3, and
+  the test drives kombu as a worker does (a consumer, an event loop tick, then
+  `close()`). It passes on redis-py 5.0 with kombu 5.3.0 and on redis-py 8.1
+  with kombu 5.7. The development profile's broker socket timeout was right on
+  both and is unchanged.
+- **Every package's `__version__` is its release version.** `karni_ai` and
+  `karni_charts` said 0.4.0, `karni_payments` 0.1.0, and four modules had no
+  `__version__`. Each of the ten Python packages now reads it from its own
+  distribution (`importlib.metadata`), so `[project] version` in
+  `pyproject.toml` is the one place it is set. A source tree imported without
+  being installed says `0+unknown`. The release check refuses a tag when a
+  package's `__version__` is a literal that differs or is missing.
+- **Every PyPI upload step skips existing files and honours the token.** In
+  `release.yml` and `pypi-from-release.yml` the `karni-charts`,
+  `karni-reports` and `karni-ai` steps lacked `skip-existing`, `password` and
+  `attestations`, so a re-run after a partial publish failed at
+  `karni-charts`, and a `PYPI_API_TOKEN` secret did not reach them. All ten
+  steps are now alike, and the release check refuses a tag when an upload
+  step differs or a package is missing from a build or upload list.
+- **The npm install lines in the UI READMEs install what the peers allow.**
+  `@karni/ui`'s README installed `@tanstack/react-table` without a version, so
+  npm picked 9 against the `^8` peer range, and the next install failed with
+  ERESOLVE. The install lines of `@karni/ui`, `@karni/ai-ui`,
+  `@karni/payments-ui` and `@karni/storage-ui` now name a version inside each
+  peer range, and the module UI READMEs no longer name an old `@karni/ui`
+  range. A test holds every README's install line to its `package.json` peers.
+- **The error page keeps its anchors visible to mkdocs.** SITE010's text
+  holds a literal `<title>`, and the HTML parser mkdocs scans pages with read
+  the rest of `docs/errors.md` as the title's text, so the build printed 345
+  false "does not contain an anchor" lines. `python -m karni_cli.errordoc` now
+  writes `<` as `&lt;` in every code's text, and a code span that holds `<` as
+  a `<code>` element, which render the same. Bare placeholders such as
+  `<app>/listeners.py` also show on the page now, where the browser hid them
+  as unknown tags.
+- **Broken links in the docs, and a test that finds them.** Five links named
+  anchors their pages do not have: `deploy.md#health-checks` (the heading is
+  "12. Health checks") and `admin.md#the-guide` in the settings reference,
+  and `accounts.md#roles-and-object-permissions` in `docs/api.md`. They point
+  at the right headings now. A new test follows every in-repository link in
+  the READMEs and `docs/` and fails on a missing file or anchor, which
+  `mkdocs build --strict` reports at INFO level only.
+- **The release docs name every package.** `docs/releasing.md` counted five
+  to twelve packages and manifests where the release has ten on PyPI and
+  eight on npm, its lockstep table left out `karni-ai` and `@karni/ai-ui`,
+  and its PyPI publisher table had three stacked rows from three merges. The
+  `release.yml` header, the `check_release.py` docstring, `docs/stability.md`
+  and the top of this file named older subsets. They now point at the one
+  list in `.github/ci/check_release.py`, and a test holds the table and the
+  publisher row to it and refuses a spelled-out count of packages.
+- **The roadmap pages match what is merged.** Large-apps item 12 (wide models)
+  said planned, item 15 said in progress with all three modules done and had
+  no row for 15b (karni-ai), and app-builder item A9 said planned with its
+  harness merged. Item 12 and item 15 are done, 15b has its row, and A9 is in
+  progress until its runs are published. A test refuses a roadmap item the
+  CHANGELOG ships while the roadmap says planned.
+- **A release cannot go out with an undated changelog.** The release check
+  now reads the top of this file: a tag needs `## X.Y.Z (YYYY-MM-DD)` for its
+  version, and a dry run on a branch accepts `## X.Y.Z (unreleased)`.
+  `docs/releasing.md` gains the step that dates the section in the release
+  commit. The 0.5.0 section stays unreleased until that commit.
 
 ## 0.4.0 (2026-10-22)
 
