@@ -1582,6 +1582,10 @@ apply codemods and list the manual steps. This file is the human summary.
   screens open it through a signed link. The link also asks a download path
   given as an absolute URL on another host (a dev proxy) at the client's own
   origin.
+- **Fixed: ResourceTable filtered a tree foreign key with a flat list.** The
+  filter bar used `ResourceSelect` (continents and countries mixed,
+  alphabetical) for a relation to a tree model. It now uses `TreeSelect`, as
+  `ResourceForm` does.
 
 ## 0.4.0 (2026-10-22)
 
