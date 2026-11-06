@@ -11,7 +11,9 @@ page differs from :func:`render`.
 
 from __future__ import annotations
 
+import html
 import json
+import re
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
@@ -94,19 +96,50 @@ KIND_LABEL: Mapping[str, str] = {
 }
 
 
+_CODE_SPAN = re.compile(r"(`+)(.+?)(?<!`)\1(?!`)")
+
+
+def _code(text: str) -> str:
+    """A code span as a ``<code>`` element, its text escaped (renders the same)."""
+    if text.startswith(" ") and text.endswith(" ") and text.strip():
+        text = text[1:-1]  # Markdown drops one space on each side
+    return f"<code>{html.escape(text, quote=False)}</code>"
+
+
+def _text(value: str) -> str:
+    """Registry text as Markdown that no HTML parser reads as a tag.
+
+    Registry text is plain text with Markdown code spans and links: ``karni
+    explain`` prints it as it is. On the page a bare ``<app>`` would be an
+    unknown tag the browser hides, and a ``<title>`` or ``<textarea>``, even in
+    a code span, makes the HTML parser mkdocs scans for anchors read the rest
+    of the page as that element's text. So ``<`` becomes ``&lt;`` outside code
+    spans, and a code span holding ``<`` becomes a ``<code>`` element with its
+    text escaped. Both render as the registry wrote them.
+    """
+    parts, last = [], 0
+    for match in _CODE_SPAN.finditer(value):
+        parts.append(value[last : match.start()].replace("<", "&lt;"))
+        parts.append(_code(match[2]) if "<" in match[2] else match[0])
+        last = match.end()
+    parts.append(value[last:].replace("<", "&lt;"))
+    return "".join(parts)
+
+
 def _entry(entry: Mapping[str, str]) -> str:
     code = entry["code"]
+    kind = KIND_LABEL.get(entry["kind"], entry["kind"])
     return "\n".join(
         [
             f'<a id="{code.lower()}"></a>',
             "",
-            f"### {code}: {entry['title']}",
+            f"### {code}: {_text(entry['title'])}",
             "",
-            f"*{KIND_LABEL.get(entry['kind'], entry['kind'])}* · from `{entry['source']}`",
+            f"*{kind}* · from {_text(f'`{entry["source"]}`')}",
             "",
-            f"**Why Karni objects.** {entry['why']}",
+            f"**Why Karni objects.** {_text(entry['why'])}",
             "",
-            f"**Fix.** {entry['fix']}",
+            f"**Fix.** {_text(entry['fix'])}",
             "",
         ]
     )
@@ -175,16 +208,16 @@ def _rule_section() -> str:
             [
                 f'<a id="{str(rule["code"]).lower()}"></a>',
                 "",
-                f"### {rule['code']}: {rule['summary']}",
+                f"### {rule['code']}: {_text(str(rule['summary']))}",
                 "",
                 f"*agent rule, {rule['severity']}* · enforced by "
-                + ", ".join(f"`{name}`" for name in rule.get("enforced_by") or ["review"]),
+                + ", ".join(_text(f"`{name}`") for name in rule.get("enforced_by") or ["review"]),
                 "",
-                f"**Rule.** {rule['rule']}",
+                f"**Rule.** {_text(str(rule['rule']))}",
                 "",
-                f"**Why Karni objects.** {rule['rationale']}",
+                f"**Why Karni objects.** {_text(str(rule['rationale']))}",
                 "",
-                f"**Fix.** {rule['fix']}",
+                f"**Fix.** {_text(str(rule['fix']))}",
                 "",
             ]
         )
@@ -215,11 +248,11 @@ def _eslint_section() -> str:
             [
                 f'<a id="{item["id"].replace("/", "-")}"></a>',
                 "",
-                f"### `{item['id']}`: {item['title']}",
+                f"### {_text(f'`{item["id"]}`')}: {_text(item['title'])}",
                 "",
-                f"**Why Karni objects.** {item['why']}",
+                f"**Why Karni objects.** {_text(item['why'])}",
                 "",
-                f"**Fix.** {item['fix']}",
+                f"**Fix.** {_text(item['fix'])}",
                 "",
             ]
         )

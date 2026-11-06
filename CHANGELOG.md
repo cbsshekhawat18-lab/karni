@@ -1577,6 +1577,14 @@ apply codemods and list the manual steps. This file is the human summary.
   `@karni/payments-ui` and `@karni/storage-ui` now name a version inside each
   peer range, and the module UI READMEs no longer name an old `@karni/ui`
   range. A test holds every README's install line to its `package.json` peers.
+- **The error page keeps its anchors visible to mkdocs.** SITE010's text
+  holds a literal `<title>`, and the HTML parser mkdocs scans pages with read
+  the rest of `docs/errors.md` as the title's text, so the build printed 345
+  false "does not contain an anchor" lines. `python -m karni_cli.errordoc` now
+  writes `<` as `&lt;` in every code's text, and a code span that holds `<` as
+  a `<code>` element, which render the same. Bare placeholders such as
+  `<app>/listeners.py` also show on the page now, where the browser hid them
+  as unknown tags.
 
 ## 0.4.0 (2026-10-22)
 
