@@ -25,7 +25,7 @@ until the middleware and the include are both in place:
 
 ```python
 # config/urls.py: the banner's exit
-path("impersonation/", include("karni_impersonation.urls")),
+(path("impersonation/", include("karni_impersonation.urls")),)
 ```
 
 If the middleware stays in `MIDDLEWARE` while the app is out of
@@ -39,6 +39,11 @@ KARNI_ROLES = {
     "support": {"grants": {"karni_impersonation.impersonationsession:impersonate": "all", ...}},
 }
 ```
+
+Write the permission out. A wildcard never reaches it (`class Karni:
+explicit_actions`): the default `user` and `customer` (`"*": "own"`) and
+`staff` (`"*": "all"`) roles do not hold it, and neither does
+`"karni_impersonation.impersonationsession:*"`.
 
 Keep the Celery worker and beat running: the target's notification is a
 task and an hourly sweep closes abandoned sessions.
@@ -55,9 +60,10 @@ list.
 
 **What it blocks.**
 
-- *Starting without the permission* (`IMP001`). Staff and superuser status
-  never imply it. Only a role with the grant does. Superusers hold every
-  grant by Karni's convention, so treat superuser accounts accordingly.
+- *Starting without the permission* (`IMP001`). Staff status never implies
+  it, and no wildcard grant reaches it. Only a role whose grants name it
+  does. Superusers hold every grant by Karni's convention, so treat
+  superuser accounts accordingly.
 - *Privilege escalation* (`IMP002`). The target may not be a superuser or
   staff unless the actor is, may not hold any role grant at a scope the
   actor does not hold (`all` covers all), and may not hold any Django

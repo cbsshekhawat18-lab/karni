@@ -61,6 +61,7 @@ from karni.accounts.roles import (
     GrantSource,
     custom_scopes,
     grants_for,
+    pattern_matches,
     permission_keys,
 )
 from karni.exceptions import KarniTypeError, KarniValueError
@@ -218,12 +219,10 @@ def _matching(permission: str, keys: dict[str, type[models.Model]] | None) -> li
         if model._meta.proxy or model._meta.auto_created or action not in model_actions(model):
             return []
         return [permission_key(model, action)]
-    glob = "*:*" if permission == "*" else permission
-    return [
-        key
-        for key in (keys if keys is not None else permission_keys())
-        if fnmatch.fnmatchcase(key, glob)
-    ]
+    every = keys if keys is not None else permission_keys()
+    # A wildcard skips the actions a model keeps for grants that name them
+    # (Karni.explicit_actions), as KARNI_ROLES does.
+    return [key for key, model in every.items() if pattern_matches(permission, key, model)]
 
 
 def _model_of(key: str, keys: dict[str, type[models.Model]] | None) -> type[models.Model]:

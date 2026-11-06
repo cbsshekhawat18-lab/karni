@@ -78,10 +78,15 @@ class PendingChange(BaseModel):
         verbose_name = "pending change"
 
     class Karni:
-        """Audited; ``approve`` and ``reject`` are permissions; makers own their proposals."""
+        """Audited; ``approve`` and ``reject`` are permissions; makers own their proposals.
+
+        Only a grant that names them gives ``approve`` and ``reject``: a
+        wildcard role (``"*": "own"``, ``"*": "all"``) never makes a checker.
+        """
 
         audit = True
         actions = ["approve", "reject"]
+        explicit_actions = ["approve", "reject"]
         owner_field = "maker"
         cascade = {
             "content_type": "a proposal for a model that no longer exists cannot be decided",

@@ -903,6 +903,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Name a field of the model: class Karni: label_field = 'name'. Leave it out to use the first text field named name, title or label, else Karni.natural_key.
 
+<a id="e290"></a>
+
+#### E290: Karni.explicit_actions names an action the model does not have
+
+*system check (error)* · from `karni.meta.explicit_actions; karni.checks.check_explicit_actions (karni check)`
+
+**Why Karni objects.** Karni.explicit_actions lists the actions a wildcard grant never reaches: only a grant that writes the action out gives it. A name that is not one of the model's actions protects nothing, so a typo would leave the real action open to every wildcard role.
+
+**Fix.** List actions of the model: the standard view, add, change, delete, or a name in Karni.actions (class Karni: actions = ['refund']; explicit_actions = ['refund']). Then grant the action by name: KARNI_ROLES = {'finance': {'grants': {'shop.order:refund': 'all'}}}.
+
 ### 3xx · Admin
 
 <a id="e301"></a>

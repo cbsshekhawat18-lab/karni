@@ -1718,6 +1718,7 @@ class Lead(BaseModel):
 | `owner_field` | karni | `created_by` | The field or path (through foreign keys and many-to-manys) that leads to the user who owns a row. The `own` scope filters on it. | `owner_field = "workspace__members"` |
 | `scope_paths` | karni | `{}` | Named paths a role's `related:<key>` scope compares with the same key on the user. | `scope_paths = {"branch": "branch", "region": "branch__region"}` |
 | `actions` | karni | `()` | Permission actions besides view, add, change and delete. Roles grant them like any other. | `actions = ["approve", "export"]` |
+| `explicit_actions` | karni | `()` | Actions only a grant that names them reaches. A wildcard (`*`, `app.model:*`) skips them, so a broad role such as `"*": "own"` never holds them. Each one is an action of the model, standard or from `actions` (`karni.E290`). | `explicit_actions = ["refund"]` |
 | `field_roles` | karni | `{}` | Which roles see and change a field. The API, the admin and exports hide it from the rest. | `field_roles = {"salary": {"read": ["hr", "manager"], "write": ["hr"]}}` |
 | `audit` | karni | `False` | Record field-level change history (who, when, old and new value): `True` for every field, or a list of field names. | `audit = True` |
 | `sensitive` | karni | `()` | Fields the change history records as changed but never with their values, on top of names matching `KARNI_AUDIT_REDACT`. | `sensitive = ["iban"]` |
@@ -2399,6 +2400,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E275`](errors.md#e275) | check | class Karni: external, writable or database has a value of the wrong type |
 | [`E276`](errors.md#e276) | check | A relation joins models on different databases |
 | [`E280`](errors.md#e280) | check | Karni.label_field names a field the model does not have |
+| [`E290`](errors.md#e290) | check | Karni.explicit_actions names an action the model does not have |
 | [`E301`](errors.md#e301) | exception | KARNI_ADMIN_BASE is not a ModelAdmin class |
 | [`E302`](errors.md#e302) | exception | AdminMeta.inline_on is invalid |
 | [`E303`](errors.md#e303) | exception | KARNI_ADMIN_LOGO is not a logo declaration |

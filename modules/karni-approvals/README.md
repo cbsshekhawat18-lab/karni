@@ -26,17 +26,22 @@ running, because notifications and the hourly timeout sweep are tasks.
 from datetime import timedelta
 from karni.models import BaseModel
 
+
 class Invoice(BaseModel):
     ...
+
     class Karni:
-        requires_approval = ["amount", "status"]   # a list holds updates of those fields, and a create
-                                                    # that sets one off its default; True holds
-                                                    # every change, create and delete
-        approvals_required = 2                      # default KARNI_APPROVALS_REQUIRED (1)
-        approver_roles = ["finance"]                # default KARNI_APPROVALS_APPROVER_ROLES ([])
-        approval_timeout = timedelta(hours=48)      # or hours as a number; default the setting (never)
-        approval_on_timeout = "escalate"            # or "expire" (the default)
-        approval_escalation_roles = ["cfo"]         # default KARNI_APPROVALS_ESCALATION_ROLES
+        requires_approval = [
+            "amount",
+            "status",
+        ]  # a list holds updates of those fields, and a create
+        # that sets one off its default; True holds
+        # every change, create and delete
+        approvals_required = 2  # default KARNI_APPROVALS_REQUIRED (1)
+        approver_roles = ["finance"]  # default KARNI_APPROVALS_APPROVER_ROLES ([])
+        approval_timeout = timedelta(hours=48)  # or hours as a number; default the setting (never)
+        approval_on_timeout = "escalate"  # or "expire" (the default)
+        approval_escalation_roles = ["cfo"]  # default KARNI_APPROVALS_ESCALATION_ROLES
 ```
 
 The model must be a `karni.models.BaseModel` (every `save()` and `delete()`
@@ -65,7 +70,10 @@ approver roles `KARNI_ROLES` does not declare (`APR007`).
   - The maker can never be the checker (`APR002`), superuser or not.
   - A checker needs the `karni_approvals.pendingchange:approve` (or
     `:reject`) grant and, when the model declares `approver_roles`, one of
-    those roles (`APR003`).
+    those roles (`APR003`). The grant must name the action: a wildcard
+    (`"*": "own"`, `"*": "all"`, `"karni_approvals.pendingchange:*"`) never
+    reaches `approve` or `reject` (`class Karni: explicit_actions`), so the
+    default roles make nobody a checker.
   - A checker sees and decides only pending changes whose row lies inside
     their own scope, which for a branch checker is their branch (`APR003`).
     A create has no row yet and is visible to whoever may view every row of

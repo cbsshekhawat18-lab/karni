@@ -8,6 +8,7 @@ nested class, next to ``Meta``, ``APIMeta`` and ``AdminMeta``::
             owner_field = "created_by"          # the `own` scope (default: created_by)
             scope_paths = {"branch": "branch", "region": "branch__region"}
             actions = ["approve", "export"]     # besides view/add/change/delete
+            explicit_actions = ["approve"]      # a wildcard grant never reaches these
             field_roles = {                     # who sees / changes a field (P3)
                 "phone": {"read": ["staff", "support"], "write": ["staff"]},
                 "internal_note": ["staff"],     # shorthand: read and write
@@ -51,6 +52,7 @@ __all__ = [
     "FieldRule",
     "ImportOptions",
     "Option",
+    "explicit_actions",
     "field_roles",
     "import_options",
     "karni_option",
@@ -106,6 +108,14 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "`()`",
         "Permission actions besides view, add, change and delete. Roles grant them like any other.",
         'actions = ["approve", "export"]',
+    ),
+    Option(
+        "explicit_actions",
+        "`()`",
+        "Actions only a grant that names them reaches. A wildcard (`*`, `app.model:*`) skips "
+        'them, so a broad role such as `"*": "own"` never holds them. Each one is an '
+        "action of the model, standard or from `actions` (`karni.E290`).",
+        'explicit_actions = ["refund"]',
     ),
     Option(
         "field_roles",
@@ -313,6 +323,21 @@ def model_actions(model: type[models.Model]) -> tuple[str, ...]:
     """The standard actions plus the model's own (``Karni.actions``), in order."""
     extra = tuple(karni_option(model, "actions", ()) or ())
     return STANDARD_ACTIONS + tuple(action for action in extra if action not in STANDARD_ACTIONS)
+
+
+def explicit_actions(model: type[models.Model]) -> frozenset[str]:
+    """``Karni.explicit_actions``: the actions only a grant that names them reaches.
+
+    A wildcard pattern (``"*"``, ``"shop.order:*"``) skips them in
+    ``KARNI_ROLES``, in a module's roles and in a user grant, so a broad role
+    never holds an action like ``impersonate`` or ``refund`` by accident. A
+    single string counts as one action (fail closed). ``karni check`` reports
+    a name that is not one of the model's actions (``karni.E290``).
+    """
+    declared = karni_option(model, "explicit_actions", ()) or ()
+    if isinstance(declared, str):
+        declared = (declared,)
+    return frozenset(str(action) for action in declared)
 
 
 def permission_key(model: type[models.Model], action: str) -> str:

@@ -231,7 +231,16 @@ A grant maps a **permission pattern** to a **scope**. Permissions are
 `app_label.model:action`. The actions are `view`, `add`, `change`, `delete`
 for every model, plus the actions a model declares. `*` stands for the model
 or the action (`"*"` alone is everything). A later, more specific pattern
-wins over an earlier wildcard. Scopes:
+wins over an earlier wildcard.
+
+A wildcard never reaches an action the model lists in
+`Karni.explicit_actions`. Only a grant that writes the action out gives it:
+`"events.event:refund"` or `"*:refund"`, never `"*"` or `"events.event:*"`.
+Modules mark their dangerous actions this way, so the default roles
+(`"*": "own"`, `"*": "all"`) never hold karni-impersonation's `impersonate` or
+karni-approvals' `approve` and `reject`. Grant those to the role that does
+the job. A name in `explicit_actions` that is not one of the model's actions
+fails `karni check` ([`E290`](errors.md#e290)). Scopes:
 
 | scope | rows the action reaches |
 |---|---|
@@ -251,6 +260,7 @@ class Event(BaseModel):
         owner_field = "organizer"          # the `own` scope (default: created_by)
         scope_paths = {"venue": "venue"}   # keys `related:` may use
         actions = ["approve"]              # permissions besides view/add/change/delete
+        explicit_actions = ["approve"]     # only a grant that names it gives it
         field_roles = {"internal_note": ["staff"]}   # who sees / changes a field
 ```
 
@@ -311,7 +321,8 @@ matrix and `karni context` treat them like the project's own.
 The defaults are deliberately boring. A model with no `Karni` class is owned
 by whoever created it, has no scope paths and has the four standard actions.
 The shipped `KARNI_ROLES` is `staff` (everything), `user` and `customer`
-(their own rows). Replace it entirely with your own. A wildcard `own` grant
+(their own rows). Their wildcards skip every action in
+`Karni.explicit_actions`. Replace them entirely with your own. A wildcard `own` grant
 simply skips models that cannot be owned. An explicit one on such a model is
 an error (`E206`), and so is a pattern that matches nothing, because a typo
 must not grant silently.

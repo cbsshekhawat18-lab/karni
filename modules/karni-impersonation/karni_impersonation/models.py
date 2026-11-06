@@ -54,10 +54,16 @@ class ImpersonationSession(BaseModel):
         ]
 
     class Karni:
-        """Audited; ``impersonate`` is the permission the module is gated on."""
+        """Audited; ``impersonate`` is the permission the module is gated on.
+
+        Only a grant that names it gives it: ``"*"`` and
+        ``"karni_impersonation.impersonationsession:*"`` skip it, so the
+        default ``user``, ``customer`` and ``staff`` roles never hold it.
+        """
 
         audit = True
         actions = ["impersonate"]
+        explicit_actions = ["impersonate"]
 
     class APIMeta:
         read_only = [

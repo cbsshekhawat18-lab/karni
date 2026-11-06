@@ -1968,6 +1968,19 @@ apply codemods and list the manual steps. This file is the human summary.
   `docker-compose.yml` now mounts the repository's checkout by its relative
   path, as EventHub does.
 - **docs/robots.txt** lets every crawler read every page with one rule.
+- **Security: a wildcard role no longer impersonates or approves.** The
+  scaffold's `user` and `customer` (`"*": "own"`) and `staff` (`"*": "all"`)
+  roles reached every action a model declares, so once karni-impersonation
+  was added any signed-in user could act as another user of the same grants
+  (201 with that user's tokens), and once karni-approvals was added the owner
+  of a row could approve someone else's change to it. A model now lists in
+  `class Karni: explicit_actions` the actions only a grant that names them
+  reaches, and a wildcard in a role or a user grant skips them. The modules
+  mark `impersonate`, `approve` and `reject`. `karni check` refuses a name
+  that is not one of the model's actions (`karni.E290`). The next
+  `karni migrate` takes the grants back from wildcard roles: grant them by
+  name to the roles that need them. See
+  [migrating](docs/migrations/0.5.md#wildcard-grants-skip-impersonate-approve-and-reject-security).
 
 ## 0.4.0 (2026-10-22)
 

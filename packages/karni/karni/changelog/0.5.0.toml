@@ -751,3 +751,17 @@ with C860, and karni doctor mentions them. They stop being updated, and are remo
 in 1.0. Point your tool at AGENTS.md and keep project guidance in karni.rules.py."""
 mechanical = false
 migration = "migrations/0.5.md#tool-specific-agent-files-are-deprecated-keep-agentsmd"
+
+[[change]]
+id = "wildcard-grants-skip-explicit-actions"
+kind = "behaviour"
+symbol = "KARNI_ROLES wildcards; class Karni: explicit_actions"
+summary = """\
+A wildcard grant (`"*"`, `app.model:*`) no longer reaches an action the model lists in \
+`class Karni: explicit_actions`. karni-impersonation marks `impersonate` and \
+karni-approvals marks `approve` and `reject`, so the default `user`, `customer` and \
+`staff` roles stop holding them at the next `karni migrate` (or `karni sync-roles`). \
+Grant each one by name to the role that needs it, for example \
+`"support": {"grants": {"karni_impersonation.impersonationsession:impersonate": "all"}}`."""
+mechanical = false
+migration = "migrations/0.5.md#wildcard-grants-skip-impersonate-approve-and-reject-security"
