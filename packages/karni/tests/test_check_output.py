@@ -33,14 +33,14 @@ def short(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setenv(check_output.ENV, "short")
     check_output.connect()
     yield
-    BaseCommand.check = original  # type: ignore[method-assign]
+    BaseCommand.check = original
 
 
 def _run() -> str:
     command = BaseCommand()
     command.stderr = OutputWrapper(io.StringIO())
     command.check()
-    return command.stderr._out.getvalue()  # type: ignore[attr-defined,no-any-return]
+    return command.stderr._out.getvalue()
 
 
 def test_the_full_text_stays_without_the_variable(three_warnings: None) -> None:
