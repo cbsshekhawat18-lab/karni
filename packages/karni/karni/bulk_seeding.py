@@ -363,7 +363,18 @@ class BulkSeeder:
 
     def rows(self, model: type[models.Model], made: type[Any], count: int) -> list[Any]:
         """``count`` unsaved rows of ``model``."""
-        return [made.build() for _ in range(count)]
+        from django.core.exceptions import ImproperlyConfigured
+
+        from karni.seeding import SeedError
+
+        try:
+            return [made.build() for _ in range(count)]
+        except ImproperlyConfigured as exc:  # the same coded error a plain `karni seed` gives
+            raise SeedError(
+                f"{model._meta.label}: {exc} For seeding, override Seeder.seed() "
+                f"(karni make seeder {model.__name__}) and pass the row yourself.",
+                code="E613",
+            ) from exc
 
     def fresh_keys(self, model: type[models.Model], rows: list[Any]) -> None:
         """Replace a UUID key an earlier run already used (one query per batch)."""

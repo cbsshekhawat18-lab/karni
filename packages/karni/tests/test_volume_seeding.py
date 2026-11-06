@@ -139,3 +139,19 @@ def test_volume_takes_a_positive_number() -> None:
         call_command("karni_seed", "--volume", "0", stdout=StringIO())
     with pytest.raises(CommandError, match="E475"):
         call_command("karni_seed", "--volume", "10", "--batch-size", "0", stdout=StringIO())
+
+
+def test_a_volume_run_on_a_model_it_cannot_fill_is_a_coded_error() -> None:
+    """F14: --volume ended in a raw E610 traceback where a plain seed gives a one-line E613."""
+    from karni.bulk_seeding import BulkSeeder
+    from karni.exceptions import KarniImproperlyConfigured
+    from karni.seeding import SeedError
+
+    class Unfillable:
+        @staticmethod
+        def build() -> None:
+            raise KarniImproperlyConfigured("cannot generate Genre.span.", code="E610")
+
+    with pytest.raises(SeedError, match="perfapp.Genre: .*cannot generate") as caught:
+        BulkSeeder.rows(object(), Genre, Unfillable, 3)  # type: ignore[arg-type]
+    assert caught.value.code == "E613" and "karni make seeder Genre" in str(caught.value)
