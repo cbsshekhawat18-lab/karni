@@ -233,6 +233,22 @@ def test_ui_mount_target() -> None:
     assert ui_mount_target("^0.1.0") == "^0.1.0"
 
 
+def test_a_checkout_found_by_walking_is_used_only_inside_it(
+    runner, tmp_path: Path, monkeypatch
+) -> None:
+    """A CLI run from a checkout must not write that checkout's absolute path elsewhere."""
+    monkeypatch.delenv("KARNI_UI_SRC", raising=False)
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    ui = REPO_ROOT / "packages" / "karni-ui"
+    assert scaffold.resolve_ui_source_for(tmp_path / "proj") is None
+    assert scaffold.resolve_ui_source_for(REPO_ROOT / "examples" / "demo") == ui
+    result = runner.invoke(app, ["new", "Elsewhere", "-o", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    package = json.loads((tmp_path / "elsewhere" / "frontend" / "package.json").read_text())
+    assert package["dependencies"]["@karni/ui"] == "^0.5.0"
+    assert "/" not in package["dependencies"]["@karni/ui"]
+
+
 def test_new_falls_back_to_the_registry(runner, tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
     monkeypatch.setattr(scaffold, "resolve_ui_source", lambda: None)

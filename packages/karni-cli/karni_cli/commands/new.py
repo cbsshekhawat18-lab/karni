@@ -34,8 +34,9 @@ state the kind and its stack. The production stack
 same way, by ``karni make deploy compose``'s code.
 
 @karni/ui is resolved like the template: ``KARNI_UI_SRC`` > the monorepo
-checkout's ``packages/karni-ui`` > the npm release. A local source becomes
-``"@karni/ui": "file:<abs path>"`` in frontend/package.json (installed as a
+checkout's ``packages/karni-ui`` (only for a project inside that checkout, where the path
+is relative) > the npm release. A local source becomes
+``"@karni/ui": "file:<path>"`` in frontend/package.json (installed as a
 packed copy via the scaffold's ``.npmrc``), and its ``dist/`` is built here
 when missing — package.json ``exports`` point into dist/. The build writes only
 git-ignored paths (``npm ci`` never rewrites package-lock.json), so scaffolding
@@ -600,10 +601,10 @@ def new(
     site = kinds.has_site(chosen)
     print_mark()
     template = resolve_template()
-    ui_source = scaffold.resolve_ui_source() if with_staff_app else None
+    project = output_dir / slug
+    ui_source = scaffold.resolve_ui_source_for(project) if with_staff_app else None
     if ui_source is not None:
         prepare_ui_source(ui_source)
-    project = output_dir / slug
     cookiecutter(
         str(template),
         no_input=True,
@@ -639,6 +640,11 @@ def new(
         typer.echo("No staff app (frontend/): staff work in the admin.")
     elif ui_source is not None:
         typer.echo(f"@karni/ui: {ui_spec} (local checkout)")
+        if not ui_spec.startswith("file:.."):
+            typer.echo(
+                "That path exists on this machine only: frontend/package.json needs the npm "
+                f"range ({scaffold.UI_REGISTRY_SPEC}) before the project is shared."
+            )
     else:
         typer.echo(
             f"@karni/ui: {scaffold.UI_REGISTRY_SPEC} from npm "
