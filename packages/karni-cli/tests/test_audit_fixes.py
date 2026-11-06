@@ -211,3 +211,16 @@ def test_a_killed_wrapper_leaves_no_child_behind(tmp_path: Path, name: str) -> N
         if pidfile.exists():
             with contextlib.suppress(ProcessLookupError):
                 os.kill(int(pidfile.read_text()), signal.SIGKILL)
+
+
+def test_project_commands_ask_for_the_short_system_check_output(monkeypatch) -> None:
+    """Timing note: every Django-backed command printed the same warnings in full."""
+    monkeypatch.delenv("KARNI_SYSTEM_CHECK_OUTPUT", raising=False)
+    short = project_mod._short_checks_env(["manage.py", "migrate"])
+    assert short is not None and short["KARNI_SYSTEM_CHECK_OUTPUT"] == "short"
+    assert project_mod._short_checks_env(["manage.py", "karni_check"]) is None
+    assert project_mod._short_checks_env(["manage.py", "check"]) is None
+    assert project_mod._short_checks_env(["-m", "celery", "worker"]) is None
+    monkeypatch.setenv("KARNI_SYSTEM_CHECK_OUTPUT", "full")
+    kept = project_mod._short_checks_env(["manage.py", "migrate"])
+    assert kept is not None and kept["KARNI_SYSTEM_CHECK_OUTPUT"] == "full"

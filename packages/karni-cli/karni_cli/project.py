@@ -241,14 +241,15 @@ def run_python(
     python, cmd = _resolve_command(
         project, args, docker=docker, service=service, interactive=interactive
     )
+    env = _short_checks_env(args) if python is not None else None
     if database is None or python is None:
-        return run_process(cmd, cwd=project, capture=capture)
+        return run_process(cmd, cwd=project, capture=capture, env=env)
     from karni_cli import database as database_mod
 
     checked = database_mod.enabled()
     if checked and not capture:
         database_mod.guard(project, python, database)
-    proc = run_process(cmd, cwd=project, capture=capture)
+    proc = run_process(cmd, cwd=project, capture=capture, env=env)
     if checked and capture and proc.returncode != 0:
         database_mod.guard(project, python, database)
     return proc
@@ -265,8 +266,22 @@ _FORWARDED: Final = tuple(
 )
 
 
+def _short_checks_env(args: list[str]) -> dict[str, str] | None:
+    """The environment that prints a manage.py command's system check warnings as one line.
+
+    ``karni check`` (``karni_check``) and ``manage.py check`` keep them in full, and so does a project whose
+    environment already sets the variable (``KARNI_SYSTEM_CHECK_OUTPUT=full``).
+    """
+    if args[:1] != ["manage.py"] or args[1:2] in (["karni_check"], ["check"]):
+        return None
+    return {
+        **os.environ,
+        "KARNI_SYSTEM_CHECK_OUTPUT": os.environ.get("KARNI_SYSTEM_CHECK_OUTPUT", "short"),
+    }
+
+
 def run_process(
-    cmd: list[str], *, cwd: Path, capture: bool = False
+    cmd: list[str], *, cwd: Path, capture: bool = False, env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
     """``subprocess.run`` that passes a stop signal on to the child and waits for it.
 
@@ -276,7 +291,7 @@ def run_process(
     and exits with its status.
     """
     pipe = subprocess.PIPE if capture else None
-    with subprocess.Popen(cmd, cwd=cwd, text=True, stdout=pipe, stderr=pipe) as proc:
+    with subprocess.Popen(cmd, cwd=cwd, env=env, text=True, stdout=pipe, stderr=pipe) as proc:
 
         def forward(signum: int, _frame: Any) -> None:
             sent = signal.SIGTERM if signum == getattr(signal, "SIGALRM", None) else signum
