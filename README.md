@@ -242,7 +242,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni suggest`](docs/REFERENCE.md#karni-suggest) | What Karni could do that the project does by hand, with the fix of each |
 | [`karni explain`](docs/REFERENCE.md#karni-explain) | Explain an error code (E104, C101, PAY004, K106), or a pasted traceback or log line (karni explain -): class, cause, where, fix |
 | [`karni types`](docs/REFERENCE.md#karni-types) | Generate TS types and typed hooks from the backend OpenAPI |
-| [`karni mcp`](docs/REFERENCE.md#karni-mcp) | Serve context, rules, check, the debugging tools and the app-builder flow (recipes, questions, answer, plan, build) as MCP tools (needs karni-cli[mcp]) |
+| [`karni mcp`](docs/REFERENCE.md#karni-mcp) | Serve context, rules, check, the debugging tools and the app-builder flow (recipes, questions, answer, plan, build) as MCP tools (needs karni-cli\[mcp]) |
 | [`karni queries`](docs/REFERENCE.md#karni-queries) | Run one endpoint in-process as a user and report its queries |
 | [`karni serve`](docs/REFERENCE.md#karni-serve) | Start the dev stack |
 | [`karni migrate`](docs/REFERENCE.md#karni-migrate) | Apply migrations |

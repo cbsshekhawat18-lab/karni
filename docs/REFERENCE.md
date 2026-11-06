@@ -2384,6 +2384,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E247`](errors.md#e247) | exception | A terms acceptance is a permanent record |
 | [`E248`](errors.md#e248) | check | The terms gate is not in MIDDLEWARE, or runs before authentication |
 | [`E249`](errors.md#e249) | api | Terms acceptance is turned off |
+| [`E260`](errors.md#e260) | exception | A database alias is not configured |
 | [`E270`](errors.md#e270) | check | An external model is managed by Django |
 | [`E271`](errors.md#e271) | check | Karni.database names a database that is not in DATABASES |
 | [`E272`](errors.md#e272) | check | The table or view of an external model does not exist |
@@ -2830,6 +2831,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C740`](errors.md#c740) | cli | app.api_version is not a version name |
 | [`C780`](errors.md#c780) | cli | The project's karni predates suggestions |
 | [`C781`](errors.md#c781) | cli | manage.py karni_suggest failed |
+| [`C850`](errors.md#c850) | cli | The project folder already exists |
 
 ### Agent rules (`K`)
 

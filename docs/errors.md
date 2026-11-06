@@ -813,6 +813,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Set KARNI_TERMS = {"version": "<version>", "url": "<where the terms are>"} to ask users to accept terms, or remove the client's call.
 
+<a id="e260"></a>
+
+#### E260: A database alias is not configured
+
+*exception* · from `karni_schema (--database)`
+
+**Why Karni objects.** A command was given a database alias that DATABASES does not define, so there is no connection to read.
+
+**Fix.** Pass an alias from settings.DATABASES ('default' unless the project declares more), or add the database to DATABASES.
+
 <a id="e270"></a>
 
 #### E270: An external model is managed by Django
@@ -5208,6 +5218,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** The project could not be started, or something in it prints to stdout at startup, so the command's JSON did not come back.
 
 **Fix.** Run python manage.py karni_suggest --json in the project to see the error. karni check shows the same startup problem.
+
+<a id="c850"></a>
+
+### C850: The project folder already exists
+
+*karni command* · from `karni new`
+
+**Why Karni objects.** karni new writes a new folder named after the project and never writes into one that is there, so it cannot overwrite your files.
+
+**Fix.** Pick another name or --output-dir, or remove or rename the folder if it is a leftover. To change an existing project, use karni make, karni add or karni build.
 
 ## Agent rules (`K`)
 
