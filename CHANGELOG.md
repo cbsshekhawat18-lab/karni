@@ -1582,6 +1582,10 @@ apply codemods and list the manual steps. This file is the human summary.
   it through the `karni.roles` entry point, so `karni migrate` creates it after
   `karni add payments` and refunds are reachable without a hand-written
   `KARNI_ROLES` entry.
+- **`requires_approval` docs.** The README, the docstring, the reference and the
+  agent fragment now say a field list holds updates of those fields and a create
+  that sets one away from its default (never a delete), and `True` holds every
+  change, create and delete.
 
 ## 0.4.0 (2026-10-22)
 

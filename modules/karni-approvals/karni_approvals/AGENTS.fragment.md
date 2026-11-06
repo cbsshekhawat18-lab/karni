@@ -1,6 +1,7 @@
 ## Approvals (karni-approvals)
 - A model opts in with `class Karni: requires_approval = ["amount", "status"]`
-  (or `True` for any change, create and delete included). A guarded change by
+  (a list holds updates of those fields and a create that sets one away from its
+  default, never a delete, `True` holds any change, create and delete). A guarded change by
   a signed-in user becomes a PendingChange instead of a write: the API answers
   202, the admin says so, and code gets `KarniWriteDeferred`. Never catch it to
   write anyway. Trusted scripts use `karni_approvals.interception.bypass(reason=...)`.

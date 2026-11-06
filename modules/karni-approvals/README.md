@@ -29,7 +29,9 @@ from karni.models import BaseModel
 class Invoice(BaseModel):
     ...
     class Karni:
-        requires_approval = ["amount", "status"]   # or True: any change, create and delete too
+        requires_approval = ["amount", "status"]   # a list holds changes to those fields and a create
+                                                    # that sets one off its default; True holds
+                                                    # every change, create and delete
         approvals_required = 2                      # default KARNI_APPROVALS_REQUIRED (1)
         approver_roles = ["finance"]                # default KARNI_APPROVALS_APPROVER_ROLES ([])
         approval_timeout = timedelta(hours=48)      # or hours as a number; default the setting (never)

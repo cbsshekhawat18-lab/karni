@@ -4,7 +4,9 @@
 
     class Invoice(BaseModel):
         class Karni:
-            requires_approval = ["amount", "status"]   # or True: any change, create and delete too
+            requires_approval = ["amount", "status"]   # a list holds changes to those fields and a create
+                                                    # that sets one off its default; True holds
+                                                    # every change, create and delete
             approvals_required = 2                      # default KARNI_APPROVALS_REQUIRED
             approver_roles = ["finance"]                # default KARNI_APPROVALS_APPROVER_ROLES
             approval_timeout = timedelta(hours=48)      # or hours as an int; default the setting
@@ -37,7 +39,8 @@ KARNI_OPTIONS: tuple[Option, ...] = (
     Option(
         "requires_approval",
         "unset: never held",
-        "Hold changes for a second person's approval: a list of guarded fields, or `True` "
+        "Hold changes for a second person's approval: a list of guarded fields (holds an update "
+        "of them, and a create that sets one away from its default, never a delete), or `True` "
         "for any change, create and delete included.",
         'requires_approval = ["amount", "status"]',
     ),
