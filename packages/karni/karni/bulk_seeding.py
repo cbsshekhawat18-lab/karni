@@ -64,6 +64,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 import factory
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.db import IntegrityError, models, transaction
 from factory.declarations import BaseDeclaration
 
@@ -495,7 +496,12 @@ class BulkSeeder:
             self.current_stamps = (stamped, auto_now)
             while written < count:
                 size = min(self.batch, count - written)
-                rows = self.rows(model, made, size)
+                try:
+                    rows = self.rows(model, made, size)
+                except ImproperlyConfigured as exc:  # a field the factory cannot fill (E610)
+                    from karni.seeding import unseedable
+
+                    raise unseedable(model, exc) from exc
                 self.stamp(rows, stamped, auto_now)
                 created = self.insert(model, rows)
                 written += len(created)

@@ -19,8 +19,9 @@ from rest_framework.permissions import BasePermission
 
 from karni.api import Access, Authenticated, BaseViewSet, Granted, HasRole, Owned, Public, Where
 from karni.api.routers import KarniRouter
+from karni.api.serializers import KarniModelSerializer
 from karni.pagination import KarniPageNumberPagination
-from tests.testapp.models import Customer, Event, Venue
+from tests.testapp.models import Book, Customer, Event, Label, Shelf, Venue
 from tests.uploadsapp.models import Attachment, Photo
 
 
@@ -201,6 +202,33 @@ class EmptyEventViewSet(EventViewSet):
         return queryset.none(), False
 
 
+class StaffShelfViewSet(BaseViewSet):
+    model = Shelf
+    access = Access(read=HasRole("staff"), write=HasRole("staff"))
+
+
+class StaffLabelViewSet(BaseViewSet):
+    model = Label
+    access = Access(read=HasRole("staff"), write=HasRole("staff"))
+
+
+class BookWithLabelsSerializer(KarniModelSerializer):
+    """A book needs a shelf (a required FK) and at least one label (a required m2m)."""
+
+    class Meta:
+        model = Book
+        fields = ["id", "title", "shelf", "labels"]
+        extra_kwargs = {"labels": {"required": True, "allow_empty": False}}
+
+
+class BookViewSet(BaseViewSet):
+    """Anyone signed in writes books, but only staff may read shelves and labels."""
+
+    model = Book
+    access = Access(read=Authenticated(), write=Authenticated())
+    serializer_class = BookWithLabelsSerializer
+
+
 ROUTES = {
     "events": EventViewSet,
     "granted-events": GrantedEventViewSet,
@@ -224,6 +252,9 @@ ROUTES = {
     "undeclared-events": UndeclaredEventViewSet,
     "leaky-events": LeakyEventViewSet,
     "empty-events": EmptyEventViewSet,
+    "staff-shelves": StaffShelfViewSet,
+    "staff-labels": StaffLabelViewSet,
+    "books": BookViewSet,
 }
 
 router = KarniRouter()

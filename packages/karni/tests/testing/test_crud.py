@@ -363,6 +363,43 @@ def test_a_role_that_may_not_write_is_warned_about_and_listed() -> None:
         assert not assert_crud(crud_urls.PhotoViewSet, "staff").warnings
 
 
+# a required relation the requester may not reference
+
+
+def test_a_required_relation_the_requester_cannot_reference_is_warned_not_failed() -> None:
+    """Book needs a shelf and a label, and only staff read them: no body can be valid."""
+    with pytest.warns(UserWarning, match="not exercised as any signed-in user") as caught:
+        report = assert_crud(crud_urls.BookViewSet)
+    assert not report.failures, report.render()
+    create = next(entry for entry in report.skipped if entry.startswith("create:"))
+    assert "Book.shelf needs a Shelf the requester may reference" in create
+    assert "Book.labels needs a Label the requester may reference" in create
+    assert "StaffLabelViewSet (access=" in create and "HasRole('staff')" in create
+    assert "make labels optional" in create and "payload={'labels': ...}" in create
+    assert any(entry.startswith("update: PUT ") for entry in report.skipped)
+    assert "create" not in report.passed and {"list", "retrieve", "delete"} <= set(report.passed)
+    assert len(caught) == 2
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # staff may reference both: every write is exercised
+        staff = assert_crud(crud_urls.BookViewSet, "staff")
+    assert not staff.warnings and {"create", "update"} <= set(staff.passed)
+
+
+def test_a_multipart_body_carries_objects_as_json_text() -> None:
+    """The encoding @karni/ui uses for a form with a file (contract D2)."""
+    from karni.testing.api import Payload, file_upload
+
+    upload = file_upload("doc")
+    body = Payload(
+        {"doc": upload, "meta": {"n": 1}, "words": ["a", "b"], "rows": [{"a": 1}], "gone": None},
+        multipart=True,
+    )
+    sent = body.request_data
+    assert sent["doc"] is upload and sent["meta"] == '{"n": 1}'
+    assert sent["words"] == ["a", "b"] and sent["rows"] == ['{"a": 1}'] and "gone" not in sent
+    assert Payload({"meta": {"n": 1}}).request_data == {"meta": {"n": 1}}
+
+
 # rows the read rule hides are named, not blamed on the paginator
 
 

@@ -1547,6 +1547,22 @@ apply codemods and list the manual steps. This file is the human summary.
   `python -m karni.links check` catches the ownerless form too.
   `docs/testing.md` opens with the four fixtures most tests use.
 
+### Fixed (generator self-test)
+
+- **Range fields seed and pass their generated test.** A model with
+  `during:datetimerange` or `nights:daterange` (optional or not) made
+  `karni seed` stop at `E613` and its generated test at `E610`. Factories and
+  seeds now fill a range ahead of now, one slot per row, so a `no_overlap`
+  model seeds without a clash. `karni seed --volume` names a field it cannot
+  fill with `E613` instead of a traceback. `assert_crud` sends an object in a
+  multipart body as JSON text, as @karni/ui does, and the range serializer
+  field reads that form.
+- **A required relation the role cannot reference no longer fails
+  `assert_crud`.** An `Event` that needs `tags` while only staff read tags
+  made the generated test fail with "Invalid pk" and stopped `karni build` at
+  `C281`. The run now skips the create and the PUT, and warns naming the
+  field, the target's access and the ways on.
+
 ## 0.4.0 (2026-10-22)
 
 - **PostgreSQL is the default, everywhere.** `pip install karni` now brings

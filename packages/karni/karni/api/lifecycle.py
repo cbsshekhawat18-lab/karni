@@ -9,8 +9,9 @@
   state a 400 (``E982``).
 * A range field (``DateRangeField`` / ``DateTimeRangeField``) becomes a
   :class:`RangeField`: ``{"lower": ..., "upper": ..., "bounds": "[)"}`` in
-  and out (a ``[lower, upper]`` pair is accepted too), a lower bound after
-  the upper one is a 400.
+  and out (a ``[lower, upper]`` pair is accepted too, and either one as JSON
+  text, which is how a multipart form carries it), a lower bound after the
+  upper one is a 400.
 
 Override / escape hatch: declare the field on a hand-written serializer, or
 set ``serializer_class`` on the viewset.
@@ -18,6 +19,7 @@ set ``serializer_class`` on the viewset.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
@@ -91,6 +93,11 @@ class RangeField(serializers.Field):  # type: ignore[type-arg]
         }
 
     def to_internal_value(self, data: Any) -> Any:
+        if isinstance(data, str):  # a multipart form sends an object as JSON text
+            try:
+                data = json.loads(data)
+            except ValueError:
+                self.fail("invalid")
         if isinstance(data, list | tuple) and len(data) == 2:
             data = {"lower": data[0], "upper": data[1]}
         if not isinstance(data, dict) or not {"lower", "upper"} & set(data):
