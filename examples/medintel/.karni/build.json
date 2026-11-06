@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "spec": "a31acf153b88c6a453ecccb1741524d8bf9eafc3fc46508a50a4cb1cf44cfc85",
+  "spec": "1e3b9dc6fa8f72e75ed3ad70d43b7532320e2847310228772fc7ae0be899cd59",
   "entities": [
     "intel.Brand",
     "intel.Company",
@@ -53,7 +53,7 @@
     "frontend/src/pages/karni/trials.tsx": "12dc1800fb59cd08a4a5f1e9b87127ff861c144de014444850ed84cc560cc654",
     "intel/karni/__init__.py": "6d9c3201c188332d74dfbecab35a9069627c2a69d50ff2c725662a500a3d0727",
     "intel/karni/api.py": "5de48e2aa5fcac83974ea1cf1e2b6b238645df83fce3781964cf88cd798f11d9",
-    "intel/karni/models.py": "5c6f4a6eaf17c7791d6e31b433903b553f69ff4587baef11bf1291abc1f07a87",
+    "intel/karni/models.py": "7cb670e97de9413585917089f8da45d18ea70a5a0fc2b4a787232bc6bc5f9e93",
     "intel/karni/seeds.py": "44bb8db5236d520cdb43bd98f32a8e7bf2286c671a0d53dd588df17c538d699a",
     "intel/tests/karni/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "intel/tests/karni/test_brand.py": "3a7198988d7d781b0e343f66d8d6a5511400c2b5c7f4226cb9cd8c22eb15af28",

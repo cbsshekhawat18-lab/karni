@@ -531,7 +531,7 @@
   "code": "SITE012",
   "title": "A page has no description",
   "kind": "check",
-  "why": "Search results show the <meta name=\"description\"> under the title. Without one the search engine picks a fragment of the page, often the menu or a cookie notice.",
+  "why": "Search results show the <meta name=\"description\"> under the title. Without one the search engine picks a fragment of the page, often the menu or a cookie notice. The placeholder karni make site and karni make view write (\"One sentence that search engines show under this page's title.\") counts as none.",
   "fix": "Write one sentence about the page: {% block description %} in its template, the description of its row (class Karni: seo = {\"description\": \"summary\"}), its entry in the admin, or the site's tagline as the last default.",
   "source": "karni_site.checks_seo"
  },

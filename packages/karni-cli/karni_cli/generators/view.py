@@ -97,9 +97,7 @@ def plan(
         body += f"  <p>{param}: {{{{ {param} }}}}</p>\n"
     ws.create(
         site_gen.page_template(app, name),
-        site_gen.page_source(
-            app, title, "One sentence that search engines show under this page's title.", body
-        ),
+        site_gen.page_source(app, title, site_gen.PLACEHOLDER_DESCRIPTION, body),
     )
     if register:
         site_gen.register_route(ws, app, route, name)

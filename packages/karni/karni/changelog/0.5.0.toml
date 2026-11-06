@@ -613,3 +613,40 @@ The model docstring is no longer a fallback. A project that relied on it writes 
 into class Karni: help."""
 mechanical = false
 migration = "migrations/0.5.md#the-admin-help-line-comes-only-from-help"
+
+[[change]]
+id = "seo-placeholder-description"
+kind = "behaviour"
+symbol = "karni check --seo (SITE012)"
+summary = """\
+A page whose description is still the placeholder karni make site and karni make view \
+write ("One sentence that search engines show under this page's title.") is reported as \
+SITE012 on that page, so karni check --seo fails until each such page has a sentence of \
+its own. Before, only two or more such pages failed it, as SITE013."""
+mechanical = false
+migration = "migrations/0.5.md#generated-site-pages-ask-for-their-description"
+
+[[change]]
+id = "index-advice-on-own-models"
+kind = "behaviour"
+symbol = "karni.W967"
+summary = """\
+karni.W967 (a filtered, searched or ordered field without an index) advises on the \
+project's own models only, not on a module's or Karni's. karni-approvals indexes \
+PendingChange.action and karni-reports GeneratedReport.status, each in a new migration \
+(0002_index_filtered_fields): run karni migrate after upgrading them."""
+mechanical = false
+migration = "migrations/0.5.md#index-advice-covers-the-projects-own-models"
+
+[[change]]
+id = "build-protects-and-indexes-search"
+kind = "behaviour"
+symbol = "karni build"
+summary = """\
+karni build writes a required fk of an audited or financial entity as \
+on_delete=models.PROTECT instead of CASCADE (karni.W965), and a \
+search = SearchField(sources=[...]) over the fields an entity's search names \
+(karni.W967). The next build of a spec-built project writes a migration for both. \
+Hard-deleting a row that such rows point at is then refused while they exist."""
+mechanical = false
+migration = "migrations/0.5.md#karni-build-writes-what-karnis-checks-ask"

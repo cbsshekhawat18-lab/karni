@@ -149,7 +149,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Karni generates the serializer from the model (APIMeta tunes it). A copy that declares nothing of its own drifts from the model and from the schema the frontend is generated from.
 
-**Fix.** Delete the serializer and its serializer_class line, and tune the generated one with APIMeta on the model. Keep serializer_class only for a serializer with custom fields or validation.
+**Fix.** Delete the serializer and its serializer_class line, and tune the generated one with APIMeta on the model. Keep serializer_class only for a serializer with custom fields or validation. When the copy is deliberate, say why on the line above the class: # karni: allow(redundant-serializer): &lt;reason> (karni make serializer --reason writes it).
 
 <a id="e102"></a>
 
@@ -2463,7 +2463,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (warning)* · from `karni.fields.checks.check_usage_indexes; karni schema`
 
-**Why Karni objects.** A routed viewset declares search_fields, filterset_fields, ordering_fields or an ordering on a column no index covers, so every such list request reads the whole table. Fast with seed data, slow in production.
+**Why Karni objects.** A routed viewset declares search_fields, filterset_fields, ordering_fields or an ordering on a column no index covers, so every such list request reads the whole table. Fast with seed data, slow in production. Only the project's own models are checked: a module indexes its own.
 
 **Fix.** Add the index the message names to Meta.indexes (a SearchField for search), then run karni make migration. <code>karni schema &lt;app&gt;</code> shows what serves each column. For a table small enough to scan, silence it instead: SILENCED_SYSTEM_CHECKS = ["karni.W967"].
 
@@ -3351,7 +3351,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni_site.checks_seo`
 
-**Why Karni objects.** Search results show the &lt;meta name="description"> under the title. Without one the search engine picks a fragment of the page, often the menu or a cookie notice.
+**Why Karni objects.** Search results show the &lt;meta name="description"> under the title. Without one the search engine picks a fragment of the page, often the menu or a cookie notice. The placeholder karni make site and karni make view write ("One sentence that search engines show under this page's title.") counts as none.
 
 **Fix.** Write one sentence about the page: {% block description %} in its template, the description of its row (class Karni: seo = {"description": "summary"}), its entry in the admin, or the site's tagline as the last default.
 
@@ -5103,7 +5103,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C561: A related tab names an entity with no fk to this one
 
-*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+*karni command* · from `karni spec validate, karni make page --related (karni_cli.spec.validate)`
 
 **Why Karni objects.** A related tab is a table of the other entity's rows filtered to this record, and the list of that entity filters by its fk fields. The entity has no fk to the page's entity, or the field named is not one (a m2m or an o2o cannot back a tab).
 
@@ -5113,7 +5113,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C562: A related tab could be either of two relations
 
-*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+*karni command* · from `karni spec validate, karni make page --related (karni_cli.spec.validate)`
 
 **Why Karni objects.** The entity named has two or more fks to the page's entity (a deal's company and its partner), so the tab must say which rows it lists.
 
@@ -5123,7 +5123,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C563: A related tab is listed twice
 
-*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+*karni command* · from `karni spec validate, karni make page --related (karni_cli.spec.validate)`
 
 **Why Karni objects.** Each related tab is one relation. Deal and Deal.company name the same one when Deal has one fk to the page's entity.
 
@@ -5258,6 +5258,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** The name is neither in the module catalog nor a module installed in the project's interpreter (a distribution with a karni.module.toml). Wiring it would put an app into INSTALLED_APPS that Python cannot import, so every Django command would fail.
 
 **Fix.** Check the spelling against `karni modules list`. A third-party module is installed first (pip install &lt;distribution>), then added.
+
+<a id="c830"></a>
+
+### C830: karni make test --role names a role the project does not declare
+
+*karni command* · from `karni make test (karni_cli.generators.apitest)`
+
+**Why Karni objects.** The test acts as a user holding that role. A role KARNI_ROLES and the added modules do not declare grants nothing, so every request would be refused and the test would fail when it runs.
+
+**Fix.** Pass one of the declared roles the error lists, or declare the role in KARNI_ROLES (config/settings.py) first.
 
 ## Agent rules (`K`)
 

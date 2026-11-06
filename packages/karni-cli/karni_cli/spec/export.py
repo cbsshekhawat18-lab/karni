@@ -154,6 +154,8 @@ _ARRAY_BASES: Final = {
     "django.db.models.UUIDField": "uuid",
 }
 _CASCADE: Final = "django.db.models.deletion.CASCADE"
+_PROTECT: Final = "django.db.models.deletion.PROTECT"
+_SEARCH_FIELD: Final = "karni.fields.search.SearchField"
 _SET_NULL: Final = "django.db.models.deletion.SET_NULL"
 #: ``class Karni`` options the spec writes, by spec key.
 KARNI_KEYS: Final = {
@@ -288,9 +290,19 @@ def _target(fact: dict[str, Any], app: str, model: str, ctx: _Ctx) -> str | None
 
 
 def field_token(
-    fact: dict[str, Any], app: str, model: str, ctx: _Ctx, siblings: set[str]
+    fact: dict[str, Any],
+    app: str,
+    model: str,
+    ctx: _Ctx,
+    siblings: set[str],
+    *,
+    protect: bool = False,
 ) -> tuple[str | None, list[str]]:
-    """The field syntax for one field fact and its notes, or ``None`` and why it is left out."""
+    """The field syntax for one field fact and its notes, or ``None`` and why it is left out.
+
+    ``protect``: the model is audited or financial, so a required fk is
+    expected ``PROTECT``, as ``karni build`` writes it.
+    """
     name = fact["name"]
     where = f"{app}.{model}.{name}"
     kind = KINDS.get(fact["class"])
@@ -339,7 +351,7 @@ def field_token(
             return None, [f"{where}: points at {fact.get('related')}, which is not in the spec"]
         args = [target]
         if kind != "m2m":
-            expected["on_delete"] = _SET_NULL if optional else _CASCADE
+            expected["on_delete"] = _SET_NULL if optional else (_PROTECT if protect else _CASCADE)
             if optional:
                 expected["null"] = True
         explained |= {"related_name", "symmetrical"} & {
@@ -627,8 +639,12 @@ def _entity(
     label = model["label"]
     fields: dict[str, str] = {}
     siblings: set[str] = set()
+    protect = bool(model.get("financial")) or bool(model["karni"].get("audit"))
+    searched = list(viewset["search_fields"]) if viewset is not None else []
     tokens = [
-        (fact, *field_token(fact, app, model["name"], ctx, siblings)) for fact in model["fields"]
+        (fact, *field_token(fact, app, model["name"], ctx, siblings, protect=protect))
+        for fact in model["fields"]
+        if not _build_search_document(fact, searched)
     ]
     for fact, token, notes in tokens:
         if fact["name"] in siblings and fact["class"] == "karni.fields.iso.CurrencyField":
@@ -710,6 +726,23 @@ def _entity(
         entity["cache"] = cache
     _drop_unknown(entity, label, ctx.left_out)
     return entity
+
+
+def _build_search_document(fact: dict[str, Any], searched: list[str]) -> bool:
+    """The SearchField ``karni build`` writes for ``search``, so the spec's ``search`` makes it.
+
+    Named ``search`` (or ``search_document``), over exactly what the viewset
+    searches, with the default config and no weights.
+    """
+    kwargs = fact["kwargs"]
+    sources = kwargs.get("sources")
+    return (
+        fact["class"] == _SEARCH_FIELD
+        and fact["name"] in ("search", "search_document")
+        and set(kwargs) == {"sources"}
+        and isinstance(sources, list | tuple)
+        and list(sources) == searched
+    )
 
 
 def _taxonomies(model: dict[str, Any], ctx: _Ctx) -> dict[str, str]:

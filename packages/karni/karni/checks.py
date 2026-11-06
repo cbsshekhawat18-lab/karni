@@ -316,20 +316,33 @@ def has_integer_key(model: type[Any]) -> bool:
 
 def _key_marker(viewset: type[Any]) -> tuple[bool, str]:
     """``(silenced, note)`` from a ``public-integer-key`` marker above the viewset class."""
+    return class_marker(viewset, PUBLIC_INTEGER_KEY_RULE, "why the ids may be public")
+
+
+def class_marker(cls: type[Any], rule: str, why: str) -> tuple[bool, str]:
+    """``(silenced, note)`` from a ``# karni: allow(<rule>): <reason>`` marker above ``cls``.
+
+    A marker without a reason does not silence, and the note says so (``why``
+    names what the reason should say).
+    """
     from karni.testing._source import class_marker_lines, find_allow
 
-    marked = class_marker_lines(viewset)
+    marked = class_marker_lines(cls)
     if marked is None:
         return False, ""
-    allow = find_allow(marked[0], PUBLIC_INTEGER_KEY_RULE, marked[1])
+    allow = find_allow(marked[0], rule, marked[1])
     if allow is None:
         return False, ""
     if allow.reason:
         return True, ""
     return False, (
         f" The marker on line {allow.line} has no reason, so it does not silence this: "
-        f"write `# karni: allow({PUBLIC_INTEGER_KEY_RULE}): <why the ids may be public>`."
+        f"write `# karni: allow({rule}): <{why}>`."
     )
+
+
+#: The opt-out marker of ``karni.W101`` (and of the architecture rule of the same name).
+REDUNDANT_SERIALIZER_RULE = "redundant-serializer"
 
 
 @checks.register(checks.Tags.urls)
@@ -461,7 +474,11 @@ def check_field_roles(app_configs: Any = None, **kwargs: Any) -> list[checks.Che
 
 
 def _duplicate_serializer(viewset: type[Any], model: type[Any]) -> list[checks.CheckMessage]:
-    """W101 when ``serializer_class`` is a plain ModelSerializer copy of the model."""
+    """W101 when ``serializer_class`` is a plain ModelSerializer copy of the model.
+
+    ``# karni: allow(redundant-serializer): <reason>`` above the serializer
+    class (what ``karni make serializer --reason`` writes) silences it.
+    """
     from rest_framework import serializers
 
     declared = viewset.__dict__.get("serializer_class")
@@ -481,15 +498,21 @@ def _duplicate_serializer(viewset: type[Any], model: type[Any]) -> list[checks.C
     ]
     if getattr(declared, "_declared_fields", None) or own:
         return []
+    silenced, note = class_marker(
+        declared, REDUNDANT_SERIALIZER_RULE, "why the generated serializer is not enough"
+    )
+    if silenced:
+        return []
     return [
         check_warning(
             "W101",
             f"{declared.__name__} duplicates the serializer Karni generates from "
-            f"{model.__name__}: it declares no fields or methods of its own.",
+            f"{model.__name__}: it declares no fields or methods of its own.{note}",
             hint=(
                 f"Delete it and the serializer_class line on {viewset.__name__}. Tune the "
                 f"generated serializer with APIMeta on {model.__name__}. Keep "
-                "serializer_class only for custom fields or validation."
+                "serializer_class only for custom fields or validation, or say why above "
+                f"the class: # karni: allow({REDUNDANT_SERIALIZER_RULE}): <reason>."
             ),
             obj=viewset,
         )

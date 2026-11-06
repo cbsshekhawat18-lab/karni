@@ -233,10 +233,10 @@ model on `BaseModel` (PascalCase), with its viewset.
 | `fields` | name to type, or to `{type, was}` | `karni make model <Entity> name:type ...` |
 | `key` | a field | `karni make model --key` (`Karni.import_key`) |
 | `help` | a sentence | `Karni.help`: the line the admin shows at the top of the model's list and form. `karni plan` shows it and `karni spec export` reads it back |
-| `search` | a field or a list | `karni make model --search` (the viewset's `search_fields`) |
+| `search` | a field or a list | `karni make model --search` (the viewset's `search_fields`). `karni build` also writes `search = SearchField(sources=[...])` when every name is a field of the entity, so `?search=` reads an index (`karni.W967`) |
 | `global_search` | `true`, or `{fields, title, subtitle, weight}` | `Karni.search`, [search across models](global-search.md) (experimental). `fields` defaults to `search` |
 | `owner` | a relation to the user, or a path (`workspace__members`) | `Karni.owner_field`, the `own` scope's field |
-| `audit` | `true`, or a list of fields | `Karni.audit`, [change history](change-history.md) |
+| `audit` | `true`, or a list of fields | `Karni.audit`, [change history](change-history.md). `karni build` writes a required fk of an audited or financial entity (one with money) as `on_delete=models.PROTECT` (`karni.W965`) |
 | `groups` | title to fields | `Karni.field_groups`: sections of the React form and detail page, fieldsets of the admin (experimental) |
 | `column_sets` | name to fields | `Karni.column_sets`: column presets of the React table (experimental) |
 | `order` | a field or a list, `-` for descending | `karni make model --order` (`Meta.ordering`) |
@@ -1031,7 +1031,7 @@ For one entity, `Session` in the app `classes`, that is:
 ```python
 # classes/karni/models.py (Karni's)
 class Session(BaseModel):
-    studio = models.ForeignKey("Studio", on_delete=models.CASCADE)
+    studio = models.ForeignKey("Studio", on_delete=models.PROTECT)  # audited: W965
     title = models.CharField(max_length=200)
 
     class Meta(BaseModel.Meta):
@@ -1056,7 +1056,12 @@ class is a normal migration of the project's concrete model. The viewset the
 router serves is the project's subclass, and it inherits the access Karni
 declares, so every [architecture rule](enforcement.md) passes without an
 opt-out. A subclass overrides anything of its base: a method, `access`, or
-one option with `class Karni(karni.Session.Karni)`.
+one option with `class Karni(karni.Session.Karni)`. The models pass Karni's
+checks too: a required fk of an audited or financial entity is `PROTECT`
+(`karni.W965`), and the fields `search` names get a `SearchField`
+(`karni.W967`). To cascade on purpose, declare the field again in the
+project's subclass with `on_delete=models.CASCADE` and say why in
+`class Karni(karni.Session.Karni): cascade = {"studio": "<why>"}`.
 
 The settings block sits right above `karni_settings(globals())`, where every
 setting takes effect, `KARNI_2FA` included. It sets every feature of the

@@ -1064,7 +1064,7 @@ karni make test [OPTIONS] MODEL
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `MODEL` (required) |  | Model class name (e.g. Event). The model needs a viewset. |
-| `--role` TEXT |  | The role the test acts as. By default it is the first HasRole the viewset's write predicate names (then create, then read), so the test really writes. For Granted() it is the first KARNI_ROLES role whose grant reaches the model (own/related first). Otherwise the test uses any signed-in user. |
+| `--role` TEXT |  | The role the test acts as, one the project declares (KARNI_ROLES or an added module, C830 otherwise). By default it is the first HasRole the viewset's write predicate names (then create, then read), so the test really writes. For Granted() it is the first KARNI_ROLES role whose grant reaches the model (own/related first; own needs an owner field). Otherwise the test uses any signed-in user. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
@@ -1238,7 +1238,7 @@ karni make page [OPTIONS] NAME
 | `--kind` TEXT |  | With --resource: list (default), detail or form. A login page needs no resource, and a dashboard (experimental) counts resources (--count). |
 | `--path` TEXT |  | Route path. For resource pages it is the base (default `/<resource>`). |
 | `--title` TEXT |  | Page title (default: from the name). |
-| `--related` TEXT (repeatable) |  | Experimental. With --kind detail: a related tab (deals, or deals.partner). Repeat it. |
+| `--related` TEXT (repeatable) |  | Experimental. With --kind detail: a related tab (deals, or deals.partner), a resource whose model has a fk to this one (C561 otherwise). Repeat it. |
 | `--count` TEXT (repeatable) |  | Experimental. With --kind dashboard: a resource to count. Repeat it (default: every resource the project routes). |
 | `--no-route` |  | Do not register the route in frontend/src/routes.tsx. |
 | `--force` |  | Overwrite / replace existing targets. |
@@ -2838,6 +2838,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C851`](errors.md#c851) | cli | The menu links to a page that is not written yet |
 | [`C841`](errors.md#c841) | cli | A feature's extra is in pyproject.toml but not installed |
 | [`C840`](errors.md#c840) | cli | karni add was given a name that is not a module |
+| [`C830`](errors.md#c830) | cli | karni make test --role names a role the project does not declare |
 
 ### Agent rules (`K`)
 

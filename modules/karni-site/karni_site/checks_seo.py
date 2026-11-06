@@ -17,7 +17,9 @@ never requested.
 Findings, one line each:
 
 * ``SITE010`` a page without a title, ``SITE011`` a title two pages share;
-* ``SITE012`` a page without a description, ``SITE013`` one two pages share;
+* ``SITE012`` a page without a description, or with the placeholder
+  ``karni make site`` and ``karni make view`` write
+  (:data:`PLACEHOLDER_DESCRIPTION`), ``SITE013`` one two pages share;
 * ``SITE014`` an ``<img>`` without ``alt``, ``SITE015`` without ``width``
   and ``height``;
 * ``SITE016`` an image much larger than the page shows it: without smaller
@@ -74,7 +76,18 @@ from karni.testing.pages import PageParser
 
 from karni_site import conf, imagesize, renditions
 
-__all__ = ["Img", "SeoCrawl", "SeoParser", "quiet_requests", "run_checks"]
+__all__ = [
+    "PLACEHOLDER_DESCRIPTION",
+    "Img",
+    "SeoCrawl",
+    "SeoParser",
+    "quiet_requests",
+    "run_checks",
+]
+
+#: The description ``karni make site`` and ``karni make view`` write, to be replaced per page.
+#: karni-cli writes the same text (karni_cli.generators.site.PLACEHOLDER_DESCRIPTION).
+PLACEHOLDER_DESCRIPTION = "One sentence that search engines show under this page's title."
 
 TITLE_CODE = "SITE010"
 SAME_TITLE_CODE = "SITE011"
@@ -405,6 +418,14 @@ class SeoCrawl:
                     "{% block description %}, a row with a description, or an entry in the "
                     "admin.",
                 )
+            elif _placeholder(page.description):
+                self.fail(
+                    DESCRIPTION_CODE,
+                    f"{page.path} still has the placeholder description karni make site and "
+                    "karni make view write. Write one sentence about this page in its "
+                    "{% block description %}, its row's description, or the admin's Page "
+                    "titles and descriptions.",
+                )
         indexable = [page for page in pages if page.indexable]
         for code, attribute, what in (
             (SAME_TITLE_CODE, "title", "title"),
@@ -413,7 +434,7 @@ class SeoCrawl:
             groups: dict[str, list[str]] = {}
             for page in indexable:
                 value = " ".join(str(getattr(page, attribute) or "").split())
-                if value:
+                if value and not (attribute == "description" and _placeholder(value)):
                     groups.setdefault(value, []).append(page.path)
             for value, paths in groups.items():
                 if len(paths) > 1:
@@ -596,6 +617,11 @@ def quiet_requests() -> Iterator[list[str]]:
             logger.setLevel(level)
             logger.propagate = propagate
             logger.handlers = handlers
+
+
+def _placeholder(description: str) -> bool:
+    """Whether ``description`` is :data:`PLACEHOLDER_DESCRIPTION` (spacing aside)."""
+    return " ".join(description.split()) == PLACEHOLDER_DESCRIPTION
 
 
 def run_checks() -> list[str]:

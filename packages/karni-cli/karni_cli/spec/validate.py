@@ -35,7 +35,7 @@ import copy
 import fnmatch
 import keyword
 import re
-from collections.abc import Collection, Iterator
+from collections.abc import Callable, Collection, Iterator, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Final
 
@@ -52,7 +52,7 @@ from karni_cli.generators.fields import (
     relation_name,
     render_field,
 )
-from karni_cli.generators.naming import default_route
+from karni_cli.generators.naming import default_route, words
 from karni_cli.generators.pysource import pystr
 from karni_cli.project import CliError
 from karni_cli.spec import schema
@@ -374,6 +374,68 @@ def _value_at(data: Any, path: Loc) -> Any:
 
 
 # pass 3 ------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class TabProblem:
+    """Why a related tab cannot be listed: its code, the reason and the fix."""
+
+    code: str
+    why: str
+    fix: str
+
+
+def related_tab(
+    owner: str,
+    target: str,
+    field: str | None,
+    pointing: Mapping[str, str],
+    fields: Collection[str],
+    *,
+    ref: Callable[[str], str] | None = None,
+) -> str | TabProblem:
+    """The fk of ``target`` a related tab on ``owner``'s detail page lists by, or the problem.
+
+    ``pointing`` maps each field of ``target`` that points at ``owner`` to its
+    kind (``fk``, ``o2o``, ``m2m``), ``fields`` are all of ``target``'s fields
+    and ``field`` the one the tab names, if any. ``ref`` writes a tab the way
+    the caller's input does (``Event.host`` in a spec, ``events.host`` for
+    ``karni make page``). ``karni spec validate`` and ``karni make page
+    --related`` both ask this, so they accept the same tabs.
+    """
+    name = ref or (lambda f: f"{target}.{f}")
+    fks = [f for f, kind in pointing.items() if kind == "fk"]
+    if field is not None:
+        why = None
+        if field not in fields:
+            why = f"{target} has no field {field}"
+        elif field not in pointing:
+            why = f"{target}.{field} does not point at {owner}"
+        elif pointing[field] != "fk":
+            why = (
+                f"{target}.{field} is a {pointing[field]} field, and only a fk lists {target} "
+                f"rows per {owner} (its list filters by it)"
+            )
+        if why is not None:
+            named = f": {', '.join(name(f) for f in fks)}." if fks else "."
+            return TabProblem("C561", why, f"Name a fk of {target} to {owner}{named}")
+        return field
+    if not fks:
+        other = (
+            f" ({', '.join(f'{f}: {kind}' for f, kind in pointing.items())})" if pointing else ""
+        )
+        return TabProblem(
+            "C561",
+            f"{target} has no fk to {owner}{other}",
+            f"Add a fk:{owner} field to {target}, or drop the tab.",
+        )
+    if len(fks) > 1:
+        return TabProblem(
+            "C562",
+            f"{target} has {len(fks)} fks to {owner} ({', '.join(fks)}), so the tab must say which",
+            "Write " + " or ".join(name(f) for f in fks) + ", one tab each.",
+        )
+    return fks[0]
 
 
 @dataclass
@@ -1634,6 +1696,18 @@ class _Meaning:
                 continue
             seen.add(name)
             paths: list[str] = []
+            if name[:1].isupper() and not re.fullmatch(schema.ENTITY_NAME, name):
+                # Not a class name, so not an entity: say the name is wrong, not missing.
+                suggestion = "-".join(words(name))
+                example = suggestion if re.fullmatch(schema.PAGE_NAME, suggestion) else "about"
+                self.add(
+                    "C215",
+                    where,
+                    f"Page name {name!r} must be kebab-case, or an entity's PascalCase name.",
+                    f"Rename it, e.g. {example} (a named page) or the entity's class name.",
+                    key=True,
+                )
+                continue
             if name[:1].isupper():
                 entity = self.find(name)
                 if not isinstance(entity, _Entity):
@@ -1867,51 +1941,18 @@ class _Meaning:
                     f"{entity.name} (Entity, or Entity.field when it has two).",
                 )
                 continue
-            pointing = [f for f, label in target.targets.items() if label == entity.label]
-            kinds = {f: target.fields[f].kind for f in pointing if f in target.fields}
-            fks = [f for f in pointing if kinds.get(f) == "fk"]
-            if field is not None:
-                problem = None
-                if field not in target.fields:
-                    problem = f"{target.name} has no field {field}"
-                elif field not in pointing:
-                    problem = f"{target.name}.{field} does not point at {entity.name}"
-                elif kinds.get(field) != "fk":
-                    problem = (
-                        f"{target.name}.{field} is a {kinds.get(field)} field, and only a fk "
-                        f"lists {target.name} rows per {entity.name} (its list filters by it)"
-                    )
-                if problem is not None:
-                    self.add(
-                        "C561",
-                        at,
-                        f"{entity.name}'s related tab {ref!r}: {problem}.",
-                        f"Name a fk of {target.name} to {entity.name}"
-                        + (f": {', '.join(f'{target.name}.{f}' for f in fks)}." if fks else "."),
-                    )
-                    continue
-                chosen = f"{target.label}.{field}"
-            elif not fks:
-                other = f" ({', '.join(f'{f}: {kinds[f]}' for f in pointing)})" if pointing else ""
+            pointing = {
+                f: target.fields[f].kind
+                for f, label in target.targets.items()
+                if label == entity.label and f in target.fields
+            }
+            found = related_tab(entity.name, target.name, field, pointing, target.fields)
+            if isinstance(found, TabProblem):
                 self.add(
-                    "C561",
-                    at,
-                    f"{entity.name}'s related tab {ref!r}: {target.name} has no fk to "
-                    f"{entity.name}{other}.",
-                    f"Add a fk:{entity.name} field to {target.name}, or drop the tab.",
+                    found.code, at, f"{entity.name}'s related tab {ref!r}: {found.why}.", found.fix
                 )
                 continue
-            elif len(fks) > 1:
-                self.add(
-                    "C562",
-                    at,
-                    f"{entity.name}'s related tab {ref!r}: {target.name} has {len(fks)} fks to "
-                    f"{entity.name} ({', '.join(fks)}), so the tab must say which.",
-                    "Write " + " or ".join(f"{target.name}.{f}" for f in fks) + ", one tab each.",
-                )
-                continue
-            else:
-                chosen = f"{target.label}.{fks[0]}"
+            chosen = f"{target.label}.{found}"
             if chosen in seen:
                 self.add(
                     "C563",

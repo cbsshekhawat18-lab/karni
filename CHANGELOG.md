@@ -1772,6 +1772,71 @@ apply codemods and list the manual steps. This file is the human summary.
   `from karni.conf import env` moved from the middle of config/settings.py
   (E402) to the import block at the top.
 
+### Fixed (generator self-test)
+
+- **Range fields seed and pass their generated test.** A model with
+  `during:datetimerange` or `nights:daterange` (optional or not) made
+  `karni seed` stop at `E613` and its generated test at `E610`. Factories and
+  seeds now fill a range ahead of now, one slot per row, so a `no_overlap`
+  model seeds without a clash. `karni seed --volume` names a field it cannot
+  fill with `E613` instead of a traceback. `assert_crud` sends an object in a
+  multipart body as JSON text, as @karni/ui does, and the range serializer
+  field reads that form.
+- **A required relation the role cannot reference no longer fails
+  `assert_crud`.** An `Event` that needs `tags` while only staff read tags
+  made the generated test fail with "Invalid pk" and stopped `karni build` at
+  `C281`. The run now skips the create and the PUT, and warns naming the
+  field, the target's access and the ways on.
+- **`karni make page --related` checks the tab's fk.** A related tab with no
+  fk behind it was written, then `karni spec export` kept it, `spec validate`
+  rejected it (`C561`) and `karni plan` and `karni build` refused the whole
+  project (`C250`). `make page` now refuses it with `C561`, `C562` or `C563`,
+  by the same rule `spec validate` applies.
+- **`karni.W101` honours the marker `karni make serializer` writes.** The
+  serializer `make serializer MODEL --reason "..."` wrote tripped `W101` on
+  every Django command. `# karni: allow(redundant-serializer): <reason>` above
+  the class now silences it, as it silences the architecture rule of that
+  name. A marker without a reason still warns and says so.
+- **`karni make test` picks a role whose grant reaches the model.** For a
+  `Granted()` model with no owner field (an external table), it picked
+  `user`, whose `'*': 'own'` grant Karni skips there, so both generated tests
+  failed (`E602`, `E605`). A wildcard `own` grant now counts only for a model
+  with an owner field, and `related:<key>` only for one with that scope path,
+  as at boot. The test then acts as a role that reaches the rows.
+- **`karni make test --role` refuses a role the project does not declare.**
+  It is `C830` naming the declared roles (`KARNI_ROLES` and the added modules'
+  roles), instead of a test that fails when it runs. A role picked from the
+  viewset's access that nobody declares gets a note.
+- **`karni check --seo` asks for each generated page's description.** The
+  pages `karni make site` and `karni make view` write share a placeholder
+  description, so the check failed with `SITE013` "2 pages share the
+  description". It now reports the placeholder as `SITE012` on each page,
+  saying where to write that page's sentence.
+- **One name check for every generator.** `karni make model bad` silently
+  wrote `class Bad`, while app, page and event names of the wrong form were
+  refused, and `karni make app 9x` suggested `9_x`, itself refused. Every
+  generator now refuses a name of the wrong form with `C103` (class names
+  too: write `Bad`), and the example it gives is a name it accepts.
+- **`karni.W967` advises on the project's own models only.** It warned about
+  `PendingChange.action`, `GeneratedReport.status` and
+  `ImpersonationSession.end_reason` with a hint to edit a model the project
+  does not own. karni-approvals and karni-reports now index those fields
+  (migration `0002_index_filtered_fields`), and the check skips models
+  outside the project's apps.
+- **An invalid page name in `karni.yaml` is `C215`.** `- About Us: blank`
+  was reported as `C235` "names the entity About Us". A page key that is
+  not a class name is now `C215`, naming the kebab-case form (`about-us`).
+- **Models `karni build` writes pass Karni's own checks.** Every recipe's
+  models tripped `karni.W965` and `karni.W967` with hints naming files the
+  build owns. The build now writes a required fk of an audited or financial
+  entity as `on_delete=models.PROTECT`, and a `SearchField` over the fields
+  `search` names, which the default search provider reads through its index.
+  `karni spec export` reads both back as the spec's own. A search through a
+  `SearchField` now splits each word as PostgreSQL split the column, so a
+  code such as `MT-0001` finds its row (it found nothing before), and
+  medintel is rebuilt with both.
+
+
 ## 0.4.0 (2026-10-22)
 
 - **PostgreSQL is the default, everywhere.** `pip install karni` now brings

@@ -145,6 +145,15 @@ class SeedError(KarniError):
     """A model cannot be seeded; the message names the model and the fix."""
 
 
+def unseedable(model: type[models.Model], exc: Exception) -> SeedError:
+    """``E613`` for a row the factory cannot build (a field it cannot fill, ``E610``)."""
+    return SeedError(
+        f"{model._meta.label}: {exc} For seeding, override Seeder.seed() "
+        f"(karni make seeder {model.__name__}) and pass the row yourself.",
+        code="E613",
+    )
+
+
 class Seeder:
     """Per-model seed settings and field overrides, discovered from ``<app>/seeds.py``.
 
@@ -631,11 +640,7 @@ class _Run:
                 problem = exc
                 continue
             except ImproperlyConfigured as exc:
-                raise SeedError(
-                    f"{context.model._meta.label}: {exc} For seeding, override Seeder.seed() "
-                    f"(karni make seeder {context.model.__name__}) and pass the row yourself.",
-                    code="E613",
-                ) from exc
+                raise unseedable(context.model, exc) from exc
             self.after_create(context, row, values)
             return row
         raise SeedError(

@@ -155,3 +155,23 @@ def test_a_volume_run_on_a_model_it_cannot_fill_is_a_coded_error() -> None:
     with pytest.raises(SeedError, match="perfapp.Genre: .*cannot generate") as caught:
         BulkSeeder.rows(object(), Genre, Unfillable, 3)  # type: ignore[arg-type]
     assert caught.value.code == "E613" and "karni make seeder Genre" in str(caught.value)
+
+
+def test_a_field_the_factory_cannot_fill_is_e613_in_bulk_too(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The bulk path names the model and the fix, as the row-by-row path does."""
+    from karni.seeding import SeedError
+    from karni.testing.values import ValueInference
+
+    real = ValueInference.generator
+
+    def blind(self: ValueInference, model: type, model_field: object) -> object:
+        if model is Tag and getattr(model_field, "name", "") == "name":
+            return None  # a field type inference does not know
+        return real(self, model, model_field)
+
+    monkeypatch.setattr(ValueInference, "generator", blind)
+    with pytest.raises(SeedError, match="E613") as caught:
+        seed(models=["testapp.Tag"], volume=10)
+    assert "karni make seeder Tag" in str(caught.value) and "E610" in str(caught.value)

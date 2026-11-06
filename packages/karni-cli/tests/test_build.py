@@ -275,6 +275,50 @@ def test_a_second_build_writes_nothing(copy: Path) -> None:
     assert plan.output == "No changes: the project matches karni.yaml.\n"
 
 
+def test_the_financial_words_are_karnis() -> None:
+    """karni build decides PROTECT with karni.W965's own words (the CLI runs without karni)."""
+    checks = pytest.importorskip("karni.fields.checks")
+    from karni_cli.generators.fields import (
+        FINANCIAL_MODEL_WORDS,
+        MONEY_WORDS,
+        FieldSpec,
+        is_financial,
+    )
+
+    assert MONEY_WORDS == checks.MONEY_WORDS
+    assert FINANCIAL_MODEL_WORDS == checks.FINANCIAL_MODEL_WORDS
+    assert is_financial("LedgerEntry", [])
+    assert is_financial("Line", [FieldSpec("unit_price", "decimal", (), False)])
+    assert is_financial("Line", [FieldSpec("cost", "money", (), False)])
+    assert not is_financial("Line", [FieldSpec("weight", "decimal", (), False)])
+
+
+def test_the_built_models_pass_karnis_own_checks(copy: Path) -> None:
+    """Code karni build writes must not trip W965 or W967: their hints name its own files."""
+    karni = (copy / "classes" / "karni" / "models.py").read_text()
+    # Session is audited and holds money, Booking is audited: their fks are PROTECT.
+    session = karni[karni.index("class Session(") : karni.index("class Booking(")]
+    assert 'studio = models.ForeignKey("Studio", on_delete=models.PROTECT)' in session
+    assert "on_delete=models.CASCADE" not in karni
+    # Studio's search gets the SearchField the default search provider uses.
+    studio = karni[karni.index("class Studio(") : karni.index("class Session(")]
+    assert '    search = SearchField(sources=["name"])\n' in studio
+    checked = subprocess.run(
+        [sys.executable, "manage.py", "check"],
+        cwd=copy,
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "PYTHONPATH": str(copy)},
+    )
+    assert checked.returncode == 0, checked.stdout + checked.stderr
+    report = checked.stdout + checked.stderr
+    assert "karni.W965" not in report and "karni.W967" not in report, report
+    # the export reads both back as the spec's own: no drift, nothing left out
+    plan = CliRunner().invoke(app, ["plan", "--offline"])
+    assert plan.output == "No changes: the project matches karni.yaml.\n"
+
+
 # changes --------------------------------------------------------------------------
 
 

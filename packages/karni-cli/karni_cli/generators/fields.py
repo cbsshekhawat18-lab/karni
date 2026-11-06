@@ -155,6 +155,47 @@ _SIMPLE = {
     "datetime": "DateTimeField",
 }
 _USER_NAMES = frozenset({"user", "auth.user", "settings.auth_user_model"})
+
+#: karni.fields.checks.MONEY_WORDS and FINANCIAL_MODEL_WORDS, mirrored (the CLI runs
+#: without karni; a test keeps them equal): what makes karni.W965 treat a model as financial.
+MONEY_WORDS = frozenset(
+    {
+        *("price", "prices", "amount", "amounts", "total", "totals", "subtotal", "cost"),
+        "costs",
+        "fee",
+        *("fees", "tax", "taxes", "balance", "salary", "wage", "wages", "revenue", "budget"),
+        *("charge", "payment", "refund", "payout", "fare", "money", "deposit", "discount"),
+    }
+)
+FINANCIAL_MODEL_WORDS = frozenset(
+    {
+        *("payment", "invoice", "refund", "payout", "charge", "transaction", "ledger"),
+        *("receipt", "settlement", "wallet", "transfer", "credit", "debit"),
+    }
+)
+_NAME_PARTS = re.compile(r"[_\W]+|(?<=[a-z0-9])(?=[A-Z])")
+
+
+def _name_parts(name: str) -> set[str]:
+    return {part.lower() for part in _NAME_PARTS.split(name) if part}
+
+
+def is_financial(model: str, specs: list[FieldSpec]) -> bool:
+    """Whether karni.W965 treats ``model`` with these fields as financial.
+
+    As :func:`karni.fields.checks.is_financial`: a money field, a decimal or
+    percent field named like money (``unit_price``), or a model named like a
+    payment (``Invoice``, ``LedgerEntry``).
+    """
+    if _name_parts(model) & FINANCIAL_MODEL_WORDS:
+        return True
+    return any(
+        spec.kind == "money"
+        or (spec.kind in ("decimal", "percent") and bool(_name_parts(spec.name) & MONEY_WORDS))
+        for spec in specs
+    )
+
+
 _CHOICE_VALUE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 
 
@@ -297,11 +338,15 @@ def render_model_body(
     app_label: str,
     resolve: dict[str, RelationTarget],
     line_length: int,
+    protect: bool = False,
 ) -> Rendered:
     """Field lines (indented four spaces) for ``model`` in ``app_label``.
 
     :param resolve: relation target per field name (``spec.args[0]`` resolved
         by the caller, which can see the project's models).
+    :param protect: a required fk or o2o is ``on_delete=models.PROTECT``
+        instead of ``CASCADE`` (``karni build`` for an audited or financial
+        entity, as ``karni.W965`` asks).
     """
     out = Rendered()
     targets = [resolve[s.name].key for s in specs if s.is_relation]
@@ -315,6 +360,7 @@ def render_model_body(
             resolve=resolve,
             line_length=line_length,
             targets=targets,
+            protect=protect,
         )
     if out.lines:
         out.imports.append(Import("django.db", "models"))
@@ -331,6 +377,7 @@ def render_field(
     resolve: dict[str, RelationTarget],
     line_length: int,
     targets: list[str],
+    protect: bool = False,
 ) -> None:
     """Append one field's line (and its inner class, imports and notes) to ``out``.
 
@@ -403,7 +450,7 @@ def render_field(
             if spec.optional:
                 args += ["on_delete=models.SET_NULL", "null=True", "blank=True"]
             else:
-                args.append("on_delete=models.CASCADE")
+                args.append("on_delete=models.PROTECT" if protect else "on_delete=models.CASCADE")
         else:
             if target.key == "self":
                 # A hand-picked list of its own kind goes one way: a course that lists

@@ -8085,7 +8085,7 @@
           {
             "field": "company",
             "key": "id",
-            "label": "Persons",
+            "label": "People",
             "name": "person_set",
             "param": "company",
             "resource": "persons"

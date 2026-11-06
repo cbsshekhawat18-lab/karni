@@ -80,6 +80,24 @@ def test_the_search_provider_matches_through_the_search_field_index() -> None:
     assert "fieldsapp_p_search_335b55_gin" in _plan(sql, list(params))
 
 
+def test_a_code_and_typed_operators_search_through_the_search_field() -> None:
+    """A word is parsed as the column was: MT-0001 finds that row only, and & | ! are text."""
+    raw_insert("fieldsapp_product", product_row(name="Trial MT-0001", description="first"))
+    raw_insert("fieldsapp_product", product_row(name="Trial MT-0010", description="tenth"))
+    raw_insert("fieldsapp_product", product_row(name="O'Brien chair", description="oak"))
+    provider = PostgresSearchProvider()
+
+    def names(query: str) -> list[str]:
+        found = provider.search(queryset=Product.objects.all(), query=query, fields=["search"])
+        return sorted(p.name for p in found)
+
+    assert names("MT-0001") == ["Trial MT-0001"]
+    assert names("mt-00") == ["Trial MT-0001", "Trial MT-0010"]
+    assert names("o'brien oak") == ["O'Brien chair"]
+    assert names("chair & !oak | x:*") == []  # no tsquery syntax error: the operators are text
+    assert names("-- ::") == []
+
+
 def test_queried_json_uses_its_gin_index() -> None:
     plan = _plan("""SELECT id FROM fieldsapp_product WHERE meta @> '{"colour": "red"}'""")
     assert "fieldsapp_p_meta_db0891_gin" in plan

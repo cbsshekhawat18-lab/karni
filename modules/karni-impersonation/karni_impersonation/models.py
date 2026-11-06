@@ -33,7 +33,9 @@ class ImpersonationSession(BaseModel):
     started_at = models.DateTimeField(default=timezone.now, db_index=True)
     expires_at = models.DateTimeField(db_index=True)
     ended_at = models.DateTimeField(null=True, blank=True)
-    end_reason = models.CharField(max_length=10, choices=EndReason.choices, blank=True, default="")
+    end_reason = models.CharField(
+        max_length=10, choices=EndReason.choices, blank=True, default="", db_index=True
+    )
     ip = models.CharField(max_length=64, blank=True, default="")
     user_agent = models.CharField(max_length=255, blank=True, default="")
     batch_id = models.BigIntegerField(null=True, blank=True)

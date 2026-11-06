@@ -9,6 +9,10 @@ cannot give alone:
   ``RenameModel`` and ``RenameField`` operations, so a renamed table or
   column keeps its rows, also when its type changes in the same build.
   Django's own detection asks about a rename only when nothing else changed.
+  A generated column that reads a renamed field (the ``SearchField`` karni
+  build writes for ``search``) is dropped before the rename: makemigrations
+  then adds it back over the new name, since a generated column cannot
+  follow a rename of its source.
 * **A required field added to an empty table.** Django asks for a one-off
   value to fill the rows of a new column that cannot be empty. A table
   without rows has nothing to fill, so the column is added without one. A
@@ -28,7 +32,7 @@ from typing import Any
 from django.apps import apps
 from django.core.management.base import CommandParser
 from django.core.management.commands import makemigrations as django_makemigrations
-from django.db import DatabaseError, migrations, router
+from django.db import DatabaseError, migrations, models, router
 from django.db.migrations.autodetector import MigrationAutodetector
 from django.db.migrations.loader import MigrationLoader
 from django.db.migrations.questioner import NonInteractiveMigrationQuestioner
@@ -65,13 +69,44 @@ def _empty(model: Any) -> bool:
         return False
 
 
+def _reads(expression: Any, name: str) -> bool:
+    """Whether ``expression`` refers to the field ``name`` (``F("name")`` or a path from it)."""
+    for node in expression.flatten():
+        found = getattr(node, "name", None)
+        if isinstance(node, models.F) and (found == name or str(found).startswith(f"{name}__")):
+            return True
+    return False
+
+
+def _generated_reading(state: Any, app_label: str, model: str, field_name: str) -> list[str]:
+    """The generated fields of ``model`` in ``state`` whose expression reads ``field_name``."""
+    model_state = state.models.get((app_label, model.lower()))
+    if model_state is None:
+        return []
+    return [
+        name
+        for name, field in model_state.fields.items()
+        if isinstance(field, models.GeneratedField) and _reads(field.expression, field_name)
+    ]
+
+
 def write_renames(renames: dict[str, Any]) -> list[str]:
     """Experimental. Write the rename migrations ``renames`` asks for; returns their paths."""
     loader = MigrationLoader(None, ignore_no_migrations=True)
+    state = loader.project_state()
+    was = {(app, str(new)): str(old) for app, old, new in renames.get("models") or []}
     by_app: dict[str, list[Any]] = {}
     for app_label, old, new in renames.get("models") or []:
         by_app.setdefault(app_label, []).append(migrations.RenameModel(old, new))
+    dropped: set[tuple[str, str, str]] = set()
     for app_label, model, old, new in renames.get("fields") or []:
+        before = was.get((app_label, str(model)), str(model))
+        for generated in _generated_reading(state, app_label, before, old):
+            if (app_label, str(model), generated) not in dropped:
+                dropped.add((app_label, str(model), generated))
+                by_app.setdefault(app_label, []).append(
+                    migrations.RemoveField(str(model).lower(), generated)
+                )
         by_app.setdefault(app_label, []).append(
             migrations.RenameField(str(model).lower(), old, new)
         )

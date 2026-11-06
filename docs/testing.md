@@ -131,7 +131,9 @@ accepts it. The body goes as multipart, and every request that carries it
 (the create, the PUT and the denial checks) gets a fresh upload. The stored
 file must not be empty, after the create and after the update. Optional file
 fields are left out of the body. Without Pillow an image upload fails with
-`E501`, which names `pip install 'karni[images]'`.
+`E501`, which names `pip install 'karni[images]'`. In a multipart body an
+object (a range, a JSON value) goes as JSON text and a list as repeated keys,
+as @karni/ui sends a form with a file.
 
 To send a file of your own, put it in `payload=`. It is rewound before each
 request, so one object serves all of them:
@@ -149,6 +151,19 @@ report lists `no write exercised` in `skipped`, and `assert_crud` emits a
 role that may write, as the example above does with `"organizer"`. When the
 refusals are the point of the test, pin them with `expect={"create": 403,
 ...}` and the warning stays quiet.
+
+### A required relation the role cannot reference
+
+A relation accepts only rows the requester may read through the target's
+viewset. When a required relation (a foreign key, or a many-to-many without
+`blank=True`) points at a model the role reads none of, such as an `Event`
+that needs `tags` while only staff read tags, no create body can be valid.
+The run then does not send the create or the PUT. It lists `create: not
+exercised` and `update: PUT ...: not exercised` in `skipped`, each naming the
+field, the target's viewset and its access, and warns (`UserWarning`). The
+ways on: let the role read the target, make the field optional (`blank=True`,
+or `tags:m2m:Tag?` in `karni make model`), pass the related rows in
+`payload=`, or run as a role that may reference them.
 
 ### A read-only resource
 
@@ -562,6 +577,7 @@ after adding a module at runtime.
 | `EmailField` / `URLField` / `GenericIPAddressField` | `user<n>@example.com` / `https://example.com/<n>` / `10.x.y.z` |
 | integer / float / decimal | a sequence inside the type's range, the field's `Min`/`MaxValueValidator`s and `max_digits` |
 | date / datetime / time / duration | today / now / now / `n` minutes |
+| `DateRangeField` / `DateTimeRangeField` | one to three days, or 30 to 90 minutes, ahead of now, in a slot of its own per row, so rows never overlap (`no_overlap` holds) |
 | UUID / JSON / binary / file / image | `uuid4()` / `{"n": n}` / `b""` / a small file |
 | `null=True, blank=True` (non-relation) | `None` (`null=True` alone: a value) |
 | `ForeignKey` / `OneToOneField` | a new row from the target's factory. A nullable FK stays `None` on a cycle or deeper than `FactoryBuilder.max_depth` (3) |

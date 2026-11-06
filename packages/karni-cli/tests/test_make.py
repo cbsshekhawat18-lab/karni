@@ -185,6 +185,36 @@ def test_app_name_rules(project: Path) -> None:
     fails("make", "app", "karni_x", match="karni make module")
 
 
+def test_every_generator_refuses_a_name_of_the_wrong_form_with_a_valid_example(
+    project: Path,
+) -> None:
+    """One name check: C103, nothing written, and the example given is itself accepted."""
+
+    def example(message: str) -> str:
+        return message.split("write '", 1)[1].split("'", 1)[0] if "write '" in message else ""
+
+    message = fails("make", "app", "9x", match="C103")
+    assert "9_x" not in message and "starting with a letter" in message
+    assert "e.g. 'my_name'" in message
+    assert example(fails("make", "app", "Events", match="C103")) == "events"
+    ok("make", "app", "events")
+    message = fails("make", "model", "bad", "name:str", match="C103")
+    assert "must be PascalCase" in message and example(message) == "Bad"
+    assert "class Bad" not in (project / "events" / "models.py").read_text()
+    assert example(fails("make", "model", "event_type", "name:str", match="C103")) == "EventType"
+    fails("make", "model", "None", "name:str", match="(a Python keyword)")
+    fails("make", "model", "9x", "name:str", match="e.g. 'Event' or 'EventType'")
+    ok("make", "model", "Event", "title:str", "--with", "viewset")
+    fails("make", "test", "event", match="write 'Event'")  # an existing model, named as declared
+    fails("make", "page", "9x", match="e.g. 'my-page'")
+    assert example(fails("make", "page", "Speakers", match="C103")) == "speakers"
+    fails("make", "task", "Send", match="write 'send'")
+    from karni_cli.generators.naming import is_kebab, is_pascal, is_snake
+
+    for check, name in ((is_snake, "events"), (is_pascal, "EventType"), (is_kebab, "my-page")):
+        assert check(name)
+
+
 # model / viewset / serializer
 
 
@@ -557,9 +587,9 @@ def test_test_generator_follows_the_viewset(project: Path) -> None:
     assert "as any signed-in user + owner isolation" in result.output
     assert "run: karni test events/tests/test_event.py" in result.output
     fails("make", "test", "Event", match="--force")
-    ok("make", "test", "Event", "--role", "organizer", "--force")
+    ok("make", "test", "Event", "--role", "customer", "--force")
     assert (
-        'self.assert_crud(EventViewSet, "organizer")'
+        'self.assert_crud(EventViewSet, "customer")'
         in (project / "events" / "tests" / "test_event.py").read_text()
     )
 
@@ -586,6 +616,62 @@ def test_test_generator_picks_a_granted_role(project: Path) -> None:
     assert '        self.assert_crud(EventViewSet, "ops")\n' in text
     assert "assert_isolated" not in text  # an `all` grant partitions nothing
     assert "as role 'ops'" in result.output and "isolation" not in result.output
+
+
+def test_a_granted_model_without_an_owner_is_tested_as_a_role_that_reaches_it(
+    project: Path,
+) -> None:
+    """The shipped 'user' grant is '*': 'own', which skips a model with no owner field."""
+    ok("make", "app", "events")
+    models = project / "events" / "models.py"
+    models.write_text(
+        models.read_text()
+        + "\n\nclass Sale(models.Model):\n    sku = models.CharField(max_length=40)\n\n"
+        "    def __str__(self) -> str:\n        return self.sku\n"
+        "\n\nclass Visit(models.Model):\n    note = models.CharField(max_length=40)\n"
+        '    owner = models.ForeignKey("karni_accounts.User", on_delete=models.CASCADE)\n\n'
+        '    class Karni:\n        owner_field = "owner"\n'
+    )
+    if "from django.db import models" not in models.read_text():
+        models.write_text("from django.db import models\n" + models.read_text())
+    ok("make", "viewset", "Sale")
+    result = ok("make", "test", "Sale")
+    text = (project / "events" / "tests" / "test_sale.py").read_text()
+    assert '        self.assert_crud(SaleViewSet, "staff")\n' in text  # 'all' reaches every row
+    assert "assert_isolated(" not in text and "as role 'staff'" in result.output
+    ok("make", "viewset", "Visit")
+    ok("make", "test", "Visit")
+    text = (project / "events" / "tests" / "test_visit.py").read_text()
+    assert '        self.assert_crud(VisitViewSet, "user")\n' in text  # owner_field: 'own' fits
+    assert '        self.assert_isolated(VisitViewSet, "user")\n' in text
+    settings = project / "config" / "settings.py"
+    settings.write_text(
+        settings.read_text()
+        + '\nKARNI_ROLES = {"clerk": {"grants": {"events.*": "related:branch"}},'
+        ' "ops": {"grants": {"*": "all"}}}\n'
+    )
+    ok("make", "test", "Visit", "--force")  # no scope path 'branch': clerk holds nothing
+    text = (project / "events" / "tests" / "test_visit.py").read_text()
+    assert '        self.assert_crud(VisitViewSet, "ops")\n' in text
+
+
+def test_make_test_refuses_a_role_the_project_does_not_declare(project: Path) -> None:
+    ok("make", "app", "events")
+    ok("make", "model", "Venue", "name:str", "--with", "viewset", "--access", "staff")
+    message = fails("make", "test", "Venue", "--role", "editor", match="C830")
+    assert "declared: customer, staff, user" in message
+    assert not (project / "events" / "tests" / "test_venue.py").exists()
+    settings = project / "config" / "settings.py"
+    original = settings.read_text()
+    # an added module's role counts (karni-site declares 'editor')
+    settings.write_text(
+        original.replace("]  # karni:apps", '    "karni_site",\n]  # karni:apps', 1)
+    )
+    ok("make", "test", "Venue", "--role", "editor")
+    settings.write_text(original + '\nKARNI_ROLES = {"editor": {"grants": {"*": "all"}}}\n')
+    fails("make", "test", "Venue", "--role", "staff", "--force", match="declared: editor")
+    settings.write_text(original + "\nKARNI_ROLES = build_roles()\n")  # computed: not checked
+    ok("make", "test", "Venue", "--role", "anyone", "--force")
 
 
 def test_test_generator_takes_the_declared_role(project: Path) -> None:
@@ -1111,6 +1197,42 @@ def test_a_detail_page_takes_related_tabs(project: Path) -> None:
         "make", "page", "c", "--resource", "companies", "--kind", "detail", "--related", "Deal",
         match="resource.field for a related tab",
     )  # fmt: skip
+
+
+def test_a_related_tab_needs_a_fk_as_spec_validate_says(project: Path) -> None:
+    """A tab no fk backs is refused (C561, C562, C563), not left for spec validate to find."""
+    ok("make", "app", "events")
+    ok("make", "model", "Speaker", "name:str", "--with", "viewset")
+    ok("make", "model", "Event", "title:str", "--with", "viewset")
+    ok("make", "model", "Talk", "title:str", "speaker:fk:Speaker", "cohost:fk:Speaker?",
+       "--with", "viewset")  # fmt: skip
+    ok("make", "model", "Panel", "title:str", "speakers:m2m:Speaker", "--with", "viewset")
+    detail = ("make", "page", "speaker-detail", "--resource", "speakers", "--kind", "detail")
+    message = fails(*detail, "--related", "events", match="C561")
+    assert "Event has no fk to Speaker (events/models.py)" in message
+    assert "Add a fk:Speaker field to Event, or drop the tab." in message
+    fails(*detail, "--related", "panels", match="Panel has no fk to Speaker (speakers: m2m)")
+    fails(*detail, "--related", "talks", match="Write talks.speaker or talks.cohost")
+    fails(*detail, "--related", "talks.title", match="Name a fk of Talk to Speaker: talks.speaker")
+    fails(*detail, "--related", "talks.speaker", "--related", "talks.speaker", match="C563")
+    assert not (project / "frontend" / "src" / "pages" / "speaker-detail.tsx").exists()
+    out = ok(*detail, "--related", "talks.speaker", "--related", "talks.cohost",
+             "--related", "rooms")  # fmt: skip
+    assert "routes /api/rooms/, so the related tab 'rooms' is not checked" in out.output
+    page = (project / "frontend" / "src" / "pages" / "speaker-detail.tsx").read_text()
+    assert 'related={["talks.speaker", "talks.cohost", "rooms"]}' in page
+
+
+def test_generated_site_pages_start_with_the_placeholder_karni_site_reports() -> None:
+    """karni check --seo asks for each page's description instead of failing on a duplicate."""
+    from karni_cli.generators.site import PLACEHOLDER_DESCRIPTION
+
+    from .conftest import require_modules
+
+    require_modules("karni-site")
+    from karni_site.checks_seo import PLACEHOLDER_DESCRIPTION as REPORTED
+
+    assert PLACEHOLDER_DESCRIPTION == REPORTED
 
 
 def test_a_dashboard_page_counts_the_routed_resources(project: Path) -> None:

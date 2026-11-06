@@ -72,6 +72,8 @@ class PendingChange(BaseModel):
         indexes: ClassVar[list[models.Index]] = [
             models.Index(fields=["status", "content_type"]),
             models.Index(fields=["content_type", "object_id"]),
+            # PendingChangeViewSet filters by it (?action=), karni.W967.
+            models.Index(fields=["action"], name="karni_approvals_by_action"),
         ]
         verbose_name = "pending change"
 

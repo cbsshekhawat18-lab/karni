@@ -53,7 +53,10 @@ multipart with a fresh file per request. The stored file must not be empty.
 
 When the declaration refuses every write to the requester, the run checks
 the refusals only, lists ``no write exercised`` in the report's ``skipped``
-and warns (``UserWarning``), so a suite that never writes is visible.
+and warns (``UserWarning``), so a suite that never writes is visible. When a
+required relation points at a model the requester may reference no row of,
+no create body can be valid: the create and the PUT are not sent, and the
+report's ``skipped`` and a warning name the field and the target's access.
 
 **Read-only resources** (experimental). ``read_only=True`` checks a resource
 that only reads: ``list`` and ``retrieve`` as above, and ``POST``, ``PATCH``,
@@ -77,6 +80,7 @@ from __future__ import annotations
 import datetime as dt
 import functools
 import io
+import json
 import uuid
 import warnings
 from collections.abc import Iterable, Iterator, Mapping
@@ -88,6 +92,7 @@ from typing import Any, Final
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import FieldDoesNotExist
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
 from rest_framework import serializers
@@ -529,11 +534,81 @@ class Payload:
     scalars: list[str] = field(default_factory=list)
     #: File and image fields sent as uploads, whose stored file must not be empty.
     files: list[str] = field(default_factory=list)
+    #: Required relations with no row the requester may reference: field name -> why.
+    unreachable: dict[str, str] = field(default_factory=dict)
 
     @property
     def format(self) -> str:
         """The test client format that carries this body."""
         return "multipart" if self.multipart else "json"
+
+    @property
+    def request_data(self) -> dict[str, Any]:
+        """:attr:`data` as the request carries it.
+
+        A multipart body is encoded the way @karni/ui encodes one (contract
+        D2): an object (a range, a JSON value) is sent as JSON text, a list as
+        repeated keys, and ``None`` is left out.
+        """
+        if not self.multipart:
+            return self.data
+        encoded: dict[str, Any] = {}
+        for name, value in self.data.items():
+            if value is None:
+                continue
+            if isinstance(value, list | tuple):
+                encoded[name] = [_form_value(item) for item in value if item is not None]
+            else:
+                encoded[name] = _form_value(value)
+        return encoded
+
+
+def _form_value(value: Any) -> Any:
+    """One multipart value: an object becomes JSON text, anything else is kept."""
+    if isinstance(value, Mapping | list | tuple):
+        return json.dumps(value, cls=DjangoJSONEncoder)
+    return value
+
+
+def _referenceable(serializer_field: Any, row: Any) -> bool:
+    """True when the relation ``serializer_field`` accepts ``row``'s primary key.
+
+    Karni's relation fields accept only rows the requester may read through
+    the target's routed viewset (:class:`karni.api.serializers.
+    KarniPrimaryKeyRelatedField`), so a row the test made can still be one the
+    requester cannot reference.
+    """
+    relation = serializer_field
+    if isinstance(serializer_field, ManyRelatedField):
+        relation = serializer_field.child_relation
+    get_queryset = getattr(relation, "get_queryset", None)
+    if get_queryset is None:
+        return True
+    try:
+        queryset = get_queryset()
+    except Exception:  # noqa: BLE001 - a custom relation; let the request decide
+        return True
+    if queryset is None:
+        return True
+    return bool(queryset.filter(pk=row.pk).exists())
+
+
+def _unreachable_reason(model: type[models.Model], name: str, target: Any, user: Any) -> str:
+    """Why ``model.name`` cannot be sent, and the ways on."""
+    from karni.api.routers import viewset_for_model
+
+    viewset = viewset_for_model(target)
+    where = (
+        f"{viewset.__name__} (access={getattr(viewset, 'access', None)!r})"
+        if viewset is not None
+        else f"{target.__name__}'s read scope"
+    )
+    return (
+        f"{model.__name__}.{name} needs a {target.__name__} the requester may reference, and "
+        f"{where} lets them read none. Let this role read {target.__name__}, make "
+        f"{name} optional (blank=True, or {name}:<type>? in karni make model), or pass "
+        f"payload={{{name!r}: ...}} or user= a requester who may"
+    )
 
 
 def build_payload(
@@ -547,7 +622,9 @@ def build_payload(
 
     Scalars come from an unsaved factory row (so names and types decide the
     values, uniques stay unique); a required relation gets a new row the
-    user can read. Optional relations and to-many fields are left out. A
+    user can read, and when the user may reference no row of its model the
+    field is named in :attr:`Payload.unreachable` (the write cannot succeed
+    as this user). Optional relations and to-many fields are left out. A
     required image gets :func:`image_upload`, any other required file
     :func:`file_upload`, and the body is multipart as soon as it holds an
     upload (one from ``payload=`` too). Every call makes new uploads, so no
@@ -569,6 +646,8 @@ def build_payload(
             if target is None:
                 continue
             related = readable_row(target, user)
+            if not _referenceable(serializer_field, related):
+                body.unreachable[name] = _unreachable_reason(resource.model, name, target, user)
             pk = _json_value(related.pk)
             body.data[name] = [pk] if isinstance(serializer_field, ManyRelatedField) else pk
             continue
@@ -590,6 +669,8 @@ def build_payload(
             continue
         body.scalars.append(name)
     body.data.update(payload or {})
+    for name in payload or {}:
+        body.unreachable.pop(name, None)
     body.multipart = any(_is_upload(value) for value in body.data.values())
     file_fields = {
         name
@@ -691,6 +772,8 @@ class _Crud:
         self.report = CrudReport(resource.name, role)
         self.schema_errors: list[str] = []
         self.documented: dict[str, Any] = {}
+        #: Checks that sent nothing (:meth:`not_exercised`), so they are not listed as passed.
+        self.unexercised: set[str] = set()
 
     # plumbing
 
@@ -907,7 +990,7 @@ class _Crud:
                 except _RequestError as exc:
                     self.fail(str(exc))
                     break  # the transaction may be unusable after an exception
-                if len(self.report.failures) == before:
+                if len(self.report.failures) == before and name not in self.unexercised:
                     self.report.passed.append(name)
         return self.report
 
@@ -941,13 +1024,26 @@ class _Crud:
         if str(body.get("id", body.get("pk"))) != str(row.pk):
             self.fail(f"retrieve: GET {url} returned another row ({body.get('id')})")
 
+    def not_exercised(self, check: str, sent: Payload) -> None:
+        """List (and later warn) a write no body can make as the requester."""
+        reasons = "; ".join(sent.unreachable.values())
+        message = f"{check}: not exercised as {self.who()}: {reasons}."
+        self.report.skipped.append(message)
+        self.report.warnings.append(f"assert_crud({self.resource.name}) {message}")
+
     def check_create(self) -> None:
         expected = self.expected("create", self.user)
         sent = build_payload(self.resource, self.user, values=self.values, payload=self.payload)
+        if expected.allowed and sent.unreachable:
+            self.not_exercised("create", sent)
+            self.unexercised.add("create")
+            return
         url = self.resource.list_url()
         manager = self.resource.model._default_manager
         before = manager.count()
-        response = self.call("create", self.user, "POST", url, sent.data, format=sent.format)
+        response = self.call(
+            "create", self.user, "POST", url, sent.request_data, format=sent.format
+        )
         if not self.status("create", response, expected, f"POST {url}"):
             return
         if not expected.allowed:
@@ -995,7 +1091,12 @@ class _Crud:
         if change:
             self.matches(Payload(patch, scalars=[change]), response, self.stored(row), "update")
         expected_put = self.expected("update", self.user, row)
-        response = self.call("update", self.user, "PUT", url, fresh.data, format=fresh.format)
+        if expected_put.allowed and fresh.unreachable:
+            self.not_exercised(f"update: PUT {url}", fresh)
+            return
+        response = self.call(
+            "update", self.user, "PUT", url, fresh.request_data, format=fresh.format
+        )
         if self.status("update", response, expected_put, f"PUT {url}") and expected_put.allowed:
             self.contract("PUT", url, response)
             uploads = Payload(fresh.data, files=fresh.files)  # the scalars were checked by PATCH
@@ -1046,7 +1147,7 @@ class _Crud:
         manager = self.resource.model._default_manager
         try:
             sent = build_payload(self.resource, self.user, values=self.values, payload=self.payload)
-            data, fmt = sent.data, sent.format
+            data, fmt = sent.request_data, sent.format
         except Exception:  # noqa: BLE001 - any body will do, the method is what is refused
             data, fmt = dict(self.payload), "json"
         before = manager.count()
@@ -1098,7 +1199,7 @@ class _Crud:
                     body = build_payload(
                         self.resource, self.user, values=self.values, payload=self.payload
                     )
-                    data, fmt = body.data, body.format
+                    data, fmt = body.request_data, body.format
                 before = manager.count()
                 response = self.call("denials", user, method, url, data, format=fmt)
                 self.status("denials", response, expected, f"{method} {url} as {who}")

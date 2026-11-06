@@ -76,7 +76,9 @@ class GeneratedReport(BaseModel):
             models.Index(
                 fields=["report", "content_type", "object_id", "-requested_at"],
                 name="karni_reports_by_row",
-            )
+            ),
+            # GeneratedReportViewSet filters by it (?status=), karni.W967.
+            models.Index(fields=["status"], name="karni_reports_by_status"),
         ]
 
     def __str__(self) -> str:

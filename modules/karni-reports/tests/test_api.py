@@ -164,3 +164,14 @@ def test_requests_are_throttled_per_caller(
     assert codes[:2] != [429, 429] and codes[2] == 429
     assert client.get(_paths(product)[1]).status_code == 200  # another scope
     cache.clear()
+
+
+def test_the_module_indexes_what_its_viewsets_filter_by() -> None:
+    """karni.W967 on the module's own models would point a project at a model it cannot edit."""
+    from karni.fields.checks import check_usage_indexes
+
+    assert [
+        message.msg
+        for message in check_usage_indexes()
+        if message.obj._meta.app_label == "karni_reports"
+    ] == []

@@ -48,6 +48,7 @@ from karni_cli.generators.core import SETTINGS, App, Workspace, local_apps
 from karni_cli.generators.fields import (
     FieldSpec,
     RelationTarget,
+    is_financial,
     is_user_target,
     parse_fields,
     relation_name,
@@ -250,11 +251,28 @@ def _flat(value: Any) -> str:
 def _model_class(
     spec: schema.Spec, app: str, name: str, entity: schema.Entity, pk: str, line: int
 ) -> tuple[list[str], list[Import], list[str]]:
-    """``(lines, imports, notes)`` of the abstract class of one entity."""
+    """``(lines, imports, notes)`` of the abstract class of one entity.
+
+    What Karni's checks ask of it is written too: a required fk of an audited
+    or financial entity is ``PROTECT`` (karni.W965), and the fields ``search``
+    names get a ``SearchField`` (karni.W967) when they are all its own.
+    """
     specs = _specs(entity)
     body = render_model_body(
-        specs, model=name, app_label=app, resolve=_targets(spec, app, name, specs), line_length=line
+        specs,
+        model=name,
+        app_label=app,
+        resolve=_targets(spec, app, name, specs),
+        line_length=line,
+        protect=protects(name, entity, specs),
     )
+    searched_by = search_document(entity, specs)
+    if searched_by is not None:
+        sources = ", ".join(pystr(source) for source in entity.search)
+        body.lines.append(
+            call(f"{searched_by} = SearchField", [f"sources=[{sources}]"], "    ", line)
+        )
+        body.imports.append(Import("karni.fields", "SearchField"))
     bases, karni_names, meta_base = _base(entity, pk)
     imports = [*body.imports, *(Import("karni.models", n) for n in karni_names)]
     if entity.external:
@@ -312,6 +330,30 @@ def _model_class(
     if shown is not None:
         lines += ["", "    def __str__(self) -> str:", f"        return self.{shown}"]
     return lines, imports, body.notes
+
+
+def protects(name: str, entity: schema.Entity, specs: list[FieldSpec]) -> bool:
+    """Whether the entity's required fks are ``PROTECT``: it is audited or financial (W965)."""
+    return bool(entity.audit) or is_financial(name, specs)
+
+
+#: The name of the SearchField ``karni build`` writes for ``search`` (``search_document`` when
+#: the entity has a field of that name).
+SEARCH_DOCUMENT = "search"
+
+
+def search_document(entity: schema.Entity, specs: list[FieldSpec]) -> str | None:
+    """The SearchField's name for the entity's ``search``, or ``None`` when it gets none.
+
+    Every name ``search`` lists must be a field of the entity that is not a
+    relation: a traversal (``maker__email``) is not a column of its table.
+    """
+    own = {spec.name: spec for spec in specs}
+    if not entity.search or entity.external:
+        return None
+    if any(name not in own or own[name].is_relation for name in entity.search):
+        return None
+    return SEARCH_DOCUMENT if SEARCH_DOCUMENT not in own else "search_document"
 
 
 def _search_option(entity: schema.Entity) -> dict[str, Any] | None:
@@ -461,8 +503,16 @@ def _test_file(ws: Workspace, inputs: Inputs, app: str, name: str, api_text: str
     own = _project_class(ws, f"{app}/viewsets.py", f"{name}ViewSet")
     if own is not None and any(_assigns(stmt, "access") for stmt in own.body):
         cls = own  # access: code, or the project's own declaration: the test reads the project's
+    entity = inputs.spec.apps[app].entities[name]
+    options = {"owner_field": entity.owner, "scope_paths": dict(entity.scope_paths or {})}
     info = ModelInfo(
-        App(app, app, ws.path(app)), name, ws.path(f"{app}/models.py"), {}, frozenset()
+        App(app, app, ws.path(app)),
+        name,
+        ws.path(f"{app}/models.py"),
+        {},
+        # what an own or related grant reaches: the base's created_by, the spec's owner and paths
+        frozenset({"Model"} if entity.external else {"BaseModel"}),
+        {key: value for key, value in options.items() if value},
     )
     choice = test_gen.choose(ws, info, cls, None)
     text = test_gen.render(

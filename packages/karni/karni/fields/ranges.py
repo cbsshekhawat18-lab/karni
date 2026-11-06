@@ -17,6 +17,11 @@ a ``DateTimeRangeField`` (``tstzrange``), which is what booking needs.
 They need PostgreSQL and psycopg: importing them without psycopg raises
 ``E501`` naming the package to install. SQLite cannot store range values.
 
+Factories and ``karni seed`` fill them through :meth:`karni_sample`: a short
+range ahead of "now", one slot per row, so rows never overlap and a
+``no_overlap`` model seeds without a clash (an explicit factory or seeder
+declaration still wins).
+
 Override / escape hatch: use ``django.contrib.postgres.fields`` directly;
 ``no_overlap`` also accepts a pair of plain fields (``("starts_at",
 "ends_at")``), which works on any database.
@@ -24,6 +29,7 @@ Override / escape hatch: use ``django.contrib.postgres.fields`` directly;
 
 from __future__ import annotations
 
+import datetime as dt
 from typing import Any
 
 from django.core.exceptions import ValidationError
@@ -44,6 +50,9 @@ __all__ = ["DateRangeField", "DateTimeRangeField", "RangeOperators"]
 
 RangeOperators = _pg.RangeOperators
 
+#: Sample slots before the sequence wraps: 10,000 rows of disjoint ranges.
+_SLOTS = 10_000
+
 
 def _ordered(value: Any) -> None:
     """A range whose lower bound is after its upper bound is invalid."""
@@ -62,6 +71,12 @@ class DateRangeField(_pg.DateRangeField):  # type: ignore[misc]
 
     default_validators = [_ordered]
 
+    def karni_sample(self, ctx: Any) -> Any:
+        """One to three days in a four-day slot per row, starting tomorrow (``[)``)."""
+        start = ctx.now.date() + dt.timedelta(days=1 + 4 * (ctx.n % _SLOTS))
+        start += dt.timedelta(days=ctx.random.randint(0, 1))
+        return self.range_type(start, start + dt.timedelta(days=ctx.random.randint(1, 3)), "[)")
+
     def deconstruct(self) -> Any:
         name, _path, args, kwargs = super().deconstruct()
         return name, "karni.fields.DateRangeField", args, kwargs
@@ -71,6 +86,14 @@ class DateTimeRangeField(_pg.DateTimeRangeField):  # type: ignore[misc]
     """A ``tstzrange`` column; a ``(lower, upper)`` tuple is read as ``[)`` (``default_bounds``)."""
 
     default_validators = [_ordered]
+
+    def karni_sample(self, ctx: Any) -> Any:
+        """30 to 90 minutes in a two-hour slot per row, from the next full hour (``[)``)."""
+        hour = ctx.now.replace(minute=0, second=0, microsecond=0) + dt.timedelta(hours=1)
+        start = hour + dt.timedelta(hours=2 * (ctx.n % _SLOTS))
+        start += dt.timedelta(minutes=ctx.random.choice((0, 15, 30)))
+        minutes = ctx.random.choice((30, 45, 60, 90))
+        return self.range_type(start, start + dt.timedelta(minutes=minutes), "[)")
 
     def deconstruct(self) -> Any:
         name, _path, args, kwargs = super().deconstruct()

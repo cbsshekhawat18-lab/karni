@@ -1304,7 +1304,7 @@ CODES: Final[tuple[CliCode, ...]] = (
     _c(
         "C561",
         "A related tab names an entity with no fk to this one",
-        "karni spec validate (karni_cli.spec.validate)",
+        "karni spec validate, karni make page --related (karni_cli.spec.validate)",
         "A related tab is a table of the other entity's rows filtered to this record, and the "
         "list of that entity filters by its fk fields. The entity has no fk to the page's "
         "entity, or the field named is not one (a m2m or an o2o cannot back a tab).",
@@ -1313,7 +1313,7 @@ CODES: Final[tuple[CliCode, ...]] = (
     _c(
         "C562",
         "A related tab could be either of two relations",
-        "karni spec validate (karni_cli.spec.validate)",
+        "karni spec validate, karni make page --related (karni_cli.spec.validate)",
         "The entity named has two or more fks to the page's entity (a deal's company and its "
         "partner), so the tab must say which rows it lists.",
         "Write Entity.field, one tab for each relation you want.",
@@ -1321,7 +1321,7 @@ CODES: Final[tuple[CliCode, ...]] = (
     _c(
         "C563",
         "A related tab is listed twice",
-        "karni spec validate (karni_cli.spec.validate)",
+        "karni spec validate, karni make page --related (karni_cli.spec.validate)",
         "Each related tab is one relation. Deal and Deal.company name the same one when Deal has "
         "one fk to the page's entity.",
         "List each related tab once.",
@@ -1451,6 +1451,17 @@ CODES: Final[tuple[CliCode, ...]] = (
         "app into INSTALLED_APPS that Python cannot import, so every Django command would fail.",
         "Check the spelling against `karni modules list`. A third-party module is installed "
         "first (pip install <distribution>), then added.",
+    ),
+    # C830-C839 generator fixes from the 0.5.0 self-test
+    _c(
+        "C830",
+        "karni make test --role names a role the project does not declare",
+        "karni make test (karni_cli.generators.apitest)",
+        "The test acts as a user holding that role. A role KARNI_ROLES and the added modules do "
+        "not declare grants nothing, so every request would be refused and the test would fail "
+        "when it runs.",
+        "Pass one of the declared roles the error lists, or declare the role in KARNI_ROLES "
+        "(config/settings.py) first.",
     ),
 )
 

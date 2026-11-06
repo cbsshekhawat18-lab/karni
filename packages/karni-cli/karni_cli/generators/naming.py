@@ -3,6 +3,10 @@
 ``kebab`` and ``pluralize`` mirror :func:`karni.api.routers.kebab` /
 :func:`karni.api.routers.pluralize` exactly, so a generated page targets the
 route the auto-router actually registers for a model.
+
+The ``require_*`` checks are the one name check of every generator: a name
+of the wrong form is refused with ``C103``, never converted, and the example
+the error gives is itself a valid name.
 """
 
 from __future__ import annotations
@@ -17,6 +21,7 @@ _ES_ENDINGS = ("s", "x", "z", "ch", "sh")
 _WORDS = re.compile(r"[A-Z]+(?=[A-Z][a-z]|\d|\b|_|-)|[A-Z]?[a-z]+|[A-Z]+|\d+")
 _SNAKE = re.compile(r"^[a-z_][a-z0-9_]*$")
 _KEBAB = re.compile(r"^[a-z][a-z0-9-]*$")
+_PASCAL = re.compile(r"^[A-Z][A-Za-z0-9]*$")
 
 
 def words(name: str) -> list[str]:
@@ -160,31 +165,61 @@ def require_identifier(name: str, what: str) -> str:
     return name
 
 
+def is_snake(name: str) -> bool:
+    """A snake_case name that is not a Python keyword (``event_type``)."""
+    return bool(_SNAKE.match(name)) and not keyword.iskeyword(name)
+
+
+def is_kebab(name: str) -> bool:
+    """A kebab-case name (``event-type``)."""
+    return bool(_KEBAB.match(name))
+
+
+def is_pascal(name: str) -> bool:
+    """A PascalCase class name that is not a Python keyword (``EventType``)."""
+    return bool(_PASCAL.match(name)) and not keyword.iskeyword(name)
+
+
+def _example(name: str, suggestion: str, valid: bool, fallback: str) -> str:
+    """``write 'x'`` when converting ``name`` gives a valid name, else a generic example."""
+    if valid and suggestion != name:
+        return f"write {suggestion!r}"
+    return f"e.g. {fallback}"
+
+
 def require_snake(name: str, what: str) -> str:
-    if not _SNAKE.match(name) or keyword.iskeyword(name):
+    if not is_snake(name):
+        suggestion = snake(name)
+        keyword_note = " (a Python keyword)" if keyword.iskeyword(name) else ""
         raise CliError(
-            f"{what} {name!r} must be snake_case (lowercase letters, digits, underscores), "
-            f"e.g. {snake(name) or 'my_name'!r}.",
+            f"{what} {name!r}{keyword_note} must be snake_case: lowercase letters, digits and "
+            "underscores, starting with a letter, and not a Python keyword: "
+            f"{_example(name, suggestion, is_snake(suggestion), repr('my_name'))}.",
             code="C103",
         )
     return name
 
 
 def require_pascal(name: str, what: str) -> str:
-    converted = pascal(name)
-    if not converted or not re.fullmatch(r"[A-Z][A-Za-z0-9]*", converted):
+    if not is_pascal(name):
+        suggestion = pascal(name)
+        example = _example(name, suggestion, is_pascal(suggestion), "'Event' or 'EventType'")
+        keyword_note = " (a Python keyword)" if keyword.iskeyword(name) else ""
         raise CliError(
-            f"{what} {name!r} must be a class name such as 'Event' or 'EventType'.", code="C103"
+            f"{what} {name!r}{keyword_note} must be PascalCase: a class name of letters and "
+            f"digits that starts with a capital letter, and not a Python keyword: {example}.",
+            code="C103",
         )
-    return converted
+    return name
 
 
 def require_kebab(name: str, what: str) -> str:
-    if not _KEBAB.match(name):
-        suggestion = "-".join(words(name)) or "my-page"
+    if not is_kebab(name):
+        suggestion = "-".join(words(name))
         raise CliError(
-            f"{what} {name!r} must be kebab-case (lowercase letters, digits, dashes), "
-            f"e.g. {suggestion!r}.",
+            f"{what} {name!r} must be kebab-case: lowercase letters, digits and dashes, "
+            "starting with a letter: "
+            f"{_example(name, suggestion, is_kebab(suggestion), repr('my-page'))}.",
             code="C103",
         )
     return name
