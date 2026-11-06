@@ -46,5 +46,6 @@ def test_the_middleware_names_the_missing_app_instead_of_a_traceback(
 
     monkeypatch.delitem(sys.modules, "karni_impersonation.middleware")
     settings.INSTALLED_APPS = [a for a in settings.INSTALLED_APPS if a != "karni_impersonation"]
-    with pytest.raises(ImproperlyConfigured, match="IMP007"):
+    with pytest.raises(ImproperlyConfigured, match="IMP007") as caught:
         importlib.import_module("karni_impersonation.middleware")
+    assert str(caught.value).count("IMP007") == 1, caught.value
