@@ -44,7 +44,7 @@ the item it names is done.
 
 | Item | Goal | Depends on | Status |
 |---|---|---|---|
-| A8 | MCP tools, agent rules and a `/new-app` slash command for the whole flow. | A1 to A5 | done |
+| A8 | MCP tools, agent rules and a `/new-app` request in AGENTS.md for the whole flow. | A1 to A5 | done |
 
 ### Phase D: ready-made apps and advice
 

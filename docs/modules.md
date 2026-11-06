@@ -307,8 +307,8 @@ wired by the naming convention alone (`karni-<x>`, `karni_<x>`).
    block it appends once, unless the entry says `manual = true`, in which
    case it prints the entry for you to add. With `wiring.kind = "site"`, an
    app project becomes a site+app.
-4. Records `AGENTS.fragment.md` as `.karni/modules/<x>.md` and refreshes the
-   agent adapters, so `karni rules` and `AGENTS.md` carry the module's
+4. Records `AGENTS.fragment.md` as `.karni/modules/<x>.md` and refreshes
+   AGENTS.md, so `karni rules` and `AGENTS.md` carry the module's
    guidance. It reads the fragment through the project interpreter and
    prints "run again after installing" when the module is not importable yet.
 5. Prints the `wiring.urls` include line, the extras, the services the
