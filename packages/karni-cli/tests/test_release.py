@@ -1,9 +1,9 @@
 """The release: every package at one version, and the files that publish them.
 
-``.github/ci/check_release.py`` holds the one list of what a tag publishes (10
-Python distributions, 8 npm packages). These tests hold the packages, the
-workflows and the release docs to that list, and test the checks the script
-runs before anything is published.
+``.github/ci/check_release.py`` holds the one list of what a tag publishes:
+``PYTHON_PACKAGES`` for PyPI and ``NPM_PACKAGES`` for npm. These tests hold the
+packages, the workflows and the release docs to that list, and test the checks
+the script runs before anything is published.
 """
 
 from __future__ import annotations
