@@ -209,6 +209,11 @@ changelog entry strands everyone on the old version.
   message is a bug.
 - Using an AI coding agent is fine and expected. The agent follows the same
   rules, and you remain responsible for every line you submit.
+- Karni works with any coding agent, so its files name no AI tool or company.
+  Say "coding agent". `python scripts/check_tool_names.py` lists any name
+  outside the exceptions in `scripts/tool-names.toml`, and CI runs it.
+  Keep your own agent's working files (such as its instructions file) out of
+  the repository: `.gitignore` already ignores the usual ones at the root.
 
 ## Licence
 
