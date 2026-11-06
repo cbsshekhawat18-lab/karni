@@ -148,6 +148,7 @@ def test_selection_between_versions() -> None:
         "api-cache-header-renamed",
         "api-cache-shared-by-role",
         "no-raw-details",
+        "impersonation-one-open-session",
     }
     assert in_0_4_1 <= set(_ids("0.4.0", "0.5.0"))
     assert not in_0_4 & set(_ids("0.4.0", "0.5.0"))  # 0.4.0's changes are behind a 0.4.0 project
