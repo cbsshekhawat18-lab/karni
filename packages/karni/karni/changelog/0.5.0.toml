@@ -518,3 +518,15 @@ a raw <details> fails the lint until it uses Accordion or carries \
 `// eslint-disable-next-line karni/no-raw-elements -- <reason>`."""
 mechanical = false
 migration = "migrations/0.5.md#a-raw-details-fails-karnino-raw-elements"
+
+[[change]]
+id = "seo-placeholder-description"
+kind = "behaviour"
+symbol = "karni check --seo (SITE012)"
+summary = """\
+A page whose description is still the placeholder karni make site and karni make view \
+write ("One sentence that search engines show under this page's title.") is reported as \
+SITE012 on that page, so karni check --seo fails until each such page has a sentence of \
+its own. Before, only two or more such pages failed it, as SITE013."""
+mechanical = false
+migration = "migrations/0.5.md#generated-site-pages-ask-for-their-description"
