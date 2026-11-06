@@ -275,6 +275,27 @@ def test_dry_run_writes_nothing(project: Path) -> None:
     assert (project / deploy.COMPOSE_FILE).read_text() == before
 
 
+def test_dry_run_on_a_fresh_project_shows_no_difference(project: Path) -> None:
+    """One source for the stack: the default regeneration equals what karni new wrote."""
+    before = (project / deploy.COMPOSE_FILE).read_text()
+    result = make("compose", "--dry-run")
+    assert result.exit_code == 0, result.output
+    assert "C101" not in result.output and "nothing to change" in result.output
+    forced = make("compose", "--force")
+    assert forced.exit_code == 0, forced.output
+    assert (project / deploy.COMPOSE_FILE).read_text() == before
+
+
+def test_dry_run_shows_the_diff_of_an_existing_stack(project: Path) -> None:
+    before = (project / deploy.COMPOSE_FILE).read_text()
+    result = make("compose", "--no-celery", "--dry-run")
+    assert result.exit_code == 0, result.output
+    assert "would modify docker-compose.prod.yml" in result.output
+    assert "-  worker:" in result.output
+    assert "pass --force" in result.output
+    assert (project / deploy.COMPOSE_FILE).read_text() == before
+
+
 @pytest.mark.parametrize(
     ("args", "message"),
     [

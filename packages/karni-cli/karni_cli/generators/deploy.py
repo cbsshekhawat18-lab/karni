@@ -850,7 +850,7 @@ def command(
         )
     if path in ("/static/", "/media/", "/api/", "/health/"):
         raise CliError(f"--app-path {path} is a path Django or Caddy already serves.", code="C106")
-    ws = project_workspace(force)
+    ws = project_workspace(force or dry_run)  # a dry run shows the diff against what exists
     base = defaults(ws, domain=_host(domain, "--domain") if domain else None)
     options = Options(
         slug=base.slug,
@@ -862,8 +862,16 @@ def command(
         db=db,
         redis=redis,
         auth_mode=base.auth_mode,
+        ready_path=base.ready_path,
     )
     plan(ws, options)
+    if dry_run and not force:
+        existing = [ws.rel(path) for path, before, _ in ws.changes() if before is not None]
+        if existing:
+            ws.note(
+                f"{', '.join(existing)} exist{'s' if len(existing) == 1 else ''}: "
+                "without --dry-run, pass --force to overwrite."
+            )
     ws.note(
         f"next: cp {ENV_EXAMPLE} {ENV_FILE}, fill it in, then on the server: "
         f"docker compose -f {COMPOSE_FILE} --env-file {ENV_FILE} up -d --build "
