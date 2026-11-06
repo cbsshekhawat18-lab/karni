@@ -98,7 +98,8 @@ GENERATOR_RULES = """Every generator follows the same rules:
 
 def _md(text: str) -> str:
     """Escape ``<`` / ``>`` outside backtick code spans (Markdown would eat ``<field>``)."""
-    parts = text.split("`")
+    # `\[` keeps Rich from reading "[mcp]" in a help string as a style tag.
+    parts = text.replace("\\[", "[").split("`")
     for i in range(0, len(parts), 2):
         parts[i] = parts[i].replace("<", "&lt;").replace(">", "&gt;")
     return "`".join(parts)

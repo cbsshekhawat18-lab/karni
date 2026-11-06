@@ -221,3 +221,24 @@ def test_the_settings_reference_loads_from_the_wheels_copy(
         assert site is not None and site["module"] == "karni-site"
     finally:
         sys.modules.pop(settingref._MODULE_NAME, None)
+
+
+def test_no_help_string_holds_a_rich_tag() -> None:
+    """F13: Rich reads an unescaped "[mcp]" in a help string as a style tag and drops it."""
+    import click
+    import typer
+
+    tag = re.compile(r"(?<!\\)\[[a-z#/@][^\[\]]*\]")
+    found: list[str] = []
+
+    def walk(command: click.Command, path: str) -> None:
+        texts = [command.help or "", command.epilog or ""]
+        texts += [getattr(param, "help", None) or "" for param in command.params]
+        found.extend(f"{path}: {m}" for text in texts for m in tag.findall(text))
+        for name, sub in getattr(command, "commands", {}).items():
+            walk(sub, f"{path} {name}")
+
+    walk(typer.main.get_command(app), "karni")
+    assert not found, "escape each with a backslash, as in karni-cli\\[mcp]: " + "; ".join(found)
+    helped = runner.invoke(app, ["mcp", "--help"])
+    assert "karni-cli[mcp]" in " ".join(helped.output.split())

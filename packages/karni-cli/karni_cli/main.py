@@ -99,7 +99,7 @@ app.command(help="Make the project match karni.yaml, without touching hand-writt
 app.add_typer(recipes_app, name="recipes")
 app.command(
     help="Serve context, rules, check, the debugging tools and the app-builder flow (recipes, "
-    "questions, answer, plan, build) as MCP tools (needs karni-cli[mcp])"
+    "questions, answer, plan, build) as MCP tools (needs karni-cli\\[mcp])"
 )(mcp)
 app.command(help="Report the environment: project, interpreter, Node, adapters, history")(doctor)
 app.command(
