@@ -65,6 +65,14 @@ it will write to and refuses (``E617``) when one of their tables already
 holds rows, unless ``--reset`` wipes them first or ``--force`` adds demo rows
 on top. The user table is left out of that check: users are matched by login
 and never deleted, and a fresh project already has its superuser.
+
+**Generated slugs are the plain slug of their source.** A
+``karni.fields.SlugField(populate_from=...)`` is left empty in a demo row,
+so the field makes it on save: the slug of the name (``europe``), with
+``-2``, ``-3`` only when two rows clash. Such a slug is often the import
+key, so a demo file names the row as a person would. A seeder or an
+explicit factory that declares the slug keeps its own value, and the bulk
+path keeps the factory's unique values (:mod:`karni.bulk_seeding`).
 :func:`occupied` is the rule. Real content belongs in a content file loaded
 with ``karni load`` (:mod:`karni.transfer.loading`). The importable
 :func:`seed` does not refuse: the caller decides.
@@ -235,6 +243,21 @@ class SeedBuilder(FactoryBuilder):
         ):
             return self.value(model, field)
         return super().declaration(model, field)
+
+
+def generated_slugs(model: type[models.Model]) -> list[str]:
+    """Names of ``model``'s ``karni.fields.SlugField(populate_from=...)`` fields.
+
+    A demo row leaves them empty, so the field makes each on save from its
+    source: the plain slug, with a counter only when two rows clash.
+    """
+    from karni.fields.text import SlugField
+
+    return [
+        field.name
+        for field in model._meta.concrete_fields
+        if isinstance(field, SlugField) and field.populate_from and field.editable
+    ]
 
 
 # discovery
@@ -610,6 +633,9 @@ class _Run:
                 target = relation.related_model
                 if target is not None and target._meta.label != "contenttypes.ContentType":
                     attrs[relation.name] = _Pick(self, target, relation)
+        if explicit is None:
+            for name in generated_slugs(model):
+                attrs[name] = ""  # SlugField.pre_save makes it from its source, -2 on a clash
         if seeder is not None:
             attrs.update(seeder.declarations())
         meta: dict[str, Any] = {"model": model, "skip_postgeneration_save": True}

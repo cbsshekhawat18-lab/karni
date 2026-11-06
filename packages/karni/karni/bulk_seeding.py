@@ -335,6 +335,13 @@ class BulkSeeder:
         for text in model._meta.concrete_fields:
             if self.pooled(model, text) and text.name not in declared and text.name in inherited:
                 attrs[text.name] = _Pooled(inherited[text.name], TEXT_POOL, self.random)
+        from karni.seeding import generated_slugs
+
+        for name in generated_slugs(model):
+            if name not in declared and inherited.get(name) == "":  # the run's blank
+                # The factory's unique value, not an empty slug made on save: that
+                # would ask the database once per row and clash inside a batch.
+                attrs[name] = self.run.builder.declaration(model, model._meta.get_field(name))
         pk = model._meta.pk
         if isinstance(pk, models.UUIDField) and pk.name not in declared:
             stream = self.run.values.fake.random

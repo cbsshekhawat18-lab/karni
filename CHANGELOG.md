@@ -1567,6 +1567,12 @@ apply codemods and list the manual steps. This file is the human summary.
   user grant to widen first, with the `grants.change(...)` call. Without a
   user grant of the scope it gives the `grants.grant(...)` call that adds one,
   and it names the attribute only when the user model has it.
+- **Seeded slugs are the slug of the name.** `karni seed` gave a
+  `SlugField(populate_from=...)` the factory's row number (`africa-0`,
+  `europe-15`, `air-annual-survey-1`), and in the data-portal recipe that
+  slug is the import key. A demo row now leaves it to the field: `europe`,
+  with `-2` only when two names clash. A seeder or explicit factory that
+  declares the slug wins, and a volume run keeps the numbered values.
 
 ## 0.4.0 (2026-10-22)
 

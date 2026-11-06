@@ -298,3 +298,60 @@ def test_reset_wipes_a_tree_whose_parent_protects_its_children() -> None:
     report = seed(models=["testapp.Region"], count=12, seed=5, now=NOW, reset=True)
     assert report.reset == ["testapp.Region"]
     assert Region.objects.count() == 12
+
+
+def test_a_generated_slug_is_the_plain_slug_of_its_source() -> None:
+    """A SlugField(populate_from=...) seeds as the slug of its source, a counter only on a clash.
+
+    The slug is often the import key (a region tree's ``slug``), so a demo file
+    names ``europe``, never ``europe-15``.
+    """
+    from django.utils.text import slugify
+
+    from tests.fieldsapp.models import Product as Catalogued
+
+    names = iter(["Europe", "North America", "Europe", "Asia"])
+
+    class NamedProducts(Seeder):
+        class Meta:
+            model = Catalogued
+            count = 4
+
+        name = factory_lazy(lambda: next(names))
+
+    clear_cache()
+    try:
+        seeders()[Catalogued] = NamedProducts
+        seed(models=["fieldsapp.Product"], count=4, seed=2, now=NOW)
+    finally:
+        clear_cache()
+    slugs = list(Catalogued.objects.order_by("created_at", "slug").values_list("name", "slug"))
+    assert sorted(slug for _name, slug in slugs) == [
+        "asia",
+        "europe",
+        "europe-2",  # the one clash: the field's own counter
+        "north-america",
+    ]
+    for name, slug in slugs:
+        assert slug.startswith(slugify(name))
+
+
+def test_a_volume_seed_keeps_its_slugs_unique_without_a_query_per_row() -> None:
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    from tests.fieldsapp.models import Product as Catalogued
+
+    with CaptureQueriesContext(connection) as captured:
+        seed(models=["fieldsapp.Product"], volume=30, seed=2, now=NOW)
+    slugs = list(Catalogued.objects.values_list("slug", flat=True))
+    assert len(slugs) == len(set(slugs)) == 30
+    table = Catalogued._meta.db_table
+    lookups = [q["sql"] for q in captured if q["sql"].startswith("SELECT") and table in q["sql"]]
+    assert not [sql for sql in lookups if '"slug" =' in sql]  # no SlugField.unique_slug per row
+
+
+def factory_lazy(function: Any) -> Any:
+    import factory
+
+    return factory.LazyFunction(function)

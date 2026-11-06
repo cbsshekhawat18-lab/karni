@@ -71,7 +71,12 @@ So a second plain `karni seed` on the same database refuses. Run
 
   Optional fields are mostly filled.
 - **Constraints hold.** Unique values embed the row's number, and a clash on
-  a multi-field constraint is retried.
+  a multi-field constraint is retried. A `SlugField(populate_from="name")` is
+  the exception: the field makes it from its source on save, so a region named
+  Europe gets `europe`, and only a second Europe gets `europe-2`. Such a slug
+  is often the import key, so an import file names the row as a person
+  would. A seeder or an explicit factory that declares the slug wins, and a
+  [volume run](#volume-seeding) keeps the numbered values.
 - **A demo login.** The first user is `demo@example.com` with password
   `karni-password`. It is staff and superuser, and holds every role your
   `access` declarations name. About half of the user-owned rows belong to it,
