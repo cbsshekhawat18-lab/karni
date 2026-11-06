@@ -26,6 +26,12 @@ apply codemods and list the manual steps. This file is the human summary.
   without its own `verbose_name_plural` gets a correct English plural in the
   admin (no migration), and `karni make model` and `karni build` write
   `verbose_name_plural` when Django's would be wrong.
+- **Fixed: a deleted row showed Edit and Restore.** The admin's list shows only
+  Restore on a deleted row (View for a user who may only look), as
+  [admin](docs/admin.md#the-list-of-a-model) says.
+- **Fixed: axe reported the admin's many-to-many widget, help icons and blank
+  table headings.** Karni's admin script names the select2 search box, gives the
+  help icons a role and gives blank headings a hidden text.
 - **Fixed: the admin help line showed developer notes.** It now comes only from
   `class Karni: help` (the spec's `help:`), never the model docstring.
 
