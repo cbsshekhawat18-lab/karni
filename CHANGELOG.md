@@ -1596,6 +1596,17 @@ apply codemods and list the manual steps. This file is the human summary.
   `karni` dependency in pyproject.toml and, when the project's interpreter
   cannot import it, stops before the migrations with `C841` and the install
   line. The next `karni build` continues from there.
+- **`karni recipes list --match` weighs what the app is.** A word that is the
+  recipe's own noun (its name, or a one-word `use_when` phrase) scores 4, so
+  "a booking app for a yoga studio, with online payments" ranks `booking`
+  above `shop`.
+- **A recipe passes its own check.** `karni.W620` (a tree-scoped role grant
+  with no node on the user) is silent while `KARNI_USER_GRANTS` is on, since
+  the nodes come from the grants. The data-portal recipe warned twice.
+- **A karni.yaml that names a recipe gets the recipe's domain code.** In the
+  /new-app flow (`app.recipe` set in an existing project), the first build now
+  writes the recipe's models, viewsets, seeds and tests over its stubs, as
+  `karni new --recipe` does. A name no installed recipe has is a plain note.
 - **A new project starts without the legacy cache header warning.** The
   scaffold's settings set `KARNI_API_CACHE_LEGACY_HEADER` to `False` by
   default. Existing projects keep the old default and the warning.

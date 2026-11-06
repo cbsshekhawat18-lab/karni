@@ -1177,3 +1177,15 @@ def test_a_feature_that_needs_an_extra_names_it_and_stops_early_when_it_is_missi
     assert "uv pip install" in (stop.value.next or "")
     monkeypatch.setattr(project_mod, "project_has_module", lambda root, name: True)
     build_run._require_extras(copy, ["2fa"])  # installed: nothing to say
+
+
+def test_a_spec_that_names_a_recipe_gets_its_domain_code_on_the_first_build(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The /new-app flow: karni.yaml started from a recipe in an existing project."""
+    recipe = REPO_ROOT / "packages" / "karni-cli" / "karni_cli" / "recipes" / "booking"
+    root = _project(tmp_path, monkeypatch, "Yoga Flow", (recipe / "karni.yaml").read_text())
+    code, out = _build()
+    assert code == 0, out
+    assert (root / "bookings" / "tests" / "test_capacity.py").is_file()
+    assert "capacity" in (root / "bookings" / "models.py").read_text().lower()

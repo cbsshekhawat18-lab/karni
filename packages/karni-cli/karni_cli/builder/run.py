@@ -208,7 +208,7 @@ def build(root: Path, spec: schema.Spec, facts: dict[str, Any], file: str, opts:
         module_lines = _plan_modules(ws, plan)
         _plan_extras(ws, feature_extras(spec))
         rendered = render.render(ws, inputs)
-        _recipe_files(ws, rec)
+        _recipe_files(ws, rec, spec)
         deletes = _deletions(root, rec, rendered)
         edits = _hand_edits(root, rec, rendered, deletes)
     except Stop as stop:
@@ -486,18 +486,30 @@ def _plan_extras(ws: Workspace, extras: list[str]) -> None:
             ws.write("pyproject.toml", updated)
 
 
-def _recipe_files(ws: Workspace, rec: Record) -> list[str]:
-    """The recipe's own files over build's stubs, when ``karni new --recipe`` left one to write."""
-    if not rec.recipe:
+def _recipe_files(ws: Workspace, rec: Record, spec: schema.Spec | None = None) -> list[str]:
+    """The recipe's own files over build's stubs.
+
+    ``karni new --recipe`` names the recipe in the record. A karni.yaml started from a recipe in
+    an existing project (the /new-app flow) names it in ``app.recipe``, and the first build, the
+    one with nothing built yet, writes the same files. A name no installed recipe has is left
+    alone: ``app.recipe`` is also a plain note.
+    """
+    name = rec.recipe
+    if not name and spec is not None and spec.app.recipe and not rec.entities:
+        from karni_cli import recipes as known
+
+        if spec.app.recipe in known.load().recipes:
+            name = spec.app.recipe
+    if not name:
         return []
     from karni_cli import recipes
     from karni_cli.recipes import apply
 
     try:
-        recipe = recipes.load().require(rec.recipe)
+        recipe = recipes.load().require(name)
     except CliError as exc:
         raise CliError(
-            f"{layout.RECORD} names the recipe {rec.recipe!r}, whose own files this build writes "
+            f"{layout.RECORD} or the spec names the recipe {name!r}, whose own files this build writes "
             f'over its stubs: {exc.message} Install it, or delete "{apply.RECORD_KEY}" from '
             f"{layout.RECORD} to build without them.",
             code=exc.code,

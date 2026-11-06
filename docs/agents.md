@@ -327,6 +327,11 @@ gives them:
    tests.
 7. **Done** when `karni check` and `karni test` pass.
 
+In an existing project, a karni.yaml started from a recipe (it carries
+`app.recipe`) gets the recipe's domain code on the first `karni build` too,
+over the stubs the build writes. It stops (`C441`) when a file holds code of
+your own where the recipe has one.
+
 A new project can also start from a recipe with its domain code in place:
 `karni new "<Name>" --recipe <name>` writes the recipe's `karni.yaml` and
 runs `karni build`, which writes the recipe's own methods, actions, seeders
