@@ -12,8 +12,9 @@ public API and what Karni promises about it.
 
 Karni uses [semantic versioning](https://semver.org), starting at 0.1.0.
 Every published package moves in **lockstep**: one release tag publishes
-`karni`, `karni-cli`, `karni-payments`, `@karni/ui` and `@karni/payments-ui`
-at the same version ([releasing](releasing.md)).
+`karni`, `karni-cli`, `@karni/ui` and every module's Python package and
+React package (when it has one) at the same version
+([the list](releasing.md#lockstep-versions)).
 
 | Release | May contain |
 |---|---|

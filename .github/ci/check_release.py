@@ -1,16 +1,22 @@
 """Pre-publish checks for a release tag (run by .github/workflows/release.yml).
 
 Karni versions every published package in lockstep: one tag ``vX.Y.Z``
-publishes karni, karni-cli and karni-payments to PyPI and @karni/ui and
-@karni/payments-ui to npm, all at ``X.Y.Z``. This script refuses the release,
-and names the fix, when:
+publishes every package below at ``X.Y.Z``, the Python packages in
+:data:`PYTHON_PACKAGES` to PyPI and the React packages in
+:data:`NPM_PACKAGES` to npm. These two lists are the release:
+docs/releasing.md, the workflows and their tests are checked against them.
+This script refuses the release, and names the fix, when:
 
 - a package's version differs from the tag;
+- a Python package's ``__version__`` is not its distribution's version;
 - a package's repository URL is not the repository publishing it (npm
   provenance is verified against that URL, so a mismatch fails at publish
   time, after the Python packages are already out);
 - a package directory's LICENSE copy differs from the root LICENSE;
-- karni-payments' or @karni/payments-ui's range on core excludes the release.
+- a module's range on core (``karni`` in pyproject.toml, ``@karni/ui`` in
+  its ui/package.json) excludes the release;
+- a package is missing from a build or upload list in release.yml or
+  pypi-from-release.yml, or a PyPI upload step differs from the others.
 
 Usage::
 

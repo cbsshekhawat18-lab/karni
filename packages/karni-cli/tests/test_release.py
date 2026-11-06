@@ -306,3 +306,74 @@ def test_the_readme_names_no_stale_karni_ui_range(directory: str) -> None:
         if _intervals(spec) != _intervals(peer)
     ]
     assert stale == [], f"{directory}/README.md names @karni/ui {stale}, package.json {peer!r}"
+
+
+# The release docs agree with the release: every package, no stale counts (A6-03)
+
+COUNT = re.compile(
+    r"\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen"
+    r"|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b(?: (?:python|npm|pypi))?"
+    r" (?:packages|projects|manifests|versions|pyproject\.toml|package\.json)",
+    re.IGNORECASE,
+)
+
+
+def _release_names() -> tuple[list[str], list[str]]:
+    python = [str(_project(directory)["name"]) for directory in PYTHON_PACKAGES]
+    npm = [str(_package_json(directory)["name"]) for directory in NPM_DIRECTORIES]
+    return python, npm
+
+
+def _release_texts() -> dict[str, str]:
+    """The prose that describes the release, by where it is."""
+    workflow = (REPO_ROOT / ".github/workflows/release.yml").read_text().split("\non:")[0]
+    changelog = (REPO_ROOT / "CHANGELOG.md").read_text().split("\n## ")[0]
+    stability = (REPO_ROOT / "docs/stability.md").read_text()
+    return {
+        "docs/releasing.md": (REPO_ROOT / "docs/releasing.md").read_text(),
+        ".github/workflows/release.yml (header)": workflow,
+        ".github/ci/check_release.py (docstring)": str(check_release.__doc__),
+        "CHANGELOG.md (intro)": changelog,
+        "docs/stability.md (versioning)": stability.split("## Versioning")[1].split("\n## ")[0],
+    }
+
+
+def _names_in(text: str, names: list[str]) -> set[str]:
+    return {
+        name
+        for name in names
+        if re.search(rf"`{re.escape(name)}`|(?<![\w/@-]){re.escape(name)}(?![\w-])", text)
+    }
+
+
+@pytest.mark.parametrize("where", list(_release_texts()) if SCRIPT.is_file() else [])
+def test_the_release_prose_counts_no_packages_and_names_all_or_none(where: str) -> None:
+    text = _release_texts()[where]
+    assert COUNT.findall(text) == [], f"{where}: a count goes stale with the next package"
+    python, npm = _release_names()
+    named = _names_in(text, [*python[2:], *npm[1:]])  # the modules: core names appear anyway
+    modules = {*python[2:], *npm[1:]}
+    assert named in (set(), modules), (
+        f"{where} names {sorted(named)}, not {sorted(modules - named)}"
+    )
+
+
+def test_the_lockstep_table_is_the_release_list() -> None:
+    page = (REPO_ROOT / "docs/releasing.md").read_text()
+    section = page.split("## Lockstep versions")[1].split("\n## ")[0]
+    rows = re.findall(r"^\| `([^`]+)` \| (PyPI|npm) \| `([^`]+)` \|$", section, re.MULTILINE)
+    python, npm = _release_names()
+    assert rows == [
+        *(
+            (name, "PyPI", directory)
+            for name, directory in zip(python, PYTHON_PACKAGES, strict=True)
+        ),
+        *((name, "npm", directory) for name, directory in zip(npm, NPM_DIRECTORIES, strict=True)),
+    ]
+
+
+def test_the_pending_publisher_table_names_every_pypi_project_once() -> None:
+    page = (REPO_ROOT / "docs/releasing.md").read_text()
+    rows = re.findall(r"^\s*\| PyPI Project Name \| (.+) \|$", page, re.MULTILINE)
+    assert len(rows) == 1, rows
+    assert re.findall(r"`([^`]+)`", rows[0]) == _release_names()[0]

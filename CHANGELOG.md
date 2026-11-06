@@ -1,8 +1,8 @@
 # Changelog
 
-Every package in this repository (`karni`, `karni-cli`, `karni-payments`,
-`@karni/ui`, `@karni/payments-ui`) is released at one version, in lockstep.
-See [docs/releasing.md](docs/releasing.md).
+Every package in this repository, the Python packages on PyPI and the React
+packages on npm, is released at one version, in lockstep. The list is in
+[docs/releasing.md](docs/releasing.md#lockstep-versions).
 
 Breaking changes and deprecations are recorded in machine-readable form in
 `packages/karni/karni/changelog/<version>.toml` and explained in
@@ -1592,6 +1592,14 @@ apply codemods and list the manual steps. This file is the human summary.
   at the right headings now. A new test follows every in-repository link in
   the READMEs and `docs/` and fails on a missing file or anchor, which
   `mkdocs build --strict` reports at INFO level only.
+- **The release docs name every package.** `docs/releasing.md` counted five
+  to twelve packages and manifests where the release has ten on PyPI and
+  eight on npm, its lockstep table left out `karni-ai` and `@karni/ai-ui`,
+  and its PyPI publisher table had three stacked rows from three merges. The
+  `release.yml` header, the `check_release.py` docstring, `docs/stability.md`
+  and the top of this file named older subsets. They now point at the one
+  list in `.github/ci/check_release.py`, and a test holds the table and the
+  publisher row to it and refuses a spelled-out count of packages.
 
 ## 0.4.0 (2026-10-22)
 
