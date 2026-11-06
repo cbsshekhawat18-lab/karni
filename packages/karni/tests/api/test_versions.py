@@ -117,6 +117,38 @@ def test_redirect_sends_the_unversioned_api_to_the_current_version(
     assert client.get("/api/v1/nothing/").status_code == 404  # not a redirect loop
 
 
+@pytest.mark.parametrize("method", ["post", "put", "patch", "delete"])
+@pytest.mark.parametrize("bearer", [False, True])
+def test_the_redirect_answers_an_unsafe_method_with_308_not_a_csrf_page(
+    setup: Setup, method: str, bearer: bool
+) -> None:
+    # A mobile client on the old path has no CSRF cookie. The redirect changes
+    # nothing, so it answers 308 and the versioned view applies its own checks.
+    setup(KARNI_API_UNVERSIONED="redirect")
+    client = Client(enforce_csrf_checks=True)
+    headers = {"Authorization": "Bearer not-checked-here"} if bearer else {}
+    response = getattr(client, method)(
+        "/api/events/1/?x=1", data="{}", content_type="application/json", headers=headers
+    )
+    assert response.status_code == 308, response.content[:200]
+    assert response["Location"] == "/api/v1/events/1/?x=1"
+
+
+def test_the_versioned_view_still_checks_csrf_for_a_session(setup: Setup) -> None:
+    from django.contrib.auth import get_user_model
+
+    setup(KARNI_API_UNVERSIONED="redirect")
+    user = get_user_model().objects.create_user(
+        email="session@example.com", password="a-strong-password-123"
+    )
+    client = Client(enforce_csrf_checks=True)
+    client.force_login(user)
+    assert client.post("/api/events/", {}).status_code == 308
+    landed = client.post("/api/v1/events/", {})
+    assert landed.status_code == 403
+    assert "CSRF" in landed.json()["detail"]
+
+
 def test_remove_drops_the_unversioned_api(setup: Setup, client: Client) -> None:
     setup(KARNI_API_UNVERSIONED="remove")
     assert client.get("/api/events/").status_code == 404

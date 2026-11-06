@@ -1556,6 +1556,11 @@ apply codemods and list the manual steps. This file is the human summary.
   `KARNI_API_MAX_EXPAND_DEPTH` bound it, and a parent the requester cannot
   read (above a tree grant, or outside the tree resource's read scope)
   expands to `null`, with nothing of it in the answer.
+- **The unversioned redirect answers a POST with 308.** With
+  `KARNI_API_UNVERSIONED = "redirect"`, a POST, PUT, PATCH or DELETE to
+  `/api/x/` got Django's "CSRF verification failed" page (403), with or
+  without a bearer token. The redirect is exempt from CSRF now: it changes
+  nothing, and the versioned view it leads to still checks CSRF for a session.
 
 ## 0.4.0 (2026-10-22)
 

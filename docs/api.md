@@ -1006,7 +1006,7 @@ not use `api_urls()`.
 |---|---|---|
 | `KARNI_API_VERSION` | `""` | The current version's name. Lower case letters, digits and `-`, at most 16 characters. Empty leaves the API unversioned. |
 | `KARNI_API_VERSIONS` | `{}` | Name to options. Keys of an option dict: `router`, `deprecated`, `sunset`, `notes`. The current version needs no entry. |
-| `KARNI_API_UNVERSIONED` | `"keep"` | `"keep"`: `/api/` still serves the current version. `"redirect"`: `/api/x/` answers `308` with `Location: /api/v1/x/`, query string included, and POST stays POST. `"remove"`: `/api/` is a 404. |
+| `KARNI_API_UNVERSIONED` | `"keep"` | `"keep"`: `/api/` still serves the current version. `"redirect"`: `/api/x/` answers `308` with `Location: /api/v1/x/`, query string included, and POST stays POST. Every method gets the 308, with or without a CSRF token: the redirect changes nothing, and the view it leads to checks CSRF for a session. `"remove"`: `/api/` is a 404. |
 
 The options of a version:
 
