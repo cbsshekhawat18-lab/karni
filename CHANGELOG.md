@@ -1585,6 +1585,13 @@ apply codemods and list the manual steps. This file is the human summary.
   a `<code>` element, which render the same. Bare placeholders such as
   `<app>/listeners.py` also show on the page now, where the browser hid them
   as unknown tags.
+- **Broken links in the docs, and a test that finds them.** Five links named
+  anchors their pages do not have: `deploy.md#health-checks` (the heading is
+  "12. Health checks") and `admin.md#the-guide` in the settings reference,
+  and `accounts.md#roles-and-object-permissions` in `docs/api.md`. They point
+  at the right headings now. A new test follows every in-repository link in
+  the READMEs and `docs/` and fails on a missing file or anchor, which
+  `mkdocs build --strict` reports at INFO level only.
 
 ## 0.4.0 (2026-10-22)
 

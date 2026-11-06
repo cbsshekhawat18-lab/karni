@@ -1845,7 +1845,7 @@ class Lead(BaseModel):
 | `KARNI_ADMIN_PATH` | `KARNI_ADMIN_PATH` | `"admin/"` | URL path the scaffold mounts the Django admin at (trailing slash). Set it to something unguessable in production. |
 | `KARNI_ADMIN_EXCLUDE` | `KARNI_ADMIN_EXCLUDE` | `[ "sessions", "contenttypes", "admin", "auth.Permission", "django_celery_results.ChordCounter"]` | App labels or `app_label.ModelName` entries the admin leaves out. |
 | `KARNI_ADMIN_BULK_EDIT_MAX` | `KARNI_ADMIN_BULK_EDIT_MAX` | `500` | The most rows the admin's *Edit selected* action changes at once. A larger selection gets a message and nothing changes. See [admin](admin.md#bulk-actions). |
-| `KARNI_ADMIN_GUIDE` | `KARNI_ADMIN_GUIDE` | `True` | Show the *Getting started* panel on the admin home page, and its entry in the user menu. A user can dismiss it. See [admin](admin.md#the-guide). |
+| `KARNI_ADMIN_GUIDE` | `KARNI_ADMIN_GUIDE` | `True` | Show the *Getting started* panel on the admin home page, and its entry in the user menu. A user can dismiss it. See [admin](admin.md#the-home-page-and-the-guide). |
 | `KARNI_ADMIN_LIST_DISPLAY_MAX` |  | `6` | Columns a derived admin changelist shows at most. |
 | `KARNI_ADMIN_LIST_FILTER_MAX` |  | `6` | Sidebar filters a derived admin shows at most. |
 | `KARNI_ADMIN_SEARCH_MAX` |  | `5` | Fields a derived admin searches at most. |
@@ -1867,7 +1867,7 @@ class Lead(BaseModel):
 |---|---|---|---|
 | `KARNI_HEALTH_CHECKS` | `KARNI_HEALTH_CHECKS` | `[ "karni.health.checks.check_database", "karni.health.checks.check_cache", "karni.health.checks.check_celery"]` | Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default), comma-separated in the environment. A deployment without a Celery worker leaves `karni.health.checks.check_celery` out. |
 | `KARNI_HEALTH_CELERY_TIMEOUT` |  | `1.0` | Seconds the readiness check waits for a Celery worker to answer. |
-| `KARNI_READYZ_CHECKS` | `KARNI_READYZ_CHECKS` | `[ "karni.health.checks.check_database", "karni.health.checks.check_cache", "karni.health.checks.check_broker"]` | Dotted paths of the checks `/readyz` runs: the database, the cache and the Celery broker by default, comma-separated in the environment. Experimental. See [deploy](deploy.md#health-checks). |
+| `KARNI_READYZ_CHECKS` | `KARNI_READYZ_CHECKS` | `[ "karni.health.checks.check_database", "karni.health.checks.check_cache", "karni.health.checks.check_broker"]` | Dotted paths of the checks `/readyz` runs: the database, the cache and the Celery broker by default, comma-separated in the environment. Experimental. See [deploy](deploy.md#12-health-checks). |
 | `KARNI_HEALTH_TIMEOUT` | `KARNI_HEALTH_TIMEOUT` | `3.0` | Seconds each readiness check may take before it counts as failed (`/readyz` and `/health/ready/`). Experimental. |
 | `KARNI_LOG_QUIET_PATHS` | `KARNI_LOG_QUIET_PATHS` | `["/healthz", "/readyz", "/health/"]` | Paths whose healthy requests the request log skips, comma-separated in the environment (`/healthz`, `/readyz` and `/health/` by default). A request that answers 400 or more is still logged. Empty logs all. Experimental. |
 
