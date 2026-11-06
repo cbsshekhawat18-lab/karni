@@ -110,7 +110,13 @@ def _in_process(root: Path) -> Iterator[None]:
         }
     )
     # CI would make a missing frontend/node_modules fail the build's check step
-    for name in ("CI", "DJANGO_SETTINGS_MODULE", "VIRTUAL_ENV", "KARNI_PAYMENTS_PROVIDER", "KARNI_2FA"):
+    for name in (
+        "CI",
+        "DJANGO_SETTINGS_MODULE",
+        "VIRTUAL_ENV",
+        "KARNI_PAYMENTS_PROVIDER",
+        "KARNI_2FA",
+    ):
         os.environ.pop(name, None)
     saved = (
         scaffold.run_npm,
@@ -163,7 +169,9 @@ def new_recipe(parent: Path, name: str) -> tuple[Path, float, dict[str, float]]:
     try:
         with _in_process(root):
             started = time.perf_counter()
-            result = CliRunner().invoke(app, ["new", f"Demo {name}", "--recipe", name, "-o", str(parent)])
+            result = CliRunner().invoke(
+                app, ["new", f"Demo {name}", "--recipe", name, "-o", str(parent)]
+            )
             seconds = time.perf_counter() - started
     finally:
         run.STEP_RUNNERS.clear()
@@ -291,17 +299,35 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
     parser.add_argument("--recipes", nargs="*", help="The recipes to time (every built-in one).")
     parser.add_argument("--runs", type=int, default=3, help="Runs of each quick step (3).")
-    parser.add_argument("--build-runs", type=int, default=1, help="Runs of each from-scratch build (1).")
+    parser.add_argument(
+        "--build-runs", type=int, default=1, help="Runs of each from-scratch build (1)."
+    )
     parser.add_argument("--no-new-app", action="store_true", help="Leave the /new-app flow out.")
     parser.add_argument("--out", type=Path, help="Write the times as JSON here.")
     parser.add_argument("--baseline", type=Path, default=BASELINE, help="The baseline JSON.")
     parser.add_argument("--no-compare", action="store_true", help="Only measure.")
-    parser.add_argument("--threshold", type=float, default=1.5, help="Fail above this many times the baseline.")
-    parser.add_argument("--slack", type=float, default=1.0, help="Seconds added to a quick step's budget (1.0).")
-    parser.add_argument("--build-slack", type=float, default=10.0, help="Seconds added to a from-scratch build's budget (10).")
-    parser.add_argument("--rebuild-ceiling", type=float, default=REBUILD_CEILING, help="Seconds a no-change rebuild may take (5).")
+    parser.add_argument(
+        "--threshold", type=float, default=1.5, help="Fail above this many times the baseline."
+    )
+    parser.add_argument(
+        "--slack", type=float, default=1.0, help="Seconds added to a quick step's budget (1.0)."
+    )
+    parser.add_argument(
+        "--build-slack",
+        type=float,
+        default=10.0,
+        help="Seconds added to a from-scratch build's budget (10).",
+    )
+    parser.add_argument(
+        "--rebuild-ceiling",
+        type=float,
+        default=REBUILD_CEILING,
+        help="Seconds a no-change rebuild may take (5).",
+    )
     parser.add_argument("--record", action="store_true", help="Write the run as the baseline.")
-    parser.add_argument("--note", default="", help="A line stored with the baseline (the machine, the load).")
+    parser.add_argument(
+        "--note", default="", help="A line stored with the baseline (the machine, the load)."
+    )
     parser.add_argument("--keep", type=Path, help="Make the projects in this folder and keep it.")
     args = parser.parse_args(argv)
     if args.runs < 1 or args.build_runs < 1:
@@ -329,7 +355,9 @@ def main(argv: list[str] | None = None) -> int:
                 seconds.append(took)
                 per_step.append(steps)
                 if quick_project is None and number == args.build_runs - 1:
-                    quick_project = root  # the first recipe's last project: the quick steps run on it
+                    quick_project = (
+                        root  # the first recipe's last project: the quick steps run on it
+                    )
                 else:
                     shutil.rmtree(parent, ignore_errors=True)
             times[f"new_{name}"] = median(seconds)
@@ -349,9 +377,7 @@ def main(argv: list[str] | None = None) -> int:
                 flows.append(steps)
                 shutil.rmtree(parent, ignore_errors=True)
             times["new_app"] = median(seconds)
-            inner["new_app"] = {
-                step: median([found[step] for found in flows]) for step in flows[0]
-            }
+            inner["new_app"] = {step: median([found[step] for found in flows]) for step in flows[0]}
             print(f"/new-app flow: {times['new_app']}s", file=sys.stderr)
         if quick_project is not None:
             times.update(measure_quick(quick_project, args.runs))

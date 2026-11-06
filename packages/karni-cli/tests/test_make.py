@@ -821,7 +821,9 @@ def test_a_blank_page_is_a_kind(project: Path) -> None:
     assert '<Page title="Reports" />' in page
     bare = ok("make", "page", "notes", "--dry-run")  # the same page without the kind
     assert "page: /notes -> NotesPage" in bare.output
-    fails("make", "page", "x", "--kind", "blank", "--resource", "events", match="takes no --resource")
+    fails(
+        "make", "page", "x", "--kind", "blank", "--resource", "events", match="takes no --resource"
+    )
     fails("make", "page", "x", "--kind", "sketch", match="blank")
     assert "karni make page <name> --kind blank starts one" in inspect.getsource(run._check)
 

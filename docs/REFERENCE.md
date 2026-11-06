@@ -1235,7 +1235,7 @@ karni make page [OPTIONS] NAME
 | --- | --- | --- |
 | `NAME` (required) |  | Page file name, kebab-case (e.g. events). |
 | `--resource` TEXT |  | API resource (router prefix, e.g. events). |
-| `--kind` TEXT |  | With --resource: list (default), detail or form. A login page needs no resource, and a dashboard (experimental) counts resources (--count). |
+| `--kind` TEXT |  | With --resource: list (default), detail or form. A login page needs no resource, a dashboard (experimental) counts resources (--count), and blank is the bare page. |
 | `--path` TEXT |  | Route path. For resource pages it is the base (default `/<resource>`). |
 | `--title` TEXT |  | Page title (default: from the name). |
 | `--related` TEXT (repeatable) |  | Experimental. With --kind detail: a related tab (deals, or deals.partner), a resource whose model has a fk to this one (C561 otherwise). Repeat it. |

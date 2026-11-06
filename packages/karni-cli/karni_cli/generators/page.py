@@ -113,9 +113,7 @@ def spec_for(
 ) -> PageSpec:
     require_kebab(name, "Page name")
     if kind is not None and kind != BLANK and kind not in KINDS:
-        raise CliError(
-            f"--kind {kind!r}: choose one of {', '.join((*KINDS, BLANK))}.", code="C106"
-        )
+        raise CliError(f"--kind {kind!r}: choose one of {', '.join((*KINDS, BLANK))}.", code="C106")
     if related and kind != "detail":
         raise CliError("--related takes a detail page: add --kind detail.", code="C106")
     if counts and kind != "dashboard":

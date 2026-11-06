@@ -86,6 +86,43 @@ the app's name) and builds nothing. An unknown recipe is refused with
 `--kind site` or `--no-staff-app` with a recipe with
 [C440](../errors.md#c440). Nothing is written then.
 
+## How fast is it
+
+Karni times what a person waits for in CI, so the speed cannot slip unnoticed.
+`scripts/benchmark/speed.py` runs on every push. These are the times it
+measured on a developer Mac (Apple silicon, the median of 3 runs, SQLite, no
+frontend install, a shared machine, so they are a little high):
+
+| Step | Seconds |
+| --- | --- |
+| `karni new --recipe lms`, from scratch to a built project | 11.7 |
+| `karni new --recipe marketplace` | 13.6 |
+| `karni new --recipe data-portal` | 14.4 |
+| `karni new --recipe shop` | 15.2 |
+| `karni new --recipe crm` | 19.1 |
+| `karni new --recipe booking` | 19.3 |
+| the `/new-app` flow with a scripted agent, request to green `karni check` | 16.1 |
+| `karni build` again, no spec change | 1.1 |
+| `karni check`, cold (no cache) | 2.9 |
+| `karni check`, cached | 1.5 |
+| `karni spec validate` | 0.3 |
+| `karni plan` | 1.0 |
+| `karni plan --questions` | 0.3 |
+
+Inside a recipe build the time goes to the project's own tests (3 to 5
+seconds), the migrations and the demo data (1 to 3 seconds each), the types
+and `karni check` (2 to 4 seconds). `karni plan` and `karni check` are as long
+as they are because each starts the project's Django once.
+
+Each time has a budget: the baseline (`scripts/benchmark/speed-baseline.json`)
+times how much slower or faster the machine is than the one that recorded it
+(the same calibration as the large-project benchmark), times 1.5, plus a few
+seconds of slack. A build with no spec change has its own ceiling of 5 seconds
+on any machine. The `speed` job fails when a step goes over, and keeps the times
+as an artifact. Run it yourself with `python scripts/benchmark/speed.py`, and
+record a new baseline on a quiet machine with `--record` when a growth is
+expected.
+
 ## The stub rule
 
 `karni build` creates the project's own files (`<app>/models.py`,

@@ -569,10 +569,14 @@ def test_karni_check_hands_the_facts_over_for_the_drift_suggestion(
     """With a karni.yaml the file carries the facts, so karni check starts Django once."""
     monkeypatch.setattr("karni.testing._source.project_root", lambda: tmp_path)
     target = tmp_path / "suggestions.json"
-    call_command("karni_check", "--suggestions-file", str(target), stdout=StringIO(), stderr=StringIO())
+    call_command(
+        "karni_check", "--suggestions-file", str(target), stdout=StringIO(), stderr=StringIO()
+    )
     assert "facts" not in json.loads(target.read_text())  # no karni.yaml: nothing to compare
     (tmp_path / "karni.yaml").write_text("version: 1\n")
-    call_command("karni_check", "--suggestions-file", str(target), stdout=StringIO(), stderr=StringIO())
+    call_command(
+        "karni_check", "--suggestions-file", str(target), stdout=StringIO(), stderr=StringIO()
+    )
     facts = json.loads(target.read_text())["facts"]
     assert "databases" in facts and "apps" in facts
 

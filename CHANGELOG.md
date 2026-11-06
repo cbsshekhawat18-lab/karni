@@ -11,6 +11,26 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## 0.5.0 (unreleased)
 
+- **Speed budgets in CI (experimental).** `scripts/benchmark/speed.py` times what a
+  person waits for: each recipe from scratch with `karni new --recipe` (and the
+  build steps inside it), a second `karni build` with no spec change, `karni
+  check` cold and cached, `karni spec validate`, `karni plan`, `karni plan
+  --questions` and the `/new-app` fake-agent flow. A new `speed` CI job runs it
+  and keeps the times as an artifact. A time above `baseline x calibration x 1.5
+  + slack` fails the job (the baseline is `scripts/benchmark/speed-baseline.json`,
+  recorded on one Mac), and a no-change rebuild has an absolute ceiling of 5
+  seconds. See [docs/recipes](docs/recipes/index.md#how-fast-is-it).
+- **Faster: `karni check` starts Django once instead of twice.** In a project with a
+  `karni.yaml` it started `manage.py karni_check` and then `manage.py karni_facts`
+  for the drift suggestion (SUG007). `karni_check` now hands the facts over in the
+  suggestions file it already writes. The output is the same.
+- **Fixed: C851 named `karni make page <name> --kind blank`, which refused `blank`
+  (C106).** `--kind blank` is the bare page `karni make page <name>` already writes
+  without `--resource`, and it takes no `--resource`.
+- **Fixed: a new project started with `__pycache__` folders.** `pip install`
+  byte-compiles the template inside karni-cli and `karni new` copied those folders
+  into the project, even with `PYTHONDONTWRITEBYTECODE=1`. `karni new` now removes
+  every `__pycache__` folder and `*.pyc` file it copied.
 - **Fixed: admin lists had no pagination, selection across pages or empty state of
   their own.** Every list shows 25 rows a page with a bottom bar (`Showing 1 to 25
   of 312 notes`, page links with gaps, a 25, 50 or 100 choice kept in the URL, an
