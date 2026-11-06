@@ -183,7 +183,7 @@ def test_a_spec_builds_an_empty_project_that_passes_its_tests_and_check(harbour:
     assert "Studio 3, Session 40, Booking 200" in steps["seed"]
     assert " passed in " in steps["test"] and "failed" not in steps["test"]  # the site app's too
     assert steps["check"].split() == ["check", "ok"]
-    assert lines[-1] == "Built: the project matches karni.yaml."
+    assert lines[-1].startswith("Built: the project matches karni.yaml.")  # then the recipe note
     # Karni's code and the project's live in separate files
     karni = (root / "classes" / "karni" / "models.py").read_text()
     assert karni.startswith('"""Written by karni build from karni.yaml. Do not edit it')
