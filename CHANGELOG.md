@@ -1587,6 +1587,11 @@ apply codemods and list the manual steps. This file is the human summary.
   description, so the check failed with `SITE013` "2 pages share the
   description". It now reports the placeholder as `SITE012` on each page,
   saying where to write that page's sentence.
+- **One name check for every generator.** `karni make model bad` silently
+  wrote `class Bad`, while app, page and event names of the wrong form were
+  refused, and `karni make app 9x` suggested `9_x`, itself refused. Every
+  generator now refuses a name of the wrong form with `C103` (class names
+  too: write `Bad`), and the example it gives is a name it accepts.
 
 ## 0.4.0 (2026-10-22)
 

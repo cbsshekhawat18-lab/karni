@@ -185,6 +185,36 @@ def test_app_name_rules(project: Path) -> None:
     fails("make", "app", "karni_x", match="karni make module")
 
 
+def test_every_generator_refuses_a_name_of_the_wrong_form_with_a_valid_example(
+    project: Path,
+) -> None:
+    """One name check: C103, nothing written, and the example given is itself accepted."""
+
+    def example(message: str) -> str:
+        return message.split("write '", 1)[1].split("'", 1)[0] if "write '" in message else ""
+
+    message = fails("make", "app", "9x", match="C103")
+    assert "9_x" not in message and "starting with a letter" in message
+    assert "e.g. 'my_name'" in message
+    assert example(fails("make", "app", "Events", match="C103")) == "events"
+    ok("make", "app", "events")
+    message = fails("make", "model", "bad", "name:str", match="C103")
+    assert "must be PascalCase" in message and example(message) == "Bad"
+    assert "class Bad" not in (project / "events" / "models.py").read_text()
+    assert example(fails("make", "model", "event_type", "name:str", match="C103")) == "EventType"
+    fails("make", "model", "None", "name:str", match="(a Python keyword)")
+    fails("make", "model", "9x", "name:str", match="e.g. 'Event' or 'EventType'")
+    ok("make", "model", "Event", "title:str", "--with", "viewset")
+    fails("make", "test", "event", match="write 'Event'")  # an existing model, named as declared
+    fails("make", "page", "9x", match="e.g. 'my-page'")
+    assert example(fails("make", "page", "Speakers", match="C103")) == "speakers"
+    fails("make", "task", "Send", match="write 'send'")
+    from karni_cli.generators.naming import is_kebab, is_pascal, is_snake
+
+    for check, name in ((is_snake, "events"), (is_pascal, "EventType"), (is_kebab, "my-page")):
+        assert check(name)
+
+
 # model / viewset / serializer
 
 
