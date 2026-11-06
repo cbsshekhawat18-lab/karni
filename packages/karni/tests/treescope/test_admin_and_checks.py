@@ -92,6 +92,25 @@ class TestStartup:
         with override_settings(KARNI_USER_GRANTS=True):
             assert [m for m in check_tree_scopes() if m.id == "karni.W620"] == []
 
+    def test_karni_check_shows_every_warning_manage_check_shows(self) -> None:
+        """karni check wraps `check`: a warning of one must not be missing from the other."""
+        from io import StringIO
+
+        from django.core.management import CommandError, call_command
+
+        with override_settings(KARNI_USER_GRANTS=False):
+            plain, karni = StringIO(), StringIO()
+            call_command("check", stdout=plain, stderr=plain, fail_level="CRITICAL")
+            try:
+                call_command("karni_check", stdout=karni, stderr=karni)
+            except (SystemExit, CommandError):  # the fixtures carry errors too
+                pass
+        import re
+
+        ids = set(re.findall(r"\(karni\.[WE]\d+\)", plain.getvalue()))
+        assert "(karni.W620)" in ids, plain.getvalue()
+        assert ids <= set(re.findall(r"\(karni\.[WE]\d+\)", karni.getvalue())), karni.getvalue()
+
     def test_tree_scope_in_a_where_checks_its_path_at_once(self) -> None:
         from karni.accounts.tree_scope import tree_scope
 
