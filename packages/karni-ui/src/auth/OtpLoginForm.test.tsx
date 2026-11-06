@@ -139,6 +139,8 @@ describe("OtpLoginForm", () => {
     await user.type(screen.getByLabelText("Code"), "12");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Enter the whole code");
+    // The digits typed so far stay, to be finished.
+    expect(screen.getByLabelText("Code")).toHaveValue("12");
   });
 
   it("has one code input sized to the code, for the phone's one-time-code suggestion", async () => {

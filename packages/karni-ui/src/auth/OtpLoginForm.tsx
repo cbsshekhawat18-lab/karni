@@ -361,7 +361,8 @@ export function OtpLoginForm({
         onAwaitingApproval?.(result.detail);
       }
     } catch (error) {
-      if (codeRef.current !== null) codeRef.current.value = "";
+      // A refused code is cleared. An incomplete one is kept, to be finished.
+      if (codeRef.current !== null && !(error instanceof InvalidInput)) codeRef.current.value = "";
       fail(error);
     }
   }
