@@ -676,7 +676,7 @@ def test_response_caching_from_the_spec(copy: Path) -> None:
     code, out = _build()
     assert code == 0, out
     settings = (copy / "config" / "settings.py").read_text()
-    assert "KARNI_API_CACHE" not in settings
+    assert "KARNI_API_CACHE =" not in settings
 
 
 def test_related_tabs_and_a_dashboard_page_are_built(copy: Path) -> None:
@@ -1179,7 +1179,7 @@ def test_a_feature_that_needs_an_extra_names_it_and_stops_early_when_it_is_missi
     build_run._require_extras(copy, ["2fa"])  # installed: nothing to say
 
 
-def test_a_spec_that_names_a_recipe_gets_its_domain_code_on_the_first_build(
+def test_a_spec_that_names_a_recipe_says_its_domain_code_was_not_written(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The /new-app flow: karni.yaml started from a recipe in an existing project."""
@@ -1187,5 +1187,7 @@ def test_a_spec_that_names_a_recipe_gets_its_domain_code_on_the_first_build(
     root = _project(tmp_path, monkeypatch, "Yoga Flow", (recipe / "karni.yaml").read_text())
     code, out = _build()
     assert code == 0, out
-    assert (root / "bookings" / "tests" / "test_capacity.py").is_file()
-    assert "capacity" in (root / "bookings" / "models.py").read_text().lower()
+    assert "recipe booking's own code" in out and "karni new --recipe booking" in out
+    assert not (root / "bookings" / "tests" / "test_capacity.py").exists()
+    _, again = _build()
+    assert "was not written" not in again  # said once, with the build that wrote the spec

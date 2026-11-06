@@ -208,7 +208,7 @@ def build(root: Path, spec: schema.Spec, facts: dict[str, Any], file: str, opts:
         module_lines = _plan_modules(ws, plan)
         _plan_extras(ws, feature_extras(spec))
         rendered = render.render(ws, inputs)
-        _recipe_files(ws, rec, spec)
+        _recipe_files(ws, rec)
         deletes = _deletions(root, rec, rendered)
         edits = _hand_edits(root, rec, rendered, deletes)
     except Stop as stop:
@@ -269,7 +269,12 @@ def build(root: Path, spec: schema.Spec, facts: dict[str, Any], file: str, opts:
     else:
         state = pending
     record.save_pending(root, state)
-    return _steps(root, result, state, opts, written=bool(changes or deletes))
+    result = _steps(root, result, state, opts, written=bool(changes or deletes))
+    unwritten = _recipe_not_written(rec, spec)
+    if unwritten and result.status == "built":
+        base = result.message or f"Built: the project matches {file}."
+        result.message = f"{base} {unwritten}"
+    return result
 
 
 def _refused(result: Result, stop: Stop) -> Result:
@@ -486,20 +491,9 @@ def _plan_extras(ws: Workspace, extras: list[str]) -> None:
             ws.write("pyproject.toml", updated)
 
 
-def _recipe_files(ws: Workspace, rec: Record, spec: schema.Spec | None = None) -> list[str]:
-    """The recipe's own files over build's stubs.
-
-    ``karni new --recipe`` names the recipe in the record. A karni.yaml started from a recipe in
-    an existing project (the /new-app flow) names it in ``app.recipe``, and the first build, the
-    one with nothing built yet, writes the same files. A name no installed recipe has is left
-    alone: ``app.recipe`` is also a plain note.
-    """
+def _recipe_files(ws: Workspace, rec: Record) -> list[str]:
+    """The recipe's own files over build's stubs, when ``karni new --recipe`` left one to write."""
     name = rec.recipe
-    if not name and spec is not None and spec.app.recipe and not rec.entities:
-        from karni_cli import recipes as known
-
-        if spec.app.recipe in known.load().recipes:
-            name = spec.app.recipe
     if not name:
         return []
     from karni_cli import recipes
@@ -515,6 +509,26 @@ def _recipe_files(ws: Workspace, rec: Record, spec: schema.Spec | None = None) -
             code=exc.code,
         ) from None
     return apply.stage(ws, recipe) if recipe is not None else []
+
+
+def _recipe_not_written(rec: Record, spec: schema.Spec) -> str:
+    """Say so when the spec names a recipe whose domain code this build did not write.
+
+    Only ``karni new --recipe`` writes a recipe's own models, viewsets, seeds and tests. A
+    karni.yaml started from a recipe in an existing project (the /new-app flow) names it in
+    ``app.recipe`` and gets the spec alone.
+    """
+    from karni_cli import recipes
+
+    name = spec.app.recipe
+    if not name or rec.recipe or rec.entities or name not in recipes.load().recipes:
+        return ""
+    return (
+        f"The recipe {name}'s own code (its model methods, actions, seeders and tests, such as "
+        "its capacity rule) was not written: only karni new --recipe "
+        f"{name} writes it. Copy it from karni_cli/recipes/{name}/files, or start the project "
+        "with karni new --recipe."
+    )
 
 
 def _plan_module_urls(ws: Workspace, module: str) -> None:

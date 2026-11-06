@@ -1603,10 +1603,10 @@ apply codemods and list the manual steps. This file is the human summary.
 - **A recipe passes its own check.** `karni.W620` (a tree-scoped role grant
   with no node on the user) is silent while `KARNI_USER_GRANTS` is on, since
   the nodes come from the grants. The data-portal recipe warned twice.
-- **A karni.yaml that names a recipe gets the recipe's domain code.** In the
-  /new-app flow (`app.recipe` set in an existing project), the first build now
-  writes the recipe's models, viewsets, seeds and tests over its stubs, as
-  `karni new --recipe` does. A name no installed recipe has is a plain note.
+- **A karni.yaml that names a recipe says what it did not write.**
+  In the /new-app flow (`app.recipe` set in an existing project) only `karni
+  new --recipe` writes the recipe's own models, actions, seeds and tests. The
+  first `karni build` now says so, and names the way to get them.
 - **A new project starts without the legacy cache header warning.** The
   scaffold's settings set `KARNI_API_CACHE_LEGACY_HEADER` to `False` by
   default. Existing projects keep the old default and the warning.
