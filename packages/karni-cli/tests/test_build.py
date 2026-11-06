@@ -270,9 +270,9 @@ def test_the_financial_words_are_karnis() -> None:
     assert MONEY_WORDS == checks.MONEY_WORDS
     assert FINANCIAL_MODEL_WORDS == checks.FINANCIAL_MODEL_WORDS
     assert is_financial("LedgerEntry", [])
-    assert is_financial("Line", [FieldSpec("unit_price", "decimal", [], False)])
-    assert is_financial("Line", [FieldSpec("cost", "money", [], False)])
-    assert not is_financial("Line", [FieldSpec("weight", "decimal", [], False)])
+    assert is_financial("Line", [FieldSpec("unit_price", "decimal", (), False)])
+    assert is_financial("Line", [FieldSpec("cost", "money", (), False)])
+    assert not is_financial("Line", [FieldSpec("weight", "decimal", (), False)])
 
 
 def test_the_built_models_pass_karnis_own_checks(copy: Path) -> None:

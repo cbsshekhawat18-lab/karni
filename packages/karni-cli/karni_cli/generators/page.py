@@ -28,6 +28,7 @@ Routes are registered in ``frontend/src/routes.tsx`` between the
 from __future__ import annotations
 
 import ast
+import functools
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -282,7 +283,7 @@ def check_related(ws: Workspace, spec: PageSpec) -> None:
             field or None,
             pointing,
             fields,
-            ref=lambda f, route=route: f"{route}.{f}",
+            ref=functools.partial("{}.{}".format, route),
         )
         if isinstance(found, TabProblem):
             raise CliError(
