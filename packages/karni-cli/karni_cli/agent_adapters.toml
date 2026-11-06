@@ -1,16 +1,22 @@
 # Agent adapter registry for `karni rules sync`.
 #
-# One entry per tool convention. Renaming a file or changing a frontmatter key
-# is an edit here, not a code change. Projects can disable entries or move
-# paths from karni.rules.py:  ADAPTERS = {"disable": [...], "paths": {...}}.
+# AGENTS.md is the one agent file Karni writes. Renaming a file or changing a
+# frontmatter key is an edit here, not a code change. Projects can disable
+# entries or move paths from karni.rules.py:
+#   ADAPTERS = {"disable": [...], "paths": {...}}.
 #
 # Every adapter says the same thing: run `karni context` and `karni rules`
 # first, then follow what they return. The content lives in karni.agent.rules
 # (packages/karni/karni/agent/rules.py); these files are thin pointers.
 #
+# Entries with `deprecated = true` are one tool's file or command folder each.
+# They are deprecated since 0.5.0 and removed in 1.0 (docs/stability.md, Agent
+# guidance): sync writes them only where a project already has them, keeps
+# those up to date and warns with code C860 (docs/migrations/0.5.md).
+#
 # Templates (implemented in karni_cli/adapters.py):
-#   instructions  - the shared ~15-line body (+ optional YAML frontmatter)
-#   import        - an `@<file>` import of another adapter (Claude Code)
+#   instructions  - the shared body (+ optional YAML frontmatter)
+#   import        - an `@<file>` import of another adapter
 #   command       - one file per procedure (slash commands / prompt files)
 #
 # Each entry records where its convention was verified, and when. Re-verify
@@ -23,7 +29,7 @@ max_lines = 100
 
 [[adapter]]
 id = "agents-md"
-tool = "AGENTS.md (canonical for Codex, Jules, Gemini CLI, Zed, Warp and Devin, also read by Cursor, Copilot, Windsurf, Cline and Junie)"
+tool = "AGENTS.md (any coding agent)"
 path = "AGENTS.md"
 template = "instructions"
 modules = true
@@ -33,6 +39,7 @@ modules = true
 
 [[adapter]]
 id = "claude"
+deprecated = true
 tool = "Claude Code"
 path = "CLAUDE.md"
 template = "import"
@@ -44,6 +51,7 @@ import = "agents-md"
 
 [[adapter]]
 id = "cursor"
+deprecated = true
 tool = "Cursor"
 path = ".cursor/rules/karni.mdc"
 template = "instructions"
@@ -55,6 +63,7 @@ frontmatter = { description = "Karni project conventions: run karni context and 
 
 [[adapter]]
 id = "windsurf"
+deprecated = true
 tool = "Windsurf (Cascade, now documented as Devin Desktop)"
 path = ".windsurf/rules/karni.md"
 template = "instructions"
@@ -68,6 +77,7 @@ frontmatter = { trigger = "always_on" }
 
 [[adapter]]
 id = "copilot"
+deprecated = true
 tool = "GitHub Copilot"
 path = ".github/copilot-instructions.md"
 template = "instructions"
@@ -77,6 +87,7 @@ template = "instructions"
 
 [[adapter]]
 id = "cline"
+deprecated = true
 tool = "Cline"
 path = ".clinerules/karni.md"
 template = "instructions"
@@ -87,6 +98,7 @@ template = "instructions"
 
 [[adapter]]
 id = "aider"
+deprecated = true
 tool = "Aider"
 path = "CONVENTIONS.md"
 template = "instructions"
@@ -97,6 +109,7 @@ note = "Aider does not load this file by itself: run `aider --read CONVENTIONS.m
 
 [[adapter]]
 id = "junie"
+deprecated = true
 tool = "JetBrains Junie"
 path = ".junie/AGENTS.md"
 template = "instructions"
@@ -113,6 +126,7 @@ modules = true
 
 [[commands]]
 id = "claude-commands"
+deprecated = true
 tool = "Claude Code"
 dir = ".claude/commands"
 suffix = ".md"
@@ -124,6 +138,7 @@ frontmatter = ["description", "argument-hint"]
 
 [[commands]]
 id = "cursor-commands"
+deprecated = true
 tool = "Cursor"
 dir = ".cursor/commands"
 suffix = ".md"
@@ -136,6 +151,7 @@ frontmatter = []
 
 [[commands]]
 id = "windsurf-workflows"
+deprecated = true
 tool = "Windsurf"
 dir = ".windsurf/workflows"
 suffix = ".md"
@@ -148,6 +164,7 @@ frontmatter = ["description"]
 
 [[commands]]
 id = "copilot-prompts"
+deprecated = true
 tool = "GitHub Copilot (VS Code prompt files)"
 dir = ".github/prompts"
 suffix = ".prompt.md"

@@ -44,7 +44,7 @@ the item it names is done.
 
 | Item | Goal | Depends on | Status |
 |---|---|---|---|
-| A8 | MCP tools, agent rules and a `/new-app` slash command for the whole flow. | A1 to A5 | done |
+| A8 | MCP tools, agent rules and a `/new-app` request in AGENTS.md for the whole flow. | A1 to A5 | done |
 
 ### Phase D: ready-made apps and advice
 
@@ -77,7 +77,7 @@ Notes on the order:
 ## Definition of done
 
 Every item meets the [definition of done in the large-apps roadmap](large-apps.md#definition-of-done):
-Karni's patterns and CLAUDE.md, new public names experimental, tests plus an assert helper or a
+Karni's patterns and the repository rules, new public names experimental, tests plus an assert helper or a
 check rule wherever there is a misuse to catch, docs with REFERENCE.md regenerated and a
 CHANGELOG entry, `karni rules sync` when agents need to know, the full suite and `karni check`
 green, one branch per item, and nothing pushed until the owner asks.

@@ -198,11 +198,10 @@ jobs:
           python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
 
       # -----------------------------------------------------------------------
-      # Agent adapters vs karni/agent/rules.py (docs/agents.md). Scaffolds a
-      # project, then `karni rules sync --check` fails if any generated adapter
-      # (AGENTS.md, CLAUDE.md, .cursor/rules/karni.mdc, ...) differs from what
-      # the rule registry produces; also fails if the generated procedures
-      # block in docs/agents.md is stale. Projects run the same
+      # AGENTS.md vs karni/agent/rules.py (docs/agents.md). Scaffolds a
+      # project, then `karni rules sync --check` fails if the generated
+      # AGENTS.md differs from what the rule registry produces; also fails if
+      # the generated procedures block in docs/agents.md is stale. Projects run the same
       # `karni rules sync --check` in their own CI (`make check`).
       # -----------------------------------------------------------------------
       - name: Agent adapters are up to date (karni rules sync --check)
@@ -417,6 +416,10 @@ jobs:
       # llms.txt, Open Graph, every package's metadata and the GitHub About.
       - name: Karni's description is identical everywhere
         run: python scripts/check_description.py --github
+      # scripts/tool-names.toml: no AI tool or company names in a tracked file,
+      # outside the exceptions it lists with their reasons.
+      - name: No AI tool names outside the exceptions
+        run: python scripts/check_tool_names.py
       # scripts/docs_seo.py: every page has its own title and description,
       # JSON-LD on the homepage and FAQ, llms-full.txt; warnings fail --strict.
       - name: "Build (strict: a broken link, a missing page or a missing description fails)"
@@ -433,7 +436,7 @@ jobs:
           # the text is in the HTML itself, not rendered by JavaScript
           grep -q "$(cut -c1-60 docs/seo/description.txt)" site/index.html
           test -s site/llms.txt && test -s site/llms-full.txt && test -s site/sitemap.xml
-          grep -q "GPTBot" site/robots.txt
+          grep -qx "User-agent: \*" site/robots.txt && grep -qx "Allow: /" site/robots.txt
       - uses: actions/upload-pages-artifact@v5
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:

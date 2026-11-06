@@ -26,24 +26,38 @@ TASKS = ("booking", "crm", "shop")
 DEFAULT_N = 5
 
 
-def resolve_claude(explicit: str | None, fake: bool) -> list[str]:
+def resolve_agent(explicit: str | None, fake: bool) -> list[str]:
+    """The agent CLI: --agent, else KARNI_BENCH_AGENT (a name on PATH or a path)."""
     if fake:
-        return [sys.executable, str(execute.FAKE_CLAUDE)]
-    found = explicit or os.environ.get("KARNI_BENCH_CLAUDE") or shutil.which("claude")
+        return [sys.executable, str(execute.FAKE_AGENT)]
+    named = explicit or os.environ.get("KARNI_BENCH_AGENT", "")
+    found = shutil.which(named) if named else None
     if not found:
-        raise SystemExit("claude is not on PATH: pass --claude PATH or set KARNI_BENCH_CLAUDE")
+        raise SystemExit(
+            "No agent CLI: pass --agent NAME_OR_PATH or set KARNI_BENCH_AGENT "
+            f"(found nothing for {named!r})."
+            if named
+            else "No agent CLI: pass --agent NAME_OR_PATH or set KARNI_BENCH_AGENT."
+        )
     return [found]
 
 
-def versions(claude: list[str], fake: bool) -> tuple[str, str]:
-    """The checkout's commit and the claude version, recorded with every run."""
+def resolve_model(explicit: str, fake: bool) -> str:
+    """The model: --model, else KARNI_BENCH_MODEL. The fake agent needs none."""
+    if explicit or fake:
+        return explicit or "fake"
+    raise SystemExit("No model: pass --model NAME or set KARNI_BENCH_MODEL.")
+
+
+def versions(agent: list[str], fake: bool) -> tuple[str, str]:
+    """The checkout's commit and the agent CLI's version, recorded with every run."""
     commit = subprocess.run(
         ["git", "-C", str(paths.REPO_ROOT), "rev-parse", "--short", "HEAD"],
         capture_output=True, text=True, check=False,
     ).stdout.strip()  # fmt: skip
     if fake:
         return commit, "fake"
-    done = subprocess.run([*claude, "--version"], capture_output=True, text=True, check=False)
+    done = subprocess.run([*agent, "--version"], capture_output=True, text=True, check=False)
     return commit, done.stdout.strip()
 
 
@@ -53,8 +67,8 @@ def describe(
     run_id = execute.run_id_for(task, condition, index, "<time>")
     prompt = execute.task_prompt(config.tasks_dir, task, condition)
     shown = prompt if show_prompt else f"<prompt: {len(prompt)} characters, starts {prompt[:40]!r}>"
-    command = execute.claude_command(
-        config.claude,
+    command = execute.agent_command(
+        config.agent,
         "@PROMPT@",
         config.model,
         Path("<project>/.mcp.json" if condition == "karni" else "<run>/mcp-empty.json"),
@@ -85,16 +99,18 @@ def main(argv: list[str] | None = None) -> int:
         "--conditions", default=",".join(starts.CONDITIONS), help="plain, karni or both"
     )
     parser.add_argument("--n", type=int, default=DEFAULT_N, help="runs per task and condition (5)")
-    parser.add_argument("--model", default=execute.DEFAULT_MODEL)
+    parser.add_argument(
+        "--model", default=execute.DEFAULT_MODEL, help="the model (default: KARNI_BENCH_MODEL)"
+    )
     parser.add_argument("--limit-minutes", type=float, default=60, help="per run (60)")
-    parser.add_argument("--fake", action="store_true", help="use the fake claude (no usage spent)")
+    parser.add_argument("--fake", action="store_true", help="use the fake agent (no usage spent)")
     parser.add_argument("--dry-run", action="store_true", help="print the plan and commands only")
     parser.add_argument(
         "--show-prompt", action="store_true", help="with --dry-run: the full prompts"
     )
     parser.add_argument("--resume", action="store_true", help="skip runs already in the data")
     parser.add_argument("--keep", action="store_true", help="keep each run's project folder")
-    parser.add_argument("--claude", help="the claude binary (default: KARNI_BENCH_CLAUDE or PATH)")
+    parser.add_argument("--agent", help="the agent CLI (default: KARNI_BENCH_AGENT)")
     parser.add_argument(
         "--data", type=Path, default=records.DATA_FILE, help="the runs.jsonl to use"
     )
@@ -127,17 +143,22 @@ def main(argv: list[str] | None = None) -> int:
     ]
     if unknown:
         raise SystemExit(f"Unknown task or condition: {', '.join(unknown)}")
-    claude = (
-        resolve_claude(args.claude, args.fake)
-        if not args.dry_run
-        else ([sys.executable, str(execute.FAKE_CLAUDE)] if args.fake else ["claude"])
-    )
+    if args.dry_run:
+        agent = (
+            [sys.executable, str(execute.FAKE_AGENT)]
+            if args.fake
+            else [args.agent or os.environ.get("KARNI_BENCH_AGENT") or "<agent>"]
+        )
+        model = args.model or ("fake" if args.fake else "<model>")
+    else:
+        agent = resolve_agent(args.agent, args.fake)
+        model = resolve_model(args.model, args.fake)
     plan = order.plan(tasks, conditions, args.n)
     if args.resume:
         finished = records.done(records.load(args.data))
         plan = [run for run in plan if run not in finished]
     config = execute.Config(
-        model=args.model, limit_seconds=args.limit_minutes * 60, claude=claude,
+        model=model, limit_seconds=args.limit_minutes * 60, agent=agent,
         data_file=args.data, keep=args.keep,
     )  # fmt: skip
     if args.dry_run:
@@ -145,7 +166,7 @@ def main(argv: list[str] | None = None) -> int:
         for task, condition, index in plan:
             print(describe(task, condition, index, config, args.show_prompt))
         return 0
-    config.karni_commit, config.claude_version = versions(claude, args.fake)
+    config.karni_commit, config.agent_version = versions(agent, args.fake)
     config.database = Postgres()
     loaded = {name: starts.load(name) for name in conditions}
     for number, (task, condition, index) in enumerate(plan, 1):

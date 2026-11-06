@@ -1463,6 +1463,19 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Pass one of the declared roles the error lists, or declare the role in KARNI_ROLES "
         "(config/settings.py) first.",
     ),
+    # C860-C869 agent files
+    _c(
+        "C860",
+        "Tool-specific agent files are deprecated",
+        "karni rules sync, karni doctor (karni_cli.adapters)",
+        "AGENTS.md is the one agent file Karni writes, and coding agents read it. Since 0.5.0 "
+        "karni new no longer writes one tool's instruction file or command folder. A project "
+        "that already has them keeps getting them updated by karni rules sync until 1.0, which "
+        "stops updating them and removes them.",
+        "Point your tool at AGENTS.md. Keep project guidance in karni.rules.py, which feeds "
+        "AGENTS.md, and delete the files the warning names once your tool reads AGENTS.md "
+        "(docs/migrations/0.5.md).",
+    ),
 )
 
 

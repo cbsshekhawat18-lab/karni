@@ -71,7 +71,7 @@ and where a young, unsupported framework is an acceptable risk.
 | Front end | HTMX or React (Vue example) | React only |
 | Upgrading | regenerate and merge with git | `karni upgrade` with codemods |
 | Per-model API, admin, permissions | generated once, then yours | derived from the model and `access` rule |
-| AI agent support | rule files, CLAUDE.md / AGENTS.md, skills, MCP | instruction files for eight tools, MCP server, build-failing lint rules |
+| AI agent support | rule files, agent instruction files, skills, MCP | AGENTS.md from one rule set, MCP server, build-failing lint rules |
 | Support | email, Slack (paid tiers) | GitHub issues |
 | Django version | 6 (open-source edition) | 5.2 LTS |
 

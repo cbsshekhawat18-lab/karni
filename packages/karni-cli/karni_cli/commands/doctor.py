@@ -31,7 +31,7 @@ from karni_cli import agent_data, envfile, services, tips, toolchain
 from karni_cli import history as history_mod
 from karni_cli import project as project_mod
 from karni_cli import suggest as suggest_mod
-from karni_cli.adapters import sync
+from karni_cli.adapters import DEPRECATED_CODE, sync
 from karni_cli.commands.context import find_manifest
 from karni_cli.project import CliError, find_project
 
@@ -208,14 +208,21 @@ def _manifest(project: Path) -> str:
     return f"@karni/ui manifest: {_display(found, project)}"
 
 
-def _adapters(project: Path) -> str:
+def _adapters(project: Path) -> list[str]:
     try:
         result = sync(project, agent_data.load(project), check=True)
     except CliError as exc:
-        return f"cannot check: {exc}"
+        return [f"cannot check: {exc}"]
     if result.stale:
-        return f"stale ({len(result.stale)} files). Run `karni rules sync`"
-    return f"up to date ({len(result.unchanged)} files)"
+        lines = [f"stale ({len(result.stale)} files). Run `karni rules sync`"]
+    else:
+        lines = [f"up to date ({len(result.unchanged)} files)"]
+    if result.deprecated:
+        lines.append(
+            f"{DEPRECATED_CODE}: {len(result.deprecated)} tool-specific files are deprecated and "
+            "removed in 1.0. Keep AGENTS.md (`karni rules sync` names them)"
+        )
+    return lines
 
 
 def _history(project: Path) -> list[str]:
@@ -269,7 +276,7 @@ def doctor(
     _echo_lines("redis", redis)
     _echo_lines("node", _node())
     typer.echo(_line("ui", _manifest(project)))
-    typer.echo(_line("adapters", _adapters(project)))
+    _echo_lines("adapters", _adapters(project))
     _echo_lines("history", _history(project))
     for line in _suggestions(project, service):
         typer.echo(line)

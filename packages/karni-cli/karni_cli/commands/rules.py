@@ -1,4 +1,4 @@
-"""``karni rules`` — the conventions, file checks, and adapter sync.
+"""``karni rules`` — the conventions, file checks, and AGENTS.md sync.
 
     karni rules                       conventions (code + one line each)
     karni rules --explain K101        full statement, rationale, fix, enforcement
@@ -6,7 +6,7 @@
     karni rules --check FILE...       static violations with fixes (exit 1 if any)
     karni rules --json                the raw data (rules, procedures)
     karni rules sync [--check] [--force]
-                                      regenerate AGENTS.md, CLAUDE.md, ... (CI: --check)
+                                      regenerate AGENTS.md (CI: --check)
 
 Works without Django and, except ``sync``, without a project; inside one,
 ``karni.rules.py`` overrides and ``.karni/modules/`` guidance apply.
@@ -20,7 +20,7 @@ from pathlib import Path
 import typer
 
 from karni_cli import agent_data
-from karni_cli.adapters import module_fragments, sync
+from karni_cli.adapters import deprecation_warning, module_fragments, sync
 from karni_cli.project import CliError, find_project, require_project
 from karni_cli.rules_render import (
     render_explain,
@@ -107,10 +107,12 @@ def sync_command(
         False, "--force", help="Overwrite hand-written files (backed up under .karni/backup/)."
     ),
 ) -> None:
-    """Regenerate the agent adapter files from Karni's rule registry."""
+    """Regenerate AGENTS.md (and any deprecated tool-specific agent file) from the rules."""
     project = require_project()
     data = agent_data.load(project)
     result = sync(project, data, check=check, force=force)
+    if result.deprecated:
+        typer.echo(f"warning: {deprecation_warning(result.deprecated)}", err=True)
     if check:
         if result.stale:
             for rel in result.stale:

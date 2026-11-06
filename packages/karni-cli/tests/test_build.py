@@ -224,7 +224,7 @@ def test_the_ai_module_is_added_wired_and_checked(
     """``modules: ai`` adds karni-ai with its provider; karni check passes with the test one."""
     require_modules("karni-ai")
     monkeypatch.setitem(run.STEP_RUNNERS, "check", run._check)  # the fixture skips it
-    for name in ("KARNI_AI_PROVIDER", "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL"):
+    for name in [n for n in os.environ if n.endswith(("_AI_PROVIDER", "_API_KEY", "_MODEL"))]:
         monkeypatch.delenv(name, raising=False)
     _edit(copy / "karni.yaml", ("modules:\n", "modules:\n  ai: {provider: test}\n"))
     plan = CliRunner().invoke(app, ["plan", "--offline"]).output
@@ -240,7 +240,7 @@ def test_the_ai_module_is_added_wired_and_checked(
     assert '"karni_ai",' in apps_block[apps_block.rindex("INSTALLED_APPS") :]
     block = settings[settings.index("# karni:spec start") : settings.index("# karni:spec end")]
     assert 'KARNI_AI_PROVIDER = "test"' in block
-    assert "ANTHROPIC" not in block and "MODEL" not in block
+    assert "_API_KEY" not in block and "MODEL" not in block
     assert '"karni-ai' in (copy / "pyproject.toml").read_text()
     assert (copy / ".karni" / "modules" / "ai.md").is_file()
     assert _rows(copy, "select count(*) from karni_ai_aicall") == [(0,)]

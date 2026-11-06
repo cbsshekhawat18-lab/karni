@@ -1,5 +1,5 @@
 ---
-description: "The token benchmark: three apps built by Claude Code with and without Karni, with the method, the exact commands to repeat it, the limits and the raw data."
+description: "The token benchmark: three apps built by a coding agent with and without Karni, with the method, the exact commands to repeat it, the limits and the raw data."
 ---
 
 # Token benchmark: the same apps with and without Karni
@@ -53,18 +53,22 @@ the agent's claim.
 
 - **Plain.** An empty Django 5.2 and DRF project with a Vite, React and TypeScript frontend.
   Dependencies are installed, Karni is not.
-- **Karni.** `karni new` from wheels built from the checkout under test, its generated agent
-  files, the Karni MCP server in `.mcp.json`, and a prompt that starts with `/new-app`.
+- **Karni.** `karni new` from wheels built from the checkout under test, its generated
+  AGENTS.md, the Karni MCP server in `.mcp.json`, and a prompt that starts with the new-app
+  procedure (``Run `karni rules --procedure new-app` and follow every step for this
+  request:``).
 
-The model, the task prompt and contract, the checks, the time limit, the tool permissions, a
-fresh directory and a fresh PostgreSQL database per run are the same. No user settings, hooks,
+The agent CLI, the model, the task prompt and contract, the checks, the time limit, the tool
+permissions, a fresh directory and a fresh PostgreSQL database per run are the same. No user settings, hooks,
 plugins or memory are loaded (`--setting-sources project`, `--strict-mcp-config`,
 `--no-session-persistence`, and a new path per run so auto-memory starts empty).
 
-**The command of every run.**
+**The command of every run.** `<agent>` is the agent CLI (`--agent` or `KARNI_BENCH_AGENT`)
+and `<model>` the model (`--model` or `KARNI_BENCH_MODEL`). The harness reads the stream-json
+events the CLI prints.
 
 ```sh
-claude -p "<prompt>" --output-format stream-json --verbose --model claude-sonnet-5-5 \
+<agent> -p "<prompt>" --output-format stream-json --verbose --model <model> \
   --setting-sources project --strict-mcp-config --mcp-config <the condition's MCP file> \
   --no-session-persistence --dangerously-skip-permissions
 ```
@@ -72,13 +76,13 @@ claude -p "<prompt>" --output-format stream-json --verbose --model claude-sonnet
 It runs inside a throwaway folder under `~/.cache/karni-dev/bench/`, with a limit of 60
 minutes of wall time. `--dangerously-skip-permissions` is used only there, for both conditions.
 
-**Decisions.** The model is `claude-sonnet-5-5` in both conditions. There are 5 runs per task
+**Decisions.** One model for both conditions, recorded with every run. There are 5 runs per task
 and condition, 30 runs in all. Acceptance is the API tests plus the frontend build. The time
 limit is 60 minutes per run. The runs alternate between the conditions, plain then Karni, so the
 time of day touches both alike.
 
 **Recorded per run.** Input, output, cache-read and cache-creation tokens, the reported cost,
-tool calls by tool, wall time, the lines the agent wrote itself (counted from its Write and
+tool calls by tool, wall time, the agent CLI's version, the lines the agent wrote itself (counted from its Write and
 Edit tool inputs), the size of the project's git diff (lines added plus deleted, shown with and
 without lockfiles, `node_modules`, migrations and build output), tests passed out of the total,
 the frontend build, whether the time limit hit, and the exit status. The report gives the
@@ -90,12 +94,13 @@ frontend built.
 ## Reproduce it
 
 Everything is run from a Karni checkout with a virtualenv that has `karni`, `karni-cli`,
-`psycopg`, `pytest` and `requests`, Node 20 or later, a test PostgreSQL and the `claude` binary
+`psycopg`, `pytest` and `requests`, Node 20 or later, a test PostgreSQL and the agent CLI
 signed in. Unset `VIRTUAL_ENV` first: the Karni commands prefer it over a project's own
 virtualenv.
 
 ```sh
 unset VIRTUAL_ENV
+export KARNI_BENCH_AGENT=<the agent CLI> KARNI_BENCH_MODEL=<the model>
 # once: the two starting projects (wheels from this checkout, dependencies, node_modules)
 python scripts/benchmarks/tokens/run.py --build-starts
 
@@ -107,7 +112,7 @@ python scripts/benchmarks/tokens/run.py --reference shop
 # see the plan and the exact commands, nothing is started
 python scripts/benchmarks/tokens/run.py --dry-run --show-prompt
 
-# test the harness with a stand-in for claude (no usage is spent)
+# test the harness with a stand-in for the agent (no usage is spent)
 python scripts/benchmarks/tokens/run.py --fake --n 1 --data /tmp/fake-runs.jsonl
 
 # the 30 real runs (re-run the same command to continue where a stop left off)
@@ -117,7 +122,8 @@ python scripts/benchmarks/tokens/run.py --resume
 python scripts/benchmarks/tokens/report.py
 ```
 
-`--tasks`, `--conditions`, `--n`, `--model` and `--limit-minutes` narrow or change a run.
+`--tasks`, `--conditions`, `--n`, `--agent`, `--model` and `--limit-minutes` narrow or change a
+run.
 The PostgreSQL is `127.0.0.1:55432` (user `postgres`) and each run uses a database named
 `bm_<run id>` that is dropped afterwards. Servers listen on a free port between 8700 and 8799.
 

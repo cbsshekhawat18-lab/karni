@@ -39,9 +39,9 @@ agents then ran `karni context` and `--help` to confirm it.
 
 ## How it was counted
 
-- **Agents**: Claude Code subagents (general-purpose, Claude Opus 5.5), one
+- **Agents**: general-purpose coding-agent subagents, all on one model, one
   run per cell, 2026-10-22.
-- **Tokens**: the agent's context size when it answered, as Claude Code
+- **Tokens**: the agent's context size when it answered, as the agent tool
   reports it, minus 29,357, which is what an agent that runs `echo ok` and
   answers "OK" reports (system prompt and tool definitions). What is left is
   what the debugging itself read and wrote.

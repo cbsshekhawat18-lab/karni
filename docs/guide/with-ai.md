@@ -1,12 +1,12 @@
 ---
-description: "How to drive a Karni project with Claude Code, Cursor, Copilot or another coding agent: the adapters, the context and rules commands, and what the agent writes."
+description: "How to drive a Karni project with a coding agent: AGENTS.md, the context and rules commands, the procedures, and what the agent writes."
 ---
 
 # Building with an AI agent
 
-Karni is built to be driven by a coding agent: Claude Code, Cursor, Copilot,
-Windsurf, Cline, Junie or anything that reads a `CLAUDE.md`/`AGENTS.md`. The
-agent does not reinvent CRUD, permissions, admin screens or tests. It runs
+Karni is built to be driven by a coding agent, any agent that reads an
+`AGENTS.md`. The agent does not reinvent CRUD, permissions, admin screens or
+tests. It runs
 `karni` commands and writes only the domain code. This page is the workflow.
 The companion page, [Building without one](without-ai.md), is the same
 project built by hand, command by command.
@@ -20,24 +20,16 @@ cd ticket_shop
 cp .env.example .env
 ```
 
-`karni new` wrote the guidance files for every major tool:
+`karni new` wrote `AGENTS.md`, the file coding agents read at the
+repository root. It says: run `karni context` and `karni rules` first, run
+`karni rules --check <file>` on every file you write, and `karni check`
+before committing. It lists the procedures for routine tasks, and a request
+that starts with `/<name>`, such as `/new-app a ticket shop with online
+payments`, asks the agent for that procedure. AGENTS.md is generated from
+one registry, and `karni rules sync` refreshes it after an upgrade. If your
+tool reads only a file of its own, point it at AGENTS.md.
 
-| Tool | File it reads |
-|---|---|
-| Claude Code | `CLAUDE.md` (which includes `AGENTS.md`) |
-| Cursor | `.cursor/rules/karni.mdc`, `.cursor/commands/*.md` |
-| GitHub Copilot | `.github/copilot-instructions.md`, `.github/prompts/*.prompt.md` |
-| Windsurf | `.windsurf/rules/karni.md`, `.windsurf/workflows/*.md` |
-| Cline | `.clinerules/karni.md` |
-| JetBrains Junie | `.junie/AGENTS.md` |
-| Anything else | `AGENTS.md`, `CONVENTIONS.md` |
-
-They all say the same thing: run `karni context` and `karni rules` first,
-run `karni rules --check <file>` on every file you write, and `karni check`
-before committing. The files are generated from one registry, so they never
-disagree, and `karni rules sync` refreshes them after an upgrade.
-
-They open with the project's kind and its stack, so the agent never asks
+It opens with the project's kind and its stack, so the agent never asks
 which technology to use. `karni new` asks for the kind in a terminal, and
 `--kind` says it: `app` (this guide's ticket shop), `site` for a public
 website the client edits in the admin, or `site+app`. For a website from a
@@ -132,7 +124,7 @@ ADD = [
 ]
 ```
 
-`karni rules sync` regenerates every adapter file with them. See
+`karni rules sync` regenerates AGENTS.md with them. See
 [Karni for AI agents](../agents.md) for the full contract: the rule codes,
 the procedures (`karni rules --procedure new-model`), the MCP server and
 how enforcement works.

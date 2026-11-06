@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships.
+Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.
 </p>
 
 <p align="center">
@@ -131,7 +131,7 @@ Without Python 3.12 on your machine, run the `karni` command from its container 
 | Teams, subscriptions, multi-tenancy | no | no | yes, mature | no (payments only, as a module) |
 | Maturity | the standard | large community, many years in production | large, actively supported | version 0.4, two reference apps |
 | Deployment | your choice | Docker and cloud guides, widely used | deploy guides for several platforms | a generated production Docker Compose stack (Caddy, PostgreSQL, Redis, Celery, backups) that CI boots and smoke-tests |
-| AI agent guidance in the project | none | none in the generated project | rule files, CLAUDE.md / AGENTS.md, Claude Code skills and MCP | adapters for eight tools from one rule set, `karni context`, a build-failing `karni check`, an MCP server |
+| AI agent guidance in the project | none | none in the generated project | rule files, agent instruction files, skills and MCP | AGENTS.md from one rule set, `karni context`, a build-failing `karni check`, an MCP server |
 
 Choose Cookiecutter Django or SaaS Pegasus for a proven, complete starting point that you will own. Choose Karni to keep the generic code upstream, and accept a younger framework for it.
 
@@ -425,30 +425,30 @@ Full reference: [modules](docs/REFERENCE.md#modules).
 </details>
 
 <details>
-<summary><b>Agent integration: context, rules, adapters, MCP</b></summary>
+<summary><b>Agent integration: context, rules, AGENTS.md, MCP</b></summary>
 
-The same rule set produces every adapter file, so the tools never disagree.
+The rule set produces AGENTS.md, the file every coding agent reads.
 
 <!-- generated:agents -->
 - `stable` `karni context`, `karni rules` and `karni check` in the project workflow
-- `stable` Adapter files for every supported agent tool from one rule set (`karni rules sync`)
-- `stable` Slash commands for the routine tasks (`/new-model`, `/new-page`, …)
+- `stable` AGENTS.md, the one agent file, generated from the rule set (`karni rules sync`)
+- `stable` Procedures for the routine tasks (`new-model`, `new-page`, …), listed in AGENTS.md: `karni rules --procedure <name>`, or `/<name>` in a request
 - `experimental` `karni explain <code>`: why an error happens and the fix, offline
 - `experimental` The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` (every problem with its code and line), `karni spec export` (the spec of an existing project) and `karni plan` (what `karni build` would change, risky changes with their row counts). Experimental tier
 - `experimental` Clarifying questions: `karni plan --questions` lists the few gaps of `karni.yaml` worth asking the user (owners, access, the sign-up role, the kind, each module's and feature's asks), chosen by fixed rules, and `karni spec answer` writes an answer keeping the file's comments. Experimental tier
 - `experimental` `karni build`: the spec applied in one command, idempotently. Karni's code in files of its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and `karni check`. Experimental tier
 - `experimental` Spec pages beyond CRUD: a detail page's related tabs and dashboard pages of charts, in `karni plan`, `karni build`, `karni spec export` and `karni make page`. Experimental tier
 - `experimental` The module catalog: a manifest per module and built-in feature, `karni modules list` and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from the manifest and `karni remove`, which never drops data. Experimental tier
-- `experimental` The `/new-app` flow, from a one-line request to a running app: recipes (`karni recipes list --match`, `show`, the `karni.recipes` entry points, the blank start), the `new-app` procedure and rule K311 in every adapter, and the MCP tools `recipes`, `spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`, each returning JSON with a published schema. Experimental tier
+- `experimental` The `/new-app` flow, from a one-line request to a running app: recipes (`karni recipes list --match`, `show`, the `karni.recipes` entry points, the blank start), the `new-app` procedure and rule K311 in AGENTS.md, and the MCP tools `recipes`, `spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`, each returning JSON with a published schema. Experimental tier
 - `experimental` Six recipes, `shop`, `booking`, `crm`, `lms`, `marketplace` and `data-portal`, and `karni new "<Name>" --recipe <name>`: the recipe's karni.yaml, then `karni build`, which writes the recipe's domain code, seeds and tests over its own stubs, never over the project's code, and runs the tests and `karni check`. Each is built from scratch in CI. Experimental tier
 - `experimental` `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it
 - `experimental` MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools
 - `experimental` Large projects, one area at a time: `karni context --summary`, `--app`, `--model` and `--max-tokens`, and a `karni check` that skips unchanged files (a cache per check and file, `--changed [REF]` for the files git reports). Experimental tier
 
-Slash commands: `/new-model`, `/new-page`, `/add-module`, `/new-module`, `/site-from-design`, `/new-app`.
+Procedures: `/new-model`, `/new-page`, `/add-module`, `/new-module`, `/site-from-design`, `/new-app`.
 <!-- /generated:agents -->
 
-Full reference: [slash commands](docs/REFERENCE.md#slash-commands) and [agent rules](docs/REFERENCE.md#agent-rules-k).
+Full reference: [procedures](docs/REFERENCE.md#procedures) and [agent rules](docs/REFERENCE.md#agent-rules-k).
 </details>
 
 <details>
@@ -478,17 +478,17 @@ An agent in a Karni project extends the framework instead of rewriting it:
 
 - **`karni context`** prints the project in a few lines: apps, models, viewsets, roles, components, hooks and pages.
 - **`karni rules`** prints the 48 conventions, each with a code, in 620 tokens (cl100k). `karni rules --check <file>` checks one file.
-- **Adapter files.** `karni new` writes the file each tool reads, from one rule set: AGENTS.md, CLAUDE.md, Cursor, Copilot, Windsurf, Cline, Aider and Junie, plus slash commands such as `/new-model`.
+- **AGENTS.md.** `karni new` writes the file coding agents read, from one rule set. It lists the procedures for routine tasks, and a request such as `/new-model` asks the agent for one.
 - **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools, and the `/new-app` flow as `recipes`, `questions`, `answer`, `plan` and `build`.
 - **Your prompts, kept (optional).** [Gigai Chronicle](https://github.com/cbsshekhawat18-lab/gigai-chronicle) records every prompt you give an agent inside your repository, and `karni context --with-history <file>` reads it back to brief the next agent. It is MIT licensed, local-only, and made by Karni's author.
 
-When an agent writes a serializer or a raw `<table>` by hand, `karni check` fails the build and names the component to use. The first prompt, as a new project's welcome page shows it: describe the app in one line, and give it to the `/new-app` slash command.
+When an agent writes a serializer or a raw `<table>` by hand, `karni check` fails the build and names the component to use. The first prompt, as a new project's welcome page shows it: describe the app in one line, and give it to the agent after `/new-app`.
 
 ```text
 /new-app a booking app for a yoga studio, with online payments
 ```
 
-The agent writes `karni.yaml`, asks you only the questions `karni plan --questions` lists, and runs `karni build`. In a tool without slash commands, the same flow is one prompt:
+The agent writes `karni.yaml`, asks you only the questions `karni plan --questions` lists, and runs `karni build`. If your tool does not pass that line on to the agent, the same flow is one prompt:
 
 ```text
 You are working in the Karni project `ticket_shop`. Run `karni rules --procedure
@@ -502,8 +502,8 @@ Karni works the same without any AI tool: nothing in it calls a language model, 
 **How is this different from a Django boilerplate?**
 A boilerplate is copied into your project once, and its serializers, permission classes and admin files then become yours to maintain. Karni keeps that code in versioned packages, derives the per-model parts from your model, and moves your project to each new release with `karni upgrade`.
 
-**Does it work with Cursor, Copilot and Claude Code?**
-Yes. A new Karni project contains the instruction files each of them reads, generated from one rule set, plus slash commands for routine tasks. `karni mcp` offers the same commands as MCP tools.
+**Does it work with my coding agent?**
+Yes. A new Karni project contains AGENTS.md, the instruction file coding agents read, generated from one rule set, with the procedures for routine tasks. `karni mcp` offers the same commands as MCP tools.
 
 **Can I use it without AI tools?**
 Yes. Nothing in Karni calls a language model, and every generator, such as `karni make model`, is a command you run yourself.

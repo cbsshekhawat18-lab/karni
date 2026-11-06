@@ -1,4 +1,4 @@
-"""Thin per-tool agent adapters, generated from data (``karni rules sync``).
+"""The agent instructions, generated from data (``karni rules sync``).
 
 Inputs, and nothing else: the adapter registry (``agent_adapters.toml``), the
 rule/procedure data (:mod:`karni_cli.agent_data`), the project's
@@ -12,6 +12,13 @@ inputs, same bytes, which is what makes
 Safety: sync only overwrites files that carry the generated marker. A
 hand-written file in an adapter's place is reported, never clobbered, unless
 ``--force`` (which backs it up under ``.karni/backup/`` first).
+
+AGENTS.md is the one agent file Karni writes. The registry's other entries
+(one tool's instruction file or command folder each) are deprecated since
+0.5.0 and leave in 1.0: sync writes them only where a project already has
+them (a generated file at the entry's path, or a generated file in its
+command folder), keeps those up to date, and reports them with code C860
+(:data:`DEPRECATED_CODE`, :func:`deprecation_warning`).
 """
 
 from __future__ import annotations
@@ -20,6 +27,7 @@ import json
 import re
 import shutil
 import tomllib
+from collections.abc import Collection
 from dataclasses import dataclass, field
 from importlib import resources
 from pathlib import Path
@@ -40,6 +48,8 @@ _TEMPLATES = ("instructions", "import", "command")
 #: The procedure that builds an app from a one-line request (rule K311).
 NEW_APP = "new-app"
 _YAML_PLAIN = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9 _./()-]*$")
+#: The code for the deprecated per-tool files (``karni rules sync``, ``karni doctor``).
+DEPRECATED_CODE = "C860"
 
 
 @dataclass(frozen=True)
@@ -52,6 +62,8 @@ class Adapter:
     frontmatter: dict[str, Any] = field(default_factory=dict)
     imports: str | None = None
     note: str = ""
+    #: Deprecated since 0.5.0: written only where the project already has it.
+    deprecated: bool = False
 
 
 @dataclass(frozen=True)
@@ -63,6 +75,8 @@ class CommandTarget:
     arguments: str
     frontmatter: tuple[str, ...] = ()
     agent: str | None = None
+    #: Deprecated since 0.5.0: written only where the project already has it.
+    deprecated: bool = False
 
 
 @dataclass(frozen=True)
@@ -91,6 +105,7 @@ def load_registry(path: Path | None = None) -> Registry:
             frontmatter=dict(entry.get("frontmatter", {})),
             imports=entry.get("import"),
             note=entry.get("note", ""),
+            deprecated=bool(entry.get("deprecated", False)),
         )
         for entry in data.get("adapter", [])
     )
@@ -103,6 +118,7 @@ def load_registry(path: Path | None = None) -> Registry:
             arguments=entry["arguments"],
             frontmatter=tuple(entry.get("frontmatter", [])),
             agent=entry.get("agent"),
+            deprecated=bool(entry.get("deprecated", False)),
         )
         for entry in data.get("commands", [])
     )
@@ -187,10 +203,6 @@ def _frontmatter(values: dict[str, Any]) -> list[str]:
     return lines
 
 
-def _procedure_names(data: AgentData) -> str:
-    return ", ".join(p["name"] for p in data.procedures)
-
-
 def instructions_body(
     title: str, data: AgentData, note: str = "", kind: ProjectKind | None = None
 ) -> list[str]:
@@ -221,13 +233,15 @@ def instructions_body(
         "While you work:",
         "",
         "- Run `karni rules --check <file>` on every file you write and fix each violation it prints.",
-        f"- Use `karni rules --procedure <name>` for routine tasks: {_procedure_names(data)}.",
+        "- Routine tasks are procedures: run `karni rules --procedure <name>` and follow every",
+        "  step. A request that starts with `/<name>` asks for that procedure, for the rest of",
+        "  the request:",
+        *(f"  - `{p['name']}`: {p['description']}" for p in data.procedures),
     ]
     if any(p["name"] == NEW_APP for p in data.procedures):
         lines.append(
-            "- To build an app from a one-line request, run `/new-app <the request>` where your "
-            "tool has slash commands, else follow `karni rules --procedure new-app`: karni.yaml "
-            "first, then `karni build` (rule K311)."
+            "- To build an app from a one-line request (`/new-app <the request>`), follow the "
+            "`new-app` procedure: karni.yaml first, then `karni build` (rule K311)."
         )
     if kind is None:
         lines.append(
@@ -306,9 +320,89 @@ def render_command(target: CommandTarget, procedure: dict[str, Any]) -> str:
     return _join(lines)
 
 
-def render_all(project: Path, data: AgentData, registry: Registry | None = None) -> dict[str, str]:
-    """Every generated file for ``project``: ``{posix relative path: content}``."""
-    registry = apply_overrides(registry or load_registry(), data.adapter_overrides)
+def present(
+    project: Path,
+    registry: Registry,
+    keep: Collection[str] = (),
+    original: Registry | None = None,
+) -> Registry:
+    """``registry`` without the deprecated entries ``project`` does not have.
+
+    A deprecated instruction file counts when a generated file is at its path,
+    a deprecated command folder when it holds a generated file. A hand-written
+    file in either place is the project's own and does not count. ``keep``
+    lists paths that count as present anyway (``karni upgrade`` passes the old
+    files it just migrated, so the project keeps its tool's files).
+    ``original`` is the registry before karni.rules.py moved paths: a file
+    still at its old place counts, so a moved entry is written at the new one.
+    """
+    kept = {Path(rel).as_posix() for rel in keep}
+    before: dict[str, str] = {}
+    if original is not None:
+        before = {a.id: Path(a.path).as_posix() for a in original.adapters}
+        before |= {c.id: Path(c.dir).as_posix() for c in original.commands}
+
+    def has_file(rel: str) -> bool:
+        return rel in kept or is_generated(project / rel)
+
+    def has_dir(rel: str) -> bool:
+        if any(path.startswith(rel + "/") for path in kept):
+            return True
+        base = project / rel
+        return base.is_dir() and any(p.is_file() and is_generated(p) for p in base.iterdir())
+
+    def has_adapter(adapter: Adapter) -> bool:
+        return has_file(Path(adapter.path).as_posix()) or (
+            adapter.id in before and has_file(before[adapter.id])
+        )
+
+    def has_commands(target: CommandTarget) -> bool:
+        return has_dir(Path(target.dir).as_posix()) or (
+            target.id in before and has_dir(before[target.id])
+        )
+
+    return Registry(
+        tuple(a for a in registry.adapters if not a.deprecated or has_adapter(a)),
+        tuple(c for c in registry.commands if not c.deprecated or has_commands(c)),
+        registry.max_lines,
+    )
+
+
+def deprecated_files(registry: Registry, files: Collection[str]) -> list[str]:
+    """The paths in ``files`` that a deprecated entry of ``registry`` writes."""
+    paths = {Path(a.path).as_posix() for a in registry.adapters if a.deprecated}
+    dirs = tuple(Path(c.dir).as_posix() + "/" for c in registry.commands if c.deprecated)
+    return sorted(rel for rel in files if rel in paths or rel.startswith(dirs))
+
+
+def deprecation_warning(paths: Collection[str]) -> str:
+    """The one C860 warning for the deprecated per-tool files a project has."""
+    groups: dict[str, list[str]] = {}
+    for rel in sorted(paths):
+        groups.setdefault(rel.rpartition("/")[0], []).append(rel)
+    names: list[str] = []
+    for parent, rels in groups.items():
+        names += [f"{parent}/ ({len(rels)} files)"] if parent and len(rels) > 1 else rels
+    notice = CliError(
+        f"these tool-specific agent files are deprecated: {', '.join(names)}. Karni still "
+        "updates them in 0.5. They stop being updated, and are removed, in 1.0. AGENTS.md is "
+        "the file to keep: point your tool at it, and keep project guidance in karni.rules.py "
+        "(docs/migrations/0.5.md).",
+        code="C860",
+    )
+    return str(notice)
+
+
+def render_all(
+    project: Path, data: AgentData, registry: Registry | None = None, keep: Collection[str] = ()
+) -> dict[str, str]:
+    """Every generated file for ``project``: ``{posix relative path: content}``.
+
+    AGENTS.md, and the deprecated per-tool files the project already has
+    (:func:`present`).
+    """
+    base = registry or load_registry()
+    registry = present(project, apply_overrides(base, data.adapter_overrides), keep, base)
     title = project_title(project)
     fragments = module_fragments(project)
     kind = project_kind(project)
@@ -342,6 +436,8 @@ class SyncResult:
     removed: list[str] = field(default_factory=list)
     blocked: list[str] = field(default_factory=list)
     backed_up: list[str] = field(default_factory=list)
+    #: The deprecated per-tool files kept up to date (C860), whether stale or not.
+    deprecated: list[str] = field(default_factory=list)
 
     @property
     def stale(self) -> list[str]:
@@ -376,11 +472,23 @@ def backup(project: Path, rel: str) -> str:
     return (BACKUP_DIR / rel).as_posix()
 
 
-def sync(project: Path, data: AgentData, *, check: bool = False, force: bool = False) -> SyncResult:
-    """Write (or, with ``check``, only compare) every adapter and command file."""
+def sync(
+    project: Path,
+    data: AgentData,
+    *,
+    check: bool = False,
+    force: bool = False,
+    keep: Collection[str] = (),
+) -> SyncResult:
+    """Write (or, with ``check``, only compare) AGENTS.md and the files the project has.
+
+    ``keep``: paths of deprecated per-tool files to write even though the
+    project does not have them yet (see :func:`present`).
+    """
     registry = load_registry()
-    files = render_all(project, data, registry)
-    result = SyncResult()
+    files = render_all(project, data, registry, keep)
+    active = apply_overrides(registry, data.adapter_overrides)
+    result = SyncResult(deprecated=deprecated_files(active, files))
     for rel, content in sorted(files.items()):
         target = project / rel
         if target.is_file():

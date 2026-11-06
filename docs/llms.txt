@@ -1,6 +1,6 @@
 # Karni
 
-> Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships.
+> Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.
 
 The site is https://cbsshekhawat18-lab.github.io/karni/ and the source is https://github.com/cbsshekhawat18-lab/karni. Python 3.12+, Django 5.2 LTS, React 18, TypeScript.
 
@@ -8,7 +8,7 @@ The site is https://cbsshekhawat18-lab.github.io/karni/ and the source is https:
 
 - [Quickstart](https://cbsshekhawat18-lab.github.io/karni/quickstart/): install `karni` and `karni-cli`, run `karni new`, add a model and see the API, admin and UI appear.
 - [Tutorial: build EventHub](https://cbsshekhawat18-lab.github.io/karni/tutorial/): the reference application (ticketing, payments, Celery, four roles) in 617 lines of project code.
-- [Building with an AI agent](https://cbsshekhawat18-lab.github.io/karni/guide/with-ai/): how Claude Code, Cursor and Copilot drive a Karni project through the generated adapter files, `karni context`, `karni rules` and `karni explain`.
+- [Building with an AI agent](https://cbsshekhawat18-lab.github.io/karni/guide/with-ai/): how a coding agent drives a Karni project through the generated AGENTS.md, `karni context`, `karni rules` and `karni explain`.
 - [Building without an AI agent](https://cbsshekhawat18-lab.github.io/karni/guide/without-ai/): the same workflow by hand, command by command.
 
 ## Main concepts
@@ -24,7 +24,7 @@ The site is https://cbsshekhawat18-lab.github.io/karni/ and the source is https:
 - [Aggregations](https://cbsshekhawat18-lab.github.io/karni/aggregations/): grouped counts and sums a resource declares (`class Karni: aggregate`), at `GET <resource>/aggregate/` under the list's filters and access, read by `useAggregate` and `DataChart`. [Saved charts](https://cbsshekhawat18-lab.github.io/karni/charts/) (the karni-charts module) are charts defined in the admin on top of it. Experimental.
 - [Events and listeners](https://cbsshekhawat18-lab.github.io/karni/events/), [Scheduling](https://cbsshekhawat18-lab.github.io/karni/scheduling/), [Seeding](https://cbsshekhawat18-lab.github.io/karni/seeding/).
 - [Enforcement](https://cbsshekhawat18-lab.github.io/karni/enforcement/): `karni check`, the ESLint preset and the architecture tests that keep generic code out of projects.
-- [Karni for AI agents](https://cbsshekhawat18-lab.github.io/karni/agents/): the generated AGENTS.md / CLAUDE.md / Cursor / Copilot adapters, slash commands and the MCP server.
+- [Karni for AI agents](https://cbsshekhawat18-lab.github.io/karni/agents/): the generated AGENTS.md, the procedures for routine tasks and the MCP server.
 - [Debugging: karni why](https://cbsshekhawat18-lab.github.io/karni/debugging/why/): why a row, field or action is refused or missing for a user (`karni why`, `karni why-empty`, `karni why 403 <request-id>`), computed by the code that enforces it.
 - [Debugging](https://cbsshekhawat18-lab.github.io/karni/debugging/capture/): one request id across tasks, email, webhooks and the change log, a development-only redacted capture under `.karni/`, and `karni trace`, `karni replay --as` and `karni explain --failure` ([trace and replay](https://cbsshekhawat18-lab.github.io/karni/debugging/trace-and-replay/)).
 

@@ -141,7 +141,7 @@ apply codemods and list the manual steps. This file is the human summary.
 - **A token benchmark harness (experimental), app-builder item A9.**
   `scripts/benchmarks/tokens/` measures the
   same three apps (booking with payments, a CRM with three roles and CSV import, a shop with
-  orders and refunds) built by Claude Code with and without Karni: a contract and black-box
+  orders and refunds) built by a coding agent with and without Karni: a contract and black-box
   acceptance tests per task, a reference solution built with Karni for each, two starting
   projects made by script, `run.py` for the runs (interleaved, a fresh folder and PostgreSQL
   database each, a time limit, the harness's own checks after the agent stops) and
@@ -191,10 +191,8 @@ apply codemods and list the manual steps. This file is the human summary.
   recipe or the blank start (`karni recipes list --match`), the questions
   of `karni plan --questions` and only those, `karni spec answer`, `karni
   plan`, `karni build`, then only the domain logic that is left, in the
-  project's own files. `karni rules sync` renders it into every adapter: a
-  `/new-app` slash command for Claude Code, Cursor, Windsurf and Copilot,
-  and a line in AGENTS.md and the other instruction files for tools without
-  slash commands. A new rule, `K311`, says never to hand-write what
+  project's own files. `karni rules sync` renders it into AGENTS.md, where
+  `/new-app <the request>` asks the agent for the procedure. A new rule, `K311`, says never to hand-write what
   karni.yaml can express (`karni rules` grows by 19 tokens, to 603). The
   welcome page's first prompt and the last lines of `karni new` are now
   this flow: describe the app in one line, then `/new-app`. Run `karni
@@ -400,7 +398,7 @@ apply codemods and list the manual steps. This file is the human summary.
 
 - **karni-ai (experimental): structured extraction with a language model,
   always through the import preview.** A new optional module, `pip install
-  "karni-ai[anthropic]"` (or `[openai]`) and `karni add ai`, with
+  "karni-ai[<provider>]"` and `karni add ai`, with
   `@karni/ai-ui`. `POST /api/ai/extract/` takes a resource (its router
   prefix) and one source: text, a URL or a PDF. A language model reads it
   into rows that follow the JSON Schema of the resource's own writable fields
@@ -412,8 +410,9 @@ apply codemods and list the manual steps. This file is the human summary.
   lets create may call it, 30 times an hour each (throttle scope
   `ai.extract`). A URL is fetched only over http or https, to a public
   address (redirects checked the same way), within a size limit and a
-  timeout. PDF text comes from pypdf. Providers: `anthropic`, `openai` (SDK
-  extras) and a deterministic `test` provider. The provider, the model name
+  timeout. PDF text comes from pypdf. Providers: two hosted ones (SDK
+  extras, see [AI extraction](docs/ai-extraction.md)) and a deterministic
+  `test` provider. The provider, the model name
   and the key come from settings and the environment only, with no default
   model: `karni check` fails (`AI001` to `AI005`) until they are set. Every
   call is logged (`AICall`, read-only in the admin) with its tokens and a
@@ -1938,6 +1937,37 @@ apply codemods and list the manual steps. This file is the human summary.
   `operation_id` sat on the view class. It is on the view's `get` now, and the
   operation is the same (`navigation`).
 
+- **AGENTS.md is the one agent file; the tool-specific files are deprecated.**
+  `karni new` writes AGENTS.md alone. It now lists the procedures for routine
+  tasks, and an agent reads a request that starts with `/<name>` (such as
+  `/new-app <the request>`) as that procedure, so no tool needs its own command
+  files. `CLAUDE.md`, `.claude/commands/`, `.cursor/rules/karni.mdc`,
+  `.cursor/commands/`, `.windsurf/rules/karni.md`, `.windsurf/workflows/`,
+  `.github/copilot-instructions.md`, `.github/prompts/`, `.clinerules/karni.md`,
+  `.junie/AGENTS.md` and `CONVENTIONS.md` are deprecated and removed in 1.0. A
+  project that has them keeps them: `karni rules sync` keeps them up to date
+  through 0.5, `--check` still reports them when stale, and sync prints one
+  warning, `C860`, that names them. `karni doctor` mentions them once, and
+  `karni upgrade` from 0.1 writes the old tool's files again. The welcome page
+  points at AGENTS.md only. The reference apps and the scaffold keep AGENTS.md
+  alone. Run `karni rules sync` once after upgrading. See
+  [migrating](docs/migrations/0.5.md#tool-specific-agent-files-are-deprecated-keep-agentsmd).
+
+### Fixed
+
+- **No AI tool or company names in the packages and docs.** The PyPI and npm
+  descriptions, the package keywords, the READMEs, the docs site, the
+  scaffold and the examples say "coding agent" and name no tool. Only the
+  karni-ai module names its providers. `scripts/check_tool_names.py` (CI)
+  fails on a name outside the exceptions in `scripts/tool-names.toml`.
+- **The token benchmark names no agent.** It takes the agent CLI from
+  `--agent` or `KARNI_BENCH_AGENT` and the model from `--model` or
+  `KARNI_BENCH_MODEL`, and the Karni condition's prompt asks for the new-app
+  procedure in words, so it needs no tool's own command files.
+- **examples/medintel mounted @karni/ui from one machine's path.** Its
+  `docker-compose.yml` now mounts the repository's checkout by its relative
+  path, as EventHub does.
+- **docs/robots.txt** lets every crawler read every page with one rule.
 
 ## 0.4.0 (2026-10-22)
 

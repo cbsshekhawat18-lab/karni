@@ -107,9 +107,17 @@ and a codemod or detector is included where possible.
 ### Agent guidance
 
 - Rule codes (`K001`, …) and what each enforces.
-- The adapter files `karni rules sync` writes (AGENTS.md, CLAUDE.md,
-  `.cursor/rules/karni.mdc`, …). Their wording changes between releases, so run
-  `karni rules sync` after upgrading.
+- AGENTS.md, the agent file `karni rules sync` writes, and the procedures it
+  lists. Its wording changes between releases, so run `karni rules sync`
+  after upgrading.
+- Deprecated in 0.5.0, removed in 1.0: the files that only one tool reads,
+  which `karni new` wrote before 0.5.0 (`CLAUDE.md`, `.claude/commands/`,
+  `.cursor/rules/karni.mdc`, `.cursor/commands/`, `.windsurf/rules/karni.md`,
+  `.windsurf/workflows/`, `.github/copilot-instructions.md`,
+  `.github/prompts/`, `.clinerules/karni.md`, `.junie/AGENTS.md` and
+  `CONVENTIONS.md`). `karni rules sync` keeps a project's existing ones up to
+  date until then and warns with `C860`
+  ([migrating](migrations/0.5.md#tool-specific-agent-files-are-deprecated-keep-agentsmd)).
 
 ## What is internal
 
@@ -248,8 +256,8 @@ Experimental now:
   types in `@karni/ui`.
 - [AI extraction](ai-extraction.md): the karni-ai module (`karni_ai`, its
   `POST /api/ai/extract/` endpoint and answer, `/api/ai/`, the `AICall`
-  model, the `KARNI_AI_*` settings and the providers' `ANTHROPIC_*` and
-  `OPENAI_*` settings, the `ai.extract` throttle scope, `karni_ai.providers`,
+  model, the `KARNI_AI_*` settings and each provider's key and model
+  settings, the `ai.extract` throttle scope, `karni_ai.providers`,
   `karni_ai.extraction`, `karni_ai.schema`, `karni_ai.sources`,
   `karni_ai.services.fetch`, `karni_ai.usage`) and `@karni/ai-ui`
   (`ExtractButton`, `ExtractPreview`, `useExtract`).

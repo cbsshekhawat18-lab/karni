@@ -15,9 +15,13 @@ from pathlib import Path
 from . import acceptance, diffsize, paths, records, starts, streamjson
 from .database import DatabaseAdmin, database_name
 
-DEFAULT_MODEL = "claude-sonnet-5-5"
+#: The model of every run: --model, else KARNI_BENCH_MODEL. Empty means not chosen yet.
+DEFAULT_MODEL = os.environ.get("KARNI_BENCH_MODEL", "")
 DEFAULT_LIMIT_SECONDS = 60 * 60
-FAKE_CLAUDE = Path(__file__).resolve().parent / "fake_claude.py"
+FAKE_AGENT = Path(__file__).resolve().parent / "fake_agent.py"
+#: How the Karni condition's prompt starts: the new-app procedure that AGENTS.md lists,
+#: asked for in words, so no tool's own command files are needed.
+NEW_APP_PREFIX = "Run `karni rules --procedure new-app` and follow every step for this request:\n\n"
 NODE_BIN = "/opt/homebrew/bin"
 
 Log = Callable[[str], None]
@@ -27,14 +31,15 @@ Log = Callable[[str], None]
 class Config:
     model: str = DEFAULT_MODEL
     limit_seconds: float = DEFAULT_LIMIT_SECONDS
-    claude: list[str] = field(default_factory=lambda: ["claude"])
+    #: The agent CLI and its leading arguments (--agent, else KARNI_BENCH_AGENT).
+    agent: list[str] = field(default_factory=list)
     tasks_dir: Path = paths.TASKS_DIR
     data_file: Path = records.DATA_FILE
     database: DatabaseAdmin | None = None
     keep: bool = False
     log: Log = print
     karni_commit: str = ""
-    claude_version: str = ""
+    agent_version: str = ""
 
 
 def run_id_for(task: str, condition: str, index: int, stamp: str) -> str:
@@ -44,7 +49,7 @@ def run_id_for(task: str, condition: str, index: int, stamp: str) -> str:
 def task_prompt(tasks_dir: Path, task: str, condition: str) -> str:
     """The prompt both conditions get: the request, the contract, the common rules.
 
-    The Karni condition starts it with /new-app, the command its agent files define.
+    The Karni condition starts it with the new-app procedure (:data:`NEW_APP_PREFIX`).
     """
     folder = tasks_dir / task
     parts = [
@@ -55,13 +60,13 @@ def task_prompt(tasks_dir: Path, task: str, condition: str) -> str:
     if common.is_file():
         parts.append(common.read_text().strip())
     text = "\n\n".join(parts)
-    return f"/new-app {text}" if condition == "karni" else text
+    return NEW_APP_PREFIX + text if condition == "karni" else text
 
 
-def claude_command(claude: list[str], prompt: str, model: str, mcp_config: Path) -> list[str]:
+def agent_command(agent: list[str], prompt: str, model: str, mcp_config: Path) -> list[str]:
     """The command from the method (docs/benchmarks/tokens.md), the same for both conditions."""
     return [
-        *claude,
+        *agent,
         "-p", prompt,
         "--output-format", "stream-json",
         "--verbose",
@@ -137,7 +142,7 @@ def execute(
     record = records.RunRecord(
         run_id=run_id, task=task, condition=condition, index=index, model=config.model,
         started_at=now.isoformat(timespec="seconds"), karni_commit=config.karni_commit,
-        claude_version=config.claude_version,
+        agent_version=config.agent_version,
     )  # fmt: skip
     run_dir = paths.home() / "runs" / run_id
     db_name = database_name(run_id)
@@ -156,7 +161,7 @@ def execute(
             database.create(db_name)
             created = True
         prompt = task_prompt(config.tasks_dir, task, condition)
-        command = claude_command(config.claude, prompt, config.model, mcp_config)
+        command = agent_command(config.agent, prompt, config.model, mcp_config)
         config.log(f"{run_id}: agent started (limit {config.limit_seconds:.0f}s)")
         record.exit_status, record.timed_out, record.wall_seconds = run_agent(
             command, project, env, run_dir / "stream.jsonl", run_dir / "stderr.log",

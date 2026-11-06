@@ -298,7 +298,7 @@ karni rules [OPTIONS] COMMAND [ARGS]...
 
 #### `karni rules sync`
 
-Regenerate the agent adapter files from Karni's rule registry.
+Regenerate AGENTS.md (and any deprecated tool-specific agent file) from the rules.
 
 ```
 karni rules sync [OPTIONS]

@@ -1,13 +1,13 @@
 site_name: Karni
-site_description: "Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
+site_description: "Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
 site_url: https://cbsshekhawat18-lab.github.io/karni/
 repo_url: https://github.com/cbsshekhawat18-lab/karni
 repo_name: cbsshekhawat18-lab/karni
 edit_uri: edit/main/docs/
 docs_dir: docs
 strict: true
-# docs/seo/ holds the findability notes (questions, off-site plan, drafts):
-# kept in the repository, not published as documentation.
+# docs/seo/ holds Karni's canonical description (description.txt, read by
+# scripts/check_description.py): kept in the repository, not published.
 exclude_docs: |
   seo/
 hooks:

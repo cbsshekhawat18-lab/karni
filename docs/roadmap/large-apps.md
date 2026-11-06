@@ -95,7 +95,7 @@ Notes on the order:
 
 Every item meets all of these before it counts as done.
 
-- **It follows [CLAUDE.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/CLAUDE.md)
+- **It follows [the repository rules](https://github.com/cbsshekhawat18-lab/karni/blob/main/CONTRIBUTING.md#rules-every-change-follows)
   and the patterns already in the code.** Type hints, ruff, mypy and pytest
   in Python, strict TypeScript with no `any` and Vitest in the UI. An escape
   hatch for every abstraction, and no abstraction without three real uses.

@@ -25,8 +25,8 @@ a search-volume figure, because none was available without paid tooling.
 | 6 | **cookiecutter django alternative**, **saas pegasus alternative** | people who already know the two names | comparison and "alternatives" pages exist for both |
 | 7 | **django rest framework react** | API-first teams | appears inside most of the above results |
 | 8 | **AI code duplication** / **vibe coding duplicate code** | people who noticed what agents produce | the HackerNoon study of 49 vibe-coded repos (7.98 % duplicated lines against a 3–5 % benchmark) is quoted across several sites |
-| 9 | **cursor generates boilerplate** / **DRY code cursor rules** | Cursor users fighting repetition | tutorial pages titled "how to reduce boilerplate in Cursor-generated code" |
-| 10 | **CLAUDE.md** / **cursor rules django**, **claude code django** | people setting up an agent on a Django project | the complaint that five projects end up with five diverging CLAUDE.md files is quoted verbatim in search results |
+| 9 | **&lt;tool&gt; generates boilerplate** / **DRY code &lt;tool&gt; rules**, each with one AI editor's name | users of one AI editor fighting repetition | tutorial pages titled "how to reduce boilerplate in &lt;tool&gt;-generated code" |
+| 10 | **&lt;tool&gt;'s rules file**, **&lt;tool&gt; rules django**, **&lt;tool&gt; django**, each with one coding agent's name | people setting up an agent on a Django project | the complaint that five projects end up with five diverging rules files is quoted verbatim in search results |
 
 The phrases people use for the *problem* are "boilerplate", "starter
 template", "full stack", and, on the AI side, "duplication" and "rewrites /
@@ -45,7 +45,6 @@ A repository can carry at most 20 topics.
 | `typescript` | 483,028 | broad |
 | `llm` | 163,579 | broad, not used (Karni is not an LLM project) |
 | `ai-agents` | 124,077 | broad but exact: the audience Karni is built for |
-| `claude-code` | 98,618 | specific: Karni generates the adapter files |
 | `vite` | 92,216 | broad, Karni's frontend build |
 | `rest-api` | 89,872 | broad |
 | `developer-tools` | 85,591 | broad |
@@ -55,7 +54,6 @@ A repository can carry at most 20 topics.
 | `generative-ai` | 23,545 | not used |
 | `django-rest-framework` | 22,006 | specific, Karni's API layer |
 | `framework` | 20,584 | specific |
-| `cursor` | 20,247 | specific, adapter generated |
 | `fullstack` | 16,501 | duplicate of `full-stack`, and the hyphenated one is larger |
 | `boilerplate` | 16,147 | the term people type, and Karni is the alternative to it |
 | `openapi` | 15,925 | specific, generated schema |
@@ -64,7 +62,6 @@ A repository can carry at most 20 topics.
 | `code-generation` | 7,366 | specific |
 | `coding-agents` | 6,940 | specific |
 | `celery` | 5,929 | specific |
-| `copilot` | 4,941 | specific, adapter generated |
 | `starter-kit` | 4,634 | specific |
 | `starter-template` | 4,223 | specific, the phrase people type |
 | `scaffolding` | 2,181 | specific: `karni new` / `karni make` |
@@ -76,12 +73,12 @@ A repository can carry at most 20 topics.
 | `saas-boilerplate` | 610 | small |
 | `django-react` | 78 | tiny, a dead page |
 
-**Chosen (20):** `django`, `react`, `typescript`, `python`,
+**Chosen (17):** `django`, `react`, `typescript`, `python`,
 `django-rest-framework`, `framework`, `full-stack`, `boilerplate`,
 `starter-template`, `scaffolding`, `code-generation`, `ai-agents`,
-`ai-coding`, `coding-agents`, `claude-code`, `cursor`, `copilot`,
-`developer-tools`, `celery`, `openapi`. Four broad ones for passive
-discovery, the rest specific enough to rank on.
+`ai-coding`, `coding-agents`, `developer-tools`, `celery`, `openapi`. Four
+broad ones for passive discovery, the rest specific enough to rank on.
+Topics that name one AI tool or company are left out (revised 2026-11-06).
 
 ## How comparable projects describe themselves
 
@@ -117,17 +114,16 @@ place:
   dependency instead of a boilerplate you fork: declare models and access,
   get the API, admin, permissions, tests and React screens. Built so AI
   coding agents extend it instead of regenerating code.*
-- **B** (183 chars): *A Django + React framework, not a boilerplate: the
-  generic code stays in an upgradable package, and AI coding agents (Claude
-  Code, Cursor, Copilot) write only the domain code.*
+- **B** (144 chars): *A Django + React framework, not a boilerplate: the
+  generic code stays in an upgradable package, and AI coding agents write
+  only the domain code.*
 - **C** (186 chars): *Django REST Framework + React starting point you
   upgrade instead of fork. Models and access declarations generate the API,
   admin, permissions and UI. Built for AI coding agents.*
 
 **Pick B.** Its first 150 characters survive truncation and already say
-framework, Django + React, not a boilerplate, and what stays where. It names
-the three agents people search by name, and it has no stack list to go
-stale. A says more but is cut off in listings. C leads with "starting
+framework, Django + React, not a boilerplate, and what stays where, and it
+has no stack list to go stale. A says more but is cut off in listings. C leads with "starting
 point", which is the boilerplate framing Karni argues against.
 
 ## Revision, 2026-10-20
@@ -138,9 +134,9 @@ first version could not tell what they would use it for:
 > Build full-stack Django + React apps from your models. Karni gives you the
 > REST API, admin, role-based permissions, React screens and tests, kept in an
 > upgradable package instead of a Django React boilerplate you copy. AI coding
-> agents (Claude Code, Cursor, Copilot) write only the domain code.
+> agents write only the domain code.
 
-It is 294 characters, and the first 150 still carry the meaning ("full-stack",
+It is 263 characters, and the first 150 still carry the meaning ("full-stack",
 "Django + React", what you get) for listings that truncate.
 
 Topics: four swapped for ones that describe Karni better and have more traffic
@@ -158,8 +154,8 @@ Karni), `coding-agents` (covered by `ai-agents` and `ai-coding`), `celery`
   and `x-debug/django-react-boilerplate`, starterindex.com category pages, and
   AppSeed, fdcservers, GeeksforGeeks and Medium guides.
 - HackerNoon, *What 49 vibe-coded GitHub projects revealed about AI code
-  duplication*, and rapidevelopers.com, *How to reduce boilerplate in
-  Cursor-generated code*.
+  duplication*, and a rapidevelopers.com guide to reducing boilerplate in one
+  AI editor's generated code.
 - GitHub search API `search/repositories?q=topic:<name>` and
   `repos/<owner>/<name>` (description, stargazers_count, topics).
 - GitHub Docs, *Classifying your repository with topics* (20 topics), plus

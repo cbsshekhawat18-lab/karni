@@ -26,10 +26,10 @@ and tests) over its stubs and runs the migrations, the seed, the tests and
 project, or without its database, it stops after karni.yaml and says to run
 ``karni build``.
 
-The template carries no agent guidance files: they are generated afterwards
-by the same code as ``karni rules sync`` (AGENTS.md, CLAUDE.md, Cursor,
-Windsurf, Copilot, Cline, Aider, Junie adapters + slash commands), and they
-state the kind and its stack. The production stack
+The template carries no agent guidance files: AGENTS.md is generated
+afterwards by the same code as ``karni rules sync``, and it states the kind
+and its stack. No tool-specific agent file is written (they are deprecated
+since 0.5.0). The production stack
 (docker-compose.prod.yml, the Caddyfile, .env.prod.example) is written the
 same way, by ``karni make deploy compose``'s code.
 
@@ -141,7 +141,7 @@ def init_repository(project: Path) -> str:
 
 
 def write_agent_adapters(project: Path) -> int:
-    """Generate the agent adapter files into a freshly rendered project. Returns their count."""
+    """Generate AGENTS.md into a freshly rendered project. Returns the count of files."""
     result = sync(project, agent_data.load(project))
     return len(result.written) + len(result.unchanged)
 
@@ -343,8 +343,8 @@ def _new_app_lines() -> list[str]:
         "Then build the app with your agent: describe it in one line, and give the line to",
         "  /new-app <the app in one line>",
         (
-            "  (in a tool without slash commands, the prompt: Run `karni rules --procedure "
-            "new-app` and follow every step for: <the app in one line>)"
+            "  (if your tool does not pass that line on, the prompt: Run `karni rules "
+            "--procedure new-app` and follow every step for: <the app in one line>)"
         ),
     ]
 
@@ -634,12 +634,12 @@ def new(
         _make_site(project, site_app)
     # The production stack: the same files `karni make deploy compose` writes.
     deploy.write_new_project(project, domain=domain, staff_app=with_staff_app)
-    adapters = write_agent_adapters(project)
+    write_agent_adapters(project)
     typer.echo("")
     typer.echo(
         f"Created {project}: kind {chosen} (recorded under [tool.karni] in pyproject.toml), "
-        f"{adapters} agent adapter files, and the production stack in {deploy.COMPOSE_FILE} "
-        "(docs/deploy.md)."
+        f"the agent instructions in AGENTS.md, and the production stack in "
+        f"{deploy.COMPOSE_FILE} (docs/deploy.md)."
     )
     if git:
         typer.echo(init_repository(project))

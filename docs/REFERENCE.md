@@ -1,5 +1,5 @@
 ---
-description: Every Karni command, base class, model option, setting, component, hook, module, error code, make target and slash command, generated from the source.
+description: Every Karni command, base class, model option, setting, component, hook, module, error code, make target and procedure, generated from the source.
 ---
 
 # Reference
@@ -17,7 +17,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 - [Modules](#modules)
 - [Error codes](#error-codes)
 - [Make targets](#make-targets)
-- [Slash commands](#slash-commands)
+- [Procedures](#procedures)
 
 ## Capabilities and status
 
@@ -119,15 +119,15 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Capability | Status | Evidence |
 |---|---|---|
 | `karni context`, `karni rules` and `karni check` in the project workflow | `stable` | [Makefile](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/Makefile), [Makefile](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/Makefile) |
-| Adapter files for every supported agent tool from one rule set (`karni rules sync`) | `stable` | [AGENTS.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/AGENTS.md), [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.cursor/commands/new-model.md) |
-| Slash commands for the routine tasks (`/new-model`, `/new-page`, …) | `stable` | [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.claude/commands/new-model.md) |
+| AGENTS.md, the one agent file, generated from the rule set (`karni rules sync`) | `stable` | [AGENTS.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/AGENTS.md), [AGENTS.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/AGENTS.md) |
+| Procedures for the routine tasks (`new-model`, `new-page`, …), listed in AGENTS.md: `karni rules --procedure <name>`, or `/<name>` in a request | `stable` | [AGENTS.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/AGENTS.md) |
 | `karni explain <code>`: why an error happens and the fix, offline | `experimental` | Karni's own tests |
 | The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` (every problem with its code and line), `karni spec export` (the spec of an existing project) and `karni plan` (what `karni build` would change, risky changes with their row counts). Experimental tier | `experimental` | Karni's own tests |
 | Clarifying questions: `karni plan --questions` lists the few gaps of `karni.yaml` worth asking the user (owners, access, the sign-up role, the kind, each module's and feature's asks), chosen by fixed rules, and `karni spec answer` writes an answer keeping the file's comments. Experimental tier | `experimental` | Karni's own tests |
 | `karni build`: the spec applied in one command, idempotently. Karni's code in files of its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and `karni check`. Experimental tier | `experimental` | Karni's own tests |
 | Spec pages beyond CRUD: a detail page's related tabs and dashboard pages of charts, in `karni plan`, `karni build`, `karni spec export` and `karni make page`. Experimental tier | `experimental` | Karni's own tests |
 | The module catalog: a manifest per module and built-in feature, `karni modules list` and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from the manifest and `karni remove`, which never drops data. Experimental tier | `experimental` | Karni's own tests |
-| The `/new-app` flow, from a one-line request to a running app: recipes (`karni recipes list --match`, `show`, the `karni.recipes` entry points, the blank start), the `new-app` procedure and rule K311 in every adapter, and the MCP tools `recipes`, `spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`, each returning JSON with a published schema. Experimental tier | `experimental` | Karni's own tests |
+| The `/new-app` flow, from a one-line request to a running app: recipes (`karni recipes list --match`, `show`, the `karni.recipes` entry points, the blank start), the `new-app` procedure and rule K311 in AGENTS.md, and the MCP tools `recipes`, `spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`, each returning JSON with a published schema. Experimental tier | `experimental` | Karni's own tests |
 | Six recipes, `shop`, `booking`, `crm`, `lms`, `marketplace` and `data-portal`, and `karni new "<Name>" --recipe <name>`: the recipe's karni.yaml, then `karni build`, which writes the recipe's domain code, seeds and tests over its own stubs, never over the project's code, and runs the tests and `karni check`. Each is built from scratch in CI. Experimental tier | `experimental` | Karni's own tests |
 | `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it | `experimental` | Karni's own tests |
 | MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools | `experimental` | Karni's own tests |
@@ -415,7 +415,7 @@ karni rules [OPTIONS] COMMAND [ARGS]...
 
 ##### `karni rules sync`
 
-Regenerate the agent adapter files from Karni's rule registry.
+Regenerate AGENTS.md (and any deprecated tool-specific agent file) from the rules.
 
 ```
 karni rules sync [OPTIONS]
@@ -2843,6 +2843,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C841`](errors.md#c841) | cli | A feature's extra is in pyproject.toml but not installed |
 | [`C840`](errors.md#c840) | cli | karni add was given a name that is not a module |
 | [`C830`](errors.md#c830) | cli | karni make test --role names a role the project does not declare |
+| [`C860`](errors.md#c860) | cli | Tool-specific agent files are deprecated |
 
 ### Agent rules (`K`)
 
@@ -2929,11 +2930,11 @@ The Makefile `karni new` writes. Every target is a thin alias for a `karni` comm
 | `make superuser` | `karni createsuperuser` |
 | `make logs` | `docker compose logs -f django worker beat` |
 
-## Slash commands
+## Procedures
 
-One per routine task, written for each agent tool by `karni new` and `karni rules sync`. `karni rules --procedure <name>` prints the same steps.
+One per routine task. AGENTS.md lists them, `karni rules --procedure <name>` prints the steps, and an agent reads a request that starts with `/<name>` as that procedure.
 
-| Command | Arguments | What it does |
+| Procedure | Arguments | What it does |
 |---|---|---|
 | `/new-model` | `<ModelName> [in <app>] [fields...]` | Add a domain model the Karni way (model + viewset, nothing else) |
 | `/new-page` | `<page purpose> [resource]` | Add a frontend page composing @karni/ui (50 lines or fewer) |
@@ -2941,10 +2942,3 @@ One per routine task, written for each agent tool by `karni new` and `karni rule
 | `/new-module` | `<app_name>` | Create a new local Django app following Karni conventions |
 | `/site-from-design` | `<design folder> [site app]` | Build the public site from a designer's pages, with models and real content |
 | `/new-app` | `<the app in one line>` | Build an app from a one-line request: karni.yaml, then karni build |
-
-| Tool | Written to |
-|---|---|
-| Claude Code | `.claude/commands/<name>.md` |
-| Cursor | `.cursor/commands/<name>.md` |
-| Windsurf | `.windsurf/workflows/<name>.md` |
-| GitHub Copilot (VS Code prompt files) | `.github/prompts/<name>.prompt.md` |

@@ -576,10 +576,10 @@ def test_the_reports_module_is_planned_with_its_options(base: Project) -> None:
 
 def test_the_ai_module_plans_with_its_provider_only(base: Project) -> None:
     """karni-ai's option in karni.yaml is the provider. Its model and key stay in .env."""
-    added = _plan(BASE.replace("roles:\n", "modules: {ai: {provider: anthropic}}\nroles:\n"), base)
+    added = _plan(BASE.replace("roles:\n", "modules: {ai: {provider: test}}\nroles:\n"), base)
     change = _only(added, "ai")
     assert change.area == "modules" and change.action == "add" and not change.risky
-    assert change.line() == "  + ai: provider anthropic"
+    assert change.line() == "  + ai: provider test"
 
 
 def test_the_storage_module_is_planned_with_its_provider_and_protected_fields(

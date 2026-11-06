@@ -19,8 +19,7 @@ idea first.
 
 ## Rules every change follows
 
-These are the rules in [CLAUDE.md](CLAUDE.md). They bind humans and AI agents
-alike.
+These rules bind every contributor, people and coding agents alike.
 
 1. **Everything is a versioned dependency.** The scaffold in
    `templates/project/` generates settings, urls, docker-compose and app code
@@ -36,6 +35,16 @@ alike.
    not core.
 6. **Python:** type hints everywhere, ruff for lint and format, pytest.
    **TypeScript:** strict mode, no `any`, vitest.
+
+## Stack
+
+- Python 3.12+, Django 5.2 LTS, Django REST framework with drf-spectacular,
+  Pydantic v2, django-environ
+- PostgreSQL 16, Redis 7, Celery 5 (with beat and results)
+- React 18, TypeScript in strict mode, Vite, TanStack Query, Router and Table,
+  Zustand, react-hook-form with Zod, Tailwind and Radix
+- Docker Compose, GitHub Actions, Caddy
+- ruff, mypy, pytest, factory-boy, ESLint, Prettier, Vitest, Playwright
 
 ## Development setup
 
@@ -200,6 +209,11 @@ changelog entry strands everyone on the old version.
   message is a bug.
 - Using an AI coding agent is fine and expected. The agent follows the same
   rules, and you remain responsible for every line you submit.
+- Karni works with any coding agent, so its files name no AI tool or company.
+  Say "coding agent". `python scripts/check_tool_names.py` lists any name
+  outside the exceptions in `scripts/tool-names.toml`, and CI runs it.
+  Keep your own agent's working files (such as its instructions file) out of
+  the repository: `.gitignore` already ignores the usual ones at the root.
 
 ## Licence
 

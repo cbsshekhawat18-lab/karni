@@ -5279,6 +5279,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Pass one of the declared roles the error lists, or declare the role in KARNI_ROLES (config/settings.py) first.
 
+<a id="c860"></a>
+
+### C860: Tool-specific agent files are deprecated
+
+*karni command* · from `karni rules sync, karni doctor (karni_cli.adapters)`
+
+**Why Karni objects.** AGENTS.md is the one agent file Karni writes, and coding agents read it. Since 0.5.0 karni new no longer writes one tool's instruction file or command folder. A project that already has them keeps getting them updated by karni rules sync until 1.0, which stops updating them and removes them.
+
+**Fix.** Point your tool at AGENTS.md. Keep project guidance in karni.rules.py, which feeds AGENTS.md, and delete the files the warning names once your tool reads AGENTS.md (docs/migrations/0.5.md).
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -5301,7 +5311,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Run `karni rules` at the start of a session and follow what it returns. The adapter files (AGENTS.md, CLAUDE.md, ...) only point here.
+**Rule.** Run `karni rules` at the start of a session and follow what it returns. AGENTS.md only points here.
 
 **Why Karni objects.** One source of truth exposed through the CLI cannot drift between tools.
 
@@ -5349,7 +5359,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, should* · enforced by `review`
 
-**Rule.** Prefer the standard procedures for routine work: new-model, new-page, add-module, new-module, site-from-design. Run one with <code>karni rules --procedure &lt;name&gt;</code>, or with the matching slash command where your tool has one.
+**Rule.** Prefer the standard procedures for routine work: new-model, new-page, add-module, new-module, site-from-design. Run one with <code>karni rules --procedure &lt;name&gt;</code>. A request that starts with <code>/&lt;name&gt;</code> asks for that procedure.
 
 **Why Karni objects.** The procedures encode the shortest correct path for routine work.
 

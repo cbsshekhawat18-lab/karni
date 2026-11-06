@@ -1,4 +1,4 @@
-"""Read the stream-json lines that `claude -p --output-format stream-json --verbose` prints.
+"""Read the stream-json lines the agent CLI prints with `-p --output-format stream-json --verbose`.
 
 One JSON object per line. The ones used here:
 

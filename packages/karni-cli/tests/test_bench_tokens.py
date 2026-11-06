@@ -1,6 +1,6 @@
-"""The token benchmark harness (scripts/benchmarks/tokens): fast, no network, no real claude.
+"""The token benchmark harness (scripts/benchmarks/tokens): fast, no network, no real agent.
 
-The end-to-end test runs the harness with the fake claude on a tiny starting project and a
+The end-to-end test runs the harness with the fake agent on a tiny starting project and a
 tiny task, so the folder, git, database calls, time limit and the recorded line are real.
 """
 
@@ -191,9 +191,9 @@ def test_the_docs_page_is_current_for_the_data_file() -> None:
 # --- the command line the runs use ---------------------------------------------------------------
 
 
-def test_the_claude_command_is_the_methods_and_the_karni_prompt_starts_with_new_app() -> None:
-    command = execute.claude_command(["claude"], "PROMPT", "claude-sonnet-5-5", Path("m.json"))
-    assert command[:3] == ["claude", "-p", "PROMPT"]
+def test_the_agent_command_is_the_methods_and_the_karni_prompt_starts_with_new_app() -> None:
+    command = execute.agent_command(["agent-cli"], "PROMPT", "a-model", Path("m.json"))
+    assert command[:3] == ["agent-cli", "-p", "PROMPT"]
     for flag in (
         "--verbose", "--strict-mcp-config", "--no-session-persistence",
         "--dangerously-skip-permissions",
@@ -201,11 +201,12 @@ def test_the_claude_command_is_the_methods_and_the_karni_prompt_starts_with_new_
         assert flag in command
     assert command[command.index("--output-format") + 1] == "stream-json"
     assert command[command.index("--setting-sources") + 1] == "project"
-    assert command[command.index("--model") + 1] == "claude-sonnet-5-5"
+    assert command[command.index("--model") + 1] == "a-model"
     tasks = TOKENS / "tasks"
     plain = execute.task_prompt(tasks, "shop", "plain")
     karni = execute.task_prompt(tasks, "shop", "karni")
-    assert karni == "/new-app " + plain and not plain.startswith("/new-app")
+    assert karni == execute.NEW_APP_PREFIX + plain and not plain.startswith("Run `karni")
+    assert "`karni rules --procedure new-app`" in execute.NEW_APP_PREFIX
     assert "API contract" in plain and "create_account" in plain
 
 
@@ -229,6 +230,20 @@ def test_a_dry_run_prints_the_plan_and_creates_nothing(
     assert out.index("shop-plain-1") < out.index("shop-karni-1")
     assert "--setting-sources project" in out and "bm_shop_karni_1" in out
     assert list(tmp_path.iterdir()) == []
+
+
+def test_a_real_run_names_its_agent_cli_and_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No agent or model is built in: --agent/KARNI_BENCH_AGENT and --model/KARNI_BENCH_MODEL."""
+    monkeypatch.delenv("KARNI_BENCH_AGENT", raising=False)
+    with pytest.raises(SystemExit, match="KARNI_BENCH_AGENT"):
+        run_module.resolve_agent(None, fake=False)
+    monkeypatch.setenv("KARNI_BENCH_AGENT", sys.executable)
+    assert run_module.resolve_agent(None, fake=False) == [sys.executable]
+    assert run_module.resolve_agent(None, fake=True)[1].endswith("fake_agent.py")
+    with pytest.raises(SystemExit, match="KARNI_BENCH_MODEL"):
+        run_module.resolve_model("", fake=False)
+    assert run_module.resolve_model("a-model", fake=False) == "a-model"
+    assert run_module.resolve_model("", fake=True) == "fake"
 
 
 # --- one fake run, end to end ----------------------------------------------------------------------
@@ -283,7 +298,7 @@ def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
     (task / "contract.md").write_text("It answers ok.\n")
     (task / "acceptance" / "test_mini.py").write_text(MINI_TEST)
     config = execute.Config(
-        claude=[sys.executable, str(execute.FAKE_CLAUDE)],
+        agent=[sys.executable, str(execute.FAKE_AGENT)],
         tasks_dir=tmp_path / "tasks",
         data_file=tmp_path / "runs.jsonl",
         database=FakeDatabase(),
@@ -298,7 +313,7 @@ def test_a_fake_run_makes_the_folder_the_repo_the_database_and_one_recorded_line
 ) -> None:
     config, start = world
     argv_log = config.tasks_dir.parent / "argv.json"
-    monkeypatch.setenv("FAKE_CLAUDE_ARGV", str(argv_log))
+    monkeypatch.setenv("FAKE_AGENT_ARGV", str(argv_log))
     record = execute.execute("mini", "plain", 1, start, config, stamp="T1")
 
     assert record.run_id == "mini-plain-1-T1"
@@ -341,7 +356,7 @@ def test_a_run_over_the_time_limit_is_killed_and_recorded_as_a_failure(
 ) -> None:
     config, start = world
     config.limit_seconds = 1
-    monkeypatch.setenv("FAKE_CLAUDE_SLEEP", "30")
+    monkeypatch.setenv("FAKE_AGENT_SLEEP", "30")
     record = execute.execute("mini", "plain", 2, start, config, stamp="T2")
     assert record.timed_out and record.exit_status == "timeout"
     assert record.wall_seconds < 20
@@ -355,11 +370,11 @@ def test_a_crashing_agent_and_a_crashing_harness_both_leave_a_failed_record(
     world: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     config, start = world
-    monkeypatch.setenv("FAKE_CLAUDE_EXIT", "3")
+    monkeypatch.setenv("FAKE_AGENT_EXIT", "3")
     record = execute.execute("mini", "plain", 3, start, config, stamp="T3")
     assert record.exit_status == 3 and not record.success
 
-    config.claude = ["/nonexistent/claude"]
+    config.agent = ["/nonexistent/agent-cli"]
     record = execute.execute("mini", "plain", 4, start, config, stamp="T4")
     assert record.exit_status == "crash" and "FileNotFoundError" in record.error
     assert not record.success

@@ -175,14 +175,14 @@ accepts the same version twice.
   ([Security](security.md) points reporters there).
 - **Repository profile** (Settings → General, or `gh repo edit`): the
   description, the website (`https://cbsshekhawat18-lab.github.io/karni/`)
-  and the 20 topics chosen in [findability research](seo-research.md). Under
+  and the 17 topics chosen in [findability research](seo-research.md). Under
   *Social preview*, upload `assets/brand/social-1280x640.png` (1280×640).
 
   ```sh
   gh repo edit cbsshekhawat18-lab/karni \
-    --description "Build full-stack Django + React apps from your models. Karni gives you the REST API, admin, role-based permissions, React screens and tests, kept in an upgradable package instead of a Django React boilerplate you copy. AI coding agents (Claude Code, Cursor, Copilot) write only the domain code." \
+    --description "Build full-stack Django + React apps from your models. Karni gives you the REST API, admin, role-based permissions, React screens and tests, kept in an upgradable package instead of a Django React boilerplate you copy. AI coding agents write only the domain code." \
     --homepage https://cbsshekhawat18-lab.github.io/karni/
-  # the 20 topics: docs/seo-research.md
+  # the 17 topics: docs/seo-research.md
   ```
 
 - **GitHub Pages:** source *GitHub Actions* (the docs workflow deploys the
