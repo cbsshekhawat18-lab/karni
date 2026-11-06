@@ -53,6 +53,7 @@ from django.core.exceptions import MiddlewareNotUsed
 from django.http import HttpRequest, HttpResponse, HttpResponseBase, HttpResponseRedirect
 from django.urls import URLPattern, URLResolver, include, path, re_path
 from django.utils.module_loading import import_string
+from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.generators import SchemaGenerator
 
 from karni.exceptions import KarniImproperlyConfigured
@@ -390,7 +391,14 @@ class VersionedSchemaGenerator(SchemaGenerator):
         return super().parse(input_request, public)
 
 
+@csrf_exempt
 def _redirect(request: HttpRequest, rest: str) -> HttpResponse:
+    """``/api/<rest>`` to ``/api/<current>/<rest>``, any method, with a 308.
+
+    Exempt from CSRF: it changes nothing, and a client on the old path (a
+    mobile build with a token) has no CSRF cookie. The versioned view the
+    client lands on applies its own checks, CSRF included for a session.
+    """
     target = f"/api/{quote(current_version())}/{rest}"
     query = request.META.get("QUERY_STRING")
     return _PermanentRedirect(f"{target}?{query}" if query else target)

@@ -155,6 +155,18 @@ def test_the_openapi_schema_describes_the_menu() -> None:
     }
 
 
+def test_schema_generation_reports_no_error_or_warning_for_the_menu() -> None:
+    """drf-spectacular said "@extend_schema on viewset class NavigationView ... broken schema"."""
+    from drf_spectacular.drainage import GENERATOR_STATS
+
+    GENERATOR_STATS.reset()
+    with GENERATOR_STATS.silence():
+        SchemaGenerator(patterns=_urlconf().urlpatterns).get_schema(request=None, public=True)
+    messages = [*GENERATOR_STATS._warn_cache, *GENERATOR_STATS._error_cache]
+    GENERATOR_STATS.reset()
+    assert not [message for message in messages if "Navigation" in message], messages
+
+
 def test_karni_api_urls_mounts_it_first_while_set(settings: Settings) -> None:
     import importlib
 

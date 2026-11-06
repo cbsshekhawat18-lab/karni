@@ -498,8 +498,8 @@ class Dimension:
     """Experimental. One grouping of a request: its key expression, label expression and kind.
 
     ``kind`` is ``relation`` (the key is the related row's key, the label its
-    natural key), ``date`` (a bucket, or a plain date), ``choice``, ``bool``
-    or ``plain``.
+    readable field, :func:`karni.meta.label_field`), ``date`` (a bucket, or a
+    plain date), ``choice``, ``bool`` or ``plain``.
     """
 
     name: str
@@ -574,7 +574,7 @@ def _dimension(
 ) -> Dimension:
     """Resolve one ``group_by`` / ``stack`` / ``series`` value, or raise ``E382`` / ``E385``."""
     from karni.accounts.visibility import hidden_fields
-    from karni.meta import natural_key
+    from karni.meta import label_field, natural_key
 
     path, _, bucket = name.partition(":")
     if not aggregation.allows_group(name):
@@ -614,9 +614,14 @@ def _dimension(
     if path not in aggregation.expressions and getattr(target, "is_relation", False):
         related = target.related_model
         label = None
-        shown = natural_key(related) if related is not None else None
-        if shown is not None and shown not in hidden_fields(related, user):
-            label = F(f"{path}__{shown}")
+        if related is not None:
+            # The row's readable field (name, title, label or Karni.label_field), else its
+            # natural key, whichever the requester may read. The key stays the group's key.
+            hidden = hidden_fields(related, user)
+            for shown in dict.fromkeys((label_field(related), natural_key(related))):
+                if shown is not None and shown not in hidden:
+                    label = F(f"{path}__{shown}")
+                    break
         return Dimension(name, path, "", key, label, "relation")
     if isinstance(target, models.BooleanField):
         return Dimension(name, path, "", key, None, "bool")

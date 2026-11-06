@@ -1836,6 +1836,57 @@ apply codemods and list the manual steps. This file is the human summary.
   code such as `MT-0001` finds its row (it found nothing before), and
   medintel is rebuilt with both.
 
+### Fixed (backend self-test)
+
+- **`?expand=parent` nests the parent of a tree.** A tree resource accepted
+  `?expand=parent` (E126 listed it) and `?expand=region.parent` through a
+  relation, but answered the key: the serializer stopped at any model already
+  on the path. Every level a client names now nests, the path and
+  `KARNI_API_MAX_EXPAND_DEPTH` bound it, and a parent the requester cannot
+  read (above a tree grant, or outside the tree resource's read scope)
+  expands to `null`, with nothing of it in the answer.
+- **The unversioned redirect answers a POST with 308.** With
+  `KARNI_API_UNVERSIONED = "redirect"`, a POST, PUT, PATCH or DELETE to
+  `/api/x/` got Django's "CSRF verification failed" page (403), with or
+  without a bearer token. The redirect is exempt from CSRF now: it changes
+  nothing, and the versioned view it leads to still checks CSRF for a session.
+- **`karni why` names the tree grant to widen.** For a row outside every tree
+  grant, the fix named a user attribute the user model lacks (the one
+  `karni.W620` reports) and the role to widen to `all`. It now names the
+  user grant to widen first, with the `grants.change(...)` call. Without a
+  user grant of the scope it gives the `grants.grant(...)` call that adds one,
+  and it names the attribute only when the user model has it.
+- **Seeded slugs are the slug of the name.** `karni seed` gave a
+  `SlugField(populate_from=...)` the factory's row number (`africa-0`,
+  `europe-15`, `air-annual-survey-1`), and in the data-portal recipe that
+  slug is the import key. A demo row now leaves it to the field: `europe`,
+  with `-2` only when two names clash. A seeder or explicit factory that
+  declares the slug wins, and a volume run keeps the numbered values.
+- **An import suggests every column a remembered mapping does not name.**
+  Once a user had confirmed a mapping for a model, the next upload took that
+  mapping whole, so a new column was left unmapped even when its header was
+  the field's name. A required to-many column (`tags`) then failed every
+  create with "This field is required.". The remembered choices now come
+  first and every other header gets the suggestion.
+- **2FA says to wait after a wrong code.** django-otp refuses every code for 1
+  second after a wrong one (then 2, 4, 8...), and the endpoints answered
+  `invalid_code` though the code was right. `2fa/confirm/`, `2fa/disable/` and
+  `2fa/login/` now answer 429 `throttled` with `retry_after` and a
+  `Retry-After` header. A replayed ephemeral token gets `replayed_token`
+  (401) before its code is checked, not `invalid_code`.
+- **An aggregate on a relation is labelled with the row's name.** A group on
+  a foreign key or a tree showed the related row's natural key, so the
+  data-portal recipe's charts, legends and comparison headers read
+  `europe-15` and `health-3`. The `label` is now the related row's
+  `Karni.label_field` (new, experimental), else its `name`, `title` or `label`
+  field, else its natural key. The `key` is still the row's id and the
+  response has the same fields. A `label_field` the model lacks is `E280`.
+- **No drf-spectacular error about the menu.** Every OpenAPI generation logged
+  "using @extend_schema on viewset class NavigationView ... will most likely
+  result in a broken schema", because the schema annotation with its
+  `operation_id` sat on the view class. It is on the view's `get` now, and the
+  operation is the same (`navigation`).
+
 
 ## 0.4.0 (2026-10-22)
 

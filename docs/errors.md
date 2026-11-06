@@ -893,6 +893,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Keep related models on the same database (the same Karni.database), or store the other row's key in a plain field. For a model Karni manages on another database, compose UUIDModel, TimestampedModel and SoftDeleteModel instead of BaseModel.
 
+<a id="e280"></a>
+
+#### E280: Karni.label_field names a field the model does not have
+
+*system check (error)* · from `karni.meta.label_field; karni.checks.check_aggregations (karni check)`
+
+**Why Karni objects.** Karni.label_field is the field that shows a row to people where only its key would show otherwise: the groups of an aggregate on a relation (chart legends and axes, comparison headers). A name the model does not have can show nothing.
+
+**Fix.** Name a field of the model: class Karni: label_field = 'name'. Leave it out to use the first text field named name, title or label, else Karni.natural_key.
+
 ### 3xx · Admin
 
 <a id="e301"></a>

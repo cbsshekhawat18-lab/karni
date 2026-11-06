@@ -71,11 +71,6 @@ def turned_off() -> Response:
     return Response({"code": "E535", "detail": str(error)}, status=status.HTTP_404_NOT_FOUND)
 
 
-@extend_schema(
-    operation_id="navigation",
-    responses={200: NavigationSerializer, 404: OpenApiTypes.OBJECT},
-    tags=["navigation"],
-)
 class NavigationView(APIView):
     """Experimental. ``GET navigation/``: the menu for the requesting user, signed in or not.
 
@@ -84,6 +79,12 @@ class NavigationView(APIView):
 
     permission_classes: ClassVar[list[type]] = [AllowAny]
 
+    # On the method: drf-spectacular refuses an operation_id on a view class.
+    @extend_schema(
+        operation_id="navigation",
+        responses={200: NavigationSerializer, 404: OpenApiTypes.OBJECT},
+        tags=["navigation"],
+    )
     def get(self, request: Request, **kwargs: Any) -> Response:
         if navigation.source() is None:
             return turned_off()

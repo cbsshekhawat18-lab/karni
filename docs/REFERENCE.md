@@ -1722,6 +1722,7 @@ class Lead(BaseModel):
 | `audit` | karni | `False` | Record field-level change history (who, when, old and new value): `True` for every field, or a list of field names. | `audit = True` |
 | `sensitive` | karni | `()` | Fields the change history records as changed but never with their values, on top of names matching `KARNI_AUDIT_REDACT`. | `sensitive = ["iban"]` |
 | `natural_key` | karni | first unique slug, char or email field, else the primary key | The field that names a row to people: imports refer to related rows by it and exports write relations with it. | `natural_key = "sku"` |
+| `label_field` | karni | the first text field named `name`, `title` or `label`, else `natural_key` | Experimental. The field that shows a row to people where only its key would show otherwise: the groups of an aggregate on a relation (chart legends and axes, comparison headers). | `label_field = "display_name"` |
 | `help` | karni | none | One line that says what the model is for. The admin shows it at the top of the model's list and form. Without it the admin shows no line: the docstring is for developers and is never shown. | `help = "Products you sell. Prices are per unit."` |
 | `import_key` | karni | `natural_key` | The column an import matches existing rows on, so a row with a known key is updated instead of created. | `import_key = "number"` |
 | `import_lookup` | karni | `{}` | For a relation field, the field of the related model that its import column carries. | `import_lookup = {"customer": "email"}` |
@@ -2395,6 +2396,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E274`](errors.md#e274) | check | An external model's field type does not match its column |
 | [`E275`](errors.md#e275) | check | class Karni: external, writable or database has a value of the wrong type |
 | [`E276`](errors.md#e276) | check | A relation joins models on different databases |
+| [`E280`](errors.md#e280) | check | Karni.label_field names a field the model does not have |
 | [`E301`](errors.md#e301) | exception | KARNI_ADMIN_BASE is not a ModelAdmin class |
 | [`E302`](errors.md#e302) | exception | AdminMeta.inline_on is invalid |
 | [`E303`](errors.md#e303) | exception | KARNI_ADMIN_LOGO is not a logo declaration |

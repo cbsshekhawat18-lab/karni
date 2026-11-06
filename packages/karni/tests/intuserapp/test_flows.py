@@ -164,6 +164,30 @@ def test_the_2fa_login_gate(settings: Settings) -> None:
     assert exchanged.json()["user"]["id"] == user.pk
 
 
+def test_a_right_2fa_code_inside_the_wait_after_a_wrong_one_says_to_wait(
+    settings: Settings,
+) -> None:
+    pytest.importorskip("django_otp")
+    from django_otp.oath import totp
+    from django_otp.plugins.otp_totp.models import TOTPDevice
+
+    user = _user()
+    settings.KARNI_2FA = True
+    settings.ROOT_URLCONF = _urlconf()
+    client = _bearer(_login(APIClient()).json()["access"])
+    assert client.post("/api/auth/2fa/setup/").status_code == 200
+    device = TOTPDevice.objects.devices_for_user(user, confirmed=False).get()
+    value = totp(device.bin_key, step=device.step, t0=device.t0, digits=device.digits)
+    right = f"{value:0{device.digits}d}"
+    wrong = f"{(value + 500_000) % 10**device.digits:0{device.digits}d}"
+    refused = client.post("/api/auth/2fa/confirm/", {"code": wrong}, format="json")
+    assert refused.status_code == 400 and refused.json()["code"] == "invalid_code"
+    waited = client.post("/api/auth/2fa/confirm/", {"code": right}, format="json")
+    assert waited.status_code == 429, waited.content
+    assert waited.json()["code"] == "throttled" and waited.json()["retry_after"] == 1
+    assert waited["Retry-After"] == "1"
+
+
 def test_sign_in_with_an_id_token(settings: Settings) -> None:
     pytest.importorskip("jwt")
     from karni.accounts.models import SocialIdentity

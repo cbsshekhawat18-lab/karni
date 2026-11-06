@@ -761,6 +761,11 @@ without a node gets an empty list, and an anonymous request is refused.
 `subtree_rows(model, path, nodes)` is the filter for any nodes you choose,
 and `tree_rows(user, model, path)` the filter for a user's nodes.
 
+`?expand=parent` (and `?expand=region.parent` through a relation) embeds a
+parent only when the requester may read it through the tree resource's own
+read scope. A parent above the nodes a grant reaches expands to `null`, and
+nothing of it is in the answer ([expansion](api.md#expansion)).
+
 ### The access forest
 
 A tree resource serves `GET <resource>/access/?permission=<pattern>`: the
@@ -815,13 +820,24 @@ the other roots are greyed (`aria-disabled`), and a click opens them.
 grants   catalog.product:view  scope tree:category on 7  (user grant 4b1c..., reason 'the food buyer', no expiry)  → category under 'Food'  ← reaches this row
              user grant 4b1c... targets Food, and this row's category Apples is under it
          catalog.product:view  scope tree:category  (role 'buyer', KARNI_ROLES)  → no row
-             role 'buyer' (through ana@example.com.category) gives no node, so this row's category Apples is outside it
+             role 'buyer' (through ana@example.com.category, which User does not have) gives no node, so this row's category Apples is outside it
 ```
 
 For a row out of reach the line says "is under none of them", and the fix
-names the user grant to widen or the attribute to set. `--json` carries
-`tree` for each tree grant: its `nodes`, the row's `values` and the pair it
-is `under`.
+comes in this order:
+
+- the user grant to widen, with the call that widens it:
+  `karni.accounts.grants.change(operator, grant, targets=[*grant.targets, '<node id>'])`,
+  or the admin's user grants;
+- without a user grant of the scope, the attribute to set when the user
+  model has it, or else the user grant to add:
+  `karni.accounts.grants.grant(operator, user, 'catalog.product:view', 'tree:category', targets=['<node id>'])`;
+- the role grant to widen to scope `all`.
+
+A role grant through an attribute the user model lacks says so
+([`W620`](errors.md#w620)), and the fix never asks you to set it. `--json`
+carries `tree` for each tree grant: its `nodes`, the row's `values` and the
+pair it is `under`.
 
 ### In karni.yaml
 
@@ -876,6 +892,25 @@ ephemeral token is signed, expires after 300 seconds and is single-use
 (replays are rejected). `POST 2fa/login/ {ephemeral_token, code}` completes
 the login (token pair in jwt mode, session login + `django_otp.login` in
 session mode).
+
+A wrong code holds the device back. django-otp refuses every code for 1
+second after it, then 2, 4, 8 seconds after each further wrong one
+(`OTP_TOTP_THROTTLE_FACTOR` scales the wait, and `0` turns it off). A code
+sent inside the wait is not checked, so `2fa/confirm/`, `2fa/disable/` and
+`2fa/login/` answer 429 with a `Retry-After` header, and the ephemeral token
+stays valid:
+
+```json
+{"detail": "Too many wrong two-factor codes in a row. Wait 1 second, then send the code again.",
+ "code": "throttled", "retry_after": 1}
+```
+
+| `code` | Status | Meaning |
+|---|---|---|
+| `invalid_code` | 400 | The code is wrong. Send the right one after the wait. |
+| `throttled` | 429 | A code inside the wait after a wrong one. Wait `retry_after` seconds. |
+| `invalid_token`, `expired_token` | 401 | The ephemeral token is not valid, or older than 300 seconds. Sign in again. |
+| `replayed_token` | 401 | The ephemeral token was exchanged already. It is checked before the code. |
 
 ## Social login (django-allauth)
 

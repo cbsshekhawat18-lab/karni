@@ -45,8 +45,10 @@ Importing is four steps, and the third is not optional:
 2. **Map** columns to fields. The mapping is suggested from the headers (by
    field name or label, case and punctuation aside) and **remembered per
    model per user**, so the second import of the same spreadsheet is one
-   click. Only fields the role may write are offered. A mapping to anything
-   else is refused (`E801`).
+   click. A column the remembered mapping does not name is still suggested
+   by its header, a to-many column such as `tags` too, and a column the
+   user left out last time stays out. Only fields the role may write are
+   offered. A mapping to anything else is refused (`E801`).
 3. **Preview** (`POST …/import/<job>/preview/` with `{"mapping": …}`). This is
    the mandatory dry run. Every row goes through the resource's generated
    serializer, exactly as a `POST` would: types, choices, relation lookup by

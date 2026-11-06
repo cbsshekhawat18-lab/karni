@@ -650,3 +650,42 @@ search = SearchField(sources=[...]) over the fields an entity's search names \
 Hard-deleting a row that such rows point at is then refused while they exist."""
 mechanical = false
 migration = "migrations/0.5.md#karni-build-writes-what-karnis-checks-ask"
+
+[[change]]
+id = "expand-nests-a-model-already-on-the-path"
+kind = "behaviour"
+symbol = "?expand="
+summary = """\
+An expand path that comes back to a model already on it now nests that level: \
+`?expand=parent` on a tree resource, `?expand=region.parent`, `?expand=events.venue`. \
+In 0.4.0 such a level stayed the key. A parent the requester cannot read expands to null. \
+A client that read the key from an expanded `parent` reads `parent.id`, or leaves `parent` \
+out of `expand`."""
+mechanical = false
+migration = "migrations/0.5.md#expand-nests-a-trees-parent"
+
+[[change]]
+id = "2fa-throttled-answer"
+kind = "behaviour"
+symbol = "karni.accounts.twofa"
+summary = """\
+A two-factor code sent inside django-otp's wait after a wrong one (1 second, then 2, 4, 8...) \
+is answered 429 with code `throttled`, `retry_after` and a `Retry-After` header by \
+2fa/confirm/, 2fa/disable/ and 2fa/login/. In 0.4.0 it was 400 `invalid_code`. A replayed \
+ephemeral token on 2fa/login/ is 401 `replayed_token` before the code is checked. A client \
+that shows `invalid_code` as "wrong code" shows `throttled` as "wait N seconds"."""
+mechanical = false
+migration = "migrations/0.5.md#2fa-answers-throttled-inside-the-wait"
+
+[[change]]
+id = "aggregate-relation-labels-read-names"
+kind = "behaviour"
+symbol = "GET <resource>/aggregate/"
+summary = """\
+A group on a relation (a foreign key, a tree's parent) is labelled with the related row's \
+`Karni.label_field`, else its `name`, `title` or `label` field, else its natural key. In \
+0.4.0 the label was the natural key, often a slug. The `key` and the response's fields are \
+unchanged. A consumer that read the natural key from `label` declares \
+`class Karni: label_field = "<that field>"` on the related model, or reads `key`."""
+mechanical = false
+migration = "migrations/0.5.md#aggregate-labels-read-the-rows-name"

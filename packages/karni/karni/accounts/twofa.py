@@ -22,6 +22,10 @@ Security posture (amendment A6):
   (``cache.add("karni:2fa:used:<sha256>", ...)``) rejects replays with 401.
 * TOTP codes are only ever checked through ``device.verify_token()`` so
   django-otp's replay protection and per-device throttling always apply.
+  After a wrong code the device refuses every code for 1 second, then 2, 4,
+  8... after each further wrong one. A code sent inside that wait is not
+  checked: the answer is 429 ``throttled`` with ``retry_after`` (seconds) and
+  a ``Retry-After`` header, never ``invalid_code``.
 * ``django_otp.middleware.OTPMiddleware`` is wired by ``karni.conf`` in
   session mode only; session-mode 2FA login calls ``django_otp.login()`` so
   the session is marked verified.
@@ -38,6 +42,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import math
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
@@ -101,13 +106,17 @@ _REPLAY_CACHE_PREFIX = "karni:2fa:used:"
 class TwoFAError(Exception):
     """A 2FA operation failed.
 
-    ``code`` is a machine-readable reason: ``invalid_code``, ``invalid_token``,
-    ``expired_token`` or ``replayed_token``. The exception message is a
-    human-readable detail safe to return to API clients.
+    ``code`` is a machine-readable reason: ``invalid_code``, ``throttled``,
+    ``invalid_token``, ``expired_token`` or ``replayed_token``. The exception
+    message is a human-readable detail safe to return to API clients.
+    ``retry_after`` is the wait in seconds for ``throttled``, else ``None``.
     """
 
-    def __init__(self, code: str, message: str | None = None) -> None:
+    def __init__(
+        self, code: str, message: str | None = None, *, retry_after: int | None = None
+    ) -> None:
         self.code = code
+        self.retry_after = retry_after
         super().__init__(message or code)
 
 
@@ -178,13 +187,11 @@ def confirm_totp(user: AbstractBaseUser, code: str) -> Any:
     returned; otherwise :class:`TwoFAError` (``invalid_code``) is raised.
     """
     device_model = _totp_device_model()
-    for device in device_model.objects.devices_for_user(user, confirmed=False):
-        if device.verify_token(code):
-            device.confirmed = True
-            device.save(update_fields=["confirmed"])
-            device_model.objects.devices_for_user(user, confirmed=False).delete()
-            return device
-    raise TwoFAError("invalid_code", "The provided two-factor code is not valid.")
+    device = _verified(device_model.objects.devices_for_user(user, confirmed=False), code)
+    device.confirmed = True
+    device.save(update_fields=["confirmed"])
+    device_model.objects.devices_for_user(user, confirmed=False).delete()
+    return device
 
 
 def verify_totp_code(user: AbstractBaseUser, code: str) -> Any:
@@ -195,10 +202,44 @@ def verify_totp_code(user: AbstractBaseUser, code: str) -> Any:
     TOTP math (amendment A6).
     """
     device_model = _totp_device_model()
-    for device in device_model.objects.devices_for_user(user, confirmed=True):
+    return _verified(device_model.objects.devices_for_user(user, confirmed=True), code)
+
+
+def _verified(devices: Any, code: str) -> Any:
+    """The device ``code`` verifies on, else ``throttled`` (inside a wait) or ``invalid_code``.
+
+    A device django-otp holds back after wrong codes is not asked: its
+    ``verify_is_allowed()`` says until when, and the error carries the wait.
+    """
+    waits: list[int] = []
+    for device in devices:
+        allowed, data = device.verify_is_allowed()
+        if not allowed:
+            waits.append(_wait_seconds(data))
+            continue
         if device.verify_token(code):
             return device
+    if waits:
+        wait = max(waits)
+        unit = "second" if wait == 1 else "seconds"
+        raise TwoFAError(
+            "throttled",
+            f"Too many wrong two-factor codes in a row. Wait {wait} {unit}, then send the "
+            "code again.",
+            retry_after=wait,
+        )
     raise TwoFAError("invalid_code", "The provided two-factor code is not valid.")
+
+
+def _wait_seconds(data: Any) -> int:
+    """Whole seconds until a throttled device takes a code again (at least 1)."""
+    from django.utils import timezone
+
+    locked_until = data.get("locked_until") if isinstance(data, Mapping) else None
+    if locked_until is not None:
+        return max(1, math.ceil((locked_until - timezone.now()).total_seconds()))
+    failures = int(data.get("failure_count", 1)) if isinstance(data, Mapping) else 1
+    return 2 ** max(failures - 1, 0)
 
 
 def disable_totp(user: AbstractBaseUser, code: str) -> None:
@@ -253,6 +294,12 @@ def resolve_ephemeral_token(token: str) -> AbstractBaseUser:
     if not user.is_active:
         raise TwoFAError("invalid_token", "The two-factor login token is not valid.")
     return user
+
+
+def _ephemeral_token_spent(token: str) -> bool:
+    """Whether ``token`` was already exchanged (read-only: :func:`mark_ephemeral_token_used`)."""
+    digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    return cache.get(f"{_REPLAY_CACHE_PREFIX}{digest}") is not None
 
 
 def mark_ephemeral_token_used(token: str) -> bool:
@@ -330,6 +377,11 @@ class TwoFADetailSerializer(serializers.Serializer):
 
 
 def _error_response(exc: TwoFAError, status_code: int) -> Response:
+    """``{"detail", "code"}``, or for ``throttled`` a 429 with ``retry_after`` and the header."""
+    if exc.code == "throttled" and exc.retry_after is not None:
+        body = {"detail": str(exc), "code": exc.code, "retry_after": exc.retry_after}
+        headers = {"Retry-After": str(exc.retry_after)}
+        return Response(body, status=status.HTTP_429_TOO_MANY_REQUESTS, headers=headers)
     return Response({"detail": str(exc), "code": exc.code}, status=status_code)
 
 
@@ -397,7 +449,9 @@ class TwoFALoginView(APIView):
 
     Error mapping: bad/expired/replayed ephemeral token → 401 (the code was
     never checked, or the token was already exchanged); bad TOTP code → 400
-    (the token stays valid so the user may retry).
+    (the token stays valid so the user may retry); a code inside django-otp's
+    wait after a wrong one → 429 ``throttled`` with ``retry_after`` (the code
+    was not checked and the token stays valid).
     """
 
     permission_classes = [AllowAny]
@@ -415,15 +469,16 @@ class TwoFALoginView(APIView):
             user = resolve_ephemeral_token(token)
         except TwoFAError as exc:
             return _error_response(exc, status.HTTP_401_UNAUTHORIZED)
+        if _ephemeral_token_spent(token):
+            # Said before the code is checked: the code of a replayed request was
+            # used too, and "invalid_code" would point at the wrong thing.
+            return _error_response(_replayed(), status.HTTP_401_UNAUTHORIZED)
         try:
             device = verify_totp_code(user, code)
         except TwoFAError as exc:
             return _error_response(exc, status.HTTP_400_BAD_REQUEST)
         if not mark_ephemeral_token_used(token):
-            replay = TwoFAError(
-                "replayed_token", "The two-factor login token has already been used."
-            )
-            return _error_response(replay, status.HTTP_401_UNAUTHORIZED)
+            return _error_response(_replayed(), status.HTTP_401_UNAUTHORIZED)
 
         from karni.accounts.api.serializers import MeSerializer
 
@@ -446,6 +501,10 @@ class TwoFALoginView(APIView):
         return Response(
             {"access": str(refresh.access_token), "refresh": str(refresh), "user": me_data}
         )
+
+
+def _replayed() -> TwoFAError:
+    return TwoFAError("replayed_token", "The two-factor login token has already been used.")
 
 
 urlpatterns = [

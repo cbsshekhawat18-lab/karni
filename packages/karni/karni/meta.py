@@ -54,6 +54,7 @@ __all__ = [
     "field_roles",
     "import_options",
     "karni_option",
+    "label_field",
     "model_actions",
     "natural_key",
     "owner_field",
@@ -132,6 +133,14 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "The field that names a row to people: imports refer to related rows by it and "
         "exports write relations with it.",
         'natural_key = "sku"',
+    ),
+    Option(
+        "label_field",
+        "the first text field named `name`, `title` or `label`, else `natural_key`",
+        "Experimental. The field that shows a row to people where only its key would show "
+        "otherwise: the groups of an aggregate on a relation (chart legends and axes, "
+        "comparison headers).",
+        'label_field = "display_name"',
     ),
     Option(
         "help",
@@ -373,6 +382,44 @@ def field_roles(model: type[models.Model]) -> dict[str, FieldRule]:
 # import and export (ADR 0002, P6)
 
 _KEY_FIELD_TYPES: Final[tuple[str, ...]] = ("SlugField", "CharField", "EmailField")
+
+
+#: The field names :func:`label_field` looks for, in order (as ``@karni/ui``'s ``displayLabel``).
+LABEL_FIELD_NAMES: Final[tuple[str, ...]] = ("name", "title", "label")
+
+
+def label_field(model: type[models.Model]) -> str | None:
+    """Experimental. The field that shows a row of ``model`` to people: ``Karni.label_field``.
+
+    What an aggregate's group on a relation is labelled with, so a chart reads
+    ``Europe`` where the key is a slug or an id. Declared explicitly, else the
+    first concrete text field named ``name``, ``title`` or ``label``, else
+    :func:`natural_key`, else ``None`` (the key is shown).
+    """
+    declared = karni_option(model, "label_field")
+    if declared:
+        name = str(declared)
+        try:
+            model._meta.get_field(name)
+        except FieldDoesNotExist as exc:
+            raise KarniImproperlyConfigured(
+                f"{model.__name__}.Karni.label_field names {name!r}, which the model does "
+                "not have.",
+                code="E280",
+            ) from exc
+        return name
+    for name in LABEL_FIELD_NAMES:
+        try:
+            found = model._meta.get_field(name)
+        except FieldDoesNotExist:
+            continue
+        if (
+            getattr(found, "concrete", False)
+            and not found.is_relation
+            and isinstance(found, models.CharField | models.TextField)
+        ):
+            return name
+    return natural_key(model)
 
 
 def natural_key(model: type[models.Model]) -> str | None:

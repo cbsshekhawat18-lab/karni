@@ -122,10 +122,16 @@ metric, without one), each with a value per category in the same order.
 
 - **Keys** are JSON: a value, a related row's key, or a date bucket written
   `2024`, `2024-Q1` or `2024-01`.
-- **Labels**: a relation shows the related row's
-  [natural key](REFERENCE.md#model-metadata-class-karni) (`Karni.natural_key`), a
-  choice its label, a boolean `Yes` or `No`, a bucket `2024`, `Q1 2024` or
-  `Jan 2024`. Rows with no value form the group `(none)`.
+- **Labels**: a relation shows what people read for the related row: its
+  `Karni.label_field`, else its first text field named `name`, `title` or
+  `label`, else its [natural key](REFERENCE.md#model-metadata-class-karni)
+  (`Karni.natural_key`). So a region keyed by the slug `europe` reads
+  `Europe`, in a chart's legend and axis and in a comparison's headers, while
+  its `key` stays the row's id for filters and links. A label field the
+  requester may not read ([field visibility](api.md#field-visibility)) gives
+  way to the natural key. A choice shows its label, a boolean `Yes` or `No`,
+  a bucket `2024`, `Q1 2024` or `Jan 2024`. Rows with no value form the
+  group `(none)`.
 - **Order**: dates by date, everything else by value, largest first. In a
   split, a category's value is the sum of its series' values. "Other" comes
   last.
