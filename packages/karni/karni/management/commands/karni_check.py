@@ -136,6 +136,26 @@ class Command(BaseCommand):
                 or os.environ.get("KARNI_SUGGESTIONS_FILE"),
             )
 
+    @staticmethod
+    def _facts_for_drift() -> dict[str, Any] | None:
+        """The project's facts for ``karni check``'s drift suggestion (SUG007), or ``None``.
+
+        It reads them here, in the process that already started Django, so the CLI does
+        not start a second one for ``manage.py karni_facts``. Only for a project with a
+        ``karni.yaml`` and with suggestions on. ``None`` leaves the CLI to ask as before.
+        """
+        from karni import suggestions
+        from karni.testing._source import project_root
+
+        if not suggestions.enabled() or not (project_root() / "karni.yaml").is_file():
+            return None
+        try:
+            from karni.facts import project_facts
+
+            return dict(project_facts())
+        except Exception:  # noqa: BLE001 - suggestions never fail a check
+            return None
+
     def _suggest(self, to_file: str | None) -> None:
         """Experimental. Print the suggestions, or write them to ``to_file``. Never fails."""
         import json
@@ -150,6 +170,9 @@ class Command(BaseCommand):
                 "enabled": suggestions.enabled(),
                 "suggestions": found,
             }
+            facts = self._facts_for_drift()
+            if facts is not None:
+                data["facts"] = facts
             try:
                 Path(to_file).parent.mkdir(parents=True, exist_ok=True)
                 Path(to_file).write_text(json.dumps(data, indent=2), encoding="utf-8")

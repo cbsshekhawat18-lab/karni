@@ -164,6 +164,45 @@ def test_a_plan_with_changes_suggests_build_or_export(
     assert "karni build" in found["fix"] and "karni spec export" in found["fix"]
 
 
+def test_facts_given_to_the_drift_check_start_no_second_django(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """karni check passes the facts manage.py karni_check wrote: karni_facts is not run again."""
+    from karni_cli.spec import export
+
+    (project / "karni.yaml").write_text(SPEC)
+    stub_plan(monkeypatch, [SimpleNamespace(managed=True)])
+
+    def fail(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("manage.py karni_facts was started")
+
+    monkeypatch.setattr(export, "read_facts", fail)
+    (found,) = suggest_mod.drift_suggestions(project, facts={"databases": ["default"]})
+    assert found["code"] == "SUG007"
+
+
+def test_check_reads_the_facts_from_the_suggestions_file(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from karni_cli.commands import check as check_mod
+
+    seen: dict[str, Any] = {}
+
+    def collect(project: Path, core: Any, **kwargs: Any) -> dict[str, Any]:
+        seen.update(kwargs)
+        return {"suggestions": []}
+
+    monkeypatch.setattr(suggest_mod, "collect", collect)
+    file = project / "suggestions.json"
+    file.write_text(json.dumps({"enabled": True, "suggestions": [], "facts": {"apps": []}}))
+    check_mod._suggestions_block(project, file, docker=None, service="django")
+    assert seen["facts"] == {"apps": []}
+    assert not file.exists()
+    file.write_text(json.dumps({"enabled": True, "suggestions": []}))  # an older karni
+    check_mod._suggestions_block(project, file, docker=None, service="django")
+    assert seen["facts"] is None
+
+
 def test_changes_plan_calls_not_managed_are_no_drift(
     project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

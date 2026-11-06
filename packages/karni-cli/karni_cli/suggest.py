@@ -223,12 +223,18 @@ def _first_phrase(
 
 
 def drift_suggestions(
-    project: Path, *, docker: bool | None = None, service: str = "django"
+    project: Path,
+    *,
+    docker: bool | None = None,
+    service: str = "django",
+    facts: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """SUG007: ``karni plan`` has changes, so the project and karni.yaml disagree.
 
     Nothing when there is no karni.yaml, when it has problems (``karni spec validate``
-    reports them), or when the project cannot be read.
+    reports them), or when the project cannot be read. ``facts`` are the project's facts
+    when the caller has them already (``karni check`` gets them from ``manage.py
+    karni_check``): without them this starts ``manage.py karni_facts``.
     """
     from karni_cli.builder import record as build_record
     from karni_cli.spec import plan as plan_mod
@@ -246,7 +252,8 @@ def drift_suggestions(
     if not report.ok or report.spec is None:
         return []
     try:
-        facts = read_facts(project, docker=docker, service=service, command="karni suggest")
+        if facts is None:
+            facts = read_facts(project, docker=docker, service=service, command="karni suggest")
         report = validate_text(text, databases=facts.get("databases"))
         if not report.ok or report.spec is None:
             return []
@@ -317,6 +324,7 @@ def collect(
     docker: bool | None = None,
     service: str = "django",
     problems: list[str] | None = None,
+    facts: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """The merged output: the project's own suggestions (``core``) and this module's.
 
@@ -332,7 +340,7 @@ def collect(
     if enabled:
         items = list(core[1]) if core is not None else []
         items += module_suggestions(project)
-        items += drift_suggestions(project, docker=docker, service=service)
+        items += drift_suggestions(project, docker=docker, service=service, facts=facts)
         items.sort(key=lambda row: (row["code"], row["file"], row["line"] or 0))
     return checked_output(
         {

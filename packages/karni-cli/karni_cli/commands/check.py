@@ -233,16 +233,19 @@ def _suggestions_block(project: Path, file: Path, *, docker: bool | None, servic
     Without it (docker, or a karni that predates suggestions) the backend printed its own.
     """
     core = None
+    facts = None
     try:
         data = json.loads(file.read_text(encoding="utf-8"))
         core = (bool(data["enabled"]), list(data["suggestions"]))
+        found = data.get("facts")  # the project's facts, so karni_facts is not started again
+        facts = found if isinstance(found, dict) else None
     except (OSError, ValueError, KeyError, TypeError):
         core = None
     finally:
         file.unlink(missing_ok=True)
     try:
         return suggest_mod.render(
-            suggest_mod.collect(project, core, docker=docker, service=service)
+            suggest_mod.collect(project, core, docker=docker, service=service, facts=facts)
         )
     except Exception:  # noqa: BLE001 - a suggestion must never break karni check
         return ""
