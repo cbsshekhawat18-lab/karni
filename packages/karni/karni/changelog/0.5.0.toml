@@ -530,7 +530,7 @@ UserGrant included, where it wiped only the project's own models. A seeder that 
 its own rows first (a `.filter(...).delete()` at the top of seed()) can drop that line, and \
 a model that holds rows you want to keep must have no seeder."""
 mechanical = false
-migration = "migrations/0.5.md#seed-reset-wipes-the-models-a-seeder-names"
+migration = "migrations/0.5.md#seed---reset-wipes-the-models-a-seeder-names"
 
 [[change]]
 id = "short-system-check-output"
