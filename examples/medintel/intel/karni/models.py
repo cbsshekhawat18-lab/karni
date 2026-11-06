@@ -4,7 +4,13 @@ Your own code goes in intel/models.py, in the subclass of each class here.
 """
 
 from django.db import models
-from karni.fields import CountryField, EmailField, MarkdownField, MoneyField
+from karni.fields import (
+    CountryField,
+    EmailField,
+    MarkdownField,
+    MoneyField,
+    SearchField,
+)
 from karni.models import BaseModel, TreeModel
 
 
@@ -12,6 +18,7 @@ class Condition(TreeModel, BaseModel):
     code = models.CharField(max_length=40)
     name = models.CharField(max_length=200)
     overview = MarkdownField(blank=True)
+    search = SearchField(sources=["name"])
 
     class Meta(BaseModel.Meta):
         abstract = True
@@ -29,6 +36,7 @@ class Intervention(TreeModel, BaseModel):
     code = models.CharField(max_length=40)
     name = models.CharField(max_length=200)
     overview = MarkdownField(blank=True)
+    search = SearchField(sources=["name"])
 
     class Meta(BaseModel.Meta):
         abstract = True
@@ -48,6 +56,7 @@ class Company(BaseModel):
     website = models.URLField(blank=True)
     summary = MarkdownField(blank=True)
     strategy = MarkdownField(blank=True)
+    search = SearchField(sources=["name"])
 
     class Meta(BaseModel.Meta):
         abstract = True
@@ -74,6 +83,7 @@ class Person(BaseModel):
     company = models.ForeignKey("Company", on_delete=models.CASCADE)
     email = EmailField(unique=True)
     bio = MarkdownField(blank=True)
+    search = SearchField(sources=["name"])
 
     class Meta(BaseModel.Meta):
         abstract = True
@@ -109,7 +119,7 @@ class Trial(BaseModel):
     )
     start_year = models.IntegerField()
     enrollment = models.IntegerField()
-    sponsor = models.ForeignKey("Company", on_delete=models.CASCADE)
+    sponsor = models.ForeignKey("Company", on_delete=models.PROTECT)
     investigator = models.ForeignKey(
         "Person", on_delete=models.SET_NULL, null=True, blank=True
     )
@@ -117,6 +127,7 @@ class Trial(BaseModel):
     design = MarkdownField(blank=True)
     eligibility = MarkdownField(blank=True)
     results = MarkdownField(blank=True)
+    search = SearchField(sources=["code", "title"])
 
     class Meta(BaseModel.Meta):
         abstract = True
@@ -154,6 +165,7 @@ class Brand(BaseModel):
     name = models.CharField(max_length=200)
     company = models.ForeignKey("Company", on_delete=models.CASCADE)
     description = MarkdownField(blank=True)
+    search = SearchField(sources=["name"])
 
     class Meta(BaseModel.Meta):
         abstract = True
@@ -173,13 +185,14 @@ class Deal(BaseModel):
     value = MoneyField(currency="USD")
     year = models.IntegerField()
     acquirer = models.ForeignKey(
-        "Company", on_delete=models.CASCADE, related_name="deal_acquirer_set"
+        "Company", on_delete=models.PROTECT, related_name="deal_acquirer_set"
     )
     seller = models.ForeignKey(
-        "Company", on_delete=models.CASCADE, related_name="deal_seller_set"
+        "Company", on_delete=models.PROTECT, related_name="deal_seller_set"
     )
     brand = models.ForeignKey("Brand", on_delete=models.SET_NULL, null=True, blank=True)
     rationale = MarkdownField(blank=True)
+    search = SearchField(sources=["title"])
 
     class Meta(BaseModel.Meta):
         abstract = True

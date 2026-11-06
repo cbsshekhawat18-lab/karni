@@ -216,7 +216,8 @@ carries it into the schema the same way.
   never in the API, factories or the change history. List it in a viewset's
   `search_fields` (or list exactly its sources) and the default search
   provider matches through its GIN index: every word is a prefix
-  (`walnu` finds `walnut`), all words must match, rows rank by `ts_rank`.
+  (`walnu` finds `walnut`, `MT-0001` finds that code), all words must match,
+  rows rank by `ts_rank`.
   The trigram leg is not combined with it, because `similarity() > t` cannot
   use an index. A source the requester may not read (`APIMeta.write_only`,
   `Karni.field_roles`) turns it back into a search of the readable sources.

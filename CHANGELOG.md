@@ -1606,7 +1606,10 @@ apply codemods and list the manual steps. This file is the human summary.
   build owns. The build now writes a required fk of an audited or financial
   entity as `on_delete=models.PROTECT`, and a `SearchField` over the fields
   `search` names, which the default search provider reads through its index.
-  `karni spec export` reads both back as the spec's own.
+  `karni spec export` reads both back as the spec's own. A search through a
+  `SearchField` now splits each word as PostgreSQL split the column, so a
+  code such as `MT-0001` finds its row (it found nothing before), and
+  medintel is rebuilt with both.
 
 ## 0.4.0 (2026-10-22)
 

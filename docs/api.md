@@ -875,7 +875,9 @@ With a [`SearchField`](fields.md#jsonfield-searchfield-arrayfield) on the
 model (named in `search_fields`, or covering every listed field), the
 PostgreSQL provider matches through its stored, GIN-indexed tsvector instead.
 Every word is a prefix, all words must match, rows rank by `ts_rank`, and no
-trigram leg is added (`similarity()` cannot use an index).
+trigram leg is added (`similarity()` cannot use an index). A word is split the
+way PostgreSQL split the column's text, so a code such as `MT-0001` finds that
+row and no other, and characters such as `&`, `|` or `!` are only text.
 
 Rank ordering vs `?ordering=`: search runs **after** ordering in the filter
 pipeline. When the client did not pass an explicit `?ordering=`, results are
