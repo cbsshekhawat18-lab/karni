@@ -1989,6 +1989,12 @@ apply codemods and list the manual steps. This file is the human summary.
   of the data-portal recipe could be deleted from the admin. A soft delete now
   names only the selected rows, both pages say the rows that refer to them are
   kept, and *Hard delete selected* keeps the cascade list and the refusal.
+- **The inputs of the admin's tabular inlines have a name.** The user page's
+  grants inline (`#id_user_grants-0-permission` and the rest of its row) and
+  every generated inline rendered their inputs with no label, which axe
+  reports as `label` (critical). Each input now carries an `aria-label` with
+  its column's name, and the parts of a date and time field say which part
+  they are.
 
 ## 0.4.0 (2026-10-22)
 

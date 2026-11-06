@@ -307,8 +307,11 @@ def _build_grant_inline() -> type[Any]:
         verbose_name_plural = "user grants"
 
         def get_formset(self, request: Any, obj: Any = None, **kwargs: Any) -> Any:
+            from karni.admin.inlines import label_tabular_fields
+
             kwargs["form"] = grant_form(request.user)
-            return super().get_formset(request, obj, **kwargs)
+            # The rows' inputs have no <label>: each gets its column's name (axe `label`).
+            return label_tabular_fields(super().get_formset(request, obj, **kwargs))
 
         @admin.display(description="status")
         def status(self, obj: Any) -> str:

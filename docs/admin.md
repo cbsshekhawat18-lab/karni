@@ -204,7 +204,10 @@ Other recognized attrs are `exclude = True` (skip registration),
 `inline_on = "fk_field"` and `register = True` (opt an `AbstractBaseUser`
 subclass in). `inline_on` goes on the child side and generates a
 `TabularInline` on the parent's admin. A list of FK names is allowed, and the
-child stays registered on its own too. `extra` is the catch-all escape hatch:
+child stays registered on its own too. A tabular inline names its columns
+only in the table head, so Karni gives each input of its rows an
+`aria-label` with the column's name (`karni.admin.inlines.label_tabular_fields`,
+which `KarniInlineMixin` calls for a tabular inline of your own too). `extra` is the catch-all escape hatch:
 it takes anything a `ModelAdmin` accepts.
 
 Precedence: explicit `admin.site.register` (project `admin.py`) >
