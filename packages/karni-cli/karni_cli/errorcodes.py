@@ -1411,6 +1411,15 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Run python manage.py karni_suggest --json in the project to see the error. "
         "karni check shows the same startup problem.",
     ),
+    _c(
+        "C850",
+        "The project folder already exists",
+        "karni new",
+        "karni new writes a new folder named after the project and never writes into one "
+        "that is there, so it cannot overwrite your files.",
+        "Pick another name or --output-dir, or remove or rename the folder if it is a "
+        "leftover. To change an existing project, use karni make, karni add or karni build.",
+    ),
 )
 
 

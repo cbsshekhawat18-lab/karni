@@ -591,6 +591,13 @@ def new(
     from cookiecutter.main import cookiecutter  # lazy: heavy import
 
     slug = validate_name(name)
+    if (output_dir / slug).exists():
+        raise CliError(
+            f"{output_dir / slug} already exists, and karni new does not write into an existing "
+            "folder. Pick another name or --output-dir, or remove the folder if it is a "
+            "leftover. To change an existing project use karni make, karni add or karni build.",
+            code="C850",
+        )
     require_snake(site_app, "Site app name")
     picked, recipe_kind = choose_recipe(recipe, kind=kind, design=design, staff_app=staff_app)
     source = _design_folder(design) if design is not None else None

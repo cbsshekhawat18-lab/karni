@@ -45,6 +45,17 @@ def test_new_generates_project(runner, tmp_path: Path, monkeypatch) -> None:
     )
 
 
+def test_new_into_an_existing_folder_is_a_coded_error(runner, tmp_path: Path, monkeypatch) -> None:
+    """F14: cookiecutter's own OutputDirExistsException used to reach the user."""
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    (tmp_path / "my_app").mkdir()
+    (tmp_path / "my_app" / "keep.txt").write_text("mine")
+    result = runner.invoke(app, ["new", "My App", "-o", str(tmp_path)])
+    assert isinstance(result.exception, CliError) and "C850" in str(result.exception)
+    assert "OutputDirExists" not in repr(result.exception)
+    assert (tmp_path / "my_app" / "keep.txt").read_text() == "mine"
+
+
 def test_new_project_installs_with_pip_install_e(runner, tmp_path: Path, monkeypatch) -> None:
     """The README's `pip install -e .` installs the dependencies, not a package.
 
