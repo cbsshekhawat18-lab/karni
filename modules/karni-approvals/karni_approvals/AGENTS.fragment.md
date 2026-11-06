@@ -8,8 +8,9 @@
 - Decisions only through `karni_approvals.services.decide(pending, checker, verdict, reason)`
   (the API's `/api/pending-changes/{id}/approve/` + `reject/`, the admin queue):
   the maker can never be the checker, checkers need the
-  `karni_approvals.pendingchange:approve` grant written out (no wildcard
-  reaches it) (+ `approver_roles`), and see only rows in their scope. Never write PendingChange/Decision rows by hand.
+  `karni_approvals.pendingchange:approve` grant written out, which no
+  wildcard reaches (+ `approver_roles`), and see only rows in their scope.
+  Never write PendingChange/Decision rows by hand.
 - Per model: `approvals_required`, `approver_roles`, `approval_timeout`,
   `approval_on_timeout` ("expire"|"escalate"). Project defaults are the
   `KARNI_APPROVALS_*` settings. Notifications and the hourly sweep run in Celery.

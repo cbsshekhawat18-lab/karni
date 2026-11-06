@@ -25,7 +25,7 @@ until the middleware and the include are both in place:
 
 ```python
 # config/urls.py: the banner's exit
-(path("impersonation/", include("karni_impersonation.urls")),)
+path("impersonation/", include("karni_impersonation.urls")),
 ```
 
 If the middleware stays in `MIDDLEWARE` while the app is out of
