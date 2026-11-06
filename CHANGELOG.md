@@ -1561,6 +1561,12 @@ apply codemods and list the manual steps. This file is the human summary.
   `/api/x/` got Django's "CSRF verification failed" page (403), with or
   without a bearer token. The redirect is exempt from CSRF now: it changes
   nothing, and the versioned view it leads to still checks CSRF for a session.
+- **`karni why` names the tree grant to widen.** For a row outside every tree
+  grant, the fix named a user attribute the user model lacks (the one
+  `karni.W620` reports) and the role to widen to `all`. It now names the
+  user grant to widen first, with the `grants.change(...)` call. Without a
+  user grant of the scope it gives the `grants.grant(...)` call that adds one,
+  and it names the attribute only when the user model has it.
 
 ## 0.4.0 (2026-10-22)
 

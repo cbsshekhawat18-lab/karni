@@ -437,45 +437,126 @@ def _can_fixes(leaf: Explained, *, user: Any, model: type[Model], row: Model | N
         return fixes
     if row is None or leaf.allows is False:
         return []
-    fixes = []
+    # (rank, text): a user grant to widen first, then a change to this row's
+    # scope, then a role at scope 'all'. Only the first two are printed.
+    ranked: list[tuple[int, str]] = []
+    tree_grants: dict[str, list[str]] = {}
+    tree_roles: list[str] = []
     for source in sources:
         if source.scope == "own":
             owner = owner_field(model)
             if owner:
                 now = row_value(row, owner, you=user)
-                fixes.append(f"make {who} the row's {owner} (now {now}) for the 'own' scope")
+                ranked.append((1, f"make {who} the row's {owner} (now {now}) for the 'own' scope"))
         elif source.scope == "related" and source.origin == USER_GRANT and source.targets:
             path = scope_paths(model).get(source.scope_path, source.scope_path)
-            fixes.append(
-                f"add the row's {path} ({row_value(row, path, you=user)}) to the targets of "
-                f"user grant {source.grant_id}"
+            ranked.append(
+                (
+                    0,
+                    f"add the row's {path} ({row_value(row, path, you=user)}) to the targets of "
+                    f"user grant {source.grant_id}",
+                )
             )
         elif source.scope == "related":
             path = scope_paths(model).get(source.scope_path, source.scope_path)
-            fixes.append(
-                f"set {who}.{source.scope_path} to the row's {path} "
-                f"({row_value(row, path, you=user)}) for the 'related:{source.scope_path}' scope"
+            ranked.append(
+                (
+                    1,
+                    f"set {who}.{source.scope_path} to the row's {path} "
+                    f"({row_value(row, path, you=user)}) for the 'related:{source.scope_path}' "
+                    "scope",
+                )
             )
-        elif source.scope == "tree":
-            path = source.scope_path
-            value = row_value(row, path, you=user)
-            if source.origin == USER_GRANT:
-                fixes.append(
-                    f"add the row's {path} ({value}) or a node above it to the targets of user "
-                    f"grant {source.grant_id}"
-                )
-            else:
-                from karni.accounts.grants import user_key
-
-                fixes.append(
-                    f"set {who}.{user_key('tree', path)} to the row's {path} ({value}) or a node "
-                    f"above it for the 'tree:{path}' scope"
-                )
+        elif source.scope == "tree" and source.origin == USER_GRANT:
+            tree_grants.setdefault(source.scope_path, []).append(source.grant_id)
+        elif source.scope == "tree" and source.scope_path not in tree_roles:
+            tree_roles.append(source.scope_path)
         if source.role:
             role_where = settings_location("KARNI_ROLES", f'"{source.role}"')
             at = f" ({role_where})" if role_where else ""
-            fixes.append(f"grant role {source.role!r} {key!r} at scope 'all' in KARNI_ROLES{at}")
+            ranked.append(
+                (2, f"grant role {source.role!r} {key!r} at scope 'all' in KARNI_ROLES{at}")
+            )
+    ranked += _tree_fixes(key, tree_grants, tree_roles, user=user, model=model, row=row)
+    return [text for _rank, text in sorted(ranked, key=lambda fix: fix[0])]
+
+
+def _tree_fixes(
+    key: str,
+    granted: dict[str, list[str]],
+    roles: list[str],
+    *,
+    user: Any,
+    model: type[Model],
+    row: Model,
+) -> list[tuple[int, str]]:
+    """How a tree grant would reach ``row``: widen a user grant, set the attribute, or add a grant.
+
+    A role grant reads the node in ``user.<last step>``. When the user model
+    has no such attribute (karni.W620), the fix is a user grant, never the
+    attribute.
+    """
+    from karni.accounts.grants import user_key
+
+    who = display_user(user)
+    fixes: list[tuple[int, str]] = []
+    for path, ids in granted.items():
+        value = row_value(row, path, you=user)
+        node = _row_node(model, row, path)
+        more = f" (or of {', '.join(ids[1:])})" if len(ids) > 1 else ""
+        fixes.append(
+            (
+                0,
+                f"add the row's {path} ({value}) or a node above it to the targets of user grant "
+                f"{ids[0]}{more}: karni.accounts.grants.change(operator, grant, "
+                f"targets=[*grant.targets, {node!r}]), or the admin's user grants",
+            )
+        )
+    for path in roles:
+        if path in granted:
+            continue  # widening the user grant above is the fix
+        attribute = user_key("tree", path)
+        value = row_value(row, path, you=user)
+        if hasattr(user, attribute):
+            fixes.append(
+                (
+                    1,
+                    f"set {who}.{attribute} to the row's {path} ({value}) or a node above it for "
+                    f"the 'tree:{path}' scope",
+                )
+            )
+        elif _user_grants_on():
+            node = _row_node(model, row, path)
+            fixes.append(
+                (
+                    1,
+                    f"give {who} a user grant of {key!r} at scope 'tree:{path}' on the row's "
+                    f"{path} ({value}) or a node above it: karni.accounts.grants.grant(operator, "
+                    f"user, {key!r}, 'tree:{path}', targets=[{node!r}]), or the admin's user "
+                    "grants",
+                )
+            )
+        else:
+            fixes.append(
+                (
+                    1,
+                    f"give {type(user).__name__} a {attribute!r} attribute holding a node (a field "
+                    "or a property), or set KARNI_USER_GRANTS = True and give "
+                    f"{who} a user grant of {key!r} at scope 'tree:{path}'",
+                )
+            )
     return fixes
+
+
+def _row_node(model: type[Model], row: Model, path: str) -> str:
+    """The id of the tree node ``row`` carries on ``path``, as text (the first when many)."""
+    found = (
+        model._base_manager.filter(pk=row.pk)
+        .exclude(**{f"{path}__isnull": True})
+        .values_list(path, flat=True)
+        .first()
+    )
+    return "<node id>" if found is None else str(found)
 
 
 # grants
@@ -509,7 +590,8 @@ def _given(source: Any, user: Any) -> str:
     from karni.accounts.grants import user_key
 
     attribute = user_key("tree", source.scope_path)
-    return f"role {source.role!r} (through {display_user(user)}.{attribute})"
+    lacks = "" if hasattr(user, attribute) else f", which {type(user).__name__} does not have"
+    return f"role {source.role!r} (through {display_user(user)}.{attribute}{lacks})"
 
 
 def _tree_line(

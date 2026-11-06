@@ -820,13 +820,24 @@ the other roots are greyed (`aria-disabled`), and a click opens them.
 grants   catalog.product:view  scope tree:category on 7  (user grant 4b1c..., reason 'the food buyer', no expiry)  → category under 'Food'  ← reaches this row
              user grant 4b1c... targets Food, and this row's category Apples is under it
          catalog.product:view  scope tree:category  (role 'buyer', KARNI_ROLES)  → no row
-             role 'buyer' (through ana@example.com.category) gives no node, so this row's category Apples is outside it
+             role 'buyer' (through ana@example.com.category, which User does not have) gives no node, so this row's category Apples is outside it
 ```
 
 For a row out of reach the line says "is under none of them", and the fix
-names the user grant to widen or the attribute to set. `--json` carries
-`tree` for each tree grant: its `nodes`, the row's `values` and the pair it
-is `under`.
+comes in this order:
+
+- the user grant to widen, with the call that widens it:
+  `karni.accounts.grants.change(operator, grant, targets=[*grant.targets, '<node id>'])`,
+  or the admin's user grants;
+- without a user grant of the scope, the attribute to set when the user
+  model has it, or else the user grant to add:
+  `karni.accounts.grants.grant(operator, user, 'catalog.product:view', 'tree:category', targets=['<node id>'])`;
+- the role grant to widen to scope `all`.
+
+A role grant through an attribute the user model lacks says so
+([`W620`](errors.md#w620)), and the fix never asks you to set it. `--json`
+carries `tree` for each tree grant: its `nodes`, the row's `values` and the
+pair it is `under`.
 
 ### In karni.yaml
 
