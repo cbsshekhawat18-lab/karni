@@ -1563,6 +1563,9 @@ apply codemods and list the manual steps. This file is the human summary.
   (or `name`, `slug`, `source`, `position`) no longer answers 404 because the
   chart list's filters narrowed the lookup of the chart. The viewer's filters
   reach the source only, and a refused one is `CHART002`.
+- **Extraction from a bare-host URL.** `https://example.com` and any URL ending
+  in `/` no longer crash the extraction with `SuspiciousFileOperation`: the
+  import job's file name no longer carries path separators.
 
 ## 0.4.0 (2026-10-22)
 
