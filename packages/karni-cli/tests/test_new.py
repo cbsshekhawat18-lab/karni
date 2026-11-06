@@ -456,3 +456,13 @@ def test_without_git_on_path_the_project_is_still_made(runner, tmp_path, monkeyp
     assert result.exit_code == 0, result.output
     assert "git is not installed, so the project is not a git repository" in result.output
     assert not (tmp_path / "out" / "no_git" / ".git").exists()
+
+
+def test_a_new_project_ignores_what_pip_install_leaves(runner, tmp_path: Path, monkeypatch) -> None:
+    """The README's `pip install -e .` writes <slug>.egg-info: not an untracked file."""
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    monkeypatch.setattr(scaffold, "resolve_ui_source", lambda: None)
+    result = runner.invoke(app, ["new", "Egg Info", "-o", str(tmp_path), "--no-git"])
+    assert result.exit_code == 0, result.output
+    ignored = (tmp_path / "egg_info" / ".gitignore").read_text().splitlines()
+    assert "*.egg-info/" in ignored and "__pycache__/" in ignored

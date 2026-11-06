@@ -1,5 +1,7 @@
 __pycache__/
 *.py[cod]
+# pip install -e . (the README's host workflow) leaves the project's metadata here.
+*.egg-info/
 .venv/
 .env
 # Production secrets (docker-compose.prod.yml reads them, docs/deploy.md).
