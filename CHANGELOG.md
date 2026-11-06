@@ -1566,6 +1566,11 @@ apply codemods and list the manual steps. This file is the human summary.
 - **Extraction from a bare-host URL.** `https://example.com` and any URL ending
   in `/` no longer crash the extraction with `SuspiciousFileOperation`: the
   import job's file name no longer carries path separators.
+- **Karni's own routes out of the sitemap and the menu choices.** The readiness
+  probe, the health probes and the welcome page are no longer listed in
+  `sitemap.xml` or offered by the menu item's "goes to" select. One list,
+  `karni_site.routes.TECHNICAL_ROUTES`, feeds both, and a project extends it
+  with the new `KARNI_SITE_TECHNICAL_ROUTES`.
 
 ## 0.4.0 (2026-10-22)
 

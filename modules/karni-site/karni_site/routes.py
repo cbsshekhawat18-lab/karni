@@ -13,12 +13,37 @@ admin's choices.
 
 from __future__ import annotations
 
+from fnmatch import fnmatchcase
 from typing import Any
 
 from django.apps import apps
 from django.urls import NoReverseMatch, reverse
 
-__all__ = ["linkable_models", "site_pages"]
+from karni_site import conf
+
+__all__ = ["TECHNICAL_ROUTES", "is_technical", "linkable_models", "site_pages"]
+
+#: URL names and paths that are Karni's own machinery, never a page of the site:
+#: the health and readiness probes and the welcome page. Shell wildcards are
+#: allowed. A project adds its own with ``KARNI_SITE_TECHNICAL_ROUTES``. The
+#: sitemap and the menu item's "goes to" choices both read this one list.
+TECHNICAL_ROUTES: tuple[str, ...] = (
+    "karni-welcome",
+    "healthz",
+    "readyz",
+    "karni_health:*",
+    "karni_probes:*",
+    "/healthz",
+    "/readyz",
+    "/health",
+    "/health/*",
+)
+
+
+def is_technical(name: str, path: str) -> bool:
+    """Whether this URL name or path is in :data:`TECHNICAL_ROUTES` or the project's additions."""
+    patterns = [*TECHNICAL_ROUTES, *(str(p) for p in conf.get("KARNI_SITE_TECHNICAL_ROUTES") or ())]
+    return any(fnmatchcase(name, p) or fnmatchcase(path, p) for p in patterns)
 
 #: Apps whose models are framework machinery, never a page a client links to.
 _INTERNAL_APPS = frozenset(
@@ -52,7 +77,7 @@ def site_pages() -> list[tuple[str, str]]:
             path = reverse(name)
         except NoReverseMatch:
             continue
-        if path.startswith(excluded):
+        if path.startswith(excluded) or is_technical(name, path):
             continue
         found[name] = path
     return sorted(found.items(), key=lambda item: (item[1], item[0]))

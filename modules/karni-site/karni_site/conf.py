@@ -130,6 +130,9 @@ DEFAULTS |= {
     # URL names and paths the sitemap leaves out, shell wildcards allowed:
     # ["website:thanks", "/drafts/*"]. The admin, the API and redirects are never in it.
     "KARNI_SITE_SITEMAP_EXCLUDE": [],
+    # URL names and paths added to Karni's own technical routes (the health and readiness
+    # probes, the welcome page), which no sitemap or menu choice lists: ["status", "/ping"].
+    "KARNI_SITE_TECHNICAL_ROUTES": [],
     # The function that lists the sitemap's sections: () -> {name: Sitemap}. A dotted path.
     "KARNI_SITE_SITEMAPS": "karni_site.sitemaps.sitemaps",
     # Boolean fields that mark a row as public, tried in order on a model in the sitemap

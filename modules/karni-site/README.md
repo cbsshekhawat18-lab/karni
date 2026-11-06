@@ -324,7 +324,10 @@ names (`published`, `is_published`, `is_public`, `public`, `visible`,
 `published`, and a `published_at` must have passed. `sitemap = False`
 leaves a model out. A page or row hidden from search engines in the admin
 is left out, and so is what `KARNI_SITE_SITEMAP_EXCLUDE` names (URL names
-or paths, wildcards allowed). `lastmod` is `updated_at` by default. Past
+or paths, wildcards allowed). Karni's own routes (the health and readiness
+probes and the welcome page) are never listed, here or in the menu item's
+"goes to" choices: add your own technical routes with
+`KARNI_SITE_TECHNICAL_ROUTES`. `lastmod` is `updated_at` by default. Past
 50,000 addresses in a section, sitemap.xml becomes an index of
 `/sitemap-<section>.xml?p=<page>`.
 
@@ -638,6 +641,7 @@ Every setting arrives through the module's settings fragment
 | `KARNI_SITE_ALLOW_INDEXING` | `None` | Whether search engines may index the site. `None`: only where `DJANGO_ENV` is `prod`. |
 | `KARNI_SITE_ROBOTS_DISALLOW` | `[]` | Paths robots.txt asks crawlers to stay out of while indexing is allowed. |
 | `KARNI_SITE_SITEMAP_EXCLUDE` | `[]` | URL names and paths the sitemap leaves out, wildcards allowed. |
+| `KARNI_SITE_TECHNICAL_ROUTES` | `[]` | URL names and paths added to Karni's own technical routes, which neither the sitemap nor the menu's "goes to" choices list. |
 | `KARNI_SITE_SITEMAPS` | `"karni_site.sitemaps.sitemaps"` | The `() -> {name: Sitemap}` function that lists the sitemap's sections. |
 | `KARNI_SITE_PUBLISHED_FIELDS` | `["published", "is_published", ...]` | Boolean fields that mark a row public, for a model in the sitemap without a filter. |
 | `KARNI_SITE_SCHEMA_TYPE` | `"auto"` | The JSON-LD type: `"auto"` (`LocalBusiness` with opening hours, else `Organization`), any schema.org type, or `None`. |
