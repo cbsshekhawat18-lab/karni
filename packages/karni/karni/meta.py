@@ -56,6 +56,7 @@ __all__ = [
     "field_roles",
     "import_options",
     "karni_option",
+    "key_field_problem",
     "label_field",
     "model_actions",
     "natural_key",
@@ -141,7 +142,7 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "natural_key",
         "first unique slug, char or email field, else the primary key",
         "The field that names a row to people: imports refer to related rows by it and "
-        "exports write relations with it.",
+        "exports write relations with it. One field name, a string (`karni.E291`).",
         'natural_key = "sku"',
     ),
     Option(
@@ -447,26 +448,54 @@ def label_field(model: type[models.Model]) -> str | None:
     return natural_key(model)
 
 
+def key_field_problem(model: type[models.Model], option: str) -> str | None:
+    """Why ``Karni.<option>`` (``natural_key``, ``import_key``) is not one field, or ``None``.
+
+    The option names one field of the model, as a string. A list or tuple
+    (``["name"]``) is refused with the fix: an import's relation cell and its
+    matching column each carry one value, so a key of several fields has no
+    form in a file. ``karni check`` reports it (``karni.E291``) and the
+    readers raise it.
+    """
+    declared = karni_option(model, option)
+    if declared is None or declared == "":
+        return None
+    where = f"{model.__name__}.Karni.{option}"
+    if not isinstance(declared, str):
+        names = list(declared) if isinstance(declared, list | tuple) else None
+        if names is not None and len(names) == 1 and isinstance(names[0], str):
+            return (
+                f"{where} is {declared!r}, a {type(declared).__name__}. It names one field, "
+                f"as a string: {option} = {names[0]!r}."
+            )
+        return (
+            f'{where} is {declared!r}. It names one field, as a string ({option} = "sku"). '
+            "A key of several fields is not supported: add one unique field that names the "
+            "row (a SlugField built from them), or leave the option out to use the primary key."
+        )
+    try:
+        model._meta.get_field(declared)
+    except FieldDoesNotExist:
+        return f"{where} names {declared!r}, which the model does not have."
+    return None
+
+
 def natural_key(model: type[models.Model]) -> str | None:
     """The field that names a row of ``model`` to people: ``Karni.natural_key``.
 
     How an import refers to a related row (``venue = "Arena"``) and how an
-    export writes a relation. Declared explicitly, else the first unique
-    slug/char/email field (``slug``, ``email``, ``sku``), else ``None`` —
-    imports and exports then use the primary key.
+    export writes a relation. Declared explicitly (one field name, a string),
+    else the first unique slug/char/email field (``slug``, ``email``,
+    ``sku``), else ``None`` — imports and exports then use the primary key.
+    A declaration that is not one field of the model raises ``E291``, which
+    ``karni check`` reports at boot.
     """
     declared = karni_option(model, "natural_key")
     if declared:
-        name = str(declared)
-        try:
-            model._meta.get_field(name)
-        except FieldDoesNotExist as exc:
-            raise KarniImproperlyConfigured(
-                f"{model.__name__}.Karni.natural_key names {name!r}, which the model does "
-                "not have.",
-                code="E801",
-            ) from exc
-        return name
+        problem = key_field_problem(model, "natural_key")
+        if problem is not None:
+            raise KarniImproperlyConfigured(problem, code="E291")
+        return str(declared)
     from karni.fields.base import is_unique  # Karni fields keep uniqueness in a constraint
 
     for field in model._meta.concrete_fields:
@@ -521,6 +550,9 @@ def _callable_option(model: type[models.Model], name: str) -> Callable[..., Any]
 
 def import_options(model: type[models.Model]) -> ImportOptions:
     """``Karni.import_key`` / ``import_lookup`` / ``import_transform`` / ``after_import``."""
+    problem = key_field_problem(model, "import_key")
+    if problem is not None:
+        raise KarniImproperlyConfigured(problem, code="E291")
     key = karni_option(model, "import_key") or natural_key(model)
     if key is not None:
         try:

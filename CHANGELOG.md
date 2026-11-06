@@ -1995,6 +1995,12 @@ apply codemods and list the manual steps. This file is the human summary.
   reports as `label` (critical). Each input now carries an `aria-label` with
   its column's name, and the parts of a date and time field say which part
   they are.
+- **`natural_key = ["name"]` fails `karni check`.** A list passed the check,
+  then every request that read the model answered 500 ("natural_key names
+  \"['name']\", which the model does not have"). `karni check` now refuses a
+  `natural_key` or `import_key` that is not one field name of the model with
+  `karni.E291`, which names the string form, and the readers raise the same
+  message. A natural key stays one field: a cell of a file carries one value.
 
 ## 0.4.0 (2026-10-22)
 

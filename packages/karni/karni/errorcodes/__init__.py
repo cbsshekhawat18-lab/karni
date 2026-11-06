@@ -1195,6 +1195,21 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Then grant the action by name: KARNI_ROLES = {'finance': {'grants': "
         "{'shop.order:refund': 'all'}}}.",
     ),
+    _e(
+        "E291",
+        "Karni.natural_key or import_key is not one field of the model",
+        "check",
+        "karni.meta.natural_key; karni.meta.import_options; karni.checks.check_key_fields "
+        "(karni check)",
+        "natural_key names the one field that names a row to people: an import's relation "
+        "cell carries its value and an export writes it. import_key names the column an "
+        "import matches rows on. Each carries one value per cell, so a list of fields has no "
+        "form in a file, and a name the model does not have would fail every request that "
+        "reads the model.",
+        "Write one field name as a string: class Karni: natural_key = 'name' (not ['name']). "
+        "For a row that only several fields name together, add one unique field that names it "
+        "(a SlugField built from them), or leave natural_key out to use the primary key.",
+    ),
     # E3xx admin
     _e(
         "E301",

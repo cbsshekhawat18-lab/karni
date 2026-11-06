@@ -1680,7 +1680,7 @@ The public names of the four packages a project builds on, from their `__all__`.
 | `KarniAdminMixin` | admin class | Every Karni admin behaviour, as cooperative `ModelAdmin` overrides. | overrides `get_queryset`, `has_module_permission`, `get_changelist`, `get_changelist_instance`, `get_ordering`, `has_view_permission`, `has_add_permission`, `has_change_permission`, `has_delete_permission`, `get_actions`, `response_action`, `get_list_display`, `changelist_view`, `render_change_form`, `get_list_filter`, `get_search_fields`, `get_sortable_by`, `get_fields`, `get_fieldsets`, `get_readonly_fields`, `lookup_allowed`, `history_view`, `formfield_for_manytomany`, `get_exclude`, `get_form`, `formfield_for_foreignkey`, `save_model`, `save_related`, `log_addition`, `log_change`, `delete_model`, `delete_queryset`, `response_add`, `response_change`, `response_delete` |
 | `KarniInlineMixin` | admin class | An inline whose rows open for a role's grant on the inline's model. | overrides `has_view_permission`, `has_add_permission`, `has_change_permission`, `has_delete_permission` |
 | `KarniModelAdmin` | admin class | `KarniAdminMixin` (and the import/export mixin) on the `KARNI_ADMIN_BASE` class. |  |
-| `SoftDeleteAdminMixin` | admin class | Admin behaviour for soft-delete models. | overrides `get_queryset`, `get_paginator`, `get_changelist`, `get_list_filter`, `get_search_results`, `get_urls`, `delete_queryset` |
+| `SoftDeleteAdminMixin` | admin class | Admin behaviour for soft-delete models. | overrides `get_queryset`, `get_paginator`, `get_changelist`, `get_list_filter`, `get_search_results`, `get_urls`, `get_deleted_objects`, `render_delete_form`, `delete_queryset` |
 | `SoftDeleteListFilter` | admin class | Changelist filter over `deleted_at`: alive (default) / deleted / all. |  |
 | `autodiscover` | function | Register a derived admin for every unregistered, non-excluded model. | `autodiscover(site: AdminSite \| None = None) -> None` |
 
@@ -1722,7 +1722,7 @@ class Lead(BaseModel):
 | `field_roles` | karni | `{}` | Which roles see and change a field. The API, the admin and exports hide it from the rest. | `field_roles = {"salary": {"read": ["hr", "manager"], "write": ["hr"]}}` |
 | `audit` | karni | `False` | Record field-level change history (who, when, old and new value): `True` for every field, or a list of field names. | `audit = True` |
 | `sensitive` | karni | `()` | Fields the change history records as changed but never with their values, on top of names matching `KARNI_AUDIT_REDACT`. | `sensitive = ["iban"]` |
-| `natural_key` | karni | first unique slug, char or email field, else the primary key | The field that names a row to people: imports refer to related rows by it and exports write relations with it. | `natural_key = "sku"` |
+| `natural_key` | karni | first unique slug, char or email field, else the primary key | The field that names a row to people: imports refer to related rows by it and exports write relations with it. One field name, a string (`karni.E291`). | `natural_key = "sku"` |
 | `label_field` | karni | the first text field named `name`, `title` or `label`, else `natural_key` | Experimental. The field that shows a row to people where only its key would show otherwise: the groups of an aggregate on a relation (chart legends and axes, comparison headers). | `label_field = "display_name"` |
 | `help` | karni | none | One line that says what the model is for. The admin shows it at the top of the model's list and form. Without it the admin shows no line: the docstring is for developers and is never shown. | `help = "Products you sell. Prices are per unit."` |
 | `import_key` | karni | `natural_key` | The column an import matches existing rows on, so a row with a known key is updated instead of created. | `import_key = "number"` |
@@ -2401,6 +2401,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E276`](errors.md#e276) | check | A relation joins models on different databases |
 | [`E280`](errors.md#e280) | check | Karni.label_field names a field the model does not have |
 | [`E290`](errors.md#e290) | check | Karni.explicit_actions names an action the model does not have |
+| [`E291`](errors.md#e291) | check | Karni.natural_key or import_key is not one field of the model |
 | [`E301`](errors.md#e301) | exception | KARNI_ADMIN_BASE is not a ModelAdmin class |
 | [`E302`](errors.md#e302) | exception | AdminMeta.inline_on is invalid |
 | [`E303`](errors.md#e303) | exception | KARNI_ADMIN_LOGO is not a logo declaration |
