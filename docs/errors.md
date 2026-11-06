@@ -5093,7 +5093,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C561: A related tab names an entity with no fk to this one
 
-*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+*karni command* · from `karni spec validate, karni make page --related (karni_cli.spec.validate)`
 
 **Why Karni objects.** A related tab is a table of the other entity's rows filtered to this record, and the list of that entity filters by its fk fields. The entity has no fk to the page's entity, or the field named is not one (a m2m or an o2o cannot back a tab).
 
@@ -5103,7 +5103,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C562: A related tab could be either of two relations
 
-*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+*karni command* · from `karni spec validate, karni make page --related (karni_cli.spec.validate)`
 
 **Why Karni objects.** The entity named has two or more fks to the page's entity (a deal's company and its partner), so the tab must say which rows it lists.
 
@@ -5113,7 +5113,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C563: A related tab is listed twice
 
-*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+*karni command* · from `karni spec validate, karni make page --related (karni_cli.spec.validate)`
 
 **Why Karni objects.** Each related tab is one relation. Deal and Deal.company name the same one when Deal has one fk to the page's entity.
 

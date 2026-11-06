@@ -12,7 +12,9 @@ Kinds (``--resource R --kind ...``), with routes under a base path
 
 A detail page takes ``--related <name>`` (experimental, repeatable): a tab
 per reverse relation, each a table of the related rows filtered to the
-record (ResourceDetail's ``related``).
+record (ResourceDetail's ``related``). Each tab must be backed by a fk of the
+related model to the page's model, by the rule ``karni spec validate``
+applies (:func:`karni_cli.spec.validate.related_tab`).
 
 Pages link to their siblings only when those routes exist (or are generated
 in the same run) — TanStack Router's typed ``navigate`` rejects unknown
@@ -36,12 +38,13 @@ from karni_cli.generators.core import (
     DRY_RUN_OPTION,
     FORCE_OPTION,
     FRONTEND,
+    App,
     Workspace,
     local_apps,
     project_workspace,
     require_frontend,
 )
-from karni_cli.generators.introspect import viewsets_file
+from karni_cli.generators.introspect import relation_targets, viewsets_file
 from karni_cli.generators.naming import default_route, humanize, pascal, require_kebab
 from karni_cli.generators.pysource import parse
 from karni_cli.project import CliError
@@ -166,7 +169,12 @@ def known_routes(ws: Workspace) -> set[str]:
 
 def _routed_resources(ws: Workspace) -> set[str]:
     """Routes of the project's viewsets (default kebab-plural, or an explicit ``route``)."""
-    found: set[str] = set()
+    return set(_routed_models(ws))
+
+
+def _routed_models(ws: Workspace) -> dict[str, tuple[App, str]]:
+    """Route of each of the project's viewsets → (the viewset's app, its model's class name)."""
+    found: dict[str, tuple[App, str]] = {}
     for app in local_apps(ws):
         path = viewsets_file(ws, app)
         text = ws.read(path)
@@ -188,10 +196,107 @@ def _routed_resources(ws: Workspace) -> set[str]:
                 elif target.id == "model" and isinstance(stmt.value, ast.Name):
                     model = stmt.value.id
             if explicit:
-                found.add(explicit)
+                found[explicit] = (app, model or "")
             elif model:
-                found.add(default_route(model))
+                found[default_route(model)] = (app, model)
     return found
+
+
+def _model_classes(ws: Workspace) -> dict[str, list[tuple[App, ast.ClassDef]]]:
+    """Every class in the local apps' ``models.py``, by name (a ``models/`` package is skipped)."""
+    found: dict[str, list[tuple[App, ast.ClassDef]]] = {}
+    for app in local_apps(ws):
+        path = app.file("models.py")
+        text = ws.read(path)
+        if text is None:
+            continue
+        for node in parse(ws, ws.rel(path), text).body:
+            if isinstance(node, ast.ClassDef):
+                found.setdefault(node.name, []).append((app, node))
+    return found
+
+
+def _model_class(
+    classes: dict[str, list[tuple[App, ast.ClassDef]]], app: App, name: str
+) -> tuple[App, ast.ClassDef] | None:
+    """The model ``name`` in ``app``, else in the one other local app that defines it."""
+    candidates = classes.get(name, [])
+    own = [found for found in candidates if found[0] == app]
+    return (own or candidates)[0] if len(own or candidates) == 1 else None
+
+
+def check_related(ws: Workspace, spec: PageSpec) -> None:
+    """Refuse a related tab no fk backs, by the rule ``karni spec validate`` applies (C561, C562).
+
+    A tab is checked when the page's resource and the tab's resource are both
+    routed by this project's viewsets, and the tab's model declares its own
+    fields (no project base class it could inherit a fk from). A module's
+    resource is left to the module.
+    """
+    if not spec.related or spec.resource is None:
+        return
+    from karni_cli.spec.validate import TabProblem, related_tab
+
+    routes = _routed_models(ws)
+    classes = _model_classes(ws)
+    owner = _model_class(classes, *routes[spec.resource]) if spec.resource in routes else None
+    if owner is None:
+        return
+    owner_app, owner_cls = owner
+    seen: set[str] = set()
+    for entry in spec.related:
+        route, _, field = entry.partition(".")
+        if route not in routes:
+            ws.note(
+                f"note: no viewset in this project routes /api/{route}/, so the related tab "
+                f"{entry!r} is not checked against its fks."
+            )
+            continue
+        held = _model_class(classes, *routes[route])
+        if held is None:
+            continue
+        held_app, held_cls = held
+        if any(isinstance(base, ast.Name) and base.id in classes for base in held_cls.bases):
+            continue  # it may inherit a fk from a project class the source does not show
+
+        def points_at_owner(written: str, held_name: str = held_cls.name) -> bool:
+            app_label, _, name = written.rpartition(".")
+            if written == "self":
+                return held_name == owner_cls.name
+            return name == owner_cls.name and app_label in ("", owner_app.label)
+
+        relations = relation_targets(held_cls)
+        pointing = {
+            name: kind for name, (kind, written) in relations.items() if points_at_owner(written)
+        }
+        fields = {
+            stmt.targets[0].id
+            for stmt in held_cls.body
+            if isinstance(stmt, ast.Assign)
+            and len(stmt.targets) == 1
+            and isinstance(stmt.targets[0], ast.Name)
+        }
+        found = related_tab(
+            owner_cls.name,
+            held_cls.name,
+            field or None,
+            pointing,
+            fields,
+            ref=lambda f, route=route: f"{route}.{f}",
+        )
+        if isinstance(found, TabProblem):
+            raise CliError(
+                f"--related {entry}: {owner_cls.name}'s related tab: {found.why} "
+                f"({ws.rel(held_app.file('models.py'))}). {found.fix}",
+                code=found.code,
+            )
+        if f"{route}.{found}" in seen:
+            raise CliError(
+                f"--related {entry}: {owner_cls.name}'s related tab is listed twice. List each "
+                "related tab once.",
+                code="C563",
+            )
+        seen.add(f"{route}.{found}")
 
 
 # rendering
@@ -459,7 +564,8 @@ def command(
     related: list[str] = typer.Option(
         [],
         "--related",
-        help="Experimental. With --kind detail: a related tab (deals, or deals.partner). Repeat it.",
+        help="Experimental. With --kind detail: a related tab (deals, or deals.partner), a "
+        "resource whose model has a fk to this one (C561 otherwise). Repeat it.",
     ),
     count: list[str] = typer.Option(
         [],
@@ -489,5 +595,6 @@ def command(
     spec = spec_for(
         name, resource=resource, kind=kind, path=path, title=title, related=related, counts=count
     )
+    check_related(ws, spec)
     plan(ws, spec, register=not no_route)
     ws.commit(dry_run=dry_run)

@@ -1562,6 +1562,11 @@ apply codemods and list the manual steps. This file is the human summary.
   made the generated test fail with "Invalid pk" and stopped `karni build` at
   `C281`. The run now skips the create and the PUT, and warns naming the
   field, the target's access and the ways on.
+- **`karni make page --related` checks the tab's fk.** A related tab with no
+  fk behind it was written, then `karni spec export` kept it, `spec validate`
+  rejected it (`C561`) and `karni plan` and `karni build` refused the whole
+  project (`C250`). `make page` now refuses it with `C561`, `C562` or `C563`,
+  by the same rule `spec validate` applies.
 
 ## 0.4.0 (2026-10-22)
 

@@ -72,6 +72,40 @@ def class_fields(cls: ast.ClassDef) -> dict[str, str]:
     return found
 
 
+_RELATION_KINDS = {"ForeignKey": "fk", "OneToOneField": "o2o", "ManyToManyField": "m2m"}
+
+
+def relation_targets(cls: ast.ClassDef) -> dict[str, tuple[str, str]]:
+    """``name = models.ForeignKey(<target>, ...)`` → ``{name: ("fk", target)}``, o2o and m2m too.
+
+    The target is as written: ``"Venue"``, ``"shop.Venue"``, ``"self"`` or a
+    class name, and ``"User"`` for ``settings.AUTH_USER_MODEL``. It is ``""``
+    when the source does not say (a variable).
+    """
+    found: dict[str, tuple[str, str]] = {}
+    for stmt in cls.body:
+        if not isinstance(stmt, ast.Assign) or len(stmt.targets) != 1:
+            continue
+        target = stmt.targets[0]
+        kind = _RELATION_KINDS.get(_call_name(stmt.value))
+        if kind is None or not isinstance(target, ast.Name) or not isinstance(stmt.value, ast.Call):
+            continue
+        call = stmt.value
+        first = call.args[0] if call.args else None
+        for keyword in call.keywords:
+            if keyword.arg == "to":
+                first = keyword.value
+        written = ""
+        if isinstance(first, ast.Constant) and isinstance(first.value, str):
+            written = first.value
+        elif isinstance(first, ast.Name):
+            written = first.id
+        elif isinstance(first, ast.Attribute) and first.attr == "AUTH_USER_MODEL":
+            written = "User"
+        found[target.id] = (kind, written)
+    return found
+
+
 def _bases(cls: ast.ClassDef) -> frozenset[str]:
     names: set[str] = set()
     for base in cls.bases:

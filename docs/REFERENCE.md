@@ -1238,7 +1238,7 @@ karni make page [OPTIONS] NAME
 | `--kind` TEXT |  | With --resource: list (default), detail or form. A login page needs no resource, and a dashboard (experimental) counts resources (--count). |
 | `--path` TEXT |  | Route path. For resource pages it is the base (default `/<resource>`). |
 | `--title` TEXT |  | Page title (default: from the name). |
-| `--related` TEXT (repeatable) |  | Experimental. With --kind detail: a related tab (deals, or deals.partner). Repeat it. |
+| `--related` TEXT (repeatable) |  | Experimental. With --kind detail: a related tab (deals, or deals.partner), a resource whose model has a fk to this one (C561 otherwise). Repeat it. |
 | `--count` TEXT (repeatable) |  | Experimental. With --kind dashboard: a resource to count. Repeat it (default: every resource the project routes). |
 | `--no-route` |  | Do not register the route in frontend/src/routes.tsx. |
 | `--force` |  | Overwrite / replace existing targets. |

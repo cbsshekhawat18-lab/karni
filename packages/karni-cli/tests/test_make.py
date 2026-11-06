@@ -1113,6 +1113,30 @@ def test_a_detail_page_takes_related_tabs(project: Path) -> None:
     )  # fmt: skip
 
 
+def test_a_related_tab_needs_a_fk_as_spec_validate_says(project: Path) -> None:
+    """A tab no fk backs is refused (C561, C562, C563), not left for spec validate to find."""
+    ok("make", "app", "events")
+    ok("make", "model", "Speaker", "name:str", "--with", "viewset")
+    ok("make", "model", "Event", "title:str", "--with", "viewset")
+    ok("make", "model", "Talk", "title:str", "speaker:fk:Speaker", "cohost:fk:Speaker?",
+       "--with", "viewset")  # fmt: skip
+    ok("make", "model", "Panel", "title:str", "speakers:m2m:Speaker", "--with", "viewset")
+    detail = ("make", "page", "speaker-detail", "--resource", "speakers", "--kind", "detail")
+    message = fails(*detail, "--related", "events", match="C561")
+    assert "Event has no fk to Speaker (events/models.py)" in message
+    assert "Add a fk:Speaker field to Event, or drop the tab." in message
+    fails(*detail, "--related", "panels", match="Panel has no fk to Speaker (speakers: m2m)")
+    fails(*detail, "--related", "talks", match="Write talks.speaker or talks.cohost")
+    fails(*detail, "--related", "talks.title", match="Name a fk of Talk to Speaker: talks.speaker")
+    fails(*detail, "--related", "talks.speaker", "--related", "talks.speaker", match="C563")
+    assert not (project / "frontend" / "src" / "pages" / "speaker-detail.tsx").exists()
+    out = ok(*detail, "--related", "talks.speaker", "--related", "talks.cohost",
+             "--related", "rooms")  # fmt: skip
+    assert "routes /api/rooms/, so the related tab 'rooms' is not checked" in out.output
+    page = (project / "frontend" / "src" / "pages" / "speaker-detail.tsx").read_text()
+    assert 'related={["talks.speaker", "talks.cohost", "rooms"]}' in page
+
+
 def test_a_dashboard_page_counts_the_routed_resources(project: Path) -> None:
     """Experimental: --kind dashboard composes DashboardGrid and ChartCard with useResourceCounts."""
     ok("make", "app", "shop")
