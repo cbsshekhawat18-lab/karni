@@ -114,7 +114,8 @@ apply codemods and list the manual steps. This file is the human summary.
   design's images their width and height and smaller WebP copies in a
   `srcset`. [docs/public-site.md](docs/public-site.md#seo-by-default).
 
-- **A token benchmark harness (experimental).** `scripts/benchmarks/tokens/` measures the
+- **A token benchmark harness (experimental), app-builder item A9.**
+  `scripts/benchmarks/tokens/` measures the
   same three apps (booking with payments, a CRM with three roles and CSV import, a shop with
   orders and refunds) built by Claude Code with and without Karni: a contract and black-box
   acceptance tests per task, a reference solution built with Karni for each, two starting
@@ -1600,6 +1601,12 @@ apply codemods and list the manual steps. This file is the human summary.
   and the top of this file named older subsets. They now point at the one
   list in `.github/ci/check_release.py`, and a test holds the table and the
   publisher row to it and refuses a spelled-out count of packages.
+- **The roadmap pages match what is merged.** Large-apps item 12 (wide models)
+  said planned, item 15 said in progress with all three modules done and had
+  no row for 15b (karni-ai), and app-builder item A9 said planned with its
+  harness merged. Item 12 and item 15 are done, 15b has its row, and A9 is in
+  progress until its runs are published. A test refuses a roadmap item the
+  CHANGELOG ships while the roadmap says planned.
 
 ## 0.4.0 (2026-10-22)
 

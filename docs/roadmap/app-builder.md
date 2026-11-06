@@ -57,7 +57,7 @@ the item it names is done.
 
 | Item | Goal | Depends on | Status |
 |---|---|---|---|
-| A9 | A token benchmark: the same apps built with and without Karni, published with the method and the raw data. | A8 | planned |
+| A9 | A token benchmark: the same apps built with and without Karni, published with the method and the raw data. | A8 | in progress: the harness and its method are merged (`scripts/benchmarks/tokens/`, [the method](../benchmarks/tokens.md)), no runs are published yet |
 
 Notes on the order:
 
