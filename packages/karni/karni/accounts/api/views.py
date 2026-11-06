@@ -491,7 +491,7 @@ class OtpVerifyView(APIView):
         else:
             _session_login(request, user)
         if result.password_cleared:
-            # The address was never verified: the code proved it, and the password went (docs/accounts.md).
+            # The address was never verified: the code proved it and the password went.
             data["password_removed"] = True
         _log().info(
             "accounts.otp.verified", user_id=str(user.pk), mode=auth_mode(), created=result.created
