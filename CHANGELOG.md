@@ -1592,6 +1592,11 @@ apply codemods and list the manual steps. This file is the human summary.
   `Karni.label_field` (new, experimental), else its `name`, `title` or `label`
   field, else its natural key. The `key` is still the row's id and the
   response has the same fields. A `label_field` the model lacks is `E280`.
+- **No drf-spectacular error about the menu.** Every OpenAPI generation logged
+  "using @extend_schema on viewset class NavigationView ... will most likely
+  result in a broken schema", because the schema annotation with its
+  `operation_id` sat on the view class. It is on the view's `get` now, and the
+  operation is the same (`navigation`).
 
 ## 0.4.0 (2026-10-22)
 
