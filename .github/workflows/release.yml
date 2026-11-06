@@ -130,8 +130,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - run: python -m pip install packaging
-      - name: Versions, repository URLs, licences, module ranges
+      - run: python -m pip install packaging pyyaml
+      - name: Versions, repository URLs, licences, module ranges, workflow lists
         env:
           TAG: ${{ needs.mode.outputs.tag }}
         run: python .github/ci/check_release.py --tag "$TAG" --repo "$GITHUB_REPOSITORY"
@@ -215,7 +215,9 @@ jobs:
           path: dist/
       # One upload per project, core first: a project whose trusted publisher
       # is missing stops the job without half-publishing the others, and
-      # skip-existing makes a re-run after fixing it safe.
+      # skip-existing makes a re-run after fixing it safe. Every upload step
+      # has the same `with:` block; .github/ci/check_release.py refuses a
+      # release whose steps differ or miss a project.
       - name: One directory per project
         run: |
           set -euo pipefail
@@ -280,14 +282,23 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: pypi/karni_charts/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
       - name: karni-reports
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: pypi/karni_reports/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
       - name: karni-ai
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: pypi/karni_ai/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
       - name: karni-storage
         uses: pypa/gh-action-pypi-publish@release/v1
         with:

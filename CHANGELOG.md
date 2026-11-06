@@ -1563,6 +1563,13 @@ apply codemods and list the manual steps. This file is the human summary.
   distribution (`importlib.metadata`), so `[project] version` in
   `pyproject.toml` is the one place it is set. The release check refuses a
   tag when a package's `__version__` is a literal that differs or is missing.
+- **Every PyPI upload step skips existing files and honours the token.** In
+  `release.yml` and `pypi-from-release.yml` the `karni-charts`,
+  `karni-reports` and `karni-ai` steps lacked `skip-existing`, `password` and
+  `attestations`, so a re-run after a partial publish failed at
+  `karni-charts`, and a `PYPI_API_TOKEN` secret did not reach them. All ten
+  steps are now alike, and the release check refuses a tag when an upload
+  step differs or a package is missing from a build or upload list.
 
 ## 0.4.0 (2026-10-22)
 

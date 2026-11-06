@@ -119,3 +119,77 @@ def test_the_release_check_runs_the_version_attribute_check(
     )
     assert check_release.main(["--tag", "v0.5.0", "--repo", "owner/karni"]) == 1
     assert "release check: stale at 0.5.0" in capsys.readouterr().out
+
+
+# The workflows: every package in every list, every PyPI upload step alike (A6-05)
+
+
+def test_every_package_is_in_every_build_and_upload_list() -> None:
+    assert check_release.check_workflows() == []
+
+
+def _copy_workflows(root: Path) -> None:
+    for workflow, *_ in check_release.LOOPS:
+        target = root / workflow
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text((REPO_ROOT / workflow).read_text())
+    for directory in (*check_release.PYTHON_PACKAGES, *check_release.NPM_PACKAGES):
+        for manifest in ("pyproject.toml", "package.json"):
+            if (REPO_ROOT / directory / manifest).is_file():
+                (root / directory).mkdir(parents=True, exist_ok=True)
+                (root / directory / manifest).write_text(
+                    (REPO_ROOT / directory / manifest).read_text()
+                )
+
+
+def test_the_workflow_check_names_a_missing_package_and_an_unlike_upload_step(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _copy_workflows(tmp_path)
+    release = tmp_path / ".github/workflows/release.yml"
+    text = release.read_text()
+    # karni-ai drops out of the npm build loop, and karni-site's upload loses skip-existing.
+    text = text.replace(
+        ' modules/karni-ai/ui modules/karni-storage/ui; do\n            (cd "$d" && npm ci && npm run build && npm publish --dry-run',
+        ' modules/karni-storage/ui; do\n            (cd "$d" && npm ci && npm run build && npm publish --dry-run',
+        1,
+    )
+    text = text.replace(
+        "packages-dir: pypi/karni_site/\n          skip-existing: true\n",
+        "packages-dir: pypi/karni_site/\n",
+        1,
+    )
+    release.write_text(text)
+    monkeypatch.setattr(check_release, "ROOT", tmp_path)
+    problems = check_release.check_workflows()
+    assert len(problems) == 2, problems
+    loop, step = problems
+    assert loop.startswith(".github/workflows/release.yml job build-npm:")
+    assert "modules/karni-ai/ui" in loop
+    assert step.startswith(".github/workflows/release.yml job publish-pypi step 'karni-site'")
+    assert "skip-existing" in step
+
+
+def test_the_workflow_check_names_a_missing_upload_step(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _copy_workflows(tmp_path)
+    workflow = tmp_path / ".github/workflows/pypi-from-release.yml"
+    text = workflow.read_text()
+    start = text.index("      - name: karni-reports\n")
+    end = text.index("      - name: karni-ai\n")
+    workflow.write_text(text[:start] + text[end:])
+    monkeypatch.setattr(check_release, "ROOT", tmp_path)
+    problems = check_release.check_workflows()
+    assert problems and problems[0].startswith(
+        ".github/workflows/pypi-from-release.yml job publish uploads"
+    )
+    assert "'karni-reports'" in problems[0]
+
+
+def test_the_release_check_job_installs_what_the_script_imports() -> None:
+    import yaml
+
+    release = yaml.safe_load((REPO_ROOT / ".github/workflows/release.yml").read_text())
+    runs = " ".join(str(step.get("run", "")) for step in release["jobs"]["check"]["steps"])
+    assert "pip install packaging pyyaml" in runs

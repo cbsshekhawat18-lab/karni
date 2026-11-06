@@ -61,6 +61,29 @@ UI_MODULES = (
     "modules/karni-storage",
 )
 NPM_PACKAGES = ("packages/karni-ui", *(f"{module}/ui" for module in UI_MODULES))
+#: Every PyPI upload step passes these besides its own ``packages-dir``: a re-run
+#: skips files PyPI already has, a PYPI_API_TOKEN secret replaces trusted
+#: publishing, and attestations follow whichever of the two is in use.
+UPLOAD_ACTION = "pypa/gh-action-pypi-publish@release/v1"
+UPLOAD_WITH: dict[str, object] = {
+    "skip-existing": True,
+    "password": "${{ secrets.PYPI_API_TOKEN }}",
+    "attestations": "${{ steps.auth.outputs.attest }}",
+}
+#: The jobs that upload to PyPI, one step per project, core first.
+PYPI_JOBS = (
+    (".github/workflows/release.yml", "publish-pypi"),
+    (".github/workflows/pypi-from-release.yml", "publish"),
+)
+#: The shell loops that name every package: (workflow, job, loop variable, "python" or "npm",
+#: and whether the loop names directories or the projects' file-name prefixes).
+LOOPS = (
+    (".github/workflows/release.yml", "build-python", "d", "python", "directories"),
+    (".github/workflows/release.yml", "publish-pypi", "project", "python", "projects"),
+    (".github/workflows/pypi-from-release.yml", "publish", "project", "python", "projects"),
+    (".github/workflows/release.yml", "build-npm", "d", "npm", "directories"),
+    (".github/workflows/release.yml", "publish-npm", "d", "npm", "directories"),
+)
 TAG = re.compile(r"^v(?P<version>\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?)$")
 
 
@@ -162,6 +185,60 @@ def check_version_attributes(version: str) -> list[str]:
     return problems
 
 
+def _file_prefix(directory: str) -> str:
+    """``karni_cli`` for packages/karni-cli: how its sdist and wheel names start."""
+    return str(_pyproject(directory).get("name")).replace("-", "_")
+
+
+def _job_steps(workflow: str, job: str) -> list[dict[str, object]]:
+    import yaml
+
+    data = yaml.safe_load((ROOT / workflow).read_text(encoding="utf-8"))
+    steps = (data.get("jobs") or {}).get(job, {}).get("steps") or []
+    return [step for step in steps if isinstance(step, dict)]
+
+
+def check_workflows() -> list[str]:
+    """Every package is in every build and upload list, and every upload step is alike."""
+    problems = []
+    expected = {
+        ("python", "directories"): list(PYTHON_PACKAGES),
+        ("python", "projects"): [_file_prefix(directory) for directory in PYTHON_PACKAGES],
+        ("npm", "directories"): list(NPM_PACKAGES),
+    }
+    for workflow, job, variable, kind, names in LOOPS:
+        want = expected[(kind, names)]
+        loop = re.compile(rf"\bfor {variable} in ([^;\n]+); do")
+        found = [
+            match[1].split()
+            for step in _job_steps(workflow, job)
+            for match in loop.finditer(str(step.get("run") or ""))
+        ]
+        if found != [want]:
+            problems.append(
+                f"{workflow} job {job}: the `for {variable} in ...` loop lists {found}, "
+                f"expected one loop over {want} (check_release.py lists the release)."
+            )
+    for workflow, job in PYPI_JOBS:
+        steps = [step for step in _job_steps(workflow, job) if step.get("uses") == UPLOAD_ACTION]
+        names = [step.get("name") for step in steps]
+        want_names = [_pyproject(directory).get("name") for directory in PYTHON_PACKAGES]
+        if names != want_names:
+            problems.append(
+                f"{workflow} job {job} uploads {names}, expected one {UPLOAD_ACTION} step per "
+                f"project in this order: {want_names}."
+            )
+        for step, directory in zip(steps, PYTHON_PACKAGES, strict=False):
+            want = {"packages-dir": f"pypi/{_file_prefix(directory)}/", **UPLOAD_WITH}
+            if step.get("with") != want:
+                problems.append(
+                    f"{workflow} job {job} step {step.get('name')!r} has with: "
+                    f"{step.get('with')}, expected {want}. Every upload step passes the same "
+                    "skip-existing, password and attestations."
+                )
+    return problems
+
+
 def check_repository(repo: str) -> list[str]:
     https = f"https://github.com/{repo}"
     problems = []
@@ -250,6 +327,7 @@ def main(argv: list[str] | None = None) -> int:
         *check_repository(args.repo),
         *check_licenses(),
         *check_module_ranges(version),
+        *check_workflows(),
     ]
     for problem in problems:
         print(f"release check: {problem}")
