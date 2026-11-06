@@ -629,8 +629,8 @@ def test_a_granted_model_without_an_owner_is_tested_as_a_role_that_reaches_it(
         + "\n\nclass Sale(models.Model):\n    sku = models.CharField(max_length=40)\n\n"
         "    def __str__(self) -> str:\n        return self.sku\n"
         "\n\nclass Visit(models.Model):\n    note = models.CharField(max_length=40)\n"
-        "    owner = models.ForeignKey(\"karni_accounts.User\", on_delete=models.CASCADE)\n\n"
-        "    class Karni:\n        owner_field = \"owner\"\n"
+        '    owner = models.ForeignKey("karni_accounts.User", on_delete=models.CASCADE)\n\n'
+        '    class Karni:\n        owner_field = "owner"\n'
     )
     if "from django.db import models" not in models.read_text():
         models.write_text("from django.db import models\n" + models.read_text())
@@ -664,7 +664,9 @@ def test_make_test_refuses_a_role_the_project_does_not_declare(project: Path) ->
     settings = project / "config" / "settings.py"
     original = settings.read_text()
     # an added module's role counts (karni-site declares 'editor')
-    settings.write_text(original.replace("]  # karni:apps", '    "karni_site",\n]  # karni:apps', 1))
+    settings.write_text(
+        original.replace("]  # karni:apps", '    "karni_site",\n]  # karni:apps', 1)
+    )
     ok("make", "test", "Venue", "--role", "editor")
     settings.write_text(original + '\nKARNI_ROLES = {"editor": {"grants": {"*": "all"}}}\n')
     fails("make", "test", "Venue", "--role", "staff", "--force", match="declared: editor")

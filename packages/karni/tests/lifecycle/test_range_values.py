@@ -75,7 +75,8 @@ def test_seed_fills_range_columns_row_by_row_and_in_bulk() -> None:
     assert report.rows["lifecycleapp.Stay"] == 5
     bulk = seed(models=labels, volume=60, batch_size=20, reset=True)
     assert bulk.rows["lifecycleapp.Reservation"] == 60
-    assert all(row.lower < row.upper for row in Reservation.objects.values_list("during", flat=True))
+    ranges = Reservation.objects.values_list("during", flat=True)
+    assert all(row.lower < row.upper for row in ranges)
     assert Stay.objects.count() == 60
 
 
