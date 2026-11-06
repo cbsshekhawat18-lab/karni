@@ -516,3 +516,16 @@ def test_the_accessibility_script_names_select2_search_boxes_tooltips_and_blank_
     assert ".select2-search__field" in text  # a label for the many-to-many search box
     assert ".help-tooltip[aria-label]:not([role])" in text  # aria-label needs a role
     assert "th:not([data-karni-named])" in text  # blank table headings get text
+
+
+@pytest.mark.django_db(databases=["default", "second"])
+def test_an_unusual_table_name_falls_back_to_an_exact_count() -> None:
+    from django.db import connection
+
+    from tests.externalapp.models import Stock
+
+    if connection.vendor != "postgresql":
+        pytest.skip("the estimate is PostgreSQL only")
+    with override_settings(KARNI_ADMIN_COUNT_ESTIMATE_ABOVE=1):
+        total, _estimated = listing.count_rows(Stock.objects.all())
+    assert total == Stock.objects.count()

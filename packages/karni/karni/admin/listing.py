@@ -30,7 +30,7 @@ from django.conf import settings
 from django.contrib.admin.views.main import PAGE_VAR, SEARCH_VAR
 from django.core.exceptions import EmptyResultSet
 from django.core.paginator import Paginator
-from django.db import connections
+from django.db import DatabaseError, connections, transaction
 from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils.formats import number_format
@@ -74,24 +74,32 @@ def count_estimate_above() -> int:
 
 
 def _plan_rows(queryset: QuerySet[Any], threshold: int) -> int | None:
-    """The planner's row estimate when it is above ``threshold``, else ``None`` (count exactly)."""
+    """The planner's row estimate when it is above ``threshold``, else ``None`` (count exactly).
+
+    Any database error (an unusual table name, a view, a failed plan) also gives
+    ``None``: the exact count is always the fallback, never an error page.
+    """
     connection = connections[queryset.db]
     if connection.vendor != "postgresql":
         return None
     table = queryset.model._meta.db_table
+    named = table if ('"' in table or "." in table) else connection.ops.quote_name(table)
     try:
         sql, params = queryset.order_by().query.sql_with_params()
     except EmptyResultSet:
         return None
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT reltuples::bigint FROM pg_class WHERE oid = to_regclass(%s)", [table]
-        )
-        row = cursor.fetchone()
-        if row is None or row[0] is None or row[0] <= threshold:
-            return None  # a small or never analysed table: counting is cheap or the only truth
-        cursor.execute(f"EXPLAIN (FORMAT JSON) {sql}", params)
-        plan = cursor.fetchone()
+    try:
+        with transaction.atomic(using=queryset.db), connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT reltuples::bigint FROM pg_class WHERE oid = to_regclass(%s)", [named]
+            )
+            row = cursor.fetchone()
+            if row is None or row[0] is None or row[0] <= threshold:
+                return None  # a small or never analysed table: counting is cheap or the only truth
+            cursor.execute(f"EXPLAIN (FORMAT JSON) {sql}", params)
+            plan = cursor.fetchone()
+    except DatabaseError:
+        return None
     if plan is None:
         return None
     document = json.loads(plan[0]) if isinstance(plan[0], str | bytes) else plan[0]
