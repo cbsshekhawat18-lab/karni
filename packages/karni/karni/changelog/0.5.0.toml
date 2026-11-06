@@ -531,3 +531,16 @@ A client that read the key from an expanded `parent` reads `parent.id`, or leave
 out of `expand`."""
 mechanical = false
 migration = "migrations/0.5.md#expand-nests-a-trees-parent"
+
+[[change]]
+id = "2fa-throttled-answer"
+kind = "behaviour"
+symbol = "karni.accounts.twofa"
+summary = """\
+A two-factor code sent inside django-otp's wait after a wrong one (1 second, then 2, 4, 8...) \
+is answered 429 with code `throttled`, `retry_after` and a `Retry-After` header by \
+2fa/confirm/, 2fa/disable/ and 2fa/login/. In 0.4.0 it was 400 `invalid_code`. A replayed \
+ephemeral token on 2fa/login/ is 401 `replayed_token` before the code is checked. A client \
+that shows `invalid_code` as "wrong code" shows `throttled` as "wait N seconds"."""
+mechanical = false
+migration = "migrations/0.5.md#2fa-answers-throttled-inside-the-wait"

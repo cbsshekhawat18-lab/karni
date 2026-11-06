@@ -893,6 +893,25 @@ ephemeral token is signed, expires after 300 seconds and is single-use
 the login (token pair in jwt mode, session login + `django_otp.login` in
 session mode).
 
+A wrong code holds the device back. django-otp refuses every code for 1
+second after it, then 2, 4, 8 seconds after each further wrong one
+(`OTP_TOTP_THROTTLE_FACTOR` scales the wait, and `0` turns it off). A code
+sent inside the wait is not checked, so `2fa/confirm/`, `2fa/disable/` and
+`2fa/login/` answer 429 with a `Retry-After` header, and the ephemeral token
+stays valid:
+
+```json
+{"detail": "Too many wrong two-factor codes in a row. Wait 1 second, then send the code again.",
+ "code": "throttled", "retry_after": 1}
+```
+
+| `code` | Status | Meaning |
+|---|---|---|
+| `invalid_code` | 400 | The code is wrong. Send the right one after the wait. |
+| `throttled` | 429 | A code inside the wait after a wrong one. Wait `retry_after` seconds. |
+| `invalid_token`, `expired_token` | 401 | The ephemeral token is not valid, or older than 300 seconds. Sign in again. |
+| `replayed_token` | 401 | The ephemeral token was exchanged already. It is checked before the code. |
+
 ## Social login (django-allauth)
 
 ```bash

@@ -1579,6 +1579,12 @@ apply codemods and list the manual steps. This file is the human summary.
   the field's name. A required to-many column (`tags`) then failed every
   create with "This field is required.". The remembered choices now come
   first and every other header gets the suggestion.
+- **2FA says to wait after a wrong code.** django-otp refuses every code for 1
+  second after a wrong one (then 2, 4, 8...), and the endpoints answered
+  `invalid_code` though the code was right. `2fa/confirm/`, `2fa/disable/` and
+  `2fa/login/` now answer 429 `throttled` with `retry_after` and a
+  `Retry-After` header. A replayed ephemeral token gets `replayed_token`
+  (401) before its code is checked, not `invalid_code`.
 
 ## 0.4.0 (2026-10-22)
 
