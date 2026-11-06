@@ -75,14 +75,15 @@ def project_root() -> Path:
     return Path.cwd().resolve()
 
 
-def project_app_configs(*, infer_root: bool = True) -> list[AppConfig]:
+def project_app_configs(*, infer_root: bool = True, skip_apps: bool = True) -> list[AppConfig]:
     """Installed apps whose code lives in the project tree (see module docstring).
 
     The tree is ``BASE_DIR`` when the settings define it, else
     :func:`project_root`'s fallback (the parent of the settings package, for a
     project made before the scaffold defined ``BASE_DIR``), so every rule scans the project
     by default. ``infer_root=False`` keeps the strict ``BASE_DIR``-only
-    behaviour and returns nothing without it.
+    behaviour and returns nothing without it. ``skip_apps=False`` ignores
+    ``KARNI_ARCHITECTURE["skip_apps"]`` (a check that is not an architecture rule).
     """
     base_dir = getattr(settings, "BASE_DIR", None)
     if base_dir is None and infer_root:
@@ -91,7 +92,7 @@ def project_app_configs(*, infer_root: bool = True) -> list[AppConfig]:
         return []
     base = str(Path(base_dir).resolve())
     site = _site_packages_roots()
-    skip = set(config("skip_apps"))
+    skip = set(config("skip_apps")) if skip_apps else set()
     found: list[AppConfig] = []
     for cfg in apps.get_app_configs():
         if cfg.label in skip:

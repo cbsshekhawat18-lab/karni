@@ -2807,7 +2807,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni.fields.checks.check_usage_indexes; karni schema",
         "A routed viewset declares search_fields, filterset_fields, ordering_fields or an "
         "ordering on a column no index covers, so every such list request reads the whole "
-        "table. Fast with seed data, slow in production.",
+        "table. Fast with seed data, slow in production. Only the project's own models are "
+        "checked: a module indexes its own.",
         "Add the index the message names to Meta.indexes (a SearchField for search), then run "
         "karni make migration. `karni schema <app>` shows what serves each column. For a table "
         'small enough to scan, silence it instead: SILENCED_SYSTEM_CHECKS = ["karni.W967"].',

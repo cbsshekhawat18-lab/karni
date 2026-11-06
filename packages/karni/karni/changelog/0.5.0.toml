@@ -530,3 +530,15 @@ SITE012 on that page, so karni check --seo fails until each such page has a sent
 its own. Before, only two or more such pages failed it, as SITE013."""
 mechanical = false
 migration = "migrations/0.5.md#generated-site-pages-ask-for-their-description"
+
+[[change]]
+id = "index-advice-on-own-models"
+kind = "behaviour"
+symbol = "karni.W967"
+summary = """\
+karni.W967 (a filtered, searched or ordered field without an index) advises on the \
+project's own models only, not on a module's or Karni's. karni-approvals indexes \
+PendingChange.action and karni-reports GeneratedReport.status, each in a new migration \
+(0002_index_filtered_fields): run karni migrate after upgrading them."""
+mechanical = false
+migration = "migrations/0.5.md#index-advice-covers-the-projects-own-models"

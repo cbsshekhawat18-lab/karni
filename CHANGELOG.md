@@ -1592,6 +1592,12 @@ apply codemods and list the manual steps. This file is the human summary.
   refused, and `karni make app 9x` suggested `9_x`, itself refused. Every
   generator now refuses a name of the wrong form with `C103` (class names
   too: write `Bad`), and the example it gives is a name it accepts.
+- **`karni.W967` advises on the project's own models only.** It warned about
+  `PendingChange.action`, `GeneratedReport.status` and
+  `ImpersonationSession.end_reason` with a hint to edit a model the project
+  does not own. karni-approvals and karni-reports now index those fields
+  (migration `0002_index_filtered_fields`), and the check skips models
+  outside the project's apps.
 
 ## 0.4.0 (2026-10-22)
 
