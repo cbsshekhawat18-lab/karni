@@ -24,7 +24,7 @@ def suggest(
         False,
         "--json",
         help="Print {version, enabled, suggestions: [{code, rule, file, line, message, fix, "
-        "command}]} (docs/assets/karni-suggestions.schema.json).",
+        "command}], problems: [...]} (docs/assets/karni-suggestions.schema.json).",
     ),
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
@@ -42,11 +42,13 @@ def suggest(
     """
     project = require_project()
     core = None
+    problems: list[str] = []
     try:
         core = suggest_mod.core_suggestions(project, docker=docker, service=service)
     except CliError as exc:
         typer.echo(f"error: {exc}", err=True)
-    data = suggest_mod.collect(project, core, docker=docker, service=service)
+        problems.append(str(exc))
+    data = suggest_mod.collect(project, core, docker=docker, service=service, problems=problems)
     if as_json:
         typer.echo(json.dumps(data, indent=2))
         return

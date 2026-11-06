@@ -80,12 +80,20 @@
         "$ref": "#/$defs/_SuggestionOut"
       },
       "type": "array"
+    },
+    "problems": {
+      "description": "Why the project's own suggestions are missing (its manage.py karni_suggest could not run, C780 or C781). Empty when nothing went wrong. A non-empty list means an empty `suggestions` is not a clean project.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     }
   },
   "required": [
     "version",
     "enabled",
-    "suggestions"
+    "suggestions",
+    "problems"
   ],
   "type": "object"
 }

@@ -1654,6 +1654,33 @@ apply codemods and list the manual steps. This file is the human summary.
   that sets one away from its default (never a delete), and `True` holds every
   change, create and delete.
 
+- **Fixed: build, check, explain and the runners (self-test 0.5.0).**
+  `karni build` ends in the same frontend check as `karni check`: without
+  `frontend/node_modules` it skips with the install note instead of failing
+  C282. `karni explain PAY004` and every module code work outside a project
+  that installs the module (`karni_cli/module_codes.json`, written by
+  `scripts/gen_reference.py`). `karni --help` and `karni mcp --help` show
+  `karni-cli[mcp]`, and a test fails on any help string Rich would read as a
+  tag. `karni schema --database bogus` is E260, `karni new` into an existing
+  folder is C850 and `karni seed --volume` on a model it cannot fill is E613,
+  each in place of a traceback. `karni spec validate` reports the semantic
+  problems beside unknown keys in one run. `karni check --seo` says when there
+  is no public site. `karni worker`, `karni beat` and `karni serve` pass
+  SIGTERM, SIGHUP, SIGQUIT and an alarm on to their child and wait for it, so
+  no celery process is left behind. `karni seed --reset` also wipes the rows of
+  every model a seeder names (a module's table, `UserGrant`). `karni plan` and
+  `karni build --dry-run` no longer report `~ navigation` for a hand-written
+  page's place in `routes.tsx`. Project commands print the system check
+  warnings as one line (`KARNI_SYSTEM_CHECK_OUTPUT=full` restores the full
+  text, `karni check` keeps it). A spec whose navigation names `code` pages
+  converges: the plan compares the settings' whole menu, and the build's
+  check stops with C851 naming the routes the project must write.
+  `karni suggest --json` has a `problems` list, so an empty `suggestions` after
+  a failed project side is not read as clean. A `karni: allow(rule)` marker
+  with no colon counts as one without a reason, and every marker on a line is
+  read, in the suggestions, the architecture rules and the agent rules.
+  SUG007 ignores the changes `karni plan` marks not managed.
+
 ## 0.4.0 (2026-10-22)
 
 - **PostgreSQL is the default, everywhere.** `pip install karni` now brings

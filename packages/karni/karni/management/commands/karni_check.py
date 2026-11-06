@@ -217,7 +217,13 @@ class Command(BaseCommand):
 
         groups = ["karni.checks", *(["karni.checks.seo"] if seo else [])]
         for group in groups:
-            for ep in sorted(entry_points(group=group), key=lambda e: e.name):
+            hooks = sorted(entry_points(group=group), key=lambda e: e.name)
+            if group == "karni.checks.seo" and not hooks:
+                self.stdout.write(
+                    "karni check --seo: no public site to check. No installed module has SEO "
+                    "checks. Add the site module with `karni add site` to have pages to check."
+                )
+            for ep in hooks:
                 try:
                     messages = ep.load()()
                     failures.extend(f"{ep.name}: {message}" for message in messages)

@@ -25,7 +25,7 @@ import signal
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Final, Literal
 
 #: Typer ``context_settings`` for runners that pass unknown options through
 #: to the wrapped command (``karni test -x -k name``). Put ``--`` before
@@ -241,48 +241,77 @@ def run_python(
     python, cmd = _resolve_command(
         project, args, docker=docker, service=service, interactive=interactive
     )
+    env = _short_checks_env(args) if python is not None else None
     if database is None or python is None:
-        return run_process(cmd, cwd=project, capture=capture)
+        return run_process(cmd, cwd=project, capture=capture, env=env)
     from karni_cli import database as database_mod
 
     checked = database_mod.enabled()
     if checked and not capture:
         database_mod.guard(project, python, database)
-    proc = run_process(cmd, cwd=project, capture=capture)
+    proc = run_process(cmd, cwd=project, capture=capture, env=env)
     if checked and capture and proc.returncode != 0:
         database_mod.guard(project, python, database)
     return proc
 
 
-def run_process(
-    cmd: list[str], *, cwd: Path, capture: bool = False
-) -> subprocess.CompletedProcess[str]:
-    """``subprocess.run`` that passes SIGTERM on to the child.
+#: Signals that stop the wrapper and are passed on to the child. SIGALRM (a timeout wrapper's
+#: `alarm`) reaches the child as SIGTERM, so a Celery worker shuts down warm instead of
+#: dying on an alarm it does not handle. Ctrl-C needs no forwarding: the terminal signals the
+#: whole group, and a second SIGINT would turn Celery's warm shutdown into a cold one.
+_FORWARDED: Final = tuple(
+    getattr(signal, name)
+    for name in ("SIGTERM", "SIGHUP", "SIGQUIT", "SIGALRM")
+    if hasattr(signal, name)
+)
 
-    ``karni serve`` and ``karni worker`` wrap a real server: a script or an
-    agent that stops the wrapper must stop the server too, not leak it.
-    Ctrl-C needs no forwarding (the terminal signals the whole group).
+
+def _short_checks_env(args: list[str]) -> dict[str, str] | None:
+    """The environment that prints a manage.py command's system check warnings as one line.
+
+    ``karni check`` (``karni_check``) and ``manage.py check`` keep them in full, and so does a project whose
+    environment already sets the variable (``KARNI_SYSTEM_CHECK_OUTPUT=full``).
+    """
+    if args[:1] != ["manage.py"] or args[1:2] in (["karni_check"], ["check"]):
+        return None
+    return {
+        **os.environ,
+        "KARNI_SYSTEM_CHECK_OUTPUT": os.environ.get("KARNI_SYSTEM_CHECK_OUTPUT", "short"),
+    }
+
+
+def run_process(
+    cmd: list[str], *, cwd: Path, capture: bool = False, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
+    """``subprocess.run`` that passes a stop signal on to the child and waits for it.
+
+    ``karni serve``, ``karni worker`` and ``karni beat`` wrap a real server: a script
+    or an agent that stops the wrapper (SIGTERM, SIGHUP, SIGQUIT or an alarm) must
+    stop the server too, not leave it running. The wrapper then waits for the child
+    and exits with its status.
     """
     pipe = subprocess.PIPE if capture else None
-    with subprocess.Popen(cmd, cwd=cwd, text=True, stdout=pipe, stderr=pipe) as proc:
+    with subprocess.Popen(cmd, cwd=cwd, env=env, text=True, stdout=pipe, stderr=pipe) as proc:
 
         def forward(signum: int, _frame: Any) -> None:
+            sent = signal.SIGTERM if signum == getattr(signal, "SIGALRM", None) else signum
             with contextlib.suppress(ProcessLookupError):
-                proc.send_signal(signum)
+                proc.send_signal(sent)
 
-        previous: Any = None
-        try:
-            previous = signal.signal(signal.SIGTERM, forward)
-        except ValueError:  # not the main thread: no forwarding, same run
-            previous = None
+        previous: dict[int, Any] = {}
+        for signum in _FORWARDED:
+            try:
+                previous[signum] = signal.signal(signum, forward)
+            except ValueError:  # not the main thread: no forwarding, same run
+                break
         try:
             out, err = proc.communicate()
         except KeyboardInterrupt:
             proc.wait()
             raise
         finally:
-            if previous is not None:
-                signal.signal(signal.SIGTERM, previous)
+            for signum, handler in previous.items():
+                signal.signal(signum, handler)
     return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
 
 

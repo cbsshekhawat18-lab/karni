@@ -8,7 +8,8 @@ through a Karni code such as ``E704``). :func:`lookup` finds any code offline:
   — no Django, no project needed;
 - ``C`` codes: :data:`CODES` below;
 - module codes (``PAY001``): ``karni.errorcodes`` entry points installed next to
-  karni-cli, else the project interpreter (``python -m karni.errorcodes``);
+  karni-cli, else the project interpreter (``python -m karni.errorcodes``), else
+  ``module_codes.json`` shipped with karni-cli (every module's codes, generated);
 - ``K`` codes: the agent rules (``karni rules --explain``).
 """
 
@@ -27,6 +28,7 @@ from typing import Any, Final, NamedTuple
 __all__ = ["CODES", "CliCode", "core_module", "docs_url", "failures_module", "lookup"]
 
 _MODULE_NAME = "karni_cli._bundled_karni_errorcodes"
+_MODULE_CODES = Path(__file__).with_name("module_codes.json")
 _FALLBACK_BASE = "https://cbsshekhawat18-lab.github.io/karni/"
 
 
@@ -1409,6 +1411,25 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Run python manage.py karni_suggest --json in the project to see the error. "
         "karni check shows the same startup problem.",
     ),
+    _c(
+        "C850",
+        "The project folder already exists",
+        "karni new",
+        "karni new writes a new folder named after the project and never writes into one "
+        "that is there, so it cannot overwrite your files.",
+        "Pick another name or --output-dir, or remove or rename the folder if it is a "
+        "leftover. To change an existing project, use karni make, karni add or karni build.",
+    ),
+    _c(
+        "C851",
+        "The menu links to a page that is not written yet",
+        "karni build (the check step)",
+        "A `code` page in karni.yaml is a page of the project's own: karni build leaves it "
+        "alone, so a navigation entry that names it links to a route nothing serves until the "
+        "project writes the page (karni.E533).",
+        "Add the page's route to frontend/src/routes.tsx (karni make page <name> --kind blank "
+        "starts one), then run karni build again. The routes are in the message.",
+    ),
 )
 
 
@@ -1489,6 +1510,22 @@ def _module_entries() -> list[Any]:
     return found
 
 
+def _bundled_module_entry(code: str) -> dict[str, str] | None:
+    """A module's code from ``module_codes.json``, which ships with karni-cli.
+
+    ``scripts/gen_reference.py`` writes it from the modules' registries, so
+    ``karni explain PAY004`` works in a project (or none) without the module.
+    """
+    try:
+        rows = json.loads(_MODULE_CODES.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    for row in rows:
+        if row.get("code") == code:
+            return {**row, "url": docs_url(code)}
+    return None
+
+
 def _from_project(code: str) -> dict[str, str] | None:
     """Ask the project interpreter (it has the project's modules installed)."""
     from karni_cli import project as project_mod
@@ -1528,4 +1565,4 @@ def lookup(code: str) -> dict[str, str] | None:
         for entry in (*core.CODES, *_module_entries()):
             if entry.code == wanted:
                 return dict(entry.as_dict())
-    return _from_project(wanted)
+    return _from_project(wanted) or _bundled_module_entry(wanted)

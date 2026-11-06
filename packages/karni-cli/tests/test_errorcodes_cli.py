@@ -7,6 +7,7 @@ import json
 import re
 from html.parser import HTMLParser
 from pathlib import Path
+from typing import Any
 
 import pytest
 from typer.testing import CliRunner
@@ -177,6 +178,22 @@ def test_explain_prints_why_and_fix(code: str, fragment: str) -> None:
     assert errorcodes.docs_url(code.upper()) in result.output
 
 
+def test_explain_knows_every_module_code_without_the_module(monkeypatch) -> None:
+    """F6: `karni explain PAY004` works where the module is not installed."""
+    monkeypatch.setattr(errorcodes, "_module_entries", list)
+    monkeypatch.setattr(errorcodes, "_from_project", lambda code: None)
+    result = runner.invoke(app, ["explain", "PAY004"])
+    assert result.exit_code == 0, result.output
+    assert "STRIPE_SECRET_KEY" in result.output and errorcodes.docs_url("PAY004") in result.output
+    shipped = json.loads((PACKAGE / "module_codes.json").read_text(encoding="utf-8"))
+    docs = (REPO_ROOT / "docs" / "errors.md").read_text(encoding="utf-8")
+    listed = {
+        c.upper()
+        for c in re.findall(r'<a id="((?:ai|apr|chart|imp|pay|report|site|store)\d+)">', docs)
+    }
+    assert listed and listed <= {row["code"] for row in shipped}
+
+
 def test_explain_json() -> None:
     result = runner.invoke(app, ["explain", "E117", "--json"])
     data = json.loads(result.output)
@@ -258,3 +275,23 @@ def test_the_settings_reference_loads_from_the_wheels_copy(
         assert site is not None and site["module"] == "karni-site"
     finally:
         sys.modules.pop(settingref._MODULE_NAME, None)
+
+
+def test_no_help_string_holds_a_rich_tag() -> None:
+    """F13: Rich reads an unescaped "[mcp]" in a help string as a style tag and drops it."""
+    import typer
+
+    tag = re.compile(r"(?<!\\)\[[a-z#/@][^\[\]]*\]")
+    found: list[str] = []
+
+    def walk(command: Any, path: str) -> None:
+        texts = [command.help or "", command.epilog or ""]
+        texts += [getattr(param, "help", None) or "" for param in command.params]
+        found.extend(f"{path}: {m}" for text in texts for m in tag.findall(text))
+        for name, sub in getattr(command, "commands", {}).items():
+            walk(sub, f"{path} {name}")
+
+    walk(typer.main.get_command(app), "karni")
+    assert not found, "escape each with a backslash, as in karni-cli\\[mcp]: " + "; ".join(found)
+    helped = runner.invoke(app, ["mcp", "--help"])
+    assert "karni-cli[mcp]" in " ".join(helped.output.split())

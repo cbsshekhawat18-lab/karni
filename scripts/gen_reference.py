@@ -330,7 +330,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "ui",
-        "`Layout`'s server menu (`navSource=\"server\"`, `useNavigation`): collapsible groups, "
+        '`Layout`\'s server menu (`navSource="server"`, `useNavigation`): collapsible groups, '
         "icons by name and the current page marked. Experimental tier",
     ),
     Capability(
@@ -1449,6 +1449,20 @@ def unknown_option_keys() -> list[str]:
     ]
 
 
+MODULE_CODES = ROOT / "packages" / "karni-cli" / "karni_cli" / "module_codes.json"
+
+
+def module_codes_json() -> str:
+    """The module codes karni-cli ships, so ``karni explain PAY004`` works anywhere."""
+    from karni_cli.errorcodes import _module_entries
+
+    rows = [
+        {k: v for k, v in e.as_dict().items() if k != "url"}
+        for e in sorted(_module_entries(), key=lambda e: e.code)
+    ]
+    return json.dumps(rows, indent=1, ensure_ascii=False) + "\n"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true", help="fail when a file is stale")
@@ -1466,6 +1480,7 @@ def main(argv: list[str] | None = None) -> int:
     for path, blocks in docs_blocks().items():
         page = apply_blocks(path.read_text(encoding="utf-8"), blocks, path.name)
         pages.append((path, page))
+    pages.append((MODULE_CODES, module_codes_json()))
     stale = []
     for path, text in pages:
         current = path.read_text(encoding="utf-8") if path.is_file() else ""

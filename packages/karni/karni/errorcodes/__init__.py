@@ -1034,6 +1034,17 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         'Set KARNI_TERMS = {"version": "<version>", "url": "<where the terms are>"} to ask '
         "users to accept terms, or remove the client's call.",
     ),
+    # E260-E269: command-line input the management commands refuse
+    _e(
+        "E260",
+        "A database alias is not configured",
+        "exception",
+        "karni_schema (--database)",
+        "A command was given a database alias that DATABASES does not define, so there is "
+        "no connection to read.",
+        "Pass an alias from settings.DATABASES ('default' unless the project declares "
+        "more), or add the database to DATABASES.",
+    ),
     # E270-E279 / W540-W549 external tables, SQL views and a second database
     # (karni.db, experimental)
     _e(

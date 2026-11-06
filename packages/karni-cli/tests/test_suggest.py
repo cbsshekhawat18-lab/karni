@@ -160,8 +160,17 @@ def test_a_plan_with_changes_suggests_build_or_export(
     stub_plan(monkeypatch, [SimpleNamespace(managed=True), SimpleNamespace(managed=False)])
     (found,) = suggest_mod.drift_suggestions(project)
     assert (found["code"], found["file"], found["line"]) == ("SUG007", "karni.yaml", 1)
-    assert "2 changes, 1 of them in the project's own code" in found["message"]
+    assert "karni plan has 1 change:" in found["message"]  # the not managed one is not drift
     assert "karni build" in found["fix"] and "karni spec export" in found["fix"]
+
+
+def test_changes_plan_calls_not_managed_are_no_drift(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Area 5 A5-07: a hand-written code page is plan's "not managed", not a SUG007."""
+    (project / "karni.yaml").write_text(SPEC)
+    stub_plan(monkeypatch, [SimpleNamespace(managed=False), SimpleNamespace(managed=False)])
+    assert suggest_mod.drift_suggestions(project) == []
 
 
 def test_an_empty_plan_no_spec_or_a_silenced_spec_suggests_nothing(
@@ -205,7 +214,7 @@ def test_the_project_setting_turns_every_suggestion_off(
     settings.write_text("DEBUG = True\nKARNI_SUGGESTIONS = False\n")
     assert suggest_mod.turned_off(project)
     data = suggest_mod.collect(project, (True, [CORE_ITEM]))
-    assert data == {"version": 1, "enabled": False, "suggestions": []}
+    assert data == {"version": 1, "enabled": False, "suggestions": [], "problems": []}
     # the project's karni says it is off even when the line is not a plain assignment
     settings.write_text("DEBUG = True\n")
     assert suggest_mod.collect(project, (False, []))["enabled"] is False
@@ -399,3 +408,28 @@ def test_karni_doctor_ends_with_the_suggestions(
     monkeypatch.setattr(project_mod, "run_manage", core_answer([]))
     out = runner.invoke(app, ["doctor", "-q"]).stdout
     assert any(line.split()[:2] == ["suggestions", "none"] for line in out.splitlines())
+
+
+def test_the_cli_reads_every_marker_and_a_colonless_one() -> None:
+    line = "q()  # karni: allow(raw-sql): totals  # karni: allow(suggest-aggregate): one-off"
+    assert suggest_mod._marker([line], "suggest-aggregate", (1,)) == "silenced"
+    bare = ["x  # karni: allow(suggest-unused-module)"]
+    assert suggest_mod._marker(bare, "suggest-unused-module", (1,)) == "no-reason"
+
+
+def test_suggest_json_says_when_the_project_side_failed(runner, tmp_path, monkeypatch) -> None:
+    """Area 1 F7: an empty list with exit 0 read as a clean project."""
+    from karni_cli.project import CliError
+
+    (tmp_path / "manage.py").write_text("")
+    monkeypatch.chdir(tmp_path)
+
+    def broken(*args, **kwargs):
+        raise CliError("manage.py karni_suggest failed", code="C781")
+
+    monkeypatch.setattr(suggest_mod, "core_suggestions", broken)
+    monkeypatch.setattr(suggest_mod, "module_suggestions", lambda p: [])
+    monkeypatch.setattr(suggest_mod, "drift_suggestions", lambda p, **k: [])
+    result = runner.invoke(app, ["suggest", "--json"])
+    data = json.loads(result.stdout)
+    assert data["suggestions"] == [] and "C781" in data["problems"][0]

@@ -105,6 +105,23 @@ def test_a_tree_suggestion_is_silenced_with_a_reason_only(project: Any) -> None:
     assert "without a reason" in found.message
 
 
+def test_markers_without_a_colon_and_several_on_a_line() -> None:
+    """Area 1 F5 and F9: `allow(rule)` alone is a marker without a reason, and a second marker
+    on the line is read."""
+    assert suggestions.allows("x = 1  # karni: allow(suggest-markdown)") == [
+        (["suggest-markdown"], "")
+    ]
+    line = "q()  # karni: allow(raw-sql): totals  # karni: allow(suggest-aggregate): one-off"
+    assert suggestions.allows(line) == [
+        (["raw-sql"], "totals"),
+        (["suggest-aggregate"], "one-off"),
+    ]
+    assert suggestions.marker([line], "suggest-aggregate", [1]) == "silenced"
+    assert suggestions.marker(["x  # karni: allow(suggest-markdown)"], "suggest-markdown", [1]) == (
+        "no-reason"
+    )
+
+
 # SUG002 markdown in a text field
 
 

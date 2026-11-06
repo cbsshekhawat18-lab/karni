@@ -604,6 +604,10 @@ def run_checks() -> list[str]:
     from django.test.utils import override_settings
 
     if not apps.is_installed("karni_site"):
+        sys.stdout.write(
+            "karni check --seo: no public site to check. karni_site is not in "
+            "INSTALLED_APPS. Add it with `karni add site`.\n"
+        )
         return []
     hosts = [*getattr(settings, "ALLOWED_HOSTS", []), "testserver"]
     crawl = SeoCrawl()

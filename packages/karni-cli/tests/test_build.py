@@ -1125,3 +1125,15 @@ def test_the_settings_block_writes_the_api_version_only_when_set() -> None:
 
     assert "KARNI_API_VERSION" not in block("version: 1\napp: {name: X}\n")
     assert 'KARNI_API_VERSION = "v1"' in block("version: 1\napp: {name: X, api_version: v1}\n")
+
+
+def test_a_menu_link_to_an_unwritten_code_page_is_one_clear_stop() -> None:
+    from karni_cli.builder import run as run_mod
+
+    out = (
+        "navigation: karni.E533: Navigation item 'A > B' links to /insights, which no page of "
+        "the frontend serves.\nnavigation: karni.E533: Navigation item 'C' links to /players, "
+        "which no page of the frontend serves.\nkarni.E702: found 2 problem(s)"
+    )
+    assert run_mod._unserved_routes(out) == ["/insights", "/players"]
+    assert run_mod._unserved_routes(out + "\nx: karni.E101: other") == []

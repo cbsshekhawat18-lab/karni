@@ -115,6 +115,12 @@ def test_an_unknown_label_names_the_fix() -> None:
         call_command("karni_schema", "fieldsapp.Nope", stdout=StringIO())
 
 
+def test_an_unknown_database_alias_is_a_coded_error() -> None:
+    with pytest.raises(KarniCommandError, match="E260") as caught:
+        call_command("karni_schema", "--database", "bogus", stdout=StringIO())
+    assert "default" in str(caught.value)
+
+
 def test_a_hand_made_index_is_reported_as_undeclared() -> None:
     with connection.cursor() as cursor:
         cursor.execute('CREATE INDEX "karni_fields_stray_idx" ON "fieldsapp_customer" ("name")')

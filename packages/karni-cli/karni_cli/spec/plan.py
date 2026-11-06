@@ -1142,8 +1142,16 @@ def _pages(ctx: _Context) -> None:
     for ident_, (name, kinds) in old.items():
         if ident_ not in new:
             ctx.add(Change("pages", "remove", name, _show_page(name, kinds, "")))
-    common_old = [i for i in old if i in new]
-    common_new = [i for i in new if i in old]
+
+    # A hand-written (`code`) page sits wherever its author put it in routes.tsx, and a
+    # rebuild cannot move it: only the order of the pages Karni writes is a change.
+    def written(ident_: str) -> bool:
+        return "code" not in schema.page_kind_names(old[ident_][1]) and "code" not in (
+            schema.page_kind_names(new[ident_][1])
+        )
+
+    common_old = [i for i in old if i in new and written(i)]
+    common_new = [i for i in new if i in old and written(i)]
     if common_old != common_new:
         ctx.add(Change("pages", "change", "navigation", ", ".join(new[i][0] for i in new)))
 
@@ -1152,6 +1160,11 @@ def _navigation(ctx: _Context) -> None:
     """The menu (experimental): ``KARNI_NAVIGATION`` as ``navigation:`` gives it, in the settings block."""
     old, new = ctx.current.get("navigation"), ctx.desired.get("navigation")
     if old == new:
+        return
+    # The exported menu leaves out an entry whose route no page of the project serves (a `code`
+    # page not written yet), so a menu the build wrote reads back shorter. The settings hold the
+    # whole list: when it is the one the spec gives, there is nothing to apply.
+    if new is not None and ctx.facts.get("settings", {}).get("KARNI_NAVIGATION") == new:
         return
     if new is None:
         ctx.add(Change("pages", "remove", MENU, navigation.summary(old)))

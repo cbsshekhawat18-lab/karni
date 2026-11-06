@@ -29,7 +29,8 @@ DEFAULTS: dict[str, Any] = {
     "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]},
 }
 
-_ALLOW_RE = re.compile(r"#\s*karni:\s*allow\(([^)]+)\)\s*:\s*(.*)$")
+_ALLOW_RE = re.compile(r"#\s*karni:\s*allow\(([^)]+)\)\s*(?::\s*(.*))?$")
+_ALLOW_START = re.compile(r"#\s*karni:\s*allow\(")
 
 
 @dataclass(frozen=True)
@@ -139,14 +140,21 @@ class Allow:
     line: int
 
 
-def allows_in(path: Path) -> dict[int, Allow]:
-    """Every ``# karni: allow(...)`` marker in the file, keyed by 1-based line."""
-    found: dict[int, Allow] = {}
+def allows_in(path: Path) -> dict[int, list[Allow]]:
+    """Every ``# karni: allow(...)`` marker in the file, keyed by 1-based line.
+
+    A line may carry several markers, each reason running to the next one.
+    """
+    found: dict[int, list[Allow]] = {}
     for i, text in enumerate(_file_lines(str(path)), start=1):
-        m = _ALLOW_RE.search(text)
-        if m:
-            rules = tuple(r.strip() for r in m.group(1).split(",") if r.strip())
-            found[i] = Allow(rules=rules, reason=m.group(2).strip(), line=i)
+        starts = [m.start() for m in _ALLOW_START.finditer(text)]
+        for begin, end in zip(starts, [*starts[1:], len(text)][: len(starts)], strict=True):
+            m = _ALLOW_RE.match(text[begin:end].rstrip())
+            if m:
+                rules = tuple(r.strip() for r in m.group(1).split(",") if r.strip())
+                found.setdefault(i, []).append(
+                    Allow(rules=rules, reason=(m.group(2) or "").strip(), line=i)
+                )
     return found
 
 
@@ -158,9 +166,9 @@ def find_allow(path: Path, rule: str, lines: list[int]) -> Allow | None:
     """
     markers = allows_in(path)
     for line in lines:
-        allow = markers.get(line)
-        if allow and rule in allow.rules:
-            return allow
+        for allow in markers.get(line, []):
+            if rule in allow.rules:
+                return allow
     return None
 
 

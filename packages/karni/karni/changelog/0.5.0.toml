@@ -530,3 +530,26 @@ README says, and the database enforces it with a unique constraint on the open s
 swept yet is ended when the actor starts a new one."""
 mechanical = false
 migration = "migrations/0.5.md#impersonation-allows-one-open-session-per-actor"
+
+[[change]]
+id = "seed-reset-wipes-seeded-modules"
+kind = "behaviour"
+symbol = "karni seed --reset"
+summary = """\
+--reset now also wipes every model a seeder in <app>/seeds.py names, a module's table or \
+UserGrant included, where it wiped only the project's own models. A seeder that deleted \
+its own rows first (a `.filter(...).delete()` at the top of seed()) can drop that line, and \
+a model that holds rows you want to keep must have no seeder."""
+mechanical = false
+migration = "migrations/0.5.md#seed---reset-wipes-the-models-a-seeder-names"
+
+[[change]]
+id = "short-system-check-output"
+kind = "behaviour"
+symbol = "KARNI_SYSTEM_CHECK_OUTPUT"
+summary = """\
+The karni command prints a project command's system check warnings as one line \
+(System check identified 5 warnings (...)). karni check and manage.py check keep them in \
+full. Set KARNI_SYSTEM_CHECK_OUTPUT=full in the environment to see every warning on each run."""
+mechanical = false
+migration = "migrations/0.5.md#system-check-warnings-print-as-one-line"

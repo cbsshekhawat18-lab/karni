@@ -173,8 +173,8 @@ def explain(
     if entry is None:
         raise CliError(
             f"Unknown code {code!r}. Codes look like E104, W101, C101, PAY004 or K106 and "
-            "start every Karni error message. A module's codes are found inside a project "
-            "that installs it. docs/errors.md lists every code. karni explain also takes a "
+            "start every Karni error message. A third-party module's codes are found inside a "
+            "project that installs it. docs/errors.md lists every code. karni explain also takes a "
             "setting (KARNI_SITE_HIGHLIGHT), a template tag (image) and a content map key "
             "(map.items). To explain a traceback or a log line, pipe it in: "
             "karni explain - < traceback.txt",

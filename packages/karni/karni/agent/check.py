@@ -50,6 +50,7 @@ TS_SUFFIXES = frozenset({".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", "
 JSX_SUFFIXES = frozenset({".tsx", ".jsx"})
 PAGE_MAX_LINES = 50
 
+_PY_ALLOW_START = re.compile(r"#\s*karni:\s*allow\(")
 _PY_ALLOW = re.compile(r"#\s*karni:\s*allow\(([^)]*)\)\s*(?::\s*(.*))?$")
 # ESLint only honours a directive that opens the comment (`// eslint-disable...`
 # or `/* eslint-disable... */`); prose that merely mentions it is not one.
@@ -426,26 +427,31 @@ def http_client_imports(tree: ast.AST) -> list[tuple[int, str]]:
 
 
 def _python_optouts(lines: list[str], found: list[tuple[Finding, list[int]]]) -> list[Finding]:
-    markers: dict[int, tuple[set[str], str]] = {}
+    markers: dict[int, list[tuple[set[str], str]]] = {}
     for i, text in enumerate(lines, start=1):
-        m = _PY_ALLOW.search(text)
-        if m:
-            rules = {r.strip() for r in m.group(1).split(",") if r.strip()}
-            markers[i] = (rules, (m.group(2) or "").strip())
+        # A line may carry several markers, each reason running to the next one.
+        starts = [m.start() for m in _PY_ALLOW_START.finditer(text)]
+        for begin, end in zip(starts, [*starts[1:], len(text)][: len(starts)], strict=True):
+            m = _PY_ALLOW.match(text[begin:end].rstrip())
+            if m:
+                rules = {r.strip() for r in m.group(1).split(",") if r.strip()}
+                markers.setdefault(i, []).append((rules, (m.group(2) or "").strip()))
     result: list[Finding] = []
-    for i, (rules, reason) in sorted(markers.items()):
-        if not reason:
-            result.append(
-                _finding(
-                    "opt-out-reason",
-                    i,
-                    f"karni: allow({', '.join(sorted(rules))}) requires a non-empty reason",
+    for i, entries in sorted(markers.items()):
+        for rules, reason in entries:
+            if not reason:
+                result.append(
+                    _finding(
+                        "opt-out-reason",
+                        i,
+                        f"karni: allow({', '.join(sorted(rules))}) requires a non-empty reason",
+                    )
                 )
-            )
     for finding, candidates in found:
         allowed = any(
-            finding.rule_id in markers.get(line, (set(), ""))[0] and markers[line][1]
+            finding.rule_id in rules and reason
             for line in candidates
+            for rules, reason in markers.get(line, [])
         )
         if not allowed:
             result.append(finding)

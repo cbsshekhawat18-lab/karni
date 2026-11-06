@@ -196,6 +196,23 @@ def test_karni_check_ok() -> None:
     assert "backend checks: ok" in out.getvalue()
 
 
+@pytest.mark.django_db
+def test_karni_check_seo_without_a_site_says_so(monkeypatch) -> None:
+    """F19: --seo with no SEO hooks installed names that there is no site to check."""
+    from karni.management.commands import karni_check
+
+    real = karni_check.entry_points
+    monkeypatch.setattr(
+        karni_check,
+        "entry_points",
+        lambda group: [] if group == "karni.checks.seo" else real(group=group),
+    )
+    out = StringIO()
+    call_command("karni_check", seo=True, stdout=out)
+    assert "no public site to check" in out.getvalue()
+    assert "backend checks: ok" in out.getvalue()
+
+
 def test_karni_check_hook_failures(monkeypatch) -> None:
     """Entry-point hooks: failures collected, exceptions recorded, exit nonzero."""
     import karni.management.commands.karni_check as cmd_mod

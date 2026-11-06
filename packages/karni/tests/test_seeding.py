@@ -298,3 +298,32 @@ def test_reset_wipes_a_tree_whose_parent_protects_its_children() -> None:
     report = seed(models=["testapp.Region"], count=12, seed=5, now=NOW, reset=True)
     assert report.reset == ["testapp.Region"]
     assert Region.objects.count() == 12
+
+
+def test_reset_wipes_the_rows_of_a_module_model_a_seeder_names(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Friction 14: a seeded module table doubled (or hit a unique) on the second run."""
+    from django.contrib.auth.models import Group, Permission
+
+    from karni import seeding
+
+    class GroupSeeder(seeding.Seeder):
+        class Meta:
+            model = Group
+            count = 2
+
+        def seed(self, context: Any) -> list[Any]:
+            return [Group.objects.create(name=f"seeded-{n}") for n in range(2)]
+
+    monkeypatch.setattr(seeding, "_SEEDERS", {**seeding.seeders(), Group: GroupSeeder})
+    kept = Permission.objects.count()
+    first = seed(models=["auth.Group"], reset=True, now=NOW)
+    second = seed(models=["auth.Group"], reset=True, now=NOW)  # was: IntegrityError on the name
+    assert first.rows == second.rows == {"auth.Group": 2}
+    assert second.reset == ["auth.Group"]
+    assert Group.objects.filter(name__startswith="seeded-").count() == 2
+    assert Permission.objects.count() == kept  # a model no seeder names is not touched
+    monkeypatch.setattr(seeding, "_SEEDERS", {})
+    seed(models=["auth.Group"], reset=True, now=NOW)
+    assert Group.objects.filter(name__startswith="seeded-").count() == 2  # no seeder: kept

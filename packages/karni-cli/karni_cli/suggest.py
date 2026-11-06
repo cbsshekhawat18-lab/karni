@@ -66,7 +66,22 @@ SUGGESTIONS_FILE = Path(".karni") / "local" / "suggestions.json"
 
 _OFF = re.compile(r"^\s*KARNI_SUGGESTIONS\s*=\s*False\b", re.MULTILINE)
 #: The comment form of the architecture rules (karni.testing._source), and its HTML form.
-_ALLOW = re.compile(r"(?:#|<!--)\s*karni:\s*allow\(([^)]+)\)\s*:\s*(.*?)\s*(?:-->)?$")
+_ALLOW_START = re.compile(r"(?:#|<!--)\s*karni:\s*allow\(")
+_ALLOW = re.compile(r"(?:#|<!--)\s*karni:\s*allow\(([^)]+)\)\s*(?::\s*(.*?))?\s*(?:-->)?\s*$")
+
+
+def _allows(text: str) -> list[tuple[list[str], str]]:
+    """Every marker on one line as ``(rules, reason)``, as :func:`karni.suggestions.allows`."""
+    starts = [m.start() for m in _ALLOW_START.finditer(text)]
+    found: list[tuple[list[str], str]] = []
+    for begin, end in zip(starts, [*starts[1:], len(text)][: len(starts)], strict=True):
+        match = _ALLOW.match(text[begin:end])
+        if match is not None:
+            names = [n.strip() for n in match.group(1).split(",")]
+            found.append((names, (match.group(2) or "").strip()))
+    return found
+
+
 _RULES = {
     "SUG006": "suggest-add-module",
     "SUG007": "suggest-sync-spec",
@@ -90,12 +105,12 @@ def _marker(lines: list[str], rule: str, candidates: tuple[int, ...]) -> str | N
     for number in candidates:
         if not 1 <= number <= len(lines):
             continue
-        match = _ALLOW.search(lines[number - 1])
-        if match is None or rule not in [name.strip() for name in match.group(1).split(",")]:
-            continue
-        if match.group(2).strip():
-            return "silenced"
-        found = "no-reason"
+        for rules, reason in _allows(lines[number - 1]):
+            if rule not in rules:
+                continue
+            if reason:
+                return "silenced"
+            found = "no-reason"
     return found
 
 
@@ -239,11 +254,13 @@ def drift_suggestions(
         result = plan_mod.plan_project(report.spec, facts, project, file=path.name, managed=managed)
     except CliError:
         return []
-    if not result.changes:
+    # What plan calls "not managed" (a hand-written `code` page, say) is the project's own code:
+    # karni build leaves it alone and exporting would not change it, so it is no drift.
+    changes = [change for change in result.changes if change.managed]
+    if not changes:
         return []
     state = _marker(spec_lines, _RULES["SUG007"], (1, 2))
-    count, left = len(result.changes), len(result.not_managed)
-    kept = f", {left} of them in the project's own code" if left else ""
+    count, kept = len(changes), ""
     return [
         {
             "code": "SUG007",
@@ -299,12 +316,14 @@ def collect(
     *,
     docker: bool | None = None,
     service: str = "django",
+    problems: list[str] | None = None,
 ) -> dict[str, Any]:
     """The merged output: the project's own suggestions (``core``) and this module's.
 
     ``core`` is ``(enabled, suggestions)`` from the project's interpreter, ``None`` when it
     could not be asked (this module's suggestions still run, unless the project turned
-    them off in ``config/settings.py``).
+    them off in ``config/settings.py``). ``problems`` says what stopped the project's side, so
+    an empty list is not read as "nothing to suggest".
     """
     enabled = core[0] if core is not None else True
     if turned_off(project):
@@ -316,7 +335,12 @@ def collect(
         items += drift_suggestions(project, docker=docker, service=service)
         items.sort(key=lambda row: (row["code"], row["file"], row["line"] or 0))
     return checked_output(
-        {"version": SUGGESTIONS_VERSION, "enabled": enabled, "suggestions": items}
+        {
+            "version": SUGGESTIONS_VERSION,
+            "enabled": enabled,
+            "suggestions": items,
+            "problems": list(problems or []),
+        }
     )
 
 
@@ -368,6 +392,11 @@ class _SuggestionsOut(_Out):
     )
     suggestions: list[_SuggestionOut] = Field(
         description="The suggestions, by code, then file and line. They never fail a run."
+    )
+    problems: list[str] = Field(
+        description="Why the project's own suggestions are missing (its manage.py karni_suggest "
+        "could not run, C780 or C781). Empty when nothing went wrong. A non-empty list means "
+        "an empty `suggestions` is not a clean project."
     )
 
 

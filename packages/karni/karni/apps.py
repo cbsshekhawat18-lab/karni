@@ -69,3 +69,8 @@ class KarniAppConfig(AppConfig):
         from karni.api import caching
 
         caching.connect()
+
+        # `karni <command>` asks for the system check warnings as one line (karni.check_output).
+        from karni import check_output
+
+        check_output.connect()

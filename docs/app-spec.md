@@ -1104,7 +1104,10 @@ is forced or adopted.
   spec.
 - `- <name>: code` in `pages`: the page at `/<name>` is the project's, and
   `karni build` leaves it alone. `karni spec export` writes a page of the
-  project's this way.
+  project's this way. Write its route in `frontend/src/routes.tsx` yourself:
+  until you do, a `navigation` entry that names it fails `karni check`
+  (E533) and the build stops with C851 naming the routes. `karni plan` shows
+  no menu change for it once the build has written the menu.
 - Every subclass in the project's files overrides its Karni base.
 
 ### The steps, in order

@@ -44,7 +44,7 @@ class Calls:
         return self.finding
 
     def run_process(
-        self, cmd: list[str], *, cwd: Path, capture: bool = False
+        self, cmd: list[str], *, cwd: Path, capture: bool = False, env: dict[str, str] | None = None
     ) -> subprocess.CompletedProcess[str]:
         self.log.append("run")
         return subprocess.CompletedProcess(cmd, self.returncode, "", "Traceback ...")
