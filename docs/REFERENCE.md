@@ -200,7 +200,7 @@ karni add MODULE
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `MODULE` (required) |  | Module short name, e.g. "payments" |
+| `MODULE` (required) |  | Module short name, e.g. "payments" (karni modules list). An unknown name is C840. |
 
 #### `karni remove`
 
@@ -2830,6 +2830,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C740`](errors.md#c740) | cli | app.api_version is not a version name |
 | [`C780`](errors.md#c780) | cli | The project's karni predates suggestions |
 | [`C781`](errors.md#c781) | cli | manage.py karni_suggest failed |
+| [`C840`](errors.md#c840) | cli | karni add was given a name that is not a module |
 
 ### Agent rules (`K`)
 

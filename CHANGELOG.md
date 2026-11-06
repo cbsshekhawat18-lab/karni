@@ -1547,6 +1547,55 @@ apply codemods and list the manual steps. This file is the human summary.
   `python -m karni.links check` catches the ownerless form too.
   `docs/testing.md` opens with the four fixtures most tests use.
 
+### Fixed
+
+- **`karni add` refuses a name that is not a module.** `karni add bogus` wrote
+  `karni-bogus` into pyproject.toml and INSTALLED_APPS, and then every Django
+  command failed until `karni remove bogus`. A name that is neither in the
+  catalog nor a module installed in the project's interpreter now stops with
+  `C840` and the closest names, and writes nothing. `karni remove` still takes
+  a name wired by hand or by an older karni out.
+- **`karni remove` announces only what it does.** It printed a "Changes:"
+  block and then stopped with `C319`. It now checks the tables first and
+  prints the changes only when it will make them (`--dry-run` still shows
+  both).
+- **The impersonation middleware is wired by `karni add` and unwired by
+  `karni remove`.** The manifest marked it manual, so `karni remove` left the
+  README's `MIDDLEWARE.insert(...)` line and `karni check` crashed with a bare
+  RuntimeError. Importing the middleware while the app is not in
+  INSTALLED_APPS now raises a message that names `IMP007` and both fixes.
+- **`karni add` and `karni remove` handle a module's UI package.** A module
+  that ships one (`provides.ui` in its manifest, such as `@karni/charts-ui`)
+  gets the dependency in `frontend/package.json` at the release's range, only
+  when the project has a frontend, and `karni remove` takes it out again with
+  the file byte for byte as before.
+- **`karni new` writes no path that exists on one machine.** A checkout of
+  `@karni/ui` found only because the CLI runs from a checkout is used just for
+  a project inside it (a relative path). Elsewhere `frontend/package.json` gets
+  the npm range. `KARNI_UI_SRC` is a choice and still writes its path, with a
+  note that it is not portable.
+- **`karni make deploy compose --dry-run` shows the diff** on a project that
+  has the stack (every `karni new` project) instead of stopping with `C101`,
+  and the regenerated file equals the scaffold's: the django health check kept
+  `/readyz` only for `karni new`.
+- **A new project's `.gitignore` lists `*.egg-info/`**, so the README's
+  `pip install -e .` leaves no untracked folder for `karni upgrade` to count.
+- **The first admin can write.** `karni createsuperuser` makes an account that
+  holds the roles the routed viewsets name, as `karni seed` does for the demo
+  account, so `public-read`, `staff` and `role:` viewsets no longer refuse it
+  with 403. `KarniUserManager.superuser_roles` is the override.
+- **An unset social client id stops nothing.** `karni build` writes
+  `env.list("KARNI_SOCIAL_GOOGLE_CLIENT_IDS", default=[])`, an empty
+  `client_ids` list passes startup validation, and signing in with that
+  provider answers 503 `E216` naming the variable. Every other command and
+  request works.
+- **A new project starts without the legacy cache header warning.** The
+  scaffold's settings set `KARNI_API_CACHE_LEGACY_HEADER` to `False` by
+  default. Existing projects keep the old default and the warning.
+- **The settings block `karni build` writes passes the project's own ruff.**
+  `from karni.conf import env` moved from the middle of config/settings.py
+  (E402) to the import block at the top.
+
 ## 0.4.0 (2026-10-22)
 
 - **PostgreSQL is the default, everywhere.** `pip install karni` now brings

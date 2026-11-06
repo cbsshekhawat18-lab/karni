@@ -129,8 +129,10 @@ def _ui_package(ws: Workspace, manifest: Manifest) -> list[str]:
         return [f"{package}: already in {FRONTEND_PACKAGE}"]
     ws.write(FRONTEND_PACKAGE, updated)
     return [
-        f"{package}: added to {FRONTEND_PACKAGE} ({scaffold.UI_REGISTRY_SPEC}), "
-        "run npm install in frontend/ (or rebuild the frontend image)"
+        (
+            f"{package}: added to {FRONTEND_PACKAGE} ({scaffold.UI_REGISTRY_SPEC}), "
+            "run npm install in frontend/ (or rebuild the frontend image)"
+        )
     ]
 
 
@@ -399,7 +401,12 @@ def _site_next(project: Path) -> None:
         )
 
 
-def add(module: str = typer.Argument(..., help='Module short name, e.g. "payments"')) -> None:
+def add(
+    module: str = typer.Argument(
+        ...,
+        help='Module short name, e.g. "payments" (karni modules list). An unknown name is C840.',
+    ),
+) -> None:
     from karni_cli.generators.core import Workspace
 
     project = require_project()

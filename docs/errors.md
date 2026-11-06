@@ -631,7 +631,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A token's aud claim names the client id it was issued to. Accepting a token issued to another application would let any app that signs its users in with the same provider sign them in here too, so aud must be one of the configured client ids (401).
 
-**Fix.** Add the client id the app uses to KARNI_SOCIAL_TOKEN_PROVIDERS[<provider>]['client_ids']: the web client id, and each iOS and Android client id (for Apple, the service id and the bundle id).
+**Fix.** Add the client id the app uses to KARNI_SOCIAL_TOKEN_PROVIDERS[<provider>]['client_ids']: the web client id, and each iOS and Android client id (for Apple, the service id and the bundle id). An empty list means the provider is not configured: signing in with it answers 503 with this code, and every other command and request still works. The settings block karni build writes reads the ids from KARNI_SOCIAL_<PROVIDER>_CLIENT_IDS.
 
 <a id="e217"></a>
 
@@ -5208,6 +5208,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** The project could not be started, or something in it prints to stdout at startup, so the command's JSON did not come back.
 
 **Fix.** Run python manage.py karni_suggest --json in the project to see the error. karni check shows the same startup problem.
+
+<a id="c840"></a>
+
+### C840: karni add was given a name that is not a module
+
+*karni command* · from `karni add`
+
+**Why Karni objects.** The name is neither in the module catalog nor a module installed in the project's interpreter (a distribution with a karni.module.toml). Wiring it would put an app into INSTALLED_APPS that Python cannot import, so every Django command would fail.
+
+**Fix.** Check the spelling against `karni modules list`. A third-party module is installed first (pip install <distribution>), then added.
 
 ## Agent rules (`K`)
 

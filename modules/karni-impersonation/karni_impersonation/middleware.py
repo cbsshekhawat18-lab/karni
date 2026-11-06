@@ -28,7 +28,8 @@ from django.utils import timezone
 
 _APP = "karni_impersonation"
 if not any(
-    entry == _APP or entry.startswith(f"{_APP}.") for entry in getattr(settings, "INSTALLED_APPS", ())
+    entry == _APP or entry.startswith(f"{_APP}.")
+    for entry in getattr(settings, "INSTALLED_APPS", ())
 ):
     # Importing the models of an app that is not installed fails with a bare RuntimeError.
     raise ImproperlyConfigured(

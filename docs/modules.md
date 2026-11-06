@@ -295,8 +295,11 @@ A module's UI package (`@karni/<x>-ui` or your own scope):
 ## Wiring lifecycle (what `karni add <x>` does)
 
 `karni add` reads what to wire from the module's manifest
-([the module catalog](#the-module-catalog)). A module without a manifest is
-wired by the naming convention alone (`karni-<x>`, `karni_<x>`).
+([the module catalog](#the-module-catalog)). A name that is neither in the
+catalog nor a module installed in the project's interpreter (a distribution
+with a `karni.module.toml`) is refused with `C840` and the closest names, and
+nothing is written: wiring an app Python cannot import would stop every
+Django command. Install a third-party module first, then add it.
 
 1. Adds the distribution (`karni-<x>`) to `[project].dependencies` in the
    project's `pyproject.toml` (idempotent, parsed, never string-matched).
@@ -307,6 +310,11 @@ wired by the naming convention alone (`karni-<x>`, `karni_<x>`).
    block it appends once, unless the entry says `manual = true`, in which
    case it prints the entry for you to add. With `wiring.kind = "site"`, an
    app project becomes a site+app.
+   When the module has a UI package (`provides.ui`) and the project has
+   `frontend/package.json`, it also adds that package to `dependencies` at the
+   release's range (`^0.5.0`) and says to run `npm install` in `frontend/`. A
+   project without a frontend is left alone. `karni remove` takes the entry out
+   again.
 4. Records `AGENTS.fragment.md` as `.karni/modules/<x>.md` and refreshes the
    agent adapters, so `karni rules` and `AGENTS.md` carry the module's
    guidance. It reads the fragment through the project interpreter and
@@ -329,7 +337,8 @@ one dependency line, one `INSTALLED_APPS` entry, one optional include line.
 `karni remove <x> [--dry-run] [--keep-tables]` reverses `karni add`: the
 dependency, the apps, the middleware and context processors (any entry
 inside the module's package, so a hand-added one goes too), the context
-processors block once it is empty, the module's include in config/urls.py,
+processors block once it is empty, the module's UI package in
+`frontend/package.json`, the module's include in config/urls.py,
 the kind it gave the project (a site+app goes back to an app) and
 `.karni/modules/<x>.md`, then it refreshes the agent files. Adding and
 removing a module gives back the project's files byte for byte.
@@ -346,7 +355,8 @@ Its tables (nothing is dropped):
 
 Django can drop a module's tables only while the module is in
 `INSTALLED_APPS`, so while a table exists `karni remove` stops (`C319`) and
-prints the command that drops them, for you to run deliberately:
+prints the command that drops them, for you to run deliberately. It prints no
+"Changes:" block then, since it changes nothing (`--dry-run` shows both):
 
 ```bash
 karni migrate karni_payments zero   # deletes the tables and their rows

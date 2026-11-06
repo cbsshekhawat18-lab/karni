@@ -248,6 +248,24 @@ def test_the_ai_module_is_added_wired_and_checked(
     assert steps["check"].split() == ["check", "ok"], out
 
 
+def test_the_settings_block_passes_the_projects_ruff_and_needs_no_client_ids(copy: Path) -> None:
+    """The env import sits with the imports (no E402), and an unset client id stops nothing."""
+    text = (copy / "config" / "settings.py").read_text()
+    block = text[text.index("# karni:spec start") : text.index("# karni:spec end")]
+    assert "import" not in block
+    assert text.index("from karni.conf import") < text.index("# karni:spec start")
+    assert '"KARNI_SOCIAL_GOOGLE_CLIENT_IDS", default=[]' in block
+    ruff = shutil.which("ruff") or str(Path(sys.executable).parent / "ruff")
+    done = subprocess.run(
+        [ruff, "check", "--isolated", "--select", "E402,F821", "--no-cache", "config/settings.py"],
+        cwd=copy,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert "E402" not in done.stdout, done.stdout
+
+
 def test_a_second_build_writes_nothing(copy: Path) -> None:
     before = _files(copy)
     code, out = _build()

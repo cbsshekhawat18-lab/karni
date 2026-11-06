@@ -466,3 +466,19 @@ def test_a_new_project_ignores_what_pip_install_leaves(runner, tmp_path: Path, m
     assert result.exit_code == 0, result.output
     ignored = (tmp_path / "egg_info" / ".gitignore").read_text().splitlines()
     assert "*.egg-info/" in ignored and "__pycache__/" in ignored
+
+
+def test_a_new_project_starts_without_the_legacy_cache_header(
+    runner, tmp_path: Path, monkeypatch
+) -> None:
+    """A fresh app sends only X-Cache, so its first run has no deprecation warning."""
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    monkeypatch.setattr(scaffold, "resolve_ui_source", lambda: None)
+    result = runner.invoke(app, ["new", "Quiet Cache", "-o", str(tmp_path), "--no-git"])
+    assert result.exit_code == 0, result.output
+    text = (tmp_path / "quiet_cache" / "config" / "settings.py").read_text()
+    assert (
+        'KARNI_API_CACHE_LEGACY_HEADER = env.bool("KARNI_API_CACHE_LEGACY_HEADER", default=False)'
+        in text
+    )
+    assert text.index("karni_settings(globals())") < text.index("KARNI_API_CACHE_LEGACY_HEADER")

@@ -83,7 +83,7 @@ karni add MODULE
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `MODULE` (required) |  | Module short name, e.g. "payments" |
+| `MODULE` (required) |  | Module short name, e.g. "payments" (karni modules list). An unknown name is C840. |
 
 ### `karni remove`
 
