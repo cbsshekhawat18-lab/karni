@@ -1571,6 +1571,57 @@ apply codemods and list the manual steps. This file is the human summary.
   `github.com/karni`, which is not Karni. It now links to the repository, and
   `python -m karni.links check` catches the ownerless form too.
   `docs/testing.md` opens with the four fixtures most tests use.
+- **Fixed: signing in with an emailed code did nothing.** `OtpLoginForm` reused
+  the email step's form and input for the code step, so the Code box held the
+  email address, a typed code never fit and "Sign in" sent nothing. Each step
+  is now its own form, and the form checks the address and the code itself, so
+  a blocked or incomplete submit always shows a message.
+- **Fixed: ChartCard ignored `aggregate`.** A `ChartCard` given only the
+  `aggregate` prop (the `useAggregate` result) said "No data to chart yet."
+  while a bare `DataChart` drew. The card's empty test now reads the aggregate
+  the way the chart does.
+- **Fixed: the export buttons' accessible name did not start with their text.**
+  `Export CSV` and `Export XLSX` carried `aria-label="Export as CSV"`, which
+  fails WCAG 2.5.3 (axe `label-content-name-mismatch`). The label is gone, the
+  visible text names the button. The package's axe pass now checks this rule on
+  every story (jsdom cannot run axe's own version of it), and the icon button
+  story hides its `+` glyph from assistive technology. A project's own test
+  that finds the button by `Export as CSV` needs `Export CSV`.
+- **Fixed: the first click on a tree select was lost under a required field.**
+  Leaving a required field empty shows its message, which pushed the
+  `TreeSelect` button down between the mouse press and the release, so the
+  click landed on nothing. The tree now opens on the mouse press, as `Select`
+  does (touch and the keyboard are unchanged).
+- **Fixed: heading order and the terms screen's landmark.** `ResourceDetail`'s
+  groups, `FacetPanel` and `EmptyState` put an `<h3>` straight under the page's
+  `<h1>` (axe `heading-order`), and the `TermsGate` screen had no `<main>` and
+  no `<h1>`. The components now start at `<h2>` and take a `headingLevel`
+  (`ResourceDetail` puts its groups under its title), and `TermsGate` renders
+  a `<main>` with an `<h1>` (`page={false}` inside a page that has both). See
+  [migration](docs/migrations/0.5.md#headings-follow-the-pages-outline).
+- **Fixed: a protected file field was a dead link on the generated detail
+  page.** `ResourceDetail` and `ResourceTable` showed a protected file as a
+  plain link, which answers 401 in token auth. The schema's `x-karni-storage`
+  now marks the field (`FieldDef.protected`), and `@karni/storage-ui` registers
+  `ProtectedFileLink` (`registerProtectedFileLink` in `@karni/ui`), so both
+  screens open it through a signed link. The link also asks a download path
+  given as an absolute URL on another host (a dev proxy) at the client's own
+  origin.
+- **Fixed: ResourceTable filtered a tree foreign key with a flat list.** The
+  filter bar used `ResourceSelect` (continents and countries mixed,
+  alphabetical) for a relation to a tree model. It now uses `TreeSelect`, as
+  `ResourceForm` does.
+- **Fixed: ResourceTable paged 25 rows whatever `KARNI_PAGE_SIZE` said.** The
+  table sent `page_size=25` on every request. It now sends none by default, so
+  the API's page size applies and the table reads it from the first full page.
+  `pageSize` still overrides, and so does the size menu. See
+  [migration](docs/migrations/0.5.md#resourcetable-follows-the-apis-page-size).
+- **Fixed: a code sign-in removed an unverified account's password without a
+  word.** As documented, signing in with an emailed code removes the password
+  of an account whose address was never verified. `otp/verify/` now adds
+  `"password_removed": true` to that answer, and `OtpLoginForm` shows a toast
+  saying so (`passwordRemovedNotice` replaces it, `onSuccess` gets
+  `{ passwordRemoved }`).
 
 ### Fixed (packaging and release self-test)
 

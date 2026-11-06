@@ -206,6 +206,8 @@ export const TEST_OTP_EMAILS = {
   pending: "pending@example.com",
   inactive: "inactive@example.com",
   throttled: "throttled@example.com",
+  /** An account whose address was never verified: signing in removes its password. */
+  unverified: "unverified@example.com",
 } as const;
 
 export const TEST_OTP = "123456";
@@ -914,6 +916,12 @@ const authHandlers = [
           { code: "E226", detail: "E226: This account is inactive." },
           { status: 401 },
         );
+      case TEST_OTP_EMAILS.unverified:
+        return HttpResponse.json({
+          ...issueTokens(),
+          user: { ...meUser(), email },
+          password_removed: true,
+        });
       default:
         return HttpResponse.json({ ...issueTokens(), user: { ...meUser(), email } });
     }

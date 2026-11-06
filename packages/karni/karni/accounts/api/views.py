@@ -421,7 +421,9 @@ class OtpVerifyView(APIView):
 
     The answer is the one ``login/`` gives: ``{"access", "refresh", "user"}``
     in JWT mode, a session plus ``{"user"}`` in session mode, or the 2FA gate
-    payload (:func:`_twofa_gate_payload`). A refused code is a 401 ``E235``
+    payload (:func:`_twofa_gate_payload`). When the code verified an address
+    that was never verified, it also removed the account's password, and the
+    answer adds ``"password_removed": true`` so the app can say so. A refused code is a 401 ``E235``
     whatever went wrong (wrong, expired, used, locked, or an address nobody
     sent a code to), an inactive account a 401 ``E226`` after a right code,
     and a new account under the ``approval`` policy a 202 ``E224`` with no
@@ -479,6 +481,8 @@ class OtpVerifyView(APIView):
         gate = _twofa_gate_payload(user)
         if gate is not None:
             _log().info("accounts.otp.2fa_required", user_id=str(user.pk))
+            if result.password_cleared:
+                gate["password_removed"] = True
             return Response(gate)
 
         data: dict[str, Any] = {}
@@ -486,6 +490,9 @@ class OtpVerifyView(APIView):
             data.update(_issue_jwt_pair(user))
         else:
             _session_login(request, user)
+        if result.password_cleared:
+            # The address was never verified: the code proved it and the password went.
+            data["password_removed"] = True
         _log().info(
             "accounts.otp.verified", user_id=str(user.pk), mode=auth_mode(), created=result.created
         )

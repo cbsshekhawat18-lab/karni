@@ -712,7 +712,7 @@ describe("search box and filter bar (D5)", () => {
 describe("pagination (server mode)", () => {
   it("shows page math from DRF count and navigates with page params", async () => {
     const user = userEvent.setup();
-    renderTable(<ResourceTable resource="events" />);
+    renderTable(<ResourceTable resource="events" pageSize={25} />);
     expect(screen.getByText("Page 1 of 3 · 60 items")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
 

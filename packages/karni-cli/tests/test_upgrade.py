@@ -162,6 +162,9 @@ def test_selection_between_versions() -> None:
         "expand-nests-a-model-already-on-the-path",
         "2fa-throttled-answer",
         "aggregate-relation-labels-read-names",
+        "ui-heading-levels",
+        "ui-export-button-names",
+        "ui-table-follows-api-page-size",
     }
     assert in_0_4_1 <= set(_ids("0.4.0", "0.5.0"))
     assert not in_0_4 & set(_ids("0.4.0", "0.5.0"))  # 0.4.0's changes are behind a 0.4.0 project
@@ -278,7 +281,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     result = runner.invoke(app, ["upgrade"])
     assert result.exit_code == 0, result.output
     out = result.output
-    assert "karni 0.1.0 -> 0.5.0: 87 change(s), 6 mechanical, 81 manual" in out
+    assert "karni 0.1.0 -> 0.5.0: 90 change(s), 6 mechanical, 84 manual" in out
 
     views = (git_project / "library" / "views.py").read_text()
     assert (

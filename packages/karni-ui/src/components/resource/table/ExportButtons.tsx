@@ -57,7 +57,6 @@ export function ExportButtons({
           size="sm"
           disabled={busy !== null}
           onClick={() => run(format)}
-          aria-label={`Export as ${format.toUpperCase()}`}
         >
           {busy === format ? "Exporting…" : `Export ${format.toUpperCase()}`}
         </Button>

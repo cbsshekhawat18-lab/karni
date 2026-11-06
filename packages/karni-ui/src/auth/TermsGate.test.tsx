@@ -120,6 +120,9 @@ describe("TermsGate", () => {
     mount({ onAccepted, client: { platform: "web", app_version: "4.1.0" } });
     await signIn();
 
+    // The gate is the whole screen: a main landmark and the page's h1.
+    expect(screen.getByRole("main")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Terms of use" })).toBeInTheDocument();
     const panel = screen.getByRole("region", { name: "Terms of use" });
     expect(panel).toHaveTextContent(
       "Read the terms (version 2026-11) and accept them to continue.",

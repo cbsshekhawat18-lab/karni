@@ -715,8 +715,8 @@ Every list is paginated by a `karni.pagination.KarniPagination` subclass:
   **100**). A paginator subclass may set a lower `max_page_size`, never a
   higher one.
 - **Floor.** `KARNI_MAX_PAGE_SIZE` may not be configured below
-  `KARNI_MAX_PAGE_SIZE_FLOOR` (env, default **25**, which is the page size
-  `@karni/ui`'s `ResourceTable` requests). The floor itself is at least 1.
+  `KARNI_MAX_PAGE_SIZE_FLOOR` (env, default **25**, the smallest page size
+  `@karni/ui`'s `ResourceTable` offers in its size menu). The floor itself is at least 1.
   A cap of `0`/`None` would switch DRF's cap off, and a cap below what the UI
   requests silently hides rows from its page count. Boot validation refuses
   both. Lowering the floor is the explicit, project-wide way to allow a

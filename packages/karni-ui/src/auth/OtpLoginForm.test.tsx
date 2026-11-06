@@ -20,6 +20,7 @@ import {
   TEST_OTP_EMAILS,
   TEST_USER,
 } from "../../tests/msw/server";
+import { getToasts, resetToastStore } from "../components/toast/toast-store";
 import { createKarniClient, KarniApiError } from "../schema/client";
 import { KarniProvider } from "../schema/provider";
 import { LoginForm, type LoginFormProps } from "./LoginForm";
@@ -87,6 +88,59 @@ describe("OtpLoginForm", () => {
       "send",
       "verify",
     ]);
+  });
+
+  it("starts the code step with an empty code input, so a typed code fits and verifies", async () => {
+    const seen: string[] = [];
+    server.events.on("request:start", ({ request }) => {
+      if (request.url.endsWith("/otp/verify/")) seen.push(request.url);
+    });
+    const onSuccess = vi.fn();
+    mount({ onSuccess });
+    await sendTo(TEST_USER.email);
+    const input = screen.getByLabelText("Code");
+    expect(input).toHaveValue("");
+    const user = userEvent.setup();
+    await user.type(input, TEST_LOGIN_CODE);
+    expect(input).toHaveValue(TEST_LOGIN_CODE);
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(seen).toHaveLength(1);
+    server.events.removeAllListeners();
+  });
+
+  it("tells the person when the sign-in removed the password of an unverified account", async () => {
+    const onSuccess = vi.fn();
+    mount({ onSuccess });
+    await sendTo(TEST_OTP_EMAILS.unverified);
+    await enter(TEST_LOGIN_CODE);
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(onSuccess.mock.calls[0]?.[1]).toEqual({ passwordRemoved: true });
+    const notice = getToasts().find((toast) => toast.title === "Your password was removed");
+    expect(notice).toBeDefined();
+    expect(String(notice?.description)).toContain("never been verified");
+    resetToastStore();
+  });
+
+  it("says nothing about the password after an ordinary code sign-in", async () => {
+    const onSuccess = vi.fn();
+    mount({ onSuccess });
+    await sendTo(TEST_USER.email);
+    await enter(TEST_LOGIN_CODE);
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(onSuccess.mock.calls[0]?.[1]).toEqual({ passwordRemoved: false });
+    expect(getToasts()).toHaveLength(0);
+  });
+
+  it("shows a message when the code is incomplete instead of doing nothing", async () => {
+    mount();
+    await sendTo(TEST_USER.email);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Code"), "12");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Enter the whole code");
+    // The digits typed so far stay, to be finished.
+    expect(screen.getByLabelText("Code")).toHaveValue("12");
   });
 
   it("has one code input sized to the code, for the phone's one-time-code suggestion", async () => {

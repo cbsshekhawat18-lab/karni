@@ -693,8 +693,13 @@ describe("view state in the URL", () => {
     const user = userEvent.setup();
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <ResourceTable resource="events" />
-        <ResourceTable resource="events" urlNamespace="archive" caption="Archived events" />
+        <ResourceTable resource="events" pageSize={25} />
+        <ResourceTable
+          resource="events"
+          urlNamespace="archive"
+          caption="Archived events"
+          pageSize={25}
+        />
       </QueryClientProvider>,
     );
     expect(screen.getByRole("grid", { name: "Archived events" })).toBeInTheDocument();
@@ -736,8 +741,27 @@ describe("view state in the URL", () => {
 
   it("a page size outside the offered sizes falls back to the default", () => {
     window.history.replaceState(null, "", "/?events.page_size=100000");
-    renderTable();
+    renderTable({ pageSize: 25 });
     expect(lastParams()?.pageSize).toBe(25);
+    renderTable();
+    expect(lastParams()?.pageSize).toBeUndefined();
+  });
+
+  it("sends no page_size by default and reads the API's own size from a full page", () => {
+    const fifty: Row[] = Array.from({ length: 50 }, (_, index) => ({
+      id: index + 1,
+      title: `Event ${String(index + 1)}`,
+      capacity: 10,
+      status: "DRAFT",
+      organizer: 7,
+    }));
+    mockUseResourceList.mockImplementation(() =>
+      listResult({ data: page(fifty, { count: 120, next: "n" }) }),
+    );
+    renderTable();
+    expect(lastParams()?.pageSize).toBeUndefined();
+    // 120 rows at the API's 50 a page: three pages, not five.
+    expect(screen.getByText("Page 1 of 3 · 120 items")).toBeInTheDocument();
   });
 });
 
@@ -755,7 +779,7 @@ describe("pagination at real size", () => {
         }),
       }),
     );
-    renderTable();
+    renderTable({ pageSize: 25 });
     expect(screen.getByText("Page 1 of 4,000 · 100,000 items")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Last page" }));
     expect(lastParams()?.page).toBe(4000);
@@ -954,7 +978,11 @@ describe("keyboard and assistive technology", () => {
   it("opens a row, sorts, selects and pages from the keyboard alone", async () => {
     const user = userEvent.setup();
     const onRowClick = vi.fn();
-    renderTable({ onRowClick, bulkActions: [{ label: "Archive", onClick: vi.fn() }] });
+    renderTable({
+      onRowClick,
+      pageSize: 25,
+      bulkActions: [{ label: "Archive", onClick: vi.fn() }],
+    });
 
     // Every control in the grid takes focus by script, whatever its tabindex.
     await user.tab(); // search

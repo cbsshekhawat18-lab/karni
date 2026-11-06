@@ -170,7 +170,11 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   expand?: readonly string[];
   /** The ordering when the URL names none. */
   initialSorting?: SortingState;
-  /** Sent as `page_size`. Default 25. */
+  /**
+   * Sent as `page_size`. Default: none, so the API's own page size applies
+   * (`REST_FRAMEWORK["PAGE_SIZE"]`, which `KARNI_PAGE_SIZE` sets), and the table
+   * reads the size from the first full page.
+   */
   pageSize?: number;
   /** The page sizes a user can choose. Default `[10, 25, 50, 100]`. `pageSize` is always offered. */
   pageSizeOptions?: readonly number[];
@@ -530,7 +534,8 @@ export function ResourceTable<T = Record<string, unknown>>(
   }, [filterFields, facetFields]);
 
   // view state: the URL (or component state with syncUrl={false})
-  const defaultPageSize = pageSize ?? DEFAULT_PAGE_SIZE;
+  // 0 = follow the API: no page_size is sent until `pageSize` or the size menu sets one.
+  const defaultPageSize = pageSize ?? 0;
   const sizesKey = (pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS).join(",");
   const defaultOrdering = sortingToOrdering(initialSorting ?? []) ?? "";
   const defaults = React.useMemo(
@@ -538,7 +543,11 @@ export function ResourceTable<T = Record<string, unknown>>(
       pageSize: defaultPageSize,
       ordering: defaultOrdering,
       pageSizes: [
-        ...new Set([...sizesKey.split(",").map(Number).filter(Number.isFinite), defaultPageSize]),
+        ...new Set(
+          [...sizesKey.split(",").map(Number).filter(Number.isFinite), defaultPageSize].filter(
+            (size) => size > 0,
+          ),
+        ),
       ].sort((a, b) => a - b),
     }),
     [defaultPageSize, defaultOrdering, sizesKey],
@@ -640,7 +649,7 @@ export function ResourceTable<T = Record<string, unknown>>(
   const listParams = React.useMemo<ResourceListParams>(
     () => ({
       page: view.page,
-      pageSize: view.pageSize,
+      pageSize: view.pageSize > 0 ? view.pageSize : undefined,
       ordering: view.ordering === "" ? undefined : view.ordering,
       search: activeSearch.length > 0 ? activeSearch : undefined,
       filters:
@@ -667,16 +676,24 @@ export function ResourceTable<T = Record<string, unknown>>(
   if (list.data !== undefined) lastLoaded.current = { resource, data: list.data };
   const lastData = lastLoaded.current?.resource === resource ? lastLoaded.current.data : undefined;
 
+  // With no page size asked for, the API's own is the size of a full page (one with a next page).
+  const serverPageSize = React.useRef<number | undefined>(undefined);
+  if (view.pageSize === 0 && lastData?.next != null && lastData.results.length > 0) {
+    serverPageSize.current = lastData.results.length;
+  }
+  const pageSizeNow =
+    view.pageSize > 0 ? view.pageSize : (serverPageSize.current ?? DEFAULT_PAGE_SIZE);
+
   const status = statusOf(list.error);
   const hasError = list.error !== null && list.error !== undefined;
   // D5 page clamp: a 404 past page 1 means the page is gone (fewer rows now).
   const clamping = isNotFoundError(list.error) && view.page > 1;
   React.useEffect(() => {
     if (!clamping) return;
-    const known = lastData !== undefined ? pageCountFor(lastData.count, view.pageSize) : 1;
+    const known = lastData !== undefined ? pageCountFor(lastData.count, pageSizeNow) : 1;
     const target = view.page > known ? known : view.page - 1;
     setView({ page: Math.max(1, target) }, { push: false });
-  }, [clamping, lastData, view.page, view.pageSize, setView]);
+  }, [clamping, lastData, view.page, pageSizeNow, setView]);
 
   const blocking = status === 401 || status === 403;
   const shownData = list.data ?? (hasError && !blocking && !clamping ? lastData : undefined);
@@ -862,7 +879,7 @@ export function ResourceTable<T = Record<string, unknown>>(
 
   const rows = React.useMemo<T[]>(() => shownData?.results ?? [], [shownData]);
   const count = shownData?.count;
-  const pageCount = pageCountFor(count, view.pageSize);
+  const pageCount = pageCountFor(count, pageSizeNow);
 
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [sortTarget, setSortTarget] = React.useState<string | null>(null);
@@ -914,7 +931,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     const total = list.data.count;
     if (kind === "page") {
       setAnnouncement(
-        `Showing page ${view.page.toLocaleString()} of ${pageCountFor(total, view.pageSize).toLocaleString()}.`,
+        `Showing page ${view.page.toLocaleString()} of ${pageCountFor(total, pageSizeNow).toLocaleString()}.`,
       );
     } else {
       setAnnouncement(
@@ -923,7 +940,7 @@ export function ResourceTable<T = Record<string, unknown>>(
           : `${total.toLocaleString()} ${total === 1 ? one : plural} match.`,
       );
     }
-  }, [list.isFetching, list.data, view.page, view.pageSize, plural, one]);
+  }, [list.isFetching, list.data, view.page, pageSizeNow, plural, one]);
 
   const firstSelection = React.useRef(true);
   // A finished bulk action says what it did; its deselection needs no second word.
@@ -1072,7 +1089,7 @@ export function ResourceTable<T = Record<string, unknown>>(
           ? SKELETON_COLUMNS + (hasBulkSelect ? 1 : 0) + (hasActions ? 1 : 0)
           : table.getVisibleLeafColumns().length
       }
-      rowCount={view.pageSize}
+      rowCount={pageSizeNow}
       density={density}
       toolbar={schema === undefined}
       layout={layout}
@@ -1162,7 +1179,7 @@ export function ResourceTable<T = Record<string, unknown>>(
             onSort={onSort}
             onRowClick={onRowClick}
             failures={failures}
-            firstRowIndex={(view.page - 1) * view.pageSize + 1}
+            firstRowIndex={(view.page - 1) * pageSizeNow + 1}
             totalCount={count}
             dimmed={dimmed}
             scrollRef={scrollRef}
@@ -1185,7 +1202,7 @@ export function ResourceTable<T = Record<string, unknown>>(
                 : shownData.next !== null && shownData.next !== undefined
             }
             onPageChange={changePage}
-            pageSize={view.pageSize}
+            pageSize={pageSizeNow}
             pageSizeOptions={defaults.pageSizes}
             onPageSizeChange={changePageSize}
             busy={transitioning}

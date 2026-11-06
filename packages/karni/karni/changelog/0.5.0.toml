@@ -689,3 +689,40 @@ unchanged. A consumer that read the natural key from `label` declares \
 `class Karni: label_field = "<that field>"` on the related model, or reads `key`."""
 mechanical = false
 migration = "migrations/0.5.md#aggregate-labels-read-the-rows-name"
+
+[[change]]
+id = "ui-heading-levels"
+kind = "behaviour"
+symbol = "@karni/ui EmptyState, FacetPanel, ResourceDetail, TermsGate"
+summary = """\
+Headings follow the page's outline. EmptyState's title and FacetPanel's heading are an \
+h2 (were h3), ResourceDetail's title takes `headingLevel` (default 2) and its field groups \
+and Record block the next level (were h3 under any title), and TermsGate's panel is the \
+page's <main> with an h1 (`page={false}` keeps a panel inside a page that has both). \
+Set `headingLevel` where a component sits deeper in your outline. A test that finds one by \
+heading level 3 needs the new level, and a TermsGate inside a Layout needs `page={false}`."""
+mechanical = false
+migration = "migrations/0.5.md#headings-follow-the-pages-outline"
+
+[[change]]
+id = "ui-export-button-names"
+kind = "behaviour"
+symbol = "@karni/ui ResourceTable export buttons"
+summary = """\
+The export buttons are named by their visible text, `Export CSV` and `Export XLSX` (were \
+`Export as CSV` through aria-label), as WCAG 2.5.3 asks. A test or Playwright script that \
+finds the button by its old name needs the new one."""
+mechanical = false
+migration = "migrations/0.5.md#the-export-buttons-name-is-its-visible-text"
+
+[[change]]
+id = "ui-table-follows-api-page-size"
+kind = "behaviour"
+symbol = "@karni/ui ResourceTable pageSize"
+summary = """\
+ResourceTable no longer sends page_size=25 by default. It sends none, so the API's page \
+size applies (KARNI_PAGE_SIZE, 50 by default) and the table reads it from the first full \
+page. Pass pageSize={25} to keep 25 rows a page. A page the user picks from the size menu \
+is still sent. A test that expects page_size=25 on the first request needs pageSize={25}."""
+mechanical = false
+migration = "migrations/0.5.md#resourcetable-follows-the-apis-page-size"

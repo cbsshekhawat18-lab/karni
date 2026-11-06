@@ -13,6 +13,7 @@ import * as React from "react";
 import { cn } from "../lib/cn";
 import { registerComponentRole } from "../lib/roles";
 import { Button } from "../components/primitives/button";
+import { addToast } from "../components/toast/toast-store";
 import { AlertIcon, OfflineIcon } from "../components/primitives/icons";
 import { Input } from "../components/primitives/input";
 import { Label } from "../components/primitives/label";
@@ -47,8 +48,18 @@ export interface OtpLoginFormSlots {
 }
 
 export interface OtpLoginFormProps {
-  /** Called with the signed-in user. Navigate from here. */
-  onSuccess?: (user: KarniUser) => void;
+  /**
+   * Called with the signed-in user. Navigate from here. The second argument says
+   * whether the sign-in removed the account's password (see `passwordRemovedNotice`).
+   */
+  onSuccess?: (user: KarniUser, info: { passwordRemoved: boolean }) => void;
+  /**
+   * Shown as a toast after a sign-in that removed the password of an account whose
+   * address was never verified (the code proved the address, so the password
+   * someone else may know is gone). It outlives this form, so it is still there
+   * after `onSuccess` navigates away. Needs the app's `<Toaster />`. `null` shows none.
+   */
+  passwordRemovedNotice?: { title: React.ReactNode; description: React.ReactNode } | null;
   /** Called when the account needs a second factor (the token completes it), as in LoginForm. */
   on2FA?: (ephemeralToken: string) => void;
   /** Called when a new account was created and waits for an administrator. */
@@ -70,6 +81,15 @@ export interface OtpLoginFormProps {
   className?: string;
 }
 
+/** Worded from docs/accounts.md, "Who gets in": the code proved the address, the password went. */
+const PASSWORD_REMOVED_NOTICE = {
+  title: "Your password was removed",
+  description:
+    "This account's email address had never been verified, and the code you just used proved it is yours. " +
+    "Whoever opened the account may have known its password, so it was removed. " +
+    "Sign in with a code from now on, or reset your password to set a new one.",
+};
+
 /** The label-to-control gap LoginForm uses, the same under Tailwind 3 and 4. */
 const FIELD_GAP = "[&>:not([hidden])~:not([hidden])]:mt-1";
 
@@ -78,6 +98,17 @@ class TwoFactorUnavailable extends Error {
   constructor() {
     super("This account needs a two-factor code, but the app has not enabled that step.");
     this.name = "TwoFactorUnavailable";
+  }
+}
+
+/** Thrown inside the form when the browser's own validation is not used (`noValidate`): a message always shows. */
+class InvalidInput extends Error {
+  constructor(
+    readonly field: "email" | "code",
+    readonly length?: number,
+  ) {
+    super(`The ${field} is not valid.`);
+    this.name = "InvalidInput";
   }
 }
 
@@ -122,6 +153,21 @@ export function describeOtpError(error: unknown): KarniErrorDescription {
       "The app has not enabled that step. Ask the site's administrator.",
       401,
     );
+  }
+  if (error instanceof InvalidInput) {
+    return error.field === "code"
+      ? described(
+          "validation",
+          "Enter the whole code",
+          `The code has ${error.length ?? 6} digits. Type them all, then sign in.`,
+          undefined,
+        )
+      : described(
+          "validation",
+          "Enter your email address",
+          "Type the address you sign in with, then ask for the code.",
+          undefined,
+        );
   }
   if (!(error instanceof KarniApiError)) return describeError(error, { action: "sign in" });
   const status = error.status;
@@ -229,6 +275,7 @@ function minutes(seconds: number): string {
  */
 export function OtpLoginForm({
   onSuccess,
+  passwordRemovedNotice = PASSWORD_REMOVED_NOTICE,
   on2FA,
   onAwaitingApproval,
   resendCooldown = 30,
@@ -274,6 +321,7 @@ export function OtpLoginForm({
     const email = String(new FormData(event.currentTarget).get("email") ?? "");
     setOutcome(null);
     try {
+      if (email.trim() === "") throw new InvalidInput("email");
       await login.send(email);
     } catch (error) {
       fail(error);
@@ -295,9 +343,16 @@ export function OtpLoginForm({
     const code = String(new FormData(event.currentTarget).get("code") ?? "");
     setOutcome(null);
     try {
-      const result = await login.verify(code);
+      if (!new RegExp(`^[0-9]{${login.length}}$`).test(code.trim())) {
+        throw new InvalidInput("code", login.length);
+      }
+      const result = await login.verify(code.trim());
       if ("ok" in result) {
-        onSuccess?.(result.user);
+        const removed = result.passwordRemoved === true;
+        if (removed && passwordRemovedNotice !== null) {
+          addToast({ ...passwordRemovedNotice, variant: "info", duration: 15000 });
+        }
+        onSuccess?.(result.user, { passwordRemoved: removed });
       } else if ("requires2fa" in result) {
         if (on2FA !== undefined) on2FA(result.ephemeralToken);
         else fail(new TwoFactorUnavailable());
@@ -306,7 +361,8 @@ export function OtpLoginForm({
         onAwaitingApproval?.(result.detail);
       }
     } catch (error) {
-      if (codeRef.current !== null) codeRef.current.value = "";
+      // A refused code is cleared. An incomplete one is kept, to be finished.
+      if (codeRef.current !== null && !(error instanceof InvalidInput)) codeRef.current.value = "";
       fail(error);
     }
   }
@@ -335,10 +391,13 @@ export function OtpLoginForm({
   if (!onCodeStep) {
     return (
       <form
+        // Keyed by step: React must not reuse the email step's DOM (and its typed value) for the code step.
+        key="email-step"
         className={cn("space-y-4", className)}
         onSubmit={(event) => void sendCode(event)}
         aria-busy={busy}
         data-step="email"
+        noValidate
       >
         {title !== null ? <h2 className="text-lg font-semibold">{title}</h2> : null}
         {description !== undefined ? (
@@ -378,10 +437,12 @@ export function OtpLoginForm({
   const expires = login.expiresIn !== null ? ` It expires in ${minutes(login.expiresIn)}.` : "";
   return (
     <form
+      key="code-step"
       className={cn("space-y-4", className)}
       onSubmit={(event) => void verifyCode(event)}
       aria-busy={busy}
       data-step="code"
+      noValidate
     >
       {title !== null ? <h2 className="text-lg font-semibold">{title}</h2> : null}
       <p className="text-sm text-muted-foreground">

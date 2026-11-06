@@ -127,6 +127,31 @@ describe("FacetPanel", () => {
     expect(onChange).toHaveBeenLastCalledWith([]);
   });
 
+  it("titles the panel one level under the page's h1, or at the level it is given", async () => {
+    mount(
+      <div>
+        <h1>Products</h1>
+        <FacetPanel
+          resource="products"
+          taxonomy="regions"
+          label="Regions"
+          value={[]}
+          onChange={() => undefined}
+        />
+        <FacetPanel
+          resource="products"
+          taxonomy="regions"
+          label="Where"
+          headingLevel={3}
+          value={[]}
+          onChange={() => undefined}
+        />
+      </div>,
+    );
+    expect(await screen.findByRole("heading", { level: 2, name: "Regions" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Where" })).toBeInTheDocument();
+  });
+
   it("says when no node counts a row, and when the counts cannot load", async () => {
     mount(
       <FacetPanel
@@ -172,6 +197,23 @@ describe("ResourceTable facets", () => {
     expect(facets[facets.length - 1]?.searchParams.has("regions")).toBe(false);
     expect(within(panel).getByRole("checkbox", { name: "Asia 1" })).not.toBeChecked();
     expect(within(panel).getByRole("checkbox", { name: "Nordics 2" })).toBeChecked();
+  });
+
+  it("filters a tree foreign key with a TreeSelect, not a flat list", async () => {
+    const user = userEvent.setup();
+    const backend = mount(
+      <ResourceTable resource="products" filters={["category"]} syncUrl={false} />,
+    );
+    expect(await screen.findByText("Knife")).toBeInTheDocument();
+    const filter = await screen.findByRole("button", { name: /Category/ });
+    expect(filter).toHaveAttribute("aria-haspopup", "dialog");
+    await user.click(filter);
+    const tree = await screen.findByRole("tree");
+    await user.click(await within(tree).findByRole("treeitem", { name: "Garden" }));
+    await waitFor(() => {
+      const lists = backend.requests.filter((url) => url.pathname === "/api/products/");
+      expect(lists[lists.length - 1]?.searchParams.get("category")).toBe("1");
+    });
   });
 
   it("keeps the choice in the URL and shows no panel without facets", async () => {

@@ -1,3 +1,5 @@
+import { protectedFileLinkFor } from "../protected-file";
+import { HEADING_TAGS, nextHeadingLevel, type HeadingLevel } from "../../../lib/heading";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { AuthContext } from "../../../auth/provider";
@@ -148,6 +150,12 @@ export interface ResourceDetailSlots {
 export type ResourceDetailBreadcrumbOptions = Pick<TreeBreadcrumbProps, "href" | "onNavigate">;
 
 export interface ResourceDetailProps {
+  /**
+   * The level of the page title (`title`). Default 2, the level under a page's
+   * `<h1>`. The field groups and the record block take the next level when a
+   * title shows, and this level when none does.
+   */
+  headingLevel?: HeadingLevel;
   resource: string;
   id: string | number;
   fields?: Record<string, ResourceDetailFieldOverride>;
@@ -285,7 +293,16 @@ function DefaultValue(props: {
       return <>{field.enumLabels?.[String(value)] ?? humanizeValue(String(value))}</>;
     case "relation":
       return <RelationValue value={value} />;
-    case "file":
+    case "file": {
+      const Protected = protectedFileLinkFor(field);
+      if (Protected !== null) {
+        return (
+          <Protected
+            href={String(value)}
+            className="rounded-sm font-medium text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+        );
+      }
       return (
         <a
           href={String(value)}
@@ -296,6 +313,7 @@ function DefaultValue(props: {
           {fileBasename(String(value))}
         </a>
       );
+    }
     case "json":
       return (
         <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">
@@ -622,6 +640,7 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
   const {
     resource,
     id,
+    headingLevel = 2,
     fields,
     sections,
     related,
@@ -816,6 +835,9 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
     asking === null ? undefined : lifecycle.find((entry) => entry.field.name === asking.field);
   const askedTarget = askedFor?.targets.find((target) => target.value === asking?.target);
 
+  const TitleHeading = HEADING_TAGS[headingLevel];
+  const sectionLevel = title === undefined ? headingLevel : nextHeadingLevel(headingLevel);
+  const SectionHeading = HEADING_TAGS[sectionLevel];
   const header = hasHeader ? (
     <div className="flex flex-wrap items-center justify-between gap-3">
       {title === undefined ? (
@@ -827,10 +849,12 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
             <Skeleton className={cn("h-5 w-32 sm:w-48", !slow && "invisible")} />
           </div>
         ) : (
-          <h2 className="text-lg font-semibold tracking-tight">{title(item)}</h2>
+          <TitleHeading className="text-lg font-semibold tracking-tight">
+            {title(item)}
+          </TitleHeading>
         )
       ) : (
-        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        <TitleHeading className="text-lg font-semibold tracking-tight">{title}</TitleHeading>
       )}
       {actions !== undefined || mayEdit || mayDelete || hasLifecycle ? (
         <div className="flex flex-wrap items-center gap-2">
@@ -977,6 +1001,7 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
         <GroupedFields
           layout={chosenLayout(groupLayout, schema)}
           as="section"
+          headingLevel={sectionLevel}
           label={`${humanizeValue(label)} details`}
           panels={grouped.map((group) => ({
             key: group.key,
@@ -990,12 +1015,12 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
           aria-labelledby={recordHeadingId}
           className="rounded-md border border-border bg-muted-subtle px-4 py-2"
         >
-          <h3
+          <SectionHeading
             id={recordHeadingId}
             className="py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"
           >
             Record
-          </h3>
+          </SectionHeading>
           <dl className="[&>*+*]:border-t [&>*+*]:border-border">
             {audit.map((field) => (
               <DetailRow

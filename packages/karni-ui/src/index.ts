@@ -107,6 +107,11 @@ export { Skeleton } from "./components/primitives/skeleton";
 export type { SkeletonProps } from "./components/primitives/skeleton";
 
 // resource components
+export {
+  protectedFileLinkFor,
+  registerProtectedFileLink,
+} from "./components/resource/protected-file";
+export type { ProtectedFileLinkRenderProps } from "./components/resource/protected-file";
 export { ResourceTable } from "./components/resource/ResourceTable";
 export type {
   ResourceTableProps,

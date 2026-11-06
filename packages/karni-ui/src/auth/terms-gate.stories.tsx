@@ -131,6 +131,7 @@ export const PanelWithError: Story = {
       title="Terms of use"
       description="Read the terms (version 2026-11) and accept them to continue."
       acceptLabel="Accept and continue"
+      page={false}
     />
   ),
 };

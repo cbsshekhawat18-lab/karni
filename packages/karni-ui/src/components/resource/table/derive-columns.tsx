@@ -24,6 +24,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 import { humanize } from "../../../schema/parse";
 import type { FieldDef, FieldKind } from "../../../schema/types";
+import { protectedFileLinkFor } from "../protected-file";
 import { CheckIcon } from "../../primitives/icons";
 import { isAuditField, partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
@@ -97,8 +98,16 @@ function dateText(value: unknown, withTime: boolean): string {
   return withTime ? parsed.toLocaleString() : parsed.toLocaleDateString();
 }
 
-function FileCell({ value }: { value: unknown }): React.ReactElement {
+function FileCell({ field, value }: { field: FieldDef; value: unknown }): React.ReactElement {
   if (typeof value === "string" && value.length > 0) {
+    const Protected = protectedFileLinkFor(field);
+    if (Protected !== null) {
+      return (
+        <span onClick={(event) => event.stopPropagation()}>
+          <Protected href={value} className="text-primary underline underline-offset-4" />
+        </span>
+      );
+    }
     const name = value.split("/").filter(Boolean).pop() ?? value;
     return (
       <a
@@ -163,7 +172,7 @@ export function renderFieldCell(
         </span>
       );
     case "file":
-      return <FileCell value={value} />;
+      return <FileCell field={field} value={value} />;
     case "json":
       return <JsonCell value={value} />;
     case "array":

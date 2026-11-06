@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, type Mock } from "vitest";
 import { downloadResourceExport } from "../../../hooks/useResourceImport";
+import { axeViolations } from "../../../../tests/axe";
 import { ExportButtons } from "./ExportButtons";
 
 vi.mock("../../../hooks/useResourceImport", () => ({ downloadResourceExport: vi.fn() }));
@@ -10,15 +11,20 @@ vi.mock("../../../schema/provider", () => ({ useKarniClient: () => fakeClient })
 const mockDownload = downloadResourceExport as unknown as Mock;
 
 describe("ExportButtons", () => {
+  it("names each button by its visible text (WCAG 2.5.3)", async () => {
+    const { container } = render(
+      <ExportButtons resource="events" params={{}} formats={["csv", "xlsx"]} />,
+    );
+    expect(await axeViolations(container)).toEqual([]);
+  });
+
   it("downloads the table's current query in the chosen format", async () => {
     mockDownload.mockResolvedValue("events.csv");
     const params = { search: "gig", ordering: "-starts_at", filters: { status: "published" } };
     render(<ExportButtons resource="events" params={params} formats={["csv", "xlsx"]} />);
-    fireEvent.click(screen.getByRole("button", { name: "Export as XLSX" }));
+    fireEvent.click(screen.getByRole("button", { name: "Export XLSX" }));
     expect(mockDownload).toHaveBeenCalledWith(fakeClient, "events", params, "xlsx");
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Export as XLSX" })).toBeEnabled(),
-    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Export XLSX" })).toBeEnabled());
   });
 
   it("shows the backend's refusal", async () => {
@@ -27,7 +33,7 @@ describe("ExportButtons", () => {
     });
     mockDownload.mockRejectedValue(error);
     render(<ExportButtons resource="events" params={{}} formats={["csv"]} />);
-    fireEvent.click(screen.getByRole("button", { name: "Export as CSV" }));
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent("E803: narrow the filters"),
     );

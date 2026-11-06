@@ -1272,7 +1272,9 @@ curl -X POST https://api.example.com/api/auth/otp/verify/ \
 
 In JWT mode the second answer carries `access` and `refresh`. Send
 `Authorization: Bearer <access>` and rotate with `refresh/`, exactly as after
-`login/`.
+`login/`. When the code removed the password of an account whose address was
+never verified (see [who gets in](#who-gets-in)), the answer also has
+`"password_removed": true`, and `OtpLoginForm` tells the person.
 
 ### Who gets in
 

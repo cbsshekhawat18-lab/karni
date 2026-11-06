@@ -43,10 +43,12 @@ export interface SocialSignInOptions {
 /**
  * Experimental. The result of signing in with an ID token: signed in, the 2FA
  * step (the same `ephemeralToken` LoginForm's `on2FA` receives), or a new
- * account that waits for an administrator (nothing signed in).
+ * account that waits for an administrator (nothing signed in). `passwordRemoved`
+ * is set when the sign-in proved an address that was never verified and so
+ * removed the account's password (`"password_removed": true` in the answer).
  */
 export type SocialLoginResult =
-  | { ok: true; user: KarniUser }
+  | { ok: true; user: KarniUser; passwordRemoved?: true }
   | { requires2fa: true; ephemeralToken: string }
   | { awaitingApproval: true; detail: string };
 

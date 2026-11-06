@@ -893,6 +893,14 @@ waits for an administrator is its own state (`onAwaitingApproval`). To offer
 it next to the password, pass `codeSignIn` to `LoginForm`: a "Sign in with a
 code" switch shows `OtpLoginForm` in place of the password fields.
 
+A code that proves an address the account never verified also removes the
+account's password (whoever opened it may not own the address). The form says
+so in a toast, worded from the accounts docs, that outlives the form when
+`onSuccess` navigates away, so the app needs its `<Toaster />`.
+`passwordRemovedNotice` replaces the text (`null` shows none), and
+`onSuccess(user, { passwordRemoved })` tells a page of your own. The result of
+`verify(code)` carries `passwordRemoved: true` in that case.
+
 For a form of your own, use the hook: `const { step, send, verify, resend,
 back, status, error, cooldown, length } = useOtpLogin({ resendCooldown: 30 })`.
 `verify(code)` adopts the token pair in JWT mode, re-syncs the session user

@@ -239,7 +239,7 @@ describe("ResourceDetail of a wide model", SLOW, () => {
       "noopener noreferrer nofollow",
     );
     const headings = screen
-      .getAllByRole("heading", { level: 3 })
+      .getAllByRole("heading", { level: 2 })
       .map((heading) => heading.textContent)
       .filter((text) =>
         ["Overview", "Specifications", "Financials", "Content", "Measurements", "Other"].includes(

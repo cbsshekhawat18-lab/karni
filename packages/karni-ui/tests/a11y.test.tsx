@@ -40,6 +40,7 @@ import * as switchStories from "../src/components/primitives/switch.stories";
 import * as tabs from "../src/components/primitives/tabs.stories";
 import * as textarea from "../src/components/primitives/textarea.stories";
 import * as stat from "../src/components/stat/stat.stories";
+import "./axe";
 import { resetToastStore } from "../src/components/toast/toast-store";
 import * as toast from "../src/components/toast/toaster.stories";
 import * as theme from "../src/theme/theme.stories";
@@ -126,6 +127,18 @@ describe("the axe harness", () => {
     );
     const results = await axe.run(document.body, OPTIONS);
     expect(describeViolations(results.violations).join("\n")).toContain("button-name");
+  });
+
+  it("fails on an accessible name that does not contain the visible text (WCAG 2.5.3)", async () => {
+    render(
+      <button type="button" aria-label="Export as CSV">
+        Export CSV
+      </button>,
+    );
+    const results = await axe.run(document.body, OPTIONS);
+    expect(describeViolations(results.violations).join("\n")).toContain(
+      "label-content-name-mismatch",
+    );
   });
 
   it("sees what the open stories portal into the body", async () => {

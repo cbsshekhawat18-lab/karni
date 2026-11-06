@@ -160,6 +160,15 @@ function read2fa(value: unknown): { ephemeralToken: string } | null {
     : null;
 }
 
+/** True when a sign-in answer says it removed the account's password (`password_removed`). */
+function passwordRemoved(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as Record<string, unknown>).password_removed === true
+  );
+}
+
 /** A 202 from `social/<provider>/` or `otp/verify/` whose new account awaits an administrator (code E224). */
 function readApproval(value: unknown): { detail: string } | null {
   if (typeof value !== "object" || value === null) return null;
@@ -621,7 +630,7 @@ export class AuthEngine {
             "and Secure settings for a cross-site setup.",
         );
       }
-      return { ok: true, user };
+      return passwordRemoved(data) ? { ok: true, user, passwordRemoved: true } : { ok: true, user };
     }
     const record =
       typeof data === "object" && data !== null ? (data as Record<string, unknown>) : {};
@@ -638,7 +647,7 @@ export class AuthEngine {
     this.accessToken = access;
     const user = normalizeUser(record.user) ?? (await this.fetchMe(path));
     this.setState("authenticated", user);
-    return { ok: true, user };
+    return passwordRemoved(data) ? { ok: true, user, passwordRemoved: true } : { ok: true, user };
   }
 
   private async fetchMe(loginPath: string): Promise<KarniUser> {
