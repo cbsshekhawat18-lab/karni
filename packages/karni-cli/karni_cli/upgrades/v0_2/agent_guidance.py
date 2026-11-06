@@ -47,6 +47,8 @@ _H1 = re.compile(r"^# (?P<name>.+?) — agent guidance\s*$")
 _ITEM = re.compile(r"^(?:[-*+]|\d+[.)])\s+")
 _CODE = re.compile(r"""["']code["']\s*:\s*["']P(\d{3})["']""")
 _SIGNATURES = ("This project is built on Karni.", "karni context")
+#: An old file whose generated replacement has another name.
+_REPLACED_BY = {".cursorrules": ".cursor/rules/karni.mdc"}
 
 
 @dataclass
@@ -225,7 +227,10 @@ def _apply(project: Path, migration: Migration) -> list[str]:
     for rel in migration.migrated:
         changed.append(backup(project, rel))
         (project / rel).unlink()
-    result = sync(project, agent_data.load(project))
+    # The project keeps its tool's files: each migrated file is generated again
+    # (deprecated since 0.5.0, so `karni rules sync` reports them with C860).
+    kept = [_REPLACED_BY.get(rel, rel) for rel in migration.migrated]
+    result = sync(project, agent_data.load(project), keep=kept)
     changed += result.written + result.removed
     return sorted(set(changed))
 

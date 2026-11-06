@@ -23,7 +23,7 @@ ADD += [{"code": "P002", "rule": "Invoices are immutable once sent."}]
 OVERRIDE = {"K007": {"summary": "Commands: just up."}}
 DISABLE = ["K304"]
 DISABLE += ["K307"]
-ADAPTERS = {"disable": ["copilot"], "paths": {"windsurf": ".devin/rules/karni.md"}}
+ADAPTERS = {"disable": ["legacy-tool"], "paths": {"agents-md": "docs/AGENTS.md"}}
 '''
 
 
@@ -44,7 +44,7 @@ def test_valid_file_resolves(tmp_path: Path) -> None:
     assert by_code["P002"].summary == "Invoices are immutable once sent."
     assert by_code["P002"].category == "project"
     assert by_code["P001"].category == "billing"
-    assert overrides.adapters["paths"] == {"windsurf": ".devin/rules/karni.md"}
+    assert overrides.adapters["paths"] == {"agents-md": "docs/AGENTS.md"}
 
     data = dump(tmp_path)
     assert data["categories"][-2:] == ["billing", "project"]

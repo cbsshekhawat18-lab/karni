@@ -209,9 +209,8 @@ the dashboard numbers and downloads the attendee CSV. CI runs the same script (`
 
 ### Agent guidance
 
-`karni new` wrote `AGENTS.md`, `CLAUDE.md` and the editor adapters.
-`karni add payments` appended the module's guidance, and
-`karni rules sync --check` keeps them current. `karni check` (architecture rules, duplication, the
+`karni new` wrote `AGENTS.md`. `karni add payments` appended the module's
+guidance, and `karni rules sync --check` keeps it current. `karni check` (architecture rules, duplication, the
 ESLint preset) is clean.
 
 ## Commands used

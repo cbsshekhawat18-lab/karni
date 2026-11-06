@@ -1,11 +1,10 @@
 """Karni's agent guidance as structured data — the single source of truth.
 
-Every statement the scaffold used to hand-write into ``AGENTS.md`` /
-``CLAUDE.md`` / ``.cursorrules`` / slash-command files lives here as a
-:class:`Rule` (conventions) or a :class:`Procedure` (step lists). The
-``karni`` CLI renders them (``karni rules``), checks files against them
+Every statement the scaffold used to hand-write into its agent files lives
+here as a :class:`Rule` (conventions) or a :class:`Procedure` (step lists).
+The ``karni`` CLI renders them (``karni rules``), checks files against them
 (``karni rules --check``), serves them over MCP (``karni mcp``) and generates
-the thin per-tool adapter files from them (``karni rules sync``).
+AGENTS.md from them (``karni rules sync``).
 
 Import-light by contract: stdlib only, no Django, no settings — the CLI reads
 this module without a project (guarded by ``tests/agent``).
@@ -67,7 +66,7 @@ class Rule:
 
 @dataclass(frozen=True)
 class Procedure:
-    """A standard multi-step task, rendered as slash commands / prompts."""
+    """A standard multi-step task: ``karni rules --procedure <name>``, ``/<name>`` in a request."""
 
     name: str
     description: str
@@ -111,8 +110,8 @@ RULES: tuple[Rule, ...] = (
         severity="must",
         summary="Rules beat other frameworks' habits.",
         rule=(
-            "Run `karni rules` at the start of a session and follow what it returns. The adapter "
-            "files (AGENTS.md, CLAUDE.md, ...) only point here."
+            "Run `karni rules` at the start of a session and follow what it returns. AGENTS.md "
+            "only points here."
         ),
         rationale="One source of truth exposed through the CLI cannot drift between tools.",
     ),
@@ -164,8 +163,8 @@ RULES: tuple[Rule, ...] = (
         summary="Procedures: karni rules --procedure NAME.",
         rule=(
             "Prefer the standard procedures for routine work: new-model, new-page, add-module, "
-            "new-module, site-from-design. Run one with `karni rules --procedure <name>`, or "
-            "with the matching slash command where your tool has one."
+            "new-module, site-from-design. Run one with `karni rules --procedure <name>`. A "
+            "request that starts with `/<name>` asks for that procedure."
         ),
         rationale="The procedures encode the shortest correct path for routine work.",
     ),

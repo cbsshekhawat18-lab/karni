@@ -23,7 +23,7 @@ check:
 	karni check
 	karni rules sync --check
 
-# Agent guidance: conventions, and regenerating AGENTS.md / CLAUDE.md / tool adapters.
+# Agent guidance: conventions, and regenerating AGENTS.md.
 rules:
 	karni rules
 

@@ -198,11 +198,10 @@ jobs:
           python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
 
       # -----------------------------------------------------------------------
-      # Agent adapters vs karni/agent/rules.py (docs/agents.md). Scaffolds a
-      # project, then `karni rules sync --check` fails if any generated adapter
-      # (AGENTS.md, CLAUDE.md, .cursor/rules/karni.mdc, ...) differs from what
-      # the rule registry produces; also fails if the generated procedures
-      # block in docs/agents.md is stale. Projects run the same
+      # AGENTS.md vs karni/agent/rules.py (docs/agents.md). Scaffolds a
+      # project, then `karni rules sync --check` fails if the generated
+      # AGENTS.md differs from what the rule registry produces; also fails if
+      # the generated procedures block in docs/agents.md is stale. Projects run the same
       # `karni rules sync --check` in their own CI (`make check`).
       # -----------------------------------------------------------------------
       - name: Agent adapters are up to date (karni rules sync --check)

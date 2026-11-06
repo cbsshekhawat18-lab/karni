@@ -89,9 +89,22 @@ def test_doctor_reports_the_environment(runner, project: Path) -> None:
     ]
     assert "node-9.9.9 (npm npm-9.9.9)" in result.stdout
     assert "manifest absent" in result.stdout
-    assert "stale (32 files)" in result.stdout  # no adapters generated in this bare project
+    assert "stale (1 files)" in result.stdout  # AGENTS.md is not generated in this bare project
     assert "no store detected (installed: gigai-chronicle)" in result.stdout
     assert TIP_FIRST_LINE not in result.output
+
+
+def test_doctor_mentions_deprecated_agent_files_once(runner, project: Path) -> None:
+    from karni_cli import agent_data
+    from karni_cli.adapters import sync
+
+    assert "C860" not in runner.invoke(app, ["doctor", "-q"]).stdout
+    sync(project, agent_data.load(project), keep={"CLAUDE.md", ".cursor/rules/karni.mdc"})
+    out = runner.invoke(app, ["doctor", "-q"]).stdout
+    lines = [line for line in out.splitlines() if "C860" in line]
+    assert len(lines) == 1, out
+    assert "2 tool-specific files are deprecated and removed in 1.0" in lines[0]
+    assert "Keep AGENTS.md" in lines[0]
 
 
 def test_doctor_lists_a_detected_store(runner, project: Path) -> None:

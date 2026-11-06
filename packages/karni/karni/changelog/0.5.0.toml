@@ -518,3 +518,28 @@ a raw <details> fails the lint until it uses Accordion or carries \
 `// eslint-disable-next-line karni/no-raw-elements -- <reason>`."""
 mechanical = false
 migration = "migrations/0.5.md#a-raw-details-fails-karnino-raw-elements"
+
+[[change]]
+id = "agent-files-procedures-block"
+kind = "project-files"
+symbol = "AGENTS.md"
+summary = """\
+AGENTS.md lists the procedures for routine tasks, and an agent reads a request that \
+starts with `/<name>` (such as `/new-app <the request>`) as that procedure. Run \
+`karni rules sync`. Until then `karni rules sync --check` (and make check) reports \
+the file as stale."""
+mechanical = false
+migration = "migrations/0.5.md#tool-specific-agent-files-are-deprecated-keep-agentsmd"
+
+[[change]]
+id = "tool-specific-agent-files"
+kind = "project-files"
+symbol = "the agent files only one tool reads (karni new, karni rules sync)"
+summary = """\
+AGENTS.md is the one agent file: karni new no longer writes the instruction files and \
+command folders that only one tool reads (the list is in the migration note). A \
+project that has them keeps them: karni rules sync keeps them up to date and warns \
+with C860, and karni doctor mentions them. They stop being updated, and are removed, \
+in 1.0. Point your tool at AGENTS.md and keep project guidance in karni.rules.py."""
+mechanical = false
+migration = "migrations/0.5.md#tool-specific-agent-files-are-deprecated-keep-agentsmd"

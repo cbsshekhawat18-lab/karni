@@ -1546,6 +1546,21 @@ apply codemods and list the manual steps. This file is the human summary.
   `github.com/karni`, which is not Karni. It now links to the repository, and
   `python -m karni.links check` catches the ownerless form too.
   `docs/testing.md` opens with the four fixtures most tests use.
+- **AGENTS.md is the one agent file; the tool-specific files are deprecated.**
+  `karni new` writes AGENTS.md alone. It now lists the procedures for routine
+  tasks, and an agent reads a request that starts with `/<name>` (such as
+  `/new-app <the request>`) as that procedure, so no tool needs its own command
+  files. `CLAUDE.md`, `.claude/commands/`, `.cursor/rules/karni.mdc`,
+  `.cursor/commands/`, `.windsurf/rules/karni.md`, `.windsurf/workflows/`,
+  `.github/copilot-instructions.md`, `.github/prompts/`, `.clinerules/karni.md`,
+  `.junie/AGENTS.md` and `CONVENTIONS.md` are deprecated and removed in 1.0. A
+  project that has them keeps them: `karni rules sync` keeps them up to date
+  through 0.5, `--check` still reports them when stale, and sync prints one
+  warning, `C860`, that names them. `karni doctor` mentions them once, and
+  `karni upgrade` from 0.1 writes the old tool's files again. The welcome page
+  points at AGENTS.md only. The reference apps and the scaffold keep AGENTS.md
+  alone. Run `karni rules sync` once after upgrading. See
+  [migrating](docs/migrations/0.5.md#tool-specific-agent-files-are-deprecated-keep-agentsmd).
 
 ## 0.4.0 (2026-10-22)
 

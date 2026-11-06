@@ -138,15 +138,15 @@ def test_add_merges_agents_fragment_through_project_interpreter(
     # Recorded in the project (source of truth for module guidance) ...
     recorded = generated_project / ".karni" / "modules" / "payments.md"
     assert recorded.read_text() == FRAGMENT
-    # ... and rendered into the canonical adapters between markers.
-    for rel in ("AGENTS.md", ".junie/AGENTS.md"):
-        agents = (generated_project / rel).read_text()
-        assert "<!-- karni:module:payments -->" in agents
-        assert "<!-- /karni:module:payments -->" in agents
-        assert "go through karni_payments.services" in agents
-        assert "karni context" in agents  # the generated guidance is still there
-    # Tool-specific thin adapters stay thin; the CLI carries the guidance.
-    assert "karni_payments" not in (generated_project / ".cursor/rules/karni.mdc").read_text()
+    # ... and rendered into AGENTS.md between markers.
+    agents = (generated_project / "AGENTS.md").read_text()
+    assert "<!-- karni:module:payments -->" in agents
+    assert "<!-- /karni:module:payments -->" in agents
+    assert "go through karni_payments.services" in agents
+    assert "karni context" in agents  # the generated guidance is still there
+    # No tool-specific agent file appears (deprecated since 0.5.0).
+    for rel in (".junie/AGENTS.md", ".cursor/rules/karni.mdc", "CLAUDE.md"):
+        assert not (generated_project / rel).exists(), rel
     rules = runner.invoke(app, ["rules"])
     assert rules.exit_code == 0, rules.output
     assert "[module:payments]" in rules.output

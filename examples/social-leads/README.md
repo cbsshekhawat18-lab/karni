@@ -164,13 +164,12 @@ block and middleware to the `# karni:middleware` block, so keep those markers.
 
 ## AI coding agents
 
-`karni new` generated thin agent adapters: `AGENTS.md`, `CLAUDE.md`,
-`.cursor/rules/karni.mdc`, `.windsurf/rules/karni.md`,
-`.github/copilot-instructions.md`, `.clinerules/karni.md`, `CONVENTIONS.md`,
-`.junie/AGENTS.md` and slash commands. They all say the same thing: run
-`karni context` and `karni rules` first. Do not edit them. Put project rules
-in `karni.rules.py` and run `karni rules sync` (`make check` fails when they
-are stale). `karni mcp` serves the same surface over MCP.
+`karni new` generated `AGENTS.md`, the instructions coding agents read. It
+says to run `karni context` and `karni rules` first, lists the procedures for
+routine tasks, and reads a request that starts with `/new-app` (or another
+procedure's name) as that procedure. Do not edit it. Put project rules in
+`karni.rules.py` and run `karni rules sync` (`make check` fails when it is
+stale). `karni mcp` serves the same surface over MCP.
 
 ## Production
 

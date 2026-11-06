@@ -18,8 +18,8 @@ Everything is read from this checkout, never typed from memory:
   by scripts/gen_reference_ui.mjs;
 - modules: modules/*/pyproject.toml (and ui/package.json);
 - error codes: the registries docs/errors.md is generated from;
-- make targets: the scaffold's Makefile; slash commands: karni.agent's
-  procedures and the command adapters in agent_adapters.toml;
+- make targets: the scaffold's Makefile; procedures: karni.agent's
+  procedures;
 - status: :data:`CAPABILITIES` below. A capability is ``stable`` only with
   evidence (a reference-application file and a phrase in it), checked on
   every run, so a claim cannot outlive the code that backs it.
@@ -438,13 +438,14 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "agents",
-        "Adapter files for every supported agent tool from one rule set (`karni rules sync`)",
-        ((f"{EH}/AGENTS.md", "karni context"), (f"{EH}/.cursor/commands/new-model.md", "")),
+        "AGENTS.md, the one agent file, generated from the rule set (`karni rules sync`)",
+        ((f"{EH}/AGENTS.md", "karni context"), (f"{EH}/AGENTS.md", "karni rules sync")),
     ),
     Capability(
         "agents",
-        "Slash commands for the routine tasks (`/new-model`, `/new-page`, …)",
-        ((f"{EH}/.claude/commands/new-model.md", "karni context"),),
+        "Procedures for the routine tasks (`new-model`, `new-page`, …), listed in AGENTS.md: "
+        "`karni rules --procedure <name>`, or `/<name>` in a request",
+        ((f"{EH}/AGENTS.md", "asks for that procedure"),),
     ),
     Capability("agents", "`karni explain <code>`: why an error happens and the fix, offline"),
     Capability(
@@ -484,7 +485,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         "agents",
         "The `/new-app` flow, from a one-line request to a running app: recipes (`karni recipes "
         "list --match`, `show`, the `karni.recipes` entry points, the blank start), the "
-        "`new-app` procedure and rule K311 in every adapter, and the MCP tools `recipes`, "
+        "`new-app` procedure and rule K311 in AGENTS.md, and the MCP tools `recipes`, "
         "`spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`, each returning "
         "JSON with a published schema. Experimental tier",
     ),
@@ -1211,7 +1212,7 @@ def errors_section() -> list[str]:
     return out
 
 
-# --- make targets and slash commands --------------------------------------------
+# --- make targets and procedures ------------------------------------------------
 
 
 def make_targets() -> list[tuple[str, list[str]]]:
@@ -1226,39 +1227,32 @@ def make_targets() -> list[tuple[str, list[str]]]:
     return targets
 
 
-def procedures() -> tuple[list[Any], list[dict[str, Any]]]:
+def procedures() -> list[Any]:
     from karni.agent import PROCEDURES
 
-    adapters = tomllib.loads(
-        (ROOT / "packages" / "karni-cli" / "karni_cli" / "agent_adapters.toml").read_text(
-            encoding="utf-8"
-        )
-    )
-    return list(PROCEDURES), list(adapters.get("commands", []))
+    return list(PROCEDURES)
 
 
-def make_and_slash_section() -> list[str]:
+def make_and_procedures_section() -> list[str]:
     targets = [
         (f"`make {t}`", ", then ".join(f"`{c}`" for c in cmds)) for t, cmds in make_targets()
     ]
-    procs, adapters = procedures()
-    where = [(a["tool"], f"`{a['dir']}/<name>{a['suffix']}`") for a in adapters]
+    procs = procedures()
     return [
         "## Make targets",
         "",
         "The Makefile `karni new` writes. Every target is a thin alias for a `karni` command.",
         "",
         *table(("Target", "Runs"), targets),
-        "## Slash commands",
+        "## Procedures",
         "",
-        "One per routine task, written for each agent tool by `karni new` and "
-        "`karni rules sync`. `karni rules --procedure <name>` prints the same steps.",
+        "One per routine task. AGENTS.md lists them, `karni rules --procedure <name>` prints "
+        "the steps, and an agent reads a request that starts with `/<name>` as that procedure.",
         "",
         *table(
-            ("Command", "Arguments", "What it does"),
+            ("Procedure", "Arguments", "What it does"),
             [(f"`/{p.name}`", f"`{p.argument_hint}`", p.description) for p in procs],
         ),
-        *table(("Tool", "Written to"), where),
     ]
 
 
@@ -1294,7 +1288,7 @@ CONTENTS: tuple[tuple[str, str], ...] = (
     ("Modules", "modules"),
     ("Error codes", "error-codes"),
     ("Make targets", "make-targets"),
-    ("Slash commands", "slash-commands"),
+    ("Procedures", "procedures"),
 )
 
 
@@ -1302,7 +1296,7 @@ def render_reference(exports: list[dict[str, Any]]) -> str:
     out = [
         "---",
         "description: Every Karni command, base class, model option, setting, component, hook, "
-        "module, error code, make target and slash command, generated from the source.",
+        "module, error code, make target and procedure, generated from the source.",
         "---",
         "",
         "# Reference",
@@ -1326,7 +1320,7 @@ def render_reference(exports: list[dict[str, Any]]) -> str:
         ui_section(exports),
         modules_section(),
         errors_section(),
-        make_and_slash_section(),
+        make_and_procedures_section(),
     ):
         out += part
     text = "\n".join(out)
@@ -1391,8 +1385,8 @@ def readme_blocks(exports: list[dict[str, Any]]) -> dict[str, list[str]]:
                 f"- `{m['status']}` `karni add {m['short']}`: {first_sentence(m['description'])}"
             )
     blocks["modules"] = module_lines
-    procs, _ = procedures()
-    blocks["agents"] += ["", "Slash commands: " + ", ".join(f"`/{p.name}`" for p in procs) + "."]
+    procs = procedures()
+    blocks["agents"] += ["", "Procedures: " + ", ".join(f"`/{p.name}`" for p in procs) + "."]
     return blocks
 
 

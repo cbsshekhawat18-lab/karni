@@ -170,6 +170,15 @@ def test_the_first_prompt_is_the_new_app_flow(first_boot: None, client: Any) -> 
     assert "Event model" not in html.split('id="prompt"')[1].split("</pre>")[0]
 
 
+def test_the_agent_section_points_at_agents_md_only(first_boot: None, client: Any) -> None:
+    """AGENTS.md is the one agent file (0.5.0): no tool-specific file is listed or asked for."""
+    assert inventory.ADAPTERS == (("Any coding agent", "AGENTS.md"),)
+    html = client.get("/").content.decode()
+    assert "AGENTS.md tells the agent that this asks for the new-app procedure" in html
+    for gone in ("CLAUDE.md", ".cursor/", "copilot-instructions", ".junie/", "Not written:"):
+        assert gone not in html, gone
+
+
 def test_renders_with_zero_models(first_boot: None, client: Any, settings: Any) -> None:
     settings.KARNI_CONTEXT_SKIP_APPS = frozenset(cfg.label for cfg in apps.get_app_configs())
     assert inventory.models() == []
