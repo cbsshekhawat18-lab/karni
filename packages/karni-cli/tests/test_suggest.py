@@ -399,3 +399,28 @@ def test_karni_doctor_ends_with_the_suggestions(
     monkeypatch.setattr(project_mod, "run_manage", core_answer([]))
     out = runner.invoke(app, ["doctor", "-q"]).stdout
     assert any(line.split()[:2] == ["suggestions", "none"] for line in out.splitlines())
+
+
+def test_the_cli_reads_every_marker_and_a_colonless_one() -> None:
+    line = "q()  # karni: allow(raw-sql): totals  # karni: allow(suggest-aggregate): one-off"
+    assert suggest_mod._marker([line], "suggest-aggregate", (1,)) == "silenced"
+    bare = ["x  # karni: allow(suggest-unused-module)"]
+    assert suggest_mod._marker(bare, "suggest-unused-module", (1,)) == "no-reason"
+
+
+def test_suggest_json_says_when_the_project_side_failed(runner, tmp_path, monkeypatch) -> None:
+    """Area 1 F7: an empty list with exit 0 read as a clean project."""
+    from karni_cli.project import CliError
+
+    (tmp_path / "manage.py").write_text("")
+    monkeypatch.chdir(tmp_path)
+
+    def broken(*args, **kwargs):
+        raise CliError("manage.py karni_suggest failed", code="C781")
+
+    monkeypatch.setattr(suggest_mod, "core_suggestions", broken)
+    monkeypatch.setattr(suggest_mod, "module_suggestions", lambda p: [])
+    monkeypatch.setattr(suggest_mod, "drift_suggestions", lambda p, **k: [])
+    result = runner.invoke(app, ["suggest", "--json"])
+    data = json.loads(result.stdout)
+    assert data["suggestions"] == [] and "C781" in data["problems"][0]

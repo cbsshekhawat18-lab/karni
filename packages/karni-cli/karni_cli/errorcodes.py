@@ -1420,6 +1420,16 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Pick another name or --output-dir, or remove or rename the folder if it is a "
         "leftover. To change an existing project, use karni make, karni add or karni build.",
     ),
+    _c(
+        "C851",
+        "The menu links to a page that is not written yet",
+        "karni build (the check step)",
+        "A `code` page in karni.yaml is a page of the project's own: karni build leaves it "
+        "alone, so a navigation entry that names it links to a route nothing serves until the "
+        "project writes the page (karni.E533).",
+        "Add the page's route to frontend/src/routes.tsx (karni make page <name> --kind blank "
+        "starts one), then run karni build again. The routes are in the message.",
+    ),
 )
 
 

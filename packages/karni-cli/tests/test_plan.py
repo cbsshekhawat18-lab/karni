@@ -1209,3 +1209,24 @@ def test_a_hand_written_pages_place_is_not_a_navigation_change() -> None:
     ctx = SimpleNamespace(current=reordered, desired=data, entity_renames={}, add=added.append)
     plan_mod._pages(ctx)  # type: ignore[arg-type]
     assert [c.target for c in added] == ["navigation"]
+
+
+def test_a_menu_the_settings_hold_whole_is_not_a_change() -> None:
+    """Area 1 F6: the exported menu drops an entry for an unwritten `code` page, so the plan kept
+    a `~ KARNI_NAVIGATION` change no build applies."""
+    from types import SimpleNamespace
+
+    full = [{"label": "Home", "route": "/"}, {"label": "Insights", "route": "/insights"}]
+    shorter = [{"label": "Home", "route": "/"}]
+    added: list[Change] = []
+    ctx = SimpleNamespace(
+        current={"navigation": shorter},
+        desired={"navigation": full},
+        facts={"settings": {"KARNI_NAVIGATION": full}},
+        add=added.append,
+    )
+    plan_mod._navigation(ctx)  # type: ignore[arg-type]
+    assert added == []
+    ctx.facts = {"settings": {"KARNI_NAVIGATION": shorter}}
+    plan_mod._navigation(ctx)  # type: ignore[arg-type]
+    assert [c.target for c in added] == [plan_mod.MENU]

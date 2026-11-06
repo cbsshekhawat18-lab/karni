@@ -89,7 +89,27 @@ _NO_REASON = " (A karni: allow marker without a reason does not silence it.)"
 _MARKDOWN_NAME = re.compile(r"(^|_)(markdown|md)$")
 _MARKDOWN_HELP = re.compile(r"\bmarkdown\b", re.IGNORECASE)
 _GROUP_BY = re.compile(r"\bGROUP\s+BY\b", re.IGNORECASE)
-_ALLOW = re.compile(r"(?:#|<!--)\s*karni:\s*allow\(([^)]+)\)\s*:\s*(.*?)\s*(?:-->)?$")
+_ALLOW_START = re.compile(r"(?:#|<!--)\s*karni:\s*allow\(")
+_ALLOW = re.compile(r"(?:#|<!--)\s*karni:\s*allow\(([^)]+)\)\s*(?::\s*(.*?))?\s*(?:-->)?\s*$")
+
+
+def allows(text: str) -> list[tuple[list[str], str]]:
+    """Every ``karni: allow(<rules>): <reason>`` marker on one line: ``(rules, reason)``.
+
+    A line may carry several (``# karni: allow(raw-sql): ... # karni: allow(suggest-x): ...``),
+    each reason running to the next marker. A marker without ``: <reason>`` has an empty one.
+    """
+    starts = [m.start() for m in _ALLOW_START.finditer(text)]
+    found: list[tuple[list[str], str]] = []
+    for begin, end in zip(starts, [*starts[1:], len(text)], strict=True):
+        match = _ALLOW.match(text[begin:end])
+        if match is not None:
+            found.append(
+                ([n.strip() for n in match.group(1).split(",")], (match.group(2) or "").strip())
+            )
+    return found
+
+
 _SKIP_DIRS = frozenset(
     {
         ".git",
@@ -184,15 +204,12 @@ def marker(lines: list[str], rule: str, candidates: Iterable[int]) -> str | None
     for number in candidates:
         if not 1 <= number <= len(lines):
             continue
-        match = _ALLOW.search(lines[number - 1])
-        if match is None:
-            continue
-        rules = [name.strip() for name in match.group(1).split(",")]
-        if rule not in rules:
-            continue
-        if match.group(2).strip():
-            return "silenced"
-        found = "no-reason"
+        for rules, reason in allows(lines[number - 1]):
+            if rule not in rules:
+                continue
+            if reason:
+                return "silenced"
+            found = "no-reason"
     return found
 
 

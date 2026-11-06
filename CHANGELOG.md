@@ -1565,7 +1565,13 @@ apply codemods and list the manual steps. This file is the human summary.
   `karni build --dry-run` no longer report `~ navigation` for a hand-written
   page's place in `routes.tsx`. Project commands print the system check
   warnings as one line (`KARNI_SYSTEM_CHECK_OUTPUT=full` restores the full
-  text, `karni check` keeps it).
+  text, `karni check` keeps it). A spec whose navigation names `code` pages
+  converges: the plan compares the settings' whole menu, and the build's
+  check stops with C851 naming the routes the project must write.
+  `karni suggest --json` has a `problems` list, so an empty `suggestions` after
+  a failed project side is not read as clean. A `karni: allow(rule)` marker
+  with no colon counts as one without a reason, and every marker on a line is
+  read, in the suggestions, the architecture rules and the agent rules.
 
 ## 0.4.0 (2026-10-22)
 

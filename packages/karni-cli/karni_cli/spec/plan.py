@@ -1161,6 +1161,11 @@ def _navigation(ctx: _Context) -> None:
     old, new = ctx.current.get("navigation"), ctx.desired.get("navigation")
     if old == new:
         return
+    # The exported menu leaves out an entry whose route no page of the project serves (a `code`
+    # page not written yet), so a menu the build wrote reads back shorter. The settings hold the
+    # whole list: when it is the one the spec gives, there is nothing to apply.
+    if new is not None and ctx.facts.get("settings", {}).get("KARNI_NAVIGATION") == new:
+        return
     if new is None:
         ctx.add(Change("pages", "remove", MENU, navigation.summary(old)))
     else:

@@ -5229,6 +5229,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Pick another name or --output-dir, or remove or rename the folder if it is a leftover. To change an existing project, use karni make, karni add or karni build.
 
+<a id="c851"></a>
+
+### C851: The menu links to a page that is not written yet
+
+*karni command* · from `karni build (the check step)`
+
+**Why Karni objects.** A `code` page in karni.yaml is a page of the project's own: karni build leaves it alone, so a navigation entry that names it links to a route nothing serves until the project writes the page (karni.E533).
+
+**Fix.** Add the page's route to frontend/src/routes.tsx (karni make page <name> --kind blank starts one), then run karni build again. The routes are in the message.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.

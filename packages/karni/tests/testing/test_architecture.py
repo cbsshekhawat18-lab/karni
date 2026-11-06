@@ -439,3 +439,18 @@ def test_run_checks_returns_strings(monkeypatch) -> None:
     monkeypatch.setattr(architecture, "project_app_configs", lambda: [])
     monkeypatch.setattr(_source, "project_app_configs", lambda: [])
     assert architecture.run_checks() == []
+
+
+def test_every_marker_on_a_line_is_read(tmp_path: Path) -> None:
+    """Area 1 F9: only the first marker on a line was read."""
+    f = tmp_path / "x.py"
+    f.write_text(
+        "q()  # karni: allow(raw-sql): reporting totals  # karni: allow(http-client): one call\n"
+    )
+    _source._file_lines.cache_clear()
+    for rule in ("raw-sql", "http-client"):
+        assert (
+            check_optout(f, rule, [1], Violation(rule=rule, location="x.py:1", message="m")) == []
+        )
+    first = _source.find_allow(f, "raw-sql", [1])
+    assert first is not None and first.reason == "reporting totals"

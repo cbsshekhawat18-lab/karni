@@ -464,7 +464,7 @@ karni suggest [OPTIONS]
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `--json` |  | Print {version, enabled, suggestions: [{code, rule, file, line, message, fix, command}]} (docs/assets/karni-suggestions.schema.json). |
+| `--json` |  | Print {version, enabled, suggestions: [{code, rule, file, line, message, fix, command}], problems: [...]} (docs/assets/karni-suggestions.schema.json). |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
@@ -2832,6 +2832,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C780`](errors.md#c780) | cli | The project's karni predates suggestions |
 | [`C781`](errors.md#c781) | cli | manage.py karni_suggest failed |
 | [`C850`](errors.md#c850) | cli | The project folder already exists |
+| [`C851`](errors.md#c851) | cli | The menu links to a page that is not written yet |
 
 ### Agent rules (`K`)
 

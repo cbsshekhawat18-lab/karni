@@ -973,11 +973,34 @@ def _test(root: Path, state: dict[str, Any], opts: Options) -> str:
     return summary
 
 
+_UNSERVED = re.compile(r"karni\.E533: .*? links to (\S+?), which no page")
+
+
+def _unserved_routes(out: str) -> list[str]:
+    """The routes of ``karni check``'s output when E533 is the only finding, else ``[]``."""
+    if any(
+        "karni.E" in line and "karni.E533" not in line and "karni.E702" not in line
+        for line in out.splitlines()
+    ):
+        return []
+    return sorted(set(_UNSERVED.findall(out)))
+
+
 def _check(root: Path, state: dict[str, Any], opts: Options) -> str:
     from karni_cli.commands.check import run_checks
 
     passed, out = run_checks(root, docker=opts.docker, service=opts.service)
     if not passed:
+        routes = _unserved_routes(out)
+        if routes:
+            raise Stop(
+                "C851",
+                "The menu links to pages of your own that are not written yet: "
+                f"{', '.join(routes)}.",
+                "a `code` page in karni.yaml is yours to write: add its route to "
+                "frontend/src/routes.tsx (karni make page <name> --kind blank starts one), "
+                "then run karni build again",
+            )
         tail = "\n".join(out.strip().splitlines()[-_TAIL:])
         raise Stop("C282", "karni check fails.", "karni check shows every finding", tail)
     return "ok"

@@ -243,14 +243,18 @@ matching line of `karni.yaml` or the README (in a README as
 `<!-- karni: allow(suggest-add-module): <reason> -->`). For SUG003 and SUG004
 a marker on one query or model leaves that one out of the count. A marker
 without a reason does not silence a suggestion, and never fails the run:
-the suggestion stays and says so.
+the suggestion stays and says so. A line may carry several markers, each
+read (`# karni: allow(raw-sql): ... # karni: allow(suggest-aggregate): ...`).
 
 **Off for a project.** `KARNI_SUGGESTIONS = False` in `config/settings.py`
 turns every suggestion off. `karni check` and `karni doctor` then print
 nothing about them. The CLI reads that plain line without starting Django.
 
 **For agents.** `karni suggest --json` prints `{version, enabled,
-suggestions: [{code, rule, file, line, message, fix, command}]}`. `command`
+suggestions: [{code, rule, file, line, message, fix, command}], problems}`.
+`problems` lists why the project's own suggestions are missing (its
+`manage.py karni_suggest` could not run, C781): when it is not empty, an empty
+`suggestions` is not a clean project. `command`
 is the exact command when the fix is one, else `null`, and `line` is `null`
 for a whole file. The shape is versioned (`version: 1`) and published as
 [`karni-suggestions.schema.json`](assets/karni-suggestions.schema.json),
