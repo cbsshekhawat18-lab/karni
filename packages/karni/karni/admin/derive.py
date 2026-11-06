@@ -14,7 +14,6 @@ Caps are read from settings on every call (``KARNI_ADMIN_LIST_DISPLAY_MAX``,
 
 from __future__ import annotations
 
-import inspect
 from collections.abc import Iterable
 from typing import Any
 
@@ -134,22 +133,17 @@ def derive_list_display(model: type[models.Model]) -> list[str]:
 
 
 def derive_help(model: type[models.Model]) -> str:
-    """The line that says what ``model`` is for: ``Karni.help``, else its docstring's first line.
+    """The line that says what ``model`` is for: ``class Karni: help``, nothing else.
 
-    Django gives a model without a docstring a generated one (``Name(id, name)``),
-    which is not help, so it is skipped. Returns ``""`` when there is none.
+    The docstring is for developers and never shown to the people who run the
+    app (Django's generated ``Name(id, name)`` least of all). Returns ``""``
+    without a ``help`` option.
     """
     from karni.meta import karni_option
 
     declared = karni_option(model, "help", None)
     if declared:
         return str(declared).strip().replace("``", "")
-    doc = model.__dict__.get("__doc__") or ""
-    if not doc or doc.startswith(f"{model.__name__}("):
-        return ""
-    for line in inspect.cleandoc(doc).splitlines():
-        if line.strip():
-            return line.strip().replace("``", "")
     return ""
 
 

@@ -15,7 +15,7 @@
     }
     Array.prototype.forEach.call(main.children, function (child) {
       if (child === body || child.getAttribute("role")) return;
-      if (child.querySelector("[id=submit-row],#changelist-actions,.pagination") || child.tagName === "FOOTER") {
+      if (child.querySelector("[id=submit-row],#changelist-actions,.pagination,.karni-pagination") || child.tagName === "FOOTER") {
         child.setAttribute("role", "contentinfo");
       } else if (child === main.firstElementChild) {
         child.setAttribute("role", "banner");
@@ -38,7 +38,12 @@
       }
     );
   }
-  function run() { landmarks(); names(); }
+  function sorting() {
+    Array.prototype.forEach.call(document.querySelectorAll("#result_list thead th.sorted"), function (th) {
+      th.setAttribute("aria-sort", th.classList.contains("descending") ? "descending" : "ascending");
+    });
+  }
+  function run() { landmarks(); names(); sorting(); }
   document.addEventListener("DOMContentLoaded", run);
   window.addEventListener("load", run);
   new MutationObserver(names).observe(document.documentElement, { childList: true, subtree: true });

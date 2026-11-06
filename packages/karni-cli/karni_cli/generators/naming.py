@@ -52,6 +52,96 @@ def pluralize(word: str) -> str:
     return word + "s"
 
 
+# -- the plural Django cannot guess (mirrors karni.admin.plurals, which the admin shows) --
+
+_IRREGULAR: dict[str, str] = {
+    "person": "people",
+    "man": "men",
+    "woman": "women",
+    "child": "children",
+    "foot": "feet",
+    "tooth": "teeth",
+    "mouse": "mice",
+    "goose": "geese",
+    "ox": "oxen",
+    "datum": "data",
+    "criterion": "criteria",
+    "phenomenon": "phenomena",
+    "analysis": "analyses",
+    "basis": "bases",
+    "crisis": "crises",
+    "diagnosis": "diagnoses",
+    "thesis": "theses",
+    "axis": "axes",
+    "leaf": "leaves",
+    "life": "lives",
+    "wife": "wives",
+    "knife": "knives",
+    "shelf": "shelves",
+    "half": "halves",
+    "wolf": "wolves",
+    "thief": "thieves",
+    "loaf": "loaves",
+    "hero": "heroes",
+    "potato": "potatoes",
+    "tomato": "tomatoes",
+    "echo": "echoes",
+    "veto": "vetoes",
+}
+_UNCOUNTABLE = frozenset(
+    {
+        "series",
+        "species",
+        "sheep",
+        "fish",
+        "news",
+        "equipment",
+        "information",
+        "data",
+        "metadata",
+        "staff",
+        "feedback",
+        "software",
+        "hardware",
+        "advice",
+        "research",
+        "traffic",
+    }
+)
+_STAYS_SINGULAR = ("ss", "us", "is", "as")
+
+
+def _plural_word(word: str) -> str:
+    lower = word.lower()
+    if lower in _UNCOUNTABLE:
+        return word
+    if lower in _IRREGULAR:
+        found = _IRREGULAR[lower]
+        return found.capitalize() if word[:1].isupper() else found
+    if lower.endswith("y") and len(lower) > 1 and lower[-2] not in _VOWELS:
+        return word[:-1] + "ies"
+    if lower.endswith("s") and not lower.endswith(_STAYS_SINGULAR):
+        return word
+    if lower.endswith(_ES_ENDINGS):
+        return word + "es"
+    return word + "s"
+
+
+def verbose_plural(model: str) -> str | None:
+    """The ``verbose_name_plural`` a model needs, or ``None`` when Django's own is right.
+
+    Django's default is the singular name plus an ``s`` (``Category`` becomes
+    "categorys"). A model class name such as ``LogEntry`` has the singular
+    "log entry", and the plural here is "log entries". The English rules are
+    the ones the admin applies (``karni.admin.plurals``), so a written plural
+    and the admin's own agree.
+    """
+    singular = " ".join(words(model))
+    head, space, last = singular.rpartition(" ")
+    plural = head + space + _plural_word(last) if last else singular
+    return plural if plural != f"{singular}s" else None
+
+
 def default_route(model: str) -> str:
     """The auto-router prefix for a model class name: ``EventType`` → ``event-types``."""
     return pluralize(kebab(model))

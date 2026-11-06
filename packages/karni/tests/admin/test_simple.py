@@ -382,11 +382,21 @@ def test_the_login_page_still_renders() -> None:
 # -- help text ----------------------------------------------------------------------
 
 
-def test_help_comes_from_karni_help_then_the_docstring_then_nothing() -> None:
+def test_help_comes_only_from_karni_help_never_the_docstring() -> None:
     assert derive_help(Widget) == "Things we sell."
-    assert derive_help(Note).startswith("Standalone soft-delete subject")
-    assert "``" not in derive_help(Note)
-    assert derive_help(Gizmo) == ""  # Django's generated docstring is not help
+    assert derive_help(Note) == ""  # its docstring is a developer note
+    assert derive_help(Gizmo) == ""  # and Django's generated docstring is not help
+
+
+def test_a_docstring_never_reaches_the_list_or_the_form() -> None:
+    note = Note.objects.create(title="Note 1")
+    client = _client(_super())
+    for page in (_url(Note, "changelist"), _url(Note, "change", note.pk)):
+        html = client.get(page).content.decode()
+        assert "Standalone soft-delete subject" not in html
+        assert 'class="karni-help"' not in html
+    gizmo = client.get(_url(Gizmo, "changelist")).content.decode()
+    assert "Gizmo(id" not in gizmo
 
 
 def test_help_shows_on_the_list_and_form_and_field_help_is_visible() -> None:

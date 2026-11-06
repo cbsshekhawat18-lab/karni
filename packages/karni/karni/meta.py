@@ -135,9 +135,10 @@ OPTIONS: Final[tuple[Option, ...]] = (
     ),
     Option(
         "help",
-        "the first line of the docstring",
+        "none",
         "One line that says what the model is for. The admin shows it at the top of the "
-        "model's list and form. Without it the first line of the model's docstring is shown.",
+        "model's list and form. Without it the admin shows no line: the docstring is for "
+        "developers and is never shown.",
         'help = "Products you sell. Prices are per unit."',
     ),
     Option(

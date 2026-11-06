@@ -56,7 +56,7 @@ from karni_cli.generators.introspect import (
     models_in,
     viewset_for,
 )
-from karni_cli.generators.naming import default_route, kebab, require_pascal
+from karni_cli.generators.naming import default_route, kebab, require_pascal, verbose_plural
 from karni_cli.generators.pysource import Import, ensure_imports, pystr, replace_or_append
 from karni_cli.project import CliError
 
@@ -197,12 +197,14 @@ def plan(
     if body.inner:
         lines += [*body.inner, ""]
     lines += body.lines
+    meta: list[str] = []
     if order is not None:
-        lines += [
-            "",
-            "    class Meta:",
-            f"        ordering = [{pystr(_field_option(specs, order, '--order'))}]",
-        ]
+        meta.append(f"        ordering = [{pystr(_field_option(specs, order, '--order'))}]")
+    plural = verbose_plural(model)
+    if plural is not None:  # Django's own "categorys" is wrong: write the right one
+        meta.append(f"        verbose_name_plural = {pystr(plural)}")
+    if meta:
+        lines += ["", "    class Meta:", *meta]
     if key is not None:
         lines += [
             "",

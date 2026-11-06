@@ -62,9 +62,16 @@ set hard_delete_selected_confirmation_template on the admin class.
             <form method="post" class="border-t border-base-200 px-4 py-3 dark:border-base-800">
                 {% csrf_token %}
 
-                {% for obj in queryset %}
-                    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk|unlocalize }}">
-                {% endfor %}
+                {% if request.POST.select_across == "1" %}
+                    <input type="hidden" name="select_across" value="1">
+                    {% for obj in queryset|slice:":1" %}
+                        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk|unlocalize }}">
+                    {% endfor %}
+                {% else %}
+                    {% for obj in queryset %}
+                        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk|unlocalize }}">
+                    {% endfor %}
+                {% endif %}
 
                 <input type="hidden" name="action" value="hard_delete_selected">
                 <input type="hidden" name="post" value="yes">

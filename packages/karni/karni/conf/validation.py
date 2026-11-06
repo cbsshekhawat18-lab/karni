@@ -118,6 +118,8 @@ class KarniSettingsModel(BaseModel):
     KARNI_PERMISSIONS_POLICY: Any = Field(default_factory=dict)
     KARNI_ADMIN_BULK_EDIT_MAX: int = Field(default=500, ge=1)
     KARNI_ADMIN_GUIDE: bool = True
+    KARNI_ADMIN_PER_PAGE: int = Field(default=25, ge=1)
+    KARNI_ADMIN_COUNT_ESTIMATE_ABOVE: int = Field(default=100000, ge=0)
     KARNI_ADMIN_LIST_DISPLAY_MAX: int = 6
     KARNI_ADMIN_LIST_FILTER_MAX: int = 6
     KARNI_ADMIN_SEARCH_MAX: int = 5

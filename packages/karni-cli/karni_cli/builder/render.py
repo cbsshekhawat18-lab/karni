@@ -54,7 +54,7 @@ from karni_cli.generators.fields import (
     render_model_body,
 )
 from karni_cli.generators.introspect import ModelInfo
-from karni_cli.generators.naming import default_route
+from karni_cli.generators.naming import default_route, verbose_plural
 from karni_cli.generators.pysource import (
     Import,
     call,
@@ -268,6 +268,9 @@ def _model_class(
         meta += ["managed = False", f"db_table = {pystr(_db_table(entity.table or ''))}"]
     if entity.order:
         meta.append(_literal(list(entity.order), "", line - 8, "ordering = "))
+    plural = verbose_plural(name)
+    if plural is not None:  # Django's own "categorys" is wrong: write the right one
+        meta.append(f"verbose_name_plural = {pystr(plural)}")
     lines += ["", f"    class Meta{f'({meta_base})' if meta_base else ''}:"]
     lines += [f"        {row}" for item in meta for row in item.splitlines()]
     options: list[tuple[str, Any]] = []

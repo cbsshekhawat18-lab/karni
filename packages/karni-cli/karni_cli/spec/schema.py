@@ -419,7 +419,7 @@ class Entity(_Node):
         None,
         description=(
             "One line that says what the entity is for, shown at the top of its admin list and "
-            "form (class Karni: help). Without it the admin shows the model's docstring."
+            "form (class Karni: help). Without it the admin shows no line."
         ),
     )
     search: Names = Field(default_factory=list, description="The viewset's search_fields.")
