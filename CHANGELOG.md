@@ -1546,6 +1546,11 @@ apply codemods and list the manual steps. This file is the human summary.
   `github.com/karni`, which is not Karni. It now links to the repository, and
   `python -m karni.links check` catches the ownerless form too.
   `docs/testing.md` opens with the four fixtures most tests use.
+- **Fixed: signing in with an emailed code did nothing.** `OtpLoginForm` reused
+  the email step's form and input for the code step, so the Code box held the
+  email address, a typed code never fit and "Sign in" sent nothing. Each step
+  is now its own form, and the form checks the address and the code itself, so
+  a blocked or incomplete submit always shows a message.
 
 ## 0.4.0 (2026-10-22)
 

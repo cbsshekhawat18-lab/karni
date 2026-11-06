@@ -81,6 +81,17 @@ class TwoFactorUnavailable extends Error {
   }
 }
 
+/** Thrown inside the form when the browser's own validation is not used (`noValidate`): a message always shows. */
+class InvalidInput extends Error {
+  constructor(
+    readonly field: "email" | "code",
+    readonly length?: number,
+  ) {
+    super(`The ${field} is not valid.`);
+    this.name = "InvalidInput";
+  }
+}
+
 function karniCode(error: KarniApiError): string | undefined {
   const data = error.data;
   if (typeof data !== "object" || data === null) return undefined;
@@ -122,6 +133,21 @@ export function describeOtpError(error: unknown): KarniErrorDescription {
       "The app has not enabled that step. Ask the site's administrator.",
       401,
     );
+  }
+  if (error instanceof InvalidInput) {
+    return error.field === "code"
+      ? described(
+          "validation",
+          "Enter the whole code",
+          `The code has ${error.length ?? 6} digits. Type them all, then sign in.`,
+          undefined,
+        )
+      : described(
+          "validation",
+          "Enter your email address",
+          "Type the address you sign in with, then ask for the code.",
+          undefined,
+        );
   }
   if (!(error instanceof KarniApiError)) return describeError(error, { action: "sign in" });
   const status = error.status;
@@ -274,6 +300,7 @@ export function OtpLoginForm({
     const email = String(new FormData(event.currentTarget).get("email") ?? "");
     setOutcome(null);
     try {
+      if (email.trim() === "") throw new InvalidInput("email");
       await login.send(email);
     } catch (error) {
       fail(error);
@@ -295,7 +322,10 @@ export function OtpLoginForm({
     const code = String(new FormData(event.currentTarget).get("code") ?? "");
     setOutcome(null);
     try {
-      const result = await login.verify(code);
+      if (!new RegExp(`^[0-9]{${login.length}}$`).test(code.trim())) {
+        throw new InvalidInput("code", login.length);
+      }
+      const result = await login.verify(code.trim());
       if ("ok" in result) {
         onSuccess?.(result.user);
       } else if ("requires2fa" in result) {
@@ -335,10 +365,13 @@ export function OtpLoginForm({
   if (!onCodeStep) {
     return (
       <form
+        // Keyed by step: React must not reuse the email step's DOM (and its typed value) for the code step.
+        key="email-step"
         className={cn("space-y-4", className)}
         onSubmit={(event) => void sendCode(event)}
         aria-busy={busy}
         data-step="email"
+        noValidate
       >
         {title !== null ? <h2 className="text-lg font-semibold">{title}</h2> : null}
         {description !== undefined ? (
@@ -378,10 +411,12 @@ export function OtpLoginForm({
   const expires = login.expiresIn !== null ? ` It expires in ${minutes(login.expiresIn)}.` : "";
   return (
     <form
+      key="code-step"
       className={cn("space-y-4", className)}
       onSubmit={(event) => void verifyCode(event)}
       aria-busy={busy}
       data-step="code"
+      noValidate
     >
       {title !== null ? <h2 className="text-lg font-semibold">{title}</h2> : null}
       <p className="text-sm text-muted-foreground">

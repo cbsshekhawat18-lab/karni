@@ -89,6 +89,34 @@ describe("OtpLoginForm", () => {
     ]);
   });
 
+  it("starts the code step with an empty code input, so a typed code fits and verifies", async () => {
+    const seen: string[] = [];
+    server.events.on("request:start", ({ request }) => {
+      if (request.url.endsWith("/otp/verify/")) seen.push(request.url);
+    });
+    const onSuccess = vi.fn();
+    mount({ onSuccess });
+    await sendTo(TEST_OTP_EMAILS[0] ?? "a@example.com");
+    const input = screen.getByLabelText("Code");
+    expect(input).toHaveValue("");
+    const user = userEvent.setup();
+    await user.type(input, TEST_LOGIN_CODE);
+    expect(input).toHaveValue(TEST_LOGIN_CODE);
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(seen).toHaveLength(1);
+    server.events.removeAllListeners();
+  });
+
+  it("shows a message when the code is incomplete instead of doing nothing", async () => {
+    mount();
+    await sendTo(TEST_OTP_EMAILS[0] ?? "a@example.com");
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Code"), "12");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Enter the whole code");
+  });
+
   it("has one code input sized to the code, for the phone's one-time-code suggestion", async () => {
     server.use(
       http.post("*/api/auth/otp/send/", () =>
