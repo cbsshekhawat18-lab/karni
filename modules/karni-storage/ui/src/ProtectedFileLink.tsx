@@ -11,7 +11,7 @@
  */
 import { cn, useKarniClient } from "@karni/ui";
 import * as React from "react";
-import { useProtectedFileLink } from "./hooks";
+import { requestPath, useProtectedFileLink } from "./hooks";
 import type { FileLink } from "./types";
 
 export interface ProtectedFileLinkProps extends Omit<
@@ -58,7 +58,7 @@ export function ProtectedFileLink({
     setBusy(true);
     setFailed(null);
     try {
-      const link = await client.request<FileLink>(href, {
+      const link = await client.request<FileLink>(requestPath(href), {
         query: { download: download ? "1" : undefined },
       });
       if (open !== undefined) open(link.url);

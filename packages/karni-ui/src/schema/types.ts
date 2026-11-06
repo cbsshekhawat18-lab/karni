@@ -92,6 +92,12 @@ export interface FieldDef {
    * and the `facets/` counts exist for it (FacetPanel).
    */
   taxonomy?: string;
+  /**
+   * Experimental. True on a file or image field the storage module protects
+   * (`x-karni-storage` with `protected: true`): its value is a download path that
+   * needs the caller's credentials, so a plain link to it answers 401 in token auth.
+   */
+  protected?: true;
   /** Declaration order in the schema (response props first, request-only appended). */
   order: number;
 }

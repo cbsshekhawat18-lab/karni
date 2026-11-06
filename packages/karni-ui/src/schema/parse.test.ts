@@ -146,6 +146,23 @@ describe("parseOpenApi — handwritten fixture", () => {
     expect(tags.relationValueType).toBe("integer");
   });
 
+  it("marks a protected file field from x-karni-storage (experimental)", () => {
+    const doc = structuredClone(openApiFixture) as unknown as {
+      components: { schemas: Record<string, { properties?: Record<string, object> }> };
+    };
+    const storage = { protected: true, max_size: 1000, content_types: [], thumbnails: [] };
+    for (const schema of Object.values(doc.components.schemas)) {
+      const poster = schema.properties?.["poster"];
+      if (poster !== undefined && schema.properties !== undefined) {
+        schema.properties["poster"] = { ...poster, "x-karni-storage": storage };
+      }
+    }
+    const marked = fieldOf(parseOpenApi(doc).resources["events"] as ResourceSchema, "poster");
+    expect(marked.protected).toBe(true);
+    // a file field without the extension, or with protected false, is a plain link
+    expect(fieldOf(events as ResourceSchema, "poster").protected).toBeUndefined();
+  });
+
   it("marks kind file from the request side's format: binary (D1)", () => {
     if (events === undefined) return;
     const poster = fieldOf(events, "poster");

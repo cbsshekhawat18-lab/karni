@@ -199,6 +199,7 @@ interface PropertyInfo {
   initial?: readonly string[];
   tree?: TreeRef;
   taxonomy?: string;
+  protectedFile?: true;
 }
 
 function normalizeType(schema: SchemaObject): { type: string | undefined; nullable: boolean } {
@@ -394,6 +395,9 @@ function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo 
   const taxonomy = resolved["x-karni-taxonomy"] ?? raw["x-karni-taxonomy"];
   if (typeof taxonomy === "string" && taxonomy !== "") info.taxonomy = taxonomy;
 
+  const storage = resolved["x-karni-storage"] ?? raw["x-karni-storage"];
+  if (isRecord(storage) && storage["protected"] === true) info.protectedFile = true;
+
   // drf-spectacular nullable/blank enums: oneOf [XEnum, BlankEnum?, NullEnum?].
   const composition = resolved.oneOf ?? resolved.anyOf;
   if (Array.isArray(composition)) {
@@ -556,6 +560,9 @@ function mergeField(
   if (tree !== undefined && relation !== undefined) field.tree = tree;
   const taxonomy = responseInfo?.taxonomy ?? requestInfo?.taxonomy;
   if (taxonomy !== undefined && relation !== undefined) field.taxonomy = taxonomy;
+  if (responseInfo?.protectedFile === true || requestInfo?.protectedFile === true) {
+    field.protected = true;
+  }
 
   return field;
 }

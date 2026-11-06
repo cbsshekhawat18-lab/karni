@@ -43,6 +43,21 @@ export function uploadReference(token: string, name: string): File {
   return new File([token], name, { type: UPLOAD_REFERENCE_TYPE });
 }
 
+/**
+ * The API gives a download path as an absolute URL on the host Django saw (behind
+ * a dev proxy, not the page's). The client resolves a path against its own base,
+ * so ask for the path and the query only.
+ */
+export function requestPath(href: string): string {
+  if (!/^https?:\/\//.test(href)) return href;
+  try {
+    const url = new URL(href);
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return href;
+  }
+}
+
 function resourcePath(resource: string, field: string, step: "upload" | "confirm"): string {
   const trimmed = resource.replace(/^\/+|\/+$/g, "");
   return `/${trimmed}/files/${field}/${step}/`;
@@ -185,7 +200,7 @@ export function useProtectedFileLink(
     queryKey: ["karni-storage", "link", href ?? "", size ?? "", download === true],
     enabled: enabled && typeof href === "string" && href !== "",
     queryFn: ({ signal }) =>
-      client.request<FileLink>(String(href), {
+      client.request<FileLink>(requestPath(String(href)), {
         query: { size, download: download === true ? "1" : undefined },
         signal,
       }),

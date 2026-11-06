@@ -262,7 +262,12 @@ import { ProtectedFileInput, ProtectedFileLink, ProtectedImage } from "@karni/st
   progress bar, and the form saves the confirmed token. On local storage the
   file itself goes with the form.
 - `ProtectedFileLink` asks the download path for a signed link on click and
-  opens it, so it works with session and JWT auth alike.
+  opens it, so it works with session and JWT auth alike. `ResourceDetail` and
+  `ResourceTable` use it by themselves for every protected field: the schema's
+  `x-karni-storage` marks the field, and importing `@karni/storage-ui` registers
+  the link (`registerProtectedFileLink` from `@karni/ui` swaps in your own). A
+  download path the API gives as an absolute URL on another host (behind a dev
+  proxy) is asked at the client's own origin.
 - `ProtectedImage` shows an image or one of its thumbnails through a signed
   link.
 - `useProtectedUpload` and `useProtectedFileLink` are the hooks under them.

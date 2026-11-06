@@ -6,6 +6,8 @@
  * Experimental: every name here may change in a minor release, with a
  * CHANGELOG entry.
  */
+import { registerProtectedFileLink } from "@karni/ui";
+import { ProtectedFileLink } from "./ProtectedFileLink";
 import { registerStorageRoles } from "./roles";
 
 export { ProtectedFileInput } from "./ProtectedFileInput";
@@ -38,3 +40,7 @@ export { STORAGE_COMPONENT_ROLES, registerStorageRoles } from "./roles";
 export type { ComponentRoleDefinition } from "./roles";
 
 registerStorageRoles();
+
+// ResourceDetail and ResourceTable show every protected file field (the schema's
+// `x-karni-storage`) through the signed link, in session and token auth alike.
+registerProtectedFileLink(ProtectedFileLink);

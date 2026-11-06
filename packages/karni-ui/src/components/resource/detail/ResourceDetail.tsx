@@ -1,3 +1,4 @@
+import { protectedFileLinkFor } from "../protected-file";
 import { HEADING_TAGS, nextHeadingLevel, type HeadingLevel } from "../../../lib/heading";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
@@ -292,7 +293,16 @@ function DefaultValue(props: {
       return <>{field.enumLabels?.[String(value)] ?? humanizeValue(String(value))}</>;
     case "relation":
       return <RelationValue value={value} />;
-    case "file":
+    case "file": {
+      const Protected = protectedFileLinkFor(field);
+      if (Protected !== null) {
+        return (
+          <Protected
+            href={String(value)}
+            className="rounded-sm font-medium text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+        );
+      }
       return (
         <a
           href={String(value)}
@@ -303,6 +313,7 @@ function DefaultValue(props: {
           {fileBasename(String(value))}
         </a>
       );
+    }
     case "json":
       return (
         <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">

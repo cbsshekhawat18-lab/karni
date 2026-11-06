@@ -30,6 +30,24 @@ describe("ProtectedFileLink", () => {
     expect(api.calls[0]?.accept).toBe("application/json");
   });
 
+  it("asks the client's own origin when the API gave an absolute URL on another host", async () => {
+    const user = userEvent.setup();
+    // What Django saw behind a dev proxy: its own host, not the page's.
+    const api = fakeApi((call) =>
+      call.url.startsWith(PATH) ? { body: LINK } : { status: 599, body: {} },
+    );
+    const open = vi.fn();
+    renderWithKarni(
+      <ProtectedFileLink href="http://127.0.0.1:8790/api/products/7/files/manual/" open={open}>
+        Manual
+      </ProtectedFileLink>,
+      api,
+    );
+    await user.click(screen.getByRole("link", { name: "Manual" }));
+    await waitFor(() => expect(open).toHaveBeenCalledWith(LINK.url));
+    expect(api.calls[0]?.url).toBe(PATH);
+  });
+
   it("asks for an attachment when download is set", async () => {
     const user = userEvent.setup();
     const api = fakeApi(() => ({ body: LINK }));

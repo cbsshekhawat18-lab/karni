@@ -1574,6 +1574,14 @@ apply codemods and list the manual steps. This file is the human summary.
   (`ResourceDetail` puts its groups under its title), and `TermsGate` renders
   a `<main>` with an `<h1>` (`page={false}` inside a page that has both). See
   [migration](docs/migrations/0.5.md#headings-follow-the-pages-outline).
+- **Fixed: a protected file field was a dead link on the generated detail
+  page.** `ResourceDetail` and `ResourceTable` showed a protected file as a
+  plain link, which answers 401 in token auth. The schema's `x-karni-storage`
+  now marks the field (`FieldDef.protected`), and `@karni/storage-ui` registers
+  `ProtectedFileLink` (`registerProtectedFileLink` in `@karni/ui`), so both
+  screens open it through a signed link. The link also asks a download path
+  given as an absolute URL on another host (a dev proxy) at the client's own
+  origin.
 
 ## 0.4.0 (2026-10-22)
 
