@@ -24,6 +24,9 @@ then `make migrate`. Register `https://<host>/payments/webhook/stripe/` (or
 - **Models** (all on `karni.models.BaseModel`): `Payment`, `Refund`,
   `WebhookEvent` (the `(provider, event_id)` dedupe record). The admin is
   derived through `AdminMeta`, with no `admin.py`.
+- **Role**: `payments-admin` is declared by the module (the `karni.roles` entry
+  point), so `karni migrate` creates it and a project writes nothing in
+  `KARNI_ROLES`. Give a person the role to let them refund.
 - **API** (auto-routed, authenticated only):
   - `GET /api/payments/`: owner-scoped. The `payments-admin` role sees all.
   - `POST /api/payments/checkout/`: create a pending payment + provider

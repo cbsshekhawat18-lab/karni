@@ -1574,6 +1574,14 @@ apply codemods and list the manual steps. This file is the human summary.
 - **A sent form without `karni-next`.** When the hidden field is missing and the
   `Referer` (or the field) names the form's own address, the 303 goes to `/`
   instead of a page that answers 405.
+- **A test-provider webhook with an unknown status.** A signed event whose
+  `status` is not in `ParsedEventStatus` parses with `status=None` and is
+  recorded as processed with a note, as for any unmapped event, instead of a
+  500 the sender would retry.
+- **The `payments-admin` role ships with the module.** `karni-payments` declares
+  it through the `karni.roles` entry point, so `karni migrate` creates it after
+  `karni add payments` and refunds are reachable without a hand-written
+  `KARNI_ROLES` entry.
 
 ## 0.4.0 (2026-10-22)
 

@@ -118,3 +118,18 @@ def test_duplicate_with_null_processed_at_is_reenqueued(
     assert stored.processed_at is not None
     payment.refresh_from_db()
     assert payment.status == Payment.Status.SUCCEEDED
+
+
+def test_a_status_outside_the_vocabulary_is_ignored_not_a_500(
+    deliver_webhook, make_payment, django_capture_on_commit_callbacks
+) -> None:
+    payment = make_payment(provider_payment_id="pi_9")
+    with django_capture_on_commit_callbacks(execute=True):
+        response = deliver_webhook(
+            {"id": "evt_9", "type": "payment.pending", "status": "pending", "payment_id": "pi_9"}
+        )
+    assert response.status_code == 200
+    event = WebhookEvent.objects.get(event_id="evt_9")
+    assert event.processed_at is not None
+    payment.refresh_from_db()
+    assert payment.status == Payment.Status.PENDING

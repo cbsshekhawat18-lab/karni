@@ -80,3 +80,10 @@ def test_refund_serializer_is_fully_read_only_except_audit_defaults() -> None:
     fields = build_serializer(Refund)().fields
     for name in ("payment", "amount", "status", "provider_refund_id", "reason"):
         assert fields[name].read_only, name
+
+
+def test_the_payments_admin_role_is_declared_by_the_module() -> None:
+    from karni.accounts.roles import declared_roles
+
+    spec = next(spec for spec in declared_roles() if spec.slug == "payments-admin")
+    assert spec.name == "Payments admin"
