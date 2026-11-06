@@ -206,6 +206,7 @@ def build(root: Path, spec: schema.Spec, facts: dict[str, Any], file: str, opts:
         inputs, created = _inputs(spec, facts, plan, rec)
         ws = Workspace(root)
         module_lines = _plan_modules(ws, plan)
+        _plan_extras(ws, feature_extras(spec))
         rendered = render.render(ws, inputs)
         _recipe_files(ws, rec)
         deletes = _deletions(root, rec, rendered)
@@ -454,6 +455,37 @@ def _plan_modules(ws: Workspace, plan: plan_mod.Plan) -> list[str]:
     return lines
 
 
+#: The import that shows a Karni extra is installed. Only features with an ``extra`` in
+#: their manifest need one.
+EXTRA_IMPORTS: dict[str, str] = {"2fa": "django_otp", "social-token": "cryptography"}
+
+
+def feature_extras(spec: schema.Spec) -> list[str]:
+    """The extras of ``karni`` the spec's switched-on features need (``2fa``, ``social-token``)."""
+    from karni_cli import catalog as modules_catalog
+
+    found: list[str] = []
+    for entry in modules_catalog.load().features:
+        extra = getattr(entry, "extra", "") or ""
+        if "[" not in extra or not getattr(spec.features, entry.name, None):
+            continue
+        name = extra.split("[", 1)[1].rstrip("]")
+        if name not in found:
+            found.append(name)
+    return sorted(found)
+
+
+def _plan_extras(ws: Workspace, extras: list[str]) -> None:
+    """Name each extra a feature needs on the ``karni`` dependency, as ``karni add`` does a module."""
+    from karni_cli.commands.add import add_extra_text
+
+    for extra in extras:
+        text = ws.read("pyproject.toml")
+        updated = add_extra_text(text, extra) if text is not None else None
+        if updated is not None:
+            ws.write("pyproject.toml", updated)
+
+
 def _recipe_files(ws: Workspace, rec: Record) -> list[str]:
     """The recipe's own files over build's stubs, when ``karni new --recipe`` left one to write."""
     if not rec.recipe:
@@ -686,6 +718,7 @@ def _state(
     return {
         "steps": list(output.STEPS[2:]),
         "modules": modules,
+        "extras": feature_extras(inputs.spec),
         "apps": apps,
         "databases": databases,
         "renames": renames,
@@ -706,6 +739,7 @@ def _merge(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
         return found + [item for item in new.get(key) or [] if item not in found]
 
     merged["modules"] = union("modules")
+    merged["extras"] = union("extras")
     merged["apps"] = sorted(set(union("apps")))
     merged["databases"] = sorted(set(union("databases")))
     merged["seed"] = union("seed", "seed" in left)
@@ -742,6 +776,7 @@ def _steps(
         files.status, files.summary = "skipped", "already written by the build that stopped"
     current = "modules"
     try:
+        _require_extras(root, list(state.get("extras") or []))
         if modules:
             _guidance(root, modules, opts)
             state["modules"] = []
@@ -803,6 +838,20 @@ def _tail(proc: Any) -> str:
         if line.strip() and not _WARNING.match(line)
     ]
     return "\n".join(lines[-_TAIL:])
+
+
+def _require_extras(root: Path, extras: list[str]) -> None:
+    """Stop early, with the install line, when a feature's extra is not importable."""
+    for extra in extras:
+        name = EXTRA_IMPORTS.get(extra)
+        if name is not None and project_mod.project_has_module(root, name) is False:
+            raise Stop(
+                "C841",
+                f"karni[{extra}] is in pyproject.toml now (a feature in karni.yaml needs it), but "
+                f"the project's interpreter cannot import {name}.",
+                "install it: uv pip install -r pyproject.toml (or docker compose build), then "
+                "karni build again: it continues from here",
+            )
 
 
 def _guidance(root: Path, modules: list[str], opts: Options) -> None:

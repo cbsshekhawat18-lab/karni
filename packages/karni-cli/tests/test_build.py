@@ -1143,3 +1143,37 @@ def test_the_settings_block_writes_the_api_version_only_when_set() -> None:
 
     assert "KARNI_API_VERSION" not in block("version: 1\napp: {name: X}\n")
     assert 'KARNI_API_VERSION = "v1"' in block("version: 1\napp: {name: X, api_version: v1}\n")
+
+
+def test_a_feature_that_needs_an_extra_names_it_and_stops_early_when_it_is_missing(
+    copy: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """two_factor and social_login need karni[2fa] and karni[social-token]: the build says so."""
+    from karni_cli.builder import run as build_run
+    from karni_cli.commands.add import add_extra_text
+    from karni_cli.spec import schema
+
+    assert add_extra_text('[project]\ndependencies = ["karni>=0.5"]\n', "2fa") == (
+        '[project]\ndependencies = ["karni[2fa]>=0.5"]\n'
+    )
+    assert add_extra_text('[project]\ndependencies = ["karni[2fa]"]\n', "2fa") is None
+    spec = schema.Spec.model_validate(
+        {
+            "version": 1,
+            "app": {"name": "x"},
+            "features": {"two_factor": True, "social_login": ["google"]},
+        }
+    )
+    assert build_run.feature_extras(spec) == ["2fa", "social-token"]
+    assert (
+        build_run.feature_extras(schema.Spec.model_validate({"version": 1, "app": {"name": "x"}}))
+        == []
+    )
+
+    monkeypatch.setattr(project_mod, "project_has_module", lambda root, name: False)
+    with pytest.raises(build_run.Stop) as stop:
+        build_run._require_extras(copy, ["2fa"])
+    assert stop.value.code == "C841" and "karni[2fa]" in stop.value.message
+    assert "uv pip install" in (stop.value.next or "")
+    monkeypatch.setattr(project_mod, "project_has_module", lambda root, name: True)
+    build_run._require_extras(copy, ["2fa"])  # installed: nothing to say

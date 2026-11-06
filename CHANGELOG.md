@@ -1589,6 +1589,13 @@ apply codemods and list the manual steps. This file is the human summary.
   `client_ids` list passes startup validation, and signing in with that
   provider answers 503 `E216` naming the variable. Every other command and
   request works.
+- **A feature's extra reaches the project.** `two_factor: true` needs
+  `karni[2fa]` and `social_login` needs `karni[social-token]`, and nothing
+  installed them, so the crm and marketplace recipes died at the migrations
+  with a bare `ModuleNotFoundError`. `karni build` now names the extra on the
+  `karni` dependency in pyproject.toml and, when the project's interpreter
+  cannot import it, stops before the migrations with `C841` and the install
+  line. The next `karni build` continues from there.
 - **A new project starts without the legacy cache header warning.** The
   scaffold's settings set `KARNI_API_CACHE_LEGACY_HEADER` to `False` by
   default. Existing projects keep the old default and the warning.

@@ -84,6 +84,33 @@ def add_dependency_text(text: str, distribution: str) -> str | None:
 FRONTEND_PACKAGE = "frontend/package.json"
 
 
+def add_extra_text(text: str, extra: str, package: str = "karni") -> str | None:
+    """``pyproject.toml`` text with ``package[extra]`` in [project].dependencies, ``None`` if there.
+
+    The requirement for ``package`` keeps its version specifier and gains the
+    extra (``"karni"`` becomes ``"karni[2fa]"``). A project that does not list
+    ``package`` is left alone (``None``), as one that already names the extra.
+    """
+    doc = tomlkit.parse(text)
+    try:
+        deps = doc["project"]["dependencies"]
+    except (KeyError, TypeError):
+        return None
+    for index, dep in enumerate(list(deps)):
+        try:
+            requirement = Requirement(str(dep))
+        except InvalidRequirement:
+            continue
+        if canonicalize_name(requirement.name) != canonicalize_name(package):
+            continue
+        if extra in requirement.extras:
+            return None
+        requirement.extras = {*requirement.extras, extra}
+        deps[index] = str(requirement)
+        return tomlkit.dumps(doc)
+    return None
+
+
 def _json_indent(text: str) -> str:
     match = re.search(r"^([ \t]+)\S", text, re.MULTILINE)
     return match.group(1) if match else "  "
