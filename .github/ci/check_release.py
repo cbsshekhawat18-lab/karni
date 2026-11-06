@@ -138,9 +138,14 @@ def _version_attribute(init: Path) -> tuple[str, str] | None:
 
     ``("distribution", "karni-ai")`` for ``_metadata.version("karni-ai")`` (or a
     bare ``version(...)``), ``("literal", "0.5.0")`` for a string, ``("other",
-    source)`` for anything else, ``None`` when nothing sets it.
+    source)`` for anything else, ``None`` when nothing sets it. In a ``try``
+    the body counts and the ``except`` fallback (an uninstalled source tree's
+    ``"0+unknown"``) does not.
     """
+    statements = []
     for node in ast.parse(init.read_text(encoding="utf-8")).body:
+        statements.extend(node.body if isinstance(node, ast.Try) else [node])
+    for node in statements:
         if isinstance(node, ast.Assign):
             targets, value = node.targets, node.value
         elif isinstance(node, ast.AnnAssign) and node.value is not None:

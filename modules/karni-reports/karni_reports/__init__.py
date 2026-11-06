@@ -17,7 +17,10 @@ from __future__ import annotations
 from importlib import metadata as _metadata
 from typing import TYPE_CHECKING, Any
 
-__version__ = _metadata.version("karni-reports")  # [project] version in pyproject.toml
+try:
+    __version__ = _metadata.version("karni-reports")  # [project] version in pyproject.toml
+except _metadata.PackageNotFoundError:  # a source tree on sys.path, never installed
+    __version__ = "0+unknown"
 
 if TYPE_CHECKING:
     from karni_reports.registry import get_report, register, reports, unregister

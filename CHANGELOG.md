@@ -1562,8 +1562,9 @@ apply codemods and list the manual steps. This file is the human summary.
   `karni_charts` said 0.4.0, `karni_payments` 0.1.0, and four modules had no
   `__version__`. Each of the ten Python packages now reads it from its own
   distribution (`importlib.metadata`), so `[project] version` in
-  `pyproject.toml` is the one place it is set. The release check refuses a
-  tag when a package's `__version__` is a literal that differs or is missing.
+  `pyproject.toml` is the one place it is set. A source tree imported without
+  being installed says `0+unknown`. The release check refuses a tag when a
+  package's `__version__` is a literal that differs or is missing.
 - **Every PyPI upload step skips existing files and honours the token.** In
   `release.yml` and `pypi-from-release.yml` the `karni-charts`,
   `karni-reports` and `karni-ai` steps lacked `skip-existing`, `password` and

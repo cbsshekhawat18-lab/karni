@@ -11,7 +11,9 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import json
+import os
 import re
+import subprocess
 import sys
 import tomllib
 from importlib import metadata
@@ -65,6 +67,21 @@ def test_every_package_version_attribute_is_its_distribution_version(directory: 
     )
 
 
+@pytest.mark.parametrize("directory", PYTHON_PACKAGES)
+def test_every_package_imports_from_a_source_tree_without_metadata(directory: str) -> None:
+    """``python -S`` sees no installed distribution: the package still imports."""
+    name = str(_project(directory)["name"]).replace("-", "_")
+    proc = subprocess.run(
+        [sys.executable, "-S", "-c", f"import {name}; print({name}.__version__)"],
+        capture_output=True,
+        text=True,
+        env={"PATH": os.environ.get("PATH", ""), "PYTHONPATH": str(REPO_ROOT / directory)},
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip() == "0+unknown"
+
+
 def test_the_release_check_passes_on_the_checkout() -> None:
     version = str(_project("packages/karni")["version"])
     assert check_release.check_version_attributes(version) == []
@@ -92,6 +109,14 @@ def test_the_release_check_names_a_version_attribute_out_of_lockstep(
         ),
         _package(tmp_path, "karni-stale", '"""A module."""\n\n__version__ = "0.4.0"\n'),
         _package(tmp_path, "karni-missing", '"""A module."""\n'),
+        _package(
+            tmp_path,
+            "karni-fallback",
+            "from importlib import metadata as _metadata\n\ntry:\n"
+            '    __version__ = _metadata.version("karni-fallback")\n'
+            "except _metadata.PackageNotFoundError:\n"
+            '    __version__ = "0+unknown"\n',
+        ),
         _package(
             tmp_path,
             "karni-borrowed",
