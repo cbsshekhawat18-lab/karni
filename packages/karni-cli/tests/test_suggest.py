@@ -160,8 +160,17 @@ def test_a_plan_with_changes_suggests_build_or_export(
     stub_plan(monkeypatch, [SimpleNamespace(managed=True), SimpleNamespace(managed=False)])
     (found,) = suggest_mod.drift_suggestions(project)
     assert (found["code"], found["file"], found["line"]) == ("SUG007", "karni.yaml", 1)
-    assert "2 changes, 1 of them in the project's own code" in found["message"]
+    assert "karni plan has 1 change:" in found["message"]  # the not managed one is not drift
     assert "karni build" in found["fix"] and "karni spec export" in found["fix"]
+
+
+def test_changes_plan_calls_not_managed_are_no_drift(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Area 5 A5-07: a hand-written code page is plan's "not managed", not a SUG007."""
+    (project / "karni.yaml").write_text(SPEC)
+    stub_plan(monkeypatch, [SimpleNamespace(managed=False), SimpleNamespace(managed=False)])
+    assert suggest_mod.drift_suggestions(project) == []
 
 
 def test_an_empty_plan_no_spec_or_a_silenced_spec_suggests_nothing(

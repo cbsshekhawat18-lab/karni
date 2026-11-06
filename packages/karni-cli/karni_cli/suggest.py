@@ -254,11 +254,13 @@ def drift_suggestions(
         result = plan_mod.plan_project(report.spec, facts, project, file=path.name, managed=managed)
     except CliError:
         return []
-    if not result.changes:
+    # What plan calls "not managed" (a hand-written `code` page, say) is the project's own code:
+    # karni build leaves it alone and exporting would not change it, so it is no drift.
+    changes = [change for change in result.changes if change.managed]
+    if not changes:
         return []
     state = _marker(spec_lines, _RULES["SUG007"], (1, 2))
-    count, left = len(result.changes), len(result.not_managed)
-    kept = f", {left} of them in the project's own code" if left else ""
+    count, kept = len(changes), ""
     return [
         {
             "code": "SUG007",

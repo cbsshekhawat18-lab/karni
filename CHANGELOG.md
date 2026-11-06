@@ -1572,6 +1572,7 @@ apply codemods and list the manual steps. This file is the human summary.
   a failed project side is not read as clean. A `karni: allow(rule)` marker
   with no colon counts as one without a reason, and every marker on a line is
   read, in the suggestions, the architecture rules and the agent rules.
+  SUG007 ignores the changes `karni plan` marks not managed.
 
 ## 0.4.0 (2026-10-22)
 
