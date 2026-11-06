@@ -46,8 +46,10 @@ fresh project seeding without flags:
 
 To seed anyway:
 
-- `--reset` deletes the project models' rows first (users are kept),
-  restarts the id sequences of the tables it wiped, then seeds. This is what
+- `--reset` deletes the project models' rows first, and the rows of every
+  other model a seeder in `seeds.py` names (a module's table, `UserGrant`).
+  Users are kept. It restarts the id sequences of the tables it wiped, then
+  seeds. This is what
   a demo or end-to-end script runs every time.
 - `--force` adds demo rows on top of what is there.
 
