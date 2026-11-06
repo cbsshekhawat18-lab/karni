@@ -39,7 +39,8 @@ the menu entry.
 - The top right has a primary **Add \<model\>** button, and **Import** beside
   it, both only for users who may add. A user who may not has neither.
 - Under the page title is one line of help: `class Karni: help = "..."` on the
-  model, else the first line of the model's docstring, else nothing. Set
+  model (the spec's `help:`), else nothing. The docstring is for developers and
+  is never shown. Set
   `karni_help = "..."` (through `AdminMeta.extra`) to change it for the admin
   alone, or `""` to hide it.
 - The search box and a **Filters** button sit above the rows. A model with soft
@@ -55,12 +56,34 @@ the menu entry.
   declaration order, then the updated time. Set `AdminMeta.list_display` to
   choose them.
 - A list with no rows shows **No \<models\> yet.**, one sentence, and the Add
-  and Import buttons. A search or filter that finds nothing shows Unfold's
-  usual "No results" instead.
+  and Import buttons. A search or filter that finds nothing shows **No
+  \<models\> match these filters** with a button that clears them.
+- A bar at the bottom of every list says `Showing 1 to 25 of 312 notes`, with
+  previous and next, page numbers with gaps (`1 2 3 ... 13`) and the page size
+  (25, 50 or 100, kept in the URL as `?per_page=`). One page shows the count and
+  no page links. The default is `KARNI_ADMIN_PER_PAGE` (25), one model's is
+  `AdminMeta.per_page` (or `list_per_page` on an admin class), and the offered
+  sizes are `karni_per_page_choices`. On PostgreSQL a table above
+  `KARNI_ADMIN_COUNT_ESTIMATE_ABOVE` rows (100000, `0` always counts) shows the
+  planner's estimate, said as "about", instead of a `COUNT` on every page.
+- Active filters are chips above the table, each with a remove button, and
+  **Clear all** when there are several. A search shows its term, `12 results for
+  "paper"`, and a clear button.
+- A list always has an order, so pages never shuffle: `AdminMeta.ordering`, the
+  model's `Meta.ordering`, else newest updated first, newest created, then the
+  newest key (`get_ordering` is the hook). A sortable column shows an arrow on
+  hover, and the sorted one its direction. The header row stays in view while
+  the rows scroll, and the Actions heading sits over its buttons.
+- A model without its own `verbose_name_plural` shows a correct English plural
+  (Categories, Entries, Log entries) in the menu, the home page and titles. Its
+  `Meta` is not changed, so no migration comes of it, and a plural the model
+  declares always wins.
 
 ### Bulk actions
 
 Tick rows (or the box in the header for the whole page) and pick an action.
+After the header box, **Select all 312 notes** extends the selection to every
+row of the list, filters and search included, and each action below honours it.
 Each action checks the user's permission, writes an admin log entry per row,
 and replaces the API response cache tokens once when it ends.
 
@@ -81,7 +104,8 @@ the user's `change` scope. A field the user may not change or see
 primary key, unique fields, many-to-many, file and image fields, lifecycle
 states (each row's legal moves differ), JSON fields and the audit fields.
 At most `KARNI_ADMIN_BULK_EDIT_MAX` rows (default 500) at a time. A bigger
-selection gets a message to narrow the list, and nothing changes.
+selection, including a select-across one, gets a message to narrow the list, and
+nothing changes.
 `karni_bulk_edit = False` removes the action and `bulk_editable_fields` is the
 hook to offer fewer or more fields.
 
@@ -172,6 +196,7 @@ class Invoice(BaseModel):
         read_only = ["total"]          # extends derived readonly_fields
         date_hierarchy = "issued_at"
         ordering = ["-issued_at"]
+        per_page = 50                  # rows per page, else KARNI_ADMIN_PER_PAGE
         extra = {"list_per_page": 25}  # any ModelAdmin attrs, applied last
 ```
 

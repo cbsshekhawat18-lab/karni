@@ -1,0 +1,31 @@
+{% load i18n %}{% comment %}
+The bottom bar of every Karni list: how many rows, previous and next, page
+numbers with gaps, and the page-size choice. Everything keeps the filters,
+search and sort in the URL.
+{% endcomment %}{% with summary=cl.karni_summary neighbours=cl.karni_neighbours pages=cl.karni_pages sizes=cl.karni_sizes %}
+{% if summary or cl.formset %}
+<div class="karni-pagination-bar">
+<nav class="karni-pagination" aria-label="{% translate 'Pagination' %}">
+  <p class="karni-pagination-summary" role="status">{% if summary %}{{ summary.text }}{% endif %}</p>
+  {% if pages %}
+  <ul class="karni-pages">
+    <li>{% if neighbours.previous %}<a class="karni-page-link" href="{{ neighbours.previous }}" rel="prev">{% translate "Previous" %}</a>{% else %}<span class="karni-page-link karni-page-off" aria-disabled="true">{% translate "Previous" %}</span>{% endif %}</li>
+    {% for page in pages %}
+      {% if page.gap %}<li><span class="karni-page-gap" aria-hidden="true">&hellip;</span></li>
+      {% elif page.current %}<li><span class="karni-page-link karni-page-current" aria-current="page">{{ page.number }}</span></li>
+      {% else %}<li><a class="karni-page-link" href="{{ page.url }}" aria-label="{% blocktranslate with number=page.number %}Page {{ number }}{% endblocktranslate %}">{{ page.number }}</a></li>{% endif %}
+    {% endfor %}
+    <li>{% if neighbours.next %}<a class="karni-page-link" href="{{ neighbours.next }}" rel="next">{% translate "Next" %}</a>{% else %}<span class="karni-page-link karni-page-off" aria-disabled="true">{% translate "Next" %}</span>{% endif %}</li>
+  </ul>
+  {% endif %}
+  {% if summary and sizes|length > 1 %}
+  <div class="karni-sizes" role="group" aria-label="{% translate 'Rows per page' %}">
+    <span class="karni-sizes-label">{% translate "Rows per page" %}</span>
+    {% for size in sizes %}{% if size.current %}<span class="karni-page-link karni-page-current" aria-current="true">{{ size.size }}</span>{% else %}<a class="karni-page-link" href="{{ size.url }}">{{ size.size }}</a>{% endif %}{% endfor %}
+  </div>
+  {% endif %}
+  {% if cl.formset and cl.result_count %}<button type="submit" form="changelist-form" name="_save" class="karni-button karni-pagination-save">{% translate "Save" %}</button>{% endif %}
+</nav>
+</div>
+{% endif %}
+{% endwith %}

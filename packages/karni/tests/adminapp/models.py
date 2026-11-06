@@ -321,5 +321,8 @@ class Widget(BaseModel):
 class Gizmo(BaseModel):
     name = models.CharField(max_length=100)
 
+    class AdminMeta:
+        per_page = 15
+
     def __str__(self) -> str:
         return self.name

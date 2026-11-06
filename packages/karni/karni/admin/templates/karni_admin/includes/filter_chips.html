@@ -1,0 +1,15 @@
+{% load i18n %}{% comment %}
+What narrows the list: the search term with its result count and a clear
+button, one chip per active filter with a remove button, and Clear all.
+{% endcomment %}{% if cl.karni_narrowed and not is_popup %}{% with chips=cl.karni_chips %}
+<div class="karni-chips" role="group" aria-label="{% translate 'Active search and filters' %}">
+  {% if cl.query %}
+  <p class="karni-search-note" role="status">{% blocktranslate count counter=cl.result_count with term=cl.query %}{{ counter }} result for “{{ term }}”{% plural %}{{ counter }} results for “{{ term }}”{% endblocktranslate %}
+    <a class="karni-chip-clear" href="{{ cl.karni_search_clear_url }}">{% translate "Clear search" %}</a></p>
+  {% endif %}
+  {% for chip in chips %}
+  <span class="karni-chip">{{ chip.label }}<a class="karni-chip-remove" href="{{ chip.remove }}" aria-label="{% blocktranslate with label=chip.label %}Remove filter {{ label }}{% endblocktranslate %}">&times;</a></span>
+  {% endfor %}
+  {% if chips|length > 1 or chips and cl.query %}<a class="karni-chip-all" href="{{ cl.karni_clear_url }}">{% translate "Clear all" %}</a>{% endif %}
+</div>
+{% endwith %}{% endif %}

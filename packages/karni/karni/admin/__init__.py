@@ -176,6 +176,10 @@ def autodiscover(site: AdminSite | None = None) -> None:
         inlines = [build_inline(child, fk_name) for child, fk_name in inline_map.get(model, [])]
         site.register(model, build_model_admin(model, inlines=inlines))
 
+    from karni.admin.plurals import apply_plurals
+
+    apply_plurals(site)
+
     # Second pass: with every registration done, targets are known, so the
     # karni-created admins can safely point FK/M2M fields at autocomplete
     # endpoints. Recomputed from scratch on every call (idempotent).

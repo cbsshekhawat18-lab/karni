@@ -28,7 +28,7 @@ this template, or set bulk_edit_template on the admin class.
   {% if form.non_field_errors %}<div class="karni-problem" role="alert">{{ form.non_field_errors }}</div>{% endif %}
   <form method="post">
     {% csrf_token %}
-    {% for pk in queryset %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ pk|unlocalize }}">{% endfor %}
+    {% if request.POST.select_across == "1" %}<input type="hidden" name="select_across" value="1">{% for pk in queryset|slice:":1" %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ pk|unlocalize }}">{% endfor %}{% else %}{% for pk in queryset %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ pk|unlocalize }}">{% endfor %}{% endif %}
     <input type="hidden" name="action" value="edit_selected">
     <input type="hidden" name="post" value="yes">
     <div class="karni-scroll"><table class="karni-table">

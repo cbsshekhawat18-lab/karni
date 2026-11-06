@@ -11,6 +11,30 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## 0.5.0 (unreleased)
 
+- **Fixed: admin lists had no pagination, selection across pages or empty state of
+  their own.** Every list shows 25 rows a page with a bottom bar (`Showing 1 to 25
+  of 312 notes`, page links with gaps, a 25, 50 or 100 choice kept in the URL, an
+  estimated count above `KARNI_ADMIN_COUNT_ESTIMATE_ABOVE` rows on PostgreSQL).
+  `KARNI_ADMIN_PER_PAGE` and `AdminMeta.per_page` set the size. "Select all 312
+  notes" works for delete, restore, edit and export, with the bulk edit limit
+  message. A list with no order is newest updated first. Active filters show as
+  chips with remove buttons and Clear all, a search shows its term and result
+  count, and a search or filter with no rows says "No notes match these
+  filters". The header row stays visible, the Actions heading sits over its
+  buttons and a sortable column shows an arrow. See [admin](docs/admin.md#the-list-of-a-model).
+- **Fixed: the admin showed "Categorys", "Entrys" and "Log entrys".** A model
+  without its own `verbose_name_plural` gets a correct English plural in the
+  admin (no migration), and `karni make model` and `karni build` write
+  `verbose_name_plural` when Django's would be wrong.
+- **Fixed: a deleted row showed Edit and Restore.** The admin's list shows only
+  Restore on a deleted row (View for a user who may only look), as
+  [admin](docs/admin.md#the-list-of-a-model) says.
+- **Fixed: axe reported the admin's many-to-many widget, help icons and blank
+  table headings.** Karni's admin script names the select2 search box, gives the
+  help icons a role and gives blank headings a hidden text.
+- **Fixed: the admin help line showed developer notes.** It now comes only from
+  `class Karni: help` (the spec's `help:`), never the model docstring.
+
 - **Suggestions from code (experimental).** `karni check`, `karni doctor` and
   the new `karni suggest` end with a compact block of what Karni could do that
   the project does by hand, each with its file, line and the exact command or

@@ -37,6 +37,7 @@ from typing import Any, ClassVar
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.utils import flatten, flatten_fieldsets, quote
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import Q
 from django.forms import ModelForm
@@ -59,6 +60,13 @@ from karni.admin.derive import (
     derive_search_fields,
     password_field_names,
     technical_fields,
+)
+from karni.admin.listing import (
+    PER_PAGE_CHOICES,
+    PER_PAGE_VAR,
+    KarniChangeListMixin,
+    KarniPaginator,
+    per_page_default,
 )
 from karni.admin.scope import scope_queryset, scoped_choices, within_scope
 from karni.admin.soft_delete import SoftDeleteAdminMixin, lift_soft_delete
@@ -104,6 +112,17 @@ _ADMIN_META_PASSTHROUGH = (
 )
 
 _REQUEST_OBJ_ATTR = "_karni_admin_obj"
+
+_LIST_CLASSES: dict[type, type] = {}
+
+
+def _karni_changelist_class(base: type) -> type:
+    """``base`` with :class:`KarniChangeListMixin` in front (one class per base)."""
+    found = _LIST_CLASSES.get(base)
+    if found is None:
+        found = type(f"Karni{base.__name__}", (KarniChangeListMixin, base), {})
+        _LIST_CLASSES[base] = found
+    return found
 
 
 def resolve_admin_base() -> type[admin.ModelAdmin]:
@@ -209,8 +228,18 @@ class KarniAdminMixin(admin.ModelAdmin):
 
     karni_help: ClassVar[str | None] = None
     """The one line shown at the top of the list and form. ``None`` derives it
-    (:func:`karni.admin.derive.derive_help`: ``class Karni: help``, else the
-    docstring's first line), ``""`` shows none."""
+    (:func:`karni.admin.derive.derive_help`: ``class Karni: help`` and nothing
+    else, never the docstring), ``""`` shows none."""
+
+    list_per_page = None  # type: ignore[assignment]
+    """Rows per page. ``None`` takes ``KARNI_ADMIN_PER_PAGE`` (25) at ``__init__``;
+    ``AdminMeta.per_page`` or a number here sets one model's."""
+
+    karni_per_page_choices: ClassVar[tuple[int, ...]] = PER_PAGE_CHOICES
+    """The page sizes ``?per_page=`` accepts (the admin's own ``list_per_page`` joins them)."""
+
+    paginator = KarniPaginator
+    """Django's paginator, with a count that is an estimate on a very large PostgreSQL table."""
 
     karni_row_actions: ClassVar[bool] = True
     """``False`` removes the *Actions* column (Edit, Delete, Restore) from the list."""
@@ -233,6 +262,8 @@ class KarniAdminMixin(admin.ModelAdmin):
         """
         super().__init__(model, admin_site)
         cls = type(self)
+        if self.list_per_page is None:
+            self.list_per_page = cls.derive_per_page(model)
         if is_tree_model(model):
             from karni.admin.tree import TreeLabel, tree_list_display
 
@@ -269,6 +300,11 @@ class KarniAdminMixin(admin.ModelAdmin):
     def derive_list_display(cls, model: type[models.Model]) -> list[str]:
         """Hook for :func:`karni.admin.derive.derive_list_display`."""
         return derive_list_display(model)
+
+    @classmethod
+    def derive_per_page(cls, model: type[models.Model]) -> int:
+        """Rows per page: ``KARNI_ADMIN_PER_PAGE``. Override for one rule per model."""
+        return per_page_default()
 
     @classmethod
     def derive_help(cls, model: type[models.Model]) -> str:
@@ -338,7 +374,45 @@ class KarniAdminMixin(admin.ModelAdmin):
         """The base changelist, in tree order for a tree model (:mod:`karni.admin.tree`)."""
         from karni.admin.tree import tree_changelist_class
 
-        return tree_changelist_class(super().get_changelist(request, **kwargs), self.model)
+        base = tree_changelist_class(super().get_changelist(request, **kwargs), self.model)
+        return _karni_changelist_class(base)
+
+    def karni_page_sizes(self) -> list[int]:
+        """The page sizes the list offers: the choices and this admin's own, ascending."""
+        return sorted({*self.karni_per_page_choices, int(self.list_per_page or 0)})
+
+    def karni_page_size(self, request: HttpRequest) -> int:
+        """Rows on this request's page: ``?per_page=`` when it is one of the choices."""
+        asked = request.GET.get(PER_PAGE_VAR, "")
+        if asked.isdigit() and int(asked) in self.karni_page_sizes():
+            return int(asked)
+        return int(self.list_per_page or 0)
+
+    def get_changelist_instance(self, request: HttpRequest) -> Any:
+        request._karni_per_page = self.karni_page_size(request)  # type: ignore[attr-defined]
+        return super().get_changelist_instance(request)
+
+    def get_ordering(self, request: HttpRequest) -> Any:
+        """The admin's ordering, else the model's, else newest updated first, else newest key.
+
+        Pages must not shuffle, so a list always has an order: ``ordering`` on
+        the admin, the model's ``Meta.ordering``, ``-updated_at`` (then
+        ``-created_at``) when the model has one, and ``-pk`` at last.
+
+        Override / escape hatch: set ``ordering`` on the admin (``AdminMeta.ordering``),
+        or override this method.
+        """
+        found = super().get_ordering(request)
+        if found or self.model._meta.ordering:
+            return found
+        for name in ("updated_at", "created_at"):
+            try:
+                field = self.model._meta.get_field(name)
+            except FieldDoesNotExist:
+                continue
+            if getattr(field, "concrete", False):
+                return [f"-{name}"]
+        return ["-pk"]
 
     def has_view_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
         """A view or change grant (else Django's permission), and the row inside the scope."""
@@ -518,13 +592,14 @@ class KarniAdminMixin(admin.ModelAdmin):
             deleted = soft and getattr(obj, "deleted_at", None) is not None
             name = str(obj)
             buttons: list[tuple[str, str, str, str]] = []  # (tag, url, kind, text)
-            if can_change:
-                buttons.append(("a", reverse(f"{stem}_change", args=[key]), "", _("Edit")))
-            elif can_view:
-                buttons.append(("a", reverse(f"{stem}_change", args=[key]), "", _("View")))
             if deleted and can_change:
                 buttons.append(("button", reverse(f"{stem}_restore", args=[key]), "", _("Restore")))
-            elif can_delete and not deleted:
+            elif deleted or not can_change:
+                if can_view:
+                    buttons.append(("a", reverse(f"{stem}_change", args=[key]), "", _("View")))
+            else:
+                buttons.append(("a", reverse(f"{stem}_change", args=[key]), "", _("Edit")))
+            if can_delete and not deleted:
                 buttons.append(("a", reverse(f"{stem}_delete", args=[key]), "danger", _("Delete")))
             return format_html(
                 '<span class="karni-row-actions">{}</span>',
@@ -919,6 +994,12 @@ def build_model_admin(
                 explicit.add(name)
         if hasattr(meta, "read_only"):
             attrs["karni_read_only"] = tuple(meta.read_only or ())
+        per_page = getattr(meta, "per_page", None)
+        if per_page is not None:
+            attrs["list_per_page"] = int(per_page)
+        choices = getattr(meta, "per_page_choices", None)
+        if choices:
+            attrs["karni_per_page_choices"] = tuple(int(n) for n in choices)
         extra = dict(getattr(meta, "extra", None) or {})
         attrs.update(extra)
         explicit.update(extra)

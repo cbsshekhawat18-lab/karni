@@ -646,6 +646,10 @@ BASE: dict[str, Any] = {
     # admin home page shows its "Getting started" panel (karni.admin.guide).
     "KARNI_ADMIN_BULK_EDIT_MAX": env.int("KARNI_ADMIN_BULK_EDIT_MAX", default=500),
     "KARNI_ADMIN_GUIDE": env.bool("KARNI_ADMIN_GUIDE", default=True),
+    # Rows per admin list page, and the table size above which PostgreSQL counts are
+    # estimates (karni.admin.listing).
+    "KARNI_ADMIN_PER_PAGE": env.int("KARNI_ADMIN_PER_PAGE", default=25),
+    "KARNI_ADMIN_COUNT_ESTIMATE_ABOVE": env.int("KARNI_ADMIN_COUNT_ESTIMATE_ABOVE", default=100000),
     "KARNI_ADMIN_LIST_DISPLAY_MAX": 6,
     "KARNI_ADMIN_LIST_FILTER_MAX": 6,
     "KARNI_ADMIN_SEARCH_MAX": 5,

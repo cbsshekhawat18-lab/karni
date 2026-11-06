@@ -3399,7 +3399,7 @@
           {
             "field": "parent",
             "key": "id",
-            "label": "Categorys",
+            "label": "Categories",
             "name": "children",
             "param": "parent",
             "resource": "categories"

@@ -589,3 +589,27 @@ warning. An existing project keeps the old default (`True`) and its warning unti
 the line or sets the variable."""
 mechanical = false
 migration = "migrations/0.5.md#new-projects-start-without-the-legacy-cache-header"
+
+[[change]]
+id = "admin-list-basics"
+kind = "behaviour"
+symbol = "KarniModelAdmin.list_per_page"
+summary = """\
+Every admin list shows 25 rows a page (KARNI_ADMIN_PER_PAGE, AdminMeta.per_page or \
+list_per_page on an admin class) instead of Django's 100, with a bar at the bottom \
+("Showing 1 to 25 of 312 notes", page links, rows per page). A list with no order is \
+newest updated first, and a model without its own verbose_name_plural shows a correct \
+English plural in the admin. A project that wanted 100 rows sets KARNI_ADMIN_PER_PAGE = 100."""
+mechanical = false
+migration = "migrations/0.5.md#admin-lists-page-filter-and-sort-like-a-data-table"
+
+[[change]]
+id = "admin-help-docstring"
+kind = "behaviour"
+symbol = "karni.admin.derive.derive_help"
+summary = """\
+The line under an admin page's title comes only from class Karni: help (the spec's help:). \
+The model docstring is no longer a fallback. A project that relied on it writes the line \
+into class Karni: help."""
+mechanical = false
+migration = "migrations/0.5.md#the-admin-help-line-comes-only-from-help"
