@@ -222,6 +222,16 @@ def test_the_hook_runs_with_the_projects_hosts(
     assert checks_seo.run_checks() == []
 
 
+def test_the_hook_says_when_there_is_no_site(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from django.apps import apps
+
+    monkeypatch.setattr(apps, "is_installed", lambda name: False)
+    checks_seo.run_checks()
+    assert "no public site to check" in capsys.readouterr().out
+
+
 def test_the_page_limit_and_ignored_paths(settings: Settings, projects: list[Project]) -> None:
     settings.KARNI_SITE_SEO_MAX_PAGES = 2
     assert len(checks_seo.SeoCrawl().pages) == 0
