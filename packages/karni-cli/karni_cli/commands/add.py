@@ -21,16 +21,18 @@ after installing.
 from __future__ import annotations
 
 import difflib
+import json
+import re
 import subprocess
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import tomlkit
 import typer
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 
-from karni_cli import agent_data
+from karni_cli import agent_data, scaffold
 from karni_cli.adapters import MODULES_DIR, sync
 from karni_cli.project import (
     CliError,
@@ -77,6 +79,59 @@ def add_dependency_text(text: str, distribution: str) -> str | None:
             continue
     deps.append(distribution)
     return tomlkit.dumps(doc)
+
+
+FRONTEND_PACKAGE = "frontend/package.json"
+
+
+def _json_indent(text: str) -> str:
+    match = re.search(r"^([ \t]+)\S", text, re.MULTILINE)
+    return match.group(1) if match else "  "
+
+
+def _dump_package(data: dict[str, Any], original: str) -> str:
+    out = json.dumps(data, indent=_json_indent(original), ensure_ascii=False)
+    return out + ("\n" if original.endswith("\n") else "")
+
+
+def ui_dependency_text(text: str, package: str, spec: str) -> str | None:
+    """``frontend/package.json`` text with ``package`` in dependencies, ``None`` if there.
+
+    The module's UI package (``@karni/charts-ui``) at ``spec``. The entry goes
+    in sorted place when the table is sorted, else last, and the file keeps
+    its indent, so ``karni remove`` gives the original bytes back.
+    """
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    deps = data.get("dependencies")
+    if deps is None:
+        deps = {}
+    if not isinstance(deps, dict) or package in deps:
+        return None
+    was_sorted = list(deps) == sorted(deps)
+    deps[package] = spec
+    data["dependencies"] = dict(sorted(deps.items())) if was_sorted else deps
+    return _dump_package(data, text)
+
+
+def _ui_package(ws: Workspace, manifest: Manifest) -> list[str]:
+    """Add the module's UI package to frontend/package.json, when the project has a frontend."""
+    package = manifest.provides.ui
+    text = ws.read(FRONTEND_PACKAGE)
+    if not package or text is None:
+        return []
+    updated = ui_dependency_text(text, package, scaffold.UI_REGISTRY_SPEC)
+    if updated is None:
+        return [f"{package}: already in {FRONTEND_PACKAGE}"]
+    ws.write(FRONTEND_PACKAGE, updated)
+    return [
+        f"{package}: added to {FRONTEND_PACKAGE} ({scaffold.UI_REGISTRY_SPEC}), "
+        "run npm install in frontend/ (or rebuild the frontend image)"
+    ]
 
 
 def _read_agents_fragment(project: Path, app_name: str) -> str | None:
@@ -282,11 +337,11 @@ def plan_module(
         f"{distribution}: {'added to' if with_dependency else 'already in'} pyproject.toml",
         f"{app_name}: {'wired into' if app_added else 'already in'} INSTALLED_APPS",
     ]
-    if manifest is not None:
-        settings, notes = _wire(settings, manifest)
-        lines += notes
+    settings, notes = _wire(settings, manifest)
+    lines += notes
     if settings != ws.read(SETTINGS):
         ws.write(SETTINGS, settings)
+    lines += _ui_package(ws, manifest)
     if manifest is not None and manifest.wiring.kind == "site":
         from karni_cli import kinds
 

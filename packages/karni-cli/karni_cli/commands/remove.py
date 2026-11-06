@@ -23,6 +23,7 @@ convention (``karni_<module>``, ``karni-<module>``).
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from collections.abc import Callable
@@ -37,7 +38,12 @@ from packaging.utils import canonicalize_name
 
 from karni_cli import catalog
 from karni_cli.adapters import MODULES_DIR
-from karni_cli.commands.add import _refresh_adapters, find_manifest
+from karni_cli.commands.add import (
+    FRONTEND_PACKAGE,
+    _dump_package,
+    _refresh_adapters,
+    find_manifest,
+)
 from karni_cli.project import CliError, require_project
 from karni_cli.settings_edit import (
     MARKER,
@@ -85,6 +91,23 @@ def remove_dependency_text(text: str, distribution: str) -> str | None:
         except InvalidRequirement:
             continue
     return None
+
+
+def remove_ui_dependency_text(text: str, package: str) -> str | None:
+    """``frontend/package.json`` text without ``package`` in dependencies, ``None`` if absent.
+
+    The reverse of :func:`karni_cli.commands.add.ui_dependency_text`. An empty
+    ``dependencies`` table the add created is left out again.
+    """
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    deps = data.get("dependencies") if isinstance(data, dict) else None
+    if not isinstance(deps, dict) or package not in deps:
+        return None
+    del deps[package]
+    return _dump_package(data, text)
 
 
 def remove_include(text: str, app: str) -> tuple[str | None, bool]:
@@ -196,6 +219,15 @@ def plan_removal(project: Path, name: str, manifest: Manifest | None) -> Removal
                     f"{URLS.as_posix()} still includes {module_app}.urls on more than one line: "
                     "remove it yourself."
                 )
+
+    package = manifest.provides.ui if manifest else ""
+    frontend = project / FRONTEND_PACKAGE
+    if package and frontend.is_file():
+        updated_package = remove_ui_dependency_text(frontend.read_text(encoding="utf-8"), package)
+        if updated_package is not None:
+            removal.edit(
+                Path(FRONTEND_PACKAGE), updated_package, f"{package} removed from dependencies"
+            )
 
     fragment = MODULES_DIR / f"{name}.md"
     if (project / fragment).is_file():

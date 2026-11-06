@@ -417,6 +417,40 @@ def test_add_prints_what_the_manifest_says(
     assert "ImpersonationMiddleware" in settings  # written, so karni check never fails IMP007
 
 
+def test_a_module_ui_package_follows_add_and_remove(
+    runner, generated_project: Path, monkeypatch, no_docker, counter
+) -> None:
+    monkeypatch.chdir(generated_project)
+    package = generated_project / "frontend" / "package.json"
+    assert package.is_file()
+    before = _snapshot(generated_project)
+    added = runner.invoke(app, ["add", "charts"])
+    assert added.exit_code == 0, added.output
+    deps = json.loads(package.read_text())["dependencies"]
+    assert deps["@karni/charts-ui"] == "^0.5.0"
+    assert "@karni/charts-ui: added to frontend/package.json" in added.output
+    assert list(deps) == sorted(deps)
+    again = runner.invoke(app, ["add", "charts"])
+    assert "already in frontend/package.json" in again.output
+    removed = runner.invoke(app, ["remove", "charts"])
+    assert removed.exit_code == 0, removed.output
+    assert "@karni/charts-ui removed from dependencies" in removed.output
+    assert _snapshot(generated_project) == before
+
+
+def test_a_module_ui_package_needs_a_frontend(
+    runner, generated_project: Path, monkeypatch, no_docker, counter
+) -> None:
+    import shutil
+
+    monkeypatch.chdir(generated_project)
+    shutil.rmtree(generated_project / "frontend")
+    added = runner.invoke(app, ["add", "charts"])
+    assert added.exit_code == 0, added.output
+    assert "charts-ui" not in added.output
+    assert not (generated_project / "frontend").exists()
+
+
 def test_impersonation_middleware_round_trips(
     runner, generated_project: Path, monkeypatch, no_docker, counter
 ) -> None:
