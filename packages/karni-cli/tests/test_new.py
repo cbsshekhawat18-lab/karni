@@ -45,6 +45,28 @@ def test_new_generates_project(runner, tmp_path: Path, monkeypatch) -> None:
     )
 
 
+def test_new_never_copies_compiled_files_from_the_template(
+    runner, tmp_path: Path, monkeypatch
+) -> None:
+    """pip byte-compiles the installed template: a project must not start with its caches (S-S1)."""
+    import compileall
+
+    template = tmp_path / "templates" / "project"
+    shutil.copytree(TEMPLATE, template, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    # what `pip install karni-cli` leaves in the template: compiled copies of its .py files
+    for source in template.rglob("*.py"):
+        compileall.compile_file(str(source), quiet=2, force=True, legacy=False)
+    assert any(template.rglob("__pycache__")), "the template was not compiled: nothing to prove"
+    monkeypatch.setenv("KARNI_TEMPLATES", str(template))
+    out = tmp_path / "out"
+    out.mkdir()
+    result = runner.invoke(app, ["new", "My App", "-o", str(out)])
+    assert result.exit_code == 0, result.output
+    project = out / "my_app"
+    assert (project / "manage.py").is_file()
+    assert list(project.rglob("__pycache__")) == [] and list(project.rglob("*.pyc")) == []
+
+
 def test_new_into_an_existing_folder_is_a_coded_error(runner, tmp_path: Path, monkeypatch) -> None:
     """F14: cookiecutter's own OutputDirExistsException used to reach the user."""
     monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
