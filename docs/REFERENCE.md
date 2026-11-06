@@ -1064,7 +1064,7 @@ karni make test [OPTIONS] MODEL
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `MODEL` (required) |  | Model class name (e.g. Event). The model needs a viewset. |
-| `--role` TEXT |  | The role the test acts as. By default it is the first HasRole the viewset's write predicate names (then create, then read), so the test really writes. For Granted() it is the first KARNI_ROLES role whose grant reaches the model (own/related first). Otherwise the test uses any signed-in user. |
+| `--role` TEXT |  | The role the test acts as, one the project declares (KARNI_ROLES or an added module, C830 otherwise). By default it is the first HasRole the viewset's write predicate names (then create, then read), so the test really writes. For Granted() it is the first KARNI_ROLES role whose grant reaches the model (own/related first; own needs an owner field). Otherwise the test uses any signed-in user. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
@@ -2830,6 +2830,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C740`](errors.md#c740) | cli | app.api_version is not a version name |
 | [`C780`](errors.md#c780) | cli | The project's karni predates suggestions |
 | [`C781`](errors.md#c781) | cli | manage.py karni_suggest failed |
+| [`C830`](errors.md#c830) | cli | karni make test --role names a role the project does not declare |
 
 ### Agent rules (`K`)
 

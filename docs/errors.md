@@ -5209,6 +5209,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Run python manage.py karni_suggest --json in the project to see the error. karni check shows the same startup problem.
 
+<a id="c830"></a>
+
+### C830: karni make test --role names a role the project does not declare
+
+*karni command* · from `karni make test (karni_cli.generators.apitest)`
+
+**Why Karni objects.** The test acts as a user holding that role. A role KARNI_ROLES and the added modules do not declare grants nothing, so every request would be refused and the test would fail when it runs.
+
+**Fix.** Pass one of the declared roles the error lists, or declare the role in KARNI_ROLES (config/settings.py) first.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.

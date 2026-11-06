@@ -557,9 +557,9 @@ def test_test_generator_follows_the_viewset(project: Path) -> None:
     assert "as any signed-in user + owner isolation" in result.output
     assert "run: karni test events/tests/test_event.py" in result.output
     fails("make", "test", "Event", match="--force")
-    ok("make", "test", "Event", "--role", "organizer", "--force")
+    ok("make", "test", "Event", "--role", "customer", "--force")
     assert (
-        'self.assert_crud(EventViewSet, "organizer")'
+        'self.assert_crud(EventViewSet, "customer")'
         in (project / "events" / "tests" / "test_event.py").read_text()
     )
 
@@ -586,6 +586,60 @@ def test_test_generator_picks_a_granted_role(project: Path) -> None:
     assert '        self.assert_crud(EventViewSet, "ops")\n' in text
     assert "assert_isolated" not in text  # an `all` grant partitions nothing
     assert "as role 'ops'" in result.output and "isolation" not in result.output
+
+
+def test_a_granted_model_without_an_owner_is_tested_as_a_role_that_reaches_it(
+    project: Path,
+) -> None:
+    """The shipped 'user' grant is '*': 'own', which skips a model with no owner field."""
+    ok("make", "app", "events")
+    models = project / "events" / "models.py"
+    models.write_text(
+        models.read_text()
+        + "\n\nclass Sale(models.Model):\n    sku = models.CharField(max_length=40)\n\n"
+        "    def __str__(self) -> str:\n        return self.sku\n"
+        "\n\nclass Visit(models.Model):\n    note = models.CharField(max_length=40)\n"
+        "    owner = models.ForeignKey(\"karni_accounts.User\", on_delete=models.CASCADE)\n\n"
+        "    class Karni:\n        owner_field = \"owner\"\n"
+    )
+    if "from django.db import models" not in models.read_text():
+        models.write_text("from django.db import models\n" + models.read_text())
+    ok("make", "viewset", "Sale")
+    result = ok("make", "test", "Sale")
+    text = (project / "events" / "tests" / "test_sale.py").read_text()
+    assert '        self.assert_crud(SaleViewSet, "staff")\n' in text  # 'all' reaches every row
+    assert "assert_isolated(" not in text and "as role 'staff'" in result.output
+    ok("make", "viewset", "Visit")
+    ok("make", "test", "Visit")
+    text = (project / "events" / "tests" / "test_visit.py").read_text()
+    assert '        self.assert_crud(VisitViewSet, "user")\n' in text  # owner_field: 'own' fits
+    assert '        self.assert_isolated(VisitViewSet, "user")\n' in text
+    settings = project / "config" / "settings.py"
+    settings.write_text(
+        settings.read_text()
+        + '\nKARNI_ROLES = {"clerk": {"grants": {"events.*": "related:branch"}},'
+        ' "ops": {"grants": {"*": "all"}}}\n'
+    )
+    ok("make", "test", "Visit", "--force")  # no scope path 'branch': clerk holds nothing
+    text = (project / "events" / "tests" / "test_visit.py").read_text()
+    assert '        self.assert_crud(VisitViewSet, "ops")\n' in text
+
+
+def test_make_test_refuses_a_role_the_project_does_not_declare(project: Path) -> None:
+    ok("make", "app", "events")
+    ok("make", "model", "Venue", "name:str", "--with", "viewset", "--access", "staff")
+    message = fails("make", "test", "Venue", "--role", "editor", match="C830")
+    assert "declared: customer, staff, user" in message
+    assert not (project / "events" / "tests" / "test_venue.py").exists()
+    settings = project / "config" / "settings.py"
+    original = settings.read_text()
+    # an added module's role counts (karni-site declares 'editor')
+    settings.write_text(original.replace("]  # karni:apps", '    "karni_site",\n]  # karni:apps', 1))
+    ok("make", "test", "Venue", "--role", "editor")
+    settings.write_text(original + '\nKARNI_ROLES = {"editor": {"grants": {"*": "all"}}}\n')
+    fails("make", "test", "Venue", "--role", "staff", "--force", match="declared: editor")
+    settings.write_text(original + "\nKARNI_ROLES = build_roles()\n")  # computed: not checked
+    ok("make", "test", "Venue", "--role", "anyone", "--force")
 
 
 def test_test_generator_takes_the_declared_role(project: Path) -> None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import fnmatch
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,21 @@ SHIPPED_ROLES: dict[str, dict[str, Any]] = {
 
 _RELATION_CALLS = frozenset({"ForeignKey", "OneToOneField", "ManyToManyField"})
 _AUDIT_BASES = frozenset({"BaseModel", "BigIntBaseModel", "AuditedModel"})
+#: Bases known to add no ``created_by``: a model on these alone has no owner unless it says so.
+_OWNERLESS_BASES = frozenset(
+    {
+        "Model",
+        "UUIDModel",
+        "IntegerKeyModel",
+        "TimestampedModel",
+        "SoftDeleteModel",
+        "GuardedModel",
+        "TreeModel",
+        "OrderedTreeModel",
+    }
+)
+#: A ``class Karni:`` option whose value is computed (not a literal): present, value unknown.
+COMPUTED: Any = object()
 
 
 @dataclass(frozen=True)
@@ -383,8 +399,70 @@ def declared_pk(ws: Workspace) -> tuple[str, str | None]:
     return str(value), None
 
 
-def grant_scopes(roles: dict[str, dict[str, Any]], key: str) -> dict[str, str]:
-    """Role slug → the scope its grants give ``key`` (``app.model:action``); later patterns win."""
+def karni_options(ws: Workspace, model: ModelInfo) -> dict[str, Any]:
+    """The model's ``class Karni:`` options, literal values read (a computed one is ``COMPUTED``)."""
+    text = ws.read(model.path) or ""
+    for node in parse(ws, ws.rel(model.path), text).body:
+        if not (isinstance(node, ast.ClassDef) and node.name == model.name):
+            continue
+        for inner in node.body:
+            if not (isinstance(inner, ast.ClassDef) and inner.name == "Karni"):
+                continue
+            options: dict[str, Any] = {}
+            for stmt in inner.body:
+                if (
+                    isinstance(stmt, ast.Assign)
+                    and len(stmt.targets) == 1
+                    and isinstance(stmt.targets[0], ast.Name)
+                ):
+                    try:
+                        options[stmt.targets[0].id] = ast.literal_eval(stmt.value)
+                    except ValueError:
+                        options[stmt.targets[0].id] = COMPUTED
+            return options
+    return {}
+
+
+def scope_fits(ws: Workspace, model: ModelInfo) -> Callable[[str], bool]:
+    """Whether a grant's scope can reach ``model``'s rows (as ``karni.accounts.roles`` decides).
+
+    ``own`` needs an owner: ``Karni.owner_field``, or the ``created_by`` of
+    ``BaseModel`` / ``AuditedModel``. ``related:<key>`` needs ``<key>`` in
+    ``Karni.scope_paths``. When the source cannot tell (a project base class,
+    a computed option), the scope is taken to fit.
+    """
+    options = karni_options(ws, model)
+    unknown_base = bool(model.bases - _OWNERLESS_BASES - _AUDIT_BASES)
+    has_owner = (
+        bool(options.get("owner_field"))
+        or "created_by" in model.fields
+        or bool(model.bases & _AUDIT_BASES)
+        or unknown_base
+    )
+    paths = options.get("scope_paths")
+
+    def fits(scope: str) -> bool:
+        kind, _, path = scope.partition(":")
+        if kind == "own":
+            return has_owner
+        if kind == "related":
+            if paths is COMPUTED or unknown_base:
+                return True
+            return isinstance(paths, dict) and path in paths
+        return True
+
+    return fits
+
+
+def grant_scopes(
+    roles: dict[str, dict[str, Any]], key: str, fits: Callable[[str], bool] | None = None
+) -> dict[str, str]:
+    """Role slug → the scope its grants give ``key`` (``app.model:action``); later patterns win.
+
+    ``fits`` (:func:`scope_fits`) drops what Karni drops at boot: a wildcard
+    pattern's ``own`` or ``related:<key>`` scope on a model it cannot reach,
+    so that role holds no grant there from that pattern.
+    """
     found: dict[str, str] = {}
     for slug, spec in roles.items():
         grants = spec.get("grants") if isinstance(spec, dict) else None
@@ -393,8 +471,12 @@ def grant_scopes(roles: dict[str, dict[str, Any]], key: str) -> dict[str, str]:
         scope = None
         for pattern, value in grants.items():
             glob = "*:*" if pattern == "*" else str(pattern)
-            if fnmatch.fnmatchcase(key, glob):
-                scope = str(value)
+            if not fnmatch.fnmatchcase(key, glob):
+                continue
+            wildcard = "*" in glob.split(":", 1)[0]
+            if wildcard and fits is not None and not fits(str(value)):
+                continue
+            scope = str(value)
         if scope is not None:
             found[slug] = scope
     return found

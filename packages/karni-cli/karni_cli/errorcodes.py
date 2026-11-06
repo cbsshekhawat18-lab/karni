@@ -1409,6 +1409,17 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Run python manage.py karni_suggest --json in the project to see the error. "
         "karni check shows the same startup problem.",
     ),
+    # C830-C839 generator fixes from the 0.5.0 self-test
+    _c(
+        "C830",
+        "karni make test --role names a role the project does not declare",
+        "karni make test (karni_cli.generators.apitest)",
+        "The test acts as a user holding that role. A role KARNI_ROLES and the added modules do "
+        "not declare grants nothing, so every request would be refused and the test would fail "
+        "when it runs.",
+        "Pass one of the declared roles the error lists, or declare the role in KARNI_ROLES "
+        "(config/settings.py) first.",
+    ),
 )
 
 

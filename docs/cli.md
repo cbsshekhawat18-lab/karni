@@ -947,7 +947,7 @@ karni make test [OPTIONS] MODEL
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `MODEL` (required) |  | Model class name (e.g. Event). The model needs a viewset. |
-| `--role` TEXT |  | The role the test acts as. By default it is the first HasRole the viewset's write predicate names (then create, then read), so the test really writes. For Granted() it is the first KARNI_ROLES role whose grant reaches the model (own/related first). Otherwise the test uses any signed-in user. |
+| `--role` TEXT |  | The role the test acts as, one the project declares (KARNI_ROLES or an added module, C830 otherwise). By default it is the first HasRole the viewset's write predicate names (then create, then read), so the test really writes. For Granted() it is the first KARNI_ROLES role whose grant reaches the model (own/related first; own needs an owner field). Otherwise the test uses any signed-in user. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |

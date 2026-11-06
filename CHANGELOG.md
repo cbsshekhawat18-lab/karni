@@ -1572,6 +1572,16 @@ apply codemods and list the manual steps. This file is the human summary.
   every Django command. `# karni: allow(redundant-serializer): <reason>` above
   the class now silences it, as it silences the architecture rule of that
   name. A marker without a reason still warns and says so.
+- **`karni make test` picks a role whose grant reaches the model.** For a
+  `Granted()` model with no owner field (an external table), it picked
+  `user`, whose `'*': 'own'` grant Karni skips there, so both generated tests
+  failed (`E602`, `E605`). A wildcard `own` grant now counts only for a model
+  with an owner field, and `related:<key>` only for one with that scope path,
+  as at boot. The test then acts as a role that reaches the rows.
+- **`karni make test --role` refuses a role the project does not declare.**
+  It is `C830` naming the declared roles (`KARNI_ROLES` and the added modules'
+  roles), instead of a test that fails when it runs. A role picked from the
+  viewset's access that nobody declares gets a note.
 
 ## 0.4.0 (2026-10-22)
 
