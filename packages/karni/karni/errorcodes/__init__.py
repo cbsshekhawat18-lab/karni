@@ -1154,6 +1154,18 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "router with an answer wins). If your own router routes these models, add "
         "'karni.W542' to SILENCED_SYSTEM_CHECKS.",
     ),
+    # E280-E289 / W280-W289 model display (karni.meta, experimental)
+    _e(
+        "E280",
+        "Karni.label_field names a field the model does not have",
+        "check",
+        "karni.meta.label_field; karni.checks.check_aggregations (karni check)",
+        "Karni.label_field is the field that shows a row to people where only its key would "
+        "show otherwise: the groups of an aggregate on a relation (chart legends and axes, "
+        "comparison headers). A name the model does not have can show nothing.",
+        "Name a field of the model: class Karni: label_field = 'name'. Leave it out to use the "
+        "first text field named name, title or label, else Karni.natural_key.",
+    ),
     # E3xx admin
     _e(
         "E301",

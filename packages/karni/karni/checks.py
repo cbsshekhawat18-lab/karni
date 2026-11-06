@@ -567,21 +567,29 @@ def check_global_search_routes(app_configs: Any = None, **kwargs: Any) -> list[c
 
 @checks.register(checks.Tags.urls)
 def check_aggregations(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
-    """karni.E380 / W570: every aggregation declaration (experimental) fits its model.
+    """karni.E380 / W570 / E280: every aggregation declaration (experimental) fits its model.
 
     A model's ``class Karni: aggregate`` and a routed viewset's ``aggregation``
     must name fields, relation paths or declared expressions, with buckets
     only on dates (E380). An expression neither list uses is a warning (W570).
+    A ``Karni.label_field``, which labels the groups of a relation, must name a
+    field of its model (E280).
     """
     from karni.aggregation import Aggregation, aggregation_of
     from karni.api.routers import resolve_router
     from karni.api.viewsets import BaseViewSet
+    from karni.meta import karni_option, label_field
 
     found: list[tuple[str, Any, Any, Any]] = []
     configs = app_configs if app_configs is not None else apps.get_app_configs()
     messages: list[checks.CheckMessage] = []
     for config in configs:
         for model in config.get_models():
+            if karni_option(model, "label_field"):
+                try:
+                    label_field(model)
+                except KarniError as exc:
+                    messages.append(_as_check(exc, model))
             try:
                 declared = aggregation_of(model)
             except KarniError as exc:

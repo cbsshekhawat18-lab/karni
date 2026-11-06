@@ -54,10 +54,10 @@ def analyst() -> Any:
 @pytest.fixture
 def catalog(analyst: Any) -> dict[str, Any]:
     """Seven products across three categories (a tree), two channels and two years."""
-    home = Category.objects.create(name="Home")
-    lamps = Category.objects.create(name="Lamps", parent=home)
-    chairs = Category.objects.create(name="Chairs", parent=home)
-    toys = Category.objects.create(name="Toys")
+    home = Category.objects.create(name="Home", code="home-1")
+    lamps = Category.objects.create(name="Lamps", code="lamps-2", parent=home)
+    chairs = Category.objects.create(name="Chairs", code="chairs-3", parent=home)
+    toys = Category.objects.create(name="Toys")  # no code: the name labels it all the same
     rows = [
         ("Desk lamp", lamps, "online", True, dt.date(2024, 1, 10), "10.00", 3, "$1.2K", "4"),
         ("Floor lamp", lamps, "store", False, dt.date(2024, 5, 2), "30.00", 1, "450", "9"),
@@ -202,6 +202,42 @@ def test_a_relation_groups_by_key_and_is_labelled_by_its_natural_key(
     keys = {category["label"]: category["key"] for category in body["categories"]}
     assert keys["Lamps"] == str(catalog["lamps"].pk) or keys["Lamps"] == catalog["lamps"].pk
     assert keys["(none)"] is None
+
+
+def test_a_relation_is_labelled_by_the_row_s_name_not_its_slug_key(
+    catalog: dict[str, Any], analyst: Any
+) -> None:
+    """The natural key is a slug (``lamps-2``): the label is what people read, the key the id."""
+    client = client_as(user=analyst)
+    body = _get(client, group_by="category", stack="category__parent").json()
+    labels = [category["label"] for category in body["categories"]]
+    assert sorted(labels) == ["(none)", "Chairs", "Lamps", "Toys"]
+    assert {series["label"] for series in body["series"]} == {"Home", "(none)"}
+    lamps = next(c for c in body["categories"] if c["label"] == "Lamps")
+    assert str(lamps["key"]) == str(catalog["lamps"].pk)  # the key still filters and links
+    assert set(lamps) == {"key", "label", "other"}  # the same shape as before
+
+
+def test_label_field_names_the_label_and_a_hidden_one_falls_back(
+    catalog: dict[str, Any], analyst: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client = client_as(user=analyst)
+    monkeypatch.setattr(Category.Karni, "label_field", "code", raising=False)
+    declared = _get(client, group_by="category").json()
+    assert {c["label"] for c in declared["categories"]} >= {"lamps-2", "chairs-3"}
+    monkeypatch.setattr(Category.Karni, "label_field", "name", raising=False)
+    monkeypatch.setattr(Category.Karni, "field_roles", {"name": ["nobody"]}, raising=False)
+    hidden = _get(client, group_by="category").json()
+    assert "Lamps" not in {c["label"] for c in hidden["categories"]}
+    assert "lamps-2" in {c["label"] for c in hidden["categories"]}  # the natural key
+
+
+def test_a_label_field_the_model_lacks_is_e280(monkeypatch: pytest.MonkeyPatch) -> None:
+    from django.apps import apps
+
+    monkeypatch.setattr(Category.Karni, "label_field", "title", raising=False)
+    found = [m.id for m in check_aggregations(apps.get_app_configs())]
+    assert "karni.E280" in found
 
 
 def test_a_relation_path(catalog: dict[str, Any], analyst: Any) -> None:

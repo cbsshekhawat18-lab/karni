@@ -142,13 +142,13 @@ def test_the_aggregate_groups_countries_by_their_continent(client_as: Any) -> No
     asia = analyst_of(client_as, world.asia).get(url).json()
     assert [
         (c["label"], v) for c, v in zip(asia["categories"], asia["series"][0]["values"])
-    ] == [("asia", 2)]
+    ] == [("Asia", 2)]
     every = client_as("staff").get(url).json()
     assert dict(
         zip([c["label"] for c in every["categories"]], every["series"][0]["values"])
     ) == {
-        "asia": 2,
-        "europe": 2,
+        "Asia": 2,
+        "Europe": 2,
     }
 
 
@@ -160,7 +160,7 @@ def test_the_saved_chart_draws_the_same_scope(client_as: Any) -> None:
     client = analyst_of(client_as, world.europe)
     data = client.get(f"/api/charts/{chart.slug}/data/").json()["data"]
     assert data["group_by"] == "year" and data["stacked"] is True
-    assert [s["label"] for s in data["series"]] == ["europe"]  # no Asia in this scope
+    assert [s["label"] for s in data["series"]] == ["Europe"]  # no Asia in this scope
     assert data["series"][0]["values"] == [2]
 
 

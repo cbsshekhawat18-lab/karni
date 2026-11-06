@@ -1585,6 +1585,13 @@ apply codemods and list the manual steps. This file is the human summary.
   `2fa/login/` now answer 429 `throttled` with `retry_after` and a
   `Retry-After` header. A replayed ephemeral token gets `replayed_token`
   (401) before its code is checked, not `invalid_code`.
+- **An aggregate on a relation is labelled with the row's name.** A group on
+  a foreign key or a tree showed the related row's natural key, so the
+  data-portal recipe's charts, legends and comparison headers read
+  `europe-15` and `health-3`. The `label` is now the related row's
+  `Karni.label_field` (new, experimental), else its `name`, `title` or `label`
+  field, else its natural key. The `key` is still the row's id and the
+  response has the same fields. A `label_field` the model lacks is `E280`.
 
 ## 0.4.0 (2026-10-22)
 

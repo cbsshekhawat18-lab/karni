@@ -544,3 +544,16 @@ ephemeral token on 2fa/login/ is 401 `replayed_token` before the code is checked
 that shows `invalid_code` as "wrong code" shows `throttled` as "wait N seconds"."""
 mechanical = false
 migration = "migrations/0.5.md#2fa-answers-throttled-inside-the-wait"
+
+[[change]]
+id = "aggregate-relation-labels-read-names"
+kind = "behaviour"
+symbol = "GET <resource>/aggregate/"
+summary = """\
+A group on a relation (a foreign key, a tree's parent) is labelled with the related row's \
+`Karni.label_field`, else its `name`, `title` or `label` field, else its natural key. In \
+0.4.0 the label was the natural key, often a slug. The `key` and the response's fields are \
+unchanged. A consumer that read the natural key from `label` declares \
+`class Karni: label_field = "<that field>"` on the related model, or reads `key`."""
+mechanical = false
+migration = "migrations/0.5.md#aggregate-labels-read-the-rows-name"

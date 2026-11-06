@@ -1,7 +1,8 @@
 """A small product catalog for the aggregations suite (``tests/api/test_aggregate.py``).
 
 ``Category`` is a tree (``parent``), so ``category__parent`` is a relation
-path. ``Product`` has one field of every kind a group or a value can be: a
+path, and its natural key is a ``code`` while people read its ``name``.
+``Product`` has one field of every kind a group or a value can be: a
 relation, a choice, a boolean, a date and a datetime, numbers, a number
 stored as text (``revenue_text``), a field only one role reads
 (``cost``, the ``staff`` role) and a write-only one (``supplier_code``). The models follow
@@ -27,15 +28,16 @@ else:
 
 # karni: allow(hand-written-tree): a plain self-referencing key to group by in the aggregation tests
 class Category(ApiBase):
-    """A node of the category tree, named by its ``name``."""
+    """A node of the category tree: ``code`` is its key, ``name`` what people read."""
 
     name = models.CharField(max_length=100)
+    code = models.SlugField(max_length=40, unique=True, null=True, blank=True)
     parent = models.ForeignKey(
         "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="children"
     )
 
     class Karni:
-        natural_key = "name"
+        natural_key = "code"
 
     def __str__(self) -> str:
         return self.name
