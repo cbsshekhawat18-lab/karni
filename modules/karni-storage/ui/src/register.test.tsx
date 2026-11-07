@@ -23,7 +23,8 @@ const field: FieldDef = {
 describe("registration", () => {
   it("registers ProtectedFileLink for protected fields only", () => {
     expect(protectedFileLinkFor(field)).toBe(ProtectedFileLink);
-    const { protected: _unused, ...plain } = field;
+    const plain: FieldDef = { ...field };
+    delete plain.protected;
     expect(protectedFileLinkFor(plain)).toBeNull();
   });
 });
