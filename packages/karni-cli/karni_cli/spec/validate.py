@@ -1524,11 +1524,18 @@ class _Meaning:
         if kind == "tree" and arg:
             self.tree_grant(where, slug, pattern, arg, matched, explicit)
             return
+        denied = kind.lower() in ("none", "no", "deny", "denied", "false", "nothing", "never")
         self.add(
             "C218",
             where,
             f"Role {slug!r}: scope {scope!r} on {pattern!r} is not a scope.",
-            "Use all, own, own:<owner field>, related:<scope path key>, custom:<name> or "
+            (
+                "A grant gives rows, so a role is kept from an action by leaving it out: grant "
+                "the others (app.entity:view, :add and :change, without :delete). "
+                if denied
+                else ""
+            )
+            + "Use all, own, own:<owner field>, related:<scope path key>, custom:<name> or "
             "tree:<path>.",
         )
 

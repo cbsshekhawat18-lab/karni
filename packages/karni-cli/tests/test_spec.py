@@ -348,6 +348,16 @@ def test_an_access_value_close_to_a_rule_names_the_rule(value: str, hint: str) -
     assert "karni explain access" in issues[0].fix
 
 
+def test_a_grant_of_none_says_to_leave_the_action_out() -> None:
+    spec = ACCESS_SHOP.replace(
+        "member: {name: Member}", "member: {name: Member, grants: GRANTS}"
+    ).replace("GRANTS", "{'shop.product:delete': none}")
+    issues = validate_text(spec).issues
+    assert [issue.code for issue in issues] == ["C218"], issues
+    assert issues[0].fix.startswith("A grant gives rows, so a role is kept from an action by")
+    assert "without :delete" in issues[0].fix
+
+
 def test_an_undeclared_role_in_another_case_and_an_access_key_name_the_right_form() -> None:
     issues = validate_text(ACCESS_SHOP + "        access: {read: 'role:STAFF'}\n").issues
     assert issues[0].code == "C232" and issues[0].message.endswith("Did you mean role:staff?")

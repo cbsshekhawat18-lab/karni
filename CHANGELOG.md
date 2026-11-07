@@ -2018,7 +2018,9 @@ apply codemods and list the manual steps. This file is the human summary.
   end with "Did you mean role:staff?" (`authenticated`, `owned:<the owner
   field>`, a declared role in its own case), the fix starts with the rule to
   write, and C212 on an access key names the slot that covers it (`delete`,
-  `update`: `write`, with the grants that keep a role from deleting).
+  `update`: `write`, with the grants that keep a role from deleting). A
+  grant scope of `none` (C218) says that a role is kept from an action by
+  leaving the action out of its grants.
 - **The new-app procedure says how to write access, and `karni explain access`
   says the rest.** In the token benchmark a coding agent that followed
   `/new-app` spent about half its tool calls reading Karni's installed source
