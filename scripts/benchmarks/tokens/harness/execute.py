@@ -116,7 +116,9 @@ def run_agent(
     return status, timed_out, round(time.monotonic() - started, 2)
 
 
-def prepare_run(run_dir: Path, start: starts.Start, task_dir: Path) -> tuple[Path, Path | None]:
+def prepare_run(
+    run_dir: Path, start: starts.Start, task_dir: Path
+) -> tuple[Path, Path | None, str]:
     """The run's folder: the project copied in with its venv and the checks, one git commit."""
     project = run_dir / "project"
     starts.clone(start.project, project)
@@ -127,8 +129,7 @@ def prepare_run(run_dir: Path, start: starts.Start, task_dir: Path) -> tuple[Pat
         mcp_config = run_dir / "mcp-empty.json"
         mcp_config.write_text('{"mcpServers": {}}\n')
     shutil.copytree(task_dir / "acceptance", project / "acceptance")
-    diffsize.commit_start(project)
-    return mcp_config, python
+    return mcp_config, python, diffsize.commit_start(project)
 
 
 def execute(
@@ -153,7 +154,7 @@ def execute(
             shutil.rmtree(run_dir)
         run_dir.mkdir(parents=True)
         project = run_dir / "project"
-        mcp_config, python = prepare_run(run_dir, start, config.tasks_dir / task)
+        mcp_config, python, start_commit = prepare_run(run_dir, start, config.tasks_dir / task)
         python_path = python or Path(sys.executable)
         db_url = paths.database_url(db_name)
         env = project_env(project, db_url, venv=python is not None)
@@ -185,7 +186,7 @@ def execute(
             record.interrupted_reason = reason
             record.reset_time = stats.reset_time
         else:
-            size = diffsize.measure(project)
+            size = diffsize.measure(project, start_commit)
             record.diff_lines_all, record.diff_lines_code = size.lines_all, size.lines_code
             record.diff_files_all, record.diff_files_code = size.files_all, size.files_code
             check(record, config, task, project, python_path, env, run_dir)

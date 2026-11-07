@@ -136,6 +136,65 @@ def test_measure_counts_new_and_changed_files_against_the_start_commit(tmp_path:
     assert (size.lines_code, size.lines_all) == (5, 15)
 
 
+def test_measure_counts_work_the_agent_committed_itself(tmp_path: Path) -> None:
+    (tmp_path / "a.py").write_text("one\n")
+    commit = diffsize.commit_start(tmp_path)
+    (tmp_path / "b.py").write_text("x\ny\nz\n")
+    (tmp_path / "package-lock.json").write_text("l\n" * 4)
+    for args in (
+        ["add", "-A"],
+        ["-c", "user.name=a", "-c", "user.email=a@b.c", "commit", "-qm", "m"],
+    ):
+        subprocess.run(["git", "-C", str(tmp_path), *args], check=True)
+    (tmp_path / "c.py").write_text("u\n")  # committed and uncommitted work count alike
+    size = diffsize.measure(tmp_path, commit)
+    assert (size.lines_code, size.files_code) == (4, 2)
+    assert (size.lines_all, size.files_all) == (8, 3)
+
+
+def _bash(command: str) -> int:
+    return streamjson.written_lines("Bash", {"command": command})
+
+
+def test_heredocs_that_write_files_are_counted() -> None:
+    assert _bash("cat > app.py <<'EOF'\none\ntwo\nthree\nEOF") == 3
+    assert _bash("cat >> app.py <<EOF\nmore\nEOF\nls") == 1
+    assert _bash("tee out.txt <<'X' >/dev/null\na\nb\nX") == 2
+    script = "python - <<'PY'\nfrom pathlib import Path\nPath('a').write_text('x')\nPY"
+    assert _bash(script) == 2
+    two = "cat > a <<EOF\n1\nEOF\ncat > b <<EOF\n2\n3\nEOF"
+    assert _bash(two) == 3
+
+
+def test_heredocs_that_do_not_write_files_and_plain_commands_are_not_counted() -> None:
+    assert _bash("ls -la") == 0
+    assert _bash("python - <<'PY'\nprint(1)\nPY") == 0
+    assert _bash("cat <<EOF | grep a\na\nb\nEOF") == 0
+    assert _bash("cat /dev/null > /dev/null <<EOF\na\nEOF") == 0
+    assert streamjson.written_lines("NotebookEdit", {"new_source": "a\nb"}) == 2
+
+
+def test_a_mixed_stream_adds_tool_inputs_and_heredocs() -> None:
+    usage = {"input_tokens": 1, "output_tokens": 1}
+    parsed = streamjson.parse(
+        lines(
+            assistant(
+                "m1",
+                usage,
+                {"name": "Write", "input": {"content": "a\nb\n"}},
+                {"name": "Bash", "input": {"command": "cat > x <<'EOF'\n1\n2\n3\nEOF"}},
+            ),
+        )
+    )
+    assert parsed.lines_written == 5
+    heredoc_only = streamjson.parse(
+        lines(
+            assistant("m2", usage, {"name": "Bash", "input": {"command": "cat > x <<EOF\nq\nEOF"}})
+        )
+    )
+    assert heredoc_only.lines_written == 1
+
+
 # --- statistics, the order, the report ------------------------------------------------------------
 
 
