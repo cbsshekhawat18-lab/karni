@@ -148,6 +148,8 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C216", SHOP + "        fields: {name: 'strr:80'}\n", 7),
     ("C216", SHOP + "        fields: {slug: 'slug:title'}\n", 7),
     ("C216", SHOP + "        fields: {price: 'decimal:4:6'}\n", 7),
+    ("C216", SHOP + "        fields: {name: 'str:200:unique'}\n", 7),
+    ("C216", SHOP + "        fields: {body: 'text:500'}\n", 7),
     ("C217", SHOP + "        access: {read: everyone}\n", 7),
     ("C218", HEAD + "roles:\n  staff: {grants: {'*': most}}\n", 4),
     ("C218", HEAD + "roles:\n  staff: {grants: {'shop': all}}\n", 4),
@@ -287,6 +289,31 @@ def test_unknown_keys_and_meaning_problems_come_in_one_run() -> None:
 def test_each_problem_has_its_code_and_line(code: str, text: str, line: int | None) -> None:
     found = [(issue.code, issue.line) for issue in validate_text(text).issues]
     assert (code, line) in found, found
+
+
+@pytest.mark.parametrize(
+    ("token", "said"),
+    [
+        ("name:str:200:unique", 'LiveUniqueConstraint(fields=["name"]) from karni.fields'),
+        ("name:str:unique", "str takes no :unique"),
+        ("count:int:unique", "int takes no :unique"),
+        ("price:decimal:10:2:4", "decimal takes 2 arguments after the type"),
+        ("body:text:500", "text takes no argument (e.g. body:text), so '500' would be dropped"),
+        ("tags:array:int:5", "array takes 1 argument after the type"),
+        ("venue:fk:Venue:cascade", "fk takes 1 argument after the type"),
+        ("site:url:300:x", "url takes 1 argument after the type"),
+    ],
+)
+def test_a_field_argument_its_type_does_not_take_is_refused(token: str, said: str) -> None:
+    """Never dropped without a word: ``str:200:unique`` built a field that was not unique."""
+    from karni_cli.generators.fields import parse_field, refuse_extra_args
+    from karni_cli.project import CliError
+
+    with pytest.raises(CliError) as caught:
+        refuse_extra_args(parse_field(token))
+    assert said in caught.value.message and caught.value.code == "C104"
+    for fine in ("tags:array:str:40", "email:email:unique", "price:money:EUR", "x:str:", "n:int"):
+        refuse_extra_args(parse_field(fine))
 
 
 #: (access value, the hint the message gives). The shop declares staff and member.

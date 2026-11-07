@@ -263,7 +263,13 @@ parser and renderer, so the spec and the generator can never disagree:
 `json[:queried]`, `array:str[:len]`, `state:<a>><b>|...` (a `StateField`,
 written as `karni make form --states` takes it), `daterange`,
 `datetimerange` and `capacity[:total]`, with a trailing `?` for optional.
-See [the karni command](cli.md) for what each one generates.
+See [the karni command](cli.md) for what each one generates. An argument a
+type does not take is refused (`C216`), never dropped: `body: "text:500"`
+names `text`'s form, and `name: "str:200:unique"` names the way to a unique
+value, `LiveUniqueConstraint(fields=["name"])` from `karni.fields` in the
+Meta of the model's class in `<app>/models.py` (`class
+Meta(karni.<Model>.Meta)`), unique among the live rows. `email:unique` is
+the one type that takes `:unique`.
 `file:protected` and `image:protected` are a file only the row's readers may
 download ([protected files](storage.md)): they need `modules: {storage: ...}`
 (`C720`).

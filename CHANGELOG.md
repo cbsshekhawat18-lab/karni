@@ -1976,6 +1976,14 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ### Fixed
 
+- **A field argument its type does not take is refused, not dropped.**
+  `name: "str:200:unique"` validated, showed in `karni plan` and built a
+  plain `CharField(max_length=200)`: the `:unique` was silently lost, and so
+  was any extra argument (`text:500`, `decimal:10:2:4`, `fk:Venue:cascade`).
+  `karni spec validate` and `karni make model` now refuse it (`C216`, the
+  generator's `C104`) with the type's form. `:unique` on a type that does not
+  take it names `LiveUniqueConstraint(fields=[...])` in the Meta of the
+  project's class, unique among live rows. `email:unique` is unchanged.
 - **A recipe's own code is printed by a command, not found in the installed
   package.** After a karni.yaml started from a recipe, `karni build` said to
   copy the recipe's code "from karni_cli/recipes/<name>/files", so an agent
