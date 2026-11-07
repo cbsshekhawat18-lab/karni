@@ -5,6 +5,10 @@ hide:
   - toc
 ---
 
+<div class="karni-hero" markdown>
+
+<div class="karni-eyebrow">Django + React framework · Apache-2.0</div>
+
 # Karni
 
 Karni is an open-source Django + React framework for building with AI coding
@@ -16,6 +20,8 @@ agent hand-writes what Karni ships.
 [Quickstart](quickstart.md){ .md-button .md-button--primary }
 [Recipes](recipes/index.md){ .md-button }
 [GitHub](https://github.com/cbsshekhawat18-lab/karni){ .md-button }
+
+</div>
 
 ## Why Karni exists
 
