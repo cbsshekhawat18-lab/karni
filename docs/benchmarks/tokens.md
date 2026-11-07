@@ -26,6 +26,36 @@ the context the agent read again by 30 to 43 percent, and raised the runs that p
 test from 12 of 15 to 14 of 15. These tasks measure the time and cost to meet a small API
 contract, not everything a finished app contains.
 
+## What each finished project contains
+
+The cost and time below measure a small API contract. What the agent leaves behind differs much
+more: one kept run per app and condition (`run.py --keep --n 1`, the same model and agent),
+each passing every acceptance test, measured by `scripts/benchmarks/tokens/inventory.py`. The
+project's own Django reports its API routes and the methods each answers, its sign-in and account
+routes outside the admin, the models in its admin and whether it serves an OpenAPI schema
+(`harness/django_probe.py`). Its files give the React screens (`.tsx` files other than `main.tsx`,
+`App.tsx`, tests and stories), the tests it ships with (the harness's acceptance tests are not
+counted), a typed API client, a production Docker stack (`Dockerfile` and
+`docker-compose.prod.yml`) and rules for the coding agent (`AGENTS.md`). The data is in
+`data/inventory.json`, and the run records in `data/inventory.jsonl`.
+
+<!-- bench:inventory-full:start -->
+| In the finished app | Booking, plain | Booking, Karni | CRM, plain | CRM, Karni | Shop, plain | Shop, Karni |
+|---|---|---|---|---|---|---|
+| API operations (route and method) | 22 | 103 | 24 | 71 | 25 | 135 |
+| Sign-in and account endpoints, outside the admin | 1 | 16 | 2 | 16 | 2 | 16 |
+| Models in the admin | 2 | 29 | 1 | 26 | 1 | 30 |
+| React screens | none | 10 | none | 12 | none | 9 |
+| Tests the project ships with | none | 9 | none | 7 | none | 15 |
+| OpenAPI schema served | no | yes | no | yes | no | yes |
+| Typed API client in the frontend | no | yes | no | yes | no | yes |
+| Production Docker stack | no | yes | no | yes | no | yes |
+| Rules for the coding agent | no | yes | no | yes | no | yes |
+| Acceptance tests passed | 13 of 13 | 13 of 13 | 16 of 16 | 16 of 16 | 17 of 17 | 17 of 17 |
+
+Runs measured: booking-karni-1-20261107T165100, booking-plain-1-20261107T164927, crm-karni-1-20261107T165559, crm-plain-1-20261107T165419, shop-karni-1-20261107T170108, shop-plain-1-20261107T165926 (repository commit 1d7cc1fb).
+<!-- bench:inventory-full:end -->
+
 **Model and agent.** Every run of both conditions and both sets used the same model and the
 same agent CLI version. The project names no AI tool or company, so the published data calls
 the model `model-A` and gives the agent CLI by its version.
