@@ -46,7 +46,7 @@ Coding agents write that setup faster, but they write it again in every project.
 1. **Create a project** with `karni new "Yoga Studio"` and open it in your coding agent.
 2. **Describe the app in one line** after `/new-app`. AGENTS.md tells the agent what that asks for.
 3. **The agent writes `karni.yaml`** from the closest [recipe](docs/recipes/index.md), and asks you only the questions `karni plan --questions` lists.
-4. **`karni build` makes the app**: it adds the modules, writes Karni's code, migrates, seeds demo data, generates the TypeScript types, and runs the tests and `karni check`.
+4. **`karni build` makes the app**: it adds the modules, writes Karni's code, migrates, seeds the demo data the spec asks for, generates the TypeScript types, and runs the tests and `karni check`.
 5. **The agent writes only the domain logic that is left**, in the project's own files. It is done when `karni check` and `karni test` pass.
 
 ```text
@@ -64,15 +64,14 @@ $ karni plan --questions
 No questions: karni.yaml settles everything Karni asks before a build.
 
 $ karni build
-...
-22 changes, 0 risky.
+plan        22 changes, 0 risky: modules 1, features 1, roles 3, apps 1, entities 3, access 3, pages 3, migrations 1, seed 3, tests 3 (--verbose lists each)
 modules     karni add payments
 files       27 written: 17 Karni's, 10 the project's (pyproject.toml, frontend/package.json, ...)
 migrations  bookings/migrations/0001_initial.py
 migrate     applied 84 on default
 seed        Resource 4, Slot 30, Booking 60 (demo login demo@example.com / karni-password)
 types       frontend/src/api/types.ts and hooks.ts
-test        7 passed in 2.09s, tests/openapi.snapshot.json updated (the API changed: commit it)
+test        7 passed in 2.88s, tests/openapi.snapshot.json updated (the API changed: commit it)
 check       ok
 Built: the project matches karni.yaml.
 ```
@@ -85,22 +84,25 @@ On a developer laptop, `karni new --recipe shop` builds the shop from scratch on
 
 ## Coding-agent benchmark
 
-A coding agent builds three apps five times each on plain Django + React, on the Karni 0.5.0 candidate, and on Karni again after work on its agent flow. All three sets are published, whatever they show.
+A coding agent built three small apps five times each on plain Django + React, on the Karni 0.5.0 candidate, and on Karni again after work on its agent flow: 45 runs with the same model and agent version, prompt and API contract, where the harness's own acceptance tests decide success.
 
 <!-- bench:readme:start -->
-> [!NOTE]
-> **The runs are in progress.** No figures are published yet, and this page claims nothing in either direction until they are.
-
 | Task | Plain Django + React | Karni 0.5.0 candidate | Karni after the agent-flow work |
 |---|---|---|---|
-| Booking with payments | in progress | in progress | in progress |
-| A CRM with three roles and import | in progress | in progress | in progress |
-| A shop with orders and refunds | in progress | in progress | in progress |
+| Booking with payments | $0.19, 61.76 s, 5 of 5 passed, 5 tool calls | $0.45, 208 s, 3 of 5 passed, 26 tool calls | $0.33, 187 s, 5 of 5 passed, 20 tool calls |
+| A CRM with three roles and import | $0.21, 70.51 s, 5 of 5 passed, 6 tool calls | $0.56, 278 s, 5 of 5 passed, 31 tool calls | $0.40, 236 s, 5 of 5 passed, 22 tool calls |
+| A shop with orders and refunds | $0.23, 72.21 s, 5 of 5 passed, 7 tool calls | $0.62, 238 s, 4 of 5 passed, 29 tool calls | $0.44, 255 s, 4 of 5 passed, 24 tool calls |
+| All three tasks | $0.63, 204 s, 15 of 15 passed, 18 tool calls | $1.63, 724 s, 12 of 15 passed, 86 tool calls | $1.17, 678 s, 14 of 15 passed, 66 tool calls |
 
-Each cell will hold the median of five runs: tokens, cost, wall time, acceptance tests passed and tool calls.
+Each cell: median cost in US dollars, median wall time, runs that passed every acceptance test, and median tool calls. In the last row the runs add up and the other figures are the sums of the task medians, as the [benchmark report](docs/benchmarks/tokens.md) gives them.
 <!-- bench:readme:end -->
 
-Method: the same agent and model get the same prompt and API contract in each condition, and the harness's own acceptance tests decide success. The [benchmark report](docs/benchmarks/tokens.md) has the full method, the limits, the commands to repeat it and the raw data.
+- **Plain Django + React was cheaper and faster on these three small apps.** Karni after the agent-flow work cost about 1.8 to 1.9 times as much per app (median) and took about 3 to 3.5 times as long.
+- **The agent-flow work** cut the median cost by 27 to 29 percent and the context the agent read again by 30 to 43 percent, and raised the runs that passed every test from 12 of 15 to 14 of 15.
+- **With Karni the agent wrote fewer lines of its own** (median 256 to 431 per app, against 438 to 554), and each Karni project ended with far more code in it (median about 11,500 to 20,000 lines, most of it generated by Karni, against about 440 to 570).
+- **What these tasks measure** is the time and cost to meet a small API contract, not everything a finished app contains.
+
+The [benchmark report](docs/benchmarks/tokens.md) has every figure with its range, the method, the limits, the commands to repeat it and the raw data.
 
 ## What you get
 
