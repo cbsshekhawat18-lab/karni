@@ -11,6 +11,7 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## 0.5.0 (unreleased)
 
+- **Token benchmark: diff and lines written.** The diff size is measured against the run's start commit, so an agent that commits its own work is no longer measured as zero, and lines written count shell heredocs that write files, not only Write and Edit.
 - **Token benchmark: interrupted runs.** A run cut short by a usage or rate limit, an API error or a kill is recorded as interrupted, left out of the statistics, run again by `--resume`, and a usage limit stops the batch; the report refuses to compare while a cell is short.
 - **Speed budgets in CI (experimental).** `scripts/benchmark/speed.py` times what a
   person waits for: each recipe from scratch with `karni new --recipe` (and the

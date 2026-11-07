@@ -91,8 +91,8 @@ limit is 60 minutes per run. The runs alternate between the conditions, plain th
 time of day touches both alike.
 
 **Recorded per run.** Input, output, cache-read and cache-creation tokens, the reported cost,
-tool calls by tool, wall time, the agent CLI's version, the lines the agent wrote itself (counted from its Write and
-Edit tool inputs), the size of the project's git diff (lines added plus deleted, shown with and
+tool calls by tool, wall time, the agent CLI's version, the lines the agent wrote itself (counted from its Write, Edit,
+MultiEdit and NotebookEdit inputs and from shell heredocs that write a file), the size of the project's git diff (lines added plus deleted, shown with and
 without lockfiles, `node_modules`, migrations and build output), tests passed out of the total,
 the frontend build, whether the time limit hit, and the exit status. The report gives the
 success rate and, per figure, the median, minimum, maximum and interquartile range.
@@ -150,8 +150,12 @@ checks can be passed and are never shown to the agents under test.
   it is also part of the condition.
 - Package install time is excluded for both conditions. Dependencies are installed before the
   agent starts.
-- Lines written by the agent are counted from Write and Edit inputs only. Lines written through
-  shell commands show up in the diff size, not in that count.
+- Lines written by the agent are counted from Write, Edit, MultiEdit and NotebookEdit inputs, plus
+  the bodies of shell heredocs that redirect into a file (`cat > f <<'EOF'`, `cat >> f`, `tee f`)
+  and of interpreter scripts (`python - <<'EOF'`) that call a file-writing function. `echo >`,
+  `sed -i` and files written by a script's own logic are not counted; they show up in the diff size.
+- The diff size is measured against the commit the harness made at the start of the run, so work
+  the agent committed itself counts the same as work it left uncommitted.
 - The checks measure the contract, not the quality or the look of the app.
 - The Karni condition may use a recipe the contract fits. The result describes tasks like these
   and not every project.

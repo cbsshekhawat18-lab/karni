@@ -108,16 +108,61 @@ def count_lines(text: str) -> int:
     return len(text.splitlines()) if text else 0
 
 
-def written_lines(name: str, tool_input: dict[str, Any]) -> int:
-    """The lines the agent itself wrote through one Write, Edit or MultiEdit call.
+_HEREDOC = re.compile(r"<<(-?)\s*(?:'([^'\n]+)'|\"([^\"\n]+)\"|\\?([A-Za-z_][\w]*))")
+_REDIRECT = re.compile(r"(?<![<>&\d])\d?>>?\s*(?!&|/dev/null\b)[^\s&|;<>]")
+_INTERPRETER = re.compile(r"\b(?:python3?|node|ruby|perl)\b")
+_FILE_WRITE = re.compile(r"write_text|write_bytes|\.write\(|writeFileSync|open\([^)]*['\"][wax]")
 
-    Write counts its content, Edit its new string and MultiEdit the new strings of its edits.
-    Lines written through Bash (heredocs, sed) are not counted: the diff size covers those.
+
+def shell_written_lines(command: str) -> int:
+    """The lines a shell command writes into files through heredocs.
+
+    Counted: the body of a heredoc whose command redirects into a file (``cat > f <<'EOF'``,
+    ``cat >> f <<EOF``, ``tee f <<EOF``), and the body of a script fed to an interpreter
+    (``python - <<'EOF'``) when the script calls a file-writing function. Not counted: heredocs
+    that feed other commands, ``echo``/``printf`` redirects, ``sed -i`` and files a script
+    writes by other means. The diff size covers those.
+    """
+    rows = command.split("\n")
+    total = 0
+    index = 0
+    while index < len(rows):
+        found = _HEREDOC.search(rows[index])
+        if not found:
+            index += 1
+            continue
+        strip_tabs = bool(found.group(1))
+        word = found.group(2) or found.group(3) or found.group(4)
+        end = index + 1
+        while end < len(rows) and (rows[end].lstrip("\t") if strip_tabs else rows[end]) != word:
+            end += 1
+        body = rows[index + 1 : end]
+        head = rows[index]
+        before = head[: found.start()] + head[found.end() :]
+        if _REDIRECT.search(before) or re.search(r"\btee\b", before):
+            total += len(body)
+        elif _INTERPRETER.search(before) and _FILE_WRITE.search("\n".join(body)):
+            total += len(body)
+        index = end + 1
+    return total
+
+
+def written_lines(name: str, tool_input: dict[str, Any]) -> int:
+    """The lines the agent itself wrote through one tool call.
+
+    Write counts its content, Edit its new string, MultiEdit the new strings of its edits and
+    NotebookEdit its new source. Bash counts the bodies of heredocs that write a file (see
+    ``shell_written_lines``). Other shell writing (``sed -i``, ``echo >``) is not counted here;
+    the diff size covers it.
     """
     if name == "Write":
         return count_lines(str(tool_input.get("content", "")))
     if name == "Edit":
         return count_lines(str(tool_input.get("new_string", "")))
+    if name == "NotebookEdit":
+        return count_lines(str(tool_input.get("new_source", "")))
+    if name == "Bash":
+        return shell_written_lines(str(tool_input.get("command", "")))
     if name == "MultiEdit":
         edits = tool_input.get("edits")
         if isinstance(edits, list):

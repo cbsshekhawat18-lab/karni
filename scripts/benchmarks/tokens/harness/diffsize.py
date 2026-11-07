@@ -1,7 +1,8 @@
 """The size of what a run changed in its project, from git.
 
-The start of a run is one commit. Afterwards everything the agent (and the tools it ran)
-left in the working tree that git does not ignore is counted: lines added plus lines deleted.
+The start of a run is one commit, whose hash is recorded. Afterwards everything the agent
+(and the tools it ran) left that differs from that commit is counted, whether the agent
+committed it or left it in the working tree (git ignores aside): lines added plus lines deleted.
 Two figures: ``all`` counts every file, ``code`` leaves out lockfiles, ``node_modules``,
 migrations, build output and caches.
 """
@@ -77,7 +78,7 @@ def commit_start(project: Path) -> str:
     return _git(project, "rev-parse", "HEAD").strip()
 
 
-def measure(project: Path, base: str = "HEAD") -> DiffSize:
+def measure(project: Path, base: str) -> DiffSize:
     """Lines changed since ``base``, new files included, ignored files left out."""
     _git(project, "add", "-A")
     return parse_numstat(_git(project, "diff", "--cached", "--numstat", base))
