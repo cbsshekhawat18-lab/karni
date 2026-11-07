@@ -240,11 +240,30 @@ def test_the_report_replaces_only_what_is_between_the_markers() -> None:
         report.splice("no markers", "new")
 
 
-def test_the_docs_page_is_current_for_the_data_file() -> None:
+PUBLISHED_SETS = ("before", "after")
+
+
+def test_the_docs_page_is_current_for_the_published_data() -> None:
+    """The page shows exactly what the committed data sets give, so the raw data is the proof."""
     page = report.PAGE.read_text()
-    assert report.splice(page, report.render(records.load())) == page, (
-        "run scripts/benchmarks/tokens/report.py"
+    data = TOKENS / "data"
+    sets = [(label, records.load(data / f"{label}.jsonl")) for label in PUBLISHED_SETS]
+    assert all(rows for _, rows in sets), "a published data set is missing or empty"
+    assert report.splice(page, report.render_sets(sets)) == page, (
+        "run scripts/benchmarks/tokens/report.py "
+        + " ".join(
+            f"--data {label}=scripts/benchmarks/tokens/data/{label}.jsonl"
+            for label in PUBLISHED_SETS
+        )
     )
+
+
+def test_the_published_data_names_no_ai_tool() -> None:
+    """The project names no AI tool or company: the published runs carry a neutral model label."""
+    for label in PUBLISHED_SETS:
+        for row in records.load(TOKENS / "data" / f"{label}.jsonl"):
+            assert row["model"] == "model-A"
+            assert row["agent_version"].endswith("(coding-agent CLI)")
 
 
 # --- the command line the runs use ---------------------------------------------------------------
