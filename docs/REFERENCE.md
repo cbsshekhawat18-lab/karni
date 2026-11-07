@@ -449,7 +449,7 @@ karni check [OPTIONS] [REF]
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 | `--frontend/--no-frontend` |  | Run the frontend checks (eslint and jscpd in frontend/). By default they run when frontend/node_modules is installed, and are skipped with a note when it is not, except in CI. --frontend fails without it, --no-frontend skips them. |
 | `--quiet`, `-q` |  | Do not print the optional tip. |
-| `--verbose`, `-v` |  | Print the frontend tools' own output (ESLint, jscpd's report) when they pass too. By default a pass is one line and only a failure prints their output. |
+| `--verbose`, `-v` |  | Print the frontend tools' own output (ESLint, jscpd's report) when they pass too. By default only a failure prints their output. |
 | `--deploy` |  | Also run the deploy checks (DEBUG, SECRET_KEY, hosts, HSTS, cookies, admin path, CORS, CSP) and fail on warnings. Run it with the production environment. |
 | `--seo` |  | Also run the SEO checks: every page of the public site rendered, and missing or shared titles and descriptions, images without alt, size or smaller copies, broken links and pages missing from the sitemap reported (karni-site, SITE010 to SITE018). |
 | `--changed` |  | Only the files git reports as changed: the working tree and the index against HEAD (or REF), and untracked files. The checks that read the whole project still run. Experimental. |

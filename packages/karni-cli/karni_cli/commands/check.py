@@ -308,7 +308,7 @@ def check(
         "--verbose",
         "-v",
         help="Print the frontend tools' own output (ESLint, jscpd's report) when they pass too. "
-        "By default a pass is one line and only a failure prints their output.",
+        "By default only a failure prints their output.",
     ),
     deploy: bool = typer.Option(
         False,
@@ -390,7 +390,8 @@ def check(
                 err=True,
             )
     if run_frontend:
-        # a pass is one line: jscpd's report table and the tools' banners only on a failure
+        # a pass says nothing more than karni check: ok, jscpd's report table and the tools'
+        # banners only on a failure (or with --verbose)
         captured: list[str] | None = None if verbose else []
         dup = _frontend_duplication(project, capture=captured)
         lint_files = (
@@ -403,13 +404,10 @@ def check(
             else None
         )
         lint = _frontend_lint(project, capture=captured, cache=not no_cache, files=lint_files)
-        if captured is not None:
-            if dup or lint:
-                for part in captured:
-                    if part.strip():
-                        typer.echo(part.rstrip())
-            else:
-                typer.echo("frontend checks: ok (ESLint and jscpd, --verbose prints their output)")
+        if captured is not None and (dup or lint):
+            for part in captured:
+                if part.strip():
+                    typer.echo(part.rstrip())
     os.environ.pop("KARNI_SUGGESTIONS_FILE", None)
     block = (
         _suggestions_block(project, suggestions_file, docker=docker, service=service)

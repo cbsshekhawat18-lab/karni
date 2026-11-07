@@ -41,7 +41,7 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_ci: None) -> Pat
         "run_manage",
         lambda *a, **k: subprocess.CompletedProcess([], 0, stdout=BACKEND + "\n", stderr=""),
     )
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 0)
     # No real DNS lookup or connect: test_services covers the probes.
     monkeypatch.setattr(services, "resolves", lambda host, timeout=0: False)
     monkeypatch.setattr(services, "speaks", lambda *a, **k: None)
@@ -242,7 +242,7 @@ def test_check_prints_the_tip_on_stderr_only(runner, project: Path) -> None:
 
 
 def test_failing_check_keeps_the_tip_for_later(runner, project: Path, monkeypatch) -> None:
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 1)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 1)
     failed = runner.invoke(app, ["check"])
     assert failed.exit_code == 1 and TIP_FIRST_LINE not in failed.output
     assert not _state(project).exists()

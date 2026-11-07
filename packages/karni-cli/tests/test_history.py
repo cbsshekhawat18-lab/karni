@@ -306,7 +306,7 @@ def test_no_store_spawns_no_provider_process(runner, project, monkeypatch) -> No
     monkeypatch.setattr(project_mod, "compose_service_running", lambda *a: False)
     import karni_cli.commands.check as check_mod
 
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 0)
     for args in (
         ["context", "--with-history", "apps/events/models.py"],
         ["context", "--with-history"],

@@ -368,7 +368,7 @@ def fake_backend(
 
 @pytest.fixture
 def quiet_frontend(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 0)
     monkeypatch.setattr(check_mod, "_frontend_lint", lambda p, **kwargs: 0)
 
 

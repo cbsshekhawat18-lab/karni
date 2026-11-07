@@ -331,7 +331,7 @@ def test_a_changed_run_without_frontend_changes_skips_eslint(tmp_path: Path) -> 
     ]
 
 
-def test_a_frontend_pass_is_one_line_and_a_failure_prints_the_tools_output(
+def test_a_frontend_pass_prints_nothing_more_and_a_failure_prints_the_tools_output(
     runner, tmp_path: Path, monkeypatch
 ) -> None:
     """jscpd's report table and ESLint's banner reach the output only when they fail."""
@@ -355,13 +355,12 @@ def test_a_frontend_pass_is_one_line_and_a_failure_prints_the_tools_output(
 
     monkeypatch.setattr(check_mod, "_frontend_duplication", tool("jscpd"))
     monkeypatch.setattr(check_mod, "_frontend_lint", tool("eslint"))
-    passed = runner.invoke(app, ["check"])
+    passed = runner.invoke(app, ["check", "-q"])
     assert passed.exit_code == 0, passed.output
-    assert "REPORT TABLE" not in passed.output
-    assert "frontend checks: ok (ESLint and jscpd" in passed.output
+    assert passed.output == "karni check: ok\n"  # nothing of the tools' own output
     verbose = runner.invoke(app, ["check", "--verbose"])
     assert "jscpd REPORT TABLE" in verbose.output and "eslint REPORT TABLE" in verbose.output
     outcome["dup"] = 1
     failed = runner.invoke(app, ["check"])
     assert failed.exit_code == 1
-    assert "jscpd REPORT TABLE" in failed.output and "frontend checks: ok" not in failed.output
+    assert "jscpd REPORT TABLE" in failed.output and "eslint REPORT TABLE" in failed.output

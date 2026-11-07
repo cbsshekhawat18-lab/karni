@@ -2038,9 +2038,9 @@ apply codemods and list the manual steps. This file is the human summary.
   jscpd's report table. A coding agent reads that output back on every later
   turn. The build now prints the plan as one line, `plan  24 changes, 0
   risky: entities 4, access 4, ...`, with each risky change under it, and
-  `karni build --verbose` prints every change as before. A frontend pass is
-  one line, `frontend checks: ok`. A failure still prints the tools' output,
-  and `karni check --verbose` always does.
+  `karni build --verbose` prints every change as before. A frontend pass
+  adds nothing to `karni check: ok`. A failure still prints the tools'
+  output, and `karni check --verbose` always does.
 - **`karni build` wrote demo rows that neither the spec nor `karni plan` named.**
   Every table a build created got 10 demo rows and the demo login, unless
   `seed` gave it `0`, while `karni plan` listed seed changes only for the
