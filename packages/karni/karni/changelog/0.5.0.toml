@@ -803,3 +803,17 @@ unique. Remove the argument from scripts that call karni make model. For a uniqu
 declare LiveUniqueConstraint(fields=[...]) from karni.fields in the model's Meta."""
 mechanical = false
 migration = "migrations/0.5.md#a-field-argument-its-type-does-not-take-is-refused"
+
+[[change]]
+id = "frontend-minimatch-override"
+kind = "project-files"
+symbol = "frontend/package.json (overrides)"
+summary = """\
+npm audit reports minimatch 7.0.0 to 11.0.0 as moderate (GHSA-g3hv-75wg-m249, a denial \
+of service through glob parts), and typescript-eslint, which ESLint loads in frontend/, \
+still needs minimatch 10. A new project's frontend/package.json now overrides only those \
+versions: "overrides": {"minimatch@>=7.0.0 <11.0.1": "^11.0.5"}. The minimatch 3 that \
+ESLint itself uses stays. Add the same block to an earlier project and run npm install \
+there to clear the audit."""
+mechanical = false
+migration = "migrations/0.5.md#minimatch-is-overridden-in-the-frontend"

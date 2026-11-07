@@ -28,6 +28,14 @@ apply codemods and list the manual steps. This file is the human summary.
   `karni.yaml` it started `manage.py karni_check` and then `manage.py karni_facts`
   for the drift suggestion (SUG007). `karni_check` now hands the facts over in the
   suggestions file it already writes. The output is the same.
+- **Fixed: every frontend locked minimatch 10.2.6** (GHSA-g3hv-75wg-m249, moderate: a
+  denial of service through glob parts), through typescript-eslint and glob, which ESLint
+  and the test tools load. @karni/ui, the module UIs, the examples and a new project's
+  `frontend/package.json` override that range alone with minimatch ^11.0.5, so ESLint
+  keeps its minimatch 3. `karni upgrade` reports `frontend-minimatch-override` for an
+  earlier project, and a test checks every committed lockfile and every frontend.
+  @karni/ui's Storybook also overrides glob 9.0.0 to 14.0.1 (GHSA-3g3m-2fjr-6pw4,
+  moderate) with glob ^14.0.4: its stories and their generated prop tables are unchanged.
 - **Fixed: the Dashboard's count tiles had a screen-reader name of their own** ("Draft:
   6. Open the list") that did not contain the visible text, which WCAG 2.5.3 refuses
   (axe: label-content-name-mismatch). Their name is now the visible label and number,
