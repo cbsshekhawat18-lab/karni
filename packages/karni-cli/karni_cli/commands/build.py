@@ -68,8 +68,9 @@ def build(
     frontend/src/pages/karni/, the karni:spec blocks of config/settings.py
     and routes.tsx) and the project's own files once (<app>/models.py,
     viewsets.py, seeds.py: a subclass per entity, never overwritten),
-    makemigrations then migrate, seed (only tables it created, only while
-    empty), karni types, karni test, then karni check. It stops at the first
+    makemigrations then migrate, seed (only tables it created that the
+    spec's seed counts, only while empty), karni types, karni test, then
+    karni check. It stops at the first
     failure with its code and what to do next, and the next karni build
     continues from there. Run twice with no change, it writes nothing.
     Fingerprints live in .karni/build.json (commit it). Exit status 1 when

@@ -540,6 +540,9 @@ page, which `karni build` leaves to the project.
 
 `seed` maps an entity to its demo rows per `karni seed` run (`karni make
 seeder <Entity> --count <n>`, a Seeder's `Meta.count`). `0` skips it.
+`karni build` seeds only the entities `seed` names, so a spec without
+`seed` builds an app with empty tables. Keep it for a demo, and leave it out
+when the app's database should hold only the rows its users create.
 
 A large count (experimental) is seeded in bulk: from the project's
 `KARNI_SEED_BULK_THRESHOLD` (default 1000) rows, `karni seed` writes the
@@ -1144,8 +1147,11 @@ rows). Then the hash check, then the steps:
    table needs no value. On a table with rows it stops (`C277`): add it as
    optional first, fill it, then make it required.
 4. **migrate**: on `default` and on every alias an entity names.
-5. **seed**: only the tables this build created, only while they hold no
-   row, with the spec's `seed` counts. Demo rows never mix with real data.
+5. **seed**: only the tables this build created that `seed` gives a count,
+   only while they hold no row. A new table `seed` does not name starts
+   empty, as `karni plan` shows: demo rows in the database the app runs on
+   would mix with the rows its users and its tests create. `karni seed`
+   fills every table when you ask for demo data.
    A count at the bulk threshold is inserted in bulk, and the step says so
    with its time (`Booking 200000 in bulk (61.2s)`, experimental).
 6. **types**: `karni types`, when the project has a frontend.

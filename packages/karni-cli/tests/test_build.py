@@ -840,7 +840,7 @@ STORE = """\
       - home: dashboard
       - Part: [list]
       - reports: code
-    seed: {Part: 4}
+    seed: {Part: 4, Mapping: 3}
     """
 
 
@@ -869,7 +869,7 @@ def test_bigint_keys_an_external_table_a_second_database_and_code(
     assert not (root / "stock/tests/karni/test_sale.py").exists()  # another system's table
     assert _rows(root, "select count(*) from stock_part") == [(4,)]
     with sqlite3.connect(root / "warehouse.sqlite3") as db:
-        assert db.execute("select count(*) from stock_mapping").fetchall() == [(10,)]
+        assert db.execute("select count(*) from stock_mapping").fetchall() == [(3,)]
     assert "pages/karni/reports.tsx" not in out and "+ reports: code (not managed)" in out
     # the project's own page at /reports: access: code and the page match the spec as they are
     (root / "frontend/src/pages/reports.tsx").write_text(
@@ -1138,6 +1138,29 @@ def test_hand_edit_lines_and_the_record() -> None:
     rec = record.Record(spec="s", entities=["b.B", "a.A"], files={"z": "1", "a": "2"})
     assert json.loads(rec.text())["entities"] == ["a.A", "b.B"]
     assert list(json.loads(rec.text())["files"]) == ["a", "z"]
+
+
+def test_a_new_table_the_spec_seeds_none_of_starts_empty(copy: Path) -> None:
+    """Demo rows go only where seed names a count, as karni plan shows: none mix with real ones."""
+    spec = copy / "karni.yaml"
+    _edit(
+        spec,
+        (
+            "pages:\n",
+            (
+                "      Note:\n        fields: {title: str}\n"
+                '        access: {read: public, write: "role:staff"}\npages:\n'
+            ),
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan"])
+    assert "+ Note" not in plan.output.split("\nseed\n", 1)[-1]  # the plan seeds no Note
+    code, out = _build()
+    assert code == 0, out
+    assert _rows(copy, "select count(*) from classes_note") == [(0,)]
+    seed_line = next(line for line in out.splitlines() if line.startswith("seed "))
+    assert "names none of the new tables, so they start empty" in seed_line, seed_line
+    assert "karni seed fills them with demo rows" in seed_line
 
 
 def test_seeding_skips_a_table_that_holds_rows(copy: Path) -> None:

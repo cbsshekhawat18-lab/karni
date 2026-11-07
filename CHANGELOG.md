@@ -1976,6 +1976,16 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ### Fixed
 
+- **`karni build` wrote demo rows that neither the spec nor `karni plan` named.**
+  Every table a build created got 10 demo rows and the demo login, unless
+  `seed` gave it `0`, while `karni plan` listed seed changes only for the
+  entities `seed` names. In the database the app runs on those rows mixed
+  with the ones its users and its tests create: a coding agent's own
+  acceptance run read the first page of a list sorted by name and missed the
+  row it had just created. The build now seeds only the entities `seed`
+  names, and the seed step says when the new tables start empty. `karni
+  seed` still fills every table on request. The recipes name every entity,
+  so `karni new --recipe` builds the same demo.
 - **A viewset's own action named `move` was not routed on a flat model.**
   `BaseViewSet` hides its tree actions (`tree`, `children`, `ancestors`,
   `move`, `access_forest`) on a model that is not a tree, and `facets` and
