@@ -11,6 +11,7 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## 0.5.0 (unreleased)
 
+- **Documentation refresh.** A new README and docs home (the /new-app flow, the recipes and modules, a quickstart checked on a clean machine, one diagram), a [features page](docs/features.md) that `scripts/gen_reference.py` keeps complete, every package page on PyPI and npm in one shape, and the docs site in the look of the Karni page on gigaikripaservices.com.
 - **Token benchmark: side-by-side report.** `report.py --data LABEL=PATH` (repeatable) shows plain Django and one Karni column per labelled data set, with medians and ranges per task, a total row, and the Karni commit, model, agent version and dates of each set.
 - **Token benchmark: diff and lines written.** The diff size is measured against the run's start commit, so an agent that commits its own work is no longer measured as zero, and lines written count shell heredocs that write files, not only Write and Edit.
 - **Token benchmark: interrupted runs.** A run cut short by a usage or rate limit, an API error or a kill is recorded as interrupted, left out of the statistics, run again by `--resume`, and a usage limit stops the batch; the report refuses to compare while a cell is short.

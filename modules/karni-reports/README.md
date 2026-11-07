@@ -1,12 +1,10 @@
 # karni-reports
 
-PDF reports for [Karni](https://github.com/cbsshekhawat18-lab/karni)
-projects, experimental. A report prints one row of a model from an HTML
-template. A Celery task renders it with WeasyPrint and stores the file
-through Django's storage. The file is cached by the template and the data,
-so a changed row or template gives a new file and an unchanged one is served
-again without rendering. The API serves it only to users who may retrieve
-the row through its own viewset.
+Reports for Karni: a row printed to PDF from an HTML template in the background, cached by template and data, served only to users who may see the row.
+
+[![PyPI](https://img.shields.io/pypi/v/karni-reports)](https://pypi.org/project/karni-reports/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/reports/)
+
+Experimental. A Celery task renders the template with WeasyPrint and stores the file through Django's storage. The file is cached by the template and the data, so a changed row or template gives a new file and an unchanged one is served again without rendering. The API serves it only to users who may retrieve the row through its own viewset.
 
 ## Install
 
@@ -51,6 +49,15 @@ class ProductSheet(Report):
 `get_context` gets only the row: one file serves everyone who may see the
 row, so it must not depend on who asks.
 
+## Main features
+
+- A report declared in `<app>/reports.py`: the model, the template and `get_context(obj)`
+- Rendered in the background by a Celery task, with WeasyPrint
+- Cached by the template and a hash of the data
+- `POST /api/reports/<report>/<id>/`, its status and its download, under the row's own access
+- A base print template, `manage.py karni_pregenerate` and a Generated reports admin
+- A React button in [`@karni/reports-ui`](https://www.npmjs.com/package/@karni/reports-ui)
+
 ## Endpoints
 
 | Method and path | Answer |
@@ -93,3 +100,12 @@ explicit registration (`karni_reports.admin.GeneratedReportAdmin`).
   `reports.download_report` in `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]`.
 - The task: `karni_reports.tasks.render_report`. Route it with Celery's
   `task_routes`.
+
+## Links
+
+- Reports (PDF): <https://cbsshekhawat18-lab.github.io/karni/reports/>
+- React components: <https://www.npmjs.com/package/@karni/reports-ui>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. karni-reports is released with every other Karni package, at one version.

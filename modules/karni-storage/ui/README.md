@@ -1,8 +1,10 @@
 # @karni/storage-ui
 
-React components for the Karni storage module (`karni add storage`), composing
-[`@karni/ui`](https://www.npmjs.com/package/@karni/ui). **Experimental**: its names
-may change in a minor release, with a CHANGELOG entry.
+React components for the Karni storage module: protected uploads straight to the bucket, download links and images.
+
+[![npm](https://img.shields.io/npm/v/@karni/storage-ui)](https://www.npmjs.com/package/@karni/storage-ui) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/storage/)
+
+It composes [`@karni/ui`](https://www.npmjs.com/package/@karni/ui) for the [karni-storage](https://pypi.org/project/karni-storage/) module (`karni add storage`). **Experimental**: its names may change in a minor release, with a CHANGELOG entry.
 
 - **`ProtectedFileInput`**: a protected file field of `<ResourceForm>`. The file goes
   straight to the bucket when the user picks it, with a progress bar, and the form
@@ -65,3 +67,12 @@ frontend's origin for `POST` (or `PUT`) with the `Content-Type` header. See
   to the bucket (the default is XMLHttpRequest, for its progress events).
 - `open` on `ProtectedFileLink` replaces how the signed URL opens.
 - `fallback` on `ProtectedImage` shows while the link loads.
+
+## Links
+
+- Protected files: <https://cbsshekhawat18-lab.github.io/karni/storage/>
+- The Python module: <https://pypi.org/project/karni-storage/>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. @karni/storage-ui is released with every other Karni package, at one version.

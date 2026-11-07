@@ -24,13 +24,17 @@ Everything is read from this checkout, never typed from memory:
   evidence (a reference-application file and a phrase in it), checked on
   every run, so a claim cannot outlive the code that backs it.
 
-README.md keeps hand-written prose; only the regions between
-``<!-- generated:NAME -->`` and ``<!-- /generated:NAME -->`` are replaced.
+docs/features.md keeps hand-written prose; only the regions between
+``<!-- generated:NAME -->`` and ``<!-- /generated:NAME -->`` are replaced
+(the capabilities by area, the modules, the commands and the make targets).
 Two docs pages have such a block too: docs/public-site.md the karni-site
 template tags (``karni_site.tagref``) and docs/design-content.md the content
 map's keys (``karni_cli.design.mapref``), the sources ``karni explain`` reads.
-Every README link into docs/REFERENCE.md is checked against the anchors
-GitHub generates for its headings.
+Every features-page link into docs/REFERENCE.md is checked against the
+anchors generated for its headings. The features page must also link every
+page of the Reference and Debugging sections of mkdocs.yml's nav, and the
+README must name every module's ``karni add`` command, so neither misses a
+feature.
 
 Needs the packages installed (``make install-py``) and @karni/ui's
 dependencies (``make install-ui``).
@@ -58,7 +62,12 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 REFERENCE = ROOT / "docs" / "REFERENCE.md"
 README = ROOT / "README.md"
-REF_LINK = "docs/REFERENCE.md"
+FEATURES = ROOT / "docs" / "features.md"
+MKDOCS = ROOT / "mkdocs.yml"
+#: The features page lives next to REFERENCE.md in docs/.
+REF_LINK = "REFERENCE.md"
+#: The nav sections whose every page the features page links.
+FEATURE_SECTIONS = ("Reference", "Debugging")
 SCAFFOLD = ROOT / "templates" / "project" / "{{cookiecutter.project_slug}}"
 SITE_DOCS = ROOT / "docs" / "public-site.md"
 CONTENT_DOCS = ROOT / "docs" / "design-content.md"
@@ -92,7 +101,7 @@ class Capability:
 EH = "examples/eventhub"
 SL = "examples/social-leads"
 
-#: Every capability the README and the reference list, by area.
+#: Every capability the features page and the reference list, by area.
 CAPABILITIES: tuple[Capability, ...] = (
     # models
     Capability(
@@ -1327,14 +1336,14 @@ def render_reference(exports: list[dict[str, Any]]) -> str:
     return re.sub(r"\n{3,}", "\n\n", text).rstrip("\n") + "\n"
 
 
-# --- README blocks ------------------------------------------------------------------
+# --- the features page's blocks ---------------------------------------------------
 
 
 def _capability_lines(area: str) -> list[str]:
     return [f"- `{c.status}` {c.text}" for c in capabilities(area)]
 
 
-def readme_blocks(exports: list[dict[str, Any]]) -> dict[str, list[str]]:
+def feature_blocks(exports: list[dict[str, Any]]) -> dict[str, list[str]]:
     components = [e["name"] for e in exports if e["kind"] == "component"]
     hooks = [e["name"] for e in exports if e["kind"] == "hook"]
     bases = dict(base_entries())
@@ -1417,7 +1426,47 @@ def check_links(readme: str, reference: str) -> list[str]:
     problems = []
     for anchor in re.findall(rf"{re.escape(REF_LINK)}#([\w-]+)", readme):
         if anchor not in defined:
-            problems.append(f"README links {REF_LINK}#{anchor}, which has no such anchor")
+            problems.append(
+                f"docs/features.md links {REF_LINK}#{anchor}, which has no such anchor"
+            )
+    return problems
+
+
+def _nav_pages(node: Any, inside: bool = False) -> list[str]:
+    """The pages under FEATURE_SECTIONS in mkdocs.yml's nav, nested sections included."""
+    pages: list[str] = []
+    if isinstance(node, list):
+        for item in node:
+            pages += _nav_pages(item, inside)
+    elif isinstance(node, dict):
+        for title, value in node.items():
+            pages += _nav_pages(value, inside or title in FEATURE_SECTIONS)
+    elif isinstance(node, str) and inside and node.endswith(".md"):
+        pages.append(node)
+    return pages
+
+
+def feature_problems(features: str, readme: str) -> list[str]:
+    """What the features page or the README misses: a nav page, a module's command."""
+    import yaml
+
+    class _Loader(yaml.SafeLoader):
+        pass
+
+    # mkdocs.yml may carry !!python/name tags (emoji, superfences): read them as strings.
+    _Loader.add_multi_constructor("tag:yaml.org,2002:python/", lambda _l, _s, n: str(n.value))
+    nav = yaml.load(MKDOCS.read_text(encoding="utf-8"), Loader=_Loader).get("nav", [])
+    linked = set(re.findall(r"\]\(([^)#\s]+\.md)", features))
+    problems = [
+        f"docs/features.md links no {page}, a page in mkdocs.yml's nav: add it to its group"
+        for page in _nav_pages(nav)
+        if page not in linked and page != "features.md"
+    ]
+    problems += [
+        f"README.md names no `karni add {m['short']}`: add the module to its modules table"
+        for m in modules()
+        if m["status"] != "planned" and f"karni add {m['short']}`" not in readme
+    ]
     return problems
 
 
@@ -1465,12 +1514,15 @@ def main(argv: list[str] | None = None) -> int:
     problems = verify_evidence() + unknown_option_keys()
     exports = ui_exports()
     reference = render_reference(exports)
-    readme = apply_blocks(README.read_text(encoding="utf-8"), readme_blocks(exports))
-    problems += check_links(readme, reference)
+    features = apply_blocks(
+        FEATURES.read_text(encoding="utf-8"), feature_blocks(exports), "docs/features.md"
+    )
+    problems += check_links(features, reference)
+    problems += feature_problems(features, README.read_text(encoding="utf-8"))
     if problems:
         print("\n".join(problems), file=sys.stderr)
         return 1
-    pages = [(REFERENCE, reference), (README, readme)]
+    pages = [(REFERENCE, reference), (FEATURES, features)]
     for path, blocks in docs_blocks().items():
         page = apply_blocks(path.read_text(encoding="utf-8"), blocks, path.name)
         pages.append((path, page))

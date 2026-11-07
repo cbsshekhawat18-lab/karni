@@ -1,7 +1,10 @@
 # @karni/payments-ui
 
-Payments components for Karni backends, composing [`@karni/ui`](https://www.npmjs.com/package/@karni/ui).
-Ships two components for the `karni_payments` Django app (`karni add payments`):
+React components for the Karni payments module: CheckoutButton and PaymentStatus.
+
+[![npm](https://img.shields.io/npm/v/@karni/payments-ui)](https://www.npmjs.com/package/@karni/payments-ui) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/modules/#modules-in-this-repository)
+
+It composes [`@karni/ui`](https://www.npmjs.com/package/@karni/ui) for the [karni-payments](https://pypi.org/project/karni-payments/) module (`karni add payments`):
 
 - **`CheckoutButton`**: starts a provider checkout (`POST /api/payments/checkout/`) and
   redirects the user to the provider's hosted page.
@@ -119,3 +122,12 @@ npm run typecheck
 npm test
 npm run lint
 ```
+
+## Links
+
+- The module in the docs: <https://cbsshekhawat18-lab.github.io/karni/modules/#modules-in-this-repository>
+- The Python module: <https://pypi.org/project/karni-payments/>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. @karni/payments-ui is released with every other Karni package, at one version.

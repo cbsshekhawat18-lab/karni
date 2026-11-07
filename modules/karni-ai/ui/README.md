@@ -1,7 +1,10 @@
 # @karni/ai-ui
 
-Experimental. React components for the Karni AI extraction module
-(`karni add ai`), composing [`@karni/ui`](https://www.npmjs.com/package/@karni/ui):
+React components for the Karni AI extraction module: ExtractButton and the useExtract hook.
+
+[![npm](https://img.shields.io/npm/v/@karni/ai-ui)](https://www.npmjs.com/package/@karni/ai-ui) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/ai-extraction/)
+
+Experimental. It composes [`@karni/ui`](https://www.npmjs.com/package/@karni/ui) for the [karni-ai](https://pypi.org/project/karni-ai/) module (`karni add ai`):
 
 - **`ExtractButton`**: a button that opens a dialog, reads rows of a resource
   from a text, a web page or a PDF (`POST /api/ai/extract/`), shows the import
@@ -67,3 +70,12 @@ commit.mutate(preview.id); // the import's own commit
 ```bash
 npm test
 ```
+
+## Links
+
+- AI extraction: <https://cbsshekhawat18-lab.github.io/karni/ai-extraction/>
+- The Python module: <https://pypi.org/project/karni-ai/>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. @karni/ai-ui is released with every other Karni package, at one version.

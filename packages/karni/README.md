@@ -1,19 +1,12 @@
 # karni
 
-Django glue with the batteries included. One call assembles the settings
-every Django + DRF + Celery project repeats, with production-safe defaults,
-startup validation, and an escape hatch for every value. On top of the
-settings core it ships the three batteries every project rewrites:
+The Python core of Karni: settings in one call, models, an API with access rules, an admin that registers itself, accounts and test helpers.
 
-- **karni.accounts**: an email-based swappable user, JWT or session auth
-  endpoints, verified-email / password-reset / email-change flows, roles,
-  optional TOTP 2FA and social login ([docs](https://cbsshekhawat18-lab.github.io/karni/accounts/))
-- **karni.api**: `class EventViewSet(BaseViewSet): model = Event` gives
-  CRUD + filtering + search + expansion + OpenAPI, auto-routed
-  ([docs](https://cbsshekhawat18-lab.github.io/karni/api/))
-- **karni.admin**: a zero-config django-unfold admin. Every model is
-  registered with derived columns, filters, search and soft-delete handling
-  ([docs](https://cbsshekhawat18-lab.github.io/karni/admin/))
+[![PyPI](https://img.shields.io/pypi/v/karni)](https://pypi.org/project/karni/) [![Python versions](https://img.shields.io/pypi/pyversions/karni)](https://pypi.org/project/karni/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/)
+
+Karni is a Django + React framework for building with coding agents. This package is its Django side: the code every Django + DRF + Celery project repeats, kept in a package you upgrade. [`@karni/ui`](https://www.npmjs.com/package/@karni/ui) is the React side, and [`karni-cli`](https://pypi.org/project/karni-cli/) is the `karni` command that scaffolds and builds projects.
+
+## Install
 
 ```bash
 pip install karni            # core
@@ -24,6 +17,40 @@ pip install 'karni[social]'  # + social login (django-allauth)
 pip install 'karni[social-token]'  # + sign-in with a Google, Microsoft or Apple ID token (experimental)
 pip install 'karni[2fa]'     # + TOTP two-factor auth (django-otp)
 ```
+
+A new project is quickest with the `karni` command: `pip install karni-cli`, then `karni new "Corner Shop" --recipe shop` ([quickstart](https://cbsshekhawat18-lab.github.io/karni/quickstart/)).
+
+## A model and its API
+
+```python
+# events/models.py
+from django.db import models
+from karni.models import BaseModel
+
+class Venue(BaseModel):
+    name = models.CharField(max_length=200)
+    city = models.CharField(max_length=100)
+
+# events/viewsets.py
+from karni.api import Access, BaseViewSet, HasRole, Public
+from events.models import Venue
+
+class VenueViewSet(BaseViewSet):
+    model = Venue
+    access = Access(read=Public(), write=HasRole("organizer", "staff"))
+```
+
+In a project from `karni new`, these two classes are the REST resource at `/api/venues/` with filters, search, pagination and `?expand=`, its OpenAPI schema, its admin screen, and the permission check on every query.
+
+## Main features
+
+- **Settings in one call.** `karni_settings(globals())` assembles the settings every project repeats, from the environment, and validates them at startup ([settings](https://cbsshekhawat18-lab.github.io/karni/settings/)).
+- **Models.** `BaseModel` gives a UUID key, timestamps, soft delete and audit fields, and `karni.fields` gives typed fields the database enforces ([models](https://cbsshekhawat18-lab.github.io/karni/models/), [fields](https://cbsshekhawat18-lab.github.io/karni/fields/)).
+- **The API.** `BaseViewSet` needs an `access` rule and derives the serializer, filters, search, pagination, `?expand=` and an N+1-free query plan ([API](https://cbsshekhawat18-lab.github.io/karni/api/)).
+- **The admin.** `karni.admin` registers every model in a django-unfold admin with derived columns, filters and search, with no `admin.py` ([admin](https://cbsshekhawat18-lab.github.io/karni/admin/)).
+- **Accounts.** `karni.accounts` has an email-based swappable user, JWT or session auth endpoints, the email flows, roles, per-user grants, TOTP two-factor and social login ([accounts](https://cbsshekhawat18-lab.github.io/karni/accounts/)).
+- **History, events and schedules.** Field-level change history, listeners queued to Celery, and periodic tasks ([change history](https://cbsshekhawat18-lab.github.io/karni/change-history/), [events](https://cbsshekhawat18-lab.github.io/karni/events/), [scheduling](https://cbsshekhawat18-lab.github.io/karni/scheduling/)).
+- **Tests in one line.** `karni.testing` has `assert_crud`, `assert_isolated`, `client_as` and query budgets ([testing](https://cbsshekhawat18-lab.github.io/karni/testing/)).
 
 ## A whole settings.py
 
@@ -142,3 +169,12 @@ pip install -e . --group dev
 pytest
 ruff check .
 ```
+
+## Links
+
+- Documentation: <https://cbsshekhawat18-lab.github.io/karni/>
+- Every feature, with its status: <https://cbsshekhawat18-lab.github.io/karni/features/>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. karni is released with every other Karni package, at one version.

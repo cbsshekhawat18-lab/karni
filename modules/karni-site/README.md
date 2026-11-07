@@ -1,10 +1,10 @@
 # karni-site
 
-The runtime a Karni project's public website loads. A site app is plain
-project code: function views, templates and static files, written by
-`karni make site`, `karni make view` and `karni import design`. What every
-such site needs, and no project should write again, lives here. See
-[Public server-rendered pages](https://cbsshekhawat18-lab.github.io/karni/public-site/).
+Public websites for Karni: every text, image and menu editable in the admin, public forms, redirects, and error pages that cannot fail.
+
+[![PyPI](https://img.shields.io/pypi/v/karni-site)](https://pypi.org/project/karni-site/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/public-site/)
+
+A site app is plain project code: function views, templates and static files, written by `karni make site`, `karni make view` and `karni import design`. What every such site needs, and no project should write again, lives here. See [Public server-rendered pages](https://cbsshekhawat18-lab.github.io/karni/public-site/).
 
 ## Install
 
@@ -56,6 +56,15 @@ path("", include("karni_site.urls")),
 handler404 = "karni_site.views.page_not_found"
 handler500 = "karni_site.views.server_error"
 ```
+
+## Main features
+
+- `{% editable %}` and `{% editable_image %}`: every text and image editable in the admin, with the template's text as the default and a history
+- `{% get_menu %}` menus in the design's own markup, and the site's name, logo and contact details as `site`
+- Public forms with `{% karni_form %}`, with and without JavaScript, under the enforced Content-Security-Policy
+- `{% karni_seo %}` for titles, descriptions, share tags and JSON-LD, plus robots.txt and sitemap.xml
+- Redirects, and 404 and 500 pages that fall back to a plain page when one fails
+- `{% image %}` serves uploads as WebP copies at the size the page shows them
 
 ## What it gives a site
 
@@ -736,3 +745,12 @@ notification naming a setting the project lacks `SITE023`.
   Python.
 - `KarniSiteConfig`: subclass it and point `INSTALLED_APPS` at the subclass.
   Keep the label `karni_site`.
+
+## Links
+
+- Public server-rendered pages: <https://cbsshekhawat18-lab.github.io/karni/public-site/>
+- From a design to content: <https://cbsshekhawat18-lab.github.io/karni/design-content/>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. karni-site is released with every other Karni package, at one version.

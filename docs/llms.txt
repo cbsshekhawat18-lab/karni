@@ -10,6 +10,9 @@ The site is https://cbsshekhawat18-lab.github.io/karni/ and the source is https:
 - [Tutorial: build EventHub](https://cbsshekhawat18-lab.github.io/karni/tutorial/): the reference application (ticketing, payments, Celery, four roles) in 617 lines of project code.
 - [Building with an AI agent](https://cbsshekhawat18-lab.github.io/karni/guide/with-ai/): how a coding agent drives a Karni project through the generated AGENTS.md, `karni context`, `karni rules` and `karni explain`.
 - [Building without an AI agent](https://cbsshekhawat18-lab.github.io/karni/guide/without-ai/): the same workflow by hand, command by command.
+- [Recipes](https://cbsshekhawat18-lab.github.io/karni/recipes/): six ready apps (shop, booking, crm, lms, marketplace, data-portal), each built by `karni new "<Name>" --recipe <name>` with its domain code, demo data and tests.
+- [The /new-app flow](https://cbsshekhawat18-lab.github.io/karni/agents/#agents-the-new-app-flow): from a one-line request to a running app through `karni.yaml`, `karni plan` and `karni build`.
+- [Every feature](https://cbsshekhawat18-lab.github.io/karni/features/): every feature grouped by what you need, with its page and its status.
 
 ## Main concepts
 

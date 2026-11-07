@@ -1,10 +1,10 @@
 # karni-storage
 
-Protected files for [Karni](https://github.com/cbsshekhawat18-lab/karni): files
-a row owns, kept in S3 or an S3-compatible service (or on disk in
-development) and handed only to whoever may read that row. It is
-**experimental**: its names may change in a minor release, with a CHANGELOG
-entry.
+Protected files for Karni: files a row owns, in S3 or an S3-compatible service, served only to whoever may read that row, with direct uploads and thumbnails.
+
+[![PyPI](https://img.shields.io/pypi/v/karni-storage)](https://pypi.org/project/karni-storage/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/storage/)
+
+Files are kept in S3 or an S3-compatible service (or on disk in development) and handed only to whoever may read their row. It is **experimental**: its names may change in a minor release, with a CHANGELOG entry.
 
 The full guide is [docs/storage.md](https://cbsshekhawat18-lab.github.io/karni/storage/).
 
@@ -44,6 +44,15 @@ retrieves the row through `ProductViewSet` first: 401 or 403 from its gate,
 redirects to a signed URL in the bucket (`KARNI_STORAGE=s3`) or streams the
 file (`KARNI_STORAGE=local`). `?size=small` serves a thumbnail of an image.
 
+## Main features
+
+- `ProtectedFileField` and `ProtectedImageField`, downloaded only through the row's own viewset
+- Short-lived signed URLs, or the file streamed
+- One setting for the service: `aws`, `r2`, `minio`, `spaces`, `b2` or `gcs-interop`
+- Direct uploads with a presigned POST or PUT, and a confirm step before a row points at the file
+- Thumbnails made by a Celery task
+- React components in [`@karni/storage-ui`](https://www.npmjs.com/package/@karni/storage-ui)
+
 ## Settings
 
 | Setting | Env | Default | Meaning |
@@ -82,3 +91,12 @@ or bucket, and a missing URL include.
 ## Admin
 
 No `admin.py`: the thumbnails' admin is derived from `AdminMeta`.
+
+## Links
+
+- Protected files: <https://cbsshekhawat18-lab.github.io/karni/storage/>
+- React components: <https://www.npmjs.com/package/@karni/storage-ui>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. karni-storage is released with every other Karni package, at one version.
