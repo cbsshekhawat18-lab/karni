@@ -267,6 +267,14 @@ was recorded on a laptop (Apple silicon, macOS, Python 3.12): after a change
 that makes a step slower on purpose, record a new one with `--record` and
 commit it.
 
+The calibration is pure Python, and the project's tests are not: relative to
+it, they ran 1.4 to 1.7 times slower on GitHub's Linux runners than on that
+laptop, in three runs of the same code. So the CI job compares with
+`scripts/benchmark/baseline-ci.json`, the times of one CI run (the middle of
+those three), and the laptop's baseline stays for runs on a laptop. A change
+that slows a step on purpose records both: `--record` on the laptop, and the
+CI job's `benchmark` artifact copied to `baseline-ci.json`.
+
 | Step | Baseline |
 |---|---|
 | `karni check`, cold | 8.05 s |

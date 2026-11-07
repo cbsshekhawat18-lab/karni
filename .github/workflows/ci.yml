@@ -289,8 +289,11 @@ jobs:
             packages/karni-cli/pyproject.toml
       - name: Install packages/ only (editable) + dev tools
         run: make install-py CORE_ONLY=1
+      # Against the baseline recorded on this runner type: relative to the
+      # calibration, the project's tests run 1.4 to 1.7 times slower here than on
+      # the laptop baseline.json comes from (docs/large-projects.md).
       - name: Time the tooling on a 100-model project
-        run: python scripts/benchmark/large_project.py --out benchmark.json
+        run: python scripts/benchmark/large_project.py --out benchmark.json --baseline scripts/benchmark/baseline-ci.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
