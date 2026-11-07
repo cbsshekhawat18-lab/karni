@@ -1976,6 +1976,19 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ### Fixed
 
+- **The new-app procedure says how to write access, and `karni explain access`
+  says the rest.** In the token benchmark a coding agent that followed
+  `/new-app` spent about half its tool calls reading Karni's installed source
+  (`karni/api/access.py`, the accounts models, the test generator) to find how
+  karni.yaml says "anyone signed in reads and staff write" or "a member owns
+  their rows", and rewrote `access` four or five times with a build after
+  each. The procedure is five steps now (the build prints the plan itself),
+  followed by a short reference: the access words and the common rules, the
+  shape of a list (`{count, next, previous, results}`, 50 a page, newest
+  first), what `seed` puts in the database, and how code makes an account
+  with a role. `karni explain access` prints every access word, the common
+  rules, grants per action, an action's own `access=` and why a rule only
+  code enforces fails the generated tests. Rule K109 points at it.
 - **`karni build` and `karni check` print a short summary.** A build printed
   the whole plan again before its steps (30 lines and more for a new app,
   after `karni plan` had printed it), and a passing `karni check` printed
