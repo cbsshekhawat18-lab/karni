@@ -5579,7 +5579,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="k109"></a>
 
-### K109: Viewsets declare access.
+### K109: Viewsets declare access: karni explain access.
 
 *agent rule, error* · enforced by `viewset-access`
 

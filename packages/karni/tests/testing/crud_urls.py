@@ -184,6 +184,15 @@ class OwnerFromBodyEventViewSet(EventViewSet):
         serializer.save()
 
 
+class RefusingEventViewSet(EventViewSet):
+    """Refuses every create in code, while its access admits organizers."""
+
+    def perform_create(self, serializer: Any) -> None:
+        from rest_framework.exceptions import PermissionDenied
+
+        raise PermissionDenied("Organizers book through the desk.")
+
+
 class UndeclaredEventViewSet(BaseViewSet):
     model = Event
 
@@ -249,6 +258,7 @@ ROUTES = {
     "undocumented-venues": UndocumentedFieldVenueViewSet,
     "no-stamp-events": NoStampEventViewSet,
     "owner-from-body-events": OwnerFromBodyEventViewSet,
+    "refusing-events": RefusingEventViewSet,
     "undeclared-events": UndeclaredEventViewSet,
     "leaky-events": LeakyEventViewSet,
     "empty-events": EmptyEventViewSet,

@@ -156,7 +156,7 @@ def test_karni_check_reports_the_backend_and_still_runs_the_frontend(
     _install(monkeypatch, Calls(DRIVER))
     frontend: list[Path] = []
 
-    def duplication(project: Path) -> int:
+    def duplication(project: Path, **kwargs: object) -> int:
         frontend.append(project)
         return 0
 

@@ -20,10 +20,10 @@ what they return.
 | `karni context --summary` / `--app LABEL` / `--model NAME` | One area of a large project at a time: a line per app, one app in full, one model in depth. `--max-tokens N` cuts at whole sections (experimental, [below](#large-projects-one-area-at-a-time)) |
 | `karni modules list` / `show NAME` | The module catalog: every module and feature with its options and the questions to ask (experimental) |
 | `karni recipes list --match "<request>"` / `show NAME` | The recipes a new app starts from, ranked for a one-line request, and the blank start ([the /new-app flow](#agents-the-new-app-flow), experimental) |
-| `karni rules` | Every convention as `CODE summary` (about 620 tokens for Karni's own rules, measured) |
+| `karni rules` | Every convention as `CODE summary` (about 626 tokens for Karni's own rules, measured) |
 | `karni rules --explain K101` | One rule in full: statement, why, fix, enforcing rule id |
 | `karni rules --procedure new-model` | The steps of a standard procedure |
-| `karni rules --check FILE [--check FILE…]` | Static violations with code, line, message and fix. Exit 1 if any |
+| `karni rules --check FILE [FILE…]` | Static violations with code, line, message and fix, for one file or several (`--check` repeated works too). Exit 1 if any |
 | `karni rules --json` | The raw data (rules, procedures, adapter overrides) |
 | `karni rules sync` | Regenerate AGENTS.md (and any deprecated tool-specific file the project still has) |
 | `karni rules sync --check` | Exit 1 when any generated file is stale (CI gate) |
@@ -290,25 +290,31 @@ gives them:
    share with the request. The agent starts `karni.yaml` from the closest
    one, or from the blank start (the version and the app's name, nothing
    else) when none fits, and writes in it what the request asks for.
-2. **The questions.** `karni plan --questions` lists the few questions for
-   the user ([questions](app-spec.md#questions)). The agent asks those and
-   only those.
-3. **The answers.** `karni spec answer <id> <value>` writes each one into
-   `karni.yaml`, keeping its comments and layout.
-4. **The plan.** `karni plan` shows what will change, risky changes first.
-5. **The build.** `karni build` writes Karni's code, runs the migrations,
-   seeds, types, tests and `karni check`. A Karni-owned file edited by hand
-   stops it, and the agent asks the user which of the three ways on to take.
-6. **The domain logic.** The agent writes only what `karni.yaml` cannot
+2. **The questions and the answers.** `karni plan --questions` lists the
+   few questions for the user ([questions](app-spec.md#questions)). The
+   agent asks those and only those, and `karni spec answer <id> <value>`
+   writes each answer into `karni.yaml`, keeping its comments and layout.
+3. **The build.** `karni build` prints the plan in one line, then writes
+   Karni's code and runs the migrations, the seed, types, tests and `karni
+   check`. A risky change waits for `--allow-destructive`, and a Karni-owned
+   file edited by hand stops it: the agent asks the user first. `karni plan`
+   lists every change for whoever wants to read them before the build.
+4. **The domain logic.** The agent writes only what `karni.yaml` cannot
    express, in the project's own files: methods in `<app>/models.py`,
-   actions in `<app>/viewsets.py`, `<app>/seeds.py`, its own pages and
-   tests.
-7. **Done** when `karni check` and `karni test` pass.
+   actions in `<app>/viewsets.py`, its own pages and tests.
+5. **Done** when `karni check` and `karni test` pass.
+
+Under the steps, the procedure prints a short reference: the access words
+of `karni.yaml` with the rules most apps need (`karni explain access` has
+them all), the shape of a list and its default order, what `seed` puts in
+the database, and how code makes an account with a role. These are the
+facts an agent otherwise looks up in Karni's installed source.
 
 In an existing project, a karni.yaml started from a recipe (it carries
 `app.recipe`) gets the spec alone. The recipe's own code, such as the booking
 capacity rule and its tests, comes only with `karni new "<Name>" --recipe
-<name>`, and the first `karni build` says so.
+<name>`, and the first `karni build` says so. `karni recipes show <name>
+--files` prints that code, each file with the path it takes, to copy from.
 
 A new project can also start from a recipe with its domain code in place:
 `karni new "<Name>" --recipe <name>` writes the recipe's `karni.yaml` and
@@ -479,13 +485,17 @@ What `karni rules --procedure` returns:
 ```text
 Build this app: <the app in one line>
 
-1. `karni recipes list --match "<the request>"` ranks the recipes by the words they share with the request. Start karni.yaml from the closest one that fits (`karni recipes show <name>` prints its spec and what people usually change) or, when none does, from the blank start it prints. Write in it what the request asks for: apps, entities and fields, roles, modules (`karni modules list`), features, pages. `karni spec validate` checks it.
-2. `karni plan --questions` lists the questions for the user, most impact first. Ask the user those and only those, with their options and defaults, in one message. Names, labels and the rest are yours to choose.
-3. Write each answer with `karni spec answer <id> <value>` (a question the user leaves to you takes its default). Edit karni.yaml by hand only for what no question covers. Run `karni plan --questions` again until none is open.
-4. `karni plan` shows what `karni build` will change. Check that it is what the request asks for, and ask the user before any risky (!) change.
-5. `karni build` makes the project match karni.yaml: modules, models, viewsets, migrations, seeds, types, tests and `karni check`. It stops at the first failure with its code and what to do next. A Karni-owned file edited by hand stops it (C273): ask the user which of the three ways on to take.
-6. Write only the domain logic that is left, where the project owns the code: methods on the subclasses in `<app>/models.py`, custom actions in `<app>/viewsets.py`, demo values in `<app>/seeds.py`, your own pages and tests. Never edit `<app>/karni/` or the `karni:spec` blocks: `karni build` rewrites them.
-7. Done when `karni check` and `karni test` pass.
+1. `karni recipes list --match "<the request>"` names the closest recipes, and `karni recipes show <name>` prints one's karni.yaml (`blank` when none fits). Write karni.yaml from it with what the request asks for: entities and fields (`karni explain fields`), roles, access, modules (`karni modules list`) and pages. `karni spec validate` checks it.
+2. `karni plan --questions` lists what only the user decides. Ask the user those and only those, in one message, then write each answer with `karni spec answer <id> <value>` (one left to you takes its default) until none is open.
+3. `karni build` makes the project match karni.yaml: models, viewsets, migrations, types, tests and `karni check`. It stops at the first failure with its code and the next step. Ask the user before `--allow-destructive` (a risky change) and before a way past C273 (a Karni-owned file edited by hand).
+4. Write the domain logic that is left, in the project's own files: methods on the subclasses in `<app>/models.py`, actions in `<app>/viewsets.py`, your own pages and tests. Never edit `<app>/karni/` or a `karni:spec` block.
+5. Done when `karni check` and `karni test` pass.
+
+Reference:
+- Access, per entity: `access: {read: WHO, write: WHO, create: WHO}`, WHO one of `public`, `authenticated`, `role:<slug>`, `owned:<field>` or `granted` (the roles' grants, the default), or a list of them. write covers changes, deletes and POST actions, create defaults to write, and owned:<user fk> in either sets that fk to the signed-in user. Signed-in users read, staff write: `{read: authenticated, write: "role:staff"}`. Each member their own rows, staff all: `owner: member` and `{read: ["owned:member", "role:staff"], write: "owned:member"}`, plus `create: "role:member"` when staff may not create. The rest: `karni explain access`.
+- Lists answer `{count, next, previous, results}`, 50 rows a page by default (`?page=`, `?page_size=` up to 100), in the entity's `order` (default: newest first). Ids are UUIDs unless the entity says `pk: bigint`.
+- `seed` writes demo rows into the database the app runs on: keep it only when the user wants demo data.
+- Accounts in code: `get_user_model().objects.create_user(email=..., password=...)`, then `assign_role(user, "<slug>")` from `karni.accounts.permissions`.
 
 Never hand-write what karni.yaml can express: change karni.yaml and run `karni build` again. The MCP tools recipes, questions, answer, plan and build do the same as these commands.
 

@@ -240,10 +240,13 @@ def test_the_new_app_flow_reaches_every_adapter(legacy_project: Path) -> None:
         command = files[rel]
         assert f"Build this app: {token}" in command, rel
         steps = [line for line in command.splitlines() if line[:2] in {f"{n}." for n in "1234567"}]
-        assert len(steps) == 7, rel
+        assert len(steps) == 5, rel
         assert 'karni recipes list --match "<the request>"' in steps[0], rel
-        assert "`karni plan --questions`" in steps[1] and "`karni build`" in steps[4], rel
+        assert "`karni plan --questions`" in steps[1] and "`karni build`" in steps[2], rel
         assert "Rules that apply: K311, K310, K305, K301" in command, rel
+        # the reference the steps need comes with them: the access words and the lists' shape
+        assert "\nReference:\n- Access, per entity: `access: {read: WHO" in command, rel
+        assert "`karni explain access`" in command and "`?page_size=` up to 100" in command, rel
     line = (
         "- To build an app from a one-line request (`/new-app <the request>`), follow the "
         "`new-app` procedure: karni.yaml first, then `karni build` (rule K311)."

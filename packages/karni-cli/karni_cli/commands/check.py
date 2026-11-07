@@ -303,6 +303,13 @@ def check(
         "except in CI. --frontend fails without it, --no-frontend skips them.",
     ),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Do not print the optional tip."),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Print the frontend tools' own output (ESLint, jscpd's report) when they pass too. "
+        "By default only a failure prints their output.",
+    ),
     deploy: bool = typer.Option(
         False,
         "--deploy",
@@ -383,7 +390,10 @@ def check(
                 err=True,
             )
     if run_frontend:
-        dup = _frontend_duplication(project)
+        # a pass says nothing more than karni check: ok, jscpd's report table and the tools'
+        # banners only on a failure (or with --verbose)
+        captured: list[str] | None = None if verbose else []
+        dup = _frontend_duplication(project, capture=captured)
         lint_files = (
             [
                 name.removeprefix("frontend/")
@@ -393,7 +403,11 @@ def check(
             if files is not None
             else None
         )
-        lint = _frontend_lint(project, cache=not no_cache, files=lint_files)
+        lint = _frontend_lint(project, capture=captured, cache=not no_cache, files=lint_files)
+        if captured is not None and (dup or lint):
+            for part in captured:
+                if part.strip():
+                    typer.echo(part.rstrip())
     os.environ.pop("KARNI_SUGGESTIONS_FILE", None)
     block = (
         _suggestions_block(project, suggestions_file, docker=docker, service=service)

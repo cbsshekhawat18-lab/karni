@@ -477,7 +477,7 @@ Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
 An agent in a Karni project extends the framework instead of rewriting it:
 
 - **`karni context`** prints the project in a few lines: apps, models, viewsets, roles, components, hooks and pages.
-- **`karni rules`** prints the 48 conventions, each with a code, in 620 tokens (cl100k). `karni rules --check <file>` checks one file.
+- **`karni rules`** prints the 48 conventions, each with a code, in 626 tokens (cl100k). `karni rules --check <file>` checks one file.
 - **AGENTS.md.** `karni new` writes the file coding agents read, from one rule set. It lists the procedures for routine tasks, and a request such as `/new-model` asks the agent for one.
 - **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools, and the `/new-app` flow as `recipes`, `questions`, `answer`, `plan` and `build`.
 - **Your prompts, kept (optional).** [Gigai Chronicle](https://github.com/cbsshekhawat18-lab/gigai-chronicle) records every prompt you give an agent inside your repository, and `karni context --with-history <file>` reads it back to brief the next agent. It is MIT licensed, local-only, and made by Karni's author.

@@ -199,11 +199,13 @@ def test_one_line_to_a_green_build(flow: Flow) -> None:
         ("files", "done"),
         ("migrations", "done"),
         ("migrate", "done"),
-        ("seed", "done"),
+        ("seed", "skipped"),  # the request asked for no demo rows: the table starts empty
         ("types", "done"),
         ("test", "done"),
         ("check", "done"),
     ]
+    seed = next(step for step in built["steps"] if step["name"] == "seed")
+    assert "names none of the new tables, so they start empty" in seed["summary"]
     assert (root / "books" / "karni" / "models.py").is_file()
     assert "def is_finished(self) -> bool:" in (root / "books" / "models.py").read_text()
     summary = flow.test.strip().splitlines()[-1]

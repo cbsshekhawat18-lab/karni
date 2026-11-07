@@ -220,25 +220,40 @@ def test_import_light(module: str) -> None:
 
 
 def test_the_new_app_procedure_follows_the_flow_in_order() -> None:
-    """One line to a running app: recipe or blank start, questions, answers, plan, build."""
+    """One line to a running app: recipe or blank start, questions and answers, build.
+
+    The build prints the plan itself, so a separate ``karni plan`` step is left to whoever wants
+    to read every change first.
+    """
     procedure = next(p for p in PROCEDURES if p.name == "new-app")
     steps = procedure.steps
     order = [
         'karni recipes list --match "<the request>"',
-        "`karni plan --questions` lists the questions",
+        "`karni plan --questions` lists what only the user decides",
         "`karni spec answer <id> <value>`",
-        "`karni plan` shows",
         "`karni build` makes the project match karni.yaml",
-        "Write only the domain logic that is left",
+        "Write the domain logic that is left",
         "Done when `karni check` and `karni test` pass.",
     ]
     found = [next(i for i, step in enumerate(steps) if phrase in step) for phrase in order]
-    assert found == list(range(len(order))), found
-    assert "blank start" in steps[0] and "only those" in steps[1]
-    assert "C273" in steps[4] and "ask the user" in steps[4]
-    assert "`<app>/models.py`" in steps[5] and "Never edit `<app>/karni/`" in steps[5]
+    assert found == [0, 1, 1, 2, 3, 4], found
+    assert "`blank` when none fits" in steps[0] and "only those" in steps[1]
+    assert "C273" in steps[2] and "Ask the user before `--allow-destructive`" in steps[2]
+    assert "`<app>/models.py`" in steps[3] and "Never edit `<app>/karni/`" in steps[3]
     assert "Never hand-write what karni.yaml can express" in procedure.outro
     assert procedure.rules[0] == "K311" and "K310" in procedure.rules
+    assert procedure.reference[0].startswith("Access, per entity: `access: {read: WHO")
+    assert procedure.to_dict()["reference"] == list(procedure.reference)
+
+
+def test_the_access_topic_names_every_word_the_spec_takes() -> None:
+    """``karni explain access`` and the spec's validator agree on the access words."""
+    from karni.agent.rules import TOPICS, topics_by_name
+
+    lines = "\n".join(topics_by_name()["access"].lines)
+    for word in ("public", "authenticated", "role:<slug>", "owned:<field>", "granted"):
+        assert f"  {word} " in lines, word
+    assert [topic.name for topic in TOPICS] == ["access"]
 
 
 def test_k311_puts_karni_yaml_before_code() -> None:

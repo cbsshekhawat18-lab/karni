@@ -35,6 +35,7 @@ def test_context_command_shape() -> None:
     order = (
         "MODELS",
         "KEYS",
+        "API",
         "SCOPES",
         "VIEWSETS",
         "ROLES",
@@ -138,6 +139,27 @@ def test_keys_section_names_each_model_key_type(settings) -> None:
         assert keys == "bigint(Entry,Part,Reading,Remark,Review) uuid(rest)"
     else:
         assert keys == "uuid(Book,Label,Shelf,Stamp) bigint(rest)"
+
+
+def test_the_api_line_states_how_a_list_pages(settings, monkeypatch) -> None:
+    """The shape, page size and cap of a list, from the project's own paginator."""
+    from karni.introspect import api_section
+    from karni.pagination import KarniCursorPagination, KarniPageNumberPagination
+
+    line = api_section()
+    assert line is not None and _sections(build_context())["API"] == line.removeprefix("API: ")
+    monkeypatch.setattr(KarniPageNumberPagination, "page_size", 20)
+    settings.KARNI_MAX_PAGE_SIZE = 60
+    assert api_section() == (
+        "API: lists answer {count, next, previous, results}, 20 rows a page (?page=, "
+        "?page_size= up to 60), in the model's ordering, else newest first"
+    )
+    monkeypatch.setattr(KarniCursorPagination, "page_size", 20)
+    cursor = "karni.pagination.KarniCursorPagination"
+    settings.REST_FRAMEWORK = {**settings.REST_FRAMEWORK, "DEFAULT_PAGINATION_CLASS": cursor}
+    assert (api_section() or "").startswith(
+        "API: lists answer {next, previous, results}, 20 rows a page (?cursor=, ?page_size="
+    )
 
 
 def test_keys_section_says_all_when_every_key_is_one_type(monkeypatch) -> None:

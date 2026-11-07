@@ -276,7 +276,9 @@ and the CLI prints the rest as a second one.
 `eslint.config.js` with the `@karni/ui` preset below, warnings counted as
 failures) and jscpd (pinned in the scaffold's frontend devDependencies,
 configured by `frontend/.jscpd.json`). Duplication above the threshold
-fails with the full clone report. Opt-out:
+fails with the full clone report. A pass adds nothing to `karni check: ok`:
+the two tools' own output (jscpd's report table) is printed when one fails,
+or always with `karni check --verbose`. Opt-out:
 `// jscpd:ignore-start -- <reason>` … `// jscpd:ignore-end`. A bare
 `ignore-start` without a reason fails. jscpd compares the project's files
 with each other: a `@karni/ui` component copied into the project is not a

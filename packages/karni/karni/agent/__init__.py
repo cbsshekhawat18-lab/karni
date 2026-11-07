@@ -16,7 +16,7 @@ from typing import Any
 from .check import check_file, check_source, supported
 from .history import active_conditions
 from .overrides import OVERRIDE_FILE, OverrideError, read_overrides, resolve_rules
-from .rules import CATEGORIES, PROCEDURES, RULES, Procedure, Rule
+from .rules import CATEGORIES, PROCEDURES, RULES, TOPICS, Procedure, Rule, Topic
 
 #: Bumped when the shape of :func:`dump` changes incompatibly.
 SCHEMA_VERSION = 1
@@ -27,9 +27,11 @@ __all__ = [
     "PROCEDURES",
     "RULES",
     "SCHEMA_VERSION",
+    "TOPICS",
     "OverrideError",
     "Procedure",
     "Rule",
+    "Topic",
     "check_file",
     "check_paths",
     "check_source",
@@ -64,6 +66,7 @@ def dump(root: str | Path | None = None) -> dict[str, Any]:
         "categories": [c for c in categories if any(r.category == c for r in rules)],
         "rules": [rule.to_dict() for rule in rules],
         "procedures": [procedure.to_dict() for procedure in PROCEDURES],
+        "topics": [topic.to_dict() for topic in TOPICS],
         "adapters": overrides.adapters,
         "overrides_file": str(overrides.path) if overrides.path else None,
         "conditions": sorted(conditions),

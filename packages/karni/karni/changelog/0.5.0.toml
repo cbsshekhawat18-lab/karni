@@ -790,3 +790,16 @@ such as ["name"], or a name the model does not have. Before, the project booted 
 request that read the model answered 500. Write the field name as a string."""
 mechanical = false
 migration = "migrations/0.5.md#natural_key-and-import_key-are-checked-at-boot"
+
+[[change]]
+id = "field-arguments-refused-not-dropped"
+kind = "behaviour"
+symbol = "karni make model, karni.yaml fields"
+summary = """\
+karni make model and karni spec validate refuse a field argument its type does not take \
+(C104, C216 in a spec), such as name:str:200:unique, body:text:500 or fk:Venue:cascade. In \
+0.4.0 the argument was dropped without a word, so str:200:unique made a field that is not \
+unique. Remove the argument from scripts that call karni make model. For a unique value, \
+declare LiveUniqueConstraint(fields=[...]) from karni.fields in the model's Meta."""
+mechanical = false
+migration = "migrations/0.5.md#a-field-argument-its-type-does-not-take-is-refused"
