@@ -417,7 +417,12 @@ admits:
 | a list | the items joined with `\|` |
 
 `read` and `write` default to `granted`, and `create` to `write`. An entity
-without `access` has `Granted()`, the default of `karni make viewset`. The
+without `access` has `Granted()`, the default of `karni make viewset`.
+`owned:<field>` in `write` or `create` also sets the field to the signed-in
+user on create. `karni explain access` prints the words and the rules most
+apps need, and a value close to one is refused with the rule it stands for:
+`staff` with "Did you mean role:staff?", `signed_in` with `authenticated`,
+`own` with `owned:<the owner field>`, a `delete:` key with `write`. The
 shapes the `--access` presets make:
 
 | `--access` | In the spec |

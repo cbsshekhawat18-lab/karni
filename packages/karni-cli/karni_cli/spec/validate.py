@@ -80,6 +80,38 @@ RESERVED: Final[dict[str, dict[str, str]]] = {
 #: Field types a later release adds (``markdown`` was one until large-apps item 12 shipped it).
 RESERVED_TYPES: Final[dict[str, str]] = {}
 ACCESS_WORDS: Final = ("public", "authenticated", "granted")
+#: Experimental. Words people write for an access word, folded (lower case, ``_`` for ``-``).
+_ACCESS_NEAR: Final = {
+    **dict.fromkeys(
+        (
+            "signed_in", "signedin", "logged_in", "loggedin", "login", "auth", "authed",
+            "is_authenticated", "isauthenticated", "authenticated_users", "any_user", "anyuser",
+            "registered", "user", "users",
+        ),
+        "authenticated",
+    ),
+    **dict.fromkeys(
+        (
+            "anyone", "everyone", "everybody", "all", "any", "anonymous", "open", "world",
+            "guest", "guests", "allow_any", "allowany",
+        ),
+        "public",
+    ),
+    **dict.fromkeys(("grant", "grants", "permissions", "perms", "default"), "granted"),
+}  # fmt: skip
+#: Experimental. Words people write for owned:<field>, folded.
+_OWNED_NEAR: Final = ("own", "owner", "owned", "owns", "mine", "self", "owner_only", "own_rows")
+#: Experimental. Words people write for role:<slug>, folded.
+_ROLE_NEAR: Final = ("role", "roles", "group", "groups", "has_role", "hasrole")
+#: Experimental. Keys people write in access, by the slot that covers them.
+_ACCESS_KEYS_NEAR: Final = {
+    **dict.fromkeys(
+        ("delete", "destroy", "remove", "update", "change", "edit", "patch", "put", "modify"),
+        "write",
+    ),
+    **dict.fromkeys(("list", "retrieve", "view", "get", "detail", "see", "show"), "read"),
+    **dict.fromkeys(("add", "new", "post", "insert", "make"), "create"),
+}  # fmt: skip
 STANDARD_ACTIONS: Final = ("view", "add", "change", "delete")
 ENTITY_PAGES: Final = ("list", "detail", "form")
 NAMED_PAGES: Final = ("dashboard", "blank", "login", "code")
@@ -307,7 +339,8 @@ def _shape_issues(check: _Checker, error: ValidationError, data: dict[str, Any])
                 path,
                 f"Unknown key {path[-1]!r} in {_dotted(path[:-1]) or 'the spec'}"
                 + (f" (keys: {known})." if known else "."),
-                "Fix the spelling or remove it. A key that starts with x- is kept and ignored, "
+                _access_key_fix(path)
+                or "Fix the spelling or remove it. A key that starts with x- is kept and ignored, "
                 "for notes of your own.",
                 key=True,
             )
@@ -334,6 +367,22 @@ def _shape_issues(check: _Checker, error: ValidationError, data: dict[str, Any])
                 "Write the value in the form docs/app-spec.md shows for this key. Quote a "
                 "value that YAML would read as a date, a number or true/false.",
             )
+
+
+def _access_key_fix(path: Loc) -> str:
+    """The fix for an unknown key of an entity's access: the slot that covers it, or ``""``."""
+    if len(path) != 6 or path[0] != "apps" or path[2] != "entities" or path[4] != "access":
+        return ""
+    slot = _ACCESS_KEYS_NEAR.get(str(path[-1]).lower())
+    if slot is None:
+        return ""
+    fix = f"Use {slot}: access takes read, write and create, and {slot} covers {path[-1]}."
+    if slot == "write" and str(path[-1]).lower() in ("delete", "destroy", "remove"):
+        fix += (
+            " A role that may change rows but not delete them: access granted, with :view, :add "
+            "and :change in the role's grants and no :delete."
+        )
+    return fix + " karni explain access lists the rules."
 
 
 def _without_unknown_keys(error: ValidationError, data: dict[str, Any]) -> schema.Spec | None:
@@ -1009,12 +1058,15 @@ class _Meaning:
                     continue
                 if word == "role" and arg:
                     if arg not in self.declared_roles():
+                        same = self._role_like(arg)
                         self.add(
                             "C232",
                             where,
                             f"{entity.name}.access.{slot} names role {arg!r}, which the spec does "
-                            f"not declare (roles: {', '.join(sorted(self.declared_roles()))}).",
-                            f"Declare it under roles ({arg}: {{name: ...}}) or fix the slug.",
+                            f"not declare (roles: {', '.join(sorted(self.declared_roles()))})."
+                            + (f" Did you mean role:{same}?" if same else ""),
+                            (f"Write role:{same}, or d" if same else "D")
+                            + f"eclare it under roles ({arg}: {{name: ...}}) or fix the slug.",
                         )
                     continue
                 if word == "owned" and arg:
@@ -1028,14 +1080,50 @@ class _Meaning:
                             "owned:session__instructor.",
                         )
                     continue
+                hint = self._access_hint(entity, item)
                 self.add(
                     "C217",
                     where,
-                    f"{entity.name}.access.{slot} has {item!r}, which is not an access rule.",
-                    "Use public, authenticated, granted, role:<slug> or owned:<field>, or a list "
-                    "of them. For anything else write access: code and declare Access(...) in "
-                    "the viewset.",
+                    f"{entity.name}.access.{slot} has {item!r}, which is not an access rule."
+                    + (f" Did you mean {hint}?" if hint else ""),
+                    (f"Write {hint}. " if hint else "")
+                    + "Use public, authenticated, granted, role:<slug> or owned:<field>, or a "
+                    "list of them (karni explain access lists the common rules). For anything "
+                    "else write access: code and declare Access(...) in the viewset.",
                 )
+
+    def _role_like(self, name: str) -> str | None:
+        """The declared role ``name`` means with another case or separator, or ``None``."""
+        folded = name.lower().replace("-", "_")
+        return next(
+            (role for role in sorted(self.declared_roles()) if role.lower() == folded), None
+        )
+
+    def _access_hint(self, entity: _Entity, item: str) -> str | None:
+        """The access rule ``item`` comes close to (``staff`` is ``role:staff``), or ``None``."""
+        word, colon, arg = item.strip().partition(":")
+        folded = word.lower().replace("-", "_").replace(" ", "_")
+        if not colon:
+            role = self._role_like(word)
+            if role is not None:
+                return f"role:{role}"
+        if folded in ACCESS_WORDS and colon:
+            role = self._role_like(arg)
+            return f"role:{role}" if role else folded
+        if folded in _OWNED_NEAR:
+            if arg and self.leads_to_user(entity, arg):
+                return f"owned:{arg}"
+            users = [name for name, target in entity.targets.items() if target == _USER_TARGET]
+            field_name = entity.entity.owner or (users[0] if len(users) == 1 else None)
+            return f"owned:{field_name}" if field_name else "owned:<a field that points at the user>"
+        if folded in _ROLE_NEAR and arg:
+            return f"role:{self._role_like(arg) or arg}"
+        near = _ACCESS_NEAR.get(folded)
+        if near is not None and not colon:
+            return near
+        if folded in ("staff", "admin", "admins", "superuser", "manager", "managers") and not colon:
+            return f"role:{folded}, with {folded} declared under roles"
+        return None
 
     def protected_files(self, entity: _Entity) -> None:
         """``file:protected`` and ``image:protected`` need the storage module (``C720``)."""

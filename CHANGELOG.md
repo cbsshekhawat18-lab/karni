@@ -1976,6 +1976,14 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ### Fixed
 
+- **`karni spec validate` names the access rule a near miss stands for.** An
+  access value such as `staff`, `signed_in`, `own` or `owner:member` was
+  refused with the list of words and no word of which one was meant, and
+  `delete:` in `access` was an unknown key with no hint. C217 and C232 now
+  end with "Did you mean role:staff?" (`authenticated`, `owned:<the owner
+  field>`, a declared role in its own case), the fix starts with the rule to
+  write, and C212 on an access key names the slot that covers it (`delete`,
+  `update`: `write`, with the grants that keep a role from deleting).
 - **The new-app procedure says how to write access, and `karni explain access`
   says the rest.** In the token benchmark a coding agent that followed
   `/new-app` spent about half its tool calls reading Karni's installed source

@@ -289,6 +289,51 @@ def test_each_problem_has_its_code_and_line(code: str, text: str, line: int | No
     assert (code, line) in found, found
 
 
+#: (access value, the hint the message gives). The shop declares staff and member.
+ACCESS_NEAR = [
+    ("{read: signed_in}", "authenticated"),
+    ("{read: everyone}", "public"),
+    ("{write: staff}", "role:staff"),
+    ("{write: Staff}", "role:staff"),
+    ("{write: own}", "owned:member"),
+    ("{write: owned}", "owned:member"),
+    ("{write: 'owner:member'}", "owned:member"),
+    ("{create: 'roles:member'}", "role:member"),
+    ("{write: 'authenticated:staff'}", "role:staff"),
+    ("{read: grants}", "granted"),
+    ("{write: admin}", "role:admin, with admin declared under roles"),
+]
+ACCESS_SHOP = (
+    "version: 1\napp: {name: Shop}\n"
+    "roles:\n  staff: {name: Staff, grants: {'*': all}}\n  member: {name: Member}\n"
+    "apps:\n  shop:\n    entities:\n      Product:\n"
+    "        fields: {name: str, member: fk:User}\n        owner: member\n"
+)
+
+
+@pytest.mark.parametrize(("value", "hint"), ACCESS_NEAR)
+def test_an_access_value_close_to_a_rule_names_the_rule(value: str, hint: str) -> None:
+    """Did you mean: the access rule a near miss stands for, in the message and the fix."""
+    issues = validate_text(ACCESS_SHOP + f"        access: {value}\n").issues
+    assert [issue.code for issue in issues] == ["C217"], issues
+    assert issues[0].message.endswith(f" Did you mean {hint}?"), issues[0].message
+    assert issues[0].fix.startswith(f"Write {hint}. "), issues[0].fix
+    assert "karni explain access" in issues[0].fix
+
+
+def test_an_undeclared_role_in_another_case_and_an_access_key_name_the_right_form() -> None:
+    issues = validate_text(ACCESS_SHOP + "        access: {read: 'role:STAFF'}\n").issues
+    assert issues[0].code == "C232" and issues[0].message.endswith("Did you mean role:staff?")
+    issues = validate_text(ACCESS_SHOP + "        access: {read: public, delete: 'role:staff'}\n").issues
+    assert issues[0].code == "C212"
+    assert issues[0].fix.startswith("Use write: access takes read, write and create")
+    assert "no :delete" in issues[0].fix
+    issues = validate_text(ACCESS_SHOP + "        access: {list: public}\n").issues
+    assert issues[0].fix.startswith("Use read: ")
+    plain = validate_text(ACCESS_SHOP + "        access: {read: anyone_at_all}\n").issues
+    assert "Did you mean" not in plain[0].message  # no guess without a close word
+
+
 def test_every_code_is_tested_and_registered() -> None:
     # C324 needs a manifest that requires or conflicts with another: tests/test_catalog.py.
     tested = {code for code, _, _ in INVALID} | {"C324"}
