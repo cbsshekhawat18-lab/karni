@@ -839,7 +839,7 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - name: Build the prod image (django, worker, beat, release)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ${{ env.PROJECT }}
           target: prod
@@ -853,7 +853,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=production-stack-prod
 
       - name: Build the backup image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ${{ env.PROJECT }}
           target: backup
