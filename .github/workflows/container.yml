@@ -41,7 +41,7 @@ jobs:
       IMAGE: ghcr.io/${{ github.repository_owner }}/karni
       PUSH: ${{ github.event_name != 'pull_request' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Version
         id: version
