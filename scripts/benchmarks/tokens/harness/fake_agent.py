@@ -2,7 +2,9 @@
 
 It prints stream-json lines shaped like the real ones and writes files in its working
 directory. FAKE_AGENT_SLEEP=<seconds> makes it hang first (for the time limit),
-FAKE_AGENT_EXIT=<code> sets its exit status, FAKE_AGENT_ARGV=<file> records its arguments.
+FAKE_AGENT_EXIT=<code> sets its exit status, FAKE_AGENT_END=usage_limit|is_error|none ends the
+stream with a usage-limit result, an is_error result or no result line at all,
+FAKE_AGENT_ARGV=<file> records its arguments.
 """
 
 from __future__ import annotations
@@ -50,6 +52,17 @@ def main(argv: list[str]) -> int:
             ],
         },
     })  # fmt: skip
+    end = os.environ.get("FAKE_AGENT_END", "")
+    if end == "usage_limit":
+        emit({"type": "result", "subtype": "success", "is_error": True, "num_turns": 2,
+              "result": "Usage limit reached|1893456000"})  # fmt: skip
+        return int(os.environ.get("FAKE_AGENT_EXIT", "1"))
+    if end == "is_error":
+        emit({"type": "result", "subtype": "error_during_execution", "is_error": True,
+              "num_turns": 2, "result": "something broke"})  # fmt: skip
+        return int(os.environ.get("FAKE_AGENT_EXIT", "1"))
+    if end == "none":
+        return int(os.environ.get("FAKE_AGENT_EXIT", "0"))
     emit({
         "type": "result", "subtype": "success", "is_error": False, "num_turns": 2,
         "total_cost_usd": 0.0123,

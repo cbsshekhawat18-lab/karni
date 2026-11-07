@@ -26,6 +26,15 @@ The raw data is one JSON line per run in
 The tables above are written from it by `report.py`. A failed run stays in the data and
 counts as a failure. Its tokens are in the figures too.
 
+A run the agent CLI did not finish is different: when a usage or rate limit, an overloaded or
+other API error, or a kill cuts it short (an error result, a stream with no result line, or a
+non-zero exit without one), the run says nothing about its condition. It is recorded with
+`interrupted: true` and the reason, left out of every figure, and counted in a note under the
+results. `run.py --resume` runs it again, and a usage or rate limit stops the batch at once and
+prints the reset time when the message gives one. `report.py` writes no comparison while a task
+and condition has fewer completed runs than `--n`. Hitting the time limit is not an
+interruption: it counts as part of the result.
+
 ## The method
 
 Three tasks, each one written prompt plus an API contract that both conditions must meet:
