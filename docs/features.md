@@ -67,7 +67,7 @@ Reference or Debugging sections.
 - **[Building with an agent](guide/with-ai.md)** and **[without one](guide/without-ai.md)**: the same project, both ways.
 - **[Enforcement](enforcement.md)**: `karni check` and the ESLint preset fail the build when code rebuilds what Karni ships, with an inline opt-out and a reason ([why](concepts/enforcement-layer.md)).
 - **[Error codes](errors.md)**: every code with its cause and fix, offline through `karni explain <code>`.
-- **[Token benchmark](benchmarks/tokens.md)**: three apps built by a coding agent with and without Karni.
+- **[Coding-agent benchmark](benchmarks/tokens.md)**: three apps built by a coding agent on plain Django + React and on Karni, with the method and the raw data.
 
 ## Debugging
 

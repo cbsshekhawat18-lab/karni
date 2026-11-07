@@ -28,8 +28,7 @@ agent hand-writes what Karni ships.
 Every web project starts with the same work: sign-in, a user model, the
 admin, permissions, CRUD endpoints, tables, forms, Docker and Celery. Coding
 agents write that setup faster, but they write it again in every project, a
-little different each time. Every line costs tokens and time, and every copy
-has to be maintained.
+little different each time, and every copy has to be maintained.
 
 Karni ships that code as versioned packages: `karni` (Python), `@karni/ui`
 (React) and the `karni` command. You declare a model and who may access it,
@@ -70,33 +69,39 @@ check       ok
 Built: the project matches karni.yaml.
 ```
 
+On a developer laptop, `karni new --recipe shop` builds the shop from
+scratch on SQLite in 14.1 seconds, its tests and `karni check` included and
+the frontend install left out ([how fast is it](recipes/index.md#how-fast-is-it)).
 [The /new-app flow](agents.md#agents-the-new-app-flow) has every step.
 Every step is also a command you can run without an agent
 ([building without one](guide/without-ai.md)).
 
 ![A terminal runs karni new, karni make model, migrate, seed and serve. Then the browser shows the welcome page, the admin listing the seeded events, and the React app's events table and detail view.](assets/karni-demo.gif){ loading=lazy }
 
-## Fewer tokens, less time
+## Coding-agent benchmark
+
+A coding agent builds three apps five times each on plain Django + React, on
+the Karni 0.5.0 candidate, and on Karni again after work on its agent flow.
+All three sets are published, whatever they show.
 
 <!-- bench:home:start -->
-!!! note "The measurement is in progress"
-    A coding agent is building the same three apps five times with Karni and
-    five times without it. This section shows the results when the runs are
-    done, and no numbers before then.
-<!-- The table the results drop into, from benchmarks/tokens.md:
+!!! note "The runs are in progress"
+    No figures are published yet, and this page claims nothing in either
+    direction until they are.
 
-| App | Tokens, without Karni | Tokens, with Karni | Time, without | Time, with | Success, without | Success, with |
-|---|---|---|---|---|---|---|
-| Booking with payments | | | | | | |
-| A CRM with three roles and import | | | | | | |
-| A shop with orders and refunds | | | | | | |
--->
+| Task | Plain Django + React | Karni 0.5.0 candidate | Karni after the agent-flow work |
+|---|---|---|---|
+| Booking with payments | in progress | in progress | in progress |
+| A CRM with three roles and import | in progress | in progress | in progress |
+| A shop with orders and refunds | in progress | in progress | in progress |
+
+Each cell will hold the median of five runs: tokens, cost, wall time,
+acceptance tests passed and tool calls.
 <!-- bench:home:end -->
 
-The same agent and model build each app from the same prompt and API
-contract, on plain Django + React or on a new Karni project, and the
-harness's own acceptance tests decide success. The
-[token benchmark](benchmarks/tokens.md) has the method, the limits and the
+Method: the same agent and model get the same prompt and API contract in
+each condition, and the harness's own acceptance tests decide success. The
+[benchmark report](benchmarks/tokens.md) has the method, the limits and the
 raw data.
 
 ## What you get
