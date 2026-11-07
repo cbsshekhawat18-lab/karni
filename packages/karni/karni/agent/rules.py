@@ -76,12 +76,32 @@ class Procedure:
     steps: tuple[str, ...]
     outro: str = ""
     rules: tuple[str, ...] = field(default=())
+    #: Experimental. Facts the steps need, printed after them under :data:`REFERENCE_HEADING`,
+    #: one bullet each.
+    reference: tuple[str, ...] = field(default=())
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
         data["steps"] = list(self.steps)
         data["rules"] = list(self.rules)
+        data["reference"] = list(self.reference)
         return data
+
+
+#: Experimental. The heading of a procedure's ``reference`` bullets.
+REFERENCE_HEADING = "Reference:"
+
+
+@dataclass(frozen=True)
+class Topic:
+    """Experimental. A reference an agent looks up by name: ``karni explain <name>``."""
+
+    name: str
+    title: str
+    lines: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"name": self.name, "title": self.title, "lines": list(self.lines)}
 
 
 RULES: tuple[Rule, ...] = (
@@ -609,7 +629,7 @@ RULES: tuple[Rule, ...] = (
         code="K109",
         category="backend",
         severity="error",
-        summary="Viewsets declare access.",
+        summary="Viewsets declare access: karni explain access.",
         rule=(
             "Every `BaseViewSet` declares `access`: `Granted()` (the default: the roles' grants "
             "for the model, row-scoped) or `Access(read=..., write=...)` built from "
@@ -952,6 +972,56 @@ RULES: tuple[Rule, ...] = (
 )
 
 
+#: Experimental. karni.yaml's access words and the rules most apps need (``karni explain
+#: access``). The new-app procedure's reference sums them up in one bullet.
+ACCESS_LINES: tuple[str, ...] = (
+    "Per entity in karni.yaml: access: {read: WHO, write: WHO, create: WHO}.",
+    "WHO is one of these, or a list of them (any one admits):",
+    "  public          anyone, signed in or not",
+    "  authenticated   anyone signed in",
+    "  role:<slug>     the users with a role the spec declares under roles",
+    "  owned:<field>   the rows whose <field> is the user: a user fk, or a path (order__customer)",
+    "  granted         what each role's grants allow (the default)",
+    "read: lists, details and GET actions. write: changes, deletes and POST actions. "
+    "create: defaults to write.",
+    "owned:<field> in write or create also sets <field> to the signed-in user on create, and "
+    "the API makes it read-only. Name the field in owner: too.",
+    "",
+    "Common rules (a role named staff, a user fk named member):",
+    '  signed-in users read, staff write:  {read: authenticated, write: "role:staff"}',
+    '  anyone reads, staff write:          {read: public, write: "role:staff"}',
+    "  each member reads and changes only their own rows, staff read every row:",
+    '    owner: member',
+    '    access: {read: ["owned:member", "role:staff"], write: "owned:member"}',
+    '  the same, and staff change every row: write: ["owned:member", "role:staff"]',
+    '  members create (as themselves), staff may not: add create: "role:member"',
+    "  anyone signed in creates their own rows, only staff change them:",
+    '    access: {read: ["owned:member", "role:staff"], create: "owned:member", '
+    'write: "role:staff"}',
+    "",
+    "With granted, per role and per action: roles: {member: {grants: {\"catalog.item\": own, "
+    "\"catalog.tag:view\": all}}}. all: every row. own: the rows whose owner field is the user. "
+    "app.entity:view, :add, :change and :delete grant one action, so a role without :delete "
+    "may not delete.",
+    "An action of your own: @action(detail=True, methods=[\"post\"], access=Owned(\"member\") | "
+    "HasRole(\"staff\")), with Owned and HasRole from karni.api. Without access= it follows "
+    "read (GET) or write (POST).",
+    "The generated tests act as the roles access names: a rule only your code enforces (a "
+    "perform_create that refuses staff) fails them. Declare it in access instead.",
+    "Anything else: access: code, then Access(...) in <app>/viewsets.py (docs/api.md, access "
+    "control).",
+)
+
+#: Experimental. The references ``karni explain <name>`` prints.
+TOPICS: tuple[Topic, ...] = (
+    Topic(
+        name="access",
+        title="Who reads, writes and creates an entity's rows",
+        lines=ACCESS_LINES,
+    ),
+)
+
+
 PROCEDURES: tuple[Procedure, ...] = (
     Procedure(
         name="new-model",
@@ -1175,28 +1245,20 @@ PROCEDURES: tuple[Procedure, ...] = (
         argument_hint="<the app in one line>",
         intro="Build this app: {arguments}",
         steps=(
-            '`karni recipes list --match "<the request>"` ranks the recipes by the words they '
-            "share with the request. Start karni.yaml from the closest one that fits (`karni "
-            "recipes show <name>` prints its spec and what people usually change) or, when none "
-            "does, from the blank start it prints. Write in it what the request asks for: apps, "
-            "entities and fields, roles, modules (`karni modules list`), features, pages. `karni "
-            "spec validate` checks it.",
-            "`karni plan --questions` lists the questions for the user, most impact first. Ask "
-            "the user those and only those, with their options and defaults, in one message. "
-            "Names, labels and the rest are yours to choose.",
-            "Write each answer with `karni spec answer <id> <value>` (a question the user leaves "
-            "to you takes its default). Edit karni.yaml by hand only for what no question "
-            "covers. Run `karni plan --questions` again until none is open.",
-            "`karni plan` shows what `karni build` will change. Check that it is what the "
-            "request asks for, and ask the user before any risky (!) change.",
-            "`karni build` makes the project match karni.yaml: modules, models, viewsets, "
-            "migrations, seeds, types, tests and `karni check`. It stops at the first failure "
-            "with its code and what to do next. A Karni-owned file edited by hand stops it "
-            "(C273): ask the user which of the three ways on to take.",
-            "Write only the domain logic that is left, where the project owns the code: methods "
-            "on the subclasses in `<app>/models.py`, custom actions in `<app>/viewsets.py`, "
-            "demo values in `<app>/seeds.py`, your own pages and tests. Never edit "
-            "`<app>/karni/` or the `karni:spec` blocks: `karni build` rewrites them.",
+            '`karni recipes list --match "<the request>"` names the closest recipes, and `karni '
+            "recipes show <name>` prints one's karni.yaml (`blank` when none fits). Write "
+            "karni.yaml from it with what the request asks for: entities and fields, roles, "
+            "access, modules (`karni modules list`) and pages. `karni spec validate` checks it.",
+            "`karni plan --questions` lists what only the user decides. Ask the user those and "
+            "only those, in one message, then write each answer with `karni spec answer <id> "
+            "<value>` (one left to you takes its default) until none is open.",
+            "`karni build` makes the project match karni.yaml: models, viewsets, migrations, "
+            "types, tests and `karni check`. It stops at the first failure with its code and the "
+            "next step. Ask the user before `--allow-destructive` (a risky change) and before a "
+            "way past C273 (a Karni-owned file edited by hand).",
+            "Write the domain logic that is left, in the project's own files: methods on the "
+            "subclasses in `<app>/models.py`, actions in `<app>/viewsets.py`, your own pages and "
+            "tests. Never edit `<app>/karni/` or a `karni:spec` block.",
             "Done when `karni check` and `karni test` pass.",
         ),
         outro=(
@@ -1205,6 +1267,23 @@ PROCEDURES: tuple[Procedure, ...] = (
             "as these commands."
         ),
         rules=("K311", "K310", "K305", "K301"),
+        reference=(
+            "Access, per entity: `access: {read: WHO, write: WHO, create: WHO}`, WHO one of "
+            "`public`, `authenticated`, `role:<slug>`, `owned:<field>` or `granted` (the roles' "
+            "grants, the default), or a list of them. write covers changes, deletes and POST "
+            "actions, create defaults to write, and owned:<field> in either sets the field to "
+            'the signed-in user. Signed-in users read, staff write: `{read: authenticated, write: '
+            '"role:staff"}`. Each member their own rows, staff all: `owner: member` and '
+            '`{read: ["owned:member", "role:staff"], write: "owned:member"}`, plus `create: '
+            '"role:member"` when staff may not create. The rest: `karni explain access`.',
+            "Lists answer `{count, next, previous, results}`, 50 rows a page by default "
+            "(`?page=`, `?page_size=` up to 100), in the entity's `order` (default: newest "
+            "first). Ids are UUIDs unless the entity says `pk: bigint`.",
+            "`seed` writes demo rows into the database the app runs on: keep it only when the "
+            "user wants demo data.",
+            "Accounts in code: `get_user_model().objects.create_user(email=..., password=...)`, "
+            'then `assign_role(user, "<slug>")` from `karni.accounts.permissions`.',
+        ),
     ),
 )
 
@@ -1215,6 +1294,11 @@ def rules_by_code() -> dict[str, Rule]:
 
 def procedures_by_name() -> dict[str, Procedure]:
     return {procedure.name: procedure for procedure in PROCEDURES}
+
+
+def topics_by_name() -> dict[str, Topic]:
+    """Experimental. :data:`TOPICS` by name."""
+    return {topic.name: topic for topic in TOPICS}
 
 
 #: Enforcement rule id -> K code, for tools that report the underlying id.

@@ -17,11 +17,11 @@ from .conftest import REPO_ROOT
 FIXTURES = REPO_ROOT / "packages" / "karni" / "tests" / "agent" / "fixtures"
 #: ~4 characters per token is the usual English/code approximation; the
 #: tiktoken check below is stricter when the package is available.
-# Measured 620 cl100k tokens with 48 rules (K013-K015 and K030-K032 debugging, K114 typed
+# Measured 626 cl100k tokens with 48 rules (K013-K015 and K030-K032 debugging, K114 typed
 # fields, K115 and K116 lifecycle and capacity, K206 token classes, K309 public site, K307
 # naming the module catalog, K310 and K311 the new-app flow, K312 tree models, K314
-# aggregations). The README quotes the figure.
-TOKEN_BUDGET = 625
+# aggregations, K109 naming karni explain access). The README quotes the figure.
+TOKEN_BUDGET = 630
 
 
 def _rules_output(runner, monkeypatch, cwd: Path) -> str:
@@ -68,6 +68,63 @@ def test_explain_procedure_and_json(runner, tmp_path, monkeypatch) -> None:
 
     assert runner.invoke(app, ["rules", "--explain", "K999"]).exit_code != 0
     assert runner.invoke(app, ["rules", "--procedure", "nope"]).exit_code != 0
+
+
+#: The new-app procedure with its reference: the five steps, the access words and patterns,
+#: the lists' shape, seed and accounts. Measured 674 cl100k and 653 o200k tokens. The seven
+#: steps without a reference it replaced were about 480: the reference costs less than one
+#: read of Karni's source it saves.
+NEW_APP_BUDGET = 700
+
+
+def test_the_new_app_procedure_carries_what_its_steps_need_within_a_budget(
+    runner, tmp_path, monkeypatch
+) -> None:
+    """An agent that follows /new-app needs no reading of Karni's source for access or lists."""
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["rules", "--procedure", "new-app"])
+    assert result.exit_code == 0, result.output
+    out = result.output
+    steps = [line for line in out.splitlines() if line[:2] in {f"{n}." for n in "123456789"}]
+    assert len(steps) == 5 and steps[-1] == "5. Done when `karni check` and `karni test` pass."
+    reference = out.split("\nReference:\n", 1)[1].split("\n\n", 1)[0].splitlines()
+    assert len(reference) == 4 and all(line.startswith("- ") for line in reference)
+    access, lists, seed, accounts = reference
+    for word in ("`public`", "`authenticated`", "`role:<slug>`", "`owned:<field>`", "`granted`"):
+        assert word in access
+    assert '`{read: authenticated, write: "role:staff"}`' in access
+    assert '`{read: ["owned:member", "role:staff"], write: "owned:member"}`' in access
+    assert "`karni explain access`" in access
+    assert "`{count, next, previous, results}`" in lists and "newest first" in lists
+    assert "demo rows into the database the app runs on" in seed
+    assert "assign_role(user" in accounts and "karni.accounts.permissions" in accounts
+    assert len(out) / 4 < NEW_APP_BUDGET
+    tiktoken = pytest.importorskip("tiktoken")
+    for name in ("cl100k_base", "o200k_base"):
+        try:
+            encoding = tiktoken.get_encoding(name)
+        except Exception:  # noqa: BLE001 - encodings download on first use
+            pytest.skip("tiktoken encodings unavailable offline")
+        assert len(encoding.encode(out)) < NEW_APP_BUDGET, name
+
+
+def test_explain_access_prints_the_access_reference(runner, tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["explain", "access"])
+    assert result.exit_code == 0, result.output
+    out = result.output
+    assert out.startswith("access: Who reads, writes and creates an entity's rows\n")
+    assert "  authenticated   anyone signed in" in out
+    assert 'members create (as themselves), staff may not: add create: "role:member"' in out
+    assert "a role without :delete may not delete" in out
+    assert runner.invoke(app, ["explain", "Access"]).output == out
+    as_json = json.loads(runner.invoke(app, ["explain", "access", "--json"]).output)
+    assert as_json["name"] == "access" and as_json["lines"][0].startswith("Per entity")
+    assert "K109! Viewsets declare access: karni explain access." in _rules_output(
+        runner, monkeypatch, tmp_path
+    )
+    unknown = runner.invoke(app, ["explain", "nothing-here"])
+    assert unknown.exit_code != 0 and "a reference (access)" in str(unknown.exception)
 
 
 def test_the_questions_rule_is_listed_and_explained(runner, tmp_path, monkeypatch) -> None:

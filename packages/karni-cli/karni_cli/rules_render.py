@@ -44,11 +44,29 @@ def render_explain(rule: dict[str, Any]) -> str:
 def render_procedure(procedure: dict[str, Any], arguments: str = "<arguments>") -> str:
     lines = [procedure["intro"].replace("{arguments}", arguments), ""]
     lines += [f"{i}. {step}" for i, step in enumerate(procedure["steps"], start=1)]
+    lines += reference_lines(procedure)
     if procedure.get("outro"):
         lines += ["", procedure["outro"]]
     if procedure.get("rules"):
         lines += ["", "Rules that apply: " + ", ".join(procedure["rules"])]
     return "\n".join(lines)
+
+
+#: Experimental. Mirrors karni.agent.rules.REFERENCE_HEADING (an older karni has no reference).
+REFERENCE_HEADING = "Reference:"
+
+
+def reference_lines(procedure: dict[str, Any]) -> list[str]:
+    """Experimental. A procedure's reference bullets under their heading, after a blank line."""
+    reference = procedure.get("reference") or []
+    if not reference:
+        return []
+    return ["", REFERENCE_HEADING, *(f"- {item}" for item in reference)]
+
+
+def render_topic(topic: dict[str, Any]) -> str:
+    """Experimental. ``karni explain <topic>``: its title, then its lines."""
+    return "\n".join([f"{topic['name']}: {topic['title']}", "", *topic["lines"]])
 
 
 def render_findings(findings: list[dict[str, Any]]) -> str:
