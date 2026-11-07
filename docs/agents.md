@@ -23,7 +23,7 @@ what they return.
 | `karni rules` | Every convention as `CODE summary` (about 626 tokens for Karni's own rules, measured) |
 | `karni rules --explain K101` | One rule in full: statement, why, fix, enforcing rule id |
 | `karni rules --procedure new-model` | The steps of a standard procedure |
-| `karni rules --check FILE [--check FILE…]` | Static violations with code, line, message and fix. Exit 1 if any |
+| `karni rules --check FILE [FILE…]` | Static violations with code, line, message and fix, for one file or several (`--check` repeated works too). Exit 1 if any |
 | `karni rules --json` | The raw data (rules, procedures, adapter overrides) |
 | `karni rules sync` | Regenerate AGENTS.md (and any deprecated tool-specific file the project still has) |
 | `karni rules sync --check` | Exit 1 when any generated file is stale (CI gate) |

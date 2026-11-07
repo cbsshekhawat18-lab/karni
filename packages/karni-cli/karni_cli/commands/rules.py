@@ -17,7 +17,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import click
 import typer
+from typer.core import TyperGroup
 
 from karni_cli import agent_data
 from karni_cli.adapters import deprecation_warning, module_fragments, sync
@@ -30,7 +32,44 @@ from karni_cli.rules_render import (
     render_rules,
 )
 
+def more_checks(args: list[str], commands: set[str]) -> list[str]:
+    """``--check a.py b.py`` as ``--check a.py --check b.py``: the words after a checked file.
+
+    A word that is not an option or a subcommand, after ``--check FILE``, is one more
+    file to check, until the next option.
+    """
+    out: list[str] = []
+    checking = False
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == "--check" and index + 1 < len(args):
+            out += [arg, args[index + 1]]
+            checking = True
+            index += 2
+            continue
+        if arg.startswith("--check="):
+            checking = True
+        elif checking and not arg.startswith("-") and arg not in commands:
+            out += ["--check", arg]
+            index += 1
+            continue
+        elif arg.startswith("-"):
+            checking = False
+        out.append(arg)
+        index += 1
+    return out
+
+
+class _RulesGroup(TyperGroup):
+    """``karni rules``: ``--check`` takes one file or several (``--check a.py b.py``)."""
+
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        return super().parse_args(ctx, more_checks(list(args), set(self.commands)))
+
+
 rules_app = typer.Typer(
+    cls=_RulesGroup,
     help="Karni's conventions for humans and AI agents (no Django needed).",
     no_args_is_help=False,
     add_completion=False,
@@ -57,7 +96,10 @@ def check_text(paths: list[Path], project: Path | None) -> tuple[str, int]:
 def rules(
     ctx: typer.Context,
     check: list[Path] | None = typer.Option(
-        None, "--check", help="Statically check FILE (repeatable) and exit 1 on violations."
+        None,
+        "--check",
+        help="Statically check FILE and exit 1 on violations. Several files: --check a.py b.py "
+        "(or --check repeated).",
     ),
     explain: str | None = typer.Option(None, "--explain", help="Show one rule in full."),
     procedure: str | None = typer.Option(None, "--procedure", help="Show a procedure's steps."),

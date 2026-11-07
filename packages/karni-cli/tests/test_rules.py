@@ -183,6 +183,29 @@ def test_check_exit_codes(runner, monkeypatch) -> None:
     assert missing.exit_code != 0
 
 
+def test_check_takes_several_files_after_one_flag(runner, monkeypatch) -> None:
+    """``--check a.py b.py``, as an agent writes it, checks both files."""
+    monkeypatch.chdir(FIXTURES)
+    good = runner.invoke(
+        app, ["rules", "--check", "app/good_models.py", "frontend/src/pages/good_page.tsx"]
+    )
+    assert good.exit_code == 0, good.output
+    assert "ok: no violations in 2 file(s)" in good.output
+    bad = runner.invoke(app, ["rules", "--check", "app/good_models.py", "app/bad_models.py"])
+    assert bad.exit_code == 1 and "app/bad_models.py:" in bad.output
+    both = runner.invoke(
+        app, ["rules", "--check", "app/good_models.py", "app/bad_models.py", "--json"]
+    )
+    assert {f["path"] for f in json.loads(both.output)} == {"app/bad_models.py"}
+    from karni_cli.commands.rules import more_checks
+
+    assert more_checks(["--check", "a.py", "b.py", "--json"], {"sync"}) == [
+        "--check", "a.py", "--check", "b.py", "--json",
+    ]  # fmt: skip
+    assert more_checks(["sync", "--check"], {"sync"}) == ["sync", "--check"]
+    assert more_checks(["--check=a.py", "b.py"], {"sync"}) == ["--check=a.py", "--check", "b.py"]
+
+
 def test_project_overrides_apply(runner, generated_project, monkeypatch) -> None:
     (generated_project / "karni.rules.py").write_text(
         'ADD = [{"code": "P001", "rule": "Money is Decimal, never float."}]\nDISABLE = ["K304"]\n'

@@ -1976,6 +1976,11 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ### Fixed
 
+- **`karni rules --check a.py b.py` checks both files.** The second file was
+  read as a subcommand ("No such command"), so an agent checking its files
+  in one call got an error and checked them again one by one. Every word
+  after `--check FILE` that is not an option or a subcommand is one more
+  file. `--check` repeated works as before.
 - **`karni context` says how a list pages.** Nothing an agent reads said that
   lists answer 50 rows a page in the model's ordering, so an agent that
   ordered a list by name and created rows in its own test runs missed its new
