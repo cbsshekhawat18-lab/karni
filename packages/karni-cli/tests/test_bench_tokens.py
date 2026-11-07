@@ -36,6 +36,7 @@ execute = _load("harness.execute")
 starts = _load("harness.starts")
 report = _load("report")
 run_module = _load("run")
+inventory = _load("inventory")
 
 
 def lines(*events: dict[str, Any]) -> list[str]:
@@ -260,7 +261,7 @@ def test_the_docs_page_is_current_for_the_published_data() -> None:
 
 def test_the_published_data_names_no_ai_tool() -> None:
     """The project names no AI tool or company: the published runs carry a neutral model label."""
-    for label in PUBLISHED_SETS:
+    for label in (*PUBLISHED_SETS, "inventory"):
         for row in records.load(TOKENS / "data" / f"{label}.jsonl"):
             assert row["model"] == "model-A"
             assert row["agent_version"].endswith("(coding-agent CLI)")
@@ -666,3 +667,30 @@ def test_one_unlabelled_data_file_behaves_as_before(tmp_path: Path) -> None:
     assert report.main(["--data", str(data), "--page", str(page), "--n", "3"]) == 0
     assert page.read_text() == report.splice(page.read_text(), report.render(both))
     assert "### Success" in page.read_text()
+
+
+def test_the_inventory_tables_are_current_for_the_measured_data() -> None:
+    """README.md, docs/index.md and the report show data/inventory.json and nothing else."""
+    data = json.loads(inventory.DATA.read_text())
+    stale = [
+        str(page) for page, text in inventory.render_pages(data).items() if text != page.read_text()
+    ]
+    assert stale == [], "run scripts/benchmarks/tokens/inventory.py"
+
+
+def test_the_inventory_measures_one_passing_run_per_app_and_side() -> None:
+    data = json.loads(inventory.DATA.read_text())
+    cells = sorted((run["task"], run["condition"]) for run in data["runs"])
+    assert cells == sorted((task, side) for task in inventory.TASKS for side in ("plain", "karni"))
+    assert all(run["success"] for run in data["runs"])
+    recorded = {row["run_id"] for row in records.load(TOKENS / "data" / "inventory.jsonl")}
+    assert {run["run_id"] for run in data["runs"]} <= recorded
+
+
+def test_the_inventory_ranges_read_as_words() -> None:
+    assert inventory._range([22, 25, 24]) == "22 to 25"
+    assert inventory._range([16, 16]) == "16"
+    assert inventory._range([0, 0]) == "none"
+    assert inventory._range([True, True]) == "yes"
+    assert inventory._range([False, False]) == "no"
+    assert inventory._range([True, False, True]) == "2 of 3"
