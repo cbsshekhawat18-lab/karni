@@ -984,8 +984,8 @@ ACCESS_LINES: tuple[str, ...] = (
     "  granted         what each role's grants allow (the default)",
     "read: lists, details and GET actions. write: changes, deletes and POST actions. "
     "create: defaults to write.",
-    "owned:<field> in write or create also sets <field> to the signed-in user on create, and "
-    "the API makes it read-only. Name the field in owner: too.",
+    "owned:<field> in write or create, with <field> a user fk of the entity, also sets it to "
+    "the signed-in user on create, and the API makes it read-only. Name it in owner: too.",
     "",
     "Common rules (a role named staff, a user fk named member):",
     '  signed-in users read, staff write:  {read: authenticated, write: "role:staff"}',
@@ -1271,7 +1271,7 @@ PROCEDURES: tuple[Procedure, ...] = (
             "Access, per entity: `access: {read: WHO, write: WHO, create: WHO}`, WHO one of "
             "`public`, `authenticated`, `role:<slug>`, `owned:<field>` or `granted` (the roles' "
             "grants, the default), or a list of them. write covers changes, deletes and POST "
-            "actions, create defaults to write, and owned:<field> in either sets the field to "
+            "actions, create defaults to write, and owned:<user fk> in either sets that fk to "
             "the signed-in user. Signed-in users read, staff write: `{read: authenticated, write: "
             '"role:staff"}`. Each member their own rows, staff all: `owner: member` and '
             '`{read: ["owned:member", "role:staff"], write: "owned:member"}`, plus `create: '
