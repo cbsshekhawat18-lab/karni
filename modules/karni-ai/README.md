@@ -1,11 +1,10 @@
 # karni-ai
 
-Structured extraction for [Karni](https://github.com/cbsshekhawat18-lab/karni),
-experimental. A language model reads a source (text, a web page or a PDF)
-into rows of any of your resources. The rows always go through Karni's import
-preview: nothing is saved until a user confirms the preview through the
-import's own commit. Every call is logged with its tokens and cost, and
-monthly budgets cap the spending.
+Structured extraction for Karni: rows for any resource read from text, a web page or a PDF by a language model, always through the import preview.
+
+[![PyPI](https://img.shields.io/pypi/v/karni-ai)](https://pypi.org/project/karni-ai/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/ai-extraction/)
+
+Experimental. A language model reads a source (text, a web page or a PDF) into rows of any of your resources. The rows always go through Karni's import preview: nothing is saved until a user confirms the preview through the import's own commit. Every call is logged with its tokens and cost, and monthly budgets cap the spending.
 
 The full guide is [AI extraction](https://cbsshekhawat18-lab.github.io/karni/ai-extraction/).
 
@@ -17,6 +16,15 @@ karni migrate
 
 `karni add ai` adds the app. The API rides the auto-router, so there is no
 URL include. Karni core never imports this module.
+
+## Main features
+
+- Rows for any resource, validated against the resource's own schema
+- Text, a web page or a PDF as the source, with URL fetching that never reaches the server's own network
+- Always through the import preview: a user commits, never the model
+- Every call logged with its tokens and cost, monthly token budgets and a per-user rate limit
+- A test provider for CI, and checks `AI001` to `AI005`
+- React components in [`@karni/ai-ui`](https://www.npmjs.com/package/@karni/ai-ui)
 
 ## The endpoint
 
@@ -73,3 +81,12 @@ next answers, and `TestProvider.reset()` clears them.
 ```bash
 cd modules/karni-ai && python -m pytest
 ```
+
+## Links
+
+- AI extraction: <https://cbsshekhawat18-lab.github.io/karni/ai-extraction/>
+- React components: <https://www.npmjs.com/package/@karni/ai-ui>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. karni-ai is released with every other Karni package, at one version.

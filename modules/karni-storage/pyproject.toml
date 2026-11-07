@@ -33,9 +33,10 @@ dependencies = ["karni[s3]>=0.5,<0.6"]
 
 [project.urls]
 Homepage = "https://github.com/cbsshekhawat18-lab/karni"
-Documentation = "https://cbsshekhawat18-lab.github.io/karni/"
+Documentation = "https://cbsshekhawat18-lab.github.io/karni/storage/"
 Repository = "https://github.com/cbsshekhawat18-lab/karni"
 Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
+Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"
 
 [project.optional-dependencies]
 # Pillow, for protected image fields and their thumbnails.

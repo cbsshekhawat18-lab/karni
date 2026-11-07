@@ -23,6 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Visualization",
     "Typing :: Typed",
 ]
 # Range-pinned per the module contract (docs/modules.md): karni 0.x minors
@@ -31,9 +32,10 @@ dependencies = ["karni>=0.5,<0.6"]
 
 [project.urls]
 Homepage = "https://github.com/cbsshekhawat18-lab/karni"
-Documentation = "https://cbsshekhawat18-lab.github.io/karni/"
+Documentation = "https://cbsshekhawat18-lab.github.io/karni/charts/"
 Repository = "https://github.com/cbsshekhawat18-lab/karni"
 Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
+Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"
 
 # The catalog entry, karni_charts/karni.module.toml: `karni modules`, `karni add`
 # and `karni remove` read it.

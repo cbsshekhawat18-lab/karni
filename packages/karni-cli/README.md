@@ -1,7 +1,44 @@
 # karni-cli
 
-The `karni` command. It runs a Karni project's own `manage.py` as a
-subprocess, so the CLI itself never imports Django.
+The karni command: scaffold, generate, run and upgrade Karni projects.
+
+[![PyPI](https://img.shields.io/pypi/v/karni-cli)](https://pypi.org/project/karni-cli/) [![Python versions](https://img.shields.io/pypi/pyversions/karni-cli)](https://pypi.org/project/karni-cli/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/cli/)
+
+It runs a project's own `manage.py` as a subprocess, so the CLI itself never imports Django. Karni's Python core is [`karni`](https://pypi.org/project/karni/) and its React side [`@karni/ui`](https://www.npmjs.com/package/@karni/ui).
+
+## Install
+
+```sh
+pip install karni-cli
+```
+
+## A minimal example
+
+The shop recipe, built on SQLite with no Docker:
+
+```sh
+python3 -m venv .venv && . .venv/bin/activate
+pip install karni karni-cli karni-payments pytest pytest-django
+karni new "Corner Shop" --recipe shop && cd corner_shop
+printf 'DATABASE_URL=sqlite:///data/db.sqlite3\nKARNI_CACHE=locmem\n' > .env
+karni build
+karni serve --local
+```
+
+`karni build` runs the migrations, seeds demo data, generates the TypeScript types, and runs the tests and `karni check`. The [quickstart](https://cbsshekhawat18-lab.github.io/karni/quickstart/) does the same on PostgreSQL.
+
+## Main features
+
+- **Start a project.** `karni new` scaffolds a site, an app or both, blank or from one of six [recipes](https://cbsshekhawat18-lab.github.io/karni/recipes/).
+- **Build from a spec.** `karni spec validate`, `karni plan` and `karni build` turn `karni.yaml` into code ([the app spec](https://cbsshekhawat18-lab.github.io/karni/app-spec/)).
+- **Generate.** `karni make app`, `model`, `page`, `schedule`, `task`, `site` and `form` write the files a project owns.
+- **Modules.** `karni add` and `karni remove` wire a module in and out, and `karni modules` lists the catalog.
+- **Run and check.** `karni serve`, `seed`, `migrate`, `test`, `types` and `check`, the last one failing the build when code rebuilds what Karni ships.
+- **For coding agents.** `karni context`, `karni rules`, the procedures in AGENTS.md and `karni mcp`, the MCP server ([Karni for coding agents](https://cbsshekhawat18-lab.github.io/karni/agents/)).
+- **Debugging.** `karni why`, `karni explain`, `karni trace`, `karni replay` and `karni queries` ([debugging](https://cbsshekhawat18-lab.github.io/karni/debugging/why/)).
+- **Upgrades.** `karni upgrade` applies each release's codemods and lists what it could not change.
+
+Every command and option is in [the karni command](https://cbsshekhawat18-lab.github.io/karni/cli/). A short list follows.
 
 ## Commands
 - `karni new <name>`: scaffold a project from the bundled cookiecutter
@@ -158,3 +195,12 @@ joined by `|`.
 Commands that run the project resolve, in order: `--docker/--no-docker` flag →
 `<project>/.venv` → a running compose service (default `django`, changed with
 `--service` or `KARNI_COMPOSE_SERVICE`) → an error naming both remedies.
+
+## Links
+
+- The karni command: <https://cbsshekhawat18-lab.github.io/karni/cli/>
+- Quickstart: <https://cbsshekhawat18-lab.github.io/karni/quickstart/>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. karni-cli is released with every other Karni package, at one version.

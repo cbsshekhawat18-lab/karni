@@ -1,8 +1,10 @@
 # @karni/ui
 
-Schema-driven React components for [Karni](https://github.com/cbsshekhawat18-lab/karni#readme) backends. Point it at a
-Karni API's OpenAPI schema and you get working tables, forms, detail views and
-auth, plus the themable primitives they are built from, without regenerating boilerplate.
+React components for Karni: schema-driven tables, forms, detail views and auth.
+
+[![npm](https://img.shields.io/npm/v/@karni/ui)](https://www.npmjs.com/package/@karni/ui) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/ui/)
+
+Point it at a Karni API's OpenAPI schema and you get working tables, forms, detail views and auth, plus the themable primitives they are built from. These are its main features:
 
 - **Resource components**: `ResourceTable`, `ResourceForm`, `ResourceDetail`,
   `ResourceSelect` render themselves from the backend schema (`/api/schema/`).
@@ -1226,3 +1228,13 @@ Before the first `npm run storybook`, generate the MSW worker once:
 Tests enforce the color discipline: component source uses tokens only, with no
 Tailwind palette classes or raw color literals
 (see `src/components/primitives/no-color-literals.test.ts`).
+
+## Links
+
+- @karni/ui in the docs: <https://cbsshekhawat18-lab.github.io/karni/ui/>
+- Theming with karni ui detect: <https://cbsshekhawat18-lab.github.io/karni/theming/>
+- The Python side: <https://pypi.org/project/karni/>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. @karni/ui is released with every other Karni package, at one version.

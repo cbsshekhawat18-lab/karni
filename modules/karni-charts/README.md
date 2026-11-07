@@ -1,11 +1,10 @@
 # karni-charts
 
-Saved charts for [Karni](https://github.com/cbsshekhawat18-lab/karni): charts
-people define and preview in the admin, drawn by the app with one component.
-A chart's data is never stored or computed by the module: it is the source
-resource's own [aggregate action](https://cbsshekhawat18-lab.github.io/karni/aggregations/),
-fetched as the person who views the chart, so a chart never shows a row the
-source's list would hide from them.
+Saved charts for Karni: charts defined and previewed in the admin, served through each resource's aggregate action under its access.
+
+[![PyPI](https://img.shields.io/pypi/v/karni-charts)](https://pypi.org/project/karni-charts/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/charts/)
+
+A chart's data is never stored or computed by the module: it is the source resource's own [aggregate action](https://cbsshekhawat18-lab.github.io/karni/aggregations/), fetched as the person who views the chart, so a chart never shows a row the source's list would hide from them.
 
 **Experimental**, like the aggregations it builds on: the model, the API, the
 settings and `@karni/charts-ui` may change in a minor release, with a
@@ -59,6 +58,14 @@ Saving checks the axes against the source's declaration (`CHART004`), the
 filters (`CHART003`) and the source (`CHART001`). The change form shows a
 preview under the fields: the chart's data as a table, as the signed-in staff
 user may see it.
+
+## Main features
+
+- Charts defined and previewed in the admin: a source resource, its axes and its filters
+- Served at `/api/charts/<slug>/data/` through the source's aggregate action, as the viewer
+- Filters a viewer may add, next to the ones the chart applies
+- Drawn in React with one component, `SavedChart` from [`@karni/charts-ui`](https://www.npmjs.com/package/@karni/charts-ui)
+- Error codes `CHART001` to `CHART004`, explained offline by `karni explain`
 
 ## The API
 
@@ -120,3 +127,13 @@ the hook underneath.
 | `CHART004` | the axes do not fit the source's aggregation |
 
 `karni explain CHART001` prints each one.
+
+## Links
+
+- Saved charts: <https://cbsshekhawat18-lab.github.io/karni/charts/>
+- Aggregations: <https://cbsshekhawat18-lab.github.io/karni/aggregations/>
+- React components: <https://www.npmjs.com/package/@karni/charts-ui>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. karni-charts is released with every other Karni package, at one version.

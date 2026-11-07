@@ -34,6 +34,7 @@ Homepage = "https://github.com/cbsshekhawat18-lab/karni"
 Documentation = "https://cbsshekhawat18-lab.github.io/karni/"
 Repository = "https://github.com/cbsshekhawat18-lab/karni"
 Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
+Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"
 
 # The catalog entry, karni_impersonation/karni.module.toml: `karni modules`, `karni add`
 # and `karni remove` read it.
