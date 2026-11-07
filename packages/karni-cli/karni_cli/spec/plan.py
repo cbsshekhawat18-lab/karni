@@ -258,6 +258,15 @@ class Plan:
         text = f"{total} change{'s' if total != 1 else ''}, {risky} risky"
         return text + (f", {left} not managed." if left else ".")
 
+    def brief(self) -> str:
+        """The plan in one line: the summary, then the changes per area (``karni build``)."""
+        counts = [
+            f"{area} {count}"
+            for area in AREAS
+            if (count := sum(1 for change in self.changes if change.area == area))
+        ]
+        return f"{self.summary().removesuffix('.')}: {', '.join(counts)}"
+
     def text(self) -> str:
         """The plan as the terminal shows it: one line per change, grouped by area."""
         if not self.changes:

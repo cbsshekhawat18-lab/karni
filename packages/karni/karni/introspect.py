@@ -381,11 +381,51 @@ def visibility_section(only: Iterable[type[models.Model]] | None = None) -> str 
     return "VISIBILITY: " + " ".join(parts) if parts else None
 
 
+def api_section() -> str | None:
+    """Experimental. How a list answers: ``API: lists 50 a page as {count, next, ...}``.
+
+    Read from the paginator ``REST_FRAMEWORK`` names, the page size and
+    ``KARNI_MAX_PAGE_SIZE``, so a project that changes them sees its own values.
+    ``None`` when the paginator cannot be read.
+    """
+    from django.utils.module_loading import import_string
+    from rest_framework.pagination import CursorPagination, PageNumberPagination
+    from rest_framework.settings import api_settings
+
+    from karni.pagination import KarniPagination
+
+    try:
+        paginator_class = api_settings.DEFAULT_PAGINATION_CLASS
+        if isinstance(paginator_class, str):
+            paginator_class = import_string(paginator_class)
+        paginator = paginator_class()
+        if not isinstance(paginator, KarniPagination):
+            return None
+        size = paginator.get_default_page_size()
+        cap = paginator.get_max_page_size()
+    except Exception:  # noqa: BLE001 - inventory must degrade, never crash
+        return None
+    sized = getattr(paginator, "page_size_query_param", None)
+    query = f"?{sized}= up to {cap}" if sized else ""
+    if isinstance(paginator, CursorPagination):
+        shape, pages = "{next, previous, results}", "?cursor="
+    elif isinstance(paginator, PageNumberPagination):
+        shape, pages = "{count, next, previous, results}", "?page="
+    else:
+        return None
+    params = ", ".join(part for part in (pages, query) if part)
+    return (
+        f"API: lists answer {shape}, {size} rows a page ({params}), in the model's "
+        "ordering, else newest first"
+    )
+
+
 def build_context() -> str:
     """The full inventory, one section per line, empty sections omitted."""
     sections = [
         models_section(),
         keys_section(),
+        api_section(),
         scopes_section(),
         viewsets_section(),
         roles_section(),

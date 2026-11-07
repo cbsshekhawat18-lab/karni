@@ -386,7 +386,9 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         """DRF's extra actions, without the tree and taxonomy actions the model does not use.
 
         The tree actions need a tree model, ``facets`` a model with taxonomies
-        and ``tagged`` a tree model a taxonomy points at.
+        and ``tagged`` a tree model a taxonomy points at. Only Karni's own
+        actions are left out: a subclass's action of the same name (a ``move``
+        that moves a card between columns) is the project's and stays routed.
         """
         actions: list[Any] = list(super().get_extra_actions())
         hidden: set[str] = set()
@@ -396,7 +398,12 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             hidden.add("facets")
         if not cls.serves_tagged():
             hidden.add("tagged")
-        return [extra for extra in actions if extra.__name__ not in hidden]
+        karni_own = BaseViewSet.__dict__
+        return [
+            extra
+            for extra in actions
+            if extra.__name__ not in hidden or extra is not karni_own.get(extra.__name__)
+        ]
 
     @classmethod
     def _served_model(cls) -> type[Model] | None:

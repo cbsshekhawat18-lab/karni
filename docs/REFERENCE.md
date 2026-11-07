@@ -408,7 +408,7 @@ karni rules [OPTIONS] COMMAND [ARGS]...
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `--check` PATH (repeatable) |  | Statically check FILE (repeatable) and exit 1 on violations. |
+| `--check` PATH (repeatable) |  | Statically check FILE and exit 1 on violations. Several files: --check a.py b.py (or --check repeated). |
 | `--explain` TEXT |  | Show one rule in full. |
 | `--procedure` TEXT |  | Show a procedure's steps. |
 | `--json` |  | Machine-readable output. |
@@ -449,6 +449,7 @@ karni check [OPTIONS] [REF]
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 | `--frontend/--no-frontend` |  | Run the frontend checks (eslint and jscpd in frontend/). By default they run when frontend/node_modules is installed, and are skipped with a note when it is not, except in CI. --frontend fails without it, --no-frontend skips them. |
 | `--quiet`, `-q` |  | Do not print the optional tip. |
+| `--verbose`, `-v` |  | Print the frontend tools' own output (ESLint, jscpd's report) when they pass too. By default only a failure prints their output. |
 | `--deploy` |  | Also run the deploy checks (DEBUG, SECRET_KEY, hosts, HSTS, cookies, admin path, CORS, CSP) and fail on warnings. Run it with the production environment. |
 | `--seo` |  | Also run the SEO checks: every page of the public site rendered, and missing or shared titles and descriptions, images without alt, size or smaller copies, broken links and pages missing from the sitemap reported (karni-site, SITE010 to SITE018). |
 | `--changed` |  | Only the files git reports as changed: the working tree and the index against HEAD (or REF), and untracked files. The checks that read the whole project still run. Experimental. |
@@ -478,7 +479,7 @@ karni explain [OPTIONS] [CODE]
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106, a setting such as KARNI_SITE_HIGHLIGHT, a template tag such as image, or a content map key such as map.items. Pass - to read a traceback or log line from stdin. |
+| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106, a setting such as KARNI_SITE_HIGHLIGHT, a template tag such as image, a content map key such as map.items, or a reference: access or fields. Pass - to read a traceback or log line from stdin. |
 | `--json` |  | Machine-readable output. |
 | `--failure` TEXT |  | A captured failure id (.karni/failures/), a failed request's id, or `last`: print it as a brief (development, DEBUG on). |
 
@@ -1549,6 +1550,7 @@ karni build [OPTIONS]
 | `--allow-destructive` |  | Apply the risky (!) changes too: a field or entity removed, a type narrowed, access widened. Without it they stop the build (C270), each named with its rows. |
 | `--force` |  | Replace Karni-owned files edited by hand, keeping each as &lt;file&gt;.orig. |
 | `--adopt` TEXT (repeatable) |  | Hand a Karni-owned file (or config/settings.py, frontend/src/routes.tsx for their blocks) to the project: karni build stops managing it. Repeatable. |
+| `--verbose`, `-v` |  | Print every change of the plan before the steps, as karni plan does. By default the plan is one line, with each risky change under it. |
 | `--json` |  | Print {version, file, valid, issues, status, code, message, plan, files, hand_edits, adopted, steps, next} (docs/assets/karni-build.schema.json). |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
@@ -1619,7 +1621,7 @@ karni recipes list [OPTIONS]
 
 Experimental. One recipe: what it is for, what people usually change, its files and spec.
 
-blank shows the blank start: karni.yaml with the version and the app's name, nothing else, where an app starts when no recipe fits.
+blank shows the blank start: karni.yaml with the version and the app's name, nothing else, where an app starts when no recipe fits. --files prints the recipe's own model methods, actions, seeders and tests, which only karni new --recipe writes into a project.
 
 ```
 karni recipes show [OPTIONS] NAME
@@ -1628,6 +1630,7 @@ karni recipes show [OPTIONS] NAME
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `NAME` (required) |  | A recipe, or blank for the blank start. |
+| `--files` |  | Print the recipe's own domain code instead: each file of its files/ folder, with the path it takes in a project (with --json: {recipe, files: {path: text}}). |
 | `--json` |  | Print {version, request, threshold, recipes, blank, next, problems} (docs/assets/karni-recipes.schema.json). |
 
 ## Base classes
@@ -2874,7 +2877,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K106`](errors.md#k106) | rule | No Meta-only ModelSerializer. |
 | [`K107`](errors.md#k107) | rule | No duplicated code. |
 | [`K108`](errors.md#k108) | rule | Off-request writes: current_user(u). |
-| [`K109`](errors.md#k109) | rule | Viewsets declare access. |
+| [`K109`](errors.md#k109) | rule | Viewsets declare access: karni explain access. |
 | [`K110`](errors.md#k110) | rule | Row rules: in access. |
 | [`K111`](errors.md#k111) | rule | Paginate lists. No N+1. |
 | [`K113`](errors.md#k113) | rule | Audited models: no update()/bulk_update(). |

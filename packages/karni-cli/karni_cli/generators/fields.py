@@ -303,6 +303,84 @@ def parse_fields(tokens: list[str]) -> list[FieldSpec]:
     return specs
 
 
+#: Experimental. How many arguments each type takes after it, with an example. A field that
+#: writes more is refused (C104): an argument is never dropped without a word. ``choice`` and
+#: ``state`` read the rest as their values, and the range and capacity types check their own.
+ARG_SHAPES: dict[str, tuple[int, str]] = {
+    "str": (1, "title:str:200"),
+    "url": (1, "site:url:300"),
+    "slug": (1, "slug:slug:title"),
+    "decimal": (2, "price:decimal:10:2"),
+    "money": (1, "price:money:EUR"),
+    "percent": (2, "rate:percent:0:100"),
+    "email": (1, "email:email:unique"),
+    "json": (1, "meta:json:queried"),
+    "array": (2, "tags:array:str:40"),
+    "file": (1, "doc:file:protected"),
+    "image": (1, "photo:image:protected"),
+    "fk": (1, "venue:fk:Venue"),
+    "o2o": (1, "profile:o2o:User"),
+    "m2m": (1, "tags:m2m:Tag"),
+    **{
+        kind: (0, f"{example}:{kind}")
+        for kind, example in (
+            ("text", "body"),
+            ("int", "count"),
+            ("float", "ratio"),
+            ("bool", "done"),
+            ("date", "day"),
+            ("datetime", "at"),
+            ("uuid", "ref"),
+            ("quantity", "stock"),
+            ("phone", "phone"),
+            ("markdown", "notes"),
+            ("country", "country"),
+            ("currency", "currency"),
+        )
+    },
+}
+
+#: Experimental. The types a ``:unique`` after the type means a unique value for.
+_UNIQUE_TEXT = frozenset({"str", "url", "text", "int", "phone", "uuid"})
+
+
+def refuse_extra_args(spec: FieldSpec) -> None:
+    """Experimental. Refuse an argument ``spec``'s type does not take (C104), never drop it.
+
+    ``title:str:200:unique`` is refused with the way to a unique value: a
+    ``LiveUniqueConstraint`` in the Meta of the project's class.
+    """
+    shape = ARG_SHAPES.get(spec.kind)
+    if shape is None:
+        return
+    limit, example = shape
+    if spec.kind == "array" and spec.args[:1] != ("str",):
+        limit = 1  # only an array of str takes a length
+    extra = spec.args[limit:]
+    if "unique" in spec.args and spec.kind in _UNIQUE_TEXT:
+        raise CliError(
+            f"Field {spec.name}: {spec.kind} takes no :unique, so it would be dropped "
+            f"({spec.name}:{':'.join([spec.kind, *spec.args])}). A value unique among live rows "
+            f'is LiveUniqueConstraint(fields=["{spec.name}"]) from karni.fields, in the Meta '
+            "of the model's class in <app>/models.py (class Meta(karni.<Model>.Meta)), then "
+            "karni make migration. email:unique is the one type that takes it.",
+            code="C104",
+        )
+    if not extra or (len(extra) == 1 and extra[0] == "" and limit == 0):
+        return
+    shown = ":".join(extra)
+    takes = (
+        "takes no argument"
+        if limit == 0
+        else f"takes {limit} argument{'s' if limit != 1 else ''} after the type"
+    )
+    raise CliError(
+        f"Field {spec.name}: {spec.kind} {takes} (e.g. {example}), so {shown!r} would be "
+        "dropped. Remove it (field types: karni make model --help).",
+        code="C104",
+    )
+
+
 def _int_arg(spec: FieldSpec, index: int, default: int, what: str) -> int:
     if len(spec.args) <= index or spec.args[index] == "":
         return default
@@ -387,6 +465,7 @@ def render_field(
     ``karni spec validate`` runs every field of a spec through it, so the spec
     and ``karni make model`` accept exactly the same fields.
     """
+    refuse_extra_args(spec)
     indent = "    "
     head = f"{spec.name} = models."
     typed = TYPED.get(spec.kind)

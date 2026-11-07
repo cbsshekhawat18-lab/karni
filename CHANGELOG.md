@@ -12,6 +12,8 @@ apply codemods and list the manual steps. This file is the human summary.
 ## 0.5.0 (unreleased)
 
 - **Documentation refresh.** A new README and docs home (the /new-app flow, the recipes and modules, a quickstart checked on a clean machine, one diagram), a [features page](docs/features.md) that `scripts/gen_reference.py` keeps complete, every package page on PyPI and npm in one shape, and the docs site in the look of the Karni page on gigaikripaservices.com.
+- **Token benchmark: side-by-side report.** `report.py --data LABEL=PATH` (repeatable) shows plain Django and one Karni column per labelled data set, with medians and ranges per task, a total row, and the Karni commit, model, agent version and dates of each set.
+- **Token benchmark: diff and lines written.** The diff size is measured against the run's start commit, so an agent that commits its own work is no longer measured as zero, and lines written count shell heredocs that write files, not only Write and Edit.
 - **Token benchmark: interrupted runs.** A run cut short by a usage or rate limit, an API error or a kill is recorded as interrupted, left out of the statistics, run again by `--resume`, and a usage limit stops the batch; the report refuses to compare while a cell is short.
 - **Speed budgets in CI (experimental).** `scripts/benchmark/speed.py` times what a
   person waits for: each recipe from scratch with `karni new --recipe` (and the
@@ -1977,6 +1979,93 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ### Fixed
 
+- **A field argument its type does not take is refused, not dropped.**
+  `name: "str:200:unique"` validated, showed in `karni plan` and built a
+  plain `CharField(max_length=200)`: the `:unique` was silently lost, and so
+  was any extra argument (`text:500`, `decimal:10:2:4`, `fk:Venue:cascade`).
+  `karni spec validate` and `karni make model` now refuse it (`C216`, the
+  generator's `C104`) with the type's form. `:unique` on a type that does not
+  take it names `LiveUniqueConstraint(fields=[...])` in the Meta of the
+  project's class, unique among live rows. `email:unique` is unchanged.
+- **A recipe's own code is printed by a command, not found in the installed
+  package.** After a karni.yaml started from a recipe, `karni build` said to
+  copy the recipe's code "from karni_cli/recipes/<name>/files", so an agent
+  went looking in site-packages, and it named "its capacity rule" for every
+  recipe, the CRM's too. `karni recipes show <name> --files` prints each of
+  the recipe's own files with the path it takes (`--json`: `{recipe,
+  files}`), and the build and `karni recipes show` point at it.
+- **`karni rules --check a.py b.py` checks both files.** The second file was
+  read as a subcommand ("No such command"), so an agent checking its files
+  in one call got an error and checked them again one by one. Every word
+  after `--check FILE` that is not an option or a subcommand is one more
+  file. `--check` repeated works as before.
+- **`karni context` says how a list pages.** Nothing an agent reads said that
+  lists answer 50 rows a page in the model's ordering, so an agent that
+  ordered a list by name and created rows in its own test runs missed its new
+  row on page 1. A new `API:` line (experimental) states the envelope, the
+  page size, the `?page_size=` cap and the default order, read from the
+  project's paginator.
+- **A generated test that fails on a rule only code enforces says how to
+  declare it.** When `perform_create` refused staff, `assert_crud` reported
+  "answered 403, expected 201" and the agent changed `access` by trial, with a
+  build after each try. A 403 where the declaration admits the request now
+  says something else refused it and names the karni.yaml way (`create:
+  role:<slug>`, or a role's grants without `:delete`). When a create body
+  chooses the owner, `assert_isolated` says whether the declaration stamps
+  that field (then the project's `perform_create` or serializer took it from
+  the body) or names `owned:<field>` for `write` or `create`.
+- **`karni spec validate` names the access rule a near miss stands for.** An
+  access value such as `staff`, `signed_in`, `own` or `owner:member` was
+  refused with the list of words and no word of which one was meant, and
+  `delete:` in `access` was an unknown key with no hint. C217 and C232 now
+  end with "Did you mean role:staff?" (`authenticated`, `owned:<the owner
+  field>`, a declared role in its own case), the fix starts with the rule to
+  write, and C212 on an access key names the slot that covers it (`delete`,
+  `update`: `write`, with the grants that keep a role from deleting). A
+  grant scope of `none` (C218) says that a role is kept from an action by
+  leaving the action out of its grants.
+- **The new-app procedure says how to write access, and `karni explain access`
+  says the rest.** In the token benchmark a coding agent that followed
+  `/new-app` spent about half its tool calls reading Karni's installed source
+  (`karni/api/access.py`, the accounts models, the test generator) to find how
+  karni.yaml says "anyone signed in reads and staff write" or "a member owns
+  their rows", and rewrote `access` four or five times with a build after
+  each. The procedure is five steps now (the build prints the plan itself),
+  followed by a short reference: the access words and the common rules, the
+  shape of a list (`{count, next, previous, results}`, 50 a page, newest
+  first), what `seed` puts in the database, and how code makes an account
+  with a role. `karni explain access` prints every access word, the common
+  rules, grants per action, an action's own `access=` and why a rule only
+  code enforces fails the generated tests. Rule K109 points at it. `karni
+  explain fields` prints every field type with what it generates (in a
+  validation run an agent looked for a never-negative integer in the
+  installed source: it is `quantity`), and the procedure's first step names
+  it.
+- **`karni build` and `karni check` print a short summary.** A build printed
+  the whole plan again before its steps (30 lines and more for a new app,
+  after `karni plan` had printed it), and a passing `karni check` printed
+  jscpd's report table. A coding agent reads that output back on every later
+  turn. The build now prints the plan as one line, `plan  24 changes, 0
+  risky: entities 4, access 4, ...`, with each risky change under it, and
+  `karni build --verbose` prints every change as before. A frontend pass
+  adds nothing to `karni check: ok`. A failure still prints the tools'
+  output, and `karni check --verbose` always does.
+- **`karni build` wrote demo rows that neither the spec nor `karni plan` named.**
+  Every table a build created got 10 demo rows and the demo login, unless
+  `seed` gave it `0`, while `karni plan` listed seed changes only for the
+  entities `seed` names. In the database the app runs on those rows mixed
+  with the ones its users and its tests create: a coding agent's own
+  acceptance run read the first page of a list sorted by name and missed the
+  row it had just created. The build now seeds only the entities `seed`
+  names, and the seed step says when the new tables start empty. `karni
+  seed` still fills every table on request. The recipes name every entity,
+  so `karni new --recipe` builds the same demo.
+- **A viewset's own action named `move` was not routed on a flat model.**
+  `BaseViewSet` hides its tree actions (`tree`, `children`, `ancestors`,
+  `move`, `access_forest`) on a model that is not a tree, and `facets` and
+  `tagged` where no taxonomy needs them. It hid them by name, so a project's
+  own `@action def move` (a deal moved through a pipeline, a card between
+  columns) answered 404. Only Karni's own actions are hidden now.
 - **No AI tool or company names in the packages and docs.** The PyPI and npm
   descriptions, the package keywords, the READMEs, the docs site, the
   scaffold and the examples say "coding agent" and name no tool. Only the

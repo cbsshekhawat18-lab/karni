@@ -148,6 +148,8 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C216", SHOP + "        fields: {name: 'strr:80'}\n", 7),
     ("C216", SHOP + "        fields: {slug: 'slug:title'}\n", 7),
     ("C216", SHOP + "        fields: {price: 'decimal:4:6'}\n", 7),
+    ("C216", SHOP + "        fields: {name: 'str:200:unique'}\n", 7),
+    ("C216", SHOP + "        fields: {body: 'text:500'}\n", 7),
     ("C217", SHOP + "        access: {read: everyone}\n", 7),
     ("C218", HEAD + "roles:\n  staff: {grants: {'*': most}}\n", 4),
     ("C218", HEAD + "roles:\n  staff: {grants: {'shop': all}}\n", 4),
@@ -287,6 +289,88 @@ def test_unknown_keys_and_meaning_problems_come_in_one_run() -> None:
 def test_each_problem_has_its_code_and_line(code: str, text: str, line: int | None) -> None:
     found = [(issue.code, issue.line) for issue in validate_text(text).issues]
     assert (code, line) in found, found
+
+
+@pytest.mark.parametrize(
+    ("token", "said"),
+    [
+        ("name:str:200:unique", 'LiveUniqueConstraint(fields=["name"]) from karni.fields'),
+        ("name:str:unique", "str takes no :unique"),
+        ("count:int:unique", "int takes no :unique"),
+        ("price:decimal:10:2:4", "decimal takes 2 arguments after the type"),
+        ("body:text:500", "text takes no argument (e.g. body:text), so '500' would be dropped"),
+        ("tags:array:int:5", "array takes 1 argument after the type"),
+        ("venue:fk:Venue:cascade", "fk takes 1 argument after the type"),
+        ("site:url:300:x", "url takes 1 argument after the type"),
+    ],
+)
+def test_a_field_argument_its_type_does_not_take_is_refused(token: str, said: str) -> None:
+    """Never dropped without a word: ``str:200:unique`` built a field that was not unique."""
+    from karni_cli.generators.fields import parse_field, refuse_extra_args
+    from karni_cli.project import CliError
+
+    with pytest.raises(CliError) as caught:
+        refuse_extra_args(parse_field(token))
+    assert said in caught.value.message and caught.value.code == "C104"
+    for fine in ("tags:array:str:40", "email:email:unique", "price:money:EUR", "x:str:", "n:int"):
+        refuse_extra_args(parse_field(fine))
+
+
+#: (access value, the hint the message gives). The shop declares staff and member.
+ACCESS_NEAR = [
+    ("{read: signed_in}", "authenticated"),
+    ("{read: everyone}", "public"),
+    ("{write: staff}", "role:staff"),
+    ("{write: Staff}", "role:staff"),
+    ("{write: own}", "owned:member"),
+    ("{write: owned}", "owned:member"),
+    ("{write: 'owner:member'}", "owned:member"),
+    ("{create: 'roles:member'}", "role:member"),
+    ("{write: 'authenticated:staff'}", "role:staff"),
+    ("{read: grants}", "granted"),
+    ("{write: admin}", "role:admin, with admin declared under roles"),
+]
+ACCESS_SHOP = (
+    "version: 1\napp: {name: Shop}\n"
+    "roles:\n  staff: {name: Staff, grants: {'*': all}}\n  member: {name: Member}\n"
+    "apps:\n  shop:\n    entities:\n      Product:\n"
+    "        fields: {name: str, member: fk:User}\n        owner: member\n"
+)
+
+
+@pytest.mark.parametrize(("value", "hint"), ACCESS_NEAR)
+def test_an_access_value_close_to_a_rule_names_the_rule(value: str, hint: str) -> None:
+    """Did you mean: the access rule a near miss stands for, in the message and the fix."""
+    issues = validate_text(ACCESS_SHOP + f"        access: {value}\n").issues
+    assert [issue.code for issue in issues] == ["C217"], issues
+    assert issues[0].message.endswith(f" Did you mean {hint}?"), issues[0].message
+    assert issues[0].fix.startswith(f"Write {hint}. "), issues[0].fix
+    assert "karni explain access" in issues[0].fix
+
+
+def test_a_grant_of_none_says_to_leave_the_action_out() -> None:
+    spec = ACCESS_SHOP.replace(
+        "member: {name: Member}", "member: {name: Member, grants: GRANTS}"
+    ).replace("GRANTS", "{'shop.product:delete': none}")
+    issues = validate_text(spec).issues
+    assert [issue.code for issue in issues] == ["C218"], issues
+    assert issues[0].fix.startswith("A grant gives rows, so a role is kept from an action by")
+    assert "without :delete" in issues[0].fix
+
+
+def test_an_undeclared_role_in_another_case_and_an_access_key_name_the_right_form() -> None:
+    issues = validate_text(ACCESS_SHOP + "        access: {read: 'role:STAFF'}\n").issues
+    assert issues[0].code == "C232" and issues[0].message.endswith("Did you mean role:staff?")
+    issues = validate_text(
+        ACCESS_SHOP + "        access: {read: public, delete: 'role:staff'}\n"
+    ).issues
+    assert issues[0].code == "C212"
+    assert issues[0].fix.startswith("Use write: access takes read, write and create")
+    assert "no :delete" in issues[0].fix
+    issues = validate_text(ACCESS_SHOP + "        access: {list: public}\n").issues
+    assert issues[0].fix.startswith("Use read: ")
+    plain = validate_text(ACCESS_SHOP + "        access: {read: anyone_at_all}\n").issues
+    assert "Did you mean" not in plain[0].message  # no guess without a close word
 
 
 def test_every_code_is_tested_and_registered() -> None:

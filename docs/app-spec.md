@@ -263,7 +263,14 @@ parser and renderer, so the spec and the generator can never disagree:
 `json[:queried]`, `array:str[:len]`, `state:<a>><b>|...` (a `StateField`,
 written as `karni make form --states` takes it), `daterange`,
 `datetimerange` and `capacity[:total]`, with a trailing `?` for optional.
-See [the karni command](cli.md) for what each one generates.
+See [the karni command](cli.md) for what each one generates, or `karni
+explain fields` for the table in the terminal. An argument a
+type does not take is refused (`C216`), never dropped: `body: "text:500"`
+names `text`'s form, and `name: "str:200:unique"` names the way to a unique
+value, `LiveUniqueConstraint(fields=["name"])` from `karni.fields` in the
+Meta of the model's class in `<app>/models.py` (`class
+Meta(karni.<Model>.Meta)`), unique among the live rows. `email:unique` is
+the one type that takes `:unique`.
 `file:protected` and `image:protected` are a file only the row's readers may
 download ([protected files](storage.md)): they need `modules: {storage: ...}`
 (`C720`).
@@ -417,7 +424,12 @@ admits:
 | a list | the items joined with `\|` |
 
 `read` and `write` default to `granted`, and `create` to `write`. An entity
-without `access` has `Granted()`, the default of `karni make viewset`. The
+without `access` has `Granted()`, the default of `karni make viewset`.
+`owned:<field>` in `write` or `create` also sets the field to the signed-in
+user on create. `karni explain access` prints the words and the rules most
+apps need, and a value close to one is refused with the rule it stands for:
+`staff` with "Did you mean role:staff?", `signed_in` with `authenticated`,
+`own` with `owned:<the owner field>`, a `delete:` key with `write`. The
 shapes the `--access` presets make:
 
 | `--access` | In the spec |
@@ -540,6 +552,9 @@ page, which `karni build` leaves to the project.
 
 `seed` maps an entity to its demo rows per `karni seed` run (`karni make
 seeder <Entity> --count <n>`, a Seeder's `Meta.count`). `0` skips it.
+`karni build` seeds only the entities `seed` names, so a spec without
+`seed` builds an app with empty tables. Keep it for a demo, and leave it out
+when the app's database should hold only the rows its users create.
 
 A large count (experimental) is seeded in bulk: from the project's
 `KARNI_SEED_BULK_THRESHOLD` (default 1000) rows, `karni seed` writes the
@@ -985,6 +1000,7 @@ spec writes nothing.
 ```sh
 karni build                          # karni.yaml in the project root
 karni build --dry-run                # the plan and the files it would write
+karni build --verbose                # every change of the plan, then the steps
 karni build --allow-destructive      # apply the risky (!) changes too
 karni build --force                  # replace Karni-owned files edited by hand
 karni build --adopt classes/karni/api.py
@@ -992,11 +1008,11 @@ karni build --json
 ```
 
 From an empty `karni new` project and the spec at the top of this page, it
-prints the plan, then one line per step:
+prints the plan in one line (each risky change under it, every change with
+`--verbose`), then one line per step:
 
 ```text
-...
-25 changes, 0 risky.
+plan        25 changes, 0 risky: modules 1, features 1, roles 3, apps 1, entities 3, ... (--verbose lists each)
 modules     karni add payments
 files       23 written: 15 Karni's, 8 the project's (pyproject.toml, classes/__init__.py, ...)
 migrations  classes/migrations/0001_initial.py
@@ -1144,8 +1160,11 @@ rows). Then the hash check, then the steps:
    table needs no value. On a table with rows it stops (`C277`): add it as
    optional first, fill it, then make it required.
 4. **migrate**: on `default` and on every alias an entity names.
-5. **seed**: only the tables this build created, only while they hold no
-   row, with the spec's `seed` counts. Demo rows never mix with real data.
+5. **seed**: only the tables this build created that `seed` gives a count,
+   only while they hold no row. A new table `seed` does not name starts
+   empty, as `karni plan` shows: demo rows in the database the app runs on
+   would mix with the rows its users and its tests create. `karni seed`
+   fills every table when you ask for demo data.
    A count at the bulk threshold is inserted in bulk, and the step says so
    with its time (`Booking 200000 in bulk (61.2s)`, experimental).
 6. **types**: `karni types`, when the project has a frontend.
@@ -1236,6 +1255,7 @@ own domain code, seeds and tests over its stubs and runs the tests and
 karni recipes list                                  # every recipe, and the blank start
 karni recipes list --match "a booking app for a yoga studio"
 karni recipes show <name>                           # its spec, what people usually change
+karni recipes show <name> --files                   # its own domain code, to copy from
 karni recipes show blank                            # the blank start
 karni recipes list --json                           # also --match and show
 ```

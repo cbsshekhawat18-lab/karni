@@ -4,6 +4,7 @@
     karni recipes list --match "<request>"        the best few for a one-line request
     karni recipes show NAME [--json]              one recipe and its karni.yaml (blank: the
                                                   blank start)
+    karni recipes show NAME --files               the recipe's own domain code, to copy from
 
 The recipes come from :mod:`karni_cli.recipes`: the ones built into
 karni-cli and the ``karni.recipes`` entry points of its environment.
@@ -120,19 +121,51 @@ def list_(
     typer.echo(f"next: {data['next']}")
 
 
+def _show_files(loaded: Loaded, name: str, as_json: bool) -> None:
+    """``--files``: each of the recipe's own files, its path and its text."""
+    from karni_cli.recipes import apply
+
+    recipe = loaded.require(name)
+    contents = apply.contents(recipe) if recipe is not None else {}
+    if as_json:
+        typer.echo(json.dumps({"recipe": name, "files": contents}, indent=2))
+        return
+    if not contents:
+        typer.echo(f"{name}: no files of its own (its karni.yaml is the whole recipe).")
+        return
+    for rel, text in contents.items():
+        typer.echo(f"--- {rel}")
+        typer.echo(text.rstrip("\n"))
+    typer.echo(
+        f"next: copy what fits into the project's own files (karni build writes the stubs they "
+        f"replace). karni new --recipe {name} writes them all into a new project."
+    )
+
+
 @recipes_app.command("show")
 def show(
     name: str = typer.Argument(..., help="A recipe, or blank for the blank start."),
+    files: bool = typer.Option(
+        False,
+        "--files",
+        help="Print the recipe's own domain code instead: each file of its files/ folder, with "
+        "the path it takes in a project (with --json: {recipe, files: {path: text}}).",
+    ),
     as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
     """Experimental. One recipe: what it is for, what people usually change, its files and spec.
 
     blank shows the blank start: karni.yaml with the version and the app's
-    name, nothing else, where an app starts when no recipe fits.
+    name, nothing else, where an app starts when no recipe fits. --files prints
+    the recipe's own model methods, actions, seeders and tests, which only karni
+    new --recipe writes into a project.
     """
     from karni_cli.recipes import output
 
     loaded, app = _load()
+    if files:
+        _show_files(loaded, name, as_json)
+        return
     data = output.shown(loaded, name, app_name=app)
     if as_json:
         typer.echo(json.dumps(data, indent=2))
@@ -152,7 +185,12 @@ def show(
     if entry["usually_changed"]:
         lines.append("Usually changed: " + "; ".join(entry["usually_changed"]))
     if entry["files"]:
-        lines.append("Files: " + ", ".join(entry["files"]))
+        lines.append(
+            "Files (karni recipes show "
+            + entry["name"]
+            + " --files prints them): "
+            + ", ".join(entry["files"])
+        )
     lines += ["karni.yaml:", *str(entry["spec"]).rstrip("\n").splitlines()]
     lines.append(f"next: {data['next']}")
     typer.echo("\n".join(lines))

@@ -176,7 +176,10 @@ def copy(harbour: Built, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
 def test_a_spec_builds_an_empty_project_that_passes_its_tests_and_check(harbour: Built) -> None:
     root, out = harbour.root, harbour.output
     lines = out.splitlines()
-    assert "25 changes, 0 risky." in lines
+    plan = [line for line in lines if line.startswith("plan ")]
+    assert len(plan) == 1 and "25 changes, 0 risky: " in plan[0], plan  # one line, not 25
+    assert "entities 3" in plan[0] and plan[0].endswith("(--verbose lists each)")
+    assert not [line for line in lines if line.startswith(("  + ", "  ~ ", "  - "))]
     steps = {line.split()[0]: line for line in lines if line[:1].isalpha() and "  " in line}
     assert steps["modules"].endswith("karni add payments")
     assert "classes/migrations/0001_initial.py" in steps["migrations"]
@@ -400,7 +403,7 @@ def test_an_entity_added_and_fields_changed_and_renamed_keep_the_data(copy: Path
         ("Booking: 200}", "Booking: 200, Review: 5, Room: 0}"),
     )
     names = _rows(copy, "select name from classes_studio order by name")
-    code, out = _build()
+    code, out = _build("--verbose")
     assert code == 0, out
     assert "  ~ classes.Studio.label: from name, str:120 -> str:150" in out
     assert "classes/migrations/0002_karni_renames.py" in out
@@ -427,7 +430,7 @@ def test_an_entity_added_and_fields_changed_and_renamed_keep_the_data(copy: Path
         ("      Review:\n", "      Rating:\n        was: Review\n"),
         ("Review: 5", "Rating: 5"),
     )
-    code, out = _build()
+    code, out = _build("--verbose")
     assert code == 0 and "  ~ classes.Rating: from Review, rows kept" in out, out
     assert _rows(copy, "select count(*) from classes_rating") == [(5,)]
     assert "class Rating(karni.Rating):" in (copy / "classes" / "models.py").read_text()
@@ -462,7 +465,7 @@ def test_global_search_is_written_into_class_karni_with_its_index_migration(copy
             ),
         ),
     )
-    code, out = _build()
+    code, out = _build("--verbose")
     assert code == 0, out
     assert "  ~ classes.Studio global_search: none -> name" in out
     models = (copy / "classes" / "karni" / "models.py").read_text()
@@ -484,7 +487,11 @@ def test_global_search_is_written_into_class_karni_with_its_index_migration(copy
 
 def test_the_destructive_guard_and_a_removal(copy: Path) -> None:
     spec = copy / "karni.yaml"
-    _edit(spec, ("pages:\n", "      Review:\n        fields: {stars: int}\npages:\n"))
+    _edit(
+        spec,
+        ("pages:\n", "      Review:\n        fields: {stars: int}\npages:\n"),
+        ("Booking: 200}", "Booking: 200, Review: 10}"),
+    )
     assert _build()[0] == 0
     before = _files(copy)
     _edit(
@@ -492,6 +499,7 @@ def test_the_destructive_guard_and_a_removal(copy: Path) -> None:
         ("      Review:\n        fields: {stars: int}\n", ""),
         ('          note: "text?"\n', ""),
         (", Notes: [note]}", "}"),
+        ("Booking: 200, Review: 10}", "Booking: 200}"),
     )
     code, out = _build()
     assert code == 1
@@ -523,7 +531,7 @@ def test_an_aggregate_and_the_charts_module(copy: Path) -> None:
             ),
         ),
     )
-    code, out = _build()
+    code, out = _build("--verbose")
     assert code == 0, out
     assert "  + charts: read public" in out
     assert "  ~ classes.Session aggregate: none -> by studio, studio__name, starts_at:month" in out
@@ -701,7 +709,7 @@ def test_response_caching_from_the_spec(copy: Path) -> None:
         ("        search: [name]\n", "        search: [name]\n        cache: 600\n"),
         ("          write: owned:member\n", "          write: owned:member\n        cache: false\n"),
     )  # fmt: skip
-    code, out = _build()
+    code, out = _build("--verbose")
     assert code == 0, out
     assert "+ api_cache: KARNI_API_CACHE, KARNI_API_CACHE_TTL 120" in out
     assert "~ classes.Studio cache: none -> 600" in out
@@ -840,7 +848,7 @@ STORE = """\
       - home: dashboard
       - Part: [list]
       - reports: code
-    seed: {Part: 4}
+    seed: {Part: 4, Mapping: 3}
     """
 
 
@@ -856,7 +864,7 @@ def test_bigint_keys_an_external_table_a_second_database_and_code(
     monkeypatch.setenv("WAREHOUSE_DATABASE_URL", f"sqlite:///{root / 'warehouse.sqlite3'}")
     with sqlite3.connect(root / "warehouse.sqlite3") as db:
         db.execute("create table sales (id integer primary key, sku varchar(20), amount int)")
-    code, out = _build()
+    code, out = _build("--verbose")
     assert code == 0, out
     karni = (root / "stock" / "karni" / "models.py").read_text()
     assert "class Part(BigIntBaseModel):" in karni
@@ -869,7 +877,7 @@ def test_bigint_keys_an_external_table_a_second_database_and_code(
     assert not (root / "stock/tests/karni/test_sale.py").exists()  # another system's table
     assert _rows(root, "select count(*) from stock_part") == [(4,)]
     with sqlite3.connect(root / "warehouse.sqlite3") as db:
-        assert db.execute("select count(*) from stock_mapping").fetchall() == [(10,)]
+        assert db.execute("select count(*) from stock_mapping").fetchall() == [(3,)]
     assert "pages/karni/reports.tsx" not in out and "+ reports: code (not managed)" in out
     # the project's own page at /reports: access: code and the page match the spec as they are
     (root / "frontend/src/pages/reports.tsx").write_text(
@@ -1140,6 +1148,29 @@ def test_hand_edit_lines_and_the_record() -> None:
     assert list(json.loads(rec.text())["files"]) == ["a", "z"]
 
 
+def test_a_new_table_the_spec_seeds_none_of_starts_empty(copy: Path) -> None:
+    """Demo rows go only where seed names a count, as karni plan shows: none mix with real ones."""
+    spec = copy / "karni.yaml"
+    _edit(
+        spec,
+        (
+            "pages:\n",
+            (
+                "      Note:\n        fields: {title: str}\n"
+                '        access: {read: public, write: "role:staff"}\npages:\n'
+            ),
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan"])
+    assert "+ Note" not in plan.output.split("\nseed\n", 1)[-1]  # the plan seeds no Note
+    code, out = _build()
+    assert code == 0, out
+    assert _rows(copy, "select count(*) from classes_note") == [(0,)]
+    seed_line = next(line for line in out.splitlines() if line.startswith("seed "))
+    assert "names none of the new tables, so they start empty" in seed_line, seed_line
+    assert "karni seed fills them with demo rows" in seed_line
+
+
 def test_seeding_skips_a_table_that_holds_rows(copy: Path) -> None:
     state = {"seed": ["classes.Studio"], "user": "karni_accounts.User"}
     assert (
@@ -1244,6 +1275,9 @@ def test_a_spec_that_names_a_recipe_says_its_domain_code_was_not_written(
     code, out = _build()
     assert code == 0, out
     assert "recipe booking's own code" in out and "karni new --recipe booking" in out
+    # a command prints it: never a path into the installed package, never another recipe's rule
+    assert "karni recipes show booking --files prints it to copy from." in out
+    assert "karni_cli/recipes" not in out and "capacity rule" not in out
     assert not (root / "bookings" / "tests" / "test_capacity.py").exists()
     _, again = _build()
     assert "was not written" not in again  # said once, with the build that wrote the spec

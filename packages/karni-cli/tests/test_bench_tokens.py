@@ -136,6 +136,65 @@ def test_measure_counts_new_and_changed_files_against_the_start_commit(tmp_path:
     assert (size.lines_code, size.lines_all) == (5, 15)
 
 
+def test_measure_counts_work_the_agent_committed_itself(tmp_path: Path) -> None:
+    (tmp_path / "a.py").write_text("one\n")
+    commit = diffsize.commit_start(tmp_path)
+    (tmp_path / "b.py").write_text("x\ny\nz\n")
+    (tmp_path / "package-lock.json").write_text("l\n" * 4)
+    for args in (
+        ["add", "-A"],
+        ["-c", "user.name=a", "-c", "user.email=a@b.c", "commit", "-qm", "m"],
+    ):
+        subprocess.run(["git", "-C", str(tmp_path), *args], check=True)
+    (tmp_path / "c.py").write_text("u\n")  # committed and uncommitted work count alike
+    size = diffsize.measure(tmp_path, commit)
+    assert (size.lines_code, size.files_code) == (4, 2)
+    assert (size.lines_all, size.files_all) == (8, 3)
+
+
+def _bash(command: str) -> int:
+    return streamjson.written_lines("Bash", {"command": command})
+
+
+def test_heredocs_that_write_files_are_counted() -> None:
+    assert _bash("cat > app.py <<'EOF'\none\ntwo\nthree\nEOF") == 3
+    assert _bash("cat >> app.py <<EOF\nmore\nEOF\nls") == 1
+    assert _bash("tee out.txt <<'X' >/dev/null\na\nb\nX") == 2
+    script = "python - <<'PY'\nfrom pathlib import Path\nPath('a').write_text('x')\nPY"
+    assert _bash(script) == 2
+    two = "cat > a <<EOF\n1\nEOF\ncat > b <<EOF\n2\n3\nEOF"
+    assert _bash(two) == 3
+
+
+def test_heredocs_that_do_not_write_files_and_plain_commands_are_not_counted() -> None:
+    assert _bash("ls -la") == 0
+    assert _bash("python - <<'PY'\nprint(1)\nPY") == 0
+    assert _bash("cat <<EOF | grep a\na\nb\nEOF") == 0
+    assert _bash("cat /dev/null > /dev/null <<EOF\na\nEOF") == 0
+    assert streamjson.written_lines("NotebookEdit", {"new_source": "a\nb"}) == 2
+
+
+def test_a_mixed_stream_adds_tool_inputs_and_heredocs() -> None:
+    usage = {"input_tokens": 1, "output_tokens": 1}
+    parsed = streamjson.parse(
+        lines(
+            assistant(
+                "m1",
+                usage,
+                {"name": "Write", "input": {"content": "a\nb\n"}},
+                {"name": "Bash", "input": {"command": "cat > x <<'EOF'\n1\n2\n3\nEOF"}},
+            ),
+        )
+    )
+    assert parsed.lines_written == 5
+    heredoc_only = streamjson.parse(
+        lines(
+            assistant("m2", usage, {"name": "Bash", "input": {"command": "cat > x <<EOF\nq\nEOF"}})
+        )
+    )
+    assert heredoc_only.lines_written == 1
+
+
 # --- statistics, the order, the report ------------------------------------------------------------
 
 
@@ -181,11 +240,30 @@ def test_the_report_replaces_only_what_is_between_the_markers() -> None:
         report.splice("no markers", "new")
 
 
-def test_the_docs_page_is_current_for_the_data_file() -> None:
+PUBLISHED_SETS = ("before", "after")
+
+
+def test_the_docs_page_is_current_for_the_published_data() -> None:
+    """The page shows exactly what the committed data sets give, so the raw data is the proof."""
     page = report.PAGE.read_text()
-    assert report.splice(page, report.render(records.load())) == page, (
-        "run scripts/benchmarks/tokens/report.py"
+    data = TOKENS / "data"
+    sets = [(label, records.load(data / f"{label}.jsonl")) for label in PUBLISHED_SETS]
+    assert all(rows for _, rows in sets), "a published data set is missing or empty"
+    assert report.splice(page, report.render_sets(sets)) == page, (
+        "run scripts/benchmarks/tokens/report.py "
+        + " ".join(
+            f"--data {label}=scripts/benchmarks/tokens/data/{label}.jsonl"
+            for label in PUBLISHED_SETS
+        )
     )
+
+
+def test_the_published_data_names_no_ai_tool() -> None:
+    """The project names no AI tool or company: the published runs carry a neutral model label."""
+    for label in PUBLISHED_SETS:
+        for row in records.load(TOKENS / "data" / f"{label}.jsonl"):
+            assert row["model"] == "model-A"
+            assert row["agent_version"].endswith("(coding-agent CLI)")
 
 
 # --- the command line the runs use ---------------------------------------------------------------
@@ -496,3 +574,95 @@ def test_the_report_leaves_interrupted_runs_out_and_refuses_short_cells(tmp_path
     data.write_text("".join(json.dumps(r) + "\n" for r in rows))
     assert report.main(["--data", str(data), "--page", str(page)]) == 1
     assert page.read_text() == f"{report.START}\n{report.END}\n"
+
+
+# --- several labelled data sets side by side -----------------------------------------------------
+
+
+def _set_rows(plain: int, karni: int, tokens: int, commit: str, day: str) -> list[dict[str, Any]]:
+    extra = {"model": "m1", "agent_version": "9.9", "started_at": f"{day}T10:00:00"}
+    rows: list[dict[str, Any]] = []
+    for task in report.TASKS:
+        rows += [{**_row(task, "plain", 100 + i), **extra} for i in range(plain)]
+        rows += [
+            {**_row(task, "karni", tokens + i), **extra, "karni_commit": commit, "build_ok": True}
+            for i in range(karni)
+        ]
+    return rows
+
+
+def _write(path: Path, rows: list[dict[str, Any]]) -> Path:
+    path.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    return path
+
+
+def test_two_labelled_sets_pool_plain_and_give_one_karni_column_each() -> None:
+    before = _set_rows(2, 3, 50, "aaa111", "2026-11-01")
+    after = _set_rows(3, 3, 20, "bbb222", "2026-11-05")
+    text = report.render_sets([("before", before), ("after", after)])
+    header = "| | plain | karni before | karni after |"
+    assert header in text
+    assert "| Runs completed | 5 | 3 | 3 |" in text  # plain pooled: 2 + 3, per task
+    assert "| Runs completed | 15 | 9 | 9 |" in text  # all tasks
+    assert "| Output tokens | 0 (0 to 0) | 0 (0 to 0) | 0 (0 to 0) |" in text
+    assert "| Total tokens | 101 (100 to 102) | 51 (50 to 52) | 21 (20 to 22) |" in text
+    assert "| Total tokens | 303 (300 to 306) | 153 (150 to 156) | 63 (60 to 66) |" in text
+    assert "| Frontend builds | 0 of 5 | 3 of 3 | 3 of 3 |" in text
+    assert "| Runs that passed every test | 0 of 5 (0%) | 0 of 3 (0%) | 0 of 3 (0%) |" in text
+    assert "- **before**: " in text and "Karni commit: aaa111." in text
+    assert "Karni commit: bbb222." in text and "run 2026-11-05." in text
+    assert "Model: m1. Agent CLI version: 9.9." in text
+    assert "plain side does not depend on Karni's version" in text
+    assert "### All tasks" in text
+
+
+def test_each_column_must_have_enough_completed_runs(tmp_path: Path) -> None:
+    before = _set_rows(2, 3, 50, "aaa111", "2026-11-01")
+    after = _set_rows(1, 2, 20, "bbb222", "2026-11-05")
+    sets = [("before", before), ("after", after)]
+    only_shop = ("shop",)
+    assert report.short_columns(sets, 3, only_shop) == ["shop karni after: 2 of 3 completed runs"]
+    assert report.short_columns(sets, 4, only_shop) == [
+        "shop plain: 3 of 4 completed runs",
+        "shop karni before: 3 of 4 completed runs",
+        "shop karni after: 2 of 4 completed runs",
+    ]
+    page = tmp_path / "p.md"
+    page.write_text(f"{report.START}\n{report.END}\n")
+    args = [
+        "--data", f"before={_write(tmp_path / 'b.jsonl', before)}",
+        "--data", f"after={_write(tmp_path / 'a.jsonl', after)}",
+        "--page", str(page),
+    ]  # fmt: skip
+    assert report.main([*args, "--n", "9"]) == 1
+    assert page.read_text() == f"{report.START}\n{report.END}\n"
+
+
+def test_labelled_sets_are_written_and_checked_and_labels_are_required(tmp_path: Path) -> None:
+    before = _write(tmp_path / "b.jsonl", _set_rows(1, 1, 50, "aaa111", "2026-11-01"))
+    after = _write(tmp_path / "a.jsonl", _set_rows(1, 1, 20, "bbb222", "2026-11-05"))
+    page = tmp_path / "p.md"
+    page.write_text(f"{report.START}\n{report.END}\n")
+    args = ["--data", f"before={before}", "--data", f"after={after}", "--page", str(page)]
+    assert report.main([*args, "--n", "1"]) == 0
+    assert "karni before | karni after" in page.read_text()
+    assert report.main([*args, "--n", "1", "--check"]) == 0
+    with pytest.raises(SystemExit):
+        report.parse_data_args([f"before={before}", str(after)])
+    with pytest.raises(SystemExit):
+        report.parse_data_args([f"x={before}", f"x={after}"])
+
+
+def test_one_unlabelled_data_file_behaves_as_before(tmp_path: Path) -> None:
+    rows = [_row(task, "plain", t) for task in report.TASKS for t in (10, 20, 30)]
+    assert report.parse_data_args(None) == [("", records.DATA_FILE)]
+    assert report.parse_data_args(["x.jsonl"]) == [("", Path("x.jsonl"))]
+    page = tmp_path / "p.md"
+    page.write_text(f"{report.START}\n{report.END}\n")
+    data = _write(tmp_path / "d.jsonl", rows)
+    assert report.main(["--data", str(data), "--page", str(page), "--n", "3"]) == 1  # karni short
+    both = rows + [_row(task, "karni", t) for task in report.TASKS for t in (1, 2, 3)]
+    data = _write(tmp_path / "d.jsonl", both)
+    assert report.main(["--data", str(data), "--page", str(page), "--n", "3"]) == 0
+    assert page.read_text() == report.splice(page.read_text(), report.render(both))
+    assert "### Success" in page.read_text()

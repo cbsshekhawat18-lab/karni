@@ -19,7 +19,8 @@
    --recipe``, the recipe's own files over build's stubs, by the stub rule of
    :mod:`karni_cli.recipes.apply`), ``migrations``
    (``manage.py karni_makemigrations``: renames first), ``migrate``, ``seed``
-   (only tables this build created, only while empty), ``types``, ``test``
+   (only tables this build created that the spec's ``seed`` counts, only while
+   empty), ``types``, ``test``
    and ``check``. The first failure stops the build with its code, what was
    done and what to do next. The steps not run yet are remembered on this
    machine, so the next ``karni build`` continues from there.
@@ -131,15 +132,24 @@ class Result:
             }
         )
 
-    def text(self) -> str:
-        """The terminal output: the plan's lines, a line per step, how it ended."""
+    def text(self, verbose: bool = False) -> str:
+        """The terminal output: the plan, a line per step, how it ended.
+
+        The plan is one line, with each risky change under it: ``verbose``
+        (and a dry run) prints every change, as ``karni plan`` does.
+        """
         lines: list[str] = []
         if self.status == "nothing to build":
             lines.append(self.message or f"Nothing to build: the project matches {self.file}.")
             lines += self._adopted_lines()
             return "\n".join(lines) + "\n"
+        width = max(len(name) for name in output.STEPS)
         if self.plan is not None and self.plan.changes:
-            lines += self.plan.text().rstrip("\n").splitlines()
+            if verbose or self.status == "dry run":
+                lines += self.plan.text().rstrip("\n").splitlines()
+            else:
+                lines.append(f"{'plan':<{width}}  {self.plan.brief()} (--verbose lists each)")
+                lines += [change.line() for change in self.plan.risky]
         for edit in self.hand_edits:
             lines.append(f"{edit.name}: edited by hand ({edit.shown_lines()})")
             lines += [f"    {row}" for row in edit.diff]
@@ -147,7 +157,6 @@ class Result:
             lines += [f"would {f['action']} {f['path']} ({f['owner']})" for f in self.files]
             lines.append("(dry run: nothing written)")
             return "\n".join(lines) + "\n"
-        width = max(len(name) for name in output.STEPS)
         for step in self.steps:
             if step.status == "pending" and self.status in ("refused", "invalid"):
                 continue
@@ -524,10 +533,9 @@ def _recipe_not_written(rec: Record, spec: schema.Spec) -> str:
     if not name or rec.recipe or rec.entities or name not in recipes.load().recipes:
         return ""
     return (
-        f"The recipe {name}'s own code (its model methods, actions, seeders and tests, such as "
-        "its capacity rule) was not written: only karni new --recipe "
-        f"{name} writes it. Copy it from karni_cli/recipes/{name}/files, or start the project "
-        "with karni new --recipe."
+        f"The recipe {name}'s own code (its model methods, actions, seeders and tests) was not "
+        f"written: only karni new --recipe {name} writes it. karni recipes show {name} --files "
+        "prints it to copy from."
     )
 
 
@@ -736,11 +744,14 @@ def _state(
         if label in inputs.entities and f"{label}.{new_field}" in applied:
             app, name = label.split(".", 1)
             renames["fields"].append([app, name, old_field, new_field])
+    # demo rows only where the spec's seed names a count: rows nobody asked for would mix with
+    # the ones the app's users (and its tests) create in the database the app runs on
     seed = [
         label
         for label in created
-        if not entities[label].external and _seed_count(inputs.spec, label) != 0
+        if not entities[label].external and (_seed_count(inputs.spec, label) or 0) > 0
     ]
+    unseeded = [label for label in created if not entities[label].external and label not in seed]
     return {
         "steps": list(output.STEPS[2:]),
         "modules": modules,
@@ -749,6 +760,7 @@ def _state(
         "databases": databases,
         "renames": renames,
         "seed": seed,
+        "unseeded": unseeded,
         "user": str(facts.get("user_model") or ""),
     }
 
@@ -769,6 +781,7 @@ def _merge(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
     merged["apps"] = sorted(set(union("apps")))
     merged["databases"] = sorted(set(union("databases")))
     merged["seed"] = union("seed", "seed" in left)
+    merged["unseeded"] = union("unseeded", "seed" in left)
     old_renames = old.get("renames") or {} if "migrations" in left else {}
     merged["renames"] = {
         kind: [*(old_renames.get(kind) or []), *(new["renames"].get(kind) or [])]
@@ -964,6 +977,11 @@ def _migrate(root: Path, state: dict[str, Any], opts: Options) -> str:
 def _seed(root: Path, state: dict[str, Any], opts: Options) -> str:
     labels = list(state.get("seed") or [])
     if not labels:
+        if state.get("unseeded"):
+            return (
+                "skipped: seed in karni.yaml names none of the new tables, so they start empty "
+                "(karni seed fills them with demo rows)"
+            )
         return "skipped: no table created"
     counter = plan_mod.manage_counter(root, docker=opts.docker, service=opts.service)
     answer = counter([{"model": label} for label in labels])
