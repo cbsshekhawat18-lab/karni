@@ -97,6 +97,17 @@ without lockfiles, `node_modules`, migrations and build output), tests passed ou
 the frontend build, whether the time limit hit, and the exit status. The report gives the
 success rate and, per figure, the median, minimum, maximum and interquartile range.
 
+**Comparing a Karni change.** `report.py` takes several labelled data sets, for example plain
+Django, Karni before an improvement and Karni after it: `--data before=before.jsonl --data
+after=after.jsonl`. The plain runs of every set are pooled into one column, because the plain
+side does not depend on Karni's version, and each label gets its own Karni column, in the order
+given. For every task and column the report shows the runs completed, the acceptance tests
+passed and the share of runs that passed every test, the frontend builds, output, cache-read and
+total tokens, cost, wall time, tool calls, diff lines (code and all) and the lines the agent
+wrote, as the median with the minimum to maximum range, and a row across all tasks. The method
+section the report writes names, for each set, the Karni commit, the model, the agent CLI version
+and the dates of its runs. The `--n` check applies to each column.
+
 A run counts as a success when the agent ended by itself, every acceptance test passed and the
 frontend built.
 
@@ -129,6 +140,9 @@ python scripts/benchmarks/tokens/run.py --resume
 
 # write the results into this page
 python scripts/benchmarks/tokens/report.py
+
+# or, with two Karni versions beside the plain runs (--data LABEL=PATH, repeatable)
+python scripts/benchmarks/tokens/report.py --data before=before.jsonl --data after=after.jsonl
 ```
 
 `--tasks`, `--conditions`, `--n`, `--agent`, `--model` and `--limit-minutes` narrow or change a
