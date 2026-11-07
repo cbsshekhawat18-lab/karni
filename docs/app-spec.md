@@ -988,6 +988,7 @@ spec writes nothing.
 ```sh
 karni build                          # karni.yaml in the project root
 karni build --dry-run                # the plan and the files it would write
+karni build --verbose                # every change of the plan, then the steps
 karni build --allow-destructive      # apply the risky (!) changes too
 karni build --force                  # replace Karni-owned files edited by hand
 karni build --adopt classes/karni/api.py
@@ -995,11 +996,11 @@ karni build --json
 ```
 
 From an empty `karni new` project and the spec at the top of this page, it
-prints the plan, then one line per step:
+prints the plan in one line (each risky change under it, every change with
+`--verbose`), then one line per step:
 
 ```text
-...
-25 changes, 0 risky.
+plan        25 changes, 0 risky: modules 1, features 1, roles 3, apps 1, entities 3, ... (--verbose lists each)
 modules     karni add payments
 files       23 written: 15 Karni's, 8 the project's (pyproject.toml, classes/__init__.py, ...)
 migrations  classes/migrations/0001_initial.py

@@ -484,6 +484,7 @@ def _run_build(project: Path) -> None:
             allow_destructive=False,
             force=False,
             adopt=None,
+            verbose=False,
             as_json=False,
             docker=None,
             service="django",

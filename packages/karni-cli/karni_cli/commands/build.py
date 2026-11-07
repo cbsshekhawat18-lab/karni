@@ -2,6 +2,7 @@
 
     karni build                         karni.yaml in the project root
     karni build --dry-run               the plan and the files it would write
+    karni build --verbose               every change of the plan, then the steps
     karni build --allow-destructive     apply risky changes too (each is named first)
     karni build --force                 replace Karni-owned files edited by hand (.orig kept)
     karni build --adopt <file>          hand a Karni-owned file to the project
@@ -49,6 +50,13 @@ def build(
         "--adopt",
         help="Hand a Karni-owned file (or config/settings.py, frontend/src/routes.tsx for "
         "their blocks) to the project: karni build stops managing it. Repeatable.",
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Print every change of the plan before the steps, as karni plan does. By default "
+        "the plan is one line, with each risky change under it.",
     ),
     as_json: bool = typer.Option(
         False,
@@ -118,6 +126,6 @@ def build(
     if as_json:
         typer.echo(json.dumps(result.as_dict(), indent=2))
     else:
-        typer.echo(result.text(), nl=False)
+        typer.echo(result.text(verbose=verbose), nl=False)
     if not result.ok:
         raise typer.Exit(1)

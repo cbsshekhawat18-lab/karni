@@ -20,7 +20,7 @@ def _fake_run(returncode: int, expected: list[str] | None = None):
 def test_deploy_passes_through_to_the_backend_check(runner, tmp_path, monkeypatch) -> None:
     (tmp_path / "manage.py").write_text("")
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 0)
     monkeypatch.setattr(check_mod, "_frontend_lint", lambda p, **kwargs: 0)
     monkeypatch.setattr(project_mod, "run_manage", _fake_run(0, ["karni_check", "--deploy"]))
     result = runner.invoke(app, ["check", "--deploy"])
@@ -35,7 +35,7 @@ def test_deploy_passes_through_to_the_backend_check(runner, tmp_path, monkeypatc
 def test_seo_passes_through_to_the_backend_check(runner, tmp_path, monkeypatch) -> None:
     (tmp_path / "manage.py").write_text("")
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 0)
     monkeypatch.setattr(check_mod, "_frontend_lint", lambda p, **kwargs: 0)
     monkeypatch.setattr(project_mod, "run_manage", _fake_run(1, ["karni_check", "--seo"]))
     result = runner.invoke(app, ["check", "--seo"])
@@ -56,7 +56,7 @@ def test_exit_code_aggregates_backend_and_frontend(runner, tmp_path, monkeypatch
     (tmp_path / "manage.py").write_text("")
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(project_mod, "run_manage", _fake_run(0))
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 0)
     monkeypatch.setattr(check_mod, "_frontend_lint", lambda p, **kwargs: 0)
     result = runner.invoke(app, ["check"])
     assert result.exit_code == 0 and "karni check: ok" in result.output
@@ -68,11 +68,11 @@ def test_exit_code_aggregates_backend_and_frontend(runner, tmp_path, monkeypatch
 
     # frontend failure alone must fail, and the backend step still ran
     monkeypatch.setattr(project_mod, "run_manage", _fake_run(0))
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 1)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 1)
     assert runner.invoke(app, ["check"]).exit_code == 1
 
     # an eslint failure alone (a raw <table> in a page) must fail too
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 0)
     monkeypatch.setattr(check_mod, "_frontend_lint", lambda p, **kwargs: 1)
     result = runner.invoke(app, ["check"])
     assert result.exit_code == 1 and "karni check: FAILED" in result.output
@@ -280,11 +280,11 @@ def test_changed_passes_the_files_and_lints_only_changed_frontend_files(
         return subprocess.CompletedProcess(args, 0, stdout="check cache: 1 of 1\n", stderr="")
 
     def lint(project, **kwargs):
-        seen["lint"] = kwargs
+        seen["lint"] = {key: value for key, value in kwargs.items() if key != "capture"}
         return 0
 
     monkeypatch.setattr(project_mod, "run_manage", run_manage)
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 0)
     monkeypatch.setattr(check_mod, "_frontend_lint", lint)
     result = runner.invoke(app, ["check", "--changed"])
     assert result.exit_code == 0, result.output
@@ -314,7 +314,7 @@ def test_a_ref_needs_changed_and_an_old_karni_is_named(runner, tmp_path: Path, m
             args, 2, stdout="", stderr="karni_check: error: unrecognized arguments: --no-cache"
         ),
     )
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 0)
     monkeypatch.setattr(check_mod, "_frontend_lint", lambda p, **kwargs: 0)
     result = runner.invoke(app, ["check", "--no-cache"])
     assert result.exit_code == 1 and "C582" in result.output
@@ -329,3 +329,40 @@ def test_a_changed_run_without_frontend_changes_skips_eslint(tmp_path: Path) -> 
         "--max-warnings",
         "0",
     ]
+
+
+def test_a_frontend_pass_is_one_line_and_a_failure_prints_the_tools_output(
+    runner, tmp_path: Path, monkeypatch
+) -> None:
+    """jscpd's report table and ESLint's banner reach the output only when they fail."""
+    (tmp_path / "manage.py").write_text("")
+    (tmp_path / "frontend" / "node_modules").mkdir(parents=True)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(project_mod, "run_manage", _fake_run(0))
+    monkeypatch.delenv("CI", raising=False)
+    outcome = {"dup": 0}
+
+    def tool(name: str):
+        def run(project: Path, capture: list[str] | None = None, **kwargs: object) -> int:
+            report = f"{name} REPORT TABLE"
+            if capture is None:
+                print(report)
+            else:
+                capture.append(report)
+            return outcome["dup"] if name == "jscpd" else 0
+
+        return run
+
+    monkeypatch.setattr(check_mod, "_frontend_duplication", tool("jscpd"))
+    monkeypatch.setattr(check_mod, "_frontend_lint", tool("eslint"))
+    passed = runner.invoke(app, ["check"])
+    assert passed.exit_code == 0, passed.output
+    assert "REPORT TABLE" not in passed.output
+    assert "frontend checks: ok (ESLint and jscpd" in passed.output
+    verbose = runner.invoke(app, ["check", "--verbose"])
+    assert "jscpd REPORT TABLE" in verbose.output and "eslint REPORT TABLE" in verbose.output
+    outcome["dup"] = 1
+    failed = runner.invoke(app, ["check"])
+    assert failed.exit_code == 1
+    assert "jscpd REPORT TABLE" in failed.output and "frontend checks: ok" not in failed.output
+

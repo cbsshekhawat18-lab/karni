@@ -132,15 +132,24 @@ class Result:
             }
         )
 
-    def text(self) -> str:
-        """The terminal output: the plan's lines, a line per step, how it ended."""
+    def text(self, verbose: bool = False) -> str:
+        """The terminal output: the plan, a line per step, how it ended.
+
+        The plan is one line, with each risky change under it: ``verbose``
+        (and a dry run) prints every change, as ``karni plan`` does.
+        """
         lines: list[str] = []
         if self.status == "nothing to build":
             lines.append(self.message or f"Nothing to build: the project matches {self.file}.")
             lines += self._adopted_lines()
             return "\n".join(lines) + "\n"
+        width = max(len(name) for name in output.STEPS)
         if self.plan is not None and self.plan.changes:
-            lines += self.plan.text().rstrip("\n").splitlines()
+            if verbose or self.status == "dry run":
+                lines += self.plan.text().rstrip("\n").splitlines()
+            else:
+                lines.append(f"{'plan':<{width}}  {self.plan.brief()} (--verbose lists each)")
+                lines += [change.line() for change in self.plan.risky]
         for edit in self.hand_edits:
             lines.append(f"{edit.name}: edited by hand ({edit.shown_lines()})")
             lines += [f"    {row}" for row in edit.diff]
@@ -148,7 +157,6 @@ class Result:
             lines += [f"would {f['action']} {f['path']} ({f['owner']})" for f in self.files]
             lines.append("(dry run: nothing written)")
             return "\n".join(lines) + "\n"
-        width = max(len(name) for name in output.STEPS)
         for step in self.steps:
             if step.status == "pending" and self.status in ("refused", "invalid"):
                 continue
