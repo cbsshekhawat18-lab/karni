@@ -28,6 +28,13 @@ apply codemods and list the manual steps. This file is the human summary.
   `karni.yaml` it started `manage.py karni_check` and then `manage.py karni_facts`
   for the drift suggestion (SUG007). `karni_check` now hands the facts over in the
   suggestions file it already writes. The output is the same.
+- **Fixed: the eventhub and social-leads examples locked Zod 3.25.76 and an affected
+  seroval** (GHSA-mrhx-c7xc-m3w5, high; GHSA-9wx9-5pv9-3349 and GHSA-f86p-h4j2-7qgj,
+  moderate). They now pin what the scaffold pins: Zod `^4.6.6` with
+  `@hookform/resolvers` `^5.2.0`, which @karni/ui's forms need with Zod 4, and
+  seroval 1.7.10. Their locks also still held the 0.4.0 copy of @karni/ui. A test
+  checks every committed lockfile for those versions. New projects already get Zod
+  4.6.6, and `karni upgrade` reports `frontend-zod-4` for older ones.
 - **Fixed: C851 named `karni make page <name> --kind blank`, which refused `blank`
   (C106).** `--kind blank` is the bare page `karni make page <name>` already writes
   without `--resource`, and it takes no `--resource`.

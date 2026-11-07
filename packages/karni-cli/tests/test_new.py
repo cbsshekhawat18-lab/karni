@@ -155,6 +155,45 @@ def test_the_frontend_has_no_known_vulnerable_zod(runner, tmp_path: Path, monkey
     assert ui["devDependencies"]["zod"] == "^4.6.6"
 
 
+def _release(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("-")[0].split("."))
+
+
+#: name -> the affected [low, high) ranges of the advisories the repository has met.
+VULNERABLE = {
+    "zod": [((0,), (4, 6, 6))],  # GHSA-mrhx-c7xc-m3w5
+    "seroval": [((1, 5, 5), (1, 6, 11))],  # GHSA-9wx9-5pv9-3349, GHSA-f86p-h4j2-7qgj
+}
+LOCKS = (
+    "examples/*/frontend/package-lock.json",
+    "packages/karni-ui/package-lock.json",
+    "modules/*/ui/package-lock.json",
+)
+
+
+def test_no_committed_lockfile_pins_a_known_vulnerable_zod_or_seroval() -> None:
+    """The examples and module UIs lock what the scaffold does, not an older Zod or seroval."""
+    locks = sorted(lock for pattern in LOCKS for lock in REPO_ROOT.glob(pattern))
+    assert locks, "no package-lock.json found"
+    found = []
+    for lock in locks:
+        for key, entry in json.loads(lock.read_text())["packages"].items():
+            name, version = key.rsplit("node_modules/", 1)[-1], entry.get("version")
+            for low, high in VULNERABLE.get(name, []) if version else []:
+                if low <= _release(version) < high:
+                    found.append(f"{lock.relative_to(REPO_ROOT)}: {name} {version}")
+    assert found == []
+
+
+@pytest.mark.parametrize("example", ["eventhub", "social-leads", "medintel"])
+def test_the_examples_pin_the_scaffolds_zod_and_resolvers(example: str) -> None:
+    """@karni/ui's forms call zodResolver: Zod 4 needs @hookform/resolvers 5."""
+    package = REPO_ROOT / "examples" / example / "frontend" / "package.json"
+    dependencies = json.loads(package.read_text())["dependencies"]
+    assert dependencies["zod"] == "^4.6.6"
+    assert dependencies["@hookform/resolvers"].startswith("^5.")
+
+
 def test_slug_rules() -> None:
     assert derive_slug("My App") == "my_app"
     assert validate_name("acme-board") == "acme_board"
