@@ -11,6 +11,7 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## 0.5.0 (unreleased)
 
+- **Documentation refresh.** A new README and docs home (the /new-app flow, the recipes and modules, a quickstart checked on a clean machine, one diagram), a [features page](docs/features.md) that `scripts/gen_reference.py` keeps complete, every package page on PyPI and npm in one shape, and the docs site in the look of the Karni page on gigaikripaservices.com.
 - **Token benchmark: interrupted runs.** A run cut short by a usage or rate limit, an API error or a kill is recorded as interrupted, left out of the statistics, run again by `--resume`, and a usage limit stops the batch; the report refuses to compare while a cell is short.
 - **Speed budgets in CI (experimental).** `scripts/benchmark/speed.py` times what a
   person waits for: each recipe from scratch with `karni new --recipe` (and the
