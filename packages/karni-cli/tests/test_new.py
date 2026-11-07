@@ -163,7 +163,10 @@ def _release(version: str) -> tuple[int, ...]:
 VULNERABLE: dict[str, list[tuple[tuple[int, ...], tuple[int, ...]]]] = {
     "zod": [((0,), (4, 6, 6))],  # GHSA-mrhx-c7xc-m3w5
     "seroval": [((1, 5, 5), (1, 6, 11))],  # GHSA-9wx9-5pv9-3349, GHSA-f86p-h4j2-7qgj
+    "minimatch": [((7, 0, 0), (11, 0, 1))],  # GHSA-g3hv-75wg-m249 (ESLint's 3.x is outside it)
+    "glob": [((9, 0, 0), (14, 0, 2))],  # GHSA-3g3m-2fjr-6pw4 (the module UIs' 7.x is outside it)
 }
+MINIMATCH_OVERRIDE = {"minimatch@>=7.0.0 <11.0.1": "^11.0.5"}
 LOCKS = (
     "examples/*/frontend/package-lock.json",
     "packages/karni-ui/package-lock.json",
@@ -171,8 +174,9 @@ LOCKS = (
 )
 
 
-def test_no_committed_lockfile_pins_a_known_vulnerable_zod_or_seroval() -> None:
-    """The examples and module UIs lock what the scaffold does, not an older Zod or seroval."""
+def test_no_committed_lockfile_pins_a_known_vulnerable_package() -> None:
+    """The examples and module UIs lock what the scaffold does: no Zod, seroval, minimatch or
+    glob in an advisory's range."""
     locks = sorted(lock for pattern in LOCKS for lock in REPO_ROOT.glob(pattern))
     assert locks, "no package-lock.json found"
     found = []
@@ -183,6 +187,28 @@ def test_no_committed_lockfile_pins_a_known_vulnerable_zod_or_seroval() -> None:
                 if low <= _release(version) < high:
                     found.append(f"{lock.relative_to(REPO_ROOT)}: {name} {version}")
     assert found == []
+
+
+def test_every_frontend_overrides_only_the_affected_minimatch(
+    runner, tmp_path: Path, monkeypatch
+) -> None:
+    """typescript-eslint still asks for minimatch 10 (GHSA-g3hv-75wg-m249): every frontend
+    overrides that range alone, so ESLint keeps its minimatch 3."""
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    assert runner.invoke(app, ["new", "Shop", "-o", str(tmp_path)]).exit_code == 0
+    packages = [tmp_path / "shop" / "frontend" / "package.json"]
+    packages += sorted(
+        package
+        for pattern in ("packages/karni-ui", "modules/*/ui", "examples/*/frontend")
+        for package in REPO_ROOT.glob(f"{pattern}/package.json")
+    )
+    wrong = {
+        str(package): overrides
+        for package in packages
+        if not MINIMATCH_OVERRIDE.items()
+        <= (overrides := json.loads(package.read_text()).get("overrides") or {}).items()
+    }
+    assert wrong == {}
 
 
 @pytest.mark.parametrize("example", ["eventhub", "social-leads", "medintel"])
