@@ -294,7 +294,7 @@ jobs:
       # the laptop baseline.json comes from (docs/large-projects.md).
       - name: Time the tooling on a 100-model project
         run: python scripts/benchmark/large_project.py --out benchmark.json --baseline scripts/benchmark/baseline-ci.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: benchmark
@@ -334,7 +334,7 @@ jobs:
         run: make install-py
       - name: Time karni new, build, check, plan and the /new-app flow
         run: python scripts/benchmark/speed.py --out speed.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: speed
@@ -631,7 +631,7 @@ jobs:
       - name: Build, start the stack, run Playwright
         run: ./scripts/e2e.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: eventhub-e2e
@@ -912,7 +912,7 @@ jobs:
 
       - name: Browser test traces
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: production-stack-e2e
           path: .github/ci/prod_e2e/test-results
