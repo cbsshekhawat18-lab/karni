@@ -90,29 +90,32 @@ the app's name) and builds nothing. An unknown recipe is refused with
 
 Karni times what a person waits for in CI, so the speed cannot slip unnoticed.
 `scripts/benchmark/speed.py` runs on every push. These are the times it
-measured on a developer Mac (Apple silicon, the median of 3 runs, SQLite, no
-frontend install, a machine with other work on it, so they are a little high):
+recorded in [`scripts/benchmark/speed-baseline.json`](https://github.com/cbsshekhawat18-lab/karni/blob/main/scripts/benchmark/speed-baseline.json)
+on a developer laptop (a Mac with Apple silicon, the 0.5.0 release candidate,
+the median of 3 runs, SQLite, no frontend install). Other work was running on
+the laptop, so read them as a slightly busy desktop, not a clean lab:
 
 | Step | Seconds |
 | --- | --- |
-| `karni new --recipe lms`, from scratch to a built project | 11.0 |
-| `karni new --recipe data-portal` | 12.0 |
-| `karni new --recipe crm` | 12.4 |
-| `karni new --recipe booking` | 12.6 |
-| `karni new --recipe marketplace` | 12.9 |
-| `karni new --recipe shop` | 13.5 |
-| the `/new-app` flow with a scripted agent, request to green `karni check` | 14.1 |
-| `karni build` again, no spec change | 1.4 |
-| `karni check`, cold (no cache) | 3.8 |
-| `karni check`, cached | 2.0 |
-| `karni spec validate` | 0.37 |
-| `karni plan` | 1.4 |
-| `karni plan --questions` | 0.38 |
+| `karni new --recipe marketplace`, from scratch to a built project | 13.2 |
+| `karni new --recipe booking` | 13.8 |
+| `karni new --recipe shop` | 14.1 |
+| `karni new --recipe lms` | 15.2 |
+| `karni new --recipe data-portal` | 16.9 |
+| `karni new --recipe crm` | 21.9 |
+| the `/new-app` flow with a scripted agent, request to green `karni check` | 15.4 |
+| `karni build` again, no spec change | 1.08 |
+| `karni check`, cold (no cache) | 2.88 |
+| `karni check`, cached | 1.45 |
+| `karni spec validate` | 0.29 |
+| `karni plan` | 1.05 |
+| `karni plan --questions` | 0.29 |
 
-Inside a recipe build the time goes to the project's own tests (3 to 4
-seconds), the migrations and the demo data (about 1.5 seconds each), the types
-(1 to 1.5 seconds) and `karni check` (about 2 seconds). `karni plan` and
-`karni check` take as long as they do because each starts the project's Django once.
+Inside a recipe build the time goes to the project's own tests (3.5 to 6.6
+seconds), the migrations (1.8 to 2.8 seconds), the demo data (1.6 to 2.5
+seconds), the types (1.5 to 2.0 seconds) and `karni check` (2.2 to 3.6
+seconds). `karni plan` and `karni check` take as long as they do because each
+starts the project's Django once.
 
 Each time has a budget: the baseline (`scripts/benchmark/speed-baseline.json`)
 times how much slower or faster the machine is than the one that recorded it
