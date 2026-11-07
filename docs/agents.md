@@ -313,7 +313,8 @@ facts an agent otherwise looks up in Karni's installed source.
 In an existing project, a karni.yaml started from a recipe (it carries
 `app.recipe`) gets the spec alone. The recipe's own code, such as the booking
 capacity rule and its tests, comes only with `karni new "<Name>" --recipe
-<name>`, and the first `karni build` says so.
+<name>`, and the first `karni build` says so. `karni recipes show <name>
+--files` prints that code, each file with the path it takes, to copy from.
 
 A new project can also start from a recipe with its domain code in place:
 `karni new "<Name>" --recipe <name>` writes the recipe's `karni.yaml` and

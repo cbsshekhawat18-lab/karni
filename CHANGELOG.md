@@ -1976,6 +1976,13 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ### Fixed
 
+- **A recipe's own code is printed by a command, not found in the installed
+  package.** After a karni.yaml started from a recipe, `karni build` said to
+  copy the recipe's code "from karni_cli/recipes/<name>/files", so an agent
+  went looking in site-packages, and it named "its capacity rule" for every
+  recipe, the CRM's too. `karni recipes show <name> --files` prints each of
+  the recipe's own files with the path it takes (`--json`: `{recipe,
+  files}`), and the build and `karni recipes show` point at it.
 - **`karni rules --check a.py b.py` checks both files.** The second file was
   read as a subcommand ("No such command"), so an agent checking its files
   in one call got an error and checked them again one by one. Every word

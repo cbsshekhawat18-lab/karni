@@ -199,9 +199,22 @@ def test_an_installed_recipe_comes_from_its_entry_point(installed: Path, runner:
         "Tickets that customers open and staff answer and close.\n"
         "Use when: helpdesk; support tickets; customer support; ticketing\n"
         "Usually changed: the ticket fields; who may see which tickets\n"
-        "Files: desk/models.py, desk/tests/test_desk.py\n"
+        "Files (karni recipes show helpdesk --files prints them): desk/models.py, "
+        "desk/tests/test_desk.py\n"
         "karni.yaml:\nversion: 1\n"
     )
+    own = runner.invoke(app, ["recipes", "show", "helpdesk", "--files"])
+    assert own.exit_code == 0, own.output
+    from karni_cli.recipes import apply as recipe_apply
+
+    texts = recipe_apply.contents(recipe)
+    assert own.output.startswith("--- desk/models.py\n" + texts["desk/models.py"].rstrip("\n"))
+    assert "--- desk/tests/test_desk.py\n" in own.output
+    assert own.output.rstrip().endswith("karni new --recipe helpdesk writes them all into a new project.")
+    as_json = json.loads(runner.invoke(app, ["recipes", "show", "helpdesk", "--files", "--json"]).output)
+    assert as_json == {"recipe": "helpdesk", "files": texts}
+    blank = runner.invoke(app, ["recipes", "show", "blank", "--files"])
+    assert blank.output.startswith("blank: no files of its own")
     data = _json(runner, "show", "helpdesk")
     assert data["recipes"][0]["spec"] == HELPDESK_SPEC
     assert data["recipes"][0]["usually_changed"] == [

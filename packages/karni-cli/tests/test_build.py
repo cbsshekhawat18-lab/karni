@@ -1275,6 +1275,9 @@ def test_a_spec_that_names_a_recipe_says_its_domain_code_was_not_written(
     code, out = _build()
     assert code == 0, out
     assert "recipe booking's own code" in out and "karni new --recipe booking" in out
+    # a command prints it: never a path into the installed package, never another recipe's rule
+    assert "karni recipes show booking --files prints it to copy from." in out
+    assert "karni_cli/recipes" not in out and "capacity rule" not in out
     assert not (root / "bookings" / "tests" / "test_capacity.py").exists()
     _, again = _build()
     assert "was not written" not in again  # said once, with the build that wrote the spec

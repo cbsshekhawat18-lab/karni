@@ -1248,6 +1248,7 @@ own domain code, seeds and tests over its stubs and runs the tests and
 karni recipes list                                  # every recipe, and the blank start
 karni recipes list --match "a booking app for a yoga studio"
 karni recipes show <name>                           # its spec, what people usually change
+karni recipes show <name> --files                   # its own domain code, to copy from
 karni recipes show blank                            # the blank start
 karni recipes list --json                           # also --match and show
 ```

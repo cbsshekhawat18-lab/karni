@@ -533,10 +533,9 @@ def _recipe_not_written(rec: Record, spec: schema.Spec) -> str:
     if not name or rec.recipe or rec.entities or name not in recipes.load().recipes:
         return ""
     return (
-        f"The recipe {name}'s own code (its model methods, actions, seeders and tests, such as "
-        "its capacity rule) was not written: only karni new --recipe "
-        f"{name} writes it. Copy it from karni_cli/recipes/{name}/files, or start the project "
-        "with karni new --recipe."
+        f"The recipe {name}'s own code (its model methods, actions, seeders and tests) was not "
+        f"written: only karni new --recipe {name} writes it. karni recipes show {name} --files "
+        "prints it to copy from."
     )
 
 
