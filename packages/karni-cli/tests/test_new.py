@@ -389,7 +389,11 @@ def test_a_locked_ui_installs_with_npm_ci(tmp_path: Path) -> None:
     "set KARNI_TEST_UI_BUILD=1 to run it (CI's Quickstart job does)",
 )
 def test_new_from_a_checkout_leaves_git_status_clean(tmp_path: Path) -> None:
-    """``karni new`` run from a clone builds that clone's @karni/ui and changes no tracked file."""
+    """``karni new`` with KARNI_UI_SRC on a clone builds its @karni/ui and changes no tracked file.
+
+    A project outside the checkout gets the npm range unless KARNI_UI_SRC asks for the
+    checkout (test_a_checkout_found_by_walking_is_used_only_inside_it), so this sets it.
+    """
     clone = tmp_path / "karni"
     git = ["git", "-C", str(clone)]
     # init + fetch HEAD, not clone: CI checks a pull request out as a detached commit
@@ -400,6 +404,7 @@ def test_new_from_a_checkout_leaves_git_status_clean(tmp_path: Path) -> None:
     assert not (ui / "dist").exists() and not (ui / "node_modules").exists()
     env = {k: v for k, v in os.environ.items() if k not in {"KARNI_UI_SRC", "KARNI_TEMPLATES"}}
     env["PYTHONPATH"] = str(clone / "packages" / "karni-cli")  # the clone's CLI finds the clone
+    env["KARNI_UI_SRC"] = str(ui)
     result = subprocess.run(
         [
             sys.executable,

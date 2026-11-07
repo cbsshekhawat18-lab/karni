@@ -397,13 +397,21 @@ def test_design_leaves_the_content_that_becomes_rows_without_blocks(
 
 
 def _run(project: Path, python: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    """Run in the new project as its developer would, outside CI.
+
+    In CI the project's first test run may not write its OpenAPI snapshot (E607),
+    and a project fresh from ``karni new`` has none yet.
+    """
+    from karni_cli.environment import CI_ENV_VARS
+
+    env = {k: v for k, v in os.environ.items() if k not in CI_ENV_VARS}
     return subprocess.run(
         [str(python), *args],
         cwd=project,
         text=True,
         capture_output=True,
         check=False,
-        env={**os.environ, "PYTHONPATH": str(project)},
+        env={**env, "PYTHONPATH": str(project)},
     )
 
 

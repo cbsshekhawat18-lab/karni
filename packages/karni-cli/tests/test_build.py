@@ -71,15 +71,20 @@ def _env(mp: pytest.MonkeyPatch, root: Path) -> None:
 
 
 def _frontend(mp: pytest.MonkeyPatch) -> None:
-    """No npm in the suite: openapi-typescript writes a stub, ESLint and jscpd pass."""
+    """No npm in the suite: openapi-typescript writes a stub, ESLint and jscpd pass.
+
+    The frontend counts as installed too: in CI (``CI=true``) a missing
+    ``frontend/node_modules`` fails ``karni check``, and these projects never run npm.
+    """
 
     def stub(project: Path, schema: Path, out: Path) -> list[str]:
         code = "import sys; open(sys.argv[1], 'w').write('export type paths = {};\\n')"
         return [sys.executable, "-c", code, str(out)]
 
     mp.setattr(types_mod, "_openapi_typescript_cmd", stub)
-    mp.setattr(check_mod, "_frontend_lint", lambda project, capture=None: 0)
-    mp.setattr(check_mod, "_frontend_duplication", lambda project, capture=None: 0)
+    mp.setattr(check_mod, "_frontend_lint", lambda project, *args, **kwargs: 0)
+    mp.setattr(check_mod, "_frontend_duplication", lambda project, *args, **kwargs: 0)
+    mp.setattr(check_mod, "_frontend_not_installed", lambda project: False)
 
 
 def _fast(mp: pytest.MonkeyPatch) -> None:
@@ -1270,6 +1275,7 @@ def test_a_spec_that_names_a_recipe_says_its_domain_code_was_not_written(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The /new-app flow: karni.yaml started from a recipe in an existing project."""
+    require_modules("karni-payments")  # the booking recipe takes payments
     recipe = REPO_ROOT / "packages" / "karni-cli" / "karni_cli" / "recipes" / "booking"
     root = _project(tmp_path, monkeypatch, "Yoga Flow", (recipe / "karni.yaml").read_text())
     code, out = _build()

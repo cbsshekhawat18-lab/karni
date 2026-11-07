@@ -109,9 +109,13 @@ def _in_process(root: Path) -> Iterator[None]:
             "PYTHONDONTWRITEBYTECODE": "1",
         }
     )
-    # CI would make a missing frontend/node_modules fail the build's check step
+    # A person's machine, not CI: in CI (any variable karni_cli.environment.is_ci
+    # reads, GITHUB_ACTIONS included) a missing frontend/node_modules fails the
+    # build's check step.
+    from karni_cli.environment import CI_ENV_VARS
+
     for name in (
-        "CI",
+        *CI_ENV_VARS,
         "DJANGO_SETTINGS_MODULE",
         "VIRTUAL_ENV",
         "KARNI_PAYMENTS_PROVIDER",
@@ -128,8 +132,8 @@ def _in_process(root: Path) -> Iterator[None]:
     scaffold.run_npm = no_npm
     project_mod._running_interpreter = lambda: Path(sys.executable)  # type: ignore[assignment]
     types_mod._openapi_typescript_cmd = types_stub  # type: ignore[assignment]
-    check_mod._frontend_lint = lambda project, capture=None: 0  # type: ignore[assignment]
-    check_mod._frontend_duplication = lambda project, capture=None: 0  # type: ignore[assignment]
+    check_mod._frontend_lint = lambda project, *args, **kwargs: 0  # type: ignore[assignment]
+    check_mod._frontend_duplication = lambda project, *args, **kwargs: 0  # type: ignore[assignment]
     try:
         yield
     finally:
