@@ -6,6 +6,7 @@ Kinds (``--resource R --kind ...``), with routes under a base path
 * ``list``   → ``<base>``: ``<Page><ResourceTable resource=R /></Page>``
 * ``detail`` → ``<base>/$id``: ``<ResourceDetail resource=R id={id} />``
 * ``form``   → ``<base>/new`` and ``<base>/$id/edit``: ``<ResourceForm />``
+* ``blank``  → ``/<name>``: the bare page (``--kind blank``, no ``--resource``)
 * ``dashboard`` (experimental) → ``/<name>``: a ``DashboardGrid`` with a
   ``ChartCard`` of the rows of each resource (``--count``, default: every
   resource the project routes), counted by ``useResourceCounts``
@@ -54,6 +55,8 @@ NAME = "page"
 SUMMARY = "Add a frontend page (<= 50 lines) composing @karni/ui, with its route."
 
 KINDS = ("list", "detail", "form", "login", "dashboard")
+#: ``--kind blank``: the bare ``<Page title=... />`` (what a page without ``--resource`` is).
+BLANK = "blank"
 MAX_LINES = 50
 PAGES = FRONTEND / "src" / "pages"
 ROUTES = FRONTEND / "src" / "routes.tsx"
@@ -109,8 +112,8 @@ def spec_for(
     counts: tuple[str, ...] | list[str] | None = None,
 ) -> PageSpec:
     require_kebab(name, "Page name")
-    if kind is not None and kind not in KINDS:
-        raise CliError(f"--kind {kind!r}: choose one of {', '.join(KINDS)}.", code="C106")
+    if kind is not None and kind != BLANK and kind not in KINDS:
+        raise CliError(f"--kind {kind!r}: choose one of {', '.join((*KINDS, BLANK))}.", code="C106")
     if related and kind != "detail":
         raise CliError("--related takes a detail page: add --kind detail.", code="C106")
     if counts and kind != "dashboard":
@@ -122,6 +125,14 @@ def spec_for(
                 "(deals.partner).",
                 code="C106",
             )
+    if kind == BLANK:
+        if resource is not None:
+            raise CliError(
+                "--kind blank is the bare page: it takes no --resource (without --kind it is "
+                "a list of the resource).",
+                code="C106",
+            )
+        kind = None  # the page karni make page <name> writes without --resource
     if kind == "dashboard" and resource is not None:
         raise CliError(
             "A dashboard counts resources: pass each with --count instead of --resource.",
@@ -554,7 +565,7 @@ def command(
         None,
         "--kind",
         help="With --resource: list (default), detail or form. A login page needs no resource, "
-        "and a dashboard (experimental) counts resources (--count).",
+        "a dashboard (experimental) counts resources (--count), and blank is the bare page.",
     ),
     path: str | None = typer.Option(
         None,

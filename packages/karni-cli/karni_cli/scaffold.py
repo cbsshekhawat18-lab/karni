@@ -224,3 +224,17 @@ def build_ui_dist(source: Path) -> str | None:
             return f"`{' '.join(argv)}` failed ({proc.returncode}):\n{tail}"
     missing = ui_dist_missing(source)
     return f"the build did not produce {', '.join(missing)}" if missing else None
+
+
+def remove_bytecode(project: Path) -> None:
+    """Delete every ``__pycache__`` folder and ``*.pyc`` file under ``project``.
+
+    ``pip install`` byte-compiles the template's ``.py`` files inside the installed
+    karni-cli, and cookiecutter copies those folders into a new project, so a fresh
+    project would start with compiled files it never asked for (and
+    ``PYTHONDONTWRITEBYTECODE`` cannot prevent a copy).
+    """
+    for folder in sorted(project.rglob("__pycache__"), reverse=True):
+        shutil.rmtree(folder, ignore_errors=True)
+    for stray in project.rglob("*.pyc"):
+        stray.unlink(missing_ok=True)

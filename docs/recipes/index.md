@@ -86,6 +86,43 @@ the app's name) and builds nothing. An unknown recipe is refused with
 `--kind site` or `--no-staff-app` with a recipe with
 [C440](../errors.md#c440). Nothing is written then.
 
+## How fast is it
+
+Karni times what a person waits for in CI, so the speed cannot slip unnoticed.
+`scripts/benchmark/speed.py` runs on every push. These are the times it
+measured on a developer Mac (Apple silicon, the median of 3 runs, SQLite, no
+frontend install, a machine with other work on it, so they are a little high):
+
+| Step | Seconds |
+| --- | --- |
+| `karni new --recipe lms`, from scratch to a built project | 11.0 |
+| `karni new --recipe data-portal` | 12.0 |
+| `karni new --recipe crm` | 12.4 |
+| `karni new --recipe booking` | 12.6 |
+| `karni new --recipe marketplace` | 12.9 |
+| `karni new --recipe shop` | 13.5 |
+| the `/new-app` flow with a scripted agent, request to green `karni check` | 14.1 |
+| `karni build` again, no spec change | 1.4 |
+| `karni check`, cold (no cache) | 3.8 |
+| `karni check`, cached | 2.0 |
+| `karni spec validate` | 0.37 |
+| `karni plan` | 1.4 |
+| `karni plan --questions` | 0.38 |
+
+Inside a recipe build the time goes to the project's own tests (3 to 4
+seconds), the migrations and the demo data (about 1.5 seconds each), the types
+(1 to 1.5 seconds) and `karni check` (about 2 seconds). `karni plan` and
+`karni check` take as long as they do because each starts the project's Django once.
+
+Each time has a budget: the baseline (`scripts/benchmark/speed-baseline.json`)
+times how much slower or faster the machine is than the one that recorded it
+(the same calibration as the large-project benchmark), times 1.5, plus a few
+seconds of slack. A build with no spec change has its own ceiling of 5 seconds
+on any machine. The `speed` job fails when a step goes over, and keeps the times
+as an artifact. Run it yourself with `python scripts/benchmark/speed.py`, and
+record a new baseline on a quiet machine with `--record` when a growth is
+expected.
+
 ## The stub rule
 
 `karni build` creates the project's own files (`<app>/models.py`,

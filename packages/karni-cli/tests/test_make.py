@@ -6,6 +6,7 @@ generated backend really runs) lives in ``test_make_gate.py``.
 
 from __future__ import annotations
 
+import inspect
 import json
 import subprocess
 import sys
@@ -808,6 +809,23 @@ def test_pages_link_only_to_routes_that_exist(project: Path) -> None:
     fails("make", "page", "x", "--kind", "list", match="needs --resource")
     fails("make", "page", "Bad_Name", match="kebab-case")
     fails("make", "page", "x", "--title", 'Say "hi"', match="plain text only")
+
+
+def test_a_blank_page_is_a_kind(project: Path) -> None:
+    """C851 tells the user `karni make page <name> --kind blank`: it must work (S-N1)."""
+    from karni_cli.builder import run
+
+    result = ok("make", "page", "reports", "--kind", "blank")
+    assert "page: /reports -> ReportsPage" in result.output
+    page = (project / "frontend" / "src" / "pages" / "reports.tsx").read_text()
+    assert '<Page title="Reports" />' in page
+    bare = ok("make", "page", "notes", "--dry-run")  # the same page without the kind
+    assert "page: /notes -> NotesPage" in bare.output
+    fails(
+        "make", "page", "x", "--kind", "blank", "--resource", "events", match="takes no --resource"
+    )
+    fails("make", "page", "x", "--kind", "sketch", match="blank")
+    assert "karni make page <name> --kind blank starts one" in inspect.getsource(run._check)
 
 
 def test_page_without_route_markers(project: Path) -> None:

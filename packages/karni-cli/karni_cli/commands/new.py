@@ -626,6 +626,7 @@ def new(
         },
         output_dir=str(output_dir),
     )
+    scaffold.remove_bytecode(project)  # pip compiles the installed template: do not copy that
     if not with_staff_app:
         shutil.rmtree(project / "frontend")
     if source is not None:

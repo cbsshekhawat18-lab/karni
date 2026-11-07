@@ -283,6 +283,46 @@ jobs:
           if-no-files-found: ignore
 
   # ---------------------------------------------------------------------------
+  # What a person waits for (scripts/benchmark/speed.py): every recipe from
+  # scratch (karni new --recipe), a second karni build with no spec change,
+  # karni check cold and cached, karni spec validate, karni plan, karni plan
+  # --questions and the /new-app fake-agent flow, each the median of its runs.
+  # A time above its budget fails the job (scripts/benchmark/speed-baseline.json
+  # x the run's calibration x 1.5, plus slack; a no-change rebuild has an
+  # absolute ceiling). The times are an artifact.
+  # ---------------------------------------------------------------------------
+  speed:
+    name: Speed budgets (what a person waits for)
+    runs-on: ubuntu-latest
+    env:
+      PYTHON: python
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      KARNI_REQUIRE_MODULES: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/karni/pyproject.toml
+            packages/karni-cli/pyproject.toml
+            modules/karni-payments/pyproject.toml
+            modules/karni-approvals/pyproject.toml
+            modules/karni-impersonation/pyproject.toml
+            modules/karni-site/pyproject.toml
+      - name: Install Karni and its modules from this checkout (editable)
+        run: make install-py
+      - name: Time karni new, build, check, plan and the /new-app flow
+        run: python scripts/benchmark/speed.py --out speed.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: speed
+          path: speed.json
+          if-no-files-found: ignore
+
+  # ---------------------------------------------------------------------------
   # docs/quickstart.md, run verbatim on a clean machine: every `sh` block on
   # the page, in a fresh venv and an empty directory, with this checkout's
   # packages in place of PyPI's (the one documented substitution).
