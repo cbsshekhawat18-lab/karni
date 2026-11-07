@@ -1247,8 +1247,9 @@ PROCEDURES: tuple[Procedure, ...] = (
         steps=(
             '`karni recipes list --match "<the request>"` names the closest recipes, and `karni '
             "recipes show <name>` prints one's karni.yaml (`blank` when none fits). Write "
-            "karni.yaml from it with what the request asks for: entities and fields, roles, "
-            "access, modules (`karni modules list`) and pages. `karni spec validate` checks it.",
+            "karni.yaml from it with what the request asks for: entities and fields (`karni "
+            "explain fields`), roles, access, modules (`karni modules list`) and pages. `karni "
+            "spec validate` checks it.",
             "`karni plan --questions` lists what only the user decides. Ask the user those and "
             "only those, in one message, then write each answer with `karni spec answer <id> "
             "<value>` (one left to you takes its default) until none is open.",

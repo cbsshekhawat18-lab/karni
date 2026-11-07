@@ -71,7 +71,7 @@ def test_explain_procedure_and_json(runner, tmp_path, monkeypatch) -> None:
 
 
 #: The new-app procedure with its reference: the five steps, the access words and patterns,
-#: the lists' shape, seed and accounts. Measured 674 cl100k and 653 o200k tokens. The seven
+#: the lists' shape, seed and accounts. Measured 687 cl100k and 665 o200k tokens. The seven
 #: steps without a reference it replaced were about 480: the reference costs less than one
 #: read of Karni's source it saves.
 NEW_APP_BUDGET = 700
@@ -87,6 +87,7 @@ def test_the_new_app_procedure_carries_what_its_steps_need_within_a_budget(
     out = result.output
     steps = [line for line in out.splitlines() if line[:2] in {f"{n}." for n in "123456789"}]
     assert len(steps) == 5 and steps[-1] == "5. Done when `karni check` and `karni test` pass."
+    assert "`karni explain fields`" in steps[0]  # the field types, where the fields are written
     reference = out.split("\nReference:\n", 1)[1].split("\n\n", 1)[0].splitlines()
     assert len(reference) == 4 and all(line.startswith("- ") for line in reference)
     access, lists, seed, accounts = reference
@@ -124,7 +125,22 @@ def test_explain_access_prints_the_access_reference(runner, tmp_path, monkeypatc
         runner, monkeypatch, tmp_path
     )
     unknown = runner.invoke(app, ["explain", "nothing-here"])
-    assert unknown.exit_code != 0 and "a reference (access)" in str(unknown.exception)
+    assert unknown.exit_code != 0 and "a reference (access, fields)" in str(unknown.exception)
+
+
+def test_explain_fields_prints_every_field_type(runner, tmp_path, monkeypatch) -> None:
+    """The field table an agent otherwise looks for in Karni's source (a never-negative int)."""
+    from karni_cli.generators.fields import FIELD_DOCS
+
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["explain", "fields"])
+    assert result.exit_code == 0, result.output
+    assert result.output.startswith("fields: The field types of karni.yaml")
+    for syntax, generates in FIELD_DOCS:
+        assert syntax in result.output and generates in result.output
+    assert "QuantityField(default=0) with a CHECK that it is never negative" in result.output
+    as_json = json.loads(runner.invoke(app, ["explain", "Fields", "--json"]).output)
+    assert len(as_json["types"]) == len(FIELD_DOCS)
 
 
 def test_the_questions_rule_is_listed_and_explained(runner, tmp_path, monkeypatch) -> None:

@@ -263,7 +263,8 @@ parser and renderer, so the spec and the generator can never disagree:
 `json[:queried]`, `array:str[:len]`, `state:<a>><b>|...` (a `StateField`,
 written as `karni make form --states` takes it), `daterange`,
 `datetimerange` and `capacity[:total]`, with a trailing `?` for optional.
-See [the karni command](cli.md) for what each one generates. An argument a
+See [the karni command](cli.md) for what each one generates, or `karni
+explain fields` for the table in the terminal. An argument a
 type does not take is refused (`C216`), never dropped: `body: "text:500"`
 names `text`'s form, and `name: "str:200:unique"` names the way to a unique
 value, `LiveUniqueConstraint(fields=["name"])` from `karni.fields` in the

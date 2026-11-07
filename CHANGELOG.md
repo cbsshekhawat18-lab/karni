@@ -2033,7 +2033,11 @@ apply codemods and list the manual steps. This file is the human summary.
   first), what `seed` puts in the database, and how code makes an account
   with a role. `karni explain access` prints every access word, the common
   rules, grants per action, an action's own `access=` and why a rule only
-  code enforces fails the generated tests. Rule K109 points at it.
+  code enforces fails the generated tests. Rule K109 points at it. `karni
+  explain fields` prints every field type with what it generates (in a
+  validation run an agent looked for a never-negative integer in the
+  installed source: it is `quantity`), and the procedure's first step names
+  it.
 - **`karni build` and `karni check` print a short summary.** A build printed
   the whole plan again before its steps (30 lines and more for a new app,
   after `karni plan` had printed it), and a passing `karni check` printed

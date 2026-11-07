@@ -8,6 +8,7 @@
     karni explain image       a karni-site template tag or filter ("{% image %}" works too)
     karni explain map.items   a content map key (karni explain map lists every one)
     karni explain access      a reference: karni.yaml's access words and the common rules
+    karni explain fields      a reference: every field type of karni.yaml and karni make model
     karni explain --failure last   a captured failure as a brief (in a project, DEBUG on)
     karni explain -           a pasted traceback, test failure or log line (stdin)
 
@@ -88,6 +89,28 @@ def _explain_tag(text: str, as_json: bool, *, required: bool) -> bool:
     )
 
 
+def _explain_fields(as_json: bool) -> None:
+    """``karni explain fields``: the field types, from the generator's own table."""
+    from karni_cli.generators.fields import FIELD_DOCS
+
+    if as_json:
+        rows = [{"syntax": syntax, "generates": result} for syntax, result in FIELD_DOCS]
+        typer.echo(json.dumps({"name": "fields", "types": rows}, indent=2))
+        return
+    width = max(len(syntax) for syntax, _ in FIELD_DOCS)
+    head = (
+        "fields: The field types of karni.yaml (fields: {name: type}) and karni make model "
+        "(name:type)"
+    )
+    tail = (
+        "An argument a type does not take is refused (C216, C104). A value unique among live "
+        'rows: LiveUniqueConstraint(fields=["name"]) from karni.fields in the model\'s Meta.'
+    )
+    lines = [head, "", *(f"  {syntax:<{width}}  {result}" for syntax, result in FIELD_DOCS)]
+    lines += ["", tail]
+    typer.echo("\n".join(lines))
+
+
 def _explain_failure(code: str | None, failure: str, as_json: bool) -> None:
     """``--failure ID``: a captured failure as a brief (karni_cli.debugging)."""
     if code:
@@ -122,7 +145,7 @@ def explain(
         None,
         help="An error code such as E104, W101, C101, PAY004 or K106, a setting such as "
         "KARNI_SITE_HIGHLIGHT, a template tag such as image, a content map key such as "
-        "map.items, or a reference such as access. Pass - to read a traceback or log line "
+        "map.items, or a reference: access or fields. Pass - to read a traceback or log line "
         "from stdin.",
         show_default=False,
     ),
@@ -135,8 +158,9 @@ def explain(
     ),
 ) -> None:
     """Explain an error code, a setting (its default, environment variable and docs), a
-    template tag, a content map key, a reference (access: karni.yaml's access rules), a
-    captured failure (--failure), or the failure in a pasted traceback or log line (-)."""
+    template tag, a content map key, a reference (access: karni.yaml's access rules, fields:
+    its field types), a captured failure (--failure), or the failure in a pasted traceback or
+    log line (-)."""
     if failure is not None:
         _explain_failure(code, failure, as_json)
         return
@@ -146,6 +170,9 @@ def explain(
     written = code.strip()
     if written.lower() == "map" or written.lower().startswith("map."):
         _explain_map(written, as_json)
+        return
+    if written.lower() == "fields":
+        _explain_fields(as_json)
         return
     if _TOPIC.match(written):
         topic = agent_data.load(find_project()).topic(written)
@@ -185,8 +212,8 @@ def explain(
             "start every Karni error message. A third-party module's codes are found inside a "
             "project that installs it. docs/errors.md lists every code. karni explain also takes a "
             "setting (KARNI_SITE_HIGHLIGHT), a template tag (image), a content map key "
-            "(map.items) and a reference (access). To explain a traceback or a log line, pipe it "
-            "in: "
+            "(map.items) and a reference (access, fields). To explain a traceback or a log line, "
+            "pipe it in: "
             "karni explain - < traceback.txt",
             code="C204",
         )

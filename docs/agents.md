@@ -485,7 +485,7 @@ What `karni rules --procedure` returns:
 ```text
 Build this app: <the app in one line>
 
-1. `karni recipes list --match "<the request>"` names the closest recipes, and `karni recipes show <name>` prints one's karni.yaml (`blank` when none fits). Write karni.yaml from it with what the request asks for: entities and fields, roles, access, modules (`karni modules list`) and pages. `karni spec validate` checks it.
+1. `karni recipes list --match "<the request>"` names the closest recipes, and `karni recipes show <name>` prints one's karni.yaml (`blank` when none fits). Write karni.yaml from it with what the request asks for: entities and fields (`karni explain fields`), roles, access, modules (`karni modules list`) and pages. `karni spec validate` checks it.
 2. `karni plan --questions` lists what only the user decides. Ask the user those and only those, in one message, then write each answer with `karni spec answer <id> <value>` (one left to you takes its default) until none is open.
 3. `karni build` makes the project match karni.yaml: models, viewsets, migrations, types, tests and `karni check`. It stops at the first failure with its code and the next step. Ask the user before `--allow-destructive` (a risky change) and before a way past C273 (a Karni-owned file edited by hand).
 4. Write the domain logic that is left, in the project's own files: methods on the subclasses in `<app>/models.py`, actions in `<app>/viewsets.py`, your own pages and tests. Never edit `<app>/karni/` or a `karni:spec` block.
