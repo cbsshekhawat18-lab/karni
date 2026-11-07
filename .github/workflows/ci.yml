@@ -671,6 +671,7 @@ jobs:
       KARNI_SOCIAL_GOOGLE_CLIENT_IDS: medintel-example.apps.googleusercontent.com
       KARNI_EMAIL_OTP_SIGNUP: approval
       KARNI_SOCIAL_TOKEN_SIGNUP: approval
+      KARNI_SEED_LOGINS: '{"analyst@example.com": ["customer"], "oncology@example.com": ["customer"], "vaccines@example.com": ["customer"]}'
       KARNI_API_CACHE_LEGACY_HEADER: "False"
       PY: python
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
