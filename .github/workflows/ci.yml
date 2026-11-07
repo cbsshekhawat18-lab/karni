@@ -66,6 +66,8 @@ jobs:
             modules/karni-site/pyproject.toml
             modules/karni-charts/pyproject.toml
             modules/karni-reports/pyproject.toml
+            modules/karni-ai/pyproject.toml
+            modules/karni-storage/pyproject.toml
 
       # karni-reports draws its PDFs with WeasyPrint, which needs Pango (a
       # system library) and a font. Without them its real render test skips.
@@ -74,8 +76,6 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends \
             libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b fonts-dejavu-core
-            modules/karni-ai/pyproject.toml
-            modules/karni-storage/pyproject.toml
 
       - name: Install packages (editable) + dev tools
         run: make install-py
@@ -716,7 +716,7 @@ jobs:
 
       - name: Install Karni from this checkout (the project depends on it)
         run: |
-          python -m pip install -e ../../packages/karni -e ../../packages/karni-cli \
+          python -m pip install -e "../../packages/karni[social-token]" -e ../../packages/karni-cli \
             -e ../../modules/karni-charts "psycopg[binary]" pytest pytest-django
 
       - name: Build @karni/ui and @karni/charts-ui (the project installs them from this checkout)
@@ -777,8 +777,10 @@ jobs:
           cache: npm
           cache-dependency-path: packages/karni-ui/package-lock.json
 
-      - name: Install karni and karni-cli from this checkout
-        run: python -m pip install -q -e packages/karni -e packages/karni-cli
+      # karni-site too: `karni make site` adds it to the project, whose host-side
+      # makemigrations below imports it.
+      - name: Install karni, karni-cli and karni-site from this checkout
+        run: python -m pip install -q -e packages/karni -e packages/karni-cli -e "modules/karni-site[images]"
 
       # The scaffold's frontend names this checkout's @karni/ui ("file:"), which
       # an image build cannot reach, so it is packed into the project
@@ -807,6 +809,11 @@ jobs:
           karni make model Product name:str price:decimal --with viewset,page --app catalog --migrate
           test -f catalog/migrations/0001_initial.py
           cp -r "$GITHUB_WORKSPACE/packages/karni" .karni-src
+          # karni make site added karni-site to pyproject.toml: the image installs this
+          # checkout's copy (the build copies the project to /app), not a release.
+          cp -r "$GITHUB_WORKSPACE/modules/karni-site" .karni-site-src
+          sed -i 's#"karni-site\[images\]"#"karni-site[images] @ file:///app/.karni-site-src"#' pyproject.toml
+          grep -q '"karni-site\[images\] @ file:///app/.karni-site-src"' pyproject.toml
           mkdir -p .karni-ui && cp "$RUNNER_TEMP"/karni-ui/*.tgz .karni-ui/karni-ui.tgz
           echo "PROJECT=$PWD" >> "$GITHUB_ENV"
 

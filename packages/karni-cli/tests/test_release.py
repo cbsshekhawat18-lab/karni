@@ -520,3 +520,18 @@ def test_every_workflow_step_runs_a_script_or_an_action(workflow: Path) -> None:
         if "run" not in step and "uses" not in step
     ]
     assert empty == []
+
+
+@pytest.mark.parametrize("workflow", WORKFLOWS, ids=lambda path: path.name)
+def test_no_workflow_script_line_is_a_bare_file_path(workflow: Path) -> None:
+    """A list entry a merge left inside a `run:` script runs as a command and fails (126)."""
+    jobs = _load_workflow(workflow)["jobs"]
+    assert isinstance(jobs, dict)
+    bare = [
+        f"{job}: {step.get('name')}: {line.strip()}"
+        for job, spec in jobs.items()
+        for step in spec.get("steps", [])
+        for line in str(step.get("run", "")).splitlines()
+        if (REPO_ROOT / line.strip()).is_file() and not os.access(REPO_ROOT / line.strip(), os.X_OK)
+    ]
+    assert bare == []

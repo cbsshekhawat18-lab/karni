@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Medintel, a Karni project."
 requires-python = ">=3.12"
 dependencies = [
-    "karni",
+    "karni[social-token]",
     "gunicorn",
     "uvicorn-worker",
     "psycopg[binary]",
