@@ -1976,6 +1976,12 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ### Fixed
 
+- **A viewset's own action named `move` was not routed on a flat model.**
+  `BaseViewSet` hides its tree actions (`tree`, `children`, `ancestors`,
+  `move`, `access_forest`) on a model that is not a tree, and `facets` and
+  `tagged` where no taxonomy needs them. It hid them by name, so a project's
+  own `@action def move` (a deal moved through a pipeline, a card between
+  columns) answered 404. Only Karni's own actions are hidden now.
 - **No AI tool or company names in the packages and docs.** The PyPI and npm
   descriptions, the package keywords, the READMEs, the docs site, the
   scaffold and the examples say "coding agent" and name no tool. Only the

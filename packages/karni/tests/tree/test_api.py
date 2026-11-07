@@ -137,6 +137,32 @@ def test_a_flat_resource_has_no_tree_routes() -> None:
     assert client_as(None).get("/api/venues/tree/").status_code == 404
 
 
+def test_a_flat_resource_keeps_its_own_action_named_like_a_tree_action() -> None:
+    """A project's ``move`` or ``tagged`` on a flat model is its own action, not the tree's."""
+    from rest_framework.decorators import action
+    from rest_framework.response import Response
+    from rest_framework.routers import SimpleRouter
+
+    class Board(VenueViewSet):
+        auto_register = False
+
+        @action(detail=True, methods=["post"])
+        def move(self, request: Any, *args: Any, **kwargs: Any) -> Response:
+            return Response({"moved": True})
+
+        @action(detail=False, methods=["get"])
+        def tagged(self, request: Any, *args: Any, **kwargs: Any) -> Response:
+            return Response([])
+
+    names = {extra.__name__ for extra in Board.get_extra_actions()}
+    assert {"move", "tagged"} <= names
+    assert not {"tree", "children", "ancestors", "access_forest", "facets"} & names
+    router = SimpleRouter()
+    router.register("boards", Board, basename="board")
+    routed = {url.name for url in router.urls}
+    assert {"board-move", "board-tagged"} <= routed and "board-tree" not in routed
+
+
 # move/
 
 
