@@ -751,9 +751,7 @@ def _state(
         for label in created
         if not entities[label].external and (_seed_count(inputs.spec, label) or 0) > 0
     ]
-    unseeded = [
-        label for label in created if not entities[label].external and label not in seed
-    ]
+    unseeded = [label for label in created if not entities[label].external and label not in seed]
     return {
         "steps": list(output.STEPS[2:]),
         "modules": modules,

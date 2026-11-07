@@ -351,7 +351,9 @@ def test_an_access_value_close_to_a_rule_names_the_rule(value: str, hint: str) -
 def test_an_undeclared_role_in_another_case_and_an_access_key_name_the_right_form() -> None:
     issues = validate_text(ACCESS_SHOP + "        access: {read: 'role:STAFF'}\n").issues
     assert issues[0].code == "C232" and issues[0].message.endswith("Did you mean role:staff?")
-    issues = validate_text(ACCESS_SHOP + "        access: {read: public, delete: 'role:staff'}\n").issues
+    issues = validate_text(
+        ACCESS_SHOP + "        access: {read: public, delete: 'role:staff'}\n"
+    ).issues
     assert issues[0].code == "C212"
     assert issues[0].fix.startswith("Use write: access takes read, write and create")
     assert "no :delete" in issues[0].fix

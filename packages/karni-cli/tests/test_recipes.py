@@ -210,8 +210,12 @@ def test_an_installed_recipe_comes_from_its_entry_point(installed: Path, runner:
     texts = recipe_apply.contents(recipe)
     assert own.output.startswith("--- desk/models.py\n" + texts["desk/models.py"].rstrip("\n"))
     assert "--- desk/tests/test_desk.py\n" in own.output
-    assert own.output.rstrip().endswith("karni new --recipe helpdesk writes them all into a new project.")
-    as_json = json.loads(runner.invoke(app, ["recipes", "show", "helpdesk", "--files", "--json"]).output)
+    assert own.output.rstrip().endswith(
+        "karni new --recipe helpdesk writes them all into a new project."
+    )
+    as_json = json.loads(
+        runner.invoke(app, ["recipes", "show", "helpdesk", "--files", "--json"]).output
+    )
     assert as_json == {"recipe": "helpdesk", "files": texts}
     blank = runner.invoke(app, ["recipes", "show", "blank", "--files"])
     assert blank.output.startswith("blank: no files of its own")

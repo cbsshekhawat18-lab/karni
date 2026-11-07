@@ -1115,7 +1115,9 @@ class _Meaning:
                 return f"owned:{arg}"
             users = [name for name, target in entity.targets.items() if target == _USER_TARGET]
             field_name = entity.entity.owner or (users[0] if len(users) == 1 else None)
-            return f"owned:{field_name}" if field_name else "owned:<a field that points at the user>"
+            return (
+                f"owned:{field_name}" if field_name else "owned:<a field that points at the user>"
+            )
         if folded in _ROLE_NEAR and arg:
             return f"role:{self._role_like(arg) or arg}"
         near = _ACCESS_NEAR.get(folded)

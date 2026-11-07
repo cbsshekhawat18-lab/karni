@@ -991,7 +991,7 @@ ACCESS_LINES: tuple[str, ...] = (
     '  signed-in users read, staff write:  {read: authenticated, write: "role:staff"}',
     '  anyone reads, staff write:          {read: public, write: "role:staff"}',
     "  each member reads and changes only their own rows, staff read every row:",
-    '    owner: member',
+    "    owner: member",
     '    access: {read: ["owned:member", "role:staff"], write: "owned:member"}',
     '  the same, and staff change every row: write: ["owned:member", "role:staff"]',
     '  members create (as themselves), staff may not: add create: "role:member"',
@@ -999,12 +999,12 @@ ACCESS_LINES: tuple[str, ...] = (
     '    access: {read: ["owned:member", "role:staff"], create: "owned:member", '
     'write: "role:staff"}',
     "",
-    "With granted, per role and per action: roles: {member: {grants: {\"catalog.item\": own, "
-    "\"catalog.tag:view\": all}}}. all: every row. own: the rows whose owner field is the user. "
+    'With granted, per role and per action: roles: {member: {grants: {"catalog.item": own, '
+    '"catalog.tag:view": all}}}. all: every row. own: the rows whose owner field is the user. '
     "app.entity:view, :add, :change and :delete grant one action, so a role without :delete "
     "may not delete.",
-    "An action of your own: @action(detail=True, methods=[\"post\"], access=Owned(\"member\") | "
-    "HasRole(\"staff\")), with Owned and HasRole from karni.api. Without access= it follows "
+    'An action of your own: @action(detail=True, methods=["post"], access=Owned("member") | '
+    'HasRole("staff")), with Owned and HasRole from karni.api. Without access= it follows '
     "read (GET) or write (POST).",
     "The generated tests act as the roles access names: a rule only your code enforces (a "
     "perform_create that refuses staff) fails them. Declare it in access instead.",
@@ -1272,7 +1272,7 @@ PROCEDURES: tuple[Procedure, ...] = (
             "`public`, `authenticated`, `role:<slug>`, `owned:<field>` or `granted` (the roles' "
             "grants, the default), or a list of them. write covers changes, deletes and POST "
             "actions, create defaults to write, and owned:<field> in either sets the field to "
-            'the signed-in user. Signed-in users read, staff write: `{read: authenticated, write: '
+            "the signed-in user. Signed-in users read, staff write: `{read: authenticated, write: "
             '"role:staff"}`. Each member their own rows, staff all: `owner: member` and '
             '`{read: ["owned:member", "role:staff"], write: "owned:member"}`, plus `create: '
             '"role:member"` when staff may not create. The rest: `karni explain access`.',

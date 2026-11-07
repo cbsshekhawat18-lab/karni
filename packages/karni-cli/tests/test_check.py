@@ -365,4 +365,3 @@ def test_a_frontend_pass_is_one_line_and_a_failure_prints_the_tools_output(
     failed = runner.invoke(app, ["check"])
     assert failed.exit_code == 1
     assert "jscpd REPORT TABLE" in failed.output and "frontend checks: ok" not in failed.output
-

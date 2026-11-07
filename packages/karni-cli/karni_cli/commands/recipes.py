@@ -186,7 +186,9 @@ def show(
         lines.append("Usually changed: " + "; ".join(entry["usually_changed"]))
     if entry["files"]:
         lines.append(
-            "Files (karni recipes show " + entry["name"] + " --files prints them): "
+            "Files (karni recipes show "
+            + entry["name"]
+            + " --files prints them): "
             + ", ".join(entry["files"])
         )
     lines += ["karni.yaml:", *str(entry["spec"]).rstrip("\n").splitlines()]

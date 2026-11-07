@@ -16,8 +16,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
-import click
 import typer
 from typer.core import TyperGroup
 
@@ -31,6 +31,7 @@ from karni_cli.rules_render import (
     render_prompts_doc,
     render_rules,
 )
+
 
 def more_checks(args: list[str], commands: set[str]) -> list[str]:
     """``--check a.py b.py`` as ``--check a.py --check b.py``: the words after a checked file.
@@ -64,7 +65,8 @@ def more_checks(args: list[str], commands: set[str]) -> list[str]:
 class _RulesGroup(TyperGroup):
     """``karni rules``: ``--check`` takes one file or several (``--check a.py b.py``)."""
 
-    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+    # ctx: Typer >= 0.20 vendors its own click (typer._click), older ones use click
+    def parse_args(self, ctx: Any, args: list[str]) -> list[str]:
         return super().parse_args(ctx, more_checks(list(args), set(self.commands)))
 
 
