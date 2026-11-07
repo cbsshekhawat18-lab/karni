@@ -179,11 +179,27 @@ jobs:
       - name: Test karni-reports with integer keys (sqlite, then PostgreSQL 16)
         if: matrix.python == '3.12'
         working-directory: modules/karni-reports
+        env:
+          KARNI_TEST_PK: bigint
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/karni
+          PYTHONPATH: ${{ github.workspace }}/.github/ci
+        run: |
+          python -m pytest -q -ra
+          python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
+
       # karni-ai's suite with its test app on integer keys too (KARNI_TEST_PK=bigint),
       # on sqlite and on PostgreSQL: an extraction names rows by natural key, never id.
       - name: Test modules/karni-ai with integer keys (sqlite, then PostgreSQL 16)
         if: matrix.python == '3.12'
         working-directory: modules/karni-ai
+        env:
+          KARNI_TEST_PK: bigint
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/karni
+          PYTHONPATH: ${{ github.workspace }}/.github/ci
+        run: |
+          python -m pytest -q -ra
+          python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
+
       # karni-storage's test app on integer keys (KARNI_TEST_PK=bigint): its
       # download paths carry the row's key, so both key types run.
       - name: Test modules/karni-storage with integer keys (sqlite, then PostgreSQL 16)

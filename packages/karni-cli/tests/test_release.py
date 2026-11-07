@@ -484,3 +484,39 @@ def test_the_release_check_names_a_module_pinned_to_the_previous_minor(
     assert len(problems) == 2, problems
     assert "'karni[s3]>=0.4,<0.5', which excludes karni 0.5.0" in problems[0]
     assert "@karni/ui '^0.4.0', which excludes 0.5.0" in problems[1]
+
+
+WORKFLOWS = sorted((REPO_ROOT / ".github" / "workflows").glob("*.yml"))
+
+
+def _load_workflow(path: Path) -> dict[str, object]:
+    """Parse a workflow, refusing a key repeated in one mapping (GitHub refuses the file)."""
+    import yaml
+
+    class Loader(yaml.SafeLoader):
+        pass
+
+    def mapping(loader: yaml.SafeLoader, node: yaml.MappingNode) -> dict[object, object]:
+        keys = [loader.construct_object(key) for key, _ in node.value]
+        repeated = sorted({str(key) for key in keys if keys.count(key) > 1})
+        assert repeated == [], f"{path.name} line {node.start_mark.line + 1}: {repeated} twice"
+        return loader.construct_mapping(node)
+
+    Loader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, mapping)
+    loaded = yaml.load(path.read_text(), Loader=Loader)  # a SafeLoader subclass
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+@pytest.mark.parametrize("workflow", WORKFLOWS, ids=lambda path: path.name)
+def test_every_workflow_step_runs_a_script_or_an_action(workflow: Path) -> None:
+    """GitHub refuses the whole file, and runs no job, when one step has neither."""
+    jobs = _load_workflow(workflow)["jobs"]
+    assert isinstance(jobs, dict)
+    empty = [
+        f"{job}: {step.get('name', f'step {index}')}"
+        for job, spec in jobs.items()
+        for index, step in enumerate(spec.get("steps", []))
+        if "run" not in step and "uses" not in step
+    ]
+    assert empty == []

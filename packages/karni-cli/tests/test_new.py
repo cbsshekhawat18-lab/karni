@@ -160,7 +160,7 @@ def _release(version: str) -> tuple[int, ...]:
 
 
 #: name -> the affected [low, high) ranges of the advisories the repository has met.
-VULNERABLE = {
+VULNERABLE: dict[str, list[tuple[tuple[int, ...], tuple[int, ...]]]] = {
     "zod": [((0,), (4, 6, 6))],  # GHSA-mrhx-c7xc-m3w5
     "seroval": [((1, 5, 5), (1, 6, 11))],  # GHSA-9wx9-5pv9-3349, GHSA-f86p-h4j2-7qgj
 }
