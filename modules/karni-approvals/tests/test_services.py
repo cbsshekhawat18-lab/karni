@@ -90,10 +90,13 @@ class TestDecide:
         with current_user(maker), pytest.raises(KarniWriteDeferred):
             contract.save()
         held = PendingChange.objects.latest("created_at")
-        staff = make_user(
-            "staff@example.com", "staff"
-        )  # holds every permission, not the finance role
+        # Holds the approve grant by name, but not the finance role the policy asks for.
+        checker = make_user("branch@example.com", "branch_checker")
         with pytest.raises(services.ApprovalError, match="only roles finance"):
+            services.decide(held, checker, "approve")
+        # Staff ("*": "all") hold no approve grant at all: a wildcard never reaches it.
+        staff = make_user("staff@example.com", "staff")
+        with pytest.raises(services.ApprovalError, match="you do not hold"):
             services.decide(held, staff, "approve")
 
     def test_a_checker_sees_and_decides_only_their_scope(

@@ -1181,6 +1181,35 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Name a field of the model: class Karni: label_field = 'name'. Leave it out to use the "
         "first text field named name, title or label, else Karni.natural_key.",
     ),
+    # E290-E299 class Karni options that grants and keys read
+    _e(
+        "E290",
+        "Karni.explicit_actions names an action the model does not have",
+        "check",
+        "karni.meta.explicit_actions; karni.checks.check_explicit_actions (karni check)",
+        "Karni.explicit_actions lists the actions a wildcard grant never reaches: only a grant "
+        "that writes the action out gives it. A name that is not one of the model's actions "
+        "protects nothing, so a typo would leave the real action open to every wildcard role.",
+        "List actions of the model: the standard view, add, change, delete, or a name in "
+        "Karni.actions (class Karni: actions = ['refund']; explicit_actions = ['refund']). "
+        "Then grant the action by name: KARNI_ROLES = {'finance': {'grants': "
+        "{'shop.order:refund': 'all'}}}.",
+    ),
+    _e(
+        "E291",
+        "Karni.natural_key or import_key is not one field of the model",
+        "check",
+        "karni.meta.natural_key; karni.meta.import_options; karni.checks.check_key_fields "
+        "(karni check)",
+        "natural_key names the one field that names a row to people: an import's relation "
+        "cell carries its value and an export writes it. import_key names the column an "
+        "import matches rows on. Each carries one value per cell, so a list of fields has no "
+        "form in a file, and a name the model does not have would fail every request that "
+        "reads the model.",
+        "Write one field name as a string: class Karni: natural_key = 'name' (not ['name']). "
+        "For a row that only several fields name together, add one unique field that names it "
+        "(a SlugField built from them), or leave natural_key out to use the primary key.",
+    ),
     # E3xx admin
     _e(
         "E301",

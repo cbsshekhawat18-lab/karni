@@ -751,3 +751,42 @@ with C860, and karni doctor mentions them. They stop being updated, and are remo
 in 1.0. Point your tool at AGENTS.md and keep project guidance in karni.rules.py."""
 mechanical = false
 migration = "migrations/0.5.md#tool-specific-agent-files-are-deprecated-keep-agentsmd"
+
+[[change]]
+id = "wildcard-grants-skip-explicit-actions"
+kind = "behaviour"
+symbol = "KARNI_ROLES wildcards; class Karni: explicit_actions"
+summary = """\
+A wildcard grant (`"*"`, `app.model:*`) no longer reaches an action the model lists in \
+`class Karni: explicit_actions`. karni-impersonation marks `impersonate` and \
+karni-approvals marks `approve` and `reject`, so the default `user`, `customer` and \
+`staff` roles stop holding them at the next `karni migrate` (or `karni sync-roles`). \
+Grant each one by name to the role that needs it, for example \
+`"support": {"grants": {"karni_impersonation.impersonationsession:impersonate": "all"}}`."""
+mechanical = false
+migration = "migrations/0.5.md#wildcard-grants-skip-impersonate-approve-and-reject-security"
+
+[[change]]
+id = "admin-soft-delete-ignores-protect"
+kind = "behaviour"
+symbol = "karni.admin.SoftDeleteAdminMixin.get_deleted_objects"
+summary = """\
+On a soft-delete model the admin's Delete page and Delete selected soft-delete a row that \
+a PROTECT foreign key points from instead of refusing it, as the API does. Hard delete \
+selected still refuses. The row's Delete page is karni_admin/delete_confirmation.html, so a \
+project-wide admin/delete_confirmation.html override needs to move to \
+admin/<app>/<model>/delete_confirmation.html or delete_confirmation_template."""
+mechanical = false
+migration = "migrations/0.5.md#the-admin-soft-deletes-rows-that-protect-points-at"
+
+[[change]]
+id = "natural-key-checked-at-boot"
+kind = "behaviour"
+symbol = "class Karni: natural_key, import_key"
+summary = """\
+karni check (and every manage.py command that runs the system checks) fails with \
+karni.E291 when Karni.natural_key or import_key is not one field name of the model: a list \
+such as ["name"], or a name the model does not have. Before, the project booted and every \
+request that read the model answered 500. Write the field name as a string."""
+mechanical = false
+migration = "migrations/0.5.md#natural_key-and-import_key-are-checked-at-boot"

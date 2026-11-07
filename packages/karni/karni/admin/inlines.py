@@ -37,21 +37,62 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from django import forms
 from django.contrib.admin.options import InlineModelAdmin
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.http import HttpRequest
+from django.utils.text import capfirst
 from unfold.admin import TabularInline
 
 from karni.admin.derive import admin_meta, password_field_names
 from karni.db import is_read_only
 from karni.exceptions import KarniImproperlyConfigured
 
-__all__ = ["KarniInlineMixin", "build_inline", "collect_inlines"]
+__all__ = ["KarniInlineMixin", "build_inline", "collect_inlines", "label_tabular_fields"]
 
 #: One ``AdminMeta.inline_on`` declaration: the child model and the name of
 #: the FK on it that points at the parent.
 InlineSpec = tuple[type[models.Model], str]
+
+
+def _sub_label(label: Any, widget: forms.Widget, index: int, count: int) -> str:
+    if isinstance(widget, forms.DateInput):
+        return f"{label} (date)"
+    if isinstance(widget, forms.TimeInput):
+        return f"{label} (time)"
+    return f"{label} ({index + 1} of {count})"
+
+
+def label_tabular_fields(formset: Any) -> Any:
+    """Give each input of a tabular inline's rows an ``aria-label``: its column's label.
+
+    A tabular inline names its columns once, in the table head, and renders
+    the rows' inputs with no ``<label>``, so assistive technology has no name
+    for them (axe ``label``, critical). Each visible widget of the formset's
+    form gets its field's label, and each part of a split widget (a date and
+    a time) gets the label and the part. A widget that already carries
+    ``aria-label`` or ``aria-labelledby`` keeps it. Returns ``formset``.
+
+    The form class is the one ``get_formset`` just built, so the change is
+    local to it. Override / escape hatch: set ``aria-label`` on the widget
+    yourself (``formfield_overrides`` or the form), and it is kept.
+    """
+    for name, field in formset.form.base_fields.items():
+        widget = field.widget
+        if widget.is_hidden:
+            continue
+        label = capfirst(field.label or name.replace("_", " "))
+        parts = list(getattr(widget, "widgets", None) or [])
+        targets = parts or [widget]
+        for index, target in enumerate(targets):
+            attrs = target.attrs
+            if "aria-label" in attrs or "aria-labelledby" in attrs:
+                continue
+            attrs["aria-label"] = (
+                _sub_label(label, target, index, len(parts)) if parts else str(label)
+            )
+    return formset
 
 
 class KarniInlineMixin(InlineModelAdmin):  # type: ignore[type-arg]
@@ -77,6 +118,13 @@ class KarniInlineMixin(InlineModelAdmin):  # type: ignore[type-arg]
         from karni.meta import permission_key
 
         return user_can(getattr(request, "user", None), permission_key(self.model, action))
+
+    def get_formset(self, request: HttpRequest, obj: Any = None, **kwargs: Any) -> Any:
+        """Django's formset; a tabular inline's inputs get their column's name (axe ``label``)."""
+        formset = super().get_formset(request, obj, **kwargs)
+        if "tabular" in str(self.template):
+            label_tabular_fields(formset)
+        return formset
 
     def has_view_permission(self, request: HttpRequest, obj: Any = None) -> bool:
         return (

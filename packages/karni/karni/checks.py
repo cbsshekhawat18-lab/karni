@@ -473,6 +473,47 @@ def check_field_roles(app_configs: Any = None, **kwargs: Any) -> list[checks.Che
     return messages
 
 
+@checks.register(checks.Tags.models)
+def check_explicit_actions(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E290: every ``Karni.explicit_actions`` entry is an action of the model."""
+    from karni.meta import explicit_actions, model_actions
+
+    configs = app_configs if app_configs is not None else apps.get_app_configs()
+    messages: list[checks.CheckMessage] = []
+    for config in configs:
+        for model in config.get_models():
+            unknown = sorted(explicit_actions(model) - set(model_actions(model)))
+            if unknown:
+                messages.append(
+                    check_error(
+                        "E290",
+                        f"{model.__name__}.Karni.explicit_actions names "
+                        f"{', '.join(map(repr, unknown))}, which {model.__name__} has no "
+                        f"permission for (its actions: {', '.join(model_actions(model))}). "
+                        "Add it to Karni.actions or fix the name.",
+                        hint=_fix("E290"),
+                        obj=model,
+                    )
+                )
+    return messages
+
+
+@checks.register(checks.Tags.models)
+def check_key_fields(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E291: ``Karni.natural_key`` and ``import_key`` each name one field of the model."""
+    from karni.meta import key_field_problem
+
+    configs = app_configs if app_configs is not None else apps.get_app_configs()
+    messages: list[checks.CheckMessage] = []
+    for config in configs:
+        for model in config.get_models():
+            for option in ("natural_key", "import_key"):
+                problem = key_field_problem(model, option)
+                if problem is not None:
+                    messages.append(check_error("E291", problem, hint=_fix("E291"), obj=model))
+    return messages
+
+
 def _duplicate_serializer(viewset: type[Any], model: type[Any]) -> list[checks.CheckMessage]:
     """W101 when ``serializer_class`` is a plain ModelSerializer copy of the model.
 
@@ -1043,13 +1084,11 @@ def check_tree_scopes(app_configs: Any = None, **kwargs: Any) -> list[checks.Che
     the path's last step, the node a role grant of the scope reaches
     (experimental, :mod:`karni.accounts.tree_scope`).
     """
-    import fnmatch
-
     from django.conf import settings
     from django.contrib.auth import get_user_model
 
     from karni.accounts.grants import user_key
-    from karni.accounts.roles import declared_roles, permission_keys
+    from karni.accounts.roles import declared_roles, pattern_matches, permission_keys
     from karni.accounts.tree_scope import resolve_path, tree_path
 
     try:
@@ -1064,10 +1103,9 @@ def check_tree_scopes(app_configs: Any = None, **kwargs: Any) -> list[checks.Che
             kind, _, path = str(scope).partition(":")
             if kind != "tree" or not path:
                 continue
-            glob = "*:*" if pattern == "*" else pattern
             matched = list(
                 dict.fromkeys(
-                    model for key, model in keys.items() if fnmatch.fnmatchcase(key, glob)
+                    model for key, model in keys.items() if pattern_matches(pattern, key, model)
                 )
             )
             if not matched:

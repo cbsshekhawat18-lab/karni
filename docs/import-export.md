@@ -149,6 +149,13 @@ of a model. It is what exports write for a relation and what imports look
 up. If it is not declared, it is the model's first unique slug/char/email field
 (`slug`, `email`). A model with neither uses its primary key.
 
+A natural key is one field, written as a string. A cell of a file carries one
+value, so a key of several fields has no form there: `natural_key = ["name"]`
+fails `karni check` with [`E291`](errors.md#e291), which names the string
+form, and so does a field the model does not have. The same holds for
+`import_key`. For a row that only several fields name together, add one
+unique field that names it (a `SlugField` built from them).
+
 A relation cell is matched against the natural key alone, never also
 against the primary key. A numeric natural key (a year, a part number such
 as `2024`) is therefore never read as an id: on [integer keys](models.md#choosing-the-key-type)

@@ -89,7 +89,7 @@ and replaces the API response cache tokens once when it ends.
 
 | Action | For | What it does |
 |---|---|---|
-| Delete selected | users who may delete | A confirmation shows the count and the first ten rows, then deletes. A model with soft delete moves the rows to Deleted and the page says they can be restored |
+| Delete selected | users who may delete | A confirmation shows the count and the first ten rows, then deletes. A model with soft delete moves the rows to Deleted, keeps the rows that refer to them (a `PROTECT` foreign key does not block it), and the page says they can be restored |
 | Restore selected | soft-delete models, users who may change | Restores the selected deleted rows, one `restore()` each (open the **Deleted** filter to select them) |
 | Edit selected | users who may change | A form lists the fields the user may change. Tick **Change** beside each field to set, give one value, confirm. Every selected row is saved one by one in one transaction |
 | Export selected as CSV or XLSX | users who may view | Karni's export of the selection, columns the user may see |
@@ -204,7 +204,10 @@ Other recognized attrs are `exclude = True` (skip registration),
 `inline_on = "fk_field"` and `register = True` (opt an `AbstractBaseUser`
 subclass in). `inline_on` goes on the child side and generates a
 `TabularInline` on the parent's admin. A list of FK names is allowed, and the
-child stays registered on its own too. `extra` is the catch-all escape hatch:
+child stays registered on its own too. A tabular inline names its columns
+only in the table head, so Karni gives each input of its rows an
+`aria-label` with the column's name (`karni.admin.inlines.label_tabular_fields`,
+which `KarniInlineMixin` calls for a tabular inline of your own too). `extra` is the catch-all escape hatch:
 it takes anything a `ModelAdmin` accepts.
 
 Precedence: explicit `admin.site.register` (project `admin.py`) >
@@ -420,9 +423,12 @@ Behavioural fine print (by design, see the `karni/models.py` docstrings):
 - Soft deletes send **no** `pre_delete`/`post_delete` signals and do **not**
   cascade to related rows. Hard deletion is only ever the explicit
   `hard_delete()` / admin hard-delete action.
-- The one-row Delete page uses Django's collector, so it lists cascade
-  children that a *soft* delete will not actually touch. The *Delete selected*
-  page shows the count and a sample instead, and says the rows can be restored.
+- A soft delete changes only the selected rows, so neither the row's Delete
+  page nor *Delete selected* lists related rows or refuses a row that a
+  `PROTECT` foreign key points from: they soft-delete it, as the API does, and
+  say that the rows that refer to it are kept. *Hard delete selected* still
+  lists what the cascade removes and refuses a row that `PROTECT` keeps. A row
+  the user may not delete is refused on both.
 
 ## Theming
 

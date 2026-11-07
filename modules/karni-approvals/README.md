@@ -65,7 +65,10 @@ approver roles `KARNI_ROLES` does not declare (`APR007`).
   - The maker can never be the checker (`APR002`), superuser or not.
   - A checker needs the `karni_approvals.pendingchange:approve` (or
     `:reject`) grant and, when the model declares `approver_roles`, one of
-    those roles (`APR003`).
+    those roles (`APR003`). The grant must name the action: a wildcard
+    (`"*": "own"`, `"*": "all"`, `"karni_approvals.pendingchange:*"`) never
+    reaches `approve` or `reject` (`class Karni: explicit_actions`), so the
+    default roles make nobody a checker.
   - A checker sees and decides only pending changes whose row lies inside
     their own scope, which for a branch checker is their branch (`APR003`).
     A create has no row yet and is visible to whoever may view every row of

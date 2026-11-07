@@ -22,6 +22,12 @@ either part) to a **scope** — which rows the action reaches:
                         :mod:`karni.accounts.tree_scope`)
 ======================  =====================================================
 
+A wildcard never reaches an action the model lists in
+``Karni.explicit_actions`` (:func:`pattern_matches`): ``"*": "own"`` holds
+``shop.order:view`` but not ``shop.order:refund``, which only a grant that
+writes the action out gives (``"shop.order:refund"``, ``"*:refund"``). The
+modules mark their dangerous actions this way (impersonate, approve, reject).
+
 ``karni sync-roles`` (``manage.py karni_sync_roles``) expands the patterns
 against every model and its actions (the standard four plus
 ``Karni.actions``) into :class:`~karni.accounts.models.Role`,
@@ -67,7 +73,7 @@ from django.db import models, transaction
 from django.db.models import Q
 
 from karni.exceptions import KarniImproperlyConfigured, KarniValueError
-from karni.meta import model_actions, owner_field, permission_key, scope_paths
+from karni.meta import explicit_actions, model_actions, owner_field, permission_key, scope_paths
 
 __all__ = [
     "Grant",
@@ -80,6 +86,7 @@ __all__ = [
     "grant_sources",
     "grants_for",
     "module_roles",
+    "pattern_matches",
     "permission_keys",
     "register_scope",
     "requires",
@@ -264,6 +271,24 @@ def permission_keys() -> dict[str, type[models.Model]]:
     }
 
 
+def pattern_matches(pattern: str, key: str, model: type[models.Model]) -> bool:
+    """Does the grant ``pattern`` reach the permission ``key`` of ``model``?
+
+    ``fnmatch`` on ``app_label.model:action`` (``"*"`` alone is ``"*:*"``),
+    except for an action in ``Karni.explicit_actions``: only a pattern whose
+    action part is that action, written out, reaches it. ``"*"`` and
+    ``"shop.order:*"`` skip ``shop.order:refund``; ``"shop.order:refund"``
+    and ``"*:refund"`` reach it.
+    """
+    glob = "*:*" if pattern == "*" else pattern
+    if not fnmatch.fnmatchcase(key, glob):
+        return False
+    action = key.rsplit(":", 1)[1]
+    if action not in explicit_actions(model):
+        return True
+    return glob.rsplit(":", 1)[1] == action
+
+
 def expand_grants(spec: RoleSpec, keys: Mapping[str, type[models.Model]]) -> list[Grant]:
     """Resolve a role's patterns against the project's permission keys.
 
@@ -275,17 +300,29 @@ def expand_grants(spec: RoleSpec, keys: Mapping[str, type[models.Model]]) -> lis
     wildcard simply skips such models — ``"*": "own"`` means "everything
     that can be owned". A ``tree:<path>`` on an explicit key whose model has
     no such path to a tree model is ``E490``, and a wildcard skips the model.
+    A wildcard also skips every action in ``Karni.explicit_actions``
+    (:func:`pattern_matches`), and so it never overwrites a grant that
+    names one.
     """
     resolved: dict[str, Grant] = {}
     for pattern, scope in spec.grants.items():
         glob = "*:*" if pattern == "*" else pattern
         explicit = "*" not in glob.split(":", 1)[0]
-        matched = [key for key in keys if fnmatch.fnmatchcase(key, glob)]
-        if not matched:
+        named = [key for key in keys if fnmatch.fnmatchcase(key, glob)]
+        if not named:
             raise KarniImproperlyConfigured(
                 f"{SETTING}[{spec.slug!r}]: grant pattern {pattern!r} matches no permission. "
                 "Keys look like 'events.event:view'. A model's extra actions come from "
                 "`class Karni: actions = [...]`.",
+                code="E206",
+            )
+        matched = [key for key in named if pattern_matches(pattern, key, keys[key])]
+        if not matched:
+            raise KarniImproperlyConfigured(
+                f"{SETTING}[{spec.slug!r}]: grant pattern {pattern!r} matches only actions a "
+                f"wildcard never reaches ({', '.join(named)}, in `class Karni: "
+                "explicit_actions`). Write each one out, e.g. "
+                f"{named[0]!r}.",
                 code="E206",
             )
         kind, path = _scope_parts(scope, f"role {spec.slug!r}, grant {pattern!r}")

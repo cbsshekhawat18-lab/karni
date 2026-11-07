@@ -1988,6 +1988,39 @@ apply codemods and list the manual steps. This file is the human summary.
   `docker-compose.yml` now mounts the repository's checkout by its relative
   path, as EventHub does.
 - **docs/robots.txt** lets every crawler read every page with one rule.
+- **Security: a wildcard role no longer impersonates or approves.** The
+  scaffold's `user` and `customer` (`"*": "own"`) and `staff` (`"*": "all"`)
+  roles reached every action a model declares, so once karni-impersonation
+  was added any signed-in user could act as another user of the same grants
+  (201 with that user's tokens), and once karni-approvals was added the owner
+  of a row could approve someone else's change to it. A model now lists in
+  `class Karni: explicit_actions` the actions only a grant that names them
+  reaches, and a wildcard in a role or a user grant skips them. The modules
+  mark `impersonate`, `approve` and `reject`. `karni check` refuses a name
+  that is not one of the model's actions (`karni.E290`). The next
+  `karni migrate` takes the grants back from wildcard roles: grant them by
+  name to the roles that need them. See
+  [migrating](docs/migrations/0.5.md#wildcard-grants-skip-impersonate-approve-and-reject-security).
+- **The admin soft-deletes a row a `PROTECT` foreign key points at.** The
+  row's Delete page and *Delete selected* ran Django's hard-delete collector
+  on soft-delete models, so a row with `PROTECT` children was refused ("Other
+  rows depend on them") while the API soft-deleted it (204). Since `karni build`
+  writes `PROTECT` on the required foreign keys of audited models, no dataset
+  of the data-portal recipe could be deleted from the admin. A soft delete now
+  names only the selected rows, both pages say the rows that refer to them are
+  kept, and *Hard delete selected* keeps the cascade list and the refusal.
+- **The inputs of the admin's tabular inlines have a name.** The user page's
+  grants inline (`#id_user_grants-0-permission` and the rest of its row) and
+  every generated inline rendered their inputs with no label, which axe
+  reports as `label` (critical). Each input now carries an `aria-label` with
+  its column's name, and the parts of a date and time field say which part
+  they are.
+- **`natural_key = ["name"]` fails `karni check`.** A list passed the check,
+  then every request that read the model answered 500 ("natural_key names
+  \"['name']\", which the model does not have"). `karni check` now refuses a
+  `natural_key` or `import_key` that is not one field name of the model with
+  `karni.E291`, which names the string form, and the readers raise the same
+  message. A natural key stays one field: a cell of a file carries one value.
 
 ## 0.4.0 (2026-10-22)
 

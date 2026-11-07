@@ -101,6 +101,41 @@ def test_the_users_page_lists_their_grants_while_on(root: Any, settings: Setting
     assert "user_grants-TOTAL_FORMS" not in page
 
 
+def test_every_input_of_the_grants_inline_has_a_name(root: Any) -> None:
+    """axe ``label`` (F11): the tabular rows' inputs carry their column's name."""
+    from html.parser import HTMLParser
+
+    class Inputs(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__()
+            self.found: dict[str, dict[str, str | None]] = {}
+            self.labelled: set[str] = set()
+
+        def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+            found = dict(attrs)
+            if tag == "label" and found.get("for"):
+                self.labelled.add(str(found["for"]))
+            name = str(found.get("name") or "")
+            if tag in ("input", "select", "textarea") and name.startswith("user_grants-"):
+                if found.get("type") != "hidden":
+                    self.found[str(found.get("id") or name)] = found
+
+    guest = _user("guest@example.com")
+    grants.grant(None, guest, VIEW, "all", reason="pilot access")
+    page = _signed_in(root).get(f"/admin/karni_accounts/user/{guest.pk}/change/")
+    parser = Inputs()
+    parser.feed(page.content.decode())
+    assert "id_user_grants-0-permission" in parser.found
+    unnamed = [
+        key
+        for key, attrs in parser.found.items()
+        if not attrs.get("aria-label") and key not in parser.labelled
+    ]
+    assert unnamed == []
+    assert parser.found["id_user_grants-0-permission"]["aria-label"] == "Permission"
+    assert parser.found["id_user_grants-0-expires_at_0"]["aria-label"] == "Expires at (date)"
+
+
 def test_the_inline_adds_a_grant_with_granted_by(root: Any) -> None:
     arena = Venue.objects.create(name="Arena", city="Pune")
     guest = _user("guest@example.com")

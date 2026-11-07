@@ -35,6 +35,7 @@ delete_selected_confirmation_template on the admin class.
   <p>
     {% if karni_soft %}{% translate "They move to Deleted and can be restored from the list." %}{% else %}{% translate "This cannot be undone." %}{% endif %}
   </p>
+  {% if karni_soft %}<p class="karni-note">{% translate "This is a soft delete: rows that refer to them are kept as they are, and their links to them keep working." %}</p>{% endif %}
   <ul class="karni-sample">
     {% for obj in queryset|slice:":10" %}<li>{{ obj }}</li>{% endfor %}
   </ul>
