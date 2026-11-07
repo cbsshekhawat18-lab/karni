@@ -152,6 +152,12 @@ role that may write, as the example above does with `"organizer"`. When the
 refusals are the point of the test, pin them with `expect={"create": 403,
 ...}` and the warning stays quiet.
 
+When the declaration admits a write and the API answers 403 all the same, a
+`perform_create` or another check in code refused it. The failure says so and
+names the way to declare the rule instead (`create: role:<slug>` in
+karni.yaml, or a role's grants without `:delete`), so the API, its schema and
+the test agree.
+
 ### A required relation the role cannot reference
 
 A relation accepts only rows the requester may read through the target's
@@ -211,7 +217,10 @@ responses, and every export format), with a row pointing at it created when
 none exists. For the `grant` dimension the admin is checked too (the
 changelist, its search, the change form and a POST to it), since the admin's
 rows follow the roles' grants. Last, a create body naming another owner is
-ignored and stamped with the requester. It runs for every isolation
+ignored and stamped with the requester. When the body wins, the failure says
+whether the declaration stamps that field (then a `perform_create` or a
+serializer took it from the body) or names `owned:<field>` for `write` or
+`create`, which makes Karni stamp it. It runs for every isolation
 dimension that applies. Two ship with Karni: `owner` (any `Owned(...)` read
 path) and `grant` (a `Granted()` or `Can` read where the role's grant for the
 model's `view` permission is `own` or `related:<key>`, with distinct related

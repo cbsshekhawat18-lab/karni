@@ -1976,6 +1976,15 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ### Fixed
 
+- **A generated test that fails on a rule only code enforces says how to
+  declare it.** When `perform_create` refused staff, `assert_crud` reported
+  "answered 403, expected 201" and the agent changed `access` by trial, with a
+  build after each try. A 403 where the declaration admits the request now
+  says something else refused it and names the karni.yaml way (`create:
+  role:<slug>`, or a role's grants without `:delete`). When a create body
+  chooses the owner, `assert_isolated` says whether the declaration stamps
+  that field (then the project's `perform_create` or serializer took it from
+  the body) or names `owned:<field>` for `write` or `create`.
 - **`karni spec validate` names the access rule a near miss stands for.** An
   access value such as `staff`, `signed_in`, `own` or `owner:member` was
   refused with the list of words and no word of which one was meant, and

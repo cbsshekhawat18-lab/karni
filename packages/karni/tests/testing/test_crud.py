@@ -205,6 +205,18 @@ def test_an_owner_that_is_not_stamped_fails_create() -> None:
     )
 
 
+def test_a_refusal_access_does_not_declare_says_to_declare_it() -> None:
+    """A 403 from code where access admits the request names the karni.yaml way."""
+    _fails(
+        crud_urls.RefusingEventViewSet,
+        "organizer",
+        "create: POST /api/refusing-events/ answered 403, expected 201",
+        "Organizers book through the desk.",
+        "The access declaration admits this request, so something else refused it",
+        "karni.yaml: create: role:<slug>",
+    )
+
+
 def test_a_viewset_without_access_fails_naming_the_fix() -> None:
     _fails(
         crud_urls.UndeclaredEventViewSet,
