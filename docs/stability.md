@@ -181,6 +181,8 @@ Experimental now:
   setting, `karni make model --pk`, `karni.api.filters.IntegerFilter`, the
   import options `match_ids` and `keep_ids` (with the `ImportJob` fields of
   the same names), and the `KEYS:` line of `karni context`.
+- The `API:` line of `karni context` (`karni.introspect.api_section`): how a
+  list pages, read from the project's paginator.
 - [External tables, views and a second database](models.md#external-tables-views-and-a-second-database):
   the `class Karni` options `external`, `writable` and `database`, `karni.db`
   (with `DatabaseRouter`, `karni.db.checks` and `karni.db.introspection`),

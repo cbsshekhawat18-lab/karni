@@ -709,6 +709,12 @@ at startup.
 Every list is paginated by a `karni.pagination.KarniPagination` subclass:
 `KarniPageNumberPagination` (default: `?page=`, `?page_size=`) or
 `KarniCursorPagination` (`?cursor=`, with no `COUNT(*)` for very large tables).
+A page holds the rows in the model's ordering (`Meta.ordering`, karni.yaml's
+`order`), else newest first, so a row just created is on the first page only
+when the order puts it there. `karni context` states the project's own values
+on its `API:` line (experimental): `API: lists answer {count, next, previous,
+results}, 50 rows a page (?page=, ?page_size= up to 100), in the model's
+ordering, else newest first`.
 
 - **Hard cap.** `?page_size=` and the default `PAGE_SIZE` (env
   `KARNI_PAGE_SIZE`, 50) are capped at `KARNI_MAX_PAGE_SIZE` (env, default

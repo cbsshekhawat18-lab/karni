@@ -1976,6 +1976,12 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ### Fixed
 
+- **`karni context` says how a list pages.** Nothing an agent reads said that
+  lists answer 50 rows a page in the model's ordering, so an agent that
+  ordered a list by name and created rows in its own test runs missed its new
+  row on page 1. A new `API:` line (experimental) states the envelope, the
+  page size, the `?page_size=` cap and the default order, read from the
+  project's paginator.
 - **A generated test that fails on a rule only code enforces says how to
   declare it.** When `perform_create` refused staff, `assert_crud` reported
   "answered 403, expected 201" and the agent changed `access` by trial, with a
