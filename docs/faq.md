@@ -47,8 +47,8 @@ lines of project code, as measured in the [tutorial](tutorial.md).
 
 ## Is Karni production-ready?
 
-Not yet. Karni 0.4.0 was released on 2026-10-22 with Django 5.2 LTS and
-Python 3.12 to 3.14, two reference applications and CI on every push. CI
+Not yet. Karni 0.5.0 runs on Django 5.2 LTS and Python 3.12 to 3.14, with
+two reference applications and CI on every push. CI
 also boots a new project's production stack ([deploying to a server](deploy.md))
 and smoke-tests it, but Karni has no known production deployment. Teams that
 need a framework with years of production use should
@@ -72,7 +72,7 @@ better served by its current stack until such a path exists.
 
 ## Which Python, Django and React versions does Karni support?
 
-Karni 0.4.0 supports Python 3.12, 3.13 and 3.14, Django 5.2 LTS, Django REST
+Karni 0.5.0 supports Python 3.12, 3.13 and 3.14, Django 5.2 LTS, Django REST
 Framework and React 18 with TypeScript, and CI tests every Python version on
 each push. Python 3.12 is the floor because Karni's admin is built on
 django-unfold, whose current releases require Python 3.12.

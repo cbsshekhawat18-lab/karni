@@ -51,13 +51,18 @@ markdown_extensions:
       permalink: true
   - pymdownx.highlight:
       anchor_linenums: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.details
   - pymdownx.tabbed:
       alternate_style: true
 
 nav:
   - Home: index.md
+  - Features: features.md
   - Start here:
       - Quickstart: quickstart.md
       - "Tutorial: build EventHub": tutorial.md
