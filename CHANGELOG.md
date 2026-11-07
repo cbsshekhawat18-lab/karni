@@ -28,6 +28,10 @@ apply codemods and list the manual steps. This file is the human summary.
   `karni.yaml` it started `manage.py karni_check` and then `manage.py karni_facts`
   for the drift suggestion (SUG007). `karni_check` now hands the facts over in the
   suggestions file it already writes. The output is the same.
+- **Fixed: the Dashboard's count tiles had a screen-reader name of their own** ("Draft:
+  6. Open the list") that did not contain the visible text, which WCAG 2.5.3 refuses
+  (axe: label-content-name-mismatch). Their name is now the visible label and number,
+  then "Open the list".
 - **Fixed: the eventhub and social-leads examples locked Zod 3.25.76 and an affected
   seroval** (GHSA-mrhx-c7xc-m3w5, high; GHSA-9wx9-5pv9-3349 and GHSA-f86p-h4j2-7qgj,
   moderate). They now pin what the scaffold pins: Zod `^4.6.6` with

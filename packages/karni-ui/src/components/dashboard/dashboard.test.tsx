@@ -151,7 +151,11 @@ describe("Dashboard", () => {
     const onOpenList = vi.fn();
     render(<Dashboard now={() => NOW} onOpen={onOpen} onOpenList={onOpenList} />);
     const section = await screen.findByRole("region", { name: "Events" });
-    await user.click(await within(section).findByRole("button", { name: /^Draft: 6/ }));
+    const draft = await within(section).findByRole("button", { name: /^Draft/ });
+    // Its name is its visible text and the hint, never a label of its own (WCAG 2.5.3).
+    expect(draft).not.toHaveAttribute("aria-label");
+    expect(draft).toHaveAccessibleName(/^Draft\s*6\s*Open the list$/);
+    await user.click(draft);
     expect(onOpenList).toHaveBeenCalledWith("events", { status: "draft" });
     await user.click(within(section).getByRole("button", { name: "All events" }));
     expect(onOpenList).toHaveBeenLastCalledWith("events", {});

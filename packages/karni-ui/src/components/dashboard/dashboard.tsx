@@ -275,9 +275,11 @@ function DefaultCount(props: DashboardCountProps): React.ReactElement | null {
       type="button"
       onClick={onOpen}
       className="rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      aria-label={`${count.label}: ${value?.toLocaleString() ?? "loading"}. Open the list`}
     >
+      {/* The name is the tile's own text, then the hint: an aria-label that differs
+          from the visible label fails WCAG 2.5.3 (axe: label-content-name-mismatch). */}
       {tile}
+      <span className="sr-only">Open the list</span>
     </button>
   );
 }
