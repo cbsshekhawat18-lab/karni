@@ -1,17 +1,21 @@
+import { protectedFileLinkFor } from "../protected-file";
+import { HEADING_TAGS, nextHeadingLevel, type HeadingLevel } from "../../../lib/heading";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
+import { AuthContext } from "../../../auth/provider";
 import { karniKeys } from "../../../hooks/keys";
 import type { ResourceItemParams } from "../../../hooks/types";
 import { useResourceItem } from "../../../hooks/useResourceItem";
 import { useResourceMutations } from "../../../hooks/useResourceMutations";
 import { cn } from "../../../lib/cn";
 import { registerComponentRole } from "../../../lib/roles";
-import type { FieldDef } from "../../../schema/types";
+import type { FieldDef, FieldGroupDef, FieldGroupLayout } from "../../../schema/types";
 import { useSchema } from "../../../schema/useSchema";
 import { describeError } from "../../../states/describe-error";
 import { ErrorState, type ErrorSlotProps } from "../../../states/ErrorState";
 import { useDelayedFlag, useOnlineStatus } from "../../../states/hooks";
 import { PendingButton } from "../../../states/PendingButton";
+import { MarkdownView } from "../../markdown/markdown-view";
 import { Modal, ModalClose } from "../../modal/modal";
 import { Button } from "../../primitives/button";
 import { CheckIcon, SearchIcon } from "../../primitives/icons";
@@ -19,9 +23,42 @@ import { Skeleton } from "../../primitives/skeleton";
 import { partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
 import { EmptyValue } from "../empty-value";
+import { chosenGroups, chosenLayout, groupFields, GroupedFields } from "../field-groups";
 import { humanizeValue } from "../form/prepare";
+import { isMarkdownField } from "../markdown-field";
 import { singularNoun } from "../nouns";
+import { formatNumberValue } from "../number-value";
 import { offlineError, useRetryUnlessClientError, useRetryWhenOnline } from "../query-state";
+import { evaluateAccess } from "../table/access";
+import { TreeBreadcrumb, type TreeBreadcrumbProps } from "../tree/TreeBreadcrumb";
+import {
+  DefaultRelated,
+  RelatedTabs,
+  type ResourceDetailRelated,
+  type ResourceDetailRelatedProps,
+  type ResourceDetailRelatedTab,
+} from "./related";
+import {
+  DefaultTransitions,
+  TransitionConfirm,
+  TransitionFailure,
+  askFirst,
+  stateLabel,
+  transitionError,
+  transitionTargets,
+  type ResourceDetailTransitionOptions,
+  type ResourceDetailTransitionTarget,
+  type ResourceDetailTransitionsProps,
+} from "./transitions";
+
+export type {
+  ResourceDetailRelated,
+  ResourceDetailRelatedProps,
+  ResourceDetailRelatedTab,
+  ResourceDetailTransitionOptions,
+  ResourceDetailTransitionTarget,
+  ResourceDetailTransitionsProps,
+};
 
 registerComponentRole("detail-view", "ResourceDetail");
 
@@ -101,14 +138,37 @@ export interface ResourceDetailSlots {
   DeleteDialog: React.ComponentType<ResourceDetailDeleteDialogProps>;
   /** Shown in place of the record once it is deleted from this view. */
   Deleted: React.ComponentType<ResourceDetailDeletedProps>;
+  /** The lifecycle buttons of one StateField (see the `transitions` prop). */
+  Transitions: React.ComponentType<ResourceDetailTransitionsProps>;
+  /** Experimental. The path above a node of a tree resource (see the `breadcrumb` prop). */
+  Breadcrumb: React.ComponentType<TreeBreadcrumbProps>;
+  /** Experimental. The related tabs (see the `related` prop): one ResourceTable per tab. */
+  Related: React.ComponentType<ResourceDetailRelatedProps>;
 }
 
+/** Experimental. Links for the breadcrumb of a tree resource's record. */
+export type ResourceDetailBreadcrumbOptions = Pick<TreeBreadcrumbProps, "href" | "onNavigate">;
+
 export interface ResourceDetailProps {
+  /**
+   * The level of the page title (`title`). Default 2, the level under a page's
+   * `<h1>`. The field groups and the record block take the next level when a
+   * title shows, and this level when none does.
+   */
+  headingLevel?: HeadingLevel;
   resource: string;
   id: string | number;
   fields?: Record<string, ResourceDetailFieldOverride>;
   /** Appended below the field list (e.g. a child <ResourceTable>), even while the record loads. */
   sections?: ReadonlyArray<React.ReactNode>;
+  /**
+   * Experimental. A tab per reverse relation, each a ResourceTable of the
+   * related rows filtered to this record: `related={["deals", "people"]}`.
+   * A name is the relation's name, its resource, or `resource.field` when two
+   * relations lead to one resource (the backend publishes them as
+   * `x-karni-related`). An object sets the tab's label and table props.
+   */
+  related?: ReadonlyArray<string | ResourceDetailRelated>;
   expand?: readonly string[];
   /** The heading. A function receives the loaded record. A placeholder stands in until then. */
   title?: React.ReactNode | ((item: Item) => React.ReactNode);
@@ -128,8 +188,32 @@ export interface ResourceDetailProps {
   canDelete?: boolean | ((item: Item) => boolean);
   /** Called after a confirmed delete succeeded (navigate away from here). */
   onDeleted?: (item: Item) => void;
+  /**
+   * Lifecycle buttons for a StateField (`x-karni-transitions` in the schema):
+   * one per state the record's current state may move to, shown when the API
+   * lets this user write the field. A click PATCHes the field, and a move into
+   * a terminal state asks first. Default true. `false` hides them, and an
+   * object tunes them (fields, button labels, which moves ask, who may).
+   */
+  transitions?: boolean | ResourceDetailTransitionOptions;
+  /** Called after a lifecycle move succeeded, with the record as the server returned it. */
+  onTransition?: (item: Item, field: string, target: string) => void;
+  /**
+   * Experimental. On a tree resource (`x-karni-tree`), the path from the root
+   * to this record above it, from `ancestors/`. Default true. `false` hides
+   * it, and an object gives its ancestors links (`href`, `onNavigate`).
+   */
+  breadcrumb?: boolean | ResourceDetailBreadcrumbOptions;
   /** Replace parts of the view: Loading, Error, NotFound, EmptyValue, DeleteDialog, Deleted. */
   slots?: Partial<ResourceDetailSlots>;
+  /**
+   * Experimental. The groups the fields show in, as sections or tabs. Default:
+   * the model's `Karni.field_groups` (`x-karni-field-groups`). The fields in no
+   * group come last, under "Other". `false` shows one list.
+   */
+  fieldGroups?: false | readonly FieldGroupDef[];
+  /** Experimental. `"sections"` or `"tabs"`. Default: the model's `field_group_layout`. */
+  groupLayout?: FieldGroupLayout;
   className?: string;
 }
 
@@ -196,6 +280,8 @@ function DefaultValue(props: {
 }): React.ReactElement {
   const { field, value, Empty } = props;
   if (isEmpty(value)) return <Empty field={field} />;
+  // A MarkdownField: formatted, sanitized HTML (raw HTML in it shows as text).
+  if (isMarkdownField(field)) return <MarkdownView source={String(value)} />;
   switch (field.kind) {
     case "boolean":
       return <>{value ? "Yes" : "No"}</>;
@@ -207,7 +293,16 @@ function DefaultValue(props: {
       return <>{field.enumLabels?.[String(value)] ?? humanizeValue(String(value))}</>;
     case "relation":
       return <RelationValue value={value} />;
-    case "file":
+    case "file": {
+      const Protected = protectedFileLinkFor(field);
+      if (Protected !== null) {
+        return (
+          <Protected
+            href={String(value)}
+            className="rounded-sm font-medium text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+        );
+      }
       return (
         <a
           href={String(value)}
@@ -218,6 +313,7 @@ function DefaultValue(props: {
           {fileBasename(String(value))}
         </a>
       );
+    }
     case "json":
       return (
         <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">
@@ -226,7 +322,7 @@ function DefaultValue(props: {
       );
     case "number":
     case "integer":
-      return <>{typeof value === "number" ? value.toLocaleString() : String(value)}</>;
+      return <>{typeof value === "number" ? formatNumberValue(field, value) : String(value)}</>;
     case "array":
       return <>{Array.isArray(value) ? value.map(String).join(", ") : String(value)}</>;
     default:
@@ -423,7 +519,10 @@ export const defaultResourceDetailSlots: ResourceDetailSlots = {
   NotFound: DefaultNotFound,
   EmptyValue: DefaultEmptyValue,
   DeleteDialog: DefaultDeleteDialog,
+  Related: DefaultRelated,
   Deleted: DefaultDeleted,
+  Transitions: DefaultTransitions,
+  Breadcrumb: TreeBreadcrumb,
 };
 
 function DetailRow(props: {
@@ -435,15 +534,24 @@ function DetailRow(props: {
 }): React.ReactElement {
   const { field, item, override, muted, Empty } = props;
   const value = item[field.name];
+  // Long-form markdown reads across the whole width, under its label.
+  const wide = isMarkdownField(field) && override?.render === undefined;
   return (
     <div
       className={cn(
-        "grid grid-cols-1 gap-1 sm:grid-cols-3 sm:gap-4",
+        "grid grid-cols-1 gap-1",
+        !wide && "sm:grid-cols-3 sm:gap-4",
         muted ? "py-2 text-xs" : "py-3 text-sm",
       )}
+      data-karni-field={field.name}
     >
       <dt className="font-medium text-muted-foreground">{override?.label ?? field.label}</dt>
-      <dd className={cn("sm:col-span-2", muted ? "text-muted-foreground" : "text-foreground")}>
+      <dd
+        className={cn(
+          !wide && "sm:col-span-2",
+          muted ? "text-muted-foreground" : "text-foreground",
+        )}
+      >
         {override?.render !== undefined ? (
           override.render(value, item)
         ) : (
@@ -452,6 +560,31 @@ function DetailRow(props: {
       </dd>
     </div>
   );
+}
+
+/** The lifecycle fields of this record that show buttons, with their targets. */
+function lifecycleControls(
+  fields: readonly FieldDef[],
+  item: Item,
+  options: ResourceDetailTransitionOptions,
+  mayUpdate: () => boolean,
+): Array<{ field: FieldDef; current: string; targets: ResourceDetailTransitionTarget[] }> {
+  const chosen = fields.filter(
+    (field) =>
+      field.transitions !== undefined &&
+      (options.fields === undefined || options.fields.includes(field.name)),
+  );
+  if (chosen.length === 0 || !mayUpdate()) return [];
+  const found: Array<{
+    field: FieldDef;
+    current: string;
+    targets: ResourceDetailTransitionTarget[];
+  }> = [];
+  for (const field of chosen) {
+    const entry = transitionTargets(field, item, options);
+    if (entry !== null) found.push({ field, ...entry });
+  }
+  return found;
 }
 
 function allowed(rule: boolean | ((item: Item) => boolean) | undefined, item: Item): boolean {
@@ -494,16 +627,23 @@ function shownFields(
  * when it can help (it refetches the schema too when that failed). Offline
  * says so and reloads when the connection returns.
  *
+ * A MarkdownField shows formatted and sanitized (MarkdownView), across the
+ * width. A model with `Karni.field_groups` shows its domain fields in those
+ * groups, as sections or tabs (experimental), the fields in no group last.
+ *
  * Escape hatches: per-field `fields` overrides (label/hidden/render, audit
  * fields included), appended `sections`, the title/actions header, the
- * `canEdit`/`canDelete` predicates, and `slots` for every state.
+ * `canEdit`/`canDelete` predicates, `fieldGroups` / `groupLayout`, and
+ * `slots` for every state.
  */
 export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
   const {
     resource,
     id,
+    headingLevel = 2,
     fields,
     sections,
+    related,
     expand,
     title,
     actions,
@@ -514,7 +654,12 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
     enableDelete = false,
     canDelete,
     onDeleted,
+    transitions = true,
+    onTransition,
+    breadcrumb = true,
     slots,
+    fieldGroups,
+    groupLayout,
     className,
   } = props;
   const Slots: ResourceDetailSlots = { ...defaultResourceDetailSlots, ...slots };
@@ -526,7 +671,23 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
 
   const schemaResult = useSchema(resource);
   const schemaFetching = useIsFetching({ queryKey: karniKeys.schema() }) > 0;
-  const { remove } = useResourceMutations(resource);
+  const { remove, update } = useResourceMutations(resource);
+  const auth = React.useContext(AuthContext);
+  const authStatus = auth?.status;
+  const authUser = auth?.user ?? null;
+  const identity = React.useMemo(
+    () => (authStatus === undefined ? null : { status: authStatus, user: authUser }),
+    [authStatus, authUser],
+  );
+  // lifecycle moves: the one asking for confirmation, the one saving, the last failure
+  const [asking, setAsking] = React.useState<{ field: string; target: string } | null>(null);
+  const [moving, setMoving] = React.useState<{ field: string; target: string } | null>(null);
+  const [moveFailure, setMoveFailure] = React.useState<{
+    field: FieldDef;
+    target: string;
+    error: unknown;
+  } | null>(null);
+  const [moved, setMoved] = React.useState("");
   const params: ResourceItemParams | undefined = React.useMemo(
     () => (expand !== undefined && expand.length > 0 ? { expand } : undefined),
     [expand],
@@ -635,8 +796,48 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
       : undefined;
   const mayEdit = onEdit !== undefined && canEdit !== false;
   const mayDelete = enableDelete && canDelete !== false;
-  const hasHeader = title !== undefined || actions !== undefined || mayEdit || mayDelete;
+  const transitionOptions: ResourceDetailTransitionOptions | null =
+    transitions === false ? null : transitions === true ? {} : transitions;
+  const lifecycle =
+    transitionOptions !== null && schema !== undefined && item !== undefined && !deleting
+      ? lifecycleControls(schema.fields, item, transitionOptions, () =>
+          schema.operations.update === undefined
+            ? false
+            : evaluateAccess(schema.operations.update.access, identity, item) !== false,
+        )
+      : [];
+  const hasLifecycle = lifecycle.length > 0;
+  const hasHeader =
+    title !== undefined || actions !== undefined || mayEdit || mayDelete || hasLifecycle;
 
+  const move = (field: FieldDef, target: string): void => {
+    if (item === undefined) return;
+    setAsking(null);
+    setMoveFailure(null);
+    setMoved("");
+    setMoving({ field: field.name, target });
+    update.mutate(
+      { id, values: { [field.name]: target } },
+      {
+        onSuccess: (saved) => {
+          setMoving(null);
+          setMoved(`${field.label} changed to ${stateLabel(field, target)}.`);
+          onTransition?.(saved, field.name, target);
+        },
+        onError: (failure) => {
+          setMoving(null);
+          setMoveFailure({ field, target, error: failure });
+        },
+      },
+    );
+  };
+  const askedFor =
+    asking === null ? undefined : lifecycle.find((entry) => entry.field.name === asking.field);
+  const askedTarget = askedFor?.targets.find((target) => target.value === asking?.target);
+
+  const TitleHeading = HEADING_TAGS[headingLevel];
+  const sectionLevel = title === undefined ? headingLevel : nextHeadingLevel(headingLevel);
+  const SectionHeading = HEADING_TAGS[sectionLevel];
   const header = hasHeader ? (
     <div className="flex flex-wrap items-center justify-between gap-3">
       {title === undefined ? (
@@ -648,12 +849,14 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
             <Skeleton className={cn("h-5 w-32 sm:w-48", !slow && "invisible")} />
           </div>
         ) : (
-          <h2 className="text-lg font-semibold tracking-tight">{title(item)}</h2>
+          <TitleHeading className="text-lg font-semibold tracking-tight">
+            {title(item)}
+          </TitleHeading>
         )
       ) : (
-        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        <TitleHeading className="text-lg font-semibold tracking-tight">{title}</TitleHeading>
       )}
-      {actions !== undefined || mayEdit || mayDelete ? (
+      {actions !== undefined || mayEdit || mayDelete || hasLifecycle ? (
         <div className="flex flex-wrap items-center gap-2">
           {item === undefined ? (
             <>
@@ -667,6 +870,26 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
             </>
           ) : (
             <>
+              {lifecycle.map((entry) => (
+                <Slots.Transitions
+                  key={entry.field.name}
+                  field={entry.field}
+                  item={item}
+                  current={entry.current}
+                  currentLabel={stateLabel(entry.field, entry.current)}
+                  targets={entry.targets}
+                  pending={moving?.field === entry.field.name ? moving.target : null}
+                  onMove={(target) => {
+                    const chosen = entry.targets.find((candidate) => candidate.value === target);
+                    if (chosen === undefined) return;
+                    if (askFirst(transitionOptions?.confirm, chosen)) {
+                      setAsking({ field: entry.field.name, target });
+                    } else {
+                      move(entry.field, target);
+                    }
+                  }}
+                />
+              ))}
               {typeof actions === "function" ? actions(item) : actions}
               {onEdit !== undefined && mayEdit && allowed(canEdit, item) ? (
                 <Button variant="outline" onClick={() => onEdit(item)}>
@@ -692,6 +915,31 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
     </div>
   ) : null;
 
+  const breadcrumbLinks: ResourceDetailBreadcrumbOptions =
+    typeof breadcrumb === "object" ? breadcrumb : {};
+  const path =
+    breadcrumb !== false &&
+    schema?.tree !== undefined &&
+    schema.operations.ancestors !== undefined ? (
+      <Slots.Breadcrumb
+        resource={resource}
+        id={id}
+        item={item}
+        resourceLabel={{ singular: label }}
+        {...breadcrumbLinks}
+      />
+    ) : null;
+  // The path sits close above the title, not a section apart.
+  const top =
+    path !== null && header !== null ? (
+      <div className="space-y-2">
+        {path}
+        {header}
+      </div>
+    ) : (
+      (path ?? header)
+    );
+
   const appended =
     sections !== undefined && sections.length > 0 ? (
       <div className="space-y-6">
@@ -711,7 +959,7 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
         <span role="status" aria-label="Loading details" className="sr-only">
           {slow ? `Loading this ${label}…` : ""}
         </span>
-        {header}
+        {top}
         <Slots.Loading fields={placeholder?.domain} auditFields={placeholder?.audit} slow={slow} />
         {appended}
       </div>
@@ -719,32 +967,60 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
   }
 
   const { domain, audit } = domainAndAudit;
+  const grouped = groupFields(domain, chosenGroups(fieldGroups, schema));
+  const fieldList = (shown: readonly FieldDef[]): React.ReactElement => (
+    <dl className="[&>*+*]:border-t [&>*+*]:border-border">
+      {shown.map((field) => (
+        <DetailRow
+          key={field.name}
+          field={field}
+          item={item}
+          override={fields?.[field.name]}
+          muted={false}
+          Empty={Slots.EmptyValue}
+        />
+      ))}
+    </dl>
+  );
+
   return (
     <div className={cn("space-y-6", className)}>
-      {header}
-      <dl className="[&>*+*]:border-t [&>*+*]:border-border">
-        {domain.map((field) => (
-          <DetailRow
-            key={field.name}
-            field={field}
-            item={item}
-            override={fields?.[field.name]}
-            muted={false}
-            Empty={Slots.EmptyValue}
-          />
-        ))}
-      </dl>
+      {top}
+      <span role="status" className="sr-only">
+        {moved}
+      </span>
+      {moveFailure !== null ? (
+        <TransitionFailure
+          title={`Couldn't mark this ${label} as ${stateLabel(moveFailure.field, moveFailure.target)}`}
+          message={transitionError(moveFailure.error, moveFailure.field.name)}
+        />
+      ) : null}
+      {grouped === null ? (
+        fieldList(domain)
+      ) : (
+        <GroupedFields
+          layout={chosenLayout(groupLayout, schema)}
+          as="section"
+          headingLevel={sectionLevel}
+          label={`${humanizeValue(label)} details`}
+          panels={grouped.map((group) => ({
+            key: group.key,
+            label: group.label,
+            content: fieldList(group.fields),
+          }))}
+        />
+      )}
       {audit.length > 0 ? (
         <section
           aria-labelledby={recordHeadingId}
           className="rounded-md border border-border bg-muted-subtle px-4 py-2"
         >
-          <h3
+          <SectionHeading
             id={recordHeadingId}
             className="py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"
           >
             Record
-          </h3>
+          </SectionHeading>
           <dl className="[&>*+*]:border-t [&>*+*]:border-border">
             {audit.map((field) => (
               <DetailRow
@@ -759,7 +1035,32 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
           </dl>
         </section>
       ) : null}
+      {related !== undefined && related.length > 0 && schema !== undefined && !deleting ? (
+        <RelatedTabs
+          requested={related}
+          schema={schema}
+          item={item}
+          id={id}
+          identity={identity}
+          resourceLabel={label}
+          Related={Slots.Related}
+        />
+      ) : null}
       {appended}
+      {askedFor !== undefined && askedTarget !== undefined ? (
+        <TransitionConfirm
+          open
+          onOpenChange={(open) => {
+            if (!open && moving === null) setAsking(null);
+          }}
+          resourceLabel={label}
+          field={askedFor.field}
+          currentLabel={stateLabel(askedFor.field, askedFor.current)}
+          target={askedTarget}
+          pending={moving !== null}
+          onConfirm={() => move(askedFor.field, askedTarget.value)}
+        />
+      ) : null}
       {mayDelete ? (
         <Slots.DeleteDialog
           open={deleteOpen}

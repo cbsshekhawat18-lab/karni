@@ -11,7 +11,7 @@ It lives in the Karni repository and runs in CI, so a framework change that
 breaks a real app breaks the build. Read it instead of the reference docs:
 each section below names the Karni feature and the file that uses it.
 
-**Project code: 619 lines** (models 84, viewsets 86, pages 306, other 143),
+**Project code: 617 lines** (models 88, viewsets 86, pages 306, other 137),
 measured with `python scripts/loc.py --pristine <karni new output>`. That
 counts the non-blank, non-comment lines of everything EventHub wrote,
 excluding tests, migrations, lockfiles and the untouched scaffold. The first
@@ -20,7 +20,9 @@ asked for brought it to 582. Declaring the roles in `KARNI_ROLES`, moving seat c
 booking lifecycle into the database (below), the keyboard-only walk's
 delete, bulk delete, sign-out and unsaved-changes wiring, and the listener
 that takes seats back when a deleted booking is restored brought it to 619.
-The 119 lines still over Karni's 500-line target are attributed in FRICTION.md.
+The 0.5.0 scaffold's shorter `config/urls.py` brought it to 613, and the
+staff dashboard's declarations on Event and Booking to 617.
+The 117 lines still over Karni's 500-line target are attributed in FRICTION.md.
 
 ## Run it
 
@@ -60,6 +62,10 @@ karni make model TicketTier event:fk:Event name:str:100 price:decimal:10:2 quant
 karni make model Booking event:fk:Event tier:fk:TicketTier attendee:fk:User quantity:int \
     "status:choice:pending|confirmed|cancelled" 'payment:fk:karni_payments.Payment?' -a --access owned:attendee
 ```
+
+`--access public-read` wrote `Access(read=Public(), write=HasRole("staff"))`
+for venues: anyone reads them and only staff change them. EventHub's
+`VenueViewSet` then added the `organizer` role to `write`.
 
 Every model is a `karni.models.BaseModel`: UUID keys, timestamps, soft delete
 and audit stamps come for free, and `DELETE` on the API hides rows instead
@@ -156,6 +162,11 @@ pickers). EventHub adds:
 - `event-dashboard.tsx`: three `Stat` tiles, this event's bookings
   (`ResourceTable params={{ event: id }}`) and the CSV export link.
 - `login.tsx`: @karni/ui's `LoginForm`, from `karni make page login --kind login`.
+- `venue-overview.tsx` (47 lines): a dashboard of rows the page computes from
+  one venues list, with the page blocks (experimental): a `DashboardGrid` of a
+  `ChartCard` (seats per venue), a `ComparisonTable` (the three largest
+  venues) and a `DataTable` of seats per city, which sorts and exports CSV and
+  XLSX.
 
 Every page stays under the 50-line cap enforced by `karni/max-page-lines`.
 
@@ -198,9 +209,8 @@ the dashboard numbers and downloads the attendee CSV. CI runs the same script (`
 
 ### Agent guidance
 
-`karni new` wrote `AGENTS.md`, `CLAUDE.md` and the editor adapters.
-`karni add payments` appended the module's guidance, and
-`karni rules sync --check` keeps them current. `karni check` (architecture rules, duplication, the
+`karni new` wrote `AGENTS.md`. `karni add payments` appended the module's
+guidance, and `karni rules sync --check` keeps it current. `karni check` (architecture rules, duplication, the
 ESLint preset) is clean.
 
 ## Commands used

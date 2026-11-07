@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Karni's reference from the source: docs/REFERENCE.md and README.md's generated blocks.
+"""Generate Karni's reference from the source: docs/REFERENCE.md and the generated blocks.
 
     python scripts/gen_reference.py           # rewrite both files
     python scripts/gen_reference.py --check   # exit 1 with a diff when either is stale (CI)
@@ -18,16 +18,23 @@ Everything is read from this checkout, never typed from memory:
   by scripts/gen_reference_ui.mjs;
 - modules: modules/*/pyproject.toml (and ui/package.json);
 - error codes: the registries docs/errors.md is generated from;
-- make targets: the scaffold's Makefile; slash commands: karni.agent's
-  procedures and the command adapters in agent_adapters.toml;
+- make targets: the scaffold's Makefile; procedures: karni.agent's
+  procedures;
 - status: :data:`CAPABILITIES` below. A capability is ``stable`` only with
   evidence (a reference-application file and a phrase in it), checked on
   every run, so a claim cannot outlive the code that backs it.
 
-README.md keeps hand-written prose; only the regions between
-``<!-- generated:NAME -->`` and ``<!-- /generated:NAME -->`` are replaced.
-Every README link into docs/REFERENCE.md is checked against the anchors
-GitHub generates for its headings.
+docs/features.md keeps hand-written prose; only the regions between
+``<!-- generated:NAME -->`` and ``<!-- /generated:NAME -->`` are replaced
+(the capabilities by area, the modules, the commands and the make targets).
+Two docs pages have such a block too: docs/public-site.md the karni-site
+template tags (``karni_site.tagref``) and docs/design-content.md the content
+map's keys (``karni_cli.design.mapref``), the sources ``karni explain`` reads.
+Every features-page link into docs/REFERENCE.md is checked against the
+anchors generated for its headings. The features page must also link every
+page of the Reference and Debugging sections of mkdocs.yml's nav, and the
+README must name every module's ``karni add`` command, so neither misses a
+feature.
 
 Needs the packages installed (``make install-py``) and @karni/ui's
 dependencies (``make install-ui``).
@@ -55,8 +62,15 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 REFERENCE = ROOT / "docs" / "REFERENCE.md"
 README = ROOT / "README.md"
-REF_LINK = "docs/REFERENCE.md"
+FEATURES = ROOT / "docs" / "features.md"
+MKDOCS = ROOT / "mkdocs.yml"
+#: The features page lives next to REFERENCE.md in docs/.
+REF_LINK = "REFERENCE.md"
+#: The nav sections whose every page the features page links.
+FEATURE_SECTIONS = ("Reference", "Debugging")
 SCAFFOLD = ROOT / "templates" / "project" / "{{cookiecutter.project_slug}}"
+SITE_DOCS = ROOT / "docs" / "public-site.md"
+CONTENT_DOCS = ROOT / "docs" / "design-content.md"
 
 
 # --- status ------------------------------------------------------------------
@@ -87,7 +101,7 @@ class Capability:
 EH = "examples/eventhub"
 SL = "examples/social-leads"
 
-#: Every capability the README and the reference list, by area.
+#: Every capability the features page and the reference list, by area.
 CAPABILITIES: tuple[Capability, ...] = (
     # models
     Capability(
@@ -98,8 +112,23 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "models",
+        "`BigIntBaseModel`: the same base on a 64-bit integer key, chosen per model "
+        "(`karni make model --pk bigint`, `KARNI_PK`), with legacy ids in imports and "
+        "`karni load`, and `karni.W530` for a public resource. Experimental tier",
+    ),
+    Capability(
+        "models",
         "Realistic, connected seed data (`karni seed`, `<app>/seeds.py`)",
         ((f"{EH}/events/seeds.py", "Seeder"),),
+    ),
+    Capability(
+        "models",
+        "Real content from a JSON or YAML file, created or updated by natural key (`karni load`)",
+    ),
+    Capability(
+        "models",
+        "Models and real rows from a designer's pages: the repeated content, its fields and "
+        "relations (`karni design analyze`, `karni design extract`)",
     ),
     Capability(
         "models",
@@ -112,6 +141,23 @@ CAPABILITIES: tuple[Capability, ...] = (
         ((f"{SL}/crm/models.py", "audit = True"),),
     ),
     Capability("models", "Scheduled tasks (`<app>/schedules.py`, `karni schedule`)"),
+    Capability(
+        "models",
+        "External tables, SQL views and a second database as models Karni reads (`class Karni: "
+        "external`, `writable`, `database`, `karni make model --external`). Experimental tier",
+    ),
+    Capability(
+        "models",
+        "Tree models: `TreeModel` and `OrderedTreeModel` with cycle-safe walks (`roots`, "
+        "`children`, `ancestors`, `descendants`, `subtree_ids`), `move_to()` and "
+        "`delete_branch()`, and the tree changelist in the admin. Experimental tier",
+    ),
+    Capability(
+        "models",
+        "Taxonomy tagging: one declaration tags a model to tree models (`class Karni: "
+        "taxonomies`), a generated or adopted many-to-many per key, import and export columns "
+        "by natural key, and the `tree:<key>` scope. Experimental tier",
+    ),
     Capability(
         "models",
         "A tenant scope on every model (the `karni-tenancy` module)",
@@ -145,17 +191,81 @@ CAPABILITIES: tuple[Capability, ...] = (
         "Import from CSV or XLSX with a mandatory preview (`/import/`)",
         ((f"{SL}/frontend/src/pages/leads.tsx", "<ResourceImport"),),
     ),
-    Capability("api", "Response caching per viewset (`Cache`, `Uncached`)"),
+    Capability(
+        "api",
+        "Response caching per viewset (`Cache`, `Uncached`, `KARNI_API_CACHE`): entries shared "
+        "only by callers with the same access, invalidated on every write, `X-Cache`",
+        ((f"{EH}/events/viewsets.py", "cache = Cache("),),
+    ),
+    Capability(
+        "api",
+        "Rows of any resource read from text, a web page or a PDF by a language model, "
+        "always through the import preview (`karni add ai`, `POST /api/ai/extract/`, usage, "
+        "costs and budgets). Experimental tier",
+    ),
+    Capability(
+        "api",
+        "Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode "
+        "(`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier",
+    ),
+    Capability(
+        "api",
+        "Sign-in with a one-time code sent by email, in JWT and session mode "
+        "(`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier",
+    ),
+    Capability(
+        "api",
+        "A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user "
+        "accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). "
+        "Experimental tier",
+    ),
+    Capability(
+        "api",
+        "Tree endpoints on a tree model's viewset (`tree/`, `children/`, `ancestors/`, `move/`, "
+        "`?parent=`, `?descendants_of=`, `DELETE ?branch=true`) and `x-karni-tree` in the "
+        "OpenAPI document. Experimental tier",
+    ),
+    Capability(
+        "api",
+        "Taxonomy filters and counts: `?<key>=` and `?<key>_descendants=` on the list, "
+        "`facets/` (rows per node under the list's filters and access, rolled up on request) "
+        "and a tree node's `tagged/` per tagging model. Experimental tier",
+    ),
+    Capability(
+        "api",
+        "Search across models: one ranked `GET /api/search/` over every model that declares "
+        "`class Karni: search`, each under its own list access, one query per model, with "
+        "the trigram indexes in its migrations (`karni.W590`). Experimental tier",
+    ),
+    Capability(
+        "api",
+        "PDF reports of a row (the `reports` module): a template rendered in the background "
+        "with WeasyPrint, cached by template and data, served only to users who may retrieve "
+        "the row (`/api/reports/<report>/<id>/`, `ReportButton`). Experimental tier",
+    ),
+    Capability(
+        "api",
+        "Protected files (the `storage` module): kept in a private S3-compatible bucket or on "
+        "disk, downloaded only through the row's own viewset by a signed URL, with direct "
+        "uploads and thumbnails (`ProtectedFileField`, `<resource>/<id>/files/<field>/`). "
+        "Experimental tier",
+    ),
     Capability(
         "api",
         "TypeScript types and typed hooks from the OpenAPI document (`karni types`)",
         ((f"{EH}/Makefile", "karni types"),),
     ),
+    Capability(
+        "api",
+        "Grouped counts and sums under the list's filters and access: `GET "
+        "<resource>/aggregate/` from `class Karni: aggregate`, with date buckets, top N and "
+        "Other, a second dimension and numbers stored as text (`TextNumber`). Experimental tier",
+    ),
     # admin
     Capability(
         "admin",
         "Every model registered with derived columns, filters and search, with no `admin.py`",
-        ((f"{EH}/config/urls.py", 'path("admin/", admin.site.urls)'),),
+        ((f"{EH}/config/urls.py", "path(settings.KARNI_ADMIN_PATH, admin.site.urls)"),),
     ),
     Capability(
         "admin",
@@ -197,8 +307,75 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability("ui", "`ChangeHistory`, `DataChart` and `FileUpload`"),
     Capability(
         "ui",
+        "`useAggregate` and `DataChart`'s `aggregate` and `stacked`: a resource's aggregate, "
+        "read directly. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own "
+        "SDK. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as "
+        "`LoginForm`'s `codeSignIn` switch. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`GlobalSearch` and `useGlobalSearch`: a Cmd or Ctrl+K command palette over search "
+        "across models, grouped per resource, each hit linking to its ResourceDetail page "
+        "(`<Layout search>`). Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once "
+        "the user accepts the current terms. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`TreeView`, `TreeSelect` (used by `ResourceForm` for a relation to a tree) and "
+        "`TreeBreadcrumb` (on `ResourceDetail` of a tree), with `useResourceTree`. "
+        "Experimental tier",
+    ),
+    Capability(
+        "ui",
+        '`Layout`\'s server menu (`navSource="server"`, `useNavigation`): collapsible groups, '
+        "icons by name and the current page marked. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`FacetPanel` and `ResourceTable`'s `facets`: rows per node of a taxonomy, and choosing "
+        "nodes filters the table, with `useResourceFacets`. Experimental tier",
+    ),
+    Capability(
+        "ui",
         "`karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or "
-        "Mantine theme as Karni's tokens, and shadcn/ui components as Karni's primitives",
+        "Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui "
+        "components as Karni's primitives",
+    ),
+    Capability(
+        "ui",
+        "`Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s "
+        "buttons for a `StateField`'s transitions",
+    ),
+    Capability(
+        "ui",
+        "Page blocks beyond CRUD: `DashboardGrid`, `ChartCard`, `DataTable` (computed rows: "
+        "sorting, a sticky header and first column, CSV and XLSX export, only the rows in view "
+        "rendered), `ComparisonTable`, `Accordion`, `MarkdownView` (sanitized, loaded on first "
+        "use) and `useResourceCounts`. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`ResourceDetail`'s related tabs (`related`): a table per reverse relation, from the "
+        "`x-karni-related` extension of the OpenAPI schema. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "Wide models: `MarkdownField` (edited with a preview, shown sanitized), "
+        "`class Karni: field_groups` (form and detail sections or tabs, admin fieldsets) and "
+        "`column_sets` (table presets kept per user), with `karni.E550` to `E553`. "
+        "Experimental tier",
     ),
     # permissions
     Capability(
@@ -226,6 +403,24 @@ CAPABILITIES: tuple[Capability, ...] = (
         "Scope paths that do not resolve fail `karni check` (`E214`) instead of answering 500",
         ((f"{SL}/crm/models.py", 'owner_field = "lead__workspace__members"'),),
     ),
+    Capability(
+        "permissions",
+        "Per-user grants next to the role grants: a pattern and a scope for one user, with "
+        "targets and an expiry, in the admin and an API (`UserGrant`, `KARNI_USER_GRANTS`). "
+        "Experimental tier",
+    ),
+    Capability(
+        "permissions",
+        "The tree scope: a grant on a node of a tree reaches every row under it (`tree:<path>` "
+        "in `KARNI_ROLES` and user grants, one subtree subquery, the `access/` forest, "
+        "`TreeView`'s `access`). Experimental tier",
+    ),
+    Capability(
+        "permissions",
+        "Navigation from data: each user's menu from `KARNI_NAVIGATION` or a `NavItem` tree "
+        "edited in the admin, opened by the same role and per-user grants as the API "
+        "(`GET /api/navigation/`). Experimental tier",
+    ),
     Capability("permissions", "Field visibility per role (`class Karni: field_roles`)"),
     Capability("permissions", "Row scope in the admin, from the same grants as the API"),
     Capability(
@@ -252,15 +447,65 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "agents",
-        "Adapter files for every supported agent tool from one rule set (`karni rules sync`)",
-        ((f"{EH}/AGENTS.md", "karni context"), (f"{EH}/.cursor/commands/new-model.md", "")),
+        "AGENTS.md, the one agent file, generated from the rule set (`karni rules sync`)",
+        ((f"{EH}/AGENTS.md", "karni context"), (f"{EH}/AGENTS.md", "karni rules sync")),
     ),
     Capability(
         "agents",
-        "Slash commands for the routine tasks (`/new-model`, `/new-page`, …)",
-        ((f"{EH}/.claude/commands/new-model.md", "karni context"),),
+        "Procedures for the routine tasks (`new-model`, `new-page`, …), listed in AGENTS.md: "
+        "`karni rules --procedure <name>`, or `/<name>` in a request",
+        ((f"{EH}/AGENTS.md", "asks for that procedure"),),
     ),
     Capability("agents", "`karni explain <code>`: why an error happens and the fix, offline"),
+    Capability(
+        "agents",
+        "The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` "
+        "(every problem with its code and line), `karni spec export` (the spec of an "
+        "existing project) and `karni plan` (what `karni build` would change, risky changes "
+        "with their row counts). Experimental tier",
+    ),
+    Capability(
+        "agents",
+        "Clarifying questions: `karni plan --questions` lists the few gaps of `karni.yaml` worth "
+        "asking the user (owners, access, the sign-up role, the kind, each module's and "
+        "feature's asks), chosen by fixed rules, and `karni spec answer` writes an answer "
+        "keeping the file's comments. Experimental tier",
+    ),
+    Capability(
+        "agents",
+        "`karni build`: the spec applied in one command, idempotently. Karni's code in files of "
+        "its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit "
+        "found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and "
+        "`karni check`. Experimental tier",
+    ),
+    Capability(
+        "agents",
+        "Spec pages beyond CRUD: a detail page's related tabs and dashboard pages of charts, "
+        "in `karni plan`, `karni build`, `karni spec export` and `karni make page`. "
+        "Experimental tier",
+    ),
+    Capability(
+        "agents",
+        "The module catalog: a manifest per module and built-in feature, `karni modules list` "
+        "and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from "
+        "the manifest and `karni remove`, which never drops data. Experimental tier",
+    ),
+    Capability(
+        "agents",
+        "The `/new-app` flow, from a one-line request to a running app: recipes (`karni recipes "
+        "list --match`, `show`, the `karni.recipes` entry points, the blank start), the "
+        "`new-app` procedure and rule K311 in AGENTS.md, and the MCP tools `recipes`, "
+        "`spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`, each returning "
+        "JSON with a published schema. Experimental tier",
+    ),
+    Capability(
+        "agents",
+        "Six recipes, `shop`, `booking`, `crm`, `lms`, `marketplace` and `data-portal`, and `karni new "
+        '"<Name>" --recipe <name>`: the recipe\'s karni.yaml, then `karni build`, which writes '
+        "the recipe's domain code, seeds and tests over its own stubs, never over the "
+        "project's code, and runs the tests and `karni check`. Each is built from scratch in "
+        "CI. Experimental tier",
+    ),
     Capability(
         "agents",
         "`karni why` / `karni why-empty`: why a row, field or action is refused or missing for "
@@ -268,6 +513,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "agents", "MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools"
+    ),
+    Capability(
+        "agents",
+        "Large projects, one area at a time: `karni context --summary`, `--app`, `--model` and "
+        "`--max-tokens`, and a `karni check` that skips unchanged files (a cache per check and "
+        "file, `--changed [REF]` for the files git reports). Experimental tier",
     ),
     # testing
     Capability(
@@ -292,6 +543,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         ((f"{EH}/events/tests/test_booking_flow.py", "client_as"),),
     ),
     Capability("testing", "`query_budget` and `user_with_roles` helpers"),
+    Capability(
+        "testing",
+        "Performance at volume: `karni seed --volume` (bulk rows that keep their relations), "
+        "scaling row counts and a time budget per viewset (`Scaling`), `karni queries --explain` "
+        "with the index a sequential scan wants (PostgreSQL), and a CI benchmark on 100 models. "
+        "Experimental tier",
+    ),
+    Capability(
+        "testing",
+        "`assert_pages`: a public site's pages, their title, description, alt text and links, "
+        "in one call",
+    ),
     Capability(
         "testing",
         "Architecture rules that fail the build (`karni check`, the ESLint preset)",
@@ -321,7 +584,10 @@ STATUS_NOTE = (
     "`stable`: public under the [stability promise](stability.md) and used by a reference "
     "application (EventHub or the social-leads example). `experimental`: public and "
     "covered by Karni's own tests, but no reference application uses it yet, so expect "
-    "rough edges. `planned`: documented as coming, but not in the code."
+    "rough edges. A capability that also says *Experimental tier* has names that may change "
+    "in a minor release without the deprecation cycle "
+    "([experimental names](stability.md#experimental-names)). Every other capability keeps "
+    "the promise. `planned`: documented as coming, but not in the code."
 )
 
 
@@ -695,49 +961,16 @@ def options_section() -> list[str]:
 
 
 def _module_settings(module_dir: Path) -> list[tuple[str, str, str, str]]:
+    """A module's settings, read from its conf.py as docs/settings.md reads them."""
+    from karni.conf.reference import module_settings
+
     path = module_dir / _package_of(module_dir) / "conf.py"
     if not path.is_file():
         return []
-    source = path.read_text(encoding="utf-8")
-    lines = source.splitlines()
-    tree = ast.parse(source)
-    rows = []
-    for node in ast.walk(tree):
-        if not (isinstance(node, ast.AnnAssign | ast.Assign)):
-            continue
-        targets = [node.target] if isinstance(node, ast.AnnAssign) else node.targets
-        if not any(isinstance(t, ast.Name) and t.id == "DEFAULTS" for t in targets):
-            continue
-        if not isinstance(node.value, ast.Dict):
-            continue
-        for key, value in zip(node.value.keys, node.value.values, strict=True):
-            if not isinstance(key, ast.Constant):
-                continue
-            comments = []
-            index = key.lineno - 2
-            while index >= 0 and lines[index].strip().startswith("#"):
-                comments.insert(0, lines[index].strip().lstrip("#").strip())
-                index -= 1
-            if not comments and rows:
-                comments = [rows[-1][3]]
-            env, default = "", ""
-            if isinstance(value, ast.Call):
-                if value.args and isinstance(value.args[0], ast.Constant):
-                    env = str(value.args[0].value)
-                for keyword in value.keywords:
-                    if keyword.arg == "default":
-                        default = ast.get_source_segment(source, keyword.value) or ""
-            else:
-                default = ast.get_source_segment(source, value) or ""
-            rows.append(
-                (
-                    f"`{key.value}`",
-                    f"`{env}`" if env else "",
-                    f"`{' '.join(default.split())}`",
-                    " ".join(comments),
-                )
-            )
-    return rows
+    return [
+        (f"`{s.name}`", f"`{s.env}`" if s.env else "", f"`{s.default}`", s.description)
+        for s in module_settings(path, module_dir.name)
+    ]
 
 
 def settings_section() -> list[str]:
@@ -988,7 +1221,7 @@ def errors_section() -> list[str]:
     return out
 
 
-# --- make targets and slash commands --------------------------------------------
+# --- make targets and procedures ------------------------------------------------
 
 
 def make_targets() -> list[tuple[str, list[str]]]:
@@ -1003,39 +1236,32 @@ def make_targets() -> list[tuple[str, list[str]]]:
     return targets
 
 
-def procedures() -> tuple[list[Any], list[dict[str, Any]]]:
+def procedures() -> list[Any]:
     from karni.agent import PROCEDURES
 
-    adapters = tomllib.loads(
-        (ROOT / "packages" / "karni-cli" / "karni_cli" / "agent_adapters.toml").read_text(
-            encoding="utf-8"
-        )
-    )
-    return list(PROCEDURES), list(adapters.get("commands", []))
+    return list(PROCEDURES)
 
 
-def make_and_slash_section() -> list[str]:
+def make_and_procedures_section() -> list[str]:
     targets = [
         (f"`make {t}`", ", then ".join(f"`{c}`" for c in cmds)) for t, cmds in make_targets()
     ]
-    procs, adapters = procedures()
-    where = [(a["tool"], f"`{a['dir']}/<name>{a['suffix']}`") for a in adapters]
+    procs = procedures()
     return [
         "## Make targets",
         "",
         "The Makefile `karni new` writes. Every target is a thin alias for a `karni` command.",
         "",
         *table(("Target", "Runs"), targets),
-        "## Slash commands",
+        "## Procedures",
         "",
-        "One per routine task, written for each agent tool by `karni new` and "
-        "`karni rules sync`. `karni rules --procedure <name>` prints the same steps.",
+        "One per routine task. AGENTS.md lists them, `karni rules --procedure <name>` prints "
+        "the steps, and an agent reads a request that starts with `/<name>` as that procedure.",
         "",
         *table(
-            ("Command", "Arguments", "What it does"),
+            ("Procedure", "Arguments", "What it does"),
             [(f"`/{p.name}`", f"`{p.argument_hint}`", p.description) for p in procs],
         ),
-        *table(("Tool", "Written to"), where),
     ]
 
 
@@ -1071,7 +1297,7 @@ CONTENTS: tuple[tuple[str, str], ...] = (
     ("Modules", "modules"),
     ("Error codes", "error-codes"),
     ("Make targets", "make-targets"),
-    ("Slash commands", "slash-commands"),
+    ("Procedures", "procedures"),
 )
 
 
@@ -1079,7 +1305,7 @@ def render_reference(exports: list[dict[str, Any]]) -> str:
     out = [
         "---",
         "description: Every Karni command, base class, model option, setting, component, hook, "
-        "module, error code, make target and slash command, generated from the source.",
+        "module, error code, make target and procedure, generated from the source.",
         "---",
         "",
         "# Reference",
@@ -1103,21 +1329,21 @@ def render_reference(exports: list[dict[str, Any]]) -> str:
         ui_section(exports),
         modules_section(),
         errors_section(),
-        make_and_slash_section(),
+        make_and_procedures_section(),
     ):
         out += part
     text = "\n".join(out)
     return re.sub(r"\n{3,}", "\n\n", text).rstrip("\n") + "\n"
 
 
-# --- README blocks ------------------------------------------------------------------
+# --- the features page's blocks ---------------------------------------------------
 
 
 def _capability_lines(area: str) -> list[str]:
     return [f"- `{c.status}` {c.text}" for c in capabilities(area)]
 
 
-def readme_blocks(exports: list[dict[str, Any]]) -> dict[str, list[str]]:
+def feature_blocks(exports: list[dict[str, Any]]) -> dict[str, list[str]]:
     components = [e["name"] for e in exports if e["kind"] == "component"]
     hooks = [e["name"] for e in exports if e["kind"] == "hook"]
     bases = dict(base_entries())
@@ -1168,17 +1394,28 @@ def readme_blocks(exports: list[dict[str, Any]]) -> dict[str, list[str]]:
                 f"- `{m['status']}` `karni add {m['short']}`: {first_sentence(m['description'])}"
             )
     blocks["modules"] = module_lines
-    procs, _ = procedures()
-    blocks["agents"] += ["", "Slash commands: " + ", ".join(f"`/{p.name}`" for p in procs) + "."]
+    procs = procedures()
+    blocks["agents"] += ["", "Procedures: " + ", ".join(f"`/{p.name}`" for p in procs) + "."]
     return blocks
 
 
-def apply_blocks(readme: str, blocks: dict[str, list[str]]) -> str:
+def docs_blocks() -> dict[Path, dict[str, list[str]]]:
+    """The docs pages' generated blocks: what ``karni explain`` reads, as tables."""
+    from karni_cli.design import mapref
+    from karni_site import tagref
+
+    return {
+        SITE_DOCS: {"site-tags": tagref.markdown()},
+        CONTENT_DOCS: {"map-keys": mapref.markdown()},
+    }
+
+
+def apply_blocks(readme: str, blocks: dict[str, list[str]], page: str = "README.md") -> str:
     for name, lines in blocks.items():
         start, end = f"<!-- generated:{name} -->", f"<!-- /generated:{name} -->"
         pattern = re.compile(rf"{re.escape(start)}\n.*?{re.escape(end)}", re.S)
         if not pattern.search(readme):
-            raise SystemExit(f"README.md has no {start} block")
+            raise SystemExit(f"{page} has no {start} block")
         block = start + "\n" + "\n".join(lines) + "\n" + end
         readme = pattern.sub(lambda _m, block=block: block, readme)
     return readme
@@ -1189,7 +1426,47 @@ def check_links(readme: str, reference: str) -> list[str]:
     problems = []
     for anchor in re.findall(rf"{re.escape(REF_LINK)}#([\w-]+)", readme):
         if anchor not in defined:
-            problems.append(f"README links {REF_LINK}#{anchor}, which has no such anchor")
+            problems.append(
+                f"docs/features.md links {REF_LINK}#{anchor}, which has no such anchor"
+            )
+    return problems
+
+
+def _nav_pages(node: Any, inside: bool = False) -> list[str]:
+    """The pages under FEATURE_SECTIONS in mkdocs.yml's nav, nested sections included."""
+    pages: list[str] = []
+    if isinstance(node, list):
+        for item in node:
+            pages += _nav_pages(item, inside)
+    elif isinstance(node, dict):
+        for title, value in node.items():
+            pages += _nav_pages(value, inside or title in FEATURE_SECTIONS)
+    elif isinstance(node, str) and inside and node.endswith(".md"):
+        pages.append(node)
+    return pages
+
+
+def feature_problems(features: str, readme: str) -> list[str]:
+    """What the features page or the README misses: a nav page, a module's command."""
+    import yaml
+
+    class _Loader(yaml.SafeLoader):
+        pass
+
+    # mkdocs.yml may carry !!python/name tags (emoji, superfences): read them as strings.
+    _Loader.add_multi_constructor("tag:yaml.org,2002:python/", lambda _l, _s, n: str(n.value))
+    nav = yaml.load(MKDOCS.read_text(encoding="utf-8"), Loader=_Loader).get("nav", [])
+    linked = set(re.findall(r"\]\(([^)#\s]+\.md)", features))
+    problems = [
+        f"docs/features.md links no {page}, a page in mkdocs.yml's nav: add it to its group"
+        for page in _nav_pages(nav)
+        if page not in linked and page != "features.md"
+    ]
+    problems += [
+        f"README.md names no `karni add {m['short']}`: add the module to its modules table"
+        for m in modules()
+        if m["status"] != "planned" and f"karni add {m['short']}`" not in readme
+    ]
     return problems
 
 
@@ -1215,6 +1492,20 @@ def unknown_option_keys() -> list[str]:
     ]
 
 
+MODULE_CODES = ROOT / "packages" / "karni-cli" / "karni_cli" / "module_codes.json"
+
+
+def module_codes_json() -> str:
+    """The module codes karni-cli ships, so ``karni explain PAY004`` works anywhere."""
+    from karni_cli.errorcodes import _module_entries
+
+    rows = [
+        {k: v for k, v in e.as_dict().items() if k != "url"}
+        for e in sorted(_module_entries(), key=lambda e: e.code)
+    ]
+    return json.dumps(rows, indent=1, ensure_ascii=False) + "\n"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true", help="fail when a file is stale")
@@ -1223,13 +1514,21 @@ def main(argv: list[str] | None = None) -> int:
     problems = verify_evidence() + unknown_option_keys()
     exports = ui_exports()
     reference = render_reference(exports)
-    readme = apply_blocks(README.read_text(encoding="utf-8"), readme_blocks(exports))
-    problems += check_links(readme, reference)
+    features = apply_blocks(
+        FEATURES.read_text(encoding="utf-8"), feature_blocks(exports), "docs/features.md"
+    )
+    problems += check_links(features, reference)
+    problems += feature_problems(features, README.read_text(encoding="utf-8"))
     if problems:
         print("\n".join(problems), file=sys.stderr)
         return 1
+    pages = [(REFERENCE, reference), (FEATURES, features)]
+    for path, blocks in docs_blocks().items():
+        page = apply_blocks(path.read_text(encoding="utf-8"), blocks, path.name)
+        pages.append((path, page))
+    pages.append((MODULE_CODES, module_codes_json()))
     stale = []
-    for path, text in ((REFERENCE, reference), (README, readme)):
+    for path, text in pages:
         current = path.read_text(encoding="utf-8") if path.is_file() else ""
         if current == text:
             continue

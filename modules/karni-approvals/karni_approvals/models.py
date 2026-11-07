@@ -72,14 +72,21 @@ class PendingChange(BaseModel):
         indexes: ClassVar[list[models.Index]] = [
             models.Index(fields=["status", "content_type"]),
             models.Index(fields=["content_type", "object_id"]),
+            # PendingChangeViewSet filters by it (?action=), karni.W967.
+            models.Index(fields=["action"], name="karni_approvals_by_action"),
         ]
         verbose_name = "pending change"
 
     class Karni:
-        """Audited; ``approve`` and ``reject`` are permissions; makers own their proposals."""
+        """Audited; ``approve`` and ``reject`` are permissions; makers own their proposals.
+
+        Only a grant that names them gives ``approve`` and ``reject``: a
+        wildcard role (``"*": "own"``, ``"*": "all"``) never makes a checker.
+        """
 
         audit = True
         actions = ["approve", "reject"]
+        explicit_actions = ["approve", "reject"]
         owner_field = "maker"
         cascade = {
             "content_type": "a proposal for a model that no longer exists cannot be decided",

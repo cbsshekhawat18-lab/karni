@@ -4,6 +4,7 @@
     karni ui detect --dry-run        print the report and the files; write nothing
     karni ui detect --json           the report as JSON (for agents)
     karni ui detect --source mui     read this source instead of detecting
+    karni ui detect --css design/    read any stylesheet (or a design's pages) instead
 
 See :mod:`karni_cli.uitheme` for the detection order and what each source maps.
 """
@@ -12,6 +13,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -25,6 +27,7 @@ from karni_cli.uitheme import frontend as frontend_mod
 from karni_cli.uitheme import primitives as primitives_mod
 from karni_cli.uitheme.frontend import Frontend
 from karni_cli.uitheme.model import Detection, Unmapped
+from karni_cli.uitheme.plaincss import CssDetection, detect_css
 
 ui_app = typer.Typer(
     help="Fit Karni's components to the project's design system.",
@@ -54,6 +57,8 @@ class Outcome:
     primitive_problem: Unmapped | None = None
     edits: list[wiring.Edit] = field(default_factory=list)
     skipped_sources: list[str] = field(default_factory=list)
+    #: Set by ``--css``: the graded report (found, inferred, defaulted).
+    css: CssDetection | None = None
 
 
 def _detect(
@@ -170,6 +175,39 @@ def plan(
     return outcome
 
 
+def plan_css(
+    frontend: Frontend | None,
+    *,
+    paths: list[Path],
+    output: Path | None,
+    today: str,
+) -> Outcome:
+    """``--css``: the stylesheets named are the source. Without a frontend, nothing is wired."""
+    detection = detect_css(paths)
+    if frontend is not None:
+        theme_path = _output_path(frontend, output, None)
+        edits = [wiring.theme_import(frontend, theme_path)]
+    else:
+        frontend = Frontend(Path.cwd().resolve(), {})
+        theme_path = _output_path(frontend, output, None) if output else frontend.root / THEME_FILE
+        edits = [
+            wiring.Edit(
+                None,
+                False,
+                f'Import {theme_path.name} after "@karni/ui/styles.css" in the frontend\'s entry '
+                "module (no frontend was found here, so nothing was wired).",
+            )
+        ]
+    theme_text = detection.theme_css(today)
+    return Outcome(
+        frontend,
+        detection.detection,
+        render.Planned(theme_path, theme_text, render.state(theme_path)),
+        edits=edits,
+        css=detection,
+    )
+
+
 def _guard(outcome: Outcome, force: bool) -> None:
     for planned in (outcome.theme, outcome.primitives):
         if planned is None or force or planned.state != "modified" or planned.unchanged:
@@ -212,6 +250,103 @@ def _write(outcome: Outcome) -> list[dict[str, str]]:
     return actions
 
 
+_THEME_SETTING = re.compile(
+    r"""^KARNI_THEME_CSS\s*=\s*(?P<q>["'])(?P<path>[^"'\n]+)(?P=q)\s*(?:#.*)?$""", re.MULTILINE
+)
+
+
+def admin_theme_file(root: Path) -> Path | None:
+    """The theme file a project without a staff app names for its admin, or ``None``.
+
+    Read from a plain ``KARNI_THEME_CSS = "<path>"`` line in config/settings.py
+    (``karni new --no-staff-app`` writes ``karni-theme.css``), relative to the
+    project root unless absolute. Nothing is imported.
+    """
+    settings = root / "config" / "settings.py"
+    try:
+        text = settings.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    found = None
+    for found in _THEME_SETTING.finditer(text):
+        pass  # the last assignment wins, as in Python
+    if found is None:
+        return None
+    path = Path(found.group("path"))
+    return path if path.is_absolute() else root / path
+
+
+def _admin_theme_only(root: Path, target: Path, css: list[Path], dry_run: bool) -> str:
+    """No staff app: write the design's theme where the admin reads it."""
+    today = dt.datetime.now().astimezone().date().isoformat()
+    detection = detect_css(css)
+    planned = render.Planned(target, detection.theme_css(today), render.state(target))
+    try:
+        rel = target.relative_to(root).as_posix()
+    except ValueError:
+        rel = str(target)
+    graded = (
+        f"{len(detection.found)} found, {len(detection.inferred)} inferred, "
+        f"{len(detection.defaulted)} defaulted"
+    )
+    if dry_run:
+        return f"would write {rel} ({graded})."
+    if planned.state == "modified" and not planned.unchanged:
+        return (
+            f"kept {rel}, edited since Karni wrote it. To replace it with the design's "
+            f"colours and fonts, run `karni ui detect --css <design dir> --output {rel} --force`."
+        )
+    verb = "unchanged" if planned.unchanged else "wrote"
+    if not planned.unchanged:
+        _save(target, planned.content)
+    return (
+        f"{verb} {rel} ({graded}), so the admin uses the design's colours and fonts "
+        "(KARNI_THEME_CSS). `karni ui detect --css <design dir> --dry-run` shows each token."
+    )
+
+
+def detect_from_css(root: Path, css: list[Path], *, dry_run: bool = False) -> str | None:
+    """Theme a project's staff app and admin from a design's stylesheets.
+
+    ``karni import design`` calls this with the design's CSS files. It writes the
+    project's ``karni-theme.css`` as ``karni ui detect --css`` does, and returns one
+    line for the import's report. A project without a staff app gets the file its
+    admin reads (``KARNI_THEME_CSS`` in config/settings.py, :func:`admin_theme_file`),
+    and ``None`` when it names none. A theme file edited since Karni wrote it is
+    kept: the line says how to replace it.
+    """
+    try:
+        fe = frontend_mod.locate(root / "frontend")
+    except CliError as exc:
+        if exc.code != "C301":
+            raise
+        target = admin_theme_file(root)
+        return _admin_theme_only(root, target, css, dry_run) if target is not None else None
+    today = dt.datetime.now().astimezone().date().isoformat()
+    outcome = plan_css(fe, paths=list(css), output=None, today=today)
+    assert outcome.css is not None
+    rel = fe.rel(outcome.theme.path)
+    graded = (
+        f"{len(outcome.css.found)} found, {len(outcome.css.inferred)} inferred, "
+        f"{len(outcome.css.defaulted)} defaulted"
+    )
+    if dry_run:
+        return f"would write {rel} ({graded})."
+    try:
+        _guard(outcome, force=False)
+    except CliError:
+        return (
+            f"kept {rel}, edited since Karni wrote it. To replace it with the design's "
+            "colours and fonts, run `karni ui detect --css <design dir> --force`."
+        )
+    actions = _write(outcome)
+    verb = "unchanged" if actions and actions[0]["action"] == "unchanged" else "wrote"
+    return (
+        f"{verb} {rel} ({graded}), so the staff app and the admin use the design's "
+        "colours and fonts. `karni ui detect --css <design dir> --dry-run` shows each token."
+    )
+
+
 def report(outcome: Outcome, actions: list[dict[str, str]], dry_run: bool) -> dict[str, Any]:
     """The machine-readable report (``--json``)."""
     fe = outcome.frontend
@@ -225,12 +360,18 @@ def report(outcome: Outcome, actions: list[dict[str, str]], dry_run: bool) -> di
         "not_mapped": [u.as_dict() for u in detection.unmapped],
         "notes": [*detection.notes, *outcome.skipped_sources],
         "primitives": None,
+        "components": defaults.component_tokens(fe),
         "files": [],
         "wiring": [edit.as_dict(fe) for edit in outcome.edits],
         "dry_run": dry_run,
     }
     if detection.commented:
         data["defaults"] = [m.as_dict() for m in detection.commented]
+    if outcome.css is not None:
+        graded = outcome.css.as_dict()
+        data["found"] = graded["found"]
+        data["inferred"] = graded["inferred"]
+        data["defaulted"] = graded["defaulted"]
     plan_ = outcome.primitive_plan
     if plan_ is not None or outcome.primitive_problem is not None:
         data["primitives"] = {
@@ -259,7 +400,9 @@ def _text(data: dict[str, Any], outcome: Outcome) -> str:
         lines.append(f"Read: {', '.join(data['files_read'])}")
     lines.append("")
     mapped = data["mapped"]
-    if mapped:
+    if "found" in data:
+        lines += _graded_text(data)
+    elif mapped:
         lines.append(f"Mapped ({len(mapped)}):")
         width = min(32, max(len(m["from"]) for m in mapped))
         for m in mapped:
@@ -284,6 +427,12 @@ def _text(data: dict[str, Any], outcome: Outcome) -> str:
                 lines.append(f"      {u['suggestion']}")
     if data["notes"]:
         lines += ["", "Notes:", *(f"  {note}" for note in data["notes"])]
+    components = data.get("components") or []
+    if components:
+        width = max(len(entry["token"]) for entry in components)
+        lines += ["", "Component tokens (set them in karni-theme.css to resize the components):"]
+        for entry in components:
+            lines.append(f"  {entry['token']:<{width}} {entry['value']}  ({entry['used_by']})")
     prims = data["primitives"]
     if prims is not None:
         lines.append("")
@@ -310,6 +459,32 @@ def _text(data: dict[str, Any], outcome: Outcome) -> str:
         for entry in data["files"]:
             lines += ["", f"--- {entry['path']} (dry run: not written) ---", entry["content"]]
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _graded_text(data: dict[str, Any]) -> list[str]:
+    """The Found / Inferred / Defaulted sections of a ``--css`` report."""
+    lines: list[str] = []
+    for heading, entries in (("Found", data["found"]), ("Inferred", data["inferred"])):
+        lines.append(f"{heading} ({len(entries)}):")
+        if not entries:
+            lines.append("  (none)")
+        width = min(40, max((len(e["from"]) for e in entries), default=0))
+        for entry in entries:
+            colour = entry["token"].startswith("--karni-color-")
+            scheme = f" [{entry['scheme']}]" if colour and entry["scheme"] != "both" else ""
+            lines.append(
+                f"  {entry['from']:<{width}} -> {entry['token']}: {entry['value']}{scheme}"
+            )
+            if entry.get("note"):
+                lines.append(f"  {'':<{width}}    ({entry['note']})")
+        lines.append("")
+    defaulted = data["defaulted"]
+    lines.append(f"Defaulted ({len(defaulted)}): Karni's own value applies")
+    for entry in defaulted:
+        lines.append(f"  {entry['token']}: {entry['reason']}")
+    if not defaulted:
+        lines.append("  (none)")
+    return lines
 
 
 @ui_app.command("detect")
@@ -349,6 +524,14 @@ def detect(
         False, "--dry-run", help="Print the report and the files, but write nothing."
     ),
     as_json: bool = typer.Option(False, "--json", help="Print the report as JSON (for agents)."),
+    css: list[Path] | None = typer.Option(
+        None,
+        "--css",
+        help="Read these stylesheets (or directories of pages and the stylesheets they link) "
+        "instead of the frontend's design system: any CSS, with variables or without. "
+        "Repeatable. Later files win, as in a browser.",
+        show_default=False,
+    ),
 ) -> None:
     """Adopt the frontend's design system: map its theme onto Karni's `--karni-*` tokens.
 
@@ -359,21 +542,51 @@ def detect(
     UI, Chakra UI or Mantine theme (literal values read from the source). Without any of
     these it uses Karni's defaults, listed for editing.
 
+    `--css <path>` reads any stylesheet instead (plain CSS, Bootstrap, a design with no
+    variables at all): its custom properties, then its body, link, button and input rules,
+    mapped onto the colour, radius and font tokens as literal values. The report grades
+    each token as found, inferred or defaulted. The same file then themes the admin.
+
     Writes one file the project owns, `karni-theme.css`, imported after
     `@karni/ui/styles.css` (wired into `src/main.tsx` when it has the scaffold's import).
     The report lists every token mapped (from, to, value) and every value not mapped, with
     the reason. A generated file edited since is never overwritten without `--force`.
 
-    Example: karni ui detect --dry-run
+    Examples: karni ui detect --dry-run, karni ui detect --css design/ --dry-run
     """
-    fe = frontend_mod.locate(frontend)
-    outcome = plan(
-        fe,
-        output=output,
-        source=source,
-        with_primitives=with_primitives,
-        today=dt.datetime.now().astimezone().date().isoformat(),
-    )
+    today = dt.datetime.now().astimezone().date().isoformat()
+    if css:
+        if source is not None:
+            raise CliError(
+                "--css reads the stylesheets you name, so there is no source for --source to "
+                "pick. Drop one of the two options.",
+                code="C106",
+            )
+        located: Frontend | None
+        try:
+            located = frontend_mod.locate(frontend)
+        except CliError as exc:
+            if exc.code != "C301":
+                raise
+            located = None
+            if output is None and not dry_run:
+                if not as_json:
+                    raise CliError(
+                        f"{exc.message} With --css, write the file elsewhere with --output "
+                        "<path>, or look at the report first with --dry-run.",
+                        code="C301",
+                    ) from None
+                dry_run = True  # a report for an agent: nothing to write anywhere
+        outcome = plan_css(located, paths=css, output=output, today=today)
+    else:
+        fe = frontend_mod.locate(frontend)
+        outcome = plan(
+            fe,
+            output=output,
+            source=source,
+            with_primitives=with_primitives,
+            today=today,
+        )
     if not dry_run:
         _guard(outcome, force)
     actions = [] if dry_run else _write(outcome)

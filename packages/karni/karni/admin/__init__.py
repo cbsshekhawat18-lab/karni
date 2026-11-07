@@ -52,6 +52,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "DEFAULT_ADMIN_EXCLUDE",
     "KarniAdminMixin",
+    "KarniInlineMixin",
     "KarniModelAdmin",
     "SoftDeleteAdminMixin",
     "SoftDeleteListFilter",
@@ -71,6 +72,7 @@ DEFAULT_ADMIN_EXCLUDE: tuple[str, ...] = (
 
 _LAZY_IMPORTS: dict[str, str] = {
     "KarniAdminMixin": "karni.admin.base",
+    "KarniInlineMixin": "karni.admin.inlines",
     "KarniModelAdmin": "karni.admin.base",
     "SoftDeleteAdminMixin": "karni.admin.soft_delete",
     "SoftDeleteListFilter": "karni.admin.soft_delete",
@@ -173,6 +175,10 @@ def autodiscover(site: AdminSite | None = None) -> None:
             continue
         inlines = [build_inline(child, fk_name) for child, fk_name in inline_map.get(model, [])]
         site.register(model, build_model_admin(model, inlines=inlines))
+
+    from karni.admin.plurals import apply_plurals
+
+    apply_plurals(site)
 
     # Second pass: with every registration done, targets are known, so the
     # karni-created admins can safely point FK/M2M fields at autocomplete

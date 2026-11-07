@@ -1,8 +1,10 @@
 # @karni/ui
 
-Schema-driven React components for [Karni](https://github.com/cbsshekhawat18-lab/karni#readme) backends. Point it at a
-Karni API's OpenAPI schema and you get working tables, forms, detail views and
-auth, plus the themable primitives they are built from, without regenerating boilerplate.
+React components for Karni: schema-driven tables, forms, detail views and auth.
+
+[![npm](https://img.shields.io/npm/v/@karni/ui)](https://www.npmjs.com/package/@karni/ui) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/ui/)
+
+Point it at a Karni API's OpenAPI schema and you get working tables, forms, detail views and auth, plus the themable primitives they are built from. These are its main features:
 
 - **Resource components**: `ResourceTable`, `ResourceForm`, `ResourceDetail`,
   `ResourceSelect` render themselves from the backend schema (`/api/schema/`).
@@ -23,11 +25,16 @@ dependencies are resolved by your bundler or by Node.
 ## Install
 
 ```sh
-npm install @karni/ui @tanstack/react-query @tanstack/react-table react-hook-form @hookform/resolvers zod
+npm install @karni/ui @tanstack/react-query@5 @tanstack/react-table@8 react-hook-form@7 @hookform/resolvers@^5.1 zod@^4.6.6
 ```
 
+The versions in the command are the peer ranges. Without them npm installs each
+package's latest major, which can be newer than `@karni/ui` supports
+(`@tanstack/react-table` 9, for one), and the next install fails with ERESOLVE.
+
 Peer dependencies: `react` / `react-dom` (18 or 19), `@tanstack/react-query` v5,
-`@tanstack/react-table` v8, `react-hook-form` v7, `@hookform/resolvers` and `zod` v3.
+`@tanstack/react-table` v8, `react-hook-form` v7, and `zod` 4.6.6 or later with
+`@hookform/resolvers` v5 (`zod` 3.23 or later with `@hookform/resolvers` v3 still works).
 The project also needs `tailwindcss` (v3.4+ or v4) as a build tool. It is a
 devDependency, which is how `karni new` sets it up. It compiles the classes the
 components use and is never imported at runtime, so it is not a peer.
@@ -60,14 +67,14 @@ the schema root (`x-karni-auth-mode`). Override it with `mode="jwt" | "session"`
 Every visual value in every component resolves from a `--karni-*` CSS custom
 property defined in `@karni/ui/styles.css`:
 
-| Family             | What it holds                                                                                                                                                                                                            |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--karni-color-*`  | colours: background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, overlay, chart-1 … chart-5, and the derived `-foreground`, `-hover`, `-subtle` and `-border` shades |
-| `--karni-space-*`  | the spacing scale: `--karni-space-unit` (0.25rem), or any step `--karni-space-<n>` (`--karni-space-4` is 1rem)                                                                                                           |
-| `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                           |
-| `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                        |
-| `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                             |
-| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box)       |
+| Family             | What it holds                                                                                                                                                                                                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--karni-color-*`  | colours: background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, overlay, chart-1 … chart-5, and the derived `-foreground`, `-hover`, `-subtle` and `-border` shades                                                                                                  |
+| `--karni-space-*`  | the spacing scale: `--karni-space-unit` (0.25rem), or any step `--karni-space-<n>` (`--karni-space-4` is 1rem)                                                                                                                                                                                                            |
+| `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                                                                                                                            |
+| `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                                                                                                                         |
+| `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                                                                                                                              |
+| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box), `--karni-tree-indent` and `--karni-tree-max-height` (TreeView), and `--karni-search-*` (GlobalSearch) |
 
 The Tailwind preset maps its scales onto these properties, so `bg-primary`,
 `p-4` or `rounded-md`, in a component or in your own code, reads them. Import
@@ -328,6 +335,9 @@ holds Karni's own, so a project can wrap one instead of rewriting it. Every
 | `ChangeHistory`  | `Loading`, `Error`, `Empty`, `Entry`                                                     |
 | `LoginForm`      | `Error` (+ `id` for `aria-describedby`, and `described`: the failure worded for sign-in) |
 | `AuthGuard`      | `Anonymous` (not signed in: a sign-in prompt), `Denied` (signed in, role lacks access)   |
+| `SocialButton`   | `Error` (+ `id` and `described`), `Approval` (a new account awaits approval)             |
+| `OtpLoginForm`   | `Error` (+ `id` and `described`), `Approval` (a new account awaits approval)             |
+| `TermsGate`      | `Panel` (the terms and the accept button, with `accepting` and the `error` worded)       |
 
 Loading placeholders take the real layout from the start (ResourceDetail
 draws one row per field the schema declares, plus the title and action
@@ -381,6 +391,31 @@ props, and you can always drop down to the hooks + primitives.
 />
 ```
 
+A `StateField` on the server publishes its lifecycle (`x-karni-transitions`),
+and `ResourceDetail` renders it: one button per state the record may move to
+from its current state ("Mark as Confirmed", "Mark as Cancelled"), shown when
+the API lets this user write the field. A click PATCHes the field, a move into
+a terminal state (one nothing leaves) asks first, and a refusal shows the
+server's own sentence. `transitions={false}` hides them, and an object tunes
+them:
+
+```tsx
+<ResourceDetail
+  resource="orders"
+  id={orderId}
+  transitions={{
+    labels: { cancelled: "Cancel order" }, // default "Mark as <state>"
+    confirm: ["cancelled", "refunded"], // default: the terminal states. true or false: all or none
+    can: (order, field, target) => target !== "refunded" || hasRole("finance"),
+  }}
+  onTransition={(order, field, target) => toast(`Now ${target}`)}
+/>
+```
+
+The `Transitions` slot replaces the buttons and receives the targets.
+`ResourceTable` puts a lifecycle field first in its derived filter bar, so the
+list filters by state before anything else.
+
 A 404 reads "Couldn't find this event" with the `back` action and no retry.
 Karni answers 404 for a record outside the user's scope too, so the words never
 say the record exists. A 403 reads "You can't view this event". Other failures
@@ -413,6 +448,77 @@ cleared optional field is left out of the request rather than sent as `null`
 
 Validation schemas are generated at runtime with `zodFor(schema, "create" | "update")`.
 `displayLabel(obj)` picks a human label for relation objects.
+
+### Dashboard: the home page from the schema
+
+`<Dashboard>` is the staff app's home page. A model that declares `class
+Karni: dashboard = {...}` on the server is published as `x-karni-dashboard` on
+its list operation, and the component renders one section per such model: a
+`Stat` tile per count (every row, the new ones, one per state, the named
+counts) and a `ResourceTable` of the newest rows. Every number is a list
+request with `page_size=1` and the count's filters, so the API's row scope and
+access rules apply, and a resource the user may not list is left out.
+
+```tsx
+<Dashboard
+  onOpen={(resource, row) => navigate(`/${resource}/${row.id}`)}
+  onOpenList={(resource, filters) => navigate(`/${resource}`, { search: filters })}
+/>
+```
+
+`resources` picks the sections (in that order), `sections` rewrites them
+before they render, `now` fixes "today" for relative dates, and `slots`
+replaces any part: `Section`, `Counts`, `Count`, `Recent`, `Empty`, `Loading`,
+`Error`. The declaration's keys are in the backend docs
+([api.md: the staff dashboard](https://github.com/cbsshekhawat18-lab/karni/blob/main/docs/api.md#the-staff-dashboard)).
+
+### Page blocks: dashboards, comparisons and reports (experimental)
+
+Pages beyond CRUD compose these, so a dashboard stays under the 50-line page
+cap: `DashboardGrid` and `DashboardCard` (a responsive grid of titled cards
+with loading, empty and error states), `ChartCard` (a card around a
+`DataChart`), `DataTable` (rows the page computed: sorting, a sticky header and
+first column, CSV and XLSX export, and only the rows in view rendered past 100
+rows), `ComparisonTable` (entities side by side, metrics as rows, the best value
+marked), `Accordion` (the WAI-ARIA accordion pattern) and `MarkdownView`
+(sanitized markdown, with the parser and the sanitizer loaded on first use).
+`useResourceCounts` counts the rows of each resource for a chart.
+
+```tsx
+<DashboardGrid>
+  <ChartCard title="Orders per region" kind="bar" data={points} span={2} />
+  <DashboardCard title="Regions">
+    <DataTable caption="Regions" columns={columns} rows={regions} />
+  </DashboardCard>
+</DashboardGrid>
+```
+
+`ResourceDetail`'s `related={["deals", "people"]}` adds a tab per reverse
+relation, each a `ResourceTable` of the related rows filtered to the record,
+from the `x-karni-related` extension the backend publishes. Every component,
+when to use it and an example page are in
+[docs/ui.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/docs/ui.md#page-blocks-experimental).
+
+### Wide models: markdown, field groups and column sets (experimental)
+
+A model with a hundred fields and long markdown sections stays usable
+without any page code. A `MarkdownField` (`format: "markdown"` in the schema)
+is edited in `ResourceForm` with Write and Preview tabs and shown formatted
+and sanitized by `ResourceDetail`. A model's `Karni.field_groups`
+(`x-karni-field-groups`) splits `ResourceForm` and `ResourceDetail` into
+sections, or tabs with `field_group_layout = "tabs"`, the fields in no group
+last under "Other". A tab with a failing field is marked and opens when focus
+moves to it. A model's `Karni.column_sets` (`x-karni-column-sets`) gives
+`ResourceTable` a column set menu (a button named after the set shown), the choice remembered per user
+and table. Each screen can override them:
+
+```tsx
+<ResourceForm resource="products" groupLayout="tabs" />
+<ResourceDetail resource="products" id={id} fieldGroups={false} />
+<ResourceTable resource="products" columnSet="financial" onColumnSetChange={save} />
+```
+
+See [docs/ui.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/docs/ui.md#field-groups-and-column-sets-experimental).
 
 ### ResourceTable in every state
 
@@ -644,6 +750,51 @@ guards a form of your own.
   `slots` replaces `Option`, `Chip`, `Loading`, `Empty` and `Error`
   (`defaultResourceSelectSlots`).
 
+### Tree models (experimental)
+
+A resource whose model is a Karni `TreeModel` carries `x-karni-tree` in the
+schema, and so does every FK or M2M that points at one. The components read
+it, so a tree needs no code of its own:
+
+- `ResourceForm` edits a relation to a tree with `TreeSelect`: a button that
+  opens the tree at the chosen node. One choice closes it, `multiple` keeps it
+  open and shows chips. On an ordered tree `position` is read-only, so the
+  form leaves it to the move action.
+- `ResourceDetail` shows the path from the root above a tree resource's
+  record (`TreeBreadcrumb`, from `ancestors/`). `breadcrumb={false}` hides it,
+  and `breadcrumb={{ href, onNavigate }}` links the ancestors.
+- `TreeView` shows the tree itself:
+
+```tsx
+<TreeView
+  resource="regions"
+  value={regionId}
+  onChange={(id) => setRegionId(id)}
+  onActivate={(node) => navigate(`/regions/${node.id}`)}
+/>
+```
+
+- It loads two levels (`depth`) from `tree/` and each deeper branch when it is
+  opened, so a tree of 10,000 nodes costs one request per opened branch. When
+  the server's node limit cuts a level, the tree says so.
+- The search field asks the list's `?search=` and shows the matches flat.
+  Without `search_fields` it narrows the loaded nodes instead.
+- It follows the WAI-ARIA tree pattern: one tab stop, Up and Down, Right opens
+  or enters a branch, Left closes it or goes to the parent, Home and End,
+  Enter activates, Space selects, `*` opens every sibling, and typing jumps to
+  the next node whose label starts with the typed text.
+- `reveal` opens the path to a node, `root` starts below one, `slots` replaces
+  `Node`, `Loading`, `Empty` and `Error` (`defaultTreeViewSlots`).
+- `access` (experimental) shows the requester's access forest instead
+  (`GET /<resource>/access/`, the `tree:<path>` scope): granted nodes and the
+  nodes below them can be chosen, their ancestors and the other roots are
+  greyed (`aria-disabled`). `access={{ permission: "shop.order:view" }}`
+  keeps one permission's grants.
+- `useResourceTree`, `useResourceChildren`, `useResourceAncestors`,
+  `useResourceAccessForest` and `useTreeMutations` (`move`, `removeBranch`)
+  are the hooks underneath.
+  `--karni-tree-indent` and `--karni-tree-max-height` theme it.
+
 ## Hooks
 
 ```tsx
@@ -690,6 +841,100 @@ and a dropped connection. The message is announced. Both fields point at it
 (`aria-describedby`) and are marked invalid when they are the problem. The
 email stays after a failure, and wrong credentials clear and focus the password.
 The email field takes focus on mount (`autoFocus={false}` turns that off).
+
+### Sign-in with an ID token (experimental)
+
+`SocialButton` signs in with a Google, Microsoft or Apple ID token, against
+the backend's `POST <authBasePath>/social/<provider>/` ([accounts: sign-in with
+an ID token](https://cbsshekhawat18-lab.github.io/karni/accounts/#sign-in-with-an-id-token-google-microsoft-apple)).
+Karni bundles no provider SDK: `getIdToken` is your own call into Google
+Identity Services, MSAL or Sign in with Apple JS, and resolves with the ID
+token (and the nonce you generated), or `null` when the user closed the
+provider's window.
+
+```tsx
+<SocialButton
+  provider="google"
+  getIdToken={async () => ({ idToken: await askGoogleForAnIdToken(nonce), nonce })}
+  onSuccess={(user) => navigate("/")}
+  on2FA={(ephemeralToken) => navigate(`/2fa?token=${ephemeralToken}`)}
+/>
+```
+
+The button shows progress, says in plain words why a sign-in was refused
+(from the Karni code: an unverified email, sign-up closed, an inactive
+account, ...), and shows a new account that waits for an administrator as its
+own state (`onAwaitingApproval`). For a button of your own, use the hook:
+`const { signIn, status, error } = useSocialLogin("google")`. `signIn(idToken,
+{ nonce, name })` adopts the token pair in JWT mode, re-syncs the session
+user in session mode, and resolves `{ ok, user }`, `{ requires2fa,
+ephemeralToken }` (LoginForm's 2FA step) or `{ awaitingApproval, detail }`.
+Both names are experimental: they may change in a minor release.
+
+### Sign-in with a code sent by email (experimental)
+
+`OtpLoginForm` signs in without a password, against the backend's `POST
+<authBasePath>/otp/send/` and `otp/verify/` ([accounts: sign in with a code
+sent by email](https://cbsshekhawat18-lab.github.io/karni/accounts/#sign-in-with-a-code-sent-by-email)),
+which exist while `KARNI_EMAIL_OTP` is on.
+
+```tsx
+<OtpLoginForm
+  onSuccess={(user) => navigate("/")}
+  on2FA={(ephemeralToken) => navigate(`/2fa?token=${ephemeralToken}`)}
+/>
+```
+
+The email step sends the code. The code step has one input for the whole
+code, sized to the length the server answered (`inputMode="numeric"`,
+`autocomplete="one-time-code"`, so a phone offers the code from the email), a
+"Send a new code" button that waits `resendCooldown` seconds (30 by default),
+and "Use another email" to go back. A wrong code is cleared and focused, an
+inactive account and throttling are worded plainly, and a new account that
+waits for an administrator is its own state (`onAwaitingApproval`). To offer
+it next to the password, pass `codeSignIn` to `LoginForm`: a "Sign in with a
+code" switch shows `OtpLoginForm` in place of the password fields.
+
+A code that proves an address the account never verified also removes the
+account's password (whoever opened it may not own the address). The form says
+so in a toast, worded from the accounts docs, that outlives the form when
+`onSuccess` navigates away, so the app needs its `<Toaster />`.
+`passwordRemovedNotice` replaces the text (`null` shows none), and
+`onSuccess(user, { passwordRemoved })` tells a page of your own. The result of
+`verify(code)` carries `passwordRemoved: true` in that case.
+
+For a form of your own, use the hook: `const { step, send, verify, resend,
+back, status, error, cooldown, length } = useOtpLogin({ resendCooldown: 30 })`.
+`verify(code)` adopts the token pair in JWT mode, re-syncs the session user
+in session mode, and resolves `{ ok, user }`, `{ requires2fa, ephemeralToken }`
+or `{ awaitingApproval, detail }`, like `useSocialLogin`. These names are
+experimental: they may change in a minor release.
+
+### Terms acceptance (experimental)
+
+`TermsGate` renders its children only once the signed-in user has accepted
+the current terms, against the backend's `KARNI_TERMS` ([accounts: terms
+acceptance](https://cbsshekhawat18-lab.github.io/karni/accounts/#terms-acceptance)).
+Wrap the part of the app that calls the API, inside `AuthProvider`:
+
+```tsx
+<AuthProvider>
+  <TermsGate client={{ platform: "web", app_version: "4.1.0" }}>
+    <RouterProvider router={router} />
+  </TermsGate>
+</AuthProvider>
+```
+
+Until the user accepts, it renders the terms in place of its children: a link
+to their url, or the page in a frame with `embed` (the page must allow being
+framed), and an "Accept and continue" button. Accepting posts
+`<authBasePath>/terms/accept/` with the version and the optional `client`
+object (or a function that returns it), then the children render. `useAuth()` carries `terms`, `termsRequired` and
+`acceptTerms(client)`: `termsRequired` comes from `/me/` and from the API
+gate's 403 (`E245`) on any request made through the client, so terms bumped
+mid-session bring the gate back. If the version changed again before the user
+accepts (`E246`), the gate shows the new one. The `Panel` slot replaces the
+whole panel. These names are experimental: they may change in a minor release.
 
 In JWT mode the refresh token is stored through a pluggable `TokenStorage`.
 The default is `localStorage`, which is simple but readable by any XSS on your
@@ -795,16 +1040,18 @@ function NavLink({ item, href, onClick, ...props }: LayoutNavLinkProps) {
 </Layout>;
 ```
 
-| Component    | Slots                                                      |
-| ------------ | ---------------------------------------------------------- |
-| `Layout`     | `Header`, `Sidebar`, `NavLink`, `MobileDrawer`, `SkipLink` |
-| `Page`       | `Header`, `Title`, `Description`, `Actions`                |
-| `Modal`      | `Header`, `Footer`, `CloseButton`                          |
-| `Toaster`    | `Title`, `Description`, `CloseButton`                      |
-| `EmptyState` | `Icon`, `Title`, `Description`, `Actions`                  |
-| `Stat`       | `Label`, `Value`, `Delta`, `Icon`                          |
-| `DataChart`  | `Tooltip`, `Legend`, `Empty`, `Loading`                    |
-| `FileUpload` | `Dropzone`, `FileRow`                                      |
+| Component      | Slots                                                                  |
+| -------------- | ---------------------------------------------------------------------- |
+| `Layout`       | `Header`, `Sidebar`, `NavLink`, `NavGroup`, `MobileDrawer`, `SkipLink` |
+| `Page`         | `Header`, `Title`, `Description`, `Actions`                            |
+| `Modal`        | `Header`, `Footer`, `CloseButton`                                      |
+| `Toaster`      | `Title`, `Description`, `CloseButton`                                  |
+| `EmptyState`   | `Icon`, `Title`, `Description`, `Actions`                              |
+| `Stat`         | `Label`, `Value`, `Delta`, `Icon`                                      |
+| `Dashboard`    | `Section`, `Counts`, `Count`, `Recent`, `Empty`, `Loading`, `Error`    |
+| `DataChart`    | `Tooltip`, `Legend`, `Empty`, `Loading`                                |
+| `FileUpload`   | `Dropzone`, `FileRow`                                                  |
+| `GlobalSearch` | `Trigger`, `ResultLink`                                                |
 
 Where a slot does what an older prop did, the prop keeps working and the slot
 is preferred: `Layout`'s `renderNavItem` (use `NavLink`), `Page`'s `header`
@@ -813,6 +1060,60 @@ is preferred: `Layout`'s `renderNavItem` (use `NavLink`), `Page`'s `header`
 (use `className`). A custom `Modal` `Header` renders `ModalTitle` (and
 `ModalDescription`) so the dialog stays labelled. A custom `CloseButton` wraps
 its button in `ModalClose`.
+
+`routeNavItems(paths, { pathname, signedIn })` builds `Layout`'s `navItems`
+from a router's route paths (TanStack Router:
+`Object.keys(router.routesByPath)`): one entry per static route in
+registration order, the active one marked, routes with a `$param` and paths
+ending in `/new` left out (they are reached from their list page), and a
+sign-in page (`isSignInRoute`: `/login`, `/sign-in`) listed only while nobody
+is signed in. `label`, `hidden` and `signIn` replace each rule. The scaffold's
+`layout.tsx` uses it, with `<AuthGuard explain>` around every page but the
+sign-in page.
+
+Navigation from data (experimental): `navItems` also takes groups,
+`{ label, icon, children: [...] }`, which collapse behind a button (Enter or
+Space) and open while they hold the current page. `<Layout navSource="server"
+pathname={pathname} />` renders the menu the server gives the signed-in user
+instead (`useNavigation()`, `GET /navigation/`, Django's `KARNI_NAVIGATION`),
+filtered by the same grants as the API: icons come by name from
+`defaultNavIcons`, or from the `icons` prop over them, and `navItems` shows if
+the request fails. `navigationEntries(items, { pathname, icons })` is the
+conversion on its own. See
+[navigation](https://cbsshekhawat18-lab.github.io/karni/navigation/).
+
+### GlobalSearch: one search box over every model (experimental)
+
+`<GlobalSearch />` is a command palette over cross-model search
+(`GET /api/search/`, every model with `class Karni: search`). Cmd+K on macOS,
+Ctrl+K elsewhere, or its button opens it. Typing searches after a 200 ms pause
+(`debounceMs`) once the query has `minLength` (2) characters, and the hits come
+grouped per resource, best first. Each hit links to its ResourceDetail page,
+`/<resource>/<id>` (`hrefFor` changes it). The server applies each model's own
+list access, so a user never sees a model or a row they cannot list.
+
+It follows the WAI-ARIA combobox pattern: the input is a combobox that owns a
+listbox of grouped options, Arrow Down and Arrow Up move the active option
+while focus stays in the input, Enter opens it, Escape closes the palette and
+a polite live region says how many hits there are. `<Layout search>` mounts it
+in the top bar (`search={{ onSelect, models }}` passes its props).
+
+```tsx
+import { GlobalSearch, type GlobalSearchResultLinkProps } from "@karni/ui";
+import { Link } from "@tanstack/react-router";
+
+function ResultLink({ hit, href, ...props }: GlobalSearchResultLinkProps) {
+  return <Link to={href} {...props} />;
+}
+
+<GlobalSearch models={["products", "suppliers"]} slots={{ ResultLink }} />;
+```
+
+`useGlobalSearch({ q, models, limit })` is the data underneath, for a search
+page of your own. `karni types` generates a `useGlobalSearch` typed with the
+project's `SearchResource` names. The palette's width and the height its list
+grows to are the `--karni-search-width` (40rem) and `--karni-search-max-height`
+(60vh) tokens.
 
 Other additions: `Layout` takes `mobileNavOpen`, `defaultMobileNavOpen` and
 `onMobileNavOpenChange` to control the drawer. `Stat` and `DataChart` take
@@ -927,3 +1228,13 @@ Before the first `npm run storybook`, generate the MSW worker once:
 Tests enforce the color discipline: component source uses tokens only, with no
 Tailwind palette classes or raw color literals
 (see `src/components/primitives/no-color-literals.test.ts`).
+
+## Links
+
+- @karni/ui in the docs: <https://cbsshekhawat18-lab.github.io/karni/ui/>
+- Theming with karni ui detect: <https://cbsshekhawat18-lab.github.io/karni/theming/>
+- The Python side: <https://pypi.org/project/karni/>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. @karni/ui is released with every other Karni package, at one version.

@@ -1,0 +1,145 @@
+# yaml-language-server: $schema=https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json
+version: 1
+app:
+  name: Medintel
+  kind: app
+modules:
+  charts: {}
+features:
+  email_code_login: true
+  social_login: [google]
+  terms: {version: "2026-11", url: /terms/}
+  user_grants: true
+  api_cache: {ttl: 60}
+roles:
+  staff: {name: Staff, system: true, grants: {"*": all}}
+  customer: {name: Customer, default: true}
+apps:
+  intel:
+    entities:
+      Condition:
+        fields: {code: "str:40", name: "str:200", overview: "markdown?"}
+        tree: true
+        key: code
+        search: name
+        order: name
+        global_search: {fields: [name], title: name}
+        access: {read: authenticated, write: "role:staff"}
+      Intervention:
+        fields: {code: "str:40", name: "str:200", overview: "markdown?"}
+        tree: true
+        key: code
+        search: name
+        order: name
+        global_search: {fields: [name], title: name}
+        access: {read: authenticated, write: "role:staff"}
+      Company:
+        fields:
+          name: "str:200"
+          country: country
+          website: "url?"
+          summary: "markdown?"
+          strategy: "markdown?"
+        key: name
+        search: name
+        order: name
+        audit: true
+        taxonomies: {interventions: Intervention}
+        global_search: {fields: [name], title: name}
+        groups: {Profile: [name, country, website], Analysis: [summary, strategy]}
+        aggregate:
+          group_by: [country]
+          metrics: [count]
+      Person:
+        fields:
+          name: "str:200"
+          title: "str:200"
+          company: fk:Company
+          email: "email:unique"
+          bio: "markdown?"
+        key: email
+        search: name
+        order: name
+        global_search: {fields: [name], title: name, subtitle: title}
+      Trial:
+        fields:
+          code: "str:30"
+          title: "str:300"
+          phase: "choice:phase_1|phase_2|phase_3|phase_4"
+          status: "choice:recruiting|active|completed|terminated"
+          start_year: int
+          enrollment: int
+          sponsor: fk:Company
+          investigator: "fk:Person?"
+          summary: "markdown?"
+          design: "markdown?"
+          eligibility: "markdown?"
+          results: "markdown?"
+        key: code
+        search: [code, title]
+        order: [-start_year, code]
+        audit: true
+        taxonomies: {conditions: Condition, interventions: Intervention}
+        global_search: {fields: [code, title], title: title, subtitle: code}
+        groups:
+          Identity: [code, title, phase, status, start_year, enrollment]
+          People: [sponsor, investigator]
+          Protocol: [summary, design, eligibility]
+          Outcome: [results]
+        column_sets:
+          default: [code, title, phase, status, start_year]
+          sponsor: [code, sponsor, enrollment, start_year]
+        aggregate:
+          group_by: [phase, status, start_year, sponsor__name]
+          values: [enrollment]
+          metrics: [count, sum, avg]
+      Brand:
+        fields: {name: "str:200", company: fk:Company, description: "markdown?"}
+        key: name
+        search: name
+        order: name
+        taxonomies: {interventions: Intervention}
+        global_search: {fields: [name], title: name}
+      Deal:
+        fields:
+          title: "str:300"
+          value: "money:USD"
+          year: int
+          acquirer: fk:Company
+          seller: fk:Company
+          brand: "fk:Brand?"
+          rationale: "markdown?"
+        key: title
+        search: title
+        order: [-year, title]
+        audit: true
+        taxonomies: {interventions: Intervention}
+        global_search: {fields: [title], title: title}
+        aggregate:
+          group_by: [year, acquirer__name]
+          values: [value]
+          metrics: [count, sum, avg]
+pages:
+  - home: dashboard
+  - Trial: [list, detail, form]
+  - Company: [list, {detail: {related: [Trial, Brand]}}, form]
+  - Deal: [list, detail, form]
+  - Person: [list, detail, form]
+  - Brand: [list, detail, form]
+  - Condition: [list, form]
+  - Intervention: [list, form]
+  - insights: code
+  - players: code
+  - deals-chart: code
+  - search: code
+  - login: code
+seed: {Condition: 90, Intervention: 35, Company: 40, Person: 80, Trial: 300, Brand: 60, Deal: 120}
+navigation:
+  - home
+  - Intelligence: [Trial, Company, Deal, Person, Brand]
+  - Taxonomies: [Condition, Intervention]
+  - Analysis:
+      - insights: {label: Trials dashboard, requires: "intel.trial:view"}
+      - players: {requires: "intel.company:view"}
+      - deals-chart: {label: Deals chart, requires: "intel.deal:view"}
+      - search

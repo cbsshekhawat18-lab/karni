@@ -6,6 +6,16 @@ Kinds (``--resource R --kind ...``), with routes under a base path
 * ``list``   → ``<base>``: ``<Page><ResourceTable resource=R /></Page>``
 * ``detail`` → ``<base>/$id``: ``<ResourceDetail resource=R id={id} />``
 * ``form``   → ``<base>/new`` and ``<base>/$id/edit``: ``<ResourceForm />``
+* ``blank``  → ``/<name>``: the bare page (``--kind blank``, no ``--resource``)
+* ``dashboard`` (experimental) → ``/<name>``: a ``DashboardGrid`` with a
+  ``ChartCard`` of the rows of each resource (``--count``, default: every
+  resource the project routes), counted by ``useResourceCounts``
+
+A detail page takes ``--related <name>`` (experimental, repeatable): a tab
+per reverse relation, each a table of the related rows filtered to the
+record (ResourceDetail's ``related``). Each tab must be backed by a fk of the
+related model to the page's model, by the rule ``karni spec validate``
+applies (:func:`karni_cli.spec.validate.related_tab`).
 
 Pages link to their siblings only when those routes exist (or are generated
 in the same run) — TanStack Router's typed ``navigate`` rejects unknown
@@ -19,6 +29,7 @@ Routes are registered in ``frontend/src/routes.tsx`` between the
 from __future__ import annotations
 
 import ast
+import functools
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,12 +40,13 @@ from karni_cli.generators.core import (
     DRY_RUN_OPTION,
     FORCE_OPTION,
     FRONTEND,
+    App,
     Workspace,
     local_apps,
     project_workspace,
     require_frontend,
 )
-from karni_cli.generators.introspect import viewsets_file
+from karni_cli.generators.introspect import relation_targets, viewsets_file
 from karni_cli.generators.naming import default_route, humanize, pascal, require_kebab
 from karni_cli.generators.pysource import parse
 from karni_cli.project import CliError
@@ -42,7 +54,9 @@ from karni_cli.project import CliError
 NAME = "page"
 SUMMARY = "Add a frontend page (<= 50 lines) composing @karni/ui, with its route."
 
-KINDS = ("list", "detail", "form", "login")
+KINDS = ("list", "detail", "form", "login", "dashboard")
+#: ``--kind blank``: the bare ``<Page title=... />`` (what a page without ``--resource`` is).
+BLANK = "blank"
 MAX_LINES = 50
 PAGES = FRONTEND / "src" / "pages"
 ROUTES = FRONTEND / "src" / "routes.tsx"
@@ -50,7 +64,7 @@ IMPORT_MARKER = "// karni:page-imports"
 ROUTE_MARKER = "// karni:routes"
 
 _PATH = re.compile(r"^/([A-Za-z0-9_.$-]+(/[A-Za-z0-9_.$-]+)*)?$")
-_ROUTE_PATH = re.compile(r"""path:\s*["']([^"']+)["']""")
+ROUTE_PATH = re.compile(r"""path:\s*["']([^"']+)["']""")
 _SUFFIXES = ("-detail", "-form", "-list", "-page")
 
 
@@ -63,6 +77,10 @@ class PageSpec:
     title: str
     #: Relation fields a detail page asks the API to expand (labels, not raw ids).
     expand: tuple[str, ...] = ()
+    #: Experimental. A detail page's related tabs (ResourceDetail's ``related``).
+    related: tuple[str, ...] = ()
+    #: Experimental. The resources a dashboard counts, in chart order.
+    counts: tuple[str, ...] = ()
 
     @property
     def component(self) -> str:
@@ -90,11 +108,37 @@ def spec_for(
     path: str | None,
     title: str | None = None,
     expand: tuple[str, ...] | list[str] | None = None,
+    related: tuple[str, ...] | list[str] | None = None,
+    counts: tuple[str, ...] | list[str] | None = None,
 ) -> PageSpec:
     require_kebab(name, "Page name")
-    if kind is not None and kind not in KINDS:
-        raise CliError(f"--kind {kind!r}: choose one of {', '.join(KINDS)}.", code="C106")
-    if kind is not None and kind != "login" and resource is None:
+    if kind is not None and kind != BLANK and kind not in KINDS:
+        raise CliError(f"--kind {kind!r}: choose one of {', '.join((*KINDS, BLANK))}.", code="C106")
+    if related and kind != "detail":
+        raise CliError("--related takes a detail page: add --kind detail.", code="C106")
+    if counts and kind != "dashboard":
+        raise CliError("--count takes a dashboard page: add --kind dashboard.", code="C106")
+    for entry in (*(related or ()), *(counts or ())):
+        if not re.fullmatch(r"[a-z][a-z0-9_-]*(\.[a-z][a-z0-9_]*)?", entry):
+            raise CliError(
+                f"{entry!r}: a resource (deals), or resource.field for a related tab "
+                "(deals.partner).",
+                code="C106",
+            )
+    if kind == BLANK:
+        if resource is not None:
+            raise CliError(
+                "--kind blank is the bare page: it takes no --resource (without --kind it is "
+                "a list of the resource).",
+                code="C106",
+            )
+        kind = None  # the page karni make page <name> writes without --resource
+    if kind == "dashboard" and resource is not None:
+        raise CliError(
+            "A dashboard counts resources: pass each with --count instead of --resource.",
+            code="C106",
+        )
+    if kind is not None and kind not in ("login", "dashboard") and resource is None:
         raise CliError(
             f"--kind {kind} needs --resource <route>, e.g. --resource events.", code="C004"
         )
@@ -118,17 +162,31 @@ def spec_for(
             f"--title {title!r}: plain text only (no quotes, braces or angle brackets).",
             code="C106",
         )
-    return PageSpec(name, kind, resource, base, title, tuple(expand or ()))
+    return PageSpec(
+        name,
+        kind,
+        resource,
+        base,
+        title,
+        tuple(expand or ()),
+        tuple(related or ()),
+        tuple(counts or ()),
+    )
 
 
 def known_routes(ws: Workspace) -> set[str]:
     text = ws.read(ROUTES) or ""
-    return set(_ROUTE_PATH.findall(text))
+    return set(ROUTE_PATH.findall(text))
 
 
 def _routed_resources(ws: Workspace) -> set[str]:
     """Routes of the project's viewsets (default kebab-plural, or an explicit ``route``)."""
-    found: set[str] = set()
+    return set(_routed_models(ws))
+
+
+def _routed_models(ws: Workspace) -> dict[str, tuple[App, str]]:
+    """Route of each of the project's viewsets → (the viewset's app, its model's class name)."""
+    found: dict[str, tuple[App, str]] = {}
     for app in local_apps(ws):
         path = viewsets_file(ws, app)
         text = ws.read(path)
@@ -150,10 +208,107 @@ def _routed_resources(ws: Workspace) -> set[str]:
                 elif target.id == "model" and isinstance(stmt.value, ast.Name):
                     model = stmt.value.id
             if explicit:
-                found.add(explicit)
+                found[explicit] = (app, model or "")
             elif model:
-                found.add(default_route(model))
+                found[default_route(model)] = (app, model)
     return found
+
+
+def _model_classes(ws: Workspace) -> dict[str, list[tuple[App, ast.ClassDef]]]:
+    """Every class in the local apps' ``models.py``, by name (a ``models/`` package is skipped)."""
+    found: dict[str, list[tuple[App, ast.ClassDef]]] = {}
+    for app in local_apps(ws):
+        path = app.file("models.py")
+        text = ws.read(path)
+        if text is None:
+            continue
+        for node in parse(ws, ws.rel(path), text).body:
+            if isinstance(node, ast.ClassDef):
+                found.setdefault(node.name, []).append((app, node))
+    return found
+
+
+def _model_class(
+    classes: dict[str, list[tuple[App, ast.ClassDef]]], app: App, name: str
+) -> tuple[App, ast.ClassDef] | None:
+    """The model ``name`` in ``app``, else in the one other local app that defines it."""
+    candidates = classes.get(name, [])
+    own = [found for found in candidates if found[0] == app]
+    return (own or candidates)[0] if len(own or candidates) == 1 else None
+
+
+def check_related(ws: Workspace, spec: PageSpec) -> None:
+    """Refuse a related tab no fk backs, by the rule ``karni spec validate`` applies (C561, C562).
+
+    A tab is checked when the page's resource and the tab's resource are both
+    routed by this project's viewsets, and the tab's model declares its own
+    fields (no project base class it could inherit a fk from). A module's
+    resource is left to the module.
+    """
+    if not spec.related or spec.resource is None:
+        return
+    from karni_cli.spec.validate import TabProblem, related_tab
+
+    routes = _routed_models(ws)
+    classes = _model_classes(ws)
+    owner = _model_class(classes, *routes[spec.resource]) if spec.resource in routes else None
+    if owner is None:
+        return
+    owner_app, owner_cls = owner
+    seen: set[str] = set()
+    for entry in spec.related:
+        route, _, field = entry.partition(".")
+        if route not in routes:
+            ws.note(
+                f"note: no viewset in this project routes /api/{route}/, so the related tab "
+                f"{entry!r} is not checked against its fks."
+            )
+            continue
+        held = _model_class(classes, *routes[route])
+        if held is None:
+            continue
+        held_app, held_cls = held
+        if any(isinstance(base, ast.Name) and base.id in classes for base in held_cls.bases):
+            continue  # it may inherit a fk from a project class the source does not show
+
+        def points_at_owner(written: str, held_name: str = held_cls.name) -> bool:
+            app_label, _, name = written.rpartition(".")
+            if written == "self":
+                return held_name == owner_cls.name
+            return name == owner_cls.name and app_label in ("", owner_app.label)
+
+        relations = relation_targets(held_cls)
+        pointing = {
+            name: kind for name, (kind, written) in relations.items() if points_at_owner(written)
+        }
+        fields = {
+            stmt.targets[0].id
+            for stmt in held_cls.body
+            if isinstance(stmt, ast.Assign)
+            and len(stmt.targets) == 1
+            and isinstance(stmt.targets[0], ast.Name)
+        }
+        found = related_tab(
+            owner_cls.name,
+            held_cls.name,
+            field or None,
+            pointing,
+            fields,
+            ref=functools.partial("{}.{}".format, route),
+        )
+        if isinstance(found, TabProblem):
+            raise CliError(
+                f"--related {entry}: {owner_cls.name}'s related tab: {found.why} "
+                f"({ws.rel(held_app.file('models.py'))}). {found.fix}",
+                code=found.code,
+            )
+        if f"{route}.{found}" in seen:
+            raise CliError(
+                f"--related {entry}: {owner_cls.name}'s related tab is listed twice. List each "
+                "related tab once.",
+                code="C563",
+            )
+        seen.add(f"{route}.{found}")
 
 
 # rendering
@@ -182,6 +337,8 @@ def render(spec: PageSpec, routes: set[str]) -> str:
             f'    return <Page title="{spec.title}" />;\n'
             "}\n"
         )
+    if spec.kind == "dashboard":
+        return _dashboard(spec)
     if spec.kind == "login":
         home = "/" if "/" in routes or not routes else min(routes)
         props = [f"onSuccess={{() => {_go(home)}}}"]
@@ -205,6 +362,9 @@ def render(spec: PageSpec, routes: set[str]) -> str:
         if spec.expand:
             names = ", ".join(f'"{name}"' for name in spec.expand)
             props.append(f"expand={{[{names}]}}")
+        if spec.related:
+            names = ", ".join(f'"{name}"' for name in spec.related)
+            props.append(f"related={{[{names}]}}")
         return _shell(spec, "ResourceDetail", props, actions, hooks=hooks, ui={"ResourceDetail"})
     hooks = ["const { id } = useParams({ strict: false });"]
     props = [f'resource="{resource}"', "id={id}"]
@@ -215,6 +375,61 @@ def render(spec: PageSpec, routes: set[str]) -> str:
     noun = spec.title.lower()
     title = f'{{id === undefined ? "New {noun}" : "Edit {noun}"}}'
     return _shell(spec, "ResourceForm", props, None, hooks=hooks, ui={"ResourceForm"}, title=title)
+
+
+def _string_list(names: tuple[str, ...], indent: str, width: int = 96) -> list[str]:
+    """``names`` as quoted strings, several to a line, each line at most ``width`` wide."""
+    lines: list[str] = []
+    line = ""
+    for name in names:
+        item = f'"{name}",'
+        if line and len(indent) + len(line) + 1 + len(item) > width:
+            lines.append(indent + line)
+            line = item
+        else:
+            line = f"{line} {item}" if line else item
+    if line:
+        lines.append(indent + line)
+    return lines
+
+
+def _dashboard(spec: PageSpec) -> str:
+    """A dashboard page: a DashboardGrid holding a ChartCard of each resource's rows.
+
+    The data seam: ``useResourceCounts`` asks each list for its count (one
+    request each). When an aggregation endpoint can count grouped rows in one
+    request (large-apps item 8), this is the one function that changes: the
+    ChartCards it writes take that endpoint's data instead.
+    """
+    lines = [
+        _ui_import({"ChartCard", "DashboardGrid", "Page", "useResourceCounts"}),
+        "",
+        "// The rows of each resource the user can read: one list request each (page_size=1).",
+        "const COUNTED = [",
+        *_string_list(spec.counts, "    "),
+        "];",
+        "",
+        f"export default function {spec.component}() {{",
+        "    const counts = useResourceCounts(COUNTED);",
+        "    return (",
+        f'        <Page title="{spec.title}">',
+        "            <DashboardGrid>",
+        "                <ChartCard",
+        '                    title="Rows per resource"',
+        '                    kind="bar"',
+        "                    data={counts.data}",
+        "                    loading={counts.loading}",
+        "                    error={counts.error}",
+        "                    onRetry={counts.refetch}",
+        '                    span="full"',
+        "                />",
+        "            </DashboardGrid>",
+        "        </Page>",
+        "    );",
+        "}",
+        "",
+    ]
+    return "\n".join(lines)
 
 
 def _indent(text: str, spaces: int) -> str:
@@ -301,7 +516,7 @@ def plan(
 def _register(ws: Workspace, spec: PageSpec, existing: set[str]) -> None:
     text = ws.read(ROUTES)
     manual = f'import {spec.component} from "./pages/{spec.name}";\n' + "\n".join(
-        _route_line(spec, p) for p in spec.paths
+        route_line(spec, p) for p in spec.paths
     )
     if text is None or IMPORT_MARKER not in text or ROUTE_MARKER not in text:
         raise CliError(
@@ -329,11 +544,12 @@ def _register(ws: Workspace, spec: PageSpec, existing: set[str]) -> None:
             continue
         index = next(i for i, ln in enumerate(lines) if ROUTE_MARKER in ln)
         indent = lines[index][: len(lines[index]) - len(lines[index].lstrip())]
-        lines.insert(index, indent + _route_line(spec, path).strip())
+        lines.insert(index, indent + route_line(spec, path).strip())
     ws.write(ROUTES, "\n".join(lines) + "\n")
 
 
-def _route_line(spec: PageSpec, path: str) -> str:
+def route_line(spec: PageSpec, path: str) -> str:
+    """The ``createRoute(...)`` entry of one of ``spec``'s paths (``karni build`` reuses it)."""
     return (
         f'    createRoute({{ getParentRoute: () => root, path: "{path}", '
         f"component: {spec.component} }}),"
@@ -348,7 +564,8 @@ def command(
     kind: str | None = typer.Option(
         None,
         "--kind",
-        help="With --resource: list (default), detail or form. A login page needs no resource.",
+        help="With --resource: list (default), detail or form. A login page needs no resource, "
+        "a dashboard (experimental) counts resources (--count), and blank is the bare page.",
     ),
     path: str | None = typer.Option(
         None,
@@ -356,6 +573,18 @@ def command(
         help="Route path. For resource pages it is the base (default `/<resource>`).",
     ),
     title: str | None = typer.Option(None, "--title", help="Page title (default: from the name)."),
+    related: list[str] = typer.Option(
+        [],
+        "--related",
+        help="Experimental. With --kind detail: a related tab (deals, or deals.partner), a "
+        "resource whose model has a fk to this one (C561 otherwise). Repeat it.",
+    ),
+    count: list[str] = typer.Option(
+        [],
+        "--count",
+        help="Experimental. With --kind dashboard: a resource to count. Repeat it (default: "
+        "every resource the project routes).",
+    ),
     no_route: bool = typer.Option(
         False, "--no-route", help="Do not register the route in frontend/src/routes.tsx."
     ),
@@ -365,12 +594,19 @@ def command(
     """Add frontend/src/pages/NAME.tsx (at most 50 lines) and register its route.
 
     With --resource R --kind list|detail|form the page composes ResourceTable /
-    ResourceDetail / ResourceForm for the API resource R. Without --resource the
-    page is a bare `<Page>`. Routes: list at `<base>`, detail at `<base>/$id`,
-    form at `<base>/new` and `<base>/$id/edit`, where the base is --path or
-    `/<resource>`.
+    ResourceDetail / ResourceForm for the API resource R (a detail page takes
+    --related tabs). --kind dashboard composes DashboardGrid and ChartCard with
+    the rows of each --count resource. Without --resource the page is a bare
+    `<Page>`. Routes: list at `<base>`, detail at `<base>/$id`, form at
+    `<base>/new` and `<base>/$id/edit`, where the base is --path or
+    `/<resource>`, and a dashboard at `/<name>`.
     """
     ws = project_workspace(force)
-    spec = spec_for(name, resource=resource, kind=kind, path=path, title=title)
+    if kind == "dashboard" and not count:
+        count = sorted(_routed_resources(ws))
+    spec = spec_for(
+        name, resource=resource, kind=kind, path=path, title=title, related=related, counts=count
+    )
+    check_related(ws, spec)
     plan(ws, spec, register=not no_route)
     ws.commit(dry_run=dry_run)

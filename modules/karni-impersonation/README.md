@@ -1,11 +1,10 @@
 # karni-impersonation
 
-"Log in as user" for support, done safely, for
-[Karni](https://github.com/cbsshekhawat18-lab/karni) projects. A support
-person with the explicit permission acts as a customer to see what they
-see. The session comes with a banner on every page, a session record, both
-identities in the audit trail, a time limit and a hard block on dangerous
-actions.
+Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail.
+
+[![PyPI](https://img.shields.io/pypi/v/karni-impersonation)](https://pypi.org/project/karni-impersonation/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/modules/#modules-in-this-repository)
+
+A support person with the explicit permission acts as a customer to see what they see. The session comes with a banner on every page, a session record, both identities in the audit trail, a time limit and a hard block on dangerous actions.
 
 ## Install
 
@@ -15,19 +14,21 @@ karni add impersonation
 karni migrate
 ```
 
-Then wire it twice. The module cannot do this for you, and `karni check`
-fails with `IMP007` until both are in place:
+`karni add impersonation` writes the middleware into the `# karni:middleware`
+block of `config/settings.py`, after Django's own list, so it follows
+`AuthenticationMiddleware`. `karni remove impersonation` takes it out again.
+Without the CLI, add it yourself right after `AuthenticationMiddleware`.
+
+The banner's exit needs the URL include. `karni check` fails with `IMP007`
+until the middleware and the include are both in place:
 
 ```python
-# config/settings.py, right after AuthenticationMiddleware
-MIDDLEWARE.insert(
-    MIDDLEWARE.index("django.contrib.auth.middleware.AuthenticationMiddleware") + 1,
-    "karni_impersonation.middleware.ImpersonationMiddleware",
-)
-
 # config/urls.py: the banner's exit
 path("impersonation/", include("karni_impersonation.urls")),
 ```
+
+If the middleware stays in `MIDDLEWARE` while the app is out of
+`INSTALLED_APPS`, importing it fails with `IMP007` and names both.
 
 Grant the permission to the role that does support:
 
@@ -38,8 +39,22 @@ KARNI_ROLES = {
 }
 ```
 
+Write the permission out. A wildcard never reaches it (`class Karni:
+explicit_actions`): the default `user` and `customer` (`"*": "own"`) and
+`staff` (`"*": "all"`) roles do not hold it, and neither does
+`"karni_impersonation.impersonationsession:*"`.
+
 Keep the Celery worker and beat running: the target's notification is a
 task and an hourly sweep closes abandoned sessions.
+
+## Main features
+
+- An explicit `impersonate` permission, never implied by staff
+- No privilege escalation: a support user never acts as someone with more rights
+- A banner naming both identities, with a one-click exit
+- A session record and every write attributed to both identities in `karni.audit`
+- A time limit, and a hard block on deleting, exporting and payment changes
+- React components in [`@karni/impersonation-ui`](https://www.npmjs.com/package/@karni/impersonation-ui)
 
 ## Threat model
 
@@ -53,9 +68,10 @@ list.
 
 **What it blocks.**
 
-- *Starting without the permission* (`IMP001`). Staff and superuser status
-  never imply it. Only a role with the grant does. Superusers hold every
-  grant by Karni's convention, so treat superuser accounts accordingly.
+- *Starting without the permission* (`IMP001`). Staff status never implies
+  it, and no wildcard grant reaches it. Only a role whose grants name it
+  does. Superusers hold every grant by Karni's convention, so treat
+  superuser accounts accordingly.
 - *Privilege escalation* (`IMP002`). The target may not be a superuser or
   staff unless the actor is, may not hold any role grant at a scope the
   actor does not hold (`all` covers all), and may not hold any Django
@@ -149,3 +165,12 @@ path in `KARNI_IMPERSONATION_BLOCKED`.
 - This module ships an explicit `admin.py` (the session log and the start
   page) and, when the user admin is a django-unfold one, adds an
   **Impersonate** button to it.
+
+## Links
+
+- The module in the docs: <https://cbsshekhawat18-lab.github.io/karni/modules/#modules-in-this-repository>
+- React components: <https://www.npmjs.com/package/@karni/impersonation-ui>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. karni-impersonation is released with every other Karni package, at one version.

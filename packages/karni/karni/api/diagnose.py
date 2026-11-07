@@ -510,6 +510,8 @@ class Report:
     causes: list[Cause]
     notes: list[str] = dataclasses.field(default_factory=list)
     plans: list[tuple[str, str]] = dataclasses.field(default_factory=list)
+    #: Experimental. The sequential scans on large tables ``--explain`` found (PostgreSQL).
+    scans: list[Any] = dataclasses.field(default_factory=list)
 
     @property
     def counted(self) -> list[TracedQuery]:
@@ -558,6 +560,7 @@ class Report:
         }
         if self.plans:
             data["explain"] = [{"sql": sql, "plan": plan} for sql, plan in self.plans]
+            data["seq_scans"] = [scan.as_dict() for scan in self.scans]
         if every:
             data["statements"] = [
                 {"sql": query.sql, "ms": round(query.duration * 1000, 3), "origin": _origin(query)}
@@ -600,6 +603,10 @@ class Report:
             lines.append("")
             lines.append(f"EXPLAIN {short_sql(sql, 110)}")
             lines.extend(f"  {line}" for line in plan.splitlines())
+        if self.scans:
+            lines.append("")
+            lines.append(f"Sequential scans on large tables ({len(self.scans)}):")
+            lines.extend(f"  {scan.line()}" for scan in self.scans)
         for note in self.notes:
             lines.append("")
             lines.append(f"note: {note}")
@@ -1170,6 +1177,8 @@ def run(
         client.force_authenticate(account)
     hosts = [*getattr(settings, "ALLOWED_HOSTS", []), "testserver"]
     plans: list[tuple[str, str]] = []
+    scans: list[Any] = []
+    explain_note = ""
     previous = logging.root.manager.disable
     logging.disable(logging.CRITICAL)  # the dev query log and request logs would interleave
     try:
@@ -1193,7 +1202,7 @@ def run(
                     raise RequestFailed(traceback.format_exc()) from None
                 elapsed = time.perf_counter() - started
             if explain:
-                plans = _explain_plans(recorder.traced)
+                plans, scans, explain_note = _explain_queries(recorder.traced)
             transaction.set_rollback(True)
     finally:
         logging.disable(previous)
@@ -1217,9 +1226,44 @@ def run(
         queries=recorder.traced,
         causes=analyse(recorder.traced, ctx),
         plans=plans,
+        scans=scans,
     )
     report.notes.extend(_notes(report, account, elapsed, method))
+    if explain_note:
+        report.notes.append(explain_note)
     return report
+
+
+def _explain_queries(
+    queries: list[TracedQuery],
+) -> tuple[list[tuple[str, str]], list[Any], str]:
+    """``--explain``: EXPLAIN ANALYZE of each statement on PostgreSQL, else the plain plans.
+
+    On PostgreSQL every distinct ``SELECT`` is analysed in a savepoint and the
+    sequential scans on large tables come back with the index that would
+    serve them (:mod:`karni.api.explain`, experimental). Elsewhere, the plain
+    ``EXPLAIN`` of the slowest statements and a note saying so (``W610``).
+    """
+    if connections["default"].vendor == "postgresql":
+        from karni.api.explain import explain_analyze, seq_scan_threshold
+
+        found = explain_analyze(queries)
+        note = (
+            f"--explain ran EXPLAIN ANALYZE of {len(found.plans)} statement(s) inside the "
+            f"request's transaction, rolled back. Sequential scans on tables of "
+            f"{seq_scan_threshold():,} rows or more are listed (KARNI_EXPLAIN_SEQ_SCAN_ROWS)."
+        )
+        return found.plans, found.scans, note
+    vendor = connections["default"].vendor
+    code = "W610"
+    return (
+        _explain_plans(queries),
+        [],
+        f"{code} --explain runs EXPLAIN ANALYZE and flags sequential scans on PostgreSQL only. "
+        f"This database is {vendor}: the plans above are its plain EXPLAIN of the 3 slowest "
+        "statements. Run karni queries --explain against PostgreSQL (a copy of production's "
+        "volume: karni seed --volume) to see where an index is missing.",
+    )
 
 
 def _notes(report: Report, account: Any, elapsed: float, method: str) -> list[str]:

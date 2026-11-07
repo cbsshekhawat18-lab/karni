@@ -51,8 +51,26 @@ def test_a_viewset_that_bypasses_its_read_scope_leaks() -> None:
 
 
 def test_a_body_that_chooses_the_owner_is_caught() -> None:
-    with pytest.raises(AssertionError, match="the body chose the owner"):
+    with pytest.raises(AssertionError, match="the body chose the owner") as caught:
         assert_isolated(crud_urls.OwnerFromBodyEventViewSet, "organizer")
+    assert (
+        "The access declaration sets organizer to the signed-in user on create, so a "
+        "perform_create or a serializer of the project's took it from the body"
+    ) in str(caught.value)
+
+
+def test_the_owner_hint_names_owned_when_access_does_not_stamp() -> None:
+    from types import SimpleNamespace
+
+    from karni.api import Access, Authenticated, Owned
+    from karni.testing.isolation import _owner_hint
+    from tests.testapp.models import Event
+
+    class Unstamped:
+        access = Access(read=Owned("organizer"), write=Authenticated())
+
+    hint = _owner_hint(SimpleNamespace(viewset=Unstamped, model=Event), "organizer")
+    assert hint.startswith("Name owned:organizer in the viewset's access write or create")
 
 
 def test_unscoped_reads_name_the_missing_owner() -> None:

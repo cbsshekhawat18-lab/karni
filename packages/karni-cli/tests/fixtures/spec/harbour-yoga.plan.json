@@ -1,0 +1,287 @@
+{
+  "version": 1,
+  "file": "karni.yaml",
+  "valid": true,
+  "issues": [],
+  "changes": [
+    {
+      "area": "app",
+      "action": "change",
+      "target": "kind",
+      "detail": "app -> site+app",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "modules",
+      "action": "add",
+      "target": "payments",
+      "detail": "provider stripe",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "modules",
+      "action": "add",
+      "target": "site",
+      "detail": "",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "features",
+      "action": "add",
+      "target": "two_factor",
+      "detail": "KARNI_2FA",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "features",
+      "action": "add",
+      "target": "email_code_login",
+      "detail": "KARNI_EMAIL_OTP",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "features",
+      "action": "add",
+      "target": "social_login",
+      "detail": "KARNI_SOCIAL_TOKEN_PROVIDERS apple, google",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "features",
+      "action": "add",
+      "target": "terms",
+      "detail": "KARNI_TERMS version 2026-11, url /terms/",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "roles",
+      "action": "add",
+      "target": "instructor",
+      "detail": "grants classes.booking custom:taught_by, classes.session own",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "roles",
+      "action": "add",
+      "target": "member",
+      "detail": "default, grants classes.booking own",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "roles",
+      "action": "remove",
+      "target": "customer",
+      "detail": "",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "roles",
+      "action": "remove",
+      "target": "user",
+      "detail": "",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "apps",
+      "action": "add",
+      "target": "classes",
+      "detail": "",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "entities",
+      "action": "add",
+      "target": "classes.Studio",
+      "detail": "(name str:120, slug slug:name, address text?) key slug, search name",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "entities",
+      "action": "add",
+      "target": "classes.Session",
+      "detail": "(studio fk:Studio, instructor fk:User, title str:200, starts_at datetime, capacity int, price money:EUR) owner instructor, audit, order starts_at",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "entities",
+      "action": "add",
+      "target": "classes.Booking",
+      "detail": "(session fk:Session, member fk:User, status state:pending>paid|pending>cancelled|paid>refunded, note text?) owner member, audit, groups Booking, Notes",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "access",
+      "action": "add",
+      "target": "classes.Studio",
+      "detail": "read public, write role:staff",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "access",
+      "action": "add",
+      "target": "classes.Session",
+      "detail": "read public, write owned:instructor | role:staff",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "access",
+      "action": "add",
+      "target": "classes.Booking",
+      "detail": "read owned:member | owned:session__instructor | role:staff, write owned:member",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "pages",
+      "action": "add",
+      "target": "Session",
+      "detail": "list, detail, form",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "pages",
+      "action": "add",
+      "target": "Booking",
+      "detail": "list, detail",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "migrations",
+      "action": "add",
+      "target": "classes",
+      "detail": "",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "seed",
+      "action": "add",
+      "target": "Studio",
+      "detail": "3",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "seed",
+      "action": "add",
+      "target": "Session",
+      "detail": "40",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "seed",
+      "action": "add",
+      "target": "Booking",
+      "detail": "200",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "tests",
+      "action": "add",
+      "target": "classes/tests/karni/test_studio.py",
+      "detail": "",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "tests",
+      "action": "add",
+      "target": "classes/tests/karni/test_session.py",
+      "detail": "",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    },
+    {
+      "area": "tests",
+      "action": "add",
+      "target": "classes/tests/karni/test_booking.py",
+      "detail": "",
+      "risky": false,
+      "reason": null,
+      "rows": null,
+      "managed": true
+    }
+  ],
+  "summary": {
+    "changes": 27,
+    "risky": 0,
+    "not_managed": 0
+  },
+  "row_counts": {
+    "status": "not needed",
+    "note": null
+  }
+}

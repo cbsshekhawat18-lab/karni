@@ -67,7 +67,7 @@ def _search_ids(query: dict[str, str]) -> set[str]:
     view = EventViewSet.as_view({"get": "list"})
     response = view(APIRequestFactory().get("/", query))
     assert response.status_code == 200, response.data
-    return {row["id"] for row in response.data["results"]}
+    return {str(row["id"]) for row in response.data["results"]}
 
 
 # SimpleSearchProvider unit behaviour

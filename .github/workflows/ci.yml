@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Python: packages/karni, packages/karni-cli, modules/karni-payments, modules/karni-approvals, modules/karni-impersonation.
+  # Python: packages/karni, packages/karni-cli, modules/karni-payments, modules/karni-approvals, modules/karni-impersonation, modules/karni-site, modules/karni-charts, modules/karni-reports, modules/karni-ai, modules/karni-storage.
   # Every step goes through the root Makefile, so CI and `make` never drift.
   # ---------------------------------------------------------------------------
   python:
@@ -63,6 +63,19 @@ jobs:
             modules/karni-payments/pyproject.toml
             modules/karni-approvals/pyproject.toml
             modules/karni-impersonation/pyproject.toml
+            modules/karni-site/pyproject.toml
+            modules/karni-charts/pyproject.toml
+            modules/karni-reports/pyproject.toml
+            modules/karni-ai/pyproject.toml
+            modules/karni-storage/pyproject.toml
+
+      # karni-reports draws its PDFs with WeasyPrint, which needs Pango (a
+      # system library) and a font. Without them its real render test skips.
+      - name: System libraries for WeasyPrint (karni-reports)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends \
+            libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b fonts-dejavu-core
 
       - name: Install packages (editable) + dev tools
         run: make install-py
@@ -80,6 +93,14 @@ jobs:
         run: |
           npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/tailwind3" tailwindcss@3
           echo "KARNI_TEST_TAILWIND3=$RUNNER_TEMP/tailwind3/node_modules" >> "$GITHUB_ENV"
+      # karni make form's test submits the generated forms in headless Chromium under
+      # the enforced Content-Security-Policy (KARNI_TEST_PLAYWRIGHT), and is skipped
+      # without it.
+      - name: Playwright and Chromium for karni make form's browser test
+        run: |
+          npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/playwright" playwright@1.64.1
+          "$RUNNER_TEMP/playwright/node_modules/.bin/playwright" install --with-deps chromium
+          echo "KARNI_TEST_PLAYWRIGHT=$RUNNER_TEMP/playwright/node_modules" >> "$GITHUB_ENV"
 
       - name: Versions
         run: python -c "import sys, django; print(sys.version); print('Django', django.get_version())"
@@ -118,6 +139,22 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/.github/ci
         run: python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
 
+      # Integer keys (BigIntBaseModel, experimental): the core suite once more
+      # with the test app's API models on integer keys (KARNI_TEST_PK=bigint),
+      # on sqlite and on PostgreSQL. One Python is enough: the key type, not
+      # the interpreter, is what changes.
+      - name: Test packages/karni with integer keys (sqlite, then PostgreSQL 16)
+        if: matrix.python == '3.12'
+        working-directory: packages/karni
+        env:
+          KARNI_TEST_PK: bigint
+          KARNI_REQUIRE_MODULES: "1"
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/karni
+          PYTHONPATH: ${{ github.workspace }}/.github/ci
+        run: |
+          python -m pytest -q -ra
+          python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
+
       # The modules' suites pin sqlite the same way, and the same overlay
       # serves them: it imports the working directory's tests.settings.
       # karni-approvals and karni-impersonation have an unmigrated
@@ -130,18 +167,57 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/.github/ci
         run: |
           rc=0
-          for d in modules/karni-payments modules/karni-approvals modules/karni-impersonation; do
+          for d in modules/karni-payments modules/karni-approvals modules/karni-impersonation modules/karni-site modules/karni-charts modules/karni-reports modules/karni-ai modules/karni-storage; do
             echo "==> pytest on PostgreSQL ($d)"
             (cd "$d" && python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations) || rc=1
           done
           exit $rc
 
+      # karni-reports keeps a report's row as text, so it serves rows with
+      # either key type: its suite once more with the test app's catalog on
+      # integer keys, on sqlite and on PostgreSQL.
+      - name: Test karni-reports with integer keys (sqlite, then PostgreSQL 16)
+        if: matrix.python == '3.12'
+        working-directory: modules/karni-reports
+        env:
+          KARNI_TEST_PK: bigint
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/karni
+          PYTHONPATH: ${{ github.workspace }}/.github/ci
+        run: |
+          python -m pytest -q -ra
+          python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
+
+      # karni-ai's suite with its test app on integer keys too (KARNI_TEST_PK=bigint),
+      # on sqlite and on PostgreSQL: an extraction names rows by natural key, never id.
+      - name: Test modules/karni-ai with integer keys (sqlite, then PostgreSQL 16)
+        if: matrix.python == '3.12'
+        working-directory: modules/karni-ai
+        env:
+          KARNI_TEST_PK: bigint
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/karni
+          PYTHONPATH: ${{ github.workspace }}/.github/ci
+        run: |
+          python -m pytest -q -ra
+          python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
+
+      # karni-storage's test app on integer keys (KARNI_TEST_PK=bigint): its
+      # download paths carry the row's key, so both key types run.
+      - name: Test modules/karni-storage with integer keys (sqlite, then PostgreSQL 16)
+        if: matrix.python == '3.12'
+        working-directory: modules/karni-storage
+        env:
+          KARNI_TEST_PK: bigint
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/karni
+          PYTHONPATH: ${{ github.workspace }}/.github/ci
+        run: |
+          python -m pytest -q -ra
+          python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
+
       # -----------------------------------------------------------------------
-      # Agent adapters vs karni/agent/rules.py (docs/agents.md). Scaffolds a
-      # project, then `karni rules sync --check` fails if any generated adapter
-      # (AGENTS.md, CLAUDE.md, .cursor/rules/karni.mdc, ...) differs from what
-      # the rule registry produces; also fails if the generated procedures
-      # block in docs/agents.md is stale. Projects run the same
+      # AGENTS.md vs karni/agent/rules.py (docs/agents.md). Scaffolds a
+      # project, then `karni rules sync --check` fails if the generated
+      # AGENTS.md differs from what the rule registry produces; also fails if
+      # the generated procedures block in docs/agents.md is stale. Projects run the same
       # `karni rules sync --check` in their own CI (`make check`).
       # -----------------------------------------------------------------------
       - name: Agent adapters are up to date (karni rules sync --check)
@@ -184,18 +260,108 @@ jobs:
         run: make install-py CORE_ONLY=1
       - name: No module is installed
         run: |
-          ! python -m pip show karni-payments karni-approvals karni-impersonation 2>/dev/null | grep -q "^Name:"
+          ! python -m pip show karni-payments karni-approvals karni-impersonation karni-site karni-charts karni-reports karni-ai karni-storage 2>/dev/null | grep -q "^Name:"
       - name: Test (the module tests skip)
         run: make test-py CORE_ONLY=1
+
+  # ---------------------------------------------------------------------------
+  # Tooling for large projects (experimental): a 100-model project made with
+  # karni new and karni build (scripts/benchmark/large_project.py), then
+  # karni check (cold, cached, after one edit, --changed), karni context
+  # (whole, --summary, --app) and the project's tests, timed. A time more
+  # than 1.5x the baseline (scripts/benchmark/baseline.json, scaled by the
+  # run's calibration, plus 1 s) fails the job. The times are an artifact.
+  # ---------------------------------------------------------------------------
+  benchmark:
+    name: Benchmark (100 models)
+    runs-on: ubuntu-latest
+    env:
+      PYTHON: python
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/karni/pyproject.toml
+            packages/karni-cli/pyproject.toml
+      - name: Install packages/ only (editable) + dev tools
+        run: make install-py CORE_ONLY=1
+      # Against the baseline recorded on this runner type: relative to the
+      # calibration, the project's tests run 1.4 to 1.7 times slower here than on
+      # the laptop baseline.json comes from (docs/large-projects.md).
+      - name: Time the tooling on a 100-model project
+        run: python scripts/benchmark/large_project.py --out benchmark.json --baseline scripts/benchmark/baseline-ci.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark
+          path: benchmark.json
+          if-no-files-found: ignore
+
+  # ---------------------------------------------------------------------------
+  # What a person waits for (scripts/benchmark/speed.py): every recipe from
+  # scratch (karni new --recipe), a second karni build with no spec change,
+  # karni check cold and cached, karni spec validate, karni plan, karni plan
+  # --questions and the /new-app fake-agent flow, each the median of its runs.
+  # A time above its budget fails the job (scripts/benchmark/speed-baseline.json
+  # x the run's calibration x 1.5, plus slack; a no-change rebuild has an
+  # absolute ceiling). The times are an artifact.
+  # ---------------------------------------------------------------------------
+  speed:
+    name: Speed budgets (what a person waits for)
+    runs-on: ubuntu-latest
+    env:
+      PYTHON: python
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      KARNI_REQUIRE_MODULES: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/karni/pyproject.toml
+            packages/karni-cli/pyproject.toml
+            modules/karni-payments/pyproject.toml
+            modules/karni-approvals/pyproject.toml
+            modules/karni-impersonation/pyproject.toml
+            modules/karni-site/pyproject.toml
+      - name: Install Karni and its modules from this checkout (editable)
+        run: make install-py
+      - name: Time karni new, build, check, plan and the /new-app flow
+        run: python scripts/benchmark/speed.py --out speed.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: speed
+          path: speed.json
+          if-no-files-found: ignore
 
   # ---------------------------------------------------------------------------
   # docs/quickstart.md, run verbatim on a clean machine: every `sh` block on
   # the page, in a fresh venv and an empty directory, with this checkout's
   # packages in place of PyPI's (the one documented substitution).
+  # On Node 24 (the LTS the docs recommend) and on Node 20 with its bundled
+  # npm 10, the oldest setup the docs support. npm 10 crashes in a plain
+  # `npm install` of the scaffold's frontend, so the page's own install step
+  # must carry it.
   # ---------------------------------------------------------------------------
   quickstart:
-    name: Quickstart (docs/quickstart.md, verbatim)
+    # The Node 24 job keeps the name branch protection requires.
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - node: 24
+            name: Quickstart (docs/quickstart.md, verbatim)
+          - node: 20
+            name: Quickstart on Node 20 (docs/quickstart.md, verbatim)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v7
@@ -203,7 +369,9 @@ jobs:
           python-version: "3.12"
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: ${{ matrix.node }}
+      - name: Node and npm (Node 20 keeps its bundled npm 10)
+        run: node --version && npm --version
       # Before the build below: the test fetches this commit into a fresh
       # checkout, lets `karni new` build that checkout's @karni/ui, and fails
       # if any tracked file changed (package-lock.json did, with npm install).
@@ -223,6 +391,44 @@ jobs:
         run: |
           python .github/ci/quickstart.py \
             --install "pip install -q -e ${{ github.workspace }}/packages/karni -e ${{ github.workspace }}/packages/karni-cli pytest pytest-django"
+
+  # ---------------------------------------------------------------------------
+  # Recipes (docs/recipes/): each built-in recipe built from scratch, so none
+  # rots. `karni new --recipe <name>` with this checkout's packages, then the
+  # build it runs: the module, the models, the recipe's own files, the
+  # migrations, the demo data, the project's tests and `karni check`, on
+  # SQLite with a local-memory cache (tests/test_recipe_builds.py).
+  # ---------------------------------------------------------------------------
+  recipes:
+    name: Recipe ${{ matrix.recipe }} (karni new --recipe, built from scratch)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        recipe: [shop, booking, crm, lms, marketplace, data-portal]
+    env:
+      PYTHON: python
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      # every module installed: a recipe test that needs one fails instead of skipping
+      KARNI_REQUIRE_MODULES: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/karni/pyproject.toml
+            packages/karni-cli/pyproject.toml
+            modules/karni-payments/pyproject.toml
+            modules/karni-approvals/pyproject.toml
+            modules/karni-impersonation/pyproject.toml
+            modules/karni-site/pyproject.toml
+      - name: Install Karni and its modules from this checkout (editable)
+        run: make install-py
+      - name: karni new --recipe ${{ matrix.recipe }}, its tests and karni check
+        working-directory: packages/karni-cli
+        run: python -m pytest -q -p no:cacheprovider -m recipes -k ${{ matrix.recipe }} tests/test_recipe_builds.py
 
   # ---------------------------------------------------------------------------
   # The documentation site (Material for MkDocs): built strictly on every
@@ -269,6 +475,10 @@ jobs:
       # llms.txt, Open Graph, every package's metadata and the GitHub About.
       - name: Karni's description is identical everywhere
         run: python scripts/check_description.py --github
+      # scripts/tool-names.toml: no AI tool or company names in a tracked file,
+      # outside the exceptions it lists with their reasons.
+      - name: No AI tool names outside the exceptions
+        run: python scripts/check_tool_names.py
       # scripts/docs_seo.py: every page has its own title and description,
       # JSON-LD on the homepage and FAQ, llms-full.txt; warnings fail --strict.
       - name: "Build (strict: a broken link, a missing page or a missing description fails)"
@@ -285,7 +495,7 @@ jobs:
           # the text is in the HTML itself, not rendered by JavaScript
           grep -q "$(cut -c1-60 docs/seo/description.txt)" site/index.html
           test -s site/llms.txt && test -s site/llms-full.txt && test -s site/sitemap.xml
-          grep -q "GPTBot" site/robots.txt
+          grep -qx "User-agent: \*" site/robots.txt && grep -qx "Allow: /" site/robots.txt
       - uses: actions/upload-pages-artifact@v5
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
@@ -375,6 +585,9 @@ jobs:
             modules/karni-payments/pyproject.toml
             modules/karni-approvals/pyproject.toml
             modules/karni-impersonation/pyproject.toml
+            modules/karni-site/pyproject.toml
+            modules/karni-ai/pyproject.toml
+            modules/karni-storage/pyproject.toml
             examples/eventhub/pyproject.toml
 
       - uses: actions/setup-node@v7
@@ -389,7 +602,9 @@ jobs:
         run: |
           python -m pip install -e "../../packages/karni[images]" -e ../../packages/karni-cli \
             -e ../../modules/karni-payments -e ../../modules/karni-approvals \
-            -e ../../modules/karni-impersonation \
+            -e ../../modules/karni-impersonation -e ../../modules/karni-site \
+            -e ../../modules/karni-ai \
+            -e ../../modules/karni-storage \
             "psycopg[binary]" pytest pytest-django
 
       - name: Build @karni/ui (the project installs it from packages/karni-ui)
@@ -426,7 +641,322 @@ jobs:
           if-no-files-found: ignore
 
   # ---------------------------------------------------------------------------
-  # UI: packages/karni-ui (@karni/ui), modules/karni-payments/ui, modules/karni-approvals/ui and modules/karni-impersonation/ui.
+  # examples/medintel: the large-app reference (trees, grants, taxonomies,
+  # aggregates, saved charts, search, both sign-in methods, terms, import and
+  # export), on synthetic data. Built from karni.yaml; this job only checks,
+  # migrates, seeds, tests and builds the frontend.
+  # ---------------------------------------------------------------------------
+  medintel:
+    name: Medintel (large-app reference)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/medintel
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: karni
+          POSTGRES_PASSWORD: karni
+          POSTGRES_DB: medintel
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U karni"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DJANGO_ENV: dev
+      DEBUG: "True"
+      SECRET_KEY: ci-only-not-secret-ci-only-not-secret
+      ALLOWED_HOSTS: "*"
+      PROJECT_NAME: medintel
+      DATABASE_URL: postgres://karni:karni@localhost:5432/medintel
+      REDIS_URL: redis://localhost:6379/0
+      KARNI_AUTH_MODE: jwt
+      KARNI_FRONTEND_URL: http://127.0.0.1:4173
+      KARNI_SOCIAL_GOOGLE_CLIENT_IDS: medintel-example.apps.googleusercontent.com
+      KARNI_EMAIL_OTP_SIGNUP: approval
+      KARNI_SOCIAL_TOKEN_SIGNUP: approval
+      KARNI_SEED_LOGINS: '{"analyst@example.com": ["customer"], "oncology@example.com": ["customer"], "vaccines@example.com": ["customer"]}'
+      KARNI_API_CACHE_LEGACY_HEADER: "False"
+      PY: python
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/karni/pyproject.toml
+            packages/karni-cli/pyproject.toml
+            modules/karni-charts/pyproject.toml
+            examples/medintel/pyproject.toml
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            packages/karni-ui/package-lock.json
+            modules/karni-charts/ui/package-lock.json
+            examples/medintel/frontend/package-lock.json
+
+      - name: Install Karni from this checkout (the project depends on it)
+        run: |
+          python -m pip install -e "../../packages/karni[social-token]" -e ../../packages/karni-cli \
+            -e ../../modules/karni-charts "psycopg[binary]" pytest pytest-django
+
+      - name: Build @karni/ui and @karni/charts-ui (the project installs them from this checkout)
+        run: |
+          (cd ../../packages/karni-ui && npm ci && npm run build)
+          (cd ../../modules/karni-charts/ui && npm ci && npm run build)
+          (cd frontend && npm ci)
+
+      - name: Spec, architecture rules, duplication, agent adapters
+        run: |
+          karni spec validate
+          karni check
+          karni rules sync --check
+
+      - name: Migrate, seed and test
+        run: |
+          python manage.py migrate --noinput
+          python manage.py karni_seed --reset --seed 42
+          python -m pytest -q
+          python -m pytest -q --pyargs karni.testing.architecture
+
+      - name: Type-check, lint and build the frontend
+        working-directory: examples/medintel/frontend
+        run: |
+          npx tsc --noEmit
+          npx eslint .
+          npm run build
+
+  # ---------------------------------------------------------------------------
+  # The production stack a new project gets (docs/deploy.md), booted for real:
+  # `karni new` with this checkout's packages and a public site page, the prod
+  # and backup images built (base layers cached in GitHub Actions), then
+  # `docker compose up` with production values. It checks every service is
+  # healthy, the migrations ran, HTTPS through Caddy (health, a public page, the
+  # admin login at its private path, static files, the staff app and a deep
+  # link, the http redirect, the security headers), the deploy gate refusing a
+  # development value inside the image, and a backup restored into a second
+  # database with the same rows. Every value is generated here: no secrets.
+  # ---------------------------------------------------------------------------
+  production-stack:
+    name: Production stack (compose, smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      COMPOSE: docker compose -f docker-compose.prod.yml --env-file .env.prod
+      SMOKE: ${{ github.workspace }}/.github/ci/prod_smoke.py
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: packages/karni-ui/package-lock.json
+
+      # karni-site too: `karni make site` adds it to the project, whose host-side
+      # makemigrations below imports it.
+      - name: Install karni, karni-cli and karni-site from this checkout
+        run: python -m pip install -q -e packages/karni -e packages/karni-cli -e "modules/karni-site[images]"
+
+      # The scaffold's frontend names this checkout's @karni/ui ("file:"), which
+      # an image build cannot reach, so it is packed into the project
+      # (KARNI_UI_TARBALL), as docs/deploy.md describes for a local checkout.
+      - name: Build and pack @karni/ui
+        working-directory: packages/karni-ui
+        run: |
+          npm ci
+          npm run build
+          mkdir -p "$RUNNER_TEMP/karni-ui"
+          npm pack --pack-destination "$RUNNER_TEMP/karni-ui"
+
+      - name: A new project with a public site, this checkout's packages vendored
+        env:
+          KARNI_UI_SRC: ${{ github.workspace }}/packages/karni-ui
+        run: |
+          set -euo pipefail
+          karni new "Prod Smoke" --domain localhost -o "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP/prod_smoke"
+          test -f docker-compose.prod.yml && test -f Caddyfile && test -f .env.prod.example
+          karni make site website
+          # A resource with a list page: the API test and the browser test read it.
+          # The host has no database, so makemigrations runs against a throwaway SQLite file.
+          export DATABASE_URL="sqlite:///$RUNNER_TEMP/make.sqlite3"
+          karni make app catalog
+          karni make model Product name:str price:decimal --with viewset,page --app catalog --migrate
+          test -f catalog/migrations/0001_initial.py
+          cp -r "$GITHUB_WORKSPACE/packages/karni" .karni-src
+          # karni make site added karni-site to pyproject.toml: the image installs this
+          # checkout's copy (the build copies the project to /app), not a release.
+          cp -r "$GITHUB_WORKSPACE/modules/karni-site" .karni-site-src
+          sed -i 's#"karni-site\[images\]"#"karni-site[images] @ file:///app/.karni-site-src"#' pyproject.toml
+          grep -q '"karni-site\[images\] @ file:///app/.karni-site-src"' pyproject.toml
+          mkdir -p .karni-ui && cp "$RUNNER_TEMP"/karni-ui/*.tgz .karni-ui/karni-ui.tgz
+          echo "PROJECT=$PWD" >> "$GITHUB_ENV"
+
+      - name: .env.prod from .env.prod.example, every empty value generated
+        working-directory: ${{ env.PROJECT }}
+        run: |
+          set -euo pipefail
+          # A mail server and a sender, which the deploy gate requires (karni.W520).
+          # Nothing here sends mail.
+          python "$SMOKE" env .env.prod.example \
+            --set KARNI_SRC=.karni-src --set KARNI_UI_TARBALL=.karni-ui/karni-ui.tgz \
+            --set EMAIL_URL=smtp://mail.invalid:25 --set DEFAULT_FROM_EMAIL=noreply@example.com \
+            --set KARNI_API_VERSION=v1 \
+            --set "KARNI_API_VERSIONS='{\"v0\": {\"deprecated\": true, \"sunset\": \"2999-01-01\"}}'" \
+            > .env.prod
+          grep -E "^(DJANGO_ENV|DOMAIN|ALLOWED_HOSTS|CSRF_TRUSTED_ORIGINS)=" .env.prod
+          echo "ADMIN_PATH=$(grep '^KARNI_ADMIN_PATH=' .env.prod | cut -d= -f2)" >> "$GITHUB_ENV"
+          $COMPOSE config --quiet
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the prod image (django, worker, beat, release)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ env.PROJECT }}
+          target: prod
+          load: true
+          tags: prod_smoke:latest
+          build-args: |
+            KARNI_SRC=.karni-src
+            KARNI_UI_TARBALL=.karni-ui/karni-ui.tgz
+            KARNI_APP_PATH=/app/
+          cache-from: type=gha,scope=production-stack-prod
+          cache-to: type=gha,mode=max,scope=production-stack-prod
+
+      - name: Build the backup image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ env.PROJECT }}
+          target: backup
+          load: true
+          tags: prod_smoke-backup:latest
+          build-args: |
+            KARNI_SRC=.karni-src
+            POSTGRES_VERSION=16
+          cache-from: type=gha,scope=production-stack-backup
+          cache-to: type=gha,mode=max,scope=production-stack-backup
+
+      - name: Start the stack
+        working-directory: ${{ env.PROJECT }}
+        run: $COMPOSE up -d --no-build
+
+      - name: The release step exited 0 and every service is healthy
+        working-directory: ${{ env.PROJECT }}
+        run: python "$SMOKE" wait --timeout 300
+
+      - name: Migrate, then seed demo rows and a demo login
+        working-directory: ${{ env.PROJECT }}
+        run: |
+          set -euo pipefail
+          $COMPOSE exec -T django python manage.py migrate --noinput
+          $COMPOSE exec -T django python manage.py migrate --check
+          # --force: seeding refuses DEBUG=False without it, and this stack is thrown away.
+          $COMPOSE exec -T django python manage.py karni_seed --force --seed 42 | tee "$RUNNER_TEMP/seed.log"
+          login=$(grep -oE 'Log in as [^ ]+ / [^ ]+' "$RUNNER_TEMP/seed.log" | head -1)
+          echo "E2E_USER=$(echo "$login" | awk '{print $4}')" >> "$GITHUB_ENV"
+          echo "E2E_PASSWORD=$(echo "$login" | awk '{print $6}')" >> "$GITHUB_ENV"
+
+      - name: Smoke script (readyz, sign in, list, versions, admin login, staff app, headers)
+        working-directory: ${{ env.PROJECT }}
+        run: |
+          set -euo pipefail
+          $COMPOSE cp caddy:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/caddy-root.crt"
+          python "$SMOKE" check --base-url https://localhost --cafile "$RUNNER_TEMP/caddy-root.crt" \
+            --admin-path "$ADMIN_PATH" --app-path /app/ --http-url http://localhost/ \
+            --expect-check database --expect-check cache --expect-check broker --worker-check \
+            --user "$E2E_USER" --password "$E2E_PASSWORD" --list-path /api/products/ \
+            --api-version v1 --deprecated-version v0
+
+      - name: Install Playwright for the browser test
+        working-directory: .github/ci/prod_e2e
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Browser test (sign in to the built staff app, see a ResourceTable page)
+        working-directory: .github/ci/prod_e2e
+        env:
+          E2E_BASE_URL: https://localhost/app/
+          E2E_PAGE: products
+          E2E_HEADING: Products
+        run: npx playwright test
+
+      - name: Browser test traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-stack-e2e
+          path: .github/ci/prod_e2e/test-results
+          if-no-files-found: ignore
+
+      - name: The deploy gate refuses DEBUG=True in the image, and the escape hatch says so
+        working-directory: ${{ env.PROJECT }}
+        run: |
+          set -uo pipefail
+          if $COMPOSE run --rm --no-deps -T -e DEBUG=True release true > "$RUNNER_TEMP/gate.log" 2>&1; then
+            cat "$RUNNER_TEMP/gate.log"; echo "DEBUG=True started"; exit 1
+          fi
+          grep -q "karni.W510" "$RUNNER_TEMP/gate.log" && grep -q "(E520)" "$RUNNER_TEMP/gate.log" \
+            || { cat "$RUNNER_TEMP/gate.log"; exit 1; }
+          $COMPOSE run --rm --no-deps -T -e DEBUG=True -e KARNI_SKIP_DEPLOY_CHECK=1 release true \
+            > "$RUNNER_TEMP/skip.log" 2>&1 || { cat "$RUNNER_TEMP/skip.log"; exit 1; }
+          grep "WARNING" "$RUNNER_TEMP/skip.log"
+          grep -q "did NOT run (E520)" "$RUNNER_TEMP/skip.log"
+
+      - name: A backup restored into a second database has the same rows
+        working-directory: ${{ env.PROJECT }}
+        run: |
+          set -euo pipefail
+          $COMPOSE exec -T backup karni-backup run
+          $COMPOSE exec -T backup karni-backup list
+          $COMPOSE exec -T backup sh -c 'karni-backup restore latest --create \
+            --database-url "${DATABASE_URL%/*}/restore_check" \
+            && karni-backup counts --database-url "$DATABASE_URL" --against "${DATABASE_URL%/*}/restore_check"'
+          $COMPOSE exec -T backup karni-backup check
+
+      - name: Logs
+        if: failure() && env.PROJECT != ''
+        working-directory: ${{ env.PROJECT }}
+        run: |
+          $COMPOSE ps -a
+          $COMPOSE logs --no-color --tail 300
+
+      - name: Tear down
+        if: always() && env.PROJECT != ''
+        working-directory: ${{ env.PROJECT }}
+        run: $COMPOSE down -v --remove-orphans
+
+  # ---------------------------------------------------------------------------
+  # UI: packages/karni-ui (@karni/ui), modules/karni-payments/ui, modules/karni-approvals/ui, modules/karni-impersonation/ui, modules/karni-charts/ui, modules/karni-reports/ui, modules/karni-ai/ui and modules/karni-storage/ui.
   # ---------------------------------------------------------------------------
   ui:
     name: UI (Node 24)
@@ -443,6 +973,10 @@ jobs:
             modules/karni-payments/ui/package-lock.json
             modules/karni-approvals/ui/package-lock.json
             modules/karni-impersonation/ui/package-lock.json
+            modules/karni-charts/ui/package-lock.json
+            modules/karni-reports/ui/package-lock.json
+            modules/karni-ai/ui/package-lock.json
+            modules/karni-storage/ui/package-lock.json
 
       # karni-ui first: payments-ui resolves @karni/ui from its source, which
       # imports packages/karni-ui/node_modules.
@@ -491,3 +1025,15 @@ jobs:
           cd ../../karni-impersonation/ui
           node -e "const m = require('@karni/impersonation-ui'); if (!m.ImpersonationBanner) throw new Error('CJS impersonation-ui missing exports')"
           node --input-type=module -e "const m = await import('@karni/impersonation-ui'); if (!m.ImpersonationBanner) throw new Error('ESM impersonation-ui missing exports')"
+          cd ../../karni-charts/ui
+          node -e "const m = require('@karni/charts-ui'); if (!m.SavedChart) throw new Error('CJS charts-ui missing exports')"
+          node --input-type=module -e "const m = await import('@karni/charts-ui'); if (!m.SavedChart) throw new Error('ESM charts-ui missing exports')"
+          cd ../../karni-reports/ui
+          node -e "const m = require('@karni/reports-ui'); if (!m.ReportButton) throw new Error('CJS reports-ui missing exports')"
+          node --input-type=module -e "const m = await import('@karni/reports-ui'); if (!m.ReportButton) throw new Error('ESM reports-ui missing exports')"
+          cd ../../karni-ai/ui
+          node -e "const m = require('@karni/ai-ui'); if (!m.ExtractButton) throw new Error('CJS ai-ui missing exports')"
+          node --input-type=module -e "const m = await import('@karni/ai-ui'); if (!m.ExtractButton) throw new Error('ESM ai-ui missing exports')"
+          cd ../../karni-storage/ui
+          node -e "const m = require('@karni/storage-ui'); if (!m.ProtectedFileInput) throw new Error('CJS storage-ui missing exports')"
+          node --input-type=module -e "const m = await import('@karni/storage-ui'); if (!m.ProtectedFileInput) throw new Error('ESM storage-ui missing exports')"

@@ -1,0 +1,5 @@
+{% extends "website/base.html" %}{% load karni_site %}
+{% block title %}About{% endblock %}
+{% block content %}<h1>About</h1><script>{% csp_hash %}
+  console.log("about");
+{% endcsp_hash %}</script>{% endblock %}

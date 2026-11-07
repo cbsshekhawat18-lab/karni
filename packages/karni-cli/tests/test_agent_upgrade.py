@@ -54,6 +54,12 @@ def test_unmodified_legacy_project_migrates_cleanly(generated_project: Path) -> 
         assert (generated_project / ".karni" / "backup" / rel).is_file(), rel
     assert "AGENTS.md" in changed
     assert sync(generated_project, agent_data.load(generated_project), check=True).stale == []
+    # The project keeps its tools' files, generated again (deprecated since 0.5.0, C860),
+    # and gets no file for a tool it did not use.
+    for rel in ("CLAUDE.md", ".cursor/rules/karni.mdc", ".claude/commands/new-app.md"):
+        assert GENERATED_MARK in (generated_project / rel).read_text(), rel
+    for rel in (".junie", ".windsurf", ".github/copilot-instructions.md", "CONVENTIONS.md"):
+        assert not (generated_project / rel).exists(), rel
 
 
 def test_project_additions_are_preserved_verbatim(

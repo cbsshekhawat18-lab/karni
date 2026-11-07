@@ -12,7 +12,7 @@ import pytest
 
 import karni_cli.commands.check as check_mod
 import karni_cli.commands.doctor as doctor_mod
-from karni_cli import config, local_state, tips
+from karni_cli import config, local_state, services, tips, toolchain
 from karni_cli import project as project_mod
 from karni_cli.environment import CI_ENV_VARS, is_ci
 from karni_cli.main import app
@@ -41,7 +41,10 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_ci: None) -> Pat
         "run_manage",
         lambda *a, **k: subprocess.CompletedProcess([], 0, stdout=BACKEND + "\n", stderr=""),
     )
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 0)
+    # No real DNS lookup or connect: test_services covers the probes.
+    monkeypatch.setattr(services, "resolves", lambda host, timeout=0: False)
+    monkeypatch.setattr(services, "speaks", lambda *a, **k: None)
     return root
 
 
@@ -72,13 +75,36 @@ def test_no_ci_variables_is_not_ci() -> None:
 def test_doctor_reports_the_environment(runner, project: Path) -> None:
     result = runner.invoke(app, ["doctor", "-q"])
     assert result.exit_code == 0, result.output
-    labels = [line.split()[0] for line in result.stdout.splitlines() if line.strip()]
-    assert labels == ["project", "interpreter", "node", "ui", "adapters", "history"]
+    labels = [line.split()[0] for line in result.stdout.splitlines() if line[:1].strip()]
+    assert labels == [
+        "project",
+        "interpreter",
+        "database",
+        "redis",
+        "node",
+        "ui",
+        "adapters",
+        "history",
+        "suggestions",
+    ]
     assert "node-9.9.9 (npm npm-9.9.9)" in result.stdout
     assert "manifest absent" in result.stdout
-    assert "stale (24 files)" in result.stdout  # no adapters generated in this bare project
+    assert "stale (1 files)" in result.stdout  # AGENTS.md is not generated in this bare project
     assert "no store detected (installed: gigai-chronicle)" in result.stdout
     assert TIP_FIRST_LINE not in result.output
+
+
+def test_doctor_mentions_deprecated_agent_files_once(runner, project: Path) -> None:
+    from karni_cli import agent_data
+    from karni_cli.adapters import sync
+
+    assert "C860" not in runner.invoke(app, ["doctor", "-q"]).stdout
+    sync(project, agent_data.load(project), keep={"CLAUDE.md", ".cursor/rules/karni.mdc"})
+    out = runner.invoke(app, ["doctor", "-q"]).stdout
+    lines = [line for line in out.splitlines() if "C860" in line]
+    assert len(lines) == 1, out
+    assert "2 tool-specific files are deprecated and removed in 1.0" in lines[0]
+    assert "Keep AGENTS.md" in lines[0]
 
 
 def test_doctor_lists_a_detected_store(runner, project: Path) -> None:
@@ -94,6 +120,67 @@ def test_doctor_outside_a_project(runner, tmp_path: Path, monkeypatch, no_ci) ->
     result = runner.invoke(app, ["doctor"])
     assert result.exit_code == 0
     assert "not found" in result.stdout and TIP_FIRST_LINE not in result.output
+
+
+def _versions(node: str, npm: str):
+    return lambda name: {"node": node, "npm": npm}[name]
+
+
+def test_doctor_flags_npm_10(runner, project: Path, monkeypatch) -> None:
+    """Node 20's bundled npm 10.8.2 crashes in the frontend's npm install: doctor says so and how."""
+    monkeypatch.setattr(doctor_mod, "tool_version", _versions("v20.20.1", "10.8.2"))
+    out = runner.invoke(app, ["doctor", "-q"]).stdout
+    lines = out.splitlines()
+    at = next(i for i, line in enumerate(lines) if line.startswith("node"))
+    node_line, flag = lines[at : at + 2]
+    assert node_line.split() == ["node", "v20.20.1", "(npm", "10.8.2)"]
+    assert flag.startswith(" " * 12 + "too old: npm 10.8.2 is below 11")
+    for fix in ("npx npm@11 install", "npm install -g npm@11", "Node 24 LTS"):
+        assert fix in flag
+
+
+def test_doctor_flags_npm_10_outside_a_project(runner, tmp_path: Path, monkeypatch, no_ci) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(doctor_mod, "tool_version", _versions("v22.22.0", "10.9.4"))
+    assert "too old: npm 10.9.4 is below 11" in runner.invoke(app, ["doctor"]).stdout
+
+
+def test_doctor_is_quiet_about_a_supported_toolchain(runner, project: Path, monkeypatch) -> None:
+    monkeypatch.setattr(doctor_mod, "tool_version", _versions("v24.11.0", "11.6.1"))
+    out = runner.invoke(app, ["doctor", "-q"]).stdout
+    assert "v24.11.0 (npm 11.6.1)" in out and "too old" not in out
+
+
+@pytest.mark.parametrize(
+    ("node", "npm", "expected"),
+    [
+        ("v20.20.1", "10.8.2", "npm 10.8.2 is below 11"),
+        ("v22.12.0", "10.9.0", "npm 10.9.0 is below 11"),
+        ("v20.18.3", "10.8.2", "Node v20.18.3 cannot run Vite 8"),  # Node first: 24 fixes both
+        ("v21.7.3", "11.0.0", "Node v21.7.3 cannot run Vite 8"),
+        ("v22.11.0", "11.0.0", "Node v22.11.0 cannot run Vite 8"),
+        ("v18.20.8", None, "Node v18.20.8 cannot run Vite 8"),
+        ("v20.19.0", "11.0.0", None),
+        ("v22.12.0", "11.21.1", None),
+        ("v26.7.0", "11.19.0", None),
+        ("v20.20.1", None, None),
+        ("node-9.9.9", "npm-9.9.9", None),  # not a version: not judged
+        (None, None, None),
+    ],
+)
+def test_toolchain_shortfall(node: str | None, npm: str | None, expected: str | None) -> None:
+    problem = toolchain.shortfall(node, npm)
+    if expected is None:
+        assert problem is None
+    else:
+        assert problem is not None and problem.startswith(expected)
+        assert "Fix: " in problem and "Node 24 LTS" in problem
+
+
+def test_install_hint_names_the_npm_floor() -> None:
+    hint = toolchain.install_hint()
+    for part in ("npm 11 or later", "npx npm@11 install", "npm install -g npm@11", "karni doctor"):
+        assert part in hint
 
 
 # the tip
@@ -155,7 +242,7 @@ def test_check_prints_the_tip_on_stderr_only(runner, project: Path) -> None:
 
 
 def test_failing_check_keeps_the_tip_for_later(runner, project: Path, monkeypatch) -> None:
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 1)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 1)
     failed = runner.invoke(app, ["check"])
     assert failed.exit_code == 1 and TIP_FIRST_LINE not in failed.output
     assert not _state(project).exists()

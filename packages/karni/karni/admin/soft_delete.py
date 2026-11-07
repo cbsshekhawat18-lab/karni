@@ -11,10 +11,13 @@ scope. The default changelist view is scoped back to alive rows by
 Django's builtin ``delete_selected`` stays available and is *soft* on these
 models: :meth:`SoftDeleteAdminMixin.delete_queryset` soft-deletes row by row,
 and ``restore_selected`` restores row by row, so ``on_deleted`` and
-``on_restored`` listeners run. Note that its
-confirmation page lists cascade children that a soft delete will not touch —
-a documented v0.1 trade-off. ``hard_delete_selected`` is the explicit,
-superuser-only, confirmed path to real deletion.
+``on_restored`` listeners run. A soft delete touches no other row, so its
+confirmation (the row's Delete page and Delete selected) names only the
+selected rows: no cascade list, and no refusal for rows a ``PROTECT`` foreign
+key points from (:meth:`SoftDeleteAdminMixin.get_deleted_objects`), as the
+API's soft delete. ``hard_delete_selected`` is the explicit, superuser-only,
+confirmed path to real deletion, and keeps Django's cascade list and its
+``PROTECT`` refusal.
 
 Override / escape hatch: subclass the mixin (or override any method in
 ``AdminMeta.extra``) — every hook is a plain ``ModelAdmin`` method.
@@ -29,8 +32,11 @@ from django.contrib.admin import helpers
 from django.contrib.admin.utils import model_ngettext
 from django.core.exceptions import PermissionDenied
 from django.db.models import QuerySet
-from django.http import HttpRequest
+from django.http import Http404, HttpRequest, HttpResponse, HttpResponseRedirect
 from django.template.response import TemplateResponse
+from django.urls import path, reverse
+from django.utils.html import format_html
+from django.utils.text import capfirst
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 
@@ -79,7 +85,7 @@ class SoftDeleteListFilter(admin.SimpleListFilter):
     ``AdminMeta.list_filter`` (or ``AdminMeta.extra``) on the model.
     """
 
-    title = gettext_lazy("deleted")
+    title = gettext_lazy("Deleted")
     parameter_name = "deleted"
 
     def lookups(self, request: HttpRequest, model_admin: admin.ModelAdmin) -> list[tuple[str, str]]:
@@ -263,6 +269,38 @@ class SoftDeleteAdminMixin(admin.ModelAdmin):
             queryset = queryset.filter(deleted_at__isnull=True)
         return queryset, may_have_duplicates
 
+    def get_urls(self) -> Any:
+        """The row's *Restore* button posts to ``<id>/restore/``."""
+        opts = self.model._meta
+        wrap = self.admin_site.admin_view
+        return [
+            path(
+                "<path:object_id>/restore/",
+                wrap(self.restore_view),
+                name=f"{opts.app_label}_{opts.model_name}_restore",
+            ),
+            *super().get_urls(),
+        ]
+
+    def restore_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        """Restore one row (POST), then back to the list: what the row's *Restore* button does."""
+        from django.contrib.admin.utils import unquote
+
+        opts = self.model._meta
+        back = reverse(f"{self.admin_site.name}:{opts.app_label}_{opts.model_name}_changelist")
+        if request.method != "POST":
+            return HttpResponseRedirect(back)
+        obj = self.get_object(request, unquote(object_id))
+        if obj is None:
+            raise Http404
+        if not self.has_change_permission(request, obj):
+            raise PermissionDenied
+        from karni.api.caching import invalidation_batch
+
+        with invalidation_batch():
+            self.restore_selected(request, self.get_queryset(request).filter(pk=obj.pk))
+        return HttpResponseRedirect(back)
+
     def has_hard_delete_permission(self, request: HttpRequest) -> bool:
         """Gate ``hard_delete_selected``: superusers only.
 
@@ -309,6 +347,51 @@ class SoftDeleteAdminMixin(admin.ModelAdmin):
                 request, _("Not restored: %(reason)s") % {"reason": line}, messages.ERROR
             )
 
+    def get_deleted_objects(self, objs: Any, request: HttpRequest) -> tuple[Any, ...]:
+        """What a soft delete changes: the selected rows and nothing else.
+
+        Django's collector lists the rows a hard delete would cascade to and
+        refuses rows a ``PROTECT`` foreign key points from. A soft delete
+        only sets ``deleted_at`` on the selected rows: related rows stay and
+        keep resolving, so there is nothing to cascade and nothing to
+        protect. A row the user may not delete is still named in
+        ``perms_needed``, as in Django. The hard delete reads
+        :meth:`get_hard_deleted_objects` instead.
+
+        Override / escape hatch: override this method to bring back a check
+        of your own, or call :meth:`get_hard_deleted_objects`.
+        """
+        opts = self.model._meta
+        rows = list(objs)
+        perms_needed = {
+            str(opts.verbose_name) for obj in rows if not self.has_delete_permission(request, obj)
+        }
+        to_delete = [format_html("{}: {}", capfirst(opts.verbose_name), obj) for obj in rows]
+        model_count = {str(opts.verbose_name_plural): len(rows)} if rows else {}
+        return to_delete, model_count, perms_needed, []
+
+    def get_hard_deleted_objects(self, objs: Any, request: HttpRequest) -> tuple[Any, ...]:
+        """Django's collector: what a hard delete removes, and the rows ``PROTECT`` keeps."""
+        return tuple(super().get_deleted_objects(objs, request))
+
+    def render_delete_form(self, request: HttpRequest, context: dict[str, Any]) -> Any:
+        """The row's Delete page says the row moves to Deleted and related rows stay.
+
+        ``karni_admin/delete_confirmation.html``, after the per-model and
+        per-app ``admin/<app>/<model>/delete_confirmation.html`` overrides.
+        ``delete_confirmation_template`` on the admin class replaces it.
+        """
+        context["karni_soft"] = True
+        response = super().render_delete_form(request, context)
+        if not self.delete_confirmation_template:
+            opts = self.model._meta
+            response.template_name = [
+                f"admin/{opts.app_label}/{opts.model_name}/delete_confirmation.html",
+                f"admin/{opts.app_label}/delete_confirmation.html",
+                "karni_admin/delete_confirmation.html",
+            ]
+        return response
+
     def delete_queryset(self, request: HttpRequest, queryset: QuerySet) -> None:
         """Django's "delete selected": a soft ``delete()`` per row, in one transaction.
 
@@ -336,7 +419,7 @@ class SoftDeleteAdminMixin(admin.ModelAdmin):
         then, on the confirmed POST, call ``queryset.hard_delete()``.
         """
         opts = self.model._meta
-        deletable_objects, model_count, perms_needed, protected = self.get_deleted_objects(
+        deletable_objects, model_count, perms_needed, protected = self.get_hard_deleted_objects(
             queryset, request
         )
 

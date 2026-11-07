@@ -107,6 +107,11 @@ export { Skeleton } from "./components/primitives/skeleton";
 export type { SkeletonProps } from "./components/primitives/skeleton";
 
 // resource components
+export {
+  protectedFileLinkFor,
+  registerProtectedFileLink,
+} from "./components/resource/protected-file";
+export type { ProtectedFileLinkRenderProps } from "./components/resource/protected-file";
 export { ResourceTable } from "./components/resource/ResourceTable";
 export type {
   ResourceTableProps,
@@ -167,6 +172,13 @@ export type {
   ResourceDetailDeletedProps,
   ResourceDetailEmptyValueProps,
   ResourceDetailDeleteDialogProps,
+  ResourceDetailRelated,
+  ResourceDetailRelatedProps,
+  ResourceDetailRelatedTab,
+  ResourceDetailTransitionOptions,
+  ResourceDetailTransitionTarget,
+  ResourceDetailTransitionsProps,
+  ResourceDetailBreadcrumbOptions,
 } from "./components/resource/ResourceDetail";
 
 export { ResourceSelect, defaultResourceSelectSlots } from "./components/resource/ResourceSelect";
@@ -178,6 +190,49 @@ export type {
   ResourceSelectLoadingProps,
   ResourceSelectOptionProps,
 } from "./components/resource/ResourceSelect";
+
+// tree models (experimental)
+export { TreeView } from "./components/resource/tree/TreeView";
+export type { TreeViewProps, TreeValue } from "./components/resource/tree/TreeView";
+export { defaultTreeViewSlots } from "./components/resource/tree/tree-states";
+export type {
+  TreeViewSlots,
+  TreeViewNodeProps,
+  TreeViewEmptyProps,
+  TreeViewLoadingProps,
+} from "./components/resource/tree/tree-states";
+export { TreeSelect } from "./components/resource/tree/TreeSelect";
+export type { TreeSelectProps, TreeSelectSlots } from "./components/resource/tree/TreeSelect";
+export { TreeBreadcrumb } from "./components/resource/tree/TreeBreadcrumb";
+export type { TreeBreadcrumbProps } from "./components/resource/tree/TreeBreadcrumb";
+export {
+  useResourceTree,
+  useResourceChildren,
+  useResourceAncestors,
+  useResourceAccessForest,
+  useTreeMutations,
+} from "./hooks/useResourceTree";
+export type {
+  AccessForest,
+  AccessForestNode,
+  AccessForestParams,
+  TreeNode,
+  TreeResponse,
+  ResourceTreeParams,
+  ResourceChildrenParams,
+  TreeMoveInput,
+  TreeMutations,
+} from "./hooks/useResourceTree";
+
+// taxonomies (experimental)
+export { FacetPanel, defaultFacetPanelSlots } from "./components/resource/facets/FacetPanel";
+export type {
+  FacetPanelProps,
+  FacetPanelSlots,
+  FacetPanelEmptyProps,
+} from "./components/resource/facets/FacetPanel";
+export { useResourceFacets } from "./hooks/useResourceFacets";
+export type { FacetNode, FacetsResponse, ResourceFacetsParams } from "./hooks/useResourceFacets";
 
 export {
   ChangeHistory,
@@ -246,7 +301,31 @@ export { karniKeys } from "./hooks/keys";
 export { useResourceList } from "./hooks/useResourceList";
 export { useResourceItem } from "./hooks/useResourceItem";
 export { useResourceMutations } from "./hooks/useResourceMutations";
+// row counts per resource, for dashboard charts (experimental)
+export { useResourceCounts } from "./hooks/useResourceCounts";
+export type {
+  ResourceCountPoint,
+  ResourceCountTarget,
+  ResourceCounts,
+} from "./hooks/useResourceCounts";
 export type { ResourceMutations } from "./hooks/useResourceMutations";
+export { useAggregate, aggregateKey, buildAggregateQuery } from "./hooks/useAggregate";
+export type {
+  AggregateCategory,
+  AggregateKey,
+  AggregateMetric,
+  AggregateParams,
+  AggregateResult,
+  AggregateSeries,
+} from "./hooks/useAggregate";
+export { useGlobalSearch, globalSearchQuery, GLOBAL_SEARCH_PATH } from "./hooks/useGlobalSearch";
+export type {
+  GlobalSearchParams,
+  GlobalSearchHit,
+  GlobalSearchGroup,
+  GlobalSearchResult,
+  UseGlobalSearchOptions,
+} from "./hooks/useGlobalSearch";
 export type {
   Paginated,
   FilterValue,
@@ -277,6 +356,15 @@ export type {
   FieldDef,
   OperationDef,
   ResourceSchema,
+  DashboardDef,
+  DashboardCountDef,
+  TreeRef,
+  RelatedDef,
+  FieldGroupDef,
+  FieldGroupLayout,
+  FieldGroupsDef,
+  ColumnSetDef,
+  ColumnSetsDef,
 } from "./schema/types";
 
 // auth
@@ -300,7 +388,51 @@ export type { PermissionHelpers } from "./auth/usePermission";
 export { createLocalStorageTokenStorage, createMemoryTokenStorage } from "./auth/storage";
 export type { TokenStorage } from "./auth/storage";
 
-export type { KarniUser, AuthStatus, LoginResult } from "./auth/types";
+export type {
+  KarniUser,
+  AuthStatus,
+  LoginResult,
+  OtpLoginResult,
+  OtpSendResult,
+  SocialLoginResult,
+  SocialSignInOptions,
+  AuthTerms,
+  TermsClientInfo,
+} from "./auth/types";
+
+// sign-in with an ID token (experimental)
+export { useSocialLogin } from "./auth/useSocialLogin";
+export type { SocialLoginStatus, UseSocialLoginResult } from "./auth/useSocialLogin";
+
+export { SocialButton, defaultSocialButtonSlots, describeSocialError } from "./auth/SocialButton";
+export type {
+  SocialButtonProps,
+  SocialButtonSlots,
+  SocialButtonErrorProps,
+  SocialButtonApprovalProps,
+  SocialIdToken,
+} from "./auth/SocialButton";
+
+// sign-in with a code sent by email (experimental)
+export { useOtpLogin } from "./auth/useOtpLogin";
+export type {
+  OtpLoginStatus,
+  OtpLoginStep,
+  UseOtpLoginOptions,
+  UseOtpLoginResult,
+} from "./auth/useOtpLogin";
+
+export { OtpLoginForm, defaultOtpLoginFormSlots, describeOtpError } from "./auth/OtpLoginForm";
+export type {
+  OtpLoginFormProps,
+  OtpLoginFormSlots,
+  OtpLoginFormErrorProps,
+  OtpLoginFormApprovalProps,
+} from "./auth/OtpLoginForm";
+
+// terms acceptance (experimental)
+export { TermsGate, defaultTermsGateSlots } from "./auth/TermsGate";
+export type { TermsGateProps, TermsGateSlots, TermsGatePanelProps } from "./auth/TermsGate";
 
 // support components
 export { Page, defaultPageSlots } from "./components/page/page";
@@ -311,10 +443,24 @@ export type {
   PageSlotContentProps,
 } from "./components/page/page";
 
-export { Layout, defaultLayoutSlots } from "./components/layout/layout";
+export {
+  GlobalSearch,
+  defaultGlobalSearchSlots,
+  defaultHitHref,
+} from "./components/global-search/global-search";
+export type {
+  GlobalSearchProps,
+  GlobalSearchSlots,
+  GlobalSearchTriggerProps,
+  GlobalSearchResultLinkProps,
+} from "./components/global-search/global-search";
+export { Layout, defaultLayoutSlots, isNavGroup } from "./components/layout/layout";
 export type {
   LayoutProps,
   LayoutNavItem,
+  LayoutNavGroup,
+  LayoutNavEntry,
+  LayoutNavGroupProps,
   LayoutSlots,
   LayoutHeaderProps,
   LayoutSidebarProps,
@@ -323,6 +469,13 @@ export type {
   LayoutSkipLinkProps,
   LayoutRouteFocusOptions,
 } from "./components/layout/layout";
+export { isSignInRoute, routeLabel, routeNavItems } from "./components/layout/route-nav";
+export type { RouteNavOptions } from "./components/layout/route-nav";
+export { activeRoute, navigationEntries } from "./components/layout/navigation";
+export type { NavigationEntriesOptions } from "./components/layout/navigation";
+export { defaultNavIcons, navIcon } from "./components/layout/nav-icons";
+export { NAVIGATION_PATH, useNavigation } from "./hooks/useNavigation";
+export type { NavigationItem, NavigationMenu } from "./hooks/useNavigation";
 
 export { KarniMark } from "./components/brand/karni-mark";
 export type { KarniMarkProps } from "./components/brand/karni-mark";
@@ -377,7 +530,26 @@ export type {
 export { Stat, defaultStatSlots } from "./components/stat/stat";
 export type { StatProps, StatSlots, StatSlotProps, StatDeltaProps } from "./components/stat/stat";
 
-export { DataChart, defaultDataChartSlots } from "./components/chart/data-chart";
+export {
+  Dashboard,
+  defaultDashboardSlots,
+  resolveRelativeDate,
+  resolveSection,
+} from "./components/dashboard/dashboard";
+export type {
+  DashboardProps,
+  DashboardSlots,
+  DashboardSection,
+  DashboardCount,
+  DashboardCountProps,
+  DashboardCountsProps,
+  DashboardRecentProps,
+  DashboardSectionProps,
+  DashboardEmptyProps,
+  DashboardLoadingProps,
+} from "./components/dashboard/dashboard";
+
+export { DataChart, aggregateSeries, defaultDataChartSlots } from "./components/chart/data-chart";
 export type {
   DataChartProps,
   DataChartKind,
@@ -390,3 +562,74 @@ export type {
   DataChartEmptyProps,
   DataChartLoadingProps,
 } from "./components/chart/data-chart";
+
+// page blocks beyond CRUD (experimental)
+export {
+  DashboardGrid,
+  DashboardCard,
+  defaultDashboardCardSlots,
+} from "./components/dashboard-grid/dashboard-grid";
+export type {
+  DashboardGridProps,
+  DashboardGridColumns,
+  DashboardCardProps,
+  DashboardCardSpan,
+  DashboardCardSlots,
+  DashboardCardLoadingProps,
+  DashboardCardEmptyProps,
+} from "./components/dashboard-grid/dashboard-grid";
+
+export { ChartCard } from "./components/dashboard-grid/chart-card";
+export type { ChartCardProps } from "./components/dashboard-grid/chart-card";
+
+export {
+  Accordion,
+  defaultAccordionSlots,
+  toggleAccordion,
+} from "./components/accordion/accordion";
+export type {
+  AccordionProps,
+  AccordionItem,
+  AccordionSlots,
+  AccordionTriggerProps,
+} from "./components/accordion/accordion";
+
+export {
+  MarkdownView,
+  defaultMarkdownViewSlots,
+  preloadMarkdown,
+} from "./components/markdown/markdown-view";
+export type {
+  MarkdownViewProps,
+  MarkdownViewSlots,
+  MarkdownViewLoadingProps,
+} from "./components/markdown/markdown-view";
+
+export {
+  DataTable,
+  defaultDataTableSlots,
+  compareValues,
+  sortRows,
+} from "./components/data-table/data-table";
+export type {
+  DataTableProps,
+  DataTableColumn,
+  DataTableValue,
+  DataTableSort,
+  DataTableSortDirection,
+  DataTableSlots,
+  DataTableLoadingProps,
+  DataTableEmptyProps,
+} from "./components/data-table/data-table";
+export type { DataTableExportFormat } from "./components/data-table/export";
+
+export {
+  ComparisonTable,
+  defaultComparisonTableSlots,
+} from "./components/comparison-table/comparison-table";
+export type {
+  ComparisonTableProps,
+  ComparisonMetric,
+  ComparisonTableSlots,
+  ComparisonTableEmptyProps,
+} from "./components/comparison-table/comparison-table";

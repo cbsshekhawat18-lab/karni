@@ -4,7 +4,10 @@
 :func:`karni.api.diagnose.run`: one in-process request (writes rolled back),
 every SQL statement with the stack that issued it, the repeated ones grouped
 by cause with the optimiser's reason and the fix. ``--json`` for agents,
-``--explain`` adds EXPLAIN plans for the slowest statements, ``--all`` lists
+``--explain`` adds the plans: on PostgreSQL ``EXPLAIN ANALYZE`` of every
+statement, rolled back with the request, with the sequential scans on large
+tables and the index each one wants (:mod:`karni.api.explain`,
+experimental), elsewhere plain ``EXPLAIN`` of the slowest. ``--all`` lists
 every statement.
 
 Override / escape hatch: call :func:`karni.api.diagnose.run` from your own
@@ -47,7 +50,10 @@ class Command(BaseCommand):
         )
         parser.add_argument("--json", action="store_true", help="Print the report as JSON.")
         parser.add_argument(
-            "--explain", action="store_true", help="Add EXPLAIN plans for the slowest queries."
+            "--explain",
+            action="store_true",
+            help="Add the plans: on PostgreSQL EXPLAIN ANALYZE of every query (rolled back), "
+            "flagging sequential scans on large tables with the index each one wants.",
         )
         parser.add_argument("--all", action="store_true", help="List every statement.")
 

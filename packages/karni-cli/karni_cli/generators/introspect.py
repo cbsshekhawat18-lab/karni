@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import fnmatch
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,22 @@ SHIPPED_ROLES: dict[str, dict[str, Any]] = {
 }
 
 _RELATION_CALLS = frozenset({"ForeignKey", "OneToOneField", "ManyToManyField"})
-_AUDIT_BASES = frozenset({"BaseModel", "AuditedModel"})
+_AUDIT_BASES = frozenset({"BaseModel", "BigIntBaseModel", "AuditedModel"})
+#: Bases known to add no ``created_by``: a model on these alone has no owner unless it says so.
+_OWNERLESS_BASES = frozenset(
+    {
+        "Model",
+        "UUIDModel",
+        "IntegerKeyModel",
+        "TimestampedModel",
+        "SoftDeleteModel",
+        "GuardedModel",
+        "TreeModel",
+        "OrderedTreeModel",
+    }
+)
+#: A ``class Karni:`` option whose value is computed (not a literal): present, value unknown.
+COMPUTED: Any = object()
 
 
 @dataclass(frozen=True)
@@ -32,6 +48,9 @@ class ModelInfo:
     #: field name -> the called class name (``CharField``, ``ForeignKey`` …)
     fields: dict[str, str]
     bases: frozenset[str]
+    #: The ``class Karni:`` options when the caller knows them (karni build, from the spec);
+    #: ``None`` reads them from the source.
+    karni: dict[str, Any] | None = None
 
     @property
     def import_module(self) -> str:
@@ -69,6 +88,40 @@ def class_fields(cls: ast.ClassDef) -> dict[str, str]:
                 called.endswith("Field") or called in _RELATION_CALLS
             ):
                 found[target.id] = called
+    return found
+
+
+_RELATION_KINDS = {"ForeignKey": "fk", "OneToOneField": "o2o", "ManyToManyField": "m2m"}
+
+
+def relation_targets(cls: ast.ClassDef) -> dict[str, tuple[str, str]]:
+    """``name = models.ForeignKey(<target>, ...)`` → ``{name: ("fk", target)}``, o2o and m2m too.
+
+    The target is as written: ``"Venue"``, ``"shop.Venue"``, ``"self"`` or a
+    class name, and ``"User"`` for ``settings.AUTH_USER_MODEL``. It is ``""``
+    when the source does not say (a variable).
+    """
+    found: dict[str, tuple[str, str]] = {}
+    for stmt in cls.body:
+        if not isinstance(stmt, ast.Assign) or len(stmt.targets) != 1:
+            continue
+        target = stmt.targets[0]
+        kind = _RELATION_KINDS.get(_call_name(stmt.value))
+        if kind is None or not isinstance(target, ast.Name) or not isinstance(stmt.value, ast.Call):
+            continue
+        call = stmt.value
+        first = call.args[0] if call.args else None
+        for keyword in call.keywords:
+            if keyword.arg == "to":
+                first = keyword.value
+        written = ""
+        if isinstance(first, ast.Constant) and isinstance(first.value, str):
+            written = first.value
+        elif isinstance(first, ast.Name):
+            written = first.id
+        elif isinstance(first, ast.Attribute) and first.attr == "AUTH_USER_MODEL":
+            written = "User"
+        found[target.id] = (kind, written)
     return found
 
 
@@ -216,6 +269,76 @@ def role_names(cls: ast.ClassDef) -> list[str]:
     return found
 
 
+def writing_roles(cls: ast.ClassDef) -> list[str]:
+    """The ``HasRole("...")`` names a test must hold to write, in order of preference.
+
+    The roles named in the ``write=`` keyword of ``Access(...)`` come first,
+    then those in ``create=``, then every other ``HasRole`` in the class
+    body. A test acting as the first of them exercises real creates,
+    updates and deletes, where a role named only in ``read=`` (say, a
+    ``viewer``) would only confirm the refusals.
+    """
+    found: list[str] = []
+    for slot in ("write", "create"):
+        for node in ast.walk(cls):
+            if not (isinstance(node, ast.Call) and _call_name(node) == "Access"):
+                continue
+            for keyword in node.keywords:
+                if keyword.arg == slot:
+                    found += [name for name in _role_names_in(keyword.value) if name not in found]
+    return found + [name for name in role_names(cls) if name not in found]
+
+
+def _role_names_in(node: ast.AST) -> list[str]:
+    found: list[str] = []
+    for call in ast.walk(node):
+        if isinstance(call, ast.Call) and _call_name(call) == "HasRole":
+            for arg in call.args:
+                if (
+                    isinstance(arg, ast.Constant)
+                    and isinstance(arg.value, str)
+                    and arg.value not in found
+                ):
+                    found.append(arg.value)
+    return found
+
+
+def read_slot(cls: ast.ClassDef) -> ast.AST | None:
+    """The ``read=`` argument of the class's ``Access(...)`` (``None``: no such call)."""
+    for node in ast.walk(cls):
+        if isinstance(node, ast.Call) and _call_name(node) == "Access":
+            for keyword in node.keywords:
+                if keyword.arg == "read":
+                    return keyword.value
+    return None
+
+
+def owned_reads(cls: ast.ClassDef) -> list[str]:
+    """The ``Owned("...")`` paths that scope the class's reads.
+
+    Those of ``Access(read=...)``, or every one in the body when the class
+    declares no ``Access(...)`` (an ``Owned`` read is then the whole rule).
+    """
+    read = read_slot(cls)
+    if read is None:
+        return owned_paths(cls)
+    return [
+        node.args[0].value
+        for node in ast.walk(read)
+        if isinstance(node, ast.Call)
+        and _call_name(node) == "Owned"
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+        and isinstance(node.args[0].value, str)
+    ]
+
+
+def reading_roles(cls: ast.ClassDef) -> list[str]:
+    """The ``HasRole("...")`` names in ``Access(read=...)``: roles that read every row."""
+    read = read_slot(cls)
+    return _role_names_in(read) if read is not None else []
+
+
 def granted_reads(cls: ast.ClassDef) -> bool:
     """Whether the class body calls ``Granted()`` — the roles' grants decide its rows."""
     return any(
@@ -240,8 +363,111 @@ def declared_roles(ws: Workspace) -> dict[str, dict[str, Any]]:
     return dict(SHIPPED_ROLES)
 
 
-def grant_scopes(roles: dict[str, dict[str, Any]], key: str) -> dict[str, str]:
-    """Role slug → the scope its grants give ``key`` (``app.model:action``); later patterns win."""
+#: The key types ``karni make model`` writes (``KARNI_PK``, ``--pk``), and the base of each.
+PK_BASES: dict[str, str] = {"uuid": "BaseModel", "bigint": "BigIntBaseModel"}
+
+
+def declared_pk(ws: Workspace) -> tuple[str, str | None]:
+    """``(key type, note)``: ``KARNI_PK`` from config/settings.py when it is a literal.
+
+    The last plain assignment wins, as in Python. Absent, it is ``uuid``
+    (karni.conf.base's default). A computed value cannot be read without
+    Django, so it is ``uuid`` with a note saying to pass ``--pk``. A value
+    other than ``uuid`` or ``bigint`` is refused (``C106``).
+    """
+    text = ws.read(SETTINGS)
+    if text is None:
+        return "uuid", None
+    found: Any = None
+    for node in parse(ws, ws.rel(SETTINGS), text).body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == "KARNI_PK" for target in node.targets
+        ):
+            found = node.value
+    if found is None:
+        return "uuid", None
+    try:
+        value = ast.literal_eval(found)
+    except ValueError:
+        return "uuid", (
+            "note: KARNI_PK in config/settings.py is computed, so karni make model cannot read "
+            "it and writes a UUID key. Pass --pk bigint for an integer key."
+        )
+    if value not in PK_BASES:
+        raise CliError(
+            f"KARNI_PK = {value!r} in config/settings.py: the key type karni make model writes "
+            f"is one of {', '.join(PK_BASES)} (uuid: BaseModel, bigint: BigIntBaseModel).",
+            code="C106",
+        )
+    return str(value), None
+
+
+def karni_options(ws: Workspace, model: ModelInfo) -> dict[str, Any]:
+    """The model's ``class Karni:`` options, literal values read (a computed one is ``COMPUTED``)."""
+    if model.karni is not None:
+        return dict(model.karni)
+    text = ws.read(model.path) or ""
+    for node in parse(ws, ws.rel(model.path), text).body:
+        if not (isinstance(node, ast.ClassDef) and node.name == model.name):
+            continue
+        for inner in node.body:
+            if not (isinstance(inner, ast.ClassDef) and inner.name == "Karni"):
+                continue
+            options: dict[str, Any] = {}
+            for stmt in inner.body:
+                if (
+                    isinstance(stmt, ast.Assign)
+                    and len(stmt.targets) == 1
+                    and isinstance(stmt.targets[0], ast.Name)
+                ):
+                    try:
+                        options[stmt.targets[0].id] = ast.literal_eval(stmt.value)
+                    except ValueError:
+                        options[stmt.targets[0].id] = COMPUTED
+            return options
+    return {}
+
+
+def scope_fits(ws: Workspace, model: ModelInfo) -> Callable[[str], bool]:
+    """Whether a grant's scope can reach ``model``'s rows (as ``karni.accounts.roles`` decides).
+
+    ``own`` needs an owner: ``Karni.owner_field``, or the ``created_by`` of
+    ``BaseModel`` / ``AuditedModel``. ``related:<key>`` needs ``<key>`` in
+    ``Karni.scope_paths``. When the source cannot tell (a project base class,
+    a computed option), the scope is taken to fit.
+    """
+    options = karni_options(ws, model)
+    unknown_base = bool(model.bases - _OWNERLESS_BASES - _AUDIT_BASES)
+    has_owner = (
+        bool(options.get("owner_field"))
+        or "created_by" in model.fields
+        or bool(model.bases & _AUDIT_BASES)
+        or unknown_base
+    )
+    paths = options.get("scope_paths")
+
+    def fits(scope: str) -> bool:
+        kind, _, path = scope.partition(":")
+        if kind == "own":
+            return has_owner
+        if kind == "related":
+            if paths is COMPUTED or unknown_base:
+                return True
+            return isinstance(paths, dict) and path in paths
+        return True
+
+    return fits
+
+
+def grant_scopes(
+    roles: dict[str, dict[str, Any]], key: str, fits: Callable[[str], bool] | None = None
+) -> dict[str, str]:
+    """Role slug → the scope its grants give ``key`` (``app.model:action``); later patterns win.
+
+    ``fits`` (:func:`scope_fits`) drops what Karni drops at boot: a wildcard
+    pattern's ``own`` or ``related:<key>`` scope on a model it cannot reach,
+    so that role holds no grant there from that pattern.
+    """
     found: dict[str, str] = {}
     for slug, spec in roles.items():
         grants = spec.get("grants") if isinstance(spec, dict) else None
@@ -250,8 +476,12 @@ def grant_scopes(roles: dict[str, dict[str, Any]], key: str) -> dict[str, str]:
         scope = None
         for pattern, value in grants.items():
             glob = "*:*" if pattern == "*" else str(pattern)
-            if fnmatch.fnmatchcase(key, glob):
-                scope = str(value)
+            if not fnmatch.fnmatchcase(key, glob):
+                continue
+            wildcard = "*" in glob.split(":", 1)[0]
+            if wildcard and fits is not None and not fits(str(value)):
+                continue
+            scope = str(value)
         if scope is not None:
             found[slug] = scope
     return found

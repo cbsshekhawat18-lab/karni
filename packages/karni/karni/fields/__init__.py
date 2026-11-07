@@ -24,6 +24,7 @@ Field                  Column, constraint, index                     Backends
 ``EmailField``         unique on LOWER(email), domain lower-cased    all
 ``SlugField``          unique (live rows), generated from a field    all
 ``PhoneField``         E.164, CHECK format                           PG, SQLite
+``MarkdownField``      text, OpenAPI format "markdown"               all
 ``CountryField``       char(2), CHECK IN ISO 3166-1 alpha-2          all
 ``CurrencyField``      char(3), CHECK IN ISO 4217                    all
 ``JSONField``          jsonb; GIN when ``queried=True``              GIN on PG
@@ -35,9 +36,10 @@ Field                  Column, constraint, index                     Backends
 =====================  ============================================  ==============
 
 ``LiveUniqueConstraint`` declares uniqueness over live rows of a
-soft-deletable model; ``GinIndex``/``GistIndex``/``BrinIndex`` are
-PostgreSQL indexes that are a no-op elsewhere; ``CreateExtension`` creates a
-PostgreSQL extension from a migration. ``karni schema`` lists what each
+soft-deletable model; ``GinIndex``/``GistIndex``/``BrinIndex`` (and the
+experimental ``TrigramIndex``) are PostgreSQL indexes that are a no-op
+elsewhere; ``CreateExtension`` creates a PostgreSQL extension from a
+migration. ``karni schema`` lists what each
 declaration created and why; ``docs/fields.md`` has the full reference.
 
 Lifecycle and limited resources (``docs/lifecycle-and-capacity.md``):
@@ -67,14 +69,23 @@ from karni.fields.base import (
 from karni.fields.capacity import CapacityField
 from karni.fields.constraints import LiveUniqueConstraint
 from karni.fields.extensions import CreateExtension, ensure_extension
-from karni.fields.indexes import BrinIndex, GinIndex, GistIndex
+from karni.fields.indexes import BrinIndex, GinIndex, GistIndex, TrigramIndex
 from karni.fields.iso import CountryField, CurrencyField, country_codes, currency_codes
 from karni.fields.money import MoneyField, allocate, quantize, split
 from karni.fields.numbers import PercentField, QuantityField
 from karni.fields.search import SearchField
 from karni.fields.state import StateField
 from karni.fields.structured import JSONField
-from karni.fields.text import E164Format, EmailField, PhoneField, SlugField, normalize_phone
+from karni.fields.text import (
+    E164Format,
+    EmailField,
+    MarkdownField,
+    PhoneField,
+    PhoneFormField,
+    SlugField,
+    normalize_phone,
+    to_e164,
+)
 
 # ArrayField and the range fields are lazy re-exports (module __getattr__
 # below): they need a PostgreSQL driver, and karni.fields must import without one.
@@ -94,14 +105,17 @@ __all__ = [  # noqa: F822
     "JSONField",
     "KarniField",
     "LiveUniqueConstraint",
+    "MarkdownField",
     "MoneyField",
     "PercentField",
     "PhoneField",
+    "PhoneFormField",
     "QuantityField",
     "SchemaNote",
     "SearchField",
     "SlugField",
     "StateField",
+    "TrigramIndex",
     "allocate",
     "contribute_constraint",
     "contribute_index",
@@ -114,6 +128,7 @@ __all__ = [  # noqa: F822
     "quantize",
     "schema_notes",
     "split",
+    "to_e164",
 ]
 
 #: The range fields: karni.fields.ranges raises E501 itself without psycopg.

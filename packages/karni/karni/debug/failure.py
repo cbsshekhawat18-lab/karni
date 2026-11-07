@@ -58,7 +58,7 @@ _MAX_STR: Final = 500
 _MAX_ITEMS: Final = 20
 _MAX_DEPTH: Final = 3
 _MAX_STATEMENTS: Final = 200
-_CODE_IN_TEXT: Final = re.compile(r"\b((?:[EW]\d{3})|(?:[A-Z]{2,5}\d{3}))\b")
+_CODE_IN_TEXT: Final = re.compile(r"\b((?:[EW]\d{3})|(?:[A-Z]{2,6}\d{3}))\b")
 
 
 def new_failure_id() -> str:

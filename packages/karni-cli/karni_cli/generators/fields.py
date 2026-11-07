@@ -45,6 +45,10 @@ FIELD_DOCS: tuple[tuple[str, str], ...] = (
     ("slug:slug[:source]", 'SlugField(populate_from="source"), unique among live rows (:len too)'),
     ("phone:phone", "PhoneField(): E.164, CHECK format"),
     (
+        "notes:markdown",
+        "MarkdownField(): text, edited with a preview and shown formatted in @karni/ui",
+    ),
+    (
         "country:country / currency:currency",
         "CountryField() / CurrencyField() with a CHECK against the ISO list",
     ),
@@ -52,7 +56,17 @@ FIELD_DOCS: tuple[tuple[str, str], ...] = (
     ("tags:array:str[:len]", "ArrayField(models.CharField(...)) with a GIN index, PostgreSQL only"),
     (
         "doc:file / photo:image",
-        'FileField / ImageField with `upload_to="<app>/<model>/"`. Image needs Pillow',
+        (
+            'FileField / ImageField with `upload_to="<app>/<model>/"`. An image field makes '
+            "pyproject.toml depend on `karni[images]` (Pillow)"
+        ),
+    ),
+    (
+        "doc:file:protected / photo:image:protected",
+        (
+            "ProtectedFileField / ProtectedImageField (karni-storage, experimental): stored "
+            "privately, downloaded only through the row's viewset. Needs `karni add storage`"
+        ),
     ),
     ("ref:uuid", "UUIDField(default=uuid.uuid4)"),
     ("status:choice:draft|live", "a TextChoices class + CharField(choices=..., default=first)"),
@@ -129,6 +143,7 @@ _STRINGISH = frozenset(
         "phone",
         "country",
         "currency",
+        "markdown",
     }
 )
 _RELATIONS = {"fk": "ForeignKey", "o2o": "OneToOneField", "m2m": "ManyToManyField"}
@@ -140,6 +155,47 @@ _SIMPLE = {
     "datetime": "DateTimeField",
 }
 _USER_NAMES = frozenset({"user", "auth.user", "settings.auth_user_model"})
+
+#: karni.fields.checks.MONEY_WORDS and FINANCIAL_MODEL_WORDS, mirrored (the CLI runs
+#: without karni; a test keeps them equal): what makes karni.W965 treat a model as financial.
+MONEY_WORDS = frozenset(
+    {
+        *("price", "prices", "amount", "amounts", "total", "totals", "subtotal", "cost"),
+        "costs",
+        "fee",
+        *("fees", "tax", "taxes", "balance", "salary", "wage", "wages", "revenue", "budget"),
+        *("charge", "payment", "refund", "payout", "fare", "money", "deposit", "discount"),
+    }
+)
+FINANCIAL_MODEL_WORDS = frozenset(
+    {
+        *("payment", "invoice", "refund", "payout", "charge", "transaction", "ledger"),
+        *("receipt", "settlement", "wallet", "transfer", "credit", "debit"),
+    }
+)
+_NAME_PARTS = re.compile(r"[_\W]+|(?<=[a-z0-9])(?=[A-Z])")
+
+
+def _name_parts(name: str) -> set[str]:
+    return {part.lower() for part in _NAME_PARTS.split(name) if part}
+
+
+def is_financial(model: str, specs: list[FieldSpec]) -> bool:
+    """Whether karni.W965 treats ``model`` with these fields as financial.
+
+    As :func:`karni.fields.checks.is_financial`: a money field, a decimal or
+    percent field named like money (``unit_price``), or a model named like a
+    payment (``Invoice``, ``LedgerEntry``).
+    """
+    if _name_parts(model) & FINANCIAL_MODEL_WORDS:
+        return True
+    return any(
+        spec.kind == "money"
+        or (spec.kind in ("decimal", "percent") and bool(_name_parts(spec.name) & MONEY_WORDS))
+        for spec in specs
+    )
+
+
 _CHOICE_VALUE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 
 
@@ -168,6 +224,42 @@ class Rendered:
     lines: list[str] = field(default_factory=list)
     imports: list[Import] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    #: ``Model.field`` of every ImageField: the project needs Pillow for them.
+    images: list[str] = field(default_factory=list)
+
+
+def _image_fields(images: list[str]) -> str:
+    noun = "is an ImageField" if len(images) == 1 else "are ImageFields"
+    return f"{', '.join(images)} {noun}"
+
+
+def pillow_note(images: list[str], *, missing: bool) -> str:
+    """The note for ImageFields when pyproject.toml cannot be edited.
+
+    ``missing``: the project's interpreter was asked and has no Pillow.
+    """
+    state = "and the project's Python has no Pillow" if missing else "so the project needs Pillow"
+    return (
+        f'note: {_image_fields(images)}, {state}. List "karni[images]" instead of "karni" in '
+        "pyproject.toml's dependencies (it adds Pillow) and reinstall: pip install 'karni[images]'."
+    )
+
+
+def images_extra_note(images: list[str], before: str, after: str) -> str:
+    """The note for the pyproject.toml edit that adds the ``images`` extra."""
+    return (
+        f'note: pyproject.toml: "{before}" -> "{after}", because {_image_fields(images)} and '
+        "the images extra installs Pillow. Then reinstall the project to install it: "
+        "pip install -e . (docker compose build for the image)."
+    )
+
+
+def reinstall_note(images: list[str]) -> str:
+    """The note when pyproject.toml lists the extra but the project's Python has no Pillow."""
+    return (
+        f"note: {_image_fields(images)}. pyproject.toml already lists karni[images], but the "
+        "project's Python has no Pillow. Reinstall the project: pip install -e ."
+    )
 
 
 def parse_field(token: str) -> FieldSpec:
@@ -211,6 +303,84 @@ def parse_fields(tokens: list[str]) -> list[FieldSpec]:
     return specs
 
 
+#: Experimental. How many arguments each type takes after it, with an example. A field that
+#: writes more is refused (C104): an argument is never dropped without a word. ``choice`` and
+#: ``state`` read the rest as their values, and the range and capacity types check their own.
+ARG_SHAPES: dict[str, tuple[int, str]] = {
+    "str": (1, "title:str:200"),
+    "url": (1, "site:url:300"),
+    "slug": (1, "slug:slug:title"),
+    "decimal": (2, "price:decimal:10:2"),
+    "money": (1, "price:money:EUR"),
+    "percent": (2, "rate:percent:0:100"),
+    "email": (1, "email:email:unique"),
+    "json": (1, "meta:json:queried"),
+    "array": (2, "tags:array:str:40"),
+    "file": (1, "doc:file:protected"),
+    "image": (1, "photo:image:protected"),
+    "fk": (1, "venue:fk:Venue"),
+    "o2o": (1, "profile:o2o:User"),
+    "m2m": (1, "tags:m2m:Tag"),
+    **{
+        kind: (0, f"{example}:{kind}")
+        for kind, example in (
+            ("text", "body"),
+            ("int", "count"),
+            ("float", "ratio"),
+            ("bool", "done"),
+            ("date", "day"),
+            ("datetime", "at"),
+            ("uuid", "ref"),
+            ("quantity", "stock"),
+            ("phone", "phone"),
+            ("markdown", "notes"),
+            ("country", "country"),
+            ("currency", "currency"),
+        )
+    },
+}
+
+#: Experimental. The types a ``:unique`` after the type means a unique value for.
+_UNIQUE_TEXT = frozenset({"str", "url", "text", "int", "phone", "uuid"})
+
+
+def refuse_extra_args(spec: FieldSpec) -> None:
+    """Experimental. Refuse an argument ``spec``'s type does not take (C104), never drop it.
+
+    ``title:str:200:unique`` is refused with the way to a unique value: a
+    ``LiveUniqueConstraint`` in the Meta of the project's class.
+    """
+    shape = ARG_SHAPES.get(spec.kind)
+    if shape is None:
+        return
+    limit, example = shape
+    if spec.kind == "array" and spec.args[:1] != ("str",):
+        limit = 1  # only an array of str takes a length
+    extra = spec.args[limit:]
+    if "unique" in spec.args and spec.kind in _UNIQUE_TEXT:
+        raise CliError(
+            f"Field {spec.name}: {spec.kind} takes no :unique, so it would be dropped "
+            f"({spec.name}:{':'.join([spec.kind, *spec.args])}). A value unique among live rows "
+            f'is LiveUniqueConstraint(fields=["{spec.name}"]) from karni.fields, in the Meta '
+            "of the model's class in <app>/models.py (class Meta(karni.<Model>.Meta)), then "
+            "karni make migration. email:unique is the one type that takes it.",
+            code="C104",
+        )
+    if not extra or (len(extra) == 1 and extra[0] == "" and limit == 0):
+        return
+    shown = ":".join(extra)
+    takes = (
+        "takes no argument"
+        if limit == 0
+        else f"takes {limit} argument{'s' if limit != 1 else ''} after the type"
+    )
+    raise CliError(
+        f"Field {spec.name}: {spec.kind} {takes} (e.g. {example}), so {shown!r} would be "
+        "dropped. Remove it (field types: karni make model --help).",
+        code="C104",
+    )
+
+
 def _int_arg(spec: FieldSpec, index: int, default: int, what: str) -> int:
     if len(spec.args) <= index or spec.args[index] == "":
         return default
@@ -246,88 +416,132 @@ def render_model_body(
     app_label: str,
     resolve: dict[str, RelationTarget],
     line_length: int,
+    protect: bool = False,
 ) -> Rendered:
     """Field lines (indented four spaces) for ``model`` in ``app_label``.
 
     :param resolve: relation target per field name (``spec.args[0]`` resolved
         by the caller, which can see the project's models).
+    :param protect: a required fk or o2o is ``on_delete=models.PROTECT``
+        instead of ``CASCADE`` (``karni build`` for an audited or financial
+        entity, as ``karni.W965`` asks).
     """
     out = Rendered()
-    indent = "    "
     targets = [resolve[s.name].key for s in specs if s.is_relation]
     for spec in specs:
-        head = f"{spec.name} = models."
-        typed = TYPED.get(spec.kind)
-        if typed is not None:
-            typed(spec, out, indent, line_length, specs)
-            continue
-        if spec.kind in {"str", "url"}:
-            django = {"str": "CharField", "url": "URLField"}[spec.kind]
-            args: list[str] = []
-            if spec.kind == "str":
-                args.append(f"max_length={_int_arg(spec, 0, 255, 'max_length')}")
-            elif spec.args and spec.args[0]:
-                args.append(f"max_length={_int_arg(spec, 0, 1, 'max_length')}")
-            out.lines.append(
-                call(head + django, args + _optional_kwargs(spec), indent, line_length)
-            )
-        elif spec.kind in _SIMPLE:
-            out.lines.append(
-                call(head + _SIMPLE[spec.kind], _optional_kwargs(spec), indent, line_length)
-            )
-        elif spec.kind == "decimal":
-            digits = _int_arg(spec, 0, 10, "max_digits")
-            places = _int_arg(spec, 1, 2, "decimal_places")
-            if places > digits:
-                raise CliError(
-                    f"Field {spec.name}: decimal_places ({places}) > max_digits ({digits}).",
-                    code="C104",
-                )
-            args = [f"max_digits={digits}", f"decimal_places={places}", *_optional_kwargs(spec)]
-            out.lines.append(call(head + "DecimalField", args, indent, line_length))
-        elif spec.kind == "bool":
-            args = _optional_kwargs(spec) or ["default=False"]
-            out.lines.append(call(head + "BooleanField", args, indent, line_length))
-        elif spec.kind == "uuid":
-            if spec.optional:
-                args = _optional_kwargs(spec)
-            else:
-                args = ["default=uuid.uuid4"]
-                out.imports.append(Import("uuid"))
-            out.lines.append(call(head + "UUIDField", args, indent, line_length))
-        elif spec.kind in {"file", "image"}:
-            django = "FileField" if spec.kind == "file" else "ImageField"
-            upload = pystr(f"{app_label}/{snake(model)}/")
-            args = [f"upload_to={upload}", *_optional_kwargs(spec)]
-            out.lines.append(call(head + django, args, indent, line_length))
-            if spec.kind == "image":
-                out.notes.append(
-                    f"note: {model}.{spec.name} is an ImageField, so the project needs Pillow "
-                    "(pip install 'karni[images]')."
-                )
-        elif spec.kind == "choice":
-            _render_choice(spec, out, indent, line_length)
-        elif spec.kind in lifecycle_fields.TYPES:
-            names = {s.name for s in specs}
-            lifecycle_fields.render(spec, out, indent, line_length, model, names)
-        else:
-            target = resolve[spec.name]
-            args = [target.expr]
-            if spec.kind != "m2m":
-                if spec.optional:
-                    args += ["on_delete=models.SET_NULL", "null=True", "blank=True"]
-                else:
-                    args.append("on_delete=models.CASCADE")
-            elif spec.optional:
-                args.append("blank=True")
-            if targets.count(target.key) > 1:
-                args.append(f"related_name={pystr(snake(model) + '_' + spec.name + '_set')}")
-            out.lines.append(call(head + _RELATIONS[spec.kind], args, indent, line_length))
-            if target.is_user:
-                out.imports.append(Import("django.conf", "settings"))
+        render_field(
+            spec,
+            out,
+            specs=specs,
+            model=model,
+            app_label=app_label,
+            resolve=resolve,
+            line_length=line_length,
+            targets=targets,
+            protect=protect,
+        )
     if out.lines:
         out.imports.append(Import("django.db", "models"))
     return out
+
+
+def render_field(
+    spec: FieldSpec,
+    out: Rendered,
+    *,
+    specs: list[FieldSpec],
+    model: str,
+    app_label: str,
+    resolve: dict[str, RelationTarget],
+    line_length: int,
+    targets: list[str],
+    protect: bool = False,
+) -> None:
+    """Append one field's line (and its inner class, imports and notes) to ``out``.
+
+    ``specs`` are all the model's fields (a slug source, a capacity total and a
+    money companion are checked against them) and ``targets`` the relation keys
+    of all of them (a second relation to one model gets a ``related_name``).
+    ``karni spec validate`` runs every field of a spec through it, so the spec
+    and ``karni make model`` accept exactly the same fields.
+    """
+    refuse_extra_args(spec)
+    indent = "    "
+    head = f"{spec.name} = models."
+    typed = TYPED.get(spec.kind)
+    if typed is not None:
+        typed(spec, out, indent, line_length, specs)
+        return
+    if spec.kind in {"str", "url"}:
+        django = {"str": "CharField", "url": "URLField"}[spec.kind]
+        args: list[str] = []
+        if spec.kind == "str":
+            args.append(f"max_length={_int_arg(spec, 0, 255, 'max_length')}")
+        elif spec.args and spec.args[0]:
+            args.append(f"max_length={_int_arg(spec, 0, 1, 'max_length')}")
+        out.lines.append(call(head + django, args + _optional_kwargs(spec), indent, line_length))
+    elif spec.kind in _SIMPLE:
+        out.lines.append(
+            call(head + _SIMPLE[spec.kind], _optional_kwargs(spec), indent, line_length)
+        )
+    elif spec.kind == "decimal":
+        digits = _int_arg(spec, 0, 10, "max_digits")
+        places = _int_arg(spec, 1, 2, "decimal_places")
+        if places > digits:
+            raise CliError(
+                f"Field {spec.name}: decimal_places ({places}) > max_digits ({digits}).",
+                code="C104",
+            )
+        args = [f"max_digits={digits}", f"decimal_places={places}", *_optional_kwargs(spec)]
+        out.lines.append(call(head + "DecimalField", args, indent, line_length))
+    elif spec.kind == "bool":
+        args = _optional_kwargs(spec) or ["default=False"]
+        out.lines.append(call(head + "BooleanField", args, indent, line_length))
+    elif spec.kind == "uuid":
+        if spec.optional:
+            args = _optional_kwargs(spec)
+        else:
+            args = ["default=uuid.uuid4"]
+            out.imports.append(Import("uuid"))
+        out.lines.append(call(head + "UUIDField", args, indent, line_length))
+    elif spec.kind in {"file", "image"}:
+        django = "FileField" if spec.kind == "file" else "ImageField"
+        upload = pystr(f"{app_label}/{snake(model)}/")
+        args = [f"upload_to={upload}", *_optional_kwargs(spec)]
+        if is_protected(spec):
+            django = f"Protected{django}"
+            out.imports.append(Import(PROTECTED_MODULE, django))
+            out.lines.append(call(f"{spec.name} = {django}", args, indent, line_length))
+        else:
+            out.lines.append(call(head + django, args, indent, line_length))
+        if spec.kind == "image":
+            # The caller asks the project's interpreter and notes Pillow only if it is missing.
+            out.images.append(f"{model}.{spec.name}")
+    elif spec.kind == "choice":
+        _render_choice(spec, out, indent, line_length)
+    elif spec.kind in lifecycle_fields.TYPES:
+        names = {s.name for s in specs}
+        lifecycle_fields.render(spec, out, indent, line_length, model, names)
+    else:
+        target = resolve[spec.name]
+        args = [target.expr]
+        if spec.kind != "m2m":
+            if spec.optional:
+                args += ["on_delete=models.SET_NULL", "null=True", "blank=True"]
+            else:
+                args.append("on_delete=models.PROTECT" if protect else "on_delete=models.CASCADE")
+        else:
+            if target.key == "self":
+                # A hand-picked list of its own kind goes one way: a course that lists
+                # another does not make that one list it back.
+                args.append("symmetrical=False")
+            if spec.optional:
+                args.append("blank=True")
+        if targets.count(target.key) > 1:
+            args.append(f"related_name={pystr(snake(model) + '_' + spec.name + '_set')}")
+        out.lines.append(call(head + _RELATIONS[spec.kind], args, indent, line_length))
+        if target.is_user:
+            out.imports.append(Import("django.conf", "settings"))
 
 
 def _render_choice(spec: FieldSpec, out: Rendered, indent: str, line_length: int) -> None:
@@ -360,6 +574,27 @@ def _render_choice(spec: FieldSpec, out: Rendered, indent: str, line_length: int
     args = [f"max_length={length}", f"choices={enum}.choices"]
     args += _optional_kwargs(spec) or [f"default={enum}.{members[0][0]}"]
     out.lines.append(call(f"{spec.name} = models.CharField", args, indent, line_length))
+
+
+#: Where ``file:protected`` and ``image:protected`` come from (the karni-storage module).
+PROTECTED_MODULE = "karni_storage.fields"
+
+
+def is_protected(spec: FieldSpec) -> bool:
+    """Experimental. True for ``file:protected`` / ``image:protected`` (karni-storage).
+
+    :raises CliError: ``C104`` for any other argument of a file or image field, so
+        a misspelt ``protected`` never leaves a file public without a word.
+    """
+    if spec.kind not in {"file", "image"} or not spec.args:
+        return False
+    if spec.args != ("protected",):
+        raise CliError(
+            f"Field {spec.name}: {spec.kind} takes one argument, protected "
+            f"({spec.name}:{spec.kind}:protected), not {':'.join(spec.args)!r}.",
+            code="C104",
+        )
+    return True
 
 
 def relation_name(spec: FieldSpec) -> str:
@@ -562,6 +797,7 @@ TYPED: dict[str, TypedRenderer] = {
     "email": _render_email,
     "slug": _render_slug,
     "phone": _code_renderer("PhoneField"),
+    "markdown": _code_renderer("MarkdownField"),
     "country": _code_renderer("CountryField"),
     "currency": _code_renderer("CurrencyField"),
     "json": _render_json,

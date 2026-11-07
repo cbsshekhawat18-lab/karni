@@ -1,0 +1,20 @@
+# Two-factor sign-in: a built-in feature of karni (karni.accounts). See karni/catalog/__init__.py.
+name = "two_factor"
+kind = "feature"
+title = "Two-factor sign-in"
+purpose = "TOTP codes from an authenticator app as a second sign-in step."
+status = "stable"
+use_when = ["two-factor sign-in", "2FA", "TOTP", "an authenticator app", "stronger sign-in"]
+switch = "KARNI_2FA"
+extra = "karni[2fa]"
+docs = "docs/accounts.md#two-factor-auth-totp"
+
+[provides]
+endpoints = ["/api/auth/2fa/setup/", "/api/auth/2fa/confirm/", "/api/auth/2fa/disable/", "/api/auth/2fa/login/"]
+settings = { KARNI_2FA = "boolean" }
+
+[[asks]]
+question = "Should people be able to protect their sign-in with an authenticator app?"
+setting = "KARNI_2FA"
+options = [true, false]
+default = false

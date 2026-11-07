@@ -1,0 +1,448 @@
+{
+  "version": 1,
+  "file": "karni.yaml",
+  "valid": true,
+  "issues": [],
+  "status": "dry run",
+  "code": null,
+  "message": null,
+  "plan": {
+    "version": 1,
+    "file": "karni.yaml",
+    "valid": true,
+    "issues": [],
+    "changes": [
+      {
+        "area": "modules",
+        "action": "add",
+        "target": "payments",
+        "detail": "provider stripe",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "features",
+        "action": "add",
+        "target": "two_factor",
+        "detail": "KARNI_2FA",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "features",
+        "action": "add",
+        "target": "email_code_login",
+        "detail": "KARNI_EMAIL_OTP",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "features",
+        "action": "add",
+        "target": "social_login",
+        "detail": "KARNI_SOCIAL_TOKEN_PROVIDERS apple, google",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "features",
+        "action": "add",
+        "target": "terms",
+        "detail": "KARNI_TERMS version 2026-11, url /terms/",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "roles",
+        "action": "add",
+        "target": "instructor",
+        "detail": "grants classes.booking custom:taught_by, classes.session own",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "roles",
+        "action": "add",
+        "target": "member",
+        "detail": "default, grants classes.booking own",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "roles",
+        "action": "remove",
+        "target": "customer",
+        "detail": "",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "roles",
+        "action": "remove",
+        "target": "user",
+        "detail": "",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "apps",
+        "action": "add",
+        "target": "classes",
+        "detail": "",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "entities",
+        "action": "add",
+        "target": "classes.Studio",
+        "detail": "(name str:120, slug slug:name, address text?) key slug, search name",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "entities",
+        "action": "add",
+        "target": "classes.Session",
+        "detail": "(studio fk:Studio, instructor fk:User, title str:200, starts_at datetime, capacity int, price money:EUR) owner instructor, audit, order starts_at",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "entities",
+        "action": "add",
+        "target": "classes.Booking",
+        "detail": "(session fk:Session, member fk:User, status state:pending>paid|pending>cancelled|paid>refunded, note text?) owner member, audit, groups Booking, Notes",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "access",
+        "action": "add",
+        "target": "classes.Studio",
+        "detail": "read public, write role:staff",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "access",
+        "action": "add",
+        "target": "classes.Session",
+        "detail": "read public, write owned:instructor | role:staff",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "access",
+        "action": "add",
+        "target": "classes.Booking",
+        "detail": "read owned:member | owned:session__instructor | role:staff, write owned:member",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "pages",
+        "action": "add",
+        "target": "Session",
+        "detail": "list, detail, form",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "pages",
+        "action": "add",
+        "target": "Booking",
+        "detail": "list, detail",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "migrations",
+        "action": "add",
+        "target": "classes",
+        "detail": "",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "seed",
+        "action": "add",
+        "target": "Studio",
+        "detail": "3",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "seed",
+        "action": "add",
+        "target": "Session",
+        "detail": "40",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "seed",
+        "action": "add",
+        "target": "Booking",
+        "detail": "200",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "tests",
+        "action": "add",
+        "target": "classes/tests/karni/test_studio.py",
+        "detail": "",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "tests",
+        "action": "add",
+        "target": "classes/tests/karni/test_session.py",
+        "detail": "",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      },
+      {
+        "area": "tests",
+        "action": "add",
+        "target": "classes/tests/karni/test_booking.py",
+        "detail": "",
+        "risky": false,
+        "reason": null,
+        "rows": null,
+        "managed": true
+      }
+    ],
+    "summary": {
+      "changes": 25,
+      "risky": 0,
+      "not_managed": 0
+    },
+    "row_counts": {
+      "status": "not needed",
+      "note": null
+    }
+  },
+  "files": [
+    {
+      "path": "pyproject.toml",
+      "action": "modify",
+      "owner": "project"
+    },
+    {
+      "path": "config/settings.py",
+      "action": "modify",
+      "owner": "karni"
+    },
+    {
+      "path": "frontend/package.json",
+      "action": "modify",
+      "owner": "project"
+    },
+    {
+      "path": "config/urls.py",
+      "action": "modify",
+      "owner": "project"
+    },
+    {
+      "path": "classes/__init__.py",
+      "action": "create",
+      "owner": "project"
+    },
+    {
+      "path": "classes/apps.py",
+      "action": "create",
+      "owner": "project"
+    },
+    {
+      "path": "classes/models.py",
+      "action": "create",
+      "owner": "project"
+    },
+    {
+      "path": "classes/viewsets.py",
+      "action": "create",
+      "owner": "project"
+    },
+    {
+      "path": "classes/migrations/__init__.py",
+      "action": "create",
+      "owner": "project"
+    },
+    {
+      "path": "classes/tests/__init__.py",
+      "action": "create",
+      "owner": "project"
+    },
+    {
+      "path": "classes/karni/__init__.py",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "classes/karni/models.py",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "classes/karni/api.py",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "classes/karni/seeds.py",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "classes/seeds.py",
+      "action": "create",
+      "owner": "project"
+    },
+    {
+      "path": "classes/tests/karni/__init__.py",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "classes/tests/karni/test_studio.py",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "classes/tests/karni/test_session.py",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "classes/tests/karni/test_booking.py",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "frontend/src/pages/karni/sessions.tsx",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "frontend/src/pages/karni/session-detail.tsx",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "frontend/src/pages/karni/session-form.tsx",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "frontend/src/pages/karni/bookings.tsx",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "frontend/src/pages/karni/booking-detail.tsx",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "frontend/src/routes.tsx",
+      "action": "modify",
+      "owner": "karni"
+    }
+  ],
+  "hand_edits": [],
+  "adopted": [],
+  "steps": [
+    {
+      "name": "modules",
+      "status": "pending",
+      "summary": ""
+    },
+    {
+      "name": "files",
+      "status": "pending",
+      "summary": ""
+    },
+    {
+      "name": "migrations",
+      "status": "pending",
+      "summary": ""
+    },
+    {
+      "name": "migrate",
+      "status": "pending",
+      "summary": ""
+    },
+    {
+      "name": "seed",
+      "status": "pending",
+      "summary": ""
+    },
+    {
+      "name": "types",
+      "status": "pending",
+      "summary": ""
+    },
+    {
+      "name": "test",
+      "status": "pending",
+      "summary": ""
+    },
+    {
+      "name": "check",
+      "status": "pending",
+      "summary": ""
+    }
+  ],
+  "next": null
+}

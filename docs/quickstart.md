@@ -9,8 +9,11 @@ PostgreSQL. Every command on this page is run verbatim by CI
 (`.github/ci/quickstart.py`), so it works on a clean machine or the build
 fails.
 
-You need Python 3.12+, Node 20.19+ (Node 24 LTS recommended) and Docker, which
-runs the database.
+You need Python 3.12+, Node 20.19+ with npm 11+ (Node 24 LTS recommended, as
+it bundles npm 11) and Docker, which runs the database. Node 20 and 22 bundle
+npm 10, which cannot install the frontend. Step 4 shows the one command that
+works on any of them. Without Docker, a PostgreSQL installed on the machine
+works too: see [Without Docker](#without-docker) below.
 
 ## 1. Install Karni and create a project
 
@@ -21,25 +24,61 @@ pip install karni karni-cli pytest pytest-django
 karni new "Ticket Shop" && cd ticket_shop
 cp .env.example .env
 docker compose up -d --wait db
-printf 'DATABASE_URL=postgres://karni:karni@localhost:5432/karni\nKARNI_CACHE=locmem\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' >> .env
+printf 'DATABASE_URL=postgres://karni:karni@localhost:5432/karni\nKARNI_CACHE=locmem\n' >> .env
 ```
 
 `karni new` wrote a Django project configured by one call
 (`karni_settings(globals())`), a Vite + React frontend on `@karni/ui`, a
 docker-compose stack with a Makefile, and the guidance files AI coding
-agents read. `docker compose up -d --wait db` starts the project's
+agents read, and made the folder a git repository with a first commit
+(`--no-git` skips it). Run in a terminal, `karni new` first asks what kind of project
+it is: Enter takes `app`, this page's kind, and `--kind app` skips the
+question (`--kind site` makes a public website, see
+[start a site project](public-site.md#start-a-site-project)). `docker compose up -d --wait db` starts the project's
 PostgreSQL 16 from that stack, published on localhost only (set
-`KARNI_DB_PORT` in `.env` when port 5432 is taken). The four `.env` lines point
-the app at it, at an in-process cache instead of Redis, and at a local media
-folder. pytest and pytest-django are the project's dev dependencies
+`KARNI_DB_PORT` in `.env` when port 5432 is taken). The two `.env` lines point
+the app at it and at an in-process cache instead of Redis. Uploads go to
+`data/media` in the project, which git ignores. pytest and pytest-django are the project's dev dependencies
 (`karni test` runs them), and they go into the same venv.
 
 PostgreSQL is Karni's default and the database it is built and tested for:
 range columns, `EXCLUDE` constraints, trigram search and advisory locks exist
-only there. To try Karni without Docker, SQLite works too. Leave out the
-`docker compose` line and use `DATABASE_URL=sqlite:///data/db.sqlite3` in the
-`printf` line. Karni's system checks say which guarantees SQLite cannot
-give.
+only there. Without Docker, use a PostgreSQL installed on the machine (the
+[Without Docker](#without-docker) section below) or, to try Karni with no
+server at all, SQLite: leave out the `docker compose` line and use
+`DATABASE_URL=sqlite:///data/db.sqlite3` in the `printf` line. Karni's system
+checks say which guarantees SQLite cannot give.
+
+### Without Docker
+
+A PostgreSQL and a Redis installed on the machine replace the compose
+services. On macOS with Homebrew:
+
+```sh
+brew install postgresql@16 redis
+brew services start postgresql@16
+brew services start redis
+```
+
+On Debian or Ubuntu: `sudo apt install postgresql redis-server` (both start
+as services). Homebrew's PostgreSQL creates a superuser role named after
+your account, so the database URL needs no password. Point the project at the
+two services and create its database, then continue with step 2:
+
+```sh
+karni new "Ticket Shop" && cd ticket_shop
+cp .env.example .env
+printf 'DATABASE_URL=postgres://%s@127.0.0.1:5432/ticket_shop\nREDIS_URL=redis://127.0.0.1:6379/0\n' "$USER" >> .env
+createdb ticket_shop
+```
+
+`karni doctor` looks for a PostgreSQL and a Redis on the machine and prints
+these two `.env` lines, with your user and the project's name, whenever
+`.env` still names the compose hosts `db` and `redis`. With a local Redis,
+`.env` needs no `KARNI_CACHE=locmem` line, and `karni worker` runs the
+Celery worker when something needs it. On Debian or Ubuntu, the `postgres`
+system user owns the server: `sudo -u postgres createuser -s "$USER"` once,
+then `createdb` as above.
 
 ## 2. Add a domain
 
@@ -58,10 +97,14 @@ From two models declared on the command line, Karni produced the models on
 `karni.models.BaseModel` and two REST resources with filtering, search,
 pagination and `?expand=`. It also produced the `access` declarations that
 decide who reads and writes what, admin pages, the list, detail and form
-screens, and one test file per resource. The last command adds a sign-in page at `/login`: a new
+screens, and one test file per resource. `--access public-read` printed
+`access: Access(read=Public(), write=HasRole("staff"))`: anyone may read
+venues, and only the `staff` role may change them (`public-read:<role>` names
+another role). `--access owned:organizer` lets each organizer change only
+their own events. The last command adds a sign-in page at `/login`: a new
 project has none until you ask for one.
 
-## 3. Seed, test, run
+## 3. Seed and test
 
 <!-- karni:quickstart -->
 ```sh
@@ -72,17 +115,46 @@ karni check --no-frontend
 
 `karni seed` filled every table with realistic, connected rows and printed a
 demo login. `karni test` ran the generated tests: `assert_crud` proves the
-whole API surface of each resource and `assert_isolated` proves one organizer
-cannot reach another's events. `karni check` ran the architecture rules.
+whole API surface of each resource (the venue test acts as `staff`, the role
+that may write) and `assert_isolated` proves one organizer cannot reach
+another's events. `karni check` ran the architecture rules.
 `--no-frontend` is needed only until the next step installs the frontend's
 dependencies, and plain `karni check` is what CI runs.
 
-Now serve it:
+## 4. Install the frontend
+
+<!-- karni:quickstart -->
+```sh
+cd frontend && npx --yes npm@11 install && cd ..
+karni check
+```
+
+The frontend needs npm 11 or later. `npx --yes npm@11 install` runs npm 11 for
+this one install, whichever npm is on your PATH, and `--yes` lets npx download
+it without asking first. On npm 11 or later, which Node 24 bundles, plain `npm
+install` does the same. Node 20 and 22 bundle npm 10, and npm 10 crashes in
+this install with `Cannot read properties of null (reading 'edgesOut')` while
+it resolves Vite 8's optional peers. To upgrade npm for good, run `npm install
+-g npm@11`. `karni doctor` shows your Node and npm and flags either one when
+it is too old.
+
+The project's `frontend/package.json` declares the requirement in `engines`
+and `frontend/.npmrc` sets `engine-strict`. Once `package-lock.json` exists,
+an older npm stops there with `EBADENGINE` instead of installing.
+
+Plain `karni check` now runs the frontend checks too: ESLint with
+`@karni/ui`'s rules, and jscpd for duplicated code.
+
+## 5. Run it
 
 ```sh
 karni serve --local                  # Django on http://127.0.0.1:8000
-cd frontend && npm install && npm run dev   # the app on http://localhost:5173
+cd frontend && npm run dev           # the app on http://localhost:5173
 ```
+
+When port 8000 is taken, put `KARNI_DEV_PORT=8020` in `.env`: `karni serve
+--local` runs Django on that port and the frontend's dev server proxies
+`/api` to it, so nothing else changes.
 
 Open `http://127.0.0.1:8000/` first. It is Karni's welcome page, generated
 from the project as it is right now. It shows your models with their admin
@@ -108,9 +180,9 @@ no factory and no test scaffolding. The two commands in step 2 declared the
 domain, and the framework did the rest. From here:
 
 - The [tutorial](tutorial.md) builds the reference app, EventHub, with
-  payments, a Celery email and four roles, in 619 lines of project code.
+  payments, a Celery email and four roles, in 617 lines of project code.
 - [Building with an AI agent](guide/with-ai.md) shows the same workflow
-  driven by Claude Code or Cursor.
+  driven by a coding agent.
 - [Building without one](guide/without-ai.md) lists every `karni make`
   command.
 

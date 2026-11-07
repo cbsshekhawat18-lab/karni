@@ -1,0 +1,84 @@
+# The catalog entry of karni-site: what `karni modules show site` prints,
+# what `karni add site` wires and `karni remove site` takes out.
+name = "site"
+kind = "module"
+title = "Public site"
+purpose = "A public website edited in the admin: text, images, menus, redirects, forms."
+status = "stable"
+use_when = ["a public website", "a marketing site", "landing pages", "a designer's HTML pages", "a contact form", "SEO pages"]
+docs = "modules/karni-site/README.md"
+
+[provides]
+models = ["SiteSettings", "OpeningHours", "SocialLink", "Block", "Menu", "MenuItem", "Redirect", "PageSeo"]
+pages = ["admin: the site's text, images, menus, redirects and page titles", "the site's own 404 and 500 pages"]
+
+[provides.settings]
+KARNI_SITE_IS_ACTIVE = "string"
+KARNI_SITE_SERVER_ERROR_TEMPLATES = "array"
+KARNI_SITE_NOT_FOUND_TEMPLATES = "array"
+KARNI_SITE_SETTINGS_MODEL = "string"
+KARNI_SITE_HIGHLIGHT = "object"
+KARNI_SITE_INLINE_TAGS = "object"
+KARNI_SITE_LINK_SCHEMES = "array"
+KARNI_SITE_SANITIZER = "string"
+KARNI_SITE_IMAGE_TYPES = "array"
+KARNI_SITE_CACHE = "string"
+KARNI_SITE_CACHE_TIMEOUT = "integer"
+KARNI_SITE_SEED_ON_RENDER = "boolean"
+KARNI_SITE_MENU_ROWS = "string"
+KARNI_SITE_MENU_ROWS_LIMIT = "integer"
+KARNI_SITE_REDIRECTS_BEFORE_VIEWS = "boolean"
+KARNI_SITE_EDITOR_ROLE = ["string", "null"]
+KARNI_SITE_FORMS = "object"
+KARNI_SITE_FORM_CLASS = "string"
+KARNI_SITE_FORM_TEMPLATE = "string"
+KARNI_SITE_FORM_CLASSES = "object"
+KARNI_SITE_FORM_PRESETS = "object"
+KARNI_SITE_FORM_MESSAGES = "object"
+KARNI_SITE_FORM_REQUIRED_MARK = "string"
+KARNI_SITE_FORM_SCRIPT = "boolean"
+KARNI_SITE_FORM_SENT_PARAM = "string"
+KARNI_SITE_FORM_PAGE_TEMPLATE = "string"
+KARNI_SITE_NOTIFY_FROM = "string"
+KARNI_SITE_URL = ["string", "null"]
+KARNI_SITE_ALLOW_INDEXING = ["boolean", "null"]
+KARNI_SITE_DESCRIPTION_LENGTH = "integer"
+KARNI_SITE_IMAGE_MAX_SIZE = "integer"
+KARNI_SITE_IMAGE_QUALITY = "integer"
+KARNI_SITE_IMAGE_STYLE = "string"
+KARNI_SITE_IMAGE_WIDTHS = "array"
+KARNI_SITE_JSONLD = "string"
+KARNI_SITE_MENU_SECTIONS = "boolean"
+KARNI_SITE_PUBLISHED_FIELDS = "array"
+KARNI_SITE_QUEUE_RENDITIONS = "boolean"
+KARNI_SITE_RENDITIONER = "string"
+KARNI_SITE_ROBOTS_DISALLOW = "array"
+KARNI_SITE_SCHEMA_TYPE = "string"
+KARNI_SITE_SEO_IGNORE = "array"
+KARNI_SITE_SEO_IMAGE_BYTES = "integer"
+KARNI_SITE_SEO_MAX_PAGES = "integer"
+KARNI_SITE_SEO_OBJECT = "string"
+KARNI_SITE_SEO_PIXEL_RATIO = "integer"
+KARNI_SITE_SEO_QUIET = "array"
+KARNI_SITE_SITEMAP_EXCLUDE = "array"
+KARNI_SITE_SITEMAPS = "string"
+KARNI_SITE_TECHNICAL_ROUTES = "array"
+KARNI_SITE_TITLE_FORMAT = "string"
+
+[[asks]]
+question = "Does an editor role edit only the site's content (empty: no such role)?"
+setting = "KARNI_SITE_EDITOR_ROLE"
+default = "editor"
+
+[wiring]
+apps = ["karni_site"]
+settings = "karni_site.conf:DEFAULTS"
+kind = "site"
+
+[[wiring.middleware]]
+path = "karni_site.middleware.RedirectMiddleware"
+why = "the admin's redirects"
+
+[[wiring.context_processors]]
+path = "karni_site.context_processors.site"
+why = "`site`, the site's details, in every template"

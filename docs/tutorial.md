@@ -8,7 +8,7 @@ EventHub is Karni's reference application: an event ticketing platform where
 organizers create events with venues, ticket tiers and capacity, attendees
 browse, search, book and pay, organizers read a dashboard and export their
 attendees, a confirmation email goes out through Celery, and four roles decide
-who sees what. It is 619 lines of project code, it lives in the repository
+who sees what. It is 617 lines of project code, it lives in the repository
 under `examples/eventhub`, and CI builds, seeds, tests and drives it with
 Playwright on every change.
 
@@ -108,8 +108,11 @@ serializer.
 
 ## 2. Who sees what: `access`
 
-The generator wrote one `access` per viewset from the `--access` flag, but the
-domain needs more precise ones. This is the whole permission system:
+The generator wrote one `access` per viewset from the `--access` flag.
+`--access public-read` wrote `Access(read=Public(), write=HasRole("staff"))`
+for venues: anyone reads them and only staff change them. EventHub's
+`VenueViewSet` adds the `organizer` role to `write`. The other resources need
+more precise declarations. This is the whole permission system:
 
 <!-- karni:snippet examples/eventhub/events/viewsets.py -->
 ```python
@@ -309,7 +312,7 @@ Redis on every push.
 | models | 84 | four models, a `StateField`, a `CapacityField`, `Booking.save()` / `clean()`, `APIMeta` |
 | viewsets | 86 | four `access` declarations, `pay`, `cancel`, `dashboard`, `attendees` |
 | pages | 306 | nine pages and one component, each under 50 lines |
-| other | 143 | five listeners, the checkout validator, seeders, two factories, settings and URL wiring |
+| other | 137 | five listeners, the checkout validator, seeders, two factories, settings and URL wiring |
 
 Measured by `scripts/loc.py`. Everything else is Karni: serializers,
 permissions, admin, filters, pagination, the optimizer, forms, tables, auth,

@@ -1,0 +1,285 @@
+/* Karni docs: the look of the Karni page on gigaikripaservices.com.
+   A black ground, white text, one accent (the Karni orange, #FB5D08, 6.5:1 on
+   black), Jost for headings and buttons, Inter for text, JetBrains Mono for
+   code. Dark only, like that page. Material's own layout stays: this file
+   sets its colour variables and restyles the header, buttons, cards, tables
+   and code. */
+
+[data-md-color-scheme="slate"] {
+  --karni-orange: #FB5D08;
+  --karni-orange-soft: #FF7A2E;
+  --karni-card: #121212;
+  --karni-card-2: #171717;
+  --karni-line: rgba(255, 255, 255, 0.09);
+  --karni-line-2: rgba(255, 255, 255, 0.16);
+  --karni-muted: #B8B8B8;
+  --karni-muted-2: #959595;
+  --karni-code: #FFB27D;
+  --karni-display: "Jost", "Inter", sans-serif;
+
+  --md-hue: 0;
+  --md-default-bg-color: #000000;
+  --md-default-bg-color--light: rgba(0, 0, 0, 0.54);
+  --md-default-bg-color--lighter: rgba(0, 0, 0, 0.26);
+  --md-default-bg-color--lightest: rgba(0, 0, 0, 0.07);
+  --md-default-fg-color: #FAFAFA;
+  --md-default-fg-color--light: var(--karni-muted);
+  --md-default-fg-color--lighter: var(--karni-muted-2);
+  --md-default-fg-color--lightest: var(--karni-line-2);
+
+  --md-primary-fg-color: #000000;
+  --md-primary-fg-color--light: #111111;
+  --md-primary-fg-color--dark: #000000;
+  --md-primary-bg-color: #FAFAFA;
+  --md-primary-bg-color--light: var(--karni-muted);
+  --md-accent-fg-color: var(--karni-orange-soft);
+  --md-accent-fg-color--transparent: rgba(251, 93, 8, 0.12);
+  --md-accent-bg-color: #000000;
+
+  --md-typeset-color: #EDEDED;
+  --md-typeset-a-color: var(--karni-orange);
+  --md-typeset-mark-color: rgba(251, 93, 8, 0.32);
+  --md-typeset-table-color: var(--karni-line-2);
+  --md-typeset-table-color--light: rgba(255, 255, 255, 0.035);
+  --md-typeset-kbd-color: var(--karni-card-2);
+  --md-typeset-kbd-border-color: var(--karni-line-2);
+
+  --md-code-bg-color: var(--karni-card);
+  --md-code-fg-color: #E6E6E6;
+  --md-code-hl-color: rgba(251, 93, 8, 0.18);
+  --md-code-hl-keyword-color: #FF8A3D;
+  --md-code-hl-string-color: var(--karni-code);
+  --md-code-hl-number-color: #FFC799;
+  --md-code-hl-name-color: #EDEDED;
+  --md-code-hl-function-color: #F2F2F2;
+  --md-code-hl-constant-color: #FFC799;
+  --md-code-hl-special-color: #FF8A3D;
+  --md-code-hl-operator-color: var(--karni-muted);
+  --md-code-hl-punctuation-color: var(--karni-muted);
+  --md-code-hl-comment-color: #A6A6A6;
+  --md-code-hl-generic-color: var(--karni-muted);
+  --md-code-hl-variable-color: #EDEDED;
+
+  --md-footer-bg-color: #000000;
+  --md-footer-bg-color--dark: #0A0A0A;
+  --md-footer-fg-color: #FAFAFA;
+  --md-footer-fg-color--light: var(--karni-muted);
+  --md-footer-fg-color--lighter: var(--karni-muted-2);
+
+  --md-admonition-bg-color: var(--karni-card);
+  --md-admonition-fg-color: #EDEDED;
+}
+
+body {
+  background-color: #000000;
+  background-image: radial-gradient(ellipse 70% 40% at 50% -6%, rgba(251, 93, 8, 0.10), transparent 60%);
+  background-repeat: no-repeat;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: rgba(251, 93, 8, 0.32); color: #FFFFFF; }
+:focus-visible { outline: 2px solid var(--karni-orange); outline-offset: 3px; }
+
+/* ── Header: a floating, glassy pill, the logo and the wordmark ─────────── */
+.md-header {
+  background: transparent;
+  box-shadow: none;
+  padding: 0.6rem 0.8rem 0;
+}
+.md-header--shadow { box-shadow: none; }
+.md-header__inner {
+  background: rgba(17, 17, 17, 0.86);
+  border: 1px solid var(--karni-line-2);
+  border-radius: 999px;
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+  backdrop-filter: saturate(160%) blur(18px);
+  box-shadow: 0 8px 30px -14px rgba(0, 0, 0, 0.8);
+  padding: 0.3rem 0.6rem;
+}
+.md-header--shadow .md-header__inner { border-color: rgba(251, 93, 8, 0.30); }
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg { height: 2rem; width: 2rem; }
+.md-header__title { font-family: var(--karni-display); font-weight: 600; font-size: 1.05rem; letter-spacing: -0.01em; }
+.md-header__topic:first-child { text-transform: lowercase; }
+.md-search__form { border-radius: 999px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--karni-line-2); }
+.md-search__form:hover { background: rgba(255, 255, 255, 0.08); }
+.md-source { font-family: var(--karni-display); }
+
+/* ── Navigation ─────────────────────────────────────────────────────────── */
+.md-nav__title { font-family: var(--karni-display); }
+.md-nav__item--section > .md-nav__link {
+  color: var(--karni-orange);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.md-nav__link--active,
+.md-nav__link:is(:focus, :hover) { color: var(--karni-orange); }
+.md-nav--secondary .md-nav__link--active { color: var(--karni-orange); }
+
+/* ── Type ───────────────────────────────────────────────────────────────── */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4 {
+  font-family: var(--karni-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #FAFAFA;
+}
+.md-typeset h1 { font-size: 2.3em; line-height: 1.1; }
+.md-typeset h2 { font-size: 1.55em; line-height: 1.2; }
+.md-typeset h3 { font-size: 1.2em; }
+.md-typeset a:hover { color: var(--karni-orange-soft); }
+.md-typeset code {
+  border: 1px solid var(--karni-line);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--karni-code);
+}
+.md-typeset pre > code {
+  border: 0;
+  background: var(--karni-card);
+  color: var(--md-code-fg-color);
+}
+.md-typeset pre {
+  border: 1px solid var(--karni-line-2);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.md-typeset a code { color: inherit; }
+
+/* ── Buttons: orange with black text, or ghost ─────────────────────────── */
+.md-typeset .md-button {
+  font-family: var(--karni-display);
+  font-weight: 600;
+  border-radius: 12px;
+  padding: 0.6em 1.25em;
+  color: #FAFAFA;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--karni-line-2);
+  transition: transform 0.2s, background 0.2s, border-color 0.2s;
+}
+.md-typeset .md-button:hover,
+.md-typeset .md-button:focus {
+  color: #FAFAFA;
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--karni-orange);
+  transform: translateY(-2px);
+}
+.md-typeset .md-button--primary,
+.md-typeset .md-button--primary:hover,
+.md-typeset .md-button--primary:focus {
+  color: #000000;
+  background: var(--karni-orange);
+  border-color: var(--karni-orange);
+}
+.md-typeset .md-button--primary:hover { background: var(--karni-orange-soft); border-color: var(--karni-orange-soft); }
+
+/* ── Cards, tables, admonitions ─────────────────────────────────────────── */
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid > .card {
+  border: 1px solid var(--karni-line);
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--karni-card), #0A0A0A);
+  transition: transform 0.3s, border-color 0.3s;
+}
+.md-typeset .grid.cards > ul > li:hover,
+.md-typeset .grid > .card:hover {
+  border-color: var(--karni-line-2);
+  box-shadow: none;
+  transform: translateY(-3px);
+}
+.md-typeset .grid.cards > ul > li > p:first-child strong {
+  font-family: var(--karni-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--karni-orange);
+}
+.md-typeset .grid.cards > ul > li > hr { border-color: var(--karni-line-2); }
+.md-typeset table:not([class]) {
+  border: 1px solid var(--karni-line-2);
+  border-radius: 14px;
+  background: var(--karni-card);
+  overflow: hidden;
+}
+.md-typeset table:not([class]) th {
+  background: #0A0A0A;
+  color: var(--karni-muted);
+  font-family: var(--karni-display);
+  font-weight: 600;
+}
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 14px;
+  border-width: 1px;
+  border-color: var(--karni-line-2);
+  background: var(--karni-card);
+  box-shadow: none;
+}
+.md-typeset .admonition.note,
+.md-typeset details.note { border-color: rgba(251, 93, 8, 0.45); }
+.md-typeset .note > .admonition-title,
+.md-typeset .note > summary { background-color: rgba(251, 93, 8, 0.10); }
+.md-typeset .note > .admonition-title::before,
+.md-typeset .note > summary::before { background-color: var(--karni-orange); }
+
+/* ── The home page: a centred hero, as on the company page ─────────────── */
+.md-typeset .karni-hero {
+  text-align: center;
+  padding: 2.4rem 0 1.6rem;
+}
+.md-typeset .karni-hero h1 {
+  font-size: clamp(2.4rem, 5.4vw, 3.6rem);
+  margin: 0 auto 1rem;
+}
+.md-typeset .karni-hero h1 .headerlink { display: none; }
+.md-typeset .karni-hero > p:first-of-type {
+  max-width: 62ch;
+  margin: 0 auto 1.6rem;
+  color: var(--karni-muted);
+  font-size: 1.06rem;
+}
+.md-typeset .karni-hero .md-button { margin: 0.25rem 0.3rem; }
+.md-typeset .karni-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.2rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--karni-line-2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--karni-muted);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.md-typeset .karni-eyebrow::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--karni-orange);
+  box-shadow: 0 0 12px var(--karni-orange);
+}
+.md-typeset img[src$="karni-demo.gif"] {
+  border: 1px solid var(--karni-line-2);
+  border-radius: 18px;
+  box-shadow: 0 40px 120px -40px rgba(0, 0, 0, 0.95), 0 0 80px -30px rgba(251, 93, 8, 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-typeset .md-button,
+  .md-typeset .grid.cards > ul > li { transition: none; }
+}
+@media screen and (max-width: 76.1875em) {
+  .md-header { padding: 0.4rem 0.4rem 0; }
+}
+
+/* Eight groups of features: four to a row on a wide screen, two rows. */
+.md-typeset .grid.cards {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+}

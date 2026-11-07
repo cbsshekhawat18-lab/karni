@@ -4,6 +4,19 @@ The item component for each resource is resolved by following the list
 operation's 200 response ``$ref`` through the paginated wrapper to
 ``properties.results.items.$ref`` — never derived from the resource name
 (component names are app-qualified, e.g. ``TestappEvent``).
+
+A resource whose item component carries ``x-karni-tree`` (a tree model,
+experimental) also gets a ``use<Name>Tree`` hook over ``@karni/ui``'s
+``useResourceTree``.
+
+A resource whose aggregate operation carries ``x-karni-aggregate``
+(experimental) also gets ``use<Resource>Aggregate``, whose ``groupBy`` is
+the union of the groups it declares.
+
+When the schema has cross-model search (the operation marked
+``x-karni-search``, experimental), ``hooks.ts`` also exports
+``SearchResource``, the union of the resources it covers, and a
+``useGlobalSearch`` typed with it (``@karni/ui``'s hook, narrowed).
 """
 
 from __future__ import annotations
@@ -59,6 +72,58 @@ def resource_components(doc: dict[str, Any]) -> dict[str, str]:
     return out
 
 
+def tree_resources(doc: dict[str, Any], resources: dict[str, str]) -> set[str]:
+    """Experimental. The resources whose item component carries ``x-karni-tree``."""
+    schemas = doc.get("components", {}).get("schemas", {})
+    return {
+        resource
+        for resource, component in resources.items()
+        if isinstance(schemas.get(component, {}).get("x-karni-tree"), dict)
+    }
+
+
+def aggregate_groups(doc: dict[str, Any]) -> dict[str, list[str]]:
+    """resource -> the groups its aggregate action takes (``x-karni-aggregate``), experimental.
+
+    The aggregate operation sits at ``<list path>aggregate/``. A resource
+    without a declared aggregation has no such operation.
+    """
+    found: dict[str, list[str]] = {}
+    paths = doc.get("paths", {})
+    for path, item in sorted(paths.items()):
+        resource = (item.get("get") or {}).get("x-karni-resource")
+        if not resource or resource in found:
+            continue
+        operation = (paths.get(f"{path}aggregate/") or {}).get("get") or {}
+        declared = operation.get("x-karni-aggregate")
+        if isinstance(declared, dict):
+            found[resource] = [str(group) for group in declared.get("group_by") or []]
+    return found
+
+
+def search_resources(doc: dict[str, Any]) -> list[str] | None:
+    """Experimental. The resources ``GET /api/search/`` covers, or ``None`` without the endpoint."""
+    for _path, item in sorted(doc.get("paths", {}).items()):
+        op = item.get("get") if isinstance(item, dict) else None
+        marker = op.get("x-karni-search") if isinstance(op, dict) else None
+        if isinstance(marker, dict):
+            return sorted(str(name) for name in marker.get("resources") or [])
+    return None
+
+
+def _search_lines(resources: list[str]) -> list[str]:
+    union = " | ".join(json.dumps(name) for name in resources) or "never"
+    return [
+        "/** The resources cross-model search covers (GET /api/search/). */",
+        f"export type SearchResource = {union};",
+        "export const useGlobalSearch = (",
+        "  params: GlobalSearchParams<SearchResource>,",
+        "  options?: UseGlobalSearchOptions<SearchResource>,",
+        ") => useKarniGlobalSearch<SearchResource>(params, options);",
+        "",
+    ]
+
+
 def _pascal(resource: str) -> str:
     return "".join(part.capitalize() for part in resource.replace("-", "_").split("_"))
 
@@ -67,13 +132,30 @@ def generate_hooks(doc: dict[str, Any]) -> str:
     resources = resource_components(doc)
     if not resources:
         raise CliError("No x-karni-resource list operations found in the schema.", code="C206")
+    trees = tree_resources(doc, resources)
+    aggregates = {name: groups for name, groups in aggregate_groups(doc).items() if groups}
+    searched = search_resources(doc)
+    hook_names = ["useResourceItem", "useResourceList", "useResourceMutations"]
+    type_names = ["ResourceItemParams", "ResourceListParams", "ResourceMutationsOptions"]
+    if trees:
+        hook_names.append("useResourceTree")
+        type_names.append("ResourceTreeParams")
+    if searched is not None:
+        hook_names.insert(0, "useGlobalSearch as useKarniGlobalSearch")
+        type_names.insert(0, "GlobalSearchParams")
+        type_names.append("UseGlobalSearchOptions")
+    if aggregates:
+        hook_names.insert(0, "useAggregate")
+        type_names.insert(0, "AggregateParams")
+    if trees or searched is not None:
+        hooks = ["import {", *(f"  {name}," for name in hook_names), '} from "@karni/ui";']
+    else:
+        hooks = [f'import {{ {", ".join(hook_names)} }} from "@karni/ui";']
     lines = [
         HEADER.rstrip("\n"),
-        'import { useResourceItem, useResourceList, useResourceMutations } from "@karni/ui";',
+        *hooks,
         "import type {",
-        "  ResourceItemParams,",
-        "  ResourceListParams,",
-        "  ResourceMutationsOptions,",
+        *(f"  {name}," for name in type_names),
         '} from "@karni/ui";',
         'import type { components } from "./types";',
         "",
@@ -91,6 +173,24 @@ def generate_hooks(doc: dict[str, Any]) -> str:
             f'  useResourceMutations<{item}>("{resource}", options);',
             "",
         ]
+        if resource in trees:
+            lines += [
+                f"export const use{name}Tree = (params?: ResourceTreeParams) =>",
+                f'  useResourceTree<{item}>("{resource}", params);',
+                "",
+            ]
+        groups = aggregates.get(resource)
+        if groups:
+            union = " | ".join(json.dumps(group) for group in groups)
+            lines += [
+                f"export type {name}AggregateGroup = {union};",
+                f"export const use{name}Aggregate = (",
+                f"  params: AggregateParams & {{ groupBy: {name}AggregateGroup }},",
+                f') => useAggregate("{resource}", params);',
+                "",
+            ]
+    if searched is not None:
+        lines += _search_lines(searched)
     return "\n".join(lines)
 
 

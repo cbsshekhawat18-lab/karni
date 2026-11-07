@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "karni": "0.5.0",
+  "recipes": [
+    "booking",
+    "crm",
+    "data-portal",
+    "lms",
+    "marketplace",
+    "shop"
+  ],
+  "python": "3.12.12",
+  "machine": "Darwin arm64",
+  "calibration": 0.1517,
+  "load_before": "2.16 2.41 3.08",
+  "load_after": "2.91 3.25 3.32",
+  "runs": 3,
+  "build_runs": 3,
+  "note": "Recorded on the maintainer's development Mac (Apple silicon) on the 0.5.0 release candidate, median of 3 runs. Another local app's server was running, so the machine was not idle: load averages 2.16/2.41/3.08 before and 2.91/3.25/3.32 after (a docs job started during the recipe builds). Treat the figures as a slightly busy desktop, not a clean lab.",
+  "times": {
+    "new_booking": 13.825,
+    "new_crm": 21.85,
+    "new_data-portal": 16.927,
+    "new_lms": 15.206,
+    "new_marketplace": 13.205,
+    "new_shop": 14.059,
+    "new_app": 15.385,
+    "build_nochange": 1.076,
+    "check_cold": 2.88,
+    "check_cached": 1.452,
+    "spec_validate": 0.291,
+    "plan": 1.045,
+    "plan_questions": 0.289
+  },
+  "inner": {
+    "new_booking": {
+      "migrations": 0.828,
+      "migrate": 1.907,
+      "seed": 1.905,
+      "types": 1.62,
+      "test": 3.546,
+      "check": 2.753
+    },
+    "new_crm": {
+      "migrations": 1.264,
+      "migrate": 2.825,
+      "seed": 2.217,
+      "types": 1.801,
+      "test": 6.55,
+      "check": 3.559
+    },
+    "new_data-portal": {
+      "migrations": 1.001,
+      "migrate": 2.34,
+      "seed": 2.522,
+      "types": 2.045,
+      "test": 4.36,
+      "check": 2.864
+    },
+    "new_lms": {
+      "migrations": 0.974,
+      "migrate": 2.12,
+      "seed": 2.112,
+      "types": 1.619,
+      "test": 3.981,
+      "check": 2.798
+    },
+    "new_marketplace": {
+      "migrations": 0.816,
+      "migrate": 1.896,
+      "seed": 1.645,
+      "types": 1.503,
+      "test": 3.869,
+      "check": 2.289
+    },
+    "new_shop": {
+      "migrations": 0.789,
+      "migrate": 1.776,
+      "seed": 1.716,
+      "types": 1.649,
+      "test": 4.439,
+      "check": 2.249
+    },
+    "new_app": {
+      "karni new": 0.19,
+      "recipes and the spec written": 0.009,
+      "questions and answers": 0.01,
+      "plan": 0.708,
+      "build": 10.802,
+      "domain method": 0.0,
+      "karni test and karni check": 3.692
+    }
+  }
+}

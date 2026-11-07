@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <title>Mara Lind — Photographer</title>
+  <meta name="description" content="Portraits and landscapes by Mara Lind.">
+  <meta property="og:image" content="img/shot-2x.jpg">
+  <link rel="stylesheet" href="styles/main.css">
+  <style>
+    .hero { background: url("img/bg.png") center / cover; }
+    .work:target { outline: 2px solid gold; }
+  </style>
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "Person", "name": "Mara Lind"}</script>
+</head>
+<body class="home">
+  <nav class="jump">
+    <a href="#work">Work</a> <a href="#about">About</a> <a href="#contact">Contact</a> <a href="index.html#top">Top</a>
+  </nav>
+  <section class="hero" id="top">
+    <picture>
+      <source srcset="img/hero.webp" type="image/webp">
+      <img src="img/hero.jpg" alt="A lake at dawn">
+    </picture>
+    <h1>Mara Lind</h1>
+  </section>
+  <section id="work" class="work">
+    <h2>Work</h2>
+    <img srcset="img/shot-1x.jpg 1x, img/shot-2x.jpg 2x" src="img/shot-1x.jpg" alt="Portrait of a baker">
+  </section>
+  <section id="about">
+    <h2>About</h2>
+    <p>Based in a small town, travelling often.</p>
+  </section>
+  <section id="contact">
+    <h2>Contact</h2>
+    <p><a href="mailto:hello@example.com">hello@example.com</a></p>
+  </section>
+  <script src="scripts/reveal.js"></script>
+</body>
+</html>

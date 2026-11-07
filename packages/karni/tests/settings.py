@@ -8,6 +8,7 @@ else falls back to Karni's dev-profile defaults.
 
 from __future__ import annotations
 
+import os
 import tempfile
 
 from karni.conf import karni_settings
@@ -16,6 +17,12 @@ from karni.conf import karni_settings
 SECRET_KEY = "karni-tests-secret-key-not-for-production"
 DATABASES = {
     "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
+    },
+    # The second database of the external tables suite (tests.externalapp,
+    # class Karni: database = "second"). Created only for tests that ask for it.
+    "second": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
     },
@@ -36,12 +43,19 @@ CELERY_TASK_EAGER_PROPAGATES = True
 # The suite runs on sqlite, so swap the default Postgres full-text search
 # provider for the portable icontains one (production keeps Postgres FTS).
 KARNI_SEARCH_PROVIDER = "karni.api.search.simple.SimpleSearchProvider"
+# karni_check's cache writes to the project (.karni/local/): its own tests turn it on.
+KARNI_CHECK_CACHE = False
+# karni_seed's ledger too (.karni/local/seeded.json): the volume tests point it at a tmp file.
+KARNI_SEED_LEDGER = False
 
 # Mounts admin/, api/auth/ and api/ for the accounts, api and admin suites.
 ROOT_URLCONF = "tests.urls"
 
 # Fast, insecure hashing keeps the user-heavy accounts tests quick.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+# The suite reads X-Cache: no deprecated X-Karni-Cache (tests/api/test_cache_keys.py checks it).
+KARNI_API_CACHE_LEGACY_HEADER = False
 
 karni_settings(globals(), env_name="dev")
 
@@ -59,4 +73,37 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     "tests.lifecycleapp",
     # Required FileField and ImageField (assert_crud's uploads), no routed viewsets.
     "tests.uploadsapp",
+    # Content loading (karni load): no viewsets, so the API never sees it.
+    "tests.contentapp",
+    # External tables, a SQL view and a second database (karni.db): viewsets
+    # mounted by its own URLconf only.
+    "tests.externalapp",
+    # The NavItem table of the database menu (experimental). KARNI_NAVIGATION stays
+    # unset, so no navigation/ route exists unless a test sets it.
+    "karni.navigation",
+    # Taxonomy tagging (class Karni: taxonomies): viewsets mounted by tests.taxonomy.urls.
+    "tests.taxoapp",
+    # Aggregations (karni.aggregation): a product catalog, viewsets mounted by
+    # its own URLconf only.
+    "tests.aggregateapp",
+    # Cross-model search (class Karni: search): a catalog whose viewsets its own
+    # URLconf and router serve (tests.searchapp.urls).
+    "tests.searchapp",
+    # A 120-field model with markdown sections, field groups and column sets
+    # (karni.layout): viewsets mounted by its own URLconf only.
+    "tests.wideapp",
 ]
+# tests.searchapp's models declare search, and the default router does not serve
+# them (their router is tests.searchapp.urls'), so karni.W591 is expected here.
+SILENCED_SYSTEM_CHECKS += ["karni.W591"]  # type: ignore[name-defined]  # noqa: F821
+
+# An integer-keyed user model (tests/intuserapp), for the accounts flows that
+# tests/accounts/test_integer_user.py runs in a subprocess with this variable.
+if os.environ.get("KARNI_TEST_USER_PK") == "bigint":
+    INSTALLED_APPS += ["tests.intuserapp"]  # type: ignore[name-defined]  # noqa: F821
+    AUTH_USER_MODEL = "intuserapp.User"
+    # The 2FA login gate is one of the flows: its apps, when karni[2fa] is installed.
+    import importlib.util
+
+    if importlib.util.find_spec("django_otp") is not None:
+        INSTALLED_APPS += ["django_otp", "django_otp.plugins.otp_totp"]  # type: ignore[name-defined]  # noqa: F821

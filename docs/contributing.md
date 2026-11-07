@@ -21,6 +21,10 @@ The short version:
 - `make test lint typecheck` must pass. Generated files (`docs/cli.md`,
   `docs/errors.md`, `docs/settings.md`, `docs/ui.md`, the schema snapshot)
   are regenerated, never hand-edited.
+- **The tooling must scale.** A benchmark (experimental,
+  `scripts/benchmark/large_project.py`) times `karni check`, `karni context`
+  and the tests on a 100-model project in CI, and fails when a step takes
+  more than 1.5 times its baseline.
 
 Everyone taking part follows the
 [Code of Conduct](https://github.com/cbsshekhawat18-lab/karni/blob/main/CODE_OF_CONDUCT.md).

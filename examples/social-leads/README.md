@@ -21,7 +21,7 @@ scaffold.
 
 ---
 
-A [Karni](https://github.com/karni) project: batteries-included Django + DRF +
+A [Karni](https://github.com/cbsshekhawat18-lab/karni) project: batteries-included Django + DRF +
 Celery, configured almost entirely by `karni_settings(globals())` in
 `config/settings.py`. Every Karni default can be overridden from that file.
 Anything you assign after the call wins.
@@ -56,7 +56,7 @@ Other endpoints: liveness at `/health/`, admin at `/admin/`, OpenAPI schema at
 
 ## Frontend
 
-`frontend/` is Vite + React + TypeScript on [@karni/ui](https://github.com/karni).
+`frontend/` is Vite + React + TypeScript on [@karni/ui](https://github.com/cbsshekhawat18-lab/karni/tree/main/packages/karni-ui).
 `src/App.tsx` mounts `KarniProvider` (one `createKarniClient({ baseUrl: "/api" })`),
 `AuthProvider`, the router and a `Toaster`. `src/main.tsx` imports
 `@karni/ui/styles.css` (the `--karni-*` design tokens) and `src/index.css`
@@ -74,7 +74,8 @@ npm run lint    # ESLint with the karni/* enforcement rules
 ```
 
 The dev server proxies to `http://127.0.0.1:8000` (`karni serve --local`).
-Docker compose sets `KARNI_API_PROXY=http://django:8000` for its container.
+`KARNI_DEV_PORT` in `.env` moves both to another port. Docker compose sets
+`KARNI_API_PROXY=http://django:8000` for its container.
 
 ## Using a local Karni checkout
 
@@ -163,13 +164,12 @@ block and middleware to the `# karni:middleware` block, so keep those markers.
 
 ## AI coding agents
 
-`karni new` generated thin agent adapters: `AGENTS.md`, `CLAUDE.md`,
-`.cursor/rules/karni.mdc`, `.windsurf/rules/karni.md`,
-`.github/copilot-instructions.md`, `.clinerules/karni.md`, `CONVENTIONS.md`,
-`.junie/AGENTS.md` and slash commands. They all say the same thing: run
-`karni context` and `karni rules` first. Do not edit them. Put project rules
-in `karni.rules.py` and run `karni rules sync` (`make check` fails when they
-are stale). `karni mcp` serves the same surface over MCP.
+`karni new` generated `AGENTS.md`, the instructions coding agents read. It
+says to run `karni context` and `karni rules` first, lists the procedures for
+routine tasks, and reads a request that starts with `/new-app` (or another
+procedure's name) as that procedure. Do not edit it. Put project rules in
+`karni.rules.py` and run `karni rules sync` (`make check` fails when it is
+stale). `karni mcp` serves the same surface over MCP.
 
 ## Production
 

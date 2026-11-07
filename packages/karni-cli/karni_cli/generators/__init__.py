@@ -18,8 +18,10 @@ from karni_cli.generators import (
     app,
     command,
     component,
+    deploy,
     event,
     factory,
+    form,
     listener,
     middleware,
     migration,
@@ -30,7 +32,9 @@ from karni_cli.generators import (
     seeder,
     serializer,
     service,
+    site,
     task,
+    view,
     viewset,
 )
 
@@ -62,6 +66,10 @@ GENERATORS: tuple[Generator, ...] = tuple(
         middleware,
         page,
         component,
+        site,
+        view,
+        deploy,
+        form,
         module,
     )
 )

@@ -5,8 +5,18 @@ a ``<app>/seeds.py`` seeder names), relation targets first, with values
 inferred from field names and types, and prints what it created and the demo
 login. ``--count`` rows per model, ``--seed`` for reproducible data,
 ``--reset`` to wipe the project's tables first, ``--model`` (repeatable) to
-narrow the run, ``--json`` for machine output. It refuses to run with
-``DEBUG = False`` (a production database) unless ``--force`` is given.
+narrow the run, ``--json`` for machine output. It prints the models it will
+write to first, and refuses to run with ``DEBUG = False`` (a production
+database, ``E615``) or when one of those tables already holds rows
+(``E617``, seed cannot tell demo rows from content) unless ``--reset`` wipes
+the tables first or ``--force`` is given.
+
+``--volume N`` (experimental) writes N rows per model in bulk, for
+performance work (:mod:`karni.bulk_seeding`), and prints the rows and the
+time per model. It refuses (``E473``) when a table holds rows a seed run did
+not leave there (the ledger in ``.karni/local/seeded.json``), unless
+``--reset`` or ``--force``. ``--batch-size`` sets the rows per insert. Every
+run records the row counts it leaves in that ledger.
 
 Override / escape hatch: :func:`karni.seeding.seed` is the importable form;
 per-model overrides live in ``<app>/seeds.py`` (see :mod:`karni.seeding`).
@@ -20,8 +30,18 @@ from typing import Any
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandParser
 
+from karni.bulk_seeding import Ledger
 from karni.exceptions import KarniCommandError
-from karni.seeding import DEFAULT_COUNT, DEFAULT_SEED, SeedError, seed
+from karni.seeding import (
+    DEFAULT_COUNT,
+    DEFAULT_SEED,
+    SeedError,
+    occupied,
+    planned_rows,
+    seed,
+    seed_plan,
+    volume_rows,
+)
 
 
 class Command(BaseCommand):
@@ -48,7 +68,26 @@ class Command(BaseCommand):
             metavar="APP.MODEL",
             help="Only seed this model (repeatable).",
         )
-        parser.add_argument("--force", action="store_true", help="Seed even though DEBUG is False.")
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Seed even though DEBUG is False, or on top of rows the tables already hold.",
+        )
+        parser.add_argument(
+            "--volume",
+            type=int,
+            default=None,
+            metavar="N",
+            help="N rows per model, inserted in bulk, for performance data (users: one per "
+            "hundred). Experimental.",
+        )
+        parser.add_argument(
+            "--batch-size",
+            type=int,
+            default=None,
+            metavar="N",
+            help="Rows per bulk insert (default KARNI_SEED_BATCH_SIZE, else 2000). Experimental.",
+        )
         parser.add_argument("--json", action="store_true", help="Print the report as JSON.")
 
     def handle(self, *args: Any, **options: Any) -> None:
@@ -61,17 +100,71 @@ class Command(BaseCommand):
             )
         if options["count"] < 0:
             raise KarniCommandError("--count must be 0 or more.", code="E614")
+        volume, batch = options["volume"], options["batch_size"]
+        if (volume is not None and volume < 1) or (batch is not None and batch < 1):
+            raise KarniCommandError(
+                "--volume and --batch-size take a number of rows, 1 or more (e.g. --volume "
+                "100000).",
+                code="E475",
+            )
         raw_seed = options["seed"]
         seed_value: int | str = int(raw_seed) if str(raw_seed).lstrip("-").isdigit() else raw_seed
+        try:
+            plan = [
+                model
+                for model in seed_plan(options["model"] or None)
+                if (
+                    volume_rows(model, volume)
+                    if volume is not None
+                    else planned_rows(model, options["count"])
+                )
+                > 0
+            ]
+        except SeedError as exc:
+            raise KarniCommandError(exc.message, code=exc.code) from exc
+        labels = [model._meta.label for model in plan]
+        if not options["json"]:
+            self.stdout.write(f"Seeding {len(plan)} model(s): {', '.join(labels)}")
+        ledger = Ledger.from_settings()
+        if volume is not None and not options["reset"] and not options["force"]:
+            foreign = ledger.foreign(plan)
+            if foreign:
+                held = ", ".join(
+                    f"{label} ({rows} rows, {recorded} left by seed runs)"
+                    for label, (rows, recorded) in foreign.items()
+                )
+                raise KarniCommandError(
+                    f"Refusing to seed: these tables hold rows no seed run left there: {held}. "
+                    "Volume rows would mix with that content. Pass --reset to wipe the "
+                    "project's tables first, --force to add rows anyway, or --model to seed only "
+                    "the tables seed runs filled.",
+                    code="E473",
+                )
+        elif not options["reset"] and not options["force"]:
+            found = occupied(plan)
+            if found:
+                held = ", ".join(f"{label} ({total})" for label, total in found.items())
+                raise KarniCommandError(
+                    f"Refusing to seed: these tables already hold rows: {held}. Seed cannot "
+                    "tell its own rows from real content, so adding demo rows would mix the "
+                    "two. Pass --reset to wipe the project's tables first, --force to add demo "
+                    "rows on top, --model to seed only empty tables, or load real content with "
+                    "karni load.",
+                    code="E617",
+                )
         try:
             report = seed(
                 count=options["count"],
                 seed=seed_value,
                 reset=options["reset"],
                 models=options["model"] or None,
+                volume=volume,
+                batch_size=batch,
             )
         except SeedError as exc:
             raise KarniCommandError(exc.message, code=exc.code) from exc
+        if not ledger.record(plan):
+            self.stderr.write(f"warning: could not write the seed ledger {ledger.path}")
         if options["json"]:
             self.stdout.write(json.dumps(report.to_dict(), indent=2))
         else:

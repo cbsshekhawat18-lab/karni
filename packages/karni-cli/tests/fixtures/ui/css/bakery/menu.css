@@ -1,0 +1,36 @@
+/* A bakery's menu page: a handful of custom properties, then the rules. */
+:root {
+  --brand: #8a3b12;
+  --brand-600: #7a3410;
+  --ink: #2b2118;
+  --paper: #fff8f0;
+  --line: #e6d5c3;
+  --accent: #d98c3f;
+  --radius: 10px;
+  --font-body: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --danger: #b3261e;
+}
+
+body {
+  margin: 0;
+  background: var(--paper) url("flour.png") repeat;
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+h1,
+h2 {
+  font-family: var(--font-display);
+}
+
+.menu-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.btn {
+  background: var(--brand);
+  color: white;
+  border-radius: var(--radius);
+}

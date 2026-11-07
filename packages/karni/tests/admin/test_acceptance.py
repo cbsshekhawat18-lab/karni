@@ -28,7 +28,7 @@ def test_kitchen_sink_is_fully_configured_with_zero_admin_code(
     model_admin = site._registry[KitchenSink]
     assert type(model_admin)._karni_generated
 
-    assert list(model_admin.list_display) == ["name", "slug", "email", "url", "count", "price"]
+    assert list(model_admin.list_display) == ["name", "slug", "email", "url", "count", "updated_at"]
     # A BaseModel is soft-deletable, so the "deleted" filter leads.
     assert list(model_admin.list_filter) == [
         SoftDeleteListFilter,

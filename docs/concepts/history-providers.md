@@ -49,8 +49,8 @@ When a provider detects a store for the project:
    K008 Before editing a file: karni context --with-history FILE.
    ```
 
-   The generated adapters (`AGENTS.md`, `CLAUDE.md`, …) do not change. They
-   tell the agent to run `karni rules`, and the CLI decides what to say.
+   The generated `AGENTS.md` does not change. It tells the agent to run
+   `karni rules`, and the CLI decides what to say.
    `karni rules sync --check` passes the same with or without a store.
    Disable the rule like any other: `DISABLE = ["K008"]` in `karni.rules.py`.
 

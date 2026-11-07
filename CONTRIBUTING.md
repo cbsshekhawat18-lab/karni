@@ -19,8 +19,7 @@ idea first.
 
 ## Rules every change follows
 
-These are the rules in [CLAUDE.md](CLAUDE.md). They bind humans and AI agents
-alike.
+These rules bind every contributor, people and coding agents alike.
 
 1. **Everything is a versioned dependency.** The scaffold in
    `templates/project/` generates settings, urls, docker-compose and app code
@@ -36,6 +35,16 @@ alike.
    not core.
 6. **Python:** type hints everywhere, ruff for lint and format, pytest.
    **TypeScript:** strict mode, no `any`, vitest.
+
+## Stack
+
+- Python 3.12+, Django 5.2 LTS, Django REST framework with drf-spectacular,
+  Pydantic v2, django-environ
+- PostgreSQL 16, Redis 7, Celery 5 (with beat and results)
+- React 18, TypeScript in strict mode, Vite, TanStack Query, Router and Table,
+  Zustand, react-hook-form with Zod, Tailwind and Radix
+- Docker Compose, GitHub Actions, Caddy
+- ruff, mypy, pytest, factory-boy, ESLint, Prettier, Vitest, Playwright
 
 ## Development setup
 
@@ -84,7 +93,7 @@ make typecheck PYTHON=.venv/bin/python   # mypy (root mypy.ini), tsc --noEmit
 make format    PYTHON=.venv/bin/python   # fix formatting
 ```
 
-`make install` also installs the three optional modules in `modules/`, and
+`make install` also installs the four optional modules in `modules/`, and
 `make test` tests them. A few tests in `packages/karni` and
 `packages/karni-cli` check the modules' error codes and their documentation.
 With only the core packages installed (`pip install -e packages/karni -e
@@ -92,14 +101,14 @@ packages/karni-cli`, or `make install-py test-py CORE_ONLY=1`), those tests
 skip and name the module to install. CI runs both ways. Its full run sets
 `KARNI_REQUIRE_MODULES=1`, so there a missing module fails instead of skipping.
 
-CI also runs `packages/karni` and the three modules on PostgreSQL 16. Each
+CI also runs `packages/karni` and the four modules on PostgreSQL 16. Each
 suite's `tests/settings.py` pins SQLite, so CI layers the settings overlay
 `.github/ci/karni_postgres_settings.py` on top of it. To do the same locally,
 install `psycopg[binary]`, point `DATABASE_URL` at a server where you may
 create databases, and run pytest from the package's directory:
 
 ```sh
-cd modules/karni-approvals   # or packages/karni, modules/karni-payments, modules/karni-impersonation
+cd modules/karni-approvals   # or packages/karni, modules/karni-payments, modules/karni-impersonation, modules/karni-site, modules/karni-charts, modules/karni-reports
 PYTHONPATH=../../.github/ci DATABASE_URL=postgres://postgres:postgres@localhost:5432/karni \
     ../../.venv/bin/python -m pytest --ds=karni_postgres_settings --no-migrations
 ```
@@ -108,6 +117,35 @@ The test database is `test_` followed by the name in `DATABASE_URL`. The
 `packages/karni` suite also needs the `pg_trgm` extension in it. Create the
 extension in `template1`, or set `KARNI_TEST_DB_TEMPLATE` to a database that
 has it.
+
+The `packages/karni` suite also runs once per key type. `KARNI_TEST_PK=bigint`
+puts its test app's API models on integer keys (`BigIntBaseModel`), and CI
+runs the suite that way on SQLite and on PostgreSQL. The OpenAPI snapshot
+has a second file for it, `schema.testapp.bigint.json`, which the `@karni/ui`
+parser tests also use:
+
+```sh
+cd packages/karni
+KARNI_TEST_PK=bigint ../../.venv/bin/python -m pytest
+```
+
+The tooling must keep up with large projects (experimental). The benchmark
+`scripts/benchmark/large_project.py` makes a 100-model project the way a user
+does (`karni new` without `frontend/`, a `karni.yaml` of 100 entities over 10
+apps, `karni build`) and times `karni check` (cold, cached, after one edit,
+`--changed`), `karni context` (whole, `--summary`, `--app`) and the
+project's tests. It compares each time with `scripts/benchmark/baseline.json`,
+scaled by a calibration run, and fails when one is above 1.5 times the
+baseline plus 1 s. CI's `Benchmark (100 models)` job runs it. When a change
+makes a step slower on purpose, record a new baseline and commit it:
+
+```sh
+.venv/bin/python scripts/benchmark/large_project.py                       # against the baseline
+.venv/bin/python scripts/benchmark/large_project.py --models 5 --apps 1   # a quick run
+.venv/bin/python scripts/benchmark/large_project.py --record              # write the baseline
+```
+`modules/karni-reports` reads the same variable: its test catalog moves to
+integer keys, and CI runs that suite both ways too.
 
 `examples/eventhub` is the reference application, and CI builds, seeds and
 tests it end to end. If your change breaks it, the change breaks Karni for
@@ -135,8 +173,9 @@ The failure message gives the exact command to regenerate them:
   `python -m karni_cli.clidoc > docs/cli.md`
 - the procedures block in `docs/agents.md`, generated from the rules registry
   in `karni/agent/rules.py`: paste the output of `karni rules --prompts-doc`
-- the OpenAPI schema snapshot, `packages/karni/tests/api/fixtures/schema.testapp.json`,
-  which the `@karni/ui` parser tests also use
+- the OpenAPI schema snapshots, `packages/karni/tests/api/fixtures/schema.testapp.json`
+  and (with `KARNI_TEST_PK=bigint`) `schema.testapp.bigint.json`, which the
+  `@karni/ui` parser tests also use
 
 ## Breaking changes
 
@@ -170,6 +209,11 @@ changelog entry strands everyone on the old version.
   message is a bug.
 - Using an AI coding agent is fine and expected. The agent follows the same
   rules, and you remain responsible for every line you submit.
+- Karni works with any coding agent, so its files name no AI tool or company.
+  Say "coding agent". `python scripts/check_tool_names.py` lists any name
+  outside the exceptions in `scripts/tool-names.toml`, and CI runs it.
+  Keep your own agent's working files (such as its instructions file) out of
+  the repository: `.gitignore` already ignores the usual ones at the root.
 
 ## Licence
 

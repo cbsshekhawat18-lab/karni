@@ -15,7 +15,8 @@
  *   `onUnauthorized` at most ONCE per request and retries at most ONCE. A
  *   request that 401s again after a successful refresh is surfaced and never
  *   re-triggers refresh (the single-flight refresh promise itself lives in
- *   the auth layer behind this hook).
+ *   the auth layer behind this hook). `onError` sees every error the client
+ *   throws, which is how the auth layer notices the terms gate's 403.
  */
 
 export interface KarniClientOptions {
@@ -70,6 +71,13 @@ export interface KarniAuthHooks {
   getHeaders?: () => Record<string, string>;
   /** fetch credentials mode. Session mode sets "include". */
   credentials?: RequestCredentials;
+  /**
+   * Experimental. Called with every `KarniApiError` just before the client
+   * throws it. The auth layer watches it for the terms gate's 403 (`E245`),
+   * so terms bumped mid-session are caught by whichever request meets them.
+   * It cannot change the error.
+   */
+  onError?: (error: KarniApiError) => void;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -204,6 +212,16 @@ export function createKarniClient(options: KarniClientOptions): KarniClient {
     return fetchImpl(url, init);
   }
 
+  /** Hands the error to the `onError` hook (which must not break the throw), then returns it. */
+  function report(error: KarniApiError): KarniApiError {
+    try {
+      hooks.onError?.(error);
+    } catch {
+      // An observer that throws must not replace the request's own error.
+    }
+    return error;
+  }
+
   async function requestRaw(
     path: string,
     requestOptions: KarniRequestOptions = {},
@@ -225,10 +243,10 @@ export function createKarniClient(options: KarniClientOptions): KarniClient {
         if (response.ok) return response;
         // A 401 (or anything else) after a successful refresh is surfaced
         // as-is — it never re-triggers refresh (D6).
-        throw new KarniApiError(response.status, await parseBody(response));
+        throw report(new KarniApiError(response.status, await parseBody(response)));
       }
     }
-    throw error;
+    throw report(error);
   }
 
   return {

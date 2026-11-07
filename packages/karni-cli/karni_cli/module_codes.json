@@ -1,0 +1,762 @@
+[
+ {
+  "code": "AI001",
+  "title": "KARNI_AI_PROVIDER is not set",
+  "kind": "check",
+  "why": "karni-ai has no default provider: every extraction goes through the one the project names.",
+  "fix": "Set KARNI_AI_PROVIDER to 'anthropic', 'openai' or 'test' (in .env, or in karni.yaml as modules: ai: provider), or to the dotted path of a karni_ai.providers.base.Provider subclass.",
+  "source": "karni_ai.checks (and providers.base.get_provider)"
+ },
+ {
+  "code": "AI002",
+  "title": "KARNI_AI_PROVIDER cannot be loaded",
+  "kind": "exception",
+  "why": "The setting names something that is not a shortcut and does not import as a Provider subclass.",
+  "fix": "Use 'anthropic', 'openai' or 'test', or the dotted path of a karni_ai.providers.base.Provider subclass.",
+  "source": "karni_ai.providers.base.get_provider"
+ },
+ {
+  "code": "AI003",
+  "title": "The provider's SDK is not installed",
+  "kind": "check",
+  "why": "Provider SDKs are optional extras, so a project installs only the one it uses.",
+  "fix": "Install the extra: pip install 'karni-ai[anthropic]' or 'karni-ai[openai]'.",
+  "source": "karni_ai.providers (anthropic, openai)"
+ },
+ {
+  "code": "AI004",
+  "title": "The provider's API key is not set",
+  "kind": "check",
+  "why": "The provider cannot answer without its key. The key comes from the environment only, never from code or karni.yaml.",
+  "fix": "Set ANTHROPIC_API_KEY or OPENAI_API_KEY in the environment (.env in development). Use the 'test' provider for local work and CI without a key.",
+  "source": "karni_ai.providers (anthropic, openai)"
+ },
+ {
+  "code": "AI005",
+  "title": "The provider's model name is not set",
+  "kind": "check",
+  "why": "karni-ai has no default model: model names change, and the choice of one is a cost and quality decision for the project.",
+  "fix": "Set ANTHROPIC_MODEL or OPENAI_MODEL in the environment to the model the provider should use.",
+  "source": "karni_ai.providers (anthropic, openai)"
+ },
+ {
+  "code": "AI006",
+  "title": "The provider call failed",
+  "kind": "api",
+  "why": "The provider refused the request, timed out or could not be reached. The call is logged with this code and nothing is previewed.",
+  "fix": "Read the message for the provider's own reason (a rate limit, a bad key, an unknown model). Raise KARNI_AI_TIMEOUT for slow answers.",
+  "source": "karni_ai.providers (answered with HTTP 502)"
+ },
+ {
+  "code": "AI007",
+  "title": "The model's answer cannot be used",
+  "kind": "api",
+  "why": "The model declined, its answer was cut off at KARNI_AI_MAX_OUTPUT_TOKENS, or it was not the JSON the schema asks for.",
+  "fix": "Send a shorter source, raise KARNI_AI_MAX_OUTPUT_TOKENS, or try another model.",
+  "source": "karni_ai.providers (answered with HTTP 502)"
+ },
+ {
+  "code": "AI008",
+  "title": "The resource cannot be extracted into",
+  "kind": "api",
+  "why": "Extraction ends in the resource's import preview, so it needs a routed BaseViewSet whose import is on and whose model is writable.",
+  "fix": "Name the resource by its router prefix (products, not Product), and keep its viewset's import_data on.",
+  "source": "karni_ai.extraction (answered with HTTP 400)"
+ },
+ {
+  "code": "AI009",
+  "title": "You may not create rows of this resource",
+  "kind": "api",
+  "why": "Only a user the resource's access declaration lets create may extract into it, so nobody spends tokens on rows they could never save.",
+  "fix": "Ask for a role the resource's create access admits.",
+  "source": "karni_ai.extraction (answered with HTTP 403)"
+ },
+ {
+  "code": "AI010",
+  "title": "The source cannot be read",
+  "kind": "api",
+  "why": "Give exactly one of text, url or file. The text has a size limit (KARNI_AI_MAX_SOURCE_CHARS), and a file must be a PDF with text in it, within KARNI_AI_MAX_UPLOAD_BYTES and KARNI_AI_MAX_PDF_PAGES.",
+  "fix": "Send one source within the limits. A scanned PDF needs text recognition first.",
+  "source": "karni_ai.sources (answered with HTTP 400)"
+ },
+ {
+  "code": "AI011",
+  "title": "The URL is refused",
+  "kind": "api",
+  "why": "A URL the server fetches must not reach the server's own network: only http and https, no user name or password, a port of KARNI_AI_FETCH_PORTS, a public address, and every redirect checked the same way, at most KARNI_AI_FETCH_MAX_REDIRECTS of them.",
+  "fix": "Use a public http or https address. Paste the text instead for a page on a private network.",
+  "source": "karni_ai.services.fetch (answered with HTTP 400)"
+ },
+ {
+  "code": "AI012",
+  "title": "The URL's response is refused",
+  "kind": "api",
+  "why": "The response was larger than KARNI_AI_FETCH_MAX_BYTES, slower than KARNI_AI_FETCH_TIMEOUT, an HTTP error, or not HTML, plain text or a PDF.",
+  "fix": "Download the document and send it as a file, or paste its text.",
+  "source": "karni_ai.services.fetch (answered with HTTP 400)"
+ },
+ {
+  "code": "AI013",
+  "title": "Your monthly token budget is spent",
+  "kind": "api",
+  "why": "KARNI_AI_MONTHLY_TOKENS_PER_USER caps the tokens one user spends in a calendar month.",
+  "fix": "Wait for the next month, or ask for the budget to be raised.",
+  "source": "karni_ai.usage (answered with HTTP 429)"
+ },
+ {
+  "code": "AI014",
+  "title": "The project's monthly token budget is spent",
+  "kind": "api",
+  "why": "KARNI_AI_MONTHLY_TOKENS caps the tokens the whole project spends in a calendar month.",
+  "fix": "Wait for the next month, or raise KARNI_AI_MONTHLY_TOKENS.",
+  "source": "karni_ai.usage (answered with HTTP 429)"
+ },
+ {
+  "code": "AI015",
+  "title": "The resource has no field extraction can fill",
+  "kind": "api",
+  "why": "Extraction fills text, number, date, choice and boolean fields, and relations to a model with a natural key. Files, JSON and relations without a natural key are left out.",
+  "fix": "Give the related model a natural key (class Karni: natural_key = 'name'), or import the resource from a file.",
+  "source": "karni_ai.schema (answered with HTTP 400)"
+ },
+ {
+  "code": "AI016",
+  "title": "KARNI_AI_EXTRACTOR or KARNI_AI_FETCHER cannot be loaded",
+  "kind": "exception",
+  "why": "Both settings are escape hatches: dotted paths to a subclass of the class they replace.",
+  "fix": "Point KARNI_AI_EXTRACTOR at a karni_ai.extraction.Extractor subclass and KARNI_AI_FETCHER at a karni_ai.services.fetch.Fetcher subclass, or remove the setting.",
+  "source": "karni_ai.extraction.get_extractor, karni_ai.sources"
+ },
+ {
+  "code": "APR001",
+  "title": "The change was sent for approval instead of being written",
+  "kind": "api",
+  "why": "The model declares requires_approval and the change touches a guarded field, so a pending change holds it until a second person approves. The API answers 202 with the pending change, the admin says so, and code gets KarniWriteDeferred.",
+  "fix": "Nothing is wrong. Have a checker approve it (the admin queue, /api/pending-changes/, <ApprovalsQueue/>). Trusted code may write inside karni_approvals.interception.bypass(reason=...).",
+  "source": "karni_approvals.interception"
+ },
+ {
+  "code": "APR002",
+  "title": "The maker cannot be the checker",
+  "kind": "api",
+  "why": "Second-person approval means a second person: the user who proposed a change may never approve or reject it, through the API, the admin or a direct call.",
+  "fix": "Ask another holder of the approve permission to decide it.",
+  "source": "karni_approvals.services.decide"
+ },
+ {
+  "code": "APR003",
+  "title": "This user may not decide this pending change",
+  "kind": "api",
+  "why": "Deciding needs the karni_approvals.pendingchange:approve (or :reject) grant, the model's approver_roles when it declares them, and the row inside the checker's own scope.",
+  "fix": "Grant the permission in KARNI_ROLES (or the permission matrix), assign the approver role, or have someone whose scope covers the row decide.",
+  "source": "karni_approvals.services.decide"
+ },
+ {
+  "code": "APR004",
+  "title": "This checker has already decided this change",
+  "kind": "api",
+  "why": "One decision per person per change. A second one would count twice.",
+  "fix": "Another checker must supply the remaining approvals.",
+  "source": "karni_approvals.services.decide"
+ },
+ {
+  "code": "APR005",
+  "title": "The pending change is no longer pending",
+  "kind": "api",
+  "why": "It was already approved, rejected, expired or failed, and decisions are final.",
+  "fix": "Propose the change again if it is still wanted.",
+  "source": "karni_approvals.services.decide"
+ },
+ {
+  "code": "APR006",
+  "title": "The change could not be applied: the row changed since it was proposed",
+  "kind": "api",
+  "why": "Every recorded old value must still be current when the change is applied, or an approval would overwrite something nobody reviewed.",
+  "fix": "Propose the change again against the row as it is now.",
+  "source": "karni_approvals.services.apply"
+ },
+ {
+  "code": "APR007",
+  "title": "The model's approval policy is malformed",
+  "kind": "check",
+  "why": "requires_approval, approvals_required, approver_roles, approval_timeout and approval_on_timeout are read at boot. A typo would silently hold or release changes.",
+  "fix": "Set requires_approval to True or a list of field names, approvals_required to a positive int, approver_roles / approval_escalation_roles to lists of KARNI_ROLES slugs, approval_timeout to a timedelta or hours, and approval_on_timeout to 'expire' or 'escalate'.",
+  "source": "karni_approvals.meta.approval_policy"
+ },
+ {
+  "code": "CHART001",
+  "title": "The chart's source is not a resource with an aggregation",
+  "kind": "exception",
+  "why": "A chart reads its data through the source resource's aggregate action, so the source must be a routed resource whose model declares class Karni: aggregate (or whose viewset declares aggregation).",
+  "fix": "Pick one of the sources the admin offers, or declare an aggregation on the model the chart should read: class Karni: aggregate = {'group_by': [...], 'values': [...]}.",
+  "source": "karni_charts.services.source_viewset"
+ },
+ {
+  "code": "CHART002",
+  "title": "A filter the chart does not allow",
+  "kind": "api",
+  "why": "A viewer may narrow a saved chart only with the filters its allowed_filters lists. The default_filters always apply.",
+  "fix": "Send only the filters the chart allows, or add the filter's name to the chart's allowed_filters in the admin.",
+  "source": "karni_charts.services.chart_filters"
+ },
+ {
+  "code": "CHART003",
+  "title": "The chart's filters are not valid",
+  "kind": "exception",
+  "why": "default_filters maps a list filter to a value or a list of values, and allowed_filters lists the names of list filters. The aggregate's own parameters (group_by, metric, value, top, stack, series) are the chart's axes, never filters.",
+  "fix": "Write default_filters as {\"channel\": \"online\"} and allowed_filters as [\"channel\", \"launched_on__gte\"].",
+  "source": "karni_charts.models.Chart.clean"
+ },
+ {
+  "code": "CHART004",
+  "title": "The chart's axes do not fit the source's aggregation",
+  "kind": "exception",
+  "why": "The x axis, the metric and value of the y axis and the z axis must be ones the source's aggregation declares (karni.aggregation). The message quotes the source's own refusal, with its E38x code.",
+  "fix": "Choose a group, metric and value the source declares, or add them to the source model's class Karni: aggregate.",
+  "source": "karni_charts.models.Chart.clean"
+ },
+ {
+  "code": "IMP001",
+  "title": "Impersonation needs the explicit impersonate permission",
+  "kind": "api",
+  "why": "Staff or admin status never implies the right to act as someone else. Only a role granted karni_impersonation.impersonationsession:impersonate may start a session.",
+  "fix": "Grant the permission to the support role in KARNI_ROLES (or the permission matrix).",
+  "source": "karni_impersonation.services.start"
+ },
+ {
+  "code": "IMP002",
+  "title": "The target holds something the impersonator does not",
+  "kind": "api",
+  "why": "Impersonation must never escalate privileges: a target who is a superuser, is staff, or holds any grant or Django permission the impersonator lacks cannot be impersonated.",
+  "fix": "Impersonate from an account that holds at least everything the target holds, or ask such a person to.",
+  "source": "karni_impersonation.services.privilege_gap"
+ },
+ {
+  "code": "IMP003",
+  "title": "A reason is required to impersonate",
+  "kind": "api",
+  "why": "KARNI_IMPERSONATION_REQUIRE_REASON is on (the default for customer data): the reason is recorded with the session and sent to the impersonated user.",
+  "fix": "Give a reason, or set KARNI_IMPERSONATION_REQUIRE_REASON = False for a project that does not need one.",
+  "source": "karni_impersonation.services.start"
+ },
+ {
+  "code": "IMP004",
+  "title": "This user cannot be impersonated now",
+  "kind": "api",
+  "why": "You cannot impersonate yourself or an inactive account, or start a second session while one is running.",
+  "fix": "Stop the current session first, or pick another user.",
+  "source": "karni_impersonation.services.start"
+ },
+ {
+  "code": "IMP005",
+  "title": "This request is not part of an impersonated session",
+  "kind": "api",
+  "why": "stop/ ends the session the request belongs to, and there is none (it ended, expired or never started).",
+  "fix": "Nothing to do: you are yourself.",
+  "source": "karni_impersonation.viewsets.ImpersonationSessionViewSet.stop"
+ },
+ {
+  "code": "IMP006",
+  "title": "This action is blocked while impersonating",
+  "kind": "api",
+  "why": "KARNI_IMPERSONATION_BLOCKED names what an impersonator may never do (deleting, exporting, payment changes, credential changes by default), whatever the target may.",
+  "fix": "Stop impersonating and do it as yourself, or ask the user to. A project narrows the list in KARNI_IMPERSONATION_BLOCKED.",
+  "source": "karni_impersonation.vetoes, karni_impersonation.middleware"
+ },
+ {
+  "code": "IMP007",
+  "title": "karni-impersonation is installed but not wired",
+  "kind": "check",
+  "why": "The middleware resolves the impersonated session, enforces the limit and injects the banner. The URL include serves the banner's exit. Without them sessions start but nothing acts on them.",
+  "fix": "Add 'karni_impersonation.middleware.ImpersonationMiddleware' after AuthenticationMiddleware in MIDDLEWARE and path('impersonation/', include('karni_impersonation.urls')) to config/urls.py.",
+  "source": "karni_impersonation.checks"
+ },
+ {
+  "code": "IMP008",
+  "title": "KARNI_IMPERSONATION_BLOCKED is malformed",
+  "kind": "check",
+  "why": "The blocked list is matched on every gate, so a non-string entry would silently match nothing.",
+  "fix": "Use strings: action names, 'app.model', 'app.model:action' patterns, or '/path/*'.",
+  "source": "karni_impersonation.checks"
+ },
+ {
+  "code": "PAY001",
+  "title": "KARNI_PAYMENTS_PROVIDER cannot be loaded",
+  "kind": "exception",
+  "why": "Every checkout, refund and webhook goes through the configured provider class.",
+  "fix": "Set KARNI_PAYMENTS_PROVIDER to a shortcut ('stripe', 'razorpay', 'test') or the dotted path of a karni_payments.providers.base.PaymentProvider subclass.",
+  "source": "karni_payments.providers.base.get_provider"
+ },
+ {
+  "code": "PAY002",
+  "title": "No payment provider has that name",
+  "kind": "exception",
+  "why": "Webhooks and stored payments name the provider that handled them.",
+  "fix": "Use the configured provider's name or a shortcut: stripe, razorpay, test.",
+  "source": "karni_payments.providers.base.get_provider_by_name"
+ },
+ {
+  "code": "PAY003",
+  "title": "The payment provider's SDK is not installed",
+  "kind": "exception",
+  "why": "Provider SDKs are optional extras so a project installs only the one it uses.",
+  "fix": "Install the extra: pip install 'karni-payments[stripe]' or 'karni-payments[razorpay]'.",
+  "source": "karni_payments.providers (stripe, razorpay)"
+ },
+ {
+  "code": "PAY004",
+  "title": "The payment provider's API credentials are not set",
+  "kind": "exception",
+  "why": "The provider cannot create checkouts or refunds without its API keys.",
+  "fix": "Set STRIPE_SECRET_KEY (Stripe) or RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET (Razorpay) in the environment (.env in development). Use the 'test' provider for local work without keys.",
+  "source": "karni_payments.providers (stripe, razorpay)"
+ },
+ {
+  "code": "PAY005",
+  "title": "The webhook signing secret is not set",
+  "kind": "exception",
+  "why": "Unverified webhooks could mark any payment as paid, so Karni refuses them.",
+  "fix": "Set STRIPE_WEBHOOK_SECRET or RAZORPAY_WEBHOOK_SECRET to the secret shown in the provider's dashboard for this webhook endpoint.",
+  "source": "karni_payments.providers (stripe, razorpay)"
+ },
+ {
+  "code": "PAY006",
+  "title": "A webhook failed signature verification",
+  "kind": "exception",
+  "why": "The payload was not signed with this endpoint's secret: a forged request, or a secret that does not match the provider's dashboard.",
+  "fix": "If the webhook is genuine, copy the endpoint's signing secret from the provider's dashboard into the *_WEBHOOK_SECRET setting. Otherwise nothing to do: the request was rejected.",
+  "source": "karni_payments.webhooks (answered with HTTP 400, never stored)"
+ },
+ {
+  "code": "PAY007",
+  "title": "The currency or amount cannot be charged exactly",
+  "kind": "exception",
+  "why": "Providers charge integer minor units (cents). Karni never rounds money silently, and 3-decimal currencies are not supported yet.",
+  "fix": "Round the amount to the currency's minor unit before charging (e.g. Decimal('10.50')), and charge in a 0- or 2-decimal currency.",
+  "source": "karni_payments.providers.base.to_minor_units"
+ },
+ {
+  "code": "PAY008",
+  "title": "A checkout redirect URL points at an origin that is not allowed",
+  "kind": "api",
+  "why": "An open redirect after payment would let attackers send customers anywhere.",
+  "fix": "Redirect to your frontend (KARNI_FRONTEND_URL), or add the origin to KARNI_PAYMENTS_ALLOWED_REDIRECTS.",
+  "source": "karni_payments.services.create_checkout"
+ },
+ {
+  "code": "PAY009",
+  "title": "A webhook event matches no local payment",
+  "kind": "exception",
+  "why": "Providers can deliver a webhook before the checkout that created the payment is committed. The task retries instead of dropping the event.",
+  "fix": "Usually nothing: the retry succeeds. If it keeps failing, the payment was created outside Karni (or in another environment sharing the webhook): check the provider ids in the message.",
+  "source": "karni_payments.services (webhook processing task)"
+ },
+ {
+  "code": "REPORT001",
+  "title": "No report has that name",
+  "kind": "exception",
+  "why": "A report is requested by the name its class declares, and none is registered under this one.",
+  "fix": "Use a name `manage.py karni_pregenerate --list` prints, or declare the report in <app>/reports.py with @register.",
+  "source": "karni_reports.registry.get_report (the endpoints answer it with HTTP 404)"
+ },
+ {
+  "code": "REPORT002",
+  "title": "A report declaration is incomplete",
+  "kind": "exception",
+  "why": "A report prints rows of one model through one template, so both must be named.",
+  "fix": "Set `model` to a model class and `template` to a template name on the Report subclass, and give it a name of lowercase letters, digits, - and _.",
+  "source": "karni_reports.registry.register"
+ },
+ {
+  "code": "REPORT003",
+  "title": "Two reports have the same name",
+  "kind": "exception",
+  "why": "The name is the report's address in the API, so it must be unique.",
+  "fix": "Give one of them another `name`.",
+  "source": "karni_reports.registry.register"
+ },
+ {
+  "code": "REPORT004",
+  "title": "No viewset serves the report's model",
+  "kind": "check",
+  "why": "Who may see a row's report is decided by who may retrieve the row through its model's viewset. Without one, nobody can be checked, so the report is refused.",
+  "fix": "Add a BaseViewSet for the model (karni make viewset <Model>), or set `viewset` on the Report to the viewset class or its dotted path.",
+  "source": "karni_reports.report.Report.get_viewset and karni check"
+ },
+ {
+  "code": "REPORT005",
+  "title": "KARNI_REPORTS_RENDERER cannot be loaded",
+  "kind": "exception",
+  "why": "Every report goes through the configured renderer to become a PDF.",
+  "fix": "Set KARNI_REPORTS_RENDERER to 'weasyprint', 'fake' (tests) or the dotted path of a karni_reports.rendering.Renderer subclass.",
+  "source": "karni_reports.rendering.get_renderer"
+ },
+ {
+  "code": "REPORT006",
+  "title": "WeasyPrint or the system libraries it needs are missing",
+  "kind": "exception",
+  "why": "WeasyPrint draws the PDF with Pango, which is a system library, not a Python package.",
+  "fix": "Install Pango: apt-get install libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b fonts-dejavu-core (Debian, Ubuntu), apk add pango font-dejavu (Alpine) or brew install pango (macOS). Set KARNI_REPORTS_RENDERER = 'fake' in tests.",
+  "source": "karni_reports.rendering.WeasyPrintRenderer"
+ },
+ {
+  "code": "REPORT007",
+  "title": "A report failed to render",
+  "kind": "exception",
+  "why": "The template, the report's get_context or the renderer raised. The row keeps the error and the API answers status 'failed'.",
+  "fix": "Read the error on the row in the admin (Generated reports, filter by status failed), fix the template or get_context, then use the Regenerate action or request the report again.",
+  "source": "karni_reports.services.render (stored on the GeneratedReport row)"
+ },
+ {
+  "code": "REPORT008",
+  "title": "No file is ready for this report and row yet",
+  "kind": "exception",
+  "why": "The download serves a rendered file. This row's report was never requested, or is still rendering, or failed.",
+  "fix": "POST /api/reports/<report>/<id>/ to request it, poll its status/ until it says ready, then download.",
+  "source": "karni_reports.viewsets.GeneratedReportViewSet.download_report (answered with HTTP 404)"
+ },
+ {
+  "code": "REPORT009",
+  "title": "A template referenced a URL the renderer does not fetch",
+  "kind": "exception",
+  "why": "Fetching any URL while rendering would let a value in a row make the server call another host. The renderer reads only data: URLs and files under STATIC_URL and MEDIA_URL, and leaves the rest out of the PDF.",
+  "fix": "Serve the image or stylesheet from your static or media files, or subclass WeasyPrintRenderer with allow_network = True and name it in KARNI_REPORTS_RENDERER.",
+  "source": "karni_reports.rendering.WeasyPrintRenderer (logged as a warning, the URL is left out of the PDF)"
+ },
+ {
+  "code": "REPORT010",
+  "title": "A report's template does not exist",
+  "kind": "check",
+  "why": "Every render loads the template, so a missing one fails every request.",
+  "fix": "Create the template the report names, or correct its `template`.",
+  "source": "karni_reports.checks.run_checks"
+ },
+ {
+  "code": "REPORT011",
+  "title": "A report's context holds a value with no stable text",
+  "kind": "exception",
+  "why": "The data version is a hash of the context. A value whose text changes on every run (an object without __str__) would make every request render again.",
+  "fix": "Put plain data in the context (dicts, lists, model instances, querysets), give the class a __str__, or override Report.get_data_version.",
+  "source": "karni_reports.versions.encode"
+ },
+ {
+  "code": "SITE001",
+  "title": "Templates do not get the request",
+  "kind": "check",
+  "why": "{% ifactive %} reads the current page from the request, and {% csp_hash %} and {% csp_allow %} add to the request's Content-Security-Policy. Without django.template.context_processors.request in the template engine's context_processors, no menu item is ever current and the design's inline scripts are blocked in production.",
+  "fix": "Add 'django.template.context_processors.request' to TEMPLATES[0]['OPTIONS']['context_processors'] in config/settings.py (karni_settings() includes it unless the project replaced TEMPLATES).",
+  "source": "karni_site.checks"
+ },
+ {
+  "code": "SITE002",
+  "title": "{% ifactive %} names a URL the project does not have",
+  "kind": "check",
+  "why": "A menu item marks itself current when the request resolved to one of the URL names in its {% ifactive %}. A name that no URL pattern has, after a view was renamed or removed, never matches, so the item is never marked and nothing fails.",
+  "fix": "Use the name `karni routes` lists for that page (`<app>:<name>`), or remove the name from the tag.",
+  "source": "karni_site.checks"
+ },
+ {
+  "code": "SITE003",
+  "title": "A karni_site template tag is written wrongly",
+  "kind": "exception",
+  "why": "{% ifactive %} needs at least one URL name or path. {% csp_hash %} takes nothing, or `attribute`. {% csp_allow %} takes arguments like \"font-src https://fonts.gstatic.com\". {% editable %} and {% editable_image %} take a block key (\"home.intro\": lowercase words joined by dots, the page first), {% site_image %} a file field of the site's settings, {% site_defaults %} name=\"value\" pairs, and {% get_menu %} a name and `as <variable>`. The template does not compile otherwise. The highlight filter takes a tag with optional classes (\"span.accent\", \"em\", or \"\" for none) and fails the render otherwise.",
+  "fix": "Write the tag as the message shows. The karni-site README has an example of each.",
+  "source": "karni_site.templatetags.karni_site"
+ },
+ {
+  "code": "SITE004",
+  "title": "Templates do not get `site`",
+  "kind": "check",
+  "why": "`site` (the site's name, logo, contact details, opening hours and social links, edited in the admin) reaches templates through the context processor karni_site.context_processors.site. Without it every {{ site.<field> }} renders empty and nothing fails.",
+  "fix": "Add 'karni_site.context_processors.site' to TEMPLATES[0]['OPTIONS']['context_processors'] in config/settings.py. `karni make site <app>` adds it.",
+  "source": "karni_site.checks"
+ },
+ {
+  "code": "SITE005",
+  "title": "The redirect middleware is not installed",
+  "kind": "check",
+  "why": "Redirects a client adds in the admin are answered by karni_site.middleware.RedirectMiddleware. Without it they are stored and never used, and the old addresses answer 404.",
+  "fix": "Add 'karni_site.middleware.RedirectMiddleware' to the `# karni:middleware` block of config/settings.py. `karni make site <app>` adds it.",
+  "source": "karni_site.checks"
+ },
+ {
+  "code": "SITE006",
+  "title": "A redirect would send visitors in a circle",
+  "kind": "exception",
+  "why": "The new address of a redirect is itself redirected, through one redirect or several, back to the old address. A browser would follow the chain until it gives up, so the page could never be reached.",
+  "fix": "Point the redirect at the page's final address, or remove the redirect that leads back. The message lists the chain.",
+  "source": "karni_site.redirects"
+ },
+ {
+  "code": "SITE007",
+  "title": "A menu item does not point at a page",
+  "kind": "exception",
+  "why": "A menu item goes to exactly one place: one of the site's pages by URL name, a row's own page (its get_absolute_url), or an address. An item with none of them (and no children from a model), with a URL name no route has, with a row that no longer exists, with an address such as javascript:, or under itself, would render a broken link.",
+  "fix": "Choose where the item goes in the admin (or set route, content_type and object_id, or url), and pick a parent from the same menu.",
+  "source": "karni_site.menus"
+ },
+ {
+  "code": "SITE008",
+  "title": "One block key has two different defaults",
+  "kind": "check",
+  "why": "A block is stored once per key. While nobody has edited it, it follows its template's default, so a key written with one default in one template and another default elsewhere (or used for text in one place and an image in another) would be stored again on every render and show the other place's text.",
+  "fix": "Give each place its own key (`karni import design --editable` does), or the same default in both when the text is meant to be shared.",
+  "source": "karni_site.checks"
+ },
+ {
+  "code": "SITE009",
+  "title": "KARNI_SITE_SETTINGS_MODEL names no installed model",
+  "kind": "exception",
+  "why": "`site`, the admin's site settings and the editor role read the model KARNI_SITE_SETTINGS_MODEL names. A label that is not an installed model (a typo, an app missing from INSTALLED_APPS) leaves them nothing to read.",
+  "fix": "Set it to 'app_label.ModelName' of a model that subclasses karni_site.models.AbstractSiteSettings and whose app is installed, or remove it for karni_site.SiteSettings.",
+  "source": "karni_site.sitesettings"
+ },
+ {
+  "code": "SITE010",
+  "title": "A page has no title",
+  "kind": "check",
+  "why": "Search results and browser tabs show a page's <title>. A page without one, or with an empty one, is listed under its address or a title the search engine makes up.",
+  "fix": "Give the page a title: {% block title %} in its template, the title of its row (class Karni: seo), or its entry in the admin's Page titles and descriptions. base.html needs {% karni_seo %} around its <title>.",
+  "source": "karni_site.checks_seo"
+ },
+ {
+  "code": "SITE011",
+  "title": "Two pages have the same title",
+  "kind": "check",
+  "why": "Search engines treat pages with the same title as copies of one another and may show only one. Visitors cannot tell the results apart either. It usually means a template's title was written once for every page of a kind.",
+  "fix": "Give each page its own title. For pages of one view, let the row name it (class Karni: seo = {\"title\": \"name\"}, or {% block title %}{{ object.title }}{% endblock %}), or set it per page in the admin.",
+  "source": "karni_site.checks_seo"
+ },
+ {
+  "code": "SITE012",
+  "title": "A page has no description",
+  "kind": "check",
+  "why": "Search results show the <meta name=\"description\"> under the title. Without one the search engine picks a fragment of the page, often the menu or a cookie notice. The placeholder karni make site and karni make view write (\"One sentence that search engines show under this page's title.\") counts as none.",
+  "fix": "Write one sentence about the page: {% block description %} in its template, the description of its row (class Karni: seo = {\"description\": \"summary\"}), its entry in the admin, or the site's tagline as the last default.",
+  "source": "karni_site.checks_seo"
+ },
+ {
+  "code": "SITE013",
+  "title": "Two pages have the same description",
+  "kind": "check",
+  "why": "A description shared by several pages says nothing about any one of them, and search engines may ignore it. A detail page that repeats its card's text, or a layout's default left in place, is the usual cause.",
+  "fix": "Write a description per page, or let each row give its own (class Karni: seo = {\"description\": \"intro\"}).",
+  "source": "karni_site.checks_seo"
+ },
+ {
+  "code": "SITE014",
+  "title": "An image has no alt text",
+  "kind": "check",
+  "why": "Screen readers read an image's alt text, and search engines index it. An <img> without an alt attribute is announced by its file name.",
+  "fix": "Describe the image in alt=\"...\", or write alt=\"\" when it only decorates. {% image %} requires alt, and an image a client uploads takes its alt text in the admin.",
+  "source": "karni_site.checks_seo"
+ },
+ {
+  "code": "SITE015",
+  "title": "An image has no width and height",
+  "kind": "check",
+  "why": "Without width and height the browser does not know how much room an image takes until it loads, so the text below it jumps when it does (layout shift, which search engines measure).",
+  "fix": "Render uploaded images with {% image %}, which writes both. For a design's own image, write its pixel width and height (karni import design does). CSS still sizes it: {% karni_seo %} keeps such images in proportion.",
+  "source": "karni_site.checks_seo"
+ },
+ {
+  "code": "SITE016",
+  "title": "An image is much larger than the page shows it",
+  "kind": "check",
+  "why": "A visitor downloads every pixel of an image, however small the page shows it. A photo thousands of pixels wide in a small card makes the page slow on a phone, and page speed counts in search rankings.",
+  "fix": "Give it smaller copies: {% image %} for uploads (with Pillow installed, pip install karni-site[images], and a Celery worker running), a srcset for a design's image (karni import design writes one when Pillow is installed where karni runs), or a smaller file. KARNI_SITE_SEO_IMAGE_BYTES and KARNI_SITE_SEO_PIXEL_RATIO set the limits.",
+  "source": "karni_site.checks_seo"
+ },
+ {
+  "code": "SITE017",
+  "title": "A link on the site leads nowhere",
+  "kind": "check",
+  "why": "A link, image, stylesheet or script on one of the site's own pages points at an address that answers an error. Visitors land on a dead end, and search engines count broken links against the site.",
+  "fix": "Point it at a page that exists ({% url %} for the site's pages, {% static %} for its files), add a redirect for an address that moved, or remove it.",
+  "source": "karni_site.checks_seo"
+ },
+ {
+  "code": "SITE018",
+  "title": "The sitemap and the site's pages disagree",
+  "kind": "check",
+  "why": "sitemap.xml tells search engines which pages exist. A page the site links to that the sitemap leaves out is found late or not at all, and an address in the sitemap that does not answer 200 (or asks not to be indexed) wastes the crawl.",
+  "fix": "Include karni_site's URLs (path(\"\", include(\"karni_site.urls\")) in config/urls.py, which karni make site writes). Give a model's rows get_absolute_url() and the public filter they need (class Karni: sitemap), and leave out an address that is not a page with KARNI_SITE_SITEMAP_EXCLUDE.",
+  "source": "karni_site.checks_seo"
+ },
+ {
+  "code": "SITE019",
+  "title": "An SEO tag or declaration is written wrongly",
+  "kind": "exception",
+  "why": "{% karni_seo %} takes nothing and ends with {% endkarni_seo %}. {% image %} takes the image, then name=value pairs, alt among them. class Karni: sitemap is True, False or a dict of filter, exclude, lastmod, changefreq and priority, on a model with get_absolute_url(). class Karni: seo maps title, description, image and type to fields.",
+  "fix": "Write it as the message shows. The karni-site README has an example of each.",
+  "source": "karni_site.seo_tags"
+ },
+ {
+  "code": "SITE020",
+  "title": "{% karni_form %} names a form Karni cannot find",
+  "kind": "check",
+  "why": "The tag finds a form by the name of its model (\"enquiry\" for Enquiry, \"booking_request\" for BookingRequest, or \"app_label.model\"), served by the viewset the API router registered for it, or by an entry in KARNI_SITE_FORMS. A name that matches no model, a model no viewset serves, or several models leaves the page without its form. karni check reports it before a visitor does.",
+  "fix": "Create the form with karni make form <name> <field:type> ..., use the name of a model a viewset serves, write app_label.model when several apps have the name, or map the name in KARNI_SITE_FORMS = {\"<name>\": \"app.viewsets.SomeViewSet\"}.",
+  "source": "karni_site.forms.resolve_form; karni_site.form_checks"
+ },
+ {
+  "code": "SITE021",
+  "title": "{% karni_form %} is written wrongly",
+  "kind": "exception",
+  "why": "The tag takes the form's name and then option=\"value\" pairs it knows: fields, rows, labels, placeholders, widgets, next, id, classes, template, the texts (button, success, invalid, throttled, refused, failed, choose) and a <part>_class per part of the markup. labels, placeholders and widgets are \"field: text | field: text\", and every field they name must be one a visitor fills.",
+  "fix": "Write it like {% karni_form \"contact\" fields=\"name,email,message\" labels=\"name: Your name\" classes=\"bootstrap\" %}. The karni-site README lists every option.",
+  "source": "karni_site.templatetags.karni_forms"
+ },
+ {
+  "code": "SITE022",
+  "title": "The form view is not routed",
+  "kind": "exception",
+  "why": "Every {% karni_form %} posts to karni_site's form view (karni_site:form), which saves the submission through the form's viewset and works without JavaScript. Without the include in config/urls.py the form has nowhere to post.",
+  "fix": "Add path(\"\", include(\"karni_site.urls\")) to urlpatterns in config/urls.py, before the site's own include. karni make form adds it.",
+  "source": "karni_site.forms.SiteForm.action"
+ },
+ {
+  "code": "SITE023",
+  "title": "A notification does not say who to email",
+  "kind": "exception",
+  "why": "karni_site.notify.notify_recipients(row, setting=\"NAME\", ...) emails the addresses in settings.NAME, and to=[...] emails fixed addresses. It needs exactly one of the two. A setting that does not exist is a typo or a missing line, and the email would never go out. An empty list only logs a warning.",
+  "fix": "Pass setting= or to=. For a setting, add NAME = env.list(\"NAME\", default=[]) to config/settings.py and NAME=team@example.com to .env (karni make form --notify NAME writes both).",
+  "source": "karni_site.notify.recipients; karni_site.notify.notify_recipients"
+ },
+ {
+  "code": "STORE001",
+  "title": "KARNI_STORAGE_PROVIDER names no preset",
+  "kind": "check",
+  "why": "The preset gives core's S3 backend the endpoint, region and addressing style of the service. Without one, protected files have nowhere to go.",
+  "fix": "Set KARNI_STORAGE_PROVIDER to aws, r2, minio, spaces, b2 or gcs-interop (in karni.yaml: modules: {storage: {provider: r2}}). A service no preset knows is minio with its endpoint in AWS_S3_ENDPOINT_URL.",
+  "source": "karni_storage.presets"
+ },
+ {
+  "code": "STORE002",
+  "title": "The storage provider has no credentials",
+  "kind": "check",
+  "why": "With KARNI_STORAGE=s3 every upload and every signed download URL is signed with the access key. Without it each one fails in production.",
+  "fix": "Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in the environment (.env), with the access key of the provider's account (R2, Spaces, B2 and GCS HMAC keys use the same two names). On AWS with an instance or task role, set KARNI_STORAGE_CREDENTIALS=chain instead. Credentials never go in karni.yaml.",
+  "source": "karni_storage.presets"
+ },
+ {
+  "code": "STORE003",
+  "title": "The storage preset needs a value it does not have",
+  "kind": "check",
+  "why": "A preset builds the endpoint from the bucket's region (aws, spaces, b2), the account id (r2) or your server's URL (minio). Without it the backend talks to the wrong host.",
+  "fix": "Set what the message names in the environment: AWS_STORAGE_BUCKET_NAME (or KARNI_STORAGE_BUCKET), AWS_S3_REGION_NAME, R2_ACCOUNT_ID or AWS_S3_ENDPOINT_URL.",
+  "source": "karni_storage.presets"
+ },
+ {
+  "code": "STORE004",
+  "title": "karni_storage.urls is not included",
+  "kind": "check",
+  "why": "The API gives each protected file as its download path, <resource>/<id>/files/<field>/. Without the include those paths answer 404 and nothing can be uploaded.",
+  "fix": "Add path(\"api/\", include(\"karni_storage.urls\")) to config/urls.py, next to path(\"api/\", include(\"karni.api.urls\")).",
+  "source": "karni_storage.checks"
+ },
+ {
+  "code": "STORE005",
+  "title": "A karni-storage setting has a value it does not take",
+  "kind": "check",
+  "why": "The module would fail on the first upload or the first thumbnail.",
+  "fix": "KARNI_STORAGE_UPLOAD_METHOD takes post, put or nothing. KARNI_STORAGE_CREDENTIALS takes keys or chain. KARNI_STORAGE_THUMBNAIL_SIZES maps a name to [width, height] in pixels, e.g. {\"small\": [160, 160]}. KARNI_STORAGE_THROTTLE_RATES maps download, upload or confirm to a rate such as \"120/hour\", or None.",
+  "source": "karni_storage.checks"
+ },
+ {
+  "code": "STORE006",
+  "title": "A model with protected files has no viewset on the API",
+  "kind": "check",
+  "why": "A protected file is served only after its row is retrieved through the model's own viewset. A model the API does not serve has files nobody can download.",
+  "fix": "Declare a BaseViewSet for the model (karni make viewset), or use a plain FileField if the files are not meant to be downloaded through the API.",
+  "source": "karni_storage.checks"
+ },
+ {
+  "code": "STORE010",
+  "title": "No protected file field there",
+  "kind": "api",
+  "why": "The path names a resource the API does not route, or a field that is not one of its model's protected fields, or one Karni.field_roles hides from you.",
+  "fix": "Use the download path the API returned for the field, or the field's own name.",
+  "source": "karni_storage.access (answered with HTTP 404)"
+ },
+ {
+  "code": "STORE011",
+  "title": "The file is larger than the field allows",
+  "kind": "api",
+  "why": "Each protected field has a size limit: its max_size, else KARNI_STORAGE_MAX_SIZE.",
+  "fix": "Send a smaller file, or raise the field's max_size (ProtectedFileField(max_size=...)) or KARNI_STORAGE_MAX_SIZE.",
+  "source": "karni_storage (upload, confirm and the serializer field)"
+ },
+ {
+  "code": "STORE012",
+  "title": "The field does not take files of that type",
+  "kind": "api",
+  "why": "Each protected field lists the content types it takes. An image field takes JPEG, PNG, GIF and WebP by default. SVG is left out because it can carry script.",
+  "fix": "Send a file of an allowed type, or list the type in the field's content_types.",
+  "source": "karni_storage (upload, confirm and the serializer field)"
+ },
+ {
+  "code": "STORE013",
+  "title": "The upload token is not valid",
+  "kind": "api",
+  "why": "A direct upload is attached to a row only with the token the upload and confirm steps gave this user for this field. A token that expired, was altered, belongs to someone else or to another field is refused, so nobody can attach another user's object.",
+  "fix": "Upload the file again: POST <resource>/files/<field>/upload/, send it to the bucket, POST .../confirm/, then save the row with the token confirm returned.",
+  "source": "karni_storage.tokens"
+ },
+ {
+  "code": "STORE014",
+  "title": "The uploaded file is not in the bucket",
+  "kind": "api",
+  "why": "Confirm checks the object before any row may point at it.",
+  "fix": "Send the file to the URL the upload step returned before its expiry, then confirm again.",
+  "source": "karni_storage.views (confirm)"
+ },
+ {
+  "code": "STORE015",
+  "title": "Direct uploads need the bucket",
+  "kind": "api",
+  "why": "On local storage (KARNI_STORAGE=local) the upload step answers method 'api': the file goes through the API with the row, so there is nothing to confirm.",
+  "fix": "Send the file in the row's create or update request (multipart).",
+  "source": "karni_storage.views (confirm)"
+ },
+ {
+  "code": "STORE016",
+  "title": "No thumbnail size of that name",
+  "kind": "api",
+  "why": "Thumbnails are made in the sizes KARNI_STORAGE_THUMBNAIL_SIZES names.",
+  "fix": "Use one of the names the message lists, or add the size to the setting.",
+  "source": "karni_storage.views (?size=)"
+ },
+ {
+  "code": "STORE017",
+  "title": "The thumbnail is not ready",
+  "kind": "api",
+  "why": "Thumbnails are made by a Celery task after the image is confirmed or saved. Until it has run, or for a field that is not a protected image, there is none.",
+  "fix": "Try again shortly, show the full image meanwhile, and keep a Celery worker running. manage.py karni_thumbnails makes the missing ones.",
+  "source": "karni_storage.views (?size=, answered with HTTP 404)"
+ },
+ {
+  "code": "STORE018",
+  "title": "The row has no file in that field",
+  "kind": "api",
+  "why": "The field is empty on this row.",
+  "fix": "Upload a file to the field first.",
+  "source": "karni_storage.views (answered with HTTP 404)"
+ },
+ {
+  "code": "STORE019",
+  "title": "The download link is not valid",
+  "kind": "api",
+  "why": "A signed download link opens one file for KARNI_STORAGE_URL_EXPIRY seconds. It expired, was altered, or the file was replaced since.",
+  "fix": "Ask for a fresh link: GET the download path again.",
+  "source": "karni_storage.views (answered with HTTP 403)"
+ },
+ {
+  "code": "STORE020",
+  "title": "A protected file's download path cannot be built",
+  "kind": "exception",
+  "why": "The path is <resource>/<id>/files/<field>/ under karni_storage.urls. It needs the include and a viewset that serves the model.",
+  "fix": "Add path(\"api/\", include(\"karni_storage.urls\")) to config/urls.py and declare a BaseViewSet for the model. karni check names which is missing (STORE004, STORE006).",
+  "source": "karni_storage.fields (ProtectedFieldFile.url)"
+ }
+]

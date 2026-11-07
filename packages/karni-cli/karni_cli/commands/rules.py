@@ -1,4 +1,4 @@
-"""``karni rules`` — the conventions, file checks, and adapter sync.
+"""``karni rules`` — the conventions, file checks, and AGENTS.md sync.
 
     karni rules                       conventions (code + one line each)
     karni rules --explain K101        full statement, rationale, fix, enforcement
@@ -6,7 +6,7 @@
     karni rules --check FILE...       static violations with fixes (exit 1 if any)
     karni rules --json                the raw data (rules, procedures)
     karni rules sync [--check] [--force]
-                                      regenerate AGENTS.md, CLAUDE.md, ... (CI: --check)
+                                      regenerate AGENTS.md (CI: --check)
 
 Works without Django and, except ``sync``, without a project; inside one,
 ``karni.rules.py`` overrides and ``.karni/modules/`` guidance apply.
@@ -16,11 +16,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import typer
+from typer.core import TyperGroup
 
 from karni_cli import agent_data
-from karni_cli.adapters import module_fragments, sync
+from karni_cli.adapters import deprecation_warning, module_fragments, sync
 from karni_cli.project import CliError, find_project, require_project
 from karni_cli.rules_render import (
     render_explain,
@@ -30,7 +32,46 @@ from karni_cli.rules_render import (
     render_rules,
 )
 
+
+def more_checks(args: list[str], commands: set[str]) -> list[str]:
+    """``--check a.py b.py`` as ``--check a.py --check b.py``: the words after a checked file.
+
+    A word that is not an option or a subcommand, after ``--check FILE``, is one more
+    file to check, until the next option.
+    """
+    out: list[str] = []
+    checking = False
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == "--check" and index + 1 < len(args):
+            out += [arg, args[index + 1]]
+            checking = True
+            index += 2
+            continue
+        if arg.startswith("--check="):
+            checking = True
+        elif checking and not arg.startswith("-") and arg not in commands:
+            out += ["--check", arg]
+            index += 1
+            continue
+        elif arg.startswith("-"):
+            checking = False
+        out.append(arg)
+        index += 1
+    return out
+
+
+class _RulesGroup(TyperGroup):
+    """``karni rules``: ``--check`` takes one file or several (``--check a.py b.py``)."""
+
+    # ctx: Typer >= 0.20 vendors its own click (typer._click), older ones use click
+    def parse_args(self, ctx: Any, args: list[str]) -> list[str]:
+        return super().parse_args(ctx, more_checks(list(args), set(self.commands)))
+
+
 rules_app = typer.Typer(
+    cls=_RulesGroup,
     help="Karni's conventions for humans and AI agents (no Django needed).",
     no_args_is_help=False,
     add_completion=False,
@@ -57,7 +98,10 @@ def check_text(paths: list[Path], project: Path | None) -> tuple[str, int]:
 def rules(
     ctx: typer.Context,
     check: list[Path] | None = typer.Option(
-        None, "--check", help="Statically check FILE (repeatable) and exit 1 on violations."
+        None,
+        "--check",
+        help="Statically check FILE and exit 1 on violations. Several files: --check a.py b.py "
+        "(or --check repeated).",
     ),
     explain: str | None = typer.Option(None, "--explain", help="Show one rule in full."),
     procedure: str | None = typer.Option(None, "--procedure", help="Show a procedure's steps."),
@@ -107,10 +151,12 @@ def sync_command(
         False, "--force", help="Overwrite hand-written files (backed up under .karni/backup/)."
     ),
 ) -> None:
-    """Regenerate the agent adapter files from Karni's rule registry."""
+    """Regenerate AGENTS.md (and any deprecated tool-specific agent file) from the rules."""
     project = require_project()
     data = agent_data.load(project)
     result = sync(project, data, check=check, force=force)
+    if result.deprecated:
+        typer.echo(f"warning: {deprecation_warning(result.deprecated)}", err=True)
     if check:
         if result.stale:
             for rel in result.stale:

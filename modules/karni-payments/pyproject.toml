@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni-payments"
-version = "0.4.0"
-description = "Payments for Karni: hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
+version = "0.5.0"
+description = "Payments for Karni: hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"
 # PEP 639 licence expression; no "License ::" classifier (deprecated alongside it).
@@ -30,7 +30,7 @@ classifiers = [
 ]
 # Range-pinned per the module contract (docs/modules.md): karni 0.x minors
 # may break, so a module pins the minor it was built against.
-dependencies = ["karni>=0.4,<0.5"]
+dependencies = ["karni>=0.5,<0.6"]
 
 [project.urls]
 Homepage = "https://github.com/cbsshekhawat18-lab/karni"
@@ -43,10 +43,19 @@ Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migratio
 stripe = ["stripe>=10"]
 razorpay = ["razorpay>=1.4"]
 
+# The catalog entry, karni_payments/karni.module.toml: `karni modules`, `karni add`
+# and `karni remove` read it.
+[project.entry-points."karni.modules"]
+payments = "karni_payments"
+
 # The module's settings fragment: karni_settings() merges these defaults for
 # every project that installs karni-payments (new top-level names only).
 [project.entry-points."karni.settings"]
 payments = "karni_payments.conf:DEFAULTS"
+
+# The payments-admin role (karni.accounts roles): merged under KARNI_ROLES.
+[project.entry-points."karni.roles"]
+payments = "karni_payments.roles:declared"
 
 # Error codes (PAY001...) for `karni explain` and docs/errors.md.
 [project.entry-points."karni.errorcodes"]
@@ -63,11 +72,11 @@ dev = [
 packages = ["karni_payments"]
 # Pin the agent-guidance fragment into the wheel explicitly — `karni add`
 # reads it through importlib.resources after install.
-artifacts = ["karni_payments/AGENTS.fragment.md"]
+artifacts = ["karni_payments/AGENTS.fragment.md", "karni_payments/karni.module.toml"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["ui/", "tests/"]
-artifacts = ["karni_payments/AGENTS.fragment.md"]
+artifacts = ["karni_payments/AGENTS.fragment.md", "karni_payments/karni.module.toml"]
 
 [tool.ruff]
 target-version = "py312"

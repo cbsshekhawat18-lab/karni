@@ -1,9 +1,0 @@
-warning: <REDACTED>/packages/karni-ui/dist is older than its sources — rebuild it with (cd <REDACTED>/packages/karni-ui && npm install && npm run build) before `npm install` in frontend/.
-Created audit4 (24 agent adapter files)
-@karni/ui: file:<REDACTED>/packages/karni-ui (local checkout)
-Next steps:
-  cd audit4
-  cp .env.example .env
-  docker compose up -d
-  (cd frontend && npm install)  # editor, lint, type-check and `karni check` on the host
-  karni check

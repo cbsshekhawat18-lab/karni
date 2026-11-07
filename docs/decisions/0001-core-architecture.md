@@ -59,9 +59,9 @@ These current facts drive the decisions below. All were found by reading the cod
 ### Evidence
 
 PATTERNS P37 has weight 4 across three projects. The recommendation there was **MODULE**, adopting
-xperso's single enforcement point plus dedicated isolation tests ("its audit found exactly the views
+project A's single enforcement point plus dedicated isolation tests ("its audit found exactly the views
 that bypassed it"). GAPS §3 sketches `karni-tenancy` as a viewset-level `TenantScopedMixin` built
-on `filter_queryset_for_user`. The newest project (bhukailasa) is single-tenant. Nothing in the
+on `filter_queryset_for_user`. The newest project (project B) is single-tenant. Nothing in the
 corpus used schema-per-tenant or DB-per-tenant.
 
 ### Options
@@ -84,7 +84,7 @@ corpus used schema-per-tenant or DB-per-tenant.
 1. **Karni v1 ships single-tenant.**
 2. When tenancy is built, **(a) shared schema** is the one Karni supports in-process, delivered as
    the `karni-tenancy` **module**. This follows PATTERNS P37: tenancy has a RAM/ops cost and is not
-   universal, so by the CLAUDE.md rule it belongs in `modules/`.
+   universal, so by the repository rule (CONTRIBUTING.md) it belongs in `modules/`.
 3. **(c) is supported only as deployment-per-tenant** and documented. It needs no framework code
    and gives the strongest isolation for the few clients who need it.
 4. **(b) is declined.** It is the only option that forces core changes to settings Karni and its
@@ -93,16 +93,16 @@ corpus used schema-per-tenant or DB-per-tenant.
 
 **Where the tenant filter lives: this ADR diverges from GAPS §3. Both sides:**
 
-| | Viewset-level (GAPS §3 / xperso: `TenantScopedMixin` via `filter_queryset_for_user`) | **Model-level (this ADR): a tenant scope in the default-manager pipeline** |
+| | Viewset-level (GAPS §3 / project A: `TenantScopedMixin` via `filter_queryset_for_user`) | **Model-level (this ADR): a tenant scope in the default-manager pipeline** |
 |---|---|---|
 | Covers API list/detail | yes | yes |
 | Covers Celery tasks, services, management commands | no | yes, or fails closed when no tenant is bound |
 | Covers the derived admin (`admin/base.py`, stock `get_queryset`) | no | yes |
 | Covers FK write validation (F5) and related descriptors and prefetches | no | yes. DRF uses `_default_manager`, and Django builds related managers from the default manager's class. |
 | Visibility to an agent | explicit in the viewset | implicit. Mitigated by `karni context` printing the active scopes per model, and by errors that name the scope. |
-| Historical evidence | xperso's audit found the views that bypassed it | soft delete already lives at this layer in the rebuilt `BaseModel` (`managers.py:131-132`) |
+| Historical evidence | project A's audit found the views that bypassed it | soft delete already lives at this layer in the rebuilt `BaseModel` (`managers.py:131-132`) |
 
-The xperso lesson is that a single enforcement point at the viewset layer still gets bypassed by
+The project A lesson is that a single enforcement point at the viewset layer still gets bypassed by
 code that is not a viewset. A cross-tenant leak is the most expensive bug a multi-tenant product can
 ship. **This ADR recommends the model level, failing closed, with GAPS §3's isolation-test helper
 kept.** This is a recommendation only: see Q1.2.
@@ -123,7 +123,7 @@ and `deleted_only()` become `objects.without("soft_delete")` (and that plus `.de
 **keep** a future tenant scope. F12's `super().get_queryset()` does not guarantee that, and F11's
 `all_objects` drops everything. So `all_objects` (`models.py:106,211`) and its use in
 `admin/soft_delete.py:133` go through a deprecation cycle (warn in the next minor, remove at the
-next major, per CLAUDE.md). The in-flight rebuild is the cheapest moment to do this. General form:
+next major, per CONTRIBUTING.md). The in-flight rebuild is the cheapest moment to do this. General form:
 `Model.objects.without("tenant", reason="cross-tenant billing report")`, where `reason` is required
 and logged.
 
@@ -131,7 +131,7 @@ and logged.
 (`models.py:186-193`). Generalise this into a `stamp(instance, ctx)` step that every registered
 scope gets on `save()` **and** on `KarniQuerySet.bulk_create()`. `bulk_create` skips `save()`, so it
 is the hole to close now. The tenant scope stamps `tenant_id` and **raises** if no tenant is bound,
-whereas audit stamping silently skips. The request body is never trusted (xperso rule).
+whereas audit stamping silently skips. The request body is never trusted (project A rule).
 
 **S4. One request context, not one contextvar per concern.** Generalise `middleware.py` from
 "current request + user override" into `karni.context`. It holds the request plus values from
@@ -213,10 +213,10 @@ unscoped.
 
 > **Questions for the author on Decision 1**
 > 1. **Q1.1** Confirm: v1 is single-tenant. In-process tenancy will be (a) shared schema via a `karni-tenancy` module. (c) is offered only as deployment-per-tenant. (b) is declined.
-> 2. **Q1.2** Where does the tenant filter live: **model-level scope pipeline (this ADR)** or **viewset-level `filter_queryset_for_user` mixin (GAPS §3 / xperso)**?
+> 2. **Q1.2** Where does the tenant filter live: **model-level scope pipeline (this ADR)** or **viewset-level `filter_queryset_for_user` mixin (GAPS §3 / project A)**?
 > 3. **Q1.3** When a scoped model is queried with no tenant bound (shell, command, task): **raise (recommended)**, return empty, or run unscoped?
 > 4. **Q1.4** While the model rebuild is still open: approve replacing `all_objects` and `SoftDeleteManagerMixin`'s `super()`-based methods with named-scope removal (`objects.without("soft_delete")`), with `all_objects` going through a deprecation cycle?
-> 5. **Q1.5** Users under tenancy: **shared users + `Membership(user, tenant, role)` (statox form)** or one tenant per user? This decides whether roles become per-tenant (ties to GAPS §4.3).
+> 5. **Q1.5** Users under tenancy: **shared users + `Membership(user, tenant, role)` (project C form)** or one tenant per user? This decides whether roles become per-tenant (ties to GAPS §4.3).
 > 6. **Q1.6** When the module is installed: every project `BaseModel` is scoped unless marked `ScopeMeta.tenant = "shared"` (recommended), or each model opts in?
 > 7. **Q1.7** Accept that global unique constraints on scoped models are a one-time project change when tenancy is adopted?
 > 8. **Q1.8** Should Postgres RLS ship in the module as optional hardening (`KARNI_TENANCY_RLS`), or stay out of scope?
@@ -229,10 +229,10 @@ unscoped.
 
 PATTERNS P6 has weight 14, the second-sharpest change-over-time trail in the corpus.
 
-- workland's external review found nearly every endpoint open and patched it afterwards.
-- xperso ran three stacked authz systems, and its audit found the views that bypassed the scoping
+- Project D's external review found nearly every endpoint open and patched it afterwards.
+- Project A ran three stacked authz systems, and its audit found the views that bypassed the scoping
   mixin.
-- bhukailasa settled on "a resource cannot forget its gate".
+- Project B settled on "a resource cannot forget its gate".
 - Weak practice 2 is default-allow. Weak practice 8 is "security helpers written but never wired".
 - karni-payments is the in-repo proof that both layers are needed: `IsAuthenticated` plus
   `filter_queryset_for_user` with a role bypass (`viewsets.py:78,81-93`). Its "defence in depth:
@@ -296,7 +296,7 @@ answer. What changes is what a viewset **with no `access` declaration** does:
 | §4.2 option | Missing `access` means | For | Against |
 |---|---|---|---|
 | (a) `IsAuthenticated` default, with public reads made explicit (`access = Public(read=True)`) | Authenticated users see every row. | Smallest change. DRF-conventional. The agent's first request works. | Still fails open **inside** the authenticated population, which is the multi-user leak. |
-| (b) Every `BaseViewSet` must declare `access`. Missing it is a build failure (architecture rule `viewset-access`) and deny-all at runtime. | Nothing. It does not build. | Closest to bhukailasa ("a route cannot exist without a gate"). Turns the silent failure into a loud one. | One more line per viewset. `docs/adding-an-entity.md`'s six-line viewset becomes seven. |
+| (b) Every `BaseViewSet` must declare `access`. Missing it is a build failure (architecture rule `viewset-access`) and deny-all at runtime. | Nothing. It does not build. | Closest to project B ("a route cannot exist without a gate"). Turns the silent failure into a loud one. | One more line per viewset. `docs/adding-an-entity.md`'s six-line viewset becomes seven. |
 | (c) Keep `IsAuthenticatedOrReadOnly` + warning | Anonymous read. | No change. | F1 + F6. This is PATTERNS weak practice 2. |
 
 The failure-mode analysis above points to (b). The author's history (P6) points to (b). That is
@@ -304,7 +304,7 @@ the author's ruling to make (Q2.1).
 
 **Open conflict GAPS §4.3 (grant granularity): both sides.** The predicate vocabulary below has a
 request-level `HasRole(...)` predicate. Today it is backed by Django Groups (`has_role`,
-`accounts/permissions.py:72-81`). If the author adopts bhukailasa's DB-backed `area:action` grants,
+`accounts/permissions.py:72-81`). If the author adopts project B's DB-backed `area:action` grants,
 the same slot gains `Can("events:update")`, backed by `Role`/`Grant` rows, and Groups stays as the
 light tier. Declarations written against `HasRole` keep working either way. This ADR does not
 choose (Q2.2).
@@ -344,7 +344,7 @@ bool (request-level):
 - `Owned(..., bypass=HasRole("payments-admin"))` covers the payments pattern
   (`viewsets.py:81-93`) in one line.
 
-This is the third real occurrence of owner scoping: payments ×2, workland/xperso in the corpus, and
+This is the third real occurrence of owner scoping: payments ×2, project D/project A in the corpus, and
 `IsOwner`. That satisfies the three-occurrences rule.
 
 **Making the scope hard to lose (F3).** `BaseViewSet.__init_subclass__` wraps any `get_queryset`

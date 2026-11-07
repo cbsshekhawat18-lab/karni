@@ -1,5 +1,5 @@
 ---
-description: "Karni's test tooling: the assert_crud, assert_isolated and assert_row_hidden one-liners, the pytest plugin, query budgets, the scaling check and the architecture rules suite."
+description: "Karni's test tooling: the assert_crud, assert_isolated, assert_row_hidden and assert_pages one-liners, the pytest plugin, query budgets, the scaling check and the architecture rules suite."
 ---
 
 # Testing
@@ -13,7 +13,9 @@ wires it in so that it runs without project code:
 | [`assert_crud`](#the-full-crud-surface-in-one-call) | the whole CRUD surface of a resource for a role, checked against its `access` declaration and the OpenAPI contract |
 | [`assert_isolated`](#isolation-the-test-people-forget) | one line proving a role cannot see or touch another owner's rows |
 | [`assert_row_hidden`, `assert_admin_row_hidden`](#hidden-rows-the-row-scope-check) | one line proving a row outside a client's row scope behaves as "does not exist" on every API surface, and in the admin |
+| [`assert_pages`](#public-pages-assert_pages) | every page of a public site answers, has a title, a description and alt text, and links only to URLs that exist |
 | [`assert_schema_snapshot`](#schema-snapshot) | an accidental API break fails CI |
+| [`assert_module_manifest`](modules.md#checking-a-manifest) | a module's `karni.module.toml` matches its entry point, settings and models (experimental) |
 | [`karni.testing.factories`](#automatic-factories-karnitestingfactories) | a valid factory-boy factory for any model, with realistic values. `<app>/factories.py` overrides it |
 | [`karni.testing.performance`](#query-budgets-and-n1-karnitestingperformance) | the `query_budget` fixture, per-endpoint budgets that raise, the N+1 scaling check |
 | the `karni` pytest plugin | loaded automatically (`pytest11` entry point) wherever `karni` is installed |
@@ -23,6 +25,25 @@ CI runs two invocations: the project's own suite (`pytest`) and Karni's rules
 (`pytest --pyargs karni.testing.architecture`). Both need `pytest-django`
 and a test database. `karni make test <Model>` writes a starting test file
 like the one below.
+
+## The fixtures you will use
+
+Most project tests need only these four, and a project with a public site
+one more:
+
+- [`client_as(role)`](#clients-per-role): an API client signed in as a user
+  with that role. `client_as(None)` is anonymous. It is a method on
+  `APITestCase` and a pytest fixture.
+- [`create(Model, **fields)`](#automatic-factories-karnitestingfactories):
+  one saved row with every required field filled, from
+  `karni.testing.factories`.
+- [`assert_crud(ViewSet, role)`](#the-full-crud-surface-in-one-call): the
+  whole CRUD surface for that role, checked against the viewset's `access`.
+- [`assert_isolated(ViewSet, role)`](#isolation-the-test-people-forget):
+  proof that the role cannot see or change another owner's rows.
+- [`assert_pages(client, urls)`](#public-pages-assert_pages): each page of
+  the public site answers 200 with a title, a description and alt text, and
+  its links reach URLs that exist.
 
 ## A resource's full test, in 15 lines
 
@@ -110,7 +131,9 @@ accepts it. The body goes as multipart, and every request that carries it
 (the create, the PUT and the denial checks) gets a fresh upload. The stored
 file must not be empty, after the create and after the update. Optional file
 fields are left out of the body. Without Pillow an image upload fails with
-`E501`, which names `pip install 'karni[images]'`.
+`E501`, which names `pip install 'karni[images]'`. In a multipart body an
+object (a range, a JSON value) goes as JSON text and a list as repeated keys,
+as @karni/ui sends a form with a file.
 
 To send a file of your own, put it in `payload=`. It is rewound before each
 request, so one object serves all of them:
@@ -128,6 +151,44 @@ report lists `no write exercised` in `skipped`, and `assert_crud` emits a
 role that may write, as the example above does with `"organizer"`. When the
 refusals are the point of the test, pin them with `expect={"create": 403,
 ...}` and the warning stays quiet.
+
+When the declaration admits a write and the API answers 403 all the same, a
+`perform_create` or another check in code refused it. The failure says so and
+names the way to declare the rule instead (`create: role:<slug>` in
+karni.yaml, or a role's grants without `:delete`), so the API, its schema and
+the test agree.
+
+### A required relation the role cannot reference
+
+A relation accepts only rows the requester may read through the target's
+viewset. When a required relation (a foreign key, or a many-to-many without
+`blank=True`) points at a model the role reads none of, such as an `Event`
+that needs `tags` while only staff read tags, no create body can be valid.
+The run then does not send the create or the PUT. It lists `create: not
+exercised` and `update: PUT ...: not exercised` in `skipped`, each naming the
+field, the target's viewset and its access, and warns (`UserWarning`). The
+ways on: let the role read the target, make the field optional (`blank=True`,
+or `tags:m2m:Tag?` in `karni make model`), pass the related rows in
+`payload=`, or run as a role that may reference them.
+
+### A read-only resource
+
+!!! warning "Experimental"
+    `assert_crud`'s `read_only` argument is [experimental](stability.md#experimental-names).
+
+For an [external model](models.md#external-tables-views-and-a-second-database)
+that is not writable (`class Karni: external = True` without `writable =
+True`), `assert_crud` checks what the API promises for it: list, retrieve,
+pagination, filtering and field visibility as usual, and `POST`, `PUT`,
+`PATCH` and `DELETE` answering 405 to the role, to anonymous callers and to a
+user without the role, with nothing written, and absent from the OpenAPI
+document. It picks this by itself. `read_only=True` asks for it on any
+resource, and `read_only=False` checks writes instead.
+
+```python
+def test_sales(db):
+    assert_crud(SaleViewSet, "analyst")  # read-only: every write answers 405
+```
 
 ### Rows the role cannot see
 
@@ -156,7 +217,10 @@ responses, and every export format), with a row pointing at it created when
 none exists. For the `grant` dimension the admin is checked too (the
 changelist, its search, the change form and a POST to it), since the admin's
 rows follow the roles' grants. Last, a create body naming another owner is
-ignored and stamped with the requester. It runs for every isolation
+ignored and stamped with the requester. When the body wins, the failure says
+whether the declaration stamps that field (then a `perform_create` or a
+serializer took it from the body) or names `owned:<field>` for `write` or
+`create`, which makes Karni stamp it. It runs for every isolation
 dimension that applies. Two ship with Karni: `owner` (any `Owned(...)` read
 path) and `grant` (a `Granted()` or `Can` read where the role's grant for the
 model's `view` permission is `own` or `related:<key>`, with distinct related
@@ -207,7 +271,7 @@ Every check compares the hidden row with a primary key that does not exist:
 | `search` | stay out of `?search=` with a word of it. With `search="<term>"` (a term only the row matches), the search must find nothing |
 | `ordering` | not change which rows or how many come back for any orderable response field (no row repeated or dropped). A model field the response does not show must not reorder the list |
 | `expand` | not be embedded by any resource relating to it, through `?expand=` or a list of primary keys, on a read or in a `PATCH` response |
-| `export` | not be written by `export/` in any format (also when filtered or searched for), nor named by its natural key in an export of a row pointing at it |
+| `export` | not be written by `export/` in any format (also when filtered or searched for), nor named by its natural key in an export of a row pointing at it. A row is recognised by the exact value of the `id` column (without one, by a cell holding the id as a whole value), so a short integer id never matches `15` or a count of 5 |
 
 The admin counterpart checks that the changelist (and its search) leaves the
 row out, and that the change, history and delete views, read or posted to,
@@ -217,7 +281,6 @@ redirect to the index, never a 403) and leave the row unchanged:
 <!-- karni:example:hidden-admin (tests/testing/test_docs_example.py runs this block) -->
 ```python
 # events/tests/test_event_admin_scope.py: KARNI_ROLES grants organizers "events.event:*": "own"
-from django.contrib.auth.models import Permission
 from django.utils import timezone
 
 from karni.testing import APITestCase, user_with_roles
@@ -227,8 +290,7 @@ from events.models import Event
 
 class EventAdminScopeTests(APITestCase):
     def test_the_admin_treats_another_organizers_event_as_missing(self):
-        staff = user_with_roles("organizer", is_staff=True)
-        staff.user_permissions.add(*Permission.objects.filter(codename__endswith="_event"))
+        staff = user_with_roles("organizer", is_staff=True)  # the grant opens the admin page
         mine = Event.objects.create(title="Mine", starts_at=timezone.now(), organizer=staff)
         other = user_with_roles("organizer")
         theirs = Event.objects.create(title="Theirs", starts_at=timezone.now(), organizer=other)
@@ -270,6 +332,152 @@ when the scope is one `assert_isolated` cannot build two principals for (a
 `Where(...)` on a status, a tenant, a custom scope), or to pin a specific
 fixture.
 
+## Public pages: assert_pages
+
+A [public site](public-site.md) is HTML for visitors and search engines. Its
+test requests each page the way they do and checks what they get:
+
+```python
+# website/tests/test_pages.py
+from pathlib import Path
+
+import pytest
+from django.test import Client
+from karni.testing import assert_pages, load_content
+from pytest_django import Settings
+
+PAGES = [
+    "/",
+    "/about/",
+    "/services/design/",
+    # karni:pages
+]
+
+
+@pytest.fixture(autouse=True)
+def site_content(db: None, settings: Settings, tmp_path: Path) -> None:
+    settings.MEDIA_ROOT = str(tmp_path)  # its images go to a folder the test owns
+    load_content("content/site.json", missing_ok=True)
+
+
+@pytest.mark.django_db
+def test_every_page_passes_the_page_checks(client: Client) -> None:
+    assert_pages(client, PAGES)
+```
+
+`karni make site` writes this test with `"/"` in `PAGES`, and `karni make
+view` adds each new page's URL above the marker. A path with a capture, such
+as `/services/<slug:slug>/`, needs a real URL, so the command leaves it to
+you. The rows such a page shows come from the site's real content:
+`load_content` loads `content/site.json` (what `karni design extract`
+writes) the way `karni load` does, before each test. It reads a relative
+path from the project root (`BASE_DIR`, else the folder above the settings
+package), so the test passes whatever folder pytest runs in, and
+`missing_ok=True` loads nothing until the file exists. A missing file is
+`E804` and a row the models refuse `E805`, each with the path. Without a
+content file, create the rows in the test, for example with
+`create(Service, slug="design")` from
+[`karni.testing.factories`](#automatic-factories-karnitestingfactories).
+
+For each URL in the list, `assert_pages` checks:
+
+| Check | The page must |
+|---|---|
+| status | answer 200. A redirect fails with its status and `Location`. `follow=True` checks the page it ends on instead |
+| title | have a non-empty `<title>`. A `<title>` inside an inline `<svg>` names the drawing, so it does not count |
+| description | have a `<meta name="description">` with a non-empty `content` |
+| alt | give every `<img>` an `alt` attribute. `alt=""` marks a decorative image and passes |
+| links | link only to same-site URLs that answer 200, or that redirect to a URL that answers 200 |
+
+Once per call it also requests `/karni-assert-pages-404/`, a URL no site
+has, and expects a 404. A catch-all route that answers every URL fails here,
+because search engines would index its answers as real pages.
+
+**Which links are checked.** Relative paths and absolute URLs on the test
+host (`http://testserver/...`) are the site's own. They come from `href`,
+`src`, `srcset` and `poster` attributes, so stylesheets, scripts and images
+count as links. `mailto:`, `tel:`, `javascript:` and `data:` URLs, fragments
+such as `#team` and other hosts are not requested, and neither is a redirect
+to another host. Each distinct URL is requested once per call, and a page in
+the list that answered 200 is not requested again when another page links to
+it. A linked page gets the status check only. Put it in the list to give it
+every check.
+
+**Static and media files.** Django's test client serves no static files:
+Karni's settings add no static route, and tests run with `DEBUG` off. So a
+link under `STATIC_URL` that answers 404 is looked up with the staticfiles
+finders, the lookup `runserver` and `collectstatic` use. A mistyped `{%
+static %}` path fails and a file that exists passes. A link under
+`MEDIA_URL` that answers 404 is looked up in the default storage when that is
+the file system. Without `django.contrib.staticfiles` installed, static links
+are listed in the report's `skipped` instead.
+
+Every problem is reported in one `E618` error, one line per page and
+problem:
+
+```
+E618: assert_pages: 4 problem(s) (2 page(s) and 5 link(s) checked)
+  - /: a <meta name="description"> with an empty content attribute. Search results show
+    it under the title. Give the page one sentence, in {% block description %} for a page
+    that extends the site's base.html.
+  - /about/: an empty <title>. Browser tabs and search results show the title. Give the
+    page one, in {% block title %} for a page that extends the site's base.html.
+  - /about/: 1 <img> without an alt attribute: /static/website/team.svg (line 25). Screen
+    readers read the alt text and search engines index it. Describe each image in
+    alt="...", or write alt="" when it is decorative.
+  - /: links to /contact/ (line 25), which answered 404.
+```
+
+A request that raises stops the run, because the error may have left the
+test's database transaction unusable. The failure names the request and the
+exception, and the exception is chained, so its traceback shows too.
+
+`assert_pages` returns a `PagesReport`: `pages` (the URLs checked as pages),
+`links` (every distinct same-site link it requested or already knew),
+`skipped` (checks turned off and links not requested, each with the reason)
+and `failures`. An empty URL list is an error (`E619`), since it would pass
+without checking anything.
+
+Escape hatches:
+
+- `follow=True` follows a page's redirects and checks the page it ends on.
+- `require_title=False`, `require_description=False`, `require_alt=False`
+  and `check_links=False` turn one check off. `not_found_url=None` skips the
+  404 check, and `not_found_url="/other/"` names another URL.
+- `ignore=[r"^/admin/", r"\.pdf$"]` takes regular expressions, searched in a
+  link's path and query string. A matching link is not requested.
+- `hosts=["www.example.com"]` names more hosts whose absolute links count as
+  the site's own, for a template that writes the production domain.
+- `parser=` takes a `PageParser` subclass (`karni.testing.pages`). Its
+  `link_attributes` map a tag to the attributes that hold a URL, so a
+  lazy-loading `data-src` can count as a link:
+
+  ```python
+  from karni.testing.pages import PageParser
+
+
+  class LazyImages(PageParser):
+      link_attributes = {**PageParser.link_attributes, "img": ("src", "srcset", "data-src")}
+
+
+  assert_pages(client, PAGES, parser=LazyImages)
+  ```
+
+- In an `APITestCase`, `self.assert_pages(PAGES)` uses `self.client`.
+  `client=` passes another one, for example a signed-in client for pages
+  behind a login.
+
+## Integer keys
+
+Every helper on this page works for models on
+[integer keys](models.md#choosing-the-key-type) (`BigIntBaseModel`) as for
+UUIDs: `assert_crud` probes a detail URL its route accepts (a numeric
+`lookup_value_regex` gets `0`), `assert_isolated` and `assert_row_hidden`
+compare a missing id of the model's own key type, and the leak checks match
+an id exactly. Karni's own suite runs these tests once per key type
+(`KARNI_TEST_PK=bigint` puts its test app's API models on integer keys), on
+SQLite and on PostgreSQL.
+
 ## Schema snapshot
 
 ```python
@@ -288,7 +496,40 @@ difference fails, listing breaking changes (removed and changed paths) first.
 A missing snapshot is written and the test passes, except under CI, where it
 fails, because a snapshot that was never committed protects nothing. To
 accept an intended change, run `KARNI_UPDATE_SNAPSHOTS=1 karni test`, then
-commit the file.
+commit the file. A `karni make` command that changes the API (`karni make
+viewset`, `karni make form`, `karni make serializer`, `karni make model` for
+a model a viewset serves, or with `--with viewset`) says so when the project
+has a snapshot, with that command.
+
+## External tables
+
+!!! warning "Experimental"
+    The table creation, `--karni-external-tables` and
+    `karni.testing.create_external_tables` are
+    [experimental](stability.md#experimental-names).
+
+An external model's table belongs to another system, so neither migrations
+nor `--no-migrations` create it in a test database. Karni's pytest plugin
+does, once each test database is migrated: every external model routed to
+that database whose table or view is missing gets a table built from its
+fields, and on PostgreSQL the schema its `'schema"."table'` name points at.
+A table or view that exists already, such as a view your own migration
+creates, is left alone. Factories and `assert_crud` then write rows to it as
+to any table. Test a model on another database with
+`@pytest.mark.django_db(databases=["default", "warehouse"])`.
+
+- Off for a run: `pytest --karni-external-tables=off`, or
+  `karni_external_tables = off` in the pytest ini file.
+- By hand: `create_external_tables(using="warehouse", models=[Stock])` from
+  `karni.testing`, outside a transaction (a session fixture), returns the
+  tables it created.
+- SQLite has no schemas, so a schema-qualified table is skipped there with a
+  warning. Run the tests that use it on PostgreSQL.
+- Rows a `transaction=True` test writes stay until the session ends: Django's
+  flush empties only the tables it manages.
+
+Seeding and the [scaling check](#3-the-scaling-check) leave external models
+out.
 
 ## Automatic factories (`karni.testing.factories`)
 
@@ -345,6 +586,7 @@ after adding a module at runtime.
 | `EmailField` / `URLField` / `GenericIPAddressField` | `user<n>@example.com` / `https://example.com/<n>` / `10.x.y.z` |
 | integer / float / decimal | a sequence inside the type's range, the field's `Min`/`MaxValueValidator`s and `max_digits` |
 | date / datetime / time / duration | today / now / now / `n` minutes |
+| `DateRangeField` / `DateTimeRangeField` | one to three days, or 30 to 90 minutes, ahead of now, in a slot of its own per row, so rows never overlap (`no_overlap` holds) |
 | UUID / JSON / binary / file / image | `uuid4()` / `{"n": n}` / `b""` / a small file |
 | `null=True, blank=True` (non-relation) | `None` (`null=True` alone: a value) |
 | `ForeignKey` / `OneToOneField` | a new row from the target's factory. A nullable FK stays `None` on a cycle or deeper than `FactoryBuilder.max_depth` (3) |
@@ -372,6 +614,66 @@ writer__publisher=acme)`, `create(Event, tags=[t], tags__through_defaults={...})
 Public API: `factory_for`, `auto_factory`, `explicit_factories`, `create`,
 `create_batch`, `build`, `clear_cache`, `FactoryBuilder`, `AutoFactory`
 (base of generated factories), `AutoSubFactory`, `DEFAULT_PASSWORD`.
+
+## The cache in tests
+
+The `karni` pytest plugin runs every test on an empty local-memory cache:
+each alias in `CACHES` becomes a `LocMemCache` of its own (with the alias's
+`KEY_PREFIX`, `VERSION`, `KEY_FUNCTION` and `TIMEOUT`), cleared before and
+after the test. Nothing a test caches reaches the next test, a later run or
+the development server that shares `REDIS_URL`: rate-limit counters, a
+listener's "already queued" flag, a cached page or menu. The tests of a new
+project never connect to Redis. A `DummyCache` alias stays as it is.
+
+A test that needs the project's own cache (one that checks Redis itself)
+says so:
+
+```python
+import pytest
+
+
+@pytest.mark.karni_project_cache
+def test_the_lock_is_shared_between_workers():
+    ...
+```
+
+`karni_test_cache = project` in the pytest ini file (`[tool.pytest.ini_options]`
+in `pyproject.toml`) keeps the project's cache for every test, the rule
+before 0.5.0. A fixture named `_karni_test_cache` in `conftest.py` replaces
+the plugin's. Code that keeps a cache object from import time
+(`caches["default"]` stored in a module) keeps that object: use
+`django.core.cache.cache` or look the alias up when it is needed.
+
+## Rate limits in tests
+
+The `karni` pytest plugin gives DRF's throttles an empty cache of their own
+at the start of every test. A suite that posts to a public form many times
+(each public `create` is limited to `KARNI_PUBLIC_CREATE_RATE`, 10 an hour
+by default), or logs in again and again, never runs out of requests because
+of an earlier test, and a run never inherits counters an earlier run left
+in Redis. Inside one test the limits still work, so a test can prove one:
+
+```python
+def test_the_contact_form_is_rate_limited(client_as, settings):
+    settings.KARNI_PUBLIC_CREATE_RATE = "2/hour"
+    anonymous = client_as(None)
+    enquiry = {"name": "Ada", "message": "Do you design schools?"}
+    for _ in range(2):
+        assert anonymous.post("/api/enquiries/", enquiry).status_code == 201
+    assert anonymous.post("/api/enquiries/", enquiry).status_code == 429
+```
+
+`assert_crud` and `assert_isolated` switch throttling off for the resource
+they test. The throttles' cache stays fresh with `karni_project_cache` too.
+To keep the shared cache for throttles as well, define an autouse fixture
+named `_karni_fresh_throttles` in `conftest.py` that does nothing.
+
+The [response cache](api.md#response-caching) starts empty in every test too,
+while `KARNI_API_CACHE` is on: a test's rows roll back, but the cache would
+keep what it stored, and a later test could be served rows that no longer
+exist. `X-Cache` (`HIT`, `MISS`) says how a response was served, so a test can
+check that a write invalidates. To keep cached responses across tests, define
+an autouse fixture named `_karni_fresh_response_cache` that does nothing.
 
 ## Queued listeners and Celery tasks
 
@@ -457,6 +759,9 @@ every routed project `BaseViewSet` it measures
 - `list` with **2** rows and with **12** rows,
 - `retrieve` of a row with **2** related rows per to-many relation the
   serializer renders, and of one with **12**,
+- `aggregate`, for a viewset with an [aggregation](aggregations.md)
+  (experimental), with **2** rows and with **12**, grouped by its first
+  declared group with `top=1`, stacked by the second one when there is one,
 
 and fails if the query count grows. Rows come from the automatic factories
 (explicit ones win). Related rows are seeded along the serializer's own
@@ -497,10 +802,43 @@ Outcomes other than pass/fail are explicit:
       ...
   ```
 
+The row counts move, and a viewset can carry a time budget (experimental:
+`KARNI_SCALING_ROWS`, `karni.performance.Scaling` and `query_scaling`):
+
+```python
+# config/settings.py: every viewset compares 2 rows with 50
+KARNI_SCALING_ROWS = [2, 50]
+```
+
+```python
+# events/viewsets.py
+from karni.api import Scaling
+
+
+class EventViewSet(karni.EventViewSet):
+    query_scaling = Scaling(rows=(5, 500), seconds=0.3)
+```
+
+`rows` overrides the setting for one viewset. `seconds` is a time budget:
+the request at the large row count (the faster of two runs) must take no
+longer. A failed budget is [E476](errors.md#e476) and names the endpoint,
+the rows, the time and the queries, with the statements:
+
+```text
+EventViewSet.list (GET /api/events/): 500 rows took 0.412s against a time budget of 0.3s, in 4 queries.
+```
+
+`karni queries <endpoint> --explain` then shows each statement's plan on
+PostgreSQL ([query plans](debugging/queries.md#query-plans-explain)). A
+declaration that is not two row counts (small then large) or a positive
+number of seconds is [E477](errors.md#e477). `karni context` lists every
+`query_scaling` on its `PERF` line.
+
 The pieces are public for project tests: `scaling_cases()` (the
 `ScalingCase`s found), `check_scaling(case) -> ScalingResult` (`small`,
-`large`, `grows`, `skipped`, `message()`), and the constants
-`SCALING_SMALL = 2`, `SCALING_LARGE = 12`.
+`large`, `grows`, `skipped`, `message()`, and experimental `rows`,
+`seconds`, `budget`, `endpoint`, `too_slow`, `slow_message()`), and the
+constants `SCALING_SMALL = 2`, `SCALING_LARGE = 12` (the defaults).
 
 ```python
 from karni.testing.performance import ScalingCase, check_scaling

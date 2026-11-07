@@ -6,46 +6,275 @@
 </p>
 
 <p align="center">
-Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships.
+Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.
 </p>
 
 <p align="center">
-  <a href="https://github.com/cbsshekhawat18-lab/karni/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/cbsshekhawat18-lab/karni/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://pypi.org/project/karni/"><img alt="PyPI" src="https://img.shields.io/pypi/v/karni"></a>
   <a href="https://www.npmjs.com/package/@karni/ui"><img alt="npm" src="https://img.shields.io/npm/v/@karni/ui"></a>
+  <a href="https://github.com/cbsshekhawat18-lab/karni/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/cbsshekhawat18-lab/karni/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://cbsshekhawat18-lab.github.io/karni/"><img alt="Docs" src="https://img.shields.io/badge/docs-online-FB5D08"></a>
   <a href="https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
-  <a href="https://cbsshekhawat18-lab.github.io/karni/"><img alt="Docs" src="https://img.shields.io/badge/docs-online-blue"></a>
-  <a href="https://github.com/cbsshekhawat18-lab/karni/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/cbsshekhawat18-lab/karni?style=social"></a>
+  <a href="https://pypi.org/project/karni/"><img alt="Python versions" src="https://img.shields.io/pypi/pyversions/karni"></a>
+  <a href="docs/faq.md#which-python-django-and-react-versions-does-karni-support"><img alt="Node 20.19 or later" src="https://img.shields.io/badge/node-20.19%2B-339933"></a>
 </p>
+
+<p align="center">
+  <b><a href="#quickstart">Quickstart</a></b> &nbsp;·&nbsp;
+  <b><a href="https://cbsshekhawat18-lab.github.io/karni/">Docs</a></b> &nbsp;·&nbsp;
+  <b><a href="docs/recipes/index.md">Recipes</a></b>
+</p>
+
+## Why Karni exists
+
+Every web project starts with the same work: sign-in, a user model, the admin, permissions, CRUD endpoints, tables, forms, Docker and Celery. Only after that does the work on the product begin.
+
+Coding agents write that setup faster, but they write it again in every project. Each copy is a little different, with the hard parts wrong in different places, and every copy has to be maintained. Karni grew out of the 34 projects we built before it.
+
+## What is Karni
+
+**The problem.** Every Django + React project needs the same code before it does anything of its own: serializers, permission classes, admin files, sign-in pages, tables and forms. A boilerplate copies it once. A coding agent writes it again in every project. Either way, a fix made upstream never reaches the copies.
+
+**How Karni solves it.** That code ships as versioned packages: `karni` (Python), `@karni/ui` (React) and the `karni` command. `karni upgrade` moves a project to each new release, so a fix reaches every project that depends on Karni.
+
+**What you get.** You declare a model and who may access it. Karni gives you the REST API, the admin, role-based access, the React screens, the tests and the demo data.
+
+**What you still write.** Your domain: your models, the rules for who may do what, and the logic and pages your product needs. AGENTS.md tells the agent the same, and `karni check` fails the build when it hand-writes what Karni ships.
+
+## Build an app from one line
+
+1. **Create a project** with `karni new "Yoga Studio"` and open it in your coding agent.
+2. **Describe the app in one line** after `/new-app`. AGENTS.md tells the agent what that asks for.
+3. **The agent writes `karni.yaml`** from the closest [recipe](docs/recipes/index.md), and asks you only the questions `karni plan --questions` lists.
+4. **`karni build` makes the app**: it adds the modules, writes Karni's code, migrates, seeds the demo data the spec asks for, generates the TypeScript types, and runs the tests and `karni check`.
+5. **The agent writes only the domain logic that is left**, in the project's own files. It is done when `karni check` and `karni test` pass.
+
+```text
+/new-app a booking app for a yoga studio, with online payments
+```
+
+What the agent runs, from a real session:
+
+```text
+$ karni recipes list --match "a booking app for a yoga studio, with online payments"
+booking   4  Booking: Resources with time slots that members book and pay for, never over capacity. (matched: booking)
+shop      3  Online shop: Products in categories, a cart, orders and checkout with online payments. (matched: online, payment)
+
+$ karni plan --questions
+No questions: karni.yaml settles everything Karni asks before a build.
+
+$ karni build
+plan        22 changes, 0 risky: modules 1, features 1, roles 3, apps 1, entities 3, access 3, pages 3, migrations 1, seed 3, tests 3 (--verbose lists each)
+modules     karni add payments
+files       27 written: 17 Karni's, 10 the project's (pyproject.toml, frontend/package.json, ...)
+migrations  bookings/migrations/0001_initial.py
+migrate     applied 84 on default
+seed        Resource 4, Slot 30, Booking 60 (demo login demo@example.com / karni-password)
+types       frontend/src/api/types.ts and hooks.ts
+test        7 passed in 2.88s, tests/openapi.snapshot.json updated (the API changed: commit it)
+check       ok
+Built: the project matches karni.yaml.
+```
+
+On a developer laptop, `karni new --recipe shop` builds the shop from scratch on SQLite in 14.1 seconds, its tests and `karni check` included and the frontend install left out ([how fast is it](docs/recipes/index.md#how-fast-is-it)). The flow works without an agent too: every step is a command you can run yourself. The recording below builds a project command by command, then shows its welcome page, its admin and its React screens.
 
 <p align="center">
   <img alt="A terminal runs karni new, karni make model, migrate, seed and serve. Then the browser shows the welcome page, the admin listing the seeded events, and the React app's events table and detail view." src="https://raw.githubusercontent.com/cbsshekhawat18-lab/karni/main/docs/assets/karni-demo.gif" width="880">
 </p>
 
-## Why Karni exists
+## Coding-agent benchmark
 
-Every new web project starts the same way: auth, a user model, the admin, permissions, CRUD endpoints, tables, forms, Docker, Celery. Only after all of that does the work on the product itself begin.
+A coding agent built three small apps five times each on plain Django + React, on the Karni 0.5.0 candidate, and on Karni again after work on its agent flow: 45 runs with the same model and agent version, prompt and API contract, where the harness's own acceptance tests decide success.
 
-AI coding agents made this faster, but not better. We give the agent the same prompts in every project and wait while it builds the same setup again. It writes everything fresh each time: the same code, slightly different, with the subtle parts wrong in different places. Every line costs tokens and time, and every copy has to be maintained.
+<!-- bench:readme:start -->
+| Task | Plain Django + React | Karni 0.5.0 candidate | Karni after the agent-flow work |
+|---|---|---|---|
+| Booking with payments | $0.19, 61.76 s, 5 of 5 passed, 5 tool calls | $0.45, 208 s, 3 of 5 passed, 26 tool calls | $0.33, 187 s, 5 of 5 passed, 20 tool calls |
+| A CRM with three roles and import | $0.21, 70.51 s, 5 of 5 passed, 6 tool calls | $0.56, 278 s, 5 of 5 passed, 31 tool calls | $0.40, 236 s, 5 of 5 passed, 22 tool calls |
+| A shop with orders and refunds | $0.23, 72.21 s, 5 of 5 passed, 7 tool calls | $0.62, 238 s, 4 of 5 passed, 29 tool calls | $0.44, 255 s, 4 of 5 passed, 24 tool calls |
+| All three tasks | $0.63, 204 s, 15 of 15 passed, 18 tool calls | $1.63, 724 s, 12 of 15 passed, 86 tool calls | $1.17, 678 s, 14 of 15 passed, 66 tool calls |
 
-## What is Karni
+Each cell: median cost in US dollars, median wall time, runs that passed every acceptance test, and median tool calls. In the last row the runs add up and the other figures are the sums of the task medians, as the [benchmark report](docs/benchmarks/tokens.md) gives them.
+<!-- bench:readme:end -->
 
-**The problem.** Every Django + React project needs the same code before it does anything of its own: serializers, permission classes, admin files, login pages, tables and forms. A boilerplate copies it into your project once. An AI agent writes it again in every project. Either way you pay for it twice: once to produce it, and again to maintain every copy, because a fix made upstream never reaches code that was copied or regenerated.
+- **Plain Django + React was cheaper and faster on these three small apps.** Karni after the agent-flow work cost about 1.8 to 1.9 times as much per app (median) and took about 3 to 3.5 times as long.
+- **The agent-flow work** cut the median cost by 27 to 30 percent and the context the agent read again by 30 to 43 percent, and raised the runs that passed every test from 12 of 15 to 14 of 15.
+- **With Karni the agent wrote fewer lines of its own** (median 256 to 431 per app, against 438 to 554), and each Karni project ended with far more code in it (median about 11,500 to 20,000 lines, most of it generated by Karni, against about 440 to 570).
+- **What these tasks measure** is the time and cost to meet a small API contract, not everything a finished app contains.
 
-**How Karni solves it.** That code lives in three versioned packages you install and upgrade: `karni` (Python), `@karni/ui` (React) and the `karni` command. `karni upgrade` applies the changes each release needs, so a fix reaches every project that depends on Karni.
+The [benchmark report](docs/benchmarks/tokens.md) has every figure with its range, the method, the limits, the commands to repeat it and the raw data.
 
-**What you get.** You declare a model and who may access it. Karni gives you the REST API, the admin, permissions and role-based access control, the React screens, the tests and the seed data.
+## What you get
 
-**What you still write.** Your domain, and only that: your models, the rules for who may do what, and the logic and pages specific to your product. Karni's rules files tell the agent the same, and the build fails when it hand-writes what Karni provides.
+Every feature, grouped by what you need. The [features page](docs/features.md) lists all of them with their status.
 
-## Show, don't tell
+<table>
+<tr>
+<td width="50%" valign="top">
 
-This is what a developer writes in the reference app, [EventHub](examples/eventhub/README.md) (`__str__` left out):
+**Start fast**
+
+- [`karni new`](docs/quickstart.md): a Django + React project, its settings in one call, Docker Compose and a Makefile
+- [Recipes](docs/recipes/index.md): six ready apps, from a shop to a data portal
+- [`karni.yaml`](docs/app-spec.md): the app in one small file, with `karni plan` and `karni build`
+- [Generators](docs/cli.md): `karni make app`, `make model`, `make page`
+- [Demo data](docs/seeding.md) with `karni seed`, and [real content](docs/content-loading.md) with `karni load`
+- [A public website](docs/public-site.md) next to the app, [from a designer's pages](docs/design-content.md)
+
+</td>
+<td width="50%" valign="top">
+
+**Data and access**
+
+- [`BaseModel`](docs/models.md): UUID key, timestamps, soft delete, audit fields
+- [Typed fields](docs/fields.md) the database enforces: money, percent, phone, country
+- [States, capacity and no-overlap rules](docs/lifecycle-and-capacity.md) in the database
+- [`BaseViewSet`](docs/api.md) with a required `access` rule, applied to the queryset
+- [Accounts](docs/accounts.md): email sign-in, roles, per-user grants, two-factor
+- [Change history](docs/change-history.md), [events](docs/events.md) and [scheduled tasks](docs/scheduling.md)
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**Large apps**
+
+- [Aggregations](docs/aggregations.md): counts and sums by category or date
+- [Search across models](docs/global-search.md), with access applied per model
+- [Navigation from data](docs/navigation.md), opened by role
+- [Tree models and taxonomies](docs/models.md#tree-models)
+- [Import and export](docs/import-export.md): CSV and XLSX, with a dry run
+- [Tooling for 100 models or more](docs/large-projects.md): context per area, cached checks
+
+</td>
+<td valign="top">
+
+**Admin**
+
+- [An admin for every model](docs/admin.md), with no `admin.py`
+- Derived columns, filters, search, pagination and bulk edit
+- [Row scope and field visibility](docs/admin.md#row-scope) per role
+- [A permission matrix](docs/admin.md#permission-matrix) and the change history of each row
+- [Saved charts](docs/charts.md), defined and previewed in the admin
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**UI**
+
+- [`ResourceTable`, `ResourceForm`, `ResourceDetail`](docs/ui.md) from the OpenAPI schema
+- [Sign-in pages, the app shell and page blocks](docs/ui.md#app-shell-and-pages)
+- A typed TypeScript client and hooks from `karni types`
+- [Your design system's look](docs/theming.md) with `karni ui detect`
+
+**Modules**
+
+- [Payments, approvals, impersonation, a public site, charts, PDF reports, extraction and protected files](#modules), each added with one command
+
+</td>
+<td valign="top">
+
+**Coding agents**
+
+- [AGENTS.md](docs/agents.md#agentsmd), one file for every coding agent, from one rule set
+- [`/new-app`](docs/agents.md#agents-the-new-app-flow): from one line to a running app
+- [`karni context`](docs/agents.md#cli-surface): the project inventory an agent reads first
+- [An MCP server](docs/agents.md#mcp) with the same commands as tools
+- [`karni check`](docs/enforcement.md) fails the build when code rebuilds what Karni ships
+- [Debugging](docs/debugging/why.md): `karni why`, `explain`, `trace`, `queries`
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top">
+
+**Production**
+
+- [A production Docker Compose stack](docs/deploy.md): Caddy with automatic TLS, PostgreSQL, Redis, Celery and backups, booted and smoke-tested in CI
+- [Safe defaults](docs/security.md): security headers, and `karni check --deploy` before each start
+- [Tests in one line](docs/testing.md): `assert_crud` and `assert_isolated`
+- [`karni upgrade`](docs/stability.md): codemods for each release, under a written stability promise
+
+</td>
+</tr>
+</table>
+
+## Recipes and modules
+
+A recipe is a ready `karni.yaml` plus the little domain code a spec cannot express. `karni new --recipe` builds it with its demo data and tests ([recipes](docs/recipes/index.md)).
+
+| Recipe | What it gives | One command |
+|---|---|---|
+| [`shop`](docs/recipes/shop.md) | Products in categories, a cart, orders, checkout with online payments | `karni new "Corner Shop" --recipe shop` |
+| [`booking`](docs/recipes/booking.md) | Resources with time slots that members book and pay for, never over capacity | `karni new "Yoga Studio" --recipe booking` |
+| [`crm`](docs/recipes/crm.md) | Companies, contacts and deals in a pipeline, with two-factor sign-in | `karni new "Sales Desk" --recipe crm` |
+| [`lms`](docs/recipes/lms.md) | Courses with lessons in order, enrolments and each student's progress | `karni new "Course Hub" --recipe lms` |
+| [`marketplace`](docs/recipes/marketplace.md) | Sellers, listings, orders and the payout after the fee | `karni new "Market Hall" --recipe marketplace` |
+| [`data-portal`](docs/recipes/data-portal.md) | Datasets and indicators by region and sector, with saved charts | `karni new "Data Portal" --recipe data-portal` |
+
+<a id="modules"></a>A module is a separate package for anything with its own service or a real memory cost ([modules](docs/modules.md)).
+
+| Module | What it gives | One command |
+|---|---|---|
+| [`karni-payments`](modules/karni-payments/README.md) | Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI | `pip install karni-payments && karni add payments` |
+| [`karni-approvals`](modules/karni-approvals/README.md) | A second person approves high-value changes before they are written, with a queue and an audit trail | `pip install karni-approvals && karni add approvals` |
+| [`karni-impersonation`](modules/karni-impersonation/README.md) | Safe "log in as user" for support staff: a banner, a time limit, both identities in the audit trail | `pip install karni-impersonation && karni add impersonation` |
+| [`karni-site`](modules/karni-site/README.md) | A public website whose every text, image and menu is editable in the admin, with forms and redirects | `pip install "karni-site[images]" && karni add site` |
+| [`karni-charts`](modules/karni-charts/README.md) | Charts defined and previewed in the admin, served under each resource's access | `pip install karni-charts && karni add charts` |
+| [`karni-reports`](modules/karni-reports/README.md) | A row printed to PDF from an HTML template in the background, served only to users who may see the row | `pip install karni-reports && karni add reports` |
+| [`karni-ai`](modules/karni-ai/README.md) | Rows for any resource read from text, a web page or a PDF by a language model, always through the import preview | `pip install "karni-ai[<provider>]" && karni add ai` |
+| [`karni-storage`](modules/karni-storage/README.md) | Files a row owns, in S3 or an S3-compatible service, served only to whoever may read the row | `pip install "karni-storage[images]" && karni add storage` |
+
+## Quickstart
+
+You need Python 3.12 or later and Node 20.19 or later. This builds the shop recipe on SQLite, with no Docker:
+
+```sh
+python3 -m venv .venv && . .venv/bin/activate
+pip install karni karni-cli karni-payments pytest pytest-django
+karni new "Corner Shop" --recipe shop && cd corner_shop
+printf 'DATABASE_URL=sqlite:///data/db.sqlite3\nKARNI_CACHE=locmem\n' > .env
+karni build
+karni serve --local
+```
+
+`karni-payments` is the module the shop's checkout uses. `karni new` stops before the build when it cannot reach a database. The `.env` line points the project at SQLite, and `karni build` makes the app: migrations, demo data, types, tests and `karni check`.
+
+In a second terminal, in the same directory:
+
+```sh
+cd corner_shop/frontend && npx --yes npm@11 install && npm run dev
+```
+
+Open `http://127.0.0.1:8000/admin/` for the admin and `http://localhost:5173/` for the React app. Sign in as `demo@example.com` with the password `karni-password`. `npx --yes npm@11` runs npm 11 for this one install, because the npm 10 that Node 20 and 22 bundle cannot install the frontend.
+
+PostgreSQL is Karni's default database, and the [quickstart guide](docs/quickstart.md) runs it with Docker. CI runs that page verbatim on every push. `karni doctor` checks your Python, Node, npm and database.
+
+## How it works
+
+```mermaid
+flowchart LR
+    spec["karni.yaml<br/>apps, entities, access,<br/>roles, modules, pages"]
+    plan["karni plan<br/>what will change,<br/>risky changes first"]
+    build["karni build<br/>migrate, seed, types,<br/>tests, karni check"]
+    owned["Code Karni owns<br/>&lt;app&gt;/karni/, the karni:spec blocks<br/>rewritten on every build"]
+    yours["Code you own<br/>&lt;app&gt;/models.py, viewsets.py,<br/>seeds.py, your pages and tests<br/>created once, never rewritten"]
+    pkgs["Versioned packages<br/>karni, @karni/ui, karni-cli<br/>moved on by karni upgrade"]
+    spec --> plan --> build
+    build --> owned
+    build --> yours
+    yours -- "subclass" --> owned
+    owned -- "extends" --> pkgs
+```
+
+The code you own subclasses what Karni writes. For one resource it is a model and a viewset:
 
 ```python
 class Venue(BaseModel):
     name = models.CharField(max_length=200)
-    address = models.TextField()
     city = models.CharField(max_length=100)
     capacity = models.IntegerField()
 
@@ -56,427 +285,34 @@ class VenueViewSet(BaseViewSet):
     search_fields = ("name", "city")
 ```
 
-And this is the page `karni make page venues --resource venues` writes:
+From those two classes Karni derives the endpoints at `/api/venues/` with filters, search, pagination and `?expand=`, the OpenAPI schema and a typed client, the admin screen, the permission checks on every query, and a table, form and detail view in React. The reference app, [EventHub](examples/eventhub/README.md), has payments, email and four roles in 617 lines of project code.
 
-```tsx
-import { Page, ResourceTable } from "@karni/ui";
-
-export default function VenuesPage() {
-    return (
-        <Page title="Venues">
-            <ResourceTable resource="venues" />
-        </Page>
-    );
-}
-```
-
-What you get with no other code:
-
-- REST endpoints at `/api/venues/`, with filters, search, ordering, pagination and `?expand=`
-- the OpenAPI schema, Swagger UI and a typed TypeScript client
-- an admin screen, with no `admin.py`
-- a table with sorting, filters, pagination and CSV or XLSX export, plus a form and a detail view
-- permissions: everyone reads, organizers and staff write
-- a one-call test of the whole API (`assert_crud`) and realistic seed data
-
-All of EventHub, with payments, e-mail and four roles, is 619 lines of project code. Karni grew out of the 34 projects we built before it.
-
-> ⭐ **If Karni is useful to you, please star the repo.** It helps other
-> people building Django + React apps with AI coding agents find the project.
-
-## Why not just use Django or a boilerplate?
-
-Karni stays a versioned dependency that you upgrade. A boilerplate is copied once and diverges forever. Plain Django gives you the parts, but every project writes the same serializers, permission classes, admin files and tests again. A boilerplate writes them for you once, and then a security fix upstream never reaches your copy. With Karni the generic code stays in the package, and `karni upgrade` applies the code changes each release needs.
-
-## Quickstart
-
-You need Python 3.12 or later, Node 20.19 or later (24 LTS recommended) and Docker, which runs PostgreSQL.
-
-```sh
-python3 -m venv .venv && . .venv/bin/activate
-pip install karni karni-cli pytest pytest-django
-karni new "Ticket Shop" && cd ticket_shop
-cp .env.example .env
-docker compose up -d --wait db
-printf 'DATABASE_URL=postgres://karni:karni@localhost:5432/karni\nKARNI_CACHE=locmem\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' >> .env
-karni make app events
-karni make model Event title:str:200 starts_at:datetime organizer:fk:User -a --access owned:organizer
-karni make migration --app events && karni migrate
-karni make page login --kind login
-karni seed
-karni serve --local
-```
-
-In a second terminal, in the same directory:
-
-```sh
-cd ticket_shop/frontend
-npm install
-npm run dev
-```
-
-Open `http://127.0.0.1:8000/` for the welcome page and `/admin/` for the admin. Open `http://localhost:5173/login` for the React app. Sign in as `demo@example.com` with the password `karni-password`. `karni seed` created that user. The [quickstart guide](docs/quickstart.md) explains each step.
-
-PostgreSQL is Karni's default database. To try Karni without Docker, leave out the `docker compose` line and use `DATABASE_URL=sqlite:///data/db.sqlite3`: SQLite works, without the guarantees only PostgreSQL gives (range columns, `EXCLUDE` constraints, trigram search).
-
-Without Python 3.12 on your machine, run the `karni` command from its container image, [`ghcr.io/cbsshekhawat18-lab/karni`](https://github.com/cbsshekhawat18-lab/karni/pkgs/container/karni). For example, `docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/cbsshekhawat18-lab/karni new "Ticket Shop"` scaffolds the project into the current directory.
-
-## Karni compared
-
-| | Plain Django + DRF | Cookiecutter Django | SaaS Pegasus | Karni |
-|---|---|---|---|---|
-| What you start with | an empty project | a generated project you own | a generated codebase you own (paid, with an open-source edition) | a dependency you upgrade |
-| Serializers, viewsets, admin, permissions per model | you write them | you write them | generated once, then yours | derived from the model and its `access` rule |
-| An upstream fix reaches your code | only for Django itself | no | by regenerating and merging | through `karni upgrade` |
-| Teams, subscriptions, multi-tenancy | no | no | yes, mature | no (payments only, as a module) |
-| Maturity | the standard | large community, many years in production | large, actively supported | version 0.4, two reference apps |
-| Deployment | your choice | Docker and cloud guides, widely used | deploy guides for several platforms | a generated Docker Compose stack, not yet verified end to end |
-| AI agent guidance in the project | none | none in the generated project | rule files, CLAUDE.md / AGENTS.md, Claude Code skills and MCP | adapters for eight tools from one rule set, `karni context`, a build-failing `karni check`, an MCP server |
-
-Choose Cookiecutter Django or SaaS Pegasus for a proven, complete starting point that you will own. Choose Karni to keep the generic code upstream, and accept a younger framework for it.
-
-The [comparison pages](https://cbsshekhawat18-lab.github.io/karni/compare/) go into each alternative, with sources.
-
-## How it works
-
-**BaseModel.** Every model inherits a UUID key, timestamps, soft delete and who-created-it fields. Default managers apply named scopes, so a deleted row never appears in a query you forgot to filter. [Models](docs/models.md)
-
-**BaseViewSet and generated serializers.** A viewset names a model and an `access` rule. Karni derives the serializer, filters, search, pagination, `?expand=` and an N+1-free query plan, and compiles `access` into both the permission check and the queryset, so a row outside your scope is a 404. [API](docs/api.md)
-
-**An admin that registers itself.** Every model appears in a django-unfold admin with columns, filters and search from its fields. `AdminMeta` changes a detail, and your own `ModelAdmin` replaces it. [Admin](docs/admin.md)
-
-**Schema-driven components.** `@karni/ui` reads the OpenAPI document, so `ResourceTable`, `ResourceForm` and `ResourceDetail` need only a resource name to render the right columns, inputs and validation. [UI](docs/ui.md)
-
-**The enforcement layer.** `karni check`, an ESLint preset and architecture tests fail the build when project code rebuilds what Karni ships, such as a copy of the generated serializer or a raw `<table>`. Every opt-out needs a written reason. [Enforcement](docs/enforcement.md)
-
-## Cheat sheet
-
-A model and its API, in two files:
-
-```python
-# events/models.py
-from django.db import models
-from karni.models import BaseModel
-
-class Venue(BaseModel):
-    name = models.CharField(max_length=200)
-    city = models.CharField(max_length=100)
-
-# events/viewsets.py
-from karni.api import Access, BaseViewSet, HasRole, Public
-from events.models import Venue
-
-class VenueViewSet(BaseViewSet):
-    model = Venue
-    access = Access(read=Public(), write=HasRole("organizer", "staff"))
-```
-
-A page, from `karni make page venues --resource venues`:
-
-```tsx
-import { Page, ResourceTable } from "@karni/ui";
-
-export default function VenuesPage() {
-    return (
-        <Page title="Venues">
-            <ResourceTable resource="venues" />
-        </Page>
-    );
-}
-```
-
-The commands you use every day:
-
-```sh
-karni new "Shop"      # scaffold a project
-karni add payments    # wire an installed module into settings and the agent files
-karni types           # TypeScript types and hooks from the OpenAPI document
-karni context         # the project inventory an agent reads first
-karni seed            # realistic, connected demo data
-karni check           # conventions and system checks; non-zero exit on a violation
-```
-
-The project's Makefile:
-
-<!-- generated:make-targets -->
-```sh
-make up         # karni serve -d
-make down       # docker compose down
-make serve      # karni serve
-make migrate    # karni make migration; karni migrate
-make types      # karni types
-make check      # karni check; karni rules sync --check
-make rules      # karni rules
-make agents     # karni rules sync
-make context    # karni context
-make test       # karni test
-make shell      # karni shell
-make routes     # karni routes
-make schedules  # karni schedule list
-make superuser  # karni createsuperuser
-make logs       # docker compose logs -f django worker beat
-```
-<!-- /generated:make-targets -->
-
-## Commands
-
-Each command links to its full entry in the [reference](docs/REFERENCE.md#commands).
-
-<details>
-<summary><b>All karni commands</b></summary>
-
-<!-- generated:commands -->
-| Command | What it does |
-|---|---|
-| [`karni new`](docs/REFERENCE.md#karni-new) | Scaffold a project from templates/project |
-| [`karni add`](docs/REFERENCE.md#karni-add) | Install an optional module and wire it into settings |
-| [`karni upgrade`](docs/REFERENCE.md#karni-upgrade) | Upgrade across Karni versions: codemods, diff, manual-change report |
-| [`karni doctor`](docs/REFERENCE.md#karni-doctor) | Report the environment: project, interpreter, Node, adapters, history |
-| [`karni config`](docs/REFERENCE.md#karni-config) | Read and write Karni settings in the project's .karni/config.toml (committed) or, with --global, in ~/.config/karni/config.toml: [get](docs/REFERENCE.md#karni-config-get), [set](docs/REFERENCE.md#karni-config-set), [list](docs/REFERENCE.md#karni-config-list) |
-| [`karni ui`](docs/REFERENCE.md#karni-ui) | Fit Karni's components to the project's design system: [detect](docs/REFERENCE.md#karni-ui-detect) |
-| [`karni context`](docs/REFERENCE.md#karni-context) | Print a compact machine-readable project inventory |
-| [`karni rules`](docs/REFERENCE.md#karni-rules) | Karni's conventions for humans and AI agents (no Django needed): [sync](docs/REFERENCE.md#karni-rules-sync) |
-| [`karni check`](docs/REFERENCE.md#karni-check) | Run architecture and system checks |
-| [`karni explain`](docs/REFERENCE.md#karni-explain) | Explain an error code (E104, C101, PAY004, K106), or a pasted traceback or log line (karni explain -): class, cause, where, fix |
-| [`karni types`](docs/REFERENCE.md#karni-types) | Generate TS types and typed hooks from the backend OpenAPI |
-| [`karni mcp`](docs/REFERENCE.md#karni-mcp) | Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp]) |
-| [`karni queries`](docs/REFERENCE.md#karni-queries) | Run one endpoint in-process as a user and report its queries |
-| [`karni serve`](docs/REFERENCE.md#karni-serve) | Start the dev stack |
-| [`karni migrate`](docs/REFERENCE.md#karni-migrate) | Apply migrations |
-| [`karni test`](docs/REFERENCE.md#karni-test) | Run the test suite |
-| [`karni shell`](docs/REFERENCE.md#karni-shell) | Open a Django shell |
-| [`karni routes`](docs/REFERENCE.md#karni-routes) | List every URL with its methods, name, view, model and access |
-| [`karni schema`](docs/REFERENCE.md#karni-schema) | Show every column, constraint and index, and the declaration behind each |
-| [`karni worker`](docs/REFERENCE.md#karni-worker) | Run a Celery worker |
-| [`karni beat`](docs/REFERENCE.md#karni-beat) | Run Celery beat |
-| [`karni schedule`](docs/REFERENCE.md#karni-schedule) | List and run the Celery beat schedules: [list](docs/REFERENCE.md#karni-schedule-list), [run](docs/REFERENCE.md#karni-schedule-run) |
-| [`karni seed`](docs/REFERENCE.md#karni-seed) | Fill every model with realistic demo data |
-| [`karni sync-roles`](docs/REFERENCE.md#karni-sync-roles) | Create or update the roles KARNI_ROLES declares |
-| [`karni createsuperuser`](docs/REFERENCE.md#karni-createsuperuser) | Create an admin user |
-| [`karni manage`](docs/REFERENCE.md#karni-manage) | Run any management command |
-| [`karni why`](docs/REFERENCE.md#karni-why) | Explain an access decision: why a row, field or action is refused or missing |
-| [`karni why-empty`](docs/REFERENCE.md#karni-why-empty) | Explain an empty list: which step removes the rows, and the fix |
-| [`karni make`](docs/REFERENCE.md#karni-make) | Generate project code: apps, models, viewsets, tasks, schedules, listeners, pages: [app](docs/REFERENCE.md#karni-make-app), [model](docs/REFERENCE.md#karni-make-model), [viewset](docs/REFERENCE.md#karni-make-viewset), [serializer](docs/REFERENCE.md#karni-make-serializer), [migration](docs/REFERENCE.md#karni-make-migration), [test](docs/REFERENCE.md#karni-make-test), [factory](docs/REFERENCE.md#karni-make-factory), [seeder](docs/REFERENCE.md#karni-make-seeder), [task](docs/REFERENCE.md#karni-make-task), [schedule](docs/REFERENCE.md#karni-make-schedule), [event](docs/REFERENCE.md#karni-make-event), [listener](docs/REFERENCE.md#karni-make-listener), [command](docs/REFERENCE.md#karni-make-command), [service](docs/REFERENCE.md#karni-make-service), [middleware](docs/REFERENCE.md#karni-make-middleware), [page](docs/REFERENCE.md#karni-make-page), [component](docs/REFERENCE.md#karni-make-component), [module](docs/REFERENCE.md#karni-make-module) |
-| [`karni trace`](docs/REFERENCE.md#karni-trace) | Follow a captured request: its tasks, retries, email, webhooks, audit |
-| [`karni replay`](docs/REFERENCE.md#karni-replay) | Re-run a captured request against the current code, as any user |
-<!-- /generated:commands -->
-
-</details>
-
-## Reference by area
-
-`stable`: a reference application uses it. `experimental`: only Karni's own tests use it so far. `planned`: not built yet.
-
-<details>
-<summary><b>Models and the base classes</b></summary>
-
-Project models inherit `karni.models.BaseModel`. Optional settings for Karni's layers go in a nested `class Karni`.
-
-<!-- generated:models -->
-- `stable` `BaseModel`: UUID key, created and updated timestamps, soft delete, `created_by` and `updated_by`
-- `stable` Realistic, connected seed data (`karni seed`, `<app>/seeds.py`)
-- `stable` Model events and listeners, optionally queued to Celery (`@on_updated`)
-- `stable` Field-level change history (`class Karni: audit = True`)
-- `experimental` Scheduled tasks (`<app>/schedules.py`, `karni schedule`)
-- `planned` A tenant scope on every model (the `karni-tenancy` module)
-
-Base classes: `AuditedModel`, `BaseModel`, `GuardedModel`, `SoftDeleteModel`, `TimestampedModel`, `UUIDModel`.
-<!-- /generated:models -->
-
-Full reference: [base classes](docs/REFERENCE.md#base-classes) and [`class Karni` keys](docs/REFERENCE.md#model-metadata-class-karni).
-</details>
-
-<details>
-<summary><b>API layer and what BaseViewSet provides</b></summary>
-
-A viewset declares `model` and `access`. Everything else has a default you can override.
-
-<!-- generated:api -->
-- `stable` `BaseViewSet`: CRUD, filters, search, ordering, pagination, `?expand=` and the OpenAPI document, with no serializer
-- `stable` `access` declarations (`Public`, `Owned`, `HasRole`, `Where`, `Granted`) compiled into both the request gate and the row filter
-- `stable` Query budgets: a list endpoint that runs more queries than declared fails its test
-- `stable` CSV and XLSX export of any list (`/export/?format=`)
-- `stable` Import from CSV or XLSX with a mandatory preview (`/import/`)
-- `experimental` Response caching per viewset (`Cache`, `Uncached`)
-- `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
-
-Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
-<!-- /generated:api -->
-
-Full reference: [karni.api](docs/REFERENCE.md#karniapi).
-</details>
-
-<details>
-<summary><b>Admin and what is configured for you</b></summary>
-
-`karni.admin` registers every model on start-up. `AdminMeta` adjusts one model, and a `ModelAdmin` of your own replaces it.
-
-<!-- generated:admin -->
-- `stable` Every model registered with derived columns, filters and search, with no `admin.py`
-- `experimental` Row scope from the roles' grants: a staff user sees and edits only the rows a grant allows
-- `experimental` Field visibility, change history and the import and export screens
-- `experimental` A permission matrix of every role against every model and action
-<!-- /generated:admin -->
-
-Full reference: [karni.admin](docs/REFERENCE.md#karniadmin).
-</details>
-
-<details>
-<summary><b>UI components and hooks</b></summary>
-
-`@karni/ui` renders from the OpenAPI schema, so a page names a resource instead of listing fields.
-
-<!-- generated:ui -->
-- `stable` `ResourceTable`, `ResourceForm` and `ResourceDetail` driven by the OpenAPI schema
-- `stable` Sign-in, session restore and role checks (`AuthProvider`, `LoginForm`, `usePermission`)
-- `stable` Data hooks with shared caching (`useResourceList`, `useResourceItem`)
-- `stable` Import screen with column mapping and preview (`ResourceImport`)
-- `stable` Page building blocks: `Page`, `Layout`, `Stat`, `Modal`, `Toaster`, `EmptyState`
-- `experimental` `ChangeHistory`, `DataChart` and `FileUpload`
-- `experimental` `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme as Karni's tokens, and shadcn/ui components as Karni's primitives
-
-58 components and 17 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`. The hooks are `useDelayedFlag`, `useOnlineStatus`, `useTheme`, `useKarniPrimitives`, `useUnsavedChangesGuard`, `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useKarniClient`, `useSchema`, `useAuth`, `usePermission`, `useToast`.
-<!-- /generated:ui -->
-
-Full reference: [components and hooks](docs/REFERENCE.md#components-and-hooks).
-</details>
-
-<details>
-<summary><b>Permissions: roles, scopes, field visibility</b></summary>
-
-All of this is built and tested, including row scope in the admin and import with preview. Parts that no reference application uses yet are marked `experimental`. Tenancy is not built.
-
-<!-- generated:permissions -->
-- `stable` One `access` declaration per viewset: 404 outside the read scope, 403 for read-but-not-write
-- `stable` Roles as data (`KARNI_ROLES`) with the `all` and `own` scopes
-- `experimental` The `related:<key>` scope (`class Karni: scope_paths`) and `custom:` scopes
-- `stable` Membership through a path: `owner_field = "workspace__members"`
-- `stable` Scope paths that do not resolve fail `karni check` (`E214`) instead of answering 500
-- `experimental` Field visibility per role (`class Karni: field_roles`)
-- `experimental` Row scope in the admin, from the same grants as the API
-- `stable` Change history: who changed which field, when, from what to what
-- `experimental` Sensitive fields recorded in the history without their values
-- `experimental` Maker-checker approvals and safe impersonation (the `approvals` and `impersonation` modules)
-- `planned` Tenancy: a tenant scope applied to every model
-<!-- /generated:permissions -->
-
-Full reference: [capabilities](docs/REFERENCE.md#permissions) and [settings](docs/REFERENCE.md#accounts--auth).
-</details>
-
-<details>
-<summary><b>Modules you add with karni add</b></summary>
-
-A module is a separate package for anything with its own service or a real memory cost. Install it, then `karni add <name>` wires it in.
-
-<!-- generated:modules -->
-- `experimental` `karni add approvals`: A second person approves high-value changes before they are written, with a queue, an API and an audit trail
-- `experimental` `karni add impersonation`: Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail
-- `stable` `karni add payments`: Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI
-- `planned` `karni-tenancy`
-<!-- /generated:modules -->
-
-Full reference: [modules](docs/REFERENCE.md#modules).
-</details>
-
-<details>
-<summary><b>Agent integration: context, rules, adapters, MCP</b></summary>
-
-The same rule set produces every adapter file, so the tools never disagree.
-
-<!-- generated:agents -->
-- `stable` `karni context`, `karni rules` and `karni check` in the project workflow
-- `stable` Adapter files for every supported agent tool from one rule set (`karni rules sync`)
-- `stable` Slash commands for the routine tasks (`/new-model`, `/new-page`, …)
-- `experimental` `karni explain <code>`: why an error happens and the fix, offline
-- `experimental` `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it
-- `experimental` MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools
-
-Slash commands: `/new-model`, `/new-page`, `/add-module`, `/new-module`.
-<!-- /generated:agents -->
-
-Full reference: [slash commands](docs/REFERENCE.md#slash-commands) and [agent rules](docs/REFERENCE.md#agent-rules-k).
-</details>
-
-<details>
-<summary><b>Testing utilities</b></summary>
-
-`karni.testing` turns the usual hundred lines of API tests into a few calls.
-
-<!-- generated:testing -->
-- `stable` `assert_crud` and `assert_isolated`: the whole API surface and owner isolation in two calls
-- `stable` Generated tests from `karni make model … --with test`
-- `stable` OpenAPI snapshot test (`assert_schema_snapshot`)
-- `stable` Clients per role (`client_as`)
-- `experimental` `query_budget` and `user_with_roles` helpers
-- `stable` Architecture rules that fail the build (`karni check`, the ESLint preset)
-
-Helpers: `APITestCase`, `assert_admin_row_hidden`, `assert_crud`, `assert_isolated`, `assert_row_hidden`, `assert_schema_snapshot`, `client_as`, `query_budget`, `user_with_roles`.
-<!-- /generated:testing -->
-
-Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
-</details>
-
-## Built for AI agents
-
-An agent in a Karni project extends the framework instead of rewriting it:
-
-- **`karni context`** prints the project in a few lines: apps, models, viewsets, roles, components, hooks and pages.
-- **`karni rules`** prints the 43 conventions, each with a code, in 537 tokens (cl100k). `karni rules --check <file>` checks one file.
-- **Adapter files.** `karni new` writes the file each tool reads, from one rule set: AGENTS.md, CLAUDE.md, Cursor, Copilot, Windsurf, Cline, Aider and Junie, plus slash commands such as `/new-model`.
-- **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools.
-- **Your prompts, kept (optional).** [Gigai Chronicle](https://github.com/cbsshekhawat18-lab/gigai-chronicle) records every prompt you give an agent inside your repository, and `karni context --with-history <file>` reads it back to brief the next agent. It is MIT licensed, local-only, and made by Karni's author.
-
-When an agent writes a serializer or a raw `<table>` by hand, `karni check` fails the build and names the component to use. The first prompt, as a new project's welcome page shows it:
-
-```text
-You are working in the Karni project `ticket_shop`. Run `karni context` and
-`karni rules` first and follow them. Then add an Event model (title, starts_at)
-with its viewset and test using `karni make`, run `make migrate && karni types`,
-and run `karni check`. Never write serializers, routers, admin classes or
-permission checks by hand: Karni derives them.
-```
-
-Karni works the same without any AI tool: nothing in it calls a language model, and every generator is a command you run. See [building with an agent](docs/guide/with-ai.md) and [without one](docs/guide/without-ai.md).
-
-## Frequently asked questions
-
-**How is this different from a Django boilerplate?**
-A boilerplate is copied into your project once, and its serializers, permission classes and admin files then become yours to maintain. Karni keeps that code in versioned packages, derives the per-model parts from your model, and moves your project to each new release with `karni upgrade`.
-
-**Does it work with Cursor, Copilot and Claude Code?**
-Yes. A new Karni project contains the instruction files each of them reads, generated from one rule set, plus slash commands for routine tasks. `karni mcp` offers the same commands as MCP tools.
-
-**Can I use it without AI tools?**
-Yes. Nothing in Karni calls a language model, and every generator, such as `karni make model`, is a command you run yourself.
-
-**How much code do I write per model?**
-The model, an `access` rule and whatever is specific to your domain. In the reference app EventHub, the `Venue` resource is a five-line model and a four-line viewset.
+## FAQ
 
 **Is it production-ready?**
-Not yet. Version 0.4.0 has two reference applications and CI on every push, but no known production deployment and a Docker path that has not been tested end to end.
+Not yet. Karni has two reference applications and CI on every push, which also boots a new project's production Docker stack and smoke-tests it, but Karni has no known production deployment.
 
 **What happens when Karni releases a breaking change?**
 A public name keeps working for at least one minor release, with a `KarniDeprecationWarning` that names the release that removes it. `karni upgrade --to <version>` applies the mechanical changes and lists, by file and line, what it could not change ([stability promise](docs/stability.md)).
 
-## Who should not use Karni
+**Does it work without a coding agent?**
+Yes. Nothing in Karni calls a language model, and every generator is a command you run yourself ([building without an agent](docs/guide/without-ai.md)).
 
-- **You have an existing Django application.** Karni scaffolds new projects and has no path to adopt an existing one.
-- **You need teams, subscription billing or multi-tenancy now.** SaaS Pegasus ships them. Karni does not yet.
-- **Your stack is not Django REST Framework with React.**
-- **You want to own and edit every line of the generic code.** That is what a boilerplate is for.
+**How is it different from a boilerplate?**
+A boilerplate is copied into your project once, and its code then becomes yours to maintain. Karni stays a dependency you upgrade ([comparisons](https://cbsshekhawat18-lab.github.io/karni/compare/)).
 
-## Status and roadmap
+**Can an existing Django project adopt it?**
+Not today. Karni scaffolds new projects and has no supported path to adopt an existing one.
 
-Version 0.4.0 was released on 2026-10-22, with Django 5.2 LTS and Python 3.12 to 3.14. Each capability's status is in the [reference](docs/REFERENCE.md#capabilities-and-status).
+**What is the license?**
+Apache License 2.0, for every package on PyPI and npm.
 
-- **Stable:** models, the API with `access`, roles with the `all` and `own` scopes, the admin, the schema-driven components, change history, import and export, the testing helpers and the agent tooling.
-- **Built, not yet used by a reference app:** the `related:` and `custom:` scopes, field visibility per role, row scope in the admin, and the approvals and impersonation modules.
-- **Not done:** an end-to-end test of the Docker stack, the tenancy module.
+More answers are in the [FAQ](docs/faq.md).
 
-## Documentation, contributing, security, license
+## Contributing
 
-- **Documentation:** <https://cbsshekhawat18-lab.github.io/karni/>, with the [quickstart](docs/quickstart.md), the [tutorial](docs/tutorial.md) and the [reference](docs/REFERENCE.md).
-- **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). A second reference application with its friction log helps most.
-- **Security:** report problems privately, as [SECURITY.md](SECURITY.md) describes.
-- **License:** [Apache License 2.0](LICENSE).
-- **Credits:** built and maintained by Chandrabhan Shekhawat, Gigai Kripa Services (<https://gigaikripaservices.com/>).
+Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). A new app built on Karni with a friction log of what it still had to write helps most. Report security problems privately, as [SECURITY.md](SECURITY.md) describes.
+
+## License
+
+[Apache License 2.0](LICENSE). Built and maintained by Chandrabhan Shekhawat, Gigai Kripa Services (<https://gigaikripaservices.com/>).

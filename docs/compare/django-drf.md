@@ -26,10 +26,10 @@ and an explicit serializer or view is always allowed.
 - **Flexibility.** Every package is chosen and replaceable, and nothing sits
   between the project and Django. Karni adds conventions (UUID keys, a base
   model, an `access` rule per resource) that a project accepts with it.
-- **Versions.** DRF supports Django 5.2, 6.0 and 6.1, while Karni 0.4 supports
+- **Versions.** DRF supports Django 5.2, 6.0 and 6.1, while Karni 0.5 supports
   Django 5.2 LTS only.
 - **Long-term support.** Django's release and security policy is documented
-  and proven over two decades. Karni is version 0.4 under a stability promise
+  and proven over two decades. Karni is version 0.5 under a stability promise
   that has not yet been tested across a major release.
 
 ## Where Karni is the better choice
@@ -39,7 +39,7 @@ and an explicit serializer or view is always allowed.
   entry, a front-end data layer and tests. In Karni the model and an `access`
   rule produce them ([the API](../api.md), [testing](../testing.md)). Karni's
   reference application, with ticketing, payments, a Celery email and four
-  roles, is 619 lines of project code ([tutorial](../tutorial.md)).
+  roles, is 617 lines of project code ([tutorial](../tutorial.md)).
 - **Row-level permissions.** One `access` rule is compiled into both the
   request check and the queryset filter, and a row outside the user's scope is
   a 404 on every endpoint, filter, export and expansion

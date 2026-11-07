@@ -60,6 +60,7 @@ OPENS_DATABASE = frozenset(
     {
         "migrate",
         "karni_seed",
+        "karni_load",
         "karni_sync_roles",
         "createsuperuser",
         "runserver",
@@ -146,7 +147,7 @@ class ProjectWorld:
         return None
 
     def run_process(
-        self, cmd: list[str], *, cwd: Path, capture: bool = False
+        self, cmd: list[str], *, cwd: Path, capture: bool = False, env: dict[str, str] | None = None
     ) -> subprocess.CompletedProcess[str]:
         crash = self._crash(cmd)
         if crash is not None:

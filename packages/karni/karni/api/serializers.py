@@ -28,8 +28,10 @@ subclasses it is stripped even from an explicit ``APIMeta.fields`` while
 / ``user_permissions`` are forced read-only.
 
 Relations serialize as writable primary keys by default; relations named in
-``expand`` become nested read-only serializers built recursively (a cycle or
-the depth limit stops nesting at the primary key). A writable relation only
+``expand`` become nested read-only serializers built recursively, one level
+per segment of the path. The path bounds the nesting, so a path may come
+back to a model already on it (``?expand=parent.parent`` on a tree), and the
+depth limit stops nesting at the primary key. A writable relation only
 accepts primary keys of rows the requester can read through the target
 model's routed viewset (ADR 0001 Q2.5, see
 :class:`KarniPrimaryKeyRelatedField`), and every related row a generated
@@ -62,6 +64,7 @@ from rest_framework.relations import (
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
 from karni.api.expansion import DEFAULT_MAX_EXPAND_DEPTH, is_forward_relation
+from karni.api.formats import FormattedCharField, format_of
 from karni.api.lifecycle import StateChoiceField, lifecycle_errors, serializer_field
 from karni.api.related import readable_related, related_scope
 from karni.exceptions import KarniImproperlyConfigured
@@ -71,6 +74,7 @@ __all__ = [
     "KarniManyRelatedField",
     "KarniModelSerializer",
     "KarniPrimaryKeyRelatedField",
+    "PhoneNumberField",
     "build_serializer",
     "serializer_name",
 ]
@@ -79,6 +83,21 @@ USER_FORCED_READ_ONLY = frozenset(
     {"last_login", "is_staff", "is_superuser", "is_active", "groups", "user_permissions"}
 )
 """Fields forced read-only on user-model serializers (sensitive-field policy)."""
+
+
+class PhoneNumberField(serializers.CharField):
+    """A ``CharField`` that cleans a phone number to E.164, for :class:`karni.fields.PhoneField`.
+
+    The value is normalised before the validators run, so a uniqueness check
+    compares what the database stores. A national number needs
+    ``KARNI_PHONE_COUNTRY_CODE`` (:func:`karni.fields.normalize_phone`).
+    Declare it on a hand-written serializer to get the same input rules.
+    """
+
+    def to_internal_value(self, data: Any) -> Any:
+        from karni.fields.text import normalize_phone
+
+        return normalize_phone(super().to_internal_value(data))
 
 
 class KarniPrimaryKeyRelatedField(PrimaryKeyRelatedField):
@@ -229,10 +248,16 @@ class KarniModelSerializer(serializers.ModelSerializer):
         from karni.accounts.visibility import hidden_fields, protected_fields
 
         fields = super().get_fields()
+        model = self.Meta.model
+        pk = model._meta.pk.name
+        if self.instance is not None and pk in fields and not fields[pk].read_only:
+            # An entered key (an external table's, karni.db) is sent on create only:
+            # saving another value would insert a second row, not rename this one.
+            fields[pk].read_only = True
+            fields[pk].required = False
         user = self.visibility_user()
         if user is None:
             return fields
-        model = self.Meta.model
         hidden = hidden_fields(model, user)
         protected = protected_fields(model, user)
         for name in list(fields):
@@ -276,9 +301,13 @@ class KarniModelSerializer(serializers.ModelSerializer):
         says what a field starts as; forms then cannot prefill it. A literal
         default (``"draft"``, ``True``) becomes the serializer field's default,
         which drf-spectacular emits. Callable defaults (``uuid4``, ``now``)
-        stay with the model.
+        stay with the model. A ``PhoneField`` becomes a :class:`PhoneNumberField`.
         """
         field_class, kwargs = super().build_standard_field(field_name, model_field)
+        from karni.fields.text import PhoneField
+
+        if isinstance(model_field, PhoneField) and field_class is serializers.CharField:
+            field_class = PhoneNumberField  # national numbers, formatted input: E.164
         live_unique = _live_unique_validator(model_field)
         if live_unique is not None:
             kwargs["validators"] = [
@@ -290,6 +319,10 @@ class KarniModelSerializer(serializers.ModelSerializer):
             kwargs.update(lifecycle[1])
             if field_class is not StateChoiceField:
                 kwargs.pop("choices", None)
+        openapi_format = format_of(model_field)  # MarkdownField (karni.api.formats)
+        if openapi_format is not None and issubclass(field_class, serializers.CharField):
+            field_class = FormattedCharField
+            kwargs["openapi_format"] = openapi_format
         default = model_field.default if model_field.has_default() else None
         if (
             model_field.has_default()
@@ -437,10 +470,11 @@ def build_serializer(
     :param expand: validated relation paths (see
         :func:`karni.api.expansion.validate_expand`) to embed as nested
         read-only serializers instead of primary keys.
-    :param _seen: internal recursion guard — the models already on the
-        nesting path. Expanding into a model present here (a cycle) stops at
-        the primary key. Callers pass a non-empty value only when they want
-        an uncached nested build.
+    :param _seen: internal — the models already on the nesting path, which
+        count towards ``max_depth``. A model may appear more than once (a
+        tree's ``parent.parent``): each level consumes one segment of an
+        ``expand`` path, so the paths bound the recursion. Callers pass a
+        non-empty value only when they want an uncached nested build.
     :param max_depth: nesting depth limit; ``None`` reads the
         ``KARNI_API_MAX_EXPAND_DEPTH`` setting (default 2). Reaching the
         limit stops nesting at the primary key.
@@ -562,6 +596,28 @@ def _effective_field_names(model: type[Model], api_meta: Any) -> list[str]:
     return names
 
 
+def entered_key(model: type[Model]) -> bool:
+    """Whether the API takes ``model``'s primary key in a create (experimental).
+
+    True for an external model (``class Karni: external = True``,
+    :mod:`karni.db`) whose key the database does not generate: no
+    auto-increment and no default, like a code or an id another system
+    assigns. Every other primary key is read-only.
+    """
+    from django.db.models.fields import AutoFieldMixin
+
+    from karni.db import is_external
+
+    pk = model._meta.pk
+    return (
+        is_external(model)
+        and pk is not None
+        and not isinstance(pk, AutoFieldMixin)
+        and not pk.has_default()
+        and not pk.is_relation
+    )
+
+
 def _extra_kwargs(
     model: type[Model],
     api_meta: Any,
@@ -581,7 +637,7 @@ def _extra_kwargs(
                 code="E123",
             )
     always_read_only = {
-        model._meta.pk.name,
+        *(() if entered_key(model) else (model._meta.pk.name,)),
         "created_at",
         "updated_at",
         "created_by",
@@ -653,9 +709,11 @@ def _build_serializer_class(
             # Excluded forward relation: expansion never leaks it back in.
             continue
         related = field.related_model
-        if related is model or related in seen or len(seen) + 1 > max_depth:
-            # Cycle or depth guard: the representation stays at the PK
-            # (reverse relations simply stay absent).
+        if len(seen) + 1 > max_depth:
+            # Depth guard: the representation stays at the PK (reverse
+            # relations simply stay absent). A model already on the path is
+            # no reason to stop: the client named this level (a tree's
+            # ``parent``), and each level consumes one segment of the path.
             continue
         nested_class = _build_serializer_class(
             related, frozenset(sub_paths), (*seen, model), max_depth

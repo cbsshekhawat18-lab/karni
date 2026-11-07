@@ -1,0 +1,979 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json",
+  "title": "karni.yaml",
+  "description": "Experimental. A whole ``karni.yaml``.",
+  "$defs": {
+    "Access": {
+      "additionalProperties": false,
+      "description": "Experimental. ``access:`` of an entity: the viewset's ``Access(...)``.\n\nEach slot takes ``public``, ``authenticated``, ``granted``,\n``role:<slug>``, ``owned:<field>``, or a list of them (any of them\nadmits). ``read`` and ``write`` default to ``granted``, ``create`` to\n``write``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "read": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Who sees which rows (list, detail)."
+        },
+        "write": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Who changes and deletes which rows."
+        },
+        "create": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Who creates rows (default: write)."
+        }
+      },
+      "type": "object"
+    },
+    "Aggregate": {
+      "additionalProperties": false,
+      "description": "Experimental. ``aggregate:`` of an entity: ``class Karni: aggregate``.\n\nWhat ``GET <resource>/aggregate/`` may group by and sum (docs/aggregations.md).\nExpressions (``TextNumber`` and your own) stay in the project's code.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "group_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Fields or relation paths (category__parent) a request may group by. A date or datetime field takes :year, :quarter or :month, or allows every bucket without one."
+        },
+        "values": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Fields a metric other than a plain count reads."
+        },
+        "metrics": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The metrics a request may name, of count, sum, avg, min, max, distinct_count (default: all of them)."
+        }
+      },
+      "required": [
+        "group_by"
+      ],
+      "type": "object"
+    },
+    "ApiCache": {
+      "additionalProperties": false,
+      "description": "Experimental. ``features.api_cache`` as a mapping: on, with its lifetime.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "ttl": {
+          "description": "KARNI_API_CACHE_TTL: the seconds a cached response lives (default 300).",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ttl"
+      ],
+      "type": "object"
+    },
+    "App": {
+      "additionalProperties": false,
+      "description": "Experimental. One Django app of ``apps:`` and its entities.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "entities": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Entity"
+          },
+          "description": "Entity name (PascalCase) -> entity.",
+          "propertyNames": {
+            "pattern": "^(?:x-.*|[A-Z][A-Za-z0-9]*)$"
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "AppInfo": {
+      "additionalProperties": false,
+      "description": "Experimental. ``app:``: what the project is.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "name": {
+          "description": "The project's name, as given to karni new.",
+          "type": "string"
+        },
+        "kind": {
+          "default": "app",
+          "description": "The project's kind, as karni new --kind: site, app or site+app.",
+          "enum": [
+            "site",
+            "app",
+            "site+app"
+          ],
+          "type": "string"
+        },
+        "recipe": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The recipe the spec started from. For the record only."
+        },
+        "api_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "KARNI_API_VERSION: the API's current version, e.g. v1. The API is then mounted at /api/v1/ (karni.api.versions). Leave it out for an unversioned API.",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,15}$"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "DetailOptions": {
+      "additionalProperties": false,
+      "description": "Experimental. What a detail page shows besides the record: ``{related: [Deal, Person]}``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "related": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "A tab per reverse relation, each a table of the related rows filtered to the record: an entity with a fk to this one (Deal), or Entity.field when it has two (Deal.partner)."
+        }
+      },
+      "type": "object"
+    },
+    "DetailPage": {
+      "additionalProperties": false,
+      "description": "Experimental. An entity's detail page with options: ``{detail: {related: [Deal]}}``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "detail": {
+          "$ref": "#/$defs/DetailOptions",
+          "description": "The detail page's options."
+        }
+      },
+      "required": [
+        "detail"
+      ],
+      "type": "object"
+    },
+    "Entity": {
+      "additionalProperties": false,
+      "description": "Experimental. One entity: a model on BaseModel or BigIntBaseModel, its viewset and options.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "fields": {
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/FieldEntry"
+              }
+            ]
+          },
+          "description": "Field name -> type, in karni make model's syntax (types: str text int float decimal bool date datetime url file image uuid choice state daterange datetimerange capacity fk m2m o2o money percent quantity email slug phone markdown country currency json array), a trailing ? for optional. Or {type, was} to rename a field and keep its rows.",
+          "propertyNames": {
+            "pattern": "^(?:x-.*|[a-z][a-z0-9_]*)$"
+          },
+          "type": "object"
+        },
+        "was": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The entity's old name in the same app: a rename that keeps the table's rows."
+        },
+        "pk": {
+          "anyOf": [
+            {
+              "enum": [
+                "uuid",
+                "bigint"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The key type: uuid (BaseModel) or bigint (BigIntBaseModel). Default: the project's KARNI_PK."
+        },
+        "external": {
+          "default": false,
+          "description": "A table or view another system owns: Meta.managed = False and class Karni: external = True. No migration changes it, and it is read-only unless writable.",
+          "type": "boolean"
+        },
+        "table": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "With external: the table or view, as [schema.]table (Meta.db_table)."
+        },
+        "writable": {
+          "default": false,
+          "description": "With external: the API and the admin may write it (Karni.writable).",
+          "type": "boolean"
+        },
+        "database": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The DATABASES alias its reads, writes and migrations go to (Karni.database). Default: default."
+        },
+        "tree": {
+          "default": false,
+          "description": "Experimental. A hierarchy: true inherits TreeModel (a parent field and the tree endpoints), ordered inherits OrderedTreeModel (also a position among siblings).",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "const": "ordered",
+              "type": "string"
+            }
+          ]
+        },
+        "taxonomies": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Experimental. Tag the entity to tree entities: key -> tree entity (Name or app.Name). Each key is a many-to-many of that name, with the list filters ?<key>= and ?<key>_descendants=, the facets/ counts and the tree:<key> scope (class Karni: taxonomies).",
+          "propertyNames": {
+            "pattern": "^(?:x-.*|[a-z][a-z0-9_]*)$"
+          },
+          "type": "object"
+        },
+        "key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The natural key imports match rows on (Karni.import_key)."
+        },
+        "help": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "One line that says what the entity is for, shown at the top of its admin list and form (class Karni: help). Without it the admin shows no line."
+        },
+        "search": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "The viewset's search_fields."
+        },
+        "global_search": {
+          "default": false,
+          "description": "Cross-model search (class Karni: search, GET /api/search/): true, or a mapping {fields, title, subtitle, weight}. The fields default to search.",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/GlobalSearch"
+            }
+          ]
+        },
+        "owner": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The owner field the own scope uses (Karni.owner_field)."
+        },
+        "audit": {
+          "default": false,
+          "description": "Change history (Karni.audit): true, or a list of fields.",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "groups": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "Field groups: title -> fields (Karni.field_groups): sections of the React form and detail page and fieldsets of the admin. The fields in no group come last, in Other.",
+          "type": "object"
+        },
+        "column_sets": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "Column presets of the React table: name -> fields (Karni.column_sets). The set named default shows first, else the first set.",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "type": "object"
+        },
+        "order": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Default ordering (Meta.ordering), - for descending."
+        },
+        "scope_paths": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Keys the related:<key> scope uses -> lookup path (Karni.scope_paths).",
+          "type": "object"
+        },
+        "access": {
+          "description": "Who reads and writes: a mapping {read, write, create}, or code.",
+          "oneOf": [
+            {
+              "const": "code",
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/Access"
+            }
+          ]
+        },
+        "aggregate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Aggregate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "What GET <resource>/aggregate/ may group by and sum (Karni.aggregate): group_by, values, metrics."
+        },
+        "cache": {
+          "anyOf": [
+            {
+              "oneOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The viewset's response caching: a lifetime in seconds (Cache(ttl=...)), or false (Uncached(reason=\"spec\")). Default: KARNI_API_CACHE and KARNI_API_CACHE_TTL."
+        }
+      },
+      "type": "object"
+    },
+    "Features": {
+      "additionalProperties": false,
+      "description": "Experimental. ``features:``: built-in options, each switched by a setting.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "two_factor": {
+          "default": false,
+          "description": "KARNI_2FA. Needs karni[2fa].",
+          "type": "boolean"
+        },
+        "email_code_login": {
+          "default": false,
+          "description": "KARNI_EMAIL_OTP: sign-in with a code.",
+          "type": "boolean"
+        },
+        "social_login": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "KARNI_SOCIAL_TOKEN_PROVIDERS: the providers, of google, microsoft, apple. Their client ids stay in settings or .env. Needs karni[social-token]."
+        },
+        "terms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Terms"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "KARNI_TERMS: the terms acceptance gate."
+        },
+        "user_grants": {
+          "default": false,
+          "description": "KARNI_USER_GRANTS: per-user grants next to the role grants.",
+          "type": "boolean"
+        },
+        "api_cache": {
+          "default": false,
+          "description": "KARNI_API_CACHE: cached list and detail responses, invalidated on every write. true, or {ttl: <seconds>} to set KARNI_API_CACHE_TTL too.",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/ApiCache"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "FieldEntry": {
+      "additionalProperties": false,
+      "description": "Experimental. A field written as a mapping, to say what it was called before.\n\n``title: {type: \"str:200\", was: name}`` is the field ``title`` of type\n``str:200``, which ``karni plan`` and ``karni build`` treat as the field\n``name`` renamed: the column keeps its rows.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "type": {
+          "description": "The field's type, as in the short form (str:200, fk:Studio).",
+          "type": "string"
+        },
+        "was": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The field's old name: a rename that keeps the column and its rows."
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "GlobalSearch": {
+      "additionalProperties": false,
+      "description": "Experimental. ``global_search:`` of an entity as a mapping: ``class Karni: search``.\n\nEvery key is optional. ``fields`` defaults to the entity's ``search``\nlist, ``title`` to the first field, ``weight`` to 1.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "fields": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The text fields the query is matched with (default: search)."
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The field a hit shows as its title (default: the first field)."
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A field shown under the title, or a path through a relation."
+        },
+        "weight": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "default": 1,
+          "description": "Multiplies the entity's scores across entities (default 1).",
+          "gt": 0
+        }
+      },
+      "type": "object"
+    },
+    "NavigationEntry": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "items": {
+                  "$ref": "#/$defs/NavigationEntry"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/$defs/NavigationOptions"
+              }
+            ]
+          },
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1
+        }
+      ]
+    },
+    "NavigationOptions": {
+      "additionalProperties": false,
+      "description": "Experimental. A ``navigation:`` entry written as a mapping's value: a page's or a group's options.\n\nA page takes ``label``, ``icon`` and ``requires``. A group takes\n``items`` (its entries), ``icon`` and ``requires``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A page's label in the menu (default: its title)."
+        },
+        "icon": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "An icon name the frontend knows, e.g. home."
+        },
+        "requires": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "public, authenticated or a permission pattern (app.entity:action). Default: from the page's access, and for a group public when one of its entries is."
+        },
+        "items": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/NavigationEntry"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A group's entries."
+        }
+      },
+      "type": "object"
+    },
+    "Role": {
+      "additionalProperties": false,
+      "description": "Experimental. One role of ``roles:``: an entry of ``KARNI_ROLES``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The role's name (default: from the slug)."
+        },
+        "description": {
+          "default": "",
+          "description": "What the role is for.",
+          "type": "string"
+        },
+        "system": {
+          "default": false,
+          "description": "A system role cannot be deleted in the admin.",
+          "type": "boolean"
+        },
+        "default": {
+          "type": "boolean",
+          "default": false,
+          "description": "Every self-registered user gets it (KARNI_ACCOUNTS_DEFAULT_ROLES)."
+        },
+        "grants": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Permission pattern -> scope. Patterns: \"*\", app.entity, app.entity:action, with * for a part. Scopes: all, own, own:<owner field>, related:<scope path key>, custom:<registered name>, tree:<path to a tree entity> (experimental).",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "Terms": {
+      "additionalProperties": false,
+      "description": "Experimental. ``features.terms``: ``KARNI_TERMS``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "version": {
+          "description": "The current terms version, e.g. 2026-11.",
+          "type": "string"
+        },
+        "url": {
+          "description": "Where the terms are, e.g. /terms/.",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "description": "False keeps the routes and gates nothing.",
+          "type": "boolean"
+        },
+        "paths": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "URL prefixes the gate covers (default [\"/api/\"])."
+        },
+        "exempt": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "URL prefixes the gate leaves open."
+        }
+      },
+      "required": [
+        "version",
+        "url"
+      ],
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "patternProperties": {
+    "^x-": {}
+  },
+  "properties": {
+    "version": {
+      "const": 1,
+      "description": "The format version: 1.",
+      "type": "integer"
+    },
+    "app": {
+      "$ref": "#/$defs/AppInfo",
+      "description": "What the project is."
+    },
+    "modules": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "description": "karni add <name>, with the module's options (its KARNI_<MODULE>_* settings).",
+      "propertyNames": {
+        "anyOf": [
+          {
+            "enum": [
+              "ai",
+              "approvals",
+              "charts",
+              "impersonation",
+              "payments",
+              "reports",
+              "site",
+              "storage"
+            ]
+          },
+          {
+            "pattern": "^x-"
+          }
+        ]
+      },
+      "type": "object"
+    },
+    "features": {
+      "$ref": "#/$defs/Features",
+      "description": "Built-in options."
+    },
+    "roles": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Role"
+      },
+      "description": "KARNI_ROLES: slug -> role.",
+      "propertyNames": {
+        "pattern": "^(?:x-.*|[A-Za-z0-9][A-Za-z0-9_.-]*)$"
+      },
+      "type": "object"
+    },
+    "apps": {
+      "additionalProperties": {
+        "$ref": "#/$defs/App"
+      },
+      "description": "App label -> app.",
+      "propertyNames": {
+        "pattern": "^(?:x-.*|[a-z][a-z0-9_]*)$"
+      },
+      "type": "object"
+    },
+    "pages": {
+      "description": "karni make page, in navigation order. Each item is one key: an entity with its pages (list, detail, form, or {detail: {related: [Deal]}} for related tabs), or a page name with its kind (blank, login, dashboard: the scaffold's home page for home and a page of charts for any other name, or code: a page of the project's own at /<name>, which karni build leaves alone).",
+      "items": {
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/$defs/DetailPage"
+                  }
+                ]
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "type": "object",
+        "minProperties": 1,
+        "maxProperties": 1
+      },
+      "type": "array"
+    },
+    "navigation": {
+      "default": false,
+      "description": "Experimental. The menu karni build writes to KARNI_NAVIGATION: true for every page of pages in their order, or a list of pages (by their key) and groups ({label: [entries]}), each page with optional {label, icon, requires}.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/NavigationEntry"
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "seed": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "description": "Entity -> demo rows per karni seed run (a Seeder's Meta.count).",
+      "propertyNames": {
+        "pattern": "^(?:x-.*|[A-Z][A-Za-z0-9]*)$"
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "version",
+    "app"
+  ],
+  "type": "object"
+}

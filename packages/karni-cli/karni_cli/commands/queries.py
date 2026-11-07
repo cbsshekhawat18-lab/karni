@@ -4,7 +4,9 @@ Wraps ``manage.py karni_queries`` (:mod:`karni.api.diagnose`), run in the
 project's interpreter: one request in-process (writes rolled back), every
 statement with the stack that issued it, the repeated ones grouped by cause
 (the serializer field, the relation, why the optimiser did not fetch it) and
-the fix. ``--json`` for agents.
+the fix. ``--json`` for agents. ``--explain`` adds the plans: on PostgreSQL
+``EXPLAIN ANALYZE`` of every query and the sequential scans to fix
+(:mod:`karni.api.explain`, experimental).
 """
 
 from __future__ import annotations
@@ -77,7 +79,12 @@ def queries(
     ),
     as_json: bool = typer.Option(False, "--json", help="Machine-readable output."),
     explain: bool = typer.Option(
-        False, "--explain", help="Add EXPLAIN plans for the slowest queries."
+        False,
+        "--explain",
+        help="Add the plans. On PostgreSQL: EXPLAIN ANALYZE of every query, rolled back with the "
+        "request, and each sequential scan on a table of KARNI_EXPLAIN_SEQ_SCAN_ROWS rows or more "
+        "(default 1000) with the index that would serve it. Elsewhere: plain EXPLAIN of the "
+        "slowest queries.",
     ),
     every: bool = typer.Option(False, "--all", help="List every statement, not only repeats."),
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),

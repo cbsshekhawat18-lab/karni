@@ -1,8 +1,0 @@
-Created <REDACTED>/audit/t5/timing/timing_app (24 agent adapter files)
-@karni/ui: file:<REDACTED>/packages/karni-ui (local checkout)
-Next steps:
-  cd timing_app
-  cp .env.example .env
-  docker compose up -d
-  (cd frontend && npm install)  # editor, lint, type-check and `karni check` on the host
-  karni check

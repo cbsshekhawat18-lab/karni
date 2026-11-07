@@ -11,15 +11,24 @@ Opt-out, on either clone's ``def`` line (or the line above)::
 
 Config: ``KARNI_ARCHITECTURE["dup"] = {"min_statements": 8,
 "exclude": ["*/migrations/*"]}``.
+
+Each file's fingerprints are kept in ``karni check``'s cache
+(:mod:`karni.testing.checkcache`, experimental), so an unchanged file, and
+Karni's own source, are not parsed again. With ``--changed`` a clone is
+reported only when one side is in a changed file.
 """
 
 from __future__ import annotations
 
 import ast
+import hashlib
 from collections import defaultdict
+from functools import partial
 from pathlib import Path
+from typing import Any
 
 import karni
+from karni.testing import checkcache
 from karni.testing._source import (
     Violation,
     check_optout,
@@ -67,22 +76,35 @@ def _function_fingerprint(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple
     return ast.dump(module), statements
 
 
+def _fingerprints(path: Path, min_statements: int) -> list[list[Any]]:
+    """``[[fingerprint, line], ...]``: the functions of ``path`` big enough to compare."""
+    try:
+        tree = ast.parse(path.read_text())
+    except (OSError, SyntaxError, ValueError):
+        return []
+    found: list[list[Any]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            printed = _function_fingerprint(node)
+            if printed is None:
+                continue
+            fingerprint, statements = printed
+            if statements >= min_statements:
+                digest = hashlib.sha256(fingerprint.encode()).hexdigest()
+                found.append([digest, node.lineno])
+    return found
+
+
 def _collect(paths: list[Path], origin: str) -> dict[str, list[tuple[str, Path, int]]]:
+    """Fingerprint -> ``(origin, path, line)``; each file's fingerprints from the check cache."""
     groups: dict[str, list[tuple[str, Path, int]]] = defaultdict(list)
     min_statements = int(config("dup")["min_statements"])
+    cache = checkcache.active()
+    cache.extra("duplicate", str(min_statements))
     for path in paths:
-        try:
-            tree = ast.parse(path.read_text())
-        except (OSError, SyntaxError):
-            continue
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                printed = _function_fingerprint(node)
-                if printed is None:
-                    continue
-                fingerprint, statements = printed
-                if statements >= min_statements:
-                    groups[fingerprint].append((origin, path, node.lineno))
+        found = cache.per_file("duplicate", path, partial(_fingerprints, path, min_statements))
+        for fingerprint, lineno in found:
+            groups[fingerprint].append((origin, path, lineno))
     return groups
 
 
@@ -102,11 +124,14 @@ def run_check() -> list[str]:
         if fingerprint in groups:
             groups[fingerprint].extend(members)
 
+    cache = checkcache.active()
     failures: list[str] = []
     for members in groups.values():
         project_members = [m for m in members if m[0] == "project"]
         if len(members) < 2 or not project_members:
             continue
+        if not any(cache.wanted(path) for _origin, path, _line in project_members):
+            continue  # --changed: no clone in a changed file
         karni_members = [m for m in members if m[0] == "karni"]
         remaining: list[Violation] = []
         for _origin, path, lineno in project_members:

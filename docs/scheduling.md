@@ -83,7 +83,9 @@ environment without editing code. `karni schedule list` shows such a row as
 `settings.CELERY_BEAT_SCHEDULE (overrides shop.schedules)`.
 
 Karni's own daily `karni-flush-expired-tokens` entry lives in
-`CELERY_BEAT_SCHEDULE` (see `karni.conf`).
+`CELERY_BEAT_SCHEDULE` (see `karni.conf`). `karni.accounts` declares
+`karni-flush-login-codes` (hourly) in its own `schedules.py`, only while
+[sign-in with a code](accounts.md#sign-in-with-a-code-sent-by-email) is on.
 
 Removing a declaration does not delete its `PeriodicTask` row. Beat just
 stops refreshing it. Disable or delete the row in the admin
@@ -96,7 +98,7 @@ never re-enables it.
 |---|---|---|
 | `karni schedule list [--json]` | `manage.py karni_schedules` | every merged schedule: name, task, timing, source |
 | `karni schedule run <name>` | `manage.py karni_schedules --run <name>` | runs the task once, synchronously, with its args, and exits non-zero if it raised |
-| `karni worker [ARGS]` | `python -m celery -A config worker -l info` | a worker (`-Q`, `--concurrency` … pass through) |
+| `karni worker [--pool P] [ARGS]` | `python -m celery -A config worker -l info` | a worker (`-Q`, `--concurrency` … pass through). On a Mac it runs the `threads` pool |
 | `karni beat [ARGS]` | `python -m celery -A config beat -l info` | the scheduler. Run exactly one |
 
 All four run through the project interpreter: the project's `.venv` if there
@@ -105,6 +107,14 @@ scaffold's `worker` and `beat` services already run. `karni worker` and
 `karni beat` are for `.venv` development (`karni serve --local`) or a one-off
 extra worker. Use `-A/--app` (or `KARNI_CELERY_APP`) if your Celery app is
 not `config`.
+
+Celery's default `prefork` pool fails every task on macOS (billiard starts
+its processes with `spawn` there), so `karni worker` on a Mac runs the
+`threads` pool: several tasks at once, as in production, and the worker keeps
+answering the health check while a task runs. `--pool solo` runs one task at
+a time. In development a broker read gives up after 5 seconds
+(`CELERY_BROKER_TRANSPORT_OPTIONS` in the dev profile), so a stopping worker
+exits even when Redis does not answer its last poll.
 
 `karni schedule run` executes in-process with Celery's `Task.apply()`, so no
 broker or worker is needed. It is the quickest way to check that a scheduled

@@ -2,7 +2,11 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as React from "react";
 import { cn } from "../../lib/cn";
 import { registerComponentRole } from "../../lib/roles";
+import { useNavigation } from "../../hooks/useNavigation";
 import { KarniMark } from "../brand/karni-mark";
+import { Skeleton } from "../primitives/skeleton";
+import { navigationEntries } from "./navigation";
+import { GlobalSearch, type GlobalSearchProps } from "../global-search/global-search";
 import { useRouteFocus, type LayoutRouteFocusOptions } from "./route-focus";
 
 export type { LayoutRouteFocusOptions } from "./route-focus";
@@ -50,6 +54,24 @@ function CloseIcon(props: IconProps): React.ReactElement {
   );
 }
 
+function ChevronIcon(props: IconProps): React.ReactElement {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable={false}
+      {...props}
+    >
+      <polyline points="9 6 15 12 9 18" />
+    </svg>
+  );
+}
+
 export interface LayoutNavItem {
   /** Visible label of the nav entry. */
   label: React.ReactNode;
@@ -61,6 +83,45 @@ export interface LayoutNavItem {
   active?: boolean;
   /** React key override when `href` is not unique. */
   key?: string;
+}
+
+/**
+ * Experimental. A collapsible group of the sidebar nav: a label and the
+ * entries under it (links and further groups), with no link of its own.
+ */
+export interface LayoutNavGroup {
+  /** Visible label of the group's button. */
+  label: React.ReactNode;
+  /** Optional icon rendered before the label. */
+  icon?: React.ReactNode;
+  /** The entries inside the group, in order. */
+  children: readonly LayoutNavEntry[];
+  /** Open on the first render. Default: open while it holds the current page. */
+  defaultOpen?: boolean;
+  /** React key override (default: the index). */
+  key?: string;
+}
+
+/** A sidebar nav entry: a link (`LayoutNavItem`) or, experimental, a group (`LayoutNavGroup`). */
+export type LayoutNavEntry = LayoutNavItem | LayoutNavGroup;
+
+/** Experimental. Whether a nav entry is a group (it has `children`). */
+export function isNavGroup(entry: LayoutNavEntry): entry is LayoutNavGroup {
+  return "children" in entry && Array.isArray(entry.children);
+}
+
+/** Experimental. What the `NavGroup` slot receives. */
+export interface LayoutNavGroupProps {
+  group: LayoutNavGroup;
+  /** Whether the entries show. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** True while an entry inside is the current page. */
+  active: boolean;
+  /** The id of the element that holds the entries (the button's aria-controls). */
+  id: string;
+  /** The rendered entries. */
+  children: React.ReactNode;
 }
 
 /** What the `NavLink` slot receives: the props of the <a> it replaces, plus the item. */
@@ -129,11 +190,29 @@ export interface LayoutSlots {
   MobileDrawer: React.ComponentType<LayoutMobileDrawerProps>;
   /** "Skip to content", visible only while focused. `() => null` removes it. */
   SkipLink: React.ComponentType<LayoutSkipLinkProps>;
+  /** Experimental. A collapsible group of the nav: its button and its entries. */
+  NavGroup?: React.ComponentType<LayoutNavGroupProps>;
 }
 
 export interface LayoutProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Items of the derived sidebar nav. */
-  navItems?: readonly LayoutNavItem[];
+  /** Entries of the derived sidebar nav: links, and (experimental) collapsible groups. */
+  navItems?: readonly LayoutNavEntry[];
+  /**
+   * Experimental. Where the nav comes from. `"static"` (the default) renders
+   * `navItems`. `"server"` renders the menu `useNavigation()` reads from
+   * `GET /navigation/` (Django's `KARNI_NAVIGATION`), filtered by the
+   * user's grants, with `navItems` shown if that request fails. It needs
+   * `KarniProvider`.
+   */
+  navSource?: "static" | "server";
+  /**
+   * Experimental. The current route's path: marks the current page of the
+   * server menu. Default: `window.location.pathname`. Pass your router's
+   * pathname so the mark follows client-side navigation.
+   */
+  pathname?: string;
+  /** Experimental. Icons by name for the server menu, over `defaultNavIcons`. */
+  icons?: Readonly<Record<string, React.ReactNode>>;
   /**
    * Wraps or replaces the default link of one item. `defaultNode` is the
    * link the layout would render. Return it, or your own node (e.g. a
@@ -155,6 +234,12 @@ export interface LayoutProps extends React.HTMLAttributes<HTMLDivElement> {
   sidebarFooter?: React.ReactNode;
   /** Header slot, rendered in the top bar next to the mobile menu button. */
   header?: React.ReactNode;
+  /**
+   * Experimental. Mounts the GlobalSearch command palette in the top bar,
+   * before `header`: `true` with its defaults (Cmd or Ctrl+K opens it), or
+   * its props (`{ onSelect, hrefFor, models }`). Default: none.
+   */
+  search?: boolean | GlobalSearchProps;
   /** Accessible name of the sidebar navigation (default "Main"). */
   navLabel?: string;
   /** Controlled open state of the mobile drawer (pair with onMobileNavOpenChange). */
@@ -282,6 +367,113 @@ function DefaultMobileDrawer({
   );
 }
 
+function DefaultNavGroup({
+  group,
+  open,
+  onOpenChange,
+  active,
+  id,
+  children,
+}: LayoutNavGroupProps): React.ReactElement {
+  const buttonId = `${id}-button`;
+  return (
+    <div className="grid gap-1">
+      <button
+        id={buttonId}
+        type="button"
+        aria-expanded={open}
+        aria-controls={id}
+        data-active={active ? "true" : undefined}
+        onClick={() => onOpenChange(!open)}
+        className={cn(
+          NAV_ITEM_CLASS,
+          "w-full justify-between text-left",
+          active && !open && "text-foreground",
+        )}
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          {group.icon != null && <span aria-hidden="true">{group.icon}</span>}
+          {group.label}
+        </span>
+        <ChevronIcon className={cn("shrink-0 transition-transform", open && "rotate-90")} />
+      </button>
+      <div
+        id={id}
+        role="group"
+        aria-labelledby={buttonId}
+        hidden={!open}
+        className="ml-4 grid gap-1 border-l border-border pl-2"
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function holdsActive(entries: readonly LayoutNavEntry[]): boolean {
+  return entries.some((entry) =>
+    isNavGroup(entry) ? holdsActive(entry.children) : entry.active === true,
+  );
+}
+
+function GroupEntry({
+  group,
+  NavGroup,
+  children,
+}: {
+  group: LayoutNavGroup;
+  NavGroup: React.ComponentType<LayoutNavGroupProps>;
+  children: React.ReactNode;
+}): React.ReactElement {
+  const active = holdsActive(group.children);
+  const [open, setOpen] = React.useState(group.defaultOpen ?? active);
+  // Navigating into a closed group opens it, so the current page is in view.
+  React.useEffect(() => {
+    if (active) setOpen(true);
+  }, [active]);
+  const id = React.useId();
+  return (
+    <NavGroup group={group} open={open} onOpenChange={setOpen} active={active} id={id}>
+      {children}
+    </NavGroup>
+  );
+}
+
+function currentPath(): string {
+  return typeof window === "undefined" ? "/" : window.location.pathname;
+}
+
+/** The server menu: its entries once loaded, placeholders while loading, `fallback` on error. */
+function ServerNav({
+  pathname,
+  icons,
+  fallback,
+  render,
+  navLabel,
+}: {
+  pathname: string | undefined;
+  icons: Readonly<Record<string, React.ReactNode>> | undefined;
+  fallback: readonly LayoutNavEntry[];
+  render: (entries: readonly LayoutNavEntry[]) => React.ReactNode;
+  navLabel: string;
+}): React.ReactElement {
+  const menu = useNavigation();
+  if (menu.isPending) {
+    return (
+      <nav aria-label={navLabel} aria-busy="true" className="grid gap-2 px-3 py-2">
+        <Skeleton className="h-5 w-3/4" />
+        <Skeleton className="h-5 w-1/2" />
+        <Skeleton className="h-5 w-2/3" />
+      </nav>
+    );
+  }
+  const entries =
+    menu.data === undefined
+      ? fallback
+      : navigationEntries(menu.data.items, { pathname: pathname ?? currentPath(), icons });
+  return <>{render(entries)}</>;
+}
+
 function DefaultSkipLink({ href, onClick, children }: LayoutSkipLinkProps): React.ReactElement {
   return (
     <a
@@ -301,6 +493,7 @@ export const defaultLayoutSlots: LayoutSlots = {
   NavLink: DefaultNavLink,
   MobileDrawer: DefaultMobileDrawer,
   SkipLink: DefaultSkipLink,
+  NavGroup: DefaultNavGroup,
 };
 
 /**
@@ -316,7 +509,16 @@ export const defaultLayoutSlots: LayoutSlots = {
  * a live region says its title (`routeFocus`). Render the Layout once,
  * around your router's outlet, so it sees the route change.
  *
- * Escape hatches: `slots` replaces the Header, Sidebar, NavLink,
+ * The nav is `navItems` (links and collapsible groups), or with
+ * `navSource="server"` (experimental) the menu the server gives the
+ * signed-in user (`useNavigation`, Django's `KARNI_NAVIGATION`): groups
+ * collapse with a button (Enter or Space), icons come by name (`icons`
+ * over `defaultNavIcons`) and the current page is marked from `pathname`.
+ *
+ * `search` mounts the GlobalSearch command palette in the top bar
+ * (experimental).
+ *
+ * Escape hatches: `slots` replaces the Header, Sidebar, NavLink, NavGroup,
  * MobileDrawer or SkipLink. `renderNavItem` wraps each derived link.
  * `sidebar` replaces the derived nav wholesale. `sidebarHeader`,
  * `sidebarFooter` and `header` are free slots. `mobileNavOpen` controls
@@ -327,11 +529,15 @@ export const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
   (
     {
       navItems = [],
+      navSource = "static",
+      pathname,
+      icons,
       renderNavItem,
       sidebar,
       sidebarHeader = <KarniMark className="mx-3" />,
       sidebarFooter,
       header,
+      search,
       navLabel = "Main",
       mobileNavOpen,
       defaultMobileNavOpen = false,
@@ -347,10 +553,11 @@ export const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
     },
     ref,
   ) => {
-    const { Header, Sidebar, NavLink, MobileDrawer, SkipLink } = {
+    const { Header, Sidebar, NavLink, MobileDrawer, SkipLink, NavGroup } = {
       ...defaultLayoutSlots,
       ...slots,
     };
+    const Group = NavGroup ?? DefaultNavGroup;
     const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultMobileNavOpen);
     const open = mobileNavOpen ?? uncontrolledOpen;
     const setOpen = React.useCallback(
@@ -394,33 +601,53 @@ export const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
       return () => window.removeEventListener("resize", closeIfWide);
     }, [open, setOpen]);
 
-    const nav = sidebar ?? (
-      <nav aria-label={navLabel} className="grid gap-1">
-        {navItems.map((item) => {
-          const defaultClassName = cn(
-            NAV_ITEM_CLASS,
-            item.active === true && NAV_ITEM_ACTIVE_CLASS,
-          );
-          const defaultNode = (
-            <NavLink
-              item={item}
-              href={item.href}
-              aria-current={item.active === true ? "page" : undefined}
-              className={defaultClassName}
-              onClick={closeMobile}
-            >
-              {item.icon != null && <span aria-hidden="true">{item.icon}</span>}
-              {item.label}
-            </NavLink>
-          );
+    const renderEntries = (entries: readonly LayoutNavEntry[]): React.ReactNode =>
+      entries.map((entry, index) => {
+        if (isNavGroup(entry)) {
           return (
-            <React.Fragment key={item.key ?? item.href}>
-              {renderNavItem ? renderNavItem(item, { defaultNode, defaultClassName }) : defaultNode}
-            </React.Fragment>
+            <GroupEntry key={entry.key ?? `group-${index}`} group={entry} NavGroup={Group}>
+              {renderEntries(entry.children)}
+            </GroupEntry>
           );
-        })}
+        }
+        const item = entry;
+        const defaultClassName = cn(NAV_ITEM_CLASS, item.active === true && NAV_ITEM_ACTIVE_CLASS);
+        const defaultNode = (
+          <NavLink
+            item={item}
+            href={item.href}
+            aria-current={item.active === true ? "page" : undefined}
+            className={defaultClassName}
+            onClick={closeMobile}
+          >
+            {item.icon != null && <span aria-hidden="true">{item.icon}</span>}
+            {item.label}
+          </NavLink>
+        );
+        return (
+          <React.Fragment key={item.key ?? item.href}>
+            {renderNavItem ? renderNavItem(item, { defaultNode, defaultClassName }) : defaultNode}
+          </React.Fragment>
+        );
+      });
+    const renderNav = (entries: readonly LayoutNavEntry[]): React.ReactNode => (
+      <nav aria-label={navLabel} className="grid gap-1">
+        {renderEntries(entries)}
       </nav>
     );
+    const nav =
+      sidebar ??
+      (navSource === "server" ? (
+        <ServerNav
+          pathname={pathname}
+          icons={icons}
+          fallback={navItems}
+          render={renderNav}
+          navLabel={navLabel}
+        />
+      ) : (
+        renderNav(navItems)
+      ));
     const column = { header: sidebarHeader, nav, footer: sidebarFooter };
 
     const menuButton = (
@@ -459,7 +686,14 @@ export const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <Header menuButton={menuButton} className={headerClassName}>
-            {header}
+            {search === undefined || search === false ? (
+              header
+            ) : (
+              <>
+                <GlobalSearch {...(search === true ? {} : search)} />
+                {header}
+              </>
+            )}
           </Header>
           <main
             ref={mainRef}

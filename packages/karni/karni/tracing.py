@@ -11,7 +11,10 @@ request causes carries it:
   ``karni_request_id`` message header written on ``before_task_publish`` and
   restored on ``task_prerun`` (a retry is published from inside the running
   task, so it inherits the same id); a task started with no id (beat, a
-  shell) gets a fresh one, so its own work still correlates;
+  shell) gets a fresh one, so its own work still correlates. The request's
+  origin travels the same way (``karni_origin``), so :func:`get_origin` in a
+  task builds an absolute link, such as the admin link of an email a queued
+  listener sends;
 * **email** — ``X-Karni-Request-ID`` on every ``EmailMessage.send()``;
 * **outgoing HTTP** — :func:`outgoing_headers` for the call you make;
 * **change history** — ``ChangeLog.request_id`` and ``ChangeBatch.request_id``.
@@ -48,10 +51,12 @@ from django.http import HttpRequest, HttpResponseBase
 __all__ = [
     "CELERY_HEADER",
     "EMAIL_HEADER",
+    "ORIGIN_HEADER",
     "REQUEST_ID_HEADER",
     "RequestIdMiddleware",
     "bound_request_id",
     "connect",
+    "get_origin",
     "get_request_id",
     "is_valid_request_id",
     "new_request_id",
@@ -66,17 +71,48 @@ REQUEST_ID_HEADER: Final = "X-Request-ID"
 EMAIL_HEADER: Final = "X-Karni-Request-ID"
 #: The Celery message header carrying the id to the worker.
 CELERY_HEADER: Final = "karni_request_id"
+#: The Celery message header carrying the origin of the request that queued a task.
+ORIGIN_HEADER: Final = "karni_origin"
 
 _META_KEY: Final = "HTTP_X_REQUEST_ID"
 _VALID: Final = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 _UID: Final = "karni.tracing."
 
 _request_id: ContextVar[str | None] = ContextVar("karni_request_id", default=None)
+#: The origin a task's message carried (``karni_origin``), while the task runs.
+_origin: ContextVar[str | None] = ContextVar("karni_origin", default=None)
+_ORIGIN: Final = re.compile(r"^https?://[A-Za-z0-9.\-\[\]:]{1,300}$")
 
 
 def get_request_id() -> str | None:
     """The id of the unit of work running now (a request, a task), or ``None``."""
     return _request_id.get()
+
+
+def get_origin() -> str | None:
+    """``"https://www.example.com"``: the scheme and host of the request running now.
+
+    In a Celery task, the origin of the request that queued it (the
+    ``karni_origin`` header). ``None`` with neither (beat, a shell, a host the
+    request named that ``ALLOWED_HOSTS`` refuses). The host is the one the
+    visitor reached, checked by ``ALLOWED_HOSTS``. A site with one address
+    sets it instead (karni-site's ``KARNI_SITE_URL``).
+    """
+    carried = _origin.get()
+    if carried:
+        return carried
+    from django.core.exceptions import DisallowedHost
+
+    from karni.middleware import _current_request
+
+    request = _current_request.get()
+    if request is None:
+        return None
+    try:
+        origin = f"{request.scheme}://{request.get_host()}"
+    except DisallowedHost:
+        return None
+    return origin if _ORIGIN.match(origin) else None
 
 
 def new_request_id() -> str:
@@ -219,9 +255,11 @@ class RequestIdMiddleware:
 
 # --- Celery ------------------------------------------------------------------
 
-#: task id -> stack of (contextvar token, structlog tokens, start time); a
-#: stack because an eager retry runs the same task id nested.
-_RUNNING: dict[str, list[tuple[Token[str | None], Mapping[str, Any], float]]] = {}
+#: task id -> stack of (contextvar token, structlog tokens, start time, origin token);
+#: a stack because an eager retry runs the same task id nested.
+_RUNNING: dict[
+    str, list[tuple[Token[str | None], Mapping[str, Any], float, Token[str | None]]]
+] = {}
 
 
 def _header_id(request: Any) -> str | None:
@@ -235,6 +273,17 @@ def _header_id(request: Any) -> str | None:
     return found if is_valid_request_id(found) else None
 
 
+def _header_origin(request: Any) -> str | None:
+    """The origin a task message carried, when it is one (``https://host[:port]``)."""
+    if request is None:
+        return None
+    found = getattr(request, ORIGIN_HEADER, None)
+    if not isinstance(found, str):
+        headers = getattr(request, "headers", None)
+        found = headers.get(ORIGIN_HEADER) if isinstance(headers, Mapping) else None
+    return found if isinstance(found, str) and _ORIGIN.match(found) else None
+
+
 def _task_name(task: Any) -> str:
     return str(getattr(task, "name", None) or task or "")
 
@@ -246,9 +295,14 @@ def _trace(event: str, **fields: Any) -> None:
 
 
 def _before_task_publish(sender: Any = None, headers: Any = None, **_kwargs: Any) -> None:
+    if not isinstance(headers, dict):
+        return
     rid = get_request_id()
-    if rid and isinstance(headers, dict) and not headers.get(CELERY_HEADER):
+    if rid and not headers.get(CELERY_HEADER):
         headers[CELERY_HEADER] = rid
+    origin = get_origin()
+    if origin and not headers.get(ORIGIN_HEADER):
+        headers[ORIGIN_HEADER] = origin
 
 
 def _after_task_publish(
@@ -273,7 +327,9 @@ def _task_prerun(sender: Any = None, task_id: Any = None, task: Any = None, **_k
     # with no id at all (beat, a shell) starts its own.
     rid = _header_id(request) or get_request_id() or new_request_id()
     token, bound = _bind(rid)
-    _RUNNING.setdefault(str(task_id), []).append((token, bound, time.perf_counter()))
+    # An eager task keeps its caller's origin too: get_origin() falls back to the request.
+    origin = _origin.set(_header_origin(request) or _origin.get())
+    _RUNNING.setdefault(str(task_id), []).append((token, bound, time.perf_counter(), origin))
     _trace(
         "task.started",
         task=_task_name(task),
@@ -294,13 +350,17 @@ def _task_postrun(sender: Any = None, task_id: Any = None, **_kwargs: Any) -> No
     stack = _RUNNING.get(str(task_id))
     if not stack:
         return
-    token, bound, _started = stack.pop()
+    token, bound, _started, origin = stack.pop()
     if not stack:
         _RUNNING.pop(str(task_id), None)
     try:
         _unbind(token, bound)
     except ValueError:  # reset from another context (a pool quirk): just clear
         _request_id.set(None)
+    try:
+        _origin.reset(origin)
+    except ValueError:
+        _origin.set(None)
 
 
 def _task_success(sender: Any = None, **_kwargs: Any) -> None:

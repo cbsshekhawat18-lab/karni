@@ -8,12 +8,43 @@ colorized, human-readable console lines.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 import structlog
 
+#: Experimental. Paths whose healthy requests the request log skips (``KARNI_LOG_QUIET_PATHS``).
+DEFAULT_QUIET_PATHS: tuple[str, ...] = ("/healthz", "/readyz", "/health/")
 
-def build_logging(json: bool) -> dict[str, Any]:
+
+class QuietPaths:
+    """Experimental. A structlog processor that drops the request log lines of probe paths.
+
+    django-structlog logs ``request_started`` and ``request_finished`` for every request, and
+    a probe asked every few seconds fills the log. A request whose path is one of ``paths``
+    (or under it, for a path ending in ``/``) is dropped when it starts and when it finishes
+    below 400. A failed probe is still logged. Set ``KARNI_LOG_QUIET_PATHS = ()`` to log all.
+    """
+
+    def __init__(self, paths: Sequence[str]) -> None:
+        self.paths = tuple(paths)
+
+    def __call__(self, logger: Any, method: str, event_dict: Any) -> Any:
+        event = event_dict.get("event")
+        if self.paths and event in ("request_started", "request_finished"):
+            request = str(event_dict.get("request", ""))
+            path = request.partition(" ")[2].partition("?")[0]
+            code = event_dict.get("code")
+            failed = isinstance(code, int) and code >= 400
+            if not failed and any(
+                path == quiet or (quiet.endswith("/") and path.startswith(quiet))
+                for quiet in self.paths
+            ):
+                raise structlog.DropEvent
+        return event_dict
+
+
+def build_logging(json: bool, quiet_paths: Sequence[str] = DEFAULT_QUIET_PATHS) -> dict[str, Any]:
     """Return a Django ``LOGGING`` dict and configure structlog to match.
 
     ``json=True`` renders every log line as a JSON object (production);
@@ -35,6 +66,7 @@ def build_logging(json: bool) -> dict[str, Any]:
     assigning it to ``LOGGING``.
 
     :param json: render log lines as JSON when True, console lines when False.
+    :param quiet_paths: paths whose healthy requests are not logged (:class:`QuietPaths`).
     :returns: a dict suitable for Django's ``LOGGING`` setting.
     """
     renderer: Any
@@ -57,6 +89,7 @@ def build_logging(json: bool) -> dict[str, Any]:
 
     structlog.configure(
         processors=[
+            QuietPaths(quiet_paths),
             structlog.stdlib.filter_by_level,
             *shared_processors,
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,

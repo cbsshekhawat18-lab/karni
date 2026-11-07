@@ -15,6 +15,9 @@
  *   fall back to response-only, all readOnly,
  * - kind "file" = request-side `format: binary` (the response-side format: uri
  *   is just the display URL),
+ * - a formatted string that may be blank, `oneOf [{format}, {maxLength: 0}]`
+ *   (drf-spectacular's form for a blank email, URL or markdown field), is
+ *   that string. `format: markdown` (a MarkdownField) is kind "text",
  * - unknown/unsupported constructs land as kind "unknown" (never crash).
  *
  * This module is internal to @karni/ui (not re-exported from the barrel), but
@@ -22,12 +25,20 @@
  */
 
 import type {
+  ColumnSetDef,
+  ColumnSetsDef,
+  DashboardCountDef,
+  DashboardDef,
   FieldDef,
+  FieldGroupDef,
+  FieldGroupsDef,
   FieldKind,
   OperationDef,
   ParsedSchema,
+  RelatedDef,
   RelationRef,
   ResourceSchema,
+  TreeRef,
 } from "./types";
 
 // minimal structural OpenAPI types
@@ -184,6 +195,11 @@ interface PropertyInfo {
   relationValueType?: "uuid" | "integer" | "string";
   /** True when this side emits format: binary (request side of a file field). */
   binary: boolean;
+  transitions?: Readonly<Record<string, readonly string[]>>;
+  initial?: readonly string[];
+  tree?: TreeRef;
+  taxonomy?: string;
+  protectedFile?: true;
 }
 
 function normalizeType(schema: SchemaObject): { type: string | undefined; nullable: boolean } {
@@ -204,6 +220,37 @@ function relationFromExtension(schema: SchemaObject): RelationRef | undefined {
     return { resource: ext.resource, many: ext.many === true };
   }
   return undefined;
+}
+
+/**
+ * Experimental. The `x-karni-tree` extension (`{"parent": "parent", "ordered": bool}`)
+ * of a tree model's component schema or of a relation pointing at one, when well formed.
+ */
+export function parseTreeExtension(raw: unknown): TreeRef | undefined {
+  if (raw === true) return { parent: "parent", ordered: false };
+  if (!isRecord(raw)) return undefined;
+  const parent = typeof raw.parent === "string" && raw.parent !== "" ? raw.parent : "parent";
+  return { parent, ordered: raw.ordered === true };
+}
+
+function stringList(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+/** `x-karni-transitions` (state → next states) and `x-karni-initial`, when well formed. */
+function lifecycleFromExtension(
+  schema: SchemaObject,
+): Pick<PropertyInfo, "transitions" | "initial"> {
+  const raw = schema["x-karni-transitions"];
+  if (!isRecord(raw)) return {};
+  const transitions: Record<string, readonly string[]> = {};
+  for (const [state, next] of Object.entries(raw)) {
+    const targets = stringList(next);
+    if (targets !== undefined) transitions[state] = targets;
+  }
+  const initial = stringList(schema["x-karni-initial"]);
+  return initial !== undefined ? { transitions, initial } : { transitions };
 }
 
 function relationValueTypeOf(schema: SchemaObject): "uuid" | "integer" | "string" {
@@ -293,8 +340,37 @@ function isAnySchema(schema: SchemaObject): boolean {
   );
 }
 
+/** True for drf-spectacular's "may be blank" member: `{type: "string", maxLength: 0}`. */
+function isBlankString(schema: SchemaObject | undefined): boolean {
+  return schema !== undefined && schema.type === "string" && schema.maxLength === 0;
+}
+
+/**
+ * `oneOf [<formatted string>, {type: string, maxLength: 0}]`: drf-spectacular's
+ * schema for a formatted string field that may be blank. Returns the string
+ * member with the outer keys (readOnly, nullable, description, ...) merged in.
+ */
+function blankableString(
+  doc: OpenApiDocument,
+  schema: SchemaObject,
+  members: readonly SchemaObject[],
+): SchemaObject | undefined {
+  if (members.length !== 2) return undefined;
+  const resolved = members.map((member) => resolveSchema(doc, member));
+  const blank = resolved.findIndex(isBlankString);
+  const value = resolved[blank === 0 ? 1 : 0];
+  if (blank === -1 || value === undefined || value.type !== "string") return undefined;
+  const outer: SchemaObject = { ...schema };
+  delete outer.oneOf;
+  delete outer.anyOf;
+  return { ...value, ...outer };
+}
+
 function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo {
-  const resolved = resolveSchema(doc, raw) ?? {};
+  const found = resolveSchema(doc, raw) ?? {};
+  const members = found.oneOf ?? found.anyOf;
+  const resolved =
+    (Array.isArray(members) ? blankableString(doc, found, members) : undefined) ?? found;
   const relation = relationFromExtension(resolved);
   const { type, nullable: typeNullable } = normalizeType(resolved);
 
@@ -312,7 +388,15 @@ function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo 
     max: resolved.maximum,
     relation,
     binary: false,
+    ...lifecycleFromExtension(resolved),
   };
+  const tree = parseTreeExtension(resolved["x-karni-tree"] ?? raw["x-karni-tree"]);
+  if (tree !== undefined) info.tree = tree;
+  const taxonomy = resolved["x-karni-taxonomy"] ?? raw["x-karni-taxonomy"];
+  if (typeof taxonomy === "string" && taxonomy !== "") info.taxonomy = taxonomy;
+
+  const storage = resolved["x-karni-storage"] ?? raw["x-karni-storage"];
+  if (isRecord(storage) && storage["protected"] === true) info.protectedFile = true;
 
   // drf-spectacular nullable/blank enums: oneOf [XEnum, BlankEnum?, NullEnum?].
   const composition = resolved.oneOf ?? resolved.anyOf;
@@ -353,6 +437,9 @@ function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo 
         info.kind = "date";
       } else if (resolved.format === "date-time") {
         info.kind = "datetime";
+      } else if (resolved.format === "markdown") {
+        // A MarkdownField: long text, edited with a preview and shown formatted.
+        info.kind = "text";
       } else if (resolved.format === undefined && resolved.maxLength === undefined) {
         // CharField always emits maxLength; a bare string is a TextField.
         info.kind = "text";
@@ -465,8 +552,137 @@ function mergeField(
     const valueType = requestInfo?.relationValueType ?? responseInfo?.relationValueType;
     if (valueType !== undefined) field.relationValueType = valueType;
   }
+  const transitions = responseInfo?.transitions ?? requestInfo?.transitions;
+  if (transitions !== undefined) field.transitions = transitions;
+  const initial = responseInfo?.initial ?? requestInfo?.initial;
+  if (initial !== undefined) field.initial = initial;
+  const tree = requestInfo?.tree ?? responseInfo?.tree;
+  if (tree !== undefined && relation !== undefined) field.tree = tree;
+  const taxonomy = responseInfo?.taxonomy ?? requestInfo?.taxonomy;
+  if (taxonomy !== undefined && relation !== undefined) field.taxonomy = taxonomy;
+  if (responseInfo?.protectedFile === true || requestInfo?.protectedFile === true) {
+    field.protected = true;
+  }
 
   return field;
+}
+
+// dashboard (x-karni-dashboard)
+
+type DashboardParam = DashboardCountDef["params"][string];
+
+function isScalar(value: unknown): value is string | number | boolean {
+  return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+}
+
+function dashboardParams(raw: unknown): DashboardCountDef["params"] | undefined {
+  if (!isRecord(raw)) return undefined;
+  const params: Record<string, DashboardParam> = {};
+  for (const [name, value] of Object.entries(raw)) {
+    if (isScalar(value)) params[name] = value;
+    else if (Array.isArray(value)) params[name] = value.filter(isScalar);
+  }
+  return Object.keys(params).length > 0 ? params : undefined;
+}
+
+/**
+ * The `x-karni-dashboard` extension of a list operation. The server fills in
+ * every default, so this only checks the shapes, dropping what is malformed.
+ */
+export function parseDashboard(raw: unknown): DashboardDef | undefined {
+  if (!isRecord(raw) || typeof raw.label !== "string") return undefined;
+  const counts: DashboardCountDef[] = [];
+  if (Array.isArray(raw.counts)) {
+    for (const entry of raw.counts) {
+      if (!isRecord(entry) || typeof entry.label !== "string") continue;
+      const params = dashboardParams(entry.params);
+      if (params !== undefined) counts.push({ label: entry.label, params });
+    }
+  }
+  const whole = (value: unknown, fallback: number): number =>
+    typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  return {
+    label: raw.label,
+    order: whole(raw.order, 0),
+    total: raw.total !== false,
+    newDays: Math.max(0, whole(raw.new_days, 0)),
+    dateField: typeof raw.date_field === "string" ? raw.date_field : null,
+    by: typeof raw.by === "string" ? raw.by : null,
+    values: stringList(raw.values) ?? [],
+    counts,
+    recent: Math.max(0, whole(raw.recent, 0)),
+    columns: stringList(raw.columns) ?? null,
+  };
+}
+
+// reverse relations (x-karni-related)
+
+/**
+ * Experimental. The `x-karni-related` extension of a list operation: the
+ * reverse relations whose rows ResourceDetail's `related` tabs list. A
+ * malformed entry is dropped.
+ */
+export function parseRelated(raw: unknown): RelatedDef[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const found: RelatedDef[] = [];
+  for (const entry of raw) {
+    if (!isRecord(entry)) continue;
+    const { name, resource, field, param, key, label } = entry;
+    if (typeof name !== "string" || typeof resource !== "string" || typeof field !== "string") {
+      continue;
+    }
+    found.push({
+      name,
+      resource,
+      field,
+      param: typeof param === "string" && param !== "" ? param : null,
+      key: typeof key === "string" && key !== "" ? key : "id",
+      label: typeof label === "string" && label !== "" ? label : humanize(resource),
+    });
+  }
+  return found;
+}
+
+// field groups and column sets (x-karni-field-groups, x-karni-column-sets)
+
+/**
+ * Experimental. The `x-karni-field-groups` extension of a list operation. A
+ * group without a label or a field is dropped, and so is a field already in
+ * an earlier group.
+ */
+export function parseFieldGroups(raw: unknown): FieldGroupsDef | undefined {
+  if (!isRecord(raw) || !Array.isArray(raw.groups)) return undefined;
+  const seen = new Set<string>();
+  const groups: FieldGroupDef[] = [];
+  for (const entry of raw.groups) {
+    if (!isRecord(entry) || typeof entry.label !== "string" || entry.label === "") continue;
+    const fields = (stringList(entry.fields) ?? []).filter((name) => !seen.has(name));
+    for (const name of fields) seen.add(name);
+    if (fields.length > 0) groups.push({ label: entry.label, fields });
+  }
+  if (groups.length === 0) return undefined;
+  return { layout: raw.layout === "tabs" ? "tabs" : "sections", groups };
+}
+
+/**
+ * Experimental. The `x-karni-column-sets` extension of a list operation. A set
+ * without a name or a column is dropped. `default` falls back to the first set.
+ */
+export function parseColumnSets(raw: unknown): ColumnSetsDef | undefined {
+  if (!isRecord(raw) || !Array.isArray(raw.sets)) return undefined;
+  const sets: ColumnSetDef[] = [];
+  for (const entry of raw.sets) {
+    if (!isRecord(entry) || typeof entry.name !== "string" || entry.name === "") continue;
+    const columns = stringList(entry.columns) ?? [];
+    if (columns.length === 0 || sets.some((found) => found.name === entry.name)) continue;
+    const label =
+      typeof entry.label === "string" && entry.label !== "" ? entry.label : humanize(entry.name);
+    sets.push({ name: entry.name, label, columns });
+  }
+  const first = sets[0];
+  if (first === undefined) return undefined;
+  const chosen = sets.find((found) => found.name === raw.default) ?? first;
+  return { default: chosen.name, sets };
 }
 
 // operation extraction
@@ -501,6 +717,8 @@ function operationDef(
   if (expandEnum !== undefined) def.expandEnum = expandEnum;
   const access = op["x-karni-access"];
   if (isRecord(access)) def.access = access;
+  const honeypot = op["x-karni-honeypot"];
+  if (typeof honeypot === "string" && honeypot !== "") def.honeypot = honeypot;
   return def;
 }
 
@@ -585,6 +803,33 @@ export function parseOpenApi(input: unknown): ParsedSchema {
     if (importOp !== undefined) {
       operations.import = operationDef(doc, `${path}import/`, "post", importOp);
     }
+    // Tree models (experimental): tree/ under the list path, the rest under the item path.
+    const treeItem = paths[`${path}tree/`];
+    if (isRecord(treeItem) && isRecord(treeItem.get)) {
+      operations.tree = operationDef(doc, `${path}tree/`, "get", treeItem.get);
+    }
+    const accessItem = paths[`${path}access/`];
+    if (isRecord(accessItem) && isRecord(accessItem.get)) {
+      operations.access = operationDef(doc, `${path}access/`, "get", accessItem.get);
+    }
+    // Taxonomies (experimental): facets/ under the list path.
+    const facetsItem = paths[`${path}facets/`];
+    if (isRecord(facetsItem) && isRecord(facetsItem.get)) {
+      operations.facets = operationDef(doc, `${path}facets/`, "get", facetsItem.get);
+    }
+    if (itemPath !== undefined) {
+      const base = itemPath.endsWith("/") ? itemPath : `${itemPath}/`;
+      const nested: ReadonlyArray<["children" | "ancestors" | "move", "get" | "post"]> = [
+        ["children", "get"],
+        ["ancestors", "get"],
+        ["move", "post"],
+      ];
+      for (const [name, method] of nested) {
+        const nestedItem = paths[`${base}${name}/`];
+        const op = isRecord(nestedItem) ? nestedItem[method] : undefined;
+        if (isRecord(op)) operations[name] = operationDef(doc, `${base}${name}/`, method, op);
+      }
+    }
     if (itemPath !== undefined && itemItem !== undefined) {
       for (const method of METHODS) {
         const op = itemItem[method];
@@ -627,7 +872,18 @@ export function parseOpenApi(input: unknown): ParsedSchema {
       order += 1;
     }
 
-    resources[resource] = { resource, operations, fields };
+    const parsedResource: ResourceSchema = { resource, operations, fields };
+    const dashboard = parseDashboard(listOp["x-karni-dashboard"]);
+    if (dashboard !== undefined) parsedResource.dashboard = dashboard;
+    const tree = parseTreeExtension(responseSchema?.["x-karni-tree"]);
+    if (tree !== undefined) parsedResource.tree = tree;
+    const related = parseRelated(listOp["x-karni-related"]);
+    if (related !== undefined) parsedResource.related = related;
+    const fieldGroups = parseFieldGroups(listOp["x-karni-field-groups"]);
+    if (fieldGroups !== undefined) parsedResource.fieldGroups = fieldGroups;
+    const columnSets = parseColumnSets(listOp["x-karni-column-sets"]);
+    if (columnSets !== undefined) parsedResource.columnSets = columnSets;
+    resources[resource] = parsedResource;
   }
 
   const parsed: ParsedSchema = { resources };

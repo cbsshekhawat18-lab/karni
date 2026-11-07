@@ -1,0 +1,67 @@
+# The catalog entry of karni-storage: what `karni modules show storage` prints,
+# what `karni add storage` wires and `karni remove storage` takes out.
+name = "storage"
+kind = "module"
+title = "Protected files (S3)"
+purpose = "Files a row owns, in a private S3-compatible bucket, for its readers only."
+status = "experimental"
+use_when = [
+    "private files",
+    "protected uploads",
+    "files only the owner may download",
+    "S3",
+    "Cloudflare R2",
+    "MinIO",
+    "direct uploads to a bucket",
+    "presigned URLs",
+    "image thumbnails",
+]
+services = [
+    "an S3-compatible bucket in production (AWS S3, Cloudflare R2, MinIO, DigitalOcean Spaces, Backblaze B2 or Google Cloud Storage) with its keys in .env",
+    "a Celery worker: thumbnails are made as tasks",
+]
+docs = "docs/storage.md"
+
+[provides]
+models = ["Thumbnail"]
+endpoints = [
+    "/api/<resource>/<id>/files/<field>/",
+    "/api/<resource>/files/<field>/upload/",
+    "/api/<resource>/files/<field>/confirm/",
+]
+pages = [
+    "ProtectedFileField and ProtectedImageField (karni_storage.fields)",
+    "manage.py karni_thumbnails",
+    "Thumbnails in the admin",
+]
+ui = "@karni/storage-ui"
+
+[provides.settings]
+KARNI_STORAGE_PROVIDER = "string"
+KARNI_STORAGE_CREDENTIALS = "string"
+KARNI_STORAGE_BUCKET = "string"
+KARNI_STORAGE_LOCATION = "string"
+KARNI_STORAGE_ROOT = "string"
+KARNI_STORAGE_URL_EXPIRY = "integer"
+KARNI_STORAGE_UPLOAD_EXPIRY = "integer"
+KARNI_STORAGE_UPLOAD_METHOD = "string"
+KARNI_STORAGE_MAX_SIZE = "integer"
+KARNI_STORAGE_THUMBNAIL_SIZES = "object"
+KARNI_STORAGE_THUMBNAIL_FORMAT = "string"
+KARNI_STORAGE_THROTTLE_RATES = "object"
+KARNI_STORAGE_ALIAS = "string"
+R2_ACCOUNT_ID = "string"
+
+[[asks]]
+question = "Which S3-compatible service keeps the files in production?"
+setting = "KARNI_STORAGE_PROVIDER"
+options = ["aws", "r2", "minio", "spaces", "b2", "gcs-interop"]
+default = "aws"
+
+[wiring]
+apps = ["karni_storage"]
+settings = "karni_storage.conf:DEFAULTS"
+urls = 'path("api/", include("karni_storage.urls"))'
+
+[wiring.extras]
+images = "Pillow, for protected images and their thumbnails"

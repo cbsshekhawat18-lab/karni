@@ -96,14 +96,99 @@ def test_model_layer_is_reflected() -> None:
     assert "current_user" in rules_by_code()["K108"].rule
 
 
+def test_public_site_rule_and_the_app_screen_rules_point_at_each_other() -> None:
+    rules = rules_by_code()
+    k309 = rules["K309"]
+    assert k309.category == "architecture" and k309.severity == "must"
+    for phrase in (
+        "karni make site",
+        "karni import design",
+        "karni make view",
+        "karni-site",
+        'path("", ...)',
+        "`<app>/templates/<app>/`",
+        "`<app>/static/<app>/`",
+        "default manager",
+        "soft-deleted rows stay hidden",
+        "create=Public()",
+        "CSRF",
+        "karni make form",
+        "{% karni_form",
+        "K201, K202, K206",
+        "--editable",
+        "{% editable %}",
+        '{% get_menu "<name>" as items %}',
+        "never hard-coded",
+    ):
+        assert phrase in k309.rule, phrase
+    assert "karni make site" in k309.fix
+    # K302 and K306 are about app screens, and say where a public site goes instead.
+    assert "app screens" in rules["K302"].rule and "K309" in rules["K302"].rule
+    assert "App screens" in rules["K306"].rule and "K309" in rules["K306"].rule
+    assert "K309" in rules["K306"].summary and "K309" in rules["K305"].rule
+    new_page = next(p for p in PROCEDURES if p.name == "new-page")
+    assert "K309" in new_page.rules and "karni make view" in " ".join(new_page.steps)
+
+
 def test_procedures_reference_real_codes() -> None:
     codes = set(rules_by_code())
     names = [p.name for p in PROCEDURES]
-    assert names == ["new-model", "new-page", "add-module", "new-module"]
+    assert names == [
+        "new-model",
+        "new-page",
+        "add-module",
+        "new-module",
+        "site-from-design",
+        "new-app",
+    ]
     for procedure in PROCEDURES:
         assert "{arguments}" in procedure.intro
         assert set(procedure.rules) <= codes, procedure.name
         assert procedure.steps
+
+
+def test_the_site_from_design_procedure_names_each_command_in_order() -> None:
+    procedure = next(p for p in PROCEDURES if p.name == "site-from-design")
+    steps = procedure.steps
+    order = [
+        "`karni design analyze <design folder> --app <site app> --map",
+        "`karni import design <design folder> --app <site app> --editable --map",
+        "Answer every decision in the map",
+        "Run the `karni make model` commands in the order printed",
+        "`karni design extract <design folder> --map content/design-map.json -o",
+        "`karni load content/site.json --dry-run`",
+        "inside `{% for %}`",
+        "`karni make view <model> --app <site app> --path",
+        "`karni make form <name> <field:type> ...`",
+        'load_content("content/site.json")',
+    ]
+    found = [next(i for i, step in enumerate(steps) if phrase in step) for phrase in order]
+    assert found == sorted(found), found
+    assert "inside `{% for %}`" in steps[7]  # step 8: karni new --design and other prompts name it
+    imported = next(step for step in steps if "karni import design" in step)
+    assert "except what the map reads into rows" in imported and "`<form>`" in imported
+    form = next(step for step in steps if "karni make form" in step)
+    assert "{% karni_form %}" in form and "--notify" in form
+    last = steps[-1]
+    assert "Then `karni check`." in last and "from `karni.testing`" in last
+    assert "project root" in last  # not a path the working directory decides
+    # A new site has no account: the last step says how to make the first one.
+    assert "`karni createsuperuser`" in last and "staff role" in last
+    models = next(step for step in steps if "Run the `karni make model` commands" in step)
+    assert "karni types" not in models  # a site's models have no API to type
+    detail = next(step for step in steps if "karni make view <model>" in step)
+    assert "get_object_or_404(Model.objects, slug=slug)" in detail and "delete" in detail
+    # How {% karni_seo %} finds a detail page's row, so the title is set once: by the row.
+    assert "`get_absolute_url()` is the page's path" in detail and "`object`" in detail
+    assert "class Karni: " in detail and "writes no `{% block title %}`" in detail
+    load = next(step for step in steps if "karni load" in step)
+    assert "Nothing changed" in load and "karni seed" in load
+    loops = next(step for step in steps if "{% for %}" in step)
+    assert "|highlight }}" in loops and "KARNI_SITE_HIGHLIGHT" in loops
+    assert "eager=forloop.first" in loops  # the first picture of a hero list is not lazy
+    assert "<slug:slug>" in loops and "Model.objects" in loops
+    assert "K309" in procedure.rules and "{arguments}" in procedure.intro
+    assert "nothing is invented" in procedure.outro.lower()
 
 
 def test_dump_is_json_shaped() -> None:
@@ -132,3 +217,48 @@ def test_import_light(module: str) -> None:
         check=False,
     )
     assert proc.returncode == 0, proc.stderr
+
+
+def test_the_new_app_procedure_follows_the_flow_in_order() -> None:
+    """One line to a running app: recipe or blank start, questions and answers, build.
+
+    The build prints the plan itself, so a separate ``karni plan`` step is left to whoever wants
+    to read every change first.
+    """
+    procedure = next(p for p in PROCEDURES if p.name == "new-app")
+    steps = procedure.steps
+    order = [
+        'karni recipes list --match "<the request>"',
+        "`karni plan --questions` lists what only the user decides",
+        "`karni spec answer <id> <value>`",
+        "`karni build` makes the project match karni.yaml",
+        "Write the domain logic that is left",
+        "Done when `karni check` and `karni test` pass.",
+    ]
+    found = [next(i for i, step in enumerate(steps) if phrase in step) for phrase in order]
+    assert found == [0, 1, 1, 2, 3, 4], found
+    assert "`blank` when none fits" in steps[0] and "only those" in steps[1]
+    assert "C273" in steps[2] and "Ask the user before `--allow-destructive`" in steps[2]
+    assert "`<app>/models.py`" in steps[3] and "Never edit `<app>/karni/`" in steps[3]
+    assert "Never hand-write what karni.yaml can express" in procedure.outro
+    assert procedure.rules[0] == "K311" and "K310" in procedure.rules
+    assert procedure.reference[0].startswith("Access, per entity: `access: {read: WHO")
+    assert procedure.to_dict()["reference"] == list(procedure.reference)
+
+
+def test_the_access_topic_names_every_word_the_spec_takes() -> None:
+    """``karni explain access`` and the spec's validator agree on the access words."""
+    from karni.agent.rules import TOPICS, topics_by_name
+
+    lines = "\n".join(topics_by_name()["access"].lines)
+    for word in ("public", "authenticated", "role:<slug>", "owned:<field>", "granted"):
+        assert f"  {word} " in lines, word
+    assert [topic.name for topic in TOPICS] == ["access"]
+
+
+def test_k311_puts_karni_yaml_before_code() -> None:
+    rule = rules_by_code()["K311"]
+    assert rule.category == "architecture" and rule.severity == "must"
+    assert "/new-app" in rule.summary and "karni.yaml" in rule.summary
+    assert "karni rules --procedure new-app" in rule.rule
+    assert "Never hand-write what karni.yaml can express" in rule.rule

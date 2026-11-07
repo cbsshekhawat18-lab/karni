@@ -1,0 +1,18 @@
+{% load i18n admin_urls karni_admin %}{% comment %}
+The change form's fixed bar. Save is the primary button and comes first, then
+Save and add another, Save and continue editing, Cancel, and Delete apart on
+the right. Each button shows only when the user's permissions allow it, so a
+read-only page has Cancel only.
+{% endcomment %}{% karni_submit as submit %}
+<div {% if not is_popup %}id="submit-row"{% endif %} class="karni-bar">
+  <div class="karni-bar-inner">
+    {% if submit.show_save %}<button type="submit" form="{{ opts.model_name }}_form" name="_save" class="karni-button">{% translate "Save" %}</button>{% endif %}
+    {% if submit.show_save_and_add_another %}<button type="submit" form="{{ opts.model_name }}_form" name="_addanother" class="karni-button karni-button-secondary">{% translate "Save and add another" %}</button>{% endif %}
+    {% if submit.show_save_and_continue %}<button type="submit" form="{{ opts.model_name }}_form" name="_continue" class="karni-button karni-button-secondary">{% if has_change_permission %}{% translate "Save and continue editing" %}{% else %}{% translate "Save and view" %}{% endif %}</button>{% endif %}
+    {% if submit.show_save_as_new %}<button type="submit" form="{{ opts.model_name }}_form" name="_saveasnew" class="karni-button karni-button-secondary">{% translate "Save as new" %}</button>{% endif %}
+    {% for action in actions_submit_line %}<button type="submit" form="{{ opts.model_name }}_form" name="{{ action.attrs.name|default:action.action_name }}" class="karni-button karni-button-secondary">{{ action.description }}</button>{% endfor %}
+    <span class="karni-bar-gap"></span>
+    {% if not is_popup %}{% url opts|admin_urlname:'changelist' as karni_list_url %}{% add_preserved_filters karni_list_url as karni_cancel %}<a class="karni-button karni-button-secondary" href="{{ karni_cancel }}">{% translate "Cancel" %}</a>{% endif %}
+    {% if submit.show_delete_link and original %}{% url opts|admin_urlname:'delete' original.pk|admin_urlquote as karni_delete_url %}{% add_preserved_filters karni_delete_url as karni_delete %}<a class="karni-button karni-button-danger" href="{{ karni_delete }}">{% translate "Delete" %}</a>{% endif %}
+  </div>
+</div>

@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni"
-version = "0.4.0"
-description = "Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
+version = "0.5.0"
+description = "Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"
 # PEP 639 licence expression; no "License ::" classifier (deprecated alongside it).
@@ -22,9 +22,6 @@ keywords = [
     "scaffolding",
     "code-generation",
     "ai-agents",
-    "claude-code",
-    "cursor",
-    "copilot",
     "celery",
     "openapi",
 ]
@@ -101,6 +98,9 @@ s3 = ["django-storages[s3]>=1.14", "boto3>=1.34"]
 images = ["Pillow>=10.3"]
 sentry = ["sentry-sdk>=2.0"]
 social = ["django-allauth>=65.3"]
+# Sign-in with a Google, Microsoft or Apple ID token (experimental): RS256 and
+# ES256 signatures need cryptography. PyJWT itself comes with simplejwt.
+social-token = ["PyJWT[crypto]>=2.8"]
 2fa = ["django-otp>=1.5"]
 
 [dependency-groups]

@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [packages/karni, packages/karni-cli, modules/karni-payments, modules/karni-approvals, modules/karni-impersonation]
+        package: [packages/karni, packages/karni-cli, modules/karni-payments, modules/karni-approvals, modules/karni-impersonation, modules/karni-site, modules/karni-charts, modules/karni-reports, modules/karni-ai, modules/karni-storage]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v7
@@ -46,7 +46,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [packages/karni-ui, modules/karni-payments/ui, modules/karni-approvals/ui, modules/karni-impersonation/ui, examples/eventhub/frontend]
+        package: [packages/karni-ui, modules/karni-payments/ui, modules/karni-approvals/ui, modules/karni-impersonation/ui, modules/karni-charts/ui, modules/karni-reports/ui, modules/karni-ai/ui, modules/karni-storage/ui, examples/eventhub/frontend]
     defaults:
       run:
         working-directory: ${{ matrix.package }}

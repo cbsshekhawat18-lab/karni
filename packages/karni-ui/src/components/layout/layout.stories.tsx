@@ -1,8 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { QueryClient } from "@tanstack/react-query";
 import * as React from "react";
+import type { NavigationMenu } from "../../hooks/useNavigation";
+import { createKarniClient, type KarniClient } from "../../schema/client";
+import { KarniProvider } from "../../schema/provider";
 import { Button } from "../primitives/button";
 import { Page } from "../page/page";
 import { Layout, type LayoutNavLinkProps } from "./layout";
+import { defaultNavIcons } from "./nav-icons";
 
 const meta = {
   title: "Support/Layout",
@@ -192,4 +197,97 @@ function HashRouterApp(): React.ReactElement {
  */
 export const FocusAfterNavigation: Story = {
   render: () => <HashRouterApp />,
+};
+
+/**
+ * Experimental. Collapsible groups in the nav: a button (Enter or Space)
+ * opens and closes each one, and the group that holds the current page opens
+ * by itself. Icons come from `defaultNavIcons` here.
+ */
+export const WithGroups: Story = {
+  args: {
+    sidebarHeader: <span className="px-3 text-lg font-semibold">Acme</span>,
+    navItems: [
+      { label: "Dashboard", href: "#dashboard", icon: defaultNavIcons["dashboard"] },
+      {
+        label: "Catalog",
+        icon: defaultNavIcons["box"],
+        children: [
+          { label: "Products", href: "#products", active: true },
+          { label: "Categories", href: "#categories" },
+        ],
+      },
+      {
+        label: "Places",
+        icon: defaultNavIcons["map"],
+        children: [
+          { label: "Regions", href: "#regions" },
+          { label: "Warehouses", href: "#warehouses" },
+        ],
+      },
+      { label: "Settings", href: "#settings", icon: defaultNavIcons["settings"] },
+    ],
+    children: (
+      <Page title="Products">
+        <p className="text-sm text-muted-foreground">Catalog is open: it holds this page.</p>
+      </Page>
+    ),
+  },
+};
+
+/** What GET /navigation/ answers a catalog editor in the ServerMenu story. */
+const STORY_MENU: NavigationMenu = {
+  items: [
+    { label: "Dashboard", icon: "dashboard", route: "/", children: [] },
+    {
+      label: "Catalog",
+      icon: "box",
+      route: null,
+      children: [
+        { label: "Products", icon: null, route: "/products", children: [] },
+        { label: "Categories", icon: null, route: "/categories", children: [] },
+      ],
+    },
+    { label: "Reports", icon: "bar-chart", route: "/reports", children: [] },
+  ],
+};
+
+/** A client that answers GET /navigation/ itself, so the story needs no server. */
+function storyClient(): KarniClient {
+  const base = createKarniClient({ baseUrl: "/api" });
+  return {
+    ...base,
+    request: <T,>(path: string): Promise<T> =>
+      path === "/navigation/"
+        ? Promise.resolve(STORY_MENU as T)
+        : Promise.reject(new Error(`No story response for ${path}`)),
+  };
+}
+
+function ServerMenuApp(): React.ReactElement {
+  const [context] = React.useState(() => ({
+    client: storyClient(),
+    queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  }));
+  return (
+    <KarniProvider client={context.client} queryClient={context.queryClient}>
+      <Layout
+        navSource="server"
+        pathname="/products/42"
+        sidebarHeader={<span className="px-3 text-lg font-semibold">Acme</span>}
+      >
+        <Page title="Product 42">
+          <p className="text-sm text-muted-foreground">
+            The menu is the server&apos;s (KARNI_NAVIGATION), filtered by this user&apos;s grants.
+            Products is the current page: /products/42 is under /products.
+          </p>
+        </Page>
+      </Layout>
+    </KarniProvider>
+  );
+}
+
+/** Experimental. `navSource="server"`: the menu from GET /navigation/, icons by name. */
+export const ServerMenu: Story = {
+  render: () => <ServerMenuApp />,
 };

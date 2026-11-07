@@ -31,9 +31,17 @@ from .rules import ENFORCEMENT_CODES, rules_by_code
 SQL_ALLOWED: tuple[str, ...] = ("*/sql/*", "*/migrations/*")
 HTTP_ALLOWED: tuple[str, ...] = ("*/services/*", "*/providers/*", "*/tests/*", "conftest.py")
 HTTP_BANNED: frozenset[str] = frozenset({"requests", "httpx", "urllib.request"})
-#: Any of these as a base satisfies model-base (BaseModel or its mixins).
+#: Any of these as a base satisfies model-base (BaseModel, BigIntBaseModel or their mixins).
 KARNI_MODEL_BASES: frozenset[str] = frozenset(
-    {"BaseModel", "UUIDModel", "TimestampedModel", "SoftDeleteModel", "AuditedModel"}
+    {
+        "BaseModel",
+        "BigIntBaseModel",
+        "UUIDModel",
+        "IntegerKeyModel",
+        "TimestampedModel",
+        "SoftDeleteModel",
+        "AuditedModel",
+    }
 )
 _DRF_VIEWSETS = frozenset({"GenericViewSet", "ModelViewSet", "ReadOnlyModelViewSet"})
 
@@ -42,6 +50,7 @@ TS_SUFFIXES = frozenset({".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", "
 JSX_SUFFIXES = frozenset({".tsx", ".jsx"})
 PAGE_MAX_LINES = 50
 
+_PY_ALLOW_START = re.compile(r"#\s*karni:\s*allow\(")
 _PY_ALLOW = re.compile(r"#\s*karni:\s*allow\(([^)]*)\)\s*(?::\s*(.*))?$")
 # ESLint only honours a directive that opens the comment (`// eslint-disable...`
 # or `/* eslint-disable... */`); prose that merely mentions it is not one.
@@ -123,6 +132,32 @@ def _is_abstract(cls: ast.ClassDef) -> bool:
                 ):
                     return True
     return False
+
+
+def _nested_constant(cls: ast.ClassDef, nested: str, name: str) -> object:
+    """The constant ``name = <value>`` in ``cls``'s nested class ``nested``, else ``None``."""
+    for stmt in cls.body:
+        if isinstance(stmt, ast.ClassDef) and stmt.name == nested:
+            for item in stmt.body:
+                if (
+                    isinstance(item, ast.Assign)
+                    and any(isinstance(t, ast.Name) and t.id == name for t in item.targets)
+                    and isinstance(item.value, ast.Constant)
+                ):
+                    return item.value.value
+    return None
+
+
+def _is_external(cls: ast.ClassDef) -> bool:
+    """An external table or view (``karni.db``, experimental): model-base accepts it.
+
+    Both declarations are needed: ``class Karni: external = True`` and
+    ``class Meta: managed = False``.
+    """
+    return (
+        _nested_constant(cls, "Karni", "external") is True
+        and _nested_constant(cls, "Meta", "managed") is False
+    )
 
 
 def _class_lines(cls: ast.ClassDef) -> list[int]:
@@ -255,7 +290,12 @@ def _python(path: str, text: str) -> list[tuple[Finding, list[int]]]:
         if isinstance(node, ast.ClassDef):
             bases = {_dotted(b) for b in node.bases}
             short = {b.rsplit(".", 1)[-1] for b in bases}
-            if bases & model_names and not short & KARNI_MODEL_BASES and not _is_abstract(node):
+            if (
+                bases & model_names
+                and not short & KARNI_MODEL_BASES
+                and not _is_abstract(node)
+                and not _is_external(node)
+            ):
                 found.append(
                     (
                         _finding(
@@ -387,26 +427,31 @@ def http_client_imports(tree: ast.AST) -> list[tuple[int, str]]:
 
 
 def _python_optouts(lines: list[str], found: list[tuple[Finding, list[int]]]) -> list[Finding]:
-    markers: dict[int, tuple[set[str], str]] = {}
+    markers: dict[int, list[tuple[set[str], str]]] = {}
     for i, text in enumerate(lines, start=1):
-        m = _PY_ALLOW.search(text)
-        if m:
-            rules = {r.strip() for r in m.group(1).split(",") if r.strip()}
-            markers[i] = (rules, (m.group(2) or "").strip())
+        # A line may carry several markers, each reason running to the next one.
+        starts = [m.start() for m in _PY_ALLOW_START.finditer(text)]
+        for begin, end in zip(starts, [*starts[1:], len(text)][: len(starts)], strict=True):
+            m = _PY_ALLOW.match(text[begin:end].rstrip())
+            if m:
+                rules = {r.strip() for r in m.group(1).split(",") if r.strip()}
+                markers.setdefault(i, []).append((rules, (m.group(2) or "").strip()))
     result: list[Finding] = []
-    for i, (rules, reason) in sorted(markers.items()):
-        if not reason:
-            result.append(
-                _finding(
-                    "opt-out-reason",
-                    i,
-                    f"karni: allow({', '.join(sorted(rules))}) requires a non-empty reason",
+    for i, entries in sorted(markers.items()):
+        for rules, reason in entries:
+            if not reason:
+                result.append(
+                    _finding(
+                        "opt-out-reason",
+                        i,
+                        f"karni: allow({', '.join(sorted(rules))}) requires a non-empty reason",
+                    )
                 )
-            )
     for finding, candidates in found:
         allowed = any(
-            finding.rule_id in markers.get(line, (set(), ""))[0] and markers[line][1]
+            finding.rule_id in rules and reason
             for line in candidates
+            for rules, reason in markers.get(line, [])
         )
         if not allowed:
             result.append(finding)
@@ -415,7 +460,7 @@ def _python_optouts(lines: list[str], found: list[tuple[Finding, list[int]]]) ->
 
 # TypeScript / JavaScript
 
-_RAW_ELEMENT = re.compile(r"<(table|form|input|select|textarea)(?=[\s/>])")
+_RAW_ELEMENT = re.compile(r"<(table|form|input|select|textarea|details)(?=[\s/>])")
 _DEEP_IMPORT = re.compile(
     r"""(?:from\s+|import\s*\(\s*|require\s*\(\s*|import\s+)["']@karni/ui/(?:dist|src)(?:/[^"']*)?["']"""
 )
@@ -426,7 +471,8 @@ _NEW_TRANSPORT = re.compile(
     r"(?<![\w$.])new\s+(?:(?:window|globalThis|self)\.)?(XMLHttpRequest|WebSocket)\b"
 )
 _REPLACEMENTS = {
-    "table": "ResourceTable",
+    "table": "ResourceTable (a resource), DataTable (computed rows) or ComparisonTable",
+    "details": "Accordion",
     "form": "ResourceForm",
     "input": "Input (or ResourceForm)",
     "select": "Select / ResourceSelect",

@@ -110,9 +110,13 @@ DEFAULT_MATRIX_EXCLUDE: tuple[str, ...] = (
     "otp_static",
     "account",
     "socialaccount",
+    "karni_admin",
     "karni_audit",
     "karni_accounts.OneTimeToken",
     "karni_accounts.Permission",
+    "karni_accounts.SocialIdentity",
+    "karni_accounts.LoginCode",
+    "karni_accounts.TermsAcceptance",
 )
 
 _ORIGIN_DECLARED: Final = "declared"
@@ -228,7 +232,31 @@ def scope_options(model: type[models.Model]) -> list[tuple[str, str]]:
         options.append(("own", f"Own rows ({owner})"))
     options.extend((f"related:{key}", f"Related: {key}") for key in scope_paths(model))
     options.extend((f"custom:{name}", f"Custom: {name}") for name in custom_scopes())
+    options.extend((f"tree:{name}", f"Tree: {name}") for name in _tree_fields(model))
     return options
+
+
+def _tree_fields(model: type[models.Model]) -> list[str]:
+    """The model's own relations to a tree model: the ``tree:<field>`` scopes the matrix offers.
+
+    A path through other relations (``tree:product__category``) is granted in
+    ``KARNI_ROLES``, and the matrix shows such a declared cell as it is. A
+    tree model's own ``parent`` is not offered.
+    """
+    from karni.tree import is_tree_model
+
+    found: list[str] = []
+    for relation in model._meta.get_fields():
+        related = getattr(relation, "related_model", None)
+        if (
+            relation.is_relation
+            and not relation.auto_created
+            and isinstance(related, type)
+            and is_tree_model(related)
+            and not (relation.name == "parent" and related is model)
+        ):
+            found.append(relation.name)
+    return found
 
 
 def _excluded(model: type[models.Model], exclude: frozenset[str]) -> bool:
@@ -409,7 +437,7 @@ def plan_changes(operator: Any, requested: Requested, *, matrix: Matrix | None =
 
     ``requested`` is ``(role slug, "app.model:action", value)`` triples where
     ``value`` is a scope (``"all"``, ``"own"``, ``"related:<key>"``,
-    ``"custom:<name>"``), ``None`` to revoke, or :data:`DECLARED` to hand the
+    ``"custom:<name>"``, ``"tree:<field>"``), ``None`` to revoke, or :data:`DECLARED` to hand the
     cell back to ``KARNI_ROLES``. Cells already in the requested state are
     not changes; a later triple for the same cell replaces an earlier one.
     """
@@ -590,20 +618,35 @@ def apply_changes(operator: Any, requested: Requested) -> Plan:
 
 @dataclass(frozen=True)
 class Source:
-    """Why a user holds a permission: the role, its scope and where that grant came from."""
+    """Why a user holds a permission: the role, its scope and where that grant came from.
+
+    A per-user grant (experimental) has ``origin`` ``"user_grant"``, no role,
+    and ``grant`` (its id), ``reason``, ``expires_at`` and ``targets``, which
+    ``to_dict()`` adds for it alone.
+    """
 
     role: str
     role_name: str
     scope: str | None
     origin: str
+    grant: str = ""
+    reason: str = ""
+    expires_at: Any = None
+    targets: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        found: dict[str, Any] = {
             "role": self.role,
             "role_name": self.role_name,
             "scope": self.scope,
             "origin": self.origin,
         }
+        if self.grant:
+            found["grant"] = self.grant
+            found["reason"] = self.reason
+            found["expires_at"] = self.expires_at.isoformat() if self.expires_at else None
+            found["targets"] = list(self.targets)
+        return found
 
 
 @dataclass(frozen=True)
@@ -651,7 +694,9 @@ def effective_permissions(user: Any) -> EffectiveReport:
     A superuser holds everything with scope ``all`` (the admin's own
     convention); for everyone else the sources are the grant rows of the
     user's roles, including a cell the matrix revoked (scope ``None``,
-    origin ``matrix``) so "why can't this person…" is answered too.
+    origin ``matrix``) so "why can't this person…" is answered too. While
+    ``KARNI_USER_GRANTS`` is on, the user's live user grants follow, with
+    origin ``user_grant`` (experimental).
     """
     from karni.accounts.models import RolePermission
     from karni.accounts.permissions import user_roles
@@ -668,6 +713,8 @@ def effective_permissions(user: Any) -> EffectiveReport:
                     row.role.slug, row.role.name, scope_value(row.scope, row.scope_path), row.origin
                 )
             )
+        for key, granted in _user_grant_sources(user).items():
+            sources.setdefault(key, []).extend(granted)
     entries: list[Effective] = []
     for label, model in matrix_models().items():
         for action in model_actions(model):
@@ -680,7 +727,10 @@ def effective_permissions(user: Any) -> EffectiveReport:
                 )
                 continue
             found = tuple(
-                sorted(sources.get(key, ()), key=lambda source: (source.scope is None, source.role))
+                sorted(
+                    sources.get(key, ()),
+                    key=lambda source: (source.scope is None, bool(source.grant), source.role),
+                )
             )
             values = list(dict.fromkeys(s.scope for s in found if s.scope is not None))
             scope = "all" if "all" in values else (" | ".join(values) or None)
@@ -693,6 +743,31 @@ def effective_permissions(user: Any) -> EffectiveReport:
         user_roles(user) if not superuser else user_roles(user),
         entries,
     )
+
+
+def _user_grant_sources(user: Any) -> dict[str, list[Source]]:
+    """The user's live user grants as :class:`Source` entries, by permission (switch on only)."""
+    from karni.accounts import grants
+
+    if not grants.enabled():
+        return {}
+    rows = {str(row.pk): row for row in grants.live_rows(user)}
+    found: dict[str, list[Source]] = {}
+    for grant in grants.user_grants(user):
+        row = rows[grant.grant_id]
+        found.setdefault(grant.permission, []).append(
+            Source(
+                "",
+                "",
+                scope_value(grant.scope, grant.scope_path),
+                grants.ORIGIN,
+                grant=grant.grant_id,
+                reason=row.reason,
+                expires_at=row.expires_at,
+                targets=grant.targets,
+            )
+        )
+    return found
 
 
 # the matrix's own history

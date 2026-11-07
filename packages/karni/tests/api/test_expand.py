@@ -88,8 +88,9 @@ def test_unexpanded_relations_are_primary_keys(organizer: Any, venue: Venue) -> 
 def test_expand_venue_nests_the_object(organizer: Any, venue: Venue) -> None:
     _event(organizer=organizer, venue=venue)
     row = _only_row(_list({"expand": "venue"}))
+    assert str(row["venue"]["id"]) == str(venue.pk)
     assert row["venue"] == {
-        "id": str(venue.pk),
+        "id": row["venue"]["id"],
         "name": "Arena",
         "city": "Berlin",
         "created_at": row["venue"]["created_at"],
@@ -185,10 +186,18 @@ def test_viewset_expand_depth_overrides_the_setting(organizer: Any) -> None:
     assert allowed.status_code == 200
 
 
-def test_cycle_stops_at_the_primary_key() -> None:
+def test_a_path_back_to_a_model_on_it_nests() -> None:
     # Building Event's serializer while Venue is already on the nesting path
-    # simulates a Venue → Event → Venue cycle: the guard keeps the PK field.
+    # (venues?expand=events.venue): the client named this level, and the path
+    # bounds the recursion, so it nests (a tree's parent.parent is the same).
     serializer_class = build_serializer(Event, expand=frozenset({"venue"}), _seen=(Venue,))
+    assert isinstance(serializer_class().fields["venue"], serializers.BaseSerializer)
+
+
+def test_the_depth_limit_stops_at_the_primary_key() -> None:
+    serializer_class = build_serializer(
+        Event, expand=frozenset({"venue"}), _seen=(Venue,), max_depth=1
+    )
     field = serializer_class().fields["venue"]
     assert isinstance(field, PrimaryKeyRelatedField)
     assert not isinstance(field, serializers.BaseSerializer)

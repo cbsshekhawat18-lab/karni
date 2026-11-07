@@ -1,7 +1,7 @@
 """What the welcome page knows about the project, read at request time.
 
 Models with their admin and API links, installed modules with a docs link,
-the agent adapter files on disk, the live ``karni context`` text, versions
+the agent instructions file on disk, the live ``karni context`` text, versions
 and the project's name. Nothing here reads a setting's value into the page:
 links are URL paths, names are names.
 """
@@ -33,17 +33,9 @@ __all__ = [
     "project_root",
 ]
 
-#: Agent adapter files ``karni new`` writes, with the tool each one speaks to.
-ADAPTERS: tuple[tuple[str, str], ...] = (
-    ("Any agent", "AGENTS.md"),
-    ("Claude Code", "CLAUDE.md"),
-    ("Aider", "CONVENTIONS.md"),
-    ("Cursor", ".cursor/rules/karni.mdc"),
-    ("GitHub Copilot", ".github/copilot-instructions.md"),
-    ("Windsurf", ".windsurf/rules/karni.md"),
-    ("Cline", ".clinerules/karni.md"),
-    ("Junie", ".junie/AGENTS.md"),
-)
+#: The agent file ``karni new`` writes, with who reads it. AGENTS.md is the one
+#: agent file since 0.5.0 (the tool-specific files are deprecated).
+ADAPTERS: tuple[tuple[str, str], ...] = (("Any coding agent", "AGENTS.md"),)
 
 
 @dataclass(frozen=True)

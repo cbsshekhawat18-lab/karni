@@ -152,6 +152,21 @@ def test_refund_requires_the_payments_admin_role(api_client, user, make_payment)
     assert payment.refunds.count() == 0
 
 
+@pytest.mark.parametrize("role", ["user", "customer", "staff"])
+def test_a_wildcard_role_cannot_refund(api_client, user, make_payment, role) -> None:
+    """The scaffold's ``"*": "own"`` and ``"*": "all"`` roles never reach the refund action."""
+    from karni.accounts.permissions import assign_role
+    from karni.accounts.roles import sync_roles
+
+    sync_roles()
+    payment = make_payment(status=Payment.Status.SUCCEEDED)
+    assign_role(user, role)
+    api_client.force_authenticate(user=user)
+    response = api_client.post(f"{PAYMENTS}{payment.pk}/refund/", {}, format="json")
+    assert response.status_code == 403
+    assert payment.refunds.count() == 0
+
+
 def test_admin_can_refund_any_users_payment(api_client, admin_user, make_payment) -> None:
     payment = make_payment(status=Payment.Status.SUCCEEDED)  # owned by `user`
     api_client.force_authenticate(user=admin_user)

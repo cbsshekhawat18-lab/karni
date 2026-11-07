@@ -77,7 +77,7 @@ below changes one, edit it there and run `python -m karni.links sync`
 
 8. **Description, website, topics:** *reversible*. Settings → General, or
    the `gh repo edit` command in [releasing](releasing.md#one-time-repository-setup)
-   with the About line and the 20 topics from the research.
+   with the About line and the 17 topics from the research.
 9. **Social preview:** *reversible*. Settings → General → Social preview →
    upload **`assets/brand/social-1280x640.png`**.
 10. **GitHub Pages:** *reversible*. Settings → Pages → Source: GitHub
@@ -93,7 +93,8 @@ below changes one, edit it there and run `python -m karni.links sync`
 ## 3. Trusted publishing (no tokens stored anywhere)
 
 14. **PyPI trusted publishers:** *reversible*. For each of `karni`,
-    `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`:
+    `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`,
+    `karni-site`:
     <https://pypi.org/manage/account/publishing/>
     → "Add a new pending publisher": owner `cbsshekhawat18-lab` (or the
     org), repository `karni`, workflow `release.yml`, environment `pypi`.

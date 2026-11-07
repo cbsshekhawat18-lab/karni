@@ -6,7 +6,8 @@
  * This component only renders the controls:
  * - enum   → clearable <Select> ("All" clears),
  * - boolean → clearable Yes/No <Select>,
- * - relation → <ResourceSelect> (multiple for many-relations).
+ * - relation → <ResourceSelect> (multiple for many-relations), or <TreeSelect>
+ *   when the relation points at a tree model (as ResourceForm does).
  *
  * Internal to @karni/ui. The public surface is ResourceTable's props.
  */
@@ -17,6 +18,7 @@ import { cn } from "../../../lib/cn";
 import { Input } from "../../primitives/input";
 import { Select } from "../../primitives/select";
 import { ResourceSelect } from "../ResourceSelect";
+import { TreeSelect } from "../tree/TreeSelect";
 import { enumLabel } from "./table-utils";
 
 export interface FilterBarProps {
@@ -158,6 +160,21 @@ export function FilterBar(props: FilterBarProps): React.ReactElement {
           );
         }
         if (field.kind === "relation" && field.relation !== undefined) {
+          if (field.tree !== undefined) {
+            // A relation to a tree model: choose the node in its tree, as ResourceForm does.
+            return (
+              <div key={field.name} className="min-w-36">
+                <TreeSelect
+                  resource={field.relation.resource}
+                  multiple={field.relation.many}
+                  value={toRelationValue(value)}
+                  placeholder={field.label}
+                  aria-label={field.label}
+                  onChange={(next) => onFilterChange(field, next)}
+                />
+              </div>
+            );
+          }
           return (
             <div key={field.name} className="min-w-36">
               <ResourceSelect

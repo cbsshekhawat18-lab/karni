@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json
+version: 1
+app:
+  name: Bench App
+  kind: app
+roles:
+  admin: {name: Admin, system: true, grants: {"*": all}}
+  manager:
+    name: Manager
+    grants:
+      crm.company: all
+      crm.contact: all
+      "crm.deal:view": all
+      "crm.deal:add": all
+      "crm.deal:change": all
+  sales:
+    name: Sales
+    grants:
+      "crm.company:view": all
+      "crm.company:add": all
+      "crm.company:change": all
+      "crm.contact:view": all
+      "crm.contact:add": all
+      "crm.contact:change": all
+      "crm.deal:view": own
+      "crm.deal:add": own
+      "crm.deal:change": own
+apps:
+  crm:
+    entities:
+      Company:
+        fields: {name: "str:200", website: "url?"}
+        key: name
+        search: [name]
+        order: name
+      Contact:
+        fields:
+          company: "fk:Company?"
+          first_name: "str:80"
+          last_name: "str:80"
+          email: "email:unique"
+          phone: "str:40?"
+        key: email
+        search: [first_name, last_name, email]
+        order: [last_name, first_name]
+      Deal:
+        fields:
+          company: fk:Company
+          contact: "fk:Contact?"
+          title: "str:200"
+          value: "money:USD"
+          owner: fk:User
+          stage: "state:lead>qualified|qualified>proposal|proposal>won|lead>lost|qualified>lost|proposal>lost"
+        owner: owner
+        search: [title]
+        order: -created_at
+        audit: [stage, owner]
+pages:
+  - home: dashboard
+  - Company: [list, detail, form]
+  - Contact: [list, detail, form]
+  - Deal: [list, detail, form]
+seed: {Company: 3, Contact: 5, Deal: 0}

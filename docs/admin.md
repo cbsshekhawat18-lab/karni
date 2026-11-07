@@ -15,6 +15,115 @@ Scope note (v0.1): third-party apps that register their own admins
 keep their stock admin classes, because autodiscovery never re-registers an
 existing admin. A re-registration pass that restyles those is future work.
 
+## The screens
+
+The admin is made for the people who run an app day to day. Every model gets
+the same few screens, with clear buttons that show only when the user's
+permissions allow them. The sections below describe what each screen holds.
+
+### The home page and the guide
+
+The home page lists the sections and models the user may open. Above the list
+sits a **Getting started** panel with three parts: the first steps (add your
+first record, invite a user, set roles, each with a link when the user may do
+it), a list of what each section is for (the one-line help of its models,
+below), and links to these docs. The panel has a **Dismiss** button. It stays
+dismissed for that user only, and the user menu (the name at the bottom of the
+sidebar) has **Show the getting started guide** to bring it back. The
+dismissal is one row in the `karni_admin_guidedismissal` table, so run
+`migrate` after upgrading. `KARNI_ADMIN_GUIDE = False` removes the panel and
+the menu entry.
+
+### The list of a model
+
+- The top right has a primary **Add \<model\>** button, and **Import** beside
+  it, both only for users who may add. A user who may not has neither.
+- Under the page title is one line of help: `class Karni: help = "..."` on the
+  model (the spec's `help:`), else nothing. The docstring is for developers and
+  is never shown. Set
+  `karni_help = "..."` (through `AdminMeta.extra`) to change it for the admin
+  alone, or `""` to hide it.
+- The search box and a **Filters** button sit above the rows. A model with soft
+  delete has a **Deleted** filter (not deleted, deleted, all).
+- Each row ends with an **Actions** column: **Edit** and **Delete** for users who
+  may change and delete, **View** for a user who may only look, and **Restore**
+  instead of both on a deleted row. Delete opens a confirmation that names the
+  row. The buttons are named for their row (`Delete Note 1`) for screen
+  readers. A read-only model (an external table, a history) shows **View** only.
+  `karni_row_actions = False` removes the column, and `row_actions_column` is the
+  hook to draw other buttons.
+- The columns are at most six: the name or title first, then the key fields in
+  declaration order, then the updated time. Set `AdminMeta.list_display` to
+  choose them.
+- A list with no rows shows **No \<models\> yet.**, one sentence, and the Add
+  and Import buttons. A search or filter that finds nothing shows **No
+  \<models\> match these filters** with a button that clears them.
+- A bar at the bottom of every list says `Showing 1 to 25 of 312 notes`, with
+  previous and next, page numbers with gaps (`1 2 3 ... 13`) and the page size
+  (25, 50 or 100, kept in the URL as `?per_page=`). One page shows the count and
+  no page links. The default is `KARNI_ADMIN_PER_PAGE` (25), one model's is
+  `AdminMeta.per_page` (or `list_per_page` on an admin class), and the offered
+  sizes are `karni_per_page_choices`. On PostgreSQL a table above
+  `KARNI_ADMIN_COUNT_ESTIMATE_ABOVE` rows (100000, `0` always counts) shows the
+  planner's estimate, said as "about", instead of a `COUNT` on every page.
+- Active filters are chips above the table, each with a remove button, and
+  **Clear all** when there are several. A search shows its term, `12 results for
+  "paper"`, and a clear button.
+- A list always has an order, so pages never shuffle: `AdminMeta.ordering`, the
+  model's `Meta.ordering`, else newest updated first, newest created, then the
+  newest key (`get_ordering` is the hook). A sortable column shows an arrow on
+  hover, and the sorted one its direction. The header row stays in view while
+  the rows scroll, and the Actions heading sits over its buttons.
+- A model without its own `verbose_name_plural` shows a correct English plural
+  (Categories, Entries, Log entries) in the menu, the home page and titles. Its
+  `Meta` is not changed, so no migration comes of it, and a plural the model
+  declares always wins.
+
+### Bulk actions
+
+Tick rows (or the box in the header for the whole page) and pick an action.
+After the header box, **Select all 312 notes** extends the selection to every
+row of the list, filters and search included, and each action below honours it.
+Each action checks the user's permission, writes an admin log entry per row,
+and replaces the API response cache tokens once when it ends.
+
+| Action | For | What it does |
+|---|---|---|
+| Delete selected | users who may delete | A confirmation shows the count and the first ten rows, then deletes. A model with soft delete moves the rows to Deleted, keeps the rows that refer to them (a `PROTECT` foreign key does not block it), and the page says they can be restored |
+| Restore selected | soft-delete models, users who may change | Restores the selected deleted rows, one `restore()` each (open the **Deleted** filter to select them) |
+| Edit selected | users who may change | A form lists the fields the user may change. Tick **Change** beside each field to set, give one value, confirm. Every selected row is saved one by one in one transaction |
+| Export selected as CSV or XLSX | users who may view | Karni's export of the selection, columns the user may see |
+| Hard delete selected | superusers | Real deletion, after a confirmation (soft-delete models) |
+
+**Edit selected** saves each row with `obj.save()`, never `QuerySet.update()`, so
+signals, `updated_at` and the change history ([audit](change-history.md)) work as
+for a single edit. If one row fails validation or a listener refuses it, no
+row changes and the page shows which row and why. Each row has to be inside
+the user's `change` scope. A field the user may not change or see
+(`Karni.field_roles`, `readonly_fields`) is not offered, and neither are the
+primary key, unique fields, many-to-many, file and image fields, lifecycle
+states (each row's legal moves differ), JSON fields and the audit fields.
+At most `KARNI_ADMIN_BULK_EDIT_MAX` rows (default 500) at a time. A bigger
+selection, including a select-across one, gets a message to narrow the list, and
+nothing changes.
+`karni_bulk_edit = False` removes the action and `bulk_editable_fields` is the
+hook to offer fewer or more fields.
+
+### The form of a model
+
+- One line of help sits above the form, as on the list.
+- Fields show their help text under them, not on hover.
+- Technical fields (the id, `created_at`, `updated_at`, `deleted_at`, who
+  created and changed the row, any field the form cannot edit) are not in the
+  form. On an existing row they come last in a collapsed, read-only **Details**
+  section, and a new row shows no Details. `karni_details = False` keeps them
+  in the form's own fieldsets, and an admin that declares `fieldsets` is left
+  as written.
+- A bar fixed to the bottom has **Save** (the primary button, first), **Save and
+  add another**, **Save and continue editing**, **Cancel**, and **Delete** apart on
+  the right. Each shows only when the user may use it, so a user who may only
+  view gets **Cancel** alone.
+
 ## How registration works
 
 `KarniAdminConfig.ready()` runs `karni.admin.autodiscover()` (disable with
@@ -56,13 +165,14 @@ excluded from forms.
 
 | attribute | rule | cap |
 |---|---|---|
-| `list_display` | declaration-order Char/Slug/Email/URL/numeric/Boolean/Date(Time)/FK fields (never Text/JSON/File/Image/M2M), falling back to `__str__` | `KARNI_ADMIN_LIST_DISPLAY_MAX` (6) |
+| `list_display` | Char/Slug/Email/URL/numeric/Boolean/Date(Time)/FK fields (never Text/JSON/File/Image/M2M) in declaration order with a field named `name`, `title`, `label`, `display_name`, `full_name` or `subject` first and `updated_at` last, falling back to `__str__` | `KARNI_ADMIN_LIST_DISPLAY_MAX` (6) |
 | `list_filter` | booleans, choice fields, FKs (`RelatedOnlyFieldListFilter`), date/datetime | `KARNI_ADMIN_LIST_FILTER_MAX` (6) |
 | `search_fields` | Char/Slug/Email/Text without choices | `KARNI_ADMIN_SEARCH_MAX` (5) |
 | `date_hierarchy` | first declared non-audit date field, else `created_at` | none |
-| `readonly_fields` | audit fields present on the model + `AdminMeta.read_only` | none |
+| `readonly_fields` | audit fields present on the model + `AdminMeta.read_only` (shown in the collapsed Details section) | none |
 | `list_select_related` | FKs appearing in the derived `list_display` (no N+1 changelists) | none |
 | `autocomplete_fields` | FK/M2M whose target admin has search fields (second pass) | none |
+| `fieldsets` (experimental) | `Karni.field_groups`: a fieldset per group, the form's fields in no group last under Other ([field groups](ui.md#field-groups-and-column-sets-experimental)). `derive_fieldsets` is the hook | none |
 
 Each rule is a pure function in `karni.admin.derive` and a classmethod hook
 on `KarniModelAdmin`. Override either one per project.
@@ -86,6 +196,7 @@ class Invoice(BaseModel):
         read_only = ["total"]          # extends derived readonly_fields
         date_hierarchy = "issued_at"
         ordering = ["-issued_at"]
+        per_page = 50                  # rows per page, else KARNI_ADMIN_PER_PAGE
         extra = {"list_per_page": 25}  # any ModelAdmin attrs, applied last
 ```
 
@@ -93,19 +204,68 @@ Other recognized attrs are `exclude = True` (skip registration),
 `inline_on = "fk_field"` and `register = True` (opt an `AbstractBaseUser`
 subclass in). `inline_on` goes on the child side and generates a
 `TabularInline` on the parent's admin. A list of FK names is allowed, and the
-child stays registered on its own too. `extra` is the catch-all escape hatch:
+child stays registered on its own too. A tabular inline names its columns
+only in the table head, so Karni gives each input of its rows an
+`aria-label` with the column's name (`karni.admin.inlines.label_tabular_fields`,
+which `KarniInlineMixin` calls for a tabular inline of your own too). `extra` is the catch-all escape hatch:
 it takes anything a `ModelAdmin` accepts.
 
 Precedence: explicit `admin.site.register` (project `admin.py`) >
 `AdminMeta` > derived defaults.
 
+## Who may open a page
+
+A staff user opens a model's admin page for an action when they hold the
+grant for it through a role (`app_label.model:<action>`, see
+[roles as data](accounts.md#roles-as-data)), or Django's model permission
+for it. The grants are the same data the API reads for `access = Granted()`,
+so a role that may change orders through the API may change them in the
+admin too, and no Django permission needs ticking:
+
+```python
+KARNI_ROLES = {
+    "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}},
+    "front_desk": {"grants": {"clinic.appointment:*": "all", "clinic.patient:view": "all"}},
+}
+```
+
+A person with staff status and the `front_desk` role sees Appointments and
+Patients on the admin index, opens and changes appointments, and reads
+patients. The index, the app pages and the sidebar list exactly the models
+the user may open. Every other page is a 403.
+
+- Signing in to the admin still needs `is_staff` (Django's own rule). A
+  role alone never opens the admin.
+- Superusers hold every grant.
+- Rows still follow the grant's scope (below), and a [veto](#vetoes) still
+  refuses an action.
+- A user without a grant for a model keeps Django's model permissions for
+  it, as before.
+- Inlines follow the same rule for the inline's model. Generated inlines
+  have it, and `karni.admin.KarniInlineMixin` gives it to your own:
+  `class LineInline(KarniInlineMixin, TabularInline)`.
+- Only a superuser changes `is_superuser` and `user_permissions`, or edits
+  or deletes a superuser's account, on `KarniUserAdmin`. A grant on the user
+  model still lets its holder give roles to people, so grant
+  `<user model>:change` only to someone trusted with every role.
+
+`KARNI_ADMIN_GRANTS_OPEN_PAGES = False` restores the rule before 0.5.0:
+only Django's model permissions open pages, and the grants decide the rows.
+To keep one admin on Django's permissions, override `granted()`:
+
+```python
+class LedgerAdmin(KarniModelAdmin):
+    def granted(self, request, action):
+        return False  # Django's model permissions only, for this page
+```
+
 ## Row scope
 
 The admin shows the rows the user's grants reach (ADR 0002, P2). That is the
-same answer the API gives for `access = Granted()`. Django's model permissions
-still decide which screens a staff user may open. The roles' grants
+same answer the API gives for `access = Granted()`. A grant or a Django
+permission opens a page ([above](#who-may-open-a-page)). The roles' grants
 (`KARNI_ROLES` → `RolePermission`, see [roles as data](accounts.md#roles-as-data))
-decide which rows those screens show and accept:
+decide which rows those pages show and accept:
 
 - `get_queryset()` keeps only the rows the user's `view` grants reach, so the
   changelist, its search and list filters, the autocomplete endpoint and
@@ -120,8 +280,7 @@ decide which rows those screens show and accept:
   the API's relation fields accept.
 
 A soft-deleted row inside the scope stays reachable (the owner can restore
-it). An admin that must show everything its Django permissions admit opts
-out:
+it). An admin that must show every row to whoever may open it opts out:
 
 ```python
 class SupportConsoleAdmin(KarniModelAdmin):
@@ -167,6 +326,23 @@ gated on the grants (`karni_accounts.rolepermission:view` to look, `:change`
 to edit) and work at tablet width. The rules, the guard rails and the API are
 in [accounts](accounts.md#permission-matrix).
 
+## The API cache screen
+
+The admin index lists **Karni → API cache** (`<admin>/karni/api-cache/`), for
+superusers only. It shows whether [response caching](api.md#response-caching)
+is on, the cache backend and alias in use, how a clear works with that
+backend (`delete_pattern` deletes the entries, otherwise the version tokens
+are replaced), the daily flush `KARNI_API_CACHE_FLUSH` schedules, and every
+routed resource with its TTL and the models it reads. **Clear everything**
+drops every cached response, and **Clear** on a row drops one resource's.
+The bulk actions of every changelist (delete selected, restore, your own)
+invalidate the cache once per action, not once per row.
+
+Override / escape hatch: subclass `karni.admin.cache.ApiCacheScreen` (its
+`has_permission(request)` lets a role in) and call
+`karni.admin.cache.install(site, screen=MyScreen)` from an `admin.py`. The
+template is `karni_admin/api_cache.html`.
+
 ## Import and export
 
 Every changelist has **Export selected as CSV / XLSX** and an **Import**
@@ -189,12 +365,46 @@ them, so use it in a custom view. The `karni-impersonation` module registers
 the veto that blocks dangerous actions while a support user acts as someone
 else.
 
+## External tables and views
+
+!!! warning "Experimental"
+    `KarniModelAdmin.is_read_only` is [experimental](stability.md#experimental-names).
+
+An [external model](models.md#external-tables-views-and-a-second-database)
+(`class Karni: external = True`) is registered like any other, with derived
+columns, filters, search and row scope. Unless it declares `writable =
+True`, its admin is read-only: no add, change or delete permission, so the
+change view shows every field read-only, the bulk delete action and the
+import page are gone, and the export actions stay. An inline of such a model
+(`AdminMeta.inline_on`) shows its rows and changes none.
+`KarniModelAdmin.is_read_only()` decides it: override it to make one admin
+writable, or any admin read-only. A model on a second database
+(`Karni.database`) is read and written there.
+
+## Tree models
+
+!!! warning "Experimental"
+    The tree changelist (`karni.admin.tree`, `tree_changelist_max_rows`) is
+    [experimental](stability.md#experimental-names).
+
+A [tree model](models.md#tree-models)'s changelist lists the rows in tree
+order, a parent and then its branch, with the name indented by depth
+(the `tree_label` column, first in the derived columns). Filters and search
+still apply, and a row whose parent they leave out starts a branch. A list
+sorted by a column is flat, and so is one with more than
+`tree_changelist_max_rows` (10,000) rows. Set it to 0 on an admin to turn
+tree order off.
+
+The menu of [navigation from data](navigation.md) (`KARNI_NAVIGATION =
+"db"`, experimental) is such a tree: *Navigation items* lists the entries in
+tree order, and its *Menu preview* button shows the menu one user gets.
+
 ## Soft-deleted models in the admin
 
 For `karni.models.SoftDeleteModel` subclasses the derived admin is
 soft-delete aware:
 
-- The changelist defaults to **alive rows only**, and the "deleted" filter
+- The changelist defaults to **alive rows only**, and the **Deleted** filter
   switches to only-deleted or everything. The change form can open deleted
   rows. The admin queryset lifts the `soft_delete` scope, and only that one
   (`objects.without("soft_delete", reason=...)`), so any other scope, such as
@@ -213,14 +423,17 @@ Behavioural fine print (by design, see the `karni/models.py` docstrings):
 - Soft deletes send **no** `pre_delete`/`post_delete` signals and do **not**
   cascade to related rows. Hard deletion is only ever the explicit
   `hard_delete()` / admin hard-delete action.
-- Delete confirmation pages use Django's collector, so they list cascade
-  children that a *soft* delete will not actually touch.
+- A soft delete changes only the selected rows, so neither the row's Delete
+  page nor *Delete selected* lists related rows or refuses a row that a
+  `PROTECT` foreign key points from: they soft-delete it, as the API does, and
+  say that the rows that refer to it are kept. *Hard delete selected* still
+  lists what the cascade removes and refuses a row that `PROTECT` keeps. A row
+  the user may not delete is refused on both.
 
 ## Theming
 
 The admin, the welcome page and `@karni/ui` are one product: the same
-colours in light and dark, the same radius, spacing, font stack and
-dark-mode switch. They share one source, `@karni/ui`'s token stylesheet
+colours, radius, spacing and font stack. They share one source, `@karni/ui`'s token stylesheet
 (`packages/karni-ui/src/styles.css`, published as `@karni/ui/styles.css`).
 The `karni` package ships a byte-for-byte copy of it as the static file
 `karni/tokens.css`, and a test fails, printing the `cp` command, until a
@@ -248,13 +461,23 @@ Unfold reads the `UNFOLD` setting. Karni's default:
   The test pins each step to its token.
 - Sets `BORDER_RADIUS` to `var(--karni-radius-md)`, the radius of
   `@karni/ui`'s buttons and inputs.
-- Leaves unfold's light / dark / system switch on (`THEME` unset). By
-  default the admin follows the system preference, like the welcome page.
-  Dark mode is the `dark` class on `<html>` in all three.
+- Shows the admin in light mode only, with no light / dark switch (below).
 
-To retheme the admin the way you retheme `@karni/ui`, give it the same
-`--karni-*` overrides your frontend's `karni-theme.css` holds, as a static
-file appended after Karni's two:
+The admin is light only. `UNFOLD["THEME"]` is `"light"`, so unfold shows no
+switch on any page or on the login screen, and a browser in dark mode still gets
+the light admin (no stylesheet follows the system scheme). There is no Karni
+setting for it. A project that wants something else sets `UNFOLD["THEME"]`
+itself and its value wins. `karni/admin-a11y.js`, loaded through
+`UNFOLD["SCRIPTS"]`, adds the landmarks and the names unfold's pages lack for
+screen readers.
+
+The project's own brand comes from the file its staff app loads:
+`frontend/src/karni-theme.css`, which `karni ui detect` writes. `KARNI_THEME_CSS`
+names it, `karni.admin.theme.ProjectThemeFinder` serves it as the static file
+`karni/project-theme.css`, and `STYLES` loads it third. One file, both
+screens: see [theming](theming.md#one-theme-for-the-staff-app-and-the-admin).
+To give the admin overrides of its own instead, append a static file after
+Karni's three:
 
 ```css
 /* static/css/admin-theme.css */
@@ -290,6 +513,12 @@ del UNFOLD["COLORS"]
 UNFOLD = {"SITE_TITLE": "Ops", "SITE_HEADER": "Ops"}
 ```
 
+A replaced `UNFOLD` has no `SITE_LOGO` or `SITE_ICON` entry, so
+`KARNI_ADMIN_LOGO` then shows nothing, and startup fails with `karni.E508`
+while it is set. Change `UNFOLD` in place instead, or put the two entries
+back: `"SITE_LOGO": karni.conf.admin_logo.site_logo` and `"SITE_ICON":
+karni.conf.admin_logo.site_icon`.
+
 A static primary of your own keeps Karni's `unfold-theme.css`, which colours
 text on primary buttons with `--karni-color-primary-foreground`. That token is
 dark in dark mode, because Karni's primary is light there. If your primary
@@ -316,6 +545,15 @@ KARNI_ADMIN_LOGO = {"light": "img/mark.svg", "dark": "img/mark-dark.svg", "icon"
 Each value is passed to `static()`, and `dark` and `icon` fall back to
 `light`. `KARNI_ADMIN_LOGO = None` (the default, also the env value `""`)
 leaves the text header.
+
+The admin reads the setting on every request: `UNFOLD["SITE_LOGO"]` and
+`UNFOLD["SITE_ICON"]` hold `karni.conf.admin_logo.site_logo` and
+`site_icon`, which unfold calls with the request. So the setting works
+wherever `settings.py` assigns it, above or below `karni_settings()`, and an
+invalid value fails startup validation (`E303`). The login screen shows the
+same logo above its title: `karni.admin` gives the admin site the
+`karni_admin/login.html` template, which extends unfold's login page. A site
+that sets its own `login_template` keeps it.
 
 More escape hatches:
 

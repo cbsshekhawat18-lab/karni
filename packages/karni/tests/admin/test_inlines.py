@@ -75,6 +75,22 @@ class TestRegistration:
         assert b"Inlined note" in response.content
 
     @pytest.mark.django_db
+    def test_the_inline_rows_inputs_carry_their_column_name(self, admin_client: Client) -> None:
+        """axe ``label``: a tabular row's input has no <label>, so it gets an aria-label."""
+        import re
+
+        sink = KitchenSink.objects.create(name="Parent")
+        Note.objects.create(kitchen=sink, title="Inlined note")
+        page = admin_client.get(
+            reverse("admin:adminapp_kitchensink_change", args=[sink.pk])
+        ).content.decode()
+        fields = re.findall(r"<(?:input|textarea|select)\b[^>]*name=\"notes-0-[^\"]+\"[^>]*>", page)
+        visible = [tag for tag in fields if 'type="hidden"' not in tag and "-DELETE" not in tag]
+        assert visible, "the inline row renders inputs"
+        assert all("aria-label=" in tag for tag in visible), visible
+        assert any('aria-label="Title"' in tag for tag in visible)
+
+    @pytest.mark.django_db
     def test_a_soft_delete_child_inline_shows_alive_rows_only(self, admin_client: Client) -> None:
         # Documented scope note: the inline formset uses the child's default
         # manager, so soft-deleted rows stay out of the parent's change form.

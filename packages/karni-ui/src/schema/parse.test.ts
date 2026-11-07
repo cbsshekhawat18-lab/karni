@@ -10,7 +10,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { openApiFixture, openApiFixtureWithAuthMode } from "../../tests/msw/openapi";
-import { parseOpenApi } from "./parse";
+import { parseColumnSets, parseFieldGroups, parseOpenApi } from "./parse";
 import type { FieldDef, ResourceSchema } from "./types";
 
 function fieldOf(schema: ResourceSchema, name: string): FieldDef {
@@ -42,12 +42,29 @@ describe("parseOpenApi — handwritten fixture", () => {
     expect(events.operations.remove?.method).toBe("delete");
   });
 
+  it("parses the dashboard declaration of a list operation (x-karni-dashboard)", () => {
+    expect(events?.dashboard).toEqual({
+      label: "Events",
+      order: 0,
+      total: true,
+      newDays: 7,
+      dateField: "created_at",
+      by: "status",
+      values: ["draft", "published"],
+      counts: [{ label: "Public", params: { is_public: true } }],
+      recent: 3,
+      columns: ["title", "status"],
+    });
+    expect(parsed.resources["venues"]?.dashboard).toBeUndefined();
+  });
+
   it("records declared list query params, the expand enum, and hasSearch", () => {
     const list = events?.operations.list;
     expect(list).toBeDefined();
     if (list === undefined) return;
     expect([...list.queryParams].sort()).toEqual([
       "category",
+      "created_at__gte",
       "expand",
       "is_public",
       "ordering",
@@ -127,6 +144,23 @@ describe("parseOpenApi — handwritten fixture", () => {
     expect(tags.kind).toBe("relation");
     expect(tags.relation).toEqual({ resource: "tags", many: true });
     expect(tags.relationValueType).toBe("integer");
+  });
+
+  it("marks a protected file field from x-karni-storage (experimental)", () => {
+    const doc = structuredClone(openApiFixture) as unknown as {
+      components: { schemas: Record<string, { properties?: Record<string, object> }> };
+    };
+    const storage = { protected: true, max_size: 1000, content_types: [], thumbnails: [] };
+    for (const schema of Object.values(doc.components.schemas)) {
+      const poster = schema.properties?.["poster"];
+      if (poster !== undefined && schema.properties !== undefined) {
+        schema.properties["poster"] = { ...poster, "x-karni-storage": storage };
+      }
+    }
+    const marked = fieldOf(parseOpenApi(doc).resources["events"] as ResourceSchema, "poster");
+    expect(marked.protected).toBe(true);
+    // a file field without the extension, or with protected false, is a plain link
+    expect(fieldOf(events as ResourceSchema, "poster").protected).toBeUndefined();
   });
 
   it("marks kind file from the request side's format: binary (D1)", () => {
@@ -264,18 +298,23 @@ describe("parseOpenApi — resilience", () => {
   });
 });
 
-// D9 snapshot guard
+// D9 snapshot guard: one generated snapshot per key type of the testapp models
 
-const SNAPSHOT_PATH = join(process.cwd(), "tests", "fixtures", "schema.testapp.json");
-const snapshotPresent = existsSync(SNAPSHOT_PATH);
+const SNAPSHOTS = [
+  { keys: "uuid", file: "schema.testapp.json" },
+  { keys: "bigint", file: "schema.testapp.bigint.json" },
+] as const;
 
-describe("parseOpenApi — generated testapp snapshot (D9)", () => {
+describe.each(SNAPSHOTS)("parseOpenApi — generated testapp snapshot, $keys keys (D9)", (snap) => {
+  const snapshotPath = join(process.cwd(), "tests", "fixtures", snap.file);
+  const snapshotPresent = existsSync(snapshotPath);
+
   it.skipIf(!snapshotPresent)(
     "parses the testapp Event resource with the pinned field facts " +
-      "(schema.testapp.json absent? copy it from packages/karni tests/api/fixtures — " +
+      `(${snap.file} absent? copy it from packages/karni tests/api/fixtures — ` +
       "see tests/fixtures/README.md)",
     () => {
-      const parsed = parseOpenApi(JSON.parse(readFileSync(SNAPSHOT_PATH, "utf8")));
+      const parsed = parseOpenApi(JSON.parse(readFileSync(snapshotPath, "utf8")));
 
       const event = Object.values(parsed.resources).find((resource) =>
         resource.fields.some((field) => field.name === "internal_note"),
@@ -304,11 +343,12 @@ describe("parseOpenApi — generated testapp snapshot (D9)", () => {
       const organizer = fieldOf(event, "organizer");
       expect(organizer.kind).toBe("relation");
       expect(organizer.relation?.many).toBe(false);
-      expect(organizer.relationValueType).toBe("uuid"); // testapp pks are UUIDs
+      expect(organizer.relationValueType).toBe("uuid"); // the user model keeps UUIDs
 
       const venue = fieldOf(event, "venue");
       expect(venue.kind).toBe("relation");
       expect(venue.relation?.many).toBe(false);
+      expect(venue.relationValueType).toBe(snap.keys === "uuid" ? "uuid" : "integer");
 
       // Tag has no viewset in the testapp, so the backend omits
       // x-karni-relation (B13: unrouted target) — tags must degrade to a
@@ -322,7 +362,25 @@ describe("parseOpenApi — generated testapp snapshot (D9)", () => {
       expect(note.readOnly).toBe(false);
 
       expect(fieldOf(event, "title").required).toBe(true);
-      expect(fieldOf(event, "id").readOnly).toBe(true);
+      const id = fieldOf(event, "id");
+      expect(id.readOnly).toBe(true);
+      expect(id.kind).toBe(snap.keys === "uuid" ? "string" : "integer");
+      // The primary key is never a derived filter (?id__gte= would walk integer keys).
+      expect(event.operations.list?.queryParams).not.toContain("id");
+      expect(event.operations.list?.queryParams).not.toContain("id__gte");
+      expect(event.operations.list?.queryParams).toContain("venue");
+
+      // x-karni-related (experimental): the venue's events, filtered by ?venue=.
+      expect(parsed.resources["venues"]?.related).toEqual([
+        {
+          name: "events",
+          resource: "events",
+          field: "venue",
+          param: "venue",
+          key: "id",
+          label: "Events",
+        },
+      ]);
     },
   );
 });
@@ -380,5 +438,215 @@ describe("parseOpenApi — enum choice labels", () => {
     const status = fieldOf(parsed.resources["events"] as ResourceSchema, "status");
     expect(status.enumLabels).toEqual({ draft: "Draft", published: "Published" });
     expect(status.description).toBe("Visibility of the event.");
+  });
+});
+
+describe("parseOpenApi: x-karni-honeypot", () => {
+  function contactDoc(createExtensions: Record<string, unknown>): unknown {
+    return {
+      openapi: "3.0.3",
+      paths: {
+        "/api/contacts/": {
+          get: { "x-karni-resource": "contacts", responses: {} },
+          post: { operationId: "contacts_create", responses: {}, ...createExtensions },
+        },
+      },
+    };
+  }
+
+  it("reads the honeypot field name off a public create", () => {
+    const contacts = parseOpenApi(contactDoc({ "x-karni-honeypot": "homepage" })).resources[
+      "contacts"
+    ];
+    expect(contacts?.operations.create?.honeypot).toBe("homepage");
+    // Never a form field of its own: the name lives on the operation only.
+    expect(contacts?.fields.map((field) => field.name)).not.toContain("homepage");
+  });
+
+  it("ignores a missing, empty or non-string extension", () => {
+    for (const extension of [{}, { "x-karni-honeypot": "" }, { "x-karni-honeypot": 7 }]) {
+      const contacts = parseOpenApi(contactDoc(extension)).resources["contacts"];
+      expect(contacts?.operations.create?.honeypot).toBeUndefined();
+    }
+  });
+});
+
+describe("parseOpenApi — a StateField's lifecycle", () => {
+  // What drf-spectacular emits for a StateField: the enum by $ref, the
+  // lifecycle extensions next to it (karni.api.lifecycle).
+  const doc = {
+    openapi: "3.0.3",
+    paths: {
+      "/api/orders/": {
+        get: {
+          "x-karni-resource": "orders",
+          parameters: [],
+          responses: {
+            "200": {
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      results: { type: "array", items: { $ref: "#/components/schemas/Order" } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    components: {
+      schemas: {
+        StatusEnum: { type: "string", enum: ["draft", "confirmed", "cancelled"] },
+        Order: {
+          type: "object",
+          properties: {
+            id: { type: "integer", readOnly: true },
+            status: {
+              allOf: [{ $ref: "#/components/schemas/StatusEnum" }],
+              "x-karni-transitions": {
+                draft: ["confirmed", "cancelled"],
+                confirmed: ["cancelled"],
+                cancelled: [],
+                broken: "not a list",
+              },
+              "x-karni-initial": ["draft"],
+            },
+          },
+        },
+      },
+    },
+  };
+
+  it("keeps the transitions and initial states on the field, dropping malformed entries", () => {
+    const status = parseOpenApi(doc).resources["orders"]?.fields.find(
+      (field) => field.name === "status",
+    );
+    expect(status?.kind).toBe("enum");
+    expect(status?.transitions).toEqual({
+      draft: ["confirmed", "cancelled"],
+      confirmed: ["cancelled"],
+      cancelled: [],
+    });
+    expect(status?.initial).toEqual(["draft"]);
+    const id = parseOpenApi(doc).resources["orders"]?.fields.find((field) => field.name === "id");
+    expect(id?.transitions).toBeUndefined();
+  });
+});
+
+describe("parseOpenApi — wide models (experimental)", () => {
+  // A MarkdownField, a blank email, and the list operation's layout extensions.
+  const doc = {
+    openapi: "3.0.3",
+    paths: {
+      "/api/products/": {
+        get: {
+          "x-karni-resource": "products",
+          "x-karni-field-groups": {
+            layout: "tabs",
+            groups: [
+              { label: "Overview", fields: ["name", "summary"] },
+              { label: "", fields: ["contact"] },
+              { label: "Again", fields: ["name"] },
+              "not a group",
+            ],
+          },
+          "x-karni-column-sets": {
+            default: "missing",
+            sets: [
+              { name: "default", label: "Default", columns: ["name"] },
+              { name: "financial_view", columns: ["name", "contact"] },
+              { name: "empty", columns: [] },
+            ],
+          },
+          responses: {
+            "200": {
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      results: { type: "array", items: { $ref: "#/components/schemas/Product" } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    components: {
+      schemas: {
+        Product: {
+          type: "object",
+          properties: {
+            name: { type: "string", maxLength: 200 },
+            summary: {
+              oneOf: [
+                { type: "string", format: "markdown" },
+                { type: "string", maxLength: 0 },
+              ],
+              description: "What the product is.",
+            },
+            faq: { type: "string", format: "markdown" },
+            contact: {
+              oneOf: [
+                { type: "string", format: "email", maxLength: 254 },
+                { type: "string", maxLength: 0 },
+              ],
+            },
+          },
+        },
+      },
+    },
+  };
+  const products = parseOpenApi(doc).resources["products"];
+
+  it("reads format markdown as text, blank or not", () => {
+    expect(products && fieldOf(products, "faq")).toMatchObject({
+      kind: "text",
+      format: "markdown",
+    });
+    expect(products && fieldOf(products, "summary")).toMatchObject({
+      kind: "text",
+      format: "markdown",
+      description: "What the product is.",
+    });
+  });
+
+  it("reads a formatted string that may be blank as that string", () => {
+    expect(products && fieldOf(products, "contact")).toMatchObject({
+      kind: "string",
+      format: "email",
+      maxLength: 254,
+    });
+  });
+
+  it("keeps the well-formed groups and sets, a field in one group only", () => {
+    expect(products?.fieldGroups).toEqual({
+      layout: "tabs",
+      groups: [{ label: "Overview", fields: ["name", "summary"] }],
+    });
+    expect(products?.columnSets).toEqual({
+      default: "default",
+      sets: [
+        { name: "default", label: "Default", columns: ["name"] },
+        { name: "financial_view", label: "Financial view", columns: ["name", "contact"] },
+      ],
+    });
+  });
+
+  it("drops malformed extensions", () => {
+    expect(parseFieldGroups({ groups: "x" })).toBeUndefined();
+    expect(parseFieldGroups({ layout: "grid", groups: [{ label: "A", fields: ["a"] }] })).toEqual({
+      layout: "sections",
+      groups: [{ label: "A", fields: ["a"] }],
+    });
+    expect(parseColumnSets({ sets: [{ name: "", columns: ["a"] }] })).toBeUndefined();
+    expect(parseColumnSets(null)).toBeUndefined();
   });
 });

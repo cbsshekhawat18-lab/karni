@@ -1,10 +1,10 @@
 name: Release
 
 # Pushing a tag vX.Y.Z publishes every package at X.Y.Z (lockstep versioning,
-# docs/releasing.md): karni, karni-cli, karni-payments, karni-approvals and
-# karni-impersonation to PyPI; @karni/ui, @karni/payments-ui,
-# @karni/approvals-ui and @karni/impersonation-ui to npm; each with build
-# provenance.
+# docs/releasing.md), each with build provenance: the Python packages to PyPI
+# and the React packages to npm. The list of packages is PYTHON_PACKAGES and
+# NPM_PACKAGES in .github/ci/check_release.py, and the check job refuses a
+# release whose build or upload lists below differ from it.
 #
 # Publishing is off until the repository variable KARNI_PUBLISHING names the
 # registries to publish to: "pypi", "npm", "pypi,npm" or "true" (both)
@@ -17,9 +17,9 @@ name: Release
 # nothing. A tag push with the variable set is the only path that publishes.
 #
 # One-time setup (repository settings, not code):
-#   - PyPI: add a (pending) trusted publisher for each of the five projects
+#   - PyPI: add a (pending) trusted publisher for each Python package
 #     (this repository, workflow release.yml, environment "pypi").
-#   - npm: add a trusted publisher for each of the four packages
+#   - npm: add a trusted publisher for each npm package
 #     (this repository, workflow release.yml, environment "npm"). No token is
 #     stored; npm exchanges the workflow's OIDC token at publish time.
 #   - Environments "pypi" and "npm": add required reviewers to gate a publish
@@ -123,11 +123,18 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - run: python -m pip install packaging
-      - name: Versions, repository URLs, licences, module ranges
+      - run: python -m pip install packaging pyyaml
+      # A run on a branch has no tag yet, so CHANGELOG.md may still read
+      # "## X.Y.Z (unreleased)". A tag needs the release date there.
+      - name: Versions, repository URLs, licences, module ranges, workflow lists, changelog
         env:
           TAG: ${{ needs.mode.outputs.tag }}
-        run: python .github/ci/check_release.py --tag "$TAG" --repo "$GITHUB_REPOSITORY"
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          allow=()
+          [[ "$REF" == refs/tags/* ]] || allow=(--allow-unreleased)
+          python .github/ci/check_release.py --tag "$TAG" --repo "$GITHUB_REPOSITORY" "${allow[@]}"
 
   build-python:
     name: Build Python distributions
@@ -144,7 +151,7 @@ jobs:
       - name: Build sdists and wheels
         run: |
           set -euo pipefail
-          for d in packages/karni packages/karni-cli modules/karni-payments modules/karni-approvals modules/karni-impersonation; do
+          for d in packages/karni packages/karni-cli modules/karni-payments modules/karni-approvals modules/karni-impersonation modules/karni-site modules/karni-charts modules/karni-reports modules/karni-ai modules/karni-storage; do
             python -m build --outdir dist "$d"
           done
           python -m twine check --strict dist/*
@@ -181,7 +188,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p npm-dist
-          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui; do
+          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui modules/karni-reports/ui modules/karni-ai/ui modules/karni-storage/ui; do
             (cd "$d" && npm ci && npm run build && npm publish --dry-run --access public)
             npm pack --pack-destination npm-dist "./$d"
           done
@@ -208,11 +215,13 @@ jobs:
           path: dist/
       # One upload per project, core first: a project whose trusted publisher
       # is missing stops the job without half-publishing the others, and
-      # skip-existing makes a re-run after fixing it safe.
+      # skip-existing makes a re-run after fixing it safe. Every upload step
+      # has the same `with:` block, and .github/ci/check_release.py refuses a
+      # release whose steps differ or miss a project.
       - name: One directory per project
         run: |
           set -euo pipefail
-          for project in karni karni_cli karni_payments karni_approvals karni_impersonation; do
+          for project in karni karni_cli karni_payments karni_approvals karni_impersonation karni_site karni_charts karni_reports karni_ai karni_storage; do
             mkdir -p "pypi/$project"
             mv dist/"$project"-[0-9]* "pypi/$project/"
           done
@@ -262,6 +271,41 @@ jobs:
           skip-existing: true
           password: ${{ secrets.PYPI_API_TOKEN }}
           attestations: ${{ steps.auth.outputs.attest }}
+      - name: karni-site
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: pypi/karni_site/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
+      - name: karni-charts
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: pypi/karni_charts/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
+      - name: karni-reports
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: pypi/karni_reports/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
+      - name: karni-ai
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: pypi/karni_ai/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
+      - name: karni-storage
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: pypi/karni_storage/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
 
   publish-npm:
     name: Publish to npm
@@ -299,7 +343,7 @@ jobs:
           else
             echo "No NPM_TOKEN secret: npm trusted publishing."
           fi
-          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui; do
+          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui modules/karni-reports/ui modules/karni-ai/ui modules/karni-storage/ui; do
             (cd "$d" && npm ci && npm run build && npm publish --provenance --access public)
           done
 

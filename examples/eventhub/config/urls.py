@@ -1,29 +1,40 @@
 """URL configuration for EventHub.
 
 Routes: Django admin, the OpenAPI schema and Swagger UI (drf-spectacular),
-Karni's auth endpoints (/api/auth/), the auto-routed API (/api/), and
-Karni's health endpoints (/health/ liveness, /health/ready/ readiness).
-Add project routes to ``urlpatterns`` below; to replace a single Karni
-endpoint, declare your ``path(...)`` for it BEFORE the include — first
-match wins.
+Karni's auth endpoints (/api/auth/), the auto-routed API (/api/), Karni's
+health endpoints (/health/ liveness, /health/ready/ readiness) and, last,
+the welcome page at "/" while DEBUG is on. Swagger UI is the split view: its
+start-up script is a file, so the content security policy allows no inline
+script on that page either. Add project routes to
+``urlpatterns`` below. To replace a single Karni endpoint, declare your
+``path(...)`` for it BEFORE the include, because the first match wins. Your own
+``path("", ...)`` replaces the welcome page the same way. ``karni make site``
+inserts its include at the ``# karni:urls`` marker, so keep that line.
 """
 
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerSplitView
 from karni.welcome import media_urls, welcome_urls
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    # KARNI_ADMIN_PATH (env, default "admin/"): move the admin off the guessable path.
+    path(settings.KARNI_ADMIN_PATH, admin.site.urls),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path(
+        "api/docs/",
+        SpectacularSwaggerSplitView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
     path("api/auth/", include("karni.accounts.urls")),
     path("api/", include("karni.api.urls")),
     path("payments/", include("karni_payments.urls")),
     path("health/", include("karni.health.urls")),
-    # Uploads (event cover images) under MEDIA_URL while DEBUG is on.
+    # Uploads under MEDIA_URL while DEBUG is on and storage is local (dev only).
     *media_urls(),
+    # Project routes that `karni make` wires (a public site's include goes here).
+    # karni:urls
     # Only while DEBUG is on, and only until a route above answers "/".
     *welcome_urls(),
 ]

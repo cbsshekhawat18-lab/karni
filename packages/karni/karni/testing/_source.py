@@ -29,7 +29,8 @@ DEFAULTS: dict[str, Any] = {
     "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]},
 }
 
-_ALLOW_RE = re.compile(r"#\s*karni:\s*allow\(([^)]+)\)\s*:\s*(.*)$")
+_ALLOW_RE = re.compile(r"#\s*karni:\s*allow\(([^)]+)\)\s*(?::\s*(.*))?$")
+_ALLOW_START = re.compile(r"#\s*karni:\s*allow\(")
 
 
 @dataclass(frozen=True)
@@ -75,14 +76,15 @@ def project_root() -> Path:
     return Path.cwd().resolve()
 
 
-def project_app_configs(*, infer_root: bool = True) -> list[AppConfig]:
+def project_app_configs(*, infer_root: bool = True, skip_apps: bool = True) -> list[AppConfig]:
     """Installed apps whose code lives in the project tree (see module docstring).
 
     The tree is ``BASE_DIR`` when the settings define it, else
-    :func:`project_root`'s fallback (the parent of the settings package — a
-    Karni scaffold defines no ``BASE_DIR``), so every rule scans the project
+    :func:`project_root`'s fallback (the parent of the settings package, for a
+    project made before the scaffold defined ``BASE_DIR``), so every rule scans the project
     by default. ``infer_root=False`` keeps the strict ``BASE_DIR``-only
-    behaviour and returns nothing without it.
+    behaviour and returns nothing without it. ``skip_apps=False`` ignores
+    ``KARNI_ARCHITECTURE["skip_apps"]`` (a check that is not an architecture rule).
     """
     base_dir = getattr(settings, "BASE_DIR", None)
     if base_dir is None and infer_root:
@@ -91,7 +93,7 @@ def project_app_configs(*, infer_root: bool = True) -> list[AppConfig]:
         return []
     base = str(Path(base_dir).resolve())
     site = _site_packages_roots()
-    skip = set(config("skip_apps"))
+    skip = set(config("skip_apps")) if skip_apps else set()
     found: list[AppConfig] = []
     for cfg in apps.get_app_configs():
         if cfg.label in skip:
@@ -139,14 +141,21 @@ class Allow:
     line: int
 
 
-def allows_in(path: Path) -> dict[int, Allow]:
-    """Every ``# karni: allow(...)`` marker in the file, keyed by 1-based line."""
-    found: dict[int, Allow] = {}
+def allows_in(path: Path) -> dict[int, list[Allow]]:
+    """Every ``# karni: allow(...)`` marker in the file, keyed by 1-based line.
+
+    A line may carry several markers, each reason running to the next one.
+    """
+    found: dict[int, list[Allow]] = {}
     for i, text in enumerate(_file_lines(str(path)), start=1):
-        m = _ALLOW_RE.search(text)
-        if m:
-            rules = tuple(r.strip() for r in m.group(1).split(",") if r.strip())
-            found[i] = Allow(rules=rules, reason=m.group(2).strip(), line=i)
+        starts = [m.start() for m in _ALLOW_START.finditer(text)]
+        for begin, end in zip(starts, [*starts[1:], len(text)][: len(starts)], strict=True):
+            m = _ALLOW_RE.match(text[begin:end].rstrip())
+            if m:
+                rules = tuple(r.strip() for r in m.group(1).split(",") if r.strip())
+                found.setdefault(i, []).append(
+                    Allow(rules=rules, reason=(m.group(2) or "").strip(), line=i)
+                )
     return found
 
 
@@ -158,9 +167,9 @@ def find_allow(path: Path, rule: str, lines: list[int]) -> Allow | None:
     """
     markers = allows_in(path)
     for line in lines:
-        allow = markers.get(line)
-        if allow and rule in allow.rules:
-            return allow
+        for allow in markers.get(line, []):
+            if rule in allow.rules:
+                return allow
     return None
 
 

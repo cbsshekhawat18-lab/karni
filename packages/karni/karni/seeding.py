@@ -18,7 +18,9 @@ near-future datetime; optional fields are mostly filled. Relations point at
 rows seeded earlier in the run (or existing rows), so the data is connected;
 to-many relations get a few rows each; one-to-one targets are used once.
 Unique fields and constraints hold (values embed the row's number; a clash
-on a multi-field constraint is retried).
+on a multi-field constraint is retried). Models Django does not manage
+(``Meta.managed = False``), external tables and views among them
+(:mod:`karni.db`), are never seeded: another system fills them.
 
 **A demo login.** The first user is ``demo@example.com`` with the password
 ``karni-password`` (:data:`karni.testing.factories.DEFAULT_PASSWORD`),
@@ -57,11 +59,34 @@ Every class attribute other than ``Meta`` overrides one field (a value or
 any factory-boy declaration); everything else stays inferred. An explicit
 factory in ``<app>/factories.py`` is the base when there is one.
 
+**Demo data, not content.** Seeded rows carry no mark, so a run cannot tell
+its own rows from real content. ``karni seed`` therefore prints the models
+it will write to and refuses (``E617``) when one of their tables already
+holds rows, unless ``--reset`` wipes them first or ``--force`` adds demo rows
+on top. The user table is left out of that check: users are matched by login
+and never deleted, and a fresh project already has its superuser.
+
+**Generated slugs are the plain slug of their source.** A
+``karni.fields.SlugField(populate_from=...)`` is left empty in a demo row,
+so the field makes it on save: the slug of the name (``europe``), with
+``-2``, ``-3`` only when two rows clash. Such a slug is often the import
+key, so a demo file names the row as a person would. A seeder or an
+explicit factory that declares the slug keeps its own value, and the bulk
+path keeps the factory's unique values (:mod:`karni.bulk_seeding`).
+:func:`occupied` is the rule. Real content belongs in a content file loaded
+with ``karni load`` (:mod:`karni.transfer.loading`). The importable
+:func:`seed` does not refuse: the caller decides.
+
 Override / escape hatches: override :meth:`Seeder.seed` for full control of
 a model's rows (``context.create(n, **values)``, ``context.pick(Model)``,
 ``context.random``); subclass :class:`SeedBuilder` (or the value engine) and
 pass ``builder=`` to :func:`seed`; ``--model`` narrows the run. Listeners
 (:mod:`karni.events`) fire for seeded rows as for any save.
+
+**Volume (experimental).** ``karni seed --volume N`` writes N rows per model
+in bulk for performance work, and a model whose count reaches
+``KARNI_SEED_BULK_THRESHOLD`` takes the same bulk path in a plain run:
+:mod:`karni.bulk_seeding`. Bulk rows skip ``save()`` and listeners.
 """
 
 from __future__ import annotations
@@ -101,9 +126,12 @@ __all__ = [
     "SeedReport",
     "Seeder",
     "clear_cache",
+    "occupied",
+    "planned_rows",
     "seed",
     "seed_plan",
     "seeders",
+    "volume_rows",
 ]
 
 DEFAULT_COUNT: Final = 10
@@ -123,6 +151,15 @@ ATTEMPTS: Final = 10
 
 class SeedError(KarniError):
     """A model cannot be seeded; the message names the model and the fix."""
+
+
+def unseedable(model: type[models.Model], exc: Exception) -> SeedError:
+    """``E613`` for a row the factory cannot build (a field it cannot fill, ``E610``)."""
+    return SeedError(
+        f"{model._meta.label}: {exc} For seeding, override Seeder.seed() "
+        f"(karni make seeder {model.__name__}) and pass the row yourself.",
+        code="E613",
+    )
 
 
 class Seeder:
@@ -217,6 +254,21 @@ class SeedBuilder(FactoryBuilder):
         return super().declaration(model, field)
 
 
+def generated_slugs(model: type[models.Model]) -> list[str]:
+    """Names of ``model``'s ``karni.fields.SlugField(populate_from=...)`` fields.
+
+    A demo row leaves them empty, so the field makes each on save from its
+    source: the plain slug, with a counter only when two rows clash.
+    """
+    from karni.fields.text import SlugField
+
+    return [
+        field.name
+        for field in model._meta.concrete_fields
+        if isinstance(field, SlugField) and field.populate_from and field.editable
+    ]
+
+
 # discovery
 
 _SEEDERS: dict[type[models.Model], type[Seeder]] | None = None
@@ -254,6 +306,7 @@ def clear_cache() -> None:
 
 
 def _seedable(model: type[models.Model]) -> bool:
+    """A model seeding writes to: concrete, not swapped, and managed (never an external table)."""
     meta = model._meta
     return not (
         meta.abstract or meta.proxy or not meta.managed or meta.auto_created or meta.swapped
@@ -280,6 +333,29 @@ def _resolve(model: Any) -> type[models.Model]:
                 f"--model {model}: no such model (use app_label.Model).", code="E614"
             ) from exc
     return model  # type: ignore[no-any-return]
+
+
+def _wipe(model: type[models.Model]) -> None:
+    """Delete every row of ``model``. A tree's ``parent`` protects its children: leaves first."""
+    rows = model._base_manager
+    parent = next(
+        (
+            f
+            for f in model._meta.concrete_fields
+            if f.is_relation
+            and f.related_model is model
+            and f.remote_field.on_delete is models.PROTECT
+        ),
+        None,
+    )
+    while parent is not None and rows.exists():
+        leaves = rows.exclude(
+            pk__in=rows.filter(**{f"{parent.name}__isnull": False}).values(parent.attname)
+        )
+        if not leaves.exists():  # a cycle: no leaf to start from, delete() reports it
+            break
+        leaves.delete()
+    rows.all().delete()
 
 
 def _edges(model: type[models.Model], members: set[Any], *, hard_only: bool) -> set[Any]:
@@ -330,6 +406,54 @@ def seed_plan(models_: Sequence[Any] | None = None) -> list[type[models.Model]]:
     return _order(model for model in chosen if _seedable(model))
 
 
+def planned_rows(model: type[models.Model], count: int) -> int:
+    """Rows a run with ``count`` creates for ``model``: its seeder's ``Meta.count``, else ``count``.
+
+    The user model gets a quarter of ``count``, at least three (the demo
+    login and the known logins come on top).
+    """
+    default = count
+    if model is get_user_model():
+        default = max(3, math.ceil(count / 4))
+    seeder_class = seeders().get(model)
+    return seeder_class.row_count(default) if seeder_class else default
+
+
+def volume_rows(model: type[models.Model], volume: int) -> int:
+    """Experimental. Rows a volume run (``--volume``) creates for ``model``.
+
+    ``volume`` for every model, users aside (:func:`karni.bulk_seeding.volume_users`:
+    one per hundred rows, at least three). A seeder's ``Meta.count = 0``
+    still skips its model.
+    """
+    from karni.bulk_seeding import volume_users
+
+    if model is get_user_model():
+        return volume_users(volume)
+    seeder_class = seeders().get(model)
+    if seeder_class is not None and seeder_class.row_count(volume) == 0:
+        return 0
+    return volume
+
+
+def occupied(plan: Iterable[type[models.Model]]) -> dict[str, int]:
+    """Rows already in the tables a run would write to: ``label -> count``, users aside.
+
+    This is the rule ``karni seed`` refuses on. A seeded row carries no mark,
+    so any row counts, soft-deleted ones included. The user model is left
+    out: seed matches users by login and never deletes them.
+    """
+    found: dict[str, int] = {}
+    user_model = get_user_model()
+    for model in plan:
+        if model is user_model:
+            continue
+        total = model._base_manager.count()
+        if total:
+            found[model._meta.label] = total
+    return found
+
+
 # the run
 
 
@@ -339,6 +463,8 @@ class SeedReport:
 
     seed: int | str
     count: int
+    #: The models the run writes to, in seeding order.
+    plan: list[str] = field(default_factory=list)
     rows: dict[str, int] = field(default_factory=dict)
     reused: dict[str, int] = field(default_factory=dict)
     demo: str | None = None
@@ -350,20 +476,31 @@ class SeedReport:
     logins: dict[str, list[str]] = field(default_factory=dict)
     reset: list[str] = field(default_factory=list)
     seconds: float = 0.0
+    #: Experimental. The rows per model of a volume run (``--volume``), else ``None``.
+    volume: int | None = None
+    #: Experimental. The models inserted in bulk (:mod:`karni.bulk_seeding`).
+    bulk: list[str] = field(default_factory=list)
+    #: Experimental. Seconds per model.
+    timings: dict[str, float] = field(default_factory=dict)
 
     def render(self) -> str:
         lines = []
         if self.reset:
             lines.append(f"Reset {len(self.reset)} table(s): {', '.join(self.reset)}")
+        size = f"volume {self.volume}" if self.volume is not None else f"count {self.count}"
         lines.append(
             f"Seeded {len(self.rows)} model(s) with seed {self.seed} "
-            f"(count {self.count}) in {self.seconds:.1f}s:"
+            f"({size}) in {self.seconds:.1f}s:"
         )
         width = max((len(label) for label in self.rows), default=0)
+        digits = max([4, *(len(str(total)) for total in self.rows.values())])
         for label, total in self.rows.items():
             reused = self.reused.get(label, 0)
             note = f"  ({reused} existing)" if reused else ""
-            lines.append(f"  {label:<{width}}  {total:>4}{note}")
+            if label in self.bulk:
+                rate = total / self.timings[label] if self.timings.get(label) else 0
+                note += f"  (bulk, {self.timings.get(label, 0):.1f}s, {rate:,.0f} rows/s)"
+            lines.append(f"  {label:<{width}}  {total:>{digits}}{note}")
         if self.demo:
             roles = f", roles: {', '.join(self.roles)}" if self.roles else ""
             secret = f" / {self.demo_password}" if self.demo_password else " (existing user)"
@@ -377,6 +514,7 @@ class SeedReport:
         return {
             "seed": self.seed,
             "count": self.count,
+            "plan": self.plan,
             "rows": self.rows,
             "reused": self.reused,
             "demo": self.demo,
@@ -384,6 +522,9 @@ class SeedReport:
             "logins": self.logins,
             "reset": self.reset,
             "seconds": round(self.seconds, 3),
+            "volume": self.volume,
+            "bulk": self.bulk,
+            "timings": {label: round(value, 3) for label, value in self.timings.items()},
         }
 
 
@@ -437,9 +578,15 @@ class _Run:
         seed_value: int | str,
         now: dt.datetime | None,
         builder: FactoryBuilder | None,
+        volume: int | None = None,
+        bulk: type[Any] | None = None,
+        batch_size: int | None = None,
     ) -> None:
         self.count = count
+        self.volume = volume
         self.seed_value = seed_value
+        self.bulk_class = bulk
+        self.batch_size = batch_size
         anchor = now or timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
         self.values = builder.values if builder is not None else ValueInference(now=anchor)
         self.builder = builder if builder is not None else SeedBuilder(self.values)
@@ -450,7 +597,8 @@ class _Run:
         self.used_one_to_one: dict[Any, set[Any]] = {}
         self.demo: Any = None
         self.plan: set[type[models.Model]] = set()
-        self.report = SeedReport(seed_value, count)
+        self.report = SeedReport(seed_value, count, volume=volume)
+        self._bulk: Any = None
 
     # pools
 
@@ -494,6 +642,9 @@ class _Run:
                 target = relation.related_model
                 if target is not None and target._meta.label != "contenttypes.ContentType":
                     attrs[relation.name] = _Pick(self, target, relation)
+        if explicit is None:
+            for name in generated_slugs(model):
+                attrs[name] = ""  # SlugField.pre_save makes it from its source, -2 on a clash
         if seeder is not None:
             attrs.update(seeder.declarations())
         meta: dict[str, Any] = {"model": model, "skip_postgeneration_save": True}
@@ -515,11 +666,7 @@ class _Run:
                 problem = exc
                 continue
             except ImproperlyConfigured as exc:
-                raise SeedError(
-                    f"{context.model._meta.label}: {exc} For seeding, override Seeder.seed() "
-                    f"(karni make seeder {context.model.__name__}) and pass the row yourself.",
-                    code="E613",
-                ) from exc
+                raise unseedable(context.model, exc) from exc
             self.after_create(context, row, values)
             return row
         raise SeedError(
@@ -599,31 +746,21 @@ class _Run:
 
     def roles(self) -> list[str]:
         """Every role a routed viewset's ``access`` names (the demo user gets them all)."""
-        from karni.api.routers import resolve_router
-        from karni.testing.performance import _role_names
+        from karni.accounts.permissions import routed_roles
 
-        found: set[str] = set()
-        for _prefix, viewset, _basename in getattr(resolve_router(), "registry", ()):
-            declaration = getattr(viewset, "access", None)
-            for slot in ("read", "write", "create"):
-                predicate = getattr(declaration, slot, None)
-                if predicate is not None:
-                    found |= _role_names(predicate)
-            for extra in getattr(viewset, "get_extra_actions", list)():
-                override = getattr(extra, "kwargs", {}).get("access")
-                if override is not None:
-                    found |= _role_names(override)
-        return sorted(found)
+        return routed_roles()
 
     # the run
 
     def reset(self, plan: list[type[models.Model]]) -> None:
         from django.core.management.color import no_style
 
-        project = {model for model in _project_models()}
-        wiped = [model for model in reversed(plan) if model in project]
+        # What a seed run writes: the project's models, and any model a seeder names, so the
+        # rows of a module (a saved chart, a per-user grant) go too. The user model never does.
+        owned = {*_project_models(), *seeders()} - {self.user_model}
+        wiped = [model for model in reversed(plan) if model in owned]
         for model in wiped:
-            model._base_manager.all().delete()
+            _wipe(model)
         tables = {model._meta.db_table for model in wiped}
         tables |= {
             m2m.remote_field.through._meta.db_table
@@ -636,19 +773,52 @@ class _Run:
                 cursor.execute(statement)
         self.report.reset = [model._meta.label for model in wiped]  # deletion order
 
+    def rows_for(self, model: type[models.Model]) -> int:
+        """Rows this run makes for ``model``: :func:`planned_rows`, or :func:`volume_rows`."""
+        if self.volume is not None:
+            return volume_rows(model, self.volume)
+        return planned_rows(model, self.count)
+
+    def bulk_for(self, model: type[models.Model], seeder: type[Seeder] | None, count: int) -> bool:
+        """Whether ``model``'s rows go in bulk: a volume run, or a count at the threshold.
+
+        Never the user model (seeded the demo way, with the demo login) and
+        never a model whose seeder overrides :meth:`Seeder.seed`.
+        """
+        from karni.bulk_seeding import bulk_threshold
+
+        if model is self.user_model:
+            return False
+        if seeder is not None and seeder.seed is not Seeder.seed:
+            return False
+        return self.volume is not None or count >= bulk_threshold()
+
+    def bulk(self) -> Any:
+        if self._bulk is None:
+            from karni.bulk_seeding import BulkSeeder
+
+            self._bulk = (self.bulk_class or BulkSeeder)(self, batch=self.batch_size)
+        return self._bulk
+
     def run(self, plan: list[type[models.Model]], *, reset: bool) -> SeedReport:
         reseed_random(self.seed_value)
         self.plan = set(plan)
         if reset:
             self.reset(plan)
         registry = seeders()
+        self.report.plan = [model._meta.label for model in plan if self.rows_for(model) > 0]
         for model in plan:
             seeder_class = registry.get(model)
-            default = self.count
-            if model is self.user_model:
-                default = max(3, math.ceil(self.count / 4))
-            count = seeder_class.row_count(default) if seeder_class else default
+            count = self.rows_for(model)
             if count <= 0:
+                continue
+            started = time.perf_counter()
+            label = model._meta.label
+            if self.bulk_for(model, seeder_class, count):
+                self.report.rows[label] = self.bulk().seed_model(model, count, seeder_class)
+                self.report.bulk.append(label)
+                self.pools.pop(model, None)  # later picks read the table again
+                self.report.timings[label] = time.perf_counter() - started
                 continue
             declared = frozenset(seeder_class.declarations()) if seeder_class else frozenset()
             context = SeedContext(model, count, self.factory(model, seeder_class), self, declared)
@@ -659,8 +829,8 @@ class _Run:
                 fixed = 1 + len(self.seed_logins(context))
                 context.count = max(context.count - fixed, 0)
             rows = (seeder_class or Seeder)().seed(context)
-            label = model._meta.label
             self.report.rows[label] = len(rows) + fixed
+            self.report.timings[label] = time.perf_counter() - started
         return self.report
 
     def seed_logins(self, context: SeedContext) -> list[Any]:
@@ -713,6 +883,9 @@ def seed(
     models: Sequence[Any] | None = None,
     now: dt.datetime | None = None,
     builder: FactoryBuilder | None = None,
+    volume: int | None = None,
+    bulk: type[Any] | None = None,
+    batch_size: int | None = None,
 ) -> SeedReport:
     """Seed demo rows (see the module docstring); returns what was done.
 
@@ -723,11 +896,23 @@ def seed(
     :param models: only these models (classes or ``"app.Model"`` labels).
     :param now: the anchor relative dates use (default: the start of today).
     :param builder: a :class:`SeedBuilder` (or any FactoryBuilder) to infer with.
+    :param volume: experimental. ``volume`` rows per model, in bulk
+        (:mod:`karni.bulk_seeding`), users aside (:func:`volume_rows`).
+    :param bulk: experimental. The :class:`karni.bulk_seeding.BulkSeeder` class to use.
+    :param batch_size: experimental. Rows per bulk insert.
     :raises SeedError: naming the model and the fix.
     """
     started = time.perf_counter()
     plan = seed_plan(models)
-    run = _Run(count=count, seed_value=seed, now=now, builder=builder)
+    run = _Run(
+        count=count,
+        seed_value=seed,
+        now=now,
+        builder=builder,
+        volume=volume,
+        bulk=bulk,
+        batch_size=batch_size,
+    )
     with transaction.atomic():
         report = run.run(plan, reset=reset)
     report.seconds = time.perf_counter() - started

@@ -15,13 +15,28 @@ Code ranges
 ``E0xx``/``W0xx`` models, managers, scopes · ``E1xx``/``W1xx`` API (access,
 viewsets, serializers, pagination, budgets, caching, expand) · ``E2xx``
 accounts · ``E3xx`` admin · ``E4xx`` events, listeners, schedules, Celery ·
-``E5xx`` settings and optional dependencies · ``E6xx`` testing and seeding ·
+``E47x``/``E48x``/``W61x`` tooling for large projects (context slices, the
+check cache, volume seeding, scaling budgets, query plans) · ``E5xx``
+settings, optional dependencies, deploy checks and production
+(``karni.deploy``) · ``E6xx`` testing and seeding ·
 ``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog) ·
 ``E8xx`` import and export · ``E90x``–``E94x``/``W92x`` debugging (``karni
 why``, request ids, the development capture, ``karni trace``, ``karni replay``,
 ``karni queries``) · ``E96x``/``E97x`` typed fields and database guarantees
 (``karni.fields``) · ``E98x``/``W98x`` lifecycle and limited resources
-(``StateField``, capacity, ``no_overlap``).
+(``StateField``, capacity, ``no_overlap``) · ``E27x``/``W54x`` external
+tables, SQL views and a second database (``karni.db``) · ``E34x``/``W55x``
+tree models (``karni.tree``) · ``E49x``/``W62x`` the tree scope
+(``karni.accounts.tree_scope``) · ``E53x``/``W63x`` navigation from data
+(``karni.navigation``) · ``E57x``/``E58x``/``W65x`` taxonomy tagging
+(``karni.taxonomy``) · ``E38x``/``W57x``
+aggregations (``karni.aggregation``) · ``E43x``/``W59x`` cross-model search
+(``karni.global_search``) · ``E55x`` field groups and column sets
+(``karni.layout``).
+``SUG001`` to ``SUG099`` suggestions from code (``karni.suggestions``): what
+``karni check`` and ``karni doctor`` print after the errors and warnings, never a
+failure. The prefix has three letters because the registry's code pattern reads
+a single letter as an error or a warning.
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -91,10 +106,11 @@ ERRORS_PAGE: Final[str] = "errors/"
 
 #: ``exception``: raised for code to fix · ``check``: a Django system check
 #: error (boot fails) · ``warning``: a system check warning · ``api``: a 400
-#: from the API naming the bad parameter · ``test``: a karni.testing failure.
-KINDS: Final[tuple[str, ...]] = ("exception", "check", "warning", "api", "test")
+#: from the API naming the bad parameter · ``test``: a karni.testing failure ·
+#: ``suggestion``: a suggestion from code, never a failure (``SUG``).
+KINDS: Final[tuple[str, ...]] = ("exception", "check", "warning", "api", "test", "suggestion")
 
-_CODE = re.compile(r"^(?:[EW]\d{3}|[A-Z]{2,5}\d{3})$")
+_CODE = re.compile(r"^(?:[EW]\d{3}|[A-Z]{2,6}\d{3})$")
 
 
 def docs_url(code: str) -> str:
@@ -563,6 +579,33 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Remove the field from search_fields, or take it out of APIMeta.write_only if it "
         "may be read.",
     ),
+    # E1xx API: throttling
+    _e(
+        "E132",
+        "Throttle(...) is invalid",
+        "exception",
+        "karni.api.throttling.Throttle; BaseViewSet.throttle",
+        "A viewset's throttle declaration names actions of that viewset and gives each a DRF "
+        "rate, '<number>/<period>' with the period s, sec, second, m, min, minute, h, hour, d "
+        "or day.",
+        "Write `throttle = Throttle(create='10/hour')`, naming only actions the viewset has "
+        "(the standard ones, or a custom @action by its method name).",
+    ),
+    # E1xx API: the staff app's dashboard
+    _e(
+        "E133",
+        "Karni.dashboard is malformed or names a field the model does not have",
+        "check",
+        "karni.dashboard.dashboard_spec; karni.checks.check_dashboards",
+        "The dashboard declaration is published in the OpenAPI schema and @karni/ui's "
+        "<Dashboard> counts rows with the list endpoint's filters. A field name with a typo, "
+        "a value the field does not have or a count without filters would show a wrong number, "
+        "so the declaration is refused at boot.",
+        "Write dashboard = True, or a dict with the keys label, order, total, new_days, by, "
+        "values, counts, recent, columns and date_field, naming fields of the model: e.g. "
+        "dashboard = {'by': 'status', 'counts': {'Due today': {'due_on': 'today'}}, "
+        "'recent': 5}.",
+    ),
     _e(
         "W101",
         "A hand-written serializer duplicates the one Karni generates",
@@ -573,7 +616,25 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "frontend is generated from.",
         "Delete the serializer and its serializer_class line, and tune the generated one "
         "with APIMeta on the model. Keep serializer_class only for a serializer with custom "
-        "fields or validation.",
+        "fields or validation. When the copy is deliberate, say why on the line above the "
+        "class: # karni: allow(redundant-serializer): <reason> (karni make serializer "
+        "--reason writes it).",
+    ),
+    _e(
+        "W102",
+        "Any self-registered user may change and delete every row of a resource",
+        "warning",
+        "karni.checks.check_open_writes",
+        "The viewset's `write` predicate is Authenticated() or Public(), not narrowed with & "
+        "by HasRole, Granted, Owned or Can, while KARNI_ACCOUNTS_REGISTRATION is True. "
+        "Anyone who opens an account through register/ can then update and delete every "
+        "row the viewset routes. A test that acts as any signed-in user passes and confirms "
+        "it. Karni 0.4.0's `--access public-read` preset generated this declaration.",
+        'Tighten write: HasRole("staff") (what `--access public-read` now writes), '
+        'Granted() (the roles\' grants) or Owned("<field>"). create=Authenticated() with '
+        "an Owned() write is the user-generated-content pattern and is not flagged. If "
+        "nobody may self-register, set KARNI_ACCOUNTS_REGISTRATION = False. If every "
+        "signed-in user is trusted, add 'karni.W102' to SILENCED_SYSTEM_CHECKS.",
     ),
     # E2xx accounts
     _e(
@@ -621,8 +682,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "cannot be reconciled into the role tables.",
         "Write KARNI_ROLES = {'<slug>': {'name': ..., 'description': ..., 'system': bool, "
         "'grants': {'app_label.model:action': '<scope>'}}}. A pattern may use '*' for the model "
-        "or the action (or '*' alone). A scope is 'all', 'own', 'related:<key>' or "
-        "'custom:<name>'.",
+        "or the action (or '*' alone). A scope is 'all', 'own', 'related:<key>', "
+        "'custom:<name>' or 'tree:<path>'.",
     ),
     _e(
         "E206",
@@ -730,6 +791,425 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "'workspace__members'`, or the scope path), teach the custom scope the new model, "
         "or narrow the grant's pattern so it does not cover the model.",
     ),
+    # E215-E227 sign-in with an ID token (karni.accounts.social_token, experimental)
+    _e(
+        "E215",
+        "The ID token is not valid",
+        "api",
+        "karni.accounts.social_token.verify_id_token (POST <auth>/social/<provider>/)",
+        "Karni verifies an ID token offline: a JWT signed with one of the provider's published "
+        "keys, with the algorithm the provider uses, carrying exp, iat, iss, aud and sub. A token "
+        "that is malformed, signed with another key or algorithm, missing one of those claims, or "
+        "issued in the future (iat or nbf past the leeway) proves nothing, so the answer is a 401.",
+        "Send the ID token itself (not the access token, and not the authorization code) exactly "
+        "as the provider's SDK returned it, and get a fresh one. A token issued in the future "
+        "means the server's clock is off: fix the clock, or raise KARNI_SOCIAL_TOKEN_LEEWAY.",
+    ),
+    _e(
+        "E216",
+        "The ID token was issued for another application",
+        "api",
+        "karni.accounts.social_token.verify_id_token",
+        "A token's aud claim names the client id it was issued to. Accepting a token issued to "
+        "another application would let any app that signs its users in with the same provider "
+        "sign them in here too, so aud must be one of the configured client ids (401).",
+        "Add the client id the app uses to KARNI_SOCIAL_TOKEN_PROVIDERS[<provider>]['client_ids']: "
+        "the web client id, and each iOS and Android client id (for Apple, the service id and "
+        "the bundle id). An empty list means the provider is not configured: signing in with it "
+        "answers 503 with this code, and every other command and request still works. The "
+        "settings block karni build writes reads the ids from KARNI_SOCIAL_<PROVIDER>_CLIENT_IDS.",
+    ),
+    _e(
+        "E217",
+        "The ID token comes from another issuer or tenant",
+        "api",
+        "karni.accounts.social_token.verify_id_token",
+        "Each provider has its own issuer: accounts.google.com, "
+        "https://appleid.apple.com, or for Microsoft "
+        "https://login.microsoftonline.com/<tenant id>/v2.0 with the token's own tid. A "
+        "Microsoft token from a tenant the 'tenants' setting does not allow is refused the same "
+        "way (401).",
+        "Check that the token comes from the provider of the URL it was posted to. For "
+        "Microsoft, request a v2.0 token and list its tenant (or 'common', 'organizations' or "
+        "'consumers') in KARNI_SOCIAL_TOKEN_PROVIDERS['microsoft']['tenants'].",
+    ),
+    _e(
+        "E218",
+        "The ID token has expired",
+        "api",
+        "karni.accounts.social_token.verify_id_token",
+        "ID tokens live minutes to an hour. Karni accepts one up to its exp claim plus "
+        "KARNI_SOCIAL_TOKEN_LEEWAY seconds (401 after that).",
+        "Get a fresh token from the provider's SDK right before posting it. Do not store ID "
+        "tokens for later.",
+    ),
+    _e(
+        "E219",
+        "The ID token's signing key is unknown",
+        "api",
+        "karni.accounts.social_token.signing_key",
+        "Karni looks the token's kid up in the provider's key set (JWKS), cached for "
+        "KARNI_SOCIAL_TOKEN_JWKS_TTL seconds. An unknown kid fetches the key set again, at most "
+        "once a minute per provider, so a rotated key works within a minute. A kid that is still "
+        "missing answers 401. A key set that cannot be fetched answers 503.",
+        "Send a token the provider issued recently. A 503 means the server cannot reach the "
+        "provider's JWKS URL: check its outbound network, or the fetcher named in "
+        "KARNI_SOCIAL_TOKEN_JWKS_FETCHER.",
+    ),
+    _e(
+        "E220",
+        "The ID token's nonce does not match",
+        "api",
+        "karni.accounts.social_token.verify_id_token",
+        "A nonce binds the token to one sign-in attempt, so a stolen token cannot be replayed. "
+        "When the request sends a nonce, the token's nonce claim must equal it, or its SHA-256 "
+        "hex digest (Apple's convention: the app passes the hash to Apple and the raw value to "
+        "Karni). A provider with 'require_nonce' refuses a request without one (401).",
+        "Post the nonce the app generated for this sign-in, the raw value. Generate a new one "
+        "for every attempt.",
+    ),
+    _e(
+        "E221",
+        "The ID token carries no email address",
+        "api",
+        "karni.accounts.social_token.sign_in",
+        "A token whose identity is not linked yet is matched to an account by its email. Without "
+        "an email claim (for Microsoft, email or an email-shaped preferred_username) there is "
+        "nothing to match or create (400).",
+        "Request the email scope. Apple sends the email only on the first sign-in of a user, so "
+        "that first answer must reach Karni.",
+    ),
+    _e(
+        "E222",
+        "The provider did not verify the email address",
+        "api",
+        "karni.accounts.social_token.sign_in",
+        "Karni creates an account from a token, or links a token to the account with the same "
+        "email, only when the provider says it verified the address. Otherwise anyone could put "
+        "someone else's address in a token and take over their account. Microsoft tokens count "
+        "as verified only with the xms_edov claim true or a tenant listed in 'trusted_tenants' "
+        "(400). An identity already linked signs in without this check.",
+        "For Microsoft, add the xms_edov optional claim to the app registration, or list your "
+        "organisation's tenant id in KARNI_SOCIAL_TOKEN_PROVIDERS['microsoft']['trusted_tenants']. "
+        "Otherwise the user signs in with a password, or with a provider that verified the "
+        "address.",
+    ),
+    _e(
+        "E223",
+        "Sign-up with an ID token is closed",
+        "api",
+        "karni.accounts.social_token.sign_in",
+        "KARNI_SOCIAL_TOKEN_SIGNUP is 'existing' (the default while KARNI_ACCOUNTS_REGISTRATION "
+        "is False): only an identity already linked, or an account with the token's email, may "
+        "sign in. Nobody else gets an account (400).",
+        "Create the account first (in the admin, or let staff invite the user), then sign in "
+        "with the token. To let anyone in, set KARNI_SOCIAL_TOKEN_SIGNUP = 'open', or "
+        "'approval' to create accounts an administrator activates.",
+    ),
+    _e(
+        "E224",
+        "The account awaits an administrator's approval",
+        "api",
+        "karni.accounts.social_token.sign_in; karni.accounts.otp.verify_code",
+        "With KARNI_SOCIAL_TOKEN_SIGNUP = 'approval', a token without an account creates an "
+        "inactive one. The answer is a 202 with this code and no credentials, again on each "
+        "sign-in until an administrator activates the account. With KARNI_EMAIL_OTP_SIGNUP = "
+        "'approval', the code that creates the account answers the same 202. A later code for "
+        "the inactive account answers E226.",
+        "An administrator ticks 'Active' on the user's page in the admin. The next sign-in then "
+        "succeeds.",
+    ),
+    _e(
+        "E225",
+        "This sign-in provider is not configured",
+        "api",
+        "karni.accounts.api.views.SocialTokenLoginView",
+        "Each provider named in KARNI_SOCIAL_TOKEN_PROVIDERS gets its own social/<provider>/ "
+        "route. A provider the setting does not name answers 404.",
+        "Add the provider with its client ids to KARNI_SOCIAL_TOKEN_PROVIDERS, or post to the "
+        "route of a configured one.",
+    ),
+    _e(
+        "E226",
+        "The account is inactive",
+        "api",
+        "karni.accounts.social_token.sign_in; karni.accounts.otp.verify_code",
+        "An inactive user never signs in, by password, by token or by a code sent by email "
+        "(401). Sign-in by code says so only after a right code, so the answer tells nothing to "
+        "someone who does not read that mailbox.",
+        "An administrator activates the account in the admin, if it should sign in.",
+    ),
+    _e(
+        "E227",
+        "An account with this email exists and is not linked",
+        "api",
+        "karni.accounts.social_token.sign_in",
+        "KARNI_SOCIAL_TOKEN_LINK_VERIFIED is False, so a token is never linked to an existing "
+        "account that has a password, even when the provider verified the email (400).",
+        "Sign in with the password. Linking a provider from a signed-in session is not built "
+        "yet. To link on a verified email, set KARNI_SOCIAL_TOKEN_LINK_VERIFIED = True (the "
+        "default).",
+    ),
+    # E235-E236 sign-in with a code sent by email (karni.accounts.otp, experimental)
+    _e(
+        "E235",
+        "The sign-in code is wrong or has expired",
+        "api",
+        "karni.accounts.otp.verify_code (POST <auth>/otp/verify/)",
+        "One answer covers every failure of a code, so it tells nobody whether an address has an "
+        "account: a wrong code, one past KARNI_EMAIL_OTP_TTL, one already used, one replaced by a "
+        "newer code, one locked after KARNI_EMAIL_OTP_MAX_ATTEMPTS wrong guesses, an address no "
+        "code was sent to, and an address that may not sign up (KARNI_EMAIL_OTP_SIGNUP = "
+        "'existing'). The precise reason is only in the accounts.otp.refused log event (401).",
+        "Ask for a new code with POST otp/send/ and type the newest one. Only the latest code of "
+        "an address works. Check the reason in the log when one user keeps failing.",
+    ),
+    _e(
+        "E236",
+        "Sign-in with a code is turned off",
+        "api",
+        "karni.accounts.api.views.OtpSendView; karni.accounts.api.views.OtpVerifyView",
+        "otp/send/ and otp/verify/ are mounted only while KARNI_EMAIL_OTP is True. A URLconf "
+        "built while it was True answers 404 with this code once the setting is False.",
+        "Set KARNI_EMAIL_OTP = True (or KARNI_EMAIL_OTP=True in the environment) to offer "
+        "sign-in with a code, or sign in with login/.",
+    ),
+    # E245-E249 terms acceptance (karni.accounts.terms, experimental)
+    _e(
+        "E245",
+        "The signed-in user has not accepted the current terms",
+        "api",
+        "karni.accounts.terms.TermsGateMiddleware",
+        "KARNI_TERMS requires every signed-in user to accept its current version before using "
+        "the API. The gate answers 403 with this code, the version and the terms url to a "
+        "signed-in user who has not accepted that version, on every request under "
+        "KARNI_TERMS['paths'] (default ['/api/']) outside the auth mount and "
+        "KARNI_TERMS['exempt']. Staff and superusers are gated like everyone. A new version "
+        "makes everyone accept again.",
+        "Show the terms at the url in the answer, then POST <auth mount>/terms/accept/ with "
+        '{"version": "<the version in the answer>"}. @karni/ui\'s TermsGate does both. To keep '
+        "a path open before acceptance, add its prefix to KARNI_TERMS['exempt'].",
+    ),
+    _e(
+        "E246",
+        "The accepted terms version is not the current one",
+        "api",
+        "karni.accounts.terms.accept (POST <auth>/terms/accept/)",
+        "terms/accept/ records acceptance of KARNI_TERMS['version'] only. A client that sends "
+        "another version showed the user other terms (an old copy, or the version changed after "
+        "the page loaded), so nothing is recorded (400). The answer carries the current version "
+        "and url.",
+        "Show the terms at the url in the answer and send the version in the answer. GET "
+        "terms/ returns the current version too.",
+    ),
+    _e(
+        "E247",
+        "A terms acceptance is a permanent record",
+        "exception",
+        "karni.accounts.models.TermsAcceptance",
+        "Each TermsAcceptance row records that a user accepted a version of the terms, when, "
+        "from which IP and with which client. The table is append-only: saving an existing row, "
+        "deleting one (soft or hard) and update() or delete() on a queryset of them would "
+        "rewrite that record, so each one raises.",
+        "Record a new acceptance with karni.accounts.terms.accept(), or POST terms/accept/. To "
+        "make everyone accept again, change KARNI_TERMS['version']. A user's rows go only with "
+        "the user: user.hard_delete() deletes them.",
+    ),
+    _e(
+        "E248",
+        "The terms gate is not in MIDDLEWARE, or runs before authentication",
+        "check",
+        "karni.checks.check_terms_middleware",
+        "KARNI_TERMS requires acceptance, but karni.accounts.terms.TermsGateMiddleware (or a "
+        "subclass) is missing from MIDDLEWARE, so nothing is gated, or it comes before "
+        "django.contrib.auth's AuthenticationMiddleware, so it cannot see the session user. "
+        "karni_settings() lists it, so this happens when MIDDLEWARE is replaced after the call.",
+        "Add 'karni.accounts.terms.TermsGateMiddleware' to MIDDLEWARE after "
+        "'django.contrib.auth.middleware.AuthenticationMiddleware', or extend MIDDLEWARE "
+        "instead of replacing it.",
+    ),
+    _e(
+        "E249",
+        "Terms acceptance is turned off",
+        "api",
+        "karni.accounts.api.views.TermsView; karni.accounts.api.views.TermsAcceptView",
+        "terms/ and terms/accept/ are mounted only while KARNI_TERMS is set. A URLconf built "
+        "while it was set answers 404 with this code once it is unset.",
+        'Set KARNI_TERMS = {"version": "<version>", "url": "<where the terms are>"} to ask '
+        "users to accept terms, or remove the client's call.",
+    ),
+    # E260-E269: command-line input the management commands refuse
+    _e(
+        "E260",
+        "A database alias is not configured",
+        "exception",
+        "karni_schema (--database)",
+        "A command was given a database alias that DATABASES does not define, so there is "
+        "no connection to read.",
+        "Pass an alias from settings.DATABASES ('default' unless the project declares "
+        "more), or add the database to DATABASES.",
+    ),
+    # E270-E279 / W540-W549 external tables, SQL views and a second database
+    # (karni.db, experimental)
+    _e(
+        "E270",
+        "An external model is managed by Django",
+        "check",
+        "karni.db.checks.check_database_options",
+        "`class Karni: external = True` says another system owns the table or view, so Karni "
+        "must never create, change or drop it. Django still migrates a model unless "
+        "`Meta.managed = False`, so `migrate` would try to create or alter that table. The two "
+        "declarations go together.",
+        "Add `managed = False` to the model's `class Meta`, or remove `external = True` if "
+        "Django should own the table.",
+    ),
+    _e(
+        "E271",
+        "Karni.database names a database that is not in DATABASES",
+        "check",
+        "karni.db.checks.check_database_options",
+        "`class Karni: database = '<alias>'` sends the model's reads, writes and migrations to "
+        "that alias of the DATABASES setting. An alias Django does not know fails on the first "
+        "query.",
+        "Add the alias to DATABASES (for example DATABASES['warehouse'] = "
+        "env.db_url('WAREHOUSE_DATABASE_URL')), or fix the name in `class Karni`.",
+    ),
+    _e(
+        "E272",
+        "The table or view of an external model does not exist",
+        "check",
+        "karni.db.checks.check_external_tables (karni check)",
+        "An external model reads a table or view another system owns, and Karni never creates "
+        "it. `karni check` connected to the model's database and found no table or view with "
+        "the model's Meta.db_table, so every query on the model would fail.",
+        "Create the table or view in that database (a SQL view the project owns can come from "
+        "a RunSQL migration), or fix Meta.db_table. A PostgreSQL table in another schema is "
+        "written db_table = 'schema\".\"table'. Where the table cannot exist (a CI database), "
+        "add 'karni.E272' to SILENCED_SYSTEM_CHECKS in that environment's settings.",
+    ),
+    _e(
+        "E273",
+        "An external model has a column its table or view lacks",
+        "check",
+        "karni.db.checks.check_external_tables (karni check)",
+        "Every concrete field of an external model is a column Karni selects. A field whose "
+        "column (its name, or db_column) is missing from the table or view makes every query "
+        "on the model fail.",
+        "Fix the field's name or db_column to match the column, remove the field, or "
+        "regenerate the model from the table with `karni make model <Name> --external "
+        "--table <table>` and keep what you need.",
+    ),
+    _e(
+        "E274",
+        "An external model's field type does not match its column",
+        "check",
+        "karni.db.checks.check_external_tables (karni check)",
+        "The database reports a column type that cannot hold the field's values, for example "
+        "a DateTimeField over a text column or an IntegerField over a date. Karni compares "
+        "broad kinds only (numbers, text, dates, times, booleans, UUIDs, JSON, binary), and "
+        "skips columns whose type the database does not report, so a reported mismatch is a "
+        "real one.",
+        "Change the field to the column's type (`karni make model <Name> --external --table "
+        "<table> --dry-run` shows the type Django infers), or cast the column in the view.",
+    ),
+    _e(
+        "E275",
+        "class Karni: external, writable or database has a value of the wrong type",
+        "check",
+        "karni.db.checks.check_database_options",
+        "`external` and `writable` are True or False, and `database` is the name of a "
+        "DATABASES alias. Another value would be read in a way the code does not say.",
+        "Write external = True, writable = True or database = '<alias>' (a non-empty string).",
+    ),
+    _e(
+        "E276",
+        "A relation joins models on different databases",
+        "check",
+        "karni.db.checks.check_database_options",
+        "A foreign key, one-to-one or many-to-many field needs both tables in one database: "
+        "Django joins them in SQL, and Karni's router refuses to relate rows across "
+        "databases. A model on another database that inherits BaseModel has this problem "
+        "too, because AuditedModel's created_by and updated_by point at the user table.",
+        "Keep related models on the same database (the same Karni.database), or store the "
+        "other row's key in a plain field. For a model Karni manages on another database, "
+        "compose UUIDModel, TimestampedModel and SoftDeleteModel instead of BaseModel.",
+    ),
+    _e(
+        "W540",
+        "The database of an external model cannot be reached",
+        "warning",
+        "karni.db.checks.check_external_tables (karni check)",
+        "`karni check` compares each external model with its table or view when the model's "
+        "database answers. This one did not, so nothing was compared for it. That is not an "
+        "error: the database may be outside this machine's reach (CI, a laptop).",
+        "Check the alias in DATABASES (host, port, credentials, network) and run `karni "
+        "check` again where the database is reachable. Add 'karni.W540' to "
+        "SILENCED_SYSTEM_CHECKS where it never is.",
+    ),
+    _e(
+        "W541",
+        "Karni.writable on a model that is not external",
+        "warning",
+        "karni.db.checks.check_database_options",
+        "`writable = True` only lifts the read-only default of an external model. Every other "
+        "model is writable already, so the declaration does nothing.",
+        "Remove `writable = True`, or add `external = True` (with Meta.managed = False) if "
+        "another system owns the table.",
+    ),
+    _e(
+        "W542",
+        "Karni.database is declared but Karni's database router is not installed",
+        "warning",
+        "karni.db.checks.check_database_router",
+        "A model declares `class Karni: database`, but DATABASE_ROUTERS does not list "
+        "karni.db.DatabaseRouter (or a subclass), so Django sends the model to the default "
+        "database. karni_settings() lists the router, so this happens when DATABASE_ROUTERS is "
+        "replaced after the call.",
+        "Add 'karni.db.DatabaseRouter' to DATABASE_ROUTERS, after your own routers (the first "
+        "router with an answer wins). If your own router routes these models, add "
+        "'karni.W542' to SILENCED_SYSTEM_CHECKS.",
+    ),
+    # E280-E289 / W280-W289 model display (karni.meta, experimental)
+    _e(
+        "E280",
+        "Karni.label_field names a field the model does not have",
+        "check",
+        "karni.meta.label_field; karni.checks.check_aggregations (karni check)",
+        "Karni.label_field is the field that shows a row to people where only its key would "
+        "show otherwise: the groups of an aggregate on a relation (chart legends and axes, "
+        "comparison headers). A name the model does not have can show nothing.",
+        "Name a field of the model: class Karni: label_field = 'name'. Leave it out to use the "
+        "first text field named name, title or label, else Karni.natural_key.",
+    ),
+    # E290-E299 class Karni options that grants and keys read
+    _e(
+        "E290",
+        "Karni.explicit_actions names an action the model does not have",
+        "check",
+        "karni.meta.explicit_actions; karni.checks.check_explicit_actions (karni check)",
+        "Karni.explicit_actions lists the actions a wildcard grant never reaches: only a grant "
+        "that writes the action out gives it. A name that is not one of the model's actions "
+        "protects nothing, so a typo would leave the real action open to every wildcard role.",
+        "List actions of the model: the standard view, add, change, delete, or a name in "
+        "Karni.actions (class Karni: actions = ['refund']; explicit_actions = ['refund']). "
+        "Then grant the action by name: KARNI_ROLES = {'finance': {'grants': "
+        "{'shop.order:refund': 'all'}}}.",
+    ),
+    _e(
+        "E291",
+        "Karni.natural_key or import_key is not one field of the model",
+        "check",
+        "karni.meta.natural_key; karni.meta.import_options; karni.checks.check_key_fields "
+        "(karni check)",
+        "natural_key names the one field that names a row to people: an import's relation "
+        "cell carries its value and an export writes it. import_key names the column an "
+        "import matches rows on. Each carries one value per cell, so a list of fields has no "
+        "form in a file, and a name the model does not have would fail every request that "
+        "reads the model.",
+        "Write one field name as a string: class Karni: natural_key = 'name' (not ['name']). "
+        "For a row that only several fields name together, add one unique field that names it "
+        "(a SlugField built from them), or leave natural_key out to use the primary key.",
+    ),
     # E3xx admin
     _e(
         "E301",
@@ -757,6 +1237,375 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "files unfold can serve.",
         "Set KARNI_ADMIN_LOGO = 'karni' for Karni's mark, or {'light': '<static path>', 'dark': "
         "..., 'icon': ...} with at least 'light'. Leave it unset for a text header.",
+    ),
+    # E304-E305 manage.py karni_makemigrations (karni build, experimental)
+    _e(
+        "E304",
+        "karni_makemigrations --renames is not a rename list",
+        "exception",
+        "karni.management.commands.karni_makemigrations",
+        'karni build passes the renames of the plan as JSON: {"models": [[app, old, new]], '
+        '"fields": [[app, model, old, new]]}. Anything else cannot be written as a migration.',
+        "Pass a JSON object with models and fields lists, or run karni build, which writes it.",
+    ),
+    _e(
+        "E305",
+        "An app has more than one latest migration, so the renames have no place",
+        "exception",
+        "karni.management.commands.karni_makemigrations.write_renames",
+        "A rename migration follows the app's latest migration. Two migrations that both claim "
+        "to be latest (two branches) leave no single one to follow.",
+        "Run manage.py makemigrations --merge for the app, then karni build again.",
+    ),
+    # E31x the module catalog
+    _e(
+        "E310",
+        "A module's manifest does not match the module",
+        "test",
+        "karni.testing.assert_module_manifest",
+        "karni.module.toml is what karni modules, karni add, karni remove and the app spec "
+        "read about a module. assert_module_manifest checks it parses, that the karni.modules "
+        "entry point names the package, that its settings are the DEFAULTS fragment's, and "
+        "that its models are the app's. Each listed line is one mismatch.",
+        "Fix the manifest or the module as the line says: list every KARNI_<NAME>_* setting of "
+        "conf.DEFAULTS under [provides.settings] with its type, list the app's models under "
+        'provides.models, and add [project.entry-points."karni.modules"] <name> = '
+        '"karni_<name>" to pyproject.toml, then reinstall the module. docs/modules.md lists '
+        "every key.",
+    ),
+    # E340-E359 / W550-W559 tree models (karni.models.TreeModel, karni.tree, experimental)
+    _e(
+        "E340",
+        "A tree node's new parent is the node itself or a node below it",
+        "exception",
+        "karni.models.TreeModel.check_parent (save, clean, move_to); the API answers 400",
+        "A parent below the node would make the branch its own ancestor: a cycle. Every walk "
+        "stays safe on such data, but the nodes on the cycle drop out of the tree, so Karni "
+        "refuses the write before any SQL.",
+        "Choose a parent outside the node's branch (or None for a root). To swap two nodes, "
+        "move the lower one out of the branch first. In the API, POST <id>/move/ with another "
+        "parent.",
+    ),
+    _e(
+        "E341",
+        "A tree node with live children cannot be deleted alone",
+        "exception",
+        "karni.models.TreeModel.delete; the API answers 409",
+        "A soft-deleted node hides its whole branch. Deleting a node that still has live "
+        "children would hide them too, without anyone deciding that, so delete() refuses and "
+        "the answer counts the children.",
+        "Move the children to another parent first, or delete the whole branch on purpose: "
+        "node.delete_branch(), or DELETE <id>/?branch=true in the API (write access to every "
+        "node of the branch).",
+    ),
+    _e(
+        "E342",
+        "A tree endpoint got a parameter it cannot use",
+        "api",
+        "karni.api.tree (tree/, move/, ?parent=, ?descendants_of=, ?branch=)",
+        "The tree endpoints take keys of the model (?root=, ?parent=, ?descendants_of=, the "
+        "parent of move/), a whole number of levels (?depth=, from 1 to the viewset's "
+        "tree_max_depth) and true or false (?branch=). A key must name a node the requester "
+        "may read.",
+        "Send a key of the model (or null for ?parent= and move/'s parent), a depth within the "
+        "limit the message names, and branch=true or branch=false.",
+    ),
+    _e(
+        "E343",
+        "A tree method got an argument it cannot use",
+        "exception",
+        "karni.managers.TreeQuerySet (walk, descendants, ancestors, subtree_ids); "
+        "karni.models.TreeModel.move_to",
+        "A walk starts from rows of the model, their keys or a queryset of the model. A row of "
+        "another model, an unsaved row or a malformed key names no node. move_to() takes a "
+        "position only on an OrderedTreeModel, as a whole number from 0.",
+        "Pass saved rows of the model or their keys. Drop the position on a TreeModel, or "
+        "inherit OrderedTreeModel to order siblings.",
+    ),
+    _e(
+        "E344",
+        "A tree model's default manager has no tree walks",
+        "check",
+        "karni.checks.check_tree_models",
+        "TreeModel's manager (karni.managers.TreeManager) carries roots(), children(), "
+        "ancestors(), descendants() and subtree_ids(), and the tree endpoints use them. A base "
+        "listed before TreeModel (class Region(BaseModel, TreeModel)) supplies its own "
+        "`objects` first, so the walks are missing.",
+        "List TreeModel first: class Region(TreeModel, BaseModel). A custom manager must be "
+        "built on karni.managers.TreeQuerySet, the way TreeManager is.",
+    ),
+    _e(
+        "E345",
+        "A tree model's parent is not a foreign key to the model itself",
+        "check",
+        "karni.checks.check_tree_models",
+        "Every walk joins a node to its parent through the `parent` column, so `parent` must "
+        "stay a nullable ForeignKey to the same model.",
+        "Remove the redeclared `parent` field, or declare it as models.ForeignKey('self', "
+        "null=True, blank=True, on_delete=models.PROTECT, related_name='children').",
+    ),
+    # E360-E379 per-user grants (karni.accounts.grants, experimental)
+    _e(
+        "E360",
+        "A user grant's permission pattern matches no permission",
+        "exception",
+        "karni.accounts.grants.check",
+        "A user grant names its permission as a KARNI_ROLES grant does: 'app_label.model:action', "
+        "with '*' for either part, or '*' alone. A pattern that is malformed or matches no "
+        "permission of the project would grant nothing, so it is refused when the grant is "
+        "written (the API, the admin, karni.accounts.grants.grant or full_clean()).",
+        "Write the key as karni context or GET permissions/matrix/ lists it (e.g. "
+        "'shop.order:view'), and declare a model's extra actions in `class Karni: actions = "
+        "[...]` before granting them.",
+    ),
+    _e(
+        "E361",
+        "A user grant's scope does not fit the permissions it covers",
+        "exception",
+        "karni.accounts.grants.check",
+        "The scope is one a role grant takes: 'all', 'own', 'related:<key>', 'custom:<name>' "
+        "or 'tree:<path>'. 'own' needs the model's owner field, 'related:<key>' its "
+        "Karni.scope_paths[key], 'custom:<name>' a scope registered with register_scope() and "
+        "'tree:<path>' a path from the model to a tree model. "
+        "An explicit key whose model lacks it is refused, and a wildcard pattern must keep at "
+        "least one model that has it.",
+        "Pick a scope from the model's options in GET permissions/matrix/, declare the owner "
+        "field or scope path in `class Karni`, or register the custom scope at startup.",
+    ),
+    _e(
+        "E362",
+        "A user grant's targets are invalid",
+        "exception",
+        "karni.accounts.grants.check",
+        "targets lists the row ids a scope that points at rows reaches: a 'related:<key>' grant "
+        "with targets reaches the rows whose Karni.scope_paths[key] is one of them, and a "
+        "'tree:<path>' grant the rows under those nodes of the tree. Targets are "
+        "a list of ids (text, integers or UUIDs), only for such a scope, and each must be a value "
+        "the scope path's field takes.",
+        "Pass a list of ids of the related model, e.g. targets=[3, 7] for an integer key, drop "
+        "targets for an 'all', 'own' or 'custom:' grant, or grant 'related:<key>' instead.",
+    ),
+    _e(
+        "E363",
+        "The operator may not give this user grant",
+        "api",
+        "karni.accounts.grants.refusals",
+        "Nobody grants what they do not hold, as in the permission matrix: the operator must "
+        "hold every permission the pattern reaches, at scope 'all' or at the same scope, and for "
+        "a grant with targets their own targets under that scope must include each one. "
+        "Nothing was written. Superusers and code that passes operator=None are not checked.",
+        "Ask someone who holds the permission at that scope (or 'all') to give the grant, "
+        "narrow the pattern, the scope or the targets to what you hold, or grant it from code "
+        "with operator=None.",
+    ),
+    _e(
+        "E364",
+        "Per-user grants are turned off",
+        "api",
+        "karni.accounts.api.grants",
+        "permissions/grants/ and its routes are mounted only while KARNI_USER_GRANTS is True. "
+        "A URLconf built while it was True answers 404 with this code once it is False. While "
+        "it is False, user grants are not read and grant nothing.",
+        "Set KARNI_USER_GRANTS = True (or features: user_grants: true in karni.yaml, then karni "
+        "build) to use per-user grants.",
+    ),
+    _e(
+        "E365",
+        "karni.accounts.grants.change() was given a field it does not set",
+        "exception",
+        "karni.accounts.grants.change",
+        "change() sets a grant's permission, scope, targets, expires_at and reason. The user a "
+        "grant belongs to, granted_by and the timestamps are not changed this way: a grant for "
+        "another user is a new grant, and granted_by follows the operator.",
+        "Pass only permission, scope, targets, expires_at or reason. To move access to another "
+        "user, revoke() this grant and grant() a new one.",
+    ),
+    # E490-E499 / W620-W629 the tree scope (karni.accounts.tree_scope, experimental)
+    _e(
+        "E490",
+        "A tree:<path> scope does not end at a tree model",
+        "check",
+        "karni.accounts.tree_scope.resolve_path; karni.checks.check_tree_scopes (KARNI_ROLES); "
+        "tree_scope() in a Where",
+        "tree:<path> reaches the rows whose <path> is a node the user holds or a node below it, "
+        "so each step of the path must be a relation of the model before it (a foreign key, a "
+        "one-to-one, a many-to-many or a reverse relation) and the last one must point at a "
+        "model on karni.models.TreeModel. A path that does not resolve could only ever reach no "
+        "row, so Karni refuses it at startup, in KARNI_ROLES and wherever tree_scope() names it.",
+        "Name the row's relation to the tree model, through relations when needed: "
+        "tree:region, tree:product__categories. Make the target a tree model (class "
+        "Region(TreeModel, BaseModel)), or grant another scope.",
+    ),
+    _e(
+        "E491",
+        "The access/ endpoint of a tree resource got a parameter it cannot use",
+        "api",
+        "karni.api.tree (GET <resource>/access/?permission=)",
+        "?permission= keeps the grants of the permissions it matches, written as a KARNI_ROLES "
+        "pattern: 'app_label.model:action' with '*' for either part, or '*' alone. Anything "
+        "else would match no grant and answer an empty forest without saying why.",
+        "Send a permission key such as ?permission=shop.order:view (or a pattern such as "
+        "shop.order:*), or leave the parameter out to count every tree grant.",
+    ),
+    _e(
+        "W620",
+        "A role grant of a tree scope gives its members no node",
+        "warning",
+        "karni.checks.check_tree_scopes (karni check)",
+        "A role grant of tree:<path> reaches the rows under the node the user holds in the "
+        "attribute named after the path's last step (tree:region and tree:store__region read "
+        "user.region), as related:<key> compares user.<key>. The user model has no such "
+        "attribute, so the role gives each member no node and no row. A tree grant never "
+        "falls back to every row.",
+        "Give the user model the attribute (a field or a property holding a node of the tree, "
+        "e.g. region), or give each user their nodes with user grants of the same scope "
+        "(features: user_grants, then karni.accounts.grants.grant(..., targets=[...])). "
+        "The check is silent while KARNI_USER_GRANTS is on, since the nodes come from the "
+        "grants. Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] otherwise when "
+        "something else gives the nodes on purpose.",
+    ),
+    # E570-E589 / W650-W659 taxonomy tagging (karni.taxonomy, experimental)
+    _e(
+        "E570",
+        "class Karni: taxonomies is malformed",
+        "exception",
+        "karni.taxonomy.declared_taxonomies (raised when the model class is built)",
+        "taxonomies maps each key to a tree model. The key becomes a many-to-many field of "
+        "that name and the list parameters ?<key>= and ?<key>_descendants=, so it must be a "
+        "field name: no leading underscore, no double underscore, not ending in _descendants. "
+        "The value names the tree model as 'app_label.Model' or the model class.",
+        'Write taxonomies = {"region": "geo.Region", "category": "catalog.Category"}, with '
+        "keys that are field names and values that name tree models.",
+    ),
+    _e(
+        "E571",
+        "A taxonomy points at a model that is not a tree model",
+        "check",
+        "karni.checks.check_taxonomies (karni check)",
+        "A taxonomy tags rows with the nodes of a hierarchy: ?<key>_descendants=, the facets "
+        "rolled up to the ancestors, the node counts and the tree:<key> scope all walk the "
+        "tree from a node to the nodes below it. A model that is not on "
+        "karni.models.TreeModel has no parent to walk.",
+        "Make the target a tree model (class Region(TreeModel, BaseModel), or tree: true in "
+        "karni.yaml), or point the key at the tree model you meant. For tags without a "
+        "hierarchy, declare a plain many-to-many instead of a taxonomy.",
+    ),
+    _e(
+        "E572",
+        "The field a taxonomy adopts is not a many-to-many to its tree",
+        "check",
+        "karni.checks.check_taxonomies (karni check); karni.taxonomy.Taxonomy.field",
+        "When the model already has an attribute named after a taxonomy key, Karni adopts it "
+        "instead of generating the many-to-many. Adopting works only for a ManyToManyField to "
+        "the tree model the key names: the filters, the facets and the scope read its through "
+        "table.",
+        "Declare the field as models.ManyToManyField(<the tree model>, blank=True, ...) under "
+        "the key's name, rename the other attribute, or remove the field and let Karni "
+        "generate it.",
+    ),
+    _e(
+        "E573",
+        "A taxonomy filter or endpoint got a parameter it cannot use",
+        "api",
+        "karni.api.taxonomy (?<key>=, ?<key>_descendants=, facets/, <key>/tagged/)",
+        "?<key>= takes keys of the tree's nodes separated by commas. ?<key>_descendants=, "
+        "?rollup= and ?descendants= take true or false. facets/ counts one taxonomy: "
+        "?taxonomy= names it, and may be left out only when the model has one.",
+        "Send node keys (?region=3,7), true or false for the flags, and one of the keys the "
+        "message lists as ?taxonomy=.",
+    ),
+    # E38x aggregations (karni.aggregation, experimental)
+    _e(
+        "E380",
+        "An aggregation declaration is not valid",
+        "check",
+        "karni.aggregation.Aggregation (karni.checks.check_aggregations)",
+        "class Karni: aggregate on a model, or aggregation on a viewset, says what GET "
+        "<resource>/aggregate/ may group by and sum. Each name must be a field, a relation path "
+        "or a declared expression of the model, a bucket (:year, :quarter, :month) needs a date "
+        "field, and the metrics are count, sum, avg, min, max and distinct_count.",
+        "Fix the name the message quotes: {'group_by': ['category', 'launched_on:year'], "
+        "'values': ['price'], 'metrics': ['count', 'sum'], 'expressions': {'revenue': "
+        "TextNumber('revenue_text')}}. Every key but group_by is optional.",
+    ),
+    _e(
+        "E381",
+        "The resource declares no aggregation",
+        "api",
+        "karni.api.viewsets.BaseViewSet.aggregate",
+        "Nothing is aggregatable unless declared, so GET <resource>/aggregate/ answers 404 for a "
+        "model without class Karni: aggregate (and a viewset without aggregation).",
+        "Declare what may be grouped and summed on the model: class Karni: aggregate = "
+        "{'group_by': ['region'], 'values': ['price']}.",
+    ),
+    _e(
+        "E382",
+        "group_by, stack or series names something not declared",
+        "api",
+        "karni.aggregation.parse_query",
+        "A request may group only by the fields, relation paths and expressions the "
+        "declaration lists, and never by a field hidden from the requester "
+        "(Karni.field_roles, APIMeta.write_only). group_by is required.",
+        "Use one of the values the message lists (the OpenAPI document lists them too, in "
+        "x-karni-aggregate), or add the field to the declaration's group_by.",
+    ),
+    _e(
+        "E383",
+        "The metric is not allowed",
+        "api",
+        "karni.aggregation.parse_query",
+        "The declaration's metrics list what may be computed: count, sum, avg, min, max, "
+        "distinct_count, or fewer.",
+        "Send one of the metrics the message lists, or add it to the declaration's metrics.",
+    ),
+    _e(
+        "E384",
+        "The value is missing, not declared, or not a number",
+        "api",
+        "karni.aggregation.parse_query",
+        "Every metric but count reads a value, which must be in the declaration's values and "
+        "visible to the requester. sum, avg, min and max need a number field or a numeric "
+        "expression.",
+        "Send value=<one of the declared values>. For a number stored as text, declare an "
+        "expression: 'expressions': {'revenue': TextNumber('revenue_text')}.",
+    ),
+    _e(
+        "E385",
+        "The date bucket does not fit",
+        "api",
+        "karni.aggregation.parse_query",
+        "A bucket (:year, :quarter, :month) groups a date or datetime field. Another bucket, "
+        "or a bucket on another kind of field, cannot be computed.",
+        "Send group_by=<date field>:year, :quarter or :month, or group by the field without "
+        "a bucket.",
+    ),
+    _e(
+        "E386",
+        "An aggregate parameter is not valid",
+        "api",
+        "karni.aggregation.parse_query",
+        "top must be a whole number from 1 to KARNI_AGGREGATE_MAX_GROUPS, only one of stack "
+        "and series names the second dimension, and it must differ from group_by.",
+        "Fix the parameter the message names.",
+    ),
+    _e(
+        "E387",
+        "The aggregate makes too many groups",
+        "api",
+        "karni.aggregation.run_aggregate",
+        "A response holds at most KARNI_AGGREGATE_MAX_GROUPS groups (default 1000), so "
+        "grouping by a field with a value per row cannot fill a chart or the server's memory.",
+        "Send top=<n> to keep the largest groups and put the rest in Other, narrow the rows "
+        "with filters, group by a coarser bucket, or raise KARNI_AGGREGATE_MAX_GROUPS.",
+    ),
+    _e(
+        "W570",
+        "An aggregation expression is never used",
+        "warning",
+        "karni.checks.check_aggregations",
+        "An expression in the declaration's expressions is only reachable through group_by or "
+        "values. One that neither lists does nothing.",
+        "Add its name to group_by or values, or remove it.",
     ),
     # E4xx events, listeners, schedules, Celery
     _e(
@@ -832,6 +1681,123 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "`karni schedule run` executes the task in-process so failures show immediately.",
         "Read the task's own error in the message and fix the task. Then re-run it with "
         "`karni schedule run <name>`.",
+    ),
+    # E410-E429 / W580-W589 response caching (karni.api.caching)
+    _e(
+        "E410",
+        "A cached viewset reads a model Karni sees no write to",
+        "check",
+        "karni.checks.check_api_cache",
+        "With KARNI_API_CACHE on, a cached response is invalidated when a model it reads is "
+        "written. An external or unmanaged model, or one on another database, is written by "
+        "another system, so no signal reaches Karni and the response would stay stale for the "
+        "whole KARNI_API_CACHE_TTL.",
+        "Bound the staleness with `cache = Cache(ttl=60)` on the viewset (any explicit ttl), or "
+        "opt it out with `cache = Uncached(reason='reads the warehouse tables')`. After a write "
+        "you can see, call karni.api.caching.invalidate(Model).",
+    ),
+    _e(
+        "E411",
+        "KARNI_API_CACHE_FLUSH is not a time of day",
+        "exception",
+        "karni.conf.validation; karni.api.caching.parse_flush",
+        "The scheduled flush of the response cache runs once a day at the time this setting "
+        "names, in its timezone or Celery's.",
+        "Write 'HH:MM' (24-hour), optionally followed by an IANA timezone: '03:30' or "
+        "'03:30 Europe/Paris'. Leave it unset (None) for no scheduled flush.",
+    ),
+    _e(
+        "W580",
+        "Cached responses live in a cache private to each process",
+        "warning",
+        "karni.checks.check_api_cache_backend",
+        "KARNI_API_CACHE keeps responses and their version tokens in KARNI_API_CACHE_ALIAS. A "
+        "per-process backend (LocMemCache) keeps them in each worker, so a write handled by "
+        "one worker leaves the other workers serving the old response until the TTL ends.",
+        "Point KARNI_API_CACHE_ALIAS at a cache every process shares (Redis, the database "
+        "cache) in production, or silence karni.W580 for a single-process deployment.",
+    ),
+    # E47x/E48x/W61x tooling for large projects (experimental): context slices, the
+    # check cache, volume seeding, the scaling budgets and query plans
+    _e(
+        "E470",
+        "A context slice names no app or model",
+        "exception",
+        "karni.introspect.resolve_apps; karni.introspect.resolve_models; karni context",
+        "karni context --app and --model print one area of the project. The label or name "
+        "matched no app with models and no model.",
+        "Use a name the message lists, or run karni context --summary to see every app and "
+        "its models. A model is Name or app_label.Name.",
+    ),
+    _e(
+        "E471",
+        "A context slice names a model two apps share",
+        "exception",
+        "karni.introspect.resolve_models; karni context --model",
+        "Two apps have a model of that name, so the bare name could mean either.",
+        "Write app_label.Name, one of the labels the message lists.",
+    ),
+    _e(
+        "E473",
+        "A volume seed refused tables that hold rows no seed run left",
+        "exception",
+        "manage.py karni_seed --volume; karni.bulk_seeding.Ledger",
+        "A seed run records how many rows each table holds when it is done "
+        "(.karni/local/seeded.json). A table that holds another number of rows was written by "
+        "someone else, and volume rows would mix with that content.",
+        "Pass --reset to wipe the project's tables first, --force to add rows anyway, or "
+        "--model to seed only the tables seed runs filled. Real content belongs in karni load.",
+    ),
+    _e(
+        "E475",
+        "karni seed --volume or --batch-size is not a positive number",
+        "exception",
+        "manage.py karni_seed",
+        "A volume and a batch size are numbers of rows.",
+        "Pass 1 or more, e.g. karni seed --volume 100000 --batch-size 2000.",
+    ),
+    _e(
+        "E476",
+        "An endpoint is slower than its time budget at the large row count",
+        "test",
+        "karni.testing.performance (the scaling check); query_scaling = Scaling(seconds=...)",
+        "The viewset declares a time budget: the request at the scaling check's large row count "
+        "(the faster of two runs) must take no longer. It took longer.",
+        "Read the statements in the message. karni queries <endpoint> --explain shows each plan "
+        "on PostgreSQL and names the index a sequential scan wants. Raise "
+        "Scaling(seconds=...) only when the work is real.",
+    ),
+    _e(
+        "E477",
+        "A scaling declaration or KARNI_SCALING_ROWS is not valid",
+        "exception",
+        "karni.performance.Scaling; karni.performance.scaling_rows",
+        "The scaling check compares two row counts, small then large, and a time budget is a "
+        "number of seconds.",
+        "Write rows=(small, large) with 1 <= small < large, e.g. Scaling(rows=(2, 50), "
+        "seconds=0.5), and the same pair in KARNI_SCALING_ROWS.",
+    ),
+    _e(
+        "W610",
+        "karni queries --explain analyses plans on PostgreSQL only",
+        "warning",
+        "karni.api.diagnose; karni queries --explain",
+        "EXPLAIN ANALYZE with a plan Karni reads, and the sequential scans it flags, need "
+        "PostgreSQL. On another database --explain prints that database's plain EXPLAIN of the "
+        "slowest statements.",
+        "Run karni queries --explain against PostgreSQL, with data at a realistic volume "
+        "(karni seed --volume N).",
+    ),
+    _e(
+        "W611",
+        "A query reads a large table from start to end",
+        "warning",
+        "karni.api.explain; karni queries --explain",
+        "The plan has a sequential scan on a table of KARNI_EXPLAIN_SEQ_SCAN_ROWS rows or more "
+        "(default 1000). It reads every row, so it slows down as the table grows.",
+        "Add the index the finding names to the model's Meta.indexes and make a migration. "
+        "When the finding says the filter keeps most rows, narrow the filter or paginate "
+        "instead: an index would not help.",
     ),
     # E5xx settings and optional dependencies
     _e(
@@ -918,6 +1884,407 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "`locmem` is the in-process alternative for a host run without Redis.",
         "Set KARNI_CACHE to `redis` (the default) or `locmem`. For anything else, define CACHES "
         "yourself in settings.py.",
+    ),
+    # W51x and W520 deploy checks (manage.py check --deploy, karni check --deploy)
+    _e(
+        "E508",
+        "A setting is assigned where it cannot take effect",
+        "check",
+        "karni.checks.check_call_time_settings",
+        "karni_settings() reads a few settings during the call to compute others: "
+        "KARNI_AUTH_MODE, KARNI_2FA, KARNI_SOCIAL_AUTH and KARNI_SOCIAL_PROVIDERS decide "
+        "INSTALLED_APPS and MIDDLEWARE, KARNI_FRONTEND_URL feeds CSRF_TRUSTED_ORIGINS, "
+        "KARNI_AUTH_THROTTLE_RATES the throttle rates, KARNI_JSON_LOGS builds LOGGING, "
+        "KARNI_CACHE builds CACHES and KARNI_STORAGE builds STORAGES. Assigned after the "
+        "call, such a setting changes none of them, and the project would run with the "
+        "settings computed from the old value. A KARNI_ADMIN_LOGO with no SITE_LOGO entry "
+        "in UNFOLD (UNFOLD replaced after the call) shows no logo either.",
+        "Move the assignment above the `karni_settings(globals())` line, pass it as a "
+        "keyword (`karni_settings(globals(), KARNI_AUTH_MODE='session')`) or set its "
+        "environment variable in .env. For the logo, change UNFOLD in place instead of "
+        "replacing it.",
+    ),
+    _e(
+        "E509",
+        "Sign-in with an ID token needs the cryptography package",
+        "exception",
+        "karni.conf.validation (at startup), karni.accounts.social_token",
+        "Google, Microsoft and Apple sign their ID tokens with RS256 (an EC key uses ES256). "
+        "PyJWT verifies those only with the cryptography package, which a plain install of "
+        "Karni leaves out.",
+        "Run pip install 'karni[social-token]', or empty KARNI_SOCIAL_TOKEN_PROVIDERS.",
+    ),
+    _e(
+        "W510",
+        "DEBUG is on in a deployment",
+        "warning",
+        "karni.security.checks.check_debug (deploy)",
+        "With DEBUG on, an error page shows the settings, the source code around the error "
+        "and the request to whoever triggers it. Django also keeps every query in memory, "
+        "and the content security policy only reports instead of blocking.",
+        "Run production with DJANGO_ENV=prod, which turns DEBUG off, or set DEBUG=False in "
+        "the environment.",
+    ),
+    _e(
+        "W511",
+        "SECRET_KEY is weak or a development key",
+        "warning",
+        "karni.security.checks.check_secret_key (deploy)",
+        "SECRET_KEY signs sessions, password-reset and verification tokens and every signed "
+        "value. The scaffold's `karni-insecure-dev-key` is public, and a short or plain key "
+        "can be guessed. Either way anyone could forge them.",
+        "Set SECRET_KEY in the production environment to a random value of at least 50 "
+        'characters, for example the output of `python -c "from django.core.management.utils '
+        'import get_random_secret_key; print(get_random_secret_key())"`. Never commit it.',
+    ),
+    _e(
+        "W512",
+        "ALLOWED_HOSTS is empty or allows every host",
+        "warning",
+        "karni.security.checks.check_allowed_hosts (deploy)",
+        "Django builds absolute links, including password-reset and verification links, from "
+        "the request's Host header. With '*' an attacker picks the host those links point at. "
+        "An empty list answers no host at all once DEBUG is off.",
+        "Set ALLOWED_HOSTS in the environment to the site's host names, comma-separated, e.g. "
+        "ALLOWED_HOSTS=example.com,www.example.com.",
+    ),
+    _e(
+        "W513",
+        "CSRF_TRUSTED_ORIGINS is missing, a wildcard or plain http",
+        "warning",
+        "karni.security.checks.check_csrf_trusted_origins (deploy)",
+        "Django accepts a form or a session-mode API call only from a trusted origin. Behind "
+        "a proxy, and for a frontend on another host, that origin must be listed. A wildcard "
+        "or an http:// origin trusts more than the site, and session mode adds "
+        "KARNI_FRONTEND_URL, whose default is http://localhost:5173.",
+        "Set CSRF_TRUSTED_ORIGINS in the environment to the site's https origins, "
+        "comma-separated, e.g. CSRF_TRUSTED_ORIGINS=https://example.com. In session mode also "
+        "set KARNI_FRONTEND_URL to the frontend's https URL.",
+    ),
+    _e(
+        "W514",
+        "HSTS is off",
+        "warning",
+        "karni.security.checks.check_hsts (deploy)",
+        "Without Strict-Transport-Security a browser may still try plain http, for example "
+        "from a typed address or an old link, and a network attacker can read or change that "
+        "traffic before the redirect to https.",
+        "Run production with DJANGO_ENV=prod, which sets SECURE_HSTS_SECONDS to one year with "
+        "subdomains and preload. To try a new domain first, set SECURE_HSTS_SECONDS=3600 in the "
+        "environment and raise it once https works.",
+    ),
+    _e(
+        "W515",
+        "The session or CSRF cookie is not marked secure",
+        "warning",
+        "karni.security.checks.check_secure_cookies (deploy)",
+        "A cookie without the Secure flag is also sent over plain http, where anyone on the "
+        "network can read it and take over the session.",
+        "Run production with DJANGO_ENV=prod, which sets SESSION_COOKIE_SECURE and "
+        "CSRF_COOKIE_SECURE to True. If you define them in settings.py, set both to True.",
+    ),
+    _e(
+        "W516",
+        "The admin is at /admin/",
+        "warning",
+        "karni.security.checks.check_admin_path (deploy)",
+        "Scanners try /admin/ on every site, so a login form there receives password guesses "
+        "all day. Another path keeps it off their lists. It is not a substitute for strong "
+        "passwords, it only removes the noise.",
+        "Set KARNI_ADMIN_PATH in the environment to a path nobody guesses, with a trailing "
+        "slash, e.g. KARNI_ADMIN_PATH=staff-7f3a9c/. The scaffold's urls.py mounts the admin "
+        "at that setting.",
+    ),
+    _e(
+        "W517",
+        "CORS allows every origin",
+        "warning",
+        "karni.security.checks.check_cors (deploy)",
+        "CORS decides which other sites may call the API from a visitor's browser. Allowing "
+        "every origin lets any site read what the visitor can read, and with "
+        "CORS_ALLOW_CREDENTIALS (on in session mode) it does so with the visitor's cookies. "
+        "The development profile allows every origin, so a deployment that runs with "
+        "DJANGO_ENV=dev does too.",
+        "Run production with DJANGO_ENV=prod and list the frontend's origins in "
+        "CORS_ALLOWED_ORIGINS, e.g. CORS_ALLOWED_ORIGINS=https://app.example.com. Remove "
+        "CORS_ALLOW_ALL_ORIGINS and any regex that matches every origin.",
+    ),
+    _e(
+        "W518",
+        "No enforced Content-Security-Policy",
+        "warning",
+        "karni.security.checks.check_csp_present (deploy)",
+        "The Content-Security-Policy tells the browser which scripts may run, so an injected "
+        "script does not. Karni's SecurityHeadersMiddleware sends it, but not when it is "
+        "missing from MIDDLEWARE or KARNI_CSP is None, and it only reports while DEBUG or "
+        "KARNI_CSP_REPORT_ONLY is on.",
+        "Keep karni.security.SecurityHeadersMiddleware in MIDDLEWARE (karni_settings() adds it), "
+        "leave KARNI_CSP a dict, and run with DEBUG off and KARNI_CSP_REPORT_ONLY unset. If a "
+        "proxy sends the policy instead, add 'karni.W518' to SILENCED_SYSTEM_CHECKS.",
+    ),
+    _e(
+        "W519",
+        "The Content-Security-Policy lets any script run",
+        "warning",
+        "karni.security.checks.check_csp_scripts (deploy)",
+        "A script-src with *, http:, https:, data:, 'unsafe-eval' or 'unsafe-inline' (without a "
+        "nonce or hash) lets an injected script run, which defeats the policy. The admin and "
+        "the API docs pages get the extra sources they need on their own pages only.",
+        "Remove those sources from KARNI_CSP['script-src']. Allow a script host by its origin, "
+        "e.g. https://js.example.com, and an inline script by its hash with "
+        "karni.security.script_hash() on the one view that needs it (@csp_extend).",
+    ),
+    _e(
+        "W520",
+        "Production email is not set up",
+        "warning",
+        "karni.security.checks.check_email (deploy)",
+        "Password resets, account emails and the notifications of a site's forms go out by "
+        "email. The console, locmem, dummy and file backends deliver nothing, and a sender at "
+        "localhost (Django's default, webmaster@localhost) is refused by mail servers, so "
+        "every email is lost without an error.",
+        "Set EMAIL_URL to the mail server (smtp+tls://user:password@smtp.example.com:587, "
+        "smtps:// for SSL) and DEFAULT_FROM_EMAIL to an address of the site's domain "
+        '("Example Site <noreply@example.com>") in the production environment (.env.prod). '
+        ".env.prod.example lists them. A project that sends no email adds 'karni.W520' to "
+        "SILENCED_SYSTEM_CHECKS.",
+    ),
+    # W53x integer primary keys (karni.models.BigIntBaseModel, experimental)
+    _e(
+        "W530",
+        "Anyone may read a resource whose ids can be guessed",
+        "warning",
+        "karni.checks.check_public_integer_keys",
+        "The model has an integer primary key (BigIntBaseModel or an AutoField), its detail "
+        "route looks rows up by that key, and its read access admits anonymous callers. "
+        "Integer ids are sequential, so a visitor learns how many rows there are and can walk "
+        "the detail URLs one id after the other, including rows no list links to.",
+        "Give the model a UUID key (inherit BaseModel) or look rows up by a slug "
+        '(lookup_field = "slug" on the viewset). When the ids may be public, write '
+        "`# karni: allow(public-integer-key): <reason>` above the viewset class, or add "
+        "'karni.W530' to SILENCED_SYSTEM_CHECKS for the whole project.",
+    ),
+    # E52x running in production (karni.deploy)
+    _e(
+        "E520",
+        "The deploy checks failed when the container started",
+        "exception",
+        "karni.deploy.entrypoint (the production image's ENTRYPOINT)",
+        "The production image runs `karni check --deploy` before its command, so a "
+        "container with DEBUG on, the scaffold's SECRET_KEY, open hosts or another unsafe "
+        "value never serves a request. Each finding printed before the E520 line has its own "
+        "code (karni.W510 to karni.W520, a Django security warning, or a karni check hook).",
+        "Set the production values in the environment the container gets (.env.prod for "
+        "docker-compose.prod.yml) and start it again: `karni explain W511` and the others "
+        "say what each value must be. In an emergency KARNI_SKIP_DEPLOY_CHECK=1 starts it "
+        "without the checks, logged on every start. Remove it once the values are fixed.",
+    ),
+    _e(
+        "E521",
+        "A backup failed",
+        "exception",
+        "karni.deploy.backup (the backup service, karni-backup)",
+        "A backup that fails quietly is found missing on the day it is needed, so the backup "
+        "service reports the failure in its log, and its health check turns unhealthy until "
+        "a backup succeeds.",
+        "Read the line after E521: it names the step (pg_dump, pg_restore, psql, the media "
+        "archive, S3) and its error. Check DATABASE_URL, that the client tools match the "
+        "database's major version (the backup image's POSTGRES_VERSION), the free space in "
+        "KARNI_BACKUP_DIR and, with KARNI_BACKUP_S3_BUCKET, the AWS_* credentials. Then run "
+        "`docker compose -f docker-compose.prod.yml exec backup karni-backup run`.",
+    ),
+    # E530-E549 / W630-W639 navigation from data (karni.navigation, experimental)
+    _e(
+        "E530",
+        "KARNI_NAVIGATION is not valid",
+        "exception",
+        "karni.navigation.settings_problems (startup validation), karni.navigation.models.NavItem",
+        "KARNI_NAVIGATION is a list of items and groups, 'db' or None. An item is a dict with "
+        "a label and a route (an app path that starts with /), and may have an icon name, an "
+        "integer order and what it requires. A group is a dict with a label and children, and "
+        "no route. A menu Karni cannot read would answer every request with an error.",
+        "Fix the entry the message names, e.g. {'label': 'Products', 'route': '/products', "
+        "'icon': 'box', 'requires': 'catalog.product:view'}, or {'label': 'Catalog', "
+        "'children': [...]} for a group.",
+    ),
+    _e(
+        "E531",
+        "KARNI_NAVIGATION = 'db' without the karni.navigation app",
+        "exception",
+        "karni.navigation.settings_problems (startup validation)",
+        "The database menu lives in the NavItem table, which comes with the karni.navigation "
+        "app. Karni does not install the app for every project, so a project that keeps its "
+        "menu in the settings gains no table.",
+        "Add 'karni.navigation' to INSTALLED_APPS and run migrate, or set KARNI_NAVIGATION to a "
+        "list of items.",
+    ),
+    _e(
+        "E532",
+        "A navigation entry's requirement is not valid",
+        "exception",
+        "karni.navigation.requirement_problem (startup validation, NavItem.requires)",
+        "An entry requires 'public' (everyone), 'authenticated' (every signed-in user) or a "
+        "permission pattern written as in KARNI_ROLES grants, so role grants and per-user "
+        "grants open it the way they open the API.",
+        "Write 'public', 'authenticated', or a pattern such as 'catalog.product:view', "
+        "'catalog.*:view' or '*'.",
+    ),
+    _e(
+        "E533",
+        "A navigation item links to a route no page serves",
+        "check",
+        "karni.navigation.checks.check_navigation (karni check)",
+        "karni check compares each item's route with the pages of the frontend: the path: "
+        "entries of the KARNI_NAVIGATION_PAGES files (frontend/src/routes.tsx, where karni "
+        "make page and karni build register each page). A menu entry that leads to no page "
+        "is a dead link for every user who sees it.",
+        "Fix the route (the message names the closest one), add the page with karni make page, "
+        "or remove the item. Add 'karni.E533' to SILENCED_SYSTEM_CHECKS if the page is "
+        "registered somewhere karni check does not read, or list that file in "
+        "KARNI_NAVIGATION_PAGES.",
+    ),
+    _e(
+        "E534",
+        "A navigation entry requires a permission the project does not have",
+        "check",
+        "karni.navigation.checks.check_navigation (karni check)",
+        "A permission pattern opens an entry for users who hold a grant for a permission it "
+        "names. A pattern that names no permission of the project (a typo, a model that was "
+        "renamed) opens it for nobody but a superuser.",
+        "Name an existing permission as karni context or GET permissions/matrix/ lists it "
+        "(app_label.model:action, lowercase), or write 'authenticated' or 'public'.",
+    ),
+    _e(
+        "E535",
+        "Navigation is turned off",
+        "api",
+        "karni.navigation.api.NavigationView",
+        "GET /api/navigation/ is mounted only while KARNI_NAVIGATION is set. A URLconf built "
+        "while it was set answers 404 with this code once it is unset.",
+        "Set KARNI_NAVIGATION to a list of items, or to 'db' with the karni.navigation app "
+        "installed (or navigation: in karni.yaml, then karni build).",
+    ),
+    _e(
+        "E536",
+        "A navigation entry has both a route and entries",
+        "exception",
+        "karni.navigation.models.NavItem.clean (the admin form)",
+        "An entry with a route is a link. A group is an entry without a route that holds other "
+        "entries. One entry cannot be both: the menu shows a link with no entries under it.",
+        "Give the group no route and put the link inside it as an entry of its own, or choose "
+        "a group as the parent.",
+    ),
+    _e(
+        "W630",
+        "The database menu could not be read",
+        "warning",
+        "karni.navigation.checks.check_navigation (karni check)",
+        "With KARNI_NAVIGATION = 'db', karni check reads the NavItem rows to compare their "
+        "routes and requirements. The database did not answer, or the karni.navigation "
+        "migration has not run, so nothing was compared. That is not an error: the database "
+        "may be outside this machine's reach.",
+        "Run migrate, check DATABASES, and run karni check again where the database answers. "
+        "Add 'karni.W630' to SILENCED_SYSTEM_CHECKS where it never does.",
+    ),
+    _e(
+        "W631",
+        "No frontend pages file to compare the menu with",
+        "warning",
+        "karni.navigation.checks.check_navigation (karni check)",
+        "karni check reads the pages from the KARNI_NAVIGATION_PAGES files (default "
+        "frontend/src/routes.tsx). None of them exists, so the menu's routes were not compared.",
+        "List the file that registers the frontend's routes in KARNI_NAVIGATION_PAGES, or set "
+        "it to [] when the menu serves a client whose pages Karni cannot read (a mobile app).",
+    ),
+    # E55x wide models: field groups and column sets (karni.layout, experimental)
+    _e(
+        "E550",
+        "Karni.field_groups or Karni.field_group_layout is malformed",
+        "check",
+        "karni.layout.field_groups; karni.checks.check_layouts",
+        "The groups are published in the OpenAPI schema as x-karni-field-groups and lay out "
+        "@karni/ui's ResourceForm and ResourceDetail and the admin's change form. A group "
+        "without a title or without fields cannot be shown, so the declaration is refused at "
+        "boot.",
+        "Map each group's title to a list of field names, e.g. field_groups = {'Overview': "
+        "['name', 'summary'], 'Financials': ['price', 'cost']}, and write field_group_layout "
+        "= 'sections' (the default) or 'tabs'.",
+    ),
+    _e(
+        "E551",
+        "A field group or a column set names a field the model does not have",
+        "check",
+        "karni.layout.field_groups; karni.layout.column_sets; karni.checks.check_layouts",
+        "A name with a typo would leave its field out of every form section, or show an "
+        "empty column, without an error anywhere, so a group or column set must name the "
+        "model's own fields.",
+        "Correct the name to a field of the model (the message names the model, the group or "
+        "set, and the field), or remove it from the group or set.",
+    ),
+    _e(
+        "E552",
+        "A field is in two field groups",
+        "check",
+        "karni.layout.field_groups; karni.checks.check_layouts",
+        "A form shows each field once, in one group. A field listed in two groups would be "
+        "edited in two places at once, so each field belongs to one group.",
+        "Keep the field in one group and remove it from the other (the message names both).",
+    ),
+    _e(
+        "E553",
+        "Karni.column_sets is malformed",
+        "check",
+        "karni.layout.column_sets; karni.checks.check_layouts",
+        "The column sets are published as x-karni-column-sets and ResourceTable offers them "
+        "in a selector. A set without a name or without columns, or one that lists a column "
+        "twice, cannot be shown.",
+        "Map each set's name to a list of field names, each once, e.g. column_sets = "
+        "{'default': ['name', 'price'], 'financial': ['name', 'price', 'cost']}.",
+    ),
+    # E590-E599 / W660-W669 production proof: API versions (karni.api.versions, experimental)
+    _e(
+        "E590",
+        "The API version settings cannot work",
+        "check",
+        "karni.checks.check_api_versions",
+        "KARNI_API_VERSION is a URL segment (lower case letters, digits and -, at most 16 "
+        "characters), and KARNI_API_VERSIONS is a dict of version name to a dict with the keys "
+        "router, deprecated, sunset and notes. A sunset or deprecated date is written "
+        "'YYYY-MM-DD', and a router is a dotted path to a zero-argument factory. One of them is "
+        "not, so the versions cannot be mounted.",
+        "Fix the setting the message names. Example: KARNI_API_VERSION = 'v1' and "
+        "KARNI_API_VERSIONS = {'v0': {'deprecated': '2026-06-01', 'sunset': '2027-01-31'}}.",
+    ),
+    _e(
+        "E591",
+        "KARNI_API_UNVERSIONED is not usable",
+        "check",
+        "karni.checks.check_api_versions",
+        "KARNI_API_UNVERSIONED says what /api/ without a version does once versions exist: "
+        "'keep', 'redirect' or 'remove'. 'redirect' sends clients to the current version, so it "
+        "needs KARNI_API_VERSION.",
+        "Use 'keep', 'redirect' or 'remove', and set KARNI_API_VERSION when you redirect.",
+    ),
+    _e(
+        "W660",
+        "An API version is past its sunset date",
+        "warning",
+        "karni.checks.check_api_versions (karni check)",
+        "A version's Sunset header promised the day it would go. That day has passed and the "
+        "version is still mounted, so clients that read the header were told something untrue.",
+        "Remove the version from KARNI_API_VERSIONS once its clients have moved, or move its "
+        "sunset date. Add 'karni.W660' to SILENCED_SYSTEM_CHECKS to keep it mounted.",
+    ),
+    _e(
+        "W661",
+        "API versions are set, but the URLconf does not mount them",
+        "warning",
+        "karni.checks.check_api_versions (karni check)",
+        "KARNI_API_VERSION or KARNI_API_VERSIONS names versions, and the API is mounted at "
+        "/api/<version>/ only by karni.api.versions.api_urls(). The URLconf still includes "
+        "karni.api.urls at api/, so every /api/<version>/ answers 404.",
+        "In config/urls.py, import api_urls from karni.api.versions and use *api_urls() in "
+        'place of path("api/", include("karni.api.urls")). A new project already does.',
     ),
     # E6xx testing and seeding
     _e(
@@ -1072,6 +2439,42 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Pass a client (or staff user) that can list the resource, and a row it does see as "
         "visible=. Test role-level refusals with assert_crud's denials instead.",
     ),
+    _e(
+        "E617",
+        "karni seed refuses to add demo rows to a table that already has rows",
+        "exception",
+        "karni seed; manage.py karni_seed",
+        "Seeded rows carry no mark, so seed cannot tell its own rows from real content. Adding "
+        "random demo rows to a table that holds content mixes the two for good. Any row in a "
+        "table the run would write to counts (the user table is left out: users are matched "
+        "by login and never deleted).",
+        "Pass --reset to wipe the project's tables first, --force to add demo rows on top, "
+        "--model to narrow the run to empty tables, or load real content with karni load.",
+    ),
+    _e(
+        "E618",
+        "A public page fails the page checks",
+        "test",
+        "karni.testing.assert_pages",
+        "assert_pages requests each page of a site and checks what visitors and search engines "
+        "get: a 200, a title, a meta description, alt text on every image, same-site links that "
+        "answer, and a 404 for a URL the site does not have. Each listed line is a page and a "
+        "problem a visitor or a crawler would meet.",
+        "Fix what each line names: usually the page's {% block title %} or {% block "
+        'description %}, an img element without an alt attribute (alt="" for a decorative '
+        "image), a link or {% static %} path to a URL that does not exist, or a catch-all "
+        "route that should raise Http404. Turn a check off with require_title=False, "
+        "require_description=False, require_alt=False, check_links=False or "
+        "not_found_url=None, or leave links out with ignore=[...].",
+    ),
+    _e(
+        "E619",
+        "assert_pages was given no URLs",
+        "exception",
+        "karni.testing.assert_pages",
+        "With no page to request, every check would pass without checking anything.",
+        'Pass the site\'s pages, for example assert_pages(client, ["/", "/about/"]).',
+    ),
     # E7xx agent tooling
     _e(
         "E701",
@@ -1142,6 +2545,31 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "request cannot pin a worker or build an unbounded file.",
         "Split the upload, narrow the export's filters, or raise the setting for a project "
         "that needs more.",
+    ),
+    _e(
+        "E804",
+        "A content file cannot be loaded",
+        "exception",
+        "karni load; manage.py karni_load; karni.transfer.loading",
+        "The file is missing, is not valid JSON or YAML, does not map model labels to lists of "
+        "rows, names a model that is not installed, nests rows under a model with no key to "
+        "match them on, or --as names no user. Nothing was written.",
+        "The message names the file and the problem. Keys are model labels (events.Event), "
+        "each holding a list of rows. A nested child needs a Karni.natural_key or a unique "
+        "constraint with its parent. YAML needs PyYAML, or write the file as JSON.",
+    ),
+    _e(
+        "E805",
+        "A content file holds rows that cannot be loaded",
+        "exception",
+        "karni load; manage.py karni_load; karni.transfer.loading",
+        "A row failed the validation the API runs (a missing required field, a bad choice, "
+        "clean(), uniqueness), names a field the model does not have or a file cannot set, "
+        "names a relation target that does not exist, lacks its key, or points at a file that "
+        "is not there. The whole load runs in one transaction, so every row was rolled back.",
+        "Each problem names the model, the row's key, the field and what is wrong. Fix the rows "
+        "(relations are named by the target's natural key, paths are relative to the content "
+        "file) and run again. karni load --dry-run checks a file without writing.",
     ),
     # E9xx debugging: karni why
     _e(
@@ -1275,7 +2703,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "exception",
         "karni.debug.replay; karni replay --as",
         "A replay runs as the captured user, or the user --as names (a primary key, an "
-        "email or a username). That user must exist in the database the replay uses.",
+        "email or a username). That user must exist in the database the replay uses, and "
+        "the captured id must still belong to the captured email: after a reset, integer "
+        "ids are reused by other users.",
         "Pass --as with an existing user's email, username or primary key, or pass --anonymous. "
         "Do not pass both.",
     ),
@@ -1432,10 +2862,11 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni.fields.checks.check_usage_indexes; karni schema",
         "A routed viewset declares search_fields, filterset_fields, ordering_fields or an "
         "ordering on a column no index covers, so every such list request reads the whole "
-        "table. Fast with seed data, slow in production.",
+        "table. Fast with seed data, slow in production. Only the project's own models are "
+        "checked: a module indexes its own.",
         "Add the index the message names to Meta.indexes (a SearchField for search), then run "
-        "karni make migration. `karni schema <app>` shows what serves each column. Silence "
-        "karni.W967 for a table small enough to scan.",
+        "karni make migration. `karni schema <app>` shows what serves each column. For a table "
+        'small enough to scan, silence it instead: SILENCED_SYSTEM_CHECKS = ["karni.W967"].',
     ),
     _e(
         "E968",
@@ -1586,6 +3017,141 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "StateField and CapacityField CHECK constraints do work on SQLite.",
         "Use PostgreSQL wherever overlaps matter (production, CI). Silence karni.W980 only for a "
         "development database where accepting overlaps is fine.",
+    ),
+    # E430-E449 / W590-W599 cross-model search (karni.global_search, experimental)
+    _e(
+        "E430",
+        "Karni.search is malformed or names a field the model does not have",
+        "check",
+        "karni.global_search.search_declaration; karni.checks.check_global_search",
+        "GET /api/search/ matches the query against the declared fields, shows each hit's "
+        "title and subtitle, and makemigrations adds a trigram index per field. A field that "
+        "is not text, a title that is not a column or a weight that is not a positive number "
+        "would fail at query time, so the declaration is refused at boot.",
+        "Write search = {'fields': [...], 'title': ..., 'subtitle': ..., 'weight': ...}: fields "
+        "lists text fields of the model (CharField, TextField), title and subtitle name a field "
+        "or a path through foreign keys (title defaults to the first field), weight is a number "
+        "above 0 (default 1). For example search = {'fields': ['name', 'sku'], 'title': 'name'}.",
+    ),
+    _e(
+        "E431",
+        "?models= names a resource cross-model search does not cover",
+        "api",
+        "karni.api.global_search.GlobalSearchView",
+        "GET /api/search/?models= picks the resources to search by their router prefix. A name "
+        "that is not one of them is a typo or a model without class Karni: search, and "
+        "searching nothing for it would hide the mistake, so the request answers 400 with the "
+        "resources it covers.",
+        "Name resources from the response's resources list (the router prefixes, e.g. "
+        "products), or declare class Karni: search on the model and route a BaseViewSet for it.",
+    ),
+    _e(
+        "W590",
+        "A field cross-model search searches has no trigram index",
+        "warning",
+        "karni.global_search.check_search_indexes (karni check)",
+        "On PostgreSQL every searched field needs a GIN trigram index, or each search reads "
+        "the whole table. Karni adds the index to the model's Meta.indexes, so it exists once "
+        "the migration that creates it is written and applied.",
+        "Run python manage.py makemigrations <app> and python manage.py migrate (karni build "
+        "writes the migration for an app built from karni.yaml). For a table another system "
+        "owns, run the CREATE INDEX the message prints in its database. For a table small "
+        'enough to scan, silence it: SILENCED_SYSTEM_CHECKS = ["karni.W590"].',
+    ),
+    _e(
+        "W591",
+        "A model declares Karni.search but no routed viewset serves it",
+        "warning",
+        "karni.checks.check_global_search_routes",
+        "Cross-model search reads each model through its list endpoint, so the access rules "
+        "hold, and links each hit to the resource's page. A model no routed BaseViewSet serves "
+        "has neither, so search never finds it.",
+        "Declare a BaseViewSet for the model in the app's viewsets.py (karni make viewset), or "
+        "remove search from its class Karni.",
+    ),
+    # SUGxxx suggestions from code (karni.suggestions): never a failure
+    _e(
+        "SUG001",
+        "A foreign key to itself, named like a parent, is a hand-written tree",
+        "suggestion",
+        "karni.suggestions.suggest_tree_models",
+        "A model with a foreign key to itself named like a parent (category_parent, "
+        "parent_category) is a tree written by hand: it has no cycle-safe queries, no tree "
+        "endpoints and no tree UI. The hand-written-tree architecture rule fails on the names "
+        "`parent` and `parent_*`, so this suggestion covers the other names.",
+        "Inherit karni.models.TreeModel first (class Category(TreeModel, BaseModel)), drop the "
+        "field and run karni makemigrations. Silence it with a comment on the field line: "
+        "# karni: allow(suggest-tree-model): <reason>.",
+    ),
+    _e(
+        "SUG002",
+        "A text field that holds markdown is not a MarkdownField",
+        "suggestion",
+        "karni.suggestions.suggest_markdown_fields",
+        "A TextField named *_markdown or *_md, or whose help text says markdown, holds "
+        "markdown. The API publishes it as plain text, so @karni/ui shows the raw markup.",
+        "Use karni.fields.MarkdownField in its place and run karni makemigrations: it is a "
+        "TextField in the database, so no data changes. Silence it with "
+        "# karni: allow(suggest-markdown): <reason>.",
+    ),
+    _e(
+        "SUG003",
+        "Raw SQL with GROUP BY, opted out of the raw-sql rule, is an aggregate",
+        "suggestion",
+        "karni.suggestions.suggest_aggregate",
+        "Two or more raw SQL queries with GROUP BY carry a karni: allow(raw-sql) opt-out. "
+        "Grouped counts and sums are what a model's aggregate declaration gives a resource, "
+        "under the list's filters and access.",
+        "Declare class Karni: aggregate = {'group_by': [...], 'values': [...]} on the model "
+        "and call GET <resource>/aggregate/?group_by=... (docs/aggregations.md). Silence one "
+        "query with # karni: allow(suggest-aggregate): <reason> on its line.",
+    ),
+    _e(
+        "SUG004",
+        "Three models with a many-to-many to one tree model need a taxonomy",
+        "suggestion",
+        "karni.suggestions.suggest_taxonomies",
+        "Each model tagged to the same tree model (a region tree, a category tree) needs the "
+        "same filters, facet counts, import columns and access rule, written once per model.",
+        "Declare class Karni: taxonomies = {'region': 'geo.Region'} on each model and drop its "
+        "many-to-many (a many-to-many you keep is adopted). Silence a model with "
+        "# karni: allow(suggest-taxonomy): <reason> on its field line.",
+    ),
+    _e(
+        "SUG005",
+        "An added module nothing in the project uses",
+        "suggestion",
+        "karni.suggestions.suggest_unused_modules",
+        "The module is in INSTALLED_APPS, and no project file imports it or renders its "
+        "templates, no URL beyond the one karni add wrote refers to it, and none of its "
+        "settings differs from its default. It costs a dependency and, for some, a service.",
+        "Run karni remove <name>. It never drops data: it counts each table's rows and stops "
+        "until you pass --keep-tables or migrate the app to zero. Silence it with "
+        "# karni: allow(suggest-unused-module): <reason> on its line in config/settings.py.",
+    ),
+    _e(
+        "SUG006",
+        "A module the spec or the README describes is not added",
+        "suggestion",
+        "karni_cli.suggest.module_suggestions",
+        "A phrase of a module's use_when list (payments, PDF reports, a public website) "
+        "appears in karni.yaml or the README, and the module is not added. In the README only a "
+        "phrase of two words or more counts, because single words (checkout, payments) mean "
+        "other things there.",
+        "Run karni modules show <name> to read what it does, then karni add <name>. Silence it "
+        "with # karni: allow(suggest-add-module): <reason> on the line (in the README inside "
+        "<!-- ... -->).",
+    ),
+    _e(
+        "SUG007",
+        "The project drifted from karni.yaml",
+        "suggestion",
+        "karni_cli.suggest.drift_suggestions",
+        "karni plan is not empty: the project and the spec say different things, so the next "
+        "karni build would change the project, or the spec is out of date.",
+        "Read karni plan. Run karni build to bring the project to the spec, or karni spec "
+        "export -o karni.yaml to take the code's side. Silence it with "
+        "# karni: allow(suggest-sync-spec): <reason> on the first line of karni.yaml.",
     ),
 )
 

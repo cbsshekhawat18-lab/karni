@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from karni_cli.uitheme.model import COLOR_ROLES, Detection, Mapping, Scheme
+from karni_cli.uitheme.model import COLOR_ROLES, Detection, Mapping
 
 _PLACEHOLDER = "0" * 16
 _DIGEST = re.compile(r"karni ui detect: sha256 ([0-9a-f]{16})")
@@ -88,7 +88,7 @@ def _declaration(mapping: Mapping, commented: bool = False) -> list[str]:
     return [*lines, f"  {text}"]
 
 
-_SCHEME_HEADINGS: dict[Scheme, tuple[str, list[str]]] = {
+_SCHEME_HEADINGS: dict[str, tuple[str, list[str]]] = {
     "both": (
         ":root,\n.dark {",
         [
@@ -96,9 +96,19 @@ _SCHEME_HEADINGS: dict[Scheme, tuple[str, list[str]]] = {
             "   recomputed in a dark subtree (a :root declaration is inherited computed). */",
         ],
     ),
+    # Light colours on :root alone would also win in dark mode: this file loads
+    # after @karni/ui/styles.css, and :root ties with its .dark block.
+    "light-colour": (":root:not(.dark) {", []),
     "light": (":root {", []),
     "dark": (".dark {", []),
 }
+
+
+def _block(mapping: Mapping) -> str:
+    """Which block a mapping is written in (see ``_SCHEME_HEADINGS``)."""
+    if mapping.scheme == "light" and mapping.token.startswith("--karni-color-"):
+        return "light-colour"
+    return mapping.scheme
 
 
 def theme_body(detection: Detection) -> str:
@@ -110,11 +120,11 @@ def theme_body(detection: Detection) -> str:
             "/* Karni's defaults, from @karni/ui's styles.css. Uncomment a line to change it.\n"
             "   Any colour notation works (hsl(), oklch(), hex, var() of your own variable). */"
         )
-    for scheme in ("both", "light", "dark"):
-        chosen = sorted((m for m in entries if m.scheme == scheme), key=_order)
+    for block in ("both", "light-colour", "light", "dark"):
+        chosen = sorted((m for m in entries if _block(m) == block), key=_order)
         if not chosen:
             continue
-        opener, comment = _SCHEME_HEADINGS[scheme]
+        opener, comment = _SCHEME_HEADINGS[block]
         lines = [*comment, opener]
         for mapping in chosen:
             lines += _declaration(mapping, commented)

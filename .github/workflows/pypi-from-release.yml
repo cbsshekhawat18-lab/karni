@@ -5,7 +5,8 @@ name: Publish a release to PyPI
 # core first, skipping files PyPI already has. For a release whose PyPI step
 # could not run (0.3.1 was released before PyPI publishing was set up) or
 # failed part-way. Authenticates with the PYPI_API_TOKEN secret when it is
-# set, else with trusted publishing (environment "pypi").
+# set, else with trusted publishing (environment "pypi"). The upload steps
+# match release.yml's, and .github/ci/check_release.py checks both lists.
 
 on:
   workflow_dispatch:
@@ -36,7 +37,7 @@ jobs:
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dist \
             --pattern '*.whl' --pattern '*.tar.gz'
           version="${TAG#v}"
-          for project in karni karni_cli karni_payments karni_approvals karni_impersonation; do
+          for project in karni karni_cli karni_payments karni_approvals karni_impersonation karni_site karni_charts karni_reports karni_ai karni_storage; do
             mkdir -p "pypi/$project"
             mv dist/"$project-$version"[-.]* "pypi/$project/"
           done
@@ -89,6 +90,41 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: pypi/karni_impersonation/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
+      - name: karni-site
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: pypi/karni_site/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
+      - name: karni-charts
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: pypi/karni_charts/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
+      - name: karni-reports
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: pypi/karni_reports/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
+      - name: karni-ai
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: pypi/karni_ai/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
+      - name: karni-storage
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: pypi/karni_storage/
           skip-existing: true
           password: ${{ secrets.PYPI_API_TOKEN }}
           attestations: ${{ steps.auth.outputs.attest }}

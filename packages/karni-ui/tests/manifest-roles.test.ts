@@ -61,7 +61,7 @@ describe("generate-manifest role scan", () => {
     const result = runScript();
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/wrote \d+ components, \d+ hooks, 19 roles/);
+    expect(result.stdout).toMatch(/wrote \d+ components, \d+ hooks, 34 roles/);
 
     const manifest = JSON.parse(
       readFileSync(resolve(packageRoot, "dist/manifest.json"), "utf8"),
@@ -69,25 +69,40 @@ describe("generate-manifest role scan", () => {
     expect(manifest.components.length).toBeGreaterThan(0);
     expect(manifest.hooks.length).toBeGreaterThan(0);
     expect(manifest.roles).toEqual({
+      accordion: "Accordion",
       "async-select": "ResourceSelect",
       "auth-guard": "AuthGuard",
       "change-history": "ChangeHistory",
+      "code-sign-in": "OtpLoginForm",
       "resource-import": "ResourceImport",
       chart: "DataChart",
+      "chart-card": "ChartCard",
+      "comparison-table": "ComparisonTable",
+      "computed-table": "DataTable",
+      dashboard: "Dashboard",
+      "dashboard-grid": "DashboardGrid",
       "data-table": "ResourceTable",
       "detail-view": "ResourceDetail",
       "empty-state": "EmptyState",
       "error-state": "ErrorState",
+      "facet-panel": "FacetPanel",
       "file-upload": "FileUpload",
+      "global-search": "GlobalSearch",
       "layout-shell": "Layout",
       "login-form": "LoginForm",
+      markdown: "MarkdownView",
       modal: "Modal",
       "page-shell": "Page",
       "permission-denied": "PermissionDenied",
       "resource-form": "ResourceForm",
+      "social-sign-in": "SocialButton",
       stat: "Stat",
+      "terms-gate": "TermsGate",
       "theme-toggle": "ThemeToggle",
       toast: "Toaster",
+      "tree-breadcrumb": "TreeBreadcrumb",
+      "tree-select": "TreeSelect",
+      "tree-view": "TreeView",
     });
   });
 

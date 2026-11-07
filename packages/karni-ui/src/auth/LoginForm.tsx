@@ -6,7 +6,8 @@
  * 2FA gate fires, `on2FA` receives the ephemeral token so the app can render
  * its code step (`POST <authBasePath>/2fa/login/`). Without a handler the
  * form explains that a code is required. Render it inside `AuthProvider`,
- * e.g. as `AuthGuard`'s `fallback`.
+ * e.g. as `AuthGuard`'s `fallback`. With `codeSignIn`, a "Sign in with a
+ * code" switch shows OtpLoginForm in its place (experimental).
  */
 import * as React from "react";
 import { cn } from "../lib/cn";
@@ -18,6 +19,8 @@ import { KarniApiError } from "../schema/client";
 import { describeError, type KarniErrorDescription } from "../states/describe-error";
 import type { ErrorSlotProps } from "../states/ErrorState";
 import { PendingButton } from "../states/PendingButton";
+import { Button } from "../components/primitives/button";
+import { OtpLoginForm } from "./OtpLoginForm";
 import { useAuth } from "./provider";
 import type { KarniUser } from "./types";
 
@@ -60,6 +63,12 @@ export interface LoginFormProps {
   autoFocus?: boolean;
   /** Replace parts of the form: Error. */
   slots?: Partial<LoginFormSlots>;
+  /**
+   * Experimental. Show a "Sign in with a code" switch that swaps the password
+   * fields for OtpLoginForm (the backend needs `KARNI_EMAIL_OTP`). Default
+   * false. For more control, render OtpLoginForm yourself.
+   */
+  codeSignIn?: boolean;
   className?: string;
 }
 
@@ -192,8 +201,65 @@ export function LoginForm({
   disabled = false,
   autoFocus = true,
   slots,
+  codeSignIn = false,
   className,
 }: LoginFormProps) {
+  const [withCode, setWithCode] = React.useState(false);
+  if (codeSignIn && withCode) {
+    return (
+      <div className={cn("space-y-4", className)} data-sign-in="code">
+        {title !== null ? <h2 className="text-lg font-semibold">{title}</h2> : null}
+        {description !== undefined ? (
+          <p className="text-sm text-muted-foreground">{description}</p>
+        ) : null}
+        <OtpLoginForm
+          title={null}
+          disabled={disabled}
+          autoFocus
+          {...(onSuccess !== undefined ? { onSuccess } : {})}
+          {...(on2FA !== undefined ? { on2FA } : {})}
+        />
+        <Button
+          variant="link"
+          size="sm"
+          className="px-0"
+          onClick={() => {
+            setWithCode(false);
+          }}
+        >
+          Sign in with a password
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <PasswordLoginForm
+      {...{ onSuccess, on2FA, title, description, submitLabel, disabled, autoFocus, slots }}
+      className={className}
+      {...(codeSignIn
+        ? {
+            onUseCode: () => {
+              setWithCode(true);
+            },
+          }
+        : {})}
+    />
+  );
+}
+
+/** The email and password form itself, with the optional switch to sign-in by code. */
+function PasswordLoginForm({
+  onSuccess,
+  on2FA,
+  title = "Sign in",
+  description,
+  submitLabel = "Sign in",
+  disabled = false,
+  autoFocus = true,
+  slots,
+  onUseCode,
+  className,
+}: Omit<LoginFormProps, "codeSignIn"> & { onUseCode?: () => void }) {
   const Slots: LoginFormSlots = { ...defaultLoginFormSlots, ...slots };
   const { login } = useAuth();
   const id = React.useId();
@@ -320,6 +386,11 @@ export function LoginForm({
       >
         {submitLabel}
       </PendingButton>
+      {onUseCode !== undefined ? (
+        <Button variant="link" size="sm" className="px-0" disabled={busy} onClick={onUseCode}>
+          Sign in with a code
+        </Button>
+      ) : null}
     </form>
   );
 }

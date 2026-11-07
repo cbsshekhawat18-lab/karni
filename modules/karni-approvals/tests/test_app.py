@@ -57,3 +57,14 @@ def test_checks_pass_for_the_test_project_and_catch_a_bad_policy(monkeypatch: An
             approval_policy(Invoice)
     finally:
         clear_caches()
+
+
+def test_the_module_indexes_what_its_viewsets_filter_by() -> None:
+    """karni.W967 on the module's own models would point a project at a model it cannot edit."""
+    from karni.fields.checks import check_usage_indexes
+
+    assert [
+        message.msg
+        for message in check_usage_indexes()
+        if message.obj._meta.app_label == "karni_approvals"
+    ] == []

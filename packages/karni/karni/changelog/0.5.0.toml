@@ -1,0 +1,805 @@
+# Karni 0.5.0: what changed since 0.4.0 that a project may notice.
+# Schema and rules: karni/changelog/__init__.py. Migration notes: docs/migrations/0.5.md.
+version = "0.5.0"
+
+[[change]]
+id = "public-read-writes-need-a-role"
+kind = "behaviour"
+symbol = "karni make --access public-read"
+summary = """\
+`--access public-read` now writes `Access(read=Public(), write=HasRole("staff"))`. \
+In 0.4.0 it wrote `write=Authenticated()`, which with open registration lets anyone \
+who signs up change and delete every row. Review each viewset that declares \
+`read=Public(), write=Authenticated()`. `karni check` reports each one as karni.W102."""
+mechanical = false
+migration = "migrations/0.5.md#public-read-viewsets-review-who-may-write"
+
+[[change]]
+id = "public-creates-limited-by-default"
+kind = "behaviour"
+symbol = "BaseViewSet.create with create=Public()"
+summary = """\
+A `create` anyone may call is limited to KARNI_PUBLIC_CREATE_RATE (10 an hour per \
+caller) without a `throttle` declaration, a request that fills the honeypot field \
+(KARNI_PUBLIC_CREATE_HONEYPOT_FIELD, `homepage`) is answered 202 and saves nothing, \
+and its import endpoints need a signed-in user. Raise or remove the limit if a public \
+endpoint takes more than that from one caller."""
+mechanical = false
+migration = "migrations/0.5.md#public-creates-are-rate-limited"
+
+[[change]]
+id = "security-headers-by-default"
+kind = "behaviour"
+symbol = "karni.security.SecurityHeadersMiddleware"
+summary = """\
+Every response now carries a Content-Security-Policy, enforced with DEBUG off and \
+report-only with DEBUG on, and a Permissions-Policy. A page that loads scripts, styles \
+or fonts from another host, or runs an inline script, needs KARNI_CSP (or @csp_extend) \
+before it reaches production."""
+mechanical = false
+migration = "migrations/0.5.md#security-headers-on-every-response"
+
+[[change]]
+id = "urls-marker"
+kind = "project-files"
+symbol = "config/urls.py"
+summary = """\
+The scaffold's config/urls.py carries a `# karni:urls` marker line inside \
+urlpatterns, before `*welcome_urls()`. `karni make site` and `karni make view` \
+insert routes there. The codemod adds the line to a project that lacks it."""
+mechanical = true
+codemod = "v0_5.urls_marker"
+migration = "migrations/0.5.md#a-marker-for-project-routes-in-configurlspy"
+
+[[change]]
+id = "agent-files-public-site"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+The adapters say where app screens and a public site go, K302 and K306 are \
+about app screens and the new-page procedure points at rule K309. Run \
+`karni rules sync`, or `karni rules sync --check` reports the files as stale."""
+mechanical = false
+migration = "migrations/0.5.md#the-agent-files-run-karni-rules-sync"
+
+[[change]]
+id = "seed-refuses-occupied-tables"
+kind = "behaviour"
+symbol = "karni seed (manage.py karni_seed)"
+summary = """\
+karni seed prints the models it will write to and refuses (E617) when one of \
+their tables already holds rows, users aside. A script that seeds a database \
+twice, or seeds after loading data, passes --reset to start over or --force \
+to add demo rows on top."""
+mechanical = false
+migration = "migrations/0.5.md#karni-seed-refuses-tables-that-already-hold-rows"
+
+[[change]]
+id = "settings-read-during-the-call"
+kind = "behaviour"
+symbol = "karni_settings() (karni.E508)"
+summary = """\
+karni_settings() reads KARNI_AUTH_MODE, KARNI_2FA, KARNI_SOCIAL_AUTH, \
+KARNI_SOCIAL_PROVIDERS, KARNI_FRONTEND_URL, KARNI_AUTH_THROTTLE_RATES, \
+KARNI_JSON_LOGS, KARNI_CACHE and KARNI_STORAGE during the call to compute other \
+settings. A settings module that assigns one of them below the call now fails \
+startup with karni.E508 instead of running with the settings computed from the \
+old value. Move the assignment above the call or pass it as a keyword."""
+mechanical = false
+migration = "migrations/0.5.md#settings-the-call-reads-fail-loudly-below-it"
+
+[[change]]
+id = "admin-logo-on-every-request"
+kind = "behaviour"
+symbol = "KARNI_ADMIN_LOGO"
+summary = """\
+The admin reads KARNI_ADMIN_LOGO on every request (UNFOLD["SITE_LOGO"] and \
+["SITE_ICON"] hold karni.conf.admin_logo.site_logo and site_icon), so the setting \
+takes effect below the karni_settings() call too, and the login screen shows the \
+same logo above its title. A project that replaces UNFOLD after the call while \
+KARNI_ADMIN_LOGO is set fails startup with karni.E508."""
+mechanical = false
+migration = "migrations/0.5.md#the-admin-logo-works-wherever-it-is-assigned-and-on-the-login-screen"
+
+[[change]]
+id = "make-model-adds-images-extra"
+kind = "behaviour"
+symbol = "karni make model (image fields)"
+summary = """\
+karni make model with an image field changes the karni dependency in \
+pyproject.toml to karni[images] (keeping its version spec and other extras), \
+prints the change and says to reinstall. It edits only that one requirement \
+string, --dry-run shows the diff, and a project that already lists the extra \
+is left alone."""
+mechanical = false
+migration = "migrations/0.5.md#karni-make-model-adds-the-images-extra-to-pyprojecttoml"
+
+[[change]]
+id = "dev-port-in-env"
+kind = "project-files"
+symbol = "frontend/vite.config.ts and docker-compose.yml"
+summary = """\
+KARNI_DEV_PORT in .env is the dev port: karni serve --local runs Django on it, \
+the scaffold's frontend/vite.config.ts proxies /api and /health to it (read from \
+../.env with Vite's loadEnv), and docker-compose.yml publishes Django on it. \
+KARNI_API_PROXY still wins. A project's existing vite.config.ts keeps working: \
+karni serve --local prints the KARNI_API_PROXY line when the two disagree."""
+mechanical = false
+migration = "migrations/0.5.md#one-dev-port-karni_dev_port"
+
+[[change]]
+id = "site-runtime-module"
+kind = "project-files"
+symbol = "karni make site"
+summary = """\
+A site app's runtime now comes from the karni-site module: the {% ifactive %} tag \
+for the current menu item, {% csp_hash %} and {% csp_allow %} for a design's inline \
+scripts and other origins under the Content-Security-Policy, and the error views \
+that render templates/404.html and 500.html with the request. `karni make site` \
+wires the module (the dependency, the `# karni:apps` entry, its redirect \
+middleware in the `# karni:middleware` block, its `site` context processor, \
+handler404 and handler500 in config/urls.py) and writes templates/500.html. The \
+module has tables, so run `karni migrate` after installing it. A site app created \
+before this gets the missing pieces from `karni make site <app> --force` after \
+`pip install karni-site`, and its base.html can load `karni_site` for the tags."""
+mechanical = false
+migration = "migrations/0.5.md#a-site-apps-runtime-is-the-karni-site-module"
+
+[[change]]
+id = "staff-app-guard-and-dashboard"
+kind = "project-files"
+symbol = "frontend/src/layout.tsx and frontend/src/pages/home.tsx"
+summary = """\
+The scaffold's layout now wraps every page but a sign-in page in \
+<AuthGuard explain>, builds its menu with @karni/ui's routeNavItems and offers \
+Sign out, and its home page is <Dashboard> (the models that declare \
+`class Karni: dashboard`) instead of the health-check placeholder. A project \
+scaffolded earlier keeps its own files: copy the two from a fresh `karni new` \
+to get the sign-in prompt and the dashboard."""
+mechanical = false
+migration = "migrations/0.5.md#the-staff-app-requires-sign-in-and-opens-on-a-dashboard"
+
+[[change]]
+id = "admin-loads-project-theme"
+kind = "behaviour"
+symbol = "KARNI_THEME_CSS, UNFOLD['STYLES'], STATICFILES_FINDERS"
+summary = """\
+The admin now loads the project's frontend/src/karni-theme.css (KARNI_THEME_CSS) \
+as the static file karni/project-theme.css, served by \
+karni.admin.theme.ProjectThemeFinder, which karni_settings() adds to \
+STATICFILES_FINDERS. A project that appended its own admin stylesheet of \
+--karni-* overrides can drop it, and a project that defines STATICFILES_FINDERS \
+itself adds the finder to keep the file served."""
+mechanical = false
+migration = "migrations/0.5.md#the-admin-wears-the-projects-karni-themecss"
+
+[[change]]
+id = "karni-theme-light-colours-scoped"
+kind = "behaviour"
+symbol = "karni ui detect (karni-theme.css)"
+summary = """\
+karni-theme.css now writes light-only colours under `:root:not(.dark)` instead \
+of `:root`, so they no longer override Karni's dark palette under \
+<html class="dark">. A file written by 0.4.0 keeps overriding it until it is \
+regenerated with `karni ui detect --force` (or edited by hand)."""
+mechanical = false
+migration = "migrations/0.5.md#karni-themecss-keeps-dark-mode"
+
+[[change]]
+id = "production-stack"
+kind = "project-files"
+symbol = "docker-compose.prod.yml, Caddyfile, .env.prod.example and the Dockerfile"
+summary = """\
+A new project has a production stack: docker-compose.prod.yml (release, django, \
+worker, beat, caddy, db, redis, backup), the Caddyfile and .env.prod.example, \
+written by `karni make deploy compose`. The Dockerfile gains the staff-app and \
+backup targets, and the prod target's ENTRYPOINT runs `karni check --deploy` and \
+refuses to start on a failure (E520). To adopt it, copy those Dockerfile parts \
+from a fresh `karni new` project, then run `karni make deploy compose --force`, \
+which replaces the Caddyfile."""
+mechanical = false
+migration = "migrations/0.5.md#a-production-stack-karni-make-deploy-compose"
+
+[[change]]
+id = "staff-app-base-path"
+kind = "project-files"
+symbol = "frontend/src/routes.tsx"
+summary = """\
+The scaffold's router takes Vite's base path (`basepath: import.meta.env.BASE_URL` \
+in createRouter), so the production build works under /app/, where Caddy serves \
+it. Add the line to a project's routes.tsx before serving the staff app under a \
+path. In development the base is /, and nothing changes."""
+mechanical = false
+migration = "migrations/0.5.md#the-staff-app-follows-vites-base-path"
+
+[[change]]
+id = "agent-files-public-forms"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+Rule K309 and the new-model procedure now name `karni make form` for a public \
+form and `{% karni_form %}` for the page that shows it. Run `karni rules sync`, \
+or `karni rules sync --check` reports the files as stale."""
+mechanical = false
+migration = "migrations/0.5.md#the-agent-files-name-karni-make-form"
+
+[[change]]
+id = "agent-files-site-from-design"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+A new procedure, site-from-design, takes an agent from a designer's pages to models, \
+the pages' real content (karni design analyze and extract, then karni load) and \
+templates that loop over the rows. `karni rules sync` writes its slash command files \
+and lists it in the adapters. Until then `karni rules sync --check` (and make check) \
+reports the files as stale."""
+mechanical = false
+migration = "migrations/0.5.md#a-procedure-from-a-design-to-content-run-karni-rules-sync"
+
+[[change]]
+id = "admin-light-only"
+kind = "behaviour"
+symbol = "UNFOLD[\"THEME\"]"
+summary = """\
+The admin is light only: UNFOLD["THEME"] is "light", which pins unfold's light \
+palette and hides its light / dark / system switch, and a browser in dark mode \
+still gets the light admin. There is no setting for it. A project that sets \
+UNFOLD["THEME"] itself keeps its value."""
+mechanical = false
+migration = "migrations/0.5.md#the-admin-is-light-only"
+
+[[change]]
+id = "admin-simple"
+kind = "behaviour"
+symbol = "karni.admin"
+summary = """\
+The admin has labelled Add, Edit, Delete and Restore buttons, bulk actions (delete, \
+restore, edit selected, export), a fixed save bar, a collapsed Details section for \
+technical fields, at most six list columns, an empty state, a one-line help from \
+class Karni: help, and a Getting started panel. Run migrate: the panel's dismissal is \
+one new table, karni_admin_guidedismissal."""
+mechanical = false
+migration = "migrations/0.5.md#the-admin-is-simple-to-use"
+
+[[change]]
+id = "project-kind"
+kind = "project-files"
+symbol = "pyproject.toml [tool.karni] kind"
+summary = """\
+`karni new` records the project's kind (site, app or site+app) as `kind` under \
+[tool.karni] in pyproject.toml, and `karni context` and the agent files state it. \
+A project without the line is read as the kind its files show: karni_site in the \
+apps block makes a site, frontend/ a staff app. Add the line to say it, or run \
+`karni add site` to turn an app into a site+app."""
+mechanical = false
+migration = "migrations/0.5.md#projects-have-a-kind"
+
+[[change]]
+id = "agent-files-project-kind"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+The adapters open with the project's kind and its stack, so an agent never asks \
+which technology to use. The site-from-design procedure analyzes before it imports \
+(`karni import design --editable --map`, so the content that becomes rows has no \
+blocks), adds the forms and ends with `karni check`. Run `karni rules sync`. Until \
+then `karni rules sync --check` (and make check) reports the files as stale."""
+mechanical = false
+migration = "migrations/0.5.md#the-agent-files-state-the-kind-run-karni-rules-sync"
+
+[[change]]
+id = "site-head-karni-seo"
+kind = "project-files"
+symbol = "<app>/templates/<app>/base.html"
+summary = """\
+`karni make site` and `karni import design` now write base.html's head as \
+`{% karni_seo %}<title>...</title><meta name="description" ...>{% block seo %}\
+{% endblock %}{% endkarni_seo %}`, which renders the title, description, \
+canonical link, share tags and JSON-LD. A site app created earlier keeps its \
+head: wrap its <title> and description in the tag and remove its canonical \
+link, or import the design again."""
+mechanical = false
+migration = "migrations/0.5.md#search-engines--karni_seo--sitemapxml-and-robotstxt"
+
+[[change]]
+id = "site-urls-include"
+kind = "project-files"
+symbol = "config/urls.py (karni_site.urls)"
+summary = """\
+`karni make site` and `karni add site` include karni_site's URLs, \
+`path("", include("karni_site.urls"))`, before the site's own include: \
+robots.txt (closed outside production) and sitemap.xml. A project wired \
+earlier gets it from `karni add site` or `karni make site <app> --force`, or \
+adds the line by hand."""
+mechanical = false
+migration = "migrations/0.5.md#search-engines--karni_seo--sitemapxml-and-robotstxt"
+
+[[change]]
+id = "import-design-sizes-images"
+kind = "behaviour"
+symbol = "karni import design (<img> width, height, srcset)"
+summary = """\
+`karni import design` now writes width and height on every <img> of the \
+design that lacks them (with data-karni-image), and, where Pillow is \
+installed, smaller WebP copies of each large JPEG, PNG or WebP under \
+static/<app>/ with a srcset and sizes. Importing a design again changes the \
+templates the project has not edited. An edited one is kept, as before."""
+mechanical = false
+migration = "migrations/0.5.md#the-designs-images-are-sized"
+
+[[change]]
+id = "admin-grants-open-pages"
+kind = "behaviour"
+symbol = "karni.admin.KarniModelAdmin (KARNI_ADMIN_GRANTS_OPEN_PAGES)"
+summary = """\
+A role's grant (`app.model:<action>`) now opens that model's admin page for a \
+staff user, as Django's model permission does: the `staff` role, karni-site's \
+`editor` and every project role reach their pages with no Django permission \
+ticked. Review who holds staff status and which roles. Only a superuser \
+changes is_superuser or a superuser's account. \
+KARNI_ADMIN_GRANTS_OPEN_PAGES = False restores Django's permissions only."""
+mechanical = false
+migration = "migrations/0.5.md#grants-open-admin-pages"
+
+[[change]]
+id = "tests-get-a-local-memory-cache"
+kind = "behaviour"
+symbol = "karni.testing.pytest_plugin (karni_test_cache)"
+summary = """\
+Karni's pytest plugin runs every test on an empty local-memory cache: each \
+alias in CACHES becomes a LocMemCache for the test, so throttle counters and \
+cached values never pass between tests, runs or the development server's \
+Redis. A test that needs the project's own cache takes \
+@pytest.mark.karni_project_cache, and `karni_test_cache = project` in the \
+pytest ini file keeps it for every test."""
+mechanical = false
+migration = "migrations/0.5.md#tests-run-on-an-empty-local-memory-cache"
+
+[[change]]
+id = "dev-files-under-the-project"
+kind = "behaviour"
+symbol = "MEDIA_ROOT and STATIC_ROOT (dev profile)"
+summary = """\
+In the dev profile MEDIA_ROOT and STATIC_ROOT default to data/media and \
+data/static under the project root, and a relative value is read from the \
+project root, not the working directory. Production keeps /data/media and \
+/data/static. The scaffold's Dockerfile sets /data in every container and its \
+.env.example no longer sets the two. A project whose .env sets them keeps its \
+values. Add the two ENV lines to an earlier Dockerfile before removing them \
+from .env."""
+mechanical = false
+migration = "migrations/0.5.md#files-under-the-project-in-development"
+
+[[change]]
+id = "frontend-zod-4"
+kind = "project-files"
+symbol = "frontend/package.json (zod, @hookform/resolvers)"
+summary = """\
+npm audit reports Zod before 4.6.6 as high severity (GHSA-mrhx-c7xc-m3w5). \
+The scaffold's frontend now depends on zod ^4.6.6, @hookform/resolvers ^5.2.0 \
+and react-hook-form ^7.55.0, and @karni/ui accepts Zod 3 (3.23 or later) and \
+Zod 4 (4.6.6 or later). An earlier project keeps working on Zod 3. Bump the \
+three in frontend/package.json to clear the audit, after moving code of your \
+own off Zod 3's required_error and invalid_type_error."""
+mechanical = false
+migration = "migrations/0.5.md#the-frontend-moves-to-zod-4"
+
+[[change]]
+id = "production-email"
+kind = "behaviour"
+symbol = "EMAIL_URL, DEFAULT_FROM_EMAIL (karni.W520)"
+summary = """\
+karni_settings() reads EMAIL_URL (smtp+tls://user:password@host:587), \
+DEFAULT_FROM_EMAIL and SERVER_EMAIL from the environment. `karni check --deploy`, \
+which the production containers run before they start, reports karni.W520 while \
+production email goes nowhere: the console, locmem, dummy or file backend, or a \
+sender at localhost (Django's webmaster@localhost). Set EMAIL_URL and \
+DEFAULT_FROM_EMAIL in .env.prod before the next deploy, or add karni.W520 to \
+SILENCED_SYSTEM_CHECKS in a project that sends no email."""
+mechanical = false
+migration = "migrations/0.5.md#production-email-email_url-and-karniw520"
+
+[[change]]
+id = "development-worker-pool-and-broker-timeout"
+kind = "behaviour"
+symbol = "karni worker --pool, CELERY_BROKER_TRANSPORT_OPTIONS (dev profile)"
+summary = """\
+`karni worker` on a Mac runs Celery's threads pool (solo before), and `--pool` picks \
+another. The dev profile sets CELERY_BROKER_TRANSPORT_OPTIONS to a 5 second socket \
+timeout, so a worker that stops while Redis does not answer its last BRPOP exits \
+instead of waiting for good. Production and a worker in Docker keep Celery's defaults. \
+A project that sets CELERY_BROKER_TRANSPORT_OPTIONS itself keeps its own value."""
+mechanical = false
+migration = "migrations/0.5.md#the-development-worker-threads-on-a-mac-and-a-broker-timeout"
+
+[[change]]
+id = "menus-of-rows"
+kind = "behaviour"
+symbol = "karni_site MenuItem.children_from, karni import design --editable --map"
+summary = """\
+A menu item with children from a model and neither a title nor an address now lists \
+the rows in its own place. Before, it rendered as an empty link with the rows as its \
+children. karni import design --editable --map seeds a list whose links are exactly \
+one model's detail pages as such an item (data-karni-children-from in the seed), so \
+a row the client adds appears in the menu. Menus already in the database keep their \
+items."""
+mechanical = false
+migration = "migrations/0.5.md#menus-that-list-a-models-rows"
+
+[[change]]
+id = "pk-filters-not-derived"
+kind = "behaviour"
+symbol = "karni.api.filters.KarniFilterBackend (?id=, ?id__gte=, ?id__lte=)"
+summary = """\
+The derived filterset no longer filters on the model's own primary key, for UUID and \
+integer keys alike: an integer key range (?id__gte=) would page through the table by \
+key. A project whose clients send ?id=, ?id__gte= or ?id__lte= declares them, e.g. \
+filterset_fields = {"id": ["exact", "gte", "lte"]} on the viewset. A relation to an \
+integer-keyed model filters with IntegerFilter (whole numbers only) instead of \
+NumberFilter."""
+mechanical = false
+migration = "migrations/0.5.md#the-primary-key-is-no-longer-a-derived-filter"
+
+[[change]]
+id = "import-ids-are-explicit"
+kind = "behaviour"
+symbol = "karni.transfer imports: the id column and relation cells"
+summary = """\
+An upload matches existing rows by its id column only with the new match_ids option \
+(it was implicit), so an export from one environment cannot update unrelated rows in \
+another. A relation cell names a target with a natural key by that key alone, never \
+also by its id. keep_ids creates rows with the file's ids. karni_transfer migration \
+0002 adds both options to ImportJob: run `karni migrate`."""
+mechanical = false
+migration = "migrations/0.5.md#imports-match-ids-only-when-asked"
+
+[[change]]
+id = "agent-files-new-app"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+A new procedure, new-app, takes an agent from a one-line request to a running app \
+through karni.yaml (a recipe or the blank start, karni plan --questions, karni spec \
+answer, karni plan, karni build), and rule K311 says never to hand-write what \
+karni.yaml can express. `karni rules sync` writes its slash command files and a line \
+for it in the adapters. Until then `karni rules sync --check` (and make check) \
+reports the files as stale."""
+mechanical = false
+migration = "migrations/0.5.md#a-procedure-from-one-line-to-an-app-run-karni-rules-sync"
+
+[[change]]
+id = "hand-written-tree-rule"
+kind = "behaviour"
+symbol = "karni check: the hand-written-tree rule (karni.testing.architecture)"
+summary = """\
+A project model with a parent (or parent_*) foreign key to the model itself that is \
+not a karni.models.TreeModel fails karni check (experimental). Make it a tree, \
+class Folder(TreeModel, BaseModel) without its own parent field, or keep the field and \
+opt out with # karni: allow(hand-written-tree): <reason> above the class."""
+mechanical = false
+migration = "migrations/0.5.md#tree-models-experimental"
+
+[[change]]
+id = "api-cache-header-renamed"
+kind = "api-change"
+symbol = "X-Karni-Cache response header"
+replacement = "X-Cache"
+summary = """\
+A cached API response says how it was served in `X-Cache` (`HIT`, `MISS` or `BYPASS`). \
+`X-Karni-Cache` (`hit` or `miss`) is still sent next to it, with a KarniDeprecationWarning \
+once per process, and goes in 1.0. Read `X-Cache` in tests and tools that check the cache, \
+then set KARNI_API_CACHE_LEGACY_HEADER = False."""
+removed_in = "1.0"
+mechanical = false
+migration = "migrations/0.5.md#response-caching-is-stable"
+
+[[change]]
+id = "api-cache-shared-by-role"
+kind = "behaviour"
+symbol = "KARNI_API_CACHE"
+summary = """\
+With KARNI_API_CACHE on, callers with the same roles share a cached response when the \
+viewset's read access depends on roles alone. Every write Karni's querysets, imports and \
+admin bulk actions make now invalidates it, and karni check refuses a cached viewset that \
+reads an external or unmanaged model, or one on another database (karni.E410), without \
+Cache(ttl=...) or Uncached(...). A response that differs per user in a way Karni cannot \
+see needs get_cache_scope on its viewset."""
+mechanical = false
+migration = "migrations/0.5.md#response-caching-is-stable"
+
+[[change]]
+id = "no-raw-details"
+kind = "behaviour"
+symbol = "@karni/ui ESLint rule karni/no-raw-elements"
+summary = """\
+The rule flags a raw <details> as well (compose Accordion), and its messages name \
+DataTable and ComparisonTable next to ResourceTable for a raw <table>. A page with \
+a raw <details> fails the lint until it uses Accordion or carries \
+`// eslint-disable-next-line karni/no-raw-elements -- <reason>`."""
+mechanical = false
+migration = "migrations/0.5.md#a-raw-details-fails-karnino-raw-elements"
+
+[[change]]
+id = "impersonation-one-open-session"
+kind = "behaviour"
+symbol = "karni_impersonation.services.start"
+summary = """\
+A second impersonation session for an actor who has one open is refused (IMP004), as the \
+README says, and the database enforces it with a unique constraint on the open sessions \
+(migration 0002 ends older duplicates first). A session past its time limit that was not \
+swept yet is ended when the actor starts a new one."""
+mechanical = false
+migration = "migrations/0.5.md#impersonation-allows-one-open-session-per-actor"
+
+[[change]]
+id = "seed-reset-wipes-seeded-modules"
+kind = "behaviour"
+symbol = "karni seed --reset"
+summary = """\
+--reset now also wipes every model a seeder in <app>/seeds.py names, a module's table or \
+UserGrant included, where it wiped only the project's own models. A seeder that deleted \
+its own rows first (a `.filter(...).delete()` at the top of seed()) can drop that line, and \
+a model that holds rows you want to keep must have no seeder."""
+mechanical = false
+migration = "migrations/0.5.md#seed---reset-wipes-the-models-a-seeder-names"
+
+[[change]]
+id = "short-system-check-output"
+kind = "behaviour"
+symbol = "KARNI_SYSTEM_CHECK_OUTPUT"
+summary = """\
+The karni command prints a project command's system check warnings as one line \
+(System check identified 5 warnings (...)). karni check and manage.py check keep them in \
+full. Set KARNI_SYSTEM_CHECK_OUTPUT=full in the environment to see every warning on each run."""
+mechanical = false
+migration = "migrations/0.5.md#system-check-warnings-print-as-one-line"
+
+[[change]]
+id = "createsuperuser-roles"
+kind = "behaviour"
+symbol = "KarniUserManager.create_superuser"
+summary = """\
+A superuser made by `karni createsuperuser` (or `create_superuser`) now holds every role \
+the routed viewsets' `access` names, the roles `karni seed` gives the demo account, so it \
+passes `public-read`, `staff` and `role:` gates. A superuser created before has none of \
+them: run `karni seed` once for the demo account, or give the roles with `assign_role`. \
+Override `KarniUserManager.superuser_roles` to return another list."""
+mechanical = false
+migration = "migrations/0.5.md#a-new-superuser-holds-the-routed-roles"
+
+[[change]]
+id = "scaffold-gitignore-egg-info"
+kind = "project-files"
+symbol = ".gitignore"
+summary = """\
+The scaffold's .gitignore lists `*.egg-info/`, which `pip install -e .` creates in the \
+project root. A project made before lacks the line, so `karni upgrade` counts the folder \
+among the dirty files. Add the line."""
+mechanical = false
+migration = "migrations/0.5.md#ignore-the-egg-info-folder"
+
+[[change]]
+id = "scaffold-no-legacy-cache-header"
+kind = "project-files"
+symbol = "config/settings.py"
+summary = """\
+The scaffold's config/settings.py sets `KARNI_API_CACHE_LEGACY_HEADER` from the environment, \
+default `False`, so a new project sends only `X-Cache` and starts without the deprecation \
+warning. An existing project keeps the old default (`True`) and its warning until it adds \
+the line or sets the variable."""
+mechanical = false
+migration = "migrations/0.5.md#new-projects-start-without-the-legacy-cache-header"
+
+[[change]]
+id = "admin-list-basics"
+kind = "behaviour"
+symbol = "KarniModelAdmin.list_per_page"
+summary = """\
+Every admin list shows 25 rows a page (KARNI_ADMIN_PER_PAGE, AdminMeta.per_page or \
+list_per_page on an admin class) instead of Django's 100, with a bar at the bottom \
+("Showing 1 to 25 of 312 notes", page links, rows per page). A list with no order is \
+newest updated first, and a model without its own verbose_name_plural shows a correct \
+English plural in the admin. A project that wanted 100 rows sets KARNI_ADMIN_PER_PAGE = 100."""
+mechanical = false
+migration = "migrations/0.5.md#admin-lists-page-filter-and-sort-like-a-data-table"
+
+[[change]]
+id = "admin-help-docstring"
+kind = "behaviour"
+symbol = "karni.admin.derive.derive_help"
+summary = """\
+The line under an admin page's title comes only from class Karni: help (the spec's help:). \
+The model docstring is no longer a fallback. A project that relied on it writes the line \
+into class Karni: help."""
+mechanical = false
+migration = "migrations/0.5.md#the-admin-help-line-comes-only-from-help"
+
+[[change]]
+id = "seo-placeholder-description"
+kind = "behaviour"
+symbol = "karni check --seo (SITE012)"
+summary = """\
+A page whose description is still the placeholder karni make site and karni make view \
+write ("One sentence that search engines show under this page's title.") is reported as \
+SITE012 on that page, so karni check --seo fails until each such page has a sentence of \
+its own. Before, only two or more such pages failed it, as SITE013."""
+mechanical = false
+migration = "migrations/0.5.md#generated-site-pages-ask-for-their-description"
+
+[[change]]
+id = "index-advice-on-own-models"
+kind = "behaviour"
+symbol = "karni.W967"
+summary = """\
+karni.W967 (a filtered, searched or ordered field without an index) advises on the \
+project's own models only, not on a module's or Karni's. karni-approvals indexes \
+PendingChange.action and karni-reports GeneratedReport.status, each in a new migration \
+(0002_index_filtered_fields): run karni migrate after upgrading them."""
+mechanical = false
+migration = "migrations/0.5.md#index-advice-covers-the-projects-own-models"
+
+[[change]]
+id = "build-protects-and-indexes-search"
+kind = "behaviour"
+symbol = "karni build"
+summary = """\
+karni build writes a required fk of an audited or financial entity as \
+on_delete=models.PROTECT instead of CASCADE (karni.W965), and a \
+search = SearchField(sources=[...]) over the fields an entity's search names \
+(karni.W967). The next build of a spec-built project writes a migration for both. \
+Hard-deleting a row that such rows point at is then refused while they exist."""
+mechanical = false
+migration = "migrations/0.5.md#karni-build-writes-what-karnis-checks-ask"
+
+[[change]]
+id = "expand-nests-a-model-already-on-the-path"
+kind = "behaviour"
+symbol = "?expand="
+summary = """\
+An expand path that comes back to a model already on it now nests that level: \
+`?expand=parent` on a tree resource, `?expand=region.parent`, `?expand=events.venue`. \
+In 0.4.0 such a level stayed the key. A parent the requester cannot read expands to null. \
+A client that read the key from an expanded `parent` reads `parent.id`, or leaves `parent` \
+out of `expand`."""
+mechanical = false
+migration = "migrations/0.5.md#expand-nests-a-trees-parent"
+
+[[change]]
+id = "2fa-throttled-answer"
+kind = "behaviour"
+symbol = "karni.accounts.twofa"
+summary = """\
+A two-factor code sent inside django-otp's wait after a wrong one (1 second, then 2, 4, 8...) \
+is answered 429 with code `throttled`, `retry_after` and a `Retry-After` header by \
+2fa/confirm/, 2fa/disable/ and 2fa/login/. In 0.4.0 it was 400 `invalid_code`. A replayed \
+ephemeral token on 2fa/login/ is 401 `replayed_token` before the code is checked. A client \
+that shows `invalid_code` as "wrong code" shows `throttled` as "wait N seconds"."""
+mechanical = false
+migration = "migrations/0.5.md#2fa-answers-throttled-inside-the-wait"
+
+[[change]]
+id = "aggregate-relation-labels-read-names"
+kind = "behaviour"
+symbol = "GET <resource>/aggregate/"
+summary = """\
+A group on a relation (a foreign key, a tree's parent) is labelled with the related row's \
+`Karni.label_field`, else its `name`, `title` or `label` field, else its natural key. In \
+0.4.0 the label was the natural key, often a slug. The `key` and the response's fields are \
+unchanged. A consumer that read the natural key from `label` declares \
+`class Karni: label_field = "<that field>"` on the related model, or reads `key`."""
+mechanical = false
+migration = "migrations/0.5.md#aggregate-labels-read-the-rows-name"
+
+[[change]]
+id = "ui-heading-levels"
+kind = "behaviour"
+symbol = "@karni/ui EmptyState, FacetPanel, ResourceDetail, TermsGate"
+summary = """\
+Headings follow the page's outline. EmptyState's title and FacetPanel's heading are an \
+h2 (were h3), ResourceDetail's title takes `headingLevel` (default 2) and its field groups \
+and Record block the next level (were h3 under any title), and TermsGate's panel is the \
+page's <main> with an h1 (`page={false}` keeps a panel inside a page that has both). \
+Set `headingLevel` where a component sits deeper in your outline. A test that finds one by \
+heading level 3 needs the new level, and a TermsGate inside a Layout needs `page={false}`."""
+mechanical = false
+migration = "migrations/0.5.md#headings-follow-the-pages-outline"
+
+[[change]]
+id = "ui-export-button-names"
+kind = "behaviour"
+symbol = "@karni/ui ResourceTable export buttons"
+summary = """\
+The export buttons are named by their visible text, `Export CSV` and `Export XLSX` (were \
+`Export as CSV` through aria-label), as WCAG 2.5.3 asks. A test or Playwright script that \
+finds the button by its old name needs the new one."""
+mechanical = false
+migration = "migrations/0.5.md#the-export-buttons-name-is-its-visible-text"
+
+[[change]]
+id = "ui-table-follows-api-page-size"
+kind = "behaviour"
+symbol = "@karni/ui ResourceTable pageSize"
+summary = """\
+ResourceTable no longer sends page_size=25 by default. It sends none, so the API's page \
+size applies (KARNI_PAGE_SIZE, 50 by default) and the table reads it from the first full \
+page. Pass pageSize={25} to keep 25 rows a page. A page the user picks from the size menu \
+is still sent. A test that expects page_size=25 on the first request needs pageSize={25}."""
+mechanical = false
+migration = "migrations/0.5.md#resourcetable-follows-the-apis-page-size"
+
+[[change]]
+id = "agent-files-procedures-block"
+kind = "project-files"
+symbol = "AGENTS.md"
+summary = """\
+AGENTS.md lists the procedures for routine tasks, and an agent reads a request that \
+starts with `/<name>` (such as `/new-app <the request>`) as that procedure. Run \
+`karni rules sync`. Until then `karni rules sync --check` (and make check) reports \
+the file as stale."""
+mechanical = false
+migration = "migrations/0.5.md#tool-specific-agent-files-are-deprecated-keep-agentsmd"
+
+[[change]]
+id = "tool-specific-agent-files"
+kind = "project-files"
+symbol = "the agent files only one tool reads (karni new, karni rules sync)"
+summary = """\
+AGENTS.md is the one agent file: karni new no longer writes the instruction files and \
+command folders that only one tool reads (the list is in the migration note). A \
+project that has them keeps them: karni rules sync keeps them up to date and warns \
+with C860, and karni doctor mentions them. They stop being updated, and are removed, \
+in 1.0. Point your tool at AGENTS.md and keep project guidance in karni.rules.py."""
+mechanical = false
+migration = "migrations/0.5.md#tool-specific-agent-files-are-deprecated-keep-agentsmd"
+
+[[change]]
+id = "wildcard-grants-skip-explicit-actions"
+kind = "behaviour"
+symbol = "KARNI_ROLES wildcards; class Karni: explicit_actions"
+summary = """\
+A wildcard grant (`"*"`, `app.model:*`) no longer reaches an action the model lists in \
+`class Karni: explicit_actions`. karni-impersonation marks `impersonate` and \
+karni-approvals marks `approve` and `reject`, so the default `user`, `customer` and \
+`staff` roles stop holding them at the next `karni migrate` (or `karni sync-roles`). \
+Grant each one by name to the role that needs it, for example \
+`"support": {"grants": {"karni_impersonation.impersonationsession:impersonate": "all"}}`."""
+mechanical = false
+migration = "migrations/0.5.md#wildcard-grants-skip-impersonate-approve-and-reject-security"
+
+[[change]]
+id = "admin-soft-delete-ignores-protect"
+kind = "behaviour"
+symbol = "karni.admin.SoftDeleteAdminMixin.get_deleted_objects"
+summary = """\
+On a soft-delete model the admin's Delete page and Delete selected soft-delete a row that \
+a PROTECT foreign key points from instead of refusing it, as the API does. Hard delete \
+selected still refuses. The row's Delete page is karni_admin/delete_confirmation.html, so a \
+project-wide admin/delete_confirmation.html override needs to move to \
+admin/<app>/<model>/delete_confirmation.html or delete_confirmation_template."""
+mechanical = false
+migration = "migrations/0.5.md#the-admin-soft-deletes-rows-that-protect-points-at"
+
+[[change]]
+id = "natural-key-checked-at-boot"
+kind = "behaviour"
+symbol = "class Karni: natural_key, import_key"
+summary = """\
+karni check (and every manage.py command that runs the system checks) fails with \
+karni.E291 when Karni.natural_key or import_key is not one field name of the model: a list \
+such as ["name"], or a name the model does not have. Before, the project booted and every \
+request that read the model answered 500. Write the field name as a string."""
+mechanical = false
+migration = "migrations/0.5.md#natural_key-and-import_key-are-checked-at-boot"
+
+[[change]]
+id = "field-arguments-refused-not-dropped"
+kind = "behaviour"
+symbol = "karni make model, karni.yaml fields"
+summary = """\
+karni make model and karni spec validate refuse a field argument its type does not take \
+(C104, C216 in a spec), such as name:str:200:unique, body:text:500 or fk:Venue:cascade. In \
+0.4.0 the argument was dropped without a word, so str:200:unique made a field that is not \
+unique. Remove the argument from scripts that call karni make model. For a unique value, \
+declare LiveUniqueConstraint(fields=[...]) from karni.fields in the model's Meta."""
+mechanical = false
+migration = "migrations/0.5.md#a-field-argument-its-type-does-not-take-is-refused"

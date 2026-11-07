@@ -1,0 +1,17 @@
+@import "tokens.css";
+
+body {
+  font-family: var(--font-sans);
+  color: var(--text);
+  background: var(--bg);
+}
+
+a {
+  color: var(--accent);
+}
+
+.button {
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: var(--radius);
+}

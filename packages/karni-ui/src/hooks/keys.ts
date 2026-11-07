@@ -5,6 +5,9 @@
  * - `["karni", "$schema"]`: the parsed OpenAPI schema (staleTime Infinity).
  * - `["karni", resource]`: the invalidation root for one resource.
  * - `["karni", resource, "list", normalizedParams]`: one list page.
+ * - `["karni", "$navigation", user]`: the menu one user gets (experimental).
+ * - `["karni", "$search", normalizedParams]`: one cross-model search
+ *   (experimental, `useGlobalSearch`).
  * - `["karni", resource, "detail", String(id)]`: one item. When the item was
  *   fetched with params (e.g. `expand`), the normalized params are appended as
  *   a fifth element so differently-shaped payloads never share a cache entry.
@@ -49,6 +52,14 @@ export const karniKeys = {
   },
 
   /**
+   * Experimental. Key for one cross-model search (`GET /search/`). Params are
+   * normalized like a list's, so the order of `models` keys never matters.
+   */
+  search(params: Record<string, unknown>): readonly unknown[] {
+    return ["karni", "$search", normalizeParams(params)] as const;
+  },
+
+  /**
    * Key for one item. The id is always stringified, so `detail("events", 5)`
    * and `detail("events", "5")` share one entry. Params (expand) append a
    * normalized fifth element (see the module docs).
@@ -59,5 +70,84 @@ export const karniKeys = {
       return ["karni", resource, "detail", String(id), normalizeParams(query)] as const;
     }
     return ["karni", resource, "detail", String(id)] as const;
+  },
+
+  /**
+   * Experimental. Key for one `tree/` request of a tree resource: the nodes
+   * under `root` (the roots when absent), `depth` levels deep.
+   */
+  tree(
+    resource: string,
+    params?: { root?: string | number | null; depth?: number },
+  ): readonly unknown[] {
+    return [
+      "karni",
+      resource,
+      "tree",
+      normalizeParams({ root: params?.root ?? undefined, depth: params?.depth }),
+    ] as const;
+  },
+
+  /** Experimental. Key for one page of a node's `children/`. */
+  children(
+    resource: string,
+    id: string | number,
+    params?: { page?: number; pageSize?: number },
+  ): readonly unknown[] {
+    return [
+      "karni",
+      resource,
+      "children",
+      String(id),
+      normalizeParams({ page: params?.page, page_size: params?.pageSize }),
+    ] as const;
+  },
+
+  /**
+   * Experimental. Key of the navigation menu (`GET /navigation/`) for one
+   * user (`null`: nobody signed in). Each user has their own entry, so a
+   * sign-in or sign-out reads the menu again.
+   */
+  navigation(user?: string | number | null): readonly unknown[] {
+    return [
+      "karni",
+      "$navigation",
+      user === undefined || user === null ? null : String(user),
+    ] as const;
+  },
+
+  /** Experimental. Key for a node's `ancestors/` (the path above it, root first). */
+  ancestors(resource: string, id: string | number): readonly unknown[] {
+    return ["karni", resource, "ancestors", String(id)] as const;
+  },
+
+  /**
+   * Experimental. Key for one `facets/` request: a taxonomy's counts under
+   * the list's filters (`params`, normalized like a list's).
+   */
+  facets(
+    resource: string,
+    params?: { taxonomy?: string; rollup?: boolean; query?: Record<string, unknown> },
+  ): readonly unknown[] {
+    return [
+      "karni",
+      resource,
+      "facets",
+      normalizeParams({
+        taxonomy: params?.taxonomy,
+        rollup: params?.rollup === true ? "true" : undefined,
+        query: params?.query,
+      }),
+    ] as const;
+  },
+
+  /** Experimental. Key for the requester's `access/` forest, for one permission or every one. */
+  accessForest(resource: string, params?: { permission?: string }): readonly unknown[] {
+    return [
+      "karni",
+      resource,
+      "access",
+      normalizeParams({ permission: params?.permission }),
+    ] as const;
   },
 };

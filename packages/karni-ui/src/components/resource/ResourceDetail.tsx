@@ -14,4 +14,11 @@ export type {
   ResourceDetailDeletedProps,
   ResourceDetailEmptyValueProps,
   ResourceDetailDeleteDialogProps,
+  ResourceDetailRelated,
+  ResourceDetailRelatedProps,
+  ResourceDetailRelatedTab,
+  ResourceDetailTransitionOptions,
+  ResourceDetailTransitionTarget,
+  ResourceDetailTransitionsProps,
+  ResourceDetailBreadcrumbOptions,
 } from "./detail/ResourceDetail";

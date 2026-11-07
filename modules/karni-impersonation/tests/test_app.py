@@ -33,3 +33,19 @@ def test_checks_require_the_wiring(settings: Any) -> None:
     assert failures and "IMP007" in failures[0] and "MIDDLEWARE" in failures[0]
     settings.KARNI_IMPERSONATION_BLOCKED = ["ok", 5]
     assert any("IMP008" in failure for failure in checks.run_checks())
+
+
+def test_the_middleware_names_the_missing_app_instead_of_a_traceback(
+    settings: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Left in MIDDLEWARE after karni remove, the import says what to do (IMP007)."""
+    import importlib
+    import sys
+
+    from django.core.exceptions import ImproperlyConfigured
+
+    monkeypatch.delitem(sys.modules, "karni_impersonation.middleware")
+    settings.INSTALLED_APPS = [a for a in settings.INSTALLED_APPS if a != "karni_impersonation"]
+    with pytest.raises(ImproperlyConfigured, match="IMP007") as caught:
+        importlib.import_module("karni_impersonation.middleware")
+    assert str(caught.value).count("IMP007") == 1, caught.value

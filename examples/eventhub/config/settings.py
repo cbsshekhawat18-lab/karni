@@ -30,6 +30,13 @@ MIDDLEWARE += [  # noqa: F821
 # CELERY_TASK_TIME_LIMIT = 600
 KARNI_PAYMENTS_CHECKOUT_VALIDATOR = "events.payments.validate_checkout"
 
+# Cache the API's list and detail responses. Every write to a model a response
+# reads invalidates it, and callers share an entry only when their access is the
+# same (docs/api.md#response-caching). VenueViewSet keeps its responses an hour.
+KARNI_API_CACHE = True
+# EventHub reads X-Cache only: no deprecated X-Karni-Cache (removed in Karni 1.0).
+KARNI_API_CACHE_LEGACY_HEADER = False
+
 # The four roles (anonymous is the absence of one). EventHub gates with
 # HasRole(...) in events/viewsets.py, so organizer and attendee carry no
 # grants; declaring them makes `migrate` create the groups and `karni context`

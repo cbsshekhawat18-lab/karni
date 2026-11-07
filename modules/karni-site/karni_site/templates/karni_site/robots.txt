@@ -1,0 +1,7 @@
+{% autoescape off %}User-agent: *
+{% if allowed %}{% for path in disallow %}Disallow: {{ path }}
+{% empty %}Allow: /
+{% endfor %}
+Sitemap: {{ sitemap_url }}
+{% else %}Disallow: /
+{% endif %}{% endautoescape %}

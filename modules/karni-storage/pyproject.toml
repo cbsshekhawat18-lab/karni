@@ -1,0 +1,88 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "karni-storage"
+version = "0.5.0"
+description = "Protected files for Karni: files a row owns, in S3 or an S3-compatible service, served only to whoever may read that row, with direct uploads and thumbnails. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Chandrabhan Shekhawat", email = "cbsshekhawat18@gmail.com" }]
+keywords = ["django", "karni", "storage", "s3", "r2", "minio", "uploads", "react"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+    "Typing :: Typed",
+]
+# Range-pinned per the module contract (docs/modules.md). The s3 extra brings
+# django-storages and boto3: core's S3 backend is what the presets configure.
+dependencies = ["karni[s3]>=0.5,<0.6"]
+
+[project.urls]
+Homepage = "https://github.com/cbsshekhawat18-lab/karni"
+Documentation = "https://cbsshekhawat18-lab.github.io/karni/storage/"
+Repository = "https://github.com/cbsshekhawat18-lab/karni"
+Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
+Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"
+
+[project.optional-dependencies]
+# Pillow, for protected image fields and their thumbnails.
+images = ["karni[images]>=0.5,<0.6"]
+
+# The catalog entry, karni_storage/karni.module.toml: `karni modules`, `karni add`
+# and `karni remove` read it.
+[project.entry-points."karni.modules"]
+storage = "karni_storage"
+
+# The module's settings fragment: karni_settings() merges these defaults for
+# every project that installs karni-storage (new top-level names only).
+[project.entry-points."karni.settings"]
+storage = "karni_storage.conf:DEFAULTS"
+
+# Error codes (STORE001...) for `karni explain` and docs/errors.md.
+[project.entry-points."karni.errorcodes"]
+storage = "karni_storage.errorcodes:CODES"
+
+# The checks `karni check` runs: the provider preset, its credentials and the URL include.
+[project.entry-points."karni.checks"]
+storage = "karni_storage.checks:run_checks"
+
+[dependency-groups]
+dev = ["pytest>=8.2", "pytest-django>=4.8", "ruff>=0.5"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["karni_storage"]
+# `karni add` reads both through importlib.resources after install.
+artifacts = ["karni_storage/AGENTS.fragment.md", "karni_storage/karni.module.toml"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["ui/", "tests/"]
+artifacts = ["karni_storage/AGENTS.fragment.md", "karni_storage/karni.module.toml"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["karni_storage/migrations", "*.md"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+django_find_project = false
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"

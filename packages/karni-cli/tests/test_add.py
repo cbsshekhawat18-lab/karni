@@ -62,6 +62,35 @@ def test_add_into_generated_project(
     assert "already in" in again.output
 
 
+def test_add_site_wires_its_middleware_and_context_processor(
+    runner, generated_project: Path, monkeypatch, no_docker
+) -> None:
+    from karni_cli.main import app
+
+    monkeypatch.chdir(generated_project)
+    result = runner.invoke(app, ["add", "site"])
+    assert result.exit_code == 0, result.output
+    settings = (generated_project / "config" / "settings.py").read_text()
+    assert '    "karni_site.middleware.RedirectMiddleware",\n]  # karni:middleware' in settings
+    assert settings.endswith(
+        'TEMPLATES[0]["OPTIONS"]["context_processors"] += [  # noqa: F821\n'
+        '    "karni_site.context_processors.site",\n'
+        "]  # karni:context_processors\n"
+    )
+    assert "karni_site.middleware.RedirectMiddleware: added to MIDDLEWARE" in result.output
+    # With its images extra: Pillow makes the smaller copies of uploaded images.
+    assert '"karni-site[images]"' in (generated_project / "pyproject.toml").read_text()
+    # robots.txt and sitemap.xml: karni_site's URLs, at the marker, before any site.
+    urls = (generated_project / "config" / "urls.py").read_text()
+    assert '    path("", include("karni_site.urls")),\n    # karni:urls\n' in urls
+    assert "karni_site.urls: included in config/urls.py" in result.output
+    assert 'path("site/"' not in result.output
+    again = runner.invoke(app, ["add", "site"])
+    assert again.exit_code == 0, again.output
+    assert (generated_project / "config" / "settings.py").read_text() == settings
+    assert (generated_project / "config" / "urls.py").read_text() == urls
+
+
 def test_add_prints_the_urls_include_line(
     runner, generated_project: Path, monkeypatch, no_docker
 ) -> None:
@@ -109,15 +138,15 @@ def test_add_merges_agents_fragment_through_project_interpreter(
     # Recorded in the project (source of truth for module guidance) ...
     recorded = generated_project / ".karni" / "modules" / "payments.md"
     assert recorded.read_text() == FRAGMENT
-    # ... and rendered into the canonical adapters between markers.
-    for rel in ("AGENTS.md", ".junie/AGENTS.md"):
-        agents = (generated_project / rel).read_text()
-        assert "<!-- karni:module:payments -->" in agents
-        assert "<!-- /karni:module:payments -->" in agents
-        assert "go through karni_payments.services" in agents
-        assert "karni context" in agents  # the generated guidance is still there
-    # Tool-specific thin adapters stay thin; the CLI carries the guidance.
-    assert "karni_payments" not in (generated_project / ".cursor/rules/karni.mdc").read_text()
+    # ... and rendered into AGENTS.md between markers.
+    agents = (generated_project / "AGENTS.md").read_text()
+    assert "<!-- karni:module:payments -->" in agents
+    assert "<!-- /karni:module:payments -->" in agents
+    assert "go through karni_payments.services" in agents
+    assert "karni context" in agents  # the generated guidance is still there
+    # No tool-specific agent file appears (deprecated since 0.5.0).
+    for rel in (".junie/AGENTS.md", ".cursor/rules/karni.mdc", "CLAUDE.md"):
+        assert not (generated_project / rel).exists(), rel
     rules = runner.invoke(app, ["rules"])
     assert rules.exit_code == 0, rules.output
     assert "[module:payments]" in rules.output
@@ -199,3 +228,12 @@ def test_unrecognized_shape_errors(tmp_path: Path) -> None:
     settings.write_text("WEIRD = 1  # karni:apps\n")
     with pytest.raises(CliError, match="manually"):
         add_app(settings, "karni_payments")
+
+
+def test_a_listed_distribution_is_not_added_again_with_extras() -> None:
+    from karni_cli.commands.add import add_dependency_text
+
+    text = '[project]\nname = "x"\ndependencies = ["karni", "karni-site>=0.4"]\n'
+    assert add_dependency_text(text, "karni-site[images]") is None
+    added = add_dependency_text('[project]\nname = "x"\ndependencies = []\n', "karni-site[images]")
+    assert added is not None and '"karni-site[images]"' in added

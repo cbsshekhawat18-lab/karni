@@ -1,0 +1,42 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}{% comment %}
+A soft-delete row's Delete page: the row moves to Deleted, can be restored, and
+the rows that point at it stay as they are. Override this template
+(admin/<app>/<model>/delete_confirmation.html), or set
+delete_confirmation_template on the admin class.
+{% endcomment %}
+
+{% block extrahead %}{{ block.super }}
+{{ media }}
+<script src="{% static 'admin/js/cancel.js' %}" async></script>
+{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+{% include "karni_admin/includes/page_styles.html" %}
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} delete-confirmation{% endblock %}
+
+{% block content %}
+<div class="karni-page karni-confirm">
+{% if perms_lacking %}
+  <h2>{% blocktranslate with escaped_object=object %}You cannot delete the {{ object_name }} "{{ escaped_object }}"{% endblocktranslate %}</h2>
+  <p>{% translate "Your account may not delete it." %}</p>
+  <div class="karni-toolbar"><a href="#" class="karni-button karni-button-secondary cancel-link">{% translate "No, take me back" %}</a></div>
+{% else %}
+  <h2>{% blocktranslate with escaped_object=object %}Delete the {{ object_name }} "{{ escaped_object }}"?{% endblocktranslate %}</h2>
+  <p>{% translate "It moves to Deleted and can be restored from the list." %}</p>
+  <p class="karni-note">{% translate "This is a soft delete: rows that refer to it are kept as they are, and their links to it keep working." %}</p>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="post" value="yes">
+    {% if is_popup %}<input type="hidden" name="{{ is_popup_var }}" value="1">{% endif %}
+    {% if to_field %}<input type="hidden" name="{{ to_field_var }}" value="{{ to_field }}">{% endif %}
+    <div class="karni-toolbar">
+      <button type="submit" class="karni-button karni-button-danger">{% translate "Yes, delete" %}</button>
+      <a href="#" class="karni-button karni-button-secondary cancel-link">{% translate "No, take me back" %}</a>
+    </div>
+  </form>
+{% endif %}
+</div>
+{% endblock %}

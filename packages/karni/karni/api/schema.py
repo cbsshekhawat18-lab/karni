@@ -17,6 +17,39 @@ vendor extensions the ``@karni/ui`` frontend consumes:
   (owner path), ``where`` (custom function name), ``any`` / ``all``
   (``|`` / ``&``), ``unscoped`` (the reason) and ``deny`` (no declaration).
   Display hints for clients only — the server enforces.
+* ``x-karni-throttle: "10/hour"`` on an operation whose action the viewset's
+  ``throttle`` declaration limits, or on a public ``create``
+  (``KARNI_PUBLIC_CREATE_RATE``, :mod:`karni.api.throttling`): the rate in
+  force, settings included.
+* ``x-karni-honeypot: "homepage"`` on a public ``create`` with a honeypot
+  field (:mod:`karni.api.honeypot`). The field is not in the request body,
+  so it is never required. ``@karni/ui``'s form renders it hidden.
+* ``x-karni-tree: {"parent": "parent", "ordered": bool}`` (experimental) on
+  the component schema of a tree model (:class:`karni.models.TreeModel`)
+  and on every relation field that points at one, so a client shows a tree
+  where it would show a list (:mod:`karni.api.tree`).
+* ``x-karni-taxonomy: "<key>"`` (experimental) on the relation field of a
+  ``class Karni: taxonomies`` key, so a client knows the field has list
+  filters and ``facets/`` counts (:mod:`karni.api.taxonomy`).
+* ``x-karni-aggregate: {"group_by": [...], "values": [...], "metrics": [...]}``
+  on the ``aggregate`` operation of a resource that declares an aggregation
+  (:mod:`karni.aggregation`, experimental). Without a declaration the
+  operation is left out.
+* ``x-karni-related`` (experimental) on the list operation: the model's
+  reverse relations whose model has a route, each
+  ``{"name", "resource", "field", "param", "key", "label"}``: the relation's
+  name on this model (``deals``, or Django's ``deal_set``), the related
+  resource, its field that points here, the query parameter its list filters
+  that field with (``null`` when the list has no such filter), the field of
+  this model whose value the parameter takes, and the related rows in words.
+  ``@karni/ui``'s ResourceDetail builds its related tabs from it
+  (:meth:`KarniAutoSchema.get_karni_related`).
+* ``x-karni-field-groups`` and ``x-karni-column-sets`` (experimental) on the
+  list operation of a model that declares ``Karni.field_groups`` /
+  ``Karni.column_sets`` (:mod:`karni.layout`): the groups ResourceForm and
+  ResourceDetail show and the column presets ResourceTable offers, limited
+  to the fields the requester's serializer has
+  (:meth:`KarniAutoSchema.get_karni_field_groups`, ``get_karni_column_sets``).
 
 Operations whose access predicate can admit anonymous callers (``Public``,
 ``Where``, or a combination containing them) list the empty security
@@ -45,12 +78,14 @@ import re
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterator, Mapping
+from functools import partial
 from typing import Any, NamedTuple
 
 from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Model
 from django.utils.module_loading import import_string
+from django.utils.text import capfirst
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
 from drf_spectacular.utils import OpenApiParameter
@@ -67,6 +102,7 @@ from karni.api.access import (
     describe_access,
 )
 from karni.api.expansion import auto_expandable_fields
+from karni.api.throttling import throttle_rate
 
 __all__ = ["KarniAutoSchema"]
 
@@ -88,9 +124,14 @@ class KarniAutoSchema(AutoSchema):
         method: str,
         registry: Any,
     ) -> dict[str, Any] | None:
-        """Stock operation plus ``x-karni-resource`` (routed list ops) and ``x-karni-access``."""
+        """Stock operation plus the ``x-karni-resource``/``-access``/``-throttle``/``-honeypot``."""
         if self._karni_action() == "history" and not self._karni_audited():
             return None  # no history is kept for this resource: no operation to document
+        if self._karni_action() == "aggregate" and self._karni_aggregation() is None:
+            return None  # nothing declared to aggregate: the action answers 404
+        view = self._karni_view()
+        if view is not None and view.refuses_read_only(self._karni_action()):
+            return None  # a read-only external model: its writes answer 405, so none is documented
         operation = super().get_operation(path, path_regex, path_prefix, method, registry)
         if operation is None:
             return None
@@ -98,11 +139,186 @@ class KarniAutoSchema(AutoSchema):
             prefix = _route_for_viewset(type(self.view))
             if prefix is not None:
                 operation["x-karni-resource"] = prefix
+                dashboard = self._karni_dashboard()
+                if dashboard is not None:
+                    operation["x-karni-dashboard"] = dashboard
+                related = self.get_karni_related()
+                if related:
+                    operation["x-karni-related"] = related
+                groups = self.get_karni_field_groups()
+                if groups is not None:
+                    operation["x-karni-field-groups"] = groups
+                sets = self.get_karni_column_sets()
+                if sets is not None:
+                    operation["x-karni-column-sets"] = sets
         view = self._karni_view()
         if view is not None:
             declaration, predicate = self._karni_access(view)
             operation["x-karni-access"] = describe_access(declaration, predicate)
+            rate = throttle_rate(view, self._karni_action())
+            if rate is not None:
+                operation["x-karni-throttle"] = rate
+            if self._karni_action() == "create":
+                honeypot = view.get_honeypot_field()
+                if honeypot:
+                    operation["x-karni-honeypot"] = honeypot
+            aggregation = self._karni_aggregation()
+            if self._karni_action() == "aggregate" and aggregation is not None:
+                operation["x-karni-aggregate"] = aggregation.describe(view.get_model())
         return operation
+
+    def _karni_aggregation(self) -> Any:
+        """The view's aggregation declaration (``None`` when it has none or it is malformed)."""
+        from karni.errorcodes import KarniError
+
+        view = self._karni_view()
+        if view is None:
+            return None
+        try:
+            return view.get_aggregation()
+        except (KarniError, ImproperlyConfigured):
+            return None  # karni check reports a malformed declaration (E380)
+
+    def _karni_dashboard(self) -> dict[str, Any] | None:
+        """The model's ``Karni.dashboard`` (:mod:`karni.dashboard`), when it opts in.
+
+        A malformed declaration is left out here: ``karni check`` reports it
+        (``E133``), and a schema endpoint that answers 500 would hide it.
+        """
+        from karni.dashboard import dashboard_spec
+        from karni.errorcodes import KarniError
+
+        model = getattr(self.view, "model", None) or getattr(
+            getattr(self.view, "queryset", None), "model", None
+        )
+        if not isinstance(model, type) or not issubclass(model, Model):
+            return None
+        try:
+            return dashboard_spec(model)
+        except KarniError:
+            return None
+
+    def get_karni_related(self) -> list[dict[str, Any]]:
+        """Experimental. The list operation's ``x-karni-related``: the model's reverse relations.
+
+        One entry per reverse foreign key or many-to-many relation whose model
+        has a route, in the model's field order (see the module docstring for
+        the keys). A one-to-one is left out (one row is a detail page, not a
+        table), and so is a hidden relation (``related_name="+"``).
+
+        Override to add, drop or relabel entries. Return ``[]`` to publish none.
+        """
+        view = self._karni_view()
+        if view is None:
+            return []
+        try:
+            model = view.get_model()
+        except ImproperlyConfigured:
+            return []
+        relations = [
+            rel
+            for rel in model._meta.related_objects
+            if (rel.one_to_many or rel.many_to_many) and not rel.hidden
+        ]
+        routed: list[tuple[Any, str, type]] = []
+        for rel in relations:
+            route = _registered_route(partial(_serves, model=rel.related_model))
+            if route is not None:
+                routed.append((rel, *route))
+        per_resource = Counter(prefix for _rel, prefix, _viewset in routed)
+        entries: list[dict[str, Any]] = []
+        for rel, prefix, viewset in routed:
+            field = rel.field
+            label = capfirst(str(rel.related_model._meta.verbose_name_plural))
+            if per_resource[prefix] > 1:
+                label = f"{label} ({field.verbose_name})"
+            key = field.target_field.name if rel.one_to_many else model._meta.pk.name
+            entries.append(
+                {
+                    "name": rel.get_accessor_name(),
+                    "resource": prefix,
+                    "field": field.name,
+                    "param": _filter_param(viewset, rel.related_model, field.name, view),
+                    "key": key,
+                    "label": label,
+                }
+            )
+        return entries
+
+    def get_karni_field_groups(self) -> dict[str, Any] | None:
+        """Experimental. The list operation's ``x-karni-field-groups``: ``Karni.field_groups``.
+
+        ``{"layout": "sections" | "tabs", "groups": [{"label", "fields"}]}``,
+        each group limited to the fields this request's serializer has (a
+        field the role may not read is never named), and a group left empty
+        dropped. The fields in no group are the client's last group.
+        ``None`` when the model declares no groups, or a malformed declaration
+        (``karni check`` reports it: E550 to E552). Override to publish other
+        groups.
+        """
+        from karni.errorcodes import KarniError
+        from karni.layout import field_group_layout, field_groups
+
+        model, names = self._karni_model_and_fields()
+        if model is None:
+            return None
+        try:
+            groups = field_groups(model)
+            layout = field_group_layout(model)
+        except KarniError:
+            return None
+        shown = [
+            {"label": group.label, "fields": [name for name in group.fields if name in names]}
+            for group in groups
+        ]
+        shown = [group for group in shown if group["fields"]]
+        return {"layout": layout, "groups": shown} if shown else None
+
+    def get_karni_column_sets(self) -> dict[str, Any] | None:
+        """Experimental. The list operation's ``x-karni-column-sets``: ``Karni.column_sets``.
+
+        ``{"default": "<name>", "sets": [{"name", "label", "columns"}]}``, each
+        set limited to the fields this request's serializer has and a set
+        left empty dropped. ``default`` is the set named ``default``, else the
+        first. ``None`` when the model declares no sets, or a malformed
+        declaration (E551, E553). Override to publish other sets.
+        """
+        from karni.errorcodes import KarniError
+        from karni.layout import ColumnSet, column_sets, default_column_set
+
+        model, names = self._karni_model_and_fields()
+        if model is None:
+            return None
+        try:
+            declared = column_sets(model)
+        except KarniError:
+            return None
+        kept = [
+            ColumnSet(found.name, found.label, tuple(c for c in found.columns if c in names))
+            for found in declared
+        ]
+        kept = [found for found in kept if found.columns]
+        if not kept:
+            return None
+        return {
+            "default": default_column_set(kept),
+            "sets": [
+                {"name": found.name, "label": found.label, "columns": list(found.columns)}
+                for found in kept
+            ],
+        }
+
+    def _karni_model_and_fields(self) -> tuple[type[Model] | None, set[str]]:
+        """The view's model and the field names its serializer has for this request."""
+        view = self._karni_view()
+        if view is None:
+            return None, set()
+        try:
+            model = view.get_model()
+            serializer = view.get_serializer()
+        except (ImproperlyConfigured, AssertionError):
+            return None, set()
+        return model, set(getattr(serializer, "fields", {}))
 
     #: The detail routes drf-spectacular already names apart from the list.
     _DETAIL_ACTIONS = frozenset({"retrieve", "update", "partial_update", "destroy"})
@@ -124,13 +340,61 @@ class KarniAutoSchema(AutoSchema):
         base, _, verb = operation_id.rpartition("_")
         return f"{base}_by_{params[-1]}_{verb}" if base else operation_id
 
+    def _map_serializer(
+        self, serializer: Any, direction: Any, bypass_extensions: bool = False
+    ) -> Any:
+        """Stock component schema, plus ``x-karni-tree`` for a tree model's serializer."""
+        schema = super()._map_serializer(serializer, direction, bypass_extensions)
+        model = getattr(getattr(serializer, "Meta", None), "model", None)
+        if isinstance(schema, dict) and isinstance(model, type):
+            from karni.tree import tree_spec
+
+            spec = tree_spec(model)
+            if spec is not None:
+                schema["x-karni-tree"] = spec.as_extension()
+        return schema
+
+    def _karni_tree_node(self) -> Any:
+        """The tree node serializer of the view (``None`` when it serves no tree)."""
+        view = self._karni_view()
+        if view is None or not view.serves_tree():
+            return None
+        return view.get_tree_node_serializer_class()
+
     def get_response_serializers(self) -> Any:
-        """History answers with change-log entries; export and import with files and job states."""
+        """History answers with change-log entries; export and import with files and job states.
+
+        ``tree/`` answers with the nested tree, ``ancestors/`` with a list of
+        tree nodes and ``access/`` with the access forest (experimental).
+        """
         action = self._karni_action()
+        view = self._karni_view()
+        if action == "access_forest" and view is not None and view.serves_tree():
+            from karni.api.tree import tree_access_serializer
+
+            return tree_access_serializer(view.get_model())
+        if action == "facets" and view is not None and view.serves_facets():
+            from karni.api.taxonomy import facets_serializer
+
+            return facets_serializer(view.get_model())
+        if action == "tagged" and view is not None and view.serves_tagged():
+            from karni.api.taxonomy import tagged_serializer
+
+            return tagged_serializer(view.get_model())
+        if action == "tree" and (node := self._karni_tree_node()) is not None:
+            from karni.api.tree import tree_response_serializer
+
+            return tree_response_serializer(node)
+        if action == "ancestors" and (node := self._karni_tree_node()) is not None:
+            return node
         if action == "history":
             from karni.audit.serializers import ChangeLogSerializer
 
             return ChangeLogSerializer
+        if action == "aggregate":
+            from karni.api.aggregate import AggregateResultSerializer
+
+            return AggregateResultSerializer
         if action in ("export", "import_template"):
             from drf_spectacular.types import OpenApiTypes
 
@@ -146,8 +410,15 @@ class KarniAutoSchema(AutoSchema):
         return super().get_response_serializers()
 
     def get_request_serializer(self) -> Any:
-        """The import endpoints take an upload, then a mapping."""
+        """The import endpoints take an upload, then a mapping. ``move/`` takes a parent."""
         action = self._karni_action()
+        view = self._karni_view()
+        if action == "move" and view is not None and view.serves_tree():
+            from karni.api.tree import tree_move_serializer
+
+            return tree_move_serializer(view.get_model())
+        if action == "aggregate":
+            return None
         if action == "import_data" and self.method == "POST":
             from karni.transfer.serializers import ImportUploadSerializer
 
@@ -166,6 +437,13 @@ class KarniAutoSchema(AutoSchema):
         expand = self._build_expand_parameter()
         if expand is not None:
             parameters.append(expand)
+        parameters.extend(self._karni_tree_parameters())
+        parameters.extend(self._karni_taxonomy_parameters())
+        aggregation = self._karni_aggregation()
+        if self._karni_action() == "aggregate" and aggregation is not None:
+            from karni.api.aggregate import aggregate_parameters
+
+            parameters += aggregate_parameters(aggregation, self.view.get_model())
         if self._karni_action() in ("export", "import_template"):
             parameters.append(
                 OpenApiParameter(
@@ -179,11 +457,136 @@ class KarniAutoSchema(AutoSchema):
             )
         return parameters
 
-    def _is_list_view(self, serializer: Any = None) -> bool:
-        """The history action is a paginated list (``paginated_response``); the rest are not."""
+    def _karni_tree_parameters(self) -> list[Any]:
+        """The tree parameters: ``root``/``depth``, ``branch`` on DELETE, ``permission``."""
+        view = self._karni_view()
         action = self._karni_action()
-        if action == "history":
+        if (
+            view is None
+            or action not in ("tree", "destroy", "access_forest")
+            or not view.serves_tree()
+        ):
+            return []
+        if action == "access_forest":
+            return [
+                OpenApiParameter(
+                    name="permission",
+                    type=str,
+                    location=OpenApiParameter.QUERY,
+                    required=False,
+                    description=(
+                        "A permission key or pattern (shop.order:view, shop.order:*): only the "
+                        "grants of the permissions it matches count. Default: every tree grant."
+                    ),
+                )
+            ]
+        if action == "destroy":
+            return [
+                OpenApiParameter(
+                    name="branch",
+                    type=bool,
+                    location=OpenApiParameter.QUERY,
+                    required=False,
+                    description=(
+                        "true deletes the node and every node below it. Without it a node "
+                        "with live children is refused (409, E341)."
+                    ),
+                )
+            ]
+        return [
+            OpenApiParameter(
+                name="root",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="A node's key: its children are the top level. Default: the roots.",
+            ),
+            OpenApiParameter(
+                name="depth",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description=(
+                    f"Levels to return, from 1 to {view.tree_max_depth} "
+                    f"(default {view.tree_default_depth})."
+                ),
+            ),
+        ]
+
+    def _karni_taxonomy_parameters(self) -> list[Any]:
+        """``taxonomy`` and ``rollup`` on ``facets/``, ``descendants`` on ``<key>/tagged/``."""
+        view = self._karni_view()
+        action = self._karni_action()
+        if view is None:
+            return []
+        if action == "tagged" and view.serves_tagged():
+            return [
+                OpenApiParameter(
+                    name="descendants",
+                    type=bool,
+                    location=OpenApiParameter.QUERY,
+                    required=False,
+                    description="true: count the rows tagged with the node or a node below it.",
+                )
+            ]
+        if action != "facets" or not view.serves_facets():
+            return []
+        from karni.taxonomy import taxonomies
+
+        keys = list(taxonomies(view.get_model()))
+        return [
+            OpenApiParameter(
+                name="taxonomy",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=len(keys) > 1,
+                enum=keys,
+                description="The taxonomy to count (optional when the model has one).",
+            ),
+            OpenApiParameter(
+                name="rollup",
+                type=bool,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description=(
+                    "true: a node also counts the rows tagged with any node below it, each "
+                    "row once."
+                ),
+            ),
+        ]
+
+    def get_filter_backends(self) -> list[Any]:
+        """Stock, except ``children/``, ``ancestors/`` and ``access/``: no list filters there.
+
+        ``facets/`` counts the list's rows, so it takes the list's filters and
+        search (not its ordering), and so does ``aggregate/``.
+        """
+        action = self._karni_action()
+        if action in ("children", "ancestors", "access_forest", "tagged"):
+            return []
+        if action in ("facets", "aggregate"):
+            from rest_framework.filters import OrderingFilter
+
+            return [
+                backend
+                for backend in getattr(self.view, "filter_backends", None) or []
+                if not (isinstance(backend, type) and issubclass(backend, OrderingFilter))
+            ]
+        return list(super().get_filter_backends())
+
+    def _get_paginator(self) -> Any:
+        """Stock, except ``ancestors/``: a plain array (a path is never long enough to page)."""
+        if self._karni_action() == "ancestors":
+            return None
+        return super()._get_paginator()
+
+    def _is_list_view(self, serializer: Any = None) -> bool:
+        """History, a node's children and its ancestors are lists; the rest are not."""
+        action = self._karni_action()
+        if action in ("history", "children", "ancestors"):
             return True
+        if action in ("tree", "move", "access_forest", "facets", "tagged"):
+            return False
         if action in (
             "export",
             "import_template",
@@ -315,17 +718,42 @@ def _admits_anonymous(predicate: Predicate) -> bool:
 
 
 def _annotate_relation(schema: Any, field: Any, *, many: bool) -> Any:
-    """Attach ``x-karni-relation`` when the target model has a route."""
+    """Attach ``x-karni-relation`` when the target model has a route, ``x-karni-tree`` to a tree."""
     if not isinstance(schema, dict):
         return schema
     model = _field_target_model(field)
     if model is None:
         return schema
+    from karni.tree import tree_spec
+
+    spec = tree_spec(model)
+    if spec is not None:
+        schema["x-karni-tree"] = spec.as_extension()
+        key = _taxonomy_key(field)
+        if key is not None:
+            schema["x-karni-taxonomy"] = key
     resource = _route_for_model(model)
     if resource is None:
         return schema
     schema["x-karni-relation"] = {"resource": resource, "many": many}
     return schema
+
+
+def _taxonomy_key(field: Any) -> str | None:
+    """The taxonomy key a serializer field carries (``class Karni: taxonomies``), else ``None``."""
+    from karni.taxonomy import get_taxonomy
+
+    parent = getattr(field, "parent", None)
+    while parent is not None and getattr(parent, "Meta", None) is None:
+        parent = getattr(parent, "parent", None)
+    model = getattr(getattr(parent, "Meta", None), "model", None)
+    name = getattr(field, "source", None) or getattr(field, "field_name", None)
+    if not isinstance(model, type) or not name:
+        return None
+    try:
+        return name if get_taxonomy(model, str(name)) is not None else None
+    except Exception:  # noqa: BLE001 - a malformed declaration fails at import (E570)
+        return None
 
 
 def _field_target_model(field: Any) -> type[Model] | None:
@@ -366,14 +794,58 @@ def _default_router() -> Any | None:
     return factory()
 
 
-def _registered_prefix(match: Callable[[Any], bool]) -> str | None:
-    """First router prefix whose registered viewset satisfies ``match``."""
+def _registered_route(match: Callable[[Any], bool]) -> tuple[str, type] | None:
+    """``(prefix, viewset)`` of the first registered viewset that satisfies ``match``."""
     router = _default_router()
     if router is None:
         return None
     for prefix, viewset, _basename in getattr(router, "registry", ()):
         if match(viewset):
-            return str(prefix)
+            return str(prefix), viewset
+    return None
+
+
+def _registered_prefix(match: Callable[[Any], bool]) -> str | None:
+    """First router prefix whose registered viewset satisfies ``match``."""
+    route = _registered_route(match)
+    return route[0] if route is not None else None
+
+
+def _serves(viewset: type, model: type[Model]) -> bool:
+    from karni.api.routers import serves_model
+
+    return serves_model(viewset, model)
+
+
+def _filter_param(viewset: type, model: type[Model], field: str, parent_view: Any) -> str | None:
+    """The query parameter ``viewset``'s list filters ``field`` with (exact), else ``None``.
+
+    The filterset is the one the list documents and applies: each filter
+    backend's ``get_filterset_class``, for the requester of the schema (a
+    field ``Karni.field_roles`` hides from them has no filter).
+    """
+    try:
+        view = viewset(
+            request=getattr(parent_view, "request", None),
+            format_kwarg=None,
+            action="list",
+            args=(),
+            kwargs={},
+        )
+    except Exception:  # noqa: BLE001 - a viewset that cannot be built has no filters to read
+        return None
+    queryset = model._default_manager.none()
+    for backend in getattr(view, "filter_backends", ()):
+        get_filterset_class = getattr(backend(), "get_filterset_class", None)
+        if get_filterset_class is None:
+            continue
+        try:
+            filterset = get_filterset_class(view, queryset)
+        except Exception:  # noqa: BLE001 - a misconfigured filterset is reported by its own list
+            continue
+        for name, declared in (getattr(filterset, "base_filters", None) or {}).items():
+            if declared.field_name == field and declared.lookup_expr == "exact":
+                return str(name)
     return None
 
 
@@ -404,6 +876,37 @@ def add_auth_mode(result: dict, generator: object, request: object, public: bool
     from django.conf import settings
 
     result["x-karni-auth-mode"] = getattr(settings, "KARNI_AUTH_MODE", "jwt")
+    return result
+
+
+def add_api_versions(result: dict, generator: object, request: object, public: bool) -> dict:
+    """Experimental. drf-spectacular postprocessing hook: list the API versions.
+
+    While versions are mounted the document gets a root-level ``x-karni-api-versions``, a list
+    of ``{"name", "current", "deprecated", "sunset", "notes"}`` (the last two when set), and
+    ``x-karni-api-version``, the version this document describes. ``karni types`` reads the
+    list to write a client per version. Nothing is added while the API is unversioned.
+    """
+    from karni.api.versions import current_version, versions
+
+    mounted = versions()
+    if not mounted:
+        return result
+    current = current_version()
+    entries = []
+    for version in mounted.values():
+        entry: dict[str, object] = {
+            "name": version.name,
+            "current": version.name == current,
+            "deprecated": version.deprecated,
+        }
+        if version.sunset is not None:
+            entry["sunset"] = version.sunset.isoformat()
+        if version.notes:
+            entry["notes"] = version.notes
+        entries.append(entry)
+    result["x-karni-api-versions"] = entries
+    result["x-karni-api-version"] = getattr(generator, "api_version", None) or current
     return result
 
 

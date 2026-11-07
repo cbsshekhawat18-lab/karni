@@ -468,7 +468,9 @@ def _check_create(
         return
     body = build_payload(resource, mine.user, values=case.values)
     body.data.update({name: _json_value(theirs.user.pk) for name in owners})
-    response = client_as(user=mine.user).post(resource.list_url(), body.data, format=body.format)
+    response = client_as(user=mine.user).post(
+        resource.list_url(), body.request_data, format=body.format
+    )
     if response.status_code != 201:
         return  # refusing the body is fine too
     created = resource.model._default_manager.filter(pk=response.json().get("id")).first()
@@ -476,8 +478,27 @@ def _check_create(
         if created is not None and getattr(created, f"{name}_id", None) == theirs.user.pk:
             fail(
                 f"POST {resource.list_url()} with {name}={theirs.user.pk} created a row owned "
-                f"by {theirs.label}: the body chose the owner"
+                f"by {theirs.label}: the body chose the owner. {_owner_hint(resource, name)}"
             )
+
+
+def _owner_hint(resource: Any, name: str) -> str:
+    """How the owner ``name`` comes from the signed-in user instead of the request body."""
+    from karni.api.access import owner_fields
+
+    try:
+        stamped = name in owner_fields(getattr(resource.viewset, "access", None), resource.model)
+    except Exception:  # noqa: BLE001 - a declaration computed per request: give the general hint
+        stamped = False
+    if stamped:
+        return (
+            f"The access declaration sets {name} to the signed-in user on create, so a "
+            "perform_create or a serializer of the project's took it from the body"
+        )
+    return (
+        f"Name owned:{name} in the viewset's access write or create (karni.yaml: access.write "
+        f"or access.create), so Karni sets {name} to the signed-in user"
+    )
 
 
 def _check_admin(

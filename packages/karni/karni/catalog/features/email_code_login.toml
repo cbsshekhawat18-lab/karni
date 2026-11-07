@@ -1,0 +1,25 @@
+# Sign-in with a code sent by email: a built-in feature of karni (karni.accounts.otp).
+name = "email_code_login"
+kind = "feature"
+title = "Sign-in with a code by email"
+purpose = "Passwordless sign-in: a short code sent to the address."
+status = "experimental"
+use_when = ["passwordless sign-in", "a code by email", "magic code", "one-time code", "OTP"]
+services = ["an email backend (KARNI_ACCOUNTS_EMAIL_BACKEND) that delivers the codes"]
+switch = "KARNI_EMAIL_OTP"
+docs = "docs/accounts.md#sign-in-with-a-code-sent-by-email"
+
+[provides]
+models = ["LoginCode"]
+endpoints = ["/api/auth/otp/send/", "/api/auth/otp/verify/"]
+settings = { KARNI_EMAIL_OTP = "boolean", KARNI_EMAIL_OTP_TTL = "integer", KARNI_EMAIL_OTP_LENGTH = "integer", KARNI_EMAIL_OTP_MAX_ATTEMPTS = "integer", KARNI_EMAIL_OTP_SIGNUP = ["string", "null"] }
+
+[[asks]]
+question = "May an address without an account sign up with a code, need approval, or only existing accounts sign in?"
+setting = "KARNI_EMAIL_OTP_SIGNUP"
+options = ["open", "approval", "existing"]
+
+[[asks]]
+question = "How many seconds does a code live (60 to 3600)?"
+setting = "KARNI_EMAIL_OTP_TTL"
+default = 600

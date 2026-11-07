@@ -12,6 +12,21 @@
  *   search + pagination (ResourceSelect fodder)
  * - *\/api/auth/{login,refresh,logout,me,csrf,2fa/login}/ → JWT flows with
  *   rotating refresh tokens (D6)
+ * - POST *\/api/auth/social/{google,microsoft,apple}/ → sign-in with an ID
+ *   token: each of TEST_ID_TOKENS answers one way (signed in, the 2FA gate,
+ *   awaiting approval, refusals with their Karni codes). Other providers 404
+ * - POST *\/api/auth/otp/{send,verify}/ → sign-in with a code sent by email:
+ *   send answers the same for every address (429 for TEST_OTP_EMAILS.throttled),
+ *   verify takes TEST_LOGIN_CODE and answers by address (TEST_USER signs in,
+ *   TEST_2FA_USER gets the 2FA gate, TEST_OTP_EMAILS.pending awaits approval,
+ *   TEST_OTP_EMAILS.inactive is E226). Any other code is E235
+ * - GET *\/api/auth/terms/, POST *\/api/auth/terms/accept/ and GET
+ *   *\/api/gated/ → terms acceptance, off until
+ *   `authTestControls.setTerms(...)`: then `/me/` carries `terms`, the gated
+ *   endpoint answers 403 E245 until the current version is accepted, and
+ *   accepting another version is a 400 E246
+ * - GET *\/api/search/ → cross-model search over events and venues, grouped
+ *   per resource (400 E431 for a resource it does not cover, 500 for q=boom)
  *
  * State: module-level in-memory DB + token registry. Vitest isolates test
  * files, so state is fresh per file; within a file call `resetMswData()` in
@@ -172,6 +187,29 @@ export const TEST_2FA_USER = {
   roles: ["viewer"],
 };
 
+/** ID tokens the simulated `social/<provider>/` endpoint understands, one per outcome. */
+export const TEST_ID_TOKENS = {
+  valid: "id-token-valid",
+  twoFactor: "id-token-2fa",
+  pending: "id-token-pending",
+  expired: "id-token-expired",
+  unverified: "id-token-unverified",
+  closed: "id-token-signup-closed",
+  unavailable: "id-token-keys-unavailable",
+} as const;
+
+/** The code the simulated `otp/verify/` accepts (any other is E235). */
+export const TEST_LOGIN_CODE = "246810";
+
+/** Addresses the simulated `otp/` endpoints answer their own way. */
+export const TEST_OTP_EMAILS = {
+  pending: "pending@example.com",
+  inactive: "inactive@example.com",
+  throttled: "throttled@example.com",
+  /** An account whose address was never verified: signing in removes its password. */
+  unverified: "unverified@example.com",
+} as const;
+
 export const TEST_OTP = "123456";
 export const TEST_EPHEMERAL_TOKEN = "ephemeral-2fa-token";
 export const TEST_CSRF_TOKEN = "test-csrf-token";
@@ -197,8 +235,46 @@ function issueTokens(): { access: string; refresh: string } {
   return { access, refresh };
 }
 
+/** Every body posted to `social/<provider>/`, with the provider, for assertions. */
+const socialRequests: Array<{ provider: string; body: unknown }> = [];
+
+/** Every body posted to `otp/send/` and `otp/verify/`, for assertions. */
+const otpRequests: Array<{ step: "send" | "verify"; body: unknown }> = [];
+
+/** The terms the simulated server asks for (null: KARNI_TERMS unset), and what was accepted. */
+interface TermsState {
+  version: string;
+  url: string;
+  required: boolean;
+}
+let termsState: TermsState | null = null;
+const acceptedVersions = new Set<string>();
+const termsRequests: unknown[] = [];
+
 /** Hooks for auth suites to stage 401s and dead sessions deterministically. */
 export const authTestControls = {
+  /** The bodies posted to `social/<provider>/` so far (cleared by resetMswData). */
+  socialRequests(): ReadonlyArray<{ provider: string; body: unknown }> {
+    return socialRequests;
+  },
+  /** The bodies posted to `otp/send/` and `otp/verify/` so far (cleared by resetMswData). */
+  otpRequests(): ReadonlyArray<{ step: "send" | "verify"; body: unknown }> {
+    return otpRequests;
+  },
+  /**
+   * Set the terms the server asks for (null turns them off, the default).
+   * Keeps what was accepted, so a new version is a mid-session bump.
+   */
+  setTerms(terms: { version: string; url?: string; required?: boolean } | null): void {
+    termsState =
+      terms === null
+        ? null
+        : { version: terms.version, url: terms.url ?? "/terms/", required: terms.required ?? true };
+  },
+  /** The bodies posted to `terms/accept/` so far (cleared by resetMswData). */
+  termsRequests(): readonly unknown[] {
+    return termsRequests;
+  },
   /** Expire every issued access token: next Bearer request 401s (D6 races). */
   invalidateAccessTokens(): void {
     authState.validAccessTokens.clear();
@@ -227,6 +303,11 @@ export function resetMswData(): void {
   authState.counter = 0;
   authState.validAccessTokens.clear();
   authState.currentRefreshToken = null;
+  socialRequests.length = 0;
+  otpRequests.length = 0;
+  termsState = null;
+  acceptedVersions.clear();
+  termsRequests.length = 0;
 }
 
 // --- shared helpers ----------------------------------------------------------
@@ -515,6 +596,10 @@ const eventHandlers = [
     if (isPublic !== null && isPublic !== "") {
       rows = rows.filter((event) => event.is_public === (isPublic === "true"));
     }
+    const createdSince = url.searchParams.get("created_at__gte");
+    if (createdSince !== null && createdSince !== "") {
+      rows = rows.filter((event) => event.created_at >= createdSince);
+    }
     const venue = url.searchParams.get("venue");
     if (venue !== null && venue !== "")
       rows = rows.filter((event) => event.venue === Number(venue));
@@ -664,7 +749,18 @@ const readOnlyHandlers = [
 
 // --- auth --------------------------------------------------------------------
 
+function meTerms(): Record<string, unknown> | null {
+  if (termsState === null) return null;
+  return {
+    required: termsState.required,
+    version: termsState.version,
+    url: termsState.url,
+    accepted: acceptedVersions.has(termsState.version),
+  };
+}
+
 function meUser(): Record<string, unknown> {
+  const terms = meTerms();
   return {
     id: TEST_USER.id,
     email: TEST_USER.email,
@@ -675,7 +771,29 @@ function meUser(): Record<string, unknown> {
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     roles: TEST_USER.roles,
+    ...(terms !== null ? { terms } : {}),
   };
+}
+
+function termsStatus(state: TermsState): Record<string, unknown> {
+  const accepted = acceptedVersions.has(state.version);
+  return {
+    version: state.version,
+    url: state.url,
+    required: state.required,
+    accepted,
+    accepted_at: accepted ? "2026-11-02T09:30:00Z" : null,
+  };
+}
+
+/** The signed-in user's token, or the 401 DRF answers without one. */
+function requireUser(request: Request): Response | null {
+  const token = bearerToken(request);
+  if (token !== null && authState.validAccessTokens.has(token)) return null;
+  return HttpResponse.json(
+    { detail: "Authentication credentials were not provided." },
+    { status: 401 },
+  );
 }
 
 function bearerToken(request: Request): string | null {
@@ -748,6 +866,159 @@ const authHandlers = [
     return HttpResponse.json(meUser());
   }),
 
+  http.post("*/api/auth/otp/send/", async ({ request }) => {
+    const body: unknown = await request.json().catch(() => null);
+    otpRequests.push({ step: "send", body });
+    const email = isRecord(body) && typeof body["email"] === "string" ? body["email"] : "";
+    if (!email.includes("@")) {
+      return HttpResponse.json({ email: ["Enter a valid email address."] }, { status: 400 });
+    }
+    if (email === TEST_OTP_EMAILS.throttled) {
+      return HttpResponse.json(
+        { detail: "Request was throttled. Expected available in 42 seconds." },
+        { status: 429 },
+      );
+    }
+    return HttpResponse.json({
+      detail: "If this address may sign in, a sign-in code is on its way to it.",
+      length: 6,
+      expires_in: 600,
+    });
+  }),
+
+  http.post("*/api/auth/otp/verify/", async ({ request }) => {
+    const body: unknown = await request.json().catch(() => null);
+    otpRequests.push({ step: "verify", body });
+    const email = isRecord(body) && typeof body["email"] === "string" ? body["email"] : "";
+    const code = isRecord(body) && typeof body["code"] === "string" ? body["code"] : "";
+    if (code !== TEST_LOGIN_CODE) {
+      return HttpResponse.json(
+        { code: "E235", detail: "E235: The code is wrong or has expired. Ask for a new code." },
+        { status: 401 },
+      );
+    }
+    switch (email) {
+      case TEST_USER.email:
+        return HttpResponse.json({ ...issueTokens(), user: meUser() });
+      case TEST_2FA_USER.email:
+        return HttpResponse.json({ requires_2fa: true, ephemeral_token: TEST_EPHEMERAL_TOKEN });
+      case TEST_OTP_EMAILS.pending:
+        return HttpResponse.json(
+          {
+            code: "E224",
+            detail: "E224: The account was created and awaits an administrator's approval.",
+            awaiting_approval: true,
+          },
+          { status: 202 },
+        );
+      case TEST_OTP_EMAILS.inactive:
+        return HttpResponse.json(
+          { code: "E226", detail: "E226: This account is inactive." },
+          { status: 401 },
+        );
+      case TEST_OTP_EMAILS.unverified:
+        return HttpResponse.json({
+          ...issueTokens(),
+          user: { ...meUser(), email },
+          password_removed: true,
+        });
+      default:
+        return HttpResponse.json({ ...issueTokens(), user: { ...meUser(), email } });
+    }
+  }),
+
+  http.post("*/api/auth/social/:provider/", async ({ request, params }) => {
+    const provider = String(params["provider"]);
+    const body: unknown = await request.json().catch(() => null);
+    socialRequests.push({ provider, body });
+    const refusal = (status: number, code: string, detail: string) =>
+      HttpResponse.json({ code, detail: `${code}: ${detail}` }, { status });
+    if (!["google", "microsoft", "apple"].includes(provider)) {
+      return refusal(404, "E225", `No sign-in provider '${provider}' is configured.`);
+    }
+    const token = isRecord(body) && typeof body["id_token"] === "string" ? body["id_token"] : "";
+    switch (token) {
+      case TEST_ID_TOKENS.valid:
+        return HttpResponse.json({ ...issueTokens(), user: meUser() });
+      case TEST_ID_TOKENS.twoFactor:
+        return HttpResponse.json({ requires_2fa: true, ephemeral_token: TEST_EPHEMERAL_TOKEN });
+      case TEST_ID_TOKENS.pending:
+        return HttpResponse.json(
+          {
+            code: "E224",
+            detail: "E224: The account was created and awaits an administrator's approval.",
+            awaiting_approval: true,
+          },
+          { status: 202 },
+        );
+      case TEST_ID_TOKENS.expired:
+        return refusal(401, "E218", "The ID token has expired.");
+      case TEST_ID_TOKENS.unverified:
+        return refusal(400, "E222", "The provider did not verify the address.");
+      case TEST_ID_TOKENS.closed:
+        return refusal(400, "E223", "KARNI_SOCIAL_TOKEN_SIGNUP is 'existing'.");
+      case TEST_ID_TOKENS.unavailable:
+        return refusal(503, "E219", "Karni could not fetch the provider's signing keys.");
+      default:
+        return refusal(401, "E215", "The ID token is not a well-formed JWT.");
+    }
+  }),
+
+  http.get("*/api/auth/terms/", ({ request }) => {
+    const refused = requireUser(request);
+    if (refused !== null) return refused;
+    if (termsState === null) {
+      return HttpResponse.json(
+        { code: "E249", detail: "E249: Terms acceptance is turned off." },
+        { status: 404 },
+      );
+    }
+    return HttpResponse.json(termsStatus(termsState));
+  }),
+
+  http.post("*/api/auth/terms/accept/", async ({ request }) => {
+    const refused = requireUser(request);
+    if (refused !== null) return refused;
+    const body: unknown = await request.json().catch(() => null);
+    termsRequests.push(body);
+    if (termsState === null) {
+      return HttpResponse.json(
+        { code: "E249", detail: "E249: Terms acceptance is turned off." },
+        { status: 404 },
+      );
+    }
+    const version = isRecord(body) && typeof body["version"] === "string" ? body["version"] : "";
+    if (version !== termsState.version) {
+      return HttpResponse.json(
+        {
+          code: "E246",
+          detail: `E246: Version '${version}' is not the current terms.`,
+          version: termsState.version,
+          url: termsState.url,
+        },
+        { status: 400 },
+      );
+    }
+    const created = !acceptedVersions.has(version);
+    acceptedVersions.add(version);
+    return HttpResponse.json(termsStatus(termsState), { status: created ? 201 : 200 });
+  }),
+
+  http.get("*/api/gated/", () => {
+    if (termsState !== null && termsState.required && !acceptedVersions.has(termsState.version)) {
+      return HttpResponse.json(
+        {
+          code: "E245",
+          detail: `E245: Accept the terms (version ${termsState.version}) to continue.`,
+          version: termsState.version,
+          url: termsState.url,
+        },
+        { status: 403 },
+      );
+    }
+    return HttpResponse.json({ ok: true });
+  }),
+
   http.get(
     "*/api/auth/csrf/",
     () =>
@@ -758,8 +1029,109 @@ const authHandlers = [
   ),
 ];
 
+// --- cross-model search ------------------------------------------------------
+
+/** What the simulated `GET /api/search/` covers: events by title, venues by name and city. */
+const SEARCHED = {
+  events: { label: "Events", weight: 1 },
+  venues: { label: "Venues", weight: 2 },
+} as const;
+type SearchedResource = keyof typeof SEARCHED;
+
+function searchScore(text: string, needle: string): number | null {
+  const value = text.toLowerCase();
+  if (value === needle) return 1;
+  if (value.startsWith(needle)) return 0.75;
+  return value.includes(needle) ? 0.5 : null;
+}
+
+function searchRows(
+  resource: SearchedResource,
+  needle: string,
+): Array<{ id: number; title: string; subtitle: string | null; raw: number }> {
+  const rows =
+    resource === "events"
+      ? mswDb.events.map((e) => ({
+          id: e.id,
+          title: e.title,
+          subtitle: e.starts_at.slice(0, 10),
+          texts: [e.title],
+        }))
+      : mswDb.venues.map((v) => ({
+          id: v.id,
+          title: v.name,
+          subtitle: v.city,
+          texts: [v.name, v.city],
+        }));
+  const hits: Array<{ id: number; title: string; subtitle: string | null; raw: number }> = [];
+  for (const row of rows) {
+    const scores = row.texts
+      .map((text) => searchScore(text, needle))
+      .filter((score): score is number => score !== null);
+    if (scores.length > 0) {
+      hits.push({ id: row.id, title: row.title, subtitle: row.subtitle, raw: Math.max(...scores) });
+    }
+  }
+  return hits.sort((a, b) => b.raw - a.raw || a.title.localeCompare(b.title));
+}
+
+/**
+ * `GET *\/api/search/?q=&models=&limit=`, shaped like Karni's: groups per
+ * resource ordered by their best hit, an empty answer under two characters,
+ * 400 E431 for a resource it does not cover. `q=boom` answers 500.
+ */
+const searchHandlers = [
+  http.get("*/api/search/", ({ request }) => {
+    const url = new URL(request.url);
+    const query = (url.searchParams.get("q") ?? "").trim();
+    const wanted = url.searchParams
+      .getAll("models")
+      .flatMap((value) => value.split(","))
+      .map((name) => name.trim())
+      .filter((name) => name !== "");
+    const unknown = wanted.filter((name) => !(name in SEARCHED));
+    if (unknown.length > 0) {
+      return HttpResponse.json(
+        {
+          code: "E431",
+          detail: `?models= names ${unknown.join(", ")}, which search does not cover.`,
+          resources: Object.keys(SEARCHED),
+        },
+        { status: 400 },
+      );
+    }
+    if (query === "boom") return HttpResponse.json({ detail: "Server error." }, { status: 500 });
+    if (query.length < 2) return HttpResponse.json({ query, groups: [] });
+    const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? "5") || 5, 1), 20);
+    const selected = (wanted.length > 0 ? wanted : Object.keys(SEARCHED)) as SearchedResource[];
+    const groups = selected
+      .map((resource) => ({
+        resource,
+        label: SEARCHED[resource].label,
+        hits: searchRows(resource, query.toLowerCase())
+          .slice(0, limit)
+          .map((hit) => ({
+            resource,
+            id: hit.id,
+            title: hit.title,
+            subtitle: hit.subtitle,
+            score: hit.raw * SEARCHED[resource].weight,
+          })),
+      }))
+      .filter((group) => group.hits.length > 0)
+      .sort((a, b) => (b.hits[0]?.score ?? 0) - (a.hits[0]?.score ?? 0));
+    return HttpResponse.json({ query, groups });
+  }),
+];
+
 // --- schema + export ---------------------------------------------------------
 
 const schemaHandler = http.get("*/api/schema/", () => HttpResponse.json(openApiFixture));
 
-export const handlers = [schemaHandler, ...eventHandlers, ...readOnlyHandlers, ...authHandlers];
+export const handlers = [
+  schemaHandler,
+  ...eventHandlers,
+  ...readOnlyHandlers,
+  ...searchHandlers,
+  ...authHandlers,
+];

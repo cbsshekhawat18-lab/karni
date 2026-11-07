@@ -20,8 +20,11 @@
  * Below `cardBreakpoint` (its container's width, not the viewport's) rows
  * render as cards. Wide tables scroll inside their box with a sticky header
  * and a frozen first column. Density and hidden columns are remembered per
- * user. In the table layout the rows are a WAI-ARIA grid: the whole table
- * is one Tab stop and the arrow keys move between rows and cells
+ * user. A model with `Karni.column_sets` (experimental) gets a column set
+ * menu that switches between its presets, the choice remembered per user
+ * and table. A MarkdownField's long text is no default column. In the
+ * table layout the rows are a WAI-ARIA grid: the whole table is one Tab
+ * stop and the arrow keys move between rows and cells
  * (`keyboardNavigation="native"` makes every control a Tab stop again).
  *
  * Audit fields (AUDIT_FIELDS: id, created_at, updated_at, created_by,
@@ -37,7 +40,7 @@
  * `rowActions`, `bulkActions`, `filters`, `slots` (every state screen and
  * part), `toolbar` / `empty` / `footer`, `canCreate` / `canEdit` /
  * `canDelete` (over the schema's access rules), `stateStore`, `getRowLabel`,
- * and `className`.
+ * `columnSets` / `columnSet` / `onColumnSetChange`, and `className`.
  */
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import {
@@ -61,15 +64,17 @@ import { cn } from "../../../lib/cn";
 import { registerComponentRole } from "../../../lib/roles";
 import type { KarniQueryValue } from "../../../schema/client";
 import { humanize } from "../../../schema/parse";
-import type { FieldDef } from "../../../schema/types";
+import type { ColumnSetDef, FieldDef } from "../../../schema/types";
 import { useSchema } from "../../../schema/useSchema";
 import { useDelayedFlag, useOnlineStatus } from "../../../states/hooks";
 import { Button } from "../../primitives/button";
 import { isAuditField, partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
+import { FacetPanel } from "../facets/FacetPanel";
 import { evaluateAccess, type AccessIdentity } from "./access";
 import type { BulkAction, BulkOutcome, BulkResult } from "./BulkActionsBar";
 import { CardList } from "./CardList";
+import { ColumnSetMenu } from "./ColumnSetMenu";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { deriveColumns, type ResourceColumn } from "./derive-columns";
 import { ExportButtons } from "./ExportButtons";
@@ -77,6 +82,7 @@ import { FilterBar } from "./FilterBar";
 import { DENSITY_CLASSES } from "./layout";
 import {
   asString,
+  columnSetKey,
   densityKey,
   hiddenColumnsKey,
   parseColumnList,
@@ -164,17 +170,31 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   expand?: readonly string[];
   /** The ordering when the URL names none. */
   initialSorting?: SortingState;
-  /** Sent as `page_size`. Default 25. */
+  /**
+   * Sent as `page_size`. Default: none, so the API's own page size applies
+   * (`REST_FRAMEWORK["PAGE_SIZE"]`, which `KARNI_PAGE_SIZE` sets), and the table
+   * reads the size from the first full page.
+   */
   pageSize?: number;
   /** The page sizes a user can choose. Default `[10, 25, 50, 100]`. `pageSize` is always offered. */
   pageSizeOptions?: readonly number[];
   /**
    * Field names to build the filter bar from. `false` disables it. Default:
-   * (enum/boolean/relation fields) ∩ declared list query params, domain
-   * fields first, audit fields only with `showAuditFields`, cap 4 (D5).
+   * (enum/boolean/relation fields) ∩ declared list query params, lifecycle
+   * (StateField) fields first, then domain fields, audit fields only with
+   * `showAuditFields`, cap 4 (D5).
    * Only enum, boolean and relation fields get controls.
    */
   filters?: readonly string[] | false;
+  /**
+   * Experimental. Facet panels for the resource's taxonomies (`class Karni:
+   * taxonomies`, fields with `x-karni-taxonomy`): `true` for each one, or the
+   * keys to show. Each panel counts the rows per node under the table's other
+   * filters and search, and choosing nodes filters the table to the rows
+   * tagged with them or below them (`?<key>=` and `?<key>_descendants=true`,
+   * kept in the URL like the other filters). Default: none.
+   */
+  facets?: readonly string[] | boolean;
   /**
    * Fixed filters sent with every request and hidden from the filter bar,
    * e.g. `{ event: eventId }` for "the bookings of this event". A user filter
@@ -234,6 +254,16 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   onDensityChange?: (density: ResourceTableDensity) => void;
   /** The "View" menu (density, column visibility). Default true. */
   viewOptions?: boolean;
+  /**
+   * Experimental. Column presets, offered in a column set menu whose choice is
+   * remembered per user and table. Default: the model's `Karni.column_sets`
+   * (`x-karni-column-sets`). `false` offers none (every derived column shows).
+   */
+  columnSets?: false | readonly ColumnSetDef[];
+  /** Experimental. The preset shown, controlled. Uncontrolled, the user's choice, else the default. */
+  columnSet?: string;
+  /** Experimental. Called with the preset the user picks. */
+  onColumnSetChange?: (name: string) => void;
   /** Below this container width (px) rows render as cards. Default 640, and 0 means never. */
   cardBreakpoint?: number;
   /**
@@ -279,6 +309,43 @@ function filterWords(field: FieldDef, value: FilterValue): string {
   if (Array.isArray(value)) return `${value.length} chosen`;
   if (field.kind === "relation") return "1 chosen";
   return String(value);
+}
+
+/** The list parameter that adds the rows tagged below a facet's nodes (`region_descendants`). */
+function descendantsName(field: FieldDef): string {
+  return `${field.taxonomy ?? field.name}_descendants`;
+}
+
+/** The descendants flag of a facet, as a boolean filter the URL state keeps. */
+function descendantsField(field: FieldDef): FieldDef {
+  return {
+    name: descendantsName(field),
+    label: `${field.label} and below`,
+    kind: "boolean",
+    required: false,
+    readOnly: false,
+    writeOnly: false,
+    nullable: false,
+    order: field.order,
+  };
+}
+
+/** A facet's chosen nodes from its filter value (an id list in the URL state). */
+function facetValue(value: FilterValue): Array<string | number> {
+  if (value === null || value === undefined || typeof value === "boolean") return [];
+  const items: ReadonlyArray<string | number | boolean> =
+    typeof value === "object" ? value : [value];
+  return items.filter((id): id is string | number => typeof id !== "boolean");
+}
+
+/** The list's query without the facet's own parameters: each node counts every row it could add. */
+function facetQuery(params: ResourceListParams, field: FieldDef): Record<string, KarniQueryValue> {
+  const own = new Set([field.name, descendantsName(field)]);
+  const query: Record<string, KarniQueryValue> = Object.fromEntries(
+    Object.entries(params.filters ?? {}).filter(([name]) => !own.has(name)),
+  );
+  if (params.search !== undefined) query.search = params.search;
+  return query;
 }
 
 /** The delete question for one row. Its mutation lives here so tables without deletes never create it. */
@@ -357,6 +424,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     pageSize,
     pageSizeOptions,
     filters,
+    facets,
     params,
     exportFormats,
     toolbar,
@@ -379,6 +447,9 @@ export function ResourceTable<T = Record<string, unknown>>(
     defaultDensity = "comfortable",
     onDensityChange,
     viewOptions = true,
+    columnSets: columnSetsProp,
+    columnSet: columnSetProp,
+    onColumnSetChange,
     cardBreakpoint = DEFAULT_CARD_BREAKPOINT,
     keyboardNavigation = "grid",
     className,
@@ -419,22 +490,52 @@ export function ResourceTable<T = Record<string, unknown>>(
     }
     const declared = new Set(schema.operations.list?.queryParams ?? []);
     const { domain, audit } = partitionAuditFields(schema.fields);
-    return [...domain, ...audit]
-      .filter(
-        (field) =>
-          !field.writeOnly &&
-          !pinned.has(field.name) &&
-          (showAuditFields === true || !isAuditField(field)) &&
-          declared.has(field.name) &&
-          (field.kind === "enum" ||
-            field.kind === "boolean" ||
-            (field.kind === "relation" && field.relation !== undefined)),
-      )
-      .slice(0, MAX_DERIVED_FILTERS);
+    const eligible = [...domain, ...audit].filter(
+      (field) =>
+        !field.writeOnly &&
+        !pinned.has(field.name) &&
+        (showAuditFields === true || !isAuditField(field)) &&
+        declared.has(field.name) &&
+        (field.kind === "enum" ||
+          field.kind === "boolean" ||
+          (field.kind === "relation" && field.relation !== undefined)),
+    );
+    // A lifecycle field (a StateField) is the filter staff reach for first:
+    // it leads, and the cap never cuts it.
+    return [
+      ...eligible.filter((field) => field.transitions !== undefined),
+      ...eligible.filter((field) => field.transitions === undefined),
+    ].slice(0, MAX_DERIVED_FILTERS);
   }, [filters, pinned, schema, showAuditFields]);
 
+  // facet panels (experimental): one per taxonomy the table shows
+  const facetFields = React.useMemo<readonly FieldDef[]>(() => {
+    if (facets === undefined || facets === false || schema?.operations.facets === undefined) {
+      return [];
+    }
+    const tagged = schema.fields.filter(
+      (field) => field.taxonomy !== undefined && !pinned.has(field.name),
+    );
+    if (facets === true) return tagged;
+    return facets
+      .map((key) => tagged.find((field) => field.taxonomy === key))
+      .filter((field): field is FieldDef => field !== undefined);
+  }, [facets, pinned, schema]);
+  // The URL keeps the bar's filters, each facet's nodes and its descendants flag.
+  const urlFields = React.useMemo<readonly FieldDef[]>(() => {
+    if (facetFields.length === 0) return filterFields;
+    const names = new Set(filterFields.map((field) => field.name));
+    const extra: FieldDef[] = [];
+    for (const field of facetFields) {
+      if (!names.has(field.name)) extra.push(field);
+      extra.push(descendantsField(field));
+    }
+    return [...filterFields, ...extra];
+  }, [filterFields, facetFields]);
+
   // view state: the URL (or component state with syncUrl={false})
-  const defaultPageSize = pageSize ?? DEFAULT_PAGE_SIZE;
+  // 0 = follow the API: no page_size is sent until `pageSize` or the size menu sets one.
+  const defaultPageSize = pageSize ?? 0;
   const sizesKey = (pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS).join(",");
   const defaultOrdering = sortingToOrdering(initialSorting ?? []) ?? "";
   const defaults = React.useMemo(
@@ -442,7 +543,11 @@ export function ResourceTable<T = Record<string, unknown>>(
       pageSize: defaultPageSize,
       ordering: defaultOrdering,
       pageSizes: [
-        ...new Set([...sizesKey.split(",").map(Number).filter(Number.isFinite), defaultPageSize]),
+        ...new Set(
+          [...sizesKey.split(",").map(Number).filter(Number.isFinite), defaultPageSize].filter(
+            (size) => size > 0,
+          ),
+        ),
       ].sort((a, b) => a - b),
     }),
     [defaultPageSize, defaultOrdering, sizesKey],
@@ -452,7 +557,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     store: stateStore,
     namespace,
     defaults,
-    filterFields,
+    filterFields: urlFields,
   });
   const viewRef = React.useRef(view);
   viewRef.current = view;
@@ -497,6 +602,24 @@ export function ResourceTable<T = Record<string, unknown>>(
     [setView],
   );
 
+  const handleFacetChange = React.useCallback(
+    (field: FieldDef, ids: Array<string | number>) => {
+      intent.current = "results";
+      setView(
+        {
+          filters: {
+            ...viewRef.current.filters,
+            [field.name]: ids.length > 0 ? ids : undefined,
+            [descendantsName(field)]: ids.length > 0 ? true : undefined,
+          },
+          page: 1,
+        },
+        { push: true },
+      );
+    },
+    [setView],
+  );
+
   const clearFilters = React.useCallback(() => {
     intent.current = "results";
     setSearchInput("");
@@ -526,7 +649,7 @@ export function ResourceTable<T = Record<string, unknown>>(
   const listParams = React.useMemo<ResourceListParams>(
     () => ({
       page: view.page,
-      pageSize: view.pageSize,
+      pageSize: view.pageSize > 0 ? view.pageSize : undefined,
       ordering: view.ordering === "" ? undefined : view.ordering,
       search: activeSearch.length > 0 ? activeSearch : undefined,
       filters:
@@ -553,16 +676,24 @@ export function ResourceTable<T = Record<string, unknown>>(
   if (list.data !== undefined) lastLoaded.current = { resource, data: list.data };
   const lastData = lastLoaded.current?.resource === resource ? lastLoaded.current.data : undefined;
 
+  // With no page size asked for, the API's own is the size of a full page (one with a next page).
+  const serverPageSize = React.useRef<number | undefined>(undefined);
+  if (view.pageSize === 0 && lastData?.next != null && lastData.results.length > 0) {
+    serverPageSize.current = lastData.results.length;
+  }
+  const pageSizeNow =
+    view.pageSize > 0 ? view.pageSize : (serverPageSize.current ?? DEFAULT_PAGE_SIZE);
+
   const status = statusOf(list.error);
   const hasError = list.error !== null && list.error !== undefined;
   // D5 page clamp: a 404 past page 1 means the page is gone (fewer rows now).
   const clamping = isNotFoundError(list.error) && view.page > 1;
   React.useEffect(() => {
     if (!clamping) return;
-    const known = lastData !== undefined ? pageCountFor(lastData.count, view.pageSize) : 1;
+    const known = lastData !== undefined ? pageCountFor(lastData.count, pageSizeNow) : 1;
     const target = view.page > known ? known : view.page - 1;
     setView({ page: Math.max(1, target) }, { push: false });
-  }, [clamping, lastData, view.page, view.pageSize, setView]);
+  }, [clamping, lastData, view.page, pageSizeNow, setView]);
 
   const blocking = status === 401 || status === 403;
   const shownData = list.data ?? (hasError && !blocking && !clamping ? lastData : undefined);
@@ -603,6 +734,30 @@ export function ResourceTable<T = Record<string, unknown>>(
     parseColumnList,
     serializeColumnList,
   );
+
+  // column sets (experimental): the presets, the one shown, the user's choice
+  const presets: readonly ColumnSetDef[] =
+    columnSetsProp === false ? [] : (columnSetsProp ?? schema?.columnSets?.sets ?? []);
+  const [storedSet, setStoredSet] = useStoredPreference(
+    columnSetKey(namespace, userId),
+    "",
+    asString,
+    asString,
+  );
+  const fallbackSet = columnSetsProp === undefined ? schema?.columnSets?.default : presets[0]?.name;
+  const activeSet =
+    presets.find((found) => found.name === columnSetProp) ??
+    presets.find((found) => found.name === storedSet) ??
+    presets.find((found) => found.name === fallbackSet) ??
+    presets[0];
+  const changeColumnSet = React.useCallback(
+    (name: string) => {
+      if (columnSetProp === undefined) setStoredSet(name);
+      onColumnSetChange?.(name);
+    },
+    [columnSetProp, setStoredSet, onColumnSetChange],
+  );
+  const onlyColumns = activeSet?.columns;
 
   // permissions: explicit props win over the schema's access rules
   const rowLabel = React.useCallback(
@@ -662,7 +817,13 @@ export function ResourceTable<T = Record<string, unknown>>(
 
   const columnDefs = React.useMemo<Array<ColumnDef<T>>>(() => {
     if (schema === undefined) return [];
-    let defs = deriveColumns<T>({ fields: schema.fields, columns, getRowLabel, showAuditFields });
+    let defs = deriveColumns<T>({
+      fields: schema.fields,
+      columns,
+      getRowLabel,
+      showAuditFields,
+      only: onlyColumns,
+    });
     if (extraColumns !== undefined) defs = [...defs, ...extraColumns];
     if (columnsOverride !== undefined) defs = columnsOverride(defs);
     const leading: Array<ColumnDef<T>> = hasBulkSelect
@@ -686,6 +847,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     columns,
     getRowLabel,
     showAuditFields,
+    onlyColumns,
     extraColumns,
     columnsOverride,
     hasBulkSelect,
@@ -717,7 +879,7 @@ export function ResourceTable<T = Record<string, unknown>>(
 
   const rows = React.useMemo<T[]>(() => shownData?.results ?? [], [shownData]);
   const count = shownData?.count;
-  const pageCount = pageCountFor(count, view.pageSize);
+  const pageCount = pageCountFor(count, pageSizeNow);
 
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [sortTarget, setSortTarget] = React.useState<string | null>(null);
@@ -769,7 +931,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     const total = list.data.count;
     if (kind === "page") {
       setAnnouncement(
-        `Showing page ${view.page.toLocaleString()} of ${pageCountFor(total, view.pageSize).toLocaleString()}.`,
+        `Showing page ${view.page.toLocaleString()} of ${pageCountFor(total, pageSizeNow).toLocaleString()}.`,
       );
     } else {
       setAnnouncement(
@@ -778,7 +940,7 @@ export function ResourceTable<T = Record<string, unknown>>(
           : `${total.toLocaleString()} ${total === 1 ? one : plural} match.`,
       );
     }
-  }, [list.isFetching, list.data, view.page, view.pageSize, plural, one]);
+  }, [list.isFetching, list.data, view.page, pageSizeNow, plural, one]);
 
   const firstSelection = React.useRef(true);
   // A finished bulk action says what it did; its deselection needs no second word.
@@ -909,12 +1071,14 @@ export function ResourceTable<T = Record<string, unknown>>(
   const activeFilters = React.useMemo<ResourceTableActiveFilter[]>(
     () =>
       Object.entries(view.filters).flatMap(([name, value]) => {
-        const field = filterFields.find((candidate) => candidate.name === name);
+        const field =
+          filterFields.find((candidate) => candidate.name === name) ??
+          facetFields.find((candidate) => candidate.name === name);
         return field === undefined
           ? []
           : [{ field: name, label: field.label, value: filterWords(field, value) }];
       }),
-    [view.filters, filterFields],
+    [view.filters, filterFields, facetFields],
   );
 
   // render
@@ -925,7 +1089,7 @@ export function ResourceTable<T = Record<string, unknown>>(
           ? SKELETON_COLUMNS + (hasBulkSelect ? 1 : 0) + (hasActions ? 1 : 0)
           : table.getVisibleLeafColumns().length
       }
-      rowCount={view.pageSize}
+      rowCount={pageSizeNow}
       density={density}
       toolbar={schema === undefined}
       layout={layout}
@@ -1015,7 +1179,7 @@ export function ResourceTable<T = Record<string, unknown>>(
             onSort={onSort}
             onRowClick={onRowClick}
             failures={failures}
-            firstRowIndex={(view.page - 1) * view.pageSize + 1}
+            firstRowIndex={(view.page - 1) * pageSizeNow + 1}
             totalCount={count}
             dimmed={dimmed}
             scrollRef={scrollRef}
@@ -1038,7 +1202,7 @@ export function ResourceTable<T = Record<string, unknown>>(
                 : shownData.next !== null && shownData.next !== undefined
             }
             onPageChange={changePage}
-            pageSize={view.pageSize}
+            pageSize={pageSizeNow}
             pageSizeOptions={defaults.pageSizes}
             onPageSizeChange={changePageSize}
             busy={transitioning}
@@ -1068,6 +1232,7 @@ export function ResourceTable<T = Record<string, unknown>>(
       toolbar !== undefined ||
       exportEnabled ||
       viewOptions ||
+      presets.length > 0 ||
       createAllowed);
 
   const liveText = slow ? `Loading ${plural}…` : announcement;
@@ -1089,6 +1254,9 @@ export function ResourceTable<T = Record<string, unknown>>(
             className="min-w-64 flex-1"
           />
           <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {presets.length > 0 && activeSet !== undefined && (
+              <ColumnSetMenu sets={presets} value={activeSet.name} onChange={changeColumnSet} />
+            )}
             {viewOptions && (
               <ViewOptionsMenu
                 density={density}
@@ -1114,6 +1282,21 @@ export function ResourceTable<T = Record<string, unknown>>(
               </Button>
             )}
           </div>
+        </div>
+      )}
+      {facetFields.length > 0 && schema !== undefined && !blocking && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {facetFields.map((field) => (
+            <FacetPanel
+              key={field.name}
+              resource={resource}
+              taxonomy={field.taxonomy ?? field.name}
+              label={field.label}
+              value={facetValue(view.filters[field.name])}
+              onChange={(ids) => handleFacetChange(field, ids)}
+              query={facetQuery(listParams, field)}
+            />
+          ))}
         </div>
       )}
       {!online && shownData !== undefined && (

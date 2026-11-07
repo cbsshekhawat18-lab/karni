@@ -102,6 +102,15 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args: Any, **options: Any) -> None:
+        from django.conf import settings
+
+        alias = options["database"]
+        if alias not in settings.DATABASES:
+            raise KarniCommandError(
+                f"No database {alias!r}. The project's DATABASES define: "
+                f"{', '.join(sorted(settings.DATABASES))}. Pass one of them to --database.",
+                code="E260",
+            )
         chosen = _resolve(list(options["labels"]))
         reports = describe_all(chosen, using=options["database"], introspect=not options["no_db"])
         if options["json"]:

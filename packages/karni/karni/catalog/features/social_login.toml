@@ -1,0 +1,27 @@
+# Sign-in with an ID token (Google, Microsoft, Apple): a built-in feature of karni.
+name = "social_login"
+kind = "feature"
+title = "Sign-in with Google, Microsoft or Apple"
+purpose = "Sign-in with an ID token from Google, Microsoft or Apple, web and mobile."
+status = "experimental"
+use_when = ["sign in with Google", "sign in with Microsoft", "sign in with Apple", "social login", "SSO"]
+services = ["a client id from each provider (in settings or .env)"]
+switch = "KARNI_SOCIAL_TOKEN_PROVIDERS"
+extra = "karni[social-token]"
+docs = "docs/accounts.md#sign-in-with-an-id-token-google-microsoft-apple"
+
+[provides]
+models = ["SocialIdentity"]
+endpoints = ["/api/auth/social/<provider>/"]
+settings = { KARNI_SOCIAL_TOKEN_PROVIDERS = "object", KARNI_SOCIAL_TOKEN_SIGNUP = ["string", "null"], KARNI_SOCIAL_TOKEN_LINK_VERIFIED = "boolean", KARNI_SOCIAL_TOKEN_LEEWAY = "integer", KARNI_SOCIAL_TOKEN_JWKS_TTL = "integer", KARNI_SOCIAL_TOKEN_JWKS_FETCHER = "string" }
+
+[[asks]]
+question = "Which providers: Google, Microsoft, Apple?"
+setting = "KARNI_SOCIAL_TOKEN_PROVIDERS"
+options = ["google", "microsoft", "apple"]
+multiple = true
+
+[[asks]]
+question = "May someone without an account sign up this way, need approval, or only existing accounts sign in?"
+setting = "KARNI_SOCIAL_TOKEN_SIGNUP"
+options = ["open", "approval", "existing"]

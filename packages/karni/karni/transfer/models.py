@@ -22,6 +22,8 @@ class ImportJob(BaseModel):
     ignores a column), ``result`` and ``problems`` are what the last run
     found, ``batch_id`` is the ``karni.audit`` batch a commit wrote.
     ``created_by`` (from ``BaseModel``) is the person importing.
+    ``match_ids`` and ``keep_ids`` (experimental) are the run's id options
+    (:class:`karni.transfer.imports.Importer`).
     """
 
     class Status(models.TextChoices):
@@ -45,6 +47,12 @@ class ImportJob(BaseModel):
     problems = models.JSONField(default=list, blank=True)
     error = models.TextField(blank=True, default="")
     batch_id = models.BigIntegerField(null=True, blank=True)
+    match_ids = models.BooleanField(
+        default=False, help_text="Match existing rows by the file's id column."
+    )
+    keep_ids = models.BooleanField(
+        default=False, help_text="Create rows with the ids the file gives."
+    )
 
     class Meta(BaseModel.Meta):
         ordering: ClassVar[list[str]] = ["-created_at"]
@@ -69,6 +77,8 @@ class ImportJob(BaseModel):
             "problems",
             "error",
             "batch_id",
+            "match_ids",
+            "keep_ids",
         ]
 
     def __str__(self) -> str:

@@ -1,6 +1,6 @@
 """CI-only settings overlay: run a package's test suite against PostgreSQL.
 
-Every suite that runs here (``packages/karni`` and the three modules in
+Every suite that runs here (``packages/karni`` and the modules in
 ``modules/``) pins sqlite in-memory in its own ``tests/settings.py`` and does
 not read ``DATABASE_URL``, so the Postgres CI job layers this module on top
 instead. It imports whichever ``tests.settings`` the working directory
@@ -11,7 +11,7 @@ provides, so the same overlay serves every suite:
         python -m pytest --ds=karni_postgres_settings --no-migrations
 
 ``--no-migrations`` is required: ``tests.testapp`` (in packages/karni,
-karni-approvals and karni-impersonation) is an unmigrated app with a
+karni-approvals, karni-impersonation and karni-reports) is an unmigrated app with a
 ForeignKey to the (migrated) user model, which Django only tolerates on
 sqlite. The test database also needs the ``pg_trgm`` extension (the Postgres
 search provider calls ``similarity()``); CI installs it into ``template1``,
@@ -39,6 +39,16 @@ if template := os.environ.get("KARNI_TEST_DB_TEMPLATE"):
     _db["TEST"] = {"TEMPLATE": template}
 
 DATABASES = {"default": _db}
+# Every other alias the suite's settings define (packages/karni's "second", for the
+# external tables suite) gets a database of its own on the same server, named
+# after the default one: karni plus _second.
+for _alias in _suite_settings.DATABASES:
+    if _alias != "default":
+        DATABASES[_alias] = {
+            **_db,
+            "NAME": f"{_db['NAME']}_{_alias}",
+            "TEST": {**_db.get("TEST", {})},
+        }
 
 # The project root karni infers is the parent of the settings package — for
 # this overlay that is .github/, where no test app lives (the seeding and

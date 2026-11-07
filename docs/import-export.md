@@ -45,8 +45,10 @@ Importing is four steps, and the third is not optional:
 2. **Map** columns to fields. The mapping is suggested from the headers (by
    field name or label, case and punctuation aside) and **remembered per
    model per user**, so the second import of the same spreadsheet is one
-   click. Only fields the role may write are offered. A mapping to anything
-   else is refused (`E801`).
+   click. A column the remembered mapping does not name is still suggested
+   by its header, a to-many column such as `tags` too, and a column the
+   user left out last time stays out. Only fields the role may write are
+   offered. A mapping to anything else is refused (`E801`).
 3. **Preview** (`POST …/import/<job>/preview/` with `{"mapping": …}`). This is
    the mandatory dry run. Every row goes through the resource's generated
    serializer, exactly as a `POST` would: types, choices, relation lookup by
@@ -70,10 +72,47 @@ questions before they are asked.
 
 A row is an **update** when its key column matches an existing row the user
 may change, else a **create**. The key is `Karni.import_key`, else the
-model's natural key, else the `id` column when the file has one (an export
-re-imports as updates). Blank cells leave a field unchanged (or at its
-default on create). Rows whose update changes nothing count as *unchanged*
-and are skipped.
+model's [natural key](#natural-keys). The `id` column matches existing rows
+only when the import asks for it (see [ids](#ids)), so an export of a model
+with a natural key re-imports as updates and one without creates new rows
+unless you turn `match_ids` on. Blank cells leave a field unchanged (or at
+its default on create). Rows whose update changes nothing count as
+*unchanged* and are skipped.
+
+### Ids
+
+!!! warning "Experimental"
+    The `match_ids` and `keep_ids` options are
+    [experimental](stability.md#experimental-names).
+
+An import has two id options, both off by default. Send them with the
+preview (`POST …/import/<job>/preview/` with `{"mapping": …, "match_ids":
+true}`) or tick them on the admin's map step. The job remembers them for the
+commit, and changing one sends the job back to the preview.
+
+- **`match_ids`**: a row whose key is blank or matches nothing is matched to
+  an existing row by its `id` column. Off, the `id` column never matches, so
+  a file exported from one environment (staging) cannot update unrelated
+  rows that happen to have the same ids in another (production). A model
+  without a natural key needs it to re-import an export as updates.
+- **`keep_ids`**: a created row keeps the id its row gives, for legacy data
+  whose ids other systems already use. Afterwards the database sequence
+  moves past the largest id (PostgreSQL's `setval`; SQLite needs nothing),
+  so the next row created without an id gets a fresh one. Only a role that
+  may create rows anywhere may keep ids: inserting a chosen id fails when any
+  row has it, which would tell a scoped user which ids exist outside their
+  scope (`E801` otherwise).
+
+With `match_ids`, an id that matches nothing in your write scope is refused,
+whether the row does not exist or belongs to someone else. The message is
+the same "not found or not in your scope" for both, and for a natural key
+held by a row outside your scope, so a preview never confirms that a row
+exists. Leave the id empty to create the row with a new id, or turn
+`keep_ids` on as well to create it with that id.
+
+`karni load` always matches rows by their key and, for a model keyed by its
+id, creates them with the ids the file gives, then moves the sequence on
+([loading content](content-loading.md)).
 
 ### Small and large files
 
@@ -94,12 +133,12 @@ same file.
   inside that predicate's scope. A branch manager cannot import rows into
   another branch. Updating needs the `write` gate, and the existing row is
   looked up through the write scope. So a row that exists elsewhere is "not
-  in your scope", never silently overwritten.
+  found or not in your scope", never silently overwritten.
 - **Fields** the role may not write are not importable. The serializer
   refuses them and names the roles that may ([field visibility](api.md#field-visibility)).
-- **Relations** are resolved by natural key (or id) among the rows the user
-  may read. An unreadable target reads as "no venue with name 'X' (or it is
-  not visible to you)".
+- **Relations** are resolved among the rows the user may read: by the
+  target's natural key when it has one, else by its id. An unreadable target
+  reads as "no venue with name 'X' (or it is not visible to you)".
 - **Owner fields** (`Owned("organizer")`, `Karni.owner_field` under
   `Granted()`) are stamped from the importer, never read from the file.
 
@@ -109,6 +148,19 @@ same file.
 of a model. It is what exports write for a relation and what imports look
 up. If it is not declared, it is the model's first unique slug/char/email field
 (`slug`, `email`). A model with neither uses its primary key.
+
+A natural key is one field, written as a string. A cell of a file carries one
+value, so a key of several fields has no form there: `natural_key = ["name"]`
+fails `karni check` with [`E291`](errors.md#e291), which names the string
+form, and so does a field the model does not have. The same holds for
+`import_key`. For a row that only several fields name together, add one
+unique field that names it (a `SlugField` built from them).
+
+A relation cell is matched against the natural key alone, never also
+against the primary key. A numeric natural key (a year, a part number such
+as `2024`) is therefore never read as an id: on [integer keys](models.md#choosing-the-key-type)
+part number `"7"` and the part with id 7 are different rows. To let a
+column carry ids instead, say so: `import_lookup = {"part": "id"}`.
 
 ### Hooks
 
@@ -139,6 +191,14 @@ Celery task share `karni.transfer.services`
 (`create_job`, `set_mapping`, `start_stage`, `run_stage`, `job_state`).
 `karni.transfer.exports.export_response` and
 `karni.transfer.template.template_response` are the downloads.
+
+### Content files
+
+An upload is for a person bringing a spreadsheet. A project's own content
+(the copy, images and children a site is made of) lives in a JSON or YAML
+file in the repository instead, and `karni load` loads it with the same row
+logic: the same keys, natural-key relations, serializer and hooks. See
+[Loading content](content-loading.md).
 
 ## In the admin
 

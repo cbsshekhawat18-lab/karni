@@ -145,7 +145,7 @@ def test_anonymous_retrieve_is_allowed() -> None:
         APIRequestFactory().get("/"), pk=str(event.pk)
     )
     assert response.status_code == 200
-    assert response.data["id"] == str(event.pk)
+    assert str(response.data["id"]) == str(event.pk)
 
 
 def test_anonymous_create_is_rejected() -> None:
@@ -205,7 +205,7 @@ def test_filter_queryset_for_user_hook_scopes_the_queryset(user: Any) -> None:
     request = _authed(APIRequestFactory().get("/"), user)
     response = _PublicOnlyViewSet.as_view({"get": "list"})(request)
     assert response.status_code == 200
-    assert {row["id"] for row in response.data["results"]} == {str(visible.pk)}
+    assert {str(row["id"]) for row in response.data["results"]} == {str(visible.pk)}
 
 
 def test_filter_queryset_for_user_runs_after_the_read_scope(user: Any) -> None:
@@ -223,7 +223,7 @@ def test_filter_queryset_for_user_runs_after_the_read_scope(user: Any) -> None:
     assert anonymous.status_code in (401, 403)  # the gate runs before any row hook
     request = _authed(APIRequestFactory().get("/"), user)
     response = _OwnPublicViewSet.as_view({"get": "list"})(request)
-    assert [row["id"] for row in response.data["results"]] == [str(shown.pk)]
+    assert [str(row["id"]) for row in response.data["results"]] == [str(shown.pk)]
 
 
 def test_public_predicate_is_the_explicit_public_form() -> None:

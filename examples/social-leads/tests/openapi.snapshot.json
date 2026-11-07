@@ -705,6 +705,112 @@
         ],
         "type": "object"
       },
+      "GlobalSearchError": {
+        "description": "Experimental. A refused request: E431 and the resources search covers.",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "resources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "detail",
+          "resources"
+        ],
+        "type": "object"
+      },
+      "GlobalSearchGroup": {
+        "description": "Experimental. The hits of one resource, best first.",
+        "properties": {
+          "hits": {
+            "items": {
+              "$ref": "#/components/schemas/GlobalSearchHit"
+            },
+            "type": "array"
+          },
+          "label": {
+            "description": "The model's plural name, for a heading.",
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "hits",
+          "label",
+          "resource"
+        ],
+        "type": "object"
+      },
+      "GlobalSearchHit": {
+        "description": "Experimental. One hit: a row of one resource, ready to link to its page.",
+        "properties": {
+          "id": {
+            "description": "The row's primary key: its page is /<resource>/<id>.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "resource": {
+            "description": "The resource (router prefix) of the row.",
+            "type": "string"
+          },
+          "score": {
+            "description": "Higher is better, the model's weight included.",
+            "format": "double",
+            "type": "number"
+          },
+          "subtitle": {
+            "nullable": true,
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "resource",
+          "score",
+          "subtitle",
+          "title"
+        ],
+        "type": "object"
+      },
+      "GlobalSearchResult": {
+        "description": "Experimental. The answer of GET /api/search/: groups ordered by their best hit.",
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/GlobalSearchGroup"
+            },
+            "type": "array"
+          },
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "groups",
+          "query"
+        ],
+        "type": "object"
+      },
       "ImportColumn": {
         "properties": {
           "choices": {
@@ -833,11 +939,17 @@
           "id": {
             "type": "string"
           },
+          "keep_ids": {
+            "type": "boolean"
+          },
           "mapping": {
             "additionalProperties": {
               "type": "string"
             },
             "type": "object"
+          },
+          "match_ids": {
+            "type": "boolean"
           },
           "model": {
             "nullable": true,
@@ -874,7 +986,9 @@
           "file_name",
           "format",
           "id",
+          "keep_ids",
           "mapping",
+          "match_ids",
           "model",
           "problems",
           "result",
@@ -885,13 +999,19 @@
         "type": "object"
       },
       "ImportMappingRequest": {
-        "description": "``POST \u2026/import/<job>/preview/``: header \u2192 field (``\"\"`` ignores a column).",
+        "description": "``POST \u2026/import/<job>/preview/``: header \u2192 field (``\"\"`` ignores a column), id options.\n\n``match_ids`` matches existing rows by the file's id column and\n``keep_ids`` creates rows with the file's ids. Both are off unless sent,\nand a value sent is kept for the job's commit.",
         "properties": {
+          "keep_ids": {
+            "type": "boolean"
+          },
           "mapping": {
             "additionalProperties": {
               "type": "string"
             },
             "type": "object"
+          },
+          "match_ids": {
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -1650,7 +1770,7 @@
     }
   },
   "info": {
-    "title": "social_leads API",
+    "title": "social-leads API",
     "version": "0.1.0"
   },
   "openapi": "3.0.3",
@@ -2574,6 +2694,16 @@
             "crm.contact:view"
           ]
         },
+        "x-karni-related": [
+          {
+            "field": "contact",
+            "key": "id",
+            "label": "Leads",
+            "name": "lead_set",
+            "param": "contact",
+            "resource": "leads"
+          }
+        ],
         "x-karni-resource": "contacts"
       },
       "post": {
@@ -2941,7 +3071,7 @@
     },
     "/api/contacts/import/{job}/preview/": {
       "post": {
-        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\n``\"match_ids\": true`` matches existing rows by the file's id column, and\n``\"keep_ids\": true`` creates rows with the file's ids (both off by default).\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
         "operationId": "contacts_import_preview_create",
         "parameters": [
           {
@@ -3780,7 +3910,7 @@
     },
     "/api/lead-activities/import/{job}/preview/": {
       "post": {
-        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\n``\"match_ids\": true`` matches existing rows by the file's id column, and\n``\"keep_ids\": true`` creates rows with the file's ids (both off by default).\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
         "operationId": "lead_activities_import_preview_create",
         "parameters": [
           {
@@ -4529,6 +4659,16 @@
             "crm.lead:view"
           ]
         },
+        "x-karni-related": [
+          {
+            "field": "lead",
+            "key": "id",
+            "label": "Lead activities",
+            "name": "activities",
+            "param": "lead",
+            "resource": "lead-activities"
+          }
+        ],
         "x-karni-resource": "leads"
       },
       "post": {
@@ -4950,7 +5090,7 @@
     },
     "/api/leads/import/{job}/preview/": {
       "post": {
-        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\n``\"match_ids\": true`` matches existing rows by the file's id column, and\n``\"keep_ids\": true`` creates rows with the file's ids (both off by default).\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
         "operationId": "leads_import_preview_create",
         "parameters": [
           {
@@ -6134,6 +6274,80 @@
         }
       }
     },
+    "/api/search/": {
+      "get": {
+        "description": "Experimental. Search every model that declares class Karni: search, each through its list endpoint's access for this request. Results are grouped per resource, best first.",
+        "operationId": "global_search",
+        "parameters": [
+          {
+            "description": "Hits per resource (KARNI_GLOBAL_SEARCH_LIMIT, at most KARNI_GLOBAL_SEARCH_MAX_LIMIT).",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma-separated resources to search (default: every one search covers).",
+            "explode": false,
+            "in": "query",
+            "name": "models",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "The query. Shorter than KARNI_GLOBAL_SEARCH_MIN_LENGTH (2) answers no groups.",
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSearchResult"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSearchError"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "search"
+        ],
+        "x-karni-search": {
+          "resources": []
+        }
+      }
+    },
     "/api/workspaces/": {
       "get": {
         "description": "Model-driven ``ModelViewSet``: declare ``model`` and ``access``, get a full API.\n\nDeclarative attributes (see the module docstring for the escape\nhatches):\n\n* ``model`` \u2014 required unless ``queryset`` is set (or ``get_queryset``\n  overridden).\n* ``access`` \u2014 required: ``Granted()`` (the roles' grants for this model\n  and the current action, row-scoped; shorthand for ``Access(read=Granted(),\n  write=Granted())``), ``Access(read=..., write=..., create=...)`` or\n  ``Unscoped(reason=...)``. Without it every request is denied with a 403\n  naming the fix.\n* ``scope_exempt`` \u2014 ``True`` (with ``scope_exempt_reason``) keeps the\n  gate and shows every row it admits; ``karni check`` lists each one.\n* ``serializer_class`` \u2014 explicit serializer; ``None`` generates one via\n  :func:`karni.api.serializers.build_serializer`.\n* ``queryset`` \u2014 explicit base queryset; ``None`` uses\n  ``model._default_manager.all()``.\n* ``expand_depth`` \u2014 ``0`` defers to ``KARNI_API_MAX_EXPAND_DEPTH``; a\n  positive value overrides the expansion depth limit for this viewset.\n* ``expandable_fields`` \u2014 mapping of expand key \u2192 model relation name;\n  ``None`` allows every forward FK/O2O/M2M under its own name.\n* ``auto_register`` \u2014 ``False`` hides the viewset from router\n  autodiscovery.\n* ``route`` \u2014 router prefix; ``None`` derives the kebab-cased plural of\n  the model name.\n* ``search_fields`` \u2014 fields searched by ``?search=`` through the\n  configured search provider.\n\n* ``select_related`` / ``prefetch_related`` \u2014 query hints merged into\n  the optimiser's derived lookups; ``optimize = False`` keeps only them.\n* ``query_budget`` \u2014 ``Budget(list=25, reason=...)``; ``None`` uses\n  ``KARNI_QUERY_BUDGET``.\n* ``pagination`` \u2014 ``Unpaginated(max_rows=N, reason=...)`` to return\n  plain (still bounded) lists; ``None`` keeps ``pagination_class``.\n* ``cache`` \u2014 ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;\n  ``None`` follows ``KARNI_API_CACHE``.\n\nThe read pipeline is fixed (ADR 0001 \u00a74): the model's default manager\n(model-level scopes such as soft delete) \u2192 ``queryset`` / an overridden\n``get_queryset`` \u2192 the ``access.read`` row filter \u2192\n``filter_queryset_for_user`` \u2192 the optimiser (``list``/``retrieve``:\nlookups derived from the serializer, each prefetch through its target's\nread scope) \u2192 filter backends \u2192 pagination. No access predicate can lift\na model-level scope.\n\nPagination always applies (a :class:`karni.pagination.KarniPagination`;\n``pagination_class = None`` without ``Unpaginated`` is a class-definition\nerror), and every request is counted against its query budget unless\n``KARNI_QUERY_BUDGET_MODE`` is ``\"off\"``. Throttling comes from the DRF\ndefaults that ``karni.conf`` configures.\n``REST_FRAMEWORK[\"DEFAULT_PERMISSION_CLASSES\"]`` does **not** apply to a\nviewset with an ``Access`` declaration \u2014 the declaration is\nthe gate; only ``Unscoped`` viewsets fall back to it. The filter backends\nare pinned on the class so they keep working even when a project\nreplaces the DRF defaults.",
@@ -6289,6 +6503,24 @@
             "crm.workspace:view"
           ]
         },
+        "x-karni-related": [
+          {
+            "field": "workspace",
+            "key": "id",
+            "label": "Contacts",
+            "name": "contact_set",
+            "param": "workspace",
+            "resource": "contacts"
+          },
+          {
+            "field": "workspace",
+            "key": "id",
+            "label": "Leads",
+            "name": "lead_set",
+            "param": "workspace",
+            "resource": "leads"
+          }
+        ],
         "x-karni-resource": "workspaces"
       },
       "post": {
@@ -6656,7 +6888,7 @@
     },
     "/api/workspaces/import/{job}/preview/": {
       "post": {
-        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\n``\"match_ids\": true`` matches existing rows by the file's id column, and\n``\"keep_ids\": true`` creates rows with the file's ids (both off by default).\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
         "operationId": "workspaces_import_preview_create",
         "parameters": [
           {
@@ -6954,5 +7186,5 @@
       }
     }
   },
-  "x-karni-auth-mode": "jwt"
+  "x-karni-auth-mode": "session"
 }

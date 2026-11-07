@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json
+version: 1
+app:
+  name: Shop
+  kind: app
+  recipe: shop
+modules:
+  payments: {provider: stripe, currency: usd}
+features:
+  email_code_login: true
+  terms: {version: "2026-01", url: /terms/, required: true}
+roles:
+  staff: {name: Staff, system: true, grants: {"*": all}}
+  customer:
+    name: Customer
+    default: true
+    grants:
+      shop.cart: own
+      shop.cartitem: own
+      shop.order: own
+      shop.orderitem: own
+apps:
+  shop:
+    entities:
+      Category:
+        fields: {name: "str:120", slug: "slug:name"}
+        key: slug
+        search: [name]
+        order: name
+        access: {read: public, write: "role:staff"}
+      Product:
+        fields:
+          category: fk:Category
+          name: "str:200"
+          slug: "slug:name"
+          description: "text?"
+          price: "money:USD"
+          stock: int
+          active: bool
+        key: slug
+        search: [name, description]
+        order: name
+        access: {read: public, write: "role:staff"}
+      Cart:
+        fields: {customer: fk:User}
+        owner: customer
+        access: {read: "owned:customer", write: "owned:customer"}
+      CartItem:
+        fields: {cart: fk:Cart, product: fk:Product, quantity: int}
+        owner: cart__customer
+        access: {read: "owned:cart__customer", write: "owned:cart__customer"}
+      Order:
+        fields:
+          customer: fk:User
+          status: "state:pending>paid|pending>cancelled|paid>shipped|paid>refunded|shipped>delivered|delivered>refunded"
+          total: "money:USD"
+          payment: "fk:karni_payments.Payment?"
+        owner: customer
+        audit: [status]
+        order: -created_at
+        access: {read: ["owned:customer", "role:staff"], write: "role:staff"}
+      OrderItem:
+        fields: {order: fk:Order, product: fk:Product, quantity: int, unit_price: "money:USD"}
+        owner: order__customer
+        access: {read: ["owned:order__customer", "role:staff"], write: "role:staff"}
+pages:
+  - home: dashboard
+  - Product: [list, detail, form]
+  - Category: [list, form]
+  - Order: [list, detail]
+  - Cart: [detail]
+seed: {Category: 5, Product: 40, Cart: 10, CartItem: 30, Order: 30, OrderItem: 80}

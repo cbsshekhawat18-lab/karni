@@ -1,0 +1,4 @@
+{% extends "seo/base.html" %}{% load karni_site %}
+{% block title %}Projects{% endblock %}
+{% block description %}What we baked for weddings and markets.{% endblock %}
+{% block content %}<ul>{% for project in projects %}<li><a href="{{ project.get_absolute_url }}">{% image project.photo width=400 alt=project.title class="card" %}{{ project.title }}</a></li>{% endfor %}</ul>{% endblock %}

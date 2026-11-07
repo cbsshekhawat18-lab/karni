@@ -1,13 +1,13 @@
 site_name: Karni
-site_description: "Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
+site_description: "Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
 site_url: https://cbsshekhawat18-lab.github.io/karni/
 repo_url: https://github.com/cbsshekhawat18-lab/karni
 repo_name: cbsshekhawat18-lab/karni
 edit_uri: edit/main/docs/
 docs_dir: docs
 strict: true
-# docs/seo/ holds the findability notes (questions, off-site plan, drafts):
-# kept in the repository, not published as documentation.
+# docs/seo/ holds Karni's canonical description (description.txt, read by
+# scripts/check_description.py): kept in the repository, not published.
 exclude_docs: |
   seo/
 hooks:
@@ -16,8 +16,15 @@ hooks:
 theme:
   name: material
   custom_dir: docs/overrides
-  logo: assets/brand/karni-mark-mono.svg
+  # The look of the Karni page on gigaikripaservices.com: a black ground, one
+  # orange accent (#FB5D08), Jost for headings, Inter for text, JetBrains Mono
+  # for code. That page is dark only, so this site is too. The colours,
+  # header, buttons and cards are in docs/stylesheets/karni.css.
+  logo: assets/brand/karni-mark.svg
   favicon: assets/brand/favicon.svg
+  font:
+    text: Inter
+    code: JetBrains Mono
   features:
     - navigation.sections
     - navigation.top
@@ -25,22 +32,18 @@ theme:
     - content.code.copy
     - content.code.annotate
     - search.suggest
+    - search.highlight
     - toc.follow
   palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: deep orange
-      accent: deep orange
-      toggle:
-        icon: material/weather-night
-        name: Dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: deep orange
-      accent: deep orange
-      toggle:
-        icon: material/weather-sunny
-        name: Light mode
+    scheme: slate
+    primary: custom
+    accent: custom
+
+extra_css:
+  - stylesheets/karni.css
+
+extra_javascript:
+  - javascripts/a11y.js
 
 markdown_extensions:
   - admonition
@@ -51,19 +54,25 @@ markdown_extensions:
       permalink: true
   - pymdownx.highlight:
       anchor_linenums: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.details
   - pymdownx.tabbed:
       alternate_style: true
 
 nav:
   - Home: index.md
+  - Features: features.md
   - Start here:
       - Quickstart: quickstart.md
       - "Tutorial: build EventHub": tutorial.md
       - Building with an AI agent: guide/with-ai.md
       - Building without one: guide/without-ai.md
       - Adding an entity end to end: adding-an-entity.md
+      - Deploying to a server: deploy.md
   - FAQ: faq.md
   - Compare:
       - Overview: compare/index.md
@@ -77,21 +86,43 @@ nav:
       - Typed fields: fields.md
       - Lifecycle and capacity: lifecycle-and-capacity.md
       - API: api.md
+      - Aggregations: aggregations.md
+      - Search across models: global-search.md
       - Accounts: accounts.md
       - Admin: admin.md
+      - Navigation from data: navigation.md
       - Change history: change-history.md
       - Import and export: import-export.md
+      - Loading content: content-loading.md
       - Events and listeners: events.md
       - Scheduling: scheduling.md
       - Testing: testing.md
       - Seeding: seeding.md
+      - Large projects: large-projects.md
       - Settings: settings.md
       - "@karni/ui": ui.md
       - Theming (karni ui detect): theming.md
+      - Public server-rendered pages: public-site.md
+      - From a design to content: design-content.md
       - The karni command: cli.md
       - Error codes: errors.md
       - Enforcement: enforcement.md
       - Modules: modules.md
+      - "Saved charts (karni-charts)": charts.md
+      - Reports (PDF): reports.md
+      - "AI extraction (karni-ai)": ai-extraction.md
+      - Protected files (S3): storage.md
+      - "App spec (karni.yaml)": app-spec.md
+      - Recipes:
+          - All recipes: recipes/index.md
+          - Online shop: recipes/shop.md
+          - Booking: recipes/booking.md
+          - CRM: recipes/crm.md
+          - Online courses: recipes/lms.md
+          - Marketplace: recipes/marketplace.md
+          - Data portal: recipes/data-portal.md
+  - Benchmarks:
+      - Token benchmark: benchmarks/tokens.md
   - Debugging:
       - Request ids and capture: debugging/capture.md
       - Trace, replay and failure briefs: debugging/trace-and-replay.md
@@ -109,6 +140,7 @@ nav:
   - Karni for AI agents: agents.md
   - Upgrading:
       - Stability promise: stability.md
+      - Migrating to 0.5: migrations/0.5.md
       - Migrating to 0.4: migrations/0.4.md
       - Migrating to 0.3: migrations/0.3.md
       - Migrating to 0.2: migrations/0.2.md
@@ -118,5 +150,8 @@ nav:
       - Contributing: contributing.md
       - Launch registrations: launch-registrations.md
       - Launch checklist: launch-checklist.md
+      - "Roadmap: large apps": roadmap/large-apps.md
+      - "Friction log: Medintel": friction/medintel.md
+      - "Roadmap: app builder": roadmap/app-builder.md
       - Findability research: seo-research.md
       - Security: security.md

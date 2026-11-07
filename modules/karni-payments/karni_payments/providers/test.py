@@ -99,12 +99,18 @@ class TestProvider(PaymentProvider):
 
     def map_event(self, event_id: str, event_type: str, payload: dict[str, Any]) -> ParsedEvent:
         """Map a test event: ``status`` is carried literally in the payload."""
-        raw_status = payload.get("status")
+        # A status outside the vocabulary is an event this provider does not
+        # map: status=None, which the webhook records as processed with a note
+        # (the contract in ParsedEventStatus), never an error the sender retries.
+        try:
+            status = ParsedEventStatus(str(payload["status"])) if payload.get("status") else None
+        except ValueError:
+            status = None
         return ParsedEvent(
             event_id=event_id,
             event_type=event_type,
             provider_payment_id=payload.get("payment_id"),
             checkout_session_id=payload.get("checkout_session_id"),
-            status=ParsedEventStatus(raw_status) if raw_status else None,
+            status=status,
             raw=payload,
         )

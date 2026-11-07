@@ -61,6 +61,26 @@ PREFIXES = {
         "Safe 'log in as user' for Karni support staff: an explicit permission, no "
         "privilege escalation, a banner, a time limit, both identities in the audit trail."
     ),
+    "modules/karni-site/pyproject.toml": (
+        "Public websites for Karni: every text, image and menu editable in the admin, "
+        "public forms, redirects, and error pages that cannot fail."
+    ),
+    "modules/karni-charts/pyproject.toml": (
+        "Saved charts for Karni: charts defined and previewed in the admin, served through each "
+        "resource's aggregate action under its access."
+    ),
+    "modules/karni-reports/pyproject.toml": (
+        "Reports for Karni: a row printed to PDF from an HTML template in the background, "
+        "cached by template and data, served only to users who may see the row."
+    ),
+    "modules/karni-ai/pyproject.toml": (
+        "Structured extraction for Karni: rows for any resource read from text, a web page "
+        "or a PDF by a language model, always through the import preview."
+    ),
+    "modules/karni-storage/pyproject.toml": (
+        "Protected files for Karni: files a row owns, in S3 or an S3-compatible service, "
+        "served only to whoever may read that row, with direct uploads and thumbnails."
+    ),
     "packages/karni-ui/package.json": (
         "React components for Karni: schema-driven tables, forms, detail views and auth."
     ),
@@ -72,6 +92,20 @@ PREFIXES = {
     ),
     "modules/karni-impersonation/ui/package.json": (
         "React components for the Karni impersonation module: ImpersonationBanner and its hook."
+    ),
+    "modules/karni-charts/ui/package.json": (
+        "React components for the Karni charts module: SavedChart and its hook."
+    ),
+    "modules/karni-reports/ui/package.json": (
+        "React components for the Karni reports module: ReportButton and its useReport hook."
+    ),
+    "modules/karni-ai/ui/package.json": (
+        "React components for the Karni AI extraction module: ExtractButton and the useExtract "
+        "hook."
+    ),
+    "modules/karni-storage/ui/package.json": (
+        "React components for the Karni storage module: protected uploads straight to the "
+        "bucket, download links and images."
     ),
 }
 

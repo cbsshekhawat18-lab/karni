@@ -1,8 +1,10 @@
 # karni-payments
 
-Payments module for [Karni](https://github.com/cbsshekhawat18-lab/karni): hosted checkout, refunds and
-webhook-driven payment state for **Stripe** (Checkout Sessions) and
-**Razorpay** (Payment Links), plus an in-memory **test provider**.
+Payments for Karni: hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI.
+
+[![PyPI](https://img.shields.io/pypi/v/karni-payments)](https://pypi.org/project/karni-payments/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/modules/#modules-in-this-repository)
+
+Stripe works through Checkout Sessions and Razorpay through Payment Links. An in-memory test provider runs in CI with no account.
 
 ```bash
 karni add payments        # wires dependency + INSTALLED_APPS + agent guidance
@@ -24,6 +26,9 @@ then `make migrate`. Register `https://<host>/payments/webhook/stripe/` (or
 - **Models** (all on `karni.models.BaseModel`): `Payment`, `Refund`,
   `WebhookEvent` (the `(provider, event_id)` dedupe record). The admin is
   derived through `AdminMeta`, with no `admin.py`.
+- **Role**: `payments-admin` is declared by the module (the `karni.roles` entry
+  point), so `karni migrate` creates it and a project writes nothing in
+  `KARNI_ROLES`. Give a person the role to let them refund.
 - **API** (auto-routed, authenticated only):
   - `GET /api/payments/`: owner-scoped. The `payments-admin` role sees all.
   - `POST /api/payments/checkout/`: create a pending payment + provider
@@ -91,3 +96,13 @@ ruff check . && ruff format --check .
 
 This module is also the reference implementation of the Karni module
 contract. See `docs/modules.md` in the Karni repo.
+
+## Links
+
+- The module in the docs: <https://cbsshekhawat18-lab.github.io/karni/modules/#modules-in-this-repository>
+- The module contract it is the reference for: <https://cbsshekhawat18-lab.github.io/karni/modules/>
+- React components: <https://www.npmjs.com/package/@karni/payments-ui>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. karni-payments is released with every other Karni package, at one version.

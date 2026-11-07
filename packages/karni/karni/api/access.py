@@ -85,6 +85,8 @@ __all__ = [
     "Unscoped",
     "Where",
     "action_predicate",
+    "admits_anyone",
+    "admits_every_user",
     "apply_rows",
     "describe_access",
     "granted_action",
@@ -123,6 +125,8 @@ GRANTED_ACTIONS: Final[dict[str, str]] = {
     "update": "change",
     "partial_update": "change",
     "destroy": "delete",
+    # A tree node's move/ (experimental) changes its parent: an update.
+    "move": "change",
 }
 _METHOD_ACTIONS: Final[dict[str, str]] = {
     "POST": "add",
@@ -970,14 +974,20 @@ def action_predicate(view: Any, access: Access, method: str | None = None) -> Pr
     An action the view names in ``write_or_create_actions`` (an import: it
     creates some rows and changes others) is governed by ``create`` **or**
     ``write`` — whoever may do either may start it; which rows each may
-    touch is the action's own business, per row.
+    touch is the action's own business, per row. When either lets anonymous
+    callers in (a public form's ``create=Public()``), the action also needs
+    a signed-in user: a public form takes one row per request, never a file
+    of rows.
     """
     override = action_override(view)
     if override is not None:
         return override.bind(view)
     action = getattr(view, "action", None)
     if _write_or_create(view, action):
-        return AnyOf((access.create.bind(view, "create"), access.write.bind(view, "update")))
+        either = AnyOf((access.create.bind(view, "create"), access.write.bind(view, "update")))
+        if admits_anyone(access.create) or admits_anyone(access.write):
+            return AllOf((Authenticated(), either))
+        return either
     if method is None:
         method = getattr(getattr(view, "request", None), "method", None)
     return access.slot(action_slot(action, method)).bind(view)
@@ -1121,6 +1131,8 @@ def _validate_granted_actions(view_class: type[Any], declaration: Any, model: ty
                 continue
             if not any(isinstance(p, Granted) for p in _flatten_leaves(governing)):
                 continue
+            if extra.__name__ in GRANTED_ACTIONS:
+                continue  # a Karni action with a standard permission (a tree node's move)
             if extra.__name__ not in model_actions(model):
                 raise KarniImproperlyConfigured(
                     f"{view_class.__name__}.{extra.__name__}: Granted() has no permission for "
@@ -1150,6 +1162,64 @@ def _flatten_leaves(predicate: Predicate) -> list[Predicate]:
         else:
             found.append(current)
     return found
+
+
+def admits_every_user(predicate: Predicate) -> bool:
+    """Whether ``predicate`` lets every signed-in user through on every row.
+
+    True for :class:`Authenticated` and :class:`Public`, for an ``|`` with
+    such a part (``Owned(..., bypass=...)`` is one), and for an ``&`` whose
+    parts include one and none that narrows (:class:`HasRole`, :class:`Owned`,
+    :class:`Granted`, :class:`Can`). :class:`Where` is neither: its function
+    may or may not look at the user, so alone it is not reported, and it does
+    not count as narrowing. ``karni.W102`` uses this for a viewset's ``write``
+    predicate.
+    """
+    if isinstance(predicate, Authenticated | Public):
+        return True
+    if isinstance(predicate, Owned):
+        return predicate.bypass is not None and admits_every_user(predicate.bypass)
+    if isinstance(predicate, AnyOf):
+        return any(admits_every_user(part) for part in predicate.parts)
+    if isinstance(predicate, AllOf):
+        return any(admits_every_user(part) for part in predicate.parts) and not any(
+            _narrows(part) for part in predicate.parts
+        )
+    return False
+
+
+def admits_anyone(predicate: Predicate) -> bool:
+    """Whether ``predicate``'s request gate lets an anonymous caller through, whoever it is.
+
+    True for :class:`Public`, for an ``|`` with such a part (``Owned(...,
+    bypass=Public())`` is one) and for an ``&`` made only of such parts.
+    :class:`Where` is not: its function decides per request, so it may well
+    turn anonymous callers away. The default rate limit for public creates
+    (``KARNI_PUBLIC_CREATE_RATE``) and the public-create honeypot use this
+    on a viewset's ``create`` predicate.
+    """
+    if isinstance(predicate, Public):
+        return True
+    if isinstance(predicate, Owned):
+        return predicate.bypass is not None and admits_anyone(predicate.bypass)
+    if isinstance(predicate, AnyOf):
+        return any(admits_anyone(part) for part in predicate.parts)
+    if isinstance(predicate, AllOf):
+        return all(admits_anyone(part) for part in predicate.parts)
+    return False
+
+
+def _narrows(predicate: Predicate) -> bool:
+    """Whether ``predicate`` admits only some users or only some rows for a user."""
+    if isinstance(predicate, Owned):
+        return predicate.bypass is None or _narrows(predicate.bypass)
+    if isinstance(predicate, HasRole | Granted | Can):
+        return True
+    if isinstance(predicate, AnyOf):
+        return all(_narrows(part) for part in predicate.parts)
+    if isinstance(predicate, AllOf):
+        return any(_narrows(part) for part in predicate.parts)
+    return False
 
 
 def _leaves(declaration: Any, view_class: type[Any]) -> list[Predicate]:

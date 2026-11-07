@@ -15,8 +15,9 @@ services:
       args:
         KARNI_SRC: ${KARNI_SRC:-}
     command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+    # KARNI_DEV_PORT in .env moves the published port (default 8000).
     ports:
-      - "8000:8000"
+      - "${KARNI_DEV_PORT:-8000}:8000"
     env_file: .env
     volumes:
       - .:/app
@@ -27,9 +28,9 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      # Liveness endpoint only responds once migrations have finished and
-      # runserver is up. Downstream services key off this.
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
+      # /readyz answers 200 once runserver is up and the database, the cache and the
+      # Celery broker respond. Downstream services key off this.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/readyz')"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -99,6 +100,7 @@ services:
         condition: service_healthy
       django:
         condition: service_healthy
+{%- if cookiecutter.staff_app == "yes" %}
 
   frontend:
     build:
@@ -123,8 +125,11 @@ services:
         target: {{ cookiecutter.karni_ui_mount | tojson }}
         read_only: true
 {%- endif %}
+{%- endif %}
 
 volumes:
   postgres_data:
   app_data:
+{%- if cookiecutter.staff_app == "yes" %}
   frontend_node_modules:
+{%- endif %}

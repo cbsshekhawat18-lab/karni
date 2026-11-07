@@ -295,6 +295,11 @@ def q_text(rows: Any, *, you: Any = None) -> str:
             if lookup == "isnull":
                 parts.append(f"{path} is {'null' if value else 'set'}")
                 continue
+            described = getattr(value, "why_text", None)
+            if callable(described):
+                # A tree scope's subquery says which nodes: "region under 'Europe'".
+                parts.append(f"{path} {described()}")
+                continue
             shown = "you" if _is_you(value, you) else display_value(value, you=you)
             parts.append(f"{path} {_LOOKUP_TEXT.get(lookup, lookup)} {shown}")
         else:

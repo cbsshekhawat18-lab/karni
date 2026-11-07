@@ -1,0 +1,46 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls %}{% comment %}
+Every Karni changelist: a labelled "Add <model>" button, one line of help, a
+hint about the bulk actions, and a friendly empty state. Set
+change_list_template on the admin class to use another page.
+{% endcomment %}
+
+{% block extrastyle %}{{ block.super }}
+{% include "karni_admin/includes/page_styles.html" %}
+{% endblock %}
+
+{% block filters %}{{ block.super }}{% include "karni_admin/includes/filter_chips.html" %}{% endblock %}
+
+{% block pagination %}{% include "karni_admin/includes/pagination.html" %}{% endblock %}
+
+{% block object-tools-items %}{% include "karni_admin/includes/add_button.html" %}{% endblock %}
+
+{% block content %}
+{% include "karni_admin/includes/model_help.html" %}
+{{ block.super }}
+{% endblock %}
+
+{% block result_list %}
+{% if cl.result_count == 0 and not cl.has_active_filters and not cl.query and not is_popup %}
+<div class="karni-empty">
+  <h2>{% blocktranslate with name=cl.opts.verbose_name_plural %}No {{ name }} yet.{% endblocktranslate %}</h2>
+  <p>
+    {% blocktranslate with name=cl.opts.verbose_name %}A {{ name }} you add is listed here.{% endblocktranslate %}
+    {% if karni_import_url %}{% translate "You can also import many at once from a CSV or XLSX file." %}{% endif %}
+  </p>
+  <div class="karni-toolbar">
+    {% include "karni_admin/includes/add_button.html" %}
+    {% if karni_import_url %}<a class="karni-button karni-button-secondary" href="{{ karni_import_url }}">{% translate "Import" %}</a>{% endif %}
+  </div>
+</div>
+{% elif cl.result_count == 0 and not is_popup %}
+<div class="karni-empty karni-empty-filtered">
+  <h2>{% blocktranslate with name=cl.opts.verbose_name_plural %}No {{ name }} match these filters{% endblocktranslate %}</h2>
+  <p>{% if cl.query %}{% blocktranslate with term=cl.query %}Nothing matches “{{ term }}” with the filters you chose.{% endblocktranslate %}{% else %}{% translate "Nothing matches the filters you chose." %}{% endif %}</p>
+  <div class="karni-toolbar"><a class="karni-button karni-button-secondary" href="{{ cl.karni_clear_url }}">{% translate "Clear search and filters" %}</a></div>
+</div>
+{% else %}
+{% if action_form and cl.result_count %}<p class="karni-note karni-bulk-hint">{% translate "Tick rows to delete, edit, restore or export them together, or tick the box in the header for the whole page." %}</p>{% endif %}
+{{ block.super }}
+{% endif %}
+{% endblock %}

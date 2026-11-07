@@ -18,7 +18,7 @@ from django.urls import reverse
 
 from karni.admin.soft_delete import SoftDeleteListFilter
 from tests.admin.conftest import RequestForUser
-from tests.adminapp.models import Citation, Memo, Note
+from tests.adminapp.models import Citation, Footnote, Memo, Note
 
 pytestmark = pytest.mark.django_db
 
@@ -219,6 +219,74 @@ class TestActions:
         assert response.status_code == 302
         assert response.url == CHANGELIST_URL
         assert Note.objects.without("soft_delete", reason="test").filter(pk=note.pk).exists()
+
+
+class TestProtectedReferences:
+    """A soft delete keeps the row, so a PROTECT foreign key has nothing to protect (NEW-2).
+
+    The API soft-deletes such a row (204) and its children stay; the admin
+    refused with Django's "Other rows depend on them" page. Both delete paths
+    now soft-delete it, and only the hard delete keeps the refusal.
+    """
+
+    def test_delete_selected_soft_deletes_a_row_protect_points_at(
+        self, admin_client: Client
+    ) -> None:
+        note = _note("Referenced")
+        footnote = Footnote.objects.create(note=note, text="Depends on it")
+        data = {"action": "delete_selected", helpers.ACTION_CHECKBOX_NAME: [str(note.pk)]}
+        confirmation = admin_client.post(CHANGELIST_URL, data)
+        assert confirmation.status_code == 200
+        page = confirmation.content.decode()
+        assert "cannot delete" not in page and "Depends on it" not in page
+        assert "can be restored" in page and "soft delete" in page
+        assert admin_client.post(CHANGELIST_URL, {**data, "post": "yes"}).status_code == 302
+        kept = Note.objects.without("soft_delete", reason="test").get(pk=note.pk)
+        assert kept.deleted_at is not None
+        footnote.refresh_from_db()
+        assert footnote.note_id == note.pk
+
+    def test_the_rows_delete_page_soft_deletes_a_row_protect_points_at(
+        self, admin_client: Client
+    ) -> None:
+        note = _note("Referenced")
+        footnote = Footnote.objects.create(note=note, text="Depends on it")
+        url = reverse("admin:adminapp_note_delete", args=[note.pk])
+        page = admin_client.get(url)
+        assert page.status_code == 200
+        assert "karni_admin/delete_confirmation.html" in [t.name for t in page.templates]
+        body = page.content.decode()
+        assert "Referenced" in body and "can be restored" in body and "soft delete" in body
+        assert "Depends on it" not in body
+        assert admin_client.post(url, {"post": "yes"}).status_code == 302
+        kept = Note.objects.without("soft_delete", reason="test").get(pk=note.pk)
+        assert kept.deleted_at is not None
+        assert Footnote.objects.filter(pk=footnote.pk, note=note).exists()
+
+    def test_the_hard_delete_still_refuses(self, admin_client: Client) -> None:
+        note = _note("Referenced", deleted=True)
+        Footnote.objects.create(note=note, text="Depends on it")
+        url = f"{CHANGELIST_URL}?deleted=all"
+        data = {"action": "hard_delete_selected", helpers.ACTION_CHECKBOX_NAME: [str(note.pk)]}
+        confirmation = admin_client.post(url, {**data, "post": "yes"})
+        assert confirmation.status_code == 200
+        assert "Depends on it" in confirmation.content.decode()
+        assert Note.objects.without("soft_delete", reason="test").filter(pk=note.pk).exists()
+
+    def test_a_row_the_user_may_not_delete_is_still_refused(
+        self, site: admin.AdminSite, make_request: RequestForUser, django_user_model: Any
+    ) -> None:
+        viewer = django_user_model.objects.create_user(
+            email="viewer@example.com", password="a-strong-password-123", is_staff=True
+        )
+        viewer.user_permissions.add(
+            *Permission.objects.filter(content_type__app_label="adminapp", codename="view_note")
+        )
+        note = _note("Referenced")
+        _, _, perms_needed, protected = site._registry[Note].get_deleted_objects(
+            [note], make_request(viewer)
+        )
+        assert perms_needed == {"note"} and protected == []
 
 
 class TestAutocomplete:

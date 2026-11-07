@@ -41,8 +41,8 @@ from django.db.models.functions import Greatest
 from karni.api.search import SearchProvider
 from karni.exceptions import KarniImportError
 
-#: Words of a query, for a prefix tsquery (tsquery operators never pass through).
-_TERMS = re.compile(r"\w+", re.UNICODE)
+#: A word of a query has a letter or digit; one of punctuation alone is left out.
+_TERMS = re.compile(r"\w", re.UNICODE)
 
 # TrigramExtension is a lazy re-export resolved by module __getattr__ below,
 # so pyflakes cannot see its definition here.
@@ -139,22 +139,31 @@ class PostgresSearchProvider(SearchProvider):
         """Match a :class:`karni.fields.SearchField` through its GIN index.
 
         Each word of the query is a prefix (``walnu`` finds ``walnut``), all
-        words must match, and rows rank by ``ts_rank``. The trigram leg is not
+        words must match, and rows rank by ``ts_rank``. A word is split the way
+        the column's text was (PostgreSQL's parser), so a code such as
+        ``MT-0001`` finds that row and no other. The trigram leg is not
         used: ``similarity() > t`` cannot be answered by an index, and OR-ing
         it in would turn every search back into a scan of the table.
 
         Override / escape hatch: override this method (call :meth:`search`'s
         plain path by searching the source fields instead) to change it.
         """
-        terms = _TERMS.findall(query)
-        if not terms:
+        words = [word for word in query.split() if _TERMS.search(word)]
+        if not words:
             return queryset.none()
-        raw = " & ".join(f"{term}:*" for term in terms)
+        # Each word quoted: PostgreSQL parses it as it parsed the column (MT-0001 is
+        # 'mt' <-> '-0001'), and an operator a visitor types (& | ! :) is only text.
+        raw = " & ".join(f"'{_quoted(word)}':*" for word in words)
         search_query = SearchQuery(raw, search_type="raw", config=document.config)
         result = queryset.annotate(rank=SearchRank(F(document.name), search_query)).filter(
             **{document.name: search_query}
         )
         return result.order_by("-rank") if rank_order else result
+
+
+def _quoted(word: str) -> str:
+    """``word`` inside a tsquery's single quotes (a quote doubled, a backslash escaped)."""
+    return word.replace("\\", "\\\\").replace("'", "''")
 
 
 class GinTrgmIndex(GinIndex):

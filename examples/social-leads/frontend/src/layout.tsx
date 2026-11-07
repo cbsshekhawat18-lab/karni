@@ -1,25 +1,18 @@
 // The app shell: @karni/ui's <Layout>, with one nav entry per static route in
-// routes.tsx, in registration order. Pages from `karni make page` show up
-// here on their own.
-// Detail/edit routes ($id) and "new" forms are reached from their list page.
-import { Layout, type LayoutNavItem } from "@karni/ui";
+// routes.tsx, in registration order (routeNavItems: detail and "new" routes
+// are reached from their list page, and the sign-in page is listed only while
+// nobody is signed in). Pages from `karni make page` show up here on their own.
+import { Layout, routeNavItems, useAuth } from "@karni/ui";
 import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
-
-function label(path: string): string {
-    const name = path.split("/").filter(Boolean).at(-1) ?? "home";
-    return name.replace(/[-_]+/g, " ").replace(/^./, (first) => first.toUpperCase());
-}
 
 export default function AppLayout() {
     const router = useRouter();
+    const { status } = useAuth();
     const pathname = useRouterState({ select: (state) => state.location.pathname });
-    const navItems: LayoutNavItem[] = Object.keys(router.routesByPath)
-        .filter((path) => !path.includes("$") && !path.endsWith("/new"))
-        .map((href) => ({
-            href,
-            label: label(href),
-            active: href === pathname || (href !== "/" && pathname.startsWith(`${href}/`)),
-        }));
+    const navItems = routeNavItems(Object.keys(router.routesByPath), {
+        pathname,
+        signedIn: status === "authenticated",
+    });
     return (
         <Layout
             navItems={navItems}

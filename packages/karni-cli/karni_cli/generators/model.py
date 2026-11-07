@@ -7,13 +7,20 @@ pages for the resource (linked to each other), its API test, an explicit
 factory and a seeder. ``-a/--all`` chains viewset, page and test — factories
 and seeders are overrides of what Karni already generates, so they are only
 written when asked for.
+
+``--external --table <[schema.]table>`` (experimental) writes a model over a
+table or view another system owns, from its columns instead of a field DSL
+(:mod:`karni_cli.generators.external`), and always the viewset with it.
 """
 
 from __future__ import annotations
 
 import typer
 
+from karni_cli import project as project_mod
+from karni_cli import pyproject_edit
 from karni_cli.generators import apitest as test_gen
+from karni_cli.generators import external as external_gen
 from karni_cli.generators import factory as factory_gen
 from karni_cli.generators import migration as migration_gen
 from karni_cli.generators import page as page_gen
@@ -33,13 +40,23 @@ from karni_cli.generators.core import (
 from karni_cli.generators.fields import (
     FieldSpec,
     RelationTarget,
+    images_extra_note,
+    is_protected,
     is_user_target,
     parse_fields,
+    pillow_note,
+    reinstall_note,
     relation_name,
     render_model_body,
 )
-from karni_cli.generators.introspect import models_file, models_in
-from karni_cli.generators.naming import default_route, kebab, require_pascal
+from karni_cli.generators.introspect import (
+    PK_BASES,
+    declared_pk,
+    models_file,
+    models_in,
+    viewset_for,
+)
+from karni_cli.generators.naming import default_route, kebab, require_pascal, verbose_plural
 from karni_cli.generators.pysource import Import, ensure_imports, pystr, replace_or_append
 from karni_cli.project import CliError
 
@@ -63,7 +80,8 @@ def _targets(
         raw = relation_name(spec)
         if is_user_target(raw):
             resolved[spec.name] = RelationTarget("settings.AUTH_USER_MODEL", True, "user")
-        elif raw in ("self", model):
+        elif raw in ("self", model, f"{app.label}.{model}"):
+            # The model itself (a course's related courses): Django's "self".
             resolved[spec.name] = RelationTarget(pystr("self"), False, "self")
         elif "." in raw:
             label, _, name = raw.partition(".")
@@ -92,10 +110,80 @@ def _targets(
     return resolved
 
 
-def plan(ws: Workspace, app: App, name: str, field_tokens: list[str]) -> str:
-    """Plan the model class in ``<app>/models.py``; returns the class name."""
+#: The extra that installs Pillow, which every ImageField needs.
+IMAGES_EXTRA = "images"
+
+
+def plan_images_extra(ws: Workspace, images: list[str]) -> None:
+    """Make the project's ``karni`` dependency ``karni[images]`` for ``images`` (ImageFields).
+
+    The one requirement string in ``pyproject.toml`` is edited in place
+    (:mod:`karni_cli.pyproject_edit`), so ``--dry-run`` shows it in the diff.
+    A project that lists the extra already is left alone. One the edit cannot
+    handle gets the manual step instead, when its Python lacks Pillow.
+    """
+    has_pillow = project_mod.project_has_module(ws.root, "PIL")
+    text = ws.read("pyproject.toml")
+    try:
+        if text is None:
+            raise pyproject_edit.CannotEdit("the project has no pyproject.toml")
+        edit = pyproject_edit.add_extra(text, "karni", IMAGES_EXTRA)
+    except pyproject_edit.CannotEdit as exc:
+        if has_pillow is not True:
+            ws.note(f"{pillow_note(images, missing=has_pillow is False)} ({exc}.)")
+        return
+    if edit is None:
+        if has_pillow is False:
+            ws.note(reinstall_note(images))
+        return
+    ws.write("pyproject.toml", edit.text)
+    ws.note(images_extra_note(images, edit.before, edit.after))
+
+
+#: Fields every BaseModel has, which --order may name too.
+_BASE_FIELDS = ("created_at", "updated_at", "id")
+
+
+def _field_option(specs: list[FieldSpec], value: str, option: str) -> str:
+    """``--order``/``--key``: a field of the model (``-position`` for descending order)."""
+    name = value.lstrip("-") if option == "--order" else value
+    if name not in {s.name for s in specs} and name not in _BASE_FIELDS:
+        names = ", ".join(s.name for s in specs) or "none"
+        raise CliError(
+            f"{option} {value}: {name!r} is not a field of the model (fields: {names}). "
+            f"Declare it, e.g. {name}:int, or name another.",
+            code="C104",
+        )
+    return value
+
+
+def plan(
+    ws: Workspace,
+    app: App,
+    name: str,
+    field_tokens: list[str],
+    *,
+    order: str | None = None,
+    key: str | None = None,
+    pk: str | None = None,
+) -> str:
+    """Plan the model class in ``<app>/models.py``; returns the class name.
+
+    ``order`` writes ``Meta.ordering``, ``key`` writes ``Karni.import_key``: the
+    field ``karni load`` and imports match rows on (for rows nested under a
+    parent, the parent plus that field). ``pk`` (``uuid`` or ``bigint``, else
+    ``KARNI_PK``) picks the base: ``BaseModel`` or ``BigIntBaseModel``.
+    """
+    base = _base_class(ws, pk)
     model = require_pascal(name, "Model name")
     specs = parse_fields(field_tokens)
+    _require_storage(ws, specs)
+    try:
+        served = viewset_for(ws, app, model) is not None
+    except CliError:  # viewsets.py does not parse: that is its own command's to report
+        served = False
+    if served:
+        ws.api_changed()  # its fields are the API's
     path = models_file(ws, app)
     rel = ws.rel(path)
     body = render_model_body(
@@ -105,21 +193,72 @@ def plan(ws: Workspace, app: App, name: str, field_tokens: list[str]) -> str:
         resolve=_targets(ws, app, model, specs),
         line_length=ws.line_length,
     )
-    lines = [f"class {model}(BaseModel):"]
+    lines = [f"class {model}({base}):"]
     if body.inner:
         lines += [*body.inner, ""]
     lines += body.lines
+    meta: list[str] = []
+    if order is not None:
+        meta.append(f"        ordering = [{pystr(_field_option(specs, order, '--order'))}]")
+    plural = verbose_plural(model)
+    if plural is not None:  # Django's own "categorys" is wrong: write the right one
+        meta.append(f"        verbose_name_plural = {pystr(plural)}")
+    if meta:
+        lines += ["", "    class Meta:", *meta]
+    if key is not None:
+        lines += [
+            "",
+            "    class Karni:",
+            f"        import_key = {pystr(_field_option(specs, key, '--key'))}",
+        ]
     text_field = next((s.name for s in specs if s.is_text), None)
     if text_field is not None:
         lines += ["", "    def __str__(self) -> str:", f"        return self.{text_field}"]
     if len(lines) == 1:
         lines.append("    pass")
     text = ws.read(path) or ""
-    text = ensure_imports(ws, rel, text, [Import("karni.models", "BaseModel"), *body.imports])
+    text = ensure_imports(ws, rel, text, [Import("karni.models", base), *body.imports])
     ws.write(path, replace_or_append(ws, rel, text, model, "\n".join(lines)))
     for note in body.notes:
         ws.note(note)
+    if body.images:
+        plan_images_extra(ws, body.images)
     return model
+
+
+def _require_storage(ws: Workspace, specs: list[FieldSpec]) -> None:
+    """``file:protected`` / ``image:protected`` need karni-storage added (``C720``)."""
+    protected = [spec.name for spec in specs if is_protected(spec)]
+    if not protected:
+        return
+    from karni_cli.settings_edit import block_entries
+
+    settings = ws.read("config/settings.py")
+    try:
+        apps = block_entries(settings) if settings is not None else []
+    except CliError:
+        apps = []
+    if "karni_storage" not in apps:
+        raise CliError(
+            f"{', '.join(protected)}: a protected file field needs the storage module. Add it "
+            "first: karni add storage (then pip install karni-storage).",
+            code="C720",
+        )
+
+
+def _base_class(ws: Workspace, pk: str | None) -> str:
+    """The base class for ``--pk`` (``uuid``/``bigint``), else for the project's ``KARNI_PK``."""
+    if pk is None:
+        pk, note = declared_pk(ws)
+        if note:
+            ws.note(note)
+    if pk not in PK_BASES:
+        raise CliError(
+            f"--pk {pk}: the key type is one of {', '.join(PK_BASES)} (uuid: BaseModel, "
+            "bigint: BigIntBaseModel).",
+            code="C106",
+        )
+    return PK_BASES[pk]
 
 
 def plan_chain(
@@ -193,26 +332,84 @@ def command(
         False, "--all", "-a", help="Also generate the viewset, the pages and the API test."
     ),
     access: str | None = typer.Option(
-        None, "--access", help=f"With viewset: {viewset_gen.ACCESS_CHOICES}."
+        None,
+        "--access",
+        help=(
+            f"With viewset: {viewset_gen.ACCESS_CHOICES}. public-read: anyone reads, only "
+            f"role {viewset_gen.PUBLIC_READ_WRITER!r} (or :<role>) writes. public-create: "
+            "anyone creates (a public form), only that role reads and writes."
+        ),
     ),
     search: list[str] | None = typer.Option(
         None, "--search", help="With viewset: search_fields (comma-separated)."
     ),
+    external: bool = typer.Option(
+        False,
+        "--external",
+        help="Experimental. A model over a table or view another system owns, written from "
+        "the columns of --table (Meta.managed = False, class Karni: external = True), with "
+        "its viewset. It reads the database, which must be reachable.",
+    ),
+    table: str | None = typer.Option(
+        None, "--table", help="With --external: the table or view, e.g. sales or reporting.sales."
+    ),
+    database: str | None = typer.Option(
+        None,
+        "--database",
+        help="With --external: the DATABASES alias the table lives in (class Karni: database).",
+    ),
+    writable: bool = typer.Option(
+        False,
+        "--writable",
+        help="With --external: let the API and the admin write it (class Karni: writable).",
+    ),
     migrate: bool = typer.Option(
         False, "--migrate", help="Run `karni make migration` for the app afterwards."
+    ),
+    order: str | None = typer.Option(
+        None,
+        "--order",
+        help="Order rows by this field (Meta.ordering), e.g. position or -created_at.",
+    ),
+    key: str | None = typer.Option(
+        None,
+        "--key",
+        help="The field karni load and imports match rows on (Karni.import_key). Rows nested "
+        "under a parent are matched on the parent plus this field, e.g. position.",
+    ),
+    pk: str | None = typer.Option(
+        None,
+        "--pk",
+        help="The primary key: uuid (BaseModel) or bigint (BigIntBaseModel, experimental). "
+        "Default: KARNI_PK in config/settings.py, else uuid.",
     ),
     app: str | None = APP_OPTION,
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
 ) -> None:
-    """Add `class NAME(BaseModel)` with FIELDS to APP/models.py.
+    """Add `class NAME(BaseModel)` with FIELDS to APP/models.py (BigIntBaseModel with --pk bigint).
 
     Example: karni make model Event title:str:200 starts_at:datetime
     "status:choice:draft|live" organizer:fk:User 'venue:fk:Venue?' -a
     --access owned:organizer
+
+    Experimental: karni make model Sale --external --table reporting.sales
+    [--database warehouse] [--writable] writes a plain models.Model over that
+    existing table or view from its columns (Meta.managed = False, class Karni:
+    external = True), and its viewset. The database must be reachable.
     """
     ws = project_workspace(force)
+    external_gen.check_options(
+        external=external,
+        table=table,
+        database=database,
+        writable=writable,
+        fields=fields or [],
+        key=key,
+    )
     chain = resolve_chain(with_ or [], all_)
+    if external and "viewset" not in chain:
+        chain = ["viewset", *chain]  # an external model always gets its viewset
     if (access or search) and "viewset" not in chain:
         raise CliError(
             "--access/--search configure the viewset: add --with viewset (or -a).", code="C004"
@@ -221,14 +418,24 @@ def command(
     if all_ and not ws.is_dir("frontend"):
         chain = [item for item in chain if item != "page"]
         ws.note("note: no frontend/ directory, so pages are skipped.")
-    model = plan(ws, target, name, fields or [])
+    if external and table is not None:
+        model = external_gen.plan(
+            ws, target, name, table=table, database=database, writable=writable, order=order
+        )
+    else:
+        model = plan(ws, target, name, fields or [], order=order, key=key, pk=pk)
     expand = [
         spec.name
         for spec in parse_fields(fields or [])
         if spec.is_relation and not is_user_target(relation_name(spec))
     ]
     plan_chain(ws, target, model, chain, access=access, search=split_csv(search), expand=expand)
-    if not migrate:
+    if external and not migrate:
+        ws.note(
+            f"next: karni make migration --app {target.label} records the model with "
+            "managed=False (no SQL ever runs for it), and karni check compares it with the table"
+        )
+    elif not migrate:
         ws.note(f"next: karni make migration --app {target.label}")
     ws.commit(dry_run=dry_run)
     if migrate and not dry_run:

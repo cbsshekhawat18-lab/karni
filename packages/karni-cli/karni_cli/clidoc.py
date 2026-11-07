@@ -22,9 +22,9 @@ from karni_cli.generators.fields import FIELD_DOCS
 
 #: Section → top-level commands, in reading order. Anything else lands in "Other".
 SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("Project", ("new", "add", "upgrade", "doctor", "config")),
+    ("Project", ("new", "add", "remove", "modules", "upgrade", "doctor", "config")),
     ("Frontend", ("ui",)),
-    ("Agents and checks", ("context", "rules", "check", "explain", "types", "mcp")),
+    ("Agents and checks", ("context", "rules", "check", "suggest", "explain", "types", "mcp")),
     ("Debugging", ("queries",)),
     (
         "Runners",
@@ -39,13 +39,14 @@ SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "beat",
             "schedule",
             "seed",
+            "load",
             "sync-roles",
             "createsuperuser",
             "manage",
         ),
     ),
     ("Debugging", ("why", "why-empty")),
-    ("Generators", ("make",)),
+    ("Generators", ("make", "import", "design", "spec", "plan", "build")),
     # The development capture under .karni/ (docs/debugging/).
     ("Debugging", ("trace", "replay")),
 )
@@ -85,7 +86,7 @@ GENERATOR_RULES = """Every generator follows the same rules:
 - The target app is `--app <label>`, else the project's only local app (local
   apps are the `# karni:apps` entries of config/settings.py).
 - Existing files change only through marker comments (`# karni:apps`,
-  `# karni:middleware`, `// karni:page-imports`, `// karni:routes`) or
+  `# karni:middleware`, `# karni:urls`, `// karni:page-imports`, `// karni:routes`) or
   AST-located appends. An unfamiliar layout is an error that names the manual
   step. Generated Python is ruff-clean (isort sections, ruff format layout).
 - It never imports Django: `karni make migration` (and `make model --migrate`)
@@ -97,7 +98,8 @@ GENERATOR_RULES = """Every generator follows the same rules:
 
 def _md(text: str) -> str:
     """Escape ``<`` / ``>`` outside backtick code spans (Markdown would eat ``<field>``)."""
-    parts = text.split("`")
+    # `\[` keeps Rich from reading "[mcp]" in a help string as a style tag.
+    parts = text.replace("\\[", "[").split("`")
     for i in range(0, len(parts), 2):
         parts[i] = parts[i].replace("<", "&lt;").replace(">", "&gt;")
     return "`".join(parts)

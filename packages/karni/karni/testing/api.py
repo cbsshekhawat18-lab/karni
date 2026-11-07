@@ -53,7 +53,18 @@ multipart with a fresh file per request. The stored file must not be empty.
 
 When the declaration refuses every write to the requester, the run checks
 the refusals only, lists ``no write exercised`` in the report's ``skipped``
-and warns (``UserWarning``), so a suite that never writes is visible.
+and warns (``UserWarning``), so a suite that never writes is visible. When a
+required relation points at a model the requester may reference no row of,
+no create body can be valid: the create and the PUT are not sent, and the
+report's ``skipped`` and a warning name the field and the target's access.
+
+**Read-only resources** (experimental). ``read_only=True`` checks a resource
+that only reads: ``list`` and ``retrieve`` as above, and ``POST``, ``PATCH``,
+``PUT`` and ``DELETE`` answer 405 to the requester, to anonymous callers and
+to a user without the role, change nothing, and are absent from the OpenAPI
+document. It is picked by itself for an external model that is not writable
+(``class Karni: external = True`` without ``writable = True``,
+:func:`karni.db.is_read_only`), and ``read_only=False`` turns it off.
 
 Override / escape hatches: ``values={...}`` (factory overrides for every row
 and the create payload), ``payload={...}`` (raw request fields, uploads
@@ -69,6 +80,7 @@ from __future__ import annotations
 import datetime as dt
 import functools
 import io
+import json
 import uuid
 import warnings
 from collections.abc import Iterable, Iterator, Mapping
@@ -80,6 +92,7 @@ from typing import Any, Final
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import FieldDoesNotExist
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.urls import reverse
 from rest_framework import serializers
@@ -200,6 +213,30 @@ class Resource:
         return reverse(f"{self.basename}-detail", kwargs={self.lookup: str(pk)})
 
 
+def _probe_detail_url(resource: Resource) -> str:
+    """A detail URL of ``resource`` for a row that need not exist, as its route accepts it.
+
+    The probe value follows the lookup field's type (a zero UUID, ``0``, a
+    word), and the first one the route's ``lookup_value_regex`` accepts wins.
+    """
+    from django.urls import NoReverseMatch
+
+    try:
+        field = resource.model._meta.get_field(resource.viewset.lookup_field)
+    except Exception:  # noqa: BLE001 - "pk" and computed lookups: the primary key
+        field = resource.model._meta.pk
+    first: list[Any] = [uuid.UUID(int=0)]
+    if isinstance(field, models.AutoField | models.IntegerField):
+        first = [0]
+    candidates = [*first, uuid.UUID(int=0), 0, "probe"]
+    for value in candidates:
+        try:
+            return resource.detail_url(value)
+        except NoReverseMatch:
+            continue
+    return resource.detail_url(candidates[0])
+
+
 def resolve_resource(resource: Any) -> Resource:
     """A viewset class, a model class, a route prefix (``"events"``) or ``"app.Model"``."""
     from django.apps import apps
@@ -279,7 +316,8 @@ def granted_values(model: type[models.Model], user: Any) -> dict[str, Any]:
 
     An ``own`` grant sets the model's owner field to the user; a ``related``
     grant sets the scope path to the user's side of it (``user.venue``), when
-    the user has one. An ``all`` grant needs nothing.
+    the user has one, or to its first target (a per-user grant with targets,
+    through the foreign key's ``<field>_id``). An ``all`` grant needs nothing.
     """
     from karni.accounts.roles import grants_for
     from karni.meta import owner_field, permission_key, scope_paths
@@ -294,10 +332,28 @@ def granted_values(model: type[models.Model], user: Any) -> dict[str, Any]:
                 found.setdefault(owner, user)
         elif grant.scope == "related":
             path = scope_paths(model).get(grant.scope_path)
+            if path and grant.targets:
+                attname = _target_attname(model, path)
+                if attname:
+                    found.setdefault(attname, grant.targets[0])
+                continue
             value = getattr(user, grant.scope_path, None)
             if path and value is not None:
                 found.setdefault(path, value)
     return found
+
+
+def _target_attname(model: type[models.Model], path: str) -> str | None:
+    """``venue_id`` for a scope path that is one foreign key of ``model``, else ``None``."""
+    from django.core.exceptions import FieldDoesNotExist
+
+    try:
+        field = model._meta.get_field(path)
+    except FieldDoesNotExist:
+        return None
+    if getattr(field, "many_to_one", False) or getattr(field, "one_to_one", False):
+        return str(field.attname)
+    return None
 
 
 def readable_row(model: type[models.Model], user: Any, **values: Any) -> Any:
@@ -313,6 +369,22 @@ def readable_row(model: type[models.Model], user: Any, **values: Any) -> Any:
 
 
 # what the declaration promises
+
+
+#: Experimental. Why a refusal the access declaration does not promise fails the test.
+REFUSED_HINT = (
+    ". The access declaration admits this request, so something else refused it (a "
+    "perform_create or a check in code). Say who may in access instead (karni.yaml: create: "
+    "role:<slug>, or the role's grants without :delete, as karni explain access shows), so the "
+    "API, its schema and this test agree"
+)
+
+
+def refused_hint(status: int, expected: Expectation) -> str:
+    """Experimental. :data:`REFUSED_HINT` for a 403 where ``expected`` promised a success."""
+    if status == 403 and expected.allowed and all(code < 400 for code in expected.statuses):
+        return REFUSED_HINT
+    return ""
 
 
 @dataclass(frozen=True)
@@ -478,11 +550,81 @@ class Payload:
     scalars: list[str] = field(default_factory=list)
     #: File and image fields sent as uploads, whose stored file must not be empty.
     files: list[str] = field(default_factory=list)
+    #: Required relations with no row the requester may reference: field name -> why.
+    unreachable: dict[str, str] = field(default_factory=dict)
 
     @property
     def format(self) -> str:
         """The test client format that carries this body."""
         return "multipart" if self.multipart else "json"
+
+    @property
+    def request_data(self) -> dict[str, Any]:
+        """:attr:`data` as the request carries it.
+
+        A multipart body is encoded the way @karni/ui encodes one (contract
+        D2): an object (a range, a JSON value) is sent as JSON text, a list as
+        repeated keys, and ``None`` is left out.
+        """
+        if not self.multipart:
+            return self.data
+        encoded: dict[str, Any] = {}
+        for name, value in self.data.items():
+            if value is None:
+                continue
+            if isinstance(value, list | tuple):
+                encoded[name] = [_form_value(item) for item in value if item is not None]
+            else:
+                encoded[name] = _form_value(value)
+        return encoded
+
+
+def _form_value(value: Any) -> Any:
+    """One multipart value: an object becomes JSON text, anything else is kept."""
+    if isinstance(value, Mapping | list | tuple):
+        return json.dumps(value, cls=DjangoJSONEncoder)
+    return value
+
+
+def _referenceable(serializer_field: Any, row: Any) -> bool:
+    """True when the relation ``serializer_field`` accepts ``row``'s primary key.
+
+    Karni's relation fields accept only rows the requester may read through
+    the target's routed viewset (:class:`karni.api.serializers.
+    KarniPrimaryKeyRelatedField`), so a row the test made can still be one the
+    requester cannot reference.
+    """
+    relation = serializer_field
+    if isinstance(serializer_field, ManyRelatedField):
+        relation = serializer_field.child_relation
+    get_queryset = getattr(relation, "get_queryset", None)
+    if get_queryset is None:
+        return True
+    try:
+        queryset = get_queryset()
+    except Exception:  # noqa: BLE001 - a custom relation; let the request decide
+        return True
+    if queryset is None:
+        return True
+    return bool(queryset.filter(pk=row.pk).exists())
+
+
+def _unreachable_reason(model: type[models.Model], name: str, target: Any, user: Any) -> str:
+    """Why ``model.name`` cannot be sent, and the ways on."""
+    from karni.api.routers import viewset_for_model
+
+    viewset = viewset_for_model(target)
+    where = (
+        f"{viewset.__name__} (access={getattr(viewset, 'access', None)!r})"
+        if viewset is not None
+        else f"{target.__name__}'s read scope"
+    )
+    return (
+        f"{model.__name__}.{name} needs a {target.__name__} the requester may reference, and "
+        f"{where} lets them read none. Let this role read {target.__name__}, make "
+        f"{name} optional (blank=True, or {name}:<type>? in karni make model), or pass "
+        f"payload={{{name!r}: ...}} or user= a requester who may"
+    )
 
 
 def build_payload(
@@ -496,7 +638,9 @@ def build_payload(
 
     Scalars come from an unsaved factory row (so names and types decide the
     values, uniques stay unique); a required relation gets a new row the
-    user can read. Optional relations and to-many fields are left out. A
+    user can read, and when the user may reference no row of its model the
+    field is named in :attr:`Payload.unreachable` (the write cannot succeed
+    as this user). Optional relations and to-many fields are left out. A
     required image gets :func:`image_upload`, any other required file
     :func:`file_upload`, and the body is multipart as soon as it holds an
     upload (one from ``payload=`` too). Every call makes new uploads, so no
@@ -518,6 +662,8 @@ def build_payload(
             if target is None:
                 continue
             related = readable_row(target, user)
+            if not _referenceable(serializer_field, related):
+                body.unreachable[name] = _unreachable_reason(resource.model, name, target, user)
             pk = _json_value(related.pk)
             body.data[name] = [pk] if isinstance(serializer_field, ManyRelatedField) else pk
             continue
@@ -539,6 +685,8 @@ def build_payload(
             continue
         body.scalars.append(name)
     body.data.update(payload or {})
+    for name in payload or {}:
+        body.unreachable.pop(name, None)
     body.multipart = any(_is_upload(value) for value in body.data.values())
     file_fields = {
         name
@@ -622,6 +770,7 @@ class _Crud:
         payload: Mapping[str, Any],
         expect: Mapping[str, int],
         skip: Iterable[str],
+        read_only: bool = False,
     ) -> None:
         unknown = set(skip) - set(CHECKS)
         if unknown:
@@ -634,10 +783,13 @@ class _Crud:
         self.payload = dict(payload)
         self.expect = dict(expect)
         self.skip = set(skip)
+        self.read_only = read_only
         self.user = user if user is not None else user_with_roles(*([role] if role else []))
         self.report = CrudReport(resource.name, role)
         self.schema_errors: list[str] = []
         self.documented: dict[str, Any] = {}
+        #: Checks that sent nothing (:meth:`not_exercised`), so they are not listed as passed.
+        self.unexercised: set[str] = set()
 
     # plumbing
 
@@ -694,7 +846,7 @@ class _Crud:
             detail = ""
         self.fail(
             f"{check}: {what} answered {response.status_code}, expected "
-            f"{expected.describe()}{detail}"
+            f"{expected.describe()}{detail}{refused_hint(response.status_code, expected)}"
         )
         return False
 
@@ -774,7 +926,9 @@ class _Crud:
         if viewset().get_access() is None:
             self.fail(f"access: {missing_access_message(viewset)}")
             return False
-        actions = ("list", "retrieve", "create", "partial_update", "destroy")
+        actions: tuple[str, ...] = ("list", "retrieve", "create", "partial_update", "destroy")
+        if self.read_only:
+            actions = ("list", "retrieve")
         allowed = [
             action
             for action in actions
@@ -820,13 +974,23 @@ class _Crud:
             row = self.row()
             if not self.preflight(row):
                 return self.report
-            self.note_unexercised_writes(row)
-            for name, check in (
-                ("list", lambda: self.check_list(row)),
-                ("retrieve", lambda: self.check_retrieve(row)),
+            writes: tuple[tuple[str, Any], ...] = (
                 ("create", self.check_create),
                 ("update", lambda: self.check_update(row)),
                 ("delete", self.check_delete),
+            )
+            if self.read_only:
+                writes = (
+                    ("create", self.check_create_refused),
+                    ("update", lambda: self.check_update_refused(row)),
+                    ("delete", lambda: self.check_delete_refused(row)),
+                )
+            else:
+                self.note_unexercised_writes(row)
+            for name, check in (
+                ("list", lambda: self.check_list(row)),
+                ("retrieve", lambda: self.check_retrieve(row)),
+                *writes,
                 ("denials", lambda: self.check_denials(row)),
                 ("pagination", self.check_pagination),
                 ("filtering", self.check_filtering),
@@ -842,7 +1006,7 @@ class _Crud:
                 except _RequestError as exc:
                     self.fail(str(exc))
                     break  # the transaction may be unusable after an exception
-                if len(self.report.failures) == before:
+                if len(self.report.failures) == before and name not in self.unexercised:
                     self.report.passed.append(name)
         return self.report
 
@@ -853,7 +1017,13 @@ class _Crud:
         if not self.status("list", response, expected, f"GET {url}") or not expected.allowed:
             return
         self.contract("GET", url, response)
-        if str(row.pk) not in _ids(response.json()):
+        body = response.json()
+        # On a table that already holds rows (a seeded database) the row may be on a later page.
+        for _page in range(50):
+            if str(row.pk) in _ids(body) or not (isinstance(body, dict) and body.get("next")):
+                break
+            body = self.call("list", self.user, "GET", body["next"]).json()
+        if str(row.pk) not in _ids(body):
             self.fail(
                 f"list: GET {url} does not include the requester's row {row.pk} "
                 f"(read={self.resource.viewset.access!r}). {self.why_empty_hint()}"
@@ -870,13 +1040,26 @@ class _Crud:
         if str(body.get("id", body.get("pk"))) != str(row.pk):
             self.fail(f"retrieve: GET {url} returned another row ({body.get('id')})")
 
+    def not_exercised(self, check: str, sent: Payload) -> None:
+        """List (and later warn) a write no body can make as the requester."""
+        reasons = "; ".join(sent.unreachable.values())
+        message = f"{check}: not exercised as {self.who()}: {reasons}."
+        self.report.skipped.append(message)
+        self.report.warnings.append(f"assert_crud({self.resource.name}) {message}")
+
     def check_create(self) -> None:
         expected = self.expected("create", self.user)
         sent = build_payload(self.resource, self.user, values=self.values, payload=self.payload)
+        if expected.allowed and sent.unreachable:
+            self.not_exercised("create", sent)
+            self.unexercised.add("create")
+            return
         url = self.resource.list_url()
         manager = self.resource.model._default_manager
         before = manager.count()
-        response = self.call("create", self.user, "POST", url, sent.data, format=sent.format)
+        response = self.call(
+            "create", self.user, "POST", url, sent.request_data, format=sent.format
+        )
         if not self.status("create", response, expected, f"POST {url}"):
             return
         if not expected.allowed:
@@ -924,7 +1107,12 @@ class _Crud:
         if change:
             self.matches(Payload(patch, scalars=[change]), response, self.stored(row), "update")
         expected_put = self.expected("update", self.user, row)
-        response = self.call("update", self.user, "PUT", url, fresh.data, format=fresh.format)
+        if expected_put.allowed and fresh.unreachable:
+            self.not_exercised(f"update: PUT {url}", fresh)
+            return
+        response = self.call(
+            "update", self.user, "PUT", url, fresh.request_data, format=fresh.format
+        )
         if self.status("update", response, expected_put, f"PUT {url}") and expected_put.allowed:
             self.contract("PUT", url, response)
             uploads = Payload(fresh.data, files=fresh.files)  # the scalars were checked by PATCH
@@ -948,13 +1136,74 @@ class _Crud:
         if after.status_code != 404:
             self.fail(f"delete: GET {url} after the delete answered {after.status_code}, not 404")
 
+    # a read-only resource (experimental)
+
+    def refused_writers(self) -> list[tuple[str, Any]]:
+        """Who must get 405 for every write: the requester, anonymous, a user without the role."""
+        found: list[tuple[str, Any]] = [("the requester", self.user), ("anonymous", None)]
+        if self.role:
+            found.append(("a user without the role", user_with_roles()))
+        return found
+
+    def refused(self, check: str, action: str, method: str, url: str, data: Any, fmt: str) -> None:
+        """``method url`` answers 405 to everyone :meth:`refused_writers` lists."""
+        model = self.resource.model
+        for who, user in self.refused_writers():
+            wanted = self.expect.get(action, 405) if user is self.user else 405
+            response = self.call(check, user, method, url, data, format=fmt)
+            if response.status_code != wanted:
+                self.fail(
+                    f"{check}: {method} {url} as {who} answered {response.status_code}, expected "
+                    f"{wanted}: {model.__name__} is read-only (class Karni: external = True "
+                    "without writable = True), so the API refuses every write"
+                )
+
+    def check_create_refused(self) -> None:
+        url = self.resource.list_url()
+        manager = self.resource.model._default_manager
+        try:
+            sent = build_payload(self.resource, self.user, values=self.values, payload=self.payload)
+            data, fmt = sent.request_data, sent.format
+        except Exception:  # noqa: BLE001 - any body will do, the method is what is refused
+            data, fmt = dict(self.payload), "json"
+        before = manager.count()
+        self.refused("create", "create", "POST", url, data, fmt)
+        if manager.count() != before:
+            self.fail(f"create: POST {url} wrote a row to a read-only resource")
+
+    def _snapshot(self, row: Any) -> dict[str, Any] | None:
+        stored = self.stored(row)
+        if stored is None:
+            return None
+        return {
+            field.attname: getattr(stored, field.attname)
+            for field in type(row)._meta.concrete_fields
+        }
+
+    def check_update_refused(self, row: Any) -> None:
+        url = self.resource.detail_url(row.pk)
+        before = self._snapshot(row)
+        self.refused("update", "partial_update", "PATCH", url, {}, "json")
+        self.refused("update", "update", "PUT", url, {}, "json")
+        if self._snapshot(row) != before:
+            self.fail(f"update: PATCH/PUT {url} changed a row of a read-only resource")
+
+    def check_delete_refused(self, row: Any) -> None:
+        url = self.resource.detail_url(row.pk)
+        self.refused("delete", "destroy", "DELETE", url, None, "json")
+        if self.stored(row) is None:
+            self.fail(f"delete: DELETE {url} removed a row of a read-only resource")
+
     def check_denials(self, row: Any) -> None:
         outsider = user_with_roles()
         manager = self.resource.model._default_manager
+        actions: tuple[str, ...] = ("list", "retrieve", "create", "partial_update", "destroy")
+        if self.read_only:
+            actions = ("list", "retrieve")  # the writes answer 405 to everyone (check_*_refused)
         for who, user in (("anonymous", None), ("a user without the role", outsider)):
             if user is outsider and not self.role:
                 continue  # without a role the requester already is such a user
-            for action in ("list", "retrieve", "create", "partial_update", "destroy"):
+            for action in actions:
                 target = row if action in {"retrieve", "partial_update", "destroy"} else None
                 expected = expectation(self.resource, action, user, target)
                 if expected.allowed:
@@ -966,7 +1215,7 @@ class _Crud:
                     body = build_payload(
                         self.resource, self.user, values=self.values, payload=self.payload
                     )
-                    data, fmt = body.data, body.format
+                    data, fmt = body.request_data, body.format
                 before = manager.count()
                 response = self.call("denials", user, method, url, data, format=fmt)
                 self.status("denials", response, expected, f"{method} {url} as {who}")
@@ -1107,7 +1356,11 @@ class _Crud:
                 f"visibility: the serializer (and so the schema) for {who} still lists "
                 f"{', '.join(documented)}"
             )
-        if protected and self.expected("partial_update", self.user, row).allowed:
+        if (
+            protected
+            and not self.read_only
+            and self.expected("partial_update", self.user, row).allowed
+        ):
             name = sorted(protected)[0]
             current = getattr(row, name, None)
             sent = _json_value(current) if current is not None else ""
@@ -1126,7 +1379,7 @@ class _Crud:
 
         document = generate_schema(cached=True, user=self.user)
         list_path = self.resource.list_url()
-        probe = self.resource.detail_url(uuid.UUID(int=0))
+        probe = _probe_detail_url(self.resource)
         for method, path, action in (
             ("GET", list_path, "list"),
             ("POST", list_path, "create"),
@@ -1140,7 +1393,15 @@ class _Crud:
                 continue
             if method.lower() not in viewset.http_method_names:
                 continue
-            if find_operation(document, path, method) is None:
+            documented = find_operation(document, path, method) is not None
+            if self.read_only and action not in {"list", "retrieve"}:
+                if documented:
+                    self.schema_errors.append(
+                        f"{method} {path} ({action}) is in the schema, but the resource is "
+                        "read-only and answers it with 405"
+                    )
+                continue
+            if not documented:
                 self.schema_errors.append(f"{method} {path} ({action}) is not in the schema")
         operation = find_operation(document, list_path, "GET") or {}
         names = {p.get("name") for p in operation.get("parameters", ()) if isinstance(p, dict)}
@@ -1232,6 +1493,7 @@ def assert_crud(
     payload: Mapping[str, Any] | None = None,
     expect: Mapping[str, int] | None = None,
     skip: Iterable[str] = (),
+    read_only: bool | None = None,
 ) -> CrudReport:
     """Assert the full CRUD surface of ``resource`` for ``role`` (see the module docstring).
 
@@ -1243,18 +1505,26 @@ def assert_crud(
     :param expect: pin the requester's status per action (``list``, ``retrieve``,
         ``create``, ``update``, ``partial_update``, ``destroy``).
     :param skip: checks to leave out (:data:`CHECKS`).
+    :param read_only: experimental. ``True`` checks that every write answers 405 and
+        changes nothing, ``False`` that writes work as ``access`` says. ``None``
+        (the default) picks ``True`` for an external model that is not writable
+        (:func:`karni.db.is_read_only`).
     :raises AssertionError: listing every failed check.
     :warns UserWarning: when the declaration refuses every write to the requester, so
         no create, update or delete was exercised (``report.skipped`` lists it too).
     """
+    from karni.db import is_read_only
+
+    resolved = resolve_resource(resource)
     run = _Crud(
-        resolve_resource(resource),
+        resolved,
         role,
         user=user,
         values=values or {},
         payload=payload or {},
         expect=expect or {},
         skip=skip,
+        read_only=is_read_only(resolved.model) if read_only is None else bool(read_only),
     )
     report = run.run()
     if report.failures:
@@ -1265,7 +1535,10 @@ def assert_crud(
 
 
 class APITestCase(drf_test.APITestCase):
-    """DRF's ``APITestCase`` with clients per role and the one-call CRUD/isolation/hiding checks."""
+    """DRF's ``APITestCase`` with clients per role and the one-call checks.
+
+    The checks: CRUD, isolation, hidden rows (API and admin) and public pages.
+    """
 
     client_class = KarniAPIClient
 
@@ -1314,3 +1587,9 @@ class APITestCase(drf_test.APITestCase):
         from karni.testing.hidden import assert_admin_row_hidden
 
         return assert_admin_row_hidden(client, row, **options)
+
+    def assert_pages(self, urls: Iterable[str], client: Any = None, **options: Any) -> Any:
+        """:func:`karni.testing.pages.assert_pages` (``client`` defaults to ``self.client``)."""
+        from karni.testing.pages import assert_pages
+
+        return assert_pages(self.client if client is None else client, urls, **options)

@@ -24,8 +24,8 @@ from karni_cli.upgrades.legacy_agent_files import LEGACY_FILES
 
 from .conftest import REPO_ROOT, TEMPLATE
 
-ADAPTER_FILES = {
-    "AGENTS.md",
+#: The deprecated per-tool instruction files (C860): written only where a project has them.
+LEGACY_ADAPTER_FILES = {
     "CLAUDE.md",
     ".cursor/rules/karni.mdc",
     ".windsurf/rules/karni.md",
@@ -34,7 +34,9 @@ ADAPTER_FILES = {
     "CONVENTIONS.md",
     ".junie/AGENTS.md",
 }
-PROCEDURES = ("new-model", "new-page", "add-module", "new-module")
+ADAPTER_FILES = {"AGENTS.md"} | LEGACY_ADAPTER_FILES
+PROCEDURES = ("new-model", "new-page", "add-module", "new-module", "site-from-design", "new-app")
+#: The deprecated per-tool command folders, one file per procedure.
 COMMAND_FILES = {
     f"{directory}/{name}{suffix}"
     for directory, suffix in (
@@ -68,16 +70,28 @@ def _frontmatter(text: str) -> dict[str, object] | None:
     return loaded
 
 
+def _warnings(output: str) -> int:
+    return sum(line.startswith("warning: C860: ") for line in output.splitlines())
+
+
 @pytest.fixture
 def new_project(runner, tmp_path: Path, monkeypatch) -> Path:
     """`karni new`, exactly as a user runs it."""
     monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
     result = runner.invoke(app, ["new", "Acme Board", "-o", str(tmp_path)])
     assert result.exit_code == 0, result.output
-    assert "24 agent adapter files" in result.output
+    assert "the agent instructions in AGENTS.md" in result.output
     project = tmp_path / "acme_board"
     monkeypatch.chdir(project)
     return project
+
+
+@pytest.fixture
+def legacy_project(new_project: Path) -> Path:
+    """A project made before 0.5.0: every per-tool file written, as `karni new` used to."""
+    sync(new_project, agent_data.load(new_project), keep=LEGACY_ADAPTER_FILES | COMMAND_FILES)
+    assert set(_generated(new_project)) == ADAPTER_FILES | COMMAND_FILES
+    return new_project
 
 
 def test_template_carries_no_hand_written_guidance() -> None:
@@ -86,12 +100,52 @@ def test_template_carries_no_hand_written_guidance() -> None:
         assert not (slug / rel).exists(), rel
 
 
-def test_new_generates_every_adapter_and_command(new_project: Path) -> None:
-    assert set(_generated(new_project)) == ADAPTER_FILES | COMMAND_FILES
+def test_new_writes_agents_md_and_no_tool_specific_file(runner, new_project: Path) -> None:
+    """0.5.0: AGENTS.md is the one agent file. No tool's own file or command folder."""
+    assert set(_generated(new_project)) == {"AGENTS.md"}
+    result = runner.invoke(app, ["rules", "sync"])
+    assert result.exit_code == 0, result.output
+    assert set(_generated(new_project)) == {"AGENTS.md"}
+    assert "C860" not in result.output
 
 
-def test_delete_all_adapters_then_sync_regenerates_identically(runner, new_project) -> None:
-    """VERIFY step: delete every adapter file, `karni rules sync`, byte-identical result."""
+def test_legacy_files_are_kept_up_to_date_with_one_c860_warning(runner, legacy_project) -> None:
+    """A project that has the deprecated files: updated for 0.5, one warning naming them."""
+    claude = legacy_project / ".claude" / "commands" / "new-model.md"
+    claude.write_text(claude.read_text() + "edited\n")
+    (legacy_project / ".github" / "copilot-instructions.md").unlink()
+
+    check = runner.invoke(app, ["rules", "sync", "--check"])
+    assert check.exit_code == 1
+    assert "stale: .claude/commands/new-model.md" in check.output
+    assert _warnings(check.output) == 1
+
+    result = runner.invoke(app, ["rules", "sync"])
+    assert result.exit_code == 0, result.output
+    assert "edited" not in claude.read_text()  # still updated in 0.5
+    assert _warnings(result.output) == 1
+    warning = next(line for line in result.output.splitlines() if "C860" in line)
+    for name in ("CLAUDE.md", ".cursor/rules/karni.mdc", ".junie/AGENTS.md", "CONVENTIONS.md"):
+        assert name in warning, name
+    assert ".claude/commands/ (6 files)" in warning
+    assert "AGENTS.md is the file to keep" in warning and "1.0" in warning
+    # A deleted deprecated file is the project opting out: it does not come back.
+    assert ".github/copilot-instructions.md" not in _generated(legacy_project)
+    assert ".github/copilot-instructions.md" not in warning
+    assert runner.invoke(app, ["rules", "sync", "--check"]).exit_code == 0
+
+
+def test_a_hand_written_file_in_a_deprecated_place_is_the_projects_own(runner, new_project) -> None:
+    (new_project / "CLAUDE.md").write_text("# Team handbook\n")
+    result = runner.invoke(app, ["rules", "sync"])
+    assert result.exit_code == 0, result.output
+    assert (new_project / "CLAUDE.md").read_text() == "# Team handbook\n"
+    assert "C860" not in result.output
+
+
+def test_delete_all_adapters_then_sync_regenerates_identically(runner, legacy_project) -> None:
+    """VERIFY step: delete every generated file, `karni rules sync`, byte-identical result."""
+    new_project = legacy_project
     (new_project / MODULES_DIR).mkdir(parents=True)
     (new_project / MODULES_DIR / "payments.md").write_text(FRAGMENT)
     (new_project / "karni.rules.py").write_text(
@@ -103,19 +157,21 @@ def test_delete_all_adapters_then_sync_regenerates_identically(runner, new_proje
     assert ".devin/rules/karni.md" in before and ".windsurf/rules/karni.md" not in before
     assert "<!-- karni:module:payments -->" in before["AGENTS.md"]
 
-    for rel in before:
-        (new_project / rel).unlink()
-    assert _generated(new_project) == {}
-
+    (new_project / "AGENTS.md").unlink()
     result = runner.invoke(app, ["rules", "sync"])
     assert result.exit_code == 0, result.output
     assert _generated(new_project) == before
     check = runner.invoke(app, ["rules", "sync", "--check"])
     assert check.exit_code == 0, check.output
 
+    for rel in before:
+        (new_project / rel).unlink()
+    assert runner.invoke(app, ["rules", "sync"]).exit_code == 0
+    assert _generated(new_project) == {"AGENTS.md": before["AGENTS.md"]}
 
-def test_formats_match_each_tools_convention(new_project: Path) -> None:
-    files = _generated(new_project)
+
+def test_formats_match_each_tools_convention(legacy_project: Path) -> None:
+    files = _generated(legacy_project)
     registry = load_registry()
     for rel, text in files.items():
         assert text.count("\n") <= registry.max_lines, rel
@@ -144,8 +200,8 @@ def test_formats_match_each_tools_convention(new_project: Path) -> None:
     assert "${input:request:what to add}" in prompt
 
 
-def test_every_adapter_says_the_same_thing(new_project: Path) -> None:
-    files = _generated(new_project)
+def test_every_adapter_says_the_same_thing(legacy_project: Path) -> None:
+    files = _generated(legacy_project)
     bodies = {
         rel: text.split("---\n", 2)[-1] if text.startswith("---\n") else text
         for rel, text in files.items()
@@ -154,7 +210,51 @@ def test_every_adapter_says_the_same_thing(new_project: Path) -> None:
     assert len(set(bodies.values())) == 1, sorted(bodies)
     body = next(iter(bodies.values()))
     assert "`karni context`" in body and "`karni rules`" in body
-    assert 15 <= body.count("\n") <= 25  # thin: ~15 lines of guidance
+    # Thin: the guidance, the procedures block, and the project's kind and stack.
+    assert 15 <= body.count("\n") <= 40
+    assert "The stack is set, so never ask which technology" in body
+
+
+def test_agents_md_carries_the_procedures_and_the_new_app_flow(new_project: Path) -> None:
+    """Every procedure by name and description, `/<name>` read as a request for it."""
+    agents = (new_project / "AGENTS.md").read_text()
+    assert "run `karni rules --procedure <name>` and follow every" in agents
+    assert "A request that starts with `/<name>` asks for that procedure" in agents
+    for procedure in agent_data.load(new_project).procedures:
+        assert f"  - `{procedure['name']}`: {procedure['description']}\n" in agents
+    assert (
+        "- To build an app from a one-line request (`/new-app <the request>`), follow the "
+        "`new-app` procedure: karni.yaml first, then `karni build` (rule K311)."
+    ) in agents
+
+
+def test_the_new_app_flow_reaches_every_adapter(legacy_project: Path) -> None:
+    """/new-app in the deprecated command folders, the line in every instruction file."""
+    files = _generated(legacy_project)
+    for rel, token in (
+        (".claude/commands/new-app.md", "$ARGUMENTS"),
+        (".cursor/commands/new-app.md", "the request typed after the command"),
+        (".windsurf/workflows/new-app.md", "the request typed after the command"),
+        (".github/prompts/new-app.prompt.md", "${input:request:what to add}"),
+    ):
+        command = files[rel]
+        assert f"Build this app: {token}" in command, rel
+        steps = [line for line in command.splitlines() if line[:2] in {f"{n}." for n in "1234567"}]
+        assert len(steps) == 5, rel
+        assert 'karni recipes list --match "<the request>"' in steps[0], rel
+        assert "`karni plan --questions`" in steps[1] and "`karni build`" in steps[2], rel
+        assert "Rules that apply: K311, K310, K305, K301" in command, rel
+        # the reference the steps need comes with them: the access words and the lists' shape
+        assert "\nReference:\n- Access, per entity: `access: {read: WHO" in command, rel
+        assert "`karni explain access`" in command and "`?page_size=` up to 100" in command, rel
+    line = (
+        "- To build an app from a one-line request (`/new-app <the request>`), follow the "
+        "`new-app` procedure: karni.yaml first, then `karni build` (rule K311)."
+    )
+    for rel in ADAPTER_FILES - {"CLAUDE.md"}:
+        assert line in files[rel], rel
+        assert "  - `new-app`: " in files[rel], rel
+    assert files["CLAUDE.md"].splitlines()[-1] == "@AGENTS.md"  # it reads AGENTS.md's line
 
 
 def test_registry_records_verified_sources() -> None:
@@ -165,25 +265,34 @@ def test_registry_records_verified_sources() -> None:
     for block in blocks:
         assert "verified 2026-10-02" in block, block[:60]
         assert "Source:" in block, block[:60]
+    # AGENTS.md is the one entry that is not deprecated.
+    assert [a.id for a in registry.adapters if not a.deprecated] == ["agents-md"]
+    assert all(c.deprecated for c in registry.commands)
 
 
-def test_check_detects_edits_missing_and_obsolete_files(runner, new_project) -> None:
+def test_check_detects_edits_missing_and_obsolete_files(runner, legacy_project) -> None:
+    new_project = legacy_project
     assert runner.invoke(app, ["rules", "sync", "--check"]).exit_code == 0
 
     agents = new_project / "AGENTS.md"
     agents.write_text(agents.read_text() + "edited\n")
-    (new_project / ".clinerules" / "karni.md").unlink()
+    junie = new_project / ".junie" / "AGENTS.md"
+    junie.write_text(junie.read_text() + "edited\n")
     stale = new_project / ".claude" / "commands" / "old-procedure.md"
     stale.write_text(f"<!-- {GENERATED_MARK} -->\n")
     result = runner.invoke(app, ["rules", "sync", "--check"])
     assert result.exit_code == 1
-    for rel in ("AGENTS.md", ".clinerules/karni.md", ".claude/commands/old-procedure.md"):
+    for rel in ("AGENTS.md", ".junie/AGENTS.md", ".claude/commands/old-procedure.md"):
         assert f"stale: {rel}" in result.output
     assert "edited" in agents.read_text()  # --check never writes
 
     assert runner.invoke(app, ["rules", "sync"]).exit_code == 0
     assert not stale.exists()
     assert runner.invoke(app, ["rules", "sync", "--check"]).exit_code == 0
+
+    agents.unlink()
+    missing = runner.invoke(app, ["rules", "sync", "--check"])
+    assert missing.exit_code == 1 and "stale: AGENTS.md" in missing.output
 
 
 def test_sync_never_clobbers_hand_written_files(runner, new_project) -> None:
@@ -201,7 +310,8 @@ def test_sync_never_clobbers_hand_written_files(runner, new_project) -> None:
     assert backup.read_text() == "# Our own agent notes\n"
 
 
-def test_disable_and_move_adapters(runner, new_project) -> None:
+def test_disable_and_move_adapters(runner, legacy_project) -> None:
+    new_project = legacy_project
     (new_project / "karni.rules.py").write_text(
         'ADAPTERS = {"disable": ["copilot-prompts", "aider"], '
         '"paths": {"cline": ".cline/rules/karni.md"}}\n'
@@ -218,9 +328,15 @@ def test_disable_and_move_adapters(runner, new_project) -> None:
     assert bad.exit_code != 0
 
 
+def test_disable_agents_md(runner, new_project) -> None:
+    (new_project / "karni.rules.py").write_text('ADAPTERS = {"disable": ["agents-md"]}\n')
+    assert runner.invoke(app, ["rules", "sync"]).exit_code == 0
+    assert _generated(new_project) == {}
+
+
 def test_claude_falls_back_to_full_body_without_agents_md(new_project) -> None:
     (new_project / "karni.rules.py").write_text('ADAPTERS = {"disable": ["agents-md"]}\n')
-    files = render_all(new_project, agent_data.load(new_project))
+    files = render_all(new_project, agent_data.load(new_project), keep={"CLAUDE.md"})
     assert "@AGENTS.md" not in files["CLAUDE.md"]
     assert "`karni rules`" in files["CLAUDE.md"]
 
@@ -349,7 +465,7 @@ COVERAGE = [
         "AGENTS.md",
         "/add-module, /new-module) encode the standard procedures — prefer them.",
         "K006",
-        "new-model, new-page, add-module, new-module",
+        "new-model, new-page, add-module, new-module, site-from-design",
     ),
     (
         "AGENTS.md",
@@ -480,7 +596,8 @@ def test_every_audited_statement_survives(
     assert _norm(statement) in _norm(LEGACY_FILES[legacy]), "coverage table is out of date"
     data = agent_data.load(None)
     if target.startswith("adapter:"):
-        text = (generated_project / target.split(":", 1)[1]).read_text()
+        rel = target.split(":", 1)[1]
+        text = render_all(generated_project, agent_data.load(generated_project), keep={rel})[rel]
     elif target.startswith("procedure:"):
         procedure = data.procedure(target.split(":", 1)[1])
         assert procedure is not None
@@ -499,4 +616,4 @@ def test_coverage_table_spans_every_legacy_file() -> None:
 def test_sync_function_reports_without_cli(generated_project: Path) -> None:
     result = sync(generated_project, agent_data.load(generated_project), check=True)
     assert result.stale == []
-    assert len(result.unchanged) == len(ADAPTER_FILES | COMMAND_FILES)
+    assert result.unchanged == ["AGENTS.md"] and result.deprecated == []

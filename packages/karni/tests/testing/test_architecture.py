@@ -173,6 +173,79 @@ def test_plain_model_flagged(monkeypatch) -> None:
     assert len(violations) == 1 and "Rogue" in violations[0].message
 
 
+@isolate_apps("tests.testapp")
+def test_an_integer_key_base_or_mixin_passes(monkeypatch) -> None:
+    from karni.models import BigIntBaseModel, IntegerKeyModel, TimestampedModel
+
+    class Reading(BigIntBaseModel):  # noqa: DJ008
+        class Meta:
+            app_label = "testapp"
+
+    class Tick(IntegerKeyModel, TimestampedModel):  # noqa: DJ008
+        class Meta:
+            app_label = "testapp"
+
+    class Bare(IntegerKeyModel):  # noqa: DJ008
+        class Meta:
+            app_label = "testapp"
+
+    cfg = SimpleNamespace(get_models=lambda: [Reading, Tick, Bare], name="testapp", label="testapp")
+    monkeypatch.setattr(architecture, "project_app_configs", lambda: [cfg])
+    assert architecture.check_model_base() == []
+
+
+# hand-written-tree (tree models)
+
+
+@isolate_apps("tests.testapp")
+def test_a_hand_written_tree_is_flagged(monkeypatch) -> None:
+    from karni.models import BaseModel, TreeModel
+
+    class Folder(BaseModel):  # noqa: DJ008
+        parent = models.ForeignKey("self", null=True, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "testapp"
+
+    class Unit(BaseModel):  # noqa: DJ008
+        parent_unit = models.ForeignKey("self", null=True, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "testapp"
+
+    class Person(BaseModel):  # noqa: DJ008
+        manager = models.ForeignKey("self", null=True, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "testapp"
+
+    class Area(TreeModel, BaseModel):  # noqa: DJ008
+        class Meta:
+            app_label = "testapp"
+
+    # karni: allow(hand-written-tree): the legacy table keeps its own parent column
+    class Legacy(BaseModel):  # noqa: DJ008
+        parent = models.ForeignKey("self", null=True, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "testapp"
+
+    models_ = [Folder, Unit, Person, Area, Legacy]
+    cfg = SimpleNamespace(get_models=lambda: models_, name="testapp", label="testapp")
+    monkeypatch.setattr(architecture, "project_app_configs", lambda: [cfg])
+    violations = architecture.check_hand_written_tree()
+    assert [v.rule for v in violations] == ["hand-written-tree", "hand-written-tree"]
+    assert "Folder.parent" in violations[0].message and "TreeModel" in violations[0].hint
+    assert "Unit.parent_unit" in violations[1].message
+
+
+@pytest.mark.django_db
+def test_testapp_trees_pass(monkeypatch) -> None:
+    real = [django_apps.get_app_config("testapp")]
+    monkeypatch.setattr(architecture, "project_app_configs", lambda: real)
+    assert architecture.check_hand_written_tree() == []
+
+
 # viewset-base
 
 
@@ -366,3 +439,18 @@ def test_run_checks_returns_strings(monkeypatch) -> None:
     monkeypatch.setattr(architecture, "project_app_configs", lambda: [])
     monkeypatch.setattr(_source, "project_app_configs", lambda: [])
     assert architecture.run_checks() == []
+
+
+def test_every_marker_on_a_line_is_read(tmp_path: Path) -> None:
+    """Area 1 F9: only the first marker on a line was read."""
+    f = tmp_path / "x.py"
+    f.write_text(
+        "q()  # karni: allow(raw-sql): reporting totals  # karni: allow(http-client): one call\n"
+    )
+    _source._file_lines.cache_clear()
+    for rule in ("raw-sql", "http-client"):
+        assert (
+            check_optout(f, rule, [1], Violation(rule=rule, location="x.py:1", message="m")) == []
+        )
+    first = _source.find_allow(f, "raw-sql", [1])
+    assert first is not None and first.reason == "reporting totals"

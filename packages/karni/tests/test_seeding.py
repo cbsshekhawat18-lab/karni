@@ -30,7 +30,7 @@ from karni.testing.factories import DEFAULT_PASSWORD, factory_for
 from karni.testing.values import SAFE_DOMAINS, ValueInference
 from tests.perfapp.models import Chapter, Genre, Loop, Novel, Publisher, Specimen, Writer
 from tests.perfapp.seeds import PublisherSeeder, WriterSeeder
-from tests.testapp.models import Event, Tag, Venue
+from tests.testapp.models import Event, Part, Reading, Region, Shelf, Tag, Venue
 
 pytestmark = pytest.mark.django_db
 
@@ -103,7 +103,9 @@ def test_seed_logins_exist_with_their_roles(settings) -> None:
 
 def test_the_same_seed_reproduces_the_same_rows() -> None:
     plan = [Venue, Tag, Event, get_user_model()]
-    seed(models=EVENTS, count=6, seed=42, now=NOW)
+    # --reset both times: integer keys (KARNI_TEST_PK=bigint) come from the sequence,
+    # which PostgreSQL never rolls back between tests, and --reset restarts it.
+    seed(models=EVENTS, count=6, seed=42, now=NOW, reset=True)
     first = _dump(*plan)
     report = seed(models=EVENTS, count=6, seed=42, now=NOW, reset=True)
     assert report.reset == ["testapp.Event", "testapp.Venue", "testapp.Tag"]  # children first
@@ -112,6 +114,21 @@ def test_the_same_seed_reproduces_the_same_rows() -> None:
     assert _dump(*plan) == first
     seed(models=EVENTS, count=6, seed=7, now=NOW, reset=True)
     assert _dump(*plan)["testapp.Event"] != first["testapp.Event"]
+
+
+def test_integer_keys_give_the_same_rows_after_a_reset() -> None:
+    """--reset restarts the sequences of the tables it wipes, so integer ids repeat too."""
+    plan = [Part, Reading]
+    seed(models=["testapp.Part", "testapp.Reading"], count=5, seed=3, now=NOW, reset=True)
+    first = _dump(*plan)
+    ids = [row["id"] for row in first["testapp.Reading"]]
+    assert ids == [str(n) for n in range(1, 6)], ids
+    again = seed(models=["testapp.Part", "testapp.Reading"], count=5, seed=3, now=NOW, reset=True)
+    assert again.reset == ["testapp.Reading", "testapp.Part"]  # children first
+    assert _dump(*plan) == first
+    # Without --reset the sequence goes on: new rows, new ids.
+    seed(models=["testapp.Reading"], count=2, seed=3, now=NOW)
+    assert Reading.objects.count() == 7 and max(Reading.objects.values_list("pk", flat=True)) == 7
 
 
 def test_without_reset_a_run_adds_rows_and_keeps_uniques_unique() -> None:
@@ -127,14 +144,14 @@ def test_a_seeded_uuid_key_an_earlier_run_used_is_replaced() -> None:
     # Each `karni seed` is a new process, so the same seed draws the same UUID
     # keys again; a key already in the table must give way to a fresh one, or
     # re-running fails with E612 on the primary key.
-    declaration = SeedBuilder(ValueInference(now=NOW)).declaration(Venue, Venue._meta.pk)
+    declaration = SeedBuilder(ValueInference(now=NOW)).declaration(Shelf, Shelf._meta.pk)
     reseed_random(0)
     key = declaration.function()
-    factory_for(Venue).create(pk=key)
+    factory_for(Shelf).create(pk=key)
     reseed_random(0)
     again = declaration.function()
     assert again != key
-    assert not Venue.objects.filter(pk=again).exists()
+    assert not Shelf.objects.filter(pk=again).exists()
 
 
 def test_seeders_pin_counts_values_and_take_over_creation() -> None:
@@ -212,14 +229,158 @@ def test_the_management_command() -> None:
         call_command("karni_seed", "--model", "testapp.Tag")
     out = StringIO()
     call_command("karni_seed", "--model", "testapp.Tag", "--count", "2", "--force", stdout=out)
+    assert out.getvalue().startswith("Seeding 1 model(s): testapp.Tag\n")
     assert "Seeded 1 model(s) with seed 0 (count 2)" in out.getvalue()
     out = StringIO()
     with override_settings(DEBUG=True):
         call_command(
             "karni_seed", "--model", "testapp.Tag", "--count", "3", "--seed", "9", "--json",
-            stdout=out,
+            "--reset", stdout=out,
         )  # fmt: skip
-    data = json.loads(out.getvalue())
+    data = json.loads(out.getvalue())  # --json prints only the report
     assert data["rows"] == {"testapp.Tag": 3} and data["seed"] == 9
+    assert data["plan"] == ["testapp.Tag"]
     with override_settings(DEBUG=True), pytest.raises(CommandError, match="no such model"):
         call_command("karni_seed", "--model", "nope.X")
+
+
+@override_settings(DEBUG=True)
+def test_seed_refuses_tables_that_already_hold_rows() -> None:
+    Tag.objects.create(name="real content")
+    out = StringIO()
+    with pytest.raises(CommandError) as caught:
+        call_command("karni_seed", "--model", "testapp.Venue", "--model", "testapp.Tag", stdout=out)
+    message = str(caught.value)
+    assert message.startswith("E617: Refusing to seed: these tables already hold rows: ")
+    assert "testapp.Tag (1)" in message and "testapp.Venue" not in message
+    assert "--reset" in message and "--force" in message and "karni load" in message
+    assert out.getvalue() == "Seeding 2 model(s): testapp.Tag, testapp.Venue\n"
+    assert Tag.objects.count() == 1 and not Venue.objects.exists()  # nothing was written
+
+    # --model narrows the check to the tables it seeds.
+    call_command("karni_seed", "--model", "testapp.Venue", "--count", "2", stdout=StringIO())
+    assert Venue.objects.count() == 2
+
+    # --force adds demo rows on top, and --reset wipes the tables first.
+    call_command("karni_seed", "--model", "testapp.Tag", "--count", "2", "--force", stdout=out)
+    assert Tag.objects.count() == 3
+    call_command("karni_seed", "--model", "testapp.Tag", "--count", "2", "--reset", stdout=out)
+    assert Tag.objects.count() == 2 and not Tag.objects.filter(name="real content").exists()
+
+
+@override_settings(DEBUG=True)
+def test_existing_users_never_block_a_seed(django_user_model: Any) -> None:
+    django_user_model.objects.create_superuser(email="admin@example.com", password="x")
+    out = StringIO()
+    call_command(
+        "karni_seed", "--model", "testapp.Tag", "--model", "karni_accounts.User", "--count", "2",
+        stdout=out,
+    )  # fmt: skip
+    assert "Seeding 2 model(s): karni_accounts.User, testapp.Tag" in out.getvalue()
+    assert Tag.objects.count() == 2
+
+
+def test_occupied_and_planned_rows() -> None:
+    from karni.seeding import occupied, planned_rows
+
+    assert occupied([Venue, Tag, get_user_model()]) == {}
+    Tag.objects.create(name="x")
+    get_user_model().objects.create_user(email="someone@example.com", password="x")
+    assert occupied([Venue, Tag, get_user_model()]) == {"testapp.Tag": 1}
+    assert planned_rows(Tag, 7) == 7 and planned_rows(get_user_model(), 20) == 5
+    assert planned_rows(Publisher, 7) == PublisherSeeder.Meta.count
+
+
+def test_reset_wipes_a_tree_whose_parent_protects_its_children() -> None:
+    """--reset deletes a tree leaves first: a node's children are PROTECTed by `parent`."""
+    seed(models=["testapp.Region"], count=12, seed=5, now=NOW, reset=True)
+    assert Region.objects.filter(parent__isnull=False).exists()
+    report = seed(models=["testapp.Region"], count=12, seed=5, now=NOW, reset=True)
+    assert report.reset == ["testapp.Region"]
+    assert Region.objects.count() == 12
+
+
+def test_reset_wipes_the_rows_of_a_module_model_a_seeder_names(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Friction 14: a seeded module table doubled (or hit a unique) on the second run."""
+    from django.contrib.auth.models import Group, Permission
+
+    from karni import seeding
+
+    class GroupSeeder(seeding.Seeder):
+        class Meta:
+            model = Group
+            count = 2
+
+        def seed(self, context: Any) -> list[Any]:
+            return [Group.objects.create(name=f"seeded-{n}") for n in range(2)]
+
+    monkeypatch.setattr(seeding, "_SEEDERS", {**seeding.seeders(), Group: GroupSeeder})
+    kept = Permission.objects.count()
+    first = seed(models=["auth.Group"], reset=True, now=NOW)
+    second = seed(models=["auth.Group"], reset=True, now=NOW)  # was: IntegrityError on the name
+    assert first.rows == second.rows == {"auth.Group": 2}
+    assert second.reset == ["auth.Group"]
+    assert Group.objects.filter(name__startswith="seeded-").count() == 2
+    assert Permission.objects.count() == kept  # a model no seeder names is not touched
+    monkeypatch.setattr(seeding, "_SEEDERS", {})
+    seed(models=["auth.Group"], reset=True, now=NOW)
+    assert Group.objects.filter(name__startswith="seeded-").count() == 2  # no seeder: kept
+
+
+def test_a_generated_slug_is_the_plain_slug_of_its_source() -> None:
+    """A SlugField(populate_from=...) seeds as the slug of its source, a counter only on a clash.
+
+    The slug is often the import key (a region tree's ``slug``), so a demo file
+    names ``europe``, never ``europe-15``.
+    """
+    from django.utils.text import slugify
+
+    from tests.fieldsapp.models import Product as Catalogued
+
+    names = iter(["Europe", "North America", "Europe", "Asia"])
+
+    class NamedProducts(Seeder):
+        class Meta:
+            model = Catalogued
+            count = 4
+
+        name = factory_lazy(lambda: next(names))
+
+    clear_cache()
+    try:
+        seeders()[Catalogued] = NamedProducts
+        seed(models=["fieldsapp.Product"], count=4, seed=2, now=NOW)
+    finally:
+        clear_cache()
+    slugs = list(Catalogued.objects.order_by("created_at", "slug").values_list("name", "slug"))
+    assert sorted(slug for _name, slug in slugs) == [
+        "asia",
+        "europe",
+        "europe-2",  # the one clash: the field's own counter
+        "north-america",
+    ]
+    for name, slug in slugs:
+        assert slug.startswith(slugify(name))
+
+
+def test_a_volume_seed_keeps_its_slugs_unique_without_a_query_per_row() -> None:
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    from tests.fieldsapp.models import Product as Catalogued
+
+    with CaptureQueriesContext(connection) as captured:
+        seed(models=["fieldsapp.Product"], volume=30, seed=2, now=NOW)
+    slugs = list(Catalogued.objects.values_list("slug", flat=True))
+    assert len(slugs) == len(set(slugs)) == 30
+    table = Catalogued._meta.db_table
+    lookups = [q["sql"] for q in captured if q["sql"].startswith("SELECT") and table in q["sql"]]
+    assert not [sql for sql in lookups if '"slug" =' in sql]  # no SlugField.unique_slug per row
+
+
+def factory_lazy(function: Any) -> Any:
+    import factory
+
+    return factory.LazyFunction(function)

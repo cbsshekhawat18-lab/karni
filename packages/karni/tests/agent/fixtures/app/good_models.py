@@ -5,7 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from karni.api import Access, Authenticated, BaseViewSet, Owned
-from karni.models import BaseModel, TimestampedModel, UUIDModel
+from karni.models import BaseModel, BigIntBaseModel, IntegerKeyModel, TimestampedModel, UUIDModel
 
 
 class Invoice(BaseModel):
@@ -17,6 +17,14 @@ class Invoice(BaseModel):
 
 class AccessLog(UUIDModel, TimestampedModel):
     path = models.CharField(max_length=200)
+
+
+class Reading(BigIntBaseModel):
+    value = models.IntegerField()
+
+
+class Tick(IntegerKeyModel, TimestampedModel):
+    source = models.CharField(max_length=40)
 
 
 class Base(models.Model):

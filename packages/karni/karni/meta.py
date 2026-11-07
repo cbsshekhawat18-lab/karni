@@ -8,6 +8,7 @@ nested class, next to ``Meta``, ``APIMeta`` and ``AdminMeta``::
             owner_field = "created_by"          # the `own` scope (default: created_by)
             scope_paths = {"branch": "branch", "region": "branch__region"}
             actions = ["approve", "export"]     # besides view/add/change/delete
+            explicit_actions = ["approve"]      # a wildcard grant never reaches these
             field_roles = {                     # who sees / changes a field (P3)
                 "phone": {"read": ["staff", "support"], "write": ["staff"]},
                 "internal_note": ["staff"],     # shorthand: read and write
@@ -19,6 +20,9 @@ nested class, next to ``Meta``, ``APIMeta`` and ``AdminMeta``::
             import_transform = "shop.imports.clean_order_row"
             after_import = "shop.imports.reindex"
             no_overlap = ("room", "during")     # one live row per room and slot (PostgreSQL)
+            field_groups = {"Order": ["number", "customer"], "Notes": ["note"]}  # karni.layout
+            # external = True, writable = True, database = "warehouse": karni.db (experimental)
+            # search = {"fields": ["number"]}: karni.global_search (experimental)
 
 Every option has a default, so a model with no ``Karni`` class behaves
 sensibly: owned by whoever created it, no extra scope paths, the four
@@ -48,9 +52,12 @@ __all__ = [
     "FieldRule",
     "ImportOptions",
     "Option",
+    "explicit_actions",
     "field_roles",
     "import_options",
     "karni_option",
+    "key_field_problem",
+    "label_field",
     "model_actions",
     "natural_key",
     "owner_field",
@@ -104,6 +111,14 @@ OPTIONS: Final[tuple[Option, ...]] = (
         'actions = ["approve", "export"]',
     ),
     Option(
+        "explicit_actions",
+        "`()`",
+        "Actions only a grant that names them reaches. A wildcard (`*`, `app.model:*`) skips "
+        'them, so a broad role such as `"*": "own"` never holds them. Each one is an '
+        "action of the model, standard or from `actions` (`karni.E290`).",
+        'explicit_actions = ["refund"]',
+    ),
+    Option(
         "field_roles",
         "`{}`",
         "Which roles see and change a field. The API, the admin and exports hide it from the rest.",
@@ -127,8 +142,24 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "natural_key",
         "first unique slug, char or email field, else the primary key",
         "The field that names a row to people: imports refer to related rows by it and "
-        "exports write relations with it.",
+        "exports write relations with it. One field name, a string (`karni.E291`).",
         'natural_key = "sku"',
+    ),
+    Option(
+        "label_field",
+        "the first text field named `name`, `title` or `label`, else `natural_key`",
+        "Experimental. The field that shows a row to people where only its key would show "
+        "otherwise: the groups of an aggregate on a relation (chart legends and axes, "
+        "comparison headers).",
+        'label_field = "display_name"',
+    ),
+    Option(
+        "help",
+        "none",
+        "One line that says what the model is for. The admin shows it at the top of the "
+        "model's list and form. Without it the admin shows no line: the docstring is for "
+        "developers and is never shown.",
+        'help = "Products you sell. Prices are per unit."',
     ),
     Option(
         "import_key",
@@ -154,6 +185,56 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "`None`",
         "A callable, or its dotted path, run once an import commits, with the result.",
         'after_import = "shop.imports.reindex"',
+    ),
+    Option(
+        "dashboard",
+        "`None`",
+        "Put the model on the staff app's dashboard: counts (all rows, new ones, one per "
+        "state) and the newest rows. `True` for the defaults, or a dict "
+        "([API: dashboard](api.md#the-staff-dashboard)).",
+        'dashboard = {"by": "status", "counts": {"Due today": {"due_on": "today"}}}',
+    ),
+    Option(
+        "aggregate",
+        "`None`",
+        "Experimental. What `GET <resource>/aggregate/` may group by and sum: the fields, "
+        "relation paths and expressions in `group_by` (a date takes `:year`, `:quarter` or "
+        "`:month`), the `values` a metric reads, the `metrics` allowed and named `expressions` "
+        "([aggregations](aggregations.md)).",
+        'aggregate = {"group_by": ["region", "launched_on"], "values": ["price"]}',
+    ),
+    # cross-model search (karni.global_search, experimental)
+    Option(
+        "search",
+        "`None`",
+        "Experimental. Put the model in cross-model search (`GET /api/search/`): the text "
+        "`fields` to match, the `title` and `subtitle` a hit shows, a `weight` across models. "
+        "Each field gets a GIN trigram index "
+        "([search across models](global-search.md)).",
+        'search = {"fields": ["name", "sku"], "title": "name", "subtitle": "sku"}',
+    ),
+    # wide models: field groups and column sets (karni.layout, experimental)
+    Option(
+        "field_groups",
+        "`{}`",
+        "Experimental. Titled groups of fields: sections (or tabs) in ResourceForm and "
+        "ResourceDetail, fieldsets in the admin. The fields in no group go into a last group, "
+        "Other ([UI: field groups](ui.md#field-groups-and-column-sets-experimental)).",
+        'field_groups = {"Overview": ["name", "summary"], "Financials": ["price", "cost"]}',
+    ),
+    Option(
+        "field_group_layout",
+        '`"sections"`',
+        'Experimental. How ResourceForm and ResourceDetail show `field_groups`: `"sections"` '
+        'or `"tabs"`.',
+        'field_group_layout = "tabs"',
+    ),
+    Option(
+        "column_sets",
+        "`{}`",
+        "Experimental. Named column presets of ResourceTable, with a selector that remembers "
+        "each user's choice. The set named `default` is shown first, else the first set.",
+        'column_sets = {"default": ["name", "price"], "financial": ["name", "price", "cost"]}',
     ),
     # typed field layer (karni.fields)
     Option(
@@ -193,6 +274,39 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "`EXCLUDE` constraint the model's migration creates. Soft-deleted rows never block.",
         'no_overlap = NoOverlap("room", "during", ignore={"status": ["cancelled"]})',
     ),
+    # external tables, SQL views and a second database (karni.db, experimental)
+    Option(
+        "external",
+        "`False`",
+        "Experimental. Another system owns the table or view: with `Meta.managed = False`, "
+        "the model may inherit plain `models.Model`, Karni runs no DDL for it, the API answers "
+        "its writes with 405 and the admin shows it read-only "
+        "([models: external tables](models.md#external-tables-views-and-a-second-database)).",
+        "external = True",
+    ),
+    Option(
+        "writable",
+        "`False`",
+        "Experimental. Let the API and the admin write an external model's table.",
+        "writable = True",
+    ),
+    Option(
+        "database",
+        "`None` (the default database)",
+        "Experimental. The `DATABASES` alias the model's reads, writes and migrations go to "
+        "(`karni.db.DatabaseRouter`).",
+        'database = "warehouse"',
+    ),
+    # taxonomy tagging (karni.taxonomy, experimental)
+    Option(
+        "taxonomies",
+        "`{}`",
+        "Experimental. Tag the model to tree models: key -> tree model. Each key is a "
+        "many-to-many of that name (generated, or yours adopted), the list filters "
+        "`?<key>=` and `?<key>_descendants=`, the `facets/` counts and the `tree:<key>` scope "
+        "([models: taxonomies](models.md#taxonomies)).",
+        'taxonomies = {"region": "geo.Region", "category": "catalog.Category"}',
+    ),
 )
 
 
@@ -210,6 +324,21 @@ def model_actions(model: type[models.Model]) -> tuple[str, ...]:
     """The standard actions plus the model's own (``Karni.actions``), in order."""
     extra = tuple(karni_option(model, "actions", ()) or ())
     return STANDARD_ACTIONS + tuple(action for action in extra if action not in STANDARD_ACTIONS)
+
+
+def explicit_actions(model: type[models.Model]) -> frozenset[str]:
+    """``Karni.explicit_actions``: the actions only a grant that names them reaches.
+
+    A wildcard pattern (``"*"``, ``"shop.order:*"``) skips them in
+    ``KARNI_ROLES``, in a module's roles and in a user grant, so a broad role
+    never holds an action like ``impersonate`` or ``refund`` by accident. A
+    single string counts as one action (fail closed). ``karni check`` reports
+    a name that is not one of the model's actions (``karni.E290``).
+    """
+    declared = karni_option(model, "explicit_actions", ()) or ()
+    if isinstance(declared, str):
+        declared = (declared,)
+    return frozenset(str(action) for action in declared)
 
 
 def permission_key(model: type[models.Model], action: str) -> str:
@@ -281,26 +410,92 @@ def field_roles(model: type[models.Model]) -> dict[str, FieldRule]:
 _KEY_FIELD_TYPES: Final[tuple[str, ...]] = ("SlugField", "CharField", "EmailField")
 
 
-def natural_key(model: type[models.Model]) -> str | None:
-    """The field that names a row of ``model`` to people: ``Karni.natural_key``.
+#: The field names :func:`label_field` looks for, in order (as ``@karni/ui``'s ``displayLabel``).
+LABEL_FIELD_NAMES: Final[tuple[str, ...]] = ("name", "title", "label")
 
-    How an import refers to a related row (``venue = "Arena"``) and how an
-    export writes a relation. Declared explicitly, else the first unique
-    slug/char/email field (``slug``, ``email``, ``sku``), else ``None`` —
-    imports and exports then use the primary key.
+
+def label_field(model: type[models.Model]) -> str | None:
+    """Experimental. The field that shows a row of ``model`` to people: ``Karni.label_field``.
+
+    What an aggregate's group on a relation is labelled with, so a chart reads
+    ``Europe`` where the key is a slug or an id. Declared explicitly, else the
+    first concrete text field named ``name``, ``title`` or ``label``, else
+    :func:`natural_key`, else ``None`` (the key is shown).
     """
-    declared = karni_option(model, "natural_key")
+    declared = karni_option(model, "label_field")
     if declared:
         name = str(declared)
         try:
             model._meta.get_field(name)
         except FieldDoesNotExist as exc:
             raise KarniImproperlyConfigured(
-                f"{model.__name__}.Karni.natural_key names {name!r}, which the model does "
+                f"{model.__name__}.Karni.label_field names {name!r}, which the model does "
                 "not have.",
-                code="E801",
+                code="E280",
             ) from exc
         return name
+    for name in LABEL_FIELD_NAMES:
+        try:
+            found = model._meta.get_field(name)
+        except FieldDoesNotExist:
+            continue
+        if (
+            getattr(found, "concrete", False)
+            and not found.is_relation
+            and isinstance(found, models.CharField | models.TextField)
+        ):
+            return name
+    return natural_key(model)
+
+
+def key_field_problem(model: type[models.Model], option: str) -> str | None:
+    """Why ``Karni.<option>`` (``natural_key``, ``import_key``) is not one field, or ``None``.
+
+    The option names one field of the model, as a string. A list or tuple
+    (``["name"]``) is refused with the fix: an import's relation cell and its
+    matching column each carry one value, so a key of several fields has no
+    form in a file. ``karni check`` reports it (``karni.E291``) and the
+    readers raise it.
+    """
+    declared = karni_option(model, option)
+    if declared is None or declared == "":
+        return None
+    where = f"{model.__name__}.Karni.{option}"
+    if not isinstance(declared, str):
+        names = list(declared) if isinstance(declared, list | tuple) else None
+        if names is not None and len(names) == 1 and isinstance(names[0], str):
+            return (
+                f"{where} is {declared!r}, a {type(declared).__name__}. It names one field, "
+                f"as a string: {option} = {names[0]!r}."
+            )
+        return (
+            f'{where} is {declared!r}. It names one field, as a string ({option} = "sku"). '
+            "A key of several fields is not supported: add one unique field that names the "
+            "row (a SlugField built from them), or leave the option out to use the primary key."
+        )
+    try:
+        model._meta.get_field(declared)
+    except FieldDoesNotExist:
+        return f"{where} names {declared!r}, which the model does not have."
+    return None
+
+
+def natural_key(model: type[models.Model]) -> str | None:
+    """The field that names a row of ``model`` to people: ``Karni.natural_key``.
+
+    How an import refers to a related row (``venue = "Arena"``) and how an
+    export writes a relation. Declared explicitly (one field name, a string),
+    else the first unique slug/char/email field (``slug``, ``email``,
+    ``sku``), else ``None`` — imports and exports then use the primary key.
+    A declaration that is not one field of the model raises ``E291``, which
+    ``karni check`` reports at boot.
+    """
+    declared = karni_option(model, "natural_key")
+    if declared:
+        problem = key_field_problem(model, "natural_key")
+        if problem is not None:
+            raise KarniImproperlyConfigured(problem, code="E291")
+        return str(declared)
     from karni.fields.base import is_unique  # Karni fields keep uniqueness in a constraint
 
     for field in model._meta.concrete_fields:
@@ -355,6 +550,9 @@ def _callable_option(model: type[models.Model], name: str) -> Callable[..., Any]
 
 def import_options(model: type[models.Model]) -> ImportOptions:
     """``Karni.import_key`` / ``import_lookup`` / ``import_transform`` / ``after_import``."""
+    problem = key_field_problem(model, "import_key")
+    if problem is not None:
+        raise KarniImproperlyConfigured(problem, code="E291")
     key = karni_option(model, "import_key") or natural_key(model)
     if key is not None:
         try:

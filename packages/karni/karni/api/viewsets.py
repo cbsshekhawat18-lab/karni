@@ -2,12 +2,12 @@
 
 The target developer experience::
 
-    from karni.api import Access, Authenticated, BaseViewSet, Public
+    from karni.api import Access, BaseViewSet, HasRole, Public
     from myapp.models import Event
 
     class EventViewSet(BaseViewSet):
         model = Event
-        access = Access(read=Public(), write=Authenticated())
+        access = Access(read=Public(), write=HasRole("staff"))
         search_fields = ["title"]
 
 gives working CRUD, filtering, pagination, ordering, search, access control,
@@ -38,8 +38,19 @@ usual):
 * ``expandable_fields`` — restrict/alias what ``?expand=`` may name.
 * ``expand_depth`` — per-viewset override of ``KARNI_API_MAX_EXPAND_DEPTH``.
 * ``auto_register`` / ``route`` — steer (or opt out of) router autodiscovery.
+* ``is_read_only()`` / ``read_only_refused_actions`` (experimental) — a
+  viewset over an external model (``class Karni: external = True``,
+  :mod:`karni.db`) answers its writes with 405 unless the model is
+  ``writable``; override to decide per viewset.
 * ``filter_backends`` / ``filterset_fields`` / ``search_fields`` /
   ``ordering_fields`` — standard DRF/django-filter attributes.
+* ``tree_max_nodes`` / ``tree_default_depth`` / ``tree_max_depth`` /
+  ``tree_top_level()`` (experimental) — the tree endpoints a viewset gets
+  when its model is a ``TreeModel`` (:mod:`karni.api.tree`).
+* ``aggregation`` / ``get_aggregation()`` / ``aggregate_queryset()``
+  (experimental): what ``GET <resource>/aggregate/`` may group and sum
+  (:mod:`karni.aggregation`). The model's ``class Karni: aggregate`` is the
+  default.
 
 Performance (ADR 0001, Decision 3) — every hatch is a declaration, never
 silence:
@@ -66,13 +77,14 @@ import weakref
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any, ClassVar, Final
 
+import structlog
 from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Model, Prefetch, QuerySet
 from django.db.models.expressions import Combinable
 from django.http import Http404, HttpRequest
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import MethodNotAllowed, NotFound
 from rest_framework.pagination import BasePagination
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
@@ -82,9 +94,12 @@ from rest_framework.settings import api_settings
 from rest_framework.viewsets import ModelViewSet
 
 from karni.accounts.permissions import ObjectPermissionsMixin
+from karni.aggregation import PARAMETERS as AGGREGATE_PARAMETERS
+from karni.aggregation import Aggregation, AggregationError, aggregation_of
 from karni.api.access import (
     Access,
     AccessPermission,
+    Authenticated,
     Granted,
     Predicate,
     RowFilter,
@@ -97,19 +112,23 @@ from karni.api.access import (
     trace,
     validate_access,
 )
-from karni.api.caching import Cache, ResponseCache, Uncached, response_cache
+from karni.api.caching import Cache, ResponseCache, Uncached, access_scope, response_cache
 from karni.api.expansion import collect_expand_param, validate_expand
 from karni.api.filters import KarniFilterBackend, KarniOrderingFilter, KarniSearchFilter
+from karni.api.honeypot import honeypot_field, honeypot_filled
 from karni.api.optimizer import TargetScope, optimize, validate_hints
 from karni.api.related import mark_read_scoped
 from karni.api.serializers import build_serializer
+from karni.api.throttling import ActionRateThrottle, Throttle
 from karni.deprecation import warn_deprecated
 from karni.exceptions import KarniImproperlyConfigured, KarniValueError, KarniWriteDeferred
+from karni.global_search import SearchDeclaration
 from karni.pagination import Unpaginated, check_pagination_class
 from karni.performance import (
     Budget,
     QueryBudgetExceeded,
     QueryRecorder,
+    Scaling,
     budget_failure,
     budget_mode,
     record_queries,
@@ -119,6 +138,8 @@ from karni.performance import (
 __all__ = ["BaseViewSet"]
 
 logger = logging.getLogger("karni.performance")
+#: Structured events of the API layer (``karni.api.honeypot``).
+api_logger = structlog.get_logger("karni.api")
 
 #: Actions whose queryset the optimiser shapes from the serializer.
 OPTIMIZED_ACTIONS: Final = frozenset({"list", "retrieve"})
@@ -249,10 +270,62 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     select_related: ClassVar[Sequence[str]] = ()
     prefetch_related: ClassVar[Sequence[str | Prefetch]] = ()
     query_budget: ClassVar[Budget | None] = None
+    #: Experimental. ``Scaling(rows=(5, 500), seconds=0.3)``: the scaling check's row counts
+    #: and a time budget at the large count (:class:`karni.performance.Scaling`).
+    query_scaling: ClassVar[Scaling | None] = None
     pagination: ClassVar[Unpaginated | None] = None
     cache: ClassVar[Cache | Uncached | None] = None
+    #: ``Throttle(create="10/hour")`` limits each caller of the named actions, on
+    #: top of the project-wide ``anon``/``user`` throttles (:mod:`karni.api.throttling`).
+    #: ``None`` declares nothing: a public ``create`` still gets ``KARNI_PUBLIC_CREATE_RATE``,
+    #: and ``Throttle(create=None)`` turns that default off.
+    throttle: ClassVar[Throttle | None] = None
+    #: The throttle class a ``throttle`` declaration adds to ``throttle_classes``.
+    #: Override / escape hatch: a subclass of ``ActionRateThrottle`` with another
+    #: ``get_cache_key`` (a different caller identity).
+    action_throttle_class: ClassVar[type[ActionRateThrottle]] = ActionRateThrottle
     scope_exempt: ClassVar[bool] = False
     scope_exempt_reason: ClassVar[str] = ""
+    #: Experimental. What ``GET <resource>/aggregate/`` may group by and sum: an
+    #: ``Aggregation(...)`` or its dict (:mod:`karni.aggregation`). ``None`` uses the
+    #: model's ``class Karni: aggregate``. Override / escape hatch: :meth:`get_aggregation`.
+    aggregation: ClassVar[Aggregation | Mapping[str, Any] | None] = None
+
+    #: Experimental. The actions a viewset answers with 405 while :meth:`is_read_only` (a
+    #: model with ``class Karni: external = True`` and no ``writable = True``): the writes
+    #: and the import screens. The OpenAPI document leaves them out. Override / escape
+    #: hatch: a subclass narrows or widens the set.
+    read_only_refused_actions: ClassVar[frozenset[str]] = frozenset(
+        {
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+            "import_data",
+            "import_template",
+            "import_job",
+            "import_preview",
+            "import_commit",
+            "move",
+        }
+    )
+
+    #: Experimental. The actions a viewset serves only when its model is a
+    #: :class:`karni.models.TreeModel` (:mod:`karni.api.tree`).
+    tree_actions: ClassVar[frozenset[str]] = frozenset(
+        {"tree", "children", "ancestors", "move", "access_forest"}
+    )
+    #: Experimental. The most nodes one ``tree/`` answer holds.
+    tree_max_nodes: ClassVar[int] = 1000
+    #: Experimental. The levels ``tree/`` returns without ``?depth=``.
+    tree_default_depth: ClassVar[int] = 2
+    #: Experimental. The most levels ``?depth=`` may ask for.
+    tree_max_depth: ClassVar[int] = 10
+
+    #: Experimental. The taxonomy actions (:mod:`karni.api.taxonomy`): ``facets`` is served
+    #: when the model declares ``class Karni: taxonomies``, ``tagged`` when a taxonomy of
+    #: another model points at this tree model.
+    taxonomy_actions: ClassVar[frozenset[str]] = frozenset({"facets", "tagged"})
 
     #: Actions governed by ``access.create`` **or** ``access.write`` (an
     #: import creates some rows and changes others); the action decides per
@@ -285,6 +358,18 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         if not getattr(resolved, _SCOPED_MARK, False):
             cls.get_queryset = _scoped_get_queryset(resolved)  # type: ignore[method-assign]
         _validate_performance(cls)
+        declares = isinstance(cls.throttle, Throttle)
+        # Every viewset carries the action throttle, so a public create gets
+        # its default limit (KARNI_PUBLIC_CREATE_RATE) without a declaration.
+        # A class that sets its own throttle_classes and declares nothing owns
+        # its throttling, as in plain DRF.
+        own_classes = "throttle_classes" in cls.__dict__
+        if (declares or not own_classes) and cls.action_throttle_class not in list(
+            cls.throttle_classes
+        ):
+            # The limit rides in throttle_classes, so everything that switches
+            # DRF throttling off (tests, probes, a project) covers it.
+            cls.throttle_classes = [*cls.throttle_classes, cls.action_throttle_class]
         if "object_permission_classes" in cls.__dict__ and cls.object_permission_classes:
             # Still honoured (checked after the access object check) until removal.
             warn_deprecated(
@@ -295,6 +380,65 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             )
         if apps.models_ready:
             _validate_once(cls)
+
+    @classmethod
+    def get_extra_actions(cls) -> list[Any]:
+        """DRF's extra actions, without the tree and taxonomy actions the model does not use.
+
+        The tree actions need a tree model, ``facets`` a model with taxonomies
+        and ``tagged`` a tree model a taxonomy points at. Only Karni's own
+        actions are left out: a subclass's action of the same name (a ``move``
+        that moves a card between columns) is the project's and stays routed.
+        """
+        actions: list[Any] = list(super().get_extra_actions())
+        hidden: set[str] = set()
+        if not cls.serves_tree():
+            hidden |= cls.tree_actions
+        if not cls.serves_facets():
+            hidden.add("facets")
+        if not cls.serves_tagged():
+            hidden.add("tagged")
+        karni_own = BaseViewSet.__dict__
+        return [
+            extra
+            for extra in actions
+            if extra.__name__ not in hidden or extra is not karni_own.get(extra.__name__)
+        ]
+
+    @classmethod
+    def _served_model(cls) -> type[Model] | None:
+        model = cls.model
+        if model is None and cls.queryset is not None:
+            model = cls.queryset.model
+        return model
+
+    @classmethod
+    def serves_tree(cls) -> bool:
+        """Experimental. Whether the viewset's model is a :class:`karni.models.TreeModel`."""
+        model = cls._served_model()
+        if model is None:
+            return False
+        from karni.tree import is_tree_model
+
+        return is_tree_model(model)
+
+    @classmethod
+    def serves_facets(cls) -> bool:
+        """Experimental. Whether the model declares taxonomies, so ``facets/`` is routed."""
+        if "facets" not in cls.taxonomy_actions:
+            return False
+        from karni.api.taxonomy import serves_facets
+
+        return serves_facets(cls._served_model())
+
+    @classmethod
+    def serves_tagged(cls) -> bool:
+        """Experimental. Whether a taxonomy points at the model, so ``<key>/tagged/`` is routed."""
+        if "tagged" not in cls.taxonomy_actions:
+            return False
+        from karni.api.taxonomy import serves_tagged
+
+        return serves_tagged(cls._served_model())
 
     # model & access
 
@@ -315,6 +459,55 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             "override get_queryset()/get_serializer_class()).",
             code="E110",
         )
+
+    def is_read_only(self) -> bool:
+        """Experimental. Whether this viewset only reads (:func:`karni.db.is_read_only`).
+
+        True for a model with ``class Karni: external = True`` that does not
+        declare ``writable = True``: :attr:`read_only_refused_actions` then
+        answer 405 and are not in the OpenAPI document.
+
+        Override / escape hatch: return ``False`` to serve writes from this
+        viewset alone, or ``True`` to make any viewset read-only.
+        """
+        from karni.db import is_read_only
+
+        try:
+            model = self.get_model()
+        except ImproperlyConfigured:
+            return False
+        return is_read_only(model)
+
+    def refuses_read_only(self, action: str | None) -> bool:
+        """Experimental. Whether ``action`` answers 405 here because the viewset only reads."""
+        return action in self.read_only_refused_actions and self.is_read_only()
+
+    def initial(self, request: Request, *args: Any, **kwargs: Any) -> None:
+        """DRF's checks, after refusing a write to a read-only model with 405 (for everyone)."""
+        if self.refuses_read_only(getattr(self, "action", None)):
+            model = self.get_model()
+            raise MethodNotAllowed(
+                request.method or "",
+                detail=(
+                    f"{model.__name__} is read-only: another system owns its table (class "
+                    "Karni: external = True), so the API only reads it. Declare class Karni: "
+                    "writable = True on the model to allow writes."
+                ),
+            )
+        super().initial(request, *args, **kwargs)
+
+    @property
+    def allowed_methods(self) -> list[str]:
+        """DRF's ``Allow`` methods, without the writes a read-only model refuses."""
+        methods: list[str] = list(super().allowed_methods)
+        if not self.is_read_only():
+            return methods
+        mapping = getattr(self, "action_map", None) or {}
+        return [
+            method
+            for method in methods
+            if mapping.get(method.lower()) not in self.read_only_refused_actions
+        ]
 
     def get_access(self) -> Access | Unscoped | None:
         """The viewset's access declaration (the class attribute ``access``).
@@ -523,6 +716,26 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             filtered = True
         return queryset, filtered
 
+    def global_search_queryset(
+        self, queryset: QuerySet[Any], query: str, declaration: SearchDeclaration
+    ) -> QuerySet[Any]:
+        """Experimental. The rows of this model that cross-model search finds for ``query``.
+
+        ``queryset`` is this viewset's ``list`` queryset for the request
+        (access applied); ``declaration`` is the model's ``Karni.search``.
+        ``GET /api/search/`` slices the result and reads the primary key and
+        the annotations :data:`karni.api.global_search.TITLE`, ``SUBTITLE``
+        and ``SCORE``, best first, in one query.
+
+        Override / escape hatch: return another ranking or match (a full-text
+        rank, a title built from two fields), starting from
+        :func:`karni.api.global_search.search_queryset` or from ``queryset``.
+        Keep the result narrowed from ``queryset`` so access still holds.
+        """
+        from karni.api.global_search import search_queryset
+
+        return search_queryset(queryset, query, declaration)
+
     def get_object(self) -> Any:
         """DRF lookup over the read scope: out of scope → 404, not writable → 403.
 
@@ -565,7 +778,92 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
                 f"No history is kept for {self.get_model().__name__}: opt in with "
                 "`class Karni: audit = True` on the model."
             )
-        return self.paginated_response(history_for(self.get_object()), ChangeLogSerializer)
+        # Not paginated_response: the viewset's select_related/prefetch hints
+        # and serializer lookups name this resource's relations, and the
+        # queryset here is ChangeLog's (the entries already join the actor).
+        entries = history_for(self.get_object())
+        if not entries.ordered:
+            entries = entries.order_by(*self.ordering)
+        page = self.paginate_queryset(entries)
+        serializer = ChangeLogSerializer(page, many=True, context=self.get_serializer_context())
+        response: Response = self.get_paginated_response(serializer.data)
+        return response
+
+    # aggregations (experimental, karni.aggregation)
+
+    def get_aggregation(self) -> Aggregation | None:
+        """Experimental. What this resource may be aggregated by, or ``None``.
+
+        The viewset's ``aggregation`` when declared, else the model's ``class
+        Karni: aggregate``. Override / escape hatch: return a declaration
+        computed per request (``self.request`` is set), or ``None`` to turn the
+        action off.
+        """
+        declared = type(self).aggregation
+        if declared is not None:
+            return Aggregation.coerce(declared, f"{type(self).__name__}.aggregation")
+        try:
+            model = self.get_model()
+        except ImproperlyConfigured:
+            return None
+        return aggregation_of(model)
+
+    def aggregate_queryset(self) -> QuerySet[Any]:
+        """Experimental. The rows an aggregate counts: the list's, with the request's filters.
+
+        :meth:`get_queryset` (the access read scope, model scopes) then
+        :meth:`filter_queryset` (filters and ``?search=``), with the aggregate's
+        own parameters (``group_by``, ``metric``, ``value``, ``top``, ``stack``,
+        ``series``) kept from the filter backends. Override / escape hatch:
+        narrow or replace the rows.
+        """
+        queryset = self.get_queryset()
+        django_request = self.request._request
+        original = django_request.GET
+        stripped = original.copy()
+        for name in AGGREGATE_PARAMETERS:
+            stripped.pop(name, None)
+        django_request.GET = stripped
+        try:
+            filtered: QuerySet[Any] = self.filter_queryset(queryset)
+        finally:
+            django_request.GET = original
+        return filtered
+
+    @action(detail=False, methods=["get"], url_path="aggregate")
+    def aggregate(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Experimental. Grouped counts, sums, averages, minimums and maximums of the list's rows.
+
+        ``group_by`` names a declared field, relation path or expression (a date
+        takes ``:year``, ``:quarter`` or ``:month``), ``metric`` one of count, sum,
+        avg, min, max and distinct_count, ``value`` the declared field it reads,
+        ``top`` keeps the largest groups and puts the rest in Other, and ``stack``
+        or ``series`` adds a second dimension. Every list filter and ``search``
+        apply, after access.
+        """
+        from karni.aggregation import parse_query, run_aggregate
+
+        declaration = self.get_aggregation()
+        model = self.get_model()
+        if declaration is None:
+            return Response(
+                {
+                    "code": "E381",
+                    "detail": (
+                        f"{model.__name__} declares no aggregation: add `class Karni: aggregate "
+                        "= {'group_by': [...], 'values': [...]}` to the model."
+                    ),
+                },
+                status=404,
+            )
+        try:
+            query = parse_query(
+                declaration, model, request.query_params, user=getattr(request, "user", None)
+            )
+            result = run_aggregate(self.aggregate_queryset(), query)
+        except AggregationError as exc:
+            return self._refused(exc)
+        return Response(result)
 
     # import and export (ADR 0002, P6)
 
@@ -675,10 +973,16 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             .first()
         )
         user = getattr(request, "user", None)
-        if found is None or (
-            not getattr(user, "is_superuser", False)
-            and found.created_by_id != getattr(user, "pk", None)
+        if (
+            found is None
+            or not getattr(user, "is_authenticated", False)
+            or (
+                not getattr(user, "is_superuser", False)
+                and found.created_by_id != getattr(user, "pk", None)
+            )
         ):
+            # An anonymous caller owns no job: two of them would share every
+            # job saved without a creator.
             raise NotFound("No such import job (or it is not yours).")
         return found
 
@@ -695,6 +999,9 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     ) -> Response:
         """``POST /<resource>/import/<job>/preview/``: the dry run, with ``{"mapping": …}``.
 
+        ``"match_ids": true`` matches existing rows by the file's id column, and
+        ``"keep_ids": true`` creates rows with the file's ids (both off by default).
+
         Every row is validated and written inside a transaction that is
         rolled back, so the counts and the per-row errors are exactly what
         the commit will do. Large files run in Celery: poll the job.
@@ -707,7 +1014,13 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         body.is_valid(raise_exception=True)
         mapping = body.validated_data.get("mapping")
         try:
-            set_mapping(found, request, mapping if mapping is not None else found.mapping)
+            set_mapping(
+                found,
+                request,
+                mapping if mapping is not None else found.mapping,
+                match_ids=body.validated_data.get("match_ids"),
+                keep_ids=body.validated_data.get("keep_ids"),
+            )
             started = start_stage(found, request, PREVIEW)
         except KarniValueError as exc:
             return self._refused(exc)
@@ -724,6 +1037,102 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         except KarniValueError as exc:
             return self._refused(exc)
         return Response(job_state(started, request))
+
+    # trees (experimental, karni.api.tree): routed only when the model is a TreeModel
+
+    @action(detail=False, methods=["get"], url_path="tree")
+    def tree(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/tree/?root=&depth=``: the tree, nested, a few levels at a time."""
+        from karni.api.tree import tree_response
+
+        return tree_response(self, request)
+
+    @action(detail=True, methods=["get"], url_path="children")
+    def children(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/<id>/children/``: the node's children, paginated."""
+        from karni.api.tree import children_response
+
+        return children_response(self, request)
+
+    @action(detail=True, methods=["get"], url_path="ancestors")
+    def ancestors(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/<id>/ancestors/``: the nodes above it, root first."""
+        from karni.api.tree import ancestors_response
+
+        return ancestors_response(self, request)
+
+    @action(detail=True, methods=["post"], url_path="move")
+    def move(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``POST /<resource>/<id>/move/``: a new parent and, on an ordered tree, a position."""
+        from karni.api.tree import move_response
+
+        try:
+            return move_response(self, request)
+        except KarniWriteDeferred as exc:
+            return self.deferred_response(exc)
+
+    @action(detail=False, methods=["get"], url_path="access", access=Authenticated())
+    def access_forest(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/access/?permission=``: the requester's granted nodes and their paths.
+
+        Experimental. The nodes the requester's tree:<path> grants name, their
+        ancestors and every other root. Any signed-in user may ask about their
+        own grants (karni.accounts.tree_scope).
+        """
+        from karni.api.tree import access_forest_response
+
+        return access_forest_response(self, request)
+
+    def tree_top_level(self, readable: QuerySet[Any], filtered: bool, base: QuerySet[Any]) -> Any:
+        """Experimental. The top level of ``tree/`` without ``?root=`` .
+
+        ``readable`` is the read-scoped queryset, ``filtered`` whether the
+        read scope narrowed it, ``base`` the queryset before the read scope.
+        Override / escape hatch: return another queryset of the model.
+        """
+        from karni.api.tree import top_level
+
+        return top_level(self, readable, filtered, base)
+
+    def get_tree_node_serializer_class(self) -> type[BaseSerializer[Any]]:
+        """Experimental. A tree node's serializer: the row's, ``has_children`` and ``children``."""
+        from karni.api.tree import tree_node_serializer
+
+        return tree_node_serializer(self._row_serializer_class())
+
+    # taxonomies (experimental, karni.api.taxonomy): routed only when the model uses them
+
+    @action(detail=False, methods=["get"], url_path="facets")
+    def facets(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/facets/?taxonomy=&rollup=``: rows per node, under the list's filters.
+
+        Experimental. How many of the rows the list shows for this request are
+        tagged with each node of one taxonomy (class Karni: taxonomies),
+        rolled up to the ancestors with rollup=true (karni.api.taxonomy).
+        """
+        from karni.api.taxonomy import facets_response
+
+        return facets_response(self, request)
+
+    @action(detail=True, methods=["get"], url_path="tagged")
+    def tagged(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/<id>/tagged/?descendants=``: the rows tagged with the node, per model.
+
+        Experimental. For each model whose taxonomy points at this tree, how
+        many of its rows the requester may read are tagged with the node
+        (or, with descendants=true, with the node or a node below it).
+        """
+        from karni.api.taxonomy import tagged_response
+
+        return tagged_response(self, request)
+
+    def facet_queryset(self) -> QuerySet[Any]:
+        """Experimental. The rows ``facets/`` counts: the list's, filters and search applied.
+
+        Override / escape hatch: return another queryset of the model (for
+        example without one filter, so a facet keeps counting its own options).
+        """
+        return self.filter_queryset(self.get_queryset())
 
     # writes & serializers
 
@@ -750,7 +1159,23 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         response: Response = super().handle_exception(api_exception(exc) or exc)
         return response
 
+    def get_honeypot_field(self) -> str | None:
+        """The hidden form field that marks a script on this viewset's public create, or ``None``.
+
+        :func:`karni.api.honeypot.honeypot_field`: ``KARNI_PUBLIC_CREATE_HONEYPOT_FIELD``
+        when ``create`` lets anonymous callers in and the model has no field of
+        that name. Override / escape hatch: return ``None`` to turn it off for
+        this viewset, or another name.
+        """
+        return honeypot_field(self)
+
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        honeypot = self.get_honeypot_field()
+        if honeypot and honeypot_filled(request, honeypot):
+            # A person never sees the field, so whoever filled it is a script.
+            # Pretend to accept, as registration does, and save nothing.
+            api_logger.info("karni.api.honeypot", viewset=type(self).__name__, field=honeypot)
+            return Response({"detail": "Received."}, status=202)
         try:
             response: Response = super().create(request, *args, **kwargs)
         except KarniWriteDeferred as exc:
@@ -771,6 +1196,44 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             return self.deferred_response(exc)
         return response
 
+    def perform_destroy(self, instance: Any) -> None:
+        """Delete the row; on a tree model ``?branch=true`` deletes the whole branch.
+
+        A tree node with live children is refused (``E341``, 409) unless the
+        request says ``?branch=true``, which needs write access to every node
+        of the branch.
+        """
+        from karni.tree import is_tree_model
+
+        if is_tree_model(instance):
+            from karni.api.tree import parse_branch
+
+            if parse_branch(self.request.query_params.get("branch")):
+                self._check_branch_writable(instance)
+                instance.delete_branch()
+                return
+        super().perform_destroy(instance)
+
+    def _check_branch_writable(self, instance: Any) -> None:
+        """403 unless the destroy predicate covers every live node of ``instance``'s branch."""
+        from rest_framework.exceptions import PermissionDenied
+
+        declaration = self.get_access()
+        if not isinstance(declaration, Access):
+            return
+        predicate = action_predicate(self, declaration)
+        rows = rows_or_exempt(self, predicate, self.request)
+        if rows is True:
+            return
+        manager = type(instance)._default_manager
+        branch = manager.descendants(instance, include_self=True)
+        writable = apply_rows(manager.all(), rows).values("pk")
+        if rows is False or branch.exclude(pk__in=writable).exists():
+            raise PermissionDenied(
+                f"Access denied: deleting the branch needs {predicate!r} on every node in it, "
+                "and some are not yours to change."
+            )
+
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         """Save, stamping every owner field from ``request.user`` (ADR 0001 R6).
 
@@ -789,15 +1252,35 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         Generation is cached per ``(model, expand, depth, owner fields)`` —
         see :func:`karni.api.serializers.build_serializer`; owner fields of
         the ``access`` declaration are read-only. Without a request (schema
-        generation) the unexpanded base serializer is returned.
+        generation) the unexpanded base serializer is returned. The tree
+        actions render tree nodes (:meth:`get_tree_node_serializer_class`).
+        """
+        if getattr(self, "action", None) in self.tree_actions and self.serves_tree():
+            return self.get_tree_node_serializer_class()
+        return self._row_serializer_class()
+
+    def _row_serializer_class(self) -> type[BaseSerializer[Any]]:
+        """``serializer_class``, else the generated serializer.
+
+        On an ordered tree the generated serializer reads ``position`` only:
+        ``move/`` sets it.
         """
         if self.serializer_class is not None:
             return self.serializer_class
+        from karni.tree import tree_spec
+
+        read_only = self.get_owner_fields()
+        try:
+            spec = tree_spec(self.get_model())
+        except ImproperlyConfigured:
+            spec = None
+        if spec is not None and spec.position is not None:
+            read_only = (*read_only, spec.position)
         return build_serializer(
             self.get_model(),
             expand=self.get_validated_expand(),
             max_depth=self.expand_depth or None,
-            read_only=self.get_owner_fields(),
+            read_only=read_only,
         )
 
     # pagination
@@ -923,6 +1406,16 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         """
         return response_cache(self)
 
+    def get_cache_scope(self) -> str:
+        """Who may share this request's cached response (:func:`karni.api.caching.access_scope`).
+
+        The role set when the read access depends on roles alone, else the
+        user. Override / escape hatch: return a value that differs between
+        callers who must not share an entry, e.g. ``f"user:{self.request.user.pk}"``
+        when the response renders something per user that Karni cannot see.
+        """
+        return access_scope(self)
+
     # list/retrieve: DRF's, served from the response cache when it is enabled.
     # No docstrings on purpose — drf-spectacular would publish them as every
     # operation's description in place of the viewset's own docstring.
@@ -989,6 +1482,25 @@ def _validate_performance(cls: type[BaseViewSet]) -> None:
             f"{name}.cache must be Cache(...) or Uncached(reason='...'), got {cache!r}.",
             code="E119",
         )
+    throttle = cls.__dict__.get("throttle")
+    if throttle is not None:
+        if not isinstance(throttle, Throttle):
+            raise KarniImproperlyConfigured(
+                f"{name}.throttle must be a Throttle, e.g. throttle = Throttle(create='10/hour'), "
+                f"got {throttle!r}.",
+                code="E132",
+            )
+        known = _STANDARD_ACTIONS | {extra.__name__ for extra in cls.get_extra_actions()}
+        unknown = sorted(set(throttle.rates) - known)
+        if unknown:
+            raise KarniImproperlyConfigured(
+                f"{name}.throttle names unknown action(s) {', '.join(unknown)}. "
+                f"Known: {', '.join(sorted(known - {'*'}))}.",
+                code="E132",
+            )
+    aggregation = cls.__dict__.get("aggregation")
+    if aggregation is not None:
+        cls.aggregation = Aggregation.coerce(aggregation, f"{name}.aggregation")
     for hint in ("select_related", "prefetch_related"):
         if hint in cls.__dict__:
             validate_hints(name, hint, cls.__dict__[hint])

@@ -1,0 +1,4 @@
+/* a reset: sets a body font the site overrides */
+html { line-height: 1.15; }
+body { margin: 0; font-family: system-ui, sans-serif; color: #111; background: #fff; }
+button { border-radius: 0; }

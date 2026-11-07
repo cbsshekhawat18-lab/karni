@@ -73,6 +73,10 @@ AUTH_THROTTLE_DEFAULTS: dict[str, str | None] = {
     "auth.verify": "10/hour",
     "auth.email_change": "5/hour",
     "auth.2fa": "10/min",
+    "auth.social": "10/min",
+    "auth.otp_send": "10/hour",
+    "auth.otp_send_email": "5/hour",
+    "auth.otp_verify": "20/min",
 }
 """Default per-scope throttle rates for the ``karni.accounts`` endpoints.
 
@@ -96,8 +100,8 @@ def _auth_throttle_rates(env: environ.Env) -> dict[str, str | None]:
     return {**AUTH_THROTTLE_DEFAULTS, **overrides}
 
 
-def _storages(env: environ.Env) -> dict[str, dict[str, Any]]:
-    """Build the ``STORAGES`` setting from the ``KARNI_STORAGE`` environment variable.
+def _storages(env: environ.Env, choice: str | None = None) -> dict[str, dict[str, Any]]:
+    """Build the ``STORAGES`` setting from ``KARNI_STORAGE`` (``choice``, else the environment).
 
     ``KARNI_STORAGE="s3"`` selects :class:`karni.storage.S3Storage` (an
     S3-compatible backend that also works with MinIO/R2 via
@@ -106,8 +110,9 @@ def _storages(env: environ.Env) -> dict[str, dict[str, Any]]:
 
     Override / escape hatch: define ``STORAGES`` yourself in ``settings.py``
     before calling ``karni_settings()`` to replace the whole mapping.
+    ``karni_settings()`` passes a ``KARNI_STORAGE`` defined before the call as ``choice``.
     """
-    if env("KARNI_STORAGE", default="local") == "s3":
+    if (choice or env("KARNI_STORAGE", default="local")) == "s3":
         default = {"BACKEND": "karni.storage.S3Storage"}
     else:
         default = {"BACKEND": "django.core.files.storage.FileSystemStorage"}
@@ -117,16 +122,17 @@ def _storages(env: environ.Env) -> dict[str, dict[str, Any]]:
     }
 
 
-def _caches(env: environ.Env) -> dict[str, dict[str, Any]]:
+def _caches(env: environ.Env, choice: str | None = None) -> dict[str, dict[str, Any]]:
     """Build ``CACHES`` from ``KARNI_CACHE``: ``redis`` (at ``REDIS_URL``) or ``locmem``.
 
     ``locmem`` is for a host run without Redis (the quickstart): throttle
     counters then live per process, which ``karni.W501`` flags with DEBUG off.
 
     Override / escape hatch: define ``CACHES`` yourself in ``settings.py``
-    before calling ``karni_settings()``.
+    before calling ``karni_settings()``. ``karni_settings()`` passes a
+    ``KARNI_CACHE`` defined before the call as ``choice``.
     """
-    choice = env("KARNI_CACHE", default="redis")
+    choice = choice or env("KARNI_CACHE", default="redis")
     if choice == "locmem":
         return {
             "default": {
@@ -148,6 +154,38 @@ def _caches(env: environ.Env) -> dict[str, dict[str, Any]]:
         "Define CACHES yourself for anything else.",
         code="E507",
     )
+
+
+#: Django's own sender addresses: ``karni check --deploy`` reports them (``karni.W520``).
+DJANGO_FROM_EMAIL = "webmaster@localhost"
+DJANGO_SERVER_EMAIL = "root@localhost"
+
+
+def _email(env: environ.Env) -> dict[str, Any]:
+    """Django's email settings from the environment.
+
+    ``EMAIL_URL`` names the mail server in django-environ's format, for
+    example ``smtp+tls://user:password@smtp.example.com:587`` (``smtps://``
+    for SSL, ``consolemail://`` to print each email). It sets
+    ``EMAIL_BACKEND``, ``EMAIL_HOST``, ``EMAIL_PORT``, ``EMAIL_HOST_USER``,
+    ``EMAIL_HOST_PASSWORD`` and ``EMAIL_USE_TLS`` or ``EMAIL_USE_SSL``.
+    Unset, Django's defaults stay (SMTP at localhost, port 25), and the dev
+    profile prints mail to the console. ``DEFAULT_FROM_EMAIL`` and
+    ``SERVER_EMAIL`` are read too, with Django's defaults, which
+    ``karni check --deploy`` reports (``karni.W520``).
+
+    Override / escape hatch: define any ``EMAIL_*`` setting in settings.py,
+    before or after ``karni_settings()``.
+    """
+    found: dict[str, Any] = {
+        "DEFAULT_FROM_EMAIL": env("DEFAULT_FROM_EMAIL", default=DJANGO_FROM_EMAIL),
+        "SERVER_EMAIL": env("SERVER_EMAIL", default=DJANGO_SERVER_EMAIL),
+    }
+    url = env.str("EMAIL_URL", default="")
+    if url:
+        config = environ.Env.email_url_config(url)
+        found.update({name: value for name, value in config.items() if value not in (None, "")})
+    return found
 
 
 def _primary_tint(percent: int) -> str:
@@ -202,6 +240,9 @@ BASE: dict[str, Any] = {
         # chain at startup unless DEBUG is on (and KARNI_DEBUG_CAPTURE).
         "karni.debug.middleware.CaptureMiddleware",
         "django.middleware.security.SecurityMiddleware",
+        # Content-Security-Policy (report-only while DEBUG is on) and
+        # Permissions-Policy on every response. KARNI_CSP and friends tune it.
+        "karni.security.SecurityHeadersMiddleware",
         "corsheaders.middleware.CorsMiddleware",
         "django.contrib.sessions.middleware.SessionMiddleware",
         "django.middleware.common.CommonMiddleware",
@@ -210,6 +251,13 @@ BASE: dict[str, Any] = {
         # Backs AuditedModel.created_by/updated_by; resolves the user lazily,
         # so JWT users authenticated later inside DRF views are seen too.
         "karni.middleware.CurrentUserMiddleware",
+        # Deprecation / Sunset / Link on a deprecated API version (experimental); removed
+        # from the chain at startup while no version is deprecated.
+        "karni.api.versions.ApiVersionHeadersMiddleware",
+        # The terms gate (experimental): 403 E245 under KARNI_TERMS["paths"] until a
+        # signed-in user accepts the current version. Removed from the chain at
+        # startup unless KARNI_TERMS requires acceptance. After authentication.
+        "karni.accounts.terms.TermsGateMiddleware",
         "django.contrib.messages.middleware.MessageMiddleware",
         "django.middleware.clickjacking.XFrameOptionsMiddleware",
         "django_structlog.middlewares.RequestMiddleware",
@@ -236,6 +284,8 @@ BASE: dict[str, Any] = {
     "TIME_ZONE": "UTC",
     "USE_TZ": True,
     "LANGUAGE_CODE": "en-us",
+    # Empty, so a project extends it: SILENCED_SYSTEM_CHECKS += ["karni.W967"].
+    "SILENCED_SYSTEM_CHECKS": [],
     "AUTH_PASSWORD_VALIDATORS": [
         {
             "NAME": ("django.contrib.auth.password_validation.UserAttributeSimilarityValidator"),
@@ -252,9 +302,43 @@ BASE: dict[str, Any] = {
     "KARNI_2FA": env.bool("KARNI_2FA", default=False),
     "KARNI_SOCIAL_AUTH": env.bool("KARNI_SOCIAL_AUTH", default=False),
     "KARNI_SOCIAL_PROVIDERS": env.list("KARNI_SOCIAL_PROVIDERS", default=[]),
+    # Sign-in with a Google, Microsoft or Apple ID token (experimental), in both
+    # auth modes and independent of KARNI_SOCIAL_AUTH: {name: {"client_ids": [...]}}.
+    # Each configured name mounts social/<name>/. Needs karni[social-token].
+    "KARNI_SOCIAL_TOKEN_PROVIDERS": env.json("KARNI_SOCIAL_TOKEN_PROVIDERS", default={}),
+    # Who a token without an account may become: "open", "approval" or "existing".
+    # None follows KARNI_ACCOUNTS_REGISTRATION ("open" while it is on, else "existing").
+    "KARNI_SOCIAL_TOKEN_SIGNUP": env("KARNI_SOCIAL_TOKEN_SIGNUP", default=None),
+    # Link a token to an existing account with its email (only a provider-verified one).
+    "KARNI_SOCIAL_TOKEN_LINK_VERIFIED": env.bool("KARNI_SOCIAL_TOKEN_LINK_VERIFIED", default=True),
+    # Seconds of clock skew allowed on exp, iat and nbf.
+    "KARNI_SOCIAL_TOKEN_LEEWAY": env.int("KARNI_SOCIAL_TOKEN_LEEWAY", default=60),
+    # Seconds a provider's key set (JWKS) stays in the default cache.
+    "KARNI_SOCIAL_TOKEN_JWKS_TTL": env.int("KARNI_SOCIAL_TOKEN_JWKS_TTL", default=21600),
+    # Dotted path of the function that fetches a key set: (url) -> dict.
+    "KARNI_SOCIAL_TOKEN_JWKS_FETCHER": "karni.accounts.social_token.fetch_jwks",
+    # Sign-in with a code sent by email (experimental), in both auth modes: mounts
+    # otp/send/ and otp/verify/ while True. The code goes through the accounts email backend.
+    "KARNI_EMAIL_OTP": env.bool("KARNI_EMAIL_OTP", default=False),
+    # Seconds a code lives (60 to 3600).
+    "KARNI_EMAIL_OTP_TTL": env.int("KARNI_EMAIL_OTP_TTL", default=600),
+    # Digits in a code (4 to 10).
+    "KARNI_EMAIL_OTP_LENGTH": env.int("KARNI_EMAIL_OTP_LENGTH", default=6),
+    # Guesses a code takes before it dies (1 to 10).
+    "KARNI_EMAIL_OTP_MAX_ATTEMPTS": env.int("KARNI_EMAIL_OTP_MAX_ATTEMPTS", default=5),
+    # Who an address without an account may become: "open", "approval" or "existing".
+    # None follows KARNI_ACCOUNTS_REGISTRATION ("open" while it is on, else "existing").
+    "KARNI_EMAIL_OTP_SIGNUP": env("KARNI_EMAIL_OTP_SIGNUP", default=None),
+    # A versioned terms (EULA) acceptance gate (experimental): {"version": "2026-11",
+    # "url": "/terms/", "required": True}, plus "paths" (default ["/api/"]) and "exempt".
+    # Set, it mounts terms/ and terms/accept/. None (the default) gates nothing.
+    "KARNI_TERMS": env.json("KARNI_TERMS", default=None),
     "KARNI_FRONTEND_URL": env("KARNI_FRONTEND_URL", default="http://localhost:5173"),
     "KARNI_ACCOUNTS_EMAIL_BACKEND": "karni.accounts.emails.DjangoEmailBackend",
     "KARNI_ACCOUNTS_AUTO_LOGIN": False,
+    # Whether anyone may open an account through register/. False leaves the
+    # route out (404) and out of the OpenAPI schema: staff create accounts.
+    "KARNI_ACCOUNTS_REGISTRATION": env.bool("KARNI_ACCOUNTS_REGISTRATION", default=True),
     # Roles (Django groups) every self-registered user starts with, e.g. ["attendee"].
     "KARNI_ACCOUNTS_DEFAULT_ROLES": env.list("KARNI_ACCOUNTS_DEFAULT_ROLES", default=[]),
     # A form field no person fills in; a registration that fills it is a bot
@@ -269,6 +353,15 @@ BASE: dict[str, Any] = {
         "customer": {"name": "Customer", "grants": {"*": "own"}},
     },
     "KARNI_ROLES_AUTOSYNC": env.bool("KARNI_ROLES_AUTOSYNC", default=True),
+    # Per-user grants (experimental): while True, each user's UserGrant rows join their
+    # role grants (one more query per request). Off, they grant nothing and cost nothing.
+    "KARNI_USER_GRANTS": env.bool("KARNI_USER_GRANTS", default=False),
+    # Navigation from data (experimental): a list of menu items and groups, "db" (the
+    # NavItem table of the karni.navigation app) or None (no menu, no navigation/ route).
+    "KARNI_NAVIGATION": None,
+    # The frontend files whose `path:` entries are the app's pages: karni check reports
+    # a menu item whose route none of them serves. [] turns that comparison off.
+    "KARNI_NAVIGATION_PAGES": ["frontend/src/routes.tsx"],
     "KARNI_ACCOUNTS_TOKEN_TTL": {
         "verify_email": 86400,
         "reset_password": 3600,
@@ -292,9 +385,15 @@ BASE: dict[str, Any] = {
     "DATABASES": {
         "default": env.db_url("DATABASE_URL", default="postgres://karni:karni@db:5432/karni"),
     },
+    # Experimental: class Karni: database = "<alias>" sends a model to another alias. A
+    # project's own routers go before this one (karni_settings() appends it after them).
+    "DATABASE_ROUTERS": ["karni.db.DatabaseRouter"],
     # "redis" (the default cache at REDIS_URL) or "locmem" (a host run without Redis).
     "KARNI_CACHE": env("KARNI_CACHE", default="redis"),
     "CACHES": _caches(env),
+    # --- Email ----------------------------------------------------------------
+    # EMAIL_URL (smtp+tls://user:password@host:587), DEFAULT_FROM_EMAIL, SERVER_EMAIL.
+    **_email(env),
     # Django's default sends a direct /admin/login/ to /accounts/profile/ (a 404).
     "LOGIN_REDIRECT_URL": f"/{_ADMIN_PATH}",
     # --- DRF & API schema -------------------------------------------------
@@ -341,6 +440,9 @@ BASE: dict[str, Any] = {
         # Split request/response components so file-upload fields keep their
         # binary format on the request side (frontend codegen relies on it).
         "COMPONENT_SPLIT_REQUEST": True,
+        # One document per API version when versions are mounted; spectacular's own
+        # generator otherwise (karni.api.versions, experimental).
+        "DEFAULT_GENERATOR_CLASS": "karni.api.versions.VersionedSchemaGenerator",
         # spectacular's enum postprocessing, with colliding enums named by
         # model and field (BookingStatusEnum, not Status469Enum), then the root
         # x-karni-auth-mode extension @karni/ui's AuthProvider defaults from.
@@ -348,6 +450,7 @@ BASE: dict[str, Any] = {
         "POSTPROCESSING_HOOKS": [
             "karni.api.schema.postprocess_schema_enums",
             "karni.api.schema.add_auth_mode",
+            "karni.api.schema.add_api_versions",
         ],
     },
     # --- Celery (django namespace, read by karni.celery.create_celery_app) -
@@ -378,17 +481,40 @@ BASE: dict[str, Any] = {
     "MEDIA_URL": "/media/",
     "STATIC_ROOT": env("STATIC_ROOT", default="/data/static"),
     "STATIC_URL": "/static/",
-    # --- CORS ---------------------------------------------------------------
+    # Django's two finders, then the one that serves the project's
+    # karni-theme.css to the admin as karni/project-theme.css (karni.admin.theme).
+    "STATICFILES_FINDERS": [
+        "django.contrib.staticfiles.finders.FileSystemFinder",
+        "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+        "karni.admin.theme.ProjectThemeFinder",
+    ],
+    # --- CORS and CSRF ------------------------------------------------------
     "CORS_ALLOWED_ORIGINS": env.list("CORS_ALLOWED_ORIGINS", default=[]),
+    # The https origins of the site for Django's CSRF check, e.g.
+    # https://example.com. Session mode adds KARNI_FRONTEND_URL's origin.
+    "CSRF_TRUSTED_ORIGINS": env.list("CSRF_TRUSTED_ORIGINS", default=[]),
     # --- API (karni.api) ----------------------------------------------------
     "KARNI_SEARCH_PROVIDER": env(
         "KARNI_SEARCH_PROVIDER",
         default="karni.api.search.postgres.PostgresSearchProvider",
     ),
     "KARNI_API_MAX_EXPAND_DEPTH": env.int("KARNI_API_MAX_EXPAND_DEPTH", default=2),
+    # Cross-model search, GET /api/search/ (karni.global_search, experimental).
+    "KARNI_GLOBAL_SEARCH_MIN_LENGTH": env.int("KARNI_GLOBAL_SEARCH_MIN_LENGTH", default=2),
+    "KARNI_GLOBAL_SEARCH_LIMIT": env.int("KARNI_GLOBAL_SEARCH_LIMIT", default=5),
+    "KARNI_GLOBAL_SEARCH_MAX_LIMIT": env.int("KARNI_GLOBAL_SEARCH_MAX_LIMIT", default=20),
+    "KARNI_GLOBAL_SEARCH_THRESHOLD": env.float("KARNI_GLOBAL_SEARCH_THRESHOLD", default=0.3),
     # Zero-argument factory returning the router karni.api.urls exposes;
     # consumed at first URLconf import (overriding it later is a no-op).
     "KARNI_API_ROUTER": env("KARNI_API_ROUTER", default="karni.api.routers.get_default_router"),
+    # The limit on each caller of a create anyone may call (create=Public()),
+    # unless the viewset declares throttle = Throttle(create=...). "" or None: off.
+    "KARNI_PUBLIC_CREATE_RATE": env("KARNI_PUBLIC_CREATE_RATE", default="10/hour"),
+    # A hidden form field on such a create. A request that fills it is a
+    # script and is accepted without saving anything. "" turns it off.
+    "KARNI_PUBLIC_CREATE_HONEYPOT_FIELD": env(
+        "KARNI_PUBLIC_CREATE_HONEYPOT_FIELD", default="homepage"
+    ),
     # --- Performance (ADR 0001 Decision 3) ----------------------------------
     # Hard cap on ?page_size= for every Karni paginator; it may not be set
     # below the floor (25 = @karni/ui ResourceTable's page size; never < 1).
@@ -415,6 +541,12 @@ BASE: dict[str, Any] = {
     "KARNI_API_CACHE": env.bool("KARNI_API_CACHE", default=False),
     "KARNI_API_CACHE_TTL": env.int("KARNI_API_CACHE_TTL", default=300),
     "KARNI_API_CACHE_ALIAS": env("KARNI_API_CACHE_ALIAS", default="default"),
+    # The most groups one GET <resource>/aggregate/ returns (karni.aggregation, experimental).
+    "KARNI_AGGREGATE_MAX_GROUPS": env.int("KARNI_AGGREGATE_MAX_GROUPS", default=1000),
+    # A daily full flush through Celery beat: "03:30" or "03:30 Europe/Paris". Off by default.
+    "KARNI_API_CACHE_FLUSH": env("KARNI_API_CACHE_FLUSH", default=None),
+    # Transitional until 1.0: also send the deprecated X-Karni-Cache header (X-Cache replaces it).
+    "KARNI_API_CACHE_LEGACY_HEADER": env.bool("KARNI_API_CACHE_LEGACY_HEADER", default=True),
     # --- Admin (karni.admin + django-unfold) --------------------------------
     "UNFOLD": {
         "SITE_TITLE": _ADMIN_TITLE,
@@ -423,13 +555,19 @@ BASE: dict[str, Any] = {
         # The admin wears @karni/ui's brand (see karni.admin.theme): the token
         # stylesheet and the unfold bridge load first, and the colours below
         # read the tokens, so they follow the light/dark theme and a project's
-        # token overrides. Unfold's light/dark/system switch stays enabled
-        # because THEME is left unset.
+        # token overrides. The admin is light only: THEME pins unfold's
+        # light palette and hides its light/dark/system switch.
+        "THEME": "light",
         "BORDER_RADIUS": "var(--karni-radius-md)",
         "STYLES": [
             "karni.admin.theme.tokens_stylesheet",
             "karni.admin.theme.unfold_theme_stylesheet",
+            # The project's karni-theme.css (KARNI_THEME_CSS), the file its
+            # staff app loads: one set of brand tokens for both.
+            "karni.admin.theme.project_theme_stylesheet",
         ],
+        # Landmarks and accessible names unfold's pages lack (karni.admin.theme).
+        "SCRIPTS": ["karni.admin.theme.a11y_script"],
         "COLORS": {
             # Unfold steps through this neutral scale itself (base-200 borders
             # in light, base-800 in dark), so it holds fixed values: the
@@ -477,10 +615,20 @@ BASE: dict[str, Any] = {
         },
     },
     "KARNI_ADMIN_AUTODISCOVER": env.bool("KARNI_ADMIN_AUTODISCOVER", default=True),
+    # A role's grant opens the admin page for that model and action (rows still
+    # follow the grant's scope). False: only Django's model permissions open
+    # pages, as in 0.4.0 (karni.admin.base.KarniAdminMixin.granted).
+    "KARNI_ADMIN_GRANTS_OPEN_PAGES": env.bool("KARNI_ADMIN_GRANTS_OPEN_PAGES", default=True),
+    # <meta name="generator"> on Karni's public pages ({% karni_seo %}), so tools
+    # that list a site's technologies see Karni. No version on purpose. "" turns it off.
+    "KARNI_GENERATOR": env("KARNI_GENERATOR", default="Karni"),
     # Logo for the admin header and login screen: "" (none, the default),
     # "karni" (Karni's own mark) or {"light": <static path>, "dark": ..., "icon": ...}.
     # Wired into UNFOLD by karni_settings(); see docs/admin.md#theming.
     "KARNI_ADMIN_LOGO": env("KARNI_ADMIN_LOGO", default="") or None,
+    # The project's brand tokens, the file `karni ui detect` writes for the
+    # staff app; the admin loads it too (karni.admin.theme). "" for none.
+    "KARNI_THEME_CSS": env("KARNI_THEME_CSS", default="frontend/src/karni-theme.css"),
     # Where the scaffold mounts the Django admin; a path nobody guesses keeps
     # the login form out of scanners' lists. Trailing slash required.
     "KARNI_ADMIN_PATH": env("KARNI_ADMIN_PATH", default="admin/"),
@@ -494,6 +642,14 @@ BASE: dict[str, Any] = {
             "django_celery_results.ChordCounter",
         ],
     ),
+    # Most rows "Edit selected" changes at once (karni.admin.bulk), and whether the
+    # admin home page shows its "Getting started" panel (karni.admin.guide).
+    "KARNI_ADMIN_BULK_EDIT_MAX": env.int("KARNI_ADMIN_BULK_EDIT_MAX", default=500),
+    "KARNI_ADMIN_GUIDE": env.bool("KARNI_ADMIN_GUIDE", default=True),
+    # Rows per admin list page, and the table size above which PostgreSQL counts are
+    # estimates (karni.admin.listing).
+    "KARNI_ADMIN_PER_PAGE": env.int("KARNI_ADMIN_PER_PAGE", default=25),
+    "KARNI_ADMIN_COUNT_ESTIMATE_ABOVE": env.int("KARNI_ADMIN_COUNT_ESTIMATE_ABOVE", default=100000),
     "KARNI_ADMIN_LIST_DISPLAY_MAX": 6,
     "KARNI_ADMIN_LIST_FILTER_MAX": 6,
     "KARNI_ADMIN_SEARCH_MAX": 5,
@@ -517,21 +673,67 @@ BASE: dict[str, Any] = {
             "otp_static",
             "account",
             "socialaccount",
+            "karni_admin",
             "karni_audit",
             "karni_transfer",
             "karni_accounts.OneTimeToken",
             "karni_accounts.Permission",
+            "karni_accounts.SocialIdentity",
+            "karni_accounts.LoginCode",
         ],
     ),
+    # --- Security headers (karni.security) ----------------------------------
+    # Directives merged into Karni's Content-Security-Policy, e.g.
+    # {"font-src": ["https://fonts.gstatic.com"]}. None: no CSP header at all.
+    "KARNI_CSP": env.json("KARNI_CSP", default={}),
+    # True sends the policy as Content-Security-Policy-Report-Only, False
+    # enforces it. None (the default) follows DEBUG: report-only in development.
+    "KARNI_CSP_REPORT_ONLY": env.bool("KARNI_CSP_REPORT_ONLY", default=None),
+    # Browser features merged into Karni's Permissions-Policy, e.g.
+    # {"geolocation": ["self"]}. None: no Permissions-Policy header.
+    "KARNI_PERMISSIONS_POLICY": env.json("KARNI_PERMISSIONS_POLICY", default={}),
     # --- Karni knobs --------------------------------------------------------
-    "KARNI_HEALTH_CHECKS": [
-        "karni.health.checks.check_database",
-        "karni.health.checks.check_cache",
-        "karni.health.checks.check_celery",
-    ],
+    # Comma-separated in the environment: a deployment without a Celery worker
+    # leaves check_celery out, so /health/ready/ does not wait for one.
+    "KARNI_HEALTH_CHECKS": env.list(
+        "KARNI_HEALTH_CHECKS",
+        default=[
+            "karni.health.checks.check_database",
+            "karni.health.checks.check_cache",
+            "karni.health.checks.check_celery",
+        ],
+    ),
     "KARNI_HEALTH_CELERY_TIMEOUT": 1.0,
+    # /readyz: the database, the cache and the Celery broker (no worker needed), each
+    # given KARNI_HEALTH_TIMEOUT seconds. Comma-separated in the environment.
+    "KARNI_READYZ_CHECKS": env.list(
+        "KARNI_READYZ_CHECKS",
+        default=[
+            "karni.health.checks.check_database",
+            "karni.health.checks.check_cache",
+            "karni.health.checks.check_broker",
+        ],
+    ),
+    "KARNI_HEALTH_TIMEOUT": env.float("KARNI_HEALTH_TIMEOUT", default=3.0),
+    # Paths whose healthy requests the request log skips (a probe asked every few seconds).
+    "KARNI_LOG_QUIET_PATHS": env.list(
+        "KARNI_LOG_QUIET_PATHS", default=["/healthz", "/readyz", "/health/"]
+    ),
+    # --- API versions (karni.api.versions, experimental) --------------------
+    # "v1" mounts the API at /api/v1/ (karni.api.versions.api_urls in config/urls.py).
+    "KARNI_API_VERSION": env.str("KARNI_API_VERSION", default=""),
+    # {"v0": {"deprecated": "2026-06-01", "sunset": "2027-01-31", "notes": "https://..."}}
+    "KARNI_API_VERSIONS": env.json("KARNI_API_VERSIONS", default={}),
+    # What /api/ without a version does: "keep", "redirect" (308) or "remove".
+    "KARNI_API_UNVERSIONED": env.str("KARNI_API_UNVERSIONED", default="keep"),
     "KARNI_THUMBNAILER": "karni.storage.thumbnails.make_thumbnail",
     "KARNI_VALIDATE": True,
+    # PhoneField (karni.fields): the country code a national number gets ("44"),
+    # None for international numbers only; the trunk prefix it loses; and the
+    # function that does it, read on every call.
+    "KARNI_PHONE_COUNTRY_CODE": env("KARNI_PHONE_COUNTRY_CODE", default=None),
+    "KARNI_PHONE_TRUNK_PREFIX": env("KARNI_PHONE_TRUNK_PREFIX", default="0"),
+    "KARNI_PHONE_NORMALIZER": "karni.fields.text.default_phone_normalizer",
     # --- Import and export (karni.transfer) ---------------------------------
     # Files with at most this many rows import inside the request; larger
     # ones run in Celery with progress. The two caps refuse outright.
@@ -559,6 +761,10 @@ BASE: dict[str, Any] = {
     # autodiscovered at startup; set False to wire them yourself.
     "KARNI_EVENTS_AUTODISCOVER": env.bool("KARNI_EVENTS_AUTODISCOVER", default=True),
     "KARNI_SCHEDULES_AUTODISCOVER": env.bool("KARNI_SCHEDULES_AUTODISCOVER", default=True),
+    # The key type `karni make model` writes (experimental): "uuid" (BaseModel) or
+    # "bigint" (BigIntBaseModel). Read by the CLI from config/settings.py, nothing
+    # else: each model's class line decides its key.
+    "KARNI_PK": "uuid",
     # Architecture-rule configuration (karni.testing); checks fall back to the
     # same defaults when this setting is absent, so non-karni.conf projects work.
     "KARNI_ARCHITECTURE": {
@@ -567,6 +773,20 @@ BASE: dict[str, Any] = {
         "http_allowed": ["*/services/*", "*/providers/*", "*/tests/*", "conftest.py"],
         "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]},
     },
+    # Tooling for large projects (experimental). karni check's cache of per-file
+    # results (.karni/local/check-cache.json): False turns it off, a path moves it.
+    "KARNI_CHECK_CACHE": True,
+    # Suggestions in karni check and karni doctor (experimental): False turns them off.
+    "KARNI_SUGGESTIONS": True,
+    # The rows the scaling check compares, small then large (query_scaling overrides).
+    "KARNI_SCALING_ROWS": [2, 12],
+    # Rows per model from which karni seed inserts in bulk, and rows per bulk insert.
+    "KARNI_SEED_BULK_THRESHOLD": 1000,
+    "KARNI_SEED_BATCH_SIZE": 2000,
+    # The row counts each seed run leaves (.karni/local/seeded.json): False turns it off.
+    "KARNI_SEED_LEDGER": True,
+    # karni queries --explain flags sequential scans on tables of this many rows or more.
+    "KARNI_EXPLAIN_SEQ_SCAN_ROWS": 1000,
 }
 """Profile-independent defaults merged first by ``karni_settings()``.
 

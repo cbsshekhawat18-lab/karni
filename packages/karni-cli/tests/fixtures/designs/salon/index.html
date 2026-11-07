@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fern Hair Salon</title>
+  <meta name="description" content="Cuts, colour and styling, booked online.">
+  <link rel="stylesheet" href="css/salon.css">
+</head>
+<body>
+  <header class="masthead"><a href="index.html" class="logo">Fern</a></header>
+  <section id="book" class="booking">
+    <h1>Book a visit</h1>
+    <form class="booking-form" action="book.php" method="post">
+      <div class="form-row">
+        <div class="field">
+          <label for="b-name">Name <span class="req">*</span></label>
+          <input id="b-name" name="name" placeholder="Jane Doe" required>
+        </div>
+        <div class="field">
+          <label for="b-email">Email <span class="req">*</span></label>
+          <input id="b-email" type="email" name="email" required>
+        </div>
+      </div>
+      <div class="field">
+        <label for="b-day">Preferred day</label>
+        <input id="b-day" type="date" name="day">
+      </div>
+      <div class="field">
+        <label for="b-service">Service</label>
+        <select id="b-service" name="service">
+          <option value="cut">Cut</option>
+          <option value="colour">Colour</option>
+        </select>
+      </div>
+      <p class="form-note" role="status" aria-live="polite" hidden></p>
+      <button type="submit" class="btn btn-accent">Book now</button>
+    </form>
+  </section>
+</body>
+</html>

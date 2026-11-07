@@ -23,9 +23,16 @@ class ImportUploadSerializer(serializers.Serializer[Any]):
 
 
 class ImportMappingSerializer(serializers.Serializer[Any]):
-    """``POST …/import/<job>/preview/``: header → field (``""`` ignores a column)."""
+    """``POST …/import/<job>/preview/``: header → field (``""`` ignores a column), id options.
+
+    ``match_ids`` matches existing rows by the file's id column and
+    ``keep_ids`` creates rows with the file's ids. Both are off unless sent,
+    and a value sent is kept for the job's commit.
+    """
 
     mapping = serializers.DictField(child=serializers.CharField(allow_blank=True), required=False)
+    match_ids = serializers.BooleanField(required=False)
+    keep_ids = serializers.BooleanField(required=False)
 
 
 class ImportColumnSerializer(serializers.Serializer[Any]):
@@ -61,6 +68,8 @@ class ImportJobSerializer(serializers.Serializer[Any]):
     format = serializers.CharField()
     columns = serializers.ListField(child=serializers.CharField())
     mapping = serializers.DictField(child=serializers.CharField(allow_blank=True))
+    match_ids = serializers.BooleanField()
+    keep_ids = serializers.BooleanField()
     rows_total = serializers.IntegerField()
     rows_done = serializers.IntegerField()
     async_ = serializers.BooleanField(source="async")

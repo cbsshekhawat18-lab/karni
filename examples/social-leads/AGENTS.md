@@ -4,17 +4,33 @@
 This is a Karni project. Karni already implements everything generic, so you write
 only domain code.
 
+An app (kind `app` in pyproject.toml). The stack is set, so never ask which technology
+to use: Python 3.12, Django 5.2, PostgreSQL, Redis and Celery, a REST API on Django REST
+framework, and a React 18 + TypeScript app in `frontend/` on @karni/ui. Screens go in
+`frontend/src/pages/` (`karni make page`). A public website joins with `karni add site`
+(rule K309).
+
 Before any work, run these two commands and follow what they return:
 
 1. `karni context` prints the live inventory: apps, models, viewsets, UI components,
-   hooks, pages and installed modules.
+   hooks, pages, and every Karni module and built-in feature with whether the
+   project has it (details: `karni modules show <name>`).
 2. `karni rules` prints the conventions, each with a stable code (K###, or P### for
    the project's own).
 
 While you work:
 
 - Run `karni rules --check <file>` on every file you write and fix each violation it prints.
-- Use `karni rules --procedure <name>` for routine tasks: new-model, new-page, add-module, new-module.
+- Routine tasks are procedures: run `karni rules --procedure <name>` and follow every
+  step. A request that starts with `/<name>` asks for that procedure, for the rest of
+  the request:
+  - `new-model`: Add a domain model the Karni way (model + viewset, nothing else)
+  - `new-page`: Add a frontend page composing @karni/ui (50 lines or fewer)
+  - `add-module`: Install an optional Karni module and wire it into settings
+  - `new-module`: Create a new local Django app following Karni conventions
+  - `site-from-design`: Build the public site from a designer's pages, with models and real content
+  - `new-app`: Build an app from a one-line request: karni.yaml, then karni build
+- To build an app from a one-line request (`/new-app <the request>`), follow the `new-app` procedure: karni.yaml first, then `karni build` (rule K311).
 - Run `karni check` before committing. Every enforced rule fails the build.
 
 If the `karni` command is unavailable, say so and stop. Do not guess the conventions.

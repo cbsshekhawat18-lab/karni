@@ -84,14 +84,61 @@ def _linux_host(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("karni_cli.commands.worker.sys.platform", "linux")
 
 
-def test_host_pool_args_adds_solo_on_macos_only() -> None:
-    from karni_cli.commands.worker import host_pool_args
+def test_pool_args_give_a_mac_host_the_threads_pool_only() -> None:
+    from karni_cli.commands.worker import pool_args
 
-    assert host_pool_args(None, platform="darwin") == ["--pool=solo"]
-    assert host_pool_args(["-Q", "high"], platform="darwin") == ["-Q", "high", "--pool=solo"]
-    assert host_pool_args(["--pool=threads"], platform="darwin") == ["--pool=threads"]
-    assert host_pool_args(["-P", "gevent"], platform="darwin") == ["-P", "gevent"]
-    assert host_pool_args(["-Q", "high"], platform="linux") == ["-Q", "high"]
+    assert pool_args(None, platform="darwin") == ["--pool=threads"]
+    assert pool_args(["-Q", "high"], platform="darwin") == ["-Q", "high", "--pool=threads"]
+    assert pool_args(["--pool=solo"], platform="darwin") == ["--pool=solo"]
+    assert pool_args(["-P", "gevent"], platform="darwin") == ["-P", "gevent"]
+    assert pool_args(["-Q", "high"], platform="linux") == ["-Q", "high"]
+    assert pool_args(None, on_host=False, platform="darwin") == []  # docker runs Linux
+    # --pool goes last, so it wins over a -P among the arguments, on every platform
+    assert pool_args(["-P", "solo"], pool="threads", platform="linux") == [
+        "-P",
+        "solo",
+        "--pool=threads",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("platform", "argv", "tail"),
+    [
+        ("darwin", ["worker"], ["--pool=threads"]),
+        ("darwin", ["worker", "--pool", "solo"], ["--pool=solo"]),
+        ("darwin", ["worker", "-P", "prefork"], ["--pool=prefork"]),
+        ("linux", ["worker"], []),
+        ("linux", ["worker", "--pool", "threads"], ["--pool=threads"]),
+    ],
+)
+def test_worker_pool_flag_and_mac_default(
+    runner: CliRunner,
+    project: Path,
+    run: Recorder,
+    monkeypatch: pytest.MonkeyPatch,
+    platform: str,
+    argv: list[str],
+    tail: list[str],
+) -> None:
+    monkeypatch.setattr("karni_cli.commands.worker.sys.platform", platform)
+    result = _invoke(runner, *argv)
+    assert result.exit_code == 0, result.output
+    assert run.cmd == [_py(project), "-m", "celery", "-A", "config", "worker", "-l", "info", *tail]
+
+
+def test_worker_says_prefork_fails_on_a_mac(
+    runner: CliRunner, project: Path, run: Recorder, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("karni_cli.commands.worker.sys.platform", "darwin")
+    result = _invoke(runner, "worker", "--pool", "prefork")
+    assert result.exit_code == 0, result.output
+    assert "prefork pool fails every task on macOS" in result.output
+
+
+def test_worker_rejects_an_unknown_pool(runner: CliRunner, project: Path, run: Recorder) -> None:
+    result = _invoke(runner, "worker", "--pool", "fork")
+    assert result.exit_code != 0
+    assert not run.calls
 
 
 VENV_CASES: list[tuple[list[str], list[str]]] = [
@@ -145,6 +192,10 @@ VENV_CASES: list[tuple[list[str], list[str]]] = [
             "--model",
             "events.Event",
         ],
+    ),
+    (
+        ["load", "content/site.json", "--dry-run", "--prune"],
+        ["manage.py", "karni_load", "content/site.json", "--dry-run", "--prune"],
     ),
     (["createsuperuser"], ["manage.py", "createsuperuser"]),
     (
@@ -241,6 +292,130 @@ def test_explicit_no_docker_wins_over_a_running_stack(
 # serve
 
 
+def test_serve_local_on_another_port_prints_the_proxy_line(
+    runner: CliRunner, project: Path, run: Recorder
+) -> None:
+    (project / "frontend").mkdir()
+    (project / "frontend" / "vite.config.ts").write_text("")
+    result = _invoke(runner, "serve", "--local", "--port", "8020")
+    assert result.exit_code == 0, result.output
+    assert "cd frontend && KARNI_API_PROXY=http://127.0.0.1:8020 npm run dev" in result.output
+    assert run.cmd == [_py(project), "manage.py", "runserver", "127.0.0.1:8020"]
+
+
+def test_serve_local_proxy_line_reaches_a_bind_all_host(
+    runner: CliRunner, project: Path, run: Recorder
+) -> None:
+    (project / "frontend").mkdir()
+    (project / "frontend" / "vite.config.ts").write_text("")
+    result = _invoke(runner, "serve", "--local", "--host", "0.0.0.0", "--port", "9000")
+    assert "KARNI_API_PROXY=http://127.0.0.1:9000 npm run dev" in result.output
+
+
+@pytest.mark.parametrize("frontend", [True, False])
+def test_serve_local_prints_no_proxy_line_when_the_default_reaches_it(
+    runner: CliRunner, project: Path, run: Recorder, frontend: bool
+) -> None:
+    if frontend:
+        (project / "frontend").mkdir()
+        (project / "frontend" / "vite.config.ts").write_text("")
+        argv = ["serve", "--local", "--host", "0.0.0.0"]
+    else:
+        argv = ["serve", "--local", "--port", "8020"]  # no frontend to point anywhere
+    result = _invoke(runner, *argv)
+    assert result.exit_code == 0, result.output
+    assert "KARNI_API_PROXY" not in result.output
+
+
+# KARNI_DEV_PORT: one setting for runserver and the frontend's proxy
+
+#: The scaffold's vite.config.ts, which reads KARNI_DEV_PORT and KARNI_API_PROXY.
+SCAFFOLD_VITE = (
+    Path(__file__).resolve().parents[3]
+    / "templates"
+    / "project"
+    / "{{cookiecutter.project_slug}}"
+    / "frontend"
+    / "vite.config.ts"
+)
+
+
+@pytest.fixture
+def frontend(project: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """The project with the scaffold's vite.config.ts; no KARNI_* variable in the environment."""
+    for name in ("KARNI_DEV_PORT", "KARNI_API_PROXY", "KARNI_DOTENV"):
+        monkeypatch.delenv(name, raising=False)
+    (project / "frontend").mkdir()
+    (project / "frontend" / "vite.config.ts").write_text(SCAFFOLD_VITE.read_text())
+    return project
+
+
+def test_the_scaffold_vite_config_reads_the_dev_port_from_the_project_env() -> None:
+    text = SCAFFOLD_VITE.read_text()
+    assert 'loadEnv(mode, fileURLToPath(new URL("..", import.meta.url)), "KARNI_")' in text
+    assert 'env.KARNI_API_PROXY || `http://127.0.0.1:${env.KARNI_DEV_PORT || "8000"}`' in text
+
+
+def test_serve_local_runs_on_the_dev_port_from_env_file(
+    runner: CliRunner, frontend: Path, run: Recorder
+) -> None:
+    (frontend / ".env").write_text("KARNI_DEV_PORT=8020\n")
+    result = _invoke(runner, "serve", "--local")
+    assert result.exit_code == 0, result.output
+    assert run.cmd == [_py(frontend), "manage.py", "runserver", "127.0.0.1:8020"]
+    assert "KARNI_API_PROXY" not in result.output  # the dev server reads the same port
+
+
+def test_the_environment_beats_env_file_and_port_beats_both(
+    runner: CliRunner, frontend: Path, run: Recorder, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (frontend / ".env").write_text("KARNI_DEV_PORT=8020\n")
+    monkeypatch.setenv("KARNI_DEV_PORT", "8030")
+    assert _invoke(runner, "serve", "--local").exit_code == 0
+    assert run.calls[-1]["cmd"][-1] == "127.0.0.1:8030"
+    result = _invoke(runner, "serve", "--local", "--port", "8040")
+    assert run.calls[-1]["cmd"][-1] == "127.0.0.1:8040"
+    assert "Set KARNI_DEV_PORT=8040 in .env" in result.output
+    assert "KARNI_API_PROXY=http://127.0.0.1:8040 npm run dev" in result.output
+
+
+def test_karni_api_proxy_wins_over_the_dev_port(
+    runner: CliRunner, frontend: Path, run: Recorder
+) -> None:
+    (frontend / ".env").write_text("KARNI_DEV_PORT=8020\nKARNI_API_PROXY=http://127.0.0.1:9000\n")
+    result = _invoke(runner, "serve", "--local")
+    assert run.cmd[-1] == "127.0.0.1:8020"
+    assert "the dev server proxies /api to http://127.0.0.1:9000" in result.output
+    assert "Set KARNI_DEV_PORT" not in result.output  # it would not move the proxy
+    assert "cd frontend && KARNI_API_PROXY=http://127.0.0.1:8020 npm run dev" in result.output
+
+
+def test_an_older_frontend_config_gets_the_proxy_line(
+    runner: CliRunner, frontend: Path, run: Recorder
+) -> None:
+    (frontend / "frontend" / "vite.config.ts").write_text(
+        'const target = process.env.KARNI_API_PROXY ?? "http://127.0.0.1:8000";\n'
+    )
+    (frontend / ".env").write_text("KARNI_DEV_PORT=8020\n")
+    result = _invoke(runner, "serve", "--local")
+    assert run.cmd[-1] == "127.0.0.1:8020"
+    assert "proxies /api to http://127.0.0.1:8000" in result.output
+    assert "Set KARNI_DEV_PORT" not in result.output
+    assert "KARNI_API_PROXY=http://127.0.0.1:8020 npm run dev" in result.output
+
+
+@pytest.mark.parametrize("value", ["eighty", "0", "70000"])
+def test_a_bad_dev_port_is_c007(
+    runner: CliRunner, frontend: Path, run: Recorder, value: str
+) -> None:
+    (frontend / ".env").write_text(f"KARNI_DEV_PORT={value}\n")
+    result = _invoke(runner, "serve", "--local")
+    assert result.exit_code != 0
+    assert isinstance(result.exception, CliError) and result.exception.code == "C007"
+    assert f"KARNI_DEV_PORT='{value}' (from .env) is not a port number" in str(result.exception)
+    assert run.calls == []
+
+
 @pytest.mark.parametrize(
     ("argv", "expected"),
     [
@@ -310,6 +485,7 @@ def test_serve_without_docker_names_the_alternative(
         (["schedule", "run"], "karni_schedules --run NAME"),
         (["createsuperuser"], "manage.py createsuperuser"),
         (["seed"], "manage.py karni_seed [ARGS]"),
+        (["load"], "manage.py karni_load FILE [ARGS]"),
         (["manage"], "manage.py ARGS"),
     ],
 )

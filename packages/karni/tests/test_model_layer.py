@@ -47,10 +47,13 @@ from karni.managers import (
 from karni.middleware import CurrentUserMiddleware, current_user, get_current_user
 from karni.models import AuditedModel, SoftDeleteModel, TimestampedModel, UUIDModel
 from tests.testapp.models import (
+    TEST_PK,
     Book,
     Entry,
     Event,
     Label,
+    Part,
+    Reading,
     Remark,
     Review,
     Shelf,
@@ -60,6 +63,9 @@ from tests.testapp.models import (
 )
 
 pytestmark = pytest.mark.django_db
+
+#: The fields BaseModel and BigIntBaseModel both carry, in declaration order.
+BASE_FIELDS = ("id", "created_at", "updated_at", "deleted_at", "created_by", "updated_by")
 
 PASSWORD = "a-strong-password-123"
 STARTS_AT = "2030-05-01T18:00:00Z"
@@ -527,9 +533,10 @@ class TestUUIDPrimaryKeysInRelations:
         )
         assert response.status_code == 201, response.data
         body = response.json()
-        assert uuid.UUID(body["id"])
-        assert body["venue"] == str(venue.pk)
-        assert body["tags"] == [str(tag.pk)]
+        # A UUID key is a string on the wire, an integer key a JSON number.
+        assert uuid.UUID(body["id"]) if TEST_PK == "uuid" else isinstance(body["id"], int)
+        assert str(body["venue"]) == str(venue.pk)
+        assert [str(pk) for pk in body["tags"]] == [str(tag.pk)]
         assert body["created_by"] == str(alice.pk)
         assert "deleted_at" not in body
 
@@ -779,3 +786,56 @@ class TestAdmin:
         assert row in changelist.context["cl"].queryset
         change = admin_client.get(reverse(f"admin:testapp_{model_name}_change", args=[row.pk]))
         assert change.status_code == 200
+
+
+class TestBigIntBaseModel:
+    """``BigIntBaseModel`` (experimental): ``BaseModel`` with a 64-bit integer key."""
+
+    def test_the_key_is_a_bigautofield_and_every_other_field_matches_basemodel(self) -> None:
+        from karni.models import BaseModel, BigIntBaseModel, IntegerKeyModel
+
+        assert isinstance(Part._meta.pk, models.BigAutoField) and Part._meta.pk.name == "id"
+        assert issubclass(Part, IntegerKeyModel) and not issubclass(Part, UUIDModel)
+        assert not issubclass(BigIntBaseModel, BaseModel)  # siblings, one shared core
+
+        def base_fields(model: type[models.Model]) -> list[str]:
+            return [f.name for f in model._meta.concrete_fields if f.name in BASE_FIELDS]
+
+        assert base_fields(Part) == base_fields(Shelf) == list(BASE_FIELDS)
+        assert type(Part._default_manager) is type(Shelf._default_manager)
+        assert Part._meta.default_manager_name == Shelf._meta.default_manager_name == "objects"
+
+    def test_rows_number_up_and_keep_soft_delete_and_audit(self, alice: Any) -> None:
+        with current_user(alice):
+            first = Part.objects.create(number="1")
+            second = Part.objects.create(number="2")
+        assert isinstance(first.pk, int) and second.pk == first.pk + 1
+        assert first.created_by == alice and first.updated_by == alice
+        first.delete()
+        assert not Part.objects.filter(pk=first.pk).exists()
+        assert Part.objects.without("soft_delete", reason="test").filter(pk=first.pk).exists()
+        first.restore()
+        assert Part.objects.filter(pk=first.pk).exists()
+
+    def test_pre_write_is_sent_before_any_sql(self) -> None:
+        from karni.signals import pre_write
+
+        seen: list[tuple[str, Any]] = []
+
+        def listen(sender: Any, instance: Any, action: str, **kwargs: Any) -> None:
+            seen.append((action, instance.pk))
+
+        pre_write.connect(listen, sender=Part)
+        try:
+            part = Part.objects.create(number="9")
+            part.delete()
+        finally:
+            pre_write.disconnect(listen, sender=Part)
+        assert seen == [("create", None), ("delete", part.pk)]  # no id before the insert
+
+    def test_both_key_types_mix_in_one_project(self) -> None:
+        part = Part.objects.create(number="7")
+        reading = Reading.objects.create(part=part, value=3)
+        shelf = Shelf.objects.create(name="uuid shelf")
+        assert isinstance(shelf.pk, uuid.UUID) and isinstance(reading.pk, int)
+        assert list(part.readings.all()) == [reading]

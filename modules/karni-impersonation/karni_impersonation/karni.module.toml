@@ -1,0 +1,59 @@
+# The catalog entry of karni-impersonation: what `karni modules show impersonation` prints,
+# what `karni add impersonation` wires and `karni remove impersonation` takes out.
+name = "impersonation"
+kind = "module"
+title = "Impersonation"
+purpose = "Log in as a user for support, with a banner, a time limit and an audit trail."
+status = "stable"
+use_when = ["log in as user", "impersonate", "support staff see what a user sees", "act as a customer"]
+services = ["Celery beat: the hourly sweep ends expired sessions", "session auth for the banner"]
+docs = "modules/karni-impersonation/README.md"
+
+[provides]
+models = ["ImpersonationSession"]
+endpoints = [
+    "/api/impersonation-sessions/",
+    "/api/impersonation-sessions/start/",
+    "/api/impersonation-sessions/stop/",
+    "/api/impersonation-sessions/current/",
+    "/impersonation/stop/",
+]
+pages = ["admin: Impersonate on the user page", "the banner on every HTML page"]
+ui = "@karni/impersonation-ui"
+
+[provides.settings]
+KARNI_IMPERSONATION_MAX_MINUTES = "integer"
+KARNI_IMPERSONATION_BLOCKED = "array"
+KARNI_IMPERSONATION_REQUIRE_REASON = "boolean"
+KARNI_IMPERSONATION_NOTIFY_TARGET = "boolean"
+KARNI_IMPERSONATION_FROM_EMAIL = "string"
+KARNI_IMPERSONATION_BANNER = "boolean"
+KARNI_IMPERSONATION_LANDING = "string"
+
+[[asks]]
+question = "How many minutes may an impersonation last?"
+setting = "KARNI_IMPERSONATION_MAX_MINUTES"
+default = 60
+
+[[asks]]
+question = "Must the support person give a reason to start?"
+setting = "KARNI_IMPERSONATION_REQUIRE_REASON"
+options = [true, false]
+default = true
+
+[[asks]]
+question = "Is the impersonated person emailed when a session starts?"
+setting = "KARNI_IMPERSONATION_NOTIFY_TARGET"
+options = [true, false]
+default = true
+
+[wiring]
+apps = ["karni_impersonation"]
+settings = "karni_impersonation.conf:DEFAULTS"
+urls = 'path("impersonation/", include("karni_impersonation.urls"))'
+
+# karni add writes it into the middleware block after Django's own list, so it follows
+# AuthenticationMiddleware (karni check: IMP007). karni remove takes it out again.
+[[wiring.middleware]]
+path = "karni_impersonation.middleware.ImpersonationMiddleware"
+why = "applies the impersonated session, after AuthenticationMiddleware"

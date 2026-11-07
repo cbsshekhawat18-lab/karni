@@ -1,0 +1,27 @@
+/* A light theme that follows the system's dark preference. */
+:root {
+  --c-primary: oklch(0.55 0.2 250);
+  --c-background: #ffffff;
+  --c-foreground: #1a1a2e;
+  --c-border: #e2e2ea;
+  --c-muted: #f4f4f8;
+  --c-muted-foreground: #5f6180;
+  --radius: 0.5rem;
+  --font-sans: Inter, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-background: #12121a;
+    --c-foreground: #ececf4;
+    --c-border: #2c2c3c;
+    --c-muted: #1c1c28;
+    --c-muted-foreground: #a0a2bc;
+  }
+}
+
+body {
+  background: var(--c-background);
+  color: var(--c-foreground);
+  font-family: var(--font-sans);
+}

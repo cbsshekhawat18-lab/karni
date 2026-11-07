@@ -20,6 +20,12 @@ only grow and are scanned by time range. A list of column names picks the
 columns instead. The trade-off: BRIN cannot serve ``ORDER BY created_at
 LIMIT n``, so do not declare it on a table listed newest-first.
 
+:class:`TrigramIndex` (experimental) is a GIN index with ``gin_trgm_ops`` on
+every field: it serves ``ILIKE '%...%'`` and pg_trgm's ``%`` operator. It
+creates the ``pg_trgm`` extension first when it is missing, and is a no-op on
+another database like the indexes above. ``class Karni: search`` adds one per
+searched field (:mod:`karni.global_search`), so ``makemigrations`` writes it.
+
 Override / escape hatch: use ``django.contrib.postgres.indexes`` directly
 for PostgreSQL-only migrations, or declare any index in ``Meta.indexes``.
 """
@@ -35,7 +41,14 @@ from django.db.backends.ddl_references import Statement
 from karni.fields.base import PUBLIC_PATH, contribute_index
 from karni.meta import karni_option
 
-__all__ = ["BrinIndex", "GinIndex", "GistIndex", "append_only_columns", "append_only_indexes"]
+__all__ = [
+    "BrinIndex",
+    "GinIndex",
+    "GistIndex",
+    "TrigramIndex",
+    "append_only_columns",
+    "append_only_indexes",
+]
 
 
 class _PostgresOnly:
@@ -76,6 +89,52 @@ class GistIndex(_PostgresOnly, pg_indexes.GistIndex):
 
 class BrinIndex(_PostgresOnly, pg_indexes.BrinIndex):
     """BRIN (large append-only tables) on PostgreSQL; skipped elsewhere."""
+
+
+class TrigramIndex(GinIndex):
+    """Experimental. GIN with ``gin_trgm_ops`` on every field, on PostgreSQL; skipped elsewhere.
+
+    ``TrigramIndex(fields=["name"], name="catalog_product_name_trgm")`` serves
+    ``name ILIKE '%lamp%'`` and ``name % 'lamp'`` (pg_trgm). Creating it
+    creates the ``pg_trgm`` extension first when the database lacks it
+    (:func:`karni.fields.ensure_extension`, ``karni.E966`` when the role may
+    not). Unlike Django's ``GinIndex`` with ``opclasses``, the name may be
+    left out: :func:`karni.fields.contribute_index` names it.
+
+    Override / escape hatch: pass ``opclasses`` to use other operator
+    classes, or declare a ``GinIndex`` yourself.
+    """
+
+    #: The operator class every field gets unless ``opclasses`` says otherwise.
+    opclass = "gin_trgm_ops"
+    #: The end of the names :meth:`set_name_with_model` gives (``suffix`` is the access method).
+    name_suffix = "trgm"
+
+    def __init__(self, *, fields: Any = (), name: str = "", **kwargs: Any) -> None:
+        opclasses = kwargs.pop("opclasses", None)
+        super().__init__(fields=fields, name=name, **kwargs)
+        # Set after Index.__init__, which requires a name whenever opclasses are given.
+        self.opclasses = tuple(opclasses or (self.opclass,) * len(self.fields))
+
+    def set_name_with_model(self, model: Any) -> None:
+        """A deterministic name of at most 30 characters (``<table>_<column>_<hash>_trgm``)."""
+        from karni.fields.base import object_name
+
+        columns = [model._meta.get_field(name.lstrip("-")).column for name in self.fields]
+        self.name = object_name(model, columns, self.name_suffix, limit=self.max_name_length)
+
+    def create_sql(self, model: Any, schema_editor: Any, using: str = "", **kwargs: Any) -> Any:
+        if schema_editor.connection.vendor == "postgresql":
+            from karni.fields.extensions import ensure_extension
+
+            ensure_extension(schema_editor, "pg_trgm")
+        return super().create_sql(model, schema_editor, using=using, **kwargs)
+
+    def deconstruct(self) -> tuple[str, tuple[Any, ...], dict[str, Any]]:
+        path, args, kwargs = super().deconstruct()
+        if tuple(kwargs.get("opclasses", ())) == (self.opclass,) * len(self.fields):
+            kwargs.pop("opclasses", None)
+        return path, args, kwargs
 
 
 def append_only_columns(model: type[models.Model]) -> list[str]:

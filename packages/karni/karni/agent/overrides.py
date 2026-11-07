@@ -14,7 +14,7 @@ Schema (every name optional)::
     ]
     OVERRIDE = {"K202": {"summary": "Page files stay at 80 lines or fewer."}}
     DISABLE = ["K304"]
-    ADAPTERS = {"disable": ["copilot"], "paths": {"windsurf": ".devin/rules/karni.md"}}
+    ADAPTERS = {"disable": [...], "paths": {"agents-md": "AGENTS.md"}}  # ids: agent_adapters.toml
 
 ``ADD += [...]`` and ``DISABLE += [...]`` are accepted (the upgrade codemod
 appends that way). Anything else at top level is an error that names the line.

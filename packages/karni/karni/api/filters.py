@@ -13,15 +13,24 @@ from collections.abc import Mapping
 from typing import Any, ClassVar, cast
 
 import django_filters
+from django import forms
 from django.db import models
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework.filters import BaseFilterBackend, OrderingFilter
 from rest_framework.request import Request
 from rest_framework.settings import api_settings
 
 from karni.api.search import get_search_provider
 
-__all__ = ["KarniFilterBackend", "KarniFilterSet", "KarniOrderingFilter", "KarniSearchFilter"]
+__all__ = [
+    "IntegerFilter",
+    "KarniFilterBackend",
+    "KarniFilterSet",
+    "KarniOrderingFilter",
+    "KarniSearchFilter",
+]
 
 _FILTERSET_CACHE: dict[tuple[type, type[models.Model]], type[FilterSet]] = {}
 _NARROWED_CACHE: dict[tuple[type[FilterSet], frozenset[str]], type[FilterSet]] = {}
@@ -95,6 +104,18 @@ def _api_filterable_names(model: type[models.Model]) -> frozenset[str]:
     return frozenset(name for name in effective - excluded - write_only if name != "password")
 
 
+@extend_schema_field(OpenApiTypes.INT)
+class IntegerFilter(django_filters.NumberFilter):
+    """Experimental. An exact filter that takes whole numbers only (``?venue=12``).
+
+    ``NumberFilter`` parses a ``Decimal``, so ``?venue=1.5`` would match row
+    1. This one refuses it (400), and the schema documents an integer. The
+    derived filter of a relation whose target has an integer key.
+    """
+
+    field_class = forms.IntegerField
+
+
 class KarniFilterSet(FilterSet):
     """The base of every FilterSet Karni's backend builds: relation choices are the readable rows.
 
@@ -143,11 +164,22 @@ class KarniFilterBackend(DjangoFilterBackend):
       (parameters ``?field=``, ``?field__gte=``, ``?field__lte=``);
     * Boolean → ``exact``;
     * forward FK / OneToOne → ``exact`` against the target's primary-key type
-      (for example ``UUIDFilter`` for UUID keys — never a
-      ``ModelChoiceFilter`` that would render the whole related queryset);
+      (``UUIDFilter`` for UUID keys, :class:`IntegerFilter` for integer keys —
+      never a ``ModelChoiceFilter`` that would render the whole related
+      queryset);
+    * the model's own primary key gets no filter, whatever its type: an
+      ``?id__gte=`` range on integer keys would page through the table by
+      key. Declare one in ``filterset_fields`` / ``filterset_class`` when you
+      want it;
     * everything else — Text, JSON, File/Image, binary, M2M — is skipped, as
       is any field outside the model's ``APIMeta`` policy (see
-      :func:`_api_filterable_names`).
+      :func:`_api_filterable_names`);
+    * a tree model (experimental) gets ``?parent=<key>`` / ``?parent=null``
+      and ``?descendants_of=<key>`` instead of the plain ``parent`` filter
+      (:mod:`karni.api.tree`);
+    * each key of ``class Karni: taxonomies`` (experimental) gets
+      ``?<key>=<node>,<node>`` and ``?<key>_descendants=true``
+      (:mod:`karni.api.taxonomy`).
 
     On every other view this backend behaves exactly like the stock
     ``DjangoFilterBackend``, and an explicit ``filterset_class`` or
@@ -183,7 +215,7 @@ class KarniFilterBackend(DjangoFilterBackend):
 
     pk_filter_map: ClassVar[Mapping[type[models.Field], type[django_filters.Filter]]] = {
         models.UUIDField: django_filters.UUIDFilter,
-        models.IntegerField: django_filters.NumberFilter,
+        models.IntegerField: IntegerFilter,
         models.CharField: django_filters.CharFilter,
     }
     """Relation-target pk type → filter class for derived FK/O2O filters."""
@@ -273,6 +305,8 @@ class KarniFilterBackend(DjangoFilterBackend):
         for field in model._meta.concrete_fields:
             if field.name not in allowed:
                 continue
+            if field.primary_key and not field.is_relation:
+                continue  # no ?id= / ?id__gte= / ?id__lte= unless declared (see the docstring)
             if field.is_relation:
                 if field.many_to_one or field.one_to_one:
                     declared[field.name] = self._relation_filter(field)
@@ -283,6 +317,13 @@ class KarniFilterBackend(DjangoFilterBackend):
             lookups = self._lookups_for(field)
             if lookups is not None:
                 meta_fields[field.name] = list(lookups)
+        if "parent" in allowed:
+            from karni.api.tree import tree_filters
+
+            declared.update(tree_filters(model))
+        from karni.api.taxonomy import taxonomy_filters
+
+        declared.update(taxonomy_filters(model, allowed))
         meta = type("Meta", (), {"model": model, "fields": meta_fields})
         return type(
             f"{model.__name__}AutoFilterSet",

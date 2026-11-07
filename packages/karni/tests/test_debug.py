@@ -16,6 +16,7 @@ from django.core import mail
 from django.core.exceptions import MiddlewareNotUsed
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.test import override_settings
 from rest_framework.test import APIClient
 
 from karni import tracing
@@ -54,7 +55,7 @@ def _eager_celery(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tasks run inline (no broker); retries re-run inline too."""
     from celery import current_app
 
-    monkeypatch.setattr(current_app.conf, "task_always_eager", True)
+    monkeypatch.setitem(current_app.conf, "task_always_eager", True)
 
 
 @pytest.fixture
@@ -165,6 +166,52 @@ def test_the_publish_header_restores_the_id_in_the_worker() -> None:
     assert retry_headers[tracing.CELERY_HEADER] == "req-abc"
     tracing._task_postrun(task_id="t-1")
     assert tracing.get_request_id() is None
+
+
+def test_the_requests_origin_reaches_the_task_it_queued(rf: Any) -> None:
+    """An absolute link from a worker: the origin of the request that queued the task."""
+    from karni.middleware import _current_request
+
+    assert tracing.get_origin() is None  # no request, no task
+    request = rf.get("/", HTTP_HOST="shop.example.com", secure=True)
+    token = _current_request.set(request)
+    try:
+        assert tracing.get_origin() == "https://shop.example.com"
+        headers: dict[str, Any] = {}
+        tracing._before_task_publish(headers=headers)
+    finally:
+        _current_request.reset(token)
+    assert headers[tracing.ORIGIN_HEADER] == "https://shop.example.com"
+    # A host ALLOWED_HOSTS refuses is no origin.
+    token = _current_request.set(rf.get("/", HTTP_HOST="evil.example"))
+    try:
+        with override_settings(ALLOWED_HOSTS=["shop.example.com"]):
+            assert tracing.get_origin() is None
+    finally:
+        _current_request.reset(token)
+
+    class Request:
+        karni_origin = "https://shop.example.com"
+        retries = 0
+        is_eager = False
+
+    class Task:
+        name = "shop.listeners.notify_order"
+        request = Request()
+
+    tracing._task_prerun(task_id="t-3", task=Task())
+    try:
+        assert tracing.get_origin() == "https://shop.example.com"
+    finally:
+        tracing._task_postrun(task_id="t-3")
+    assert tracing.get_origin() is None
+    # A header that is not an origin is ignored.
+    Request.karni_origin = "javascript:alert(1)"
+    tracing._task_prerun(task_id="t-4", task=Task())
+    try:
+        assert tracing.get_origin() is None
+    finally:
+        tracing._task_postrun(task_id="t-4")
 
 
 def test_a_task_without_an_id_gets_its_own() -> None:
@@ -517,6 +564,7 @@ def test_trace_without_a_capture_says_how_to_enable_it(karni_dir: Path) -> None:
 # --- karni_replay ------------------------------------------------------------------
 
 
+@pytest.mark.django_db(databases="__all__")  # replay rolls back every database
 def test_replay_as_another_user_reports_the_change(karni_dir: Path, user: Any) -> None:
     denied = _client(user).get("/debug/staff/")
     assert denied.status_code == 403
@@ -535,6 +583,7 @@ def test_replay_as_another_user_reports_the_change(karni_dir: Path, user: Any) -
     assert replayed is not None and replayed["status"] == 403
 
 
+@pytest.mark.django_db(databases="__all__")  # replay rolls back every database
 def test_replay_rolls_writes_back_unless_committed(karni_dir: Path, user: Any) -> None:
     created = _client(user).post(
         "/debug/prices/", {"amount": "4.00", "mail_to": "ada@example.com"}, format="json"
@@ -551,6 +600,7 @@ def test_replay_rolls_writes_back_unless_committed(karni_dir: Path, user: Any) -
     assert Price.objects.count() == before + 1
 
 
+@pytest.mark.django_db(databases="__all__")  # replay rolls back every database
 def test_replay_refuses_redacted_values_until_supplied(karni_dir: Path, user: Any) -> None:
     response = _client(user).post(
         "/debug/prices/?token=abc-query-1", {"password": "x-secret-1"}, format="json"
@@ -577,6 +627,20 @@ def test_replay_unknown_user(karni_dir: Path, user: Any) -> None:
     response = _client(user).get("/debug/staff/")
     with pytest.raises(CommandError, match="E924"):
         call_command("karni_replay", response["X-Request-ID"], "--as", "nobody@example.com")
+
+
+def test_replay_refuses_when_the_captured_id_now_names_someone_else(
+    karni_dir: Path, user: Any
+) -> None:
+    """After a reset, integer ids are reused: the id must still belong to the captured email."""
+    response = _client(user).get("/debug/staff/")
+    captured_email = user.email
+    type(user)._default_manager.filter(pk=user.pk).update(email="someone-else@example.com")
+    with pytest.raises(CommandError, match="E924") as refused:
+        call_command("karni_replay", response["X-Request-ID"])
+    message = str(refused.value)
+    assert repr(captured_email) in message and "'someone-else@example.com'" in message
+    assert "a reset reuses integer ids" in message and f"--as {captured_email}" in message
 
 
 # --- the system check ------------------------------------------------------------------

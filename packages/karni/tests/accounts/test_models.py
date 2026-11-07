@@ -145,3 +145,34 @@ def test_apimeta_is_present_and_correct() -> None:
     assert "password" not in User.APIMeta.fields
     assert "is_staff" not in User.APIMeta.fields
     assert "is_superuser" not in User.APIMeta.fields
+
+
+@pytest.mark.django_db
+def test_createsuperuser_command_gives_the_roles_the_demo_account_gets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The first admin passes HasRole('staff') gates, as the seeded demo superuser does."""
+    from django.core.management import call_command
+
+    from karni.accounts.permissions import has_role, routed_roles
+
+    assert "staff" in routed_roles()
+    monkeypatch.setenv("DJANGO_SUPERUSER_PASSWORD", "s3cret-pass-123")
+    call_command("createsuperuser", interactive=False, email="admin@example.com")
+    admin = User.objects.get(email="admin@example.com")
+    assert admin.is_superuser and has_role(admin, "staff")
+    assert set(admin.groups.values_list("name", flat=True)) == set(routed_roles())
+
+
+@pytest.mark.django_db
+def test_superuser_roles_can_be_overridden() -> None:
+    from karni.accounts.managers import KarniUserManager
+
+    class NoRoles(KarniUserManager):
+        def superuser_roles(self) -> list[str]:
+            return []
+
+    manager = NoRoles()
+    manager.model = User
+    admin = manager.create_superuser("none@example.com", "s3cret-pass")
+    assert not admin.groups.exists()

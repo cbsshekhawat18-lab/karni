@@ -1,11 +1,10 @@
 # karni-approvals
 
-Second-person (maker-checker) approval for high-value changes in a
-[Karni](https://github.com/cbsshekhawat18-lab/karni) project. A model opts
-in. From then on, a guarded change by anyone (through the API, the admin or
-plain code) becomes a **pending change holding the diff instead of a
-write**. A checker holding the approve permission applies or rejects it,
-with a reason. The maker can never be the checker, in code.
+Maker-checker approvals for Karni: a second person approves high-value changes before they are written, with a queue, an API and an audit trail.
+
+[![PyPI](https://img.shields.io/pypi/v/karni-approvals)](https://pypi.org/project/karni-approvals/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/modules/#modules-in-this-repository)
+
+A model opts in. From then on, a guarded change by anyone (through the API, the admin or plain code) becomes a **pending change holding the diff instead of a write**. A checker holding the approve permission applies or rejects it, with a reason. The maker can never be the checker, in code.
 
 ## Install
 
@@ -29,7 +28,9 @@ from karni.models import BaseModel
 class Invoice(BaseModel):
     ...
     class Karni:
-        requires_approval = ["amount", "status"]   # or True: any change, create and delete too
+        requires_approval = ["amount", "status"]   # a list holds updates of those fields, and a create
+                                                    # that sets one off its default; True holds
+                                                    # every change, create and delete
         approvals_required = 2                      # default KARNI_APPROVALS_REQUIRED (1)
         approver_roles = ["finance"]                # default KARNI_APPROVALS_APPROVER_ROLES ([])
         approval_timeout = timedelta(hours=48)      # or hours as a number; default the setting (never)
@@ -41,6 +42,15 @@ The model must be a `karni.models.BaseModel` (every `save()` and `delete()`
 sends `karni.signals.pre_write`, and that is the hook). `karni check` fails the
 build for a guarded model that is not, for a malformed policy, and for
 approver roles `KARNI_ROLES` does not declare (`APR007`).
+
+## Main features
+
+- Opt in per model with `class Karni: requires_approval`, for chosen fields or every change, with the number of approvers and their roles
+- Pending changes that hold the diff, applied or rejected with a reason
+- A queue in the admin and the API at `/api/pending-changes/`
+- Notifications, and a timeout that expires or escalates a change, run as Celery tasks
+- Every decision in `karni.audit`
+- React components in [`@karni/approvals-ui`](https://www.npmjs.com/package/@karni/approvals-ui)
 
 ## What happens
 
@@ -63,7 +73,10 @@ approver roles `KARNI_ROLES` does not declare (`APR007`).
   - The maker can never be the checker (`APR002`), superuser or not.
   - A checker needs the `karni_approvals.pendingchange:approve` (or
     `:reject`) grant and, when the model declares `approver_roles`, one of
-    those roles (`APR003`).
+    those roles (`APR003`). The grant must name the action: a wildcard
+    (`"*": "own"`, `"*": "all"`, `"karni_approvals.pendingchange:*"`) never
+    reaches `approve` or `reject` (`class Karni: explicit_actions`), so the
+    default roles make nobody a checker.
   - A checker sees and decides only pending changes whose row lies inside
     their own scope, which for a branch checker is their branch (`APR003`).
     A create has no row yet and is visible to whoever may view every row of
@@ -131,3 +144,12 @@ Many-to-many changes are not part of a diff (they are written after
 `save()` and never pass through `pre_write`). Hold them behind a guarded
 field or a service of your own. A change is held whole: an update touching
 a guarded and an unguarded field waits as one.
+
+## Links
+
+- The module in the docs: <https://cbsshekhawat18-lab.github.io/karni/modules/#modules-in-this-repository>
+- React components: <https://www.npmjs.com/package/@karni/approvals-ui>
+- Karni, the framework this package is part of: <https://github.com/cbsshekhawat18-lab/karni>
+- Changelog: <https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md>
+- Issues: <https://github.com/cbsshekhawat18-lab/karni/issues>
+- License: Apache-2.0. karni-approvals is released with every other Karni package, at one version.

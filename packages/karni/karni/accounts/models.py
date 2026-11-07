@@ -17,9 +17,13 @@ from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import Group, PermissionsMixin
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.db.models import Manager
 from django.utils import timezone
 
 from karni.accounts.managers import KarniUserManager
+from karni.accounts.terms import PermanentRecordError
+from karni.fields.constraints import LiveUniqueConstraint
+from karni.managers import BaseQuerySet, ScopedManagerMixin
 from karni.models import BaseModel
 
 if TYPE_CHECKING:
@@ -27,11 +31,17 @@ if TYPE_CHECKING:
 
 __all__ = [
     "AbstractKarniUser",
+    "LoginCode",
     "OneTimeToken",
     "Permission",
     "Role",
     "RolePermission",
+    "SocialIdentity",
+    "TermsAcceptance",
+    "TermsAcceptanceQuerySet",
     "User",
+    "UserGrant",
+    "UserGrantQuerySet",
 ]
 
 
@@ -177,6 +187,231 @@ class OneTimeToken(BaseModel):
         return f"{self.purpose} token for user {self.user_id}"
 
 
+class SocialIdentity(BaseModel):
+    """Experimental. One provider identity (Google, Microsoft, Apple, ...) linked to a user.
+
+    Written by sign-in with an ID token (:mod:`karni.accounts.social_token`):
+    ``subject`` is the provider's stable id for the person (the token's
+    ``sub``, or ``<tid>:<oid>`` for Microsoft), unique per provider among live
+    rows. Once linked, the identity signs in by subject alone, so the link
+    survives a change of the user's email. ``email_at_link`` records the
+    address the token carried when the link was made, and ``last_used_at``
+    the latest sign-in through it.
+
+    django-allauth's session redirect flow (``KARNI_SOCIAL_AUTH``) keeps its
+    own ``SocialAccount`` table. The two are separate and never read each
+    other.
+
+    Override / escape hatch: rows are written only by
+    :func:`karni.accounts.social_token.sign_in`, and the admin shows them
+    read-only. Delete a row (``hard_delete()``) to unlink an identity.
+    """
+
+    provider = models.CharField(max_length=32)
+    subject = models.CharField(max_length=255)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="social_identities",
+    )
+    email_at_link = models.EmailField(blank=True, default="")
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta(BaseModel.Meta):
+        verbose_name = "social identity"
+        verbose_name_plural = "social identities"
+        ordering: ClassVar[list[str]] = ["provider", "created_at"]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            LiveUniqueConstraint(
+                fields=["provider", "subject"], name="karni_socialidentity_provider_subject"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.provider} identity of user {self.user_id}"
+
+
+class LoginCode(BaseModel):
+    """Experimental. One sign-in code sent by email, stored as a keyed hash.
+
+    Written by sign-in with a code (:mod:`karni.accounts.otp`). ``email`` is
+    the address the code was sent to, lower-cased, and ``user`` the account
+    that had it at that moment (``None`` for an address without an account).
+    ``code_hash`` is an HMAC-SHA256 keyed by ``SECRET_KEY`` over the address
+    and the code: the code itself is never stored. A code is looked up by its
+    address, never by its hash, and dies when ``used_at`` is set, when
+    ``expires_at`` passes, or when ``attempts`` reaches
+    ``KARNI_EMAIL_OTP_MAX_ATTEMPTS``.
+
+    :class:`OneTimeToken` does not fit: it finds a token by the hash of the
+    secret alone, which needs a secret unique across every user, and it has
+    no attempt counter. A six-digit code is neither.
+
+    Override / escape hatch: rows are written only by
+    :func:`karni.accounts.otp.send_code` and :func:`karni.accounts.otp.verify_code`,
+    and the admin shows them read-only. ``karni.accounts.tasks.flush_login_codes``
+    removes the dead ones.
+    """
+
+    email = models.EmailField(db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="login_codes",
+    )
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField(db_index=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta(BaseModel.Meta):
+        verbose_name = "login code"
+        verbose_name_plural = "login codes"
+        ordering: ClassVar[list[str]] = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"login code {self.pk}"
+
+
+_PERMANENT_HINT = (
+    "Record a new acceptance with karni.accounts.terms.accept(). To make everyone accept "
+    'again, change KARNI_TERMS["version"].'
+)
+
+
+def _permanent(operation: str) -> PermanentRecordError:
+    return PermanentRecordError(
+        f"TermsAcceptance rows are permanent: {operation} would rewrite the record of who "
+        f"accepted which terms. {_PERMANENT_HINT}"
+    )
+
+
+class TermsAcceptanceQuerySet(BaseQuerySet):
+    """Experimental. The queryset of :class:`TermsAcceptance`: it reads, it never rewrites.
+
+    ``update()``, ``delete()``, ``hard_delete()`` and ``restore()`` raise
+    :class:`~karni.accounts.terms.PermanentRecordError` (``E247``), so a bulk
+    change cannot rewrite the record either. ``create()`` and
+    ``get_or_create()`` insert as usual.
+    """
+
+    def update(self, **kwargs: Any) -> int:
+        raise _permanent("update()")
+
+    update.alters_data = True  # type: ignore[attr-defined]
+
+    def delete(self) -> tuple[int, dict[str, int]]:
+        raise _permanent("delete()")
+
+    delete.queryset_only = True  # type: ignore[attr-defined]
+    delete.alters_data = True  # type: ignore[attr-defined]
+
+    def hard_delete(self) -> tuple[int, dict[str, int]]:
+        raise _permanent("hard_delete()")
+
+    hard_delete.queryset_only = True  # type: ignore[attr-defined]
+    hard_delete.alters_data = True  # type: ignore[attr-defined]
+
+    def restore(self) -> int:
+        raise _permanent("restore()")
+
+    restore.queryset_only = True  # type: ignore[attr-defined]
+    restore.alters_data = True  # type: ignore[attr-defined]
+
+
+class TermsAcceptanceManager(ScopedManagerMixin, Manager.from_queryset(TermsAcceptanceQuerySet)):  # type: ignore[misc]
+    """Experimental. The default manager of :class:`TermsAcceptance`: scoped, no rewrites."""
+
+
+class TermsAcceptance(BaseModel):
+    """Experimental. One user's acceptance of one version of the terms (``KARNI_TERMS``).
+
+    Written by :func:`karni.accounts.terms.accept` (``POST <auth
+    mount>/terms/accept/``): ``version`` is the ``KARNI_TERMS["version"]``
+    the user accepted, ``accepted_at`` when, ``ip`` the client's address as
+    Karni's throttles read it (honouring ``NUM_PROXIES``), ``user_agent`` its
+    ``User-Agent`` header, and ``client`` what the app sent about itself (a
+    mobile app's device and app version, for example). One row per user and
+    version among live rows.
+
+    The table is append-only. Saving an existing row, ``delete()``,
+    ``hard_delete()``, ``restore()``, and ``update()`` or ``delete()`` on a
+    queryset raise :class:`~karni.accounts.terms.PermanentRecordError`
+    (``E247``), also through ``objects.without(...)``. Only the alias every
+    model inherits from 0.2, deprecated and removed in 1.0, builds a plain
+    queryset. A new row clears the gate's cached answer for its user and
+    version, so the next request sees it.
+
+    Override / escape hatch: write rows with :func:`karni.accounts.terms.accept`
+    from a view of your own. A user's rows go only with the user:
+    ``user.hard_delete()`` deletes them with it. The admin lists them
+    read-only, with filters by version and an export.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="terms_acceptances",
+    )
+    version = models.CharField(max_length=100)
+    accepted_at = models.DateTimeField(default=timezone.now)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=1024, blank=True, default="")
+    client = models.JSONField(null=True, blank=True)
+
+    objects: ClassVar[TermsAcceptanceManager] = TermsAcceptanceManager()
+
+    class Meta(BaseModel.Meta):
+        verbose_name = "terms acceptance"
+        verbose_name_plural = "terms acceptances"
+        ordering: ClassVar[list[str]] = ["-accepted_at"]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            LiveUniqueConstraint(
+                fields=["user", "version"], name="karni_termsacceptance_user_version"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"terms {self.version} accepted by user {self.user_id}"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Insert only: saving a row that exists raises ``E247``."""
+        if not self._state.adding:
+            raise _permanent("save() of an existing row")
+        super().save(*args, **kwargs)
+        from karni.accounts.terms import remember_acceptance
+
+        remember_acceptance(self.user_id, self.version, using=self._state.db)
+
+    def delete(
+        self,
+        using: str | None = None,
+        keep_parents: bool = False,
+    ) -> tuple[int, dict[str, int]]:
+        """Raises ``E247``: an acceptance is never deleted on its own."""
+        raise _permanent("delete()")
+
+    delete.alters_data = True  # type: ignore[attr-defined]
+
+    def hard_delete(
+        self,
+        using: str | None = None,
+        keep_parents: bool = False,
+    ) -> tuple[int, dict[str, int]]:
+        """Raises ``E247``: an acceptance is never deleted on its own."""
+        raise _permanent("hard_delete()")
+
+    hard_delete.alters_data = True  # type: ignore[attr-defined]
+
+    def restore(self, using: str | None = None) -> None:
+        """Raises ``E247``: an acceptance is never deleted, so it is never restored."""
+        raise _permanent("restore()")
+
+    restore.alters_data = True  # type: ignore[attr-defined]
+
+
 # roles as data
 
 
@@ -248,7 +483,9 @@ class RolePermission(BaseModel):
     ``scope`` is ``all``, ``own`` (rows whose ``Karni.owner_field`` is the
     user), ``related`` (rows whose ``Karni.scope_paths[scope_path]`` equals
     ``user.<scope_path>``), ``custom`` (``scope_path`` names a scope
-    registered with :func:`karni.accounts.roles.register_scope`) or ``none``
+    registered with :func:`karni.accounts.roles.register_scope`), ``tree``
+    (``scope_path`` is a path to a tree model, and the rows under the user's
+    nodes are reached, experimental) or ``none``
     — a declared grant the permission matrix revoked, kept as a row so the
     next ``karni sync-roles`` does not quietly restore it.
 
@@ -263,6 +500,7 @@ class RolePermission(BaseModel):
         OWN = "own", "Own rows"
         RELATED = "related", "Rows related through a scope path"
         CUSTOM = "custom", "Rows a registered scope returns"
+        TREE = "tree", "Rows under the user's nodes of a tree"
         NONE = "none", "No rows (revoked in the permission matrix)"
 
     class Origin(models.TextChoices):
@@ -295,3 +533,139 @@ class RolePermission(BaseModel):
     def __str__(self) -> str:
         suffix = f":{self.scope_path}" if self.scope_path else ""
         return f"{self.role_id} may {self.permission_id} ({self.scope}{suffix})"
+
+
+# per-user grants (experimental, karni.accounts.grants)
+
+
+class UserGrantQuerySet(BaseQuerySet):
+    """Experimental. The queryset of :class:`UserGrant`: live and expired grants."""
+
+    def live(self, at: Any = None) -> UserGrantQuerySet:
+        """The grants that apply at ``at`` (default now): no expiry, or an expiry after it."""
+        moment = at if at is not None else timezone.now()
+        return self.filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=moment))
+
+    def expired(self, at: Any = None) -> UserGrantQuerySet:
+        """The grants whose ``expires_at`` is at or before ``at`` (default now)."""
+        moment = at if at is not None else timezone.now()
+        return self.filter(expires_at__lte=moment)
+
+
+class UserGrantManager(ScopedManagerMixin, Manager.from_queryset(UserGrantQuerySet)):  # type: ignore[misc]
+    """Experimental. The default manager of :class:`UserGrant`: scoped, with ``live()``."""
+
+
+class UserGrant(BaseModel):
+    """Experimental. A grant to one user, next to the grants of their roles.
+
+    ``permission`` is a pattern written as in ``KARNI_ROLES``
+    (``app_label.model:action``, with ``*`` for either part, or ``*`` alone)
+    and ``scope`` a scope a role grant takes (``all``, ``own``,
+    ``related:<key>``, ``custom:<name>``, ``tree:<path>``). ``targets`` lists
+    row ids, as text, for a scope that points at rows: a ``related:<key>``
+    grant with targets reaches the rows whose ``Karni.scope_paths[key]`` is
+    one of them, in place of ``user.<key>``, and a ``tree:<path>`` grant the
+    rows under those nodes. ``expires_at`` ends the grant (``None``
+    never). ``granted_by`` is who gave it and ``reason`` why.
+
+    While ``KARNI_USER_GRANTS`` is on, :func:`karni.accounts.roles.grants_for`
+    adds a user's live grants to their role grants, so ``Granted()``,
+    ``Can``, ``user.can`` and the admin's row scope take the union. Every
+    change is history (``karni.audit``). Revoking is ``delete()`` (a soft
+    delete, recorded) or setting ``expires_at``.
+
+    Override / escape hatch: write grants with :mod:`karni.accounts.grants`
+    (``grant``, ``bulk_grant``, ``expire``, ``revoke``), which check the
+    pattern, the scope and the targets (``E360`` to ``E362``) and what the
+    operator holds (``E363``). ``full_clean()`` runs the same checks on the
+    row alone. A row saved directly skips them: an unknown pattern grants
+    nothing.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="user_grants",
+    )
+    permission = models.CharField(
+        max_length=200,
+        help_text="A KARNI_ROLES pattern: app_label.model:action, with * for either part.",
+    )
+    scope = models.CharField(
+        max_length=120,
+        default="all",
+        help_text=(
+            "all, own, related:<scope path key>, custom:<registered name> or tree:<path to a "
+            "tree model>."
+        ),
+    )
+    targets = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "Row ids (for a related:<key> or tree:<path> scope): the rows or nodes the grant "
+            "points at."
+        ),
+    )
+    expires_at = models.DateTimeField(
+        null=True, blank=True, db_index=True, help_text="Empty: the grant never expires."
+    )
+    granted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    reason = models.CharField(max_length=255, blank=True, default="")
+
+    objects: ClassVar[UserGrantManager] = UserGrantManager()
+
+    class Meta(BaseModel.Meta):
+        verbose_name = "user grant"
+        verbose_name_plural = "user grants"
+        ordering: ClassVar[list[str]] = ["-created_at"]
+
+    class Karni:
+        """Every change to a user grant is history, and ``own`` means the grants you received."""
+
+        audit = True
+        owner_field = "user"
+        cascade: ClassVar[dict[str, str]] = {
+            "user": "a user grant belongs to its user and goes with the account",
+        }
+
+    def __str__(self) -> str:
+        return f"{self.permission} ({self.scope}) for user {self.user_id}"
+
+    @property
+    def is_live(self) -> bool:
+        """Whether the grant applies now: no expiry, or an expiry still ahead."""
+        return self.expires_at is None or self.expires_at > timezone.now()
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Store ``targets`` as a list of text ids (``[1, 2]`` becomes ``["1", "2"]``)."""
+        from karni.accounts.grants import normalise_targets
+
+        try:
+            self.targets = list(normalise_targets(self.targets))
+        except ValueError:
+            pass  # full_clean() and the karni.accounts.grants functions report it (E362)
+        super().save(*args, **kwargs)
+
+    def clean(self) -> None:
+        """Check the pattern, the scope and the targets (:func:`karni.accounts.grants.check`)."""
+        from django.core.exceptions import ValidationError
+
+        from karni.accounts.grants import check
+        from karni.exceptions import KarniError
+
+        super().clean()
+        try:
+            check(self.permission, self.scope, self.targets)
+        except KarniError as exc:
+            field = {"E360": "permission", "E361": "scope", "E362": "targets"}.get(
+                str(exc.code), "permission"
+            )
+            raise ValidationError({field: str(exc)}, code=str(exc.code)) from exc

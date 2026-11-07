@@ -1,0 +1,120 @@
+# yaml-language-server: $schema=https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json
+version: 1
+app:
+  name: Data Portal
+  kind: app
+  recipe: data-portal
+modules:
+  charts: {read: authenticated}
+features:
+  user_grants: true
+  api_cache: true
+roles:
+  admin: {name: Admin, description: "Everything, users, roles and grants too.", system: true, grants: {"*": all}}
+  staff:
+    name: Staff
+    description: Reads every dataset, indicator, region and sector.
+    default: false
+    grants: {"portal.*:view": all}
+  editor:
+    name: Editor
+    description: Imports and edits datasets and indicators.
+    default: false
+    grants:
+      portal.dataset: all
+      portal.indicator: all
+      "portal.region:view": all
+      "portal.sector:view": all
+  analyst:
+    name: Analyst
+    description: Reads the datasets and indicators of the regions granted to them, user by user.
+    default: false
+    grants:
+      "portal.dataset:view": "tree:region"
+      "portal.indicator:view": "tree:region"
+      "portal.region:view": all
+      "portal.sector:view": all
+apps:
+  portal:
+    entities:
+      Region:
+        fields:
+          name: "str:120"
+          slug: "slug:name"
+        tree: true
+        key: slug
+        search: [name]
+        order: name
+        cache: 3600
+        access: {read: granted, write: granted}
+      Sector:
+        fields:
+          name: "str:120"
+          slug: "slug:name"
+        tree: true
+        key: slug
+        search: [name]
+        order: name
+        cache: 3600
+        access: {read: granted, write: granted}
+      Dataset:
+        fields:
+          title: "str:200"
+          slug: "slug:title"
+          summary: "markdown?"
+          method: "markdown?"
+          publisher: "str:120?"
+          frequency: "choice:annual|quarterly|monthly"
+          license: "choice:open|attribution|restricted"
+          source_url: "url?"
+          published_on: "date?"
+        taxonomies: {region: Region, sector: Sector}
+        key: slug
+        search: [title, publisher]
+        global_search: {subtitle: publisher, weight: 2}
+        groups:
+          Overview: [title, slug, summary]
+          Method: [method, frequency]
+          Source: [publisher, license, source_url, published_on]
+        column_sets:
+          default: [title, publisher, frequency]
+          source: [title, publisher, license, published_on, updated_at]
+        order: title
+        audit: true
+        access: {read: granted, write: granted}
+      Indicator:
+        fields:
+          dataset: fk:Dataset
+          region: fk:Region
+          sector: fk:Sector
+          year: int
+          value: "decimal:18:3"
+          unit: "str:40?"
+          label: "str:200"
+          note: "text?"
+        key: label
+        search: [label]
+        global_search: {subtitle: unit}
+        aggregate:
+          group_by: [year, region, region__parent, sector, sector__parent, dataset]
+          values: [value]
+          metrics: [count, sum, avg, min, max]
+        column_sets:
+          default: [label, year, value, unit]
+          detail: [label, dataset, region, sector, year, value, unit, created_at]
+        order: [-year, label]
+        audit: [value]
+        access: {read: granted, write: granted}
+pages:
+  - home: dashboard
+  - overview: dashboard
+  - Dataset: [list, {detail: {related: [Indicator]}}, form]
+  - Indicator: [list, detail, form]
+  - Region: [list, {detail: {related: [Indicator]}}, form]
+  - Sector: [list, form]
+navigation:
+  - home
+  - overview
+  - Data: [Dataset, Indicator]
+  - Browse: [Region, Sector]
+seed: {Region: 40, Sector: 15, Dataset: 24, Indicator: 3000}

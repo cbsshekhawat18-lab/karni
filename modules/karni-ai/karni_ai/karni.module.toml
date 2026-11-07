@@ -1,0 +1,61 @@
+# The catalog entry of karni-ai (docs/modules.md#the-module-catalog): what
+# `karni modules show ai` prints, what `karni add ai` wires and
+# `karni remove ai` takes out. tests/test_manifest.py checks it against the module.
+name = "ai"
+kind = "module"
+title = "AI extraction"
+purpose = "Rows for any resource read from text, a URL or a PDF by a language model."
+status = "experimental"
+use_when = [
+    "extract data from text",
+    "read a PDF into records",
+    "import from a web page",
+    "structured extraction with a language model",
+    "AI data entry",
+]
+services = [
+    "an Anthropic or OpenAI account (ANTHROPIC_* or OPENAI_* key and model in .env), or the test provider",
+]
+docs = "docs/ai-extraction.md"
+
+[provides]
+models = ["AICall"]
+endpoints = ["/api/ai/", "/api/ai/extract/"]
+pages = ["the usage log in the admin (AI calls), read-only"]
+ui = "@karni/ai-ui"
+
+[provides.settings]
+KARNI_AI_PROVIDER = "string"
+KARNI_AI_TIMEOUT = "integer"
+KARNI_AI_MAX_RETRIES = "integer"
+KARNI_AI_MAX_OUTPUT_TOKENS = "integer"
+KARNI_AI_MAX_ROWS = "integer"
+KARNI_AI_MAX_SOURCE_CHARS = "integer"
+KARNI_AI_MAX_UPLOAD_BYTES = "integer"
+KARNI_AI_MAX_PDF_PAGES = "integer"
+KARNI_AI_FETCH_TIMEOUT = "integer"
+KARNI_AI_FETCH_MAX_BYTES = "integer"
+KARNI_AI_FETCH_MAX_REDIRECTS = "integer"
+KARNI_AI_FETCH_PORTS = "array"
+KARNI_AI_FETCHER = "string"
+KARNI_AI_EXTRACTOR = "string"
+KARNI_AI_PRICES = "object"
+KARNI_AI_MONTHLY_TOKENS_PER_USER = ["integer", "null"]
+KARNI_AI_MONTHLY_TOKENS = ["integer", "null"]
+ANTHROPIC_API_KEY = "string"
+ANTHROPIC_MODEL = "string"
+OPENAI_API_KEY = "string"
+OPENAI_MODEL = "string"
+
+[[asks]]
+question = "Which language model provider: Anthropic, OpenAI, or the test provider (no network)?"
+setting = "KARNI_AI_PROVIDER"
+options = ["anthropic", "openai", "test"]
+
+[wiring]
+apps = ["karni_ai"]
+settings = "karni_ai.conf:DEFAULTS"
+
+[wiring.extras]
+anthropic = "the Anthropic provider"
+openai = "the OpenAI provider"

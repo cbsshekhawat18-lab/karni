@@ -47,11 +47,31 @@
  * `modeOverride` prop → cached parsed schema (`authMode`) → the schema
  * document's root `x-karni-auth-mode` (api B14) → "jwt".
  *
+ * ## Terms (experimental)
+ * While the server sets `KARNI_TERMS`, `/me/` (and so login) carries
+ * `terms: { required, version, url, accepted }`. The engine mirrors it as
+ * `terms` and `termsRequired`. It also registers the client's `onError` hook:
+ * the terms gate's 403 (`E245`, with the new `version` and `url`) on ANY
+ * request flips `termsRequired` on, so terms bumped mid-session are caught.
+ * `acceptTerms(client?)` posts `<authBasePath>/terms/accept/` with the
+ * version it knows. A 400 `E246` (the version moved on again) updates the
+ * terms to the server's and rejects, so the UI shows the new version.
+ *
  * Internal module: not re-exported from the barrel.
  */
-import type { KarniClient } from "../schema/client";
+import { KarniApiError, type KarniClient } from "../schema/client";
 import type { TokenStorage } from "./storage";
-import type { AuthStatus, KarniUser, LoginResult } from "./types";
+import type {
+  AuthStatus,
+  AuthTerms,
+  KarniUser,
+  LoginResult,
+  OtpLoginResult,
+  OtpSendResult,
+  SocialLoginResult,
+  SocialSignInOptions,
+  TermsClientInfo,
+} from "./types";
 
 export type AuthMode = "jwt" | "session";
 
@@ -78,6 +98,10 @@ export interface AuthSnapshot {
   readonly status: AuthStatus;
   readonly user: KarniUser | null;
   readonly mode: AuthMode | null;
+  /** Experimental. The terms the server asks the user to accept, or null when it asks for none. */
+  readonly terms: AuthTerms | null;
+  /** Experimental. True while the API refuses the user until they accept `terms`. */
+  readonly termsRequired: boolean;
 }
 
 /**
@@ -136,6 +160,70 @@ function read2fa(value: unknown): { ephemeralToken: string } | null {
     : null;
 }
 
+/** True when a sign-in answer says it removed the account's password (`password_removed`). */
+function passwordRemoved(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as Record<string, unknown>).password_removed === true
+  );
+}
+
+/** A 202 from `social/<provider>/` or `otp/verify/` whose new account awaits an administrator (code E224). */
+function readApproval(value: unknown): { detail: string } | null {
+  if (typeof value !== "object" || value === null) return null;
+  const record = value as Record<string, unknown>;
+  if (record.awaiting_approval !== true && record.code !== "E224") return null;
+  return { detail: typeof record.detail === "string" ? record.detail : "" };
+}
+
+/** `/me/`'s `terms` (or the `terms/` answer) as AuthTerms, or null when it is not one. */
+export function readTerms(value: unknown): AuthTerms | null {
+  if (typeof value !== "object" || value === null) return null;
+  const record = value as Record<string, unknown>;
+  const { version, url, required, accepted } = record;
+  if (typeof version !== "string" || version === "") return null;
+  return {
+    version,
+    url: typeof url === "string" ? url : "",
+    required: required !== false,
+    accepted: accepted === true,
+  };
+}
+
+/** The new terms in a refusal with `code` (the gate's E245, accept's E246), or null. */
+function readTermsRefusal(
+  error: unknown,
+  status: number,
+  code: string,
+): { version: string; url: string } | null {
+  if (!(error instanceof KarniApiError) || error.status !== status) return null;
+  const data = error.data;
+  if (typeof data !== "object" || data === null) return null;
+  const record = data as Record<string, unknown>;
+  if (record.code !== code || typeof record.version !== "string" || record.version === "") {
+    return null;
+  }
+  return { version: record.version, url: typeof record.url === "string" ? record.url : "" };
+}
+
+function needsAcceptance(terms: AuthTerms | null): boolean {
+  return terms !== null && terms.required && !terms.accepted;
+}
+
+/** The `otp/send/` answer, with the server defaults when a field is missing. */
+function readOtpSend(value: unknown): OtpSendResult {
+  const record =
+    typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  const length = record.length;
+  const expiresIn = record.expires_in;
+  return {
+    length: typeof length === "number" && Number.isInteger(length) && length > 0 ? length : 6,
+    expiresIn: typeof expiresIn === "number" && expiresIn > 0 ? expiresIn : 600,
+    detail: typeof record.detail === "string" ? record.detail : "",
+  };
+}
+
 export class AuthEngine {
   private readonly client: KarniClient;
   private readonly tokenStorage: TokenStorage;
@@ -161,7 +249,13 @@ export class AuthEngine {
     this.authBasePath = (options.authBasePath ?? "/auth").replace(/\/+$/, "");
     this.readCachedSchema = options.readCachedSchema;
     this.mode = options.modeOverride ?? null;
-    this.state = { status: "loading", user: null, mode: this.mode };
+    this.state = {
+      status: "loading",
+      user: null,
+      mode: this.mode,
+      terms: null,
+      termsRequired: false,
+    };
     // Register the hook points during construction (render phase), not in an
     // effect: children of <AuthProvider> fire their first queries from
     // effects that run BEFORE the parent's own effects, and those requests
@@ -177,6 +271,7 @@ export class AuthEngine {
       getAccessToken: () => this.accessToken,
       onUnauthorized: () => this.handleUnauthorized(),
       getHeaders: () => this.csrfHeaders(),
+      onError: (error) => this.handleApiError(error),
       ...(this.mode === "session" ? { credentials: "include" as RequestCredentials } : {}),
     });
   }
@@ -192,7 +287,15 @@ export class AuthEngine {
       onUnauthorized: undefined,
       getHeaders: undefined,
       credentials: undefined,
+      onError: undefined,
     });
+  }
+
+  /** Every error the client throws: the terms gate's 403 says the user must accept new terms. */
+  private handleApiError(error: KarniApiError): void {
+    const refusal = readTermsRefusal(error, 403, "E245");
+    if (refusal === null) return;
+    this.setTerms({ ...refusal, required: true, accepted: false });
   }
 
   private csrfHeaders(): Record<string, string> {
@@ -229,7 +332,21 @@ export class AuthEngine {
   readonly getSnapshot = (): AuthSnapshot => this.state;
 
   private setState(status: AuthStatus, user: KarniUser | null): void {
-    this.state = { status, user, mode: this.mode };
+    const terms = readTerms(user?.["terms"]);
+    this.state = {
+      status,
+      user,
+      mode: this.mode,
+      terms,
+      termsRequired: needsAcceptance(terms),
+    };
+    for (const listener of this.listeners) listener();
+  }
+
+  /** New terms from the server: mirrored as `terms` and onto `user.terms`. */
+  private setTerms(terms: AuthTerms): void {
+    const user = this.state.user === null ? null : { ...this.state.user, terms };
+    this.state = { ...this.state, user, terms, termsRequired: needsAcceptance(terms) };
     for (const listener of this.listeners) listener();
   }
 
@@ -420,6 +537,119 @@ export class AuthEngine {
     return { ok: true, user };
   }
 
+  /**
+   * Experimental. Signs in with a provider's ID token: `POST
+   * <authBasePath>/social/<provider>/`. JWT mode adopts the returned token
+   * pair, the way `adoptTokens` does. Session mode re-syncs the session user
+   * from `/me/`, which also proves the session cookie came back. A
+   * `requires_2fa` answer and an account awaiting approval resolve without
+   * signing anyone in. Refusals reject with the `KarniApiError` (its `data`
+   * carries the Karni `code`, E215 to E227).
+   */
+  async socialLogin(
+    provider: string,
+    idToken: string,
+    options: SocialSignInOptions = {},
+  ): Promise<SocialLoginResult> {
+    await this.ensureInitialized();
+    const path = `${this.authBasePath}/social/${encodeURIComponent(provider)}/`;
+    const body: Record<string, unknown> = { id_token: idToken };
+    if (options.nonce !== undefined && options.nonce !== "") body.nonce = options.nonce;
+    if (options.name !== undefined) {
+      body.name = {
+        first_name: options.name.firstName ?? "",
+        last_name: options.name.lastName ?? "",
+      };
+    }
+    if (this.mode === "session") await this.ensureCsrfToken();
+    const data = await this.client.request<unknown>(path, {
+      method: "POST",
+      body,
+      skipAuthRefresh: true,
+    });
+    return this.finishSignIn(path, data);
+  }
+
+  /**
+   * Experimental. Asks the server to email a sign-in code: `POST
+   * <authBasePath>/otp/send/`. The answer is the same for every address, so
+   * it never says whether a code went out. It carries the code's length and
+   * lifetime. A malformed address, a throttled request or the feature turned
+   * off (E236) rejects with the `KarniApiError`.
+   */
+  async otpSend(email: string): Promise<OtpSendResult> {
+    await this.ensureInitialized();
+    if (this.mode === "session") await this.ensureCsrfToken();
+    const data = await this.client.request<unknown>(`${this.authBasePath}/otp/send/`, {
+      method: "POST",
+      body: { email },
+      skipAuthRefresh: true,
+    });
+    return readOtpSend(data);
+  }
+
+  /**
+   * Experimental. Signs in with the code the server emailed: `POST
+   * <authBasePath>/otp/verify/`. Exactly like `socialLogin`: JWT mode adopts
+   * the returned token pair, session mode re-syncs the session user from
+   * `/me/`, and a `requires_2fa` answer or a new account awaiting approval
+   * resolves without signing anyone in. A refused code rejects with the
+   * `KarniApiError` (its `data.code` is E235, or E226 for an inactive account).
+   */
+  async otpVerify(email: string, code: string): Promise<OtpLoginResult> {
+    await this.ensureInitialized();
+    const path = `${this.authBasePath}/otp/verify/`;
+    if (this.mode === "session") await this.ensureCsrfToken();
+    const data = await this.client.request<unknown>(path, {
+      method: "POST",
+      body: { email, code },
+      skipAuthRefresh: true,
+    });
+    return this.finishSignIn(path, data);
+  }
+
+  /**
+   * The answer of a sign-in that is not `login/` (an ID token, a code): the
+   * 2FA gate, a new account awaiting approval, or credentials to adopt.
+   */
+  private async finishSignIn(path: string, data: unknown): Promise<SocialLoginResult> {
+    const twoFactor = read2fa(data);
+    if (twoFactor !== null) {
+      return { requires2fa: true, ephemeralToken: twoFactor.ephemeralToken };
+    }
+    const approval = readApproval(data);
+    if (approval !== null) return { awaitingApproval: true, detail: approval.detail };
+
+    if (this.mode === "session") {
+      await this.syncUser();
+      const user = this.state.user;
+      if (user === null) {
+        throw new Error(
+          `Karni auth: POST ${path} succeeded but ${this.authBasePath}/me/ did not return ` +
+            "the user. The session cookie did not come back: check the cookie's SameSite " +
+            "and Secure settings for a cross-site setup.",
+        );
+      }
+      return passwordRemoved(data) ? { ok: true, user, passwordRemoved: true } : { ok: true, user };
+    }
+    const record =
+      typeof data === "object" && data !== null ? (data as Record<string, unknown>) : {};
+    const { access, refresh } = record;
+    if (typeof access !== "string" || typeof refresh !== "string") {
+      throw new Error(
+        `Karni auth: unexpected response from POST ${path}. Expected ` +
+          "{ access, refresh, user } (JWT mode), { requires_2fa, ephemeral_token } or an " +
+          `awaiting-approval answer, got ${describeShape(data)}. Check the backend's ` +
+          'KARNI_AUTH_MODE and the AuthProvider "mode" prop.',
+      );
+    }
+    this.tokenStorage.set(refresh);
+    this.accessToken = access;
+    const user = normalizeUser(record.user) ?? (await this.fetchMe(path));
+    this.setState("authenticated", user);
+    return passwordRemoved(data) ? { ok: true, user, passwordRemoved: true } : { ok: true, user };
+  }
+
   private async fetchMe(loginPath: string): Promise<KarniUser> {
     const data = await this.client.request<unknown>(`${this.authBasePath}/me/`, {
       skipAuthRefresh: true,
@@ -432,6 +662,41 @@ export class AuthEngine {
       );
     }
     return user;
+  }
+
+  /**
+   * Experimental. Accepts the terms the engine knows (`POST
+   * <authBasePath>/terms/accept/` with their `version`), sending `client`
+   * (what the app says about itself) along when given. Resolves with the
+   * accepted terms, and `termsRequired` turns off. A refusal rejects with the
+   * `KarniApiError`. On `E246` (the terms changed again) the engine first
+   * adopts the server's new version, so the UI shows it.
+   */
+  async acceptTerms(client?: TermsClientInfo): Promise<AuthTerms> {
+    await this.ensureInitialized();
+    const current = this.state.terms;
+    if (current === null) {
+      throw new Error(
+        "Karni auth: acceptTerms() has no terms to accept. The server sent none: check that " +
+          "KARNI_TERMS is set and that a user is signed in.",
+      );
+    }
+    if (this.mode === "session") await this.ensureCsrfToken();
+    const body: Record<string, unknown> = { version: current.version };
+    if (client !== undefined) body.client = client;
+    try {
+      const data = await this.client.request<unknown>(`${this.authBasePath}/terms/accept/`, {
+        method: "POST",
+        body,
+      });
+      const accepted = readTerms(data) ?? { ...current, accepted: true };
+      this.setTerms(accepted);
+      return accepted;
+    } catch (error) {
+      const moved = readTermsRefusal(error, 400, "E246");
+      if (moved !== null) this.setTerms({ ...current, ...moved, accepted: false });
+      throw error;
+    }
   }
 
   /** Best-effort server logout, then always clears local state (anonymous). */

@@ -1,0 +1,14 @@
+{% extends "admin/index.html" %}
+{% load i18n %}{% comment %}
+The admin home page with the Getting started panel above the app list
+(karni.admin.guide). Set the site's index_template to use another page.
+{% endcomment %}
+
+{% block extrastyle %}{{ block.super }}
+{% include "karni_admin/includes/page_styles.html" %}
+{% endblock %}
+
+{% block content %}
+{% if karni_guide %}{% include "karni_admin/includes/guide_panel.html" with guide=karni_guide %}{% endif %}
+{{ block.super }}
+{% endblock %}

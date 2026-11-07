@@ -11,7 +11,16 @@ from typer.testing import CliRunner
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = REPO_ROOT / "templates" / "project"
-MODULES = ("karni-payments", "karni-approvals", "karni-impersonation")
+MODULES = (
+    "karni-payments",
+    "karni-approvals",
+    "karni-impersonation",
+    "karni-site",
+    "karni-charts",
+    "karni-reports",
+    "karni-ai",
+    "karni-storage",
+)
 #: Set where every module is installed (CI's Python jobs): a test that needs a
 #: module fails without it instead of skipping, so the coverage cannot drop out.
 REQUIRE_MODULES = os.environ.get("KARNI_REQUIRE_MODULES") == "1"
@@ -97,6 +106,17 @@ def _no_active_virtualenv(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _no_compose_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`karni add` and `karni make site` read a module's guidance through the project
+    interpreter, else a running compose service: the suite never asks docker."""
+    from karni_cli import catalog
+    from karni_cli.commands import add as add_command
+
+    monkeypatch.setattr(add_command, "compose_service_running", lambda project, service: False)
+    monkeypatch.setattr(catalog, "compose_service_running", lambda project, service: False)
+
+
+@pytest.fixture(autouse=True)
 def _no_npm(monkeypatch: pytest.MonkeyPatch) -> None:
     """`karni new` never runs npm in the suite (an unbuilt checkout would build @karni/ui).
 
@@ -132,6 +152,12 @@ def _no_db_probe(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
 HISTORY_MARKER = "history_provider"
 
 
+#: Tests marked with it build a recipe from scratch (karni new --recipe, every step of the
+#: build). They are slow, so they run only when -m names them: pytest -m recipes (CI's recipes
+#: job runs one per recipe).
+RECIPES_MARKER = "recipes"
+
+
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers", f"{HISTORY_MARKER}: the test runs a history provider's subprocess on purpose"
@@ -139,6 +165,18 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers", f"{DB_PROBE_MARKER}: the test runs the database guard's real probe"
     )
+    config.addinivalue_line(
+        "markers", f"{RECIPES_MARKER}: a recipe built from scratch, run only with -m recipes"
+    )
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    if RECIPES_MARKER in str(config.getoption("markexpr") or ""):
+        return
+    skip = pytest.mark.skip(reason=f"a recipe built from scratch: run it with -m {RECIPES_MARKER}")
+    for item in items:
+        if item.get_closest_marker(RECIPES_MARKER) is not None:
+            item.add_marker(skip)
 
 
 def _spawns_chronicle(args: Any) -> bool:

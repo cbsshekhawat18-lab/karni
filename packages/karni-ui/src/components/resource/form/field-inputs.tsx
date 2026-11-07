@@ -1,8 +1,10 @@
 /**
  * Default per-kind inputs for <ResourceForm> (contract: string → Input,
- * text → Textarea, number/integer → Input[type=number], boolean → Switch,
+ * text → Textarea (markdown → MarkdownEditor: Write and Preview tabs),
+ * number/integer → Input[type=number], boolean → Switch,
  * date/datetime → native inputs, enum → Select, relation → ResourceSelect
- * (multiple for many), file → FileUpload, json → Textarea with validation).
+ * (multiple for many), or TreeSelect when the relation points at a tree
+ * model (`x-karni-tree`), file → FileUpload, json → Textarea with validation).
  *
  * Every control receives react-hook-form's ref (so a failed submit can move
  * focus to it), `aria-invalid`, `aria-describedby` (help text and error) and,
@@ -19,7 +21,9 @@ import { Input } from "../../primitives/input";
 import { Select } from "../../primitives/select";
 import { Switch } from "../../primitives/switch";
 import { Textarea } from "../../primitives/textarea";
+import { isMarkdownField, MarkdownEditor } from "../markdown-field";
 import { ResourceSelect } from "../select/ResourceSelect";
+import { TreeSelect } from "../tree/TreeSelect";
 import { humanizeValue } from "./prepare";
 
 export interface DefaultFieldControlProps {
@@ -41,6 +45,11 @@ export interface DefaultFieldControlProps {
 
 /** Kinds whose control role cannot carry aria-required (their label says "required" instead). */
 export const KINDS_WITHOUT_ARIA_REQUIRED: ReadonlySet<string> = new Set(["boolean", "file"]);
+
+/** Whether a field's control cannot carry aria-required: its kind, or a TreeSelect (a button). */
+export function withoutAriaRequired(field: FieldDef): boolean {
+  return KINDS_WITHOUT_ARIA_REQUIRED.has(field.kind) || field.tree !== undefined;
+}
 
 function stringInputType(field: FieldDef): string {
   switch (field.format) {
@@ -77,7 +86,7 @@ export function DefaultFieldControl({
     "aria-invalid": invalid || undefined,
     "aria-describedby": describedBy,
   } as const;
-  const ariaRequired = required && !KINDS_WITHOUT_ARIA_REQUIRED.has(field.kind) ? true : undefined;
+  const ariaRequired = required && !withoutAriaRequired(field) ? true : undefined;
 
   return (
     <Controller
@@ -129,6 +138,26 @@ function renderControl({
 }: RenderControlInput): React.ReactElement {
   switch (field.kind) {
     case "text":
+      if (isMarkdownField(field)) {
+        return (
+          <MarkdownEditor
+            label={field.label}
+            value={textValue(rhf.value)}
+            onChange={change}
+            registerFocus={rhf.ref}
+            textarea={{
+              id: inputId,
+              name: rhf.name,
+              maxLength: field.maxLength,
+              disabled,
+              onBlur: rhf.onBlur,
+              "aria-required": ariaRequired,
+              ...aria,
+              ...inputProps,
+            }}
+          />
+        );
+      }
       return (
         <Textarea
           ref={rhf.ref}
@@ -245,6 +274,24 @@ function renderControl({
             onChange={(event) => change(event.target.value)}
             onBlur={rhf.onBlur}
             aria-required={ariaRequired}
+            {...aria}
+            {...inputProps}
+          />
+        );
+      }
+      if (field.tree !== undefined) {
+        // A relation to a tree model: pick the node in its tree (experimental).
+        return (
+          <TreeSelect
+            ref={rhf.ref}
+            id={inputId}
+            resource={relation.resource}
+            multiple={relation.many}
+            disabled={disabled}
+            value={(rhf.value ?? null) as string | number | ReadonlyArray<string | number> | null}
+            onChange={(next) => change(next)}
+            onBlur={rhf.onBlur}
+            aria-labelledby={labelId}
             {...aria}
             {...inputProps}
           />

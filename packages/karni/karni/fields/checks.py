@@ -18,7 +18,8 @@ Registered through :mod:`karni.checks`, so they run on ``runserver``,
 * ``E970`` a ``class Karni`` option of the field layer is malformed.
 
 Override / escape hatch: each warning names its declaration-level opt-out;
-``SILENCED_SYSTEM_CHECKS`` silences any of them project-wide.
+``SILENCED_SYSTEM_CHECKS`` silences any of them project-wide
+(``karni_settings()`` starts it as an empty list, so ``+=`` works).
 """
 
 from __future__ import annotations
@@ -398,8 +399,14 @@ def check_backends(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckM
 
 @checks.register(checks.Tags.urls)
 def check_usage_indexes(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
-    """karni.W967: a column a routed viewset searches, filters or orders by has no index."""
+    """karni.W967: a column a routed viewset searches, filters or orders by has no index.
+
+    It advises on the project's own models only (apps whose code lives in the
+    project tree): a module's or Karni's model is not the project's to edit,
+    and the module indexes what its own viewsets filter by.
+    """
     from karni.fields.usage import covering_index, suggestion, usage_requirements
+    from karni.testing._source import project_app_configs
 
     try:
         from karni.api.routers import resolve_router
@@ -408,11 +415,14 @@ def check_usage_indexes(app_configs: Any = None, **kwargs: Any) -> list[checks.C
     except Exception:  # noqa: BLE001 - router problems are karni.E128's to report
         return []
     configs = {config.label for config in app_configs} if app_configs is not None else None
+    owned = {config.label for config in project_app_configs(skip_apps=False)}
     viewsets = []
     for _prefix, viewset, _basename in registry:
         model = getattr(viewset, "model", None)
         if model is None or (configs is not None and model._meta.app_label not in configs):
             continue
+        if model._meta.app_label not in owned:
+            continue  # a module's or Karni's model: not the project's to index
         viewsets.append(viewset)
     uncovered = [
         requirement
@@ -449,8 +459,8 @@ def check_usage_indexes(app_configs: Any = None, **kwargs: Any) -> list[checks.C
             check_warning(
                 "W967",
                 text,
-                hint=f"{_sentence(fix)}, then karni make migration. Silence karni.W967 for a "
-                "table small enough to scan.",
+                hint=f"{_sentence(fix)}, then karni make migration. For a table small enough "
+                'to scan, silence it instead: SILENCED_SYSTEM_CHECKS = ["karni.W967"].',
                 obj=model,
             )
         )

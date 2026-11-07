@@ -14,12 +14,12 @@ A model becomes a full API resource with four lines:
 
 ```python
 # myapp/viewsets.py  (or myapp/api/viewsets.py)
-from karni.api import Access, Authenticated, BaseViewSet, Public
+from karni.api import Access, BaseViewSet, HasRole, Public
 from myapp.models import Event
 
 class EventViewSet(BaseViewSet):
     model = Event
-    access = Access(read=Public(), write=Authenticated())
+    access = Access(read=Public(), write=HasRole("staff"))
     search_fields = ["title"]
 ```
 
@@ -51,6 +51,7 @@ Declarative attributes (all optional except `model` and `access`):
 | `query_budget` | `None` (`KARNI_QUERY_BUDGET`) | `Budget(list=25, reason=...)` |
 | `pagination` | `None` (`pagination_class`) | `Unpaginated(max_rows=N, reason=...)`, the only way to return plain lists |
 | `cache` | `None` (`KARNI_API_CACHE`) | `Uncached(reason=...)` or `Cache(ttl=..., depends_on=[...])` |
+| `aggregation` | `None` (`class Karni: aggregate`) | Experimental. What `GET <resource>/aggregate/` may group and sum. See [aggregations](aggregations.md) |
 
 Default ordering: model `Meta.ordering`, else `-created_at` when the field
 exists, else `-pk`. Every normal DRF hook (`get_queryset`,
@@ -99,7 +100,9 @@ need `events.event:view`, `create` needs `add`, and writes need `change` /
 `class Karni: actions` is its own permission (an undeclared unsafe one is
 `E211`). The rows are the union of the matching grants' scopes (`all`,
 `own`, `related:<key>`, `custom:<name>`, see [roles as data](accounts.md#roles-as-data)),
-so an agent writing a viewset gets row scoping without naming it. Bare
+so an agent writing a viewset gets row scoping without naming it. With
+[per-user grants](accounts.md#per-user-grants) on, a user's own grants join
+their role grants in that union. Bare
 `access = Granted()` is `Access(read=Granted(), write=Granted())`, and it
 combines like any predicate (`read=Granted() | HasRole("auditor")`). The
 [admin](admin.md#row-scope) applies the same grants to its rows.
@@ -225,7 +228,90 @@ after the access object check. Express the rule in `access` instead
 ([migration note](migrations/0.2.md#object_permission_classes)). `karni upgrade`
 lists every viewset that sets it. `IsOwner`,
 `RolePermission` and `ObjectPermissionsMixin` remain for plain DRF views
-(see [accounts](accounts.md#roles-and-object-permissions)).
+(see [accounts](accounts.md#role-helpers-and-object-permissions)).
+
+## Rate limits
+
+A form open to anonymous visitors needs a tighter limit than the
+project-wide `anon` throttle, and Karni gives it one by itself.
+
+**Public creates are limited by default.** When a viewset's `create`
+predicate lets anonymous callers in (`create=Public()`, or a `write=Public()`
+that `create` defaults to, or `Public() | ...`), its `create` action is
+limited to `KARNI_PUBLIC_CREATE_RATE`, default `"10/hour"`. Each caller is
+counted on its own: the user id when signed in, else the client IP
+(honouring `NUM_PROXIES`). Over the rate, `create` answers 429 with
+`Retry-After`. A gate built from `Where(...)` is not treated as public,
+because its function decides per request. Declare a limit for it.
+
+```python
+from karni.api import Access, BaseViewSet, HasRole, Public
+
+class EnquiryViewSet(BaseViewSet):
+    model = Enquiry
+    # A contact form: anyone sends one, only staff read them. 10 per hour
+    # and caller, and a honeypot field, without a line of throttling code.
+    access = Access(read=HasRole("staff"), write=HasRole("staff"), create=Public())
+```
+
+`karni make model Enquiry ... --with viewset --access public-create` writes
+that declaration.
+
+**Rates for any action.** `throttle = Throttle(...)` names actions and their
+rates in DRF's format (`"<number>/<period>"`, the period `s`, `min`, `hour`
+or `day`):
+
+```python
+from karni.api import Throttle
+
+class EnquiryViewSet(BaseViewSet):
+    ...
+    throttle = Throttle(create="3/hour", subscribe="20/day")
+```
+
+A declaration that names `create` replaces the public-create default, and
+`Throttle(create=None)` turns it off for that viewset. Actions without a
+rate keep only the project-wide `anon` and `user` throttles. A custom
+`@action` is named by its method name, and an unknown name fails at class
+definition (`E132`).
+
+Settings win over both. The scope is `"<route>.<action>"`
+(`enquiries.create`), so `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["enquiries.create"]`
+replaces the rate, and `None` there switches the limit off.
+`KARNI_PUBLIC_CREATE_RATE = None` (or an empty `KARNI_PUBLIC_CREATE_RATE=`
+in `.env`) turns the default off for every viewset. The rate in force is
+published on the operation as `x-karni-throttle`.
+
+The limit rides in `throttle_classes`, so anything that turns DRF throttling
+off (`assert_crud`, `karni why`) turns it off too, and the pytest plugin
+gives each test empty counters ([rate limits in tests](testing.md#rate-limits-in-tests)).
+A viewset that sets its own `throttle_classes` and declares no `throttle`
+owns its throttling, as in plain DRF, and gets no default. For another caller
+identity, subclass `karni.api.throttling.ActionRateThrottle` and set
+`action_throttle_class` on the viewset. `get_throttles()` still works as in
+plain DRF.
+
+**A honeypot on public creates.** The same viewsets accept one extra field,
+named by `KARNI_PUBLIC_CREATE_HONEYPOT_FIELD` (default `homepage`). A person
+never sees it: `@karni/ui`'s `ResourceForm` renders it out of sight, out of
+the tab order and hidden from screen readers. A request that fills it is a
+script, and is answered `202 Accepted` with nothing saved, the way
+`register/` treats its own honeypot. The event `karni.api.honeypot` is
+logged on `karni.api`. The field is not in the request body of the OpenAPI
+schema, so it is never required and never generated as a form field. The
+create operation names it in `x-karni-honeypot` instead.
+
+It is a separate setting from registration's `KARNI_ACCOUNTS_HONEYPOT_FIELD`
+because that one's default, `website`, is a common model field: a contact
+form that asks for a website would drop every real submission. When the
+model or its serializer has a field of the honeypot's name, the honeypot is
+off for that viewset. `""` turns it off everywhere, and a viewset's
+`get_honeypot_field()` can return `None` (off) or another name.
+
+**Imports stay closed.** A public `create` lets anyone send one row, not a
+file of rows. When `create` or `write` lets anonymous callers in, the import
+endpoints (`import/`, preview, commit) also need a signed-in user, who must
+still pass `create` or `write`.
 
 ## Field visibility
 
@@ -278,8 +364,53 @@ under `/<resource>/import/`. `GET` describes the importable fields, `POST`
 uploads a file, `…/<job>/preview/` is the mandatory dry run, `…/<job>/commit/`
 writes in one transaction and one audit batch, and `…/import/template/` is the
 downloadable template. The gate is the declaration's `create` **or** `write`
-(`write_or_create_actions`), and each row is then checked on its own. See
-[import and export](import-export.md).
+(`write_or_create_actions`), and each row is then checked on its own. When
+either lets anonymous callers in, the gate also needs a signed-in user
+([imports stay closed](#rate-limits)). See [import and export](import-export.md).
+
+## Read-only models
+
+!!! warning "Experimental"
+    `BaseViewSet.is_read_only` and `read_only_refused_actions` are
+    [experimental](stability.md#experimental-names).
+
+A viewset over an [external model](models.md#external-tables-views-and-a-second-database)
+that is not writable answers `create`, `update`, `partial_update`,
+`destroy` and the import actions with 405 to every caller, signed in or not,
+and leaves them out of the OpenAPI document and the `Allow` header. Reads,
+`?expand=`, filters and export work as usual. `read_only_refused_actions`
+lists the refused actions, and `is_read_only()` decides per viewset:
+override it to serve writes from one viewset.
+
+## Tree models
+
+!!! warning "Experimental"
+    The tree endpoints and filters are [experimental](stability.md#experimental-names).
+
+A viewset whose model is a [tree model](models.md#tree-models) also serves
+`tree/` (nested, a few levels at a time), `<id>/children/`,
+`<id>/ancestors/`, `<id>/move/` and `access/` (the requester's access forest,
+[the tree scope](accounts.md#the-tree-scope)), and its list takes `?parent=<id>`,
+`?parent=null` and `?descendants_of=<id>`. A node with live children
+answers `DELETE` with 409 (`E341`) unless the request says `?branch=true`.
+Access applies to each of them, and `tree_max_nodes`, `tree_default_depth`
+and `tree_max_depth` bound `tree/`. See
+[the API of tree models](models.md#the-api).
+
+## Taxonomies
+
+!!! warning "Experimental"
+    The taxonomy filters and endpoints are [experimental](stability.md#experimental-names).
+
+A viewset whose model declares [`class Karni: taxonomies`](models.md#taxonomies)
+takes `?<key>=<id>,<id>` and `?<key>_descendants=true` on its list and serves
+`facets/?taxonomy=<key>&rollup=true`: the rows per node under the list's
+filters, search and access, in two queries. A tree resource that a taxonomy
+points at serves `<id>/tagged/?descendants=true`: the rows tagged with the
+node, per tagging model, each under its own access. `facet_queryset()` is
+the escape hatch for the rows the facets count, and `taxonomy_actions` turns
+the routes off. The relation field of a taxonomy carries
+`x-karni-taxonomy: "<key>"` in the OpenAPI document.
 
 ## Deferred writes
 
@@ -383,12 +514,26 @@ setting `karni_auto_filterset = True`) declares no `filterset_class`/
 | Char/Slug/Email | `exact`, `icontains` |
 | Int/Float/Decimal/Date/DateTime | `exact`, `gte`, `lte` |
 | Boolean | `exact` |
-| FK/O2O | `exact` (typed by the target pk, so UUID pks get a UUID filter) |
+| FK/O2O | `exact` (typed by the target pk: a UUID filter for UUID keys, `IntegerFilter` for integer keys) |
 | fields with `choices` | `exact` via `ChoiceFilter` (stays an enum) |
 
-Excluded from derivation: `TextField` (unindexed seq scans, so opt back in
-with explicit `filterset_fields`), File/Image/JSON/binary fields,
-`APIMeta.write_only`/excluded fields, and password-named fields. The
+Excluded from derivation: the model's own primary key, `TextField`
+(unindexed seq scans, so opt back in with explicit `filterset_fields`),
+File/Image/JSON/binary fields, `APIMeta.write_only`/excluded fields, and
+password-named fields. The primary key gets no `?id=`, `?id__gte=` or
+`?id__lte=` whatever its type: on [integer keys](models.md#choosing-the-key-type)
+a range would page through the table by key. Declare one where you want it:
+
+```python
+class ReadingViewSet(BaseViewSet):
+    model = Reading
+    access = Access(read=HasRole("analyst"), write=HasRole("analyst"))
+    filterset_fields = {"id": ["exact", "gte", "lte"], "sensor": ["exact"]}
+```
+
+`karni.api.filters.IntegerFilter` (experimental) is an exact filter that
+takes whole numbers only, so `?sensor=1.5` is refused (400) instead of
+matching row 1, and the schema documents an integer. The
 type→lookups map is the overridable `lookup_map` class attribute on
 `KarniFilterBackend`. Explicit `filterset_*` on the viewset always wins,
 untouched, except for one thing. A relation named in `filterset_fields`
@@ -409,7 +554,11 @@ hand-written `filterset_class` declares its own querysets. Give a
   names. Each dotted segment is validated against the model at that level,
   and an unknown key answers 400 listing the allowed keys there.
 - Depth is capped by `KARNI_API_MAX_EXPAND_DEPTH` (env, default 2), and deeper
-  paths answer 400. Cycles stop at the PK.
+  paths answer 400. A path may come back to a model already on it: on a
+  [tree resource](#tree-models) `?expand=parent` nests the parent,
+  `?expand=parent.parent` the grandparent, and `?expand=region.parent` the
+  parent of a row's region. Each segment is one level, so the path bounds
+  the nesting.
 - Expanded relations are just nested serializers to the
   [query optimiser](#query-optimisation). It uses `select_related` for FK/O2O
   paths into targets whose read scope keeps every row, and a scoped `Prefetch`
@@ -419,6 +568,11 @@ hand-written `filterset_class` declares its own querysets. Give a
   its target's read scope (see [Access control](#access-control)), and a
   to-one target outside it renders as `null`. This holds on every response
   that renders the expanded serializer, writes included (`PATCH …?expand=venue`).
+  On a tree, the parent of the highest node a requester may read (under
+  [the tree scope](accounts.md#the-tree-scope), the parent above a grant)
+  expands to `null`, so an expanded `parent: null` does not by itself mean a
+  root. A relation that is not expanded stays its key, readable target or
+  not, so a form that sends a row back keeps the relation.
 
 `karni.api.expansion.related_lookups()` and `scoped_related_lookups()` are
 deprecated (they warn, and they are removed in 1.0). The optimiser derives
@@ -467,7 +621,7 @@ lookups and never replace them:
 ```python
 class NovelViewSet(BaseViewSet):
     model = Novel
-    access = Access(read=Public(), write=Authenticated())
+    access = Access(read=Public(), write=HasRole("staff"))
     serializer_class = NovelSerializer   # has chapter_count = SerializerMethodField()
     prefetch_related = ["chapters"]      # what get_chapter_count reads
     select_related = []                  # same, for to-one reads
@@ -555,14 +709,20 @@ at startup.
 Every list is paginated by a `karni.pagination.KarniPagination` subclass:
 `KarniPageNumberPagination` (default: `?page=`, `?page_size=`) or
 `KarniCursorPagination` (`?cursor=`, with no `COUNT(*)` for very large tables).
+A page holds the rows in the model's ordering (`Meta.ordering`, karni.yaml's
+`order`), else newest first, so a row just created is on the first page only
+when the order puts it there. `karni context` states the project's own values
+on its `API:` line (experimental): `API: lists answer {count, next, previous,
+results}, 50 rows a page (?page=, ?page_size= up to 100), in the model's
+ordering, else newest first`.
 
 - **Hard cap.** `?page_size=` and the default `PAGE_SIZE` (env
   `KARNI_PAGE_SIZE`, 50) are capped at `KARNI_MAX_PAGE_SIZE` (env, default
   **100**). A paginator subclass may set a lower `max_page_size`, never a
   higher one.
 - **Floor.** `KARNI_MAX_PAGE_SIZE` may not be configured below
-  `KARNI_MAX_PAGE_SIZE_FLOOR` (env, default **25**, which is the page size
-  `@karni/ui`'s `ResourceTable` requests). The floor itself is at least 1.
+  `KARNI_MAX_PAGE_SIZE_FLOOR` (env, default **25**, the smallest page size
+  `@karni/ui`'s `ResourceTable` offers in its size menu). The floor itself is at least 1.
   A cap of `0`/`None` would switch DRF's cap off, and a cap below what the UI
   requests silently hides rows from its page count. Boot validation refuses
   both. Lowering the floor is the explicit, project-wide way to allow a
@@ -599,26 +759,76 @@ Every list is paginated by a `karni.pagination.KarniPagination` subclass:
 
 ### Response caching
 
-Off by default. **One setting turns it on**: `KARNI_API_CACHE = True` (env).
-Then the data of every successful `GET` `list` and `retrieve` of every
-`BaseViewSet` is cached (`X-Karni-Cache: hit|miss`) for `KARNI_API_CACHE_TTL`
-seconds (300) in the `KARNI_API_CACHE_ALIAS` cache (`"default"`).
+Off by default. **One setting turns it on**: `KARNI_API_CACHE = True` (env),
+or `features: api_cache: true` in [karni.yaml](app-spec.md#features). Then
+the data of every successful `GET` `list` and `retrieve` of every
+`BaseViewSet` is cached for `KARNI_API_CACHE_TTL` seconds (300) in the
+`KARNI_API_CACHE_ALIAS` cache (`"default"`). Keep that cache one every
+process shares (Redis): with a per-process cache a write in one worker never
+reaches the entries of another (`karni.W580` warns with `DEBUG` off).
 
-- **Invalidation is automatic**: a save, delete or M2M change of any model
-  the response reads replaces that model's version token (and the row's, for
-  details), so every affected entry becomes unreachable at once. The models a
-  response reads are the models of the optimiser's plan, the models crossed
-  by `Owned` paths, plus `Cache(depends_on=[...])`. Details are invalidated
+**Who shares an entry.** A key is `karni:api:r:<app_label.model>:<sha256>`,
+for example `karni:api:r:shop.product:9f2c41…`. The hash covers the viewset
+and its action, the scheme, host and path, the query string normalised
+(parameters sorted by name, empty values dropped, the comma lists of
+`?expand=` and of `__in` filters sorted; `?ordering=` and `?search=` keep
+their order, which matters), the API version, the language, the caller's
+access scope and the version tokens of every model the response reads. So
+`?page=2&expand=tags,category` and `?expand=category,tags&page=2` share one
+entry.
+
+The access scope decides who shares. When the viewset's read access depends
+on roles alone, every caller with the same roles (and the same superuser and
+staff flags) shares one entry: `Public()`, `Authenticated()`, `HasRole(...)`,
+and `Granted()` or `Can(...)` whose grants all have the scope `all`, on the
+viewset and on every related resource the response embeds. Otherwise the
+entry is the caller's own: an `Owned(...)` path, a `Where(...)` rule, a grant
+scoped `own`, `related:` or `custom:`, an overridden `get_queryset`,
+`get_access`, `get_serializer_class` or `filter_queryset_for_user`, or a
+hand-written serializer with a `SerializerMethodField` or its own
+`to_representation`. Anonymous callers share one entry. The access gate runs
+before the cache is read, and details are cached only for viewsets whose gate
+is the `Access` declaration alone (extra `permission_classes` would be skipped
+on a hit).
+
+**Invalidation.** Each model has a version token and each row an object
+token, kept in the cache. A write replaces the tokens it touches, so every
+entry that read them becomes unreachable at once: no key scan, any backend.
+The models a response reads are its serializer's relations (the optimiser's
+plan, `?expand=` included), the models its `read` rule crosses (`Owned`
+paths, scope paths), `Cache(depends_on=[...])`, and the table of
+[per-user grants](accounts.md#per-user-grants) while `KARNI_USER_GRANTS` is
+on, so a grant written changes the next response.
+`karni.api.caching.dependencies(ViewSet)` lists them for every `?expand=`
+path the viewset allows. Karni sees these writes:
+
+- `save()`, `delete()` and many-to-many changes of any model, in every
+  process (web, Celery worker, management command). Details are invalidated
   per row.
-- **Per requester**: keys include the full URL (host, `?page=`, `?expand=`,
-  filters), the user, the user's roles and the language. The access gate
-  runs before the cache is read. Details are cached only for viewsets whose
-  gate is the `Access` declaration alone (extra `permission_classes` would be
-  skipped on a hit).
-- **Not seen**: `QuerySet.update()`, `bulk_create()`/`bulk_update()` and raw
-  SQL send no signals, so call `karni.api.caching.invalidate(Model, pk=None)`
-  after them. A `SerializerMethodField` reading a model the serializer does
-  not render needs `cache = Cache(depends_on=[ThatModel])`.
+- Karni's querysets: `update()`, `delete()` (soft and `hard_delete()`),
+  `bulk_create()` and `bulk_update()`, once per call, every row of the model.
+- An [import](import-export.md) or a content load (`karni load`), once per
+  import and never for a dry run, and the admin's bulk actions, once per
+  action. `with invalidation_batch(): ...` does the same for a loop of your
+  own.
+
+A write inside a transaction replaces the tokens at once and again when it
+commits, so a request that read the old rows in between cannot keep them.
+Raw SQL and another system's writes send nothing: call
+`karni.api.caching.invalidate(Model)` (every row) or `invalidate(Model, pk)`
+after them. `karni check` refuses a cached viewset that reads an external or
+unmanaged model, or one on another database (`karni.E410`), unless it
+declares `cache = Cache(ttl=...)` (the most it may be stale) or
+`cache = Uncached(reason=...)`.
+
+**Headers.** Every cacheable response says how it was served: `X-Cache: HIT`,
+`MISS` or `BYPASS`. A staff user's request with `X-Bypass-Cache: 1` neither
+reads nor writes the cache. The header is ignored for anyone else.
+`X-Karni-Cache: hit|miss` is deprecated and goes in 1.0. Until then it is
+sent too, with one `KarniDeprecationWarning` per process, unless
+`KARNI_API_CACHE_LEGACY_HEADER = False`.
+
+**Per viewset:**
 
 ```python
 class StockViewSet(BaseViewSet):
@@ -630,9 +840,40 @@ class CatalogueViewSet(BaseViewSet):
     model = Product
     access = Access(read=Public(), write=HasRole("ops"))
     cache = Cache(ttl=3600, depends_on=[Price])             # tune
+
+class WishlistViewSet(BaseViewSet):
+    model = Product
+    access = Access(read=Authenticated(), write=HasRole("ops"))
+    serializer_class = ProductWithFavouriteSerializer
+
+    def get_cache_scope(self) -> str:                       # who shares an entry
+        return f"user:{self.request.user.pk}"
 ```
 
+`depends_on` names a model whose data the serializer reads without
+rendering it as a relation (a `SerializerMethodField`, an aggregate).
+`get_cache_scope` is for a response that differs per caller in a way Karni
+cannot see. Return anything that differs between callers who must not share.
+
+**Clearing.** `karni.api.caching.clear()` drops every cached response and
+`clear(Model)` one resource's. With a backend that has `delete_pattern`
+(django-redis) the entries are deleted. Otherwise the version tokens are
+replaced and the old entries expire by their TTL. The admin's
+[API cache screen](admin.md#the-api-cache-screen) does the same with two
+buttons, and shows the backend and the flush schedule. For a daily full
+flush through Celery beat, set `KARNI_API_CACHE_FLUSH = "03:30"` (in
+Celery's timezone) or `"03:30 Europe/Paris"`: the schedule
+`karni-flush-api-cache` runs `karni.tasks.flush_api_cache`.
+
+**In tests** the pytest plugin starts every test with no cached response
+while `KARNI_API_CACHE` is on, and so does `override_settings` turning it
+on: rows a test wrote roll back, the cache would keep them.
+
 ## Search
+
+This is the search of one list. One search over every model that opts in,
+`GET /api/search/`, is [search across models](global-search.md)
+(experimental).
 
 `?search=` delegates to the provider named by `KARNI_SEARCH_PROVIDER`:
 
@@ -649,7 +890,9 @@ With a [`SearchField`](fields.md#jsonfield-searchfield-arrayfield) on the
 model (named in `search_fields`, or covering every listed field), the
 PostgreSQL provider matches through its stored, GIN-indexed tsvector instead.
 Every word is a prefix, all words must match, rows rank by `ts_rank`, and no
-trigram leg is added (`similarity()` cannot use an index).
+trigram leg is added (`similarity()` cannot use an index). A word is split the
+way PostgreSQL split the column's text, so a code such as `MT-0001` finds that
+row and no other, and characters such as `&`, `|` or `!` are only text.
 
 Rank ordering vs `?ordering=`: search runs **after** ordering in the filter
 pipeline. When the client did not pass an explicit `?ordering=`, results are
@@ -729,6 +972,175 @@ def get_router():
 KARNI_API_ROUTER = "myproject.api.get_router"
 ```
 
+## API versions
+
+!!! warning "Experimental"
+    API versions are in the [experimental tier](stability.md#experimental-names).
+    The settings and `karni.api.versions` can change in a minor release, with a
+    CHANGELOG entry.
+
+A web app ships with its API, so the two change together. A mobile app does
+not: the build a user installed last year still calls the API. A version prefix
+lets the API change for new builds while old ones keep a URL that does not
+move. Nothing changes until you set a version.
+
+```python
+# config/settings.py, above karni_settings(globals())
+KARNI_API_VERSION = "v1"        # the current version, mounted at /api/v1/
+KARNI_API_UNVERSIONED = "keep"  # what /api/ without a version does
+KARNI_API_VERSIONS = {          # more versions, and what to say about them
+    "v0": {"deprecated": "2026-06-01", "sunset": "2027-01-31",
+           "notes": "https://example.com/api-v0-to-v1"},
+}
+```
+
+Each is also an environment variable (`KARNI_API_VERSIONS` as JSON). A new
+project's `config/urls.py` mounts the API with `*api_urls()`. In an older
+project replace `path("api/", include("karni.api.urls"))` with it:
+
+```python
+from karni.api.versions import api_urls
+
+urlpatterns = [
+    path("api/auth/", include("karni.accounts.urls")),
+    *api_urls(),
+]
+```
+
+`karni check` warns (`karni.W661`) when a version is set and the URLconf does
+not use `api_urls()`.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `KARNI_API_VERSION` | `""` | The current version's name. Lower case letters, digits and `-`, at most 16 characters. Empty leaves the API unversioned. |
+| `KARNI_API_VERSIONS` | `{}` | Name to options. Keys of an option dict: `router`, `deprecated`, `sunset`, `notes`. The current version needs no entry. |
+| `KARNI_API_UNVERSIONED` | `"keep"` | `"keep"`: `/api/` still serves the current version. `"redirect"`: `/api/x/` answers `308` with `Location: /api/v1/x/`, query string included, and POST stays POST. Every method gets the 308, with or without a CSRF token: the redirect changes nothing, and the view it leads to checks CSRF for a session. `"remove"`: `/api/` is a 404. |
+
+The options of a version:
+
+- `router`: a dotted path to a zero-argument router factory (see the
+  [auto-router](#auto-router)), so a version can serve other viewsets. Default:
+  the `KARNI_API_ROUTER` router, shared by every version.
+- `deprecated`: `True`, or the day it was deprecated (`"2026-06-01"`).
+- `sunset`: the day the version goes (`"2027-01-31"`). Karni never switches a
+  version off on that day. Remove it from `KARNI_API_VERSIONS` when you do.
+  `karni check` warns (`karni.W660`) about a version still mounted after its
+  sunset date.
+- `notes`: the URL of the migration notes.
+
+`/api/auth/`, `/api/schema/` and `/api/docs/` are not versioned.
+
+### Deprecation headers
+
+A response from a deprecated version carries the headers below, whatever its
+status. The middleware `karni.api.versions.ApiVersionHeadersMiddleware` sends
+them, and `karni_settings()` lists it. It is left out of the chain while no
+version is deprecated.
+
+```text
+Deprecation: @1780272000
+Sunset: Sun, 31 Jan 2027 00:00:00 GMT
+Link: <https://example.com/api-v0-to-v1>; rel="deprecation"; type="text/html"
+```
+
+`Deprecation` is the structured date of [RFC 9745](https://www.rfc-editor.org/rfc/rfc9745)
+(`true` when `deprecated` has no day), `Sunset` is [RFC 8594](https://www.rfc-editor.org/rfc/rfc8594)'s
+HTTP date, and `Link` points at `notes`. A header the view already set is kept.
+The headers follow the route, not the prefix: a route whose URL has a `version`
+keyword is covered.
+
+### In views, URLs and tests
+
+DRF's `URLPathVersioning` is the versioning class, so a view reads
+`request.version`. With `KARNI_API_VERSION` set, a request to `/api/` has the
+current version as `request.version`. DRF's `reverse(name, request=request)`
+adds the version to the URL it builds. Django's `reverse("product-list")`
+needs `kwargs={"version": "v1"}` once `KARNI_API_UNVERSIONED` is `"redirect"` or
+`"remove"`, because there is no unversioned route left. A project with its own
+`REST_FRAMEWORK` sets `DEFAULT_VERSIONING_CLASS` to
+`rest_framework.versioning.URLPathVersioning` and `DEFAULT_VERSION` to the
+current version.
+
+### One document and one client per version
+
+Each version has its own OpenAPI document at `/api/<version>/schema/`, with
+Swagger UI at `/api/<version>/docs/`. `/api/schema/` describes the current
+version. Every document lists `x-karni-api-versions` (each version with
+`current`, `deprecated`, `sunset` and `notes`) and `x-karni-api-version`, the
+one it describes. `manage.py spectacular --api-version v0` prints one.
+
+`karni types` writes the schema, `types.ts` and `hooks.ts` of the current
+version as before, then the same three files for each version in
+`frontend/src/api/<version>/`. A mobile team takes the `types.ts` of the
+version it targets. The staff app talks to the version its `createKarniClient`
+`baseUrl` names.
+
+## The staff dashboard
+
+The staff app's home page (the scaffold's `frontend/src/pages/home.tsx`) is
+`@karni/ui`'s `<Dashboard>`. It shows the models that opt in, and nothing
+else: a shop puts its orders there, a clinic its appointments, a SaaS app its
+accounts and tickets. A model opts in next to its other `class Karni` options:
+
+```python
+class Order(BaseModel):
+    status = StateField(states=["draft", "confirmed", "shipped", "cancelled"], transitions={...})
+    due_on = models.DateField()
+
+    class Karni:
+        dashboard = True                       # every default below
+
+        dashboard = {                          # or say what to show
+            "label": "Orders",                 # the section heading (default: verbose_name_plural)
+            "order": 1,                        # position among the sections (default 0)
+            "total": True,                     # a count of every row the user may read
+            "new_days": 7,                     # a count of rows created in the last 7 days
+            "by": "status",                    # a count per value of this field
+            "values": ["draft", "confirmed"],  # only these values of `by`
+            "counts": {"Due today": {"due_on": "today"}},  # named counts, by list filters
+            "recent": 5,                       # the newest rows, in a table
+            "columns": ["number", "customer", "status"],
+            "date_field": "created_at",        # what "new" and "newest" mean
+        }
+```
+
+| Key | Default | What it does |
+|---|---|---|
+| `label` | the model's `verbose_name_plural`, capitalised | The section heading. |
+| `order` | `0` | Sections sort by it, then by label. |
+| `total` | `True` | A tile counting every row the user may read. |
+| `new_days` | `7` when the model has `created_at`, else `0` | A tile counting the rows whose `date_field` is within the last N days. |
+| `by` | the model's first `StateField` | A tile per value of this field: a `StateField`, a field with `choices`, or a `BooleanField`. |
+| `values` | the states that are not terminal (the ones that still need someone), else every choice | Which values of `by` get a tile. |
+| `counts` | `{}` | Named tiles. Each maps a label to the list endpoint's query parameters that count it (`{"status": "open"}`, `{"total__gte": 100}`, `{"due_on": "today"}`). `"today"`, `"today-7"` and `"today+1"` are dates relative to the day the page is viewed. |
+| `recent` | `5` | How many of the newest rows the section's table shows (`0` for none, at most 25). |
+| `columns` | `ResourceTable`'s default columns | The table's columns. |
+| `date_field` | `created_at` when the model has it | The date or datetime field behind `new_days` and the table's ordering. |
+
+The server normalizes the declaration (every default filled in) and publishes
+it as `x-karni-dashboard` on the model's list operation in the OpenAPI
+schema. `<Dashboard>` reads every resource that carries one and renders a
+`Stat` tile per count and a `ResourceTable` of the newest rows. Every number
+is a list request with `page_size=1` and the count's filters, so the row
+scope, the access rules and the field visibility of the API apply unchanged,
+and a resource the signed-in user may not list is left out. A count whose
+filter the list endpoint does not declare says so on its tile instead of
+showing a wrong number: the filters are the ones `ResourceTable` offers
+(a field's name, and `__gte` / `__lte` on numbers and dates, see
+[Filtering](#filtering)).
+
+A declaration that cannot work (an unknown key, a field the model does not
+have, a value `by` cannot hold, a count without filters) fails `karni check`
+with [`E133`](errors.md#e133) and is left out of the schema. `dashboard =
+False`, or no declaration, keeps the model off the page.
+
+On the frontend, `<Dashboard>` takes `resources` (which sections, in which
+order), `sections` (a function that rewrites the resolved sections before
+they render), `onOpen` and `onOpenList` (a row, or a tile's list with its
+filters), and `slots` for every part (`Section`, `Counts`, `Count`, `Recent`,
+`Empty`, `Loading`, `Error`). A home page can also compose `Stat` and
+`ResourceTable` by hand.
+
 ## Schema
 
 `KarniAutoSchema` (the conf default `DEFAULT_SCHEMA_CLASS`) keeps
@@ -749,6 +1161,49 @@ nullable, required from blank/default) and adds:
   `{"role": [...]}`, `{"owned": "<path>"}`, `{"where": "<fn>"}`,
   `{"any": [...]}`/`{"all": [...]}`, `{"unscoped": "<reason>"}`,
   `{"deny": ...}`. These are display hints only, and the server enforces.
+  `x-karni-throttle` (`"10/hour"`) is on an operation whose action the
+  viewset's `throttle` declaration limits, or on a public `create`, with the
+  rate in force. `x-karni-honeypot` (`"homepage"`) is on a public `create`
+  with a honeypot field ([rate limits](#rate-limits)). `x-karni-transitions`
+  and `x-karni-initial` are on a `StateField`'s property
+  ([lifecycle](lifecycle-and-capacity.md#the-api-the-admin-and-the-schema)),
+  and `x-karni-dashboard` on the list operation of a model that declares
+  [`Karni.dashboard`](#the-staff-dashboard). `x-karni-aggregate` is on the
+  `aggregate` operation of a resource that declares an
+  [aggregation](aggregations.md) (experimental): the groups, values and
+  metrics it takes.
+- `x-karni-related` (experimental) on the list operation: the model's
+  reverse relations (a reverse fk or many-to-many) whose model has a route,
+  each `{"name", "resource", "field", "param", "key", "label"}`. `name` is
+  the relation's name on this model (`deals`, or Django's `deal_set`),
+  `resource` the related rows' router prefix, `field` their field that points
+  here, `param` the query parameter their list filters it with (`null` when
+  the list has no such filter, read from the filterset the list applies),
+  `key` the field of this model whose value the parameter takes (its primary
+  key), and `label` the related rows in words. A one-to-one and a hidden
+  relation (`related_name="+"`) are left out. `@karni/ui`'s
+  [ResourceDetail](ui.md#page-blocks-experimental) builds its `related` tabs
+  from it. Override `KarniAutoSchema.get_karni_related()` to drop or relabel
+  an entry.
+
+  ```json
+  "x-karni-related": [
+    {"name": "events", "resource": "events", "field": "venue", "param": "venue", "key": "id", "label": "Events"}
+  ]
+  ```
+- `x-karni-field-groups` and `x-karni-column-sets` (experimental) on the list
+  operation of a model that declares `Karni.field_groups` or
+  `Karni.column_sets`: `{"layout": "sections" | "tabs", "groups": [{"label",
+  "fields"}]}` and `{"default": "<set>", "sets": [{"name", "label",
+  "columns"}]}`. Each group and set lists only the fields the requester's
+  serializer has, so a field `Karni.field_roles` hides is never named, and
+  one left empty is dropped. `@karni/ui` lays out ResourceForm,
+  ResourceDetail and ResourceTable with them
+  ([field groups and column sets](ui.md#field-groups-and-column-sets-experimental)).
+  Override `KarniAutoSchema.get_karni_field_groups()` or
+  `get_karni_column_sets()` to publish others.
+- A `MarkdownField`'s property carries `"format": "markdown"`
+  ([typed fields](fields.md#markdownfield)).
 - Operations whose access can admit anonymous callers (`Public`, `Where`)
   list the empty security requirement `{}`.
 - `SPECTACULAR_SETTINGS["COMPONENT_SPLIT_REQUEST"] = True` so file-upload

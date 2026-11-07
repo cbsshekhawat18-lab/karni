@@ -328,6 +328,53 @@ describe("ResourceForm edit mode (D3/D10)", () => {
     );
   });
 
+  it("does not mark a required file as required when the row already has one", async () => {
+    const user = userEvent.setup();
+    const { update } = setupMutations();
+    const requiredImage: ResourceSchema = {
+      ...eventSchema,
+      fields: eventSchema.fields.map((field) =>
+        field.name === "image" ? { ...field, required: true, nullable: false } : field,
+      ),
+    };
+    mockUseSchema.mockReturnValue({ data: requiredImage, isLoading: false, error: undefined });
+
+    const { unmount } = render(<ResourceForm resource="events" />);
+    expect(screen.getByRole("button", { name: "Image (required)" })).toBeInTheDocument();
+    unmount();
+
+    render(<ResourceForm resource="events" id={1} />);
+    // The stored file shows as the current one, by name, and the dropzone is not required.
+    expect(screen.getByRole("button", { name: "Image" })).toBeInTheDocument();
+    expect(screen.queryByText("(required)", { exact: false })).toBeNull();
+    const current = screen.getByRole("link", { name: "launch.png" });
+    expect(current).toHaveAttribute("href", String(eventRecord["image"]));
+    expect(current.closest("li")).toHaveTextContent(/^Current file\s*launch\.png/);
+
+    const title = screen.getByRole("textbox", { name: "Title" });
+    await user.clear(title);
+    await user.type(title, "Renamed");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() =>
+      expect(update.mutateAsync).toHaveBeenCalledWith({ id: 1, values: { title: "Renamed" } }),
+    );
+  });
+
+  it("keeps a required file required on edit when the row has none", () => {
+    const requiredImage: ResourceSchema = {
+      ...eventSchema,
+      fields: eventSchema.fields.map((field) =>
+        field.name === "image" ? { ...field, required: true, nullable: false } : field,
+      ),
+    };
+    mockUseSchema.mockReturnValue({ data: requiredImage, isLoading: false, error: undefined });
+    mockUseResourceItem.mockImplementation(() =>
+      queryResult<Record<string, unknown>>({ ...eventRecord, image: null }),
+    );
+    render(<ResourceForm resource="events" id={1} />);
+    expect(screen.getByRole("button", { name: "Image (required)" })).toBeInTheDocument();
+  });
+
   it("shows the skeleton while the item loads", () => {
     mockUseResourceItem.mockImplementation(() =>
       queryResult<Record<string, unknown>>(undefined, { isLoading: true }),
@@ -387,5 +434,67 @@ describe("ResourceForm escape hatches", () => {
     const payload = create.mutateAsync.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(payload["slug"]).toBe("my-slug");
     expect(payload["transformed"]).toBe(true);
+  });
+});
+
+describe("ResourceForm honeypot (x-karni-honeypot on a public create)", () => {
+  const publicCreate: ResourceSchema = {
+    ...eventSchema,
+    operations: {
+      ...eventSchema.operations,
+      create: { path: "/api/events/", method: "post", queryParams: [], honeypot: "homepage" },
+    },
+  };
+
+  function trapIn(container: HTMLElement): HTMLInputElement | null {
+    return container.querySelector<HTMLInputElement>('input[name="homepage"]');
+  }
+
+  it("renders the field out of sight and out of reach, never required", () => {
+    mockUseSchema.mockReturnValue({ data: publicCreate, isLoading: false, error: undefined });
+    const { container } = render(<ResourceForm resource="events" />);
+    const trap = trapIn(container);
+    expect(trap).not.toBeNull();
+    expect(trap).toHaveAttribute("tabindex", "-1");
+    expect(trap).toHaveAttribute("autocomplete", "off");
+    expect(trap).not.toBeRequired();
+    expect(trap?.closest('[aria-hidden="true"]')).not.toBeNull();
+    // Hidden from assistive technology: no role query finds it.
+    expect(screen.queryByRole("textbox", { name: /leave this field empty/i })).toBeNull();
+  });
+
+  it("sends nothing for it when a person submits", async () => {
+    const user = userEvent.setup();
+    mockUseSchema.mockReturnValue({ data: publicCreate, isLoading: false, error: undefined });
+    const { create } = setupMutations();
+    render(<ResourceForm resource="events" />);
+    await user.type(screen.getByRole("textbox", { name: "Title" }), "Hello");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(create.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(create.mutateAsync.mock.calls[0]?.[0]).not.toHaveProperty("homepage");
+  });
+
+  it("sends what a script typed into it, so the server can drop the request", async () => {
+    const user = userEvent.setup();
+    mockUseSchema.mockReturnValue({ data: publicCreate, isLoading: false, error: undefined });
+    const { create } = setupMutations();
+    const { container } = render(<ResourceForm resource="events" />);
+    const trap = trapIn(container);
+    if (trap === null) throw new Error("no honeypot input");
+    fireEvent.change(trap, { target: { value: "http://spam.example" } });
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(create.mutateAsync).toHaveBeenCalledTimes(1));
+    const payload = create.mutateAsync.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(payload["homepage"]).toBe("http://spam.example");
+  });
+
+  it("has no honeypot on an edit form or without the extension", () => {
+    mockUseSchema.mockReturnValue({ data: publicCreate, isLoading: false, error: undefined });
+    const edit = render(<ResourceForm resource="events" id={5} />);
+    expect(trapIn(edit.container)).toBeNull();
+    edit.unmount();
+    mockUseSchema.mockReturnValue({ data: eventSchema, isLoading: false, error: undefined });
+    const plain = render(<ResourceForm resource="events" />);
+    expect(trapIn(plain.container)).toBeNull();
   });
 });

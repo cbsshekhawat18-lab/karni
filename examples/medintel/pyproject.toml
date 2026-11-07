@@ -1,0 +1,46 @@
+[project]
+name = "medintel"
+version = "0.1.0"
+description = "Medintel, a Karni project."
+requires-python = ">=3.12"
+dependencies = [
+    "karni[social-token]",
+    "gunicorn",
+    "uvicorn-worker",
+    "psycopg[binary]",
+    "karni-charts",
+]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# An application, not a library: `pip install -e .` installs the dependencies
+# above and no package (Django imports config/ and the apps from this folder).
+packages = []
+
+[dependency-groups]
+# factory-boy and Faker come with karni (karni.testing factories, `karni seed`).
+dev = [
+    "pytest",
+    "pytest-django",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+# tests/ plus every app's own tests/ (`karni make test <Model>` writes there).
+# modules/ is left out: each module runs its own suite with its own settings.
+testpaths = ["tests", "*/tests"]
+# Karni's architecture rules run as a SEPARATE invocation (never via addopts):
+#   pytest --pyargs karni.testing.architecture
+
+[tool.karni]
+# The Karni release this project was generated for. `karni upgrade` starts
+# from here (or from the installed karni, whichever is newer).
+baseline = "0.5.0"
+# What the project is: site (a public website), app (an API and a React app) or
+# site+app. `karni context` and the agent files state it with its stack, and
+# `karni add site` turns an app into a site+app. Run `karni rules sync` after
+# changing it.
+kind = "app"

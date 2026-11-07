@@ -1,0 +1,16 @@
+{% load static karni_site %}{% csp_allow "style-src https://fonts.example.com" "font-src https://fonts.example.net" %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>{% block title %}{% endblock %}</title>
+  <script>{% csp_hash %}document.documentElement.className = "js";{% endcsp_hash %}</script>
+</head>
+<body>
+  <nav>
+    <a href="/"{% ifactive "website:home" %} class="active"{% endifactive %}>Home</a>
+    <a class="link{% ifactive "website:about" %} current{% endifactive %}" href="/about/">About</a>
+    <a href="/services/web/"{% ifactive "/services/*" %} aria-current="page"{% else %} data-idle{% endifactive %}>Web</a>
+    <button onclick="{% csp_hash attribute %}history.back(); return &quot;x&quot;;{% endcsp_hash %}">Back</button>
+  </nav>
+  {% block content %}{% endblock %}
+</body>
+</html>

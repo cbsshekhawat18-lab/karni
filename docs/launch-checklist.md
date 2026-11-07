@@ -22,8 +22,6 @@ get back.
 
 | List | Stars | Rule, as published | What to submit |
 |---|---:|---|---|
-| [awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code) | 56k | a resource must be at least 14 days old with commits after day one, **or** have 100+ stars. One resource per PR. The maintainer re-adds previously listed items at their own cadence | Karni's adapter generation and `karni mcp`, under tooling / integrations, after the first release |
-| [awesome-cursorrules](https://github.com/PatrickJS/awesome-cursorrules) | 41k | a `.cursorrules` / `.cursor/rules` file per stack | the generated `.cursor/rules/karni.mdc` as a "Django + React (Karni)" entry, with a link back to the generator |
 | [awesome-django](https://github.com/wsvincent/awesome-django) | 11k | no public contribution rules. Curated by Will Vincent and Jeff Triplett, who point to Django Packages for completeness | open a PR under "Third-Party Packages / Frameworks" only once there is a release and a few users. Expect it to be declined until then |
 | [Django Packages](https://djangopackages.org/) | n/a | anyone can add a package with a PyPI name and repository | add `karni` the day it is on PyPI. It is where Django developers compare options |
 | [awesome-python](https://github.com/vinta/awesome-python) | n/a | established, widely used projects only | not yet |
@@ -35,7 +33,7 @@ notes below are what the sidebars said in October 2026 or earlier.
 
 - **Django forum, Show & Tell:** <https://forum.djangoproject.com/c/show-tell/>.
   The friendliest venue: project posts are the category's purpose. Lead with
-  the problem (what an agent regenerates per project) and the measured 619
+  the problem (what an agent regenerates per project) and the measured 617
   lines, not the feature list.
 - **r/django** (~140k members): project posts are allowed when they say
   what the project is and why. Repeated promotion is removed. One post, with
@@ -74,15 +72,15 @@ notes below are what the sidebars said in October 2026 or earlier.
    the admin, in `?expand=`, in `?ordering=` on a hidden column, in the
    export, with the leaks reproduced on a plain DRF project. The
    `assert_isolated` matrix is the natural closing example.
-3. **"619 lines: measuring an application instead of estimating it."** The
+3. **"617 lines: measuring an application instead of estimating it."** The
    method (`loc.py`, what counts as project code), the friction log, the
-   framework fixes it produced, and the number going from 656 to 619. The
+   framework fixes it produced, and the number going from 656 to 617. The
    post is useful to anyone comparing starting points, whatever they pick.
-4. **"What a CLAUDE.md for a Django project should actually contain."** The
-   rules that changed agent behaviour in practice versus the ones that did
-   not. Why the same file for Cursor, Copilot and Claude Code drifts, and
-   generating all of them from one source. The `karni rules` output is one
-   worked example among others.
+4. **"What an agent instructions file for a Django project should actually
+   contain."** The rules that changed agent behaviour in practice versus the
+   ones that did not. Why one copy per tool drifts, and why one AGENTS.md
+   generated from one source does not. The `karni rules` output is one worked
+   example among others.
 5. **"Upgrade or own: the cost of a boilerplate over two years."** A table
    of what a Cookiecutter-style project pays per upstream change against a
    dependency with codemods. It is honest about where owning the code wins.

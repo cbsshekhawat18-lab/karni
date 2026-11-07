@@ -1,0 +1,1289 @@
+"""``karni build`` (experimental): the spec applied to a real project, idempotently.
+
+One project is built once per module from an empty ``karni new`` render and
+the A1 fixture (``harbour-yoga.yaml``), with every step real: migrations,
+migrate, seed, the project's own tests and ``karni check``'s backend. The
+frontend tools are stubbed (the suite runs no npm): ``openapi-typescript``
+writes a stub, and ESLint and jscpd pass. The other tests build a copy of
+that project, with the types, test and check steps skipped to keep the suite
+fast, or a project of their own.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import re
+import shutil
+import sqlite3
+import subprocess
+import sys
+import textwrap
+from collections.abc import Iterator
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import pytest
+from typer.testing import CliRunner
+
+from karni_cli import project as project_mod
+from karni_cli.builder import output, record, render, run
+from karni_cli.commands import check as check_mod
+from karni_cli.commands import types as types_mod
+from karni_cli.main import app
+
+from .conftest import REPO_ROOT, TEMPLATE, require_modules
+from .test_spec import FIXTURE
+
+BUILD_SCHEMA = REPO_ROOT / "docs" / "assets" / "karni-build.schema.json"
+SNAPSHOT = Path(__file__).parent / "fixtures" / "spec" / "harbour-yoga.build.json"
+_FAST = ("types", "test", "check")
+
+
+def _render(parent: Path, name: str, kind: str = "app") -> Path:
+    from cookiecutter.main import cookiecutter
+
+    from karni_cli.commands.new import write_agent_adapters
+
+    cookiecutter(
+        str(TEMPLATE),
+        no_input=True,
+        extra_context={"project_name": name, "kind": kind},
+        output_dir=str(parent),
+    )
+    root = parent / name.lower().replace(" ", "_")
+    write_agent_adapters(root)
+    return root
+
+
+def _env(mp: pytest.MonkeyPatch, root: Path) -> None:
+    mp.setattr(project_mod, "_running_interpreter", lambda: Path(sys.executable))
+    mp.setenv("DATABASE_URL", f"sqlite:///{root / 'db.sqlite3'}")
+    mp.setenv("KARNI_SOCIAL_GOOGLE_CLIENT_IDS", "google-client")
+    mp.setenv("KARNI_SOCIAL_APPLE_CLIENT_IDS", "apple-client")
+    mp.setenv("PYTHONDONTWRITEBYTECODE", "1")
+    mp.setenv("KARNI_CACHE", "locmem")  # karni new's .env points at the compose Redis
+    for name in ("DJANGO_SETTINGS_MODULE", "KARNI_PAYMENTS_PROVIDER", "KARNI_2FA", "CI"):
+        mp.delenv(name, raising=False)
+    mp.chdir(root)
+
+
+def _frontend(mp: pytest.MonkeyPatch) -> None:
+    """No npm in the suite: openapi-typescript writes a stub, ESLint and jscpd pass.
+
+    The frontend counts as installed too: in CI (``CI=true``) a missing
+    ``frontend/node_modules`` fails ``karni check``, and these projects never run npm.
+    """
+
+    def stub(project: Path, schema: Path, out: Path) -> list[str]:
+        code = "import sys; open(sys.argv[1], 'w').write('export type paths = {};\\n')"
+        return [sys.executable, "-c", code, str(out)]
+
+    mp.setattr(types_mod, "_openapi_typescript_cmd", stub)
+    mp.setattr(check_mod, "_frontend_lint", lambda project, *args, **kwargs: 0)
+    mp.setattr(check_mod, "_frontend_duplication", lambda project, *args, **kwargs: 0)
+    mp.setattr(check_mod, "_frontend_not_installed", lambda project: False)
+
+
+def _fast(mp: pytest.MonkeyPatch) -> None:
+    """Skip the types, test and check steps (the module's first build runs them)."""
+    for name in _FAST:
+        mp.setitem(run.STEP_RUNNERS, name, lambda root, state, opts: "skipped: not in this test")
+
+
+def _build(*args: str) -> tuple[int, str]:
+    result = CliRunner().invoke(app, ["build", *args])
+    if result.exception and not isinstance(result.exception, SystemExit):
+        raise result.exception
+    return result.exit_code, result.output
+
+
+def _files(root: Path) -> dict[str, str]:
+    """Every file of the project but the databases and caches, by its sha256."""
+    found = {}
+    for path in sorted(root.rglob("*")):
+        rel = path.relative_to(root).as_posix()
+        if path.is_file() and "__pycache__" not in rel and not rel.endswith(".sqlite3"):
+            found[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return found
+
+
+def _rows(root: Path, sql: str) -> list[Any]:
+    with sqlite3.connect(root / "db.sqlite3") as db:
+        return db.execute(sql).fetchall()
+
+
+def _edit(path: Path, *pairs: tuple[str, str]) -> None:
+    text = path.read_text()
+    for old, new in pairs:
+        assert text.count(old) == 1, old
+        text = text.replace(old, new)
+    path.write_text(text)
+
+
+@dataclass
+class Built:
+    root: Path
+    output: str
+
+
+@pytest.fixture(scope="module")
+def harbour(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Built]:
+    """The fixture spec built into an empty ``karni new`` project, every step real.
+
+    npm is stubbed as the suite's conftest stubs it, and so are the frontend tools.
+    """
+    from karni_cli import scaffold
+
+    require_modules("karni-payments", "karni-site")
+    parent = tmp_path_factory.mktemp("build-harbour")
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+        mp.setattr(
+            scaffold,
+            "run_npm",
+            lambda argv, cwd: subprocess.CompletedProcess(argv, 127, "", "npm disabled"),
+        )
+        created = CliRunner().invoke(
+            app, ["new", "Harbour Yoga", "--kind", "site+app", "-o", str(parent)]
+        )
+        assert created.exit_code == 0, created.output
+        root = parent / "harbour_yoga"
+        shutil.copy(FIXTURE, root / "karni.yaml")
+        _env(mp, root)
+        _frontend(mp)
+        code, out = _build()
+        assert code == 0, out
+        yield Built(root, out)
+
+
+@pytest.fixture(autouse=True)
+def _project_interpreter(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(project_mod, "_running_interpreter", lambda: Path(sys.executable))
+
+
+@pytest.fixture
+def copy(harbour: Built, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A copy of the built project (its database too), with the slow steps skipped."""
+    root = tmp_path / "harbour_yoga"
+    shutil.copytree(harbour.root, root, ignore=shutil.ignore_patterns("__pycache__"))
+    _env(monkeypatch, root)
+    _frontend(monkeypatch)
+    _fast(monkeypatch)
+    return root
+
+
+# from an empty project ------------------------------------------------------------
+
+
+def test_a_spec_builds_an_empty_project_that_passes_its_tests_and_check(harbour: Built) -> None:
+    root, out = harbour.root, harbour.output
+    lines = out.splitlines()
+    plan = [line for line in lines if line.startswith("plan ")]
+    assert len(plan) == 1 and "25 changes, 0 risky: " in plan[0], plan  # one line, not 25
+    assert "entities 3" in plan[0] and plan[0].endswith("(--verbose lists each)")
+    assert not [line for line in lines if line.startswith(("  + ", "  ~ ", "  - "))]
+    steps = {line.split()[0]: line for line in lines if line[:1].isalpha() and "  " in line}
+    assert steps["modules"].endswith("karni add payments")
+    assert "classes/migrations/0001_initial.py" in steps["migrations"]
+    assert "Studio 3, Session 40, Booking 200" in steps["seed"]
+    assert " passed in " in steps["test"] and "failed" not in steps["test"]  # the site app's too
+    assert steps["check"].split() == ["check", "ok"]
+    assert lines[-1].startswith("Built: the project matches karni.yaml.")  # then the recipe note
+    # Karni's code and the project's live in separate files
+    karni = (root / "classes" / "karni" / "models.py").read_text()
+    assert karni.startswith('"""Written by karni build from karni.yaml. Do not edit it')
+    assert "class Session(BaseModel):" in karni and "abstract = True" in karni
+    ours = (root / "classes" / "models.py").read_text()
+    assert "from classes.karni import models as karni\n" in ours
+    assert "class Session(karni.Session):\n" in ours
+    assert (
+        "class SessionViewSet(karni.SessionViewSet):" in (root / "classes/viewsets.py").read_text()
+    )
+    assert "count = 40" in (root / "classes/karni/seeds.py").read_text()
+    settings = (root / "config" / "settings.py").read_text()
+    block = settings[
+        settings.index("# karni:spec start") : settings.index("karni_settings(globals())")
+    ]
+    assert 'KARNI_ACCOUNTS_DEFAULT_ROLES = ["member"]' in block and "KARNI_2FA = True" in block
+    assert '"classes.session:*": "own"' in block  # own:instructor is Karni.owner_field
+    routes = (root / "frontend" / "src" / "routes.tsx").read_text()
+    assert 'import SessionsPage from "./pages/karni/sessions";' in routes
+    page = (root / "frontend/src/pages/karni/session-detail.tsx").read_text()
+    assert page.startswith("// Written by karni build") and page.count("\n") <= 50
+    test = (root / "classes/tests/karni/test_booking.py").read_text()
+    assert 'self.assert_crud(BookingViewSet, "staff")' in test
+    assert "self.assert_isolated(BookingViewSet)\n" in test  # staff reads every row
+    # the record fingerprints every Karni-owned file and block
+    rec = record.load(root)
+    assert rec.entities == ["classes.Booking", "classes.Session", "classes.Studio"]
+    assert set(rec.blocks) == {"config/settings.py", *record.layout.ROUTES_BLOCKS}
+    assert rec.files["classes/karni/models.py"] == record.digest(karni)
+    # demo rows only in the tables it created: the module's are empty
+    assert _rows(root, "select count(*) from karni_payments_payment") == [(0,)]
+    assert record.pending(root) == {}
+
+
+def test_the_ai_module_is_added_wired_and_checked(
+    copy: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``modules: ai`` adds karni-ai with its provider; karni check passes with the test one."""
+    require_modules("karni-ai")
+    monkeypatch.setitem(run.STEP_RUNNERS, "check", run._check)  # the fixture skips it
+    for name in [n for n in os.environ if n.endswith(("_AI_PROVIDER", "_API_KEY", "_MODEL"))]:
+        monkeypatch.delenv(name, raising=False)
+    _edit(copy / "karni.yaml", ("modules:\n", "modules:\n  ai: {provider: test}\n"))
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "  + ai: provider test" in plan
+    code, out = _build()
+    assert code == 0, out
+    steps = {
+        line.split()[0]: line for line in out.splitlines() if line[:1].isalpha() and "  " in line
+    }
+    assert steps["modules"].endswith("karni add ai")
+    settings = (copy / "config" / "settings.py").read_text()
+    apps_block = settings[: settings.index("# karni:apps")]
+    assert '"karni_ai",' in apps_block[apps_block.rindex("INSTALLED_APPS") :]
+    block = settings[settings.index("# karni:spec start") : settings.index("# karni:spec end")]
+    assert 'KARNI_AI_PROVIDER = "test"' in block
+    assert "_API_KEY" not in block and "MODEL" not in block
+    assert '"karni-ai' in (copy / "pyproject.toml").read_text()
+    assert (copy / ".karni" / "modules" / "ai.md").is_file()
+    assert _rows(copy, "select count(*) from karni_ai_aicall") == [(0,)]
+    # karni check runs the module's checks: the test provider needs no key and no model.
+    assert steps["check"].split() == ["check", "ok"], out
+
+
+def test_the_settings_block_passes_the_projects_ruff_and_needs_no_client_ids(copy: Path) -> None:
+    """The env import sits with the imports (no E402), and an unset client id stops nothing."""
+    text = (copy / "config" / "settings.py").read_text()
+    block = text[text.index("# karni:spec start") : text.index("# karni:spec end")]
+    assert "import" not in block
+    assert text.index("from karni.conf import") < text.index("# karni:spec start")
+    assert '"KARNI_SOCIAL_GOOGLE_CLIENT_IDS", default=[]' in block
+    ruff = shutil.which("ruff") or str(Path(sys.executable).parent / "ruff")
+    done = subprocess.run(
+        [ruff, "check", "--isolated", "--select", "E402,F821", "--no-cache", "config/settings.py"],
+        cwd=copy,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert "E402" not in done.stdout, done.stdout
+
+
+def test_a_second_build_writes_nothing(copy: Path) -> None:
+    before = _files(copy)
+    code, out = _build()
+    assert (code, out) == (0, "Nothing to build: the project matches karni.yaml.\n")
+    assert _files(copy) == before
+    plan = CliRunner().invoke(app, ["plan", "--offline"])
+    assert plan.output == "No changes: the project matches karni.yaml.\n"
+
+
+def test_the_financial_words_are_karnis() -> None:
+    """karni build decides PROTECT with karni.W965's own words (the CLI runs without karni)."""
+    checks = pytest.importorskip("karni.fields.checks")
+    from karni_cli.generators.fields import (
+        FINANCIAL_MODEL_WORDS,
+        MONEY_WORDS,
+        FieldSpec,
+        is_financial,
+    )
+
+    assert MONEY_WORDS == checks.MONEY_WORDS
+    assert FINANCIAL_MODEL_WORDS == checks.FINANCIAL_MODEL_WORDS
+    assert is_financial("LedgerEntry", [])
+    assert is_financial("Line", [FieldSpec("unit_price", "decimal", (), False)])
+    assert is_financial("Line", [FieldSpec("cost", "money", (), False)])
+    assert not is_financial("Line", [FieldSpec("weight", "decimal", (), False)])
+
+
+def test_the_built_models_pass_karnis_own_checks(copy: Path) -> None:
+    """Code karni build writes must not trip W965 or W967: their hints name its own files."""
+    karni = (copy / "classes" / "karni" / "models.py").read_text()
+    # Session is audited and holds money, Booking is audited: their fks are PROTECT.
+    session = karni[karni.index("class Session(") : karni.index("class Booking(")]
+    assert 'studio = models.ForeignKey("Studio", on_delete=models.PROTECT)' in session
+    assert "on_delete=models.CASCADE" not in karni
+    # Studio's search gets the SearchField the default search provider uses.
+    studio = karni[karni.index("class Studio(") : karni.index("class Session(")]
+    assert '    search = SearchField(sources=["name"])\n' in studio
+    checked = subprocess.run(
+        [sys.executable, "manage.py", "check"],
+        cwd=copy,
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "PYTHONPATH": str(copy)},
+    )
+    assert checked.returncode == 0, checked.stdout + checked.stderr
+    report = checked.stdout + checked.stderr
+    assert "karni.W965" not in report and "karni.W967" not in report, report
+    # the export reads both back as the spec's own: no drift, nothing left out
+    plan = CliRunner().invoke(app, ["plan", "--offline"])
+    assert plan.output == "No changes: the project matches karni.yaml.\n"
+
+
+# changes --------------------------------------------------------------------------
+
+
+def test_a_feature_turned_on_is_planned_and_written_to_the_settings_block(copy: Path) -> None:
+    spec = copy / "karni.yaml"
+    _edit(
+        spec,
+        (
+            '  terms: {version: "2026-11", url: /terms/}\n',
+            '  terms: {version: "2026-11", url: /terms/}\n  user_grants: true\n',
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "  + user_grants: KARNI_USER_GRANTS" in plan, plan
+    settings = copy / "config" / "settings.py"
+    assert "KARNI_USER_GRANTS = False" in settings.read_text()
+    code, out = _build()
+    assert code == 0, out
+    text = settings.read_text()
+    block = text[text.index("# karni:spec start") : text.index("# karni:spec end")]
+    assert "KARNI_USER_GRANTS = True" in block and "KARNI_USER_GRANTS = False" not in text
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n"
+
+
+def test_navigation_is_written_to_the_settings_block_and_reads_back(copy: Path) -> None:
+    """The menu (experimental): planned, written as KARNI_NAVIGATION, exported as the spec."""
+    spec = copy / "karni.yaml"
+    text = spec.read_text()
+    spec.write_text(
+        text + "navigation:\n  - home\n  - Classes: {icon: calendar, items: [Session, Booking]}\n"
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert (
+        "  + KARNI_NAVIGATION: Home /, Classes (Sessions /sessions, Bookings /bookings)" in plan
+    ), plan
+    code, out = _build()
+    assert code == 0, out
+    settings = (copy / "config" / "settings.py").read_text()
+    block = settings[settings.index("# karni:spec start") : settings.index("# karni:spec end")]
+    assert "KARNI_NAVIGATION = [\n" in block
+    assert '"route": "/bookings", "requires": "authenticated"' in block  # owned reads
+    assert '"label": "Sessions", "route": "/sessions", "requires": "public"' in block
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n"
+    exported = CliRunner().invoke(app, ["spec", "export"]).output
+    assert "navigation:\n  - home\n  - Classes: {icon: calendar, items: [Session, Booking]}" in (
+        exported
+    ), exported
+    spec.write_text(text + "navigation: true\n")
+    changed = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "  ~ KARNI_NAVIGATION: Home /, Sessions /sessions, Bookings /bookings" in changed
+    spec.write_text(text)
+    code, out = _build()
+    assert code == 0, out
+    assert "KARNI_NAVIGATION" not in (copy / "config" / "settings.py").read_text()
+
+
+def test_an_entity_added_and_fields_changed_and_renamed_keep_the_data(copy: Path) -> None:
+    spec = copy / "karni.yaml"
+    _edit(
+        spec,
+        (
+            '        fields: {name: "str:120", slug: "slug:name", address: "text?"}\n',
+            (
+                '        fields: {label: {type: "str:150", was: name}, slug: "slug:label", '
+                'address: "text?", phone: "phone?"}\n'
+            ),
+        ),
+        ("        search: [name]\n", "        search: [label]\n"),
+        (
+            "pages:\n",
+            (
+                "      Review:\n        fields: {session: fk:Session, stars: int}\n"
+                '        access: {read: public, write: "role:staff"}\n'
+                "      Room:\n        fields: {code: str}\npages:\n"
+            ),
+        ),
+        ("Booking: 200}", "Booking: 200, Review: 5, Room: 0}"),
+    )
+    names = _rows(copy, "select name from classes_studio order by name")
+    code, out = _build("--verbose")
+    assert code == 0, out
+    assert "  ~ classes.Studio.label: from name, str:120 -> str:150" in out
+    assert "classes/migrations/0002_karni_renames.py" in out
+    assert _rows(copy, "select label from classes_studio order by label") == names
+    assert _rows(copy, "select count(*) from classes_review") == [(5,)]
+    assert _rows(copy, "select count(*) from classes_room") == [(0,)]  # seed 0 skips it
+    assert "class Review(karni.Review):" in (copy / "classes" / "models.py").read_text()
+    assert (copy / "classes/tests/karni/test_review.py").is_file()
+    # a required field on a table with rows needs values: on an empty one it needs none
+    _edit(spec, ("        fields: {code: str}\n", "        fields: {code: str, floor: int}\n"))
+    code, out = _build()
+    assert code == 0, out
+    _edit(spec, ("session: fk:Session, stars: int}", "session: fk:Session, stars: int, n: int}"))
+    code, out = _build()
+    assert code == 1 and "error C277: makemigrations failed." in out, out
+    assert "impossible to add a non-nullable field" in out
+    _edit(spec, ("stars: int, n: int}", 'stars: int, n: "int?"}'))
+    code, out = _build()
+    assert code == 0 and "continues" not in out, out
+    assert not list((copy / "classes" / "migrations").glob("*karni_renames*"))[1:]
+    # an entity renamed: its table, its rows and the project's classes follow
+    _edit(
+        spec,
+        ("      Review:\n", "      Rating:\n        was: Review\n"),
+        ("Review: 5", "Rating: 5"),
+    )
+    code, out = _build("--verbose")
+    assert code == 0 and "  ~ classes.Rating: from Review, rows kept" in out, out
+    assert _rows(copy, "select count(*) from classes_rating") == [(5,)]
+    assert "class Rating(karni.Rating):" in (copy / "classes" / "models.py").read_text()
+    assert "class RatingViewSet(karni.RatingViewSet):" in (copy / "classes/viewsets.py").read_text()
+    assert (copy / "classes/tests/karni/test_rating.py").is_file()
+    assert not (copy / "classes/tests/karni/test_review.py").exists()
+
+
+def _karni_option(source: str, model: str, name: str) -> Any:
+    """The literal ``class Karni: <name> = ...`` of ``model`` in ``source``."""
+    import ast
+
+    tree = ast.parse(source)
+    cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == model)
+    karni = next(n for n in cls.body if isinstance(n, ast.ClassDef) and n.name == "Karni")
+    for statement in karni.body:
+        if isinstance(statement, ast.Assign) and getattr(statement.targets[0], "id", "") == name:
+            return ast.literal_eval(statement.value)
+    raise AssertionError(f"{model}.Karni has no {name}")
+
+
+def test_global_search_is_written_into_class_karni_with_its_index_migration(copy: Path) -> None:
+    spec = copy / "karni.yaml"
+    _edit(
+        spec,
+        ("        search: [name]\n", "        search: [name]\n        global_search: true\n"),
+        (
+            "        owner: instructor\n",
+            (
+                "        global_search: {fields: [title], subtitle: studio__name, weight: 2}\n"
+                "        owner: instructor\n"
+            ),
+        ),
+    )
+    code, out = _build("--verbose")
+    assert code == 0, out
+    assert "  ~ classes.Studio global_search: none -> name" in out
+    models = (copy / "classes" / "karni" / "models.py").read_text()
+    assert 'search = {"fields": ["name"], "title": "name"}' in models
+    assert _karni_option(models, "Session", "search") == {
+        "fields": ["title"],
+        "title": "title",
+        "subtitle": "studio__name",
+        "weight": 2,
+    }
+    migrations = "".join(
+        path.read_text() for path in (copy / "classes" / "migrations").glob("0*.py")
+    )
+    assert "karni.fields.TrigramIndex(fields=['name']" in migrations
+    assert "karni.fields.TrigramIndex(fields=['title']" in migrations
+    code, out = _build()
+    assert code == 0 and "Nothing to build" in out, out  # the export reads it back
+
+
+def test_the_destructive_guard_and_a_removal(copy: Path) -> None:
+    spec = copy / "karni.yaml"
+    _edit(
+        spec,
+        ("pages:\n", "      Review:\n        fields: {stars: int}\npages:\n"),
+        ("Booking: 200}", "Booking: 200, Review: 10}"),
+    )
+    assert _build()[0] == 0
+    before = _files(copy)
+    _edit(
+        spec,
+        ("      Review:\n        fields: {stars: int}\n", ""),
+        ('          note: "text?"\n', ""),
+        (", Notes: [note]}", "}"),
+        ("Booking: 200, Review: 10}", "Booking: 200}"),
+    )
+    code, out = _build()
+    assert code == 1
+    assert "! - classes.Review, its table and rows are dropped (10 rows)" in out, out
+    assert "error C270: 2 risky changes" in out and "--allow-destructive" in out
+    assert {k: v for k, v in _files(copy).items() if k != "karni.yaml"} == {
+        k: v for k, v in before.items() if k != "karni.yaml"
+    }
+    code, out = _build("--allow-destructive")
+    assert code == 0, out
+    for rel in ("classes/models.py", "classes/viewsets.py"):
+        assert "Review" not in (copy / rel).read_text()
+    assert not (copy / "classes/tests/karni/test_review.py").exists()
+    assert "note" not in (copy / "classes/karni/models.py").read_text()
+
+
+def test_an_aggregate_and_the_charts_module(copy: Path) -> None:
+    require_modules("karni-charts")
+    spec = copy / "karni.yaml"
+    _edit(
+        spec,
+        ("modules:\n  payments:\n", "modules:\n  charts: {read: public}\n  payments:\n"),
+        (
+            "        owner: instructor\n",
+            (
+                "        owner: instructor\n        aggregate:\n"
+                '          group_by: [studio, studio__name, "starts_at:month"]\n'
+                "          values: [price, capacity]\n          metrics: [count, sum, avg]\n"
+            ),
+        ),
+    )
+    code, out = _build("--verbose")
+    assert code == 0, out
+    assert "  + charts: read public" in out
+    assert "  ~ classes.Session aggregate: none -> by studio, studio__name, starts_at:month" in out
+    models = (copy / "classes" / "karni" / "models.py").read_text()
+    assert "        aggregate = {\n" in models
+    assert '"group_by": ["studio", "studio__name", "starts_at:month"]' in models
+    assert '"metrics": ["count", "sum", "avg"]' in models
+    settings = (copy / "config" / "settings.py").read_text()
+    assert '"karni_charts",' in settings and 'KARNI_CHARTS_READ = "public"' in settings
+    assert _rows(copy, "select count(*) from karni_charts_chart") == [(0,)]
+    assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
+    exported = CliRunner().invoke(app, ["spec", "export"])
+    assert exported.exit_code == 0, exported.output
+    assert "aggregate:" in exported.output and "charts:" in exported.output
+
+
+def test_a_module_added_to_the_spec_is_wired_with_its_options(copy: Path) -> None:
+    require_modules("karni-reports")
+    spec = copy / "karni.yaml"
+    _edit(
+        spec,
+        (
+            "modules:\n  payments:\n    provider: stripe\n",
+            "modules:\n  payments:\n    provider: stripe\n  reports:\n    page_size: letter\n",
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "  + reports: page_size letter" in plan, plan
+    code, out = _build()
+    assert code == 0, out
+    steps = {
+        line.split()[0]: line for line in out.splitlines() if line[:1].isalpha() and "  " in line
+    }
+    assert steps["modules"].endswith("karni add reports")
+    settings = (copy / "config" / "settings.py").read_text()
+    apps = settings[settings.index("INSTALLED_APPS") : settings.index("# karni:apps")]
+    assert '"karni_reports"' in apps
+    block = settings[
+        settings.index("# karni:spec start") : settings.index("karni_settings(globals())")
+    ]
+    assert 'KARNI_REPORTS_PAGE_SIZE = "letter"' in block
+    assert "karni-reports" in (copy / "pyproject.toml").read_text()
+    assert (copy / ".karni" / "modules" / "reports.md").is_file()
+    assert _rows(copy, "select count(*) from karni_reports_generatedreport") == [(0,)]
+
+
+def test_the_storage_module_and_a_protected_field_are_built(copy: Path) -> None:
+    require_modules("karni-storage")
+    _edit(
+        copy / "karni.yaml",
+        (
+            "modules:\n  payments:\n    provider: stripe\n",
+            "modules:\n  payments:\n    provider: stripe\n  storage:\n    provider: r2\n",
+        ),
+        (
+            '        fields: {name: "str:120", slug: "slug:name", address: "text?"}\n',
+            (
+                '        fields: {name: "str:120", slug: "slug:name", address: "text?", '
+                'photo: "image:protected?"}\n'
+            ),
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "  + storage: provider r2" in plan, plan
+    assert "  + classes.Studio.photo: image:protected?" in plan, plan
+    code, out = _build()
+    assert code == 0, out
+    settings = (copy / "config" / "settings.py").read_text()
+    apps = settings[settings.index("INSTALLED_APPS") : settings.index("# karni:apps")]
+    assert '"karni_storage"' in apps
+    block = settings[
+        settings.index("# karni:spec start") : settings.index("karni_settings(globals())")
+    ]
+    assert 'KARNI_STORAGE_PROVIDER = "r2"' in block
+    # The build places the module's URL include, so the download path works at once.
+    urls = (copy / "config" / "urls.py").read_text()
+    assert '    path("api/", include("karni_storage.urls")),\n    # karni:urls\n' in urls
+    models = (copy / "classes" / "karni" / "models.py").read_text()
+    assert "from karni_storage.fields import ProtectedImageField" in models
+    assert 'photo = ProtectedImageField(upload_to="classes/studio/", blank=True)' in models
+    assert _rows(copy, "select count(*) from karni_storage_thumbnail") == [(0,)]
+    proc = project_mod.run_manage(
+        copy,
+        [
+            "shell",
+            "-c",
+            (
+                "from classes.models import Studio; from karni_storage.checks import run_checks; "
+                "s = Studio.objects.create(name='North', photo='classes/studio/a/n.png'); "
+                "print(s.photo.url == f'/api/studios/{s.pk}/files/photo/', run_checks())"
+            ),
+        ],
+        docker=False,
+        database=None,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert proc.stdout.strip().endswith("True []"), proc.stdout
+    assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
+
+
+def test_a_key_type_switch_and_a_module_removal_are_refused(copy: Path) -> None:
+    spec = copy / "karni.yaml"
+    _edit(spec, ("        key: slug\n", "        key: slug\n        pk: bigint\n"))
+    code, out = _build("--allow-destructive")
+    assert code == 1 and "error C272: karni.yaml switches the key type of classes.Studio" in out
+    _edit(spec, ("        pk: bigint\n", ""), ("modules:\n  payments:\n    provider: stripe\n", ""))
+    code, out = _build("--allow-destructive")
+    assert code == 1 and "error C271:" in out and "payments" in out
+
+
+# ownership ------------------------------------------------------------------------
+
+
+def test_a_hand_edit_stops_the_build_then_force_or_adopt(copy: Path) -> None:
+    api = copy / "classes" / "karni" / "api.py"
+    _edit(api, ('    search_fields = ("name",)\n', '    search_fields = ("name", "address")\n'))
+    before = _files(copy)
+    code, out = _build()
+    assert code == 1
+    assert "classes/karni/api.py: edited by hand (line 14)" in out, out
+    assert '    -    search_fields = ("name",)' in out
+    assert (
+        "error C273: classes/karni/api.py was edited by hand, so karni build wrote nothing." in out
+    )
+    assert (
+        "1. move the change into classes/viewsets.py" in out
+        and "--adopt classes/karni/api.py" in out
+    )
+    assert _files(copy) == before
+    edited = api.read_text()
+    code, out = _build("--force")
+    assert code == 0, out
+    assert (copy / "classes/karni/api.py.orig").read_text() == edited
+    assert '("name", "address")' not in api.read_text()
+    _edit(api, ('    search_fields = ("name",)\n', '    search_fields = ("name", "address")\n'))
+    code, out = _build("--adopt", "classes/karni/api.py")
+    assert code == 0, out
+    assert "adopted (the project's now, karni build leaves it): classes/karni/api.py" in out
+    assert record.load(copy).adopted == ["classes/karni/api.py"]
+    assert '("name", "address")' in api.read_text()
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "  ~ classes.Studio search: name, address -> name (not managed)" in plan
+    code, out = _build("--adopt", "classes/models.py")
+    assert code == 1 and "error C274: --adopt classes/models.py: karni build does not own it" in out
+
+
+def test_the_projects_own_files_are_never_rewritten(copy: Path) -> None:
+    models = copy / "classes" / "models.py"
+    _edit(
+        models,
+        (
+            "class Studio(karni.Studio):\n" + render.STUB_LINE + "\n",
+            "class Studio(karni.Studio):\n    def city(self) -> str:\n        return 'Bristol'\n",
+        ),
+    )
+    ours = {rel: (copy / rel).read_bytes() for rel in ("classes/models.py", "classes/viewsets.py")}
+    _edit(
+        copy / "karni.yaml",
+        ("          capacity: int\n", '          capacity: int\n          level: "int?"\n'),
+    )
+    code, out = _build()
+    assert code == 0, out
+    assert all((copy / rel).read_bytes() == text for rel, text in ours.items())
+    assert (
+        "level = models.IntegerField(null=True, blank=True)"
+        in (copy / "classes/karni/models.py").read_text()
+    )
+
+
+def test_response_caching_from_the_spec(copy: Path) -> None:
+    _edit(
+        copy / "karni.yaml",
+        ('  terms: {version: "2026-11", url: /terms/}\n',
+         '  terms: {version: "2026-11", url: /terms/}\n  api_cache: {ttl: 120}\n'),
+        ("        search: [name]\n", "        search: [name]\n        cache: 600\n"),
+        ("          write: owned:member\n", "          write: owned:member\n        cache: false\n"),
+    )  # fmt: skip
+    code, out = _build("--verbose")
+    assert code == 0, out
+    assert "+ api_cache: KARNI_API_CACHE, KARNI_API_CACHE_TTL 120" in out
+    assert "~ classes.Studio cache: none -> 600" in out
+    settings = (copy / "config" / "settings.py").read_text()
+    block = settings[settings.index("# karni:spec start") : settings.index("# karni:spec end")]
+    assert "KARNI_API_CACHE = True\nKARNI_API_CACHE_TTL = 120\n" in block
+    api = (copy / "classes" / "karni" / "api.py").read_text()
+    assert "    model = Studio\n" in api and "    cache = Cache(ttl=600)\n" in api
+    assert '    cache = Uncached(reason="spec")\n' in api
+    imports = next(line for line in api.splitlines() if line.startswith("from karni.api import"))
+    assert {"Cache", "Uncached"} <= set(imports.split("import ", 1)[1].split(", "))
+    # the project reads back what the spec says: a second build has nothing to do
+    assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
+    # turned off, the block leaves KARNI_API_CACHE to the environment
+    _edit(copy / "karni.yaml", ("  api_cache: {ttl: 120}\n", ""))
+    code, out = _build()
+    assert code == 0, out
+    settings = (copy / "config" / "settings.py").read_text()
+    assert "KARNI_API_CACHE =" not in settings
+
+
+def test_related_tabs_and_a_dashboard_page_are_built(copy: Path) -> None:
+    """Experimental (page blocks): related tabs on a detail page, and a dashboard page."""
+    _edit(
+        copy / "karni.yaml",
+        (
+            "  - Session: [list, detail, form]\n",
+            "  - Session: [list, {detail: {related: [Booking]}}, form]\n  - overview: dashboard\n",
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output.splitlines()
+    assert (
+        "  ~ Session: list, detail, form -> list, detail (related classes.Booking.session), form"
+        in plan
+    )
+    assert "  + overview: dashboard (rows per entity: Booking, Session, Studio)" in plan
+    code, out = _build()
+    assert code == 0, out
+    pages = copy / "frontend" / "src" / "pages" / "karni"
+    detail = (pages / "session-detail.tsx").read_text()
+    assert 'related={["bookings"]}' in detail
+    overview = (pages / "overview.tsx").read_text()
+    assert overview.startswith("// Written by karni build")
+    assert '    "studios", "sessions", "bookings",\n' in overview
+    assert "<ChartCard" in overview and overview.count("\n") <= 50
+    routes = (copy / "frontend" / "src" / "routes.tsx").read_text()
+    assert 'path: "/overview", component: OverviewPage' in routes
+    assert "frontend/src/pages/karni/overview.tsx" in record.load(copy).files
+    # The export reads both back: the project matches the spec, and a rebuild writes nothing.
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n", again.output
+    assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
+
+
+def test_markdown_field_groups_and_column_sets_are_built(copy: Path) -> None:
+    """Experimental (wide models): a markdown field, groups and column sets, in the model base."""
+    _edit(
+        copy / "karni.yaml",
+        (
+            '          price: "money:EUR"\n        owner: instructor\n',
+            (
+                '          price: "money:EUR"\n          notes: "markdown?"\n'
+                "        groups: {Class: [studio, title, starts_at], Details: [notes, price]}\n"
+                "        column_sets: {default: [title, starts_at], money: [title, price]}\n"
+                '        help: "One class on the timetable."\n'
+                "        owner: instructor\n"
+            ),
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output.splitlines()
+    assert "  + classes.Session.notes: markdown?" in plan
+    assert (
+        "  ~ classes.Session groups: none -> Class studio, title, starts_at, Details notes, price"
+        in plan
+    )
+    assert (
+        "  ~ classes.Session column_sets: none -> default title, starts_at, money title, price"
+        in plan
+    )
+    assert "  ~ classes.Session help: none -> One class on the timetable." in plan
+    code, out = _build()
+    assert code == 0, out
+    models = (copy / "classes" / "karni" / "models.py").read_text()
+    assert "    notes = MarkdownField(blank=True)\n" in models
+    assert "from karni.fields import MarkdownField, MoneyField" in models
+    assert '        help = "One class on the timetable."\n' in models
+    assert (
+        '        field_groups = {\n            "Class": ["studio", "title", "starts_at"],\n'
+        '            "Details": ["notes", "price"],\n        }\n'
+    ) in models
+    assert (
+        '        column_sets = {"default": ["title", "starts_at"], "money": ["title", "price"]}\n'
+    ) in models
+    # The fixture's Booking groups are field_groups too: no admin class is written for them.
+    assert '"Notes": ["note"]' in models and "AdminMeta" not in models
+    migration = max((copy / "classes" / "migrations").glob("0*_*.py")).read_text()
+    assert "karni.fields.MarkdownField(blank=True)" in migration
+    # The export reads them back: the project matches the spec, and a rebuild writes nothing.
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n", again.output
+    assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
+
+
+# escape hatches, projects built by hand, keys and databases -----------------------
+
+
+def _project(tmp_path: Path, mp: pytest.MonkeyPatch, name: str, spec: str) -> Path:
+    mp.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    root = _render(tmp_path, name)
+    (root / "karni.yaml").write_text(textwrap.dedent(spec))
+    _env(mp, root)
+    _frontend(mp)
+    _fast(mp)
+    return root
+
+
+STORE = """\
+    version: 1
+    app: {name: Store Ops}
+    apps:
+      stock:
+        entities:
+          Part:
+            fields: {sku: "str:20", name: str}
+            pk: bigint
+            access: code
+          Sale:
+            fields: {sku: "str:20", amount: int}
+            external: true
+            table: sales
+            database: warehouse
+          Mapping:
+            fields: {sku: "str:20", label: "str:80"}
+            database: warehouse
+    pages:
+      - home: dashboard
+      - Part: [list]
+      - reports: code
+    seed: {Part: 4, Mapping: 3}
+    """
+
+
+def test_bigint_keys_an_external_table_a_second_database_and_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _project(tmp_path, monkeypatch, "Store Ops", STORE)
+    settings = root / "config" / "settings.py"
+    settings.write_text(
+        settings.read_text()
+        + '\nDATABASES["warehouse"] = env.db_url("WAREHOUSE_DATABASE_URL")  # noqa: F821\n'
+    )
+    monkeypatch.setenv("WAREHOUSE_DATABASE_URL", f"sqlite:///{root / 'warehouse.sqlite3'}")
+    with sqlite3.connect(root / "warehouse.sqlite3") as db:
+        db.execute("create table sales (id integer primary key, sku varchar(20), amount int)")
+    code, out = _build("--verbose")
+    assert code == 0, out
+    karni = (root / "stock" / "karni" / "models.py").read_text()
+    assert "class Part(BigIntBaseModel):" in karni
+    assert "class Sale(models.Model):" in karni and 'db_table = "sales"' in karni
+    assert "class Mapping(UUIDModel, TimestampedModel):" in karni
+    api = (root / "stock" / "karni" / "api.py").read_text()
+    assert "# access: code in karni.yaml: stock/viewsets.py declares it." in api
+    assert "    access = Granted()\n" in (root / "stock" / "viewsets.py").read_text()
+    assert not (root / "stock/tests/karni/test_mapping.py").exists()  # not on default
+    assert not (root / "stock/tests/karni/test_sale.py").exists()  # another system's table
+    assert _rows(root, "select count(*) from stock_part") == [(4,)]
+    with sqlite3.connect(root / "warehouse.sqlite3") as db:
+        assert db.execute("select count(*) from stock_mapping").fetchall() == [(3,)]
+    assert "pages/karni/reports.tsx" not in out and "+ reports: code (not managed)" in out
+    # the project's own page at /reports: access: code and the page match the spec as they are
+    (root / "frontend/src/pages/reports.tsx").write_text(
+        'import { Page, Stat } from "@karni/ui";\n\nexport default function ReportsPage() {\n'
+        '    return <Page title="Reports"><Stat label="Parts" value={4} /></Page>;\n}\n'
+    )
+    route = (
+        '    createRoute({ getParentRoute: () => root, path: "/reports", component: ReportsPage }),'
+    )
+    _edit(
+        root / "frontend/src/routes.tsx",
+        (
+            "// karni:page-imports",
+            'import ReportsPage from "./pages/reports";\n// karni:page-imports',
+        ),
+        ("    // karni:routes", f"{route}\n    // karni:routes"),
+    )
+    _edit(
+        root / "stock" / "viewsets.py",
+        (
+            "    access = Granted()\n",
+            '    access = Access(read=Granted(), write=HasRole("staff"))\n',
+        ),
+        ("from karni.api import Granted\n", "from karni.api import Access, Granted, HasRole\n"),
+    )
+    code, out = _build()  # Karni's test of Part follows the project's own access
+    assert code == 0 and "files       1 written: 1 Karni's" in out, out
+    assert (
+        'assert_crud(PartViewSet, "staff")' in (root / "stock/tests/karni/test_part.py").read_text()
+    )
+    assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
+    # a page karni.yaml wants where the project has its own is refused
+    _edit(root / "karni.yaml", ("  - reports: code\n", "  - reports: blank\n"))
+    code, out = _build()
+    assert code == 1 and "error C275: frontend/src/routes.tsx already routes /reports" in out
+
+
+def test_a_project_built_by_hand_gets_only_what_is_new(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _project(tmp_path, monkeypatch, "Hand Shop", "version: 1\napp: {name: Hand Shop}\n")
+    runner = CliRunner()
+    for args in (
+        ["make", "app", "shop"],
+        ["make", "model", "Product", "name:str:120", "--app", "shop", "--with", "viewset"],
+        ["make", "migration"],
+    ):
+        assert runner.invoke(app, args).exit_code == 0, args
+    exported = runner.invoke(app, ["spec", "export", "-o", "karni.yaml", "--force"])
+    assert exported.exit_code == 0, exported.output
+    models = root / "shop" / "models.py"
+    hand = models.read_text()
+    assert 'Product: {fields: {name: "str:120"}}' in (root / "karni.yaml").read_text()
+    (root / "karni.yaml").write_text(
+        textwrap.dedent(
+            """\
+            version: 1
+            app: {name: Hand Shop}
+            apps:
+              shop:
+                entities:
+                  Product: {fields: {name: "str:120", color: "str:30?"}}
+                  Invoice: {fields: {product: "fk:Product", total: "money:EUR"}}
+            pages:
+              - home: dashboard
+            """
+        )
+    )
+    plan = runner.invoke(app, ["plan", "--offline"]).output
+    assert "  + shop.Product.color: str:30? (not managed)" in plan
+    assert "  + shop.Invoice: (product fk:Product, total money:EUR)" in plan
+    code, out = _build()
+    assert code == 0, out
+    assert "Built. karni plan's 1 other change is in the project's own code" in out
+    text = models.read_text()
+    product = hand[hand.index("class Product(BaseModel):") :]
+    assert product in text and "color" not in text  # the hand-written model is untouched
+    assert text.endswith("class Invoice(karni.Invoice):\n" + render.STUB_LINE + "\n")
+    assert record.load(root).entities == ["shop.Invoice"]
+
+
+GEO = """\
+    version: 1
+    app: {name: Geo Shop}
+    apps:
+      geo:
+        entities:
+          Region: {fields: {name: str}, tree: true, search: name}
+          Category:
+            fields: {name: str}
+            tree: ordered
+            order: [position]
+            groups: {Main: [name]}
+          Product: {fields: {name: str, category: "fk:Category?", regions: "m2m:Region?"}}
+    pages:
+      - home: dashboard
+      - Region: [list]
+    seed: {Region: 3, Category: 3, Product: 2}
+    """
+
+
+def test_a_tree_scope_grant_is_built_into_the_settings_block(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    roles = (
+        "    roles:\n"
+        '      staff: {name: Staff, system: true, grants: {"*": all}}\n'
+        "      buyer:\n"
+        "        grants: {geo.product:view: 'tree:category', geo.product:change: 'tree:regions'}\n"
+    )
+    root = _project(
+        tmp_path, monkeypatch, "Geo Shop", GEO.replace("    apps:\n", roles + "    apps:\n")
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "+ buyer: grants geo.product:change tree:regions, geo.product:view tree:category" in (
+        plan
+    ), plan
+    code, out = _build()
+    assert code == 0, out
+    text = (root / "config" / "settings.py").read_text()
+    block = text[text.index("# karni:spec start") : text.index("# karni:spec end")]
+    assert '"geo.product:view": "tree:category"' in block, block
+    assert '"geo.product:change": "tree:regions"' in block
+    # the sync after migrate resolved both paths to the tree models (E490 otherwise)
+    assert _rows(
+        root,
+        "select scope, scope_path from karni_accounts_rolepermission r "
+        "join karni_accounts_role o on o.id = r.role_id where o.slug = 'buyer' "
+        "order by scope_path",
+    ) == [("tree", "category"), ("tree", "regions")]
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n"
+
+
+def test_a_tree_entity_builds_a_tree_model_and_a_switch_back_is_risky(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _project(tmp_path, monkeypatch, "Geo Shop", GEO)
+    code, out = _build()
+    assert code == 0, out
+    karni = (root / "geo" / "karni" / "models.py").read_text()
+    assert "from karni.models import BaseModel, OrderedTreeModel, TreeModel\n" in karni
+    assert "class Region(TreeModel, BaseModel):" in karni
+    assert "class Category(OrderedTreeModel, BaseModel):" in karni
+    assert "parent =" not in karni and "position =" not in karni  # the mixins add them
+    # no AdminMeta: the fields in no group (parent, position) go into the admin's Other group
+    assert "AdminMeta" not in karni and 'field_groups = {"Main": ["name"]}' in karni
+    (migration,) = (root / "geo" / "migrations").glob("0001_*.py")
+    text = migration.read_text().replace('"', "'")  # a migration may not be formatted
+    assert len(re.findall(r"\('parent',\s+models\.ForeignKey\(", text)) == 2
+    assert "on_delete=django.db.models.deletion.PROTECT" in text
+    assert "related_name='children'" in text and "to='geo.region'" in text
+    assert re.search(r"\('position',\s+models\.PositiveIntegerField\(", text)
+    assert _rows(root, "select count(*) from geo_region") == [(3,)]
+    assert _rows(root, "select count(*) > 0 from geo_region where parent_id is null") == [(1,)]
+    # the project reads back as the spec: tree is detected, so nothing is left to build
+    assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
+    _edit(root / "karni.yaml", ("tree: true, search: name", "search: name"))
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "! ~ geo.Region tree: true -> false" in plan, plan
+    code, out = _build()
+    assert code == 1 and "error C270" in out, out
+
+
+def test_taxonomies_build_the_many_to_many_and_a_tree_scope_on_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spec = GEO.replace(
+        '          Product: {fields: {name: str, category: "fk:Category?", regions: "m2m:Region?"}}\n',
+        "          Product:\n"
+        "            fields: {name: str}\n"
+        "            taxonomies: {region: Region, category: Category}\n"
+        "            groups: {Main: [name]}\n",
+    ).replace(
+        "    apps:\n",
+        "    roles:\n"
+        '      staff: {name: Staff, system: true, grants: {"*": all}}\n'
+        "      buyer: {grants: {geo.product:view: 'tree:region'}}\n"
+        "    apps:\n",
+    )
+    root = _project(tmp_path, monkeypatch, "Geo Shop", spec)
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "taxonomies category geo.Category, region geo.Region" in plan, plan
+    code, out = _build()
+    assert code == 0, out
+    karni = (root / "geo" / "karni" / "models.py").read_text()
+    assert 'taxonomies = {"region": "geo.Region", "category": "geo.Category"}' in karni, karni
+    assert "region =" not in karni  # class Karni: taxonomies adds the field
+    assert "AdminMeta" not in karni and 'field_groups = {"Main": ["name"]}' in karni
+    (migration,) = (root / "geo" / "migrations").glob("0001_*.py")
+    text = migration.read_text().replace('"', "'")
+    assert re.search(r"\('region',\s+models\.ManyToManyField\(", text), text
+    assert "to='geo.region'" in text and "related_name='+'" in text
+    tables = "select name from sqlite_master where type = 'table' and name like 'geo_product_%'"
+    assert sorted(_rows(root, tables)) == [("geo_product_category",), ("geo_product_region",)]
+    # the sync after migrate resolved tree:region through the taxonomy (E490 otherwise)
+    assert _rows(
+        root,
+        "select scope, scope_path from karni_accounts_rolepermission r "
+        "join karni_accounts_role o on o.id = r.role_id where o.slug = 'buyer'",
+    ) == [("tree", "region")]
+    # the project reads back as the spec: the taxonomies come back from the facts
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n", again.output
+    _edit(
+        root / "karni.yaml",
+        ("taxonomies: {region: Region, category: Category}", "taxonomies: {region: Region}"),
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "geo.Product taxonomies" in plan and "the tags under category are dropped" in plan, plan
+    code, out = _build()
+    assert code == 1 and "error C270" in out, out
+
+
+# the output -----------------------------------------------------------------------
+
+
+def test_dry_run_writes_nothing_and_the_json_snapshot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    require_modules("karni-payments", "karni-site")
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    root = _render(tmp_path, "Harbour Yoga", "site+app")
+    shutil.copy(FIXTURE, root / "karni.yaml")
+    _env(monkeypatch, root)
+    before = _files(root)
+    code, out = _build("--dry-run")
+    assert code == 0 and out.endswith("(dry run: nothing written)\n")
+    assert "would create classes/karni/models.py (karni)" in out
+    assert "would create classes/models.py (project)" in out
+    result = CliRunner().invoke(app, ["build", "--dry-run", "--json"])
+    assert _files(root) == before
+    data = json.loads(result.output)
+    assert output.checked(data) == data and data["status"] == "dry run"
+    rendered = json.dumps(data, indent=2) + "\n"
+    if os.environ.get("KARNI_UPDATE_SNAPSHOTS") == "1":
+        SNAPSHOT.write_text(rendered)
+    assert SNAPSHOT.read_text() == rendered, (
+        "The fixture's build changed. Check the difference, then rewrite the snapshot: "
+        "KARNI_UPDATE_SNAPSHOTS=1 pytest tests/test_build.py"
+    )
+
+
+def test_the_published_build_schema_is_current() -> None:
+    expected = json.dumps(output.json_schema(), indent=2) + "\n"
+    assert BUILD_SCHEMA.read_text() == expected, (
+        "docs/assets/karni-build.schema.json is stale. Regenerate it: "
+        "python -m karni_cli.builder.output > docs/assets/karni-build.schema.json"
+    )
+
+
+def test_an_invalid_spec_builds_nothing(copy: Path) -> None:
+    (copy / "karni.yaml").write_text("version: 1\napp: {name: X}\nfeatures: {two_factor: 3}\n")
+    code, out = _build("--json")
+    data = json.loads(out)
+    assert code == 1 and data["status"] == "invalid" and data["issues"][0]["code"] == "C213"
+
+
+def test_hand_edit_lines_and_the_record() -> None:
+    edit = record.hand_edit(
+        "a.py", "one\nTWO\nthree\nfour\nFIVE\n", "one\ntwo\nthree\nfour\nfive\n"
+    )
+    assert edit.lines == (2, 5) and edit.shown_lines() == "lines 2, 5"
+    assert edit.diff == ("-two", "+TWO", "-five", "+FIVE")
+    assert record.hand_edit("a.py", "x\ny\nz\n", "x\n").shown_lines() == "lines 2-3"
+    rec = record.Record(spec="s", entities=["b.B", "a.A"], files={"z": "1", "a": "2"})
+    assert json.loads(rec.text())["entities"] == ["a.A", "b.B"]
+    assert list(json.loads(rec.text())["files"]) == ["a", "z"]
+
+
+def test_a_new_table_the_spec_seeds_none_of_starts_empty(copy: Path) -> None:
+    """Demo rows go only where seed names a count, as karni plan shows: none mix with real ones."""
+    spec = copy / "karni.yaml"
+    _edit(
+        spec,
+        (
+            "pages:\n",
+            (
+                "      Note:\n        fields: {title: str}\n"
+                '        access: {read: public, write: "role:staff"}\npages:\n'
+            ),
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan"])
+    assert "+ Note" not in plan.output.split("\nseed\n", 1)[-1]  # the plan seeds no Note
+    code, out = _build()
+    assert code == 0, out
+    assert _rows(copy, "select count(*) from classes_note") == [(0,)]
+    seed_line = next(line for line in out.splitlines() if line.startswith("seed "))
+    assert "names none of the new tables, so they start empty" in seed_line, seed_line
+    assert "karni seed fills them with demo rows" in seed_line
+
+
+def test_seeding_skips_a_table_that_holds_rows(copy: Path) -> None:
+    state = {"seed": ["classes.Studio"], "user": "karni_accounts.User"}
+    assert (
+        run._seed(copy, state, run.Options()) == "skipped: the tables it created hold rows already"
+    )
+
+
+# a large seed count (experimental): the plan shows its volume, the build seeds it in bulk
+
+
+def test_a_large_seed_count_is_planned_with_its_time_and_seeded_in_bulk(copy: Path) -> None:
+    _edit(
+        copy / "karni.yaml",
+        (
+            "pages:\n",
+            (
+                '      Visit:\n        fields: {studio: fk:Studio, note: "str:80?", '
+                'day: date}\n        access: {read: public, write: "role:staff"}\npages:\n'
+            ),
+        ),
+        ("Booking: 200}", "Booking: 200, Visit: 2500}"),
+    )
+    code, out = _build("--dry-run")
+    assert code == 0, out
+    assert "  + Visit: 2500, 2,500 rows in bulk, seconds" in out
+    code, out = _build()
+    assert code == 0, out
+    seed_line = next(line for line in out.splitlines() if line.startswith("seed "))
+    assert "Visit 2500 in bulk (" in seed_line, seed_line
+    assert _rows(copy, "select count(*) from classes_visit") == [(2500,)]
+    studios = {row[0] for row in _rows(copy, "select id from classes_studio")}
+    used = {row[0] for row in _rows(copy, "select distinct studio_id from classes_visit")}
+    assert used <= studios and len(used) == len(studios)  # drawn from the studios there are
+    assert "count = 2500" in (copy / "classes/karni/seeds.py").read_text()
+
+
+def test_the_settings_block_writes_the_api_version_only_when_set() -> None:
+    from karni_cli.builder import render
+    from karni_cli.spec.validate import validate_text
+
+    def block(text: str) -> str:
+        spec = validate_text(text).spec
+        assert spec is not None
+        return render.settings_block(spec, 100)
+
+    assert "KARNI_API_VERSION" not in block("version: 1\napp: {name: X}\n")
+    assert 'KARNI_API_VERSION = "v1"' in block("version: 1\napp: {name: X, api_version: v1}\n")
+
+
+def test_a_menu_link_to_an_unwritten_code_page_is_one_clear_stop() -> None:
+    from karni_cli.builder import run as run_mod
+
+    out = (
+        "navigation: karni.E533: Navigation item 'A > B' links to /insights, which no page of "
+        "the frontend serves.\nnavigation: karni.E533: Navigation item 'C' links to /players, "
+        "which no page of the frontend serves.\nkarni.E702: found 2 problem(s)"
+    )
+    assert run_mod._unserved_routes(out) == ["/insights", "/players"]
+    assert run_mod._unserved_routes(out + "\nx: karni.E101: other") == []
+
+
+def test_a_feature_that_needs_an_extra_names_it_and_stops_early_when_it_is_missing(
+    copy: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """two_factor and social_login need karni[2fa] and karni[social-token]: the build says so."""
+    from karni_cli.builder import run as build_run
+    from karni_cli.commands.add import add_extra_text
+    from karni_cli.spec import schema
+
+    assert add_extra_text('[project]\ndependencies = ["karni>=0.5"]\n', "2fa") == (
+        '[project]\ndependencies = ["karni[2fa]>=0.5"]\n'
+    )
+    assert add_extra_text('[project]\ndependencies = ["karni[2fa]"]\n', "2fa") is None
+    spec = schema.Spec.model_validate(
+        {
+            "version": 1,
+            "app": {"name": "x"},
+            "features": {"two_factor": True, "social_login": ["google"]},
+        }
+    )
+    assert build_run.feature_extras(spec) == ["2fa", "social-token"]
+    assert (
+        build_run.feature_extras(schema.Spec.model_validate({"version": 1, "app": {"name": "x"}}))
+        == []
+    )
+
+    monkeypatch.setattr(project_mod, "project_has_module", lambda root, name: False)
+    with pytest.raises(build_run.Stop) as stop:
+        build_run._require_extras(copy, ["2fa"])
+    assert stop.value.code == "C841" and "karni[2fa]" in stop.value.message
+    assert "uv pip install" in (stop.value.next or "")
+    monkeypatch.setattr(project_mod, "project_has_module", lambda root, name: True)
+    build_run._require_extras(copy, ["2fa"])  # installed: nothing to say
+
+
+def test_a_spec_that_names_a_recipe_says_its_domain_code_was_not_written(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The /new-app flow: karni.yaml started from a recipe in an existing project."""
+    require_modules("karni-payments")  # the booking recipe takes payments
+    recipe = REPO_ROOT / "packages" / "karni-cli" / "karni_cli" / "recipes" / "booking"
+    root = _project(tmp_path, monkeypatch, "Yoga Flow", (recipe / "karni.yaml").read_text())
+    code, out = _build()
+    assert code == 0, out
+    assert "recipe booking's own code" in out and "karni new --recipe booking" in out
+    # a command prints it: never a path into the installed package, never another recipe's rule
+    assert "karni recipes show booking --files prints it to copy from." in out
+    assert "karni_cli/recipes" not in out and "capacity rule" not in out
+    assert not (root / "bookings" / "tests" / "test_capacity.py").exists()
+    _, again = _build()
+    assert "was not written" not in again  # said once, with the build that wrote the spec

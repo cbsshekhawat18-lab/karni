@@ -1,0 +1,31 @@
+{% extends "admin/change_form.html" %}
+{% block after_field_sets %}{{ block.super }}
+{% if chart_preview %}
+<fieldset class="module karni-chart-preview">
+  <h2>Preview</h2>
+  {% if chart_preview.error %}
+    <p class="errornote">{{ chart_preview.error }}</p>
+  {% elif not chart_preview.rows %}
+    <p>No data: the source has no rows for these filters.</p>
+  {% else %}
+    <table>
+      <caption>The saved chart's data, as you may see it.</caption>
+      <thead>
+        <tr>
+          <th scope="col">{{ chart_preview.header }}</th>
+          {% for name in chart_preview.series %}<th scope="col">{{ name }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in chart_preview.rows %}
+        <tr>
+          <th scope="row">{{ row.label }}</th>
+          {% for value in row.values %}<td>{% if value is None %}-{% else %}{{ value }}{% endif %}</td>{% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</fieldset>
+{% endif %}
+{% endblock %}

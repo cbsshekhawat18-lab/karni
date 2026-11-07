@@ -53,6 +53,11 @@ MODULES = [
     Module(
         "impersonation", "IMP", REPO / "modules" / "karni-impersonation" / "karni_impersonation"
     ),
+    Module("site", "SITE", REPO / "modules" / "karni-site" / "karni_site"),
+    Module("charts", "CHART", REPO / "modules" / "karni-charts" / "karni_charts"),
+    Module("reports", "REPORT", REPO / "modules" / "karni-reports" / "karni_reports"),
+    Module("ai", "AI", REPO / "modules" / "karni-ai" / "karni_ai"),
+    Module("storage", "STORE", REPO / "modules" / "karni-storage" / "karni_storage"),
 ]
 SOURCES = [PACKAGE, *(module.source for module in MODULES)]
 #: Set where every module is installed (CI's Python jobs): a missing module
@@ -101,7 +106,7 @@ def test_registry_entries_are_complete_and_well_formed() -> None:
     entries = errorcodes.registry()
     assert errorcodes.problems(entries.values()) == []
     assert len(entries) == len(errorcodes.CODES) + sum(
-        1 for code in entries if not re.match(r"^[EW]\d{3}$", code)
+        1 for code in entries if not re.match(r"^(?:[EW]\d{3}|SUG\d{3})$", code)
     )
 
 
@@ -124,8 +129,11 @@ def _project(module: Module | None) -> str:
 
 
 def test_core_codes_use_the_e_and_w_prefixes() -> None:
-    core = {entry.code for entry in errorcodes.CODES}
+    """Errors and warnings are E and W, and the suggestions (never failures) are SUG."""
+    core = {entry.code for entry in errorcodes.CODES if entry.kind != "suggestion"}
     assert all(re.match(r"^[EW]\d{3}$", code) for code in core)
+    suggestions = {entry.code for entry in errorcodes.CODES if entry.kind == "suggestion"}
+    assert suggestions and all(re.match(r"^SUG\d{3}$", code) for code in suggestions)
 
 
 @pytest.mark.parametrize("module", MODULES, ids=_project)
@@ -214,7 +222,9 @@ def _codes_in_source(roots: Iterable[Path]) -> dict[str, list[str]]:
                 isinstance(t, ast.Name) and t.id == "code" for t in node.targets
             ):
                 found = _literal(node.value)
-            if found and re.match(r"^(?:[EW]\d{3}|PAY\d{3}|APR\d{3}|IMP\d{3})$", found):
+            if found and re.match(
+                r"^(?:[EW]\d{3}|PAY\d{3}|APR\d{3}|IMP\d{3}|SITE\d{3}|REPORT\d{3}|AI\d{3})$", found
+            ):
                 used.setdefault(found, []).append(f"{_rel(path)}:{node.lineno}")  # type: ignore[attr-defined]
     return used
 

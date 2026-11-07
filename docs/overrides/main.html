@@ -2,6 +2,8 @@
 {% extends "base.html" %}
 
 {% block extrahead %}
+  {#- Jost, the wordmark's face, for headings and buttons (Inter and JetBrains Mono come from theme.font). -#}
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600&display=swap" />
   {% set brand = config.site_url ~ "assets/brand/" %}
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="{{ config.site_name }}" />

@@ -6,15 +6,22 @@ promised denials, pagination, filtering and the OpenAPI contract, in one
 call) and — when the viewset's ``access`` reads through ``Owned(...)``, or
 through ``Granted()`` with a role whose grant is ``own`` / ``related`` —
 ``assert_isolated`` (another scope's rows are out of reach). The role is
-``--role``, else the first ``HasRole("...")`` the viewset declares, else for
+``--role``, else the first ``HasRole("...")`` the viewset's ``write``
+predicate names (then ``create``, then any other), so the test exercises
+real creates, updates and deletes instead of confirming refusals, else for
 ``Granted()`` the first role in ``KARNI_ROLES`` (the shipped ``user`` when
 the project declares none) whose grants reach the model, else any signed-in
-user. The model needs a viewset first (``karni make viewset``).
+user. A wildcard ``own`` grant reaches only a model with an owner field and a
+``related:<key>`` one only a model with that scope path, as at boot. A
+``--role`` the project does not declare is refused (``C830``). The model needs
+a viewset first (``karni make viewset``).
 """
 
 from __future__ import annotations
 
+import ast
 import textwrap
+from dataclasses import dataclass
 
 import typer
 
@@ -22,6 +29,7 @@ from karni_cli.generators.core import (
     APP_OPTION,
     DRY_RUN_OPTION,
     FORCE_OPTION,
+    SETTINGS,
     App,
     Workspace,
     project_workspace,
@@ -32,11 +40,13 @@ from karni_cli.generators.introspect import (
     declared_roles,
     grant_scopes,
     granted_reads,
-    owned_paths,
+    owned_reads,
+    reading_roles,
     require_model,
-    role_names,
+    scope_fits,
     viewset_for,
     viewset_module,
+    writing_roles,
 )
 from karni_cli.generators.naming import require_pascal, snake
 from karni_cli.generators.pysource import Import, docstring, ensure_imports, pystr
@@ -54,11 +64,19 @@ def render(
     role: str | None,
     isolation: bool,
     note: str | None = None,
+    *,
+    isolation_role: str | None | bool = True,
 ) -> str:
-    """The test module's text (ruff-clean in the project's layout)."""
+    """The test module's text (ruff-clean in the project's layout).
+
+    ``isolation_role``: the role ``assert_isolated`` acts as (``True``: ``role``,
+    ``None``: any signed-in user, for a role that reads every row).
+    """
     rel = "tests/test.py"
     line = ws.line_length
     role_arg = f", {pystr(role)}" if role else ""
+    isolated_as = role if isolation_role is True else isolation_role
+    isolated_arg = f", {pystr(isolated_as)}" if isinstance(isolated_as, str) else ""
     lines = [
         docstring(
             f"The {model} API: CRUD, access" + (" and isolation" if isolation else "") + ".",
@@ -75,7 +93,7 @@ def render(
         lines += [
             "",
             "    def test_owners_cannot_reach_each_others_rows(self) -> None:",
-            f"        self.assert_isolated({viewset}{role_arg})",
+            f"        self.assert_isolated({viewset}{isolated_arg})",
         ]
     elif note:
         wrapped = textwrap.wrap(f"No assert_isolated: {note}", width=max(line - 6, 40))
@@ -99,10 +117,20 @@ def no_isolation_reason(ws: Workspace, model: ModelInfo, *, explicit: bool) -> s
     ``--role`` whose grant is ``all`` is the caller's choice and says nothing.
     """
     key = f"{model.app.label}.{model.name.lower()}:view"
-    scopes = grant_scopes(declared_roles(ws), key)
+    scopes = grant_scopes(declared_roles(ws), key, scope_fits(ws, model))
     custom = sorted(
         f"{slug!r} ({scope})" for slug, scope in scopes.items() if scope.startswith("custom:")
     )
+    trees = sorted(
+        f"{slug!r} ({scope})" for slug, scope in scopes.items() if scope.startswith("tree:")
+    )
+    if trees and not custom:
+        return (
+            f"{', '.join(trees)} reach {key} through a tree scope, which assert_isolated "
+            "cannot drive: the rows depend on the nodes each user holds. Test the subtree in a "
+            "test of your own, with a user grant (karni.accounts.grants.grant(..., "
+            "targets=[node.pk]))."
+        )
     if custom:
         return (
             f"{', '.join(custom)} reach {key} through a custom scope, which assert_isolated "
@@ -127,7 +155,7 @@ def granted_role(ws: Workspace, model: ModelInfo, role: str | None) -> tuple[str
     ``isolates`` says whether that role's grant partitions the rows.
     """
     key = f"{model.app.label}.{model.name.lower()}:view"
-    scopes = grant_scopes(declared_roles(ws), key)
+    scopes = grant_scopes(declared_roles(ws), key, scope_fits(ws, model))
     if role is not None:
         return role, _scoped(scopes.get(role))
     for slug, scope in scopes.items():
@@ -138,20 +166,34 @@ def granted_role(ws: Workspace, model: ModelInfo, role: str | None) -> tuple[str
     return None, False
 
 
-def plan(ws: Workspace, app: App, model_name: str, *, role: str | None = None) -> str:
-    """Plan the test module for ``model_name``; returns its path relative to the project."""
-    model = require_model(ws, app, require_pascal(model_name, "Model"))
-    found = viewset_for(ws, model.app, model.name)
-    if found is None:
-        raise CliError(
-            f"No viewset routes {model.name}. Create it first: karni make viewset "
-            f"{model.name} --app {model.app.label} (the test drives the resource's URLs).",
-            code="C105",
-        )
-    path, cls = found
-    roles = role_names(cls)
+@dataclass(frozen=True)
+class Choice:
+    """Who a resource's test acts as, and whether it checks isolation (:func:`choose`)."""
+
+    role: str | None
+    #: `` + owner isolation``, `` + grant isolation`` or empty: what the summary line says.
+    how: str
+    #: Why no ``assert_isolated`` is written, when a reader would expect one.
+    note: str | None
+    #: The role ``assert_isolated`` acts as: ``role``, or ``None`` when ``role`` reads every row.
+    isolation_role: str | None = None
+
+    @property
+    def isolates(self) -> bool:
+        return bool(self.how)
+
+
+def choose(ws: Workspace, model: ModelInfo, cls: ast.ClassDef, role: str | None) -> Choice:
+    """The test's role and isolation for the viewset class ``cls`` (``karni build`` reuses it).
+
+    ``role`` when given, else the first ``HasRole`` the class's ``write``
+    names (then ``create``, then any other). ``Owned(...)`` reads give the
+    owner isolation check. ``Granted()`` reads take the role from
+    ``KARNI_ROLES`` (see :func:`granted_role`).
+    """
+    roles = writing_roles(cls)
     chosen = role if role is not None else (roles[0] if roles else None)
-    owned = bool(owned_paths(cls))
+    owned = bool(owned_reads(cls))
     granted = not owned and granted_reads(cls)
     how = " + owner isolation" if owned else ""
     note: str | None = None
@@ -165,13 +207,84 @@ def plan(ws: Workspace, app: App, model_name: str, *, role: str | None = None) -
                 f"no role in KARNI_ROLES grants {model.app.label}.{model.name.lower()}:view. "
                 "As any signed-in user the test is refused everything. Pass --role"
             )
+    # a role the read rule admits outright sees every row: the isolation check acts as a user
+    isolated_as = None if owned and chosen in reading_roles(cls) else chosen
+    return Choice(chosen, how, note, isolated_as)
+
+
+def project_roles(ws: Workspace) -> set[str] | None:
+    """The role slugs the project declares: ``KARNI_ROLES`` plus the added modules' roles.
+
+    ``None`` when ``KARNI_ROLES`` is computed, so the roles cannot be read
+    without Django.
+    """
+    from karni_cli.settings_edit import block_entries
+    from karni_cli.spec.validate import MODULE_ROLES
+
+    roles = declared_roles(ws)
+    if not roles and "KARNI_ROLES" in (ws.read(SETTINGS) or ""):
+        return None
+    found = set(roles)
+    for entry in block_entries(ws.read(SETTINGS) or ""):
+        package = entry.split(".", 1)[0]
+        if package.startswith("karni_"):
+            found |= set(MODULE_ROLES.get(package.removeprefix("karni_"), ()))
+    return found
+
+
+def require_role(ws: Workspace, role: str) -> None:
+    """Refuse a ``--role`` the project does not declare (``C830``)."""
+    roles = project_roles(ws)
+    if roles is None or role in roles:
+        return
+    listing = ", ".join(sorted(roles)) or "none"
+    raise CliError(
+        f"--role {role!r}: the project declares no such role (declared: {listing}). A user "
+        "holding it would be refused every request. Pass a declared role, or add it to "
+        "KARNI_ROLES in config/settings.py first.",
+        code="C830",
+    )
+
+
+def plan(ws: Workspace, app: App, model_name: str, *, role: str | None = None) -> str:
+    """Plan the test module for ``model_name``; returns its path relative to the project."""
+    model = require_model(ws, app, require_pascal(model_name, "Model"))
+    if role is not None:
+        require_role(ws, role)
+    found = viewset_for(ws, model.app, model.name)
+    if found is None:
+        raise CliError(
+            f"No viewset routes {model.name}. Create it first: karni make viewset "
+            f"{model.name} --app {model.app.label} (the test drives the resource's URLs).",
+            code="C105",
+        )
+    path, cls = found
+    choice = choose(ws, model, cls, role)
+    chosen, how, note = choice.role, choice.how, choice.note
+    declared = project_roles(ws) if role is None and chosen else None
+    if declared is not None and chosen not in declared:
+        ws.note(
+            f"note: {cls.name}'s access names role {chosen!r}, which the project does not "
+            f"declare (declared: {', '.join(sorted(declared))}). The test fails until "
+            "KARNI_ROLES declares it."
+        )
     module = viewset_module(ws, model.app, path)
     tests = model.app.file("tests")
     init = tests / "__init__.py"
     if not ws.exists(init):
         ws.create(init, "")
     target = tests / f"test_{snake(model.name)}.py"
-    ws.create(target, render(ws, model.name, cls.name, module, chosen, bool(how), note))
+    text = render(
+        ws,
+        model.name,
+        cls.name,
+        module,
+        chosen,
+        bool(how),
+        note,
+        isolation_role=choice.isolation_role,
+    )
+    ws.create(target, text)
     who = f"role {chosen!r}" if chosen else "any signed-in user"
     ws.note(f"test: {cls.name} as {who}{how}")
     if note:
@@ -187,9 +300,11 @@ def command(
     role: str | None = typer.Option(
         None,
         "--role",
-        help="The role the test acts as. By default it is the first HasRole the viewset "
-        "declares. For Granted() it is the first KARNI_ROLES role whose grant reaches the model "
-        "(own/related first). Otherwise the test uses any signed-in user.",
+        help="The role the test acts as, one the project declares (KARNI_ROLES or an added "
+        "module, C830 otherwise). By default it is the first HasRole the viewset's write "
+        "predicate names (then create, then read), so the test really writes. For Granted() "
+        "it is the first KARNI_ROLES role whose grant reaches the model (own/related first; "
+        "own needs an owner field). Otherwise the test uses any signed-in user.",
     ),
     app: str | None = APP_OPTION,
     force: bool = FORCE_OPTION,

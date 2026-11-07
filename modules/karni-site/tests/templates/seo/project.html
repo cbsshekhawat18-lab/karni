@@ -1,0 +1,2 @@
+{% extends "seo/base.html" %}{% load karni_site %}
+{% block content %}<h1>{{ project.title }}</h1>{% image project.photo width=800 alt=project.title loading="eager" %}<p>{{ project.summary }}</p>{% endblock %}

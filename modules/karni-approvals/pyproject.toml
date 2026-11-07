@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni-approvals"
-version = "0.4.0"
-description = "Maker-checker approvals for Karni: a second person approves high-value changes before they are written, with a queue, an API and an audit trail. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
+version = "0.5.0"
+description = "Maker-checker approvals for Karni: a second person approves high-value changes before they are written, with a queue, an API and an audit trail. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
@@ -23,17 +23,24 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Topic :: Office/Business",
     "Typing :: Typed",
 ]
 # Range-pinned per the module contract (docs/modules.md): karni 0.x minors
 # may break, so a module pins the minor it was built against.
-dependencies = ["karni>=0.4,<0.5"]
+dependencies = ["karni>=0.5,<0.6"]
 
 [project.urls]
 Homepage = "https://github.com/cbsshekhawat18-lab/karni"
 Documentation = "https://cbsshekhawat18-lab.github.io/karni/"
 Repository = "https://github.com/cbsshekhawat18-lab/karni"
 Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
+Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"
+
+# The catalog entry, karni_approvals/karni.module.toml: `karni modules`, `karni add`
+# and `karni remove` read it.
+[project.entry-points."karni.modules"]
+approvals = "karni_approvals"
 
 # The settings fragment: karni_settings() merges DEFAULTS into every project
 # that installs this module (new top-level names only).
@@ -54,11 +61,11 @@ dev = ["pytest>=8.2", "pytest-django>=4.8", "ruff>=0.5"]
 [tool.hatch.build.targets.wheel]
 packages = ["karni_approvals"]
 # `karni add` reads the agent guidance through importlib.resources after install.
-artifacts = ["karni_approvals/AGENTS.fragment.md", "karni_approvals/templates/**"]
+artifacts = ["karni_approvals/AGENTS.fragment.md", "karni_approvals/karni.module.toml", "karni_approvals/templates/**"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["ui/", "tests/"]
-artifacts = ["karni_approvals/AGENTS.fragment.md", "karni_approvals/templates/**"]
+artifacts = ["karni_approvals/AGENTS.fragment.md", "karni_approvals/karni.module.toml", "karni_approvals/templates/**"]
 
 [tool.ruff]
 target-version = "py312"

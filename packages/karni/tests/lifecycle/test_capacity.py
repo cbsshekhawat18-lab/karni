@@ -156,6 +156,19 @@ def test_a_raw_update_below_zero_is_rejected() -> None:
     assert isinstance(error, CapacityExceeded) and error.code == "E985"
 
 
+def test_an_unsaved_instance_never_shows_none_as_its_id() -> None:
+    """An integer key is drawn at the insert: before it, the error names no id."""
+    stock = _stock(1)
+    table = connection.ops.quote_name(Stock._meta.db_table)
+    with pytest.raises(IntegrityError) as raised, transaction.atomic():
+        _raw(f"UPDATE {table} SET remaining = remaining - 2 WHERE id = %s", [stock.pk.hex])
+    unsaved = Stock(name="VIP", quantity=1)
+    unsaved.pk = None  # what a BigIntBaseModel row is before its insert
+    error = translate(raised.value, model=Stock, instance=unsaved)
+    assert isinstance(error, CapacityExceeded)
+    assert error.details["id"] is None and "None" not in str(error)
+
+
 def test_a_raw_update_above_the_total_is_rejected() -> None:
     stock = _stock(1)
     table = connection.ops.quote_name(Stock._meta.db_table)

@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from django.apps import apps
 from django.core import checks
 from django.db import connection, models
 from django.test.utils import isolate_apps
@@ -273,6 +274,28 @@ def test_unindexed_search_filter_and_order_columns_warn(monkeypatch: pytest.Monk
     assert texts[2].startswith("TicketViewSet.search_fields searches Ticket.notes")
     hints = " ".join(str(message.hint) for message in messages)
     assert 'models.Index(fields=["status"]' in hints and "SearchField" in hints
+    assert 'SILENCED_SYSTEM_CHECKS = ["karni.W967"]' in hints
+
+
+def test_a_model_the_project_does_not_own_gets_no_index_advice(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A module's viewset over its own model: the project cannot edit that model."""
+    from django.contrib.contenttypes.models import ContentType
+
+    class TypeViewSet:
+        model = ContentType
+        filterset_fields = ["model"]
+
+    router = SimpleNamespace(registry=[("types", TypeViewSet, "t")])
+    monkeypatch.setattr("karni.api.routers.resolve_router", lambda: router)
+    assert field_checks.check_usage_indexes() == []
+    # the same declaration on a project model is advised on
+    monkeypatch.setattr(
+        "karni.testing._source.project_app_configs",
+        lambda **kwargs: [apps.get_app_config("contenttypes")],
+    )
+    assert _ids(field_checks.check_usage_indexes()) == ["karni.W967"]
 
 
 @isolate_apps("tests.fieldsapp")

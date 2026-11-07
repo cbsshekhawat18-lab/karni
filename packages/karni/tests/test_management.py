@@ -34,12 +34,15 @@ def test_context_command_shape() -> None:
     keys = [line.split(":", 1)[0] for line in out.getvalue().strip().split("\n")]
     order = (
         "MODELS",
+        "KEYS",
+        "API",
         "SCOPES",
         "VIEWSETS",
         "ROLES",
         "ACTIONS",
         "VISIBILITY",
         "PERF",
+        "FEATURES",
         "MODULES",
         "BASES",
     )
@@ -54,6 +57,8 @@ def test_bases_line_matches_real_exports() -> None:
     from karni.models import (  # noqa: F401
         AuditedModel,
         BaseModel,
+        BigIntBaseModel,
+        IntegerKeyModel,
         SoftDeleteModel,
         TimestampedModel,
         UUIDModel,
@@ -61,7 +66,9 @@ def test_bases_line_matches_real_exports() -> None:
 
     resolved = {
         "BaseModel",
+        "BigIntBaseModel",
         "UUIDModel",
+        "IntegerKeyModel",
         "TimestampedModel",
         "SoftDeleteModel",
         "AuditedModel",
@@ -80,7 +87,18 @@ def test_models_section_covers_testapp_and_skips_framework() -> None:
     from karni.introspect import CONTEXT_SKIP_APPS
 
     # The other test apps push the suite past MODEL_CAP; this test is about testapp.
-    with override_settings(KARNI_CONTEXT_SKIP_APPS=CONTEXT_SKIP_APPS | {"adminapp", "perfapp"}):
+    with override_settings(
+        KARNI_CONTEXT_SKIP_APPS=CONTEXT_SKIP_APPS
+        | {
+            "adminapp",
+            "perfapp",
+            "externalapp",
+            "contentapp",
+            "taxoapp",
+            "aggregateapp",
+            "searchapp",
+        }
+    ):
         output = build_context()
     models_line = _sections(output)["MODELS"]
     assert "Event(" in models_line
@@ -102,6 +120,54 @@ def test_field_cap_and_declaration_order(settings) -> None:
     event_fields = models_line.split("Event(")[1].split(")")[0].split(",")
     assert 0 < len(event_fields) <= 4
     assert event_fields[0] == "title"
+
+
+@pytest.mark.django_db
+def test_keys_section_names_each_model_key_type(settings) -> None:
+    from karni.introspect import key_type, keys_section
+    from tests.testapp.models import TEST_PK, Event, Part, Stamp
+
+    others = {cfg.label for cfg in apps.get_app_configs() if cfg.label != "testapp"}
+    settings.KARNI_CONTEXT_SKIP_APPS = others
+    assert key_type(Stamp) == "uuid" and key_type(Part) == "bigint"
+    assert key_type(Event) == TEST_PK
+    keys = _sections(build_context())["KEYS"]
+    assert keys == keys_section().removeprefix("KEYS: ")  # type: ignore[union-attr]
+    # The most common type covers "the rest", every other type names its models.
+    # Entry, Remark and Review get DEFAULT_AUTO_FIELD (BigAutoField).
+    if TEST_PK == "uuid":
+        assert keys == "bigint(Entry,Part,Reading,Remark,Review) uuid(rest)"
+    else:
+        assert keys == "uuid(Book,Label,Shelf,Stamp) bigint(rest)"
+
+
+def test_the_api_line_states_how_a_list_pages(settings, monkeypatch) -> None:
+    """The shape, page size and cap of a list, from the project's own paginator."""
+    from karni.introspect import api_section
+    from karni.pagination import KarniCursorPagination, KarniPageNumberPagination
+
+    line = api_section()
+    assert line is not None and _sections(build_context())["API"] == line.removeprefix("API: ")
+    monkeypatch.setattr(KarniPageNumberPagination, "page_size", 20)
+    settings.KARNI_MAX_PAGE_SIZE = 60
+    assert api_section() == (
+        "API: lists answer {count, next, previous, results}, 20 rows a page (?page=, "
+        "?page_size= up to 60), in the model's ordering, else newest first"
+    )
+    monkeypatch.setattr(KarniCursorPagination, "page_size", 20)
+    cursor = "karni.pagination.KarniCursorPagination"
+    settings.REST_FRAMEWORK = {**settings.REST_FRAMEWORK, "DEFAULT_PAGINATION_CLASS": cursor}
+    assert (api_section() or "").startswith(
+        "API: lists answer {next, previous, results}, 20 rows a page (?cursor=, ?page_size="
+    )
+
+
+def test_keys_section_says_all_when_every_key_is_one_type(monkeypatch) -> None:
+    from karni import introspect
+    from tests.testapp.models import Shelf, Stamp
+
+    monkeypatch.setattr(introspect, "_domain_models", lambda: [("Shelf", Shelf), ("Stamp", Stamp)])
+    assert introspect.keys_section() == "KEYS: uuid(all)"
 
 
 @pytest.mark.django_db
@@ -152,6 +218,23 @@ def test_karni_check_ok() -> None:
     assert "backend checks: ok" in out.getvalue()
 
 
+@pytest.mark.django_db
+def test_karni_check_seo_without_a_site_says_so(monkeypatch) -> None:
+    """F19: --seo with no SEO hooks installed names that there is no site to check."""
+    from karni.management.commands import karni_check
+
+    real = karni_check.entry_points
+    monkeypatch.setattr(
+        karni_check,
+        "entry_points",
+        lambda group: [] if group == "karni.checks.seo" else real(group=group),
+    )
+    out = StringIO()
+    call_command("karni_check", seo=True, stdout=out)
+    assert "no public site to check" in out.getvalue()
+    assert "backend checks: ok" in out.getvalue()
+
+
 def test_karni_check_hook_failures(monkeypatch) -> None:
     """Entry-point hooks: failures collected, exceptions recorded, exit nonzero."""
     import karni.management.commands.karni_check as cmd_mod
@@ -178,3 +261,38 @@ def test_karni_check_hook_failures(monkeypatch) -> None:
         call_command("karni_check", stderr=err)
     text = err.getvalue()
     assert "boom: exploded" in text and "layers: fat model detected" in text
+
+
+def test_karni_check_seo_runs_the_seo_hooks_only_when_asked(monkeypatch) -> None:
+    """--seo adds the karni.checks.seo group: its findings fail the run like any hook's."""
+    import karni.management.commands.karni_check as cmd_mod
+
+    class FakeEP:
+        def __init__(self, name, fn):
+            self.name = name
+            self._fn = fn
+
+        def load(self):
+            return self._fn
+
+    asked: list[str] = []
+
+    def groups(group):
+        asked.append(group)
+        if group == "karni.checks.seo":
+            return [FakeEP("site", lambda: ["SITE010: / has no <title>."])]
+        return []
+
+    monkeypatch.setattr(cmd_mod, "entry_points", groups)
+    out = StringIO()
+    call_command("karni_check", stdout=out)
+    assert asked == ["karni.checks"]
+    assert "backend checks: ok" in out.getvalue()
+
+    from django.core.management.base import CommandError
+
+    err = StringIO()
+    with pytest.raises(CommandError, match=r"E702: karni check found 1 problem"):
+        call_command("karni_check", seo=True, stderr=err)
+    assert asked[1:] == ["karni.checks", "karni.checks.seo"]
+    assert "site: SITE010: / has no <title>." in err.getvalue()

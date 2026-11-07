@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "karni": "0.4.0",
+  "models": 100,
+  "apps": 10,
+  "python": "3.12.12",
+  "machine": "Darwin arm64",
+  "calibration": 0.2636,
+  "build": 106.204,
+  "times": {
+    "check_cold": 8.052,
+    "check_cached": 4.354,
+    "check_one_edit": 4.115,
+    "check_changed": 3.199,
+    "context": 2.505,
+    "context_summary": 2.568,
+    "context_app": 2.539,
+    "tests": 83.806
+  },
+  "tests": "102 passed in 78.77s (0:01:18)",
+  "context_tokens": 1173
+}

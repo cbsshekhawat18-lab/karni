@@ -1,11 +1,11 @@
 ---
-description: "For maintainers: lockstep versions across the five packages, cutting a release, the release workflow with its dry-run mode, and one-time repository setup."
+description: "For maintainers: one version for every Python and npm package, cutting a release, the release workflow with its dry-run mode, and one-time repository setup."
 ---
 
 # Releasing Karni
 
 This page is for maintainers. Users, see [the stability promise](stability.md)
-and the migration notes ([0.4](migrations/0.4.md), [0.3](migrations/0.3.md), [0.2](migrations/0.2.md), [1.0](migrations/1.0.md)).
+and the migration notes ([0.5](migrations/0.5.md), [0.4](migrations/0.4.md), [0.3](migrations/0.3.md), [0.2](migrations/0.2.md), [1.0](migrations/1.0.md)).
 
 ## Lockstep versions
 
@@ -18,14 +18,29 @@ One tag publishes every package at the same version:
 | `karni-payments` | PyPI | `modules/karni-payments` |
 | `karni-approvals` | PyPI | `modules/karni-approvals` |
 | `karni-impersonation` | PyPI | `modules/karni-impersonation` |
+| `karni-site` | PyPI | `modules/karni-site` |
+| `karni-charts` | PyPI | `modules/karni-charts` |
+| `karni-reports` | PyPI | `modules/karni-reports` |
+| `karni-ai` | PyPI | `modules/karni-ai` |
+| `karni-storage` | PyPI | `modules/karni-storage` |
 | `@karni/ui` | npm | `packages/karni-ui` |
 | `@karni/payments-ui` | npm | `modules/karni-payments/ui` |
 | `@karni/approvals-ui` | npm | `modules/karni-approvals/ui` |
 | `@karni/impersonation-ui` | npm | `modules/karni-impersonation/ui` |
+| `@karni/charts-ui` | npm | `modules/karni-charts/ui` |
+| `@karni/reports-ui` | npm | `modules/karni-reports/ui` |
+| `@karni/ai-ui` | npm | `modules/karni-ai/ui` |
+| `@karni/storage-ui` | npm | `modules/karni-storage/ui` |
 
-Lockstep keeps "which @karni/ui goes with karni 0.4?" from ever being a
-question. A module's range on core (`karni>=0.4,<0.5`, `"@karni/ui": "^0.4.0"`)
-moves with every minor release.
+The table is `PYTHON_PACKAGES` and `NPM_PACKAGES` in
+`.github/ci/check_release.py`, the one list of what a tag publishes. A test
+(`packages/karni-cli/tests/test_release.py`) holds this page, the release
+workflows and the release check to it. A new package goes into that list
+first.
+
+Lockstep keeps "which @karni/ui goes with karni 0.5?" from ever being a
+question. A module's range on core (`karni>=0.5,<0.6` and `"@karni/ui":
+"^0.5.0"` in 0.5) moves with every minor release.
 
 ## Cutting a release
 
@@ -34,17 +49,24 @@ moves with every minor release.
    `docs/migrations/<major.minor>.md` exist and are complete. They are
    written in the pull requests that made the changes (CONTRIBUTING.md), not
    at release time.
-2. **Versions.** Set the new version in all nine manifests: the five
-   `pyproject.toml` files and the four `package.json` files (and their
-   lockfiles). For a minor release, also move the module ranges on core.
-3. **Check locally:**
+2. **Date the changelog.** While a release is being built, the top section
+   of `CHANGELOG.md` reads `## X.Y.Z (unreleased)`. In the release commit,
+   replace `(unreleased)` with the release date: `## X.Y.Z (YYYY-MM-DD)`.
+   `check_release.py` refuses a tag whose section is not dated. A dry run on
+   a branch, which has no tag, accepts it. After the release, the next
+   change opens `## X.Y.Z (unreleased)` with the next version.
+3. **Versions.** Set the new version in the manifest of every package in the
+   table: its `pyproject.toml` or its `package.json` (and its lockfile). A
+   Python package's `__version__` reads its distribution's version, so it
+   needs no edit. For a minor release, also move the module ranges on core.
+4. **Check locally:**
 
    ```sh
    make test lint typecheck PYTHON=.venv/bin/python
    python .github/ci/check_release.py --tag vX.Y.Z --repo <owner>/karni
    ```
 
-4. **Tag and push:**
+5. **Tag and push:**
 
    ```sh
    git tag -s vX.Y.Z -m "Karni X.Y.Z"
@@ -60,17 +82,22 @@ The tag runs `.github/workflows/release.yml`:
    up front.
 2. **ci**: every CI gate, re-run on the tagged commit. That includes the
    `examples/eventhub` build, seed, tests and end-to-end run.
-3. **check**: `check_release.py` verifies that all nine versions equal the
-   tag, every repository URL is this repository (npm provenance is verified
-   against it), every package's LICENSE equals the root LICENSE, and the
-   modules' ranges on core include the release. A dry run on a branch has
-   no tag, so the version comes from `packages/karni/pyproject.toml`.
-4. **build-python**: sdists and wheels for the five Python packages, then
+3. **check**: `check_release.py` verifies that every package's version equals
+   the tag, every Python package's `__version__` comes from its distribution,
+   every repository URL is this repository (npm provenance is verified
+   against it), every package's LICENSE equals the root LICENSE, the
+   modules' ranges on core include the release, and every package is in
+   every build and upload list of the release workflows, with PyPI upload
+   steps that are all alike, and `CHANGELOG.md` opens with the release's
+   dated section. A dry run on a branch has no tag, so the version comes
+   from `packages/karni/pyproject.toml` and the section may still read
+   `(unreleased)`.
+4. **build-python**: sdists and wheels for every Python package, then
    `twine check --strict`, then the wheels installed into a clean venv where
    `karni --help` and `karni explain E104` must work. Uploaded as the
    `python-dist` artifact.
 5. **build-npm**: `npm ci`, `npm run build` and `npm publish --dry-run` for
-   the four npm packages (the full publish pipeline short of the upload, and
+   every npm package (the full publish pipeline short of the upload, and
    it needs no credentials), then `npm pack`. Uploaded as `npm-dist`.
 6. **publish-pypi** (when `KARNI_PUBLISHING` includes `pypi`): trusted
    publishing (OIDC, no stored token), with PEP 740 attestations as
@@ -107,14 +134,14 @@ accepts the same version twice.
 
 ## One-time repository setup
 
-- **PyPI:** trusted publishing, no stored token. For each of the five
-  projects, while it does not exist yet, add a *pending publisher* under your
+- **PyPI:** trusted publishing, no stored token. For each Python package in
+  the table, while it does not exist yet, add a *pending publisher* under your
   PyPI account: **Your account → Publishing → Add a new pending publisher →
   GitHub**, with these values (the PyPI project name changes per project):
 
   | Field | Value |
   |---|---|
-  | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation` (one publisher each) |
+  | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site`, `karni-charts`, `karni-reports`, `karni-ai`, `karni-storage` (one publisher each) |
   | Owner | `cbsshekhawat18-lab` |
   | Repository name | `karni` |
   | Workflow name | `release.yml` |
@@ -130,7 +157,7 @@ accepts the same version twice.
   `.github/workflows/pypi-from-release.yml` ("Run workflow" with a tag)
   uploads an existing GitHub release's Python files to PyPI the same way, for
   a release whose PyPI step never ran or failed part-way.
-- **npm:** for each of the four packages, add a trusted publisher: this
+- **npm:** for each npm package in the table, add a trusted publisher: this
   repository, workflow `release.yml`, environment `npm`. The `@karni` scope
   must exist and belong to the maintainers.
 - **npm with a token instead:** an `NPM_TOKEN` repository secret (an npm
@@ -148,14 +175,14 @@ accepts the same version twice.
   ([Security](security.md) points reporters there).
 - **Repository profile** (Settings → General, or `gh repo edit`): the
   description, the website (`https://cbsshekhawat18-lab.github.io/karni/`)
-  and the 20 topics chosen in [findability research](seo-research.md). Under
+  and the 17 topics chosen in [findability research](seo-research.md). Under
   *Social preview*, upload `assets/brand/social-1280x640.png` (1280×640).
 
   ```sh
   gh repo edit cbsshekhawat18-lab/karni \
-    --description "Build full-stack Django + React apps from your models. Karni gives you the REST API, admin, role-based permissions, React screens and tests, kept in an upgradable package instead of a Django React boilerplate you copy. AI coding agents (Claude Code, Cursor, Copilot) write only the domain code." \
+    --description "Build full-stack Django + React apps from your models. Karni gives you the REST API, admin, role-based permissions, React screens and tests, kept in an upgradable package instead of a Django React boilerplate you copy. AI coding agents write only the domain code." \
     --homepage https://cbsshekhawat18-lab.github.io/karni/
-  # the 20 topics: docs/seo-research.md
+  # the 17 topics: docs/seo-research.md
   ```
 
 - **GitHub Pages:** source *GitHub Actions* (the docs workflow deploys the

@@ -1,0 +1,34 @@
+{% load i18n %}{% comment %}
+The Getting started panel. `guide` holds sections, steps, docs and dismiss_url
+(karni.admin.guide.guide_context). Override this template to change it.
+{% endcomment %}
+<section class="karni-guide" aria-labelledby="karni-guide-title">
+  <div class="karni-guide-head">
+    <h2 id="karni-guide-title">{% translate "Getting started" %}</h2>
+    <form method="post" action="{{ guide.dismiss_url }}">{% csrf_token %}<button type="submit" class="karni-button karni-button-secondary karni-button-sm">{% translate "Dismiss" %}</button></form>
+  </div>
+  <p class="karni-note">{% translate "You can bring this guide back from your name at the bottom of the menu." %}</p>
+  <div class="karni-guide-grid">
+    <div>
+      <h3>{% translate "First steps" %}</h3>
+      <ol>
+        {% for step in guide.steps %}
+        <li><strong>{{ step.title }}.</strong> {{ step.text }}{% if step.url %} <a href="{{ step.url }}">{{ step.label }}</a>{% endif %}</li>
+        {% endfor %}
+      </ol>
+      <h3>{% translate "Read more" %}</h3>
+      <ul>
+        {% for link in guide.docs %}<li><a href="{{ link.url }}">{{ link.title }}</a></li>{% endfor %}
+      </ul>
+    </div>
+    <details{% if guide.sections|length < 7 %} open{% endif %}>
+      <summary><h3>{% translate "What each section is for" %}</h3></summary>
+      <dl>
+        {% for section in guide.sections %}
+        <dt>{{ section.name }}</dt>
+        <dd>{% for entry in section.models %}<a href="{{ entry.url }}">{{ entry.name }}</a>{% if entry.help %}: {{ entry.help }}{% endif %}{% if not forloop.last %}<br>{% endif %}{% endfor %}</dd>
+        {% endfor %}
+      </dl>
+    </details>
+  </div>
+</section>

@@ -96,13 +96,13 @@ predicate whose answer is data.
 
 - **Pattern 6, weighted 14, ten projects:** role enforcement diverged from
   hard-coded `IsX` permission classes on a `role` CharField (five projects)
-  to bhukailasa's **DB-backed `area:action` grants with wildcards and a single
+  to project B's **DB-backed `area:action` grants with wildcards and a single
   `require()` factory every route must take**, which was recommended there as
   the core default. Karni today sits between: declarations in code, roles as
   groups, no grants table. P1's `user.can(action)` and `@requires(action)` is
-  bhukailasa's factory. P2's scopes are what that project lacked.
+  project B's factory. P2's scopes are what that project lacked.
 - **Pattern 37, three projects:** tenant/branch scoping done once well
-  (xperso's `TenantScopedMixin`: a single enforcement point, stamps the owner,
+  (project A's `TenantScopedMixin`: a single enforcement point, stamps the owner,
   never trusts the body, isolation tests). Karni's `Owned` + `assert_isolated`
   matches the shape. The admin was not covered there either.
 - **Pattern 19, weighted 8, five projects:** audit logging diverged (a

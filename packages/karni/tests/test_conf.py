@@ -8,7 +8,7 @@ import pytest
 import structlog
 from django.core.exceptions import ImproperlyConfigured
 
-from karni.conf import karni_settings
+from karni.conf import env, karni_settings
 from karni.conf.base import BASE, INSECURE_SECRET_KEY
 from karni.conf.dev import DEV
 from karni.conf.prod import PROD
@@ -59,6 +59,25 @@ def test_assignment_after_call_wins() -> None:
     karni_settings(ns, env_name="dev")
     ns["REST_FRAMEWORK"] = {"PAGE_SIZE": 7}  # a settings.py line below the call
     assert ns["REST_FRAMEWORK"] == {"PAGE_SIZE": 7}
+
+
+def test_env_reader_is_left_in_the_namespace(make_settings) -> None:
+    """A setting added after the call reads the environment through the same ``env``."""
+    ns = make_settings("dev")
+    assert ns["env"] is env
+    marker = object()
+    assert make_settings("dev", preset={"env": marker})["env"] is marker
+
+
+def test_silenced_system_checks_starts_empty_and_extends(make_settings) -> None:
+    ns = make_settings("dev")
+    assert ns["SILENCED_SYSTEM_CHECKS"] == []
+    ns["SILENCED_SYSTEM_CHECKS"] += ["karni.W967"]  # a settings.py line below the call
+    assert ns["SILENCED_SYSTEM_CHECKS"] == ["karni.W967"]
+    assert BASE["SILENCED_SYSTEM_CHECKS"] == []
+    assert make_settings("dev", preset={"SILENCED_SYSTEM_CHECKS": ["x"]})[
+        "SILENCED_SYSTEM_CHECKS"
+    ] == ["x"]
 
 
 def test_installed_apps_merge_preserves_user_order(make_settings) -> None:
@@ -158,6 +177,39 @@ def test_profile_read_from_django_env(monkeypatch: pytest.MonkeyPatch, make_sett
     monkeypatch.setenv("DJANGO_ENV", "prod")
     ns = make_settings(env_name=None, **PROD_OK)
     assert ns["SECURE_SSL_REDIRECT"] is True
+
+
+def test_email_settings_come_from_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    import environ
+
+    from karni.conf.base import _email
+    from karni.conf.dev import CONSOLE_EMAIL, console_email
+
+    for name in ("EMAIL_URL", "DEFAULT_FROM_EMAIL", "SERVER_EMAIL"):
+        monkeypatch.delenv(name, raising=False)
+    reader = environ.Env()
+    # Unset: Django's own defaults, and development prints to the console.
+    assert _email(reader) == {
+        "DEFAULT_FROM_EMAIL": "webmaster@localhost",
+        "SERVER_EMAIL": "root@localhost",
+    }
+    assert console_email(reader) == {"EMAIL_BACKEND": CONSOLE_EMAIL}
+    monkeypatch.setenv("EMAIL_URL", "smtp+tls://mailer%40example.com:s3cret@smtp.example.com:587")
+    monkeypatch.setenv("DEFAULT_FROM_EMAIL", "Example <noreply@example.com>")
+    found = _email(reader)
+    assert found["EMAIL_BACKEND"] == "django.core.mail.backends.smtp.EmailBackend"
+    assert (found["EMAIL_HOST"], found["EMAIL_PORT"], found["EMAIL_USE_TLS"]) == (
+        "smtp.example.com",
+        587,
+        True,
+    )
+    assert (found["EMAIL_HOST_USER"], found["EMAIL_HOST_PASSWORD"]) == (
+        "mailer@example.com",
+        "s3cret",
+    )
+    assert found["DEFAULT_FROM_EMAIL"] == "Example <noreply@example.com>"
+    # A mail server named in development is used there too.
+    assert console_email(reader) == {}
 
 
 def test_profile_dicts_do_not_leak_into_each_other() -> None:
@@ -446,3 +498,40 @@ def test_karni_cache_picks_redis_or_locmem(monkeypatch: pytest.MonkeyPatch) -> N
 
 def test_login_lands_on_the_admin(make_settings) -> None:
     assert make_settings("dev")["LOGIN_REDIRECT_URL"] == "/admin/"
+
+
+# ---------------------------------------------------------------------------
+# File roots: under the project in development, /data in production
+# ---------------------------------------------------------------------------
+
+
+def test_dev_stores_files_under_the_project(make_settings, tmp_path) -> None:
+    settings_file = str(tmp_path / "config" / "settings.py")
+    ns = make_settings("dev", preset={"__file__": settings_file})
+    assert ns["MEDIA_ROOT"] == str(tmp_path.resolve() / "data" / "media")
+    assert ns["STATIC_ROOT"] == str(tmp_path.resolve() / "data" / "static")
+    # BASE_DIR, when the settings define it, is the project root.
+    elsewhere = tmp_path / "elsewhere"
+    ns = make_settings("dev", preset={"__file__": settings_file, "BASE_DIR": elsewhere})
+    assert ns["MEDIA_ROOT"] == str(elsewhere.resolve() / "data" / "media")
+
+
+def test_a_relative_root_is_read_from_the_project_not_the_working_directory(
+    make_settings, tmp_path
+) -> None:
+    preset = {"__file__": str(tmp_path / "config" / "settings.py")}
+    ns = make_settings("dev", preset=dict(preset), MEDIA_ROOT="uploads")
+    assert ns["MEDIA_ROOT"] == str(tmp_path.resolve() / "uploads")
+    ns = make_settings("dev", preset=dict(preset), MEDIA_ROOT="/srv/media")
+    assert ns["MEDIA_ROOT"] == "/srv/media"
+    # Written in settings.py before the call: left exactly as written.
+    ns = make_settings("dev", preset={**preset, "MEDIA_ROOT": "media"})
+    assert ns["MEDIA_ROOT"] == "media"
+    # No project root known (a bare namespace): left relative.
+    assert make_settings("dev")["MEDIA_ROOT"] == "data/media"
+
+
+def test_production_keeps_the_data_volume(make_settings, tmp_path) -> None:
+    preset = {"__file__": str(tmp_path / "config" / "settings.py")}
+    ns = make_settings("prod", preset=preset, **PROD_OK)
+    assert (ns["MEDIA_ROOT"], ns["STATIC_ROOT"]) == ("/data/media", "/data/static")

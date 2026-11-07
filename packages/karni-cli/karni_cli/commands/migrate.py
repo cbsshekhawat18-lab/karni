@@ -10,7 +10,7 @@ from karni_cli.project import require_project
 
 def migrate(
     args: list[str] | None = typer.Argument(
-        None, help="Passed to manage.py migrate: [app_label] [migration_name] --plan --fake …"
+        None, help="Passed to manage.py migrate: \\[app_label] \\[migration_name] --plan --fake …"
     ),
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),

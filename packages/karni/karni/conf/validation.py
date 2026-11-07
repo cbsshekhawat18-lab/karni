@@ -3,10 +3,11 @@
 A Pydantic v2 model checks the values that most often break deployments
 (secret key, hosts, database, Redis URLs, storage selection, throttle rates,
 pagination that cannot be switched off, query budgets and API caching, auth
-mode and social/2FA extras, API knobs, admin app ordering, health-check
-configuration) and :func:`validate_settings` turns any problem
-into a single ``ImproperlyConfigured`` error listing *every* failure, so a
-bad container config dies loudly at startup instead of at 3 a.m.
+mode and social/2FA extras, sign-in with an ID token or a code, terms
+acceptance, API knobs, admin app ordering, health-check configuration) and
+:func:`validate_settings` turns any problem into a single
+``ImproperlyConfigured`` error listing *every* failure, so a bad container
+config dies loudly at startup instead of at 3 a.m.
 """
 
 from __future__ import annotations
@@ -74,6 +75,7 @@ class KarniSettingsModel(BaseModel):
     KARNI_2FA: bool = False
     KARNI_FRONTEND_URL: str = "http://localhost:5173"
     KARNI_ACCOUNTS_TOKEN_TTL: dict[str, Any] = Field(default_factory=dict)
+    KARNI_ACCOUNTS_REGISTRATION: bool = True
     KARNI_ACCOUNTS_DEFAULT_ROLES: list[str] = Field(default_factory=list)
     KARNI_ROLES: dict[str, dict[str, Any]] = Field(default_factory=dict)
     KARNI_ROLES_AUTOSYNC: bool = True
@@ -81,6 +83,10 @@ class KarniSettingsModel(BaseModel):
     KARNI_AUTH_THROTTLE_RATES: dict[str, Any] = Field(default_factory=dict)
     KARNI_API_MAX_EXPAND_DEPTH: int = 2
     KARNI_SEARCH_PROVIDER: str = "karni.api.search.postgres.PostgresSearchProvider"
+    KARNI_GLOBAL_SEARCH_MIN_LENGTH: int = Field(default=2, ge=1)
+    KARNI_GLOBAL_SEARCH_LIMIT: int = Field(default=5, ge=1)
+    KARNI_GLOBAL_SEARCH_MAX_LIMIT: int = Field(default=20, ge=1)
+    KARNI_GLOBAL_SEARCH_THRESHOLD: float = Field(default=0.3, ge=0, le=1)
     KARNI_API_ROUTER: str = "karni.api.routers.get_default_router"
     KARNI_MAX_PAGE_SIZE: Any = 100
     KARNI_MAX_PAGE_SIZE_FLOOR: Any = 25
@@ -89,22 +95,46 @@ class KarniSettingsModel(BaseModel):
     KARNI_API_CACHE: bool = False
     KARNI_API_CACHE_TTL: Any = 300
     KARNI_API_CACHE_ALIAS: Any = "default"
+    KARNI_AGGREGATE_MAX_GROUPS: int = Field(default=1000, ge=1)
+    KARNI_API_CACHE_FLUSH: Any = None
+    KARNI_API_CACHE_LEGACY_HEADER: bool = True
     KARNI_EVENTS_AUTODISCOVER: bool = True
     KARNI_SCHEDULES_AUTODISCOVER: bool = True
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)
+    KARNI_ADMIN_GRANTS_OPEN_PAGES: bool = True
     KARNI_MATRIX_EXCLUDE: list[Any] = Field(default_factory=list)
     KARNI_IMPORT_INLINE_ROWS: int = Field(default=500, ge=0)
     KARNI_IMPORT_MAX_ROWS: int = Field(default=100_000, ge=1)
     KARNI_EXPORT_MAX_ROWS: int = Field(default=100_000, ge=1)
     KARNI_ADMIN_LOGO: Any = None
+    KARNI_GENERATOR: str | None = "Karni"
+    KARNI_THEME_CSS: str | None = "frontend/src/karni-theme.css"
     KARNI_ADMIN_PATH: str = "admin/"
     KARNI_ACCOUNTS_HONEYPOT_FIELD: str = "website"
+    KARNI_PUBLIC_CREATE_RATE: str | None = "10/hour"
+    KARNI_PUBLIC_CREATE_HONEYPOT_FIELD: str = "homepage"
+    KARNI_CSP: Any = Field(default_factory=dict)
+    KARNI_CSP_REPORT_ONLY: bool | None = None
+    KARNI_PERMISSIONS_POLICY: Any = Field(default_factory=dict)
+    KARNI_ADMIN_BULK_EDIT_MAX: int = Field(default=500, ge=1)
+    KARNI_ADMIN_GUIDE: bool = True
+    KARNI_ADMIN_PER_PAGE: int = Field(default=25, ge=1)
+    KARNI_ADMIN_COUNT_ESTIMATE_ABOVE: int = Field(default=100000, ge=0)
     KARNI_ADMIN_LIST_DISPLAY_MAX: int = 6
     KARNI_ADMIN_LIST_FILTER_MAX: int = 6
     KARNI_ADMIN_SEARCH_MAX: int = 5
     KARNI_HEALTH_CHECKS: list[str] = Field(default_factory=list)
     KARNI_HEALTH_CELERY_TIMEOUT: float = 1.0
+    KARNI_READYZ_CHECKS: list[str] = Field(default_factory=list)
+    KARNI_HEALTH_TIMEOUT: float = 3.0
+    KARNI_LOG_QUIET_PATHS: list[str] = Field(default_factory=list)
+    KARNI_API_VERSION: str = ""
+    KARNI_API_VERSIONS: Any = Field(default_factory=dict)
+    KARNI_API_UNVERSIONED: str = "keep"
     KARNI_THUMBNAILER: str = "karni.storage.thumbnails.make_thumbnail"
+    KARNI_PHONE_COUNTRY_CODE: str | int | None = None
+    KARNI_PHONE_TRUNK_PREFIX: str = "0"
+    KARNI_PHONE_NORMALIZER: str = "karni.fields.text.default_phone_normalizer"
     KARNI_AUDIT_ASYNC: bool = False
     KARNI_AUDIT_RETENTION_DAYS: int | None = None
     KARNI_AUDIT_REDACT: list[str] = Field(default_factory=list)
@@ -113,6 +143,22 @@ class KarniSettingsModel(BaseModel):
     KARNI_DEBUG_CAPTURE: bool = True
     KARNI_DEBUG_CAPTURE_KEEP: int = Field(default=200, ge=1)
     KARNI_DEBUG_TRACE_DAYS: int = Field(default=7, ge=1)
+    KARNI_SOCIAL_TOKEN_PROVIDERS: Any = Field(default_factory=dict)
+    KARNI_SOCIAL_TOKEN_SIGNUP: Any = None
+    KARNI_SOCIAL_TOKEN_LINK_VERIFIED: Any = True
+    KARNI_SOCIAL_TOKEN_LEEWAY: Any = 60
+    KARNI_SOCIAL_TOKEN_JWKS_TTL: Any = 21600
+    KARNI_SOCIAL_TOKEN_JWKS_FETCHER: Any = "karni.accounts.social_token.fetch_jwks"
+    KARNI_EMAIL_OTP: Any = False
+    KARNI_EMAIL_OTP_TTL: Any = 600
+    KARNI_EMAIL_OTP_LENGTH: Any = 6
+    KARNI_EMAIL_OTP_MAX_ATTEMPTS: Any = 5
+    KARNI_EMAIL_OTP_SIGNUP: Any = None
+    KARNI_TERMS: Any = None
+    KARNI_USER_GRANTS: Any = False
+    KARNI_NAVIGATION: Any = None
+    KARNI_NAVIGATION_PAGES: Any = Field(default_factory=lambda: ["frontend/src/routes.tsx"])
+    KARNI_PK: Any = "uuid"
 
     @model_validator(mode="after")
     def _cross_field_checks(self) -> KarniSettingsModel:
@@ -135,9 +181,16 @@ class KarniSettingsModel(BaseModel):
         errors.extend(self._check_pagination())
         errors.extend(self._check_performance())
         errors.extend(self._check_accounts())
+        errors.extend(self._check_social_token())
+        errors.extend(self._check_email_otp())
+        errors.extend(self._check_terms())
+        errors.extend(self._check_user_grants())
+        errors.extend(self._check_navigation())
+        errors.extend(self._check_pk())
         errors.extend(self._check_api())
         errors.extend(self._check_admin())
         errors.extend(self._check_karni_knobs())
+        errors.extend(self._check_security_headers())
         return errors
 
     def _check_secret_key(self) -> list[str]:
@@ -319,6 +372,13 @@ class KarniSettingsModel(BaseModel):
                 f"KARNI_API_CACHE_ALIAS {self.KARNI_API_CACHE_ALIAS!r} is not a CACHES alias "
                 f"(known: {', '.join(sorted(self.CACHES))})"
             )
+        from karni.api.caching import parse_flush
+        from karni.exceptions import KarniImproperlyConfigured
+
+        try:
+            parse_flush(self.KARNI_API_CACHE_FLUSH)
+        except KarniImproperlyConfigured as exc:
+            errors.append(f"{exc.code}: {exc.message}")
         return errors
 
     def _check_accounts(self) -> list[str]:
@@ -331,9 +391,10 @@ class KarniSettingsModel(BaseModel):
             if self.KARNI_AUTH_MODE == "jwt":
                 errors.append(
                     "KARNI_SOCIAL_AUTH is not supported with KARNI_AUTH_MODE='jwt' "
-                    "in karni 0.1 (social auth is session-mode only, and an "
-                    "allauth-headless JWT strategy is future work). Set "
-                    "KARNI_AUTH_MODE='session' or disable KARNI_SOCIAL_AUTH"
+                    "(django-allauth's redirect flow is session-mode only). Set "
+                    "KARNI_AUTH_MODE='session' or disable KARNI_SOCIAL_AUTH. For JWT mode, "
+                    "sign in with an ID token instead: KARNI_SOCIAL_TOKEN_PROVIDERS works in "
+                    "both modes and does not need KARNI_SOCIAL_AUTH"
                 )
             if not _importable("allauth"):
                 errors.append(
@@ -363,6 +424,202 @@ class KarniSettingsModel(BaseModel):
                 )
         return errors
 
+    def _check_social_token(self) -> list[str]:
+        """Sign-in with an ID token (experimental): the providers and their knobs."""
+        errors: list[str] = []
+        signup = self.KARNI_SOCIAL_TOKEN_SIGNUP
+        if signup is not None and signup not in ("open", "approval", "existing"):
+            errors.append(
+                f"KARNI_SOCIAL_TOKEN_SIGNUP = {signup!r} must be 'open', 'approval', 'existing' "
+                "or None (None follows KARNI_ACCOUNTS_REGISTRATION)"
+            )
+        if not isinstance(self.KARNI_SOCIAL_TOKEN_LINK_VERIFIED, bool):
+            errors.append(
+                f"KARNI_SOCIAL_TOKEN_LINK_VERIFIED = {self.KARNI_SOCIAL_TOKEN_LINK_VERIFIED!r} "
+                "must be True or False"
+            )
+        leeway = self.KARNI_SOCIAL_TOKEN_LEEWAY
+        if not (isinstance(leeway, int) and not isinstance(leeway, bool) and 0 <= leeway <= 300):
+            errors.append(
+                f"KARNI_SOCIAL_TOKEN_LEEWAY = {leeway!r} must be an integer from 0 to 300 "
+                "(seconds of clock skew allowed on exp, iat and nbf)"
+            )
+        if not _positive_int(self.KARNI_SOCIAL_TOKEN_JWKS_TTL):
+            errors.append(
+                f"KARNI_SOCIAL_TOKEN_JWKS_TTL = {self.KARNI_SOCIAL_TOKEN_JWKS_TTL!r} must be a "
+                "positive integer (seconds a key set stays cached)"
+            )
+        fetcher = self.KARNI_SOCIAL_TOKEN_JWKS_FETCHER
+        if isinstance(fetcher, str) and "." not in fetcher:
+            errors.append(
+                f"KARNI_SOCIAL_TOKEN_JWKS_FETCHER {fetcher!r} is not a dotted import path"
+            )
+        providers = self.KARNI_SOCIAL_TOKEN_PROVIDERS
+        if providers is None or providers == {}:
+            return errors
+        if not isinstance(providers, Mapping):
+            errors.append(
+                f"KARNI_SOCIAL_TOKEN_PROVIDERS = {providers!r} must be a dict of provider name "
+                "-> {'client_ids': [...]}, e.g. {'google': {'client_ids': ['<web client id>']}}"
+            )
+            return errors
+        from karni.accounts.social_token import (
+            BUILTIN_PROVIDERS,
+            PROVIDER_NAME_RE,
+            RESERVED_NAMES,
+            IdTokenProvider,
+            provider_class,
+        )
+
+        for name, config in providers.items():
+            setting = f"KARNI_SOCIAL_TOKEN_PROVIDERS[{name!r}]"
+            if not isinstance(name, str) or not PROVIDER_NAME_RE.match(name):
+                errors.append(
+                    f"{setting}: a provider name is its URL segment, lowercase letters, digits, "
+                    "'-' or '_' (at most 32), starting with a letter"
+                )
+                continue
+            if name in RESERVED_NAMES:
+                errors.append(
+                    f"{setting}: {name!r} is taken by django-allauth's pages under social/ "
+                    f"({', '.join(sorted(RESERVED_NAMES))}). Choose another name"
+                )
+                continue
+            if not isinstance(config, Mapping):
+                errors.append(f"{setting} = {config!r} must be a dict with 'client_ids'")
+                continue
+            path = config.get("class")
+            if path is None and name not in BUILTIN_PROVIDERS:
+                errors.append(
+                    f"{setting}: {name!r} is not a built-in provider "
+                    f"({', '.join(BUILTIN_PROVIDERS)}). Add 'class': '<dotted path of an "
+                    "IdTokenProvider subclass>'"
+                )
+                continue
+            if path is not None and not (isinstance(path, str) and "." in path):
+                errors.append(f"{setting}['class'] {path!r} is not a dotted import path")
+                continue
+            # A built-in is checked by its own class. A project's class is imported at first
+            # use (like every dotted path here), so only the shared keys are checked now.
+            checker = provider_class(name, config) if path is None else IdTokenProvider
+            found = checker.config_errors(name, config)
+            if path is not None:
+                found = [line for line in found if "unknown keys" not in line]
+            errors.extend(found)
+        if not _importable("cryptography"):
+            errors.append(
+                "KARNI_SOCIAL_TOKEN_PROVIDERS needs the cryptography package to verify RS256 and "
+                "ES256 signatures. Run: pip install 'karni[social-token]' (E509)"
+            )
+        return errors
+
+    def _check_user_grants(self) -> list[str]:
+        """Per-user grants (experimental): the switch is a boolean."""
+        if not isinstance(self.KARNI_USER_GRANTS, bool):
+            return [f"KARNI_USER_GRANTS = {self.KARNI_USER_GRANTS!r} must be True or False"]
+        return []
+
+    def _check_navigation(self) -> list[str]:
+        """Navigation from data (experimental): the menu's items, and the app for ``"db"``."""
+        from karni.navigation import settings_problems
+
+        errors = settings_problems(self.KARNI_NAVIGATION, self.INSTALLED_APPS)
+        pages = self.KARNI_NAVIGATION_PAGES
+        if not isinstance(pages, list | tuple) or not all(isinstance(p, str) for p in pages):
+            errors.append(
+                f"KARNI_NAVIGATION_PAGES = {pages!r} must be a list of file paths, e.g. "
+                "['frontend/src/routes.tsx'], or [] (E530)"
+            )
+        return errors
+
+    def _check_email_otp(self) -> list[str]:
+        """Sign-in with a code sent by email (experimental): the switch, the code and the policy."""
+        from karni.accounts.otp import LENGTH_RANGE, MAX_ATTEMPTS_RANGE, TTL_RANGE
+        from karni.accounts.social_token import SIGNUP_POLICIES
+
+        errors: list[str] = []
+        if not isinstance(self.KARNI_EMAIL_OTP, bool):
+            errors.append(f"KARNI_EMAIL_OTP = {self.KARNI_EMAIL_OTP!r} must be True or False")
+        for name, (low, high), what in (
+            ("KARNI_EMAIL_OTP_TTL", TTL_RANGE, "seconds a code lives"),
+            ("KARNI_EMAIL_OTP_LENGTH", LENGTH_RANGE, "digits in a code"),
+            ("KARNI_EMAIL_OTP_MAX_ATTEMPTS", MAX_ATTEMPTS_RANGE, "guesses a code takes"),
+        ):
+            value = getattr(self, name)
+            if not (
+                isinstance(value, int) and not isinstance(value, bool) and low <= value <= high
+            ):
+                errors.append(
+                    f"{name} = {value!r} must be an integer from {low} to {high} ({what})"
+                )
+        signup = self.KARNI_EMAIL_OTP_SIGNUP
+        if signup is not None and signup not in SIGNUP_POLICIES:
+            errors.append(
+                f"KARNI_EMAIL_OTP_SIGNUP = {signup!r} must be 'open', 'approval', 'existing' or "
+                "None (None follows KARNI_ACCOUNTS_REGISTRATION)"
+            )
+        return errors
+
+    def _check_pk(self) -> list[str]:
+        """The key type ``karni make model`` writes (experimental): ``uuid`` or ``bigint``."""
+        if self.KARNI_PK in ("uuid", "bigint"):
+            return []
+        return [
+            f"KARNI_PK = {self.KARNI_PK!r} must be 'uuid' (BaseModel) or 'bigint' "
+            "(BigIntBaseModel): the key type karni make model writes"
+        ]
+
+    def _check_terms(self) -> list[str]:
+        """Terms acceptance (experimental): ``KARNI_TERMS`` is None or a dict of known keys."""
+        from karni.accounts.terms import KNOWN_KEYS, VERSION_MAX_LENGTH
+
+        value = self.KARNI_TERMS
+        if value is None:
+            return []
+        example = '{"version": "2026-11", "url": "/terms/"}'
+        if not isinstance(value, Mapping) or not value:
+            return [
+                f"KARNI_TERMS = {value!r} must be a dict like {example}, or None to ask for no "
+                "terms"
+            ]
+        errors: list[str] = []
+        unknown = sorted(str(key) for key in value if key not in KNOWN_KEYS)
+        if unknown:
+            errors.append(
+                f"KARNI_TERMS has unknown keys {unknown} (known: {', '.join(sorted(KNOWN_KEYS))})"
+            )
+        version = value.get("version")
+        if not isinstance(version, str) or not version.strip():
+            errors.append(
+                f"KARNI_TERMS['version'] = {version!r} must be a non-empty string, e.g. '2026-11'"
+            )
+        elif len(version) > VERSION_MAX_LENGTH:
+            errors.append(
+                f"KARNI_TERMS['version'] is {len(version)} characters long: at most "
+                f"{VERSION_MAX_LENGTH} are stored"
+            )
+        url = value.get("url")
+        if not isinstance(url, str):
+            errors.append(
+                f"KARNI_TERMS['url'] = {url!r} must be a string: where the terms are, e.g. "
+                "'/terms/' or 'https://example.com/terms/'"
+            )
+        required = value.get("required", True)
+        if not isinstance(required, bool):
+            errors.append(f"KARNI_TERMS['required'] = {required!r} must be True or False")
+        for key, sample in (("paths", "['/api/']"), ("exempt", "['/api/public/']")):
+            if key not in value:
+                continue
+            entries = value[key]
+            if not isinstance(entries, list | tuple) or not all(
+                isinstance(entry, str) and entry.startswith("/") for entry in entries
+            ):
+                errors.append(
+                    f"KARNI_TERMS[{key!r}] = {entries!r} must be a list of URL path prefixes "
+                    f"that start with '/', e.g. {sample}"
+                )
+        return errors
+
     def _check_api(self) -> list[str]:
         errors: list[str] = []
         if self.KARNI_API_MAX_EXPAND_DEPTH < 0:
@@ -377,6 +634,44 @@ class KarniSettingsModel(BaseModel):
             )
         if "." not in self.KARNI_API_ROUTER:
             errors.append(f"KARNI_API_ROUTER {self.KARNI_API_ROUTER!r} is not a dotted import path")
+        rate = self.KARNI_PUBLIC_CREATE_RATE
+        if rate and not THROTTLE_RATE_RE.match(rate):
+            errors.append(
+                f"KARNI_PUBLIC_CREATE_RATE = {rate!r} is not a valid throttle rate (expected "
+                "'<number>/<period>', e.g. '10/hour', or None to turn the default limit off)"
+            )
+        return errors
+
+    def _check_security_headers(self) -> list[str]:
+        """``KARNI_CSP`` and ``KARNI_PERMISSIONS_POLICY``: a dict of name -> sources, or None."""
+        errors: list[str] = []
+        for setting, example in (
+            ("KARNI_CSP", '{"font-src": ["https://fonts.gstatic.com"]}'),
+            ("KARNI_PERMISSIONS_POLICY", '{"geolocation": ["self"]}'),
+        ):
+            value = getattr(self, setting)
+            if value is None:
+                continue
+            if not isinstance(value, Mapping):
+                errors.append(
+                    f"{setting} = {value!r} must be a dict of name -> list of sources, e.g. "
+                    f"{example}, or None to send no header"
+                )
+                continue
+            for name, sources in value.items():
+                if not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z-]*", name):
+                    errors.append(f"{setting} key {name!r} is not a directive name, e.g. {example}")
+                elif sources is not None and not (
+                    isinstance(sources, str)
+                    or (
+                        isinstance(sources, list | tuple)
+                        and all(isinstance(item, str) for item in sources)
+                    )
+                ):
+                    errors.append(
+                        f"{setting}[{name!r}] = {sources!r} must be a list of strings, or None "
+                        "to remove the entry"
+                    )
         return errors
 
     def _check_admin(self) -> list[str]:
@@ -402,6 +697,13 @@ class KarniSettingsModel(BaseModel):
                     f"KARNI_MATRIX_EXCLUDE entry {entry!r} must be a string "
                     "(an app_label or 'app_label.ModelName')"
                 )
+        # Read per request by the admin, so a bad value set after the call is caught here.
+        from karni.conf.admin_logo import logo_paths
+
+        try:
+            logo_paths(self.KARNI_ADMIN_LOGO)
+        except KarniImproperlyConfigured as exc:
+            errors.append(f"{exc.message.rstrip('.')} (E303)")
         for name in (
             "KARNI_ADMIN_LIST_DISPLAY_MAX",
             "KARNI_ADMIN_LIST_FILTER_MAX",
@@ -417,6 +719,13 @@ class KarniSettingsModel(BaseModel):
         for path in self.KARNI_HEALTH_CHECKS:
             if "." not in path:
                 errors.append(f"KARNI_HEALTH_CHECKS entry {path!r} is not a dotted import path")
+        for path in self.KARNI_READYZ_CHECKS:
+            if "." not in path:
+                errors.append(f"KARNI_READYZ_CHECKS entry {path!r} is not a dotted import path")
+        if self.KARNI_HEALTH_TIMEOUT <= 0:
+            errors.append(
+                f"KARNI_HEALTH_TIMEOUT = {self.KARNI_HEALTH_TIMEOUT!r} must be greater than 0"
+            )
         if self.KARNI_HEALTH_CELERY_TIMEOUT <= 0:
             errors.append(
                 f"KARNI_HEALTH_CELERY_TIMEOUT = {self.KARNI_HEALTH_CELERY_TIMEOUT!r} "
@@ -425,6 +734,25 @@ class KarniSettingsModel(BaseModel):
         if "." not in self.KARNI_THUMBNAILER:
             errors.append(
                 f"KARNI_THUMBNAILER {self.KARNI_THUMBNAILER!r} is not a dotted import path"
+            )
+        code = str(self.KARNI_PHONE_COUNTRY_CODE or "").strip().lstrip("+")
+        if self.KARNI_PHONE_COUNTRY_CODE not in (None, "") and not (
+            code.isdigit() and 1 <= len(code) <= 3 and not code.startswith("0")
+        ):
+            errors.append(
+                f"KARNI_PHONE_COUNTRY_CODE = {self.KARNI_PHONE_COUNTRY_CODE!r} is not a "
+                'country calling code: give its 1 to 3 digits, e.g. "44" or "1", or None '
+                "for international numbers only"
+            )
+        if self.KARNI_PHONE_TRUNK_PREFIX and not self.KARNI_PHONE_TRUNK_PREFIX.isdigit():
+            errors.append(
+                f"KARNI_PHONE_TRUNK_PREFIX = {self.KARNI_PHONE_TRUNK_PREFIX!r} must be digits "
+                '("0", "1", "8") or "" for none'
+            )
+        if "." not in self.KARNI_PHONE_NORMALIZER:
+            errors.append(
+                f"KARNI_PHONE_NORMALIZER {self.KARNI_PHONE_NORMALIZER!r} is not a dotted "
+                "import path"
             )
         return errors
 

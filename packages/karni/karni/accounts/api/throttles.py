@@ -10,7 +10,8 @@ Two throttle classes cover the auth surface:
 * :class:`AccountRateThrottle` — the amendment-A5 per-*account* login
   throttle, keyed on the normalized posted email instead of the caller, so a
   distributed credential-stuffing run against one mailbox is bounded no
-  matter how many source IPs it uses.
+  matter how many source IPs it uses. :class:`OtpEmailRateThrottle` is the
+  same throttle under its own scope, for the codes ``otp/send/`` emails.
 
 Counters live in DRF's throttle cache (the ``default`` cache — Redis in a
 Karni deployment via :mod:`karni.conf`, LocMem in the test suite).
@@ -35,6 +36,7 @@ __all__ = [
     "DEFAULT_AUTH_THROTTLE_RATES",
     "AccountRateThrottle",
     "AuthScopedRateThrottle",
+    "OtpEmailRateThrottle",
 ]
 
 DEFAULT_AUTH_THROTTLE_RATES: dict[str, str | None] = {
@@ -46,6 +48,10 @@ DEFAULT_AUTH_THROTTLE_RATES: dict[str, str | None] = {
     "auth.verify": "10/hour",
     "auth.email_change": "5/hour",
     "auth.2fa": "10/min",
+    "auth.social": "10/min",
+    "auth.otp_send": "10/hour",
+    "auth.otp_send_email": "5/hour",
+    "auth.otp_verify": "20/min",
 }
 """Contract-default rates per auth scope, used only as a fallback when a scope
 is absent from ``DEFAULT_THROTTLE_RATES`` (``karni.conf`` normally merges the
@@ -114,3 +120,17 @@ class AccountRateThrottle(_AuthRateFallbackMixin):
             return None
         digest = hashlib.sha256(ident.encode("utf-8")).hexdigest()
         return self.cache_format % {"scope": self.scope, "ident": digest}
+
+
+class OtpEmailRateThrottle(AccountRateThrottle):
+    """Experimental. Per-address throttle for ``otp/send/``: codes one address receives.
+
+    Keyed on the normalized posted email exactly like
+    :class:`AccountRateThrottle`, under the scope ``auth.otp_send_email``
+    (default ``5/hour``), so nobody can flood one mailbox with codes from many
+    IPs. It counts every address alike, with or without an account, so a 429
+    says nothing about the address. The per-IP scope ``auth.otp_send`` rides
+    alongside it, and the per-code attempt cap still applies.
+    """
+
+    scope = "auth.otp_send_email"

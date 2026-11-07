@@ -10,6 +10,7 @@ import pytest
 
 from karni_cli import mcp_server
 from karni_cli import project as project_mod
+from karni_cli.commands.context import catalog_lines
 
 from .conftest import REPO_ROOT
 
@@ -47,9 +48,15 @@ def test_context_tool(generated_project: Path, monkeypatch) -> None:
         "run_manage",
         lambda *a, **k: subprocess.CompletedProcess([], 0, stdout=backend, stderr=""),
     )
-    # The scaffold ships one page (frontend/src/pages/home.tsx), read statically.
-    expected = "MODELS: Event(title)\nPAGES: home\nBASES: BaseModel BaseViewSet"
+    # The scaffold ships one page (frontend/src/pages/home.tsx), read statically, and the
+    # catalog comes before BASES.
+    catalog = "\n".join(catalog_lines(generated_project))
+    expected = (
+        "KIND: app (API + React app in frontend/)\n"
+        f"MODELS: Event(title)\nPAGES: home\n{catalog}\nBASES: BaseModel BaseViewSet"
+    )
     assert mcp_server.context_tool() == expected
+    assert "  payments module, not added: " in expected
 
 
 def test_context_tool_outside_a_project(tmp_path: Path, monkeypatch) -> None:
@@ -62,13 +69,20 @@ def test_server_registers_the_tools(generated_project: Path) -> None:
     server = mcp_server.build_server(generated_project)
     tools = asyncio.run(server.list_tools())
     assert sorted(tool.name for tool in tools) == [
+        "answer",
+        "build",
         "check",
         "context",
         "explain_failure",
         "explain_text",
+        "modules",
+        "plan",
         "queries",
+        "questions",
+        "recipes",
         "replay",
         "rules",
+        "spec_validate",
         "trace",
         "why",
         "why_empty",
@@ -88,5 +102,10 @@ def test_server_registers_the_tools(generated_project: Path) -> None:
         "data",
         "explain",
     }
+    # The app-builder flow: build takes no --force and no --adopt.
+    assert set(schemas["build"]["properties"]) == {"spec", "dry_run", "allow_destructive"}
+    assert set(schemas["questions"]["properties"]) == {"spec", "max"}
+    assert set(schemas["answer"]["properties"]) == {"id", "value", "spec"}
+    assert set(schemas["recipes"]["properties"]) == {"match", "name"}
     # The --project root is what the tools use, wherever the server was started.
     assert mcp_server._project() == generated_project

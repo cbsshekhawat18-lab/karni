@@ -1,4 +1,4 @@
-"""Text with rules: case-insensitive emails, generated slugs, E.164 phone numbers.
+"""Text with rules: case-insensitive emails, generated slugs, E.164 phone numbers, markdown.
 
 * :class:`EmailField`: ``unique=True`` means unique **case-insensitively**,
   enforced by a unique index on ``LOWER(email)`` (partial on soft-deletable
@@ -13,17 +13,30 @@
 * :class:`PhoneField`: stored in E.164 (``+`` then country code and number,
   at most 15 digits: ``+14155552671``). Input may carry spaces, dashes,
   dots, parentheses, a ``(0)`` trunk marker or a ``00`` international prefix;
-  it is normalised on save. A national number without a country code is
-  rejected rather than guessed. A database CHECK enforces the format on
-  PostgreSQL (regular expression) and SQLite (``GLOB``).
+  it is normalised by the model field, its form field and the API's
+  serializer field. A national number (no ``+``) is rejected unless
+  ``KARNI_PHONE_COUNTRY_CODE`` names the country code to give it: then
+  ``"01234 000 111"`` loses its trunk prefix (``KARNI_PHONE_TRUNK_PREFIX``,
+  ``"0"`` by default) and is stored as ``+441234000111``. A database CHECK
+  enforces the format on PostgreSQL (regular expression) and SQLite
+  (``GLOB``).
 
   No dependency: per-country number plans need Google's ``phonenumbers``
   (several megabytes of metadata), which Karni does not impose. Add
   ``validators=[...]`` built on it when you need to know that a number is
   assignable, not just well-formed.
 
-Override / escape hatch: ``models.EmailField``/``SlugField``/``CharField``
-are the plain replacements; ``unique=False`` drops the constraint.
+* :class:`MarkdownField` (experimental): a ``TextField`` whose value is
+  markdown. The column is plain text and nothing is rendered on the server:
+  the OpenAPI schema says ``format: markdown``, so ``@karni/ui``'s
+  ResourceForm edits it with Write and Preview tabs and ResourceDetail shows
+  it formatted and sanitized (MarkdownView). It is searched like any text
+  field (list it in a viewset's ``search_fields``).
+
+Override / escape hatch: ``models.EmailField``/``SlugField``/``CharField``/
+``TextField`` are the plain replacements; ``unique=False`` drops the
+constraint; ``KARNI_PHONE_NORMALIZER`` names a function that replaces the phone
+rules (it may call :func:`to_e164` itself).
 """
 
 from __future__ import annotations
@@ -31,6 +44,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Func, Q
@@ -44,10 +59,14 @@ __all__ = [
     "E164",
     "E164Format",
     "EmailField",
+    "MarkdownField",
     "PhoneField",
+    "PhoneFormField",
     "SlugField",
+    "default_phone_normalizer",
     "normalize_email",
     "normalize_phone",
+    "to_e164",
     "validate_e164",
 ]
 
@@ -66,32 +85,102 @@ def normalize_email(value: Any) -> Any:
     return f"{local}@{domain.lower()}" if at else value
 
 
-def normalize_phone(value: Any) -> Any:
-    """``value`` in E.164 when it can be read as an international number, else unchanged.
+#: The function KARNI_PHONE_NORMALIZER names when the project sets none.
+DEFAULT_PHONE_NORMALIZER = "karni.fields.text.default_phone_normalizer"
+
+
+def to_e164(value: Any, *, country_code: str | None = None, trunk_prefix: str = "0") -> Any:
+    """``value`` in E.164 when it can be read as a phone number, else unchanged.
 
     ``"+44 (0)20 7946 0958"`` and ``"0044 20 7946 0958"`` both become
-    ``"+442079460958"``. Anything else (letters, an extension, no country
-    code) comes back as given, for :func:`validate_e164` to reject.
+    ``"+442079460958"``. With ``country_code`` (digits, ``"44"``), a number
+    written without ``+`` or ``00`` is national: it loses ``trunk_prefix``
+    when it starts with it and gets ``+<country_code>`` in front, so
+    ``"01234 000 111"`` becomes ``"+441234000111"``. Anything else (letters,
+    an extension, a national number without ``country_code``) comes back as
+    given, for :func:`validate_e164` to reject.
     """
     if not isinstance(value, str) or not value.strip():
         return value
     compact = _PHONE_JUNK.sub("", _TRUNK.sub("", value.strip()))
     if compact.startswith("00"):
         compact = "+" + compact[2:]
+    elif country_code and compact.isdigit():
+        if trunk_prefix and compact.startswith(trunk_prefix):
+            compact = compact[len(trunk_prefix) :]
+        compact = f"+{country_code.lstrip('+')}{compact}"
     return compact if E164.match(compact) else value
 
 
+def _setting(name: str, default: Any) -> Any:
+    """A phone setting, read on every call (the default outside a configured project)."""
+    return getattr(settings, name, default) if settings.configured else default
+
+
+def phone_country_code() -> str | None:
+    """``KARNI_PHONE_COUNTRY_CODE`` without a leading ``+``, or ``None`` (read on every call)."""
+    code = _setting("KARNI_PHONE_COUNTRY_CODE", None)
+    if code is None:
+        return None
+    return str(code).strip().lstrip("+") or None
+
+
+def default_phone_normalizer(value: Any) -> Any:
+    """Karni's rules (:func:`to_e164`) with ``KARNI_PHONE_COUNTRY_CODE`` and ``_TRUNK_PREFIX``."""
+    trunk = _setting("KARNI_PHONE_TRUNK_PREFIX", "0")
+    return to_e164(
+        value, country_code=phone_country_code(), trunk_prefix="" if trunk is None else str(trunk)
+    )
+
+
+def normalize_phone(value: Any) -> Any:
+    """``value`` through the function ``KARNI_PHONE_NORMALIZER`` names.
+
+    That is :func:`default_phone_normalizer` unless the project names its
+    own: a function taking the value as typed and returning it in E.164, or
+    unchanged when it cannot (:func:`validate_e164` then rejects it).
+    """
+    from karni.imports import import_setting
+
+    path = _setting("KARNI_PHONE_NORMALIZER", None) or DEFAULT_PHONE_NORMALIZER
+    normalizer = import_setting("KARNI_PHONE_NORMALIZER", path)
+    return normalizer(value)
+
+
+def _phone_message() -> str:
+    code = phone_country_code()
+    if code is None:
+        return (
+            "Enter the number in international format, e.g. +14155552671: a + and the "
+            "country code, then the number (at most 15 digits). For national numbers "
+            "such as 020 7946 0958, set KARNI_PHONE_COUNTRY_CODE."
+        )
+    return (
+        "Enter a phone number: a national one, which gets +"
+        f"{code} (KARNI_PHONE_COUNTRY_CODE), or + and the country code, then the "
+        "number, e.g. +14155552671 (at most 15 digits)."
+    )
+
+
 def validate_e164(value: Any) -> None:
-    """Reject a value that does not normalise to E.164."""
+    """Reject a value that does not normalise to E.164 (the message names the setting)."""
     if value in (None, ""):
         return
-    if not (isinstance(value, str) and E164.match(normalize_phone(value))):
-        raise ValidationError(
-            "Enter the number in international format, e.g. +14155552671: a + and the "
-            "country code, then the number (at most 15 digits).",
-            code="invalid_phone",
-            params={"value": value},
-        )
+    if not (isinstance(value, str) and E164.match(str(normalize_phone(value)))):
+        raise ValidationError(_phone_message(), code="invalid_phone", params={"value": value})
+
+
+class PhoneFormField(forms.CharField):
+    """A form field that cleans a phone number to E.164 (:func:`normalize_phone`).
+
+    So a form saves what the model stores, and an unchanged number written
+    another way ("020 7946 0958" for ``+442079460958``) is not a change.
+    """
+
+    default_validators = [validate_e164]
+
+    def to_python(self, value: Any) -> Any:
+        return normalize_phone(super().to_python(value))
 
 
 @deconstructible(path="karni.fields.E164Format")
@@ -244,6 +333,9 @@ class PhoneField(KarniField, models.CharField):
         setattr(model_instance, self.attname, value)
         return value
 
+    def formfield(self, **kwargs: Any) -> Any:
+        return super().formfield(**{"form_class": PhoneFormField, **kwargs})
+
     def check_condition(self) -> Any:
         condition = Q(E164Format(F(self.name)))
         return condition | Q(**{self.name: ""}) if self.blank and not self.null else condition
@@ -267,3 +359,28 @@ class PhoneField(KarniField, models.CharField):
         # Area code 555 is not assigned in the North American plan: never a real number.
         number = ctx.n if ctx.unique else ctx.random.randint(0, 9_999_999)
         return f"+1555{number:07d}"
+
+
+class MarkdownField(KarniField, models.TextField):
+    """Experimental. Long-form text written in markdown (see the module docstring).
+
+    A ``TextField`` in the database, in forms and in search. The API publishes
+    it as ``{"type": "string", "format": "markdown"}``, and that is the only
+    difference a client sees.
+    """
+
+    plain_django = "models.TextField()"
+    #: The OpenAPI ``format`` of its property in the API schema (what ``@karni/ui`` reads).
+    openapi_format = "markdown"
+
+    def karni_column(self) -> str:
+        return "MarkdownField: text, markdown that @karni/ui renders sanitized"
+
+    def deconstruct(self) -> tuple[str, str, list[Any], dict[str, Any]]:
+        name, path, args, kwargs = super().deconstruct()
+        return name, self._public_path(path), args, kwargs
+
+    def karni_sample(self, ctx: Any) -> Any:
+        heading = ctx.fake.sentence(nb_words=3).rstrip(".")
+        items = "\n".join(f"- {ctx.fake.sentence(nb_words=5)}" for _ in range(3))
+        return ctx.fit(f"## {heading}\n\n{ctx.fake.paragraph(nb_sentences=3)}\n\n{items}")

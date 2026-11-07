@@ -144,6 +144,20 @@ class Citation(BaseModel):
         return self.label
 
 
+class Footnote(BaseModel):
+    """Points at the soft-delete ``Note`` with ``PROTECT``.
+
+    A soft delete of the note keeps it, so the admin soft-deletes the note
+    without Django's protected-objects refusal; a hard delete still refuses.
+    """
+
+    text = models.CharField(max_length=200)
+    note = models.ForeignKey(Note, on_delete=models.PROTECT, related_name="footnotes")
+
+    def __str__(self) -> str:
+        return self.text
+
+
 class Tuned(BaseModel):
     """The contract's ``AdminMeta`` example: every override attribute at once."""
 
@@ -299,6 +313,30 @@ class Explicit(BaseModel):
     """
 
     name = models.CharField(max_length=100)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Widget(BaseModel):
+    """This docstring loses to ``Karni.help``."""
+
+    name = models.CharField(max_length=100, help_text="What people call it")
+    colour = models.CharField(max_length=30, blank=True)
+    stock = models.IntegerField(default=0, help_text="How many are on the shelf")
+
+    class Karni:
+        help = "Things we sell."
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Gizmo(BaseModel):
+    name = models.CharField(max_length=100)
+
+    class AdminMeta:
+        per_page = 15
 
     def __str__(self) -> str:
         return self.name

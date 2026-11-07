@@ -149,6 +149,57 @@ class TestConfirmDisable:
         assert twofa.user_has_2fa(user) is True
 
 
+def _wrong(device: Any) -> str:
+    """A code that is not the current one (nor the next, within the device's tolerance)."""
+    return f"{(int(_code(device)) + 500_000) % 10**device.digits:0{device.digits}d}"
+
+
+class TestThrottle:
+    """django-otp holds a device back 1, 2, 4... seconds after each wrong code, and says so."""
+
+    def test_a_right_code_right_after_a_wrong_one_says_to_wait(self, user: Any) -> None:
+        twofa.setup_totp(user)
+        device = TOTPDevice.objects.devices_for_user(user, confirmed=False).get()
+        wrong = _call(twofa.TwoFAConfirmView, user=user, data={"code": _wrong(device)})
+        assert wrong.status_code == 400 and wrong.data["code"] == "invalid_code"
+        right = _call(twofa.TwoFAConfirmView, user=user, data={"code": _code(device)})
+        assert right.status_code == 429, right.data
+        assert right.data["code"] == "throttled"
+        assert right.data["retry_after"] == 1
+        assert right["Retry-After"] == "1"
+        assert "wait 1 second" in right.data["detail"].lower()
+        assert twofa.user_has_2fa(user) is False  # the code was never checked
+
+    def test_the_wait_doubles_and_the_login_says_it_too(self, user: Any) -> None:
+        device = _enable_2fa(user)
+        token = twofa.issue_ephemeral_token(user)
+        with pytest.raises(twofa.TwoFAError):
+            twofa.verify_totp_code(user, _wrong(device))
+        device.refresh_from_db()
+        device.throttling_failure_count = 2  # a second wrong code
+        device.save()
+        response = _call(
+            twofa.TwoFALoginView, data={"ephemeral_token": token, "code": _code(device)}
+        )
+        assert response.status_code == 429 and response.data["retry_after"] == 2
+        assert response.data["code"] == "throttled"
+        # The token is not spent: once the wait is over, the right code signs in.
+        device.refresh_from_db()
+        device.throttle_reset()
+        ok = _call(twofa.TwoFALoginView, data={"ephemeral_token": token, "code": _code(device)})
+        assert ok.status_code == 200, ok.data
+
+    def test_a_replayed_token_is_named_before_the_code_is_checked(self, user: Any) -> None:
+        device = _enable_2fa(user)
+        token = twofa.issue_ephemeral_token(user)
+        first = _call(twofa.TwoFALoginView, data={"ephemeral_token": token, "code": _code(device)})
+        assert first.status_code == 200
+        # The same request again: the code was used too, but the token is what is wrong.
+        second = _call(twofa.TwoFALoginView, data={"ephemeral_token": token, "code": _code(device)})
+        assert second.status_code == 401
+        assert second.data["code"] == "replayed_token"
+
+
 class TestUserHas2FA:
     def test_false_for_anonymous_and_none(self) -> None:
         assert twofa.user_has_2fa(AnonymousUser()) is False

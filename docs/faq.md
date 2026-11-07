@@ -10,7 +10,7 @@ of the page.
 
 ## What is Karni?
 
-Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships.
+Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.
 
 ## How is Karni different from a Django boilerplate or starter template?
 
@@ -23,13 +23,11 @@ mechanical changes and lists the rest by file and line.
 
 ## Which AI coding tools does Karni work with?
 
-A new Karni project contains the instruction files that Claude Code, Cursor,
-GitHub Copilot, Windsurf, Cline, Aider, Junie and the tools that read
-`AGENTS.md` (Codex, Gemini CLI, Zed and others) look for, all generated from
-one rule set by `karni rules sync`. `karni mcp` offers Karni's commands as MCP
+Any coding agent that reads `AGENTS.md`. A new Karni project contains
+`AGENTS.md`, generated from one rule set by `karni rules sync`, with the
+procedures for routine tasks. `karni mcp` offers Karni's commands as MCP
 tools, and `karni context` prints a compact summary of the project for an
-agent. The [agents guide](agents.md) lists every adapter and the file each
-tool reads.
+agent. The [agents guide](agents.md) says what AGENTS.md carries.
 
 ## Does Karni work without AI coding tools?
 
@@ -44,15 +42,16 @@ A Karni resource needs the model, an `access` rule and whatever is specific to
 the domain. The REST API, admin, permissions, React table and form, tests and
 seed data come from the framework. In Karni's reference application, EventHub,
 the `Venue` resource is a five-line model and a four-line viewset, and the
-whole application (ticketing, payments, a Celery email, four roles) is 619
+whole application (ticketing, payments, a Celery email, four roles) is 617
 lines of project code, as measured in the [tutorial](tutorial.md).
 
 ## Is Karni production-ready?
 
-Not yet. Karni 0.4.0 was released on 2026-10-22 with Django 5.2 LTS and
-Python 3.12 to 3.14, two reference applications and CI on every push, but it
-has no known production deployment and its Docker setup has not been tested
-end to end. Teams that need a framework with years of production use should
+Not yet. Karni 0.5.0 runs on Django 5.2 LTS and Python 3.12 to 3.14, with
+two reference applications and CI on every push. CI
+also boots a new project's production stack ([deploying to a server](deploy.md))
+and smoke-tests it, but Karni has no known production deployment. Teams that
+need a framework with years of production use should
 weigh that before choosing Karni ([comparisons](compare/index.md)).
 
 ## What happens when Karni releases a breaking change?
@@ -73,10 +72,25 @@ better served by its current stack until such a path exists.
 
 ## Which Python, Django and React versions does Karni support?
 
-Karni 0.4.0 supports Python 3.12, 3.13 and 3.14, Django 5.2 LTS, Django REST
+Karni 0.5.0 supports Python 3.12, 3.13 and 3.14, Django 5.2 LTS, Django REST
 Framework and React 18 with TypeScript, and CI tests every Python version on
 each push. Python 3.12 is the floor because Karni's admin is built on
 django-unfold, whose current releases require Python 3.12.
+
+The frontend needs Node 20.19 or later and npm 11 or later. Node 24 LTS
+bundles both. CI runs the quickstart page on Node 20, with its bundled npm 10,
+and on Node 24, so the page's install step works on both.
+
+## Why does `npm install` fail with "Cannot read properties of null (reading 'edgesOut')"?
+
+The npm running it is version 10, which Node 20 and Node 22 bundle. npm 10
+crashes on a fresh install of a Karni frontend while it resolves Vite 8's
+optional peer dependencies. The crash comes before npm reads the project's
+`engines` field, so npm cannot print a clearer message. npm 11 fixed the bug.
+Run `npx npm@11 install` in `frontend/` in place of `npm install`, upgrade with
+`npm install -g npm@11`, or move to Node 24 LTS, which bundles npm 11.
+`karni doctor` shows the Node and npm on your PATH and flags either one when
+it is too old.
 
 ## How does Karni handle permissions?
 

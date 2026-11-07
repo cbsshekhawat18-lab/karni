@@ -1,5 +1,5 @@
 ---
-description: karni.fields - typed model fields (money, percent, quantity, email, slug, phone, country, currency, JSON, search, arrays) whose rules the database enforces, uniqueness that respects soft delete, the checks that catch float money and cascading deletes, and karni schema.
+description: karni.fields - typed model fields (money, percent, quantity, email, slug, phone, country, currency, markdown, JSON, search, arrays) whose rules the database enforces, uniqueness that respects soft delete, the checks that catch float money and cascading deletes, and karni schema.
 ---
 
 # Typed fields
@@ -33,7 +33,7 @@ class Customer(BaseModel):
 ```
 
 `karni make model` writes them from the field DSL:
-`karni make model Product name:str:200 slug:slug:name price:money:EUR stock:quantity made_in:country?`.
+`karni make model Product name:str:200 slug:slug:name price:money:EUR stock:quantity made_in:country? overview:markdown?`.
 
 ## The field set
 
@@ -53,6 +53,7 @@ cannot work at all.
 | `PhoneField` | `varchar(32)` | `CHECK` E.164 (regex on PostgreSQL, `GLOB` on SQLite) | - | PostgreSQL, SQLite (others: no CHECK, W964) | `models.CharField(max_length=32)` |
 | `CountryField` | `varchar(2)` | `CHECK (col IN (...ISO 3166-1 alpha-2...))` | - | all | `models.CharField(max_length=2, choices=...)` |
 | `CurrencyField` | `varchar(3)` | `CHECK (col IN (...ISO 4217...))` | - | all | `models.CharField(max_length=3, choices=...)` |
+| `MarkdownField` (experimental) | `text` | - | - | all | `models.TextField()` |
 | `JSONField(queried=True)` | `jsonb` | - | GIN when `queried=True` | GIN on PostgreSQL only (W964) | `models.JSONField` + `GinIndex` |
 | `SearchField(sources=[...])` | generated `tsvector` | - | GIN | PostgreSQL, and elsewhere a plain-text column and portable search (W964) | `GeneratedField(SearchVector(...))` + `GinIndex` |
 | `ArrayField(base_field)` | `type[]` | - | GIN unless `indexed=False` | PostgreSQL only (E964 elsewhere) | `django.contrib.postgres.fields.ArrayField` |
@@ -115,10 +116,38 @@ a duplicate from a concurrent insert. A number as the DSL argument
 Stored in E.164: `+`, country code and number, at most 15 digits
 (`+14155552671`). Input may carry spaces, dashes, dots, parentheses, a
 `(0)` trunk marker or a `00` prefix (`"+44 (0)20 7946 0958"` is stored as
-`+442079460958`). A national number without a country code is rejected, not
-guessed. There is no dependency: per-country number plans need Google's
-`phonenumbers` (megabytes of metadata). Add `validators=[...]` built on it
-when well formed is not enough and you must know a number is assignable.
+`+442079460958`). The model field, its form field (`PhoneFormField`, which
+the admin uses) and the API's serializer field (`PhoneNumberField`) clean
+input the same way.
+
+A national number, written without `+` or `00`, is rejected unless the
+project says which country its numbers are in:
+
+```python
+# config/settings.py, after karni_settings(globals())
+KARNI_PHONE_COUNTRY_CODE = "44"   # a national number gets +44
+KARNI_PHONE_TRUNK_PREFIX = "0"    # and loses its leading 0 (the default)
+```
+
+Then `"01234 000 111"` is stored as `+441234000111`, and a number from
+another country still needs its `+`. The trunk prefix is what a caller dials
+before a national number and what the international form drops: `"0"` in
+most countries, `"1"` in North America (`KARNI_PHONE_COUNTRY_CODE = "1"`
+turns `"1 415 555 2671"` and `"(415) 555-2671"` into `+14155552671`), `"8"`
+in Russia, and `""` where the number is dialled as written (Italy keeps its
+leading 0: `"06 1234 5678"` becomes `+390612345678`). Both settings are read
+on every call, and the environment variables of the same names set them
+too. The rejection message names `KARNI_PHONE_COUNTRY_CODE`. The admin
+shows the number as stored.
+
+`KARNI_PHONE_NORMALIZER` names the function every PhoneField cleans a
+number with. It takes the value as typed and returns it in E.164, or
+unchanged to have it rejected. `karni.fields.to_e164(value,
+country_code=..., trunk_prefix=...)` holds Karni's rules for a function of
+your own. There is no dependency: per-country number plans need Google's
+`phonenumbers` (megabytes of metadata). Use it in your normalizer, or add
+`validators=[...]` built on it, when well formed is not enough and you must
+know a number is assignable.
 
 ### CountryField and CurrencyField
 
@@ -129,6 +158,52 @@ enum get it) and as a database CHECK. `codes=[...]` narrows to a subset,
 codes, including fund and metal codes). The CHECK is a named constraint that lists
 the codes: when a Karni release updates a list, `makemigrations` replaces it,
 and each field records the list's `iso_revision`.
+
+### MarkdownField
+
+!!! warning "Experimental"
+    `MarkdownField`, its `format: markdown` in the OpenAPI schema
+    (`karni.api.formats`) and the `markdown` type of `karni make model` and
+    the spec are [experimental](stability.md#experimental-names).
+
+Long-form text written in markdown: a product's description, a policy, the
+sections of a report. The column is a plain `text` column and the API sends
+and takes the markdown source as written: nothing is rendered on the server.
+What changes is the schema: the property says `"format": "markdown"`, and
+`@karni/ui` reads it.
+
+```python
+from karni.fields import MarkdownField
+
+class Product(BaseModel):
+    name = models.CharField(max_length=200)
+    overview = MarkdownField(blank=True)
+    care = MarkdownField(blank=True)
+```
+
+- **ResourceForm** edits it with Write and Preview tabs. The preview is
+  MarkdownView, so it shows what the detail page will. When the field needs
+  attention, focus moves to the text and Write opens.
+- **ResourceDetail** shows it formatted and sanitized, across the width: raw
+  HTML in the source shows as text, and no script, event handler or
+  `javascript:` link ever reaches the page
+  ([page blocks](ui.md#page-blocks-experimental)).
+- **ResourceTable** leaves it out of its default columns (long text is no
+  column). A column set or a `columns` entry can name it, and it shows a
+  one-line excerpt without the markdown marks.
+- **Search** works as on any text field: list it in a viewset's
+  `search_fields`, or as a `SearchField` source.
+
+A `MarkdownField` with `blank=True` is published the way drf-spectacular
+publishes every formatted string that may be blank,
+`{"oneOf": [{"type": "string", "format": "markdown"}, {"type": "string",
+"maxLength": 0}]}`, and `@karni/ui` reads both forms. `karni make model
+Product overview:markdown?` writes one, and so does a spec field `overview:
+"markdown?"`. Seeds and factories fill it with a short markdown section.
+
+To publish another format a client renders by, give your own `TextField`
+subclass an `openapi_format` (`"html"`, say): the generated serializer
+carries it into the schema the same way.
 
 ### JSONField, SearchField, ArrayField
 
@@ -141,7 +216,8 @@ and each field records the list's `iso_revision`.
   never in the API, factories or the change history. List it in a viewset's
   `search_fields` (or list exactly its sources) and the default search
   provider matches through its GIN index: every word is a prefix
-  (`walnu` finds `walnut`), all words must match, rows rank by `ts_rank`.
+  (`walnu` finds `walnut`, `MT-0001` finds that code), all words must match,
+  rows rank by `ts_rank`.
   The trigram leg is not combined with it, because `similarity() > t` cannot
   use an index. A source the requester may not read (`APIMeta.write_only`,
   `Karni.field_roles`) turns it back into a search of the readable sources.
@@ -233,6 +309,11 @@ newest first.
 `django.contrib.postgres` indexes with one difference: on another database
 creating them is a commented no-op instead of a syntax error, so one
 migration runs everywhere.
+`TrigramIndex` (experimental) is a `GinIndex` with `gin_trgm_ops` on every
+field, which serves `ILIKE '%...%'` and pg_trgm's `%`. It creates `pg_trgm`
+first when the database lacks it, and it names itself when added with
+`contribute_index`. `class Karni: search` adds one per searched field
+([search across models](global-search.md#the-indexes)).
 
 ## karni schema
 

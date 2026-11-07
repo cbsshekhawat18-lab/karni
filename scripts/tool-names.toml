@@ -1,0 +1,251 @@
+# The names of AI tools and companies that Karni's tracked files do not carry,
+# and the only places that may. Read by scripts/check_tool_names.py (CI and
+# packages/karni-cli/tests/test_tool_names.py). Karni works with any coding
+# agent: say "coding agent" where the meaning needs it.
+#
+# [[term]]: name, a Python regular expression, and a sample it must match.
+# [[allow]]: a path (fnmatch glob, `*` crosses `/`), the terms it may carry
+# ("*" for every term), why, and optionally `after`: a regular expression for
+# the first line from which the exception applies.
+
+[[term]]
+name = "claude"
+pattern = '(?i)claude'
+sample = "Claude Code"
+
+[[term]]
+name = "anthropic"
+pattern = '(?i)anthropic'
+sample = "ANTHROPIC_API_KEY"
+
+[[term]]
+name = "openai"
+pattern = '(?i)openai'
+sample = "OpenAI"
+
+[[term]]
+name = "chatgpt"
+pattern = '(?i)chatgpt'
+sample = "ChatGPT"
+
+[[term]]
+name = "gpt"
+pattern = '(?i)\bgpt'
+sample = "a GPT model"
+
+[[term]]
+name = "codex"
+pattern = '(?i)\bcodex\b'
+sample = "Codex CLI"
+
+[[term]]
+name = "copilot"
+pattern = '(?i)copilot'
+sample = "GitHub Copilot"
+
+[[term]]
+name = "cursor"
+pattern = '\bCursor\b|(?i:\.cursor(?:rules|/)|\bcursor[ -]rules\b|\bcursor\.(?:com|directory|sh)\b)'
+sample = "Cursor reads .cursor/rules"
+
+[[term]]
+name = "windsurf"
+pattern = '(?i)windsurf'
+sample = "Windsurf"
+
+[[term]]
+name = "junie"
+pattern = '(?i)junie'
+sample = "JetBrains Junie"
+
+[[term]]
+name = "cline"
+pattern = '(?i)\bcline\b|clinerules'
+sample = "Cline reads .clinerules"
+
+[[term]]
+name = "aider"
+pattern = '(?i)\baider\b'
+sample = "aider --read"
+
+[[term]]
+name = "gemini"
+pattern = '(?i)gemini'
+sample = "Gemini CLI"
+
+[[term]]
+name = "perplexity"
+pattern = '(?i)perplexity'
+sample = "Perplexity"
+
+[[term]]
+name = "mistral"
+pattern = '(?i)mistral'
+sample = "Mistral"
+
+[[term]]
+name = "llama"
+pattern = '(?i)\bllama'
+sample = "Llama"
+
+[[term]]
+name = "deepseek"
+pattern = '(?i)deepseek'
+sample = "DeepSeek"
+
+[[term]]
+name = "grok"
+pattern = '(?i)\bgrok\b'
+sample = "Grok"
+
+[[term]]
+name = "devin"
+pattern = '\bDevin\b|(?i:\.devin/)'
+sample = "Devin reads .devin/rules"
+
+[[term]]
+name = "jules"
+pattern = '\bJules\b'
+sample = "Jules"
+
+[[term]]
+name = "tabnine"
+pattern = '(?i)tabnine'
+sample = "Tabnine"
+
+[[term]]
+name = "qwen"
+pattern = '(?i)\bqwen'
+sample = "Qwen"
+
+# Not a name, but the same kind of leak: a personal machine's home directory.
+[[term]]
+name = "home-path"
+pattern = '/Users/[a-z][a-z0-9._-]*/'
+sample = "/Users/someone/projects"
+
+# --- 1. The karni-ai module stays as it is: its providers and their settings ---
+
+[[allow]]
+path = "modules/karni-ai/*"
+terms = ["*"]
+reason = "The karni-ai module, its README and its settings name its providers."
+
+[[allow]]
+path = "docs/ai-extraction.md"
+terms = ["*"]
+reason = "karni-ai's own docs page."
+
+[[allow]]
+path = "docs/settings.md"
+terms = ["anthropic", "openai"]
+reason = "Generated from the settings, karni-ai's provider settings among them."
+
+[[allow]]
+path = "docs/REFERENCE.md"
+terms = ["anthropic", "openai"]
+reason = "Generated from the source, karni-ai's provider settings among them."
+
+[[allow]]
+path = "docs/errors.md"
+terms = ["anthropic", "openai"]
+reason = "Generated from the error registries, karni-ai's provider checks among them."
+
+[[allow]]
+path = "packages/karni-cli/karni_cli/module_codes.json"
+terms = ["anthropic", "openai"]
+reason = "Generated from the modules' error registries, karni-ai's provider checks among them."
+
+[[allow]]
+path = "Makefile"
+terms = ["anthropic", "openai"]
+reason = "Installs karni-ai's provider extras, which its tests need."
+
+# --- 2. Deprecation notes name the files they deprecate (removed in 1.0) ---
+
+[[allow]]
+path = "docs/migrations/0.5.md"
+terms = ["claude", "cursor", "windsurf", "copilot", "cline", "junie"]
+reason = "The deprecation note for the tool-specific agent files names them."
+
+[[allow]]
+path = "docs/stability.md"
+terms = ["claude", "cursor", "windsurf", "copilot", "cline", "junie"]
+reason = "The stability promise names the deprecated tool-specific agent files."
+
+[[allow]]
+path = "CHANGELOG.md"
+terms = ["claude", "cursor", "windsurf", "copilot", "cline", "junie"]
+reason = "The unreleased deprecation entry names the tool-specific agent files."
+
+# --- 3. The deprecated adapter code writes those files until 1.0 ---
+
+[[allow]]
+path = "packages/karni-cli/karni_cli/agent_adapters.toml"
+terms = ["claude", "cursor", "windsurf", "copilot", "cline", "junie", "aider", "devin"]
+reason = "The deprecated per-tool entries, written only where a project has them, until 1.0."
+
+[[allow]]
+path = "packages/karni-cli/karni_cli/upgrades/legacy_agent_files.py"
+terms = ["claude", "cursor"]
+reason = "The 0.1 agent files the 0.2 codemod recognises and migrates."
+
+[[allow]]
+path = "packages/karni-cli/karni_cli/upgrades/v0_2/agent_guidance.py"
+terms = ["claude", "cursor"]
+reason = "The 0.2 codemod migrates the 0.1 agent files by name."
+
+[[allow]]
+path = "packages/karni-cli/tests/test_adapters.py"
+terms = ["claude", "cursor", "windsurf", "copilot", "cline", "junie", "aider", "devin"]
+reason = "Tests that the deprecated files are kept up to date and never written anew."
+
+[[allow]]
+path = "packages/karni-cli/tests/test_agent_upgrade.py"
+terms = ["claude", "cursor", "windsurf", "copilot", "junie"]
+reason = "Tests the 0.2 codemod on the 0.1 agent files."
+
+[[allow]]
+path = "packages/karni-cli/tests/test_add.py"
+terms = ["claude", "cursor", "junie"]
+reason = "Tests that karni add writes no tool-specific agent file."
+
+[[allow]]
+path = "packages/karni-cli/tests/test_doctor.py"
+terms = ["claude", "cursor"]
+reason = "Tests that karni doctor mentions the deprecated files once."
+
+[[allow]]
+path = "packages/karni/tests/test_welcome.py"
+terms = ["claude", "cursor", "copilot", "junie"]
+reason = "Tests that the welcome page lists no tool-specific agent file."
+
+# --- 4. Released history is not rewritten ---
+
+[[allow]]
+path = "CHANGELOG.md"
+terms = ["*"]
+after = '^## \d+\.\d+\.\d+ \(\d{4}-\d{2}-\d{2}\)'
+reason = "Released sections (0.4.0 and older) stay as they were."
+
+[[allow]]
+path = "packages/karni/karni/changelog/0.2.0.toml"
+terms = ["claude", "cursor"]
+reason = "The released 0.2.0 changelog entry; entries never change after they ship."
+
+# --- 5. Everything else ---
+
+[[allow]]
+path = ".gitignore"
+terms = ["claude"]
+reason = "Keeps contributors' own agent working files out of the repository."
+
+[[allow]]
+path = "packages/karni/karni/pagination.py"
+terms = ["cursor"]
+reason = "Cursor pagination: a database cursor, not a tool."
+
+[[allow]]
+path = "docs/decisions/0001-core-architecture.md"
+terms = ["cursor"]
+reason = "Cursor pagination: a database cursor, not a tool."

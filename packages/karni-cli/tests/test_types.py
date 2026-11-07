@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from karni_cli.project import CliError
-from karni_cli.typegen import generate_hooks, resource_components
+from karni_cli.typegen import generate_hooks, resource_components, search_resources
 
 FIXTURE = Path(__file__).parent / "fixtures" / "schema.fixture.json"
 
@@ -36,6 +36,29 @@ def test_generated_hooks_golden(schema: dict) -> None:
     assert out.index("useEventsList") < out.index("useVenuesList")
 
 
+def test_a_schema_without_trees_imports_no_tree_hook(schema: dict) -> None:
+    out = generate_hooks(schema)
+    assert "Tree" not in out
+    assert (
+        'import { useResourceItem, useResourceList, useResourceMutations } from "@karni/ui";' in out
+    )
+
+
+def test_a_tree_resource_gets_a_tree_hook(schema: dict) -> None:
+    schema["components"]["schemas"]["TestappVenue"]["x-karni-tree"] = {
+        "parent": "parent",
+        "ordered": False,
+    }
+    out = generate_hooks(schema)
+    assert '  useResourceTree,\n} from "@karni/ui";' in out
+    assert '  ResourceTreeParams,\n} from "@karni/ui";' in out
+    assert (
+        "export const useVenuesTree = (params?: ResourceTreeParams) =>\n"
+        '  useResourceTree<components["schemas"]["TestappVenue"]>("venues", params);\n'
+    ) in out
+    assert "useEventsTree" not in out  # events is not a tree
+
+
 def test_no_karni_resources_errors(schema: dict) -> None:
     for item in schema["paths"].values():
         item["get"].pop("x-karni-resource", None)
@@ -46,3 +69,142 @@ def test_no_karni_resources_errors(schema: dict) -> None:
 def test_detail_op_without_pagination_is_skipped(schema: dict) -> None:
     # the detail path has no x-karni-resource and a non-paginated response: ignored
     assert "events" in resource_components(schema)
+
+
+def test_the_navigation_endpoint_is_no_resource(schema: dict) -> None:
+    """``GET /api/navigation/`` (experimental) is typed by types.ts alone, never a resource hook."""
+    schema["paths"]["/api/navigation/"] = {
+        "get": {
+            "operationId": "navigation",
+            "responses": {
+                "200": {
+                    "content": {
+                        "application/json": {"schema": {"$ref": "#/components/schemas/Navigation"}}
+                    }
+                }
+            },
+        }
+    }
+    assert "navigation" not in resource_components(schema)
+    assert "Navigation" not in generate_hooks(schema)
+
+
+def test_a_declared_aggregation_gets_a_typed_hook(schema: dict) -> None:
+    from karni_cli.typegen import aggregate_groups
+
+    assert "useAggregate" not in generate_hooks(schema)
+    list_path = next(
+        path
+        for path, item in schema["paths"].items()
+        if item["get"].get("x-karni-resource") == "events"
+    )
+    schema["paths"][f"{list_path}aggregate/"] = {
+        "get": {"x-karni-aggregate": {"group_by": ["status", "starts_at:year"]}}
+    }
+    assert aggregate_groups(schema) == {"events": ["status", "starts_at:year"]}
+    out = generate_hooks(schema)
+    assert "import { useAggregate, useResourceItem" in out
+    assert "  AggregateParams," in out
+    assert 'export type EventsAggregateGroup = "status" | "starts_at:year";' in out
+    assert "params: AggregateParams & { groupBy: EventsAggregateGroup }," in out
+    assert ') => useAggregate("events", params);' in out
+    assert "useVenuesAggregate" not in out
+
+
+def test_cross_model_search_gets_a_typed_hook(schema: dict) -> None:
+    assert "useGlobalSearch" not in generate_hooks(schema)  # no search operation, no hook
+    schema["paths"]["/api/search/"] = {
+        "get": {"x-karni-search": {"resources": ["venues", "events"]}, "responses": {}}
+    }
+    assert search_resources(schema) == ["events", "venues"]
+    out = generate_hooks(schema)
+    assert 'export type SearchResource = "events" | "venues";' in out
+    assert "  useGlobalSearch as useKarniGlobalSearch," in out
+    assert ") => useKarniGlobalSearch<SearchResource>(params, options);" in out
+    schema["paths"]["/api/search/"]["get"]["x-karni-search"]["resources"] = []
+    assert "export type SearchResource = never;" in generate_hooks(schema)
+
+
+# one typed client per API version (experimental)
+
+
+def _fake_project(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, schema: dict, versions: list[str]
+) -> list[list[str]]:
+    """``manage.py spectacular`` writes the fixture schema, and openapi-typescript a stub."""
+    import subprocess
+
+    import yaml
+
+    from karni_cli.commands import types as types_command
+
+    calls: list[list[str]] = []
+
+    def run_manage(project: Path, args: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+        calls.append(args)
+        document = dict(schema)
+        if versions:
+            document["x-karni-api-versions"] = [{"name": name} for name in versions]
+        target = project / args[args.index("--file") + 1]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(yaml.safe_dump(document))
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    def typescript(project: Path, schema_file: Path, types_file: Path) -> None:
+        types_file.parent.mkdir(parents=True, exist_ok=True)
+        types_file.write_text(f"// from {schema_file.name}\n")
+
+    monkeypatch.setattr(types_command.project_mod, "run_manage", run_manage)
+    monkeypatch.setattr(types_command, "_run_openapi_typescript", typescript)
+    return calls
+
+
+def test_types_writes_a_client_for_each_version(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, schema: dict
+) -> None:
+    from karni_cli.commands.types import write_types
+
+    calls = _fake_project(monkeypatch, tmp_path, schema, ["v1", "v2"])
+    written = write_types(tmp_path)
+    api = tmp_path / "frontend" / "src" / "api"
+    for name in ("", "v1", "v2"):
+        base = api / name if name else api
+        assert (base / "schema.yml").is_file()
+        assert (base / "types.ts").is_file()
+        assert (base / "hooks.ts").read_text().startswith("// Generated by karni types.")
+    assert [c for c in calls if "--api-version" in c] == [
+        [
+            "spectacular",
+            "--format",
+            "openapi",
+            "--file",
+            "frontend/src/api/v1/schema.yml",
+            "--api-version",
+            "v1",
+        ],
+        [
+            "spectacular",
+            "--format",
+            "openapi",
+            "--file",
+            "frontend/src/api/v2/schema.yml",
+            "--api-version",
+            "v2",
+        ],
+    ]
+    assert "(v1)" in written and "(v2)" in written
+
+
+def test_types_without_versions_writes_what_it_always_did(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, schema: dict
+) -> None:
+    from karni_cli.commands.types import write_types
+
+    calls = _fake_project(monkeypatch, tmp_path, schema, [])
+    write_types(tmp_path)
+    assert len(calls) == 1
+    assert sorted(p.name for p in (tmp_path / "frontend" / "src" / "api").iterdir()) == [
+        "hooks.ts",
+        "schema.yml",
+        "types.ts",
+    ]

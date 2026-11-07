@@ -1,0 +1,50 @@
+{% comment %}
+The base print template of karni-reports. A report's template extends it and
+fills the blocks:
+
+  content      the body of the report (required)
+  header       repeated at the top of every page (default: the report's title)
+  footer       repeated at the bottom of every page (default: empty)
+  title        the document title (default: the report's title)
+  styles       extra CSS, after the base rules
+  page_margin  the page margins (default: 22mm 16mm 20mm 16mm)
+  page_label   the word before the page number (default: Page)
+
+The page size comes from KARNI_REPORTS_PAGE_SIZE ({{ page_size }}). A project
+replaces this whole file by adding its own templates/karni_reports/base.html.
+{% endcomment %}<!doctype html>
+<html lang="{% block lang %}en{% endblock %}">
+<head>
+<meta charset="utf-8">
+<title>{% block title %}{{ report.title }}{% endblock %}</title>
+<style>
+@page {
+  size: {{ page_size }};
+  margin: {% block page_margin %}22mm 16mm 20mm 16mm{% endblock %};
+  @top-left { content: element(karni-header); }
+  @bottom-left { content: element(karni-footer); }
+  @bottom-right {
+    content: "{% block page_label %}Page{% endblock %} " counter(page) " / " counter(pages);
+    font-size: 8pt;
+    color: #555;
+  }
+}
+html { font-family: "DejaVu Sans", "Helvetica", "Arial", sans-serif; font-size: 10pt; color: #111; }
+body { margin: 0; }
+.karni-header { position: running(karni-header); font-size: 9pt; color: #555; }
+.karni-footer { position: running(karni-footer); font-size: 8pt; color: #555; }
+h1 { font-size: 16pt; margin: 0 0 6mm; }
+h2 { font-size: 12pt; margin: 6mm 0 3mm; }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 1.5mm 2mm; border-bottom: 0.3pt solid #bbb; vertical-align: top; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; }
+</style>
+{% block styles %}{% endblock %}
+</head>
+<body>
+<header class="karni-header">{% block header %}{{ report.title }}{% endblock %}</header>
+<footer class="karni-footer">{% block footer %}{% endblock %}</footer>
+<main>{% block content %}{% endblock %}</main>
+</body>
+</html>

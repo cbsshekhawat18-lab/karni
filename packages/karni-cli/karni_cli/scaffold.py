@@ -17,7 +17,7 @@ SLUG_RE = re.compile(r"^[a-z_][a-z0-9_]*$")
 
 UI_PACKAGE = "@karni/ui"
 #: The npm spec a project gets when no local @karni/ui is found.
-UI_REGISTRY_SPEC = "^0.4.0"
+UI_REGISTRY_SPEC = "^0.5.0"
 #: What a ``file:`` consumer needs: package.json ``exports`` point into dist/.
 UI_DIST_FILES = ("dist/index.js", "dist/styles.css", "dist/tailwind-preset.js")
 #: Sources the dist is built from (staleness check).
@@ -118,6 +118,23 @@ def resolve_ui_source(start: Path | None = None) -> Path | None:
     return None
 
 
+def resolve_ui_source_for(project: Path) -> Path | None:
+    """The local @karni/ui for a new ``project``, ``None``: use the npm release.
+
+    ``KARNI_UI_SRC`` is a choice, so it always wins. A checkout found only
+    because the CLI itself runs from one is used just for a project inside
+    that checkout (``examples/``), where the path is relative and portable.
+    A project anywhere else gets the registry range, never a path that
+    exists on one machine only.
+    """
+    source = resolve_ui_source()
+    if source is None or os.environ.get("KARNI_UI_SRC"):
+        return source
+    if project.resolve().is_relative_to(source.parent.parent):
+        return source
+    return None
+
+
 def ui_spec(source: Path | None, project: Path | None = None) -> str:
     """The ``@karni/ui`` dependency spec written into frontend/package.json.
 
@@ -207,3 +224,17 @@ def build_ui_dist(source: Path) -> str | None:
             return f"`{' '.join(argv)}` failed ({proc.returncode}):\n{tail}"
     missing = ui_dist_missing(source)
     return f"the build did not produce {', '.join(missing)}" if missing else None
+
+
+def remove_bytecode(project: Path) -> None:
+    """Delete every ``__pycache__`` folder and ``*.pyc`` file under ``project``.
+
+    ``pip install`` byte-compiles the template's ``.py`` files inside the installed
+    karni-cli, and cookiecutter copies those folders into a new project, so a fresh
+    project would start with compiled files it never asked for (and
+    ``PYTHONDONTWRITEBYTECODE`` cannot prevent a copy).
+    """
+    for folder in sorted(project.rglob("__pycache__"), reverse=True):
+        shutil.rmtree(folder, ignore_errors=True)
+    for stray in project.rglob("*.pyc"):
+        stray.unlink(missing_ok=True)

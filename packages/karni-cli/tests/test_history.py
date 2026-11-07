@@ -90,6 +90,8 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         "run_manage",
         lambda *a, **k: subprocess.CompletedProcess([], 0, stdout=BACKEND + "\n", stderr=""),
     )
+    # The CATALOG block is test_context's: here the inventory is the backend's alone.
+    monkeypatch.setattr(context_cmd, "catalog_lines", lambda *a, **k: [])
     return root
 
 
@@ -304,7 +306,7 @@ def test_no_store_spawns_no_provider_process(runner, project, monkeypatch) -> No
     monkeypatch.setattr(project_mod, "compose_service_running", lambda *a: False)
     import karni_cli.commands.check as check_mod
 
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 0)
     for args in (
         ["context", "--with-history", "apps/events/models.py"],
         ["context", "--with-history"],

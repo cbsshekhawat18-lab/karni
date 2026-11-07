@@ -18,14 +18,29 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from django.conf import settings
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
 from django.template.loader import render_to_string
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
+from karni.exceptions import KarniImproperlyConfigured
 
-from karni_impersonation import conf, services
-from karni_impersonation.models import ImpersonationSession
+_APP = "karni_impersonation"
+if not any(
+    entry == _APP or entry.startswith(f"{_APP}.")
+    for entry in getattr(settings, "INSTALLED_APPS", ())
+):
+    # Importing the models of an app that is not installed fails with a bare RuntimeError.
+    raise KarniImproperlyConfigured(
+        "karni_impersonation.middleware.ImpersonationMiddleware is still in MIDDLEWARE, "
+        "but karni_impersonation is not in INSTALLED_APPS. Take the middleware out of MIDDLEWARE "
+        "(karni remove impersonation does) or add the app back (karni add impersonation).",
+        code="IMP007",
+    )
+
+from karni_impersonation import conf, services  # noqa: E402
+from karni_impersonation.models import ImpersonationSession  # noqa: E402
 
 __all__ = ["ImpersonationMiddleware"]
 

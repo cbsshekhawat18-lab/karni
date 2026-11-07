@@ -33,7 +33,9 @@ class ImpersonationSession(BaseModel):
     started_at = models.DateTimeField(default=timezone.now, db_index=True)
     expires_at = models.DateTimeField(db_index=True)
     ended_at = models.DateTimeField(null=True, blank=True)
-    end_reason = models.CharField(max_length=10, choices=EndReason.choices, blank=True, default="")
+    end_reason = models.CharField(
+        max_length=10, choices=EndReason.choices, blank=True, default="", db_index=True
+    )
     ip = models.CharField(max_length=64, blank=True, default="")
     user_agent = models.CharField(max_length=255, blank=True, default="")
     batch_id = models.BigIntegerField(null=True, blank=True)
@@ -41,12 +43,27 @@ class ImpersonationSession(BaseModel):
     class Meta(BaseModel.Meta):
         ordering: ClassVar[list[str]] = ["-started_at"]
         verbose_name = "impersonation session"
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            # One open session per actor, enforced by the database so two
+            # concurrent starts cannot both succeed (IMP004).
+            models.UniqueConstraint(
+                fields=["actor"],
+                condition=models.Q(ended_at__isnull=True),
+                name="karni_impersonation_one_open_per_actor",
+            )
+        ]
 
     class Karni:
-        """Audited; ``impersonate`` is the permission the module is gated on."""
+        """Audited; ``impersonate`` is the permission the module is gated on.
+
+        Only a grant that names it gives it: ``"*"`` and
+        ``"karni_impersonation.impersonationsession:*"`` skip it, so the
+        default ``user``, ``customer`` and ``staff`` roles never hold it.
+        """
 
         audit = True
         actions = ["impersonate"]
+        explicit_actions = ["impersonate"]
 
     class APIMeta:
         read_only = [

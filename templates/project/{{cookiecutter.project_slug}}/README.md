@@ -1,9 +1,31 @@
 # {{ cookiecutter.project_name }}
 
-A [Karni](https://github.com/karni) project: batteries-included Django + DRF +
+A [Karni](https://github.com/cbsshekhawat18-lab/karni) project: batteries-included Django + DRF +
 Celery, configured almost entirely by `karni_settings(globals())` in
 `config/settings.py`. Every Karni default can be overridden from that file.
 Anything you assign after the call wins.
+
+## What this project is
+
+{% if cookiecutter.kind == "site" -%}
+A public website (`kind = "site"` in pyproject.toml): a site app of Django views
+and templates on the [karni-site](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
+module, at `/`. The client changes every text, image, menu, contact detail and
+page title in the admin, as staff or with the `editor` role. Nobody signs up:
+staff create the accounts.
+{%- if cookiecutter.staff_app == "yes" %} The staff app in `frontend/` is for staff, such as the
+requests a public form collects.
+{%- else %} There is no React staff app: staff work in the admin.
+{%- endif %}
+{%- elif cookiecutter.kind == "site+app" -%}
+A public website and an app (`kind = "site+app"` in pyproject.toml): a site app
+of Django views and templates on the [karni-site](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
+module at `/`, edited in the admin, and a REST API with the React app in
+`frontend/` for signed-in users.
+{%- else -%}
+An app (`kind = "app"` in pyproject.toml): a REST API and the React app in
+`frontend/` for signed-in users. `karni add site` adds a public website.
+{%- endif %}
 
 ## Quickstart
 
@@ -21,7 +43,9 @@ This boots:
 | `redis`    | redis:7 (Celery broker + cache)                 | internal (`redis:6379`)|
 | `worker`   | Celery worker                                   | none                   |
 | `beat`     | Celery beat (django-celery-beat DB scheduler)   | none                   |
+{%- if cookiecutter.staff_app == "yes" %}
 | `frontend` | Vite dev server (React + TS), proxies `/api` and `/health` to django | http://localhost:5173 |
+{%- endif %}
 
 Verify the stack (Postgres, Redis and Celery all checked):
 
@@ -30,30 +54,43 @@ curl http://localhost:8000/health/ready/
 # {"status": "ok", "checks": {"database": ..., "cache": ..., "celery": ...}}
 ```
 
+Probes: `/healthz` (the process answers) and `/readyz` (database, cache and broker).
 Other endpoints: liveness at `/health/`, admin at `/admin/`, OpenAPI schema at
 `/api/schema/`, Swagger UI at `/api/docs/`.
+{%- if cookiecutter.staff_app == "yes" %}
 
 ## Frontend
 
-`frontend/` is Vite + React + TypeScript on [@karni/ui](https://github.com/karni).
+`frontend/` is Vite + React + TypeScript on [@karni/ui](https://github.com/cbsshekhawat18-lab/karni/tree/main/packages/karni-ui).
 `src/App.tsx` mounts `KarniProvider` (one `createKarniClient({ baseUrl: "/api" })`),
 `AuthProvider`, the router and a `Toaster`. `src/main.tsx` imports
 `@karni/ui/styles.css` (the `--karni-*` design tokens) and `src/index.css`
 (Tailwind 4 with the `@karni/ui/tailwind-preset`, loaded through `@config` from `tailwind.config.ts`).
 Every route renders inside `src/layout.tsx`, which is @karni/ui's `Layout` with one
-nav entry per static route in `src/routes.tsx`. That is how pages from
-`karni make page` (or `karni make model ... -a`) appear in the sidebar.
+nav entry per static route in `src/routes.tsx` (`routeNavItems`). That is how pages from
+`karni make page` (or `karni make model ... -a`) appear in the sidebar. Every page but
+a sign-in page sits behind `AuthGuard`, so a visitor who is not signed in sees the
+sign-in prompt, and `src/pages/home.tsx` is the dashboard: counts and the newest rows
+of every model that declares `class Karni: dashboard = {...}`. The admin wears the
+same brand as the app: `karni ui detect` (or `karni ui detect --css <stylesheet>`)
+writes `src/karni-theme.css`, and `KARNI_THEME_CSS` serves it to the admin too.
 
 ```sh
 cd frontend
-npm install
+npm install     # needs npm 11 or later. On npm 10 (Node 20 and 22): npx npm@11 install
 npm run dev     # http://localhost:5173, proxies /api and /health to Django
 npm run build   # tsc + vite build into frontend/dist
 npm run lint    # ESLint with the karni/* enforcement rules
 ```
 
-The dev server proxies to `http://127.0.0.1:8000` (`karni serve --local`).
-For its container, docker compose sets `KARNI_API_PROXY=http://django:8000`.
+The dev server proxies to `http://127.0.0.1:8000`, where `karni serve
+--local` runs Django. When port 8000 is taken, set `KARNI_DEV_PORT=8020` in
+`.env`: `karni serve --local` and the dev server both read it, and docker
+compose publishes Django on it. For its container, docker compose sets
+`KARNI_API_PROXY=http://django:8000`, which wins over `KARNI_DEV_PORT`.
+`karni serve --local --port 8030` prints how to point the dev server at that
+port: `cd frontend && KARNI_API_PROXY=http://127.0.0.1:8030 npm run dev`.
+{%- endif %}
 
 ## Using a local Karni checkout
 
@@ -141,13 +178,12 @@ block and middleware to the `# karni:middleware` block, so keep those markers.
 
 ## AI coding agents
 
-`karni new` generated thin agent adapters: `AGENTS.md`, `CLAUDE.md`,
-`.cursor/rules/karni.mdc`, `.windsurf/rules/karni.md`,
-`.github/copilot-instructions.md`, `.clinerules/karni.md`, `CONVENTIONS.md`,
-`.junie/AGENTS.md` and slash commands. They all say the same thing: run
-`karni context` and `karni rules` first. Do not edit them. Put project rules
-in `karni.rules.py` and run `karni rules sync` (`make check` fails when they
-are stale). `karni mcp` serves the same surface over MCP.
+`karni new` generated `AGENTS.md`, the instructions coding agents read. It
+says to run `karni context` and `karni rules` first, lists the procedures for
+routine tasks, and reads a request that starts with `/new-app` (or another
+procedure's name) as that procedure. Do not edit it. Put project rules in
+`karni.rules.py` and run `karni rules sync` (`make check` fails when it is
+stale). `karni mcp` serves the same surface over MCP.
 
 Optional: to keep the prompts behind your code, install
 [Gigai Chronicle](https://github.com/cbsshekhawat18-lab/gigai-chronicle)
@@ -158,19 +194,27 @@ It is MIT licensed, local-only, and made by Karni's author.
 
 ## Production
 
-The `prod` Dockerfile target builds a slim, non-root image that runs
-`gunicorn config.asgi:application` with uvicorn workers and collects static
-files to `/data/static` at build time:
+`docker-compose.prod.yml` is the production stack: a one-shot `release`
+service (the deploy checks, migrations, `collectstatic`, the web server's
+files), `django` (gunicorn with uvicorn workers), Celery `worker` and `beat`,
+`caddy` (automatic TLS for `DOMAIN`, static and media files, the staff app at
+`/app/`, everything else proxied to Django), `db`, `redis` and `backup`
+(database and media, on a schedule, with retention). On a server with Docker:
 
 ```sh
-docker build --target prod -t {{ cookiecutter.project_slug }}:latest .
+cp .env.prod.example .env.prod      # fill in every empty value, never commit it
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 ```
 
-Run it with `DJANGO_ENV=prod`, a real `SECRET_KEY` and `ALLOWED_HOSTS`.
-Karni validates the configuration at startup and fails loudly on anything
-insecure or missing. Put Caddy in front using the provided `Caddyfile`: it
-provisions TLS for `$DOMAIN` automatically, serves `/static/*` and `/media/*`
-from `/data` (share the `/data` volume between the django container and
-Caddy), and reverse-proxies everything else to `django:8000`. For the
-frontend, `npm run build` in `frontend/` produces static assets you can serve
-from Caddy or any CDN.
+Every container from the `prod` image runs `karni check --deploy` before its
+command, and refuses to start while a value is unsafe (E520).
+`KARNI_SKIP_DEPLOY_CHECK=1` starts it anyway in an emergency, logged on every
+start. The staff app in `frontend/` is built into the image and served by
+Caddy, with the same security headers Django sends.
+
+[Deploying to a server](https://cbsshekhawat18-lab.github.io/karni/deploy/)
+covers DNS, TLS, the first superuser, updates without failed requests,
+rollback, logs, backups and restore. `karni make deploy compose --force`
+rewrites the three files with other choices: the staff app on another path or
+host (`--app-path`, `--app-domain`), no Celery, a managed database or Redis,
+no backups.

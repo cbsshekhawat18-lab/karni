@@ -239,14 +239,20 @@ def _first_model_section() -> str:
     )
 
 
-def _agent_section(inventory: Inventory) -> str:
-    prompt = (
-        f"You are working in the Karni project `{inventory.project}`. Run `karni context` and "
-        "`karni rules` first and follow them. Then add an Event model (title, starts_at) with "
-        "its viewset and test using `karni make`, run `make migrate && karni types`, and run "
-        "`karni check`. Never write serializers, routers, admin classes or permission checks "
-        "by hand: Karni derives them."
+#: The new-app request: AGENTS.md tells any agent that `/new-app <line>` asks for the procedure.
+_NEW_APP_COMMAND = "/new-app <the app in one line>"
+
+
+def _new_app_prompt(project: str) -> str:
+    """The first prompt, for a tool that does not pass `/new-app` on: the flow in plain words."""
+    return (
+        f"You are working in the Karni project `{project}`. Run `karni rules --procedure "
+        "new-app` and follow every step for: <the app in one line>"
     )
+
+
+def _agent_section(inventory: Inventory) -> str:
+    prompt = _new_app_prompt(inventory.project)
     present = [adapter for adapter in inventory.adapters if adapter.present]
     missing = [adapter for adapter in inventory.adapters if not adapter.present]
     adapters_html = ""
@@ -259,24 +265,27 @@ def _agent_section(inventory: Inventory) -> str:
             )
             + "</ul>"
         )
-    if missing and not present:
+    if missing:
         adapters_html += (
-            '<p class="muted">No adapter files found next to this project. '
-            "<code>karni rules sync</code> writes them.</p>"
-        )
-    elif missing:
-        adapters_html += (
-            '<p class="muted">Not written: '
-            + ", ".join(escape(adapter.tool) for adapter in missing)
-            + " (<code>karni rules sync</code> adds every adapter).</p>"
+            '<p class="muted">Not found next to this project: '
+            + ", ".join(f"<code>{escape(adapter.path)}</code>" for adapter in missing)
+            + ". <code>karni rules sync</code> writes it.</p>"
         )
     return (
         "<p>An agent that reads this project's context and rules writes only the domain code. "
         "The live output of <code>karni context</code> for this project right now:</p>"
         + _block("context", inventory.context)
-        + "<p>The first prompt to paste into your agent:</p>"
+        + "<p>Describe the app in one line, for example <em>a booking app for a yoga studio, "
+        "with online payments</em>, and give it to your agent after <code>/new-app</code>. "
+        "AGENTS.md tells the agent that this asks for the new-app procedure:</p>"
+        + _block("new-app", _NEW_APP_COMMAND)
+        + "<p>If your tool does not pass that line on to the agent, paste this first prompt "
+        "instead, with your line at the end:</p>"
         + _block("prompt", prompt)
-        + "<p>Adapter files generated for this project, and the tools they cover:</p>"
+        + "<p>The agent writes <code>karni.yaml</code>, asks you only the questions "
+        "<code>karni plan --questions</code> lists, and runs <code>karni build</code>. It "
+        "writes by hand only the domain logic that is left.</p>"
+        + "<p>The agent instructions generated for this project:</p>"
         + adapters_html
         + "<p>The rules an agent works to, and the check it runs on each file it touches:</p>"
         + _block("rules", "karni rules\nkarni rules --check events/viewsets.py")

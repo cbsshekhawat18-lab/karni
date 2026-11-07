@@ -1,0 +1,9 @@
+{% load i18n %}{% for entry in entries %}
+<li>
+  <strong>{{ entry.label }}</strong>
+  {% if entry.route %}<code>{{ entry.route }}</code>{% else %}<span class="karni-muted">{% translate "group" %}</span>{% endif %}
+  {% if entry.icon %}<span class="karni-muted">{% translate "icon" %} {{ entry.icon }}</span>{% endif %}
+  <span class="karni-muted">{% translate "requires" %} {{ entry.requires }}</span>
+  {% if entry.children %}<ul>{% include "karni_navigation/menu_entries.html" with entries=entry.children %}</ul>{% endif %}
+</li>
+{% endfor %}

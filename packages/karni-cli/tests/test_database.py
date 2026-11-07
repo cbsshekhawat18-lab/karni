@@ -44,7 +44,7 @@ class Calls:
         return self.finding
 
     def run_process(
-        self, cmd: list[str], *, cwd: Path, capture: bool = False
+        self, cmd: list[str], *, cwd: Path, capture: bool = False, env: dict[str, str] | None = None
     ) -> subprocess.CompletedProcess[str]:
         self.log.append("run")
         return subprocess.CompletedProcess(cmd, self.returncode, "", "Traceback ...")
@@ -127,6 +127,7 @@ def test_docker_runs_are_not_checked(tmp_path, monkeypatch) -> None:
         (["migrate"], "connect"),
         (["seed"], "connect"),
         (["sync-roles"], "connect"),
+        (["load", "content/site.json"], "connect"),
         (["createsuperuser", "--noinput"], "connect"),
         (["manage", "showmigrations"], "connect"),
         (["serve", "--local"], "connect"),
@@ -155,7 +156,7 @@ def test_karni_check_reports_the_backend_and_still_runs_the_frontend(
     _install(monkeypatch, Calls(DRIVER))
     frontend: list[Path] = []
 
-    def duplication(project: Path) -> int:
+    def duplication(project: Path, **kwargs: object) -> int:
         frontend.append(project)
         return 0
 
