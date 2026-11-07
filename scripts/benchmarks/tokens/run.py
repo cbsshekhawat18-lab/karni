@@ -108,7 +108,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--show-prompt", action="store_true", help="with --dry-run: the full prompts"
     )
-    parser.add_argument("--resume", action="store_true", help="skip runs already in the data")
+    parser.add_argument(
+        "--resume", action="store_true", help="skip finished runs (interrupted ones run again)"
+    )
     parser.add_argument("--keep", action="store_true", help="keep each run's project folder")
     parser.add_argument("--agent", help="the agent CLI (default: KARNI_BENCH_AGENT)")
     parser.add_argument(
@@ -171,7 +173,19 @@ def main(argv: list[str] | None = None) -> int:
     loaded = {name: starts.load(name) for name in conditions}
     for number, (task, condition, index) in enumerate(plan, 1):
         print(f"[{number}/{len(plan)}] {task} {condition} #{index}", flush=True)
-        execute.execute(task, condition, index, loaded[condition], config)
+        record = execute.execute(task, condition, index, loaded[condition], config)
+        if record.interrupted_kind == "usage_limit":
+            when = f" It resets: {record.reset_time}." if record.reset_time else ""
+            print(
+                f"Stopped: {record.run_id} was cut short by a usage or rate limit "
+                f"({record.interrupted_reason}).{when} The run is not counted. "
+                "Run the same command with --resume to continue from here.",
+                flush=True,
+            )
+            return 2
+    interrupted = [r for r in records.load(args.data) if r.get("interrupted")]
+    if interrupted:
+        print(f"{len(interrupted)} runs in the data were interrupted; --resume runs them again.")
     return 0
 
 

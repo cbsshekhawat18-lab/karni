@@ -42,11 +42,18 @@ class RunRecord:
     error: str = ""
     karni_commit: str = ""
     agent_version: str = ""
+    #: The agent was cut short (a usage or rate limit, an API error, a kill): the run says
+    #: nothing about the condition, so it is never counted and --resume runs it again.
+    interrupted: bool = False
+    interrupted_kind: str = ""
+    interrupted_reason: str = ""
+    reset_time: str = ""
 
     def finish(self) -> None:
         """Set ``success``: the run ended by itself, every test passed and the frontend builds."""
         self.success = (
-            not self.timed_out
+            not self.interrupted
+            and not self.timed_out
             and self.exit_status == 0
             and self.acceptance_total > 0
             and self.acceptance_passed == self.acceptance_total
@@ -80,7 +87,12 @@ def load(path: Path = DATA_FILE) -> list[dict[str, Any]]:
 
 
 def done(rows: list[dict[str, Any]]) -> set[tuple[str, str, int]]:
-    """The (task, condition, index) of every run already in the data: --resume skips these."""
+    """The (task, condition, index) of every finished run: --resume skips these.
+
+    An interrupted run is not finished; --resume runs it again.
+    """
     return {
-        (str(row.get("task")), str(row.get("condition")), int(row.get("index", 0))) for row in rows
+        (str(row.get("task")), str(row.get("condition")), int(row.get("index", 0)))
+        for row in rows
+        if not row.get("interrupted")
     }

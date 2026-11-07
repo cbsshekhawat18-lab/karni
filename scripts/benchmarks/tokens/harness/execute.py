@@ -179,10 +179,16 @@ def execute(
         record.tool_calls_total = stats.tool_calls_total
         record.agent_lines_written = stats.lines_written
         record.result_seen = stats.result_seen
-        size = diffsize.measure(project)
-        record.diff_lines_all, record.diff_lines_code = size.lines_all, size.lines_code
-        record.diff_files_all, record.diff_files_code = size.files_all, size.files_code
-        check(record, config, task, project, python_path, env, run_dir)
+        kind, reason = streamjson.interruption(stats, record.exit_status, record.timed_out)
+        if kind:  # cut short: nothing to measure or check, the run is run again later
+            record.interrupted, record.interrupted_kind = True, kind
+            record.interrupted_reason = reason
+            record.reset_time = stats.reset_time
+        else:
+            size = diffsize.measure(project)
+            record.diff_lines_all, record.diff_lines_code = size.lines_all, size.lines_code
+            record.diff_files_all, record.diff_files_code = size.files_all, size.files_code
+            check(record, config, task, project, python_path, env, run_dir)
     except Exception as exc:  # a crashed run is a failure in the data, never dropped
         record.error = record.error or f"{type(exc).__name__}: {exc}"
         if record.exit_status == "not-run":
@@ -197,6 +203,11 @@ def execute(
             shutil.rmtree(run_dir / "project", ignore_errors=True)
     record.finish()
     records.append(record, config.data_file)
+    if record.interrupted:
+        config.log(
+            f"{run_id}: INTERRUPTED ({record.interrupted_kind}): {record.interrupted_reason}"
+        )
+        return record
     config.log(
         f"{run_id}: {'ok' if record.success else 'FAILED'} "
         f"{record.acceptance_passed}/{record.acceptance_total} tests, build "

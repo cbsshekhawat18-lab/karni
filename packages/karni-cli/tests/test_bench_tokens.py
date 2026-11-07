@@ -389,3 +389,110 @@ def test_resume_skips_runs_already_in_the_data(tmp_path: Path) -> None:
     finished = records.done(records.load(data))
     plan = [run for run in order.plan(["shop"], ["plain", "karni"], 1) if run not in finished]
     assert plan == [("shop", "karni", 1)]
+
+
+# --- runs the agent CLI did not finish --------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("env", "kind"),
+    [
+        ({"FAKE_AGENT_END": "usage_limit"}, "usage_limit"),
+        ({"FAKE_AGENT_END": "is_error"}, "api_error"),
+        ({"FAKE_AGENT_END": "none"}, "no_result"),
+        ({"FAKE_AGENT_END": "none", "FAKE_AGENT_EXIT": "2"}, "exit"),
+    ],
+)
+def test_an_interrupted_run_is_recorded_excluded_and_run_again(
+    world: Any, monkeypatch: pytest.MonkeyPatch, env: dict[str, str], kind: str
+) -> None:
+    config, start = world
+    for key, value in env.items():
+        monkeypatch.setenv(key, value)
+    record = execute.execute("mini", "plain", 1, start, config, stamp="T1")
+    assert record.interrupted and record.interrupted_kind == kind and not record.success
+    saved = records.load(config.data_file)
+    assert saved[0]["interrupted"] is True and saved[0]["interrupted_reason"]
+    assert records.done(saved) == set()  # --resume runs it again
+    assert report.render(saved).startswith(report.PENDING)
+    assert "1 interrupted runs are left out" in report.render(saved)
+    if kind == "usage_limit":
+        assert record.reset_time.startswith("2030-")
+
+
+def test_an_error_result_with_a_limit_message_is_a_usage_limit_and_a_time_limit_is_not() -> None:
+    def kind(*events: dict[str, Any], status: int | str = 0, late: bool = False) -> str:
+        parsed = streamjson.parse(lines(*events))
+        return streamjson.interruption(parsed, status, late)[0]
+
+    limit = {"type": "result", "is_error": True, "result": "429 rate_limit_error: slow down"}
+    assert kind(limit) == "usage_limit"
+    assert kind({"type": "error", "error": {"type": "overloaded_error"}}) == "api_error"
+    assert kind({"type": "result", "is_error": True, "result": "boom"}) == "api_error"
+    ok = {"type": "result", "is_error": False, "result": "I added a rate limit to the API"}
+    assert kind(ok) == ""
+    retried = {"type": "system", "subtype": "api_retry", "error_status": 429}
+    assert kind(retried, ok) == ""  # it recovered
+    assert kind(status="timeout", late=True) == ""  # the time limit is part of the result
+    assert kind(status=-9) == "exit"
+    reset = streamjson.reset_time_in("Limit reached, resets 3pm (UTC). Thanks")
+    assert reset == "3pm (UTC)"
+
+
+def test_a_usage_limit_stops_the_batch_and_resume_runs_it_again(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("KARNI_BENCH_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(run_module, "versions", lambda *_a: ("c", "fake"))
+    monkeypatch.setattr(run_module, "Postgres", FakeDatabase)
+    seen: list[tuple[str, str, int]] = []
+
+    def fake_execute(task: str, condition: str, index: int, _start: Any, config: Any) -> Any:
+        seen.append((task, condition, index))
+        record = records.RunRecord("r", task, condition, index, "m", "t")
+        if len(seen) == 2 and not config.keep:
+            record.interrupted, record.interrupted_kind = True, "usage_limit"
+            record.interrupted_reason, record.reset_time = "Usage limit reached", "2030-01-01"
+        records.append(record, config.data_file)
+        return record
+
+    monkeypatch.setattr(run_module.execute, "execute", fake_execute)
+    monkeypatch.setattr(run_module.starts, "load", lambda name: name)
+    data = tmp_path / "runs.jsonl"
+    argv = ["--fake", "--tasks", "shop", "--n", "2", "--data", str(data)]
+    assert run_module.main(argv) == 2
+    out = capsys.readouterr().out
+    assert "usage or rate limit" in out and "2030-01-01" in out and "--resume" in out
+    assert len(seen) == 2  # the other runs never started
+    seen.clear()
+
+    def fake_ok(task: str, condition: str, index: int, _s: Any, config: Any) -> Any:
+        seen.append((task, condition, index))
+        record = records.RunRecord("r", task, condition, index, "m", "t")
+        records.append(record, config.data_file)
+        return record
+
+    monkeypatch.setattr(run_module.execute, "execute", fake_ok)
+    assert run_module.main([*argv, "--resume"]) == 0
+    assert seen[0] == ("shop", "karni", 1) and len(seen) == 3  # the interrupted one is first
+
+
+def test_the_report_leaves_interrupted_runs_out_and_refuses_short_cells(tmp_path: Path) -> None:
+    rows = [_row("shop", "plain", t) for t in (10, 20, 30)]
+    rows.append(
+        {**_row("shop", "plain", 999), "interrupted": True, "interrupted_kind": "api_error"}
+    )
+    text = report.render(rows)
+    assert "| shop | plain | 3 | 3 | 100% | 0 |" in text and "999" not in text
+    assert "1 interrupted runs are left out of every figure (1 api error)" in text
+    short = report.short_cells(rows, 3, ("shop",), ("plain",))
+    assert short == []
+    assert report.short_cells(rows, 4, ("shop",), ("plain", "karni")) == [
+        "shop plain: 3 of 4 completed runs",
+        "shop karni: 0 of 4 completed runs",
+    ]
+    data, page = tmp_path / "d.jsonl", tmp_path / "p.md"
+    page.write_text(f"{report.START}\n{report.END}\n")
+    data.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    assert report.main(["--data", str(data), "--page", str(page)]) == 1
+    assert page.read_text() == f"{report.START}\n{report.END}\n"

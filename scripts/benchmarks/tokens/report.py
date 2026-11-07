@@ -6,7 +6,9 @@
 
 Per task and condition: the success rate, and for each figure the median, minimum, maximum and
 interquartile range over all runs of that cell. Failed runs stay in: a failed run has real
-tokens too. Nothing is dropped, and nothing is added that the data does not say.
+tokens too. Runs the agent CLI did not finish (a usage or rate limit, an API error, a kill) are
+interrupted: they are left out of every figure, counted in a note, and the report is not written
+while a task and condition has fewer completed runs than --n.
 """
 
 from __future__ import annotations
@@ -19,12 +21,13 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from harness import paths, records, stats  # noqa: E402
+from harness import paths, records, starts, stats  # noqa: E402
 
 START = "<!-- bench:results:start -->"
 END = "<!-- bench:results:end -->"
 PAGE = paths.REPO_ROOT / "docs" / "benchmarks" / "tokens.md"
 PENDING = "The runs are pending. No numbers are published yet."
+TASKS = ("booking", "crm", "shop")
 
 Row = dict[str, Any]
 
@@ -64,12 +67,48 @@ def cells(rows: list[Row]) -> dict[tuple[str, str], list[Row]]:
     return dict(sorted(grouped.items()))
 
 
-def render(rows: list[Row]) -> str:
+def split(rows: list[Row]) -> tuple[list[Row], list[Row]]:
+    """(completed runs, interrupted runs)."""
+    return [r for r in rows if not r.get("interrupted")], [r for r in rows if r.get("interrupted")]
+
+
+def interrupted_note(interrupted: list[Row]) -> str:
+    """How many interrupted runs were left out, and why."""
+    reasons: dict[str, int] = {}
+    for row in interrupted:
+        why = str(row.get("interrupted_kind") or "interrupted")
+        reasons[why] = reasons.get(why, 0) + 1
+    detail = ", ".join(f"{count} {why.replace('_', ' ')}" for why, count in sorted(reasons.items()))
+    return (
+        f"{len(interrupted)} interrupted runs are left out of every figure ({detail}): the agent "
+        "CLI was cut short by a usage or rate limit, an API error or a kill, so the run says "
+        "nothing about its condition. Each was run again."
+    )
+
+
+def short_cells(
+    rows: list[Row], n: int, tasks: tuple[str, ...] = TASKS,
+    conditions: tuple[str, ...] = starts.CONDITIONS,
+) -> list[str]:  # fmt: skip
+    """The task and condition cells with fewer completed runs than ``n``, as text."""
+    counts = {key: len(group) for key, group in cells(split(rows)[0]).items()}
+    return [
+        f"{task} {condition}: {counts.get((task, condition), 0)} of {n} completed runs"
+        for task in tasks
+        for condition in conditions
+        if counts.get((task, condition), 0) < n
+    ]
+
+
+def render(all_rows: list[Row]) -> str:
     """The markdown between the markers."""
+    rows, interrupted = split(all_rows)
     if not rows:
-        return PENDING
+        return PENDING + (f"\n\n{interrupted_note(interrupted)}" if interrupted else "")
     grouped = cells(rows)
-    out = [f"{len(rows)} runs in the data.", ""]
+    out = [f"{len(rows)} completed runs in the data.", ""]
+    if interrupted:
+        out += [interrupted_note(interrupted), ""]
     out += [
         "### Success",
         "",
@@ -119,10 +158,19 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", type=Path, default=records.DATA_FILE)
     parser.add_argument("--page", type=Path, default=PAGE)
+    parser.add_argument("--n", type=int, default=5, help="completed runs wanted per cell (5)")
     parser.add_argument("--check", action="store_true", help="fail when the page is out of date")
     args = parser.parse_args(argv)
     page = args.page.read_text()
-    updated = splice(page, render(records.load(args.data)))
+    rows = records.load(args.data)
+    short = short_cells(rows, args.n) if split(rows)[0] else []
+    if short:
+        print(
+            "No comparison written: these have fewer completed runs than asked for "
+            "(interrupted runs do not count; run.py --resume):\n  " + "\n  ".join(short)
+        )
+        return 1
+    updated = splice(page, render(rows))
     if args.check:
         if updated != page:
             print(f"{args.page} is out of date: run scripts/benchmarks/tokens/report.py")
