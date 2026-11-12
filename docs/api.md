@@ -1141,6 +1141,41 @@ filters), and `slots` for every part (`Section`, `Counts`, `Count`, `Recent`,
 `Empty`, `Loading`, `Error`). A home page can also compose `Stat` and
 `ResourceTable` by hand.
 
+### Home tiles per role (experimental)
+
+`<Dashboard>` shows one section per model, the same for everyone.
+`GET /api/dashboard/` (`karni.tiles`) answers the tiles the signed-in person
+may see, so each role gets its own home, and every installed part adds to it.
+`@karni/ui`'s `<DashboardTiles>` draws them.
+
+A tile is a number (`stat`), a short list (`list`), a chart (`chart`) or a
+component of the app's own (`custom`). It comes from karni.yaml's
+`dashboard:` (an entity's rows, counted or listed through its list endpoint,
+so the row scope applies) or from code, in `<app>/dashboard.py`, for figures
+the server works out:
+
+```python
+from karni.tiles import Tile, register
+
+
+@register(key="shop.revenue", title="Revenue", requires="shop.order:view", size="full")
+def revenue(request):
+    total = ...  # read the rows the request's user may read
+    return Tile.stat_values([("Today", total, "money")], currency="EUR")
+```
+
+A code tile returns its data: `stat` takes `values` (`label`, `value`,
+`format` of `money` or `number`, `link`), `list` takes `columns` and `rows`
+(each row's `link` opens it), `chart` takes `kind` (`bar` or `line`), `format`
+and `points` (`label`, `value`). Returning `None` leaves the tile out.
+
+Who sees a tile: `requires` (`authenticated`, `*` or a permission pattern as
+in the roles' grants) and, when set, `roles`. A tile a role does not see is
+never computed for it. `dashboard:` places a code tile by its key (its
+title, order, size and who sees it) or hides it (`hidden: true`).
+`registerTile(key, Component)` draws one tile your way and
+`registerTileKind(kind, Component)` a whole kind.
+
 ## Schema
 
 `KarniAutoSchema` (the conf default `DEFAULT_SCHEMA_CLASS`) keeps

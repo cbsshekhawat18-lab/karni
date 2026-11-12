@@ -548,6 +548,29 @@ entity of the spec, each counted with one list request (`useResourceCounts`),
 under the user's access. `- home: dashboard` stays the scaffold's own home
 page, which `karni build` leaves to the project.
 
+### `dashboard` (experimental)
+
+The home tiles of each role, which `karni build` writes to
+`KARNI_DASHBOARD_TILES` ([home tiles](api.md#home-tiles-per-role-experimental)):
+
+```yaml
+dashboard:
+  - {key: shop.to_send, title: Parcels to send, kind: stat, entity: Shipment,
+     filters: {status: processing}, link: /shipments}
+  - {key: shop.low_stock, title: Running low, kind: list, entity: Product,
+     filters: {stock__lte: 3}, columns: [name, stock], limit: 5, roles: [shop-manager]}
+  - {key: commerce.revenue, order: 1}
+```
+
+A tile with `entity` counts (`stat`) or lists (`list`) that entity's rows
+matching `filters` (a date may be `today`, `today-7` or `today+1`), for the
+roles that may read them (`requires` defaults to the entity's view
+permission). A tile without `entity` places a tile an app declares in code by
+its key, or hides it with `hidden: true`. `roles` shows a tile to those roles
+only, `order` and `size` (`third`, `half`, `full`) lay it out, and `link`
+says where a click goes. A tile on an entity or a role the spec does not have
+is `C643`.
+
 ### `seed`
 
 `seed` maps an entity to its demo rows per `karni seed` run (`karni make

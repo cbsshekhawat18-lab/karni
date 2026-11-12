@@ -300,6 +300,7 @@ role that another component holds (compose it instead), and `karni context` list
 | `permission-denied` | `PermissionDenied` |
 | `resource-form` | `ResourceForm` |
 | `resource-grid` | `ResourceGrid` |
+| `dashboard-tiles` | `DashboardTiles` (experimental) |
 | `resource-import` | `ResourceImport` |
 | `social-sign-in` | `SocialButton` |
 | `stat` | `Stat` |

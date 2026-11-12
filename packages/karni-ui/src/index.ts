@@ -545,6 +545,21 @@ export {
   resolveRelativeDate,
   resolveSection,
 } from "./components/dashboard/dashboard";
+export {
+  DASHBOARD_PATH,
+  DashboardTiles,
+  registerTile,
+  registerTileKind,
+  unregisterTile,
+  useDashboardTiles,
+} from "./components/dashboard/dashboard-tiles";
+export type {
+  DashboardTileDef,
+  DashboardTilesBody,
+  DashboardTilesProps,
+  TileProps,
+  TileValue,
+} from "./components/dashboard/dashboard-tiles";
 export type {
   DashboardProps,
   DashboardSlots,

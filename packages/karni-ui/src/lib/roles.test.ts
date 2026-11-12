@@ -136,6 +136,7 @@ describe("package self-registrations", () => {
       "permission-denied": "PermissionDenied",
       "resource-form": "ResourceForm",
       "resource-grid": "ResourceGrid",
+      "dashboard-tiles": "DashboardTiles",
       "social-sign-in": "SocialButton",
       stat: "Stat",
       "terms-gate": "TermsGate",
