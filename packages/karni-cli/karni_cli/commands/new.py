@@ -429,7 +429,10 @@ def write_recipe_spec(project: Path, name: str, kind: str, recipe: Recipe | None
     path.write_text(text, encoding="utf-8")
     pending = project / layout.RECORD
     pending.parent.mkdir(parents=True, exist_ok=True)
-    pending.write_text(record.Record(recipe=recipe.name).text(), encoding="utf-8")
+    from karni_cli.recipes import apply
+
+    stubs = apply.scaffold_digests(project, recipe)
+    pending.write_text(record.Record(recipe=recipe.name, scaffold=stubs).text(), encoding="utf-8")
     return path
 
 

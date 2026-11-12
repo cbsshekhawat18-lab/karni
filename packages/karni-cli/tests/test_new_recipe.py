@@ -75,12 +75,12 @@ class Order(karni.Order):
 '''
 
 
-def _recipe(tmp_path: Path, files: dict[str, str]) -> recipes_mod.Recipe:
-    """A recipe of the test's own, with ``files`` under files/."""
+def _recipe(tmp_path: Path, files: dict[str, str], routes: str = "") -> recipes_mod.Recipe:
+    """A recipe of the test's own, with ``files`` under files/ and ``routes`` (TOML)."""
     folder = tmp_path / "recipe"
-    (folder / "files").mkdir(parents=True)
+    (folder / "files").mkdir(parents=True, exist_ok=True)
     (folder / "recipe.toml").write_text(
-        'name = "shop"\ntitle = "Shop"\npurpose = "A shop."\nuse_when = ["shop"]\n'
+        'name = "shop"\ntitle = "Shop"\npurpose = "A shop."\nuse_when = ["shop"]\n' + routes
     )
     (folder / "karni.yaml").write_text("version: 1\napp: {name: Shop, recipe: shop}\n")
     for rel, text in files.items():
@@ -261,6 +261,98 @@ def test_a_recipe_file_where_karni_build_writes_is_refused(tmp_path: Path) -> No
         assert recipes_mod.karni_owned(rel), rel
     for rel in ("shop/models.py", "shop/tests/test_x.py", "shop/karni.py", "frontend/src/x.tsx"):
         assert not recipes_mod.karni_owned(rel), rel
+
+
+ROUTES_FILE = """import HomePage from "./pages/home";
+// karni:page-imports
+
+const routes = [
+    createRoute({ getParentRoute: () => root, path: "/", component: HomePage }),
+    // karni:routes
+];
+"""
+CART_ROUTES = """
+[[routes]]
+path = "/cart"
+page = "pages/store/cart"
+public = true
+
+[[routes]]
+path = "/account/orders/$number"
+page = "pages/store/account-order"
+"""
+
+
+def test_a_recipe_registers_its_pages_in_the_routes_file(tmp_path: Path) -> None:
+    pages = {
+        "frontend/src/pages/store/cart.tsx": "export default function C() { return null; }\n",
+        "frontend/src/pages/store/account-order.tsx": "export default function A() {}\n",
+    }
+    recipe = _recipe(tmp_path, pages, CART_ROUTES)
+    assert [route.path for route in recipe.routes] == ["/cart", "/account/orders/$number"]
+    assert recipe.to_dict()["routes"] == ["/cart", "/account/orders/$number"]
+    ws = Workspace(tmp_path / "project")
+    ws.write("frontend/src/routes.tsx", ROUTES_FILE)
+    apply.stage(ws, recipe)
+    text = ws.read("frontend/src/routes.tsx") or ""
+    assert 'import StoreCartPage from "./pages/store/cart";\nimport StoreAccountOrderPage' in text
+    assert text.index("StoreAccountOrderPage from") < text.index("// karni:page-imports")
+    assert (
+        '    createRoute({ getParentRoute: () => root, path: "/cart", component: StoreCartPage, '
+        "staticData: { public: true } }),\n"
+    ) in text
+    assert 'path: "/account/orders/$number", component: StoreAccountOrderPage }),' in text
+    ws.commit(dry_run=False)
+    again = Workspace(tmp_path / "project")
+    apply.stage(again, recipe)
+    assert again.read("frontend/src/routes.tsx") == text  # registered once
+
+
+def test_a_recipe_route_needs_its_page_and_the_markers(tmp_path: Path) -> None:
+    with pytest.raises(recipes_mod.RecipeError, match="no files/frontend/src/pages/store/cart.tsx"):
+        _recipe(tmp_path, {}, CART_ROUTES)
+    with pytest.raises(recipes_mod.RecipeError, match="path"):
+        _recipe(tmp_path, {}, '[[routes]]\npath = "cart"\npage = "pages/cart"\n')
+    pages = {
+        "frontend/src/pages/store/cart.tsx": "x\n",
+        "frontend/src/pages/store/account-order.tsx": "x\n",
+    }
+    recipe = _recipe(tmp_path, pages, CART_ROUTES)
+    ws = Workspace(tmp_path / "project")
+    ws.write("frontend/src/routes.tsx", "const routes = [];\n")
+    with pytest.raises(CliError) as raised:
+        apply.stage(ws, recipe)
+    assert raised.value.code == "C284"
+
+
+def test_a_file_karni_new_wrote_is_a_stub_while_it_is_unchanged(tmp_path: Path) -> None:
+    layout = "export default function Layout() { return null; }\n"
+    recipe = _recipe(tmp_path, {"frontend/src/layout.tsx": layout})
+    root = tmp_path / "project"
+    (root / "frontend" / "src").mkdir(parents=True)
+    (root / "frontend" / "src" / "layout.tsx").write_text("// what karni new wrote\n")
+    stubs = apply.scaffold_digests(root, recipe)
+    assert list(stubs) == ["frontend/src/layout.tsx"]
+    ws = Workspace(root)
+    assert apply.refused(ws, recipe) == ["frontend/src/layout.tsx"]  # no record: kept
+    assert apply.stage(ws, recipe, scaffold=stubs) == ["frontend/src/layout.tsx"]
+    assert ws.read("frontend/src/layout.tsx") == layout
+    (root / "frontend" / "src" / "layout.tsx").write_text("// edited since\n")
+    assert apply.refused(Workspace(root), recipe, stubs) == ["frontend/src/layout.tsx"]
+
+
+def test_karni_new_records_the_files_a_recipe_may_replace(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    monkeypatch.setattr("karni_cli.commands.new.build_blocker", lambda project: "no interpreter")
+    result = _new(runner, tmp_path, "--recipe", "shop")
+    assert result.exit_code == 0, result.output
+    root = tmp_path / "corner_shop"
+    pending = record.load(root)
+    assert pending.recipe == "shop"
+    for rel in ("frontend/src/layout.tsx", "frontend/src/pages/home.tsx"):
+        assert pending.scaffold[rel] == record.digest((root / rel).read_text()), rel
 
 
 def _pending(root: Path, name: str) -> None:

@@ -12,12 +12,16 @@ and pages Karni manages, and the files the project adopted::
       "files": {"classes/karni/models.py": "<sha256>", ...},
       "blocks": {"config/settings.py": "<sha256>", ...},
       "adopted": ["classes/karni/api.py"],
-      "recipe": "booking"
+      "recipe": "booking",
+      "scaffold": {"frontend/src/layout.tsx": "<sha256>"}
     }
 
 ``recipe`` is there only between ``karni new --recipe`` and the first build
 that writes: it names the recipe whose own files (its domain code, seeds and
 tests) that build writes over its stubs (:mod:`karni_cli.recipes.apply`).
+``scaffold`` lives as long: the sha256 of each file ``karni new`` wrote
+where the recipe has a file of its own (``frontend/src/layout.tsx``), so the
+build replaces it only while it is still exactly that.
 
 Before it writes anything, ``karni build`` compares every recorded hash
 with the file on disk. A Karni-owned file whose content differs was edited
@@ -81,6 +85,8 @@ class Record:
     adopted: list[str] = field(default_factory=list)
     #: Experimental. The recipe whose own files the next build writes (``karni new --recipe``).
     recipe: str = ""
+    #: Experimental. The sha256 of each file ``karni new`` wrote where the recipe has its own.
+    scaffold: dict[str, str] = field(default_factory=dict)
 
     @property
     def owned(self) -> dict[str, str]:
@@ -101,6 +107,7 @@ class Record:
             "blocks": dict(sorted(self.blocks.items())),
             "adopted": sorted(self.adopted),
             **({"recipe": self.recipe} if self.recipe else {}),
+            **({"scaffold": dict(sorted(self.scaffold.items()))} if self.scaffold else {}),
         }
 
     def text(self) -> str:
@@ -145,6 +152,7 @@ def load(root: Path) -> Record:
         blocks=hashes("blocks"),
         adopted=strings("adopted"),
         recipe=str(data.get("recipe") or ""),
+        scaffold=hashes("scaffold"),
     )
 
 

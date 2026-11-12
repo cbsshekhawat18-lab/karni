@@ -8,65 +8,139 @@ modules:
   payments: {provider: stripe, currency: usd}
 features:
   email_code_login: true
-  terms: {version: "2026-01", url: /terms/, required: true}
+  terms: {version: "2026-01", url: /terms, required: true, paths: [/api/carts/current/checkout/]}
 roles:
-  staff: {name: Staff, system: true, grants: {"*": all}}
+  manager: {name: Manager, system: true, grants: {"*": all}}
+  staff:
+    name: Staff
+    system: true
+    grants: {"shop.*": all, "karni_payments.*": all}
   customer:
     name: Customer
     default: true
     grants:
-      shop.cart: own
-      shop.cartitem: own
-      shop.order: own
-      shop.orderitem: own
+      shop.address: own
+      shop.order:view: own
+      shop.orderitem:view: own
 apps:
   shop:
     entities:
       Category:
-        fields: {name: "str:120", slug: "slug:name"}
+        fields: {name: "str:120", slug: "slug:name", description: "text?", image: "image?"}
+        tree: true
         key: slug
         search: [name]
         order: name
-        access: {read: public, write: "role:staff"}
+        access: {read: public, write: granted}
+      Tag:
+        fields: {name: "str:60", slug: "slug:name"}
+        key: slug
+        search: [name]
+        order: name
+        access: {read: public, write: granted}
       Product:
         fields:
-          category: fk:Category
           name: "str:200"
           slug: "slug:name"
+          sku: "str:64"
+          short_description: "str:300?"
           description: "text?"
+          image: "image?"
           price: "money:USD"
+          sale_price: "money:USD?"
+          sale_starts: "datetime?"
+          sale_ends: "datetime?"
           stock: int
+          reserved: int
           active: bool
+          featured: bool
+          tags: "m2m:Tag"
+        taxonomies: {categories: Category}
         key: slug
-        search: [name, description]
+        search: [name, sku, short_description, description]
         order: name
-        access: {read: public, write: "role:staff"}
+        groups:
+          Product: [name, slug, sku, short_description, description, image, active, featured, tags]
+          Price: [price, sale_price, sale_starts, sale_ends]
+          Inventory: [stock, reserved]
+        access: {read: public, write: granted}
+      ProductImage:
+        fields: {product: fk:Product, image: image, alt: "str:200?", position: int}
+        order: [product, position]
+        access: {read: public, write: granted}
       Cart:
-        fields: {customer: fk:User}
+        fields: {customer: "fk:User?", token: "str:64"}
         owner: customer
-        access: {read: "owned:customer", write: "owned:customer"}
+        access: {read: granted, write: granted}
       CartItem:
         fields: {cart: fk:Cart, product: fk:Product, quantity: int}
         owner: cart__customer
-        access: {read: "owned:cart__customer", write: "owned:cart__customer"}
-      Order:
+        access: {read: granted, write: granted}
+      Address:
         fields:
           customer: fk:User
-          status: "state:pending>paid|pending>cancelled|paid>shipped|paid>refunded|shipped>delivered|delivered>refunded"
+          name: "str:120"
+          company: "str:120?"
+          line1: "str:200"
+          line2: "str:200?"
+          city: "str:120"
+          region: "str:120?"
+          postcode: "str:20"
+          country: country
+          phone: "phone?"
+          is_default: bool
+        owner: customer
+        order: [-is_default, name]
+        access: {read: "owned:customer", write: "owned:customer"}
+      Order:
+        fields:
+          number: int
+          customer: "fk:User?"
+          email: email
+          status: "state:pending>paid|pending>failed|pending>cancelled|paid>processing|paid>shipped|paid>cancelled|paid>refunded|processing>shipped|processing>cancelled|processing>refunded|shipped>delivered|shipped>refunded|delivered>refunded"
+          subtotal: "money:USD"
           total: "money:USD"
+          billing: json
+          shipping: json
+          note: "text?"
           payment: "fk:karni_payments.Payment?"
+          paid_at: "datetime?"
+          reserved_until: "datetime?"
+          key: "str:64"
+        key: number
         owner: customer
         audit: [status]
+        search: [email]
         order: -created_at
-        access: {read: ["owned:customer", "role:staff"], write: "role:staff"}
+        access: {read: granted, write: granted}
       OrderItem:
-        fields: {order: fk:Order, product: fk:Product, quantity: int, unit_price: "money:USD"}
+        fields:
+          order: fk:Order
+          product: "fk:Product?"
+          name: "str:200"
+          sku: "str:64?"
+          quantity: int
+          unit_price: "money:USD"
+          line_total: "money:USD"
         owner: order__customer
-        access: {read: ["owned:order__customer", "role:staff"], write: "role:staff"}
+        order: [order, name]
+        access: {read: granted, write: granted}
 pages:
   - home: dashboard
+  - Order: [list, {detail: {related: [OrderItem]}}]
   - Product: [list, detail, form]
   - Category: [list, form]
-  - Order: [list, detail]
-  - Cart: [detail]
-seed: {Category: 5, Product: 40, Cart: 10, CartItem: 30, Order: 30, OrderItem: 80}
+  - Tag: [list, form]
+  - shop: code
+  - cart: code
+  - checkout: code
+  - account: code
+  - signin: code
+  - terms: code
+  - backoffice: code
+navigation:
+  - backoffice: {label: Dashboard, icon: dashboard, requires: "shop.order:change"}
+  - Order: {icon: list, requires: "shop.order:change"}
+  - Catalogue: {icon: box, requires: "shop.product:change", items: [Product, Category, Tag]}
+  - shop: {label: Storefront, icon: grid, requires: public}
+seed: {Category: 15, Tag: 8, Product: 40, ProductImage: 60, Address: 10, Order: 36, OrderItem: 72}

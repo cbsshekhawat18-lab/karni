@@ -517,7 +517,7 @@ def _recipe_files(ws: Workspace, rec: Record) -> list[str]:
             f"{layout.RECORD} to build without them.",
             code=exc.code,
         ) from None
-    return apply.stage(ws, recipe) if recipe is not None else []
+    return apply.stage(ws, recipe, scaffold=rec.scaffold) if recipe is not None else []
 
 
 def _recipe_not_written(rec: Record, spec: schema.Spec) -> str:

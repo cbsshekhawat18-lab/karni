@@ -127,6 +127,6 @@ def placeholder_image(
 ) -> ContentFile[bytes]:
     """Experimental. A drawn PNG for ``label`` in ``key``'s colours (see the module docstring)."""
     buffer = io.BytesIO()
-    draw(label, key=key, size=size).save(buffer, format="PNG", optimize=True)
+    draw(label, key=key, size=size).save(buffer, format="PNG")
     stem = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-") or "placeholder"
     return ContentFile(buffer.getvalue(), name=name or f"{stem}.png")

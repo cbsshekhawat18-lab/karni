@@ -16,3 +16,62 @@ usually_changed = [
     "the order states",
     "the terms version and url",
 ]
+
+# The storefront's pages (files/frontend/src/pages/store/): the first karni build
+# registers each in frontend/src/routes.tsx. area = "store" puts a page in the
+# storefront's own header and footer (files/frontend/src/layout.tsx).
+[[routes]]
+path = "/shop"
+page = "pages/store/catalogue"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/shop/$slug"
+page = "pages/store/product"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/cart"
+page = "pages/store/cart"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/checkout"
+page = "pages/store/checkout"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/order/$number"
+page = "pages/store/order"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/signin"
+page = "pages/store/signin"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/terms"
+page = "pages/store/terms"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/account"
+page = "pages/store/account"
+data = { area = "store" }
+
+[[routes]]
+path = "/account/addresses"
+page = "pages/store/addresses"
+data = { area = "store" }
+
+[[routes]]
+path = "/backoffice"
+page = "pages/store/backoffice"

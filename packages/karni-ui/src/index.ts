@@ -563,6 +563,22 @@ export type {
   DataChartLoadingProps,
 } from "./components/chart/data-chart";
 
+// a resource's rows as cards: catalogues (experimental)
+export { ResourceGrid, defaultResourceGridSlots } from "./components/resource-grid/ResourceGrid";
+export type {
+  ResourceGridProps,
+  ResourceGridSlots,
+  ResourceGridSortOption,
+  ResourceGridPaginationProps,
+  ResourceGridEmptyProps,
+  ResourceGridLoadingProps,
+} from "./components/resource-grid/ResourceGrid";
+
+// money and page metadata for public pages (experimental)
+export { formatMoney } from "./lib/money";
+export { usePageMeta } from "./hooks/usePageMeta";
+export type { PageMeta } from "./hooks/usePageMeta";
+
 // page blocks beyond CRUD (experimental)
 export {
   DashboardGrid,

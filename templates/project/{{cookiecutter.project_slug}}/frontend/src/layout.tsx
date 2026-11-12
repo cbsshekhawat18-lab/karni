@@ -2,9 +2,12 @@
 // per static route in routes.tsx (routeNavItems: detail and "new" routes are
 // reached from their list page, and a sign-in page is listed only while
 // nobody is signed in). Pages from `karni make page` show up on their own.
-// Every page but a sign-in page sits behind <AuthGuard explain>: a visitor
-// who is not signed in gets the sign-in prompt in place, never a page of
-// errors, and the page appears once they sign in.
+// Every page but a sign-in page and a public page (a route with
+// `staticData: { public: true }` in routes.tsx) sits behind <AuthGuard explain>:
+// a visitor who is not signed in gets the sign-in prompt in place, never a
+// page of errors, and the page appears once they sign in. Behind it, <TermsGate>
+// asks a signed-in user to accept the current terms when KARNI_TERMS requires
+// them, instead of every request failing.
 // A menu from data (KARNI_NAVIGATION in config/settings.py, or `navigation:` in
 // karni.yaml): pass navSource="server" and pathname={pathname} to <Layout>,
 // and it shows each user the entries their grants open (docs/navigation.md).
@@ -12,6 +15,7 @@ import {
     AuthGuard,
     Button,
     Layout,
+    TermsGate,
     ThemeToggle,
     isSignInRoute,
     routeNavItems,
@@ -24,6 +28,9 @@ export default function AppLayout() {
     const router = useRouter();
     const { status, logout } = useAuth();
     const pathname = useRouterState({ select: (state) => state.location.pathname });
+    const open = useRouterState({
+        select: (state) => state.matches.some((match) => match.staticData.public === true),
+    });
     // The drawer closes on every route change, so an action in its footer
     // (Sign out) does not leave it open, focus trapped, over the next page.
     const [navOpen, setNavOpen] = useState(false);
@@ -76,11 +83,13 @@ export default function AppLayout() {
                 </span>
             )}
         >
-            {isSignInRoute(pathname) ? (
+            {isSignInRoute(pathname) || open ? (
                 <Outlet />
             ) : (
                 <AuthGuard explain>
-                    <Outlet />
+                    <TermsGate page={false}>
+                        <Outlet />
+                    </TermsGate>
                 </AuthGuard>
             )}
         </Layout>
