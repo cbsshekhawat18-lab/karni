@@ -21,6 +21,16 @@ export { MyOrders, OrdersPage } from "./MyOrders";
 export type { MyOrdersProps, OrdersPageProps } from "./MyOrders";
 export { OrderPage } from "./OrderPage";
 export type { OrderPageProps } from "./OrderPage";
+export { CustomerPage, CustomersPage } from "./Customers";
+export type { CustomerPageProps, CustomersPageProps } from "./Customers";
+export { NewOrderPage } from "./NewOrderPage";
+export type { NewOrderPageProps } from "./NewOrderPage";
+export { orderPanels, registerOrderPanel, unregisterOrderPanel } from "./panels";
+export type { OrderPanel, OrderPanelProps } from "./panels";
+export { StaffOrderPage, staffOrderKey } from "./StaffOrderPage";
+export type { StaffOrderPageProps } from "./StaffOrderPage";
+export { StaffOrders } from "./StaffOrders";
+export type { StaffOrdersProps } from "./StaffOrders";
 export {
   CART_QUERY_KEY,
   CART_TOKEN_HEADER,
@@ -49,10 +59,17 @@ export type {
   Address,
   Cart,
   CartLine,
+  CustomerPageData,
+  CustomerRow,
   Fulfilment,
   Order,
   OrderLine,
+  OrderNote,
+  OrderPaymentRow,
+  OrderRefundRow,
   OrderRow,
   OrderStatus,
   Placed,
+  SellableItem,
+  StaffOrder,
 } from "./types";

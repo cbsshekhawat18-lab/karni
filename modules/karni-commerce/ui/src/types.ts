@@ -110,6 +110,8 @@ export interface Order {
   /** Waiting for its payment (or failed), so "Pay now" may start it again. */
   payable: boolean;
   lines: OrderLine[];
+  /** The notes the reader may see: the notes to the customer (staff see every note). */
+  notes: OrderNote[];
   fulfilment: Fulfilment[];
 }
 
@@ -121,4 +123,87 @@ export interface OrderRow {
   total: string;
   currency: string;
   created_at: string;
+}
+
+/** A note on an order: for the staff (`internal`), or to the customer. */
+export interface OrderNote {
+  id: string;
+  kind: "internal" | "customer";
+  body: string;
+  author_name: string;
+  created_at: string;
+}
+
+/** One payment of an order, as staff read it. */
+export interface OrderPaymentRow {
+  id: string;
+  purpose: string;
+  amount: string;
+  status: string;
+  provider: string;
+  created_at: string;
+}
+
+/** One refund of an order: how much, of which lines, and where it stands. */
+export interface OrderRefundRow {
+  id: string;
+  amount: string;
+  lines: Record<string, number>;
+  restock: boolean;
+  reason: string;
+  status: string;
+  settled_at: string | null;
+  created_at: string;
+}
+
+/** GET /api/orders/{id}/staff/: an order as staff read it. */
+export interface StaffOrder extends Order {
+  payments: OrderPaymentRow[];
+  refunds: OrderRefundRow[];
+  buyer: { user: string | null; name: string; email: string; orders: number; spent: string };
+  refundable: string;
+  can_cancel: boolean;
+  can_refund: boolean;
+}
+
+/** A buyer in the staff's customers list (GET /api/orders/customers/). */
+export interface CustomerRow {
+  email: string;
+  name: string;
+  has_account: boolean;
+  order_count: number;
+  spent: string;
+  currency: string;
+  first_order: string;
+  last_order: string;
+}
+
+/** One buyer's page (GET /api/orders/customer/?email=). */
+export interface CustomerPageData {
+  email: string;
+  name: string;
+  account: { id: string; name: string; email: string; joined: string | null } | null;
+  order_count: number;
+  spent: string;
+  currency: string;
+  first_order: string;
+  last_order: string;
+  addresses: Address[];
+  orders: Array<{
+    id: string;
+    number: number;
+    status: OrderStatus;
+    total: string;
+    created_at: string;
+  }>;
+}
+
+/** Something staff may put on an order placed by hand (GET /api/orders/items/). */
+export interface SellableItem {
+  kind: string;
+  item: string;
+  name: string;
+  sku: string;
+  price: string;
+  available: number | null;
 }

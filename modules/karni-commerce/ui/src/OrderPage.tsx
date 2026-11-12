@@ -214,6 +214,19 @@ export function OrderPage({
         {shipping ? <AddressBlock title="Shipping" address={shipping} /> : null}
       </div>
       {data.note ? <p className="text-sm">Your note: {data.note}</p> : null}
+      {data.notes.length > 0 ? (
+        <section aria-label="Notes from the shop" className="space-y-2">
+          <h2 className="font-semibold">Notes from us</h2>
+          {data.notes.map((note) => (
+            <p key={note.id} className="whitespace-pre-line rounded-md bg-muted p-3 text-sm">
+              {note.body}
+              <span className="block text-xs text-muted-foreground">
+                {new Date(note.created_at).toLocaleString()}
+              </span>
+            </p>
+          ))}
+        </section>
+      ) : null}
       <p className="text-sm text-muted-foreground">
         Placed {new Date(data.created_at).toLocaleString()}
         {data.paid_at ? `, paid ${new Date(data.paid_at).toLocaleString()}` : ""}.

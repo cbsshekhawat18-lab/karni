@@ -19,6 +19,12 @@ export interface CommercePaths {
   order: (number: number | string, key?: string) => string;
   /** The sign-in page, coming back to `next`. */
   signIn: (next: string) => string;
+  /** Staff: the customers list. */
+  customers: string;
+  /** Staff: one customer's page. */
+  customer: (email: string) => string;
+  /** Staff: an order placed by hand. */
+  newOrder: string;
 }
 
 export const DEFAULT_COMMERCE_PATHS: CommercePaths = {
@@ -29,6 +35,9 @@ export const DEFAULT_COMMERCE_PATHS: CommercePaths = {
   terms: "/terms",
   order: (number, key) => `/orders/${number}${key ? `?key=${encodeURIComponent(key)}` : ""}`,
   signIn: (next) => `/signin?next=${encodeURIComponent(next)}`,
+  customers: "/customers",
+  customer: (email) => `/customers/${encodeURIComponent(email)}`,
+  newOrder: "/orders/new",
 };
 
 export interface CommerceContextValue {

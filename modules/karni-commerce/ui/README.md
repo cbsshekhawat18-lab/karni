@@ -17,6 +17,10 @@ seat, a booking): the server prices each line through its kind's adapter.
   addresses.
 - **`OrderPage`**: one order for its buyer, or for a guest with the key from checkout.
 - **`MyOrders`** and **`OrdersPage`**: the signed-in person's orders.
+- **`StaffOrders`**, **`StaffOrderPage`**, **`NewOrderPage`**, **`CustomersPage`** and
+  **`CustomerPage`**: the staff's orders, one order with refunds, notes and history, an
+  order placed by hand, and the customers. `registerOrderPanel` adds a selling app's panel
+  (a parcel to ship) to the order page.
 - **`useCart`**, **`useSetLine`**, **`useMergeOnSignIn`**, **`useCurrency`**, **`Money`**,
   **`PriceTag`**.
 

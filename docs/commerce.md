@@ -256,6 +256,24 @@ once in `<CommerceProvider navigate={(to) => router.history.push(to)}>` and
 mount each page from a thin route file. `CheckoutPage`'s `addressPicker` slot
 offers a person's saved addresses.
 
+For staff it has `StaffOrders` (the orders list with search, filters by
+state, date and buyer, and a CSV export), `StaffOrderPage` (one order: the
+buyer, lines, payments, refunds, notes and history, with Cancel and Refund
+following the order's declared row actions when the schema has them),
+`NewOrderPage` (an order placed by hand), `CustomersPage` and
+`CustomerPage`. A selling app adds its own panel to the order page once at
+startup:
+
+```tsx
+import { registerOrderPanel } from "@karni/commerce-ui";
+
+registerOrderPanel({ key: "parcel", title: "Parcel", component: Parcel,
+                     when: (order) => order.needs_shipping });
+```
+
+The panel gets the order and `refresh()`. `CommercePaths` gains
+`customers`, `customer(email)` and `newOrder`.
+
 ## What it does not do yet
 
 Coupons, tax, shipping zones and methods, invoices, deposits with a balance

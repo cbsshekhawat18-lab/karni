@@ -88,6 +88,15 @@ export const orderFixture: Order = {
       image: null,
     },
   ],
+  notes: [
+    {
+      id: "n1",
+      kind: "customer",
+      body: "Wrapped as a gift.",
+      author_name: "Theo Lindqvist",
+      created_at: "2026-11-10T11:00:00Z",
+    },
+  ],
   fulfilment: [
     { title: "Parcel", status: "shipped", label: "Shipped", detail: "Tracking TR123", at: null },
   ],
