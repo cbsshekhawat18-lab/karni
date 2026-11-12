@@ -41,4 +41,5 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 karni_settings(globals(), env_name="dev")
 
-INSTALLED_APPS += ["karni_payments"]  # type: ignore[name-defined]  # noqa: F821
+# The outbox delivers karni-payments' family events (karni_payments/listeners.py).
+INSTALLED_APPS += ["karni_payments", "karni.outbox"]  # type: ignore[name-defined]  # noqa: F821
