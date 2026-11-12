@@ -23,7 +23,11 @@ project's own ``KARNI_PAYMENTS_EVENT_HANDLER``, the admin. A row created with
 the status already set publishes too. ``QuerySet.update()`` sends no signal
 and publishes nothing, and a row loaded with ``status`` deferred publishes
 nothing when saved. The subject is the payment (or the refund), the actor
-the current user (none in a webhook), and the person is left empty.
+the current user (none in a webhook), and the person is the payer's person
+when the people contract (``karni.people``) is installed and the payment's
+user is linked to one, else empty. ``payments.payment.succeeded`` names a
+timeline title, so with ``karni.timeline`` installed it lands on the payer's
+timeline and the payment's.
 
 A part that must act inside the payment's own transaction (an order marked
 paid) keeps using a plain signal: the bus delivers after the commit, in a
@@ -38,13 +42,14 @@ from __future__ import annotations
 
 from typing import Any, Final
 
+from django.apps import apps
 from django.db.models.signals import post_init, post_save
 from django.dispatch import receiver
 from karni.events import declare, publish
 
 from karni_payments.models import Payment, Refund
 
-__all__ = ["publish_payment", "publish_refund", "remember_status"]
+__all__ = ["payer", "publish_payment", "publish_refund", "remember_status"]
 
 declare(
     "payments.payment.succeeded",
@@ -54,6 +59,7 @@ declare(
         "amount": "the amount paid, a decimal string",
         "currency": "the ISO 4217 code, lower case",
     },
+    timeline="Payment of {amount} {currency} succeeded",
     describe="The provider confirmed a payment.",
 )
 declare(
@@ -95,6 +101,17 @@ def _moved(instance: Payment | Refund, created: bool) -> str | None:
     return str(current)
 
 
+def payer(payment: Payment, using: str | None = None) -> str | None:
+    """The id of the person linked to the payment's user, or None (no people contract, no link)."""
+    if payment.user_id is None or not apps.is_installed("karni.people"):
+        return None
+    from karni.people.models import Person
+
+    manager = Person.objects.using(using) if using else Person.objects
+    found = manager.filter(user_id=payment.user_id).values_list("pk", flat=True).first()
+    return str(found) if found is not None else None
+
+
 @receiver(post_save, sender=Payment, dispatch_uid="karni_payments.listeners.payment_saved")
 def publish_payment(
     sender: Any, instance: Payment, created: bool = False, raw: bool = False, **kwargs: Any
@@ -106,6 +123,7 @@ def publish_payment(
         publish(
             "payments.payment.succeeded",
             subject=instance,
+            person=payer(instance, using),
             using=using,
             payment=str(instance.pk),
             amount=str(instance.amount),
@@ -115,6 +133,7 @@ def publish_payment(
         publish(
             "payments.payment.failed",
             subject=instance,
+            person=payer(instance, using),
             using=using,
             payment=str(instance.pk),
             amount=str(instance.amount),
@@ -131,6 +150,7 @@ def publish_refund(
         publish(
             "payments.refund.succeeded",
             subject=instance,
+            person=payer(instance.payment, kwargs.get("using")),
             using=kwargs.get("using"),
             refund=str(instance.pk),
             payment=str(instance.payment_id),

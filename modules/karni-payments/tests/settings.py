@@ -43,3 +43,6 @@ karni_settings(globals(), env_name="dev")
 
 # The outbox delivers karni-payments' family events (karni_payments/listeners.py).
 INSTALLED_APPS += ["karni_payments", "karni.outbox"]  # type: ignore[name-defined]  # noqa: F821
+# The people and timeline contracts: a succeeded payment lands on the payer's timeline
+# (tests/test_timeline.py).
+INSTALLED_APPS += ["karni.people", "karni.timeline"]  # type: ignore[name-defined]  # noqa: F821
