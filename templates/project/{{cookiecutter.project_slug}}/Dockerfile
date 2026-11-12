@@ -55,7 +55,10 @@ EXPOSE 8000
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
 # The staff app (frontend/), built for production. A project without
-# frontend/package.json gets an empty dist and no staff app.
+# frontend/package.json gets an empty dist and no staff app. `npm ci` needs a
+# lock that lists @karni/ui. The lock `karni new` writes leaves it out (the
+# first `npm install` adds it), so until that lock is committed the build runs
+# `npm install`, which keeps every version the lock pins.
 FROM node:24-alpine AS staff-app
 WORKDIR /build
 ARG KARNI_UI_TARBALL=""
@@ -70,7 +73,7 @@ RUN if [ ! -f frontend/package.json ]; then mkdir -p frontend/dist; exit 0; fi \
         echo "frontend/package.json installs @karni/ui from a local checkout (file:), which this build cannot reach. Pack it into the project and set KARNI_UI_TARBALL (docs/deploy.md)." >&2; \
         exit 1; \
     fi \
-    && if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi \
+    && if grep -q '"node_modules/@karni/ui"' package-lock.json 2>/dev/null; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi \
     && npm run build -- --base="${KARNI_APP_PATH}"
 
 FROM python:3.12-slim AS prod

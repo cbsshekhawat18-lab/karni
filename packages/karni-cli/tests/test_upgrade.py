@@ -68,7 +68,8 @@ def test_the_shipped_0_2_entries() -> None:
     assert by_id["all-objects"].codemod == "v1_0.all_objects_to_without"
     assert by_id["agent-guidance-files"].codemod == "v0_2.agent_guidance"
     assert by_id["mandatory-access"].mechanical is False
-    assert changelog.newest_release(by_id.values()) == "0.5.0"
+    assert changelog.newest_release(by_id.values()) == "0.5.2"
+    assert by_id["frontend-npm-floor"].codemod == "v0_5.frontend_npm_floor"
     assert by_id["urls-marker"].codemod == "v0_5.urls_marker" and by_id["urls-marker"].mechanical
     assert by_id["public-read-writes-need-a-role"].release == "0.5.0"
     assert by_id["public-read-writes-need-a-role"].mechanical is False
@@ -95,6 +96,7 @@ def test_selection_between_versions() -> None:
     in_0_3 = {"django-5-2", "role-scope-paths-checked"}
     in_0_4 = {change.id for change in changelog.load() if change.release == "0.4.0"}
     in_0_4_1 = {change.id for change in changelog.load() if change.release == "0.5.0"}
+    in_0_5_2 = {change.id for change in changelog.load() if change.release == "0.5.2"}
     from_0_1 = _ids("0.1.0", "0.2.0")
     assert sorted(from_0_1) == sorted(every)
     # What breaks in 0.2 runs first, then what breaks in 1.0.
@@ -103,7 +105,9 @@ def test_selection_between_versions() -> None:
     # From the deprecating release itself: the deprecations, not the 0.2 breaks again.
     assert deprecations <= set(_ids("0.2.0", "0.2.0"))
     assert "mandatory-access" not in _ids("0.2.0", "1.0")
-    assert set(_ids("0.2.0", "1.0")) == set(_ids("0.2.0", "0.2.0")) | in_0_3 | in_0_4 | in_0_4_1
+    assert set(_ids("0.2.0", "1.0")) == (
+        set(_ids("0.2.0", "0.2.0")) | in_0_3 | in_0_4 | in_0_4_1 | in_0_5_2
+    )
     assert in_0_3 <= set(_ids("0.2.0", "0.3.0"))
     assert not in_0_3 & set(_ids("0.1.0", "0.2.0"))  # a 0.2 target never sees 0.3 changes
     assert in_0_4 <= set(_ids("0.3.0", "0.4.0"))
@@ -176,6 +180,9 @@ def test_selection_between_versions() -> None:
     assert in_0_4_1 <= set(_ids("0.4.0", "0.5.0"))
     assert not in_0_4 & set(_ids("0.4.0", "0.5.0"))  # 0.4.0's changes are behind a 0.4.0 project
     assert not in_0_4_1 & set(_ids("0.3.0", "0.4.0"))
+    assert in_0_5_2 == {"frontend-npm-floor"}
+    assert in_0_5_2 <= set(_ids("0.5.1", "0.5.2"))
+    assert not in_0_5_2 & set(_ids("0.4.0", "0.5.0"))
     assert _ids("1.0.0", "1.1") == []
     assert _ids("0.1.0", "0.1.9") == []  # replacements do not exist before 0.2
     assert set(_ids("0.2.0.dev3", "0.2.0")) == set(every)  # pre-releases count as before
@@ -277,7 +284,7 @@ def test_list_needs_no_project(runner, tmp_path: Path, monkeypatch: pytest.Monke
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(app, ["upgrade", "--list"])
     assert result.exit_code == 0, result.output
-    assert "default --to: 0.5.0" in result.output
+    assert "default --to: 0.5.2" in result.output
     assert "all-objects  [api-change, codemod v1_0.all_objects_to_without, removed in 1.0]" in (
         result.output
     )
@@ -288,7 +295,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     result = runner.invoke(app, ["upgrade"])
     assert result.exit_code == 0, result.output
     out = result.output
-    assert "karni 0.1.0 -> 0.5.0: 97 change(s), 6 mechanical, 91 manual" in out
+    assert "karni 0.1.0 -> 0.5.2: 98 change(s), 7 mechanical, 91 manual" in out
 
     views = (git_project / "library" / "views.py").read_text()
     assert (
@@ -319,7 +326,8 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     assert "agent-guidance-files: nothing to change" in out
     assert "django-5-2: Django" in manual
     assert "urls-marker: nothing to change" in out  # this project has no config/urls.py
-    assert "Next: review `git diff`, pin karni to 0.5.0" in out
+    assert "Next: review `git diff`, pin karni to 0.5.2" in out
+    assert "frontend-npm-floor: nothing to change" in out  # no frontend/package.json
     assert "public-read-writes-need-a-role: karni make --access public-read" in manual
     assert "migrations/0.5/#public-read-viewsets-review-who-may-write" in manual
 
@@ -534,3 +542,35 @@ def test_upgrading_a_0_4_0_project_adds_the_marker_and_enables_make_site(
     made = runner.invoke(app, ["make", "site", "web"])
     assert made.exit_code == 0, made.output
     assert 'path("", include("web.urls")),\n    # karni:urls\n' in urls.read_text()
+
+
+# v0_5.frontend_npm_floor: npm 10.8 in engines, as the scaffold now asks
+
+
+def test_the_npm_floor_codemod_restores_the_scaffold(generated_project: Path) -> None:
+    package = generated_project / "frontend" / "package.json"
+    scaffold = package.read_text()
+    assert '"npm": ">=10.8"' in scaffold
+    package.write_text(scaffold.replace('"npm": ">=10.8"', '"npm": ">=11"'))
+    codemod = load_codemod("v0_5.frontend_npm_floor")
+    assert codemod.apply(generated_project).files == {"frontend/package.json": 1}
+    assert package.read_text() == scaffold
+    again = codemod.apply(generated_project)
+    assert again.files == {} and again.sites == []  # idempotent
+    assert codemod.apply(generated_project / "missing").files == {}
+
+
+def test_the_npm_floor_codemod_leaves_a_project_range_alone(tmp_path: Path) -> None:
+    (tmp_path / "frontend").mkdir()
+    package = tmp_path / "frontend" / "package.json"
+    codemod = load_codemod("v0_5.frontend_npm_floor")
+    for text in ('{"engines": {"npm": ">=11.6"}}\n', '{"name": "x"}\n', "not json\n"):
+        package.write_text(text)
+        outcome = codemod.apply(tmp_path)
+        assert outcome.files == {} and outcome.sites == [] and package.read_text() == text
+    # Karni's value written another way: reported for a person, not rewritten.
+    odd = '{"engines": {"npm":">=11"}}\n'
+    package.write_text(odd)
+    outcome = codemod.apply(tmp_path)
+    assert outcome.files == {} and package.read_text() == odd
+    assert len(outcome.sites) == 1 and '"npm": ">=10.8"' in outcome.sites[0].render()

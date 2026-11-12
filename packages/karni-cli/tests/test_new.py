@@ -38,7 +38,7 @@ def test_new_generates_project(runner, tmp_path: Path, monkeypatch) -> None:
     # next steps must print the SLUG, not the input name
     assert "cd my_app" in result.output
     # the release the scaffold is written for: `karni upgrade` starts there
-    assert 'baseline = "0.5.0"' in (project / "pyproject.toml").read_text()
+    assert 'baseline = "0.5.2"' in (project / "pyproject.toml").read_text()
     # generators insert project routes at this marker (karni make site)
     assert (
         "    # karni:urls\n    # Only while DEBUG" in (project / "config" / "urls.py").read_text()
@@ -168,6 +168,7 @@ VULNERABLE: dict[str, list[tuple[tuple[int, ...], tuple[int, ...]]]] = {
 }
 MINIMATCH_OVERRIDE = {"minimatch@>=7.0.0 <11.0.1": "^11.0.5"}
 LOCKS = (
+    "templates/project/*/frontend/package-lock.json",
     "examples/*/frontend/package-lock.json",
     "packages/karni-ui/package-lock.json",
     "modules/*/ui/package-lock.json",
@@ -175,8 +176,8 @@ LOCKS = (
 
 
 def test_no_committed_lockfile_pins_a_known_vulnerable_package() -> None:
-    """The examples and module UIs lock what the scaffold does: no Zod, seroval, minimatch or
-    glob in an advisory's range."""
+    """The scaffold, the examples and the module UIs lock no Zod, seroval, minimatch or glob in
+    an advisory's range (the scaffold's lock shows its minimatch override took effect)."""
     locks = sorted(lock for pattern in LOCKS for lock in REPO_ROOT.glob(pattern))
     assert locks, "no package-lock.json found"
     found = []
@@ -359,25 +360,73 @@ def test_new_falls_back_to_the_registry(runner, tmp_path: Path, monkeypatch) -> 
     assert "KARNI_UI_SRC=" in result.output
 
 
-def test_new_frontend_requires_npm_11(runner, tmp_path: Path, monkeypatch) -> None:
-    """npm 10 crashes on a fresh install of this frontend, so the scaffold asks for npm 11.
-
-    npm checks engines only after the dependency walk that crashes, so engine-strict
-    stops npm 10 only once a package-lock.json exists. The next steps name the fix
-    for the fresh install.
-    """
+def test_new_frontend_installs_with_plain_npm_install(runner, tmp_path: Path, monkeypatch) -> None:
+    """npm 10.8 (Node 20.19's) is the floor, and the next steps say plain `npm install`."""
     monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
     monkeypatch.setattr(scaffold, "resolve_ui_source", lambda: None)
     result = runner.invoke(app, ["new", "Engines", "-o", str(tmp_path)])
     assert result.exit_code == 0, result.output
     frontend = tmp_path / "engines" / "frontend"
     package = json.loads((frontend / "package.json").read_text())
-    assert package["engines"] == {"node": ">=20.19", "npm": f">={toolchain.NPM_FLOOR}"}
+    assert package["engines"] == {"node": ">=20.19", "npm": f">={toolchain.NPM_FLOOR_TEXT}"}
     settings = [
         line for line in (frontend / ".npmrc").read_text().splitlines() if not line.startswith("#")
     ]
     assert "install-links=true" in settings and "engine-strict=true" in settings
-    assert "npx npm@11 install" in result.output
+    assert "(cd frontend && npm install)" in result.output and "npx" not in result.output
+
+
+STALE_LOCK = (
+    "the scaffold's frontend lock is stale: run `python scripts/template_lock.py` on Node 20"
+)
+
+
+def test_the_scaffold_locks_its_frontend_except_karni_ui(
+    runner, tmp_path: Path, monkeypatch
+) -> None:
+    """Without a lock, npm before 11.6 (Node 20 and 22 bundle npm 10) resolves Vite 8's
+    optional peers, vite > @vitejs/devtools > @vitejs/devtools-vitest > vitest > vitest's own
+    optional peers, and crashes with "Cannot read properties of null (reading 'edgesOut')"
+    whenever vitest's packages are out of step on the registry (npm/cli#8261). With the lock,
+    npm installs what it pins and never resolves those peers, so it must lock Vite and agree
+    with package.json. @karni/ui stays out: `npm install` resolves it from package.json."""
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    monkeypatch.setattr(scaffold, "resolve_ui_source", lambda: None)
+    assert runner.invoke(app, ["new", "Shop", "-o", str(tmp_path)]).exit_code == 0
+    frontend = tmp_path / "shop" / "frontend"
+    package = json.loads((frontend / "package.json").read_text())
+    lock = json.loads((frontend / "package-lock.json").read_text())
+    root = lock["packages"][""]
+    assert lock["lockfileVersion"] == 3
+    assert lock["name"] == root["name"] == package["name"] == "shop-frontend"
+    dependencies = dict(package["dependencies"])
+    assert dependencies.pop("@karni/ui") == scaffold.UI_REGISTRY_SPEC
+    assert root["dependencies"] == dependencies, STALE_LOCK
+    assert root["devDependencies"] == package["devDependencies"], STALE_LOCK
+    assert root["engines"] == package["engines"], STALE_LOCK
+    assert "node_modules/vite" in lock["packages"]
+    assert not [key for key in lock["packages"] if key.endswith("node_modules/@karni/ui")]
+    # Optional peers npm never installs stay out of the tree it pins.
+    assert "node_modules/@vitejs/devtools" not in lock["packages"]
+    assert "node_modules/vitest" not in lock["packages"]
+
+
+def test_the_lock_generator_reads_the_template_and_writes_it_back() -> None:
+    """scripts/template_lock.py renders the template's package.json without @karni/ui and puts
+    the template expression back into the lock npm writes."""
+    import importlib.util
+
+    script = REPO_ROOT / "scripts" / "template_lock.py"
+    spec = importlib.util.spec_from_file_location("template_lock", script)
+    assert spec is not None and spec.loader is not None
+    generator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generator)
+    template = generator.FRONTEND / "package.json"
+    package = json.loads(generator.render_package(template.read_text()))
+    assert "@karni/ui" not in package["dependencies"]
+    assert package["name"] == f"{generator.PLACEHOLDER}-frontend"
+    written = json.dumps({"name": package["name"], "packages": {"": {"name": package["name"]}}})
+    assert generator.template_lock(written).count('"name": "{{ cookiecutter.project_slug }}') == 2
 
 
 def test_new_builds_a_missing_ui_dist(runner, tmp_path: Path, monkeypatch) -> None:

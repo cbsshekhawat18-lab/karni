@@ -75,8 +75,9 @@ Hosts, ports, image names and sizes are variables in `.env.prod`, listed in
 ### The staff app
 
 The staff app in `frontend/` is built into the production image by the
-Dockerfile's `staff-app` stage: `npm ci` (or `npm install` without a lock
-file), then `npm run build` with Vite's base set to the app's path
+Dockerfile's `staff-app` stage: `npm ci` (or `npm install` when
+`package-lock.json` does not list `@karni/ui` yet, as the lock `karni new`
+writes does not), then `npm run build` with Vite's base set to the app's path
 (`KARNI_APP_PATH`, `/app/` by default). The router in `src/routes.tsx` takes
 the same base, so links and reloads work under it.
 

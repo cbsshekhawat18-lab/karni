@@ -2,19 +2,18 @@
 
 The floors live here once, so ``karni doctor`` (which flags a version below
 them), ``karni check`` and ``karni new`` (which name them next to ``npm
-install``) never disagree.
+install``) never disagree. The scaffold's ``frontend/package.json`` declares
+the same floors in ``engines``, and its ``.npmrc`` sets ``engine-strict``.
 
-Why npm 11: npm 10, which Node 20 and Node 22 bundle, crashes in ``npm
-install`` of a fresh scaffold with ``Cannot read properties of null (reading
-'edgesOut')``. Vite 8's optional peer chain (vite > @vitejs/devtools >
-@vitejs/devtools-vitest > vitest, whose own optional peers pin exact vitest
-versions) makes arborist replace a vitest node while ``#loadPeerSet`` still
-walks its peers. npm 11 checks for the detached node, and npm 10.9.9, the last
-10.x, does not. npm checks ``engines`` and runs the root ``preinstall`` only
-after that walk, so nothing in package.json or .npmrc stops npm 10 before it
-crashes. The scaffold's ``engines`` and ``engine-strict=true`` still stop an
-old npm with EBADENGINE whenever it gets past the walk, as it does once a
-package-lock.json exists.
+Why npm 10.8: it is the npm Node 20.19 bundles, and plain ``npm install``
+works on it because the scaffold ships ``frontend/package-lock.json``.
+Without a lock, npm before 11.6 resolves Vite 8's optional peers (vite >
+@vitejs/devtools > @vitejs/devtools-vitest > vitest > vitest's own optional
+peers, each pinned to one vitest version) and crashes with ``Cannot read
+properties of null (reading 'edgesOut')`` whenever vitest's packages are out
+of step on the registry (npm/cli#8261, fixed in npm 11.6.0). With the lock,
+npm installs what it pins and never resolves those peers.
+``scripts/template_lock.py`` writes the lock.
 """
 
 from __future__ import annotations
@@ -26,13 +25,11 @@ NODE_RANGES: tuple[tuple[tuple[int, ...], tuple[int, ...] | None], ...] = (
     ((20, 19), (21,)),
     ((22, 12), None),
 )
-#: The first npm major that installs the scaffold's frontend.
-NPM_FLOOR = 11
-#: The three ways to an npm at the floor, cheapest first.
-NPM_FIX = (
-    "use `npx npm@11 install` in frontend/ in place of `npm install`, "
-    "run `npm install -g npm@11`, or install Node 24 LTS, which bundles npm 11"
-)
+#: The oldest npm the scaffold's frontend accepts: the one Node 20.19 bundles.
+NPM_FLOOR: tuple[int, ...] = (10, 8)
+NPM_FLOOR_TEXT = ".".join(str(part) for part in NPM_FLOOR)
+#: The ways to an npm at the floor, cheapest first.
+NPM_FIX = "run `npm install -g npm@11`, or install Node 24 LTS, which bundles npm 11"
 
 _VERSION = re.compile(r"v?(\d+)(?:\.(\d+))?(?:\.(\d+))?")
 
@@ -65,23 +62,17 @@ def shortfall(node: str | None, npm: str | None) -> str | None:
             "(22.12 or later on Node 22). Fix: install Node 24 LTS, which bundles npm 11"
         )
     npm_version = parse_version(npm)
-    if npm_version is not None and npm_version[0] < NPM_FLOOR:
+    if npm_version is not None and npm_version < NPM_FLOOR:
         return (
-            f"npm {npm} is below {NPM_FLOOR} and crashes in the frontend's `npm install` "
-            "(Cannot read properties of null (reading 'edgesOut')). "
-            f"Fix: {NPM_FIX}"
+            f"npm {npm} is below {NPM_FLOOR_TEXT}, so the frontend's `npm install` stops "
+            f"with EBADENGINE (engines in frontend/package.json). Fix: {NPM_FIX}"
         )
     return None
 
 
 def install_hint() -> str:
-    """How to get frontend/node_modules, naming the npm floor.
-
-    "Run npm install" alone is wrong advice on npm 10, where that install is
-    what fails, so the hint says what to run there instead.
-    """
+    """How to get frontend/node_modules, naming the npm floor."""
     return (
-        f"Run `npm install` in frontend/ with npm {NPM_FLOOR} or later. npm 10, which Node 20 "
-        f"and Node 22 bundle, crashes in that install: {NPM_FIX}. "
+        f"Run `npm install` in frontend/ (npm {NPM_FLOOR_TEXT} or later). "
         "`karni doctor` shows the Node and npm on PATH"
     )

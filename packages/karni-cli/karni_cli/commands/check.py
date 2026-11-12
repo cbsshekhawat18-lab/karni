@@ -63,9 +63,7 @@ def frontend_install_message() -> str:
     return (
         "the frontend checks (eslint and jscpd) need frontend/node_modules, which is "
         "missing. Install it with `(cd frontend && npm install)`, which needs npm "
-        f"{toolchain.NPM_FLOOR} or later. On npm 10 (Node 20 and 22) run "
-        "`(cd frontend && npx --yes npm@11 install)` instead. `karni doctor` shows the "
-        "Node and npm on PATH"
+        f"{toolchain.NPM_FLOOR_TEXT} or later. `karni doctor` shows the Node and npm on PATH"
     )
 
 
