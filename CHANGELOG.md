@@ -9,6 +9,39 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
+## Unreleased
+
+- **A new project's frontend installs with plain `npm install` on npm 10 and
+  11.** The crash that made the docs ask for `npx --yes npm@11 install` is an
+  npm bug that Vite 8's optional peers reach. `{"devDependencies": {"vite":
+  "^8.3.4"}}` alone crashes, and the minimatch override, `engines`, `.npmrc`
+  and `@karni/ui` play no part. npm before 11.6 builds a tree without a lock
+  by resolving every optional peer, and Vite 8's optional peers lead through
+  `@vitejs/devtools` and `@vitejs/devtools-vitest` to vitest, whose own
+  optional peers each pin one vitest version. When those packages are out of
+  step on the registry, npm replaces a node while it still walks it and
+  crashes with `Cannot read properties of null (reading 'edgesOut')`
+  (npm/cli#8261, fixed in npm 11.6.0 and not in npm 10). On Node 20 that was
+  the case from 15 to 30 October 2026, while `@vitest/browser-webdriverio`
+  4.1.12 lagged vitest 4.1.12. After that window npm 10.8.2, 10.9.9 and
+  10.9.10 installed the scaffold again, and its own `engines` (`"npm":
+  ">=11"` with `engine-strict`) was what stopped them. The scaffold now ships
+  `frontend/package-lock.json`, which pins every package but `@karni/ui`, and
+  npm installs what a lock pins without resolving those peers.
+  `scripts/template_lock.py` writes the lock on Node 20, and a test fails
+  when it disagrees with the scaffold's package.json. `@karni/ui` stays out
+  of the lock, so a new project still gets the newest `@karni/ui` in its
+  range, and the production image runs `npm ci` once the project's lock
+  lists it (`npm install` before that).
+- **npm 10.8 is the floor.** `engines` in the scaffold and in
+  `examples/medintel` asks for npm 10.8 (the npm Node 20.19 bundles) instead
+  of npm 11, `karni doctor` flags an npm below 10.8, and `karni new`,
+  `karni check`, the README, the quickstart, the FAQ and the migration notes
+  say plain `npm install`. CI runs the quickstart page on Node 22 (npm 10.9)
+  as well as Node 20 (npm 10.8) and Node 24. `karni upgrade` changes an
+  earlier project's `"npm": ">=11"` to `"npm": ">=10.8"`
+  ([migration note](docs/migrations/0.5.md#the-frontend-installs-with-plain-npm-install)).
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind
