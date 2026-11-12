@@ -3,6 +3,7 @@
 from typing import Any
 
 import pytest
+from karni.testing.api import client_as
 from karni.testing.factories import create
 from karni_payments.models import Payment
 from karni_payments.providers.test import TestProvider
@@ -18,20 +19,25 @@ def _test_payments(settings: Any) -> None:
     TestProvider.reset()
 
 
-def test_a_slot_never_takes_more_bookings_than_its_capacity(client_as: Any) -> None:
+def _member() -> Any:
+    return client_as("member")
+
+
+def test_a_slot_never_takes_more_bookings_than_its_capacity() -> None:
     slot = create(Slot, capacity=2)
-    client = client_as("member")
     first, second = (
-        client.post("/api/bookings/", {"slot": str(slot.pk)}) for _ in range(2)
+        _member().post("/api/bookings/", {"slot": str(slot.pk)}) for _ in range(2)
     )
     assert first.status_code == second.status_code == 201, first.content
-    full = client.post("/api/bookings/", {"slot": str(slot.pk)})
+    late = _member()
+    full = late.post("/api/bookings/", {"slot": str(slot.pk)})
     assert full.status_code == 409 and full.json()["code"] == "E985"
-    cancelled = client.post(f"/api/bookings/{first.json()['id']}/cancel/")
+    owner = Booking.objects.get(pk=first.json()["id"]).member
+    cancelled = client_as(user=owner).post(f"/api/bookings/{first.json()['id']}/cancel/")
     assert cancelled.status_code == 200 and cancelled.json()["status"] == "cancelled"
     slot.refresh_from_db()
     assert slot.remaining == 1
-    assert client.post("/api/bookings/", {"slot": str(slot.pk)}).status_code == 201
+    assert late.post("/api/bookings/", {"slot": str(slot.pk)}).status_code == 201
 
 
 def test_a_paid_booking_is_confirmed(client_as: Any) -> None:

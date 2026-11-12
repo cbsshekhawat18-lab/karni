@@ -23,6 +23,8 @@ apps:
         key: slug
         search: [name]
         order: name
+        bounds: {price: {min: 0}}
+        delete: {blocked_by: [Slot]}
         access: {read: public, write: "role:staff"}
       Slot:
         fields:
@@ -32,6 +34,8 @@ apps:
           capacity: int
           remaining: "capacity:capacity"
         order: starts_at
+        bounds: {capacity: {min: 1}, starts_at: {min: $now}}
+        delete: {blocked_by: {Booking: {status: {not: cancelled}}}}
         access: {read: public, write: "role:staff"}
       Booking:
         fields:
@@ -43,7 +47,18 @@ apps:
         owner: member
         audit: [status]
         order: -created_at
-        access: {read: ["owned:member", "role:staff"], write: "owned:member"}
+        unique: [{fields: [slot, member], where: {status: {not: cancelled}}}]
+        targets: {slot: {starts_at__gt: $now}}
+        frozen: {slot: true}
+        actions:
+          pay: {from: pending, by: "owned:member"}
+          cancel: {from: [pending, confirmed], to: cancelled, by: ["owned:member", "role:staff"]}
+          confirm: {from: pending, to: confirmed, by: "role:staff"}
+        access:
+          read: ["owned:member", "role:staff"]
+          write: ["owned:member", "role:staff"]
+          delete: "role:staff"
+          assign: "role:staff"
 pages:
   - home: dashboard
   - Resource: [list, detail, form]

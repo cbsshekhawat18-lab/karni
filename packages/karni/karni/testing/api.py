@@ -627,6 +627,17 @@ def _unreachable_reason(model: type[models.Model], name: str, target: Any, user:
     )
 
 
+def _frozen(model: Any) -> set[str]:
+    """The fields ``class Karni: frozen`` keeps (an update leaves them as they are)."""
+    from karni.errorcodes import KarniError
+    from karni.rules import rules_of
+
+    try:
+        return set(rules_of(model).frozen)
+    except KarniError:
+        return set()
+
+
 def build_payload(
     resource: Resource,
     user: Any,
@@ -652,8 +663,9 @@ def build_payload(
     serializer = view.get_serializer_class()(context=view.get_serializer_context())
     template = build(resource.model, **dict(values or {}))
     body = Payload({})
+    owners = set(view.get_owner_fields())  # set server-side, even where Access(assign=) opens them
     for name, serializer_field in serializer.fields.items():
-        if serializer_field.read_only:
+        if serializer_field.read_only or name in owners:
             continue
         if isinstance(serializer_field, ManyRelatedField | RelatedField):
             if not serializer_field.required:
@@ -1086,11 +1098,17 @@ class _Crud:
         fresh = build_payload(self.resource, self.user, values=self.values, payload=self.payload)
         view = _view(self.resource, "partial_update", self.user)
         current = view.get_serializer_class()(row, context=view.get_serializer_context()).data
+        frozen = _frozen(self.resource.model)
+        for name in frozen & set(fresh.data):  # class Karni: frozen: the row keeps its value
+            if name in current and name not in (self.payload or {}):
+                fresh.data[name] = _json_value(current[name])
         change = next(
             (
                 name
                 for name in fresh.scalars
-                if name in current and _json_value(current[name]) != fresh.data.get(name)
+                if name in current
+                and name not in frozen
+                and _json_value(current[name]) != fresh.data.get(name)
             ),
             None,
         )
