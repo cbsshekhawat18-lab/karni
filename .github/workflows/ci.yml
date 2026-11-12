@@ -920,7 +920,7 @@ jobs:
           echo "ADMIN_PATH=$(grep '^KARNI_ADMIN_PATH=' .env.prod | cut -d= -f2)" >> "$GITHUB_ENV"
           $COMPOSE config --quiet
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Build the prod image (django, worker, beat, release)
         uses: docker/build-push-action@v7
