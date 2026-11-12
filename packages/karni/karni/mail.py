@@ -113,7 +113,7 @@ def silenced() -> Iterator[None]:
 
 
 def kind_enabled(kind: str | None) -> bool:
-    """Experimental. Whether a message of ``kind`` goes out (not in ``KARNI_MAIL_DISABLED_KINDS``)."""
+    """Experimental. Whether ``kind`` goes out: not listed in ``KARNI_MAIL_DISABLED_KINDS``."""
     if not kind:
         return True
     return kind not in set(getattr(settings, "KARNI_MAIL_DISABLED_KINDS", None) or ())

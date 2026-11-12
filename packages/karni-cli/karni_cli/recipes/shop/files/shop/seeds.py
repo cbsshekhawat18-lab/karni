@@ -540,7 +540,7 @@ def _refund(order: Order, payment: Payment, *, full: bool) -> None:
         status=Refund.Status.SUCCEEDED,
         reason="damaged in transit" if not full else "changed their mind",
     )
-    lines = {} if full or first is None else {str(first.pk): 1}
+    lines: dict[str, int] = {} if full or first is None else {str(first.pk): 1}
     OrderRefund.objects.create(
         order=order,
         refund=refund,
@@ -591,7 +591,7 @@ class ShipmentSeeder(karni.ShipmentSeeder):
         story = STORIES[number % len(STORIES)]
         guest = number % 9 == 8
         buyer = buyers[number % len(buyers)]
-        lines = [
+        lines: list[tuple[str, str, int, dict[str, Any]]] = [
             ("product", str(products[(number * 3 + k) % len(products)].pk), k + 1, {})
             for k in range(1 + number % 3)
         ]
