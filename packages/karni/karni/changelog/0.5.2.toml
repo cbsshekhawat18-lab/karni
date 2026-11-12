@@ -1,0 +1,17 @@
+# Karni 0.5.2: what changed since 0.5.1 that a project may notice.
+# Schema and rules: karni/changelog/__init__.py. Migration notes: docs/migrations/0.5.md.
+version = "0.5.2"
+
+[[change]]
+id = "frontend-npm-floor"
+kind = "project-files"
+symbol = "frontend/package.json engines"
+summary = """\
+A new project's frontend ships a package-lock.json and asks for npm 10.8, \
+not npm 11, in `engines`, so plain `npm install` works on the npm that Node 20 \
+and 22 bundle. The codemod changes `"npm": ">=11"` to `"npm": ">=10.8"`. A \
+project without a package-lock.json runs its first install once with npm 11.6 \
+or later and commits the lock."""
+mechanical = true
+codemod = "v0_5.frontend_npm_floor"
+migration = "migrations/0.5.md#the-frontend-installs-with-plain-npm-install"
