@@ -835,10 +835,31 @@ def settings_block(spec: schema.Spec, line: int) -> str:
             rows.append(f"KARNI_API_CACHE_TTL = {features.api_cache.ttl}")
     if spec.app.api_version:
         rows.append(f"KARNI_API_VERSION = {pystr(spec.app.api_version)}")
+    for setting in contract_settings(spec):
+        rows.append(f"{setting} = True")
     for module, options in spec.modules.items():
         for option, value in (options or {}).items():
             rows.append(_literal(value, "", line, f"{catalog.module_setting(module, option)} = "))
     return "\n".join(rows)
+
+
+def contract_settings(spec: schema.Spec) -> list[str]:
+    """Experimental. The settings of the core contracts the spec's relations point at.
+
+    ``fk:people.Person`` (an app the spec does not define itself) needs the
+    people contract, so the build writes ``KARNI_PEOPLE = True``.
+    """
+    used: list[str] = []
+    for app in spec.apps.values():
+        for entity in app.entities.values():
+            for field_spec in _specs(entity):
+                if not field_spec.is_relation:
+                    continue
+                label = relation_name(field_spec).partition(".")[0]
+                setting = catalog.CONTRACT_SETTINGS.get(label)
+                if setting and label not in spec.apps and setting not in used:
+                    used.append(setting)
+    return used
 
 
 def _client_ids(provider: str) -> str:

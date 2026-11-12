@@ -53,6 +53,7 @@ from karni_cli.kinds import project_kind
 from karni_cli.project import CliError
 from karni_cli.spec import emit, navigation, schema
 from karni_cli.spec.catalog import (
+    CONTRACT_MODELS,
     DEFAULT_CACHE_TTL,
     MODULES,
     OTHER_MODELS,
@@ -583,6 +584,9 @@ def build(facts: dict[str, Any], root: Path) -> Exported:
             names[f"{known.app}.{model}"] = f"{known.app}.{model}"  # type: ignore[union-attr]
     for other in OTHER_MODELS:
         names[other] = other
+    for contract, contract_models in CONTRACT_MODELS.items():
+        for name in contract_models:
+            names[f"{contract}.{name}"] = f"{contract}.{name}"
     ctx = _Ctx(facts, names, left_out, str(facts["settings"].get("KARNI_PK") or "uuid"))
     viewsets: dict[str, dict[str, Any]] = {}
     routes: dict[str, str] = {}

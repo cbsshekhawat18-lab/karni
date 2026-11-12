@@ -1,0 +1,24 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }} | {{ site_title|default:"Django site admin" }}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+{% include "karni_admin/includes/page_styles.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="karni-page" data-testid="karni-people-erase">
+<form method="post">
+  {% csrf_token %}
+  {% for row in rows %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ row.pk }}">{% endfor %}
+  <input type="hidden" name="action" value="{{ action }}">
+  <p>{% translate "These people's names, emails, phones, addresses and memberships are erased, in every part that keeps data about them, and their change history keeps no value. Records that point at them (orders, bookings) stay, without the person's details. This cannot be undone." %}</p>
+  <ul>{% for row in rows %}<li>{{ row }}{% if row.email %} ({{ row.email }}){% endif %}</li>{% endfor %}</ul>
+  <div class="karni-toolbar">
+    <button type="submit" name="confirm" value="yes" class="karni-button">{% translate "Erase" %}</button>
+    <a class="karni-button" href=".">{% translate "Cancel" %}</a>
+  </div>
+</form>
+</div>
+{% endblock %}

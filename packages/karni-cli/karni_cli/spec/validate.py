@@ -57,6 +57,7 @@ from karni_cli.generators.pysource import pystr
 from karni_cli.project import CliError
 from karni_cli.spec import schema
 from karni_cli.spec.catalog import (
+    CONTRACT_MODELS,
     FEATURES,
     MODULES,
     OTHER_MODELS,
@@ -686,13 +687,24 @@ class _Meaning:
                 return raw
             if raw in OTHER_MODELS:
                 return raw
+            if app in CONTRACT_MODELS:
+                if name in CONTRACT_MODELS[app]:
+                    return raw
+                self.add(
+                    "C230",
+                    where,
+                    f"{entity.name}.{where[-1]} points at {raw}, but the {app} contract has no "
+                    f"model {name}.",
+                    f"Point at one of {', '.join(f'{app}.{m}' for m in CONTRACT_MODELS[app])}.",
+                )
+                return None
             self.add(
                 "C230",
                 where,
                 f"{entity.name}.{where[-1]} points at {raw}, which is neither an entity of the "
                 "spec nor a model Karni or an added module provides.",
-                "Point at an entity of the spec (Name or app.Name), User, or a module's model "
-                "such as karni_payments.Payment.",
+                "Point at an entity of the spec (Name or app.Name), User, a module's model "
+                "such as karni_payments.Payment, or a contract's such as people.Person.",
             )
             return None
         owners = [label for label, e in self.entities.items() if e.name == raw]

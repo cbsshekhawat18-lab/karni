@@ -77,6 +77,7 @@ CALL_TIME_SETTINGS: dict[str, str] = {
     "KARNI_JSON_LOGS": "LOGGING and the structlog renderer",
     "KARNI_CACHE": "CACHES",
     "KARNI_STORAGE": "STORAGES",
+    "KARNI_PEOPLE": "INSTALLED_APPS (karni.people, the people contract)",
 }
 
 #: Per settings module (its ``__name__``): the namespace and a copy of each
@@ -84,6 +85,8 @@ CALL_TIME_SETTINGS: dict[str, str] = {
 _consumed: dict[str, tuple[MutableMapping[str, Any], dict[str, Any]]] = {}
 
 _CONTRIB_ADMIN = "django.contrib.admin"
+#: The app ``KARNI_PEOPLE = True`` installs (the people contract, experimental).
+PEOPLE_APP = "karni.people"
 _AUTHENTICATION_MIDDLEWARE = "django.contrib.auth.middleware.AuthenticationMiddleware"
 _REQUEST_CONTEXT_PROCESSOR = "django.template.context_processors.request"
 _DJANGO_TEMPLATES_BACKEND = "django.template.backends.django.DjangoTemplates"
@@ -223,8 +226,9 @@ def _apply_feature_wiring(
     social: bool,
     twofa: bool,
     providers: Iterable[str],
+    people: bool = False,
 ) -> None:
-    """Extend the merged defaults with social-auth and 2FA apps/middleware.
+    """Extend the merged defaults with social-auth, 2FA and people apps/middleware.
 
     Mutates ``merged`` (the deep-copied defaults) before it is applied to the
     namespace, so every addition still obeys setdefault semantics and the
@@ -262,6 +266,11 @@ def _apply_feature_wiring(
             except ValueError:
                 index = len(middleware)
             middleware.insert(index, OTP_MIDDLEWARE)
+
+    if people and PEOPLE_APP not in apps:
+        # Before karni.admin, which derives an admin for every model registered by then.
+        at = apps.index("karni.admin") if "karni.admin" in apps else len(apps)
+        apps.insert(at, PEOPLE_APP)
 
     merged["INSTALLED_APPS"] = apps
     merged["MIDDLEWARE"] = middleware
@@ -432,6 +441,8 @@ def karni_settings(
       as an override or via env), the allauth / django-otp apps, middleware
       and companion settings are added to the defaults before merging.
       django-otp's ``OTPMiddleware`` is installed only in session auth mode.
+    * ``KARNI_PEOPLE`` (experimental): when true, ``karni.people`` (the
+      people contract) joins ``INSTALLED_APPS`` before ``karni.admin``.
     * ``KARNI_AUTH_THROTTLE_RATES``: merged into
       ``REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]`` unless the project
       supplied its own ``REST_FRAMEWORK`` (whole-value replacement then
@@ -502,6 +513,7 @@ def karni_settings(
         social=bool(final("KARNI_SOCIAL_AUTH")),
         twofa=bool(final("KARNI_2FA")),
         providers=final("KARNI_SOCIAL_PROVIDERS") or [],
+        people=bool(final("KARNI_PEOPLE")),
     )
 
     # Whole-value replacement: a project-supplied REST_FRAMEWORK (predefined
@@ -511,7 +523,7 @@ def karni_settings(
     )
     # CACHES and STORAGES follow KARNI_CACHE / KARNI_STORAGE defined before the
     # call too, not only the environment BASE read them from.
-    used = ["KARNI_AUTH_MODE", "KARNI_2FA", "KARNI_SOCIAL_AUTH"]
+    used = ["KARNI_AUTH_MODE", "KARNI_2FA", "KARNI_SOCIAL_AUTH", "KARNI_PEOPLE"]
     for flag, derived, build in (
         ("KARNI_CACHE", "CACHES", _caches),
         ("KARNI_STORAGE", "STORAGES", _storages),

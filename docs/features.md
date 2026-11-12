@@ -42,6 +42,7 @@ Reference or Debugging sections.
 - **[Aggregations](aggregations.md)**: counts, sums and averages at `<resource>/aggregate/` by category, relation or date.
 - **[Search across models](global-search.md)**: `GET /api/search/` with access applied per model, and a command palette.
 - **[Navigation from data](navigation.md)**: each user's menu, opened by the same roles and grants as the API.
+- **[People](people.md)**: one person and one organisation record for every part of a project, found or created by email, merged with a preview, erased on request, with person facts in SQL (experimental).
 - **[Import and export](import-export.md)**: CSV and XLSX from any list, and uploads with a mandatory dry run.
 - **[Large projects](large-projects.md)**: `karni context` one area at a time, a cached `karni check`, volume seeding and query plans for 100 models or more.
 
@@ -110,6 +111,7 @@ coming, not in the code. Each capability's evidence is in the
 - `experimental` Tree models: `TreeModel` and `OrderedTreeModel` with cycle-safe walks (`roots`, `children`, `ancestors`, `descendants`, `subtree_ids`), `move_to()` and `delete_branch()`, and the tree changelist in the admin. Experimental tier
 - `experimental` Taxonomy tagging: one declaration tags a model to tree models (`class Karni: taxonomies`), a generated or adopted many-to-many per key, import and export columns by natural key, and the `tree:<key>` scope. Experimental tier
 - `planned` A tenant scope on every model (the `karni-tenancy` module)
+- `experimental` The people contract (`karni.people`, `KARNI_PEOPLE`): one person and one organisation record for every part of a project, `people.resolve` by account or email, the account linked once its email is verified, person facts in SQL, duplicates, merge with a preview and hooks, erase on request, `/api/people/`. Experimental tier
 
 Base classes: `AuditedModel`, `BaseModel`, `BigIntBaseModel`, `GuardedModel`, `IntegerKeyModel`, `OrderedTreeModel`, `SoftDeleteModel`, `TimestampedModel`, `TreeModel`, `UUIDModel`.
 <!-- /generated:models -->

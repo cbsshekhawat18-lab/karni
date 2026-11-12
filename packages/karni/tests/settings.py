@@ -57,6 +57,12 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 # The suite reads X-Cache: no deprecated X-Karni-Cache (tests/api/test_cache_keys.py checks it).
 KARNI_API_CACHE_LEGACY_HEADER = False
 
+# The people contract (karni.people): installed by the switch, as a project's spec does.
+# Its viewsets stay off the default router so the test app's OpenAPI snapshot stays as it
+# is: tests/people/urls.py routes them.
+KARNI_PEOPLE = True
+KARNI_PEOPLE_API = False
+
 karni_settings(globals(), env_name="dev")
 
 # Test-only apps exercised by the api (tests.testapp), admin (tests.adminapp),
@@ -94,6 +100,10 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # A 120-field model with markdown sections, field groups and column sets
     # (karni.layout): viewsets mounted by its own URLconf only.
     "tests.wideapp",
+    # Two small parts of a family project that each add a profile and a person fact to
+    # the people contract (tests/people): their viewsets are mounted by tests.people.urls.
+    "tests.loyaltyapp",
+    "tests.helpdeskapp",
 ]
 # tests.searchapp's models declare search, and the default router does not serve
 # them (their router is tests.searchapp.urls'), so karni.W591 is expected here.

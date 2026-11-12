@@ -32,6 +32,7 @@ A few settings are read while `karni_settings()` runs, to compute other settings
 - `KARNI_JSON_LOGS`: LOGGING and the structlog renderer
 - `KARNI_CACHE`: CACHES
 - `KARNI_STORAGE`: STORAGES
+- `KARNI_PEOPLE`: INSTALLED_APPS (karni.people, the people contract)
 
 Set them in `.env`, define them above the call, or pass them to it:
 `karni_settings(globals(), KARNI_AUTH_MODE="session")`. Assigned below the
@@ -72,6 +73,12 @@ reads it on every request.
 | <a id="karni_user_grants"></a>`KARNI_USER_GRANTS` | `KARNI_USER_GRANTS` | `False` | Experimental. Per-user grants: while `True`, each user's `UserGrant` rows (a pattern and a scope as in `KARNI_ROLES`, with targets and an expiry) join the grants of their roles, for one more query per request. `False` (the default) reads no row. See [per-user grants](accounts.md#per-user-grants). |
 | <a id="karni_navigation"></a>`KARNI_NAVIGATION` |  | `None` | Experimental. The menu `GET /api/navigation/` gives each user: a list of items (`{"label", "route", "icon", "order", "requires"}`) and groups (`{"label", "children": [...]}`), or `"db"` for the `NavItem` table edited in the admin (add `karni.navigation` to `INSTALLED_APPS`). `requires` is `public`, `authenticated` (the default) or a permission pattern as in `KARNI_ROLES`, so role grants and per-user grants open an item. `None` (the default) mounts no route. See [navigation](navigation.md). |
 | <a id="karni_navigation_pages"></a>`KARNI_NAVIGATION_PAGES` |  | `["frontend/src/routes.tsx"]` | Experimental. The frontend files whose `path:` entries are the app's pages. `karni check` reports a menu item whose route none of them serves (`E533`). `[]` turns that comparison off. |
+| <a id="karni_people"></a>`KARNI_PEOPLE` | `KARNI_PEOPLE` | `False` | Experimental. `True` installs the people contract, `karni.people`: one Person per human and one Organisation per company for every part of the project. Read during the call. `karni build` writes it when karni.yaml points at `people.Person`. See [people](people.md). |
+| <a id="karni_people_resolver"></a>`KARNI_PEOPLE_RESOLVER` |  | `"karni.people.services.Resolver"` | Experimental. Dotted path of the `Resolver` class (or a subclass) `people.resolve()` finds or creates people with. |
+| <a id="karni_people_link_on_verify"></a>`KARNI_PEOPLE_LINK_ON_VERIFY` |  | `True` | Experimental. Link an account to the person with its email as soon as the email is verified (sign-up with verification, a sign-in code, a social sign-in with a verified address). `False` leaves linking to `people.link_account()`. |
+| <a id="karni_people_api"></a>`KARNI_PEOPLE_API` |  | `True` | Experimental. Route `/api/people/`, `/api/organisations/`, `/api/people-memberships/` and `/api/people-addresses/`. `False` leaves them out, for a project that routes its own viewsets over the people tables. |
+| <a id="karni_people_merge_skip"></a>`KARNI_PEOPLE_MERGE_SKIP` |  | `[]` | Experimental. Models a person or organisation merge leaves alone, as `"app_label.Model"`: their rows keep pointing at the merged record. |
+| <a id="karni_people_autodiscover"></a>`KARNI_PEOPLE_AUTODISCOVER` |  | `True` | Experimental. Import every installed app's `people.py` at startup, where a part registers its person facts, merge hooks and erase hooks. `False`: register them in the part's `AppConfig.ready()`. |
 | <a id="karni_accounts_token_ttl"></a>`KARNI_ACCOUNTS_TOKEN_TTL` |  | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
 | <a id="karni_accounts_links"></a>`KARNI_ACCOUNTS_LINKS` |  | `{ "verify_email": "{frontend}/auth/verify-email?token={token}", "reset_password": "{frontend}/auth/reset-password?token={token}", "change_email": "{frontend}/auth/confirm-email-change?token={token}"}` | Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders. |
 | <a id="karni_auth_throttle_rates"></a>`KARNI_AUTH_THROTTLE_RATES` |  | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object. `null` disables a scope. |
