@@ -19,6 +19,7 @@ import {
 } from "@karni/ui";
 import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { DemoSignInPrompt } from "./demo";
 
 export default function AppLayout() {
     const router = useRouter();
@@ -79,7 +80,8 @@ export default function AppLayout() {
             {isSignInRoute(pathname) ? (
                 <Outlet />
             ) : (
-                <AuthGuard explain>
+                // The demo login above the sign-in prompt (./demo.tsx).
+                <AuthGuard explain slots={{ Anonymous: DemoSignInPrompt }}>
                     <Outlet />
                 </AuthGuard>
             )}

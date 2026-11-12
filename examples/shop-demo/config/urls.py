@@ -13,6 +13,7 @@ script on that page either. Add project routes to
 inserts its include at the ``# karni:urls`` marker, so keep that line.
 """
 
+from demo.urls import app_urls
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
@@ -41,6 +42,8 @@ urlpatterns = [
     # Project routes that `karni make` wires (a public site's include goes here).
     path("payments/", include("karni_payments.urls")),
     # karni:urls
+    # The built React app at "/" and every deeper path of it (demo/urls.py).
+    *app_urls(),
     # Only while DEBUG is on, and only until a route above answers "/".
     *welcome_urls(),
 ]

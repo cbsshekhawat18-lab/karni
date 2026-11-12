@@ -4,11 +4,14 @@ version = "0.1.0"
 description = "Shop Demo, a Karni project."
 requires-python = ">=3.12"
 dependencies = [
-    "karni",
+    # The released packages from PyPI (the image installs these, never a checkout).
+    "karni>=0.5,<0.6",
     "gunicorn",
     "uvicorn-worker",
     "psycopg[binary]",
-    "karni-payments",
+    "karni-payments>=0.5,<0.6",
+    # Serves the static files and the React build from the one web process.
+    "whitenoise>=6.6",
 ]
 
 [build-system]
@@ -32,6 +35,8 @@ DJANGO_SETTINGS_MODULE = "config.settings"
 # tests/ plus every app's own tests/ (`karni make test <Model>` writes there).
 # modules/ is left out: each module runs its own suite with its own settings.
 testpaths = ["tests", "*/tests"]
+# WhiteNoise warns when STATIC_ROOT is missing: tests run without collectstatic.
+filterwarnings = ["ignore:No directory at:UserWarning"]
 # Karni's architecture rules run as a SEPARATE invocation (never via addopts):
 #   pytest --pyargs karni.testing.architecture
 

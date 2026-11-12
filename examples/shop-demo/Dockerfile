@@ -1,6 +1,14 @@
 # syntax=docker/dockerfile:1
 # Multi-stage build for Shop Demo.
 #
+# The demo's changes to the scaffold's Dockerfile (render.yaml builds it with
+# no --target, so the stage it serves is the last one):
+#   - prod is the last stage, after backup;
+#   - the React app is built for the site's root (KARNI_APP_PATH=/) and Django
+#     serves it with WhiteNoise, so one service answers everything;
+#   - the command is scripts/start.sh: demo_boot (migrate, then seed or reset),
+#     then gunicorn on PORT.
+#
 # Targets:
 #   dev:    docker-compose.yml. Runserver-friendly, source bind-mounted over /app.
 #   prod:   docker-compose.prod.yml's django, worker, beat and release services.
@@ -59,7 +67,7 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 FROM node:24-alpine AS staff-app
 WORKDIR /build
 ARG KARNI_UI_TARBALL=""
-ARG KARNI_APP_PATH=/app/
+ARG KARNI_APP_PATH=/
 COPY . /build/
 RUN if [ ! -f frontend/package.json ]; then mkdir -p frontend/dist; exit 0; fi \
     && cd frontend \
@@ -72,6 +80,19 @@ RUN if [ ! -f frontend/package.json ]; then mkdir -p frontend/dist; exit 0; fi \
     fi \
     && if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi \
     && npm run build -- --base="${KARNI_APP_PATH}"
+
+# Backups: the PostgreSQL client tools of the database's version, Python for
+# Karni's backup tool, and boto3 for an S3 bucket (KARNI_BACKUP_S3_BUCKET).
+# It runs as root: a restore writes media files, then hands them to the owner
+# of the media folder (the app user).
+FROM postgres:${POSTGRES_VERSION}-alpine AS backup
+RUN apk add --no-cache python3 py3-boto3 && mkdir -p /backups
+COPY --from=deps /karni_backup.py /usr/local/lib/karni_backup.py
+RUN printf '#!/bin/sh\nexec python3 /usr/local/lib/karni_backup.py "$@"\n' > /usr/local/bin/karni-backup \
+    && chmod 755 /usr/local/bin/karni-backup
+WORKDIR /backups
+ENTRYPOINT ["karni-backup"]
+CMD ["loop"]
 
 FROM python:3.12-slim AS prod
 WORKDIR /app
@@ -96,17 +117,4 @@ EXPOSE 8000
 # The deploy gate: `karni check --deploy` must pass before the command starts
 # (E520). KARNI_SKIP_DEPLOY_CHECK=1 skips it in an emergency, logged loudly.
 ENTRYPOINT ["python", "-m", "karni.deploy.entrypoint"]
-CMD ["gunicorn", "config.asgi:application", "-k", "uvicorn_worker.UvicornWorker", "-b", "0.0.0.0:8000"]
-
-# Backups: the PostgreSQL client tools of the database's version, Python for
-# Karni's backup tool, and boto3 for an S3 bucket (KARNI_BACKUP_S3_BUCKET).
-# It runs as root: a restore writes media files, then hands them to the owner
-# of the media folder (the app user).
-FROM postgres:${POSTGRES_VERSION}-alpine AS backup
-RUN apk add --no-cache python3 py3-boto3 && mkdir -p /backups
-COPY --from=deps /karni_backup.py /usr/local/lib/karni_backup.py
-RUN printf '#!/bin/sh\nexec python3 /usr/local/lib/karni_backup.py "$@"\n' > /usr/local/bin/karni-backup \
-    && chmod 755 /usr/local/bin/karni-backup
-WORKDIR /backups
-ENTRYPOINT ["karni-backup"]
-CMD ["loop"]
+CMD ["sh", "scripts/start.sh"]
