@@ -34,7 +34,7 @@
         "@vitejs/plugin-react": "^6.1.2",
         "eslint": "^9.39.5",
         "globals": "^15.15.0",
-        "jscpd": "5.4.0",
+        "jscpd": "5.4.3",
         "openapi-typescript": "^7.4.0",
         "tailwindcss": "^4.3.3",
         "typescript": "^5.5.4",
