@@ -146,11 +146,19 @@ What Render's documentation said on 12 November 2026
 - Free web services run one instance, with no shell access and no pre-deploy
   command.
 
-Not confirmed in the documentation: whether the free plan's build has enough
-memory for the React build (Karni's [deploy guide](deploy.md#1-a-server)
-measured about 1.5 GB), and whether a `WEB_CONCURRENCY` set in the Blueprint
-wins over the value Render sets for new services. With one worker instead of
-two the demo works the same.
+Not confirmed in the documentation, and not tried, since this repository has
+not deployed the demo:
+
+- The free plan page names no runtime limit, and the Blueprint reference lists
+  `plan: free` for any web service, but neither says in so many words that a
+  Docker service may use it.
+- Whether the free plan's build has enough memory for the React build (Karni's
+  [deploy guide](deploy.md#1-a-server) measured about 1.5 GB).
+- Whether a `WEB_CONCURRENCY` set in the Blueprint wins over the value Render
+  sets for new services. With one worker instead of two the demo works the same.
+- That a service can copy its own `RENDER_EXTERNAL_URL` into another variable.
+  The Blueprint reference shows it for `RENDER_EXTERNAL_HOSTNAME` and says most
+  default variables work.
 
 ## Production settings
 
