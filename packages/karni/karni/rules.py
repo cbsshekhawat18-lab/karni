@@ -106,6 +106,7 @@ __all__ = [
     "UniqueRule",
     "check_delete",
     "check_write",
+    "clock",
     "clear_caches",
     "describe_filter",
     "filter_q",
@@ -131,6 +132,7 @@ _BOUND_KEYS: Final = frozenset({"min", "max"})
 _UNIQUE_KEYS: Final = frozenset({"fields", "where"})
 
 _UNCHECKED: ContextVar[str | None] = ContextVar("karni_rules_unchecked", default=None)
+_CLOCK: ContextVar[dt.datetime | None] = ContextVar("karni_rules_clock", default=None)
 #: An entry of a row filter that is left out (``$me`` with nobody signed in).
 _SKIP: Final = object()
 
@@ -599,10 +601,14 @@ class _Context:
     row: models.Model | None
 
 
+def _now() -> dt.datetime:
+    return _CLOCK.get() or timezone.now()
+
+
 def _context(row: models.Model | None = None) -> _Context:
     from karni.middleware import get_current_user
 
-    return _Context(get_current_user(), timezone.now(), row)
+    return _Context(get_current_user(), _now(), row)
 
 
 def _walk(row: models.Model | None, path: str) -> Any:
@@ -821,6 +827,20 @@ def unchecked(reason: str) -> Iterator[None]:
         _UNCHECKED.reset(token)
 
 
+@contextmanager
+def clock(now: dt.datetime) -> Iterator[None]:
+    """Read ``$now`` and ``$today`` as ``now`` inside the block, and stamp with it.
+
+    ``karni seed`` runs at its anchor, so demo data relative to a fixed day
+    (``seed(now=...)``) passes the rules the same way on every run.
+    """
+    token = _CLOCK.set(now)
+    try:
+        yield
+    finally:
+        _CLOCK.reset(token)
+
+
 def _written(instance: models.Model, update_fields: Any) -> set[str]:
     fields = instance._meta.concrete_fields
     if update_fields is None:
@@ -870,6 +890,10 @@ def _shown_limit(value: Any) -> str:
     )
 
 
+#: How far inside a ``$now`` / ``$today`` bound :func:`clamp` puts a generated value.
+_MARGIN: Final = dt.timedelta(days=1, minutes=10)
+
+
 def clamp(model: type[models.Model], name: str, value: Any) -> Any:
     """``value`` moved inside ``name``'s bounds (demo and test data that must pass the rules)."""
     if value is None:
@@ -881,10 +905,10 @@ def clamp(model: type[models.Model], name: str, value: Any) -> Any:
             continue
         low = _limit(found, bound.min, ctx, low=True)
         high = _limit(found, bound.max, ctx, low=False)
-        if bound.min in (NOW, TODAY):
-            low = _limit(found, bound.min, _Context(None, ctx.now + _skew(), None), low=True)
+        if bound.min in (NOW, TODAY):  # a day inside, so a later "now" still passes
+            low = _limit(found, bound.min, _Context(None, ctx.now + _MARGIN, None), low=True)
         if bound.max in (NOW, TODAY):
-            high = _limit(found, bound.max, _Context(None, ctx.now - _skew(), None), low=False)
+            high = _limit(found, bound.max, _Context(None, ctx.now - _MARGIN, None), low=False)
         current = _norm(found, value)
         if low is not None and current < low:
             value = low
@@ -1113,7 +1137,9 @@ def _check_moves(
             if adding and not _empty(getattr(instance, name)):
                 continue
             found = model._meta.get_field(name)
-            value = ctx.now if isinstance(found, models.DateTimeField) else timezone.localdate()
+            value = (
+                ctx.now if isinstance(found, models.DateTimeField) else timezone.localdate(ctx.now)
+            )
             setattr(instance, name, value)
             stamped.add(name)
     return stamped

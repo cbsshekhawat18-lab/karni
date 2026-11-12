@@ -115,6 +115,7 @@ from factory.random import reseed_random
 
 from karni.errorcodes import KarniError
 from karni.exceptions import KarniValueError
+from karni.rules import RuleViolation
 from karni.testing.factories import DEFAULT_PASSWORD, FactoryBuilder, auto_factory, factory_for
 from karni.testing.values import ValueInference
 
@@ -685,6 +686,11 @@ class _Run:
             except IntegrityError as exc:
                 problem = exc
                 continue
+            except RuleViolation as exc:
+                if exc.code != "E991":  # a duplicate of class Karni: unique: draw again
+                    raise unseedable(context.model, exc) from exc
+                problem = exc
+                continue
             except ImproperlyConfigured as exc:
                 raise unseedable(context.model, exc) from exc
             self.after_create(context, row, values)
@@ -933,7 +939,10 @@ def seed(
         bulk=bulk,
         batch_size=batch_size,
     )
-    with transaction.atomic():
+    from karni.rules import clock
+
+    # The rules of class Karni read $now as the anchor, so the rows pass them the same way.
+    with transaction.atomic(), clock(run.anchor):
         report = run.run(plan, reset=reset)
     report.seconds = time.perf_counter() - started
     return report

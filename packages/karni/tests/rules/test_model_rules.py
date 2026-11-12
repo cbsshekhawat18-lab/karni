@@ -257,3 +257,15 @@ def test_generated_values_stay_inside_the_bounds() -> None:
     field = Review._meta.get_field("stars")
     values = {inference.value(Review, field, n) for n in range(30)}
     assert values and all(1 <= value <= 5 for value in values)
+
+
+def test_seeding_reads_now_as_its_anchor(item: Item, buyer: Any) -> None:
+    anchor = timezone.now() - dt.timedelta(days=40)
+    with rules.clock(anchor):
+        Purchase.objects.create(item=item, buyer=buyer, wanted_by=anchor.date())
+    purchase = Purchase.objects.get(buyer=buyer)
+    purchase.transition("status", "paid")
+    with rules.clock(anchor):
+        purchase.transition("status", "refunded", reason="late")
+    purchase.refresh_from_db()
+    assert purchase.refunded_at == anchor
