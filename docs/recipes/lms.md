@@ -51,9 +51,14 @@ enrolments, and progress on the first lessons of each student's course.
   on a lesson of another course, or a lesson only started, does not count.
 - `courses/viewsets.py`: `GET /api/enrolments/<id>/progress/` answers
   `{"percent": 75}` for the enrolled student.
-- `courses/seeds.py`: published courses, lessons numbered in each course,
-  and progress only on the lessons of the enrolment's own course.
+- `courses/seeds.py`: six published courses (baking, budgeting, Python,
+  gardening, public speaking, photography) with six lessons each that fit
+  the course and are numbered in the order it teaches them, and progress only
+  on the first lessons of the enrolment's own course. The titles come from
+  `COURSES`.
 - `courses/tests/test_completion.py`: the completion.
+- `courses/tests/test_seeds.py`: the demo data is the same for one seed, has
+  the counts of `karni.yaml`, and its lessons belong to their course.
 
 ## What people usually change
 

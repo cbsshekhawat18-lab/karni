@@ -64,7 +64,7 @@ The output for the shop, from an empty folder:
 
 ```text
 Created ./corner_shop: kind app (recorded under [tool.karni] in pyproject.toml), ...
-Recipe shop (Online shop): wrote karni.yaml (app.recipe: shop) and named the recipe in .karni/build.json. The first karni build writes its own files over its stubs: shop/models.py, shop/seeds.py, shop/tests/test_checkout.py, shop/viewsets.py.
+Recipe shop (Online shop): wrote karni.yaml (app.recipe: shop) and named the recipe in .karni/build.json. The first karni build writes its own files over its stubs: shop/models.py, shop/seeds.py, shop/tests/test_checkout.py, shop/tests/test_seeds.py, shop/viewsets.py.
 
 $ karni build
 ...

@@ -9,6 +9,22 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
+## Unreleased
+
+- **Changed: `karni seed` in a project built from a recipe writes realistic demo data.** The
+  shop, booking, CRM, LMS, marketplace and data-portal recipes now ship their own
+  `<app>/seeds.py` (new for booking, CRM and marketplace) with invented, real-sounding names:
+  products in categories that fit them, courses with lessons that belong to them, companies
+  with contacts on their own domain, bookable spaces with slots that match, sellers with
+  their own listings, and measures with values in their range. Related fields agree (an
+  order costs its listing's price, a deal's contact works at the deal's company). The same
+  `--seed` gives the same rows, the counts in each `karni.yaml` `seed:` line are exact, and a
+  larger count repeats names with a number instead of clashing. Each recipe has a
+  `tests/test_seeds.py` that checks this. The shop's quantities and stock no longer drift
+  between two runs with one seed.
+- **Added: `karni.seeding.cycled(names, index, suffix=...)`**, the name at a position of a list
+  that repeats, tagged `Name 2`, `Name 3` on later passes.
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

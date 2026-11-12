@@ -46,7 +46,10 @@ not set.
 
 Pages: the staff dashboard, listings and sellers (list, detail, form),
 orders (list, detail) and payouts (list). Demo data: 5 sellers, 30 listings
-and 40 orders. Payouts come from paid orders, so none is seeded.
+and 40 orders. Payouts come from paid orders, so none is seeded. The
+sellers are makers (pottery, leather, candles, woodwork, textiles), each
+with six listings of their own at a fitting price, and an order costs its
+listing's price times its quantity (`market/seeds.py`, `SELLERS`).
 
 ## Domain code
 
