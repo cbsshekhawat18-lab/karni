@@ -73,6 +73,7 @@ nav:
       - Building without one: guide/without-ai.md
       - Adding an entity end to end: adding-an-entity.md
       - Deploying to a server: deploy.md
+      - The shop demo on Render: demo.md
   - FAQ: faq.md
   - Compare:
       - Overview: compare/index.md

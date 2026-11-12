@@ -1,0 +1,73 @@
+# The shop demo (examples/shop-demo) as one Render web service on the free plan.
+# The "Deploy to Render" button in README.md opens this Blueprint. What it runs,
+# its limits and how the data resets: docs/demo.md.
+#
+# One container answers everything: the API, the admin and the React app. The
+# database is SQLite on the instance's disk, which the free plan does not keep:
+# a restart, a redeploy or a spin-down after 15 idle minutes starts from an empty
+# database, and the start command seeds it again. While the instance runs, the
+# data also resets every DEMO_RESET_HOURS hours.
+services:
+  - type: web
+    name: karni-shop-demo
+    runtime: docker
+    plan: free
+    dockerfilePath: ./examples/shop-demo/Dockerfile
+    dockerContext: ./examples/shop-demo
+    healthCheckPath: /healthz
+    # Instances made from the button do not redeploy on every push to the repository.
+    autoDeployTrigger: "off"
+    envVars:
+      # Production settings: DEBUG off, a new random key per deployment. Each
+      # generated value is 44 characters and the deploy check asks for 50 or
+      # more, so the key is two of them (config/settings.py joins them).
+      - key: DJANGO_ENV
+        value: prod
+      - key: PROJECT_NAME
+        value: shop_demo
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SECRET_KEY_PART_2
+        generateValue: true
+      # The service's own address, from Render's RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_URL.
+      - key: ALLOWED_HOSTS
+        fromService:
+          name: karni-shop-demo
+          type: web
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: CSRF_TRUSTED_ORIGINS
+        fromService:
+          name: karni-shop-demo
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: KARNI_FRONTEND_URL
+        fromService:
+          name: karni-shop-demo
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      # The demo rules: only the demo account writes, sign-up is closed, the
+      # data resets every 24 hours, the sign-in pages show the demo login.
+      - key: DEMO_MODE
+        value: "True"
+      - key: DEMO_RESET_HOURS
+        value: "24"
+      # One service: SQLite and a file cache on the instance, tasks inside the
+      # request, no Redis and no Celery worker.
+      - key: DATABASE_URL
+        value: sqlite:////data/db.sqlite3
+      - key: KARNI_CACHE
+        value: locmem
+      - key: CACHE_URL
+        value: filecache:///data/cache
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: "True"
+      - key: KARNI_READYZ_CHECKS
+        value: karni.health.checks.check_database,karni.health.checks.check_cache
+      - key: KARNI_HEALTH_CHECKS
+        value: karni.health.checks.check_database,karni.health.checks.check_cache
+      # Checkout opens karni-payments' test provider: the demo takes no money.
+      - key: KARNI_PAYMENTS_PROVIDER
+        value: test
+      # Two gunicorn workers fit the free plan's 512 MB (docs/demo.md).
+      - key: WEB_CONCURRENCY
+        value: "2"

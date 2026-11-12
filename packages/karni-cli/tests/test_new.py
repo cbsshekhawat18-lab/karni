@@ -212,7 +212,7 @@ def test_every_frontend_overrides_only_the_affected_minimatch(
     assert wrong == {}
 
 
-@pytest.mark.parametrize("example", ["eventhub", "social-leads", "medintel"])
+@pytest.mark.parametrize("example", ["eventhub", "social-leads", "medintel", "shop-demo"])
 def test_the_examples_pin_the_scaffolds_zod_and_resolvers(example: str) -> None:
     """@karni/ui's forms call zodResolver: Zod 4 needs @hookform/resolvers 5."""
     package = REPO_ROOT / "examples" / example / "frontend" / "package.json"

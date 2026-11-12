@@ -751,6 +751,88 @@ jobs:
           npm run build
 
   # ---------------------------------------------------------------------------
+  # examples/shop-demo: the shop recipe as the one-service demo that render.yaml
+  # deploys (docs/demo.md). Karni's checks, the demo's tests (boot, the reset,
+  # the write rule, the sign-in notice, the Blueprint passing the deploy gate),
+  # the React build from the npm release, then scripts/smoke.sh: production
+  # settings, the deploy gate and the exact start command on SQLite, checked
+  # with curl. A framework change that breaks the demo breaks this job.
+  # ---------------------------------------------------------------------------
+  shop-demo:
+    name: Shop demo (one service, smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: examples/shop-demo
+
+    env:
+      # No .env in CI: development values for the checks and the tests.
+      # scripts/smoke.sh sets the production ones itself.
+      DJANGO_ENV: dev
+      DEBUG: "True"
+      SECRET_KEY: ci-only-not-secret
+      ALLOWED_HOSTS: "*"
+      PROJECT_NAME: shop_demo
+      DATABASE_URL: sqlite:///data/db.sqlite3
+      KARNI_CACHE: locmem
+      KARNI_PAYMENTS_PROVIDER: test
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/karni/pyproject.toml
+            packages/karni-cli/pyproject.toml
+            modules/karni-payments/pyproject.toml
+            examples/shop-demo/pyproject.toml
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: examples/shop-demo/frontend/package-lock.json
+
+      # The image installs the PyPI releases. CI installs this checkout instead,
+      # so the demo is tested against the framework it ships with next.
+      - name: Install Karni from this checkout, and the demo's other packages
+        run: |
+          python -m pip install -e ../../packages/karni -e ../../packages/karni-cli \
+            -e ../../modules/karni-payments \
+            whitenoise gunicorn uvicorn-worker pytest pytest-django
+
+      - name: Install the frontend (@karni/ui from npm, as the image does)
+        working-directory: examples/shop-demo/frontend
+        run: npm ci
+
+      - name: Spec, architecture rules, duplication, agent adapters
+        run: |
+          karni spec validate
+          karni check
+          karni rules sync --check
+
+      - name: Tests
+        run: |
+          mkdir -p data
+          python -m pytest -q
+          python -m pytest -q --pyargs karni.testing.architecture
+
+      - name: Type-check, lint and build the frontend
+        working-directory: examples/shop-demo/frontend
+        run: |
+          npx tsc --noEmit
+          npx eslint .
+          npm run build
+
+      - name: Start it as the host does, and check it with curl
+        run: PORT=8950 ./scripts/smoke.sh
+
+  # ---------------------------------------------------------------------------
   # The production stack a new project gets (docs/deploy.md), booted for real:
   # `karni new` with this checkout's packages and a public site page, the prod
   # and backup images built (base layers cached in GitHub Actions), then
