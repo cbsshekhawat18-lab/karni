@@ -68,6 +68,16 @@ def test_record_links_any_record_and_cuts_a_long_title(cast: dict[str, Any]) -> 
         ({"kind": "crm.call", "title": "x", "subjects": [("nope.model", 1)]}, "E462"),
         ({"kind": "crm.call", "title": "x", "subjects": ("people.person", "x")}, "E462"),
         ({"kind": "crm.call", "title": "x", "person": "not-a-key"}, "E462"),
+        ({"kind": "crm.call", "title": "x", "subjects": [("people.person", "x")]}, "E462"),
+        (
+            {
+                "kind": "crm.call",
+                "title": "x",
+                "subjects": [("people.person", "00000000-0000-0000-0000-000000000001")],
+                "event_id": "not-an-id",
+            },
+            "E462",
+        ),
     ],
 )
 def test_record_refuses_what_it_cannot_use(arguments: dict[str, Any], code: str) -> None:

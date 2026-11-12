@@ -416,7 +416,13 @@ def record(
             code="E462",
         )
     alias = using or router.db_for_write(TimelineEntry)
-    event_key = str(uuid.UUID(str(event_id))) if event_id is not None else None
+    try:
+        event_key = str(uuid.UUID(str(event_id))) if event_id is not None else None
+    except ValueError as exc:
+        raise KarniValueError(
+            f"karni.timeline: record(event_id={event_id!r}) takes a family event's id, a UUID.",
+            code="E462",
+        ) from exc
     if event_key is not None:
         found = _existing(alias, event_key, person_id)
         if found is not None:
