@@ -427,6 +427,13 @@ CAPABILITIES: tuple[Capability, ...] = (
         "edited in the admin, opened by the same role and per-user grants as the API "
         "(`GET /api/navigation/`). Experimental tier",
     ),
+    Capability(
+        "models",
+        "The people contract (`karni.people`, `KARNI_PEOPLE`): one person and one organisation "
+        "record for every part of a project, `people.resolve` by account or email, the account "
+        "linked once its email is verified, person facts in SQL, duplicates, merge with a "
+        "preview and hooks, erase on request, `/api/people/`. Experimental tier",
+    ),
     Capability("permissions", "Field visibility per role (`class Karni: field_roles`)"),
     Capability("permissions", "Row scope in the admin, from the same grants as the API"),
     Capability(

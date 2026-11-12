@@ -1,0 +1,60 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }} | {{ site_title|default:"Django site admin" }}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+{% include "karni_admin/includes/page_styles.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="karni-page" data-testid="karni-people-merge">
+<form method="post">
+  {% csrf_token %}
+  {% for row in rows %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ row.pk }}">{% endfor %}
+  <input type="hidden" name="action" value="{{ action }}">
+
+  <h2>{% translate "Which one stays" %}</h2>
+  <p>
+    {% for row in rows %}
+      <label class="karni-choice">
+        <input type="radio" name="keep" value="{{ row.pk }}" {% if row.pk == keep.pk %}checked{% endif %} onchange="this.form.submit()">
+        {{ row }}{% if row.email %} ({{ row.email }}){% endif %}
+      </label>
+    {% endfor %}
+  </p>
+  <p class="karni-note">{% blocktranslate with keep=keep drop=drop trimmed %}
+    {{ drop }} is merged into {{ keep }}: what points at {{ drop }} moves to {{ keep }}, and {{ drop }} is kept as a deleted row that says where it went.
+  {% endblocktranslate %}</p>
+
+  {% if plan.refusals %}
+    <h2>{% translate "Refused" %}</h2>
+    <ul>
+      {% for refusal in plan.refusals %}<li class="karni-problem"><code>{{ refusal.code }}</code> {{ refusal.message }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+
+  <h2>{% translate "What moves" %}</h2>
+  {% if plan.moves %}
+    <div class="karni-scroll"><table class="karni-table">
+      <thead><tr><th>{% translate "Model" %}</th><th>{% translate "Field" %}</th><th>{% translate "How" %}</th><th>{% translate "Rows" %}</th></tr></thead>
+      <tbody>
+        {% for move in plan.moves %}<tr><td>{{ move.model }}</td><td>{{ move.field }}</td><td>{{ move.kind }}</td><td>{{ move.rows }}</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+  {% else %}
+    <p class="karni-note">{% translate "No row points at the record that goes." %}</p>
+  {% endif %}
+
+  {% if plan.fills %}
+    <h2>{% translate "Filled from the record that goes" %}</h2>
+    <ul>{% for name, value in plan.fills.items %}<li>{{ name }}: {{ value }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  <div class="karni-toolbar">
+    {% if not plan.refusals %}<button type="submit" name="confirm" value="yes" class="karni-button">{% translate "Merge" %}</button>{% endif %}
+    <a class="karni-button" href=".">{% translate "Cancel" %}</a>
+  </div>
+</form>
+</div>
+{% endblock %}

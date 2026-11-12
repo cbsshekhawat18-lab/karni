@@ -362,6 +362,19 @@ BASE: dict[str, Any] = {
     # The frontend files whose `path:` entries are the app's pages: karni check reports
     # a menu item whose route none of them serves. [] turns that comparison off.
     "KARNI_NAVIGATION_PAGES": ["frontend/src/routes.tsx"],
+    # The people contract (experimental): True installs karni.people (Person, Organisation,
+    # Membership, Address). karni build writes it when karni.yaml points at people.Person.
+    "KARNI_PEOPLE": env.bool("KARNI_PEOPLE", default=False),
+    # Dotted path of the Resolver class people.resolve() uses.
+    "KARNI_PEOPLE_RESOLVER": "karni.people.services.Resolver",
+    # Link an account to the person with its email once the email is verified.
+    "KARNI_PEOPLE_LINK_ON_VERIFY": True,
+    # Route /api/people/, /api/organisations/, /api/people-memberships/ and /api/people-addresses/.
+    "KARNI_PEOPLE_API": True,
+    # Models ("app_label.Model") a merge leaves alone: their rows keep the merged record.
+    "KARNI_PEOPLE_MERGE_SKIP": [],
+    # Import every installed app's people.py (its person facts, merge and erase hooks).
+    "KARNI_PEOPLE_AUTODISCOVER": True,
     "KARNI_ACCOUNTS_TOKEN_TTL": {
         "verify_email": 86400,
         "reset_password": 3600,

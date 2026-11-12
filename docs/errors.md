@@ -813,6 +813,106 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Set KARNI_TERMS = {"version": "&lt;version>", "url": "&lt;where the terms are>"} to ask users to accept terms, or remove the client's call.
 
+<a id="e250"></a>
+
+#### E250: A merge of two people who both have an account
+
+*exception* · from `karni.people.merge (MergeRefused, HTTP 409)`
+
+**Why Karni objects.** A person is linked to at most one account. Merging two people who each have one would have to merge the accounts too: their passwords, roles and sign-ins, which only a person can decide.
+
+**Fix.** Merge the accounts first, by hand: deactivate or delete one account (or unlink it from its person), then merge the people.
+
+<a id="e251"></a>
+
+#### E251: A merge clash that only a merge hook can resolve
+
+*exception* · from `karni.people.merge (MergeRefused, HTTP 409), karni.people.merge_plan`
+
+**Why Karni objects.** Both records have a one-to-one row of the same model (two CRM profiles), or moving the dropped record's rows breaks a unique rule of their model (two bookings for one slot). Karni cannot know which row wins, so it refuses instead of guessing.
+
+**Fix.** Register a merge hook for the model named in the message, in its app's people.py: @people.merge_hook(Model) def merge(keep, drop): fold the dropped record's row into the kept one and delete it. Or skip the model with KARNI_PEOPLE_MERGE_SKIP.
+
+<a id="e252"></a>
+
+#### E252: A merge or an erase of records it does not take
+
+*exception* · from `karni.people.merge, karni.people.merge_plan, karni.people.erase`
+
+**Why Karni objects.** A merge takes two live records of the same kind (two people or two organisations) that are not the same row, and an erase takes a person. A deleted or already merged record has nothing left to merge.
+
+**Fix.** Pass two different live people (or organisations). To merge into a record that was merged already, merge into the record it points at (merged_into).
+
+<a id="e253"></a>
+
+#### E253: people.resolve() cannot run
+
+*exception* · from `karni.people.resolve, karni.people.get_resolver (KARNI_PEOPLE_RESOLVER)`
+
+**Why Karni objects.** One email is one person, so a person is found or created by an account or an email, never by a name alone. The resolver itself comes from KARNI_PEOPLE_RESOLVER.
+
+**Fix.** Pass user= (a signed-in user) or email=. Point KARNI_PEOPLE_RESOLVER at karni.people.services.Resolver or a subclass of it.
+
+<a id="e254"></a>
+
+#### E254: Another person has this email
+
+*API 400 response* · from `karni.people.models.Person.clean (the API and the admin)`
+
+**Why Karni objects.** Email is the identity of a person: one live person per email, kept in lower case, so every part finds the same person for the same address.
+
+**Fix.** Open the person who has the email instead, or merge the two people (people.merge, POST /api/people/&lt;id>/merge/).
+
+<a id="e255"></a>
+
+#### E255: The email of a person with an account changes through the account
+
+*API 400 response* · from `karni.people.models.Person.clean (the API and the admin)`
+
+**Why Karni objects.** A person linked to an account has the account's verified email. Changing it on the person alone would let anyone with write access point the person at an address nobody verified.
+
+**Fix.** Change the email through the account (the email change flow verifies the new address), or unlink the account first.
+
+<a id="e256"></a>
+
+#### E256: A value the people tables do not take
+
+*API 400 response* · from `karni.people.models (clean of Person, Address, Membership)`
+
+**Why Karni objects.** A person's time zone is an IANA name and its language a language tag, an address belongs to exactly one owner (a person or an organisation), and a person is a member of an organisation once.
+
+**Fix.** Use a time zone such as Europe/Paris and a language such as en or pt-BR; set exactly one of person and organisation on an address; change the existing membership instead of adding a second one.
+
+<a id="e257"></a>
+
+#### E257: A person fact, merge hook, erase hook or duplicate rule cannot be registered
+
+*exception* · from `karni.people.registry (register_fact, merge_hook, erase_hook, register_duplicate_rule, annotate_facts, duplicates)`
+
+**Why Karni objects.** Facts become annotations, filters and orderings on Person, so a fact's name must be an identifier that is not a Person field, and every contribution has one owner: a second registration under a taken name would silently replace the first.
+
+**Fix.** Name the fact after what it measures (orders, total_spent), give a second contribution its own name, or pass replace=True to swap one on purpose. Ask only for registered facts and rules (people.facts(), people.duplicate_rules()).
+
+<a id="e258"></a>
+
+#### E258: An account cannot be linked to this person
+
+*exception* · from `karni.people.link_account`
+
+**Why Karni objects.** An account is linked to a person only after its email is verified, only to the person with that email, and a person has one account. Otherwise anyone could take over a guest's orders by signing up with their address.
+
+**Fix.** Verify the account's email first (the verification link, a sign-in code or a provider that verified it), link it to the person with the same email, and merge the accounts by hand when the person has another one.
+
+<a id="e259"></a>
+
+#### E259: A people event that is not declared
+
+*exception* · from `karni.people.events.publish, karni.people.events.signal_for`
+
+**Why Karni objects.** The people contract's events are declared with their fields (karni.people.events.EVENTS), so every subscriber gets the same payload.
+
+**Fix.** Publish one of the declared events (people.person.created, linked, merged, erased, people.organisation.created, merged) with exactly its declared fields.
+
 <a id="e260"></a>
 
 #### E260: A database alias is not configured

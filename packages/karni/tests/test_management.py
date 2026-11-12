@@ -99,6 +99,9 @@ def test_models_section_covers_testapp_and_skips_framework() -> None:
             "searchapp",
             "deskapp",
             "notesapp",
+            "people",
+            "loyaltyapp",
+            "helpdeskapp",
         }
     ):
         output = build_context()

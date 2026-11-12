@@ -277,8 +277,10 @@ download ([protected files](storage.md)): they need `modules: {storage: ...}`
 
 A relation points at an entity of the same app (`fk:Studio`), of another app
 (`fk:shop.Product`), at the user (`fk:User`), at itself (`fk:self`), or at a
-model of a module the spec adds (`fk:karni_payments.Payment`). A model of the
-project outside the spec cannot be named.
+model of a module the spec adds (`fk:karni_payments.Payment`), or at a model of
+a core contract (`fk:people.Person`, experimental: the build then writes
+`KARNI_PEOPLE = True`, see [people](people.md)). A model of the project outside
+the spec cannot be named.
 
 A field written as a mapping says what it was called before:
 `title: {type: "str:200", was: name}` is the field `title`, renamed from

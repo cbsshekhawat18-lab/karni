@@ -166,7 +166,8 @@ def _config_of(model: type[models.Model]) -> Any:
 
 
 def test_a_declared_model_without_a_routed_viewset_is_w591() -> None:
-    messages = check_global_search_routes()
+    # karni.people declares search too, and the suite leaves its API unrouted (KARNI_PEOPLE_API).
+    messages = [m for m in check_global_search_routes() if m.obj._meta.app_label != "people"]
     assert [message.obj for message in messages] == [Region]
     assert messages[0].id == "karni.W591" and "no routed BaseViewSet" in messages[0].msg
 

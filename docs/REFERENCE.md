@@ -40,6 +40,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Tree models: `TreeModel` and `OrderedTreeModel` with cycle-safe walks (`roots`, `children`, `ancestors`, `descendants`, `subtree_ids`), `move_to()` and `delete_branch()`, and the tree changelist in the admin. Experimental tier | `experimental` | Karni's own tests |
 | Taxonomy tagging: one declaration tags a model to tree models (`class Karni: taxonomies`), a generated or adopted many-to-many per key, import and export columns by natural key, and the `tree:<key>` scope. Experimental tier | `experimental` | Karni's own tests |
 | A tenant scope on every model (the `karni-tenancy` module) | `planned` | [documented](models.md#scopes-the-filters-every-default-manager-applies) |
+| The people contract (`karni.people`, `KARNI_PEOPLE`): one person and one organisation record for every part of a project, `people.resolve` by account or email, the account linked once its email is verified, person facts in SQL, duplicates, merge with a preview and hooks, erase on request, `/api/people/`. Experimental tier | `experimental` | Karni's own tests |
 
 ### API
 
@@ -1795,6 +1796,12 @@ class Lead(BaseModel):
 | `KARNI_USER_GRANTS` | `KARNI_USER_GRANTS` | `False` | Experimental. Per-user grants: while `True`, each user's `UserGrant` rows (a pattern and a scope as in `KARNI_ROLES`, with targets and an expiry) join the grants of their roles, for one more query per request. `False` (the default) reads no row. See [per-user grants](accounts.md#per-user-grants). |
 | `KARNI_NAVIGATION` |  | `None` | Experimental. The menu `GET /api/navigation/` gives each user: a list of items (`{"label", "route", "icon", "order", "requires"}`) and groups (`{"label", "children": [...]}`), or `"db"` for the `NavItem` table edited in the admin (add `karni.navigation` to `INSTALLED_APPS`). `requires` is `public`, `authenticated` (the default) or a permission pattern as in `KARNI_ROLES`, so role grants and per-user grants open an item. `None` (the default) mounts no route. See [navigation](navigation.md). |
 | `KARNI_NAVIGATION_PAGES` |  | `["frontend/src/routes.tsx"]` | Experimental. The frontend files whose `path:` entries are the app's pages. `karni check` reports a menu item whose route none of them serves (`E533`). `[]` turns that comparison off. |
+| `KARNI_PEOPLE` | `KARNI_PEOPLE` | `False` | Experimental. `True` installs the people contract, `karni.people`: one Person per human and one Organisation per company for every part of the project. Read during the call. `karni build` writes it when karni.yaml points at `people.Person`. See [people](people.md). |
+| `KARNI_PEOPLE_RESOLVER` |  | `"karni.people.services.Resolver"` | Experimental. Dotted path of the `Resolver` class (or a subclass) `people.resolve()` finds or creates people with. |
+| `KARNI_PEOPLE_LINK_ON_VERIFY` |  | `True` | Experimental. Link an account to the person with its email as soon as the email is verified (sign-up with verification, a sign-in code, a social sign-in with a verified address). `False` leaves linking to `people.link_account()`. |
+| `KARNI_PEOPLE_API` |  | `True` | Experimental. Route `/api/people/`, `/api/organisations/`, `/api/people-memberships/` and `/api/people-addresses/`. `False` leaves them out, for a project that routes its own viewsets over the people tables. |
+| `KARNI_PEOPLE_MERGE_SKIP` |  | `[]` | Experimental. Models a person or organisation merge leaves alone, as `"app_label.Model"`: their rows keep pointing at the merged record. |
+| `KARNI_PEOPLE_AUTODISCOVER` |  | `True` | Experimental. Import every installed app's `people.py` at startup, where a part registers its person facts, merge hooks and erase hooks. `False`: register them in the part's `AppConfig.ready()`. |
 | `KARNI_ACCOUNTS_TOKEN_TTL` |  | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
 | `KARNI_ACCOUNTS_LINKS` |  | `{ "verify_email": "{frontend}/auth/verify-email?token={token}", "reset_password": "{frontend}/auth/reset-password?token={token}", "change_email": "{frontend}/auth/confirm-email-change?token={token}"}` | Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders. |
 | `KARNI_AUTH_THROTTLE_RATES` |  | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object. `null` disables a scope. |
@@ -2401,6 +2408,16 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E247`](errors.md#e247) | exception | A terms acceptance is a permanent record |
 | [`E248`](errors.md#e248) | check | The terms gate is not in MIDDLEWARE, or runs before authentication |
 | [`E249`](errors.md#e249) | api | Terms acceptance is turned off |
+| [`E250`](errors.md#e250) | exception | A merge of two people who both have an account |
+| [`E251`](errors.md#e251) | exception | A merge clash that only a merge hook can resolve |
+| [`E252`](errors.md#e252) | exception | A merge or an erase of records it does not take |
+| [`E253`](errors.md#e253) | exception | people.resolve() cannot run |
+| [`E254`](errors.md#e254) | api | Another person has this email |
+| [`E255`](errors.md#e255) | api | The email of a person with an account changes through the account |
+| [`E256`](errors.md#e256) | api | A value the people tables do not take |
+| [`E257`](errors.md#e257) | exception | A person fact, merge hook, erase hook or duplicate rule cannot be registered |
+| [`E258`](errors.md#e258) | exception | An account cannot be linked to this person |
+| [`E259`](errors.md#e259) | exception | A people event that is not declared |
 | [`E260`](errors.md#e260) | exception | A database alias is not configured |
 | [`E270`](errors.md#e270) | check | An external model is managed by Django |
 | [`E271`](errors.md#e271) | check | Karni.database names a database that is not in DATABASES |
