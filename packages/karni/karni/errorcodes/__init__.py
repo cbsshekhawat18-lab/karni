@@ -607,6 +607,41 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "'recent': 5}.",
     ),
     _e(
+        "E134",
+        "The written row is outside the caller's write scope",
+        "exception",
+        "karni.api.viewsets.BaseViewSet.check_written_row (perform_create / perform_update)",
+        "An access rule such as Owned('seller__user') limits the rows a caller may change. A "
+        "create or an update that leaves the row outside that rule (a listing in someone "
+        "else's shop, a lesson in another instructor's course) would let the caller write "
+        "rows that are not theirs, so it is refused with a 403 and nothing is saved.",
+        "Point the row at something of yours (your shop, your course), or give the caller a "
+        "role the rule admits.",
+    ),
+    _e(
+        "E135",
+        "Only some roles may set the owner of a row",
+        "exception",
+        "karni.api.viewsets.BaseViewSet.perform_create / perform_update (Access(assign=...))",
+        "The owner field of a row (the member of a booking) is the caller. Access(assign=...) "
+        "names who may set it to someone else (staff booking for a member, a manager "
+        "reassigning a deal). Anyone else who sends another user is refused with a 403.",
+        "Leave the owner field out (it becomes you), or ask someone the assign rule admits.",
+    ),
+    _e(
+        "E136",
+        "A row action has nothing to run, or is declared wrongly",
+        "check",
+        "karni.api.actions (RowAction, row_actions); karni.checks.check_viewsets",
+        "A row action without to= is the viewset's own @action method of that name (pay opens a "
+        "payment): Karni checks the state and who may, then runs it. Without the method nothing "
+        "would answer the route. row_actions maps names to RowAction(...), and states belong to "
+        "the model's one StateField unless field= names another.",
+        "Write the @action(detail=True, methods=['post']) method of that name in the project's "
+        "viewset (<app>/viewsets.py), give the action a to= state, or name the StateField with "
+        "field=.",
+    ),
+    _e(
         "W101",
         "A hand-written serializer duplicates the one Karni generates",
         "warning",
@@ -3095,6 +3130,17 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "requires: fields that must hold a value (a lost reason) and related rows that must "
         "exist (a lesson before publishing). The move is refused with a 400 naming the field.",
         "Send the field the message names with the move, or add the related row first.",
+    ),
+    _e(
+        "E997",
+        "A row action is not legal in the row's state",
+        "exception",
+        "karni.api.actions (RowAction, the viewset's row_actions; karni.yaml: actions)",
+        "A row action (pay, cancel, ship) declares the states it may run from. Called in "
+        "another state it is refused with a 409 naming the state and the legal ones. An action "
+        "that moves the row (to=) and finds it already there answers 200 and changes nothing, "
+        "so calling it twice is safe.",
+        "Reload the row and offer only the actions x-karni-actions lists for its state.",
     ),
     _e(
         "E998",

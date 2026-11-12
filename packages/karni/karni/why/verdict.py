@@ -250,7 +250,8 @@ def _access(verdict: Verdict, probe: Probe) -> Location | None:
             )
         verdict.add("access", *lines)
         data["declaration"] = {
-            slot: predicate_text(declaration.slot(slot)) for slot in ("read", "write", "create")
+            slot: predicate_text(declaration.slot(slot))
+            for slot in ("read", "write", "create", "delete")
         }
     verdict.data["access"] = data
     return location
@@ -285,6 +286,8 @@ def _request_line(verdict: Verdict, probe: Probe) -> None:
         "write": "access.write"
         + (", with the row looked up through access.read" if probe.action.detail else ""),
         "create": "access.create",
+        "delete": "access.delete"
+        + (", with the row looked up through access.read" if probe.action.detail else ""),
         "create|write": "access.create or access.write",
         "action": "its @action(access=...)"
         + (", with the row looked up through access.read" if probe.action.detail else ""),

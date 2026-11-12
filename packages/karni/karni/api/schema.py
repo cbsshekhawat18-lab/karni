@@ -35,6 +35,10 @@ vendor extensions the ``@karni/ui`` frontend consumes:
   on the ``aggregate`` operation of a resource that declares an aggregation
   (:mod:`karni.aggregation`, experimental). Without a declaration the
   operation is left out.
+* ``x-karni-actions`` (experimental) on the list and retrieve operations of a
+  viewset that declares ``row_actions``: each action's ``from``, ``to``,
+  ``field``, ``by`` and ``requires`` (:mod:`karni.api.actions`); each
+  action's own operation carries its entry as ``x-karni-action``.
 * ``x-karni-related`` (experimental) on the list operation: the model's
   reverse relations whose model has a route, each
   ``{"name", "resource", "field", "param", "key", "label"}``: the relation's
@@ -155,6 +159,7 @@ class KarniAutoSchema(AutoSchema):
         if view is not None:
             declaration, predicate = self._karni_access(view)
             operation["x-karni-access"] = describe_access(declaration, predicate)
+            self._karni_row_actions(view, operation)
             rate = throttle_rate(view, self._karni_action())
             if rate is not None:
                 operation["x-karni-throttle"] = rate
@@ -166,6 +171,28 @@ class KarniAutoSchema(AutoSchema):
             if self._karni_action() == "aggregate" and aggregation is not None:
                 operation["x-karni-aggregate"] = aggregation.describe(view.get_model())
         return operation
+
+    def _karni_row_actions(self, view: Any, operation: dict[str, Any]) -> None:
+        """``x-karni-actions`` on the list and detail operations, ``x-karni-action`` on each one.
+
+        Each is :meth:`karni.api.actions.RowAction.describe`: the states it runs
+        from, the state it moves to, its StateField, who may (as
+        ``x-karni-access`` writes it) and the fields the move requires.
+        """
+        from karni.api.actions import described
+
+        try:
+            model = view.get_model()
+        except ImproperlyConfigured:
+            return
+        actions = described(type(view), model)
+        if not actions:
+            return
+        action = self._karni_action()
+        if action in ("list", "retrieve"):
+            operation["x-karni-actions"] = actions
+        elif action in actions:
+            operation["x-karni-action"] = actions[action]
 
     def _karni_aggregation(self) -> Any:
         """The view's aggregation declaration (``None`` when it has none or it is malformed)."""

@@ -23,8 +23,12 @@ One declaration per viewset, compiled into both enforcement layers::
 
 Per action: ``list``/``retrieve`` and safe custom actions use ``read``;
 ``create`` uses ``create`` (default: ``write``); ``update``/
-``partial_update``/``destroy`` and unsafe custom actions use ``write``;
-``@action(..., access=HasRole("x"))`` replaces the predicate for one action.
+``partial_update`` and unsafe custom actions use ``write``; ``destroy`` uses
+``delete`` (default: ``write``); ``@action(..., access=HasRole("x"))`` or a
+row action's ``by`` (:mod:`karni.api.actions`) replaces the predicate for one
+action. ``assign`` names who may set an owner field to another user. A
+create or an update must leave the row inside its own predicate's rows
+(``E134``).
 
 The vocabulary is closed (ADR 0001 Q2.8): :class:`Granted` (the default:
 the roles' grants for the viewset's model and the current action, ADR 0002),
@@ -78,6 +82,7 @@ __all__ = [
     "Explained",
     "Granted",
     "HasRole",
+    "Matching",
     "Owned",
     "Predicate",
     "Public",
@@ -113,7 +118,7 @@ ACTION_SLOTS: Final[dict[str, str]] = {
     "create": "create",
     "update": "write",
     "partial_update": "write",
-    "destroy": "write",
+    "destroy": "delete",
 }
 
 #: Standard actions → the permission action a ``Granted()`` grant names.
@@ -740,6 +745,8 @@ class Where(Predicate):
         return self._evaluate(request)
 
     def describe(self) -> dict[str, Any]:
+        if isinstance(self.fn, Matching):
+            return {"where": self._name(), "matching": dict(self.fn.lookups)}
         return {"where": self._name()}
 
     def _name(self) -> str:
@@ -748,6 +755,40 @@ class Where(Predicate):
 
     def __repr__(self) -> str:
         return f"Where({self._name()})"
+
+
+class Matching:
+    """The row function of ``Where(Matching(published=True))``: rows whose fields hold values.
+
+    Not a predicate of its own: the vocabulary stays closed (ADR 0001 Q2.8),
+    and ``Where`` takes it like any function of the request. Every caller,
+    anonymous included, passes the gate and sees the matching rows, so
+    ``Where(Matching(published=True)) | Owned("author") | HasRole("staff")``
+    shows published rows to everyone and every row to the author and staff
+    (karni.yaml: ``read: [where:published, owned:author, role:staff]``).
+    ``x-karni-access`` publishes it as ``{"where": ..., "matching": {...}}``.
+    """
+
+    def __init__(self, **lookups: Any) -> None:
+        if not lookups:
+            raise KarniImproperlyConfigured(
+                "Matching() needs the values rows must hold, e.g. Matching(published=True).",
+                code="E106",
+            )
+        self.lookups: dict[str, Any] = dict(lookups)
+        self.__name__ = ", ".join(f"{key}={value!r}" for key, value in self.lookups.items())
+
+    def __call__(self, request: Any) -> Q:
+        return Q(**self.lookups)
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Matching) and other.lookups == self.lookups
+
+    def __hash__(self) -> int:
+        return hash(tuple(sorted((key, repr(value)) for key, value in self.lookups.items())))
+
+    def __repr__(self) -> str:
+        return f"Matching({self.__name__})"
 
 
 @dataclass(frozen=True, repr=False)
@@ -859,6 +900,14 @@ class Access:
     :param write: who may change which (readable) rows — ``update``,
         ``partial_update``, ``destroy`` and unsafe custom actions.
     :param create: who may create; defaults to ``write``'s request gate.
+    :param delete: who may delete which (readable) rows (experimental);
+        defaults to ``write``.
+    :param assign: who may set an owner field (``Owned`` in ``write`` or
+        ``create``) to another user (experimental). ``None``, the default:
+        nobody, the owner is always the caller and the field is read-only.
+        Declared, the field is writable and optional: left out it is the
+        caller, set to someone else by a caller ``assign`` does not admit it
+        is a 403 (``E135``).
 
     Override / escape hatch: override ``get_access()`` on the viewset to
     compute a declaration per request, or use :class:`Unscoped`.
@@ -867,24 +916,37 @@ class Access:
     read: Predicate
     write: Predicate
     create: Predicate
+    delete: Predicate
+    assign: Predicate | None
 
     def __init__(
-        self, *, read: Predicate, write: Predicate, create: Predicate | None = None
+        self,
+        *,
+        read: Predicate,
+        write: Predicate,
+        create: Predicate | None = None,
+        delete: Predicate | None = None,
+        assign: Predicate | None = None,
     ) -> None:
         object.__setattr__(self, "read", _require_predicate("read", read))
         object.__setattr__(self, "write", _require_predicate("write", write))
         resolved = write if create is None else _require_predicate("create", create)
         object.__setattr__(self, "create", resolved)
+        removal = write if delete is None else _require_predicate("delete", delete)
+        object.__setattr__(self, "delete", removal)
+        owner = None if assign is None else _require_predicate("assign", assign)
+        object.__setattr__(self, "assign", owner)
 
     def slot(self, name: str) -> Predicate:
-        """The predicate in slot ``"read"``, ``"write"`` or ``"create"``."""
+        """The predicate in slot ``"read"``, ``"write"``, ``"create"`` or ``"delete"``."""
         predicate: Predicate = getattr(self, name)
         return predicate
 
     def owned(self) -> Iterator[Owned]:
         """Every :class:`Owned` in the declaration."""
-        for predicate in (self.read, self.write, self.create):
-            yield from predicate.owned()
+        for predicate in (self.read, self.write, self.create, self.delete, self.assign):
+            if predicate is not None:
+                yield from predicate.owned()
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -939,6 +1001,9 @@ def action_override(view: Any) -> Predicate | None:
     if not isinstance(kwargs, dict):
         return None
     override = kwargs.get("access")
+    if override is None:
+        declared = (getattr(type(view), "row_actions", None) or {}).get(action)
+        override = getattr(declared, "by", None)  # a row action's by= (karni.api.actions)
     if override is None:
         return None
     if not isinstance(override, Predicate):
@@ -1058,6 +1123,9 @@ def validate_access(view_class: type[Any], model: type[Model] | None) -> None:
             code="E102",
         )
     owned: list[Owned] = list(declaration.owned()) if isinstance(declaration, Access) else []
+    for declared in (getattr(view_class, "row_actions", None) or {}).values():
+        if isinstance(getattr(declared, "by", None), Predicate):
+            owned.extend(declared.by.owned())
     for extra in getattr(view_class, "get_extra_actions", lambda: [])():
         override = getattr(extra, "kwargs", {}).get("access")
         if override is None:
@@ -1227,10 +1295,16 @@ def _leaves(declaration: Any, view_class: type[Any]) -> list[Predicate]:
     predicates: list[Predicate] = []
     if isinstance(declaration, Access):
         predicates.extend((declaration.read, declaration.write, declaration.create))
+        predicates.append(declaration.delete)
+        if declaration.assign is not None:
+            predicates.append(declaration.assign)
     for extra in getattr(view_class, "get_extra_actions", lambda: [])():
         override = getattr(extra, "kwargs", {}).get("access")
         if isinstance(override, Predicate):
             predicates.append(override)
+    for declared in (getattr(view_class, "row_actions", None) or {}).values():
+        if isinstance(getattr(declared, "by", None), Predicate):
+            predicates.append(declared.by)
     return [leaf for predicate in predicates for leaf in _flatten_leaves(predicate)]
 
 

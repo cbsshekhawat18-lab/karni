@@ -256,10 +256,30 @@ def _access(viewset: type) -> dict[str, Any]:
         found = {"read": declared.read.describe(), "write": declared.write.describe()}
         if declared.create is not declared.write:
             found["create"] = declared.create.describe()
+        if declared.delete is not declared.write:
+            found["delete"] = declared.delete.describe()
+        if declared.assign is not None:
+            found["assign"] = declared.assign.describe()
         return found
     if isinstance(declared, Unscoped):
         return {"unscoped": declared.reason}
     return {"missing": True}
+
+
+def _row_actions(viewset: type) -> dict[str, Any]:
+    """The viewset's ``row_actions``: name -> ``{from, to, field, by}`` (``by`` described)."""
+    from karni.api.actions import RowAction
+
+    found: dict[str, Any] = {}
+    for name, item in (getattr(viewset, "row_actions", None) or {}).items():
+        if isinstance(item, RowAction):
+            found[str(name)] = {
+                "from": list(item.from_),
+                "to": item.to,
+                "field": item.field,
+                "by": item.by.describe() if item.by is not None else None,
+            }
+    return found
 
 
 def _cache(viewset: type) -> dict[str, Any] | None:
@@ -294,6 +314,7 @@ def _viewsets() -> list[dict[str, Any]]:
                 "access": _access(viewset),
                 "search_fields": [str(name) for name in getattr(viewset, "search_fields", ())],
                 "cache": _cache(viewset),
+                "row_actions": _row_actions(viewset),
             }
         )
     return found

@@ -89,3 +89,8 @@ class Course(BaseModel):
 class Lesson(BaseModel):
     course = models.ForeignKey(Course, on_delete=models.PROTECT)
     title = models.CharField(max_length=100)
+
+
+class Enrolment(BaseModel):
+    course = models.ForeignKey(Course, on_delete=models.PROTECT)
+    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
