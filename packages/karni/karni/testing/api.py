@@ -293,9 +293,13 @@ def owner_values(declaration: Any, model: type[models.Model], user: Any) -> dict
     if not isinstance(declaration, Access):
         return {}
     found: dict[str, Any] = {}
+    from karni.testing.isolation import _forward
+
     for owned in declaration.read.owned():
         if model is get_user_model() and owned.path in {"pk", model._meta.pk.name}:
             continue
+        if not _forward(model, owned.path):
+            continue  # through a reverse relation (a course's students): a new row has none
         head = owned.path.split("__", 1)[0]
         try:
             relation = model._meta.get_field(head)
@@ -638,6 +642,47 @@ def _frozen(model: Any) -> set[str]:
         return set()
 
 
+def _fitting_row(
+    model: type[models.Model],
+    name: str,
+    target: type[models.Model],
+    user: Any,
+    made: dict[str, Any],
+) -> Any:
+    """A readable row for ``model.<name>`` that its ``class Karni: targets`` rule accepts.
+
+    Literal values are set, ``$<field>`` follows the rows made for this body
+    already, ``{pk: $<field>}`` is that row, and ``{not: $me}`` is someone else.
+    """
+    from karni.testing.factories import _target_rule
+
+    rule = _target_rule(model, name) or {}
+    values: dict[str, Any] = {}
+    for key, value in rule.items():
+        if "__" in key or isinstance(value, list):
+            continue
+        if value == {"not": "$me"}:
+            values[key] = user_with_roles()
+            continue
+        if isinstance(value, dict):
+            continue
+        if isinstance(value, str) and value.startswith("$"):
+            if value in ("$me", "$now", "$today"):
+                continue
+            head, *rest = value[1:].split("__")
+            found = made.get(head)
+            if found is None:
+                continue
+            for part in rest:
+                found = getattr(found, part)
+            if key in ("pk", "id", target._meta.pk.name):
+                return target._default_manager.get(pk=found)
+            values[key] = found
+        else:
+            values[key] = value
+    return readable_row(target, user, **values)
+
+
 def build_payload(
     resource: Resource,
     user: Any,
@@ -664,6 +709,7 @@ def build_payload(
     template = build(resource.model, **dict(values or {}))
     body = Payload({})
     owners = set(view.get_owner_fields())  # set server-side, even where Access(assign=) opens them
+    made: dict[str, Any] = {}
     for name, serializer_field in serializer.fields.items():
         if serializer_field.read_only or name in owners:
             continue
@@ -673,7 +719,8 @@ def build_payload(
             target = _related_model(resource.model, name, serializer_field)
             if target is None:
                 continue
-            related = readable_row(target, user)
+            related = _fitting_row(resource.model, name, target, user, made)
+            made[name] = related
             if not _referenceable(serializer_field, related):
                 body.unreachable[name] = _unreachable_reason(resource.model, name, target, user)
             pk = _json_value(related.pk)

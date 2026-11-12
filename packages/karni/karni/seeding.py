@@ -170,13 +170,16 @@ class Seeder:
     """Per-model seed settings and field overrides, discovered from ``<app>/seeds.py``.
 
     ``Meta.model`` names the model; ``Meta.count`` pins its rows per run
-    (``None`` = ``--count``, ``0`` = skip it). Any other class attribute is a
-    field override. Override :meth:`seed` for full control.
+    (``None`` = ``--count``, ``0`` = skip it); ``Meta.after`` names models
+    (classes or ``"app.Model"``) seeded first although no foreign key says so
+    (enrolments after the lessons that let a course be published). Any other
+    class attribute is a field override. Override :meth:`seed` for full control.
     """
 
     class Meta:
         model: Any = None
         count: int | None = None
+        after: tuple[Any, ...] = ()
 
     @classmethod
     def target(cls) -> type[models.Model] | None:
@@ -362,8 +365,15 @@ def _wipe(model: type[models.Model]) -> None:
     rows.all().delete()
 
 
+def _after(model: type[models.Model]) -> set[Any]:
+    """The models ``model``'s seeder says to seed first (``Meta.after``)."""
+    seeder = seeders().get(model)
+    declared = getattr(getattr(seeder, "Meta", None), "after", ()) or ()
+    return {_resolve(item) for item in declared}
+
+
 def _edges(model: type[models.Model], members: set[Any], *, hard_only: bool) -> set[Any]:
-    found: set[Any] = set()
+    found: set[Any] = _after(model) & (members - {model})
     for relation in model._meta.concrete_fields:
         target = relation.related_model
         if relation.is_relation and target in members and target is not model:
@@ -687,7 +697,7 @@ class _Run:
                 problem = exc
                 continue
             except RuleViolation as exc:
-                if exc.code != "E991":  # a duplicate of class Karni: unique: draw again
+                if exc.code not in ("E991", "E993"):  # a duplicate, or a target the rule refuses
                     raise unseedable(context.model, exc) from exc
                 problem = exc
                 continue

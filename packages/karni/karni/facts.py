@@ -346,7 +346,8 @@ def _seeders() -> dict[str, Any]:
     from karni.seeding import seeders
 
     found = seeders().items()
-    return {model._meta.label: seeder.Meta.__dict__.get("count") for model, seeder in found}
+    # getattr: a seeder's Meta may subclass the generated one (Meta.after) and inherit count
+    return {model._meta.label: getattr(seeder.Meta, "count", None) for model, seeder in found}
 
 
 def project_facts() -> dict[str, Any]:

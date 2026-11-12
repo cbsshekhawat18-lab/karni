@@ -178,6 +178,37 @@ class AutoFactory(DjangoModelFactory):
         finally:
             _CHAIN.reset(token)
 
+    @classmethod
+    def _create(cls, model_class: Any, *args: Any, **kwargs: Any) -> Any:
+        """Create the row; a flag whose move needs related rows (``class Karni: moves``) gets them.
+
+        ``published=True`` on a course that may be published only with a lesson
+        creates the course unpublished, one lesson, then publishes it.
+        """
+        moves = _needing_moves(model_class)
+        wanted = {
+            move.field: kwargs.pop(move.field)
+            for move in moves
+            if kwargs.get(move.field) and move.field in kwargs
+        }
+        for name in wanted:
+            kwargs[name] = False
+        row = super()._create(model_class, *args, **kwargs)
+        if not wanted:
+            return row
+        from karni.rules import related_rows
+
+        for move in moves:
+            if move.field not in wanted:
+                continue
+            for ref in move.needs:
+                if not related_rows(row, ref, None).exists():
+                    related, key = _needed(model_class, ref)
+                    factory_for(related).create(**{key: row})
+            setattr(row, move.field, wanted[move.field])
+        row.save()
+        return row
+
 
 class AutoSubFactory(factory.SubFactory):
     """A ``SubFactory`` resolved lazily through :func:`factory_for`, with cycle/depth guards.
@@ -259,6 +290,24 @@ def _missing_value(model: type[models.Model], field: models.Field[Any, Any]) -> 
         )
 
     return factory.LazyFunction(fail)
+
+
+def _needing_moves(model: type[models.Model]) -> list[Any]:
+    """The moves of ``model`` into a boolean ``true`` that need related rows (karni.rules)."""
+    from karni.errorcodes import KarniError
+    from karni.rules import rules_of
+
+    try:
+        moves = rules_of(model).moves
+    except KarniError:
+        return []
+    return [move for move in moves if move.to is True and move.needs]
+
+
+def _needed(model: type[models.Model], ref: str) -> tuple[type[models.Model], str]:
+    from karni.rules import _relation
+
+    return _relation(model, "moves", ref)
 
 
 def _target_rule(model: type[models.Model], name: str) -> Any:
@@ -400,6 +449,8 @@ class FactoryBuilder:
             return factory.django.Password(DEFAULT_PASSWORD, transform=hashed_password)
         if field.is_relation:
             return self.relation_value(model, field)
+        if any(move.field == field.name for move in _needing_moves(model)):
+            return False  # a row starts before the move that needs related rows (karni.rules)
         if field.has_default():
             return SKIP
         if field.null and field.blank:
