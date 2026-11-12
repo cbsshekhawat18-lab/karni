@@ -24,7 +24,7 @@ from karni_cli.scaffold import (
     validate_name,
 )
 
-from .conftest import REPO_ROOT, TEMPLATE
+from .conftest import REPO_ROOT, TEMPLATE, requires_git
 
 
 def test_new_generates_project(runner, tmp_path: Path, monkeypatch) -> None:
@@ -507,6 +507,7 @@ def _git_out(project: Path, *args: str) -> str:
     ).stdout
 
 
+@requires_git
 def test_new_makes_a_git_repository_with_a_first_commit(runner, tmp_path, monkeypatch) -> None:
     _isolated_git(monkeypatch, tmp_path)
     out = tmp_path / "out"
@@ -521,6 +522,7 @@ def test_new_makes_a_git_repository_with_a_first_commit(runner, tmp_path, monkey
     assert "manage.py" in tracked and ".env.example" in tracked and ".env" not in tracked
 
 
+@requires_git
 def test_no_git_and_an_existing_repository_leave_git_alone(runner, tmp_path, monkeypatch) -> None:
     _isolated_git(monkeypatch, tmp_path)
     skipped = runner.invoke(app, ["new", "Plain", "-o", str(tmp_path / "a"), "--no-git"])
@@ -535,6 +537,7 @@ def test_no_git_and_an_existing_repository_leave_git_alone(runner, tmp_path, mon
     assert f"inside the git repository at {outer.resolve()}" in inside.output
 
 
+@requires_git
 def test_a_refused_first_commit_says_how_to_finish(runner, tmp_path, monkeypatch) -> None:
     hooks = tmp_path / "hooks"
     hooks.mkdir()

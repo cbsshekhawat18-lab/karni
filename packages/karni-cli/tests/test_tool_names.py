@@ -6,7 +6,6 @@ The names themselves live only in that file: these tests take them from its samp
 from __future__ import annotations
 
 import importlib.util
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -14,7 +13,7 @@ from types import ModuleType
 
 import pytest
 
-from .conftest import REPO_ROOT
+from .conftest import REPO_ROOT, requires_git
 
 SCRIPT = REPO_ROOT / "scripts" / "check_tool_names.py"
 pytestmark = pytest.mark.skipif(not SCRIPT.is_file(), reason="needs the Karni checkout")
@@ -68,6 +67,7 @@ def test_the_exceptions_are_narrow(checker) -> None:
     assert checker.scan_text("CHANGELOG.md", "- " + deprecated + " is deprecated\n", config) == []
 
 
+@requires_git
 def test_every_exception_has_a_reason_and_matches_a_tracked_file(checker) -> None:
     config = checker.load()
     tracked = [path for path, _ in checker.tracked_files(REPO_ROOT)]
@@ -76,7 +76,7 @@ def test_every_exception_has_a_reason_and_matches_a_tracked_file(checker) -> Non
         assert any(allow.covers(path) for path in tracked), f"stale exception: {allow.path}"
 
 
-@pytest.mark.skipif(shutil.which("git") is None, reason="needs git")
+@requires_git
 def test_the_repository_names_no_ai_tool_outside_the_exceptions(checker) -> None:
     """The check CI runs: a name that creeps back into a tracked file fails here."""
     if not (REPO_ROOT / ".git").exists():
@@ -85,7 +85,7 @@ def test_the_repository_names_no_ai_tool_outside_the_exceptions(checker) -> None
     assert hits == [], "\n".join(hit.render() for hit in hits)
 
 
-@pytest.mark.skipif(shutil.which("git") is None, reason="needs git")
+@requires_git
 def test_the_command_line_fails_on_a_tracked_file(checker, tmp_path: Path) -> None:
     config = (REPO_ROOT / "scripts" / "tool-names.toml").read_text()
     (tmp_path / "scripts").mkdir()
