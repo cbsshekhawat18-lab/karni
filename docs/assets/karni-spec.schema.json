@@ -204,6 +204,205 @@
       ],
       "type": "object"
     },
+    "DashboardTile": {
+      "additionalProperties": false,
+      "description": "Experimental. One ``dashboard:`` tile: a box on the home page of the roles it names.\n\nA tile with ``entity`` counts (``stat``) or lists (``list``) that entity's\nrows matching ``filters``, through its list endpoint. A tile whose\n``key`` names a tile an app declares in code (``<app>/dashboard.py``:\n``commerce.revenue``) places it: its title, order, size and who sees it,\nor ``hidden: true``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "key": {
+          "description": "A unique name, prefixed by its part: shop.to_send.",
+          "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "What the tile says at the top."
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "stat",
+                "list",
+                "chart",
+                "custom"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "stat (a number), list (the first rows), chart or custom."
+        },
+        "entity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The entity whose rows it counts or lists."
+        },
+        "filters": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "API filters of the entity's list: {status: processing}, {stock__lte: 3}. A date may be today, today-7 or today+1."
+        },
+        "columns": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A list tile's columns (fields)."
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "maximum": 25,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "How many rows a list tile shows."
+        },
+        "link": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Where a click on the tile goes (an app path)."
+        },
+        "requires": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "authenticated, * or a permission pattern (app.entity:action). Default: the entity's view permission, else authenticated."
+        },
+        "roles": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Only these roles see it."
+        },
+        "order": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Its place among the tiles, smallest first."
+        },
+        "size": {
+          "anyOf": [
+            {
+              "enum": [
+                "third",
+                "half",
+                "full"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Its width."
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A line under the title."
+        },
+        "hidden": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "true takes a code tile off the home."
+        }
+      },
+      "required": [
+        "key"
+      ],
+      "type": "object"
+    },
     "DetailOptions": {
       "additionalProperties": false,
       "description": "Experimental. What a detail page shows besides the record: ``{related: [Deal, Person]}``.",
@@ -960,6 +1159,13 @@
           "type": "array"
         }
       ]
+    },
+    "dashboard": {
+      "description": "Experimental. The home tiles karni build writes to KARNI_DASHBOARD_TILES: each counts or lists an entity's rows for the roles it names, or places a tile an app declares in code.",
+      "items": {
+        "$ref": "#/$defs/DashboardTile"
+      },
+      "type": "array"
     },
     "seed": {
       "additionalProperties": {

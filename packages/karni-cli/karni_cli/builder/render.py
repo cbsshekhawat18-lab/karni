@@ -67,7 +67,7 @@ from karni_cli.generators.pysource import (
     tuple_literal,
 )
 from karni_cli.project import CliError
-from karni_cli.spec import catalog, navigation, schema
+from karni_cli.spec import catalog, dashboard, navigation, schema
 from karni_cli.spec.normal import related_tab
 
 __all__ = [
@@ -708,7 +708,8 @@ def _project_file(
 
 
 def settings_block(spec: schema.Spec, line: int) -> str:
-    """Experimental. The ``# karni:spec`` block: roles, features, module options and the menu."""
+    """Experimental. The ``# karni:spec`` block: roles, features, module options, the menu
+    and the home tiles."""
     rows: list[str] = [
         "# Roles, features and module options from karni.yaml. Change them there and run",
         "# karni build: it rewrites the lines between the markers.",
@@ -750,6 +751,9 @@ def settings_block(spec: schema.Spec, line: int) -> str:
     menu = navigation.menu(spec)
     if menu is not None:
         rows.append(_literal(menu, "", line, "KARNI_NAVIGATION = "))
+    tiles = dashboard.tiles(spec)
+    if tiles is not None:
+        rows.append(_literal(tiles, "", line, f"{dashboard.SETTING} = "))
     # Left out, KARNI_API_CACHE follows the environment: a project may turn it on there.
     if features.api_cache:
         rows.append("KARNI_API_CACHE = True")

@@ -55,6 +55,10 @@ class KarniAppConfig(AppConfig):
             from karni.events import autodiscover
 
             autodiscover()
+        # The home tiles each app declares in <app>/dashboard.py (karni.tiles).
+        from karni.tiles import autodiscover as discover_tiles
+
+        discover_tiles()
 
         # One request id across tasks, retries and email (karni.tracing), and
         # the development capture's exception hook (inert with DEBUG off).

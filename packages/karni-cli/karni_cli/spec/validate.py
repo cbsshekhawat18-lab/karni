@@ -547,6 +547,7 @@ class _Meaning:
         self.requirements()
         self.pages()
         self.navigation()
+        self.dashboard()
         self.seed()
 
     # names and fields
@@ -1994,6 +1995,44 @@ class _Meaning:
 
         entries(("navigation",), self.spec.navigation)
 
+    def dashboard(self) -> None:
+        """``dashboard:`` (experimental): each tile's entity and roles exist, keys are unique."""
+        seen: set[str] = set()
+        for position, tile in enumerate(self.spec.dashboard):
+            where: Loc = ("dashboard", position)
+            if tile.key in seen:
+                self.add(
+                    "C643",
+                    (*where, "key"),
+                    f"Two tiles have the key {tile.key}.",
+                    "Give each tile its own key.",
+                )
+            seen.add(tile.key)
+            if tile.entity is not None:
+                app, _, name = tile.entity.rpartition(".")
+                found = [
+                    entity
+                    for entity in self.entities.values()
+                    if entity.name == name and (not app or entity.app == app)
+                ]
+                if not found and (not app or app in self.spec.apps):
+                    self.add(
+                        "C643",
+                        (*where, "entity"),
+                        f"The tile {tile.key} counts {tile.entity}, which no app of the spec has.",
+                        "Name an entity of apps, e.g. Shipment.",
+                    )
+            for slug in tile.roles or []:
+                if self.spec.roles and slug not in self.spec.roles:
+                    self.add(
+                        "C643",
+                        (*where, "roles"),
+                        f"The tile {tile.key} is for the role {slug}, which roles does not have.",
+                        f"Name a role of roles: {', '.join(self.spec.roles)}.",
+                    )
+            if tile.requires is not None:
+                self.requirement((*where, "requires"), tile.requires)
+
     def requirement(self, where: Loc, value: str) -> None:
         """A navigation entry's ``requires`` (experimental): a pattern the spec can name."""
         from karni_cli.spec import navigation as nav
@@ -2176,7 +2215,7 @@ def iter_codes() -> Iterator[str]:
     yield "C324"
     yield "C460"
     yield "C620"
-    yield from ("C640", "C641", "C642")
+    yield from ("C640", "C641", "C642", "C643")
     yield from ("C700", "C701", "C702", "C703")
     yield from ("C500", "C501", "C502")
     yield from ("C520", "C521")

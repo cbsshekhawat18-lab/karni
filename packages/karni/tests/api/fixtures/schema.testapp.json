@@ -1,6 +1,20 @@
 {
   "components": {
     "schemas": {
+      "Dashboard": {
+        "properties": {
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/Tile"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "tiles"
+        ],
+        "type": "object"
+      },
       "EmailChange": {
         "description": "Input for ``email/change/``: the new address plus the current password.\n\nUniqueness of ``new_email`` is validated (and re-validated at confirm\ntime) by :mod:`karni.accounts.services`, which raises the DRF 400\ndirectly \u2014 the accepted enumeration surface of the flow (amendment A9).",
         "properties": {
@@ -423,6 +437,16 @@
           }
         },
         "type": "object"
+      },
+      "KindEnum": {
+        "description": "* `stat` - stat\n* `list` - list\n* `chart` - chart\n* `custom` - custom",
+        "enum": [
+          "stat",
+          "list",
+          "chart",
+          "custom"
+        ],
+        "type": "string"
       },
       "LoginRequest": {
         "description": "Credential check shared by both auth modes (amendment A3).\n\nInherits SimpleJWT's ``TokenObtainSerializer``: the fields are the user\nmodel's ``USERNAME_FIELD`` (``email``) plus ``password``, credentials run\nthrough ``django.contrib.auth.authenticate`` and a failure \u2014 wrong\npassword, unknown address or inactive account, indistinguishably \u2014 raises\n``AuthenticationFailed`` (HTTP 401). ``validate`` issues no tokens; it\nleaves the authenticated user on ``self.user`` and\n:class:`karni.accounts.api.views.LoginView` decides per request whether to\nmint a JWT pair or open a Django session.",
@@ -1280,6 +1304,15 @@
           "password"
         ],
         "type": "object"
+      },
+      "SizeEnum": {
+        "description": "* `third` - third\n* `half` - half\n* `full` - full",
+        "enum": [
+          "third",
+          "half",
+          "full"
+        ],
+        "type": "string"
       },
       "StatusEnum": {
         "description": "* `draft` - Draft\n* `published` - Published",
@@ -2458,6 +2491,70 @@
         "required": [
           "city",
           "name"
+        ],
+        "type": "object"
+      },
+      "Tile": {
+        "description": "Experimental. One home tile.",
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "data": {
+            "additionalProperties": {},
+            "nullable": true,
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "filters": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/KindEnum"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "link": {
+            "nullable": true,
+            "type": "string"
+          },
+          "order": {
+            "type": "integer"
+          },
+          "resource": {
+            "nullable": true,
+            "type": "string"
+          },
+          "size": {
+            "$ref": "#/components/schemas/SizeEnum"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "columns",
+          "data",
+          "description",
+          "filters",
+          "key",
+          "kind",
+          "limit",
+          "link",
+          "order",
+          "resource",
+          "size",
+          "title"
         ],
         "type": "object"
       },
@@ -4365,6 +4462,36 @@
             "staff"
           ]
         }
+      }
+    },
+    "/api/dashboard/": {
+      "get": {
+        "description": "Experimental. The home tiles of the requesting person.",
+        "operationId": "dashboard_tiles",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "dashboard"
+        ]
       }
     },
     "/api/events/": {

@@ -46,6 +46,7 @@ __all__ = [
     "ApiCache",
     "App",
     "AppInfo",
+    "DashboardTile",
     "DetailOptions",
     "DetailPage",
     "Entity",
@@ -588,6 +589,47 @@ class NavigationOptions(_Node):
     items: list[NavigationEntry] | None = Field(None, description="A group's entries.")
 
 
+class DashboardTile(_Node):
+    """Experimental. One ``dashboard:`` tile: a box on the home page of the roles it names.
+
+    A tile with ``entity`` counts (``stat``) or lists (``list``) that entity's
+    rows matching ``filters``, through its list endpoint. A tile whose
+    ``key`` names a tile an app declares in code (``<app>/dashboard.py``:
+    ``commerce.revenue``) places it: its title, order, size and who sees it,
+    or ``hidden: true``.
+    """
+
+    key: str = Field(
+        description="A unique name, prefixed by its part: shop.to_send.",
+        pattern=r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$",
+    )
+    title: str | None = Field(None, description="What the tile says at the top.")
+    kind: Literal["stat", "list", "chart", "custom"] | None = Field(
+        None, description="stat (a number), list (the first rows), chart or custom."
+    )
+    entity: str | None = Field(None, description="The entity whose rows it counts or lists.")
+    filters: dict[str, str | int | bool | list[str]] | None = Field(
+        None,
+        description=(
+            "API filters of the entity's list: {status: processing}, {stock__lte: 3}. A date "
+            "may be today, today-7 or today+1."
+        ),
+    )
+    columns: list[str] | None = Field(None, description="A list tile's columns (fields).")
+    limit: int | None = Field(None, ge=1, le=25, description="How many rows a list tile shows.")
+    link: str | None = Field(None, description="Where a click on the tile goes (an app path).")
+    requires: str | None = Field(
+        None,
+        description="authenticated, * or a permission pattern (app.entity:action). Default: "
+        "the entity's view permission, else authenticated.",
+    )
+    roles: list[str] | None = Field(None, description="Only these roles see it.")
+    order: int | None = Field(None, description="Its place among the tiles, smallest first.")
+    size: Literal["third", "half", "full"] | None = Field(None, description="Its width.")
+    description: str | None = Field(None, description="A line under the title.")
+    hidden: bool | None = Field(None, description="true takes a code tile off the home.")
+
+
 def _navigation_member(value: Any) -> str:
     return "=page" if isinstance(value, str) else "=entry"
 
@@ -666,6 +708,14 @@ class Spec(_Node):
             "Experimental. The menu karni build writes to KARNI_NAVIGATION: true for every page "
             "of pages in their order, or a list of pages (by their key) and groups "
             "({label: [entries]}), each page with optional {label, icon, requires}."
+        ),
+    )
+    dashboard: list[DashboardTile] = Field(
+        default_factory=list,
+        description=(
+            "Experimental. The home tiles karni build writes to KARNI_DASHBOARD_TILES: each "
+            "counts or lists an entity's rows for the roles it names, or places a tile an "
+            "app declares in code."
         ),
     )
     seed: dict[str, int] = Field(

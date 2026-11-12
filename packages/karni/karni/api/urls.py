@@ -28,6 +28,7 @@ from __future__ import annotations
 from django.conf import settings
 from django.urls import path
 
+from karni.api.dashboard import DashboardView
 from karni.api.global_search import GlobalSearchView
 from karni.api.routers import KarniRouter
 from karni.imports import import_setting
@@ -43,10 +44,12 @@ router: KarniRouter = import_setting(
 )()
 
 #: What Karni mounts before the router's routes: ``navigation/`` while ``KARNI_NAVIGATION``
-#: is set, and ``search/``. :func:`karni.api.versions.api_urls` mounts them in each version.
+#: is set, ``search/`` and ``dashboard/`` (the home tiles, experimental).
+#: :func:`karni.api.versions.api_urls` mounts them in each version.
 extra_urlpatterns = [
     *navigation_urlpatterns(),
     path("search/", GlobalSearchView.as_view(), name="karni-global-search"),
+    path("dashboard/", DashboardView.as_view(), name="karni-dashboard-tiles"),
 ]
 
 urlpatterns = [*extra_urlpatterns, *router.urls]

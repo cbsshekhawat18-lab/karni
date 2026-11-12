@@ -5069,6 +5069,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write public, authenticated, or a pattern such as shop.product:view, or leave requires out: each page takes its requirement from its access.
 
+<a id="c643"></a>
+
+### C643: A dashboard tile names something the spec does not have
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** A dashboard: tile counts or lists the rows of an entity of the spec, for the roles of the spec, or places a tile an app declares in code by its key. An entity or a role the spec does not have would show nothing, and two tiles with one key would hide one.
+
+**Fix.** Name an entity of apps (Shipment, shop.Shipment) and roles of roles, give each tile its own key, or leave entity out to place a code tile (commerce.revenue).
+
 <a id="c700"></a>
 
 ### C700: A taxonomy key is not a field name the entity can take
