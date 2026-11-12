@@ -1,5 +1,5 @@
-// The catalogue: every product for sale as cards, with search, a category (and its children),
-// a price range, the sort order and pages, all kept in the address.
+// The catalogue: every product for sale as cards, with search, a category (and its
+// children), a price range, the sort order and pages, all kept in the address.
 import {
   Input,
   Label,
@@ -44,7 +44,7 @@ export function Catalogue() {
   const ids = { category: useId(), min: useId(), max: useId() };
   const chosen = options.find((option) => option.value === values.category);
   usePageMeta({
-    title: chosen ? `${chosen.label} | Shop` : "Shop",
+    title: chosen ? `${chosen.label} | Products` : "Products",
     siteName: SHOP_NAME,
     description: `Everything ${SHOP_NAME} sells${chosen ? ` in ${chosen.label}` : ""}.`,
   });
@@ -73,39 +73,42 @@ export function Catalogue() {
     </div>
   );
   return (
-    <ResourceGrid<Product>
-      resource="products"
-      label="Products"
-      searchLabel="Search the shop"
-      sortOptions={SORTS}
-      filters={filters}
-      search={values.q ?? ""}
-      onSearchChange={(q) => setSearch({ q, page: "" })}
-      ordering={values.sort ?? "name"}
-      onOrderingChange={(sort) => setSearch({ sort, page: "" })}
-      page={Number(values.page ?? "1") || 1}
-      onPageChange={(page) => setSearch({ page: String(page) })}
-      renderCard={(product) => <ProductCard product={product} />}
-      toolbar={
-        <>
-          <div className="flex flex-col gap-1 sm:w-60">
-            <Label id={ids.category}>Category</Label>
-            <Select
-              aria-labelledby={ids.category}
-              value={values.category ?? null}
-              options={options}
-              clearable
-              clearLabel="All categories"
-              placeholder="All categories"
-              onValueChange={(category) =>
-                setSearch({ category: category ?? "", page: "" })
-              }
-            />
-          </div>
-          {price("min", "From")}
-          {price("max", "To")}
-        </>
-      }
-    />
+    <div className="space-y-4">
+      <h1 className="text-2xl font-semibold">{chosen?.label ?? "Products"}</h1>
+      <ResourceGrid<Product>
+        resource="products"
+        label="Products"
+        searchLabel="Search the shop"
+        sortOptions={SORTS}
+        filters={filters}
+        search={values.q ?? ""}
+        onSearchChange={(q) => setSearch({ q, page: "" })}
+        ordering={values.sort ?? "name"}
+        onOrderingChange={(sort) => setSearch({ sort, page: "" })}
+        page={Number(values.page ?? "1") || 1}
+        onPageChange={(page) => setSearch({ page: String(page) })}
+        renderCard={(product) => <ProductCard product={product} />}
+        toolbar={
+          <>
+            <div className="flex flex-col gap-1 sm:w-60">
+              <Label id={ids.category}>Category</Label>
+              <Select
+                aria-labelledby={ids.category}
+                value={values.category ?? null}
+                options={options}
+                clearable
+                clearLabel="All categories"
+                placeholder="All categories"
+                onValueChange={(category) =>
+                  setSearch({ category: category ?? "", page: "" })
+                }
+              />
+            </div>
+            {price("min", "From")}
+            {price("max", "To")}
+          </>
+        }
+      />
+    </div>
   );
 }

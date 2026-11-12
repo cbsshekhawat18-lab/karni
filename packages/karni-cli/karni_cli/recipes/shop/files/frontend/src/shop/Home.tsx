@@ -1,4 +1,5 @@
 // The shop's front page: a welcome, the categories, featured products and what is new.
+import { ItemImage } from "@karni/commerce-ui";
 import {
   Button,
   EmptyState,
@@ -7,7 +8,7 @@ import {
   usePageMeta,
 } from "@karni/ui";
 import { Link, useRouter } from "@tanstack/react-router";
-import { ProductCard, ProductImageBox } from "./ProductCard";
+import { ProductCard } from "./ProductCard";
 import { SHOP_NAME } from "./StoreLayout";
 import type { Category, Product } from "./types";
 
@@ -20,9 +21,10 @@ function Shelf({
   products: Product[];
   loading: boolean;
 }) {
+  const id = `shelf-${title.toLowerCase().replace(/\s+/g, "-")}`;
   return (
-    <section aria-labelledby={`shelf-${title}`} className="space-y-3">
-      <h2 id={`shelf-${title}`} className="text-xl font-semibold">
+    <section aria-labelledby={id} className="space-y-3">
+      <h2 id={id} className="text-xl font-semibold">
         {title}
       </h2>
       {loading ? (
@@ -48,7 +50,9 @@ export function StoreHome() {
     title: SHOP_NAME,
     description: `${SHOP_NAME}: browse the catalogue, add to the cart and pay online.`,
   });
-  const categories = useResourceList<Category>("categories", { pageSize: 100 });
+  const categories = useResourceList<Category>("categories", {
+    pageSize: 100,
+  });
   const featured = useResourceList<Product>("products", {
     pageSize: 4,
     filters: { featured: true },
@@ -64,11 +68,14 @@ export function StoreHome() {
     <div className="space-y-10">
       <section className="rounded-lg bg-muted px-6 py-10">
         <h1 className="text-3xl font-semibold">{SHOP_NAME}</h1>
-        <p className="mt-2 max-w-xl text-muted-foreground">
+        <p className="mt-2 text-muted-foreground">
           Things for the kitchen, the garden, the desk and the road, made to
           last.
         </p>
-        <Button className="mt-6" onClick={() => router.history.push("/shop")}>
+        <Button
+          className="mt-6"
+          onClick={() => router.history.push("/shop/products")}
+        >
           Shop everything
         </Button>
       </section>
@@ -76,20 +83,24 @@ export function StoreHome() {
         <h2 id="categories" className="text-xl font-semibold">
           Categories
         </h2>
-        <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          {tops.map((category) => (
-            <li key={category.id}>
-              <Link
-                to="/shop"
-                search={{ category: category.id }}
-                className="flex flex-col gap-2 rounded-lg border border-border p-2 hover:bg-muted"
-              >
-                <ProductImageBox src={category.image} alt="" />
-                <span className="font-medium">{category.name}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {categories.isPending ? (
+          <Skeleton className="h-32 w-full" />
+        ) : (
+          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {tops.map((category) => (
+              <li key={category.id}>
+                <Link
+                  to="/shop/products"
+                  search={{ category: category.id }}
+                  className="flex flex-col gap-2 rounded-lg border border-border p-2 hover:bg-muted"
+                >
+                  <ItemImage src={category.image} alt="" />
+                  <span className="font-medium">{category.name}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
       <Shelf
         title="Featured"

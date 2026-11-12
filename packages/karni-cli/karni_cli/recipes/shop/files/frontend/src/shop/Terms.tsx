@@ -10,7 +10,7 @@ export function Terms() {
     description: `The terms of sale of ${SHOP_NAME}.`,
   });
   return (
-    <article className="max-w-2xl space-y-4">
+    <article className="space-y-4">
       <h1 className="text-2xl font-semibold">Terms of sale</h1>
       <p>These terms are an example. Write your own before the shop opens.</p>
       <h2 className="text-lg font-semibold">Orders</h2>
@@ -20,7 +20,7 @@ export function Terms() {
       </p>
       <h2 className="text-lg font-semibold">Prices</h2>
       <p>
-        Prices are shown with the currency of the shop. The price you pay is the
+        Prices are shown in the shop&apos;s currency. The price you pay is the
         one in your cart at checkout.
       </p>
       <h2 className="text-lg font-semibold">Returns</h2>

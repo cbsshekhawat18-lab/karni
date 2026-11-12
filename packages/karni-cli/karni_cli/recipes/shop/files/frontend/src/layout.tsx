@@ -1,8 +1,10 @@
-// The app shell of the shop. A storefront page (staticData area "store" in routes.tsx, and
-// the home page) shows in the shop's own header and footer, to visitors too when it is
-// public. Every other page is the back office: @karni/ui's Layout with the menu from the
-// server (navigation in karni.yaml), for staff only. A signed-in customer who opens one is
-// told it is not for them.
+// The app shell of the shop. A storefront page (staticData area "store" in routes.tsx)
+// shows in the shop's own header and footer, to visitors too when it is public. The
+// home page is the staff's dashboard for staff and the storefront for everyone else.
+// Every other page is the back office: @karni/ui's Layout with the menu from the server
+// (navigation in karni.yaml), for staff only. The cart, checkout and order pages are
+// karni-commerce's (@karni/commerce-ui), told here how to navigate.
+import { CommerceProvider } from "@karni/commerce-ui";
 import {
   AuthGuard,
   Button,
@@ -13,9 +15,14 @@ import {
   useAuth,
 } from "@karni/ui";
 import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { StoreLayout, SHOP_NAME } from "./store/StoreLayout";
-import { usePerson } from "./store/staff";
+import { useCallback, useEffect, useState } from "react";
+import { registerShop } from "./shop/register";
+import { StoreLayout, SHOP_NAME } from "./shop/StoreLayout";
+import { usePerson } from "./shop/staff";
+
+registerShop();
+
+const PATHS = { browse: "/shop/products" };
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -37,7 +44,7 @@ function BackOffice() {
     <Layout
       navSource="server"
       pathname={pathname}
-      navItems={[{ label: "Storefront", href: "/" }]}
+      navItems={[{ label: "Storefront", href: "/shop" }]}
       mobileNavOpen={navOpen}
       onMobileNavOpenChange={setNavOpen}
       sidebarHeader={
@@ -86,23 +93,35 @@ function BackOffice() {
 }
 
 export default function AppLayout() {
+  const router = useRouter();
+  const person = usePerson();
+  const navigate = useCallback(
+    (to: string) => router.history.push(to),
+    [router],
+  );
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
   const route = useRouterState({
     select: (state) => state.matches.at(-1)?.staticData,
   });
-  const store = pathname === "/" || route?.area === "store";
-  if (!store) return <BackOffice />;
+  const home = pathname === "/";
+  const store = route?.area === "store" || (home && person !== "staff");
   return (
-    <StoreLayout>
-      {route?.public === true || pathname === "/" ? (
-        <Outlet />
+    <CommerceProvider navigate={navigate} paths={PATHS}>
+      {!store ? (
+        <BackOffice />
       ) : (
-        <AuthGuard explain>
-          <Outlet />
-        </AuthGuard>
+        <StoreLayout>
+          {route?.public === true || home ? (
+            <Outlet />
+          ) : (
+            <AuthGuard explain>
+              <Outlet />
+            </AuthGuard>
+          )}
+        </StoreLayout>
       )}
-    </StoreLayout>
+    </CommerceProvider>
   );
 }

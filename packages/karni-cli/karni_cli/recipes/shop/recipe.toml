@@ -13,65 +13,70 @@ use_when = [
 usually_changed = [
     "the product fields",
     "the payment provider and the currency",
-    "the order states",
+    "the parcel states",
     "the terms version and url",
 ]
 
-# The storefront's pages (files/frontend/src/pages/store/): the first karni build
-# registers each in frontend/src/routes.tsx. area = "store" puts a page in the
-# storefront's own header and footer (files/frontend/src/layout.tsx).
+# The shop's pages (files/frontend/src/pages/): the first karni build registers each in
+# frontend/src/routes.tsx. The storefront is under /shop. /cart, /checkout, /orders,
+# /account and /signin are the family pages: thin files that mount @karni/commerce-ui's
+# and @karni/ui's components. area = "store" puts a page in the storefront's own header
+# and footer (files/frontend/src/layout.tsx).
+
 [[routes]]
 path = "/shop"
-page = "pages/store/catalogue"
+page = "pages/shop/index"
 public = true
 data = { area = "store" }
 
 [[routes]]
-path = "/shop/$slug"
-page = "pages/store/product"
+path = "/shop/products"
+page = "pages/shop/products"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/shop/products/$slug"
+page = "pages/shop/product"
 public = true
 data = { area = "store" }
 
 [[routes]]
 path = "/cart"
-page = "pages/store/cart"
+page = "pages/cart"
 public = true
 data = { area = "store" }
 
 [[routes]]
 path = "/checkout"
-page = "pages/store/checkout"
+page = "pages/checkout"
 public = true
 data = { area = "store" }
 
 [[routes]]
-path = "/order/$number"
-page = "pages/store/order"
-public = true
+path = "/orders"
+page = "pages/orders"
 data = { area = "store" }
 
 [[routes]]
-path = "/signin"
-page = "pages/store/signin"
-public = true
-data = { area = "store" }
-
-[[routes]]
-path = "/terms"
-page = "pages/store/terms"
+path = "/orders/$number"
+page = "pages/order"
 public = true
 data = { area = "store" }
 
 [[routes]]
 path = "/account"
-page = "pages/store/account"
+page = "pages/account"
 data = { area = "store" }
 
 [[routes]]
-path = "/account/addresses"
-page = "pages/store/addresses"
+path = "/signin"
+page = "pages/signin"
+public = true
 data = { area = "store" }
 
 [[routes]]
-path = "/backoffice"
-page = "pages/store/backoffice"
+path = "/terms"
+page = "pages/terms"
+public = true
+data = { area = "store" }

@@ -174,7 +174,10 @@ def test_a_paid_order_gets_a_parcel_that_moves_only_forward(
     assert "Parcel Post tracking number: PP123" in shipped.body
     assert shipped.extra_headers["X-Karni-Kind"] == "shop.shipment_shipped"
     [entry] = report(order)
-    assert (entry["label"], entry["detail"]) == ("Delivered", "Parcel Post tracking PP123")
+    assert (entry["label"], entry["detail"]) == (
+        "Delivered",
+        "Parcel Post tracking PP123",
+    )
 
 
 def test_a_product_running_low_tells_the_staff(

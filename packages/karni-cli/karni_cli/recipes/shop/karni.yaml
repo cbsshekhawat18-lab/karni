@@ -9,7 +9,7 @@ modules:
     provider: stripe
     currency: usd
     checkout_validator: karni_commerce.payments.checkout_validator
-  commerce: {}
+  commerce: {hold_minutes: 30}
 features:
   email_code_login: true
   terms: {version: "2026-01", url: /terms, required: true, paths: [/api/carts/current/checkout/]}

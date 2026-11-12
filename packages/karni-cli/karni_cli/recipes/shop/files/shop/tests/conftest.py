@@ -56,7 +56,7 @@ def make_product(db: None) -> Callable[..., Product]:
 
 
 def put(client: Any, product: Product, quantity: int, token: str | None = None) -> Any:
-    """Set ``quantity`` of ``product`` in the cart ``client`` holds (or ``token`` names)."""
+    """Set ``quantity`` of ``product`` in the cart of ``client`` (or of ``token``)."""
     headers = {"HTTP_X_CART_TOKEN": token} if token else {}
     body = {"kind": "product", "item": str(product.pk), "quantity": quantity}
     return client.post("/api/carts/current/lines/", body, format="json", **headers)

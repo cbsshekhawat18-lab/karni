@@ -1,4 +1,4 @@
-"""The shop's API per role: a visitor, a customer, another customer, staff, a manager."""
+"""The shop's API per role: a visitor, customers, staff and a manager."""
 
 from __future__ import annotations
 
@@ -86,10 +86,17 @@ def test_customers_change_no_order_product_or_parcel(
     order = pay(place(cart_with((make_product(), 1)), user=mira, email=mira.email))
     client = client_as(user=mira)
     lamp = make_product()
-    assert client.patch(f"/api/products/{lamp.slug}/", {"price": "1.00"}, format="json").status_code == 403
+    assert (
+        client.patch(
+            f"/api/products/{lamp.slug}/", {"price": "1.00"}, format="json"
+        ).status_code
+        == 403
+    )
     assert client.post(f"/api/orders/{order.pk}/cancel/").status_code in (403, 404)
     parcel = Shipment.objects.get(order=order)
-    assert client.post(f"/api/shipments/{parcel.pk}/ship/", {"tracking_number": "X"}, format="json").status_code in (403, 404)
+    assert client.post(
+        f"/api/shipments/{parcel.pk}/ship/", {"tracking_number": "X"}, format="json"
+    ).status_code in (403, 404)
 
 
 def test_staff_send_parcels_and_cancel_but_do_not_refund(
@@ -108,7 +115,9 @@ def test_staff_send_parcels_and_cancel_but_do_not_refund(
     )
     assert sent.status_code == 200, sent.content
     assert sent.json()["status"] == "shipped"
-    refund = staff.post(f"/api/orders/{order.pk}/refund/", {"amount": "1.00"}, format="json")
+    refund = staff.post(
+        f"/api/orders/{order.pk}/refund/", {"amount": "1.00"}, format="json"
+    )
     assert refund.status_code == 403
     other = pay(place(cart_with((make_product(), 1))))
     cancelled = staff.post(f"/api/orders/{other.pk}/cancel/", {}, format="json")
@@ -128,11 +137,19 @@ def test_a_manager_refunds(client_as: Any, make_product: MakeProduct) -> None:
 def test_a_visitor_sees_active_products_and_staff_see_all(
     client_as: Any, make_product: MakeProduct
 ) -> None:
-    shown, hidden = make_product(name="Shown"), make_product(name="Hidden", active=False)
-    names = {row["name"] for row in client_as(None).get("/api/products/").json()["results"]}
+    shown, hidden = (
+        make_product(name="Shown"),
+        make_product(name="Hidden", active=False),
+    )
+    names = {
+        row["name"] for row in client_as(None).get("/api/products/").json()["results"]
+    }
     assert "Shown" in names and "Hidden" not in names
     assert client_as(None).get(f"/api/products/{hidden.slug}/").status_code == 404
-    staff = {row["name"] for row in client_as("shop-staff").get("/api/products/").json()["results"]}
+    staff = {
+        row["name"]
+        for row in client_as("shop-staff").get("/api/products/").json()["results"]
+    }
     assert {shown.name, hidden.name} <= staff
 
 
@@ -142,7 +159,9 @@ def test_the_catalogue_filters_by_price_today_and_sorts_by_it(
     make_product(name="Cheap", price=Decimal("5.00"))
     make_product(name="Dear", price=Decimal("50.00"))
     visitor = client_as(None)
-    found = visitor.get("/api/products/", {"min_price": "10", "ordering": "-effective_price"})
+    found = visitor.get(
+        "/api/products/", {"min_price": "10", "ordering": "-effective_price"}
+    )
     assert [row["name"] for row in found.json()["results"]] == ["Dear"]
     assert visitor.get("/api/products/", {"min_price": "x"}).status_code == 400
 
@@ -167,7 +186,9 @@ def test_signing_in_claims_the_guest_orders_of_a_verified_email(
 ) -> None:
     order = place(cart_with((make_product(), 1)), email="mira@example.com")
     mira = user_with_roles("customer", email="mira@example.com", email_verified=True)
-    merged = client_as(user=mira).post("/api/carts/current/merge/", {"token": ""}, format="json")
+    merged = client_as(user=mira).post(
+        "/api/carts/current/merge/", {"token": ""}, format="json"
+    )
     assert merged.status_code == 200
     assert Order.objects.get(pk=order.pk).user == mira
 
