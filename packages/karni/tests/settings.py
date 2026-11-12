@@ -92,6 +92,11 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # A 120-field model with markdown sections, field groups and column sets
     # (karni.layout): viewsets mounted by its own URLconf only.
     "tests.wideapp",
+    # Family events (experimental): the outbox, a help desk that publishes and a
+    # notes app that subscribes without importing it (tests/test_family_events.py).
+    "karni.outbox",
+    "tests.deskapp",
+    "tests.notesapp",
 ]
 # tests.searchapp's models declare search, and the default router does not serve
 # them (their router is tests.searchapp.urls'), so karni.W591 is expected here.

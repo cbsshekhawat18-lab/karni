@@ -1163,6 +1163,9 @@ from karni import guard_checks as _guard_checks  # noqa: E402,F401
 from karni.db import checks as _db_checks  # noqa: E402,F401
 from karni.fields import checks as _field_checks  # noqa: E402,F401
 
+# Family events and the outbox, E451 / E455 / W450, with or without karni.outbox installed.
+from karni.outbox import checks as _outbox_checks  # noqa: E402,F401
+
 
 @checks.register(checks.Tags.models)
 def check_taxonomies(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:

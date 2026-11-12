@@ -38,6 +38,9 @@ package stays free of test-only imports:
   module's ``karni.module.toml`` parses and matches its entry point, settings
   fragment and models;
 * ``query_budget`` (:mod:`karni.testing.performance`);
+* ``capture_events``, ``deliver_now`` and ``assert_events_declared``
+  (:mod:`karni.testing.events`, experimental): family events published in a
+  block, every pending delivery run now, an app's published events declared;
 * ``create_external_tables`` (:mod:`karni.testing.external`, experimental):
   tables for external models in a test database, which the pytest plugin
   creates by itself;
@@ -54,6 +57,7 @@ if TYPE_CHECKING:
     from karni.testing.api import APITestCase, assert_crud, client_as, user_with_roles
     from karni.testing.catalog import assert_module_manifest
     from karni.testing.content import load_content
+    from karni.testing.events import assert_events_declared, capture_events, deliver_now
     from karni.testing.external import create_external_tables
     from karni.testing.hidden import assert_admin_row_hidden, assert_row_hidden
     from karni.testing.isolation import assert_isolated
@@ -65,13 +69,16 @@ __all__ = [
     "APITestCase",
     "assert_admin_row_hidden",
     "assert_crud",
+    "assert_events_declared",
     "assert_isolated",
     "assert_module_manifest",
     "assert_pages",
     "assert_row_hidden",
     "assert_schema_snapshot",
+    "capture_events",
     "client_as",
     "create_external_tables",
+    "deliver_now",
     "load_content",
     "query_budget",
     "user_with_roles",
@@ -81,13 +88,16 @@ _LAZY = {
     "APITestCase": "karni.testing.api",
     "assert_admin_row_hidden": "karni.testing.hidden",
     "assert_crud": "karni.testing.api",
+    "assert_events_declared": "karni.testing.events",
     "assert_isolated": "karni.testing.isolation",
     "assert_module_manifest": "karni.testing.catalog",
     "assert_pages": "karni.testing.pages",
     "assert_row_hidden": "karni.testing.hidden",
     "assert_schema_snapshot": "karni.testing.schema",
+    "capture_events": "karni.testing.events",
     "client_as": "karni.testing.api",
     "create_external_tables": "karni.testing.external",
+    "deliver_now": "karni.testing.events",
     "load_content": "karni.testing.content",
     "query_budget": "karni.testing.performance",
     "user_with_roles": "karni.testing.api",

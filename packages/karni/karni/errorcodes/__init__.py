@@ -32,7 +32,8 @@ tree models (``karni.tree``) · ``E49x``/``W62x`` the tree scope
 (``karni.taxonomy``) · ``E38x``/``W57x``
 aggregations (``karni.aggregation``) · ``E43x``/``W59x`` cross-model search
 (``karni.global_search``) · ``E55x`` field groups and column sets
-(``karni.layout``).
+(``karni.layout``) · ``E45x``/``W45x`` family events and the outbox
+(``karni.events``, ``karni.outbox``).
 ``SUG001`` to ``SUG099`` suggestions from code (``karni.suggestions``): what
 ``karni check`` and ``karni doctor`` print after the errors and warnings, never a
 failure. The prefix has three letters because the registry's code pattern reads
@@ -1716,6 +1717,94 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "one worker leaves the other workers serving the old response until the TTL ends.",
         "Point KARNI_API_CACHE_ALIAS at a cache every process shares (Redis, the database "
         "cache) in production, or silence karni.W580 for a single-process deployment.",
+    ),
+    # E450-E469 / W450-W459 family events and the outbox (karni.events, karni.outbox,
+    # experimental)
+    _e(
+        "E450",
+        "An event is published that is not declared",
+        "exception",
+        "karni.events.publish",
+        "A family event is an API between parts: subscribers read its declared fields and "
+        "karni check lists it. An event published without a declaration, or with a version "
+        "nobody declared, would reach subscribers with a payload no one agreed on.",
+        "Declare it in the publishing app's events.py with declare('<prefix>.<record>.<moment>', "
+        "version=1, fields={...}) before publishing it, or publish a declared version.",
+    ),
+    _e(
+        "E451",
+        "Family events need the karni.outbox app",
+        "check",
+        "karni.outbox.checks.check_event_bus; karni.events.publish; karni.events.once",
+        "Subscribers are delivered from the outbox tables, written in the publisher's "
+        "transaction. Without the app there is nowhere to write the event, so the "
+        "subscribers would never be called.",
+        "Add 'karni.outbox' to INSTALLED_APPS and run migrate.",
+    ),
+    _e(
+        "E452",
+        "An event declaration is malformed",
+        "exception",
+        "karni.events.declare",
+        "A name is <prefix>.<record>.<moment> in lower case, a version is a whole number from "
+        "1, fields are lower case names with a description each, and one part owns each "
+        "name and version.",
+        "Fix what the message names: declare('shop.order.paid', version=1, fields={'order': "
+        "'the order id', 'total': 'a decimal string'}). Declare a changed shape as the next "
+        "version, next to the old one.",
+    ),
+    _e(
+        "E453",
+        "A published event's fields do not match its declaration",
+        "exception",
+        "karni.events.publish; karni.events.once",
+        "Subscribers rely on the declared fields being there, and on plain JSON values: ids, "
+        "states and amounts, never model instances, so no subscriber depends on another "
+        "part's models.",
+        "Pass exactly the declared fields (None for a value you do not have), ids instead of "
+        "model instances (str(obj.pk)), and a person when the declaration names one.",
+    ),
+    _e(
+        "E454",
+        "A subscriber is malformed",
+        "exception",
+        "karni.events.subscribe",
+        "A delivery row names its subscriber, and every process (web, worker) finds it by "
+        "that name. A nested function or a lambda has no stable name, and two subscribers "
+        "cannot share one.",
+        "Define the subscriber at the top level of <app>/listeners.py and decorate it with "
+        "@subscribe('<event name>', version=1), or pass a distinct name='...'.",
+    ),
+    _e(
+        "E455",
+        "KARNI_EVENTS_DISPATCHER cannot be used",
+        "check",
+        "karni.outbox.checks.check_event_bus; karni.outbox.dispatch.load",
+        "After a commit, Karni calls the dispatcher with each event's id to hand it to a "
+        "worker. A path that does not import, or names something that cannot be called, "
+        "would leave every event waiting for the sweep.",
+        "Name a function taking (event_id, *, countdown=0), as 'package.module.function', or "
+        "remove the setting for the default (karni.outbox.dispatch.celery).",
+    ),
+    _e(
+        "E456",
+        "An assertion about family events failed",
+        "test",
+        "karni.testing.events (capture_events, assert_events_declared)",
+        "The test expected an event to be published with given values, or an app's published "
+        "events to be declared, and the code did otherwise.",
+        "Read the events the message lists: publish the expected event inside the action's "
+        "transaction, with the expected fields, and declare every event an app publishes.",
+    ),
+    _e(
+        "W450",
+        "A subscriber reads a version its event does not have",
+        "warning",
+        "karni.outbox.checks.check_event_bus",
+        "Subscribers name the payload version they read. When the installed publisher declares "
+        "other versions only, nothing is ever delivered to this subscriber.",
+        "Move the subscriber to a declared version (@subscribe(name, version=N)) and adapt it "
+        "to that payload, or keep the publisher publishing the old version too.",
     ),
     # E47x/E48x/W61x tooling for large projects (experimental): context slices, the
     # check cache, volume seeding, the scaling budgets and query plans
