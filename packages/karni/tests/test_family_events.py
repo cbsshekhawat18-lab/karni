@@ -353,6 +353,26 @@ def test_a_real_commit_delivers_with_eager_celery(eager: Celery) -> None:
     close(ticket, minutes=4)
     assert Note.objects.filter(ticket=str(ticket.pk)).exists()
     assert set(Delivery.objects.values_list("status", flat=True)) == {"delivered"}
+    # Outside any transaction (autocommit) the event and its deliveries land together.
+    publish("desk.ticket.closed", person="person-2", ticket="loose", minutes=0, actor=None)
+    assert Note.objects.filter(ticket="loose").exists()
+
+
+def _broken_dispatcher(event_id: str, *, countdown: float = 0) -> None:
+    raise RuntimeError("a dispatcher bug")
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_dispatcher_that_raises_never_breaks_the_publishers_commit(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    ticket = Ticket.objects.create(title="Robust", requester="p")
+    with override_settings(KARNI_EVENTS_DISPATCHER=_broken_dispatcher):
+        close(ticket, minutes=1)
+    ticket.refresh_from_db()
+    assert ticket.status == "closed"
+    assert set(Delivery.objects.values_list("status", flat=True)) == {"pending"}
+    assert "a dispatcher bug" in caplog.text
 
 
 def test_a_failing_subscriber_rolls_back_its_own_writes_only_and_is_retried(

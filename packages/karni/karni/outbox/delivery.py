@@ -36,7 +36,6 @@ import traceback
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from functools import partial
 from typing import TYPE_CHECKING, Any, Final
 
 from django.apps import apps
@@ -138,32 +137,41 @@ def store(event: Event, subscribers: Sequence[Subscriber], *, using: str | None 
 
     alias = using or router.db_for_write(OutboxEvent)
     subject = event.subject or {}
-    OutboxEvent.objects.using(alias).create(
-        id=event.id,
-        name=event.name,
-        version=event.version,
-        occurred_at=event.occurred_at,
-        subject_model=subject.get("model", ""),
-        subject_id=subject.get("id", ""),
-        person_id=event.person or "",
-        actor_id=event.actor or "",
-        request_id=event.request_id or "",
-        payload=event.payload,
-    )
+    # One unit even outside a transaction: the event never exists without its deliveries.
+    with transaction.atomic(using=alias, savepoint=False):
+        OutboxEvent.objects.using(alias).create(
+            id=event.id,
+            name=event.name,
+            version=event.version,
+            occurred_at=event.occurred_at,
+            subject_model=subject.get("model", ""),
+            subject_id=subject.get("id", ""),
+            person_id=event.person or "",
+            actor_id=event.actor or "",
+            request_id=event.request_id or "",
+            payload=event.payload,
+        )
+        if subscribers:
+            Delivery.objects.using(alias).bulk_create(
+                [
+                    Delivery(
+                        event_id=event.id,
+                        subscriber=subscriber.name,
+                        next_attempt_at=event.occurred_at,
+                        created_at=event.occurred_at,
+                    )
+                    for subscriber in subscribers
+                ]
+            )
     if not subscribers:
         return
-    Delivery.objects.using(alias).bulk_create(
-        [
-            Delivery(
-                event_id=event.id,
-                subscriber=subscriber.name,
-                next_attempt_at=event.occurred_at,
-                created_at=event.occurred_at,
-            )
-            for subscriber in subscribers
-        ]
-    )
-    transaction.on_commit(partial(dispatch, event.id), using=alias, robust=True)
+    event_id = event.id
+
+    def send_after_commit() -> None:
+        dispatch(event_id)
+
+    # robust: a dispatcher that raises is logged and never fails the publisher's commit.
+    transaction.on_commit(send_after_commit, using=alias, robust=True)
 
 
 def dispatch(event_id: str, *, countdown: float = 0) -> None:
