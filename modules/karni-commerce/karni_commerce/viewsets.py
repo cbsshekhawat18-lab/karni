@@ -189,6 +189,12 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
 
     model = Order
     access = Access(read=Owned("user") | Granted(), write=Granted())
+    query_budget = Budget(
+        cancel=40,
+        refund=40,
+        reason="cancelling and refunding run each line's adapter and the selling apps' "
+        "listeners (a parcel cancelled, stock back on the shelf): a few queries per line",
+    )
     filterset_fields = ["status", "currency", "user", "needs_shipping"]
     search_fields = ["reference", "email", "name"]
     ordering_fields = ["number", "created_at", "total", "status", "paid_at"]

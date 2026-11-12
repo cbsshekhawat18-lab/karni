@@ -3,44 +3,38 @@
 Receive one in ``<app>/listeners.py`` (Karni imports it at startup)::
 
     from django.dispatch import receiver
-    from shop.events import order_placed
+    from shop.events import shipment_shipped
 
 
-    @receiver(order_placed)
-    def welcome_first_order(sender, order, **kwargs):
+    @receiver(shipment_shipped)
+    def tell_the_courier(sender, shipment, **kwargs):
         ...
 
-Besides these:
+The orders themselves are karni-commerce's: ``karni_commerce.events`` sends
+``order_placed``, ``order_paid``, ``order_cancelled`` and ``order_refunded``.
+A payment or a refund that changes is ``karni_payments.events``.
 
-* an order's status moves (paid, shipped, delivered, failed, cancelled,
-  refunded) are Karni's own lifecycle events:
-  ``@on_transition(Order, "status", to="shipped")`` from ``karni.events``, or
-  ``karni.lifecycle.state_changed``;
-* a payment or a refund that changes is ``karni_payments.events``;
-* a row created, changed or deleted (an address, a product) is
-  ``on_created``, ``on_updated`` and ``on_deleted`` of ``karni.events``.
-
-Each signal is sent inside the transaction that made the change: a receiver
-that raises undoes it. For work that should wait for the commit (an email, a
-call to another system), use ``transaction.on_commit`` in the receiver.
+Each signal is sent inside the transaction that made the change: a receiver that
+raises undoes it. For work that waits for the commit (an email, a call to another
+system), use ``transaction.on_commit`` in the receiver. :data:`EVENTS` names each
+signal as the family events do (``shop.shipment.shipped``).
 """
 
 from django.dispatch import Signal
 
-#: A customer or a guest placed an order (it waits for its payment): ``order``.
-order_placed = Signal()
+#: An order's parcel left: ``shipment`` (its order, carrier and tracking number).
+shipment_shipped = Signal()
 
-#: Stock moved for an order: ``product``, ``quantity``, ``order`` and ``reason``:
-#: ``reserved`` (checkout holds it), ``released`` (the order did not get paid),
-#: ``taken`` (the order is paid) or ``returned`` (a paid order was cancelled or refunded).
-stock_changed = Signal()
+#: An order's parcel arrived: ``shipment``.
+shipment_delivered = Signal()
 
-#: A product's stock fell to its low-stock level or below after an order took it: ``product``.
-stock_low = Signal()
+#: A product's stock that no order holds fell to the low-stock level or below after an
+#: order took it: ``product``.
+product_low_stock = Signal()
 
-#: A visitor's cart joined the cart of the customer who signed in: ``cart``, ``user``.
-cart_merged = Signal()
-
-#: A customer who signed in got the orders they placed as a guest with their email:
-#: ``user``, ``orders``.
-customer_orders_claimed = Signal()
+#: The family event name of each signal.
+EVENTS = {
+    "shop.shipment.shipped": shipment_shipped,
+    "shop.shipment.delivered": shipment_delivered,
+    "shop.product.low_stock": product_low_stock,
+}

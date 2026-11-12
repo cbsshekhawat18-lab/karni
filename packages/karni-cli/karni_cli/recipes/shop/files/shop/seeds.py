@@ -5,9 +5,16 @@ The categories, products, prices, people and addresses are invented. Replace CAT
 with your own, or load real rows with an import. Every picture is drawn
 (karni.seeding.placeholder_image): the same seed gives the same shop.
 
-Demo logins (password karni-password): demo@example.com (every permission),
-staff@example.com (orders and the catalogue) and customer@example.com (a customer with
-orders in every state).
+Orders are placed through karni-commerce, as a shopper's would be: each holds its
+stock, a paid one takes it and gets its parcel, and the demo shows every money state
+(waiting, paid, failed, cancelled, refunded) and every parcel state (processing,
+shipped, delivered). Payments are the test provider's, made on the spot, and no email
+goes out while the demo is made (karni.mail.silenced).
+
+Demo logins (password karni-password): demo@example.com (admin, every permission),
+manager@example.com (the whole shop, refunds included), staff@example.com (orders,
+parcels and the catalogue) and customer@example.com (a customer with orders in every
+state).
 """
 
 from __future__ import annotations
@@ -20,17 +27,17 @@ from typing import Any
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from karni.accounts.permissions import assign_role
-from karni.lifecycle import any_initial_state
-from karni.seeding import SeedContext, cycled, placeholder_image
+from karni.mail import silenced
+from karni.seeding import SeedContext, Seeder, cycled, placeholder_image
 from karni.testing.factories import DEFAULT_PASSWORD
+from karni_commerce import services as commerce
+from karni_commerce.models import Order, OrderLine, OrderPayment, OrderRefund
 from karni_payments.models import Payment, Refund
 from rest_framework.exceptions import ValidationError
 from shop.karni import seeds as karni
 
-from shop import services
-from shop.models import Category, Order, OrderItem, Product, Tag, new_key
+from shop.models import Category, Product, Shipment, Tag
 
-# top category -> its child categories -> (product name, price, short description).
 CATALOG: dict[str, dict[str, list[tuple[str, str, str]]]] = {
     "Kitchen": {
         "Cookware": [
@@ -47,7 +54,10 @@ CATALOG: dict[str, dict[str, list[tuple[str, str, str]]]] = {
             (
                 "Stoneware Mixing Bowl",
                 "28.50",
-                "A glazed stoneware bowl that holds two litres and stands steady on the counter.",
+                (
+                    "A glazed stoneware bowl that holds two litres and stands steady "
+                    "on the counter."
+                ),
             ),
             (
                 "Beech Wood Chopping Board",
@@ -120,7 +130,10 @@ CATALOG: dict[str, dict[str, list[tuple[str, str, str]]]] = {
             (
                 "Wildflower Seed Mix, 500 g",
                 "12.00",
-                "A blend of native meadow flowers that covers about twenty square metres.",
+                (
+                    "A blend of native meadow flowers that covers about twenty square "
+                    "metres."
+                ),
             ),
         ],
     },
@@ -156,7 +169,10 @@ CATALOG: dict[str, dict[str, list[tuple[str, str, str]]]] = {
             (
                 "Linen-Bound Sketchbook",
                 "15.50",
-                "A sewn sketchbook with heavy cartridge paper that takes pencil and wash.",
+                (
+                    "A sewn sketchbook with heavy cartridge paper that takes pencil "
+                    "and wash."
+                ),
             ),
             (
                 "Pencil Case in Waxed Canvas",
@@ -197,7 +213,10 @@ CATALOG: dict[str, dict[str, list[tuple[str, str, str]]]] = {
             (
                 "Cotton Tote Bag",
                 "14.00",
-                "A tote with a flat base and long handles that fits a week of shopping.",
+                (
+                    "A tote with a flat base and long handles that fits a week of "
+                    "shopping."
+                ),
             ),
             (
                 "Crossbody Satchel",
@@ -275,37 +294,46 @@ TAGS = [
     "Classic",
 ]
 
-#: The people of the demo: (email, first name, last name, city, postcode, country, role).
+#: The people of the demo: (email, first name, last name, city, postcode, country,
+#: role).
 PEOPLE = [
     ("customer@example.com", "Mira", "Okafor", "Lisbon", "1100-148", "PT", "customer"),
-    ("staff@example.com", "Theo", "Lindqvist", "Malmo", "211 22", "SE", "staff"),
+    ("staff@example.com", "Theo", "Lindqvist", "Malmo", "211 22", "SE", "shop-staff"),
+    ("manager@example.com", "Iris", "Bauer", "Bremen", "28195", "DE", "shop-manager"),
     ("ana.rios@example.com", "Ana", "Rios", "Valencia", "46001", "ES", "customer"),
     ("jon.mbeki@example.com", "Jon", "Mbeki", "Leeds", "LS1 4AP", "GB", "customer"),
     ("lena.vogt@example.com", "Lena", "Vogt", "Graz", "8010", "AT", "customer"),
     ("sam.ito@example.com", "Sam", "Ito", "Osaka", "530-0001", "JP", "customer"),
 ]
 
-#: Order states the demo shows, in order: every state a customer or staff can meet.
-STATES = [
+#: What happens to each demo order, in turn: its money and its parcel.
+STORIES = [
     "delivered",
     "shipped",
     "processing",
-    "paid",
     "pending",
+    "delivered",
     "failed",
     "cancelled",
     "refunded",
+    "part_refunded",
+    "shipped",
+    "processing",
+    "delivered",
 ]
+
+#: Where a seeded payment says it came from (karni seed --reset removes these).
+SEED_SESSION = "seed_cs_"
 
 
 def anchor(context: SeedContext) -> datetime:
-    """The moment the seed's dates count from (the start of today, or the seed's ``now``)."""
+    """The moment the seed's dates count from (today, or the seed's ``now``)."""
     found = getattr(context.run, "anchor", None)
     return found if isinstance(found, datetime) else timezone.now()
 
 
 def people() -> list[Any]:
-    """The demo's people, each with their role (made once, found again on the next run)."""
+    """The demo's people with their roles (made once, found again on the next run)."""
     model = get_user_model()
     found = []
     for email, first, last, *_rest, role in PEOPLE:
@@ -321,7 +349,7 @@ def people() -> list[Any]:
         found.append(user)
     demo = model.objects.filter(email="demo@example.com").first()
     if demo is not None:
-        assign_role(demo, "manager")
+        assign_role(demo, "admin")
     return found
 
 
@@ -350,7 +378,7 @@ def address_of(user: Any) -> dict[str, str]:
 
 
 class CategorySeeder(karni.CategorySeeder):
-    """Five top categories, each with its child categories, each with a drawn picture."""
+    """Five top categories, each with its child categories and a drawn picture."""
 
     def seed(self, context: SeedContext) -> list[Any]:
         rows: list[Any] = []
@@ -392,7 +420,8 @@ def _catalogue() -> list[tuple[Category, Category, tuple[str, str, str]]]:
 
 
 class ProductSeeder(karni.ProductSeeder):
-    """Products in their categories: some on sale, some low or out of stock, a few featured."""
+    """Products in their categories: some on sale, some low or out of stock, a few
+    featured, one not for sale."""
 
     def seed(self, context: SeedContext) -> list[Any]:
         catalogue = _catalogue()
@@ -401,7 +430,7 @@ class ProductSeeder(karni.ProductSeeder):
         rows: list[Any] = []
         for number in range(context.count):
             if not catalogue:
-                rows += context.create(1, reserved=0)
+                rows += context.create(1)
                 continue
             top, child, (name, price, short) = catalogue[number % len(catalogue)]
             name = cycled([name], number // len(catalogue))
@@ -410,13 +439,12 @@ class ProductSeeder(karni.ProductSeeder):
                 "name": name,
                 "sku": f"{top.name[:3].upper()}-{number + 1:03d}",
                 "short_description": short,
-                "description": f"{short}\n\nMade to last, and sent in recycled packaging.",
+                "description": f"{short}\n\nMade to last, sent in recycled packaging.",
                 "price": regular,
                 "sale_price": None,
                 "sale_starts": None,
                 "sale_ends": None,
                 "stock": [24, 12, 40, 3, 0, 18, 7, 30][number % 8],
-                "reserved": 0,
                 "active": number % 13 != 12,
                 "featured": number % 5 == 0,
                 "image": placeholder_image(name, key=top.name),
@@ -465,154 +493,147 @@ class ProductImageSeeder(karni.ProductImageSeeder):
         return rows
 
 
-class AddressSeeder(karni.AddressSeeder):
-    """Each customer's home address, and a second one for some (work, a friend's)."""
+class OrderSeeder(Seeder):
+    """Orders come with the parcels (ShipmentSeeder runs after the products exist)."""
 
-    def seed(self, context: SeedContext) -> list[Any]:
-        found = customers()
-        rows: list[Any] = []
-        for number in range(context.count):
-            user = found[number % len(found)]
-            home = address_of(user)
-            first = number < len(found)
-            if not first:
-                home["line1"] = f"{number * 11} Market Lane"
-                home["company"] = "Studio North"
-            rows += context.create(1, customer=user, is_default=first, **home)
-        return rows
+    class Meta:
+        model = Order
+        count = 0
 
 
-class OrderSeeder(karni.OrderSeeder):
-    """Orders in every state, by customers and guests, over the last weeks.
-
-    Their lines, totals and payments come with OrderItemSeeder, which runs once the
-    products exist.
-    """
-
-    def seed(self, context: SeedContext) -> list[Any]:
-        found = customers()
-        rows: list[Any] = []
-        now = anchor(context)
-        # The payments of a seed before this one (karni seed --reset wipes the orders
-        # only).
-        Refund.objects.filter(
-            payment__checkout_session_id__startswith="seed_cs_"
-        ).hard_delete()
-        Payment.objects.filter(checkout_session_id__startswith="seed_cs_").hard_delete()
-        for number in range(context.count):
-            state = STATES[number % len(STATES)]
-            guest = number % 9 == 8
-            customer = None if guest else found[number % len(found)]
-            email = f"guest{number}@example.com" if guest else customer.email
-            address = address_of(found[number % len(found)])
-            placed = now - timedelta(
-                days=(context.count - number) // 2, hours=number % 7
-            )
-            if state == "pending":
-                placed = now - timedelta(minutes=5)
-            with any_initial_state("demo orders start in every state"):
-                [order] = context.create(
-                    1,
-                    number=1001 + number,
-                    customer=customer,
-                    email=email,
-                    status=state,
-                    subtotal=Decimal("0.00"),
-                    total=Decimal("0.00"),
-                    billing=address,
-                    shipping=address,
-                    note="Please leave it with the neighbour."
-                    if number % 5 == 0
-                    else "",
-                    payment=None,
-                    paid_at=None if state in ("pending", "failed") else placed,
-                    # a demo order waiting for its payment keeps its stock for two days
-                    reserved_until=now + timedelta(days=2)
-                    if state == "pending"
-                    else None,
-                    key=new_key(),
-                )
-            this = Order.objects.filter(pk=order.pk)
-            when = {"created_at": placed}
-            this.update(**when)  # karni: allow(audited-bulk-write): demo data
-            rows.append(order)
-        return rows
+def _forget_the_last_demo() -> None:
+    """karni seed --reset: the orders, payments and refunds of the last demo go."""
+    for model in (OrderRefund, OrderPayment, OrderLine, Order):
+        model.objects.without("soft_delete", reason="a new demo").all().hard_delete()
+    seeded = Payment.objects.filter(checkout_session_id__startswith=SEED_SESSION)
+    Refund.objects.filter(payment__in=seeded).hard_delete()
+    seeded.hard_delete()
 
 
-class OrderItemSeeder(karni.OrderItemSeeder):
-    """One to three lines per order at their product's price, then each order's totals,
-    its
-    payment and, for a cancelled or refunded order, its refund. A pending order holds
-    its stock.
-    """
-
-    def seed(self, context: SeedContext) -> list[Any]:
-        orders = list(Order.objects.order_by("number"))
-        products = list(Product.objects.filter(active=True).order_by("sku"))
-        if not orders or not products:
-            return []
-        rows: list[Any] = []
-        for number, order in enumerate(orders):
-            left = context.count - len(rows)
-            wanted = min(
-                1 + number % 3, max(left - (len(orders) - number - 1), 1), left
-            )
-            for k in range(wanted):
-                product = products[(number * 3 + k) % len(products)]
-                line = OrderItem.from_product(order, product, k + 1)
-                values = {
-                    name: getattr(line, name)
-                    for name in (
-                        "product",
-                        "name",
-                        "sku",
-                        "quantity",
-                        "unit_price",
-                        "line_total",
-                    )
-                }
-                rows += context.create(1, order=order, **values)
-            total = order.items_total()
-            payment = payment_for(
-                order, total, uuid.UUID(int=context.random.getrandbits(128))
-            )
-            this = Order.objects.filter(pk=order.pk)
-            # the history keeps the status only (audit: [status]): nothing is lost here
-            money = {"subtotal": total, "total": total, "payment": payment}
-            this.update(**money)  # karni: allow(audited-bulk-write): demo data
-            if order.status == "pending":
-                order.refresh_from_db()
-                try:
-                    services.reserve(order)
-                except ValidationError:
-                    pass  # sold out since: the demo order simply holds nothing
-        return rows
-
-
-def payment_for(order: Order, total: Decimal, pk: uuid.UUID) -> Payment:
-    """The order's payment as the test provider would have left it."""
-    status = {
-        "pending": Payment.Status.PENDING,
-        "failed": Payment.Status.FAILED,
-        "cancelled": Payment.Status.REFUNDED,
-        "refunded": Payment.Status.REFUNDED,
-    }.get(order.status, Payment.Status.SUCCEEDED)
+def _pay(order: Order, ok: bool = True) -> Payment:
+    """The order's payment, as the provider would report it."""
     payment = Payment.objects.create(
-        id=pk,
-        user=order.customer,
-        amount=total,
-        currency="usd",
+        id=uuid.UUID(int=order.number),
+        user=order.user,
+        amount=order.balance,
+        currency=order.currency.lower(),
         provider="test",
-        status=status,
-        checkout_session_id=f"seed_cs_{order.number}",
-        metadata={"order": str(order.pk), "number": order.number},
+        status=Payment.Status.SUCCEEDED if ok else Payment.Status.FAILED,
+        checkout_session_id=f"{SEED_SESSION}{order.number}",
+        metadata={"commerce_order": str(order.pk), "number": order.number},
     )
-    if order.status in ("refunded", "cancelled"):
-        Refund.objects.create(
-            id=uuid.UUID(int=pk.int ^ 1),
-            payment=payment,
-            amount=total,
-            status=Refund.Status.SUCCEEDED,
-            reason=f"order {order.number} {order.status}",
-        )
+    OrderPayment.objects.create(
+        order=order, payment=payment, currency=order.currency, amount=order.balance
+    )
+    commerce.settle(payment)
+    order.refresh_from_db()
     return payment
+
+
+def _refund(order: Order, payment: Payment, *, full: bool) -> None:
+    """A refund the provider confirmed: all of it, or the first line back in stock."""
+    first = order.lines.order_by("position").first()
+    amount = order.amount_paid if full or first is None else first.unit_price
+    refund = Refund.objects.create(
+        payment=payment,
+        amount=amount,
+        status=Refund.Status.SUCCEEDED,
+        reason="damaged in transit" if not full else "changed their mind",
+    )
+    lines = {} if full or first is None else {str(first.pk): 1}
+    OrderRefund.objects.create(
+        order=order,
+        refund=refund,
+        currency=order.currency,
+        amount=amount,
+        lines=lines,
+        restock=not full,
+        reason=refund.reason,
+    )
+    commerce.settle_refund(refund)
+    Payment.objects.filter(pk=payment.pk).update(
+        status=Payment.Status.REFUNDED if full else Payment.Status.PARTIALLY_REFUNDED
+    )
+
+
+class ShipmentSeeder(karni.ShipmentSeeder):
+    """The demo's orders, placed through karni-commerce, and their parcels.
+
+    ``seed: {Shipment: n}`` in karni.yaml is how many orders to place. Each paid one
+    gets its parcel, which then moves to shipped or delivered as its story says.
+    """
+
+    class Meta(karni.ShipmentSeeder.Meta):
+        after = ("shop.Product",)  # the orders buy the products, seeded first
+
+    def seed(self, context: SeedContext) -> list[Any]:
+        _forget_the_last_demo()
+        buyers = customers()
+        products = list(
+            Product.objects.filter(active=True, stock__gt=0).order_by("sku")
+        )
+        if not products or not buyers:
+            return []
+        now = anchor(context)
+        with silenced():
+            for number in range(context.count):
+                self.story(context, number, buyers, products, now)
+        return list(Shipment.objects.order_by("created_at"))
+
+    def story(
+        self,
+        context: SeedContext,
+        number: int,
+        buyers: list[Any],
+        products: list[Product],
+        now: datetime,
+    ) -> None:
+        story = STORIES[number % len(STORIES)]
+        guest = number % 9 == 8
+        buyer = buyers[number % len(buyers)]
+        lines = [
+            ("product", str(products[(number * 3 + k) % len(products)].pk), k + 1, {})
+            for k in range(1 + number % 3)
+        ]
+        try:
+            order = commerce.place_order(
+                lines,
+                user=None if guest else buyer,
+                email=f"guest{number}@example.com" if guest else buyer.email,
+                name=address_of(buyer)["name"],
+                billing=address_of(buyer),
+                shipping=address_of(buyer),
+                note="Please leave it with the neighbour." if number % 5 == 0 else "",
+            )
+        except ValidationError:
+            return  # sold out since: this story is skipped
+        placed = now - timedelta(days=(context.count - number) // 2, hours=number % 7)
+        this = Order.objects.filter(pk=order.pk)
+        if story == "pending":
+            # a demo order waiting for its payment keeps its stock for two days
+            held = {"hold_until": now + timedelta(days=2)}
+            this.update(**held)  # karni: allow(audited-bulk-write): demo data
+            placed = now - timedelta(minutes=5)
+        elif story == "cancelled":
+            commerce.cancel(order, "the customer changed their mind")
+        else:
+            payment = _pay(order, ok=story != "failed")
+            if story in ("refunded", "part_refunded"):
+                _refund(order, payment, full=story == "refunded")
+        shipment = Shipment.objects.filter(order=order).first()
+        if shipment is not None and story in ("shipped", "delivered", "part_refunded"):
+            shipment.transition(
+                "status",
+                "shipped",
+                carrier="Parcel Post",
+                tracking_number=f"PP{order.number}{number:03d}",
+            )
+            if story == "delivered":
+                shipment.transition("status", "delivered")
+        elif shipment is not None and story == "refunded":
+            shipment.transition("status", "cancelled")  # refunded before it was sent
+        when = {"created_at": placed}
+        this.update(**when)  # karni: allow(audited-bulk-write): demo data
+        parcels = Shipment.objects.filter(order=order)
+        later = {"created_at": placed + timedelta(hours=1)}
+        parcels.update(**later)  # karni: allow(audited-bulk-write): demo data

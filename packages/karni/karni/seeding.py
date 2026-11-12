@@ -171,13 +171,17 @@ class Seeder:
     """Per-model seed settings and field overrides, discovered from ``<app>/seeds.py``.
 
     ``Meta.model`` names the model; ``Meta.count`` pins its rows per run
-    (``None`` = ``--count``, ``0`` = skip it). Any other class attribute is a
-    field override. Override :meth:`seed` for full control.
+    (``None`` = ``--count``, ``0`` = skip it); ``Meta.after`` names models
+    (``"app.Model"`` or classes) whose rows :meth:`seed` reads, so they are
+    seeded first when the run seeds them too, though no foreign key says so.
+    Any other class attribute is a field override. Override :meth:`seed` for
+    full control.
     """
 
     class Meta:
         model: Any = None
         count: int | None = None
+        after: tuple[Any, ...] = ()
 
     @classmethod
     def target(cls) -> type[models.Model] | None:
@@ -363,8 +367,15 @@ def _wipe(model: type[models.Model]) -> None:
     rows.all().delete()
 
 
+def _after(model: type[models.Model]) -> set[Any]:
+    """The models ``model``'s seeder reads (``Meta.after``): seeded first when the run has them."""
+    seeder_class = seeders().get(model)
+    names = getattr(getattr(seeder_class, "Meta", None), "after", ()) or ()
+    return {_resolve(name) for name in names}
+
+
 def _edges(model: type[models.Model], members: set[Any], *, hard_only: bool) -> set[Any]:
-    found: set[Any] = set()
+    found: set[Any] = _after(model) & (members - {model})
     for relation in model._meta.concrete_fields:
         target = relation.related_model
         if relation.is_relation and target in members and target is not model:

@@ -202,6 +202,7 @@ with how long it takes.
 | Need | Do |
 |---|---|
 | A model never seeded | `class Meta: count = 0` in its seeder |
+| A seeder that reads another model's rows with no foreign key to it | `class Meta: after = ("shop.Product",)`: those models are seeded first when the run seeds them too |
 | Different values for one field | A class attribute on the seeder |
 | A fixed list of names that never runs out | `karni.seeding.cycled(names, index)`: the names in order, then `Name 2`, `Name 3`. `suffix=` changes the tag |
 | Different inference everywhere | Subclass `karni.testing.values.ValueInference`, change its `rules`, and pass it to the builder |

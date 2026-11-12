@@ -1,5 +1,4 @@
-"""The shop's reactions: a payment moves its order, and an order's status moves its
-stock.
+"""The shop's reactions: a paid order gets a parcel, and a parcel's moves send mail.
 
 Karni imports this module at startup (``karni.events`` autodiscovery).
 """
@@ -11,56 +10,52 @@ from typing import Any
 from django.db import transaction
 from django.dispatch import receiver
 from karni.events import on_transition
-from karni.mail import send_templated
-from karni_payments.events import payment_status_changed
-from karni_payments.models import Payment
+from karni_commerce.events import order_cancelled, order_paid
+from karni_commerce.models import Order
 
-from shop import services
-from shop.models import Order
-
-
-@receiver(payment_status_changed)
-def move_the_order(sender: Any, payment: Payment, **kwargs: Any) -> None:
-    """The provider settled the payment: its order is paid, or failed."""
-    services.settle(payment)
+from shop import events, messages, services
+from shop.models import Product, Shipment
 
 
-@on_transition(Order, "status", to="paid")
-def take_the_stock(order: Order) -> None:
-    """A paid order takes its items off the shelf, and the customer gets the confirmation."""
-    services.take(order)
-    transaction.on_commit(lambda: send_confirmation(order.pk))
+@receiver(order_paid)
+def prepare_the_parcel(sender: Any, order: Order, **kwargs: Any) -> None:
+    """A paid order with products waits to be sent."""
+    services.open_shipment(order)
 
 
-@on_transition(Order, "status", to=["failed", "cancelled"], source="pending")
-def release_the_stock(order: Order) -> None:
-    """An order that was never paid lets go of the stock it held."""
-    services.release(order)
+@receiver(order_cancelled)
+def stop_the_parcel(sender: Any, order: Order, **kwargs: Any) -> None:
+    """A cancelled order's parcel is not sent."""
+    services.cancel_shipment(order)
 
 
-@on_transition(
-    Order, "status", to=["cancelled", "refunded"], source=list(services.STOCK_TAKEN)
-)
-def return_the_stock(order: Order) -> None:
-    """A paid order that is cancelled or refunded puts its items back and refunds the payment."""
-    services.restock(order)
-    payment = order.payment
-    transaction.on_commit(
-        lambda: services.refund(payment, f"order {order.number} {order.status}")
-    )
+@on_transition(Shipment, "status", to="shipped")
+def tell_the_buyer_it_left(shipment: Shipment) -> None:
+    events.shipment_shipped.send(sender=Shipment, shipment=shipment)
+    pk = shipment.pk
+    transaction.on_commit(lambda: _send(pk, messages.shipment_shipped))
 
 
-def send_confirmation(order_pk: Any) -> None:
-    """The order confirmation: the lines, the totals and the addresses (shop/email/order_paid)."""
-    order = Order.objects.filter(pk=order_pk).first()
-    if order is None:
-        return
-    send_templated(
-        "shop/email/order_paid",
-        to=[order.email],
-        context={
-            "order": order,
-            "lines": order.lines(),
-            "link": services.order_link(order),
-        },
-    )
+@on_transition(Shipment, "status", to="delivered")
+def tell_the_buyer_it_arrived(shipment: Shipment) -> None:
+    events.shipment_delivered.send(sender=Shipment, shipment=shipment)
+    pk = shipment.pk
+    transaction.on_commit(lambda: _send(pk, messages.shipment_delivered))
+
+
+@receiver(events.product_low_stock)
+def tell_the_staff_it_runs_low(sender: Any, product: Product, **kwargs: Any) -> None:
+    pk = product.pk
+
+    def send() -> None:
+        found = Product.objects.filter(pk=pk).first()
+        if found is not None:
+            messages.low_stock(found)
+
+    transaction.on_commit(send)
+
+
+def _send(pk: Any, send: Any) -> None:
+    shipment = Shipment.objects.select_related("order").filter(pk=pk).first()
+    if shipment is not None:
+        send(shipment)

@@ -1,0 +1,5 @@
+{% if order.name %}Hello {{ order.name }},{% else %}Hello,{% endif %}
+
+Your parcel for order {{ order.number }} was delivered. We hope you enjoy it.
+
+See your order: {{ link }}

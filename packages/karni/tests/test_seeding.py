@@ -398,3 +398,19 @@ def test_cycled_takes_its_own_suffix_and_refuses_an_empty_list() -> None:
     assert cycled(["Oak"], 1, suffix="{name} (batch {round})") == "Oak (batch 2)"
     with pytest.raises(ValueError):
         cycled([], 0)
+
+
+def test_a_seeder_names_the_models_it_reads_and_they_come_first(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from karni import seeding
+
+    class NovelSeeder(Seeder):
+        class Meta:
+            model = Novel
+            after = ("testapp.Venue",)
+
+    assert seed_plan([Novel, Venue]) == [Novel, Venue]  # no relation: by label
+    monkeypatch.setattr(seeding, "seeders", lambda: {Novel: NovelSeeder})
+    assert seed_plan([Novel, Venue]) == [Venue, Novel]
+    assert seed_plan([Novel]) == [Novel]  # a model the run does not seed is not waited for
