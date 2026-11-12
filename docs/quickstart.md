@@ -128,11 +128,11 @@ cd frontend && npm install && cd ..
 karni check
 ```
 
-`npm install` works on npm 10.8 or later, the npm that Node 20.19 and Node 22
-bundle, and on npm 11. It installs the versions `frontend/package-lock.json`
-pins. The lock leaves out `@karni/ui`, which npm resolves and adds, so commit
-the lock it writes. `karni doctor` shows your Node and npm and flags either
-one when it is too old.
+`npm install` works on npm 10.8 or later: npm 10, which Node 20.19 and Node
+22 bundle, and npm 11, which Node 24 bundles. It installs the versions
+`frontend/package-lock.json` pins. The lock leaves out `@karni/ui`, which npm
+resolves and adds, so commit the lock it writes. `karni doctor` shows your
+Node and npm and flags either one when it is too old.
 
 The project's `frontend/package.json` declares the Node and npm it needs in
 `engines`, and `frontend/.npmrc` sets `engine-strict`, so an older Node or npm
