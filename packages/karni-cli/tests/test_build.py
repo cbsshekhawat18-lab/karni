@@ -352,6 +352,28 @@ def test_a_feature_turned_on_is_planned_and_written_to_the_settings_block(copy: 
     assert again.output == "No changes: the project matches karni.yaml.\n"
 
 
+def test_a_relation_to_people_turns_the_contract_on_and_migrates(copy: Path) -> None:
+    """``fk:people.Person`` (experimental): KARNI_PEOPLE, the app's tables, and no drift."""
+    _edit(
+        copy / "karni.yaml",
+        (
+            '          note: "text?"\n',
+            '          note: "text?"\n          guest: "fk:people.Person?"\n',
+        ),
+    )
+    code, out = _build()
+    assert code == 0, out
+    text = (copy / "config" / "settings.py").read_text()
+    block = text[text.index("# karni:spec start") : text.index("# karni:spec end")]
+    assert "KARNI_PEOPLE = True" in block
+    models = "".join(path.read_text() for path in copy.glob("*/karni/models.py"))
+    assert '"people.Person"' in models
+    tables = {row[0] for row in _rows(copy, "SELECT name FROM sqlite_master WHERE type='table'")}
+    assert {"people_person", "people_organisation"} <= tables
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n"
+
+
 def test_navigation_is_written_to_the_settings_block_and_reads_back(copy: Path) -> None:
     """The menu (experimental): planned, written as KARNI_NAVIGATION, exported as the spec."""
     spec = copy / "karni.yaml"

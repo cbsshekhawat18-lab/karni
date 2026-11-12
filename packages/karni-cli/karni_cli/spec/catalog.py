@@ -28,6 +28,8 @@ if TYPE_CHECKING:
     from karni.catalog import Ask, Manifest
 
 __all__ = [
+    "CONTRACT_MODELS",
+    "CONTRACT_SETTINGS",
     "DEFAULT_CACHE_TTL",
     "FEATURES",
     "MODULES",
@@ -45,6 +47,13 @@ __all__ = [
 USER_MODEL: Final = "karni_accounts.User"
 #: Experimental. Models a relation may target that are neither entities nor a module's.
 OTHER_MODELS: Final = frozenset({"auth.Group", "contenttypes.ContentType"})
+#: Experimental. The core contracts a relation may target, by app label: their models. A
+#: relation to one (``fk:people.Person``) makes the build turn the contract on.
+CONTRACT_MODELS: Final[dict[str, tuple[str, ...]]] = {
+    "people": ("Person", "Organisation", "Membership", "Address"),
+}
+#: Experimental. The setting that installs each contract (``karni.conf`` reads it).
+CONTRACT_SETTINGS: Final[dict[str, str]] = {"people": "KARNI_PEOPLE"}
 
 
 @dataclass(frozen=True)

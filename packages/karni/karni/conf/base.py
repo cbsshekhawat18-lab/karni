@@ -373,6 +373,8 @@ BASE: dict[str, Any] = {
     "KARNI_PEOPLE_API": True,
     # Models ("app_label.Model") a merge leaves alone: their rows keep the merged record.
     "KARNI_PEOPLE_MERGE_SKIP": [],
+    # Import every installed app's people.py (its person facts, merge and erase hooks).
+    "KARNI_PEOPLE_AUTODISCOVER": True,
     "KARNI_ACCOUNTS_TOKEN_TTL": {
         "verify_email": 86400,
         "reset_password": 3600,

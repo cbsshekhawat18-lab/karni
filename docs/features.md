@@ -41,6 +41,7 @@ Reference or Debugging sections.
 - **[Aggregations](aggregations.md)**: counts, sums and averages at `<resource>/aggregate/` by category, relation or date.
 - **[Search across models](global-search.md)**: `GET /api/search/` with access applied per model, and a command palette.
 - **[Navigation from data](navigation.md)**: each user's menu, opened by the same roles and grants as the API.
+- **[People](people.md)**: one person and one organisation record for every part of a project, found or created by email, merged with a preview, erased on request, with person facts in SQL (experimental).
 - **[Import and export](import-export.md)**: CSV and XLSX from any list, and uploads with a mandatory dry run.
 - **[Large projects](large-projects.md)**: `karni context` one area at a time, a cached `karni check`, volume seeding and query plans for 100 models or more.
 

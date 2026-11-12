@@ -442,6 +442,50 @@ def test_relations_reach_users_modules_and_other_apps() -> None:
     assert report.ok, report.issues
 
 
+PEOPLE_SPEC = """\
+version: 1
+app: {name: Club}
+apps:
+  club:
+    entities:
+      Visit:
+        fields: {person: fk:people.Person, company: "fk:people.Organisation?", note: str}
+      Card:
+        fields: {holder: o2o:people.Person}
+"""
+
+
+def test_a_relation_reaches_the_people_contract_and_turns_it_on() -> None:
+    from karni_cli.builder import render
+
+    report = check(PEOPLE_SPEC)
+    assert report.ok and report.spec is not None, report.issues
+    block = render.settings_block(report.spec, 100)
+    assert block.count("KARNI_PEOPLE = True") == 1
+    plain_text = PEOPLE_SPEC.replace('"fk:people.Organisation?"', "str")
+    plain = check(plain_text.replace("fk:people.Person", "str").replace("o2o:people.Person", "str"))
+    assert plain.spec is not None and "KARNI_PEOPLE" not in render.settings_block(plain.spec, 100)
+
+
+def test_a_contract_target_must_be_one_of_its_models() -> None:
+    found = codes(PEOPLE_SPEC.replace("fk:people.Person", "fk:people.Contact"))
+    assert [code for code, _line in found] == ["C230"]
+    report = check(PEOPLE_SPEC.replace("fk:people.Person", "fk:people.Contact"))
+    assert "people.Person, people.Organisation" in report.issues[0].fix
+
+
+def test_an_app_of_the_spec_named_people_is_its_own() -> None:
+    from karni_cli.builder import render
+
+    spec = PEOPLE_SPEC.replace("fk:people.Person", "fk:people.Member") + (
+        "  people:\n    entities:\n      Member: {fields: {name: str}}\n"
+    )
+    spec = spec.replace('"fk:people.Organisation?"', "str").replace("o2o:people.Person", "str")
+    report = check(spec)
+    assert report.ok and report.spec is not None, report.issues
+    assert "KARNI_PEOPLE" not in render.settings_block(report.spec, 100)
+
+
 def test_a_tree_entity_its_fields_and_its_normal_form() -> None:
     report = check(
         """\
