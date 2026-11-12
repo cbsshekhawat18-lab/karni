@@ -9,6 +9,22 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
+## Unreleased
+
+- **A one-click shop demo.** `examples/shop-demo` is the shop recipe as `karni new
+  "Shop Demo" --recipe shop` builds it, deployed by `render.yaml` at the repository root
+  as one free Render web service: the API, the admin and the React app from one
+  container, SQLite and a file cache on the instance, Celery tasks inside the request.
+  The image installs the released `karni`, `karni-payments` and `@karni/ui`. With
+  `DEMO_MODE` on, the sign-in pages show the demo login (`demo@example.com` /
+  `karni-password`), only that account writes and it cannot change its password, email
+  or roles, sign-up is closed, and the data goes back to `karni seed --seed 42` at boot
+  and every 24 hours, in one transaction under a lock that one worker takes. The
+  README has a Deploy to Render button, [docs/demo.md](docs/demo.md) says how it runs
+  and what the free plan limits, and a CI job runs the demo's tests and starts it with
+  production settings behind the deploy gate. No framework change: the demo uses the
+  project's `MIDDLEWARE`, the `AuthGuard` slot and the admin's `login_template`.
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind
