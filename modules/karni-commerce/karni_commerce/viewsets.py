@@ -193,6 +193,23 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
     search_fields = ["reference", "email", "name"]
     ordering_fields = ["number", "created_at", "total", "status", "paid_at"]
 
+    def get_queryset(self) -> QuerySet[Order]:
+        """``?mine=true`` narrows the list to the signed-in person's own orders."""
+        queryset: QuerySet[Order] = super().get_queryset()
+        mine = str(self.request.query_params.get("mine", "")).lower() in ("1", "true")
+        if mine:
+            user = self.request.user
+            queryset = queryset.filter(user=user) if user.is_authenticated else queryset.none()
+        return queryset
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("mine", bool, description="Only the signed-in person's orders.")
+        ]
+    )
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().list(request, *args, **kwargs)
+
     def _find(self, request: Request, number: Any, key: str) -> Order:
         order = Order.objects.filter(number=number).first()
         user = request.user

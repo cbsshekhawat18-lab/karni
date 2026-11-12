@@ -84,3 +84,19 @@ def test_a_kind_goes_out_in_a_header_and_can_be_switched_off(templates: Path) ->
         assert send_templated("shop/email/plain", to=["a@example.com"], kind="shop.plain") == 0
         assert send_templated("shop/email/plain", to=["a@example.com"], kind="shop.other") == 1
     assert len(mail.outbox) == 2
+
+
+@pytest.mark.django_db
+def test_silenced_sends_nothing_now_nor_at_the_commit(
+    templates: Path, django_capture_on_commit_callbacks
+) -> None:
+    from django.db import transaction
+
+    from karni.mail import silenced
+
+    with django_capture_on_commit_callbacks(execute=True):
+        with silenced():
+            assert send_templated("shop/email/plain", to=["a@example.com"]) == 0
+            transaction.on_commit(lambda: send_templated("shop/email/plain", to=["b@x.com"]))
+    assert mail.outbox == []
+    assert send_templated("shop/email/plain", to=["a@example.com"]) == 1

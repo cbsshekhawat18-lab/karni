@@ -16,7 +16,11 @@ export interface MyOrdersProps {
 export function MyOrders({ pageSize = 50, headingLevel = 3, statusWords }: MyOrdersProps) {
   const { paths } = useCommerce();
   const words: Partial<Record<string, string>> = { ...ORDER_STATUS_WORDS, ...statusWords };
-  const orders = useResourceList<OrderRow>("orders", { pageSize, ordering: "-created_at" });
+  const orders = useResourceList<OrderRow>("orders", {
+    pageSize,
+    ordering: "-created_at",
+    filters: { mine: "true" },
+  });
   if (orders.isPending) return <Skeleton className="h-40 w-full" />;
   if (orders.isError)
     return <ErrorState error={orders.error} onRetry={() => void orders.refetch()} />;

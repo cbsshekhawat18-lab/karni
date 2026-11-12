@@ -31,6 +31,11 @@ A message may carry a ``kind``, a stable name for what it is
 ``X-Karni-Kind`` header, and a kind listed in ``KARNI_MAIL_DISABLED_KINDS``
 is not sent at all, so a project switches one email off without code.
 
+Demo data and imports should not mail anyone: inside ``with silenced():``
+nothing is sent, including the messages that listeners queue with
+``transaction.on_commit`` during the block (they run while the silence holds,
+in the order they were queued).
+
 Override / escape hatch: put a template of the same name earlier in
 ``TEMPLATES`` ``DIRS`` to change a message without code, pass
 ``from_email=`` (else ``DEFAULT_FROM_EMAIL``), ``reply_to=``, ``cc=`` or
@@ -40,16 +45,19 @@ Override / escape hatch: put a template of the same name earlier in
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.db import transaction
 from django.template import TemplateDoesNotExist
 from django.template.loader import render_to_string
 
 __all__ = [
+    "silenced",
     "KIND_HEADER",
     "Rendered",
     "base_context",
@@ -74,6 +82,34 @@ class Rendered:
 def base_context() -> dict[str, Any]:
     """Experimental. What every template gets besides the caller's context."""
     return {"frontend_url": str(getattr(settings, "KARNI_FRONTEND_URL", "") or "").rstrip("/")}
+
+
+_SILENCE = [0]
+
+
+def _hush() -> None:
+    _SILENCE[0] += 1
+
+
+def _speak() -> None:
+    _SILENCE[0] = max(_SILENCE[0] - 1, 0)
+
+
+@contextmanager
+def silenced() -> Iterator[None]:
+    """Experimental. Send nothing inside the block, nor from what it queues for the commit.
+
+    The silence also covers the ``transaction.on_commit`` callbacks queued
+    inside the block: one callback queued first starts it again at the commit,
+    and one queued last ends it. A rolled-back transaction drops them all.
+    """
+    _hush()
+    transaction.on_commit(_hush)
+    try:
+        yield
+    finally:
+        transaction.on_commit(_speak)
+        _speak()
 
 
 def kind_enabled(kind: str | None) -> bool:
@@ -117,7 +153,7 @@ def send_templated(
     ``0`` when ``kind`` is switched off (``KARNI_MAIL_DISABLED_KINDS``).
     """
     addresses = [str(address).strip() for address in to if str(address or "").strip()]
-    if not addresses or not kind_enabled(kind):
+    if not addresses or not kind_enabled(kind) or _SILENCE[0]:
         return 0
     rendered = render_templated(template, context)
     message = EmailMultiAlternatives(

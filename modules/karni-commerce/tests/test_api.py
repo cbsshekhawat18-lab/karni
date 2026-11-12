@@ -189,3 +189,14 @@ def test_the_orders_list_is_not_n_plus_one(
         answer = api.get("/api/orders/")
     assert answer.data["count"] == 10
     assert len(many) <= len(few)
+
+
+def test_mine_lists_only_the_persons_own_orders_even_for_staff(
+    api: APIClient, make_gadget: Callable[..., Gadget], clerk: Any
+) -> None:
+    place(cart_with(("gadget", make_gadget(), 1)))
+    own = place(cart_with(("gadget", make_gadget(), 1)), user=clerk, email=clerk.email)
+    api.force_authenticate(clerk)
+    assert api.get("/api/orders/").data["count"] == 2
+    mine = api.get("/api/orders/", {"mine": "true"}).data["results"]
+    assert [row["number"] for row in mine] == [own.number]
