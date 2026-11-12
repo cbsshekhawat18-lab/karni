@@ -279,7 +279,7 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
             "number",
             "status",
             "email",
-            "name",
+            "buyer_name",
             "currency",
             "subtotal",
             "total",

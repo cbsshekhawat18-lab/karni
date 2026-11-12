@@ -2,7 +2,8 @@
 // shows in the shop's own header and footer, to visitors too when it is public. The
 // home page is the staff's dashboard for staff and the storefront for everyone else.
 // Every other page is the back office: @karni/ui's Layout with the menu from the server
-// (navigation in karni.yaml), for staff only. The cart, checkout and order pages are
+// (navigation in karni.yaml), for staff only. The terms of sale are a customer's: only
+// checkout asks for them. The cart, checkout and order pages are
 // karni-commerce's (@karni/commerce-ui), told here how to navigate.
 import { CommerceProvider } from "@karni/commerce-ui";
 import {
@@ -10,7 +11,6 @@ import {
   Button,
   Layout,
   PermissionDenied,
-  TermsGate,
   ThemeToggle,
   useAuth,
 } from "@karni/ui";
@@ -81,9 +81,7 @@ function BackOffice() {
     >
       <AuthGuard explain>
         {person === "staff" ? (
-          <TermsGate page={false}>
-            <Outlet />
-          </TermsGate>
+          <Outlet />
         ) : person === "loading" ? null : (
           <PermissionDenied description="The back office is for the shop's staff." />
         )}

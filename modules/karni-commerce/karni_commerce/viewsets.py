@@ -195,8 +195,15 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
         reason="cancelling and refunding run each line's adapter and the selling apps' "
         "listeners (a parcel cancelled, stock back on the shelf): a few queries per line",
     )
-    filterset_fields = ["status", "currency", "user", "needs_shipping"]
-    search_fields = ["reference", "email", "name"]
+    filterset_fields = {
+        "status": ["exact", "in"],
+        "currency": ["exact"],
+        "user": ["exact"],
+        "needs_shipping": ["exact"],
+        "created_at": ["gte", "lte"],
+        "paid_at": ["gte", "lte"],
+    }
+    search_fields = ["reference", "email", "buyer_name"]
     ordering_fields = ["number", "created_at", "total", "status", "paid_at"]
 
     def get_queryset(self) -> QuerySet[Order]:

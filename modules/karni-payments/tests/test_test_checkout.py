@@ -102,3 +102,14 @@ def test_an_unknown_outcome_or_session_is_refused(api_client, client, user) -> N
     _payment, url = _checkout(api_client, user)
     assert client.post(url.removeprefix("http://testserver"), {"outcome": "x"}).status_code == 400
     assert client.get("/payments/test-checkout/test_cs_999/").status_code == 404
+
+
+@PAGE_ON
+def test_a_restarted_server_never_reuses_a_stored_session(api_client, user, make_payment) -> None:
+    make_payment(checkout_session_id="test_cs_1", provider="test")
+    make_payment(checkout_session_id="test_cs_2", provider="test")
+    api_client.force_authenticate(user=user)
+    response = api_client.post(CHECKOUT, _checkout_body(), format="json")
+    assert response.status_code == 201, response.data
+    assert str(response.data["url"]).endswith("/payments/test-checkout/test_cs_3/")
+    assert Payment.objects.filter(checkout_session_id="test_cs_3").count() == 1

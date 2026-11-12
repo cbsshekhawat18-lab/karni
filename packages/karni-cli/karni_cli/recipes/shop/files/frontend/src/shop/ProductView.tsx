@@ -86,7 +86,9 @@ export function ProductView({ slug }: { slug: string }) {
           compareAt={product.on_sale ? product.price : null}
           className="text-xl"
         />
-        <StockState available={product.available} />
+        <p>
+          <StockState available={product.available} />
+        </p>
         {product.short_description ? <p>{product.short_description}</p> : null}
         <AddToCart
           kind="product"

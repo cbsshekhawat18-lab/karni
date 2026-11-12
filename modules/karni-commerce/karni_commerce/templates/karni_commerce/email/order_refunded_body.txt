@@ -1,4 +1,4 @@
-{% if order.name %}Hello {{ order.name }},{% else %}Hello,{% endif %}
+{% if order.buyer_name %}Hello {{ order.buyer_name }},{% else %}Hello,{% endif %}
 
 We have refunded {{ refund.amount|floatformat:2 }} {{ order.currency }} of order {{ order.number }}. It reaches you the way you paid, which can take a few days.
 

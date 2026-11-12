@@ -111,7 +111,7 @@ def test_a_signed_in_buyers_checkout_carries_their_account(
     placed = api.post(CHECKOUT, {"billing": ADDRESS}, format="json")
     assert placed.status_code == 201, placed.data
     order = Order.objects.get(number=placed.data["number"])
-    assert (order.user, order.email, order.name) == (
+    assert (order.user, order.email, order.buyer_name) == (
         buyer,
         buyer.email,
         buyer.get_full_name() or "Ines Moreau",

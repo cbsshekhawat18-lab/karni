@@ -1,4 +1,4 @@
-<p>{% if order.name %}Hello {{ order.name }},{% else %}Hello,{% endif %}</p>
+<p>{% if order.buyer_name %}Hello {{ order.buyer_name }},{% else %}Hello,{% endif %}</p>
 <p>Thank you for your order. We have your payment, and order {{ order.number }} is confirmed.</p>
 {% include "karni_commerce/email/_lines.html" %}
 <p><a href="{{ link }}">See your order</a></p>

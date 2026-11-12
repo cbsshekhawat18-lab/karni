@@ -50,6 +50,8 @@ describe("years and money", () => {
   it("leaves a year without separators", () => {
     expect(formatNumberValue(integer("year"), 2024)).toBe("2024");
     expect(formatNumberValue(integer("founded_year"), 1998)).toBe("1998");
+    expect(formatNumberValue(integer("number"), 1027)).toBe("1027");
+    expect(formatNumberValue(integer("invoice_number"), 20261)).toBe("20261");
   });
 
   it("shows money in its fixed currency, or the row's, and nothing it cannot know", () => {

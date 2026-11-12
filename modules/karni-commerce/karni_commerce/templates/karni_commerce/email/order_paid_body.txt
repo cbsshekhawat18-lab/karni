@@ -1,4 +1,4 @@
-{% if order.name %}Hello {{ order.name }},{% else %}Hello,{% endif %}
+{% if order.buyer_name %}Hello {{ order.buyer_name }},{% else %}Hello,{% endif %}
 
 Thank you for your order. We have your payment, and order {{ order.number }} is confirmed.
 

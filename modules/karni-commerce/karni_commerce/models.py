@@ -131,7 +131,7 @@ class Order(BaseModel):
         related_name="commerce_orders",
     )
     email = models.EmailField()
-    name = models.CharField(max_length=200, blank=True, default="")
+    buyer_name = models.CharField(max_length=200, blank=True, default="")
     status = StateField(
         states=list(STATES),
         transitions={
@@ -173,7 +173,7 @@ class Order(BaseModel):
             "reference",
             "user",
             "email",
-            "name",
+            "buyer_name",
             "status",
             "currency",
             "subtotal",
@@ -191,7 +191,7 @@ class Order(BaseModel):
 
     class AdminMeta:
         list_display = ["number", "email", "status", "total", "currency", "created_at"]
-        search_fields = ["number", "email", "name"]
+        search_fields = ["number", "email", "buyer_name"]
         read_only = ["number", "key", "amount_paid", "amount_refunded"]
 
     class Karni:
@@ -208,7 +208,7 @@ class Order(BaseModel):
             "columns": ["number", "email", "status", "total", "created_at"],
         }
         search = {
-            "fields": ["reference", "email", "name"],
+            "fields": ["reference", "email", "buyer_name"],
             "title": "reference",
             "subtitle": "email",
         }

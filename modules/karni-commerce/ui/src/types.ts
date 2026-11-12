@@ -93,7 +93,7 @@ export interface Order {
   number: number;
   status: OrderStatus;
   email: string;
-  name: string;
+  buyer_name: string;
   currency: string;
   subtotal: string;
   total: string;

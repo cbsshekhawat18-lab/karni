@@ -88,8 +88,18 @@ class TestProvider(PaymentProvider):
     def create_checkout(
         self, payment: Payment, success_url: str, cancel_url: str
     ) -> CheckoutSession:
-        """Issue a deterministic session id and remember the payment."""
+        """Issue a deterministic session id and remember the payment.
+
+        The ids count up from 1 in each process. A development server that
+        restarts keeps the rows of the run before, so an id a stored payment
+        already has is skipped: the checkout page finds each payment by it.
+        """
+        from karni_payments.models import Payment
+
         session_id = f"test_cs_{next(self._sequence)}"
+        taken = Payment.objects.filter(provider=self.name)
+        while taken.filter(checkout_session_id=session_id).exists():
+            session_id = f"test_cs_{next(self._sequence)}"
         url = self.checkout_url(session_id)
         if not url.startswith(IMAGINARY):
             # The page sends the person back to these once they pay or decline.

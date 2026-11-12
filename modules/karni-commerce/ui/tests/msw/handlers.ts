@@ -44,7 +44,7 @@ export const orderFixture: Order = {
   number: 1001,
   status: "paid",
   email: "ines@example.com",
-  name: "Ines Moreau",
+  buyer_name: "Ines Moreau",
   currency: "EUR",
   subtotal: "32.00",
   total: "32.00",

@@ -3,16 +3,15 @@ import type { FieldDef } from "../../schema/types";
 
 /**
  * How a number reads in a detail row or a table cell: grouped for the
- * locale (`1,234`), except an id or a year, which read the way they are
- * written (`1234`, `2024`). An id is a field named `id`, the primary key in
- * Karni's generated serializers, and a year is a field named `year` or
- * ending in `_year`.
+ * locale (`1,234`), except an id, a year or a number people quote, which
+ * read the way they are written (`1234`, `2024`, order `1027`). That is a
+ * field named `id`, `year` or `number`, or ending in `_year` or `_number`.
  */
 export function formatNumberValue(field: Pick<FieldDef, "name">, value: number): string {
-  const name = field.name;
-  if (name === "id" || name === "year" || name.endsWith("_year")) return String(value);
-  return value.toLocaleString();
+  return WRITTEN.test(field.name) ? String(value) : value.toLocaleString();
 }
+
+const WRITTEN = /^(id|year|number)$|_(year|number)$/;
 
 /**
  * Experimental. The currency of a money field's value: its fixed currency, or

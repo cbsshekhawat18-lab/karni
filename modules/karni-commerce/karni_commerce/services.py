@@ -360,7 +360,7 @@ def place_order(
         Order(
             user=person,
             email=str(email).strip(),
-            name=str(name).strip(),
+            buyer_name=str(name).strip(),
             status="pending",
             currency=currency,
             subtotal=subtotal,

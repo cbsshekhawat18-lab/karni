@@ -31,6 +31,14 @@ export interface OrderPageProps {
   statusWords?: Partial<Record<string, string>>;
 }
 
+function countryName(code: string): string {
+  try {
+    return new Intl.DisplayNames(undefined, { type: "region" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
 function lines(address: Address): string {
   return [
     address.name,
@@ -39,7 +47,7 @@ function lines(address: Address): string {
     address.line2,
     `${address.postcode} ${address.city}`.trim(),
     address.region,
-    address.country,
+    address.country ? countryName(address.country) : "",
   ]
     .filter(Boolean)
     .join("\n");
