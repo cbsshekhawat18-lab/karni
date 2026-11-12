@@ -62,7 +62,7 @@ from typing import TYPE_CHECKING
 
 import typer
 
-from karni_cli import agent_data, kinds, scaffold, toolchain
+from karni_cli import agent_data, kinds, scaffold
 from karni_cli.adapters import MODULES_DIR, sync
 from karni_cli.brand import print_mark
 from karni_cli.generators import deploy
@@ -329,10 +329,6 @@ def _setup_lines(slug: str, project: Path, staff_app: bool, site: bool) -> list[
         lines.append(
             "  (cd frontend && npm install)  # editor, lint, type-check and `karni check` on "
             "the host"
-        )
-        lines.append(
-            f"  # npm install needs npm {toolchain.NPM_FLOOR} or later. "
-            "On npm 10 (Node 20 and 22), run `npx npm@11 install` there instead"
         )
     if site and not (project / MODULES_DIR / "site.md").is_file():
         lines.append(

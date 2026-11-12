@@ -9,11 +9,10 @@ PostgreSQL. Every command on this page is run verbatim by CI
 (`.github/ci/quickstart.py`), so it works on a clean machine or the build
 fails.
 
-You need Python 3.12+, Node 20.19+ with npm 11+ (Node 24 LTS recommended, as
-it bundles npm 11) and Docker, which runs the database. Node 20 and 22 bundle
-npm 10, which cannot install the frontend. Step 4 shows the one command that
-works on any of them. Without Docker, a PostgreSQL installed on the machine
-works too: see [Without Docker](#without-docker) below.
+You need Python 3.12+, Node 20.19+ (22.12+ on Node 22, Node 24 LTS
+recommended) with the npm it bundles, and Docker, which runs the database.
+Without Docker, a PostgreSQL installed on the machine works too: see
+[Without Docker](#without-docker) below.
 
 ## 1. Install Karni and create a project
 
@@ -125,22 +124,19 @@ dependencies, and plain `karni check` is what CI runs.
 
 <!-- karni:quickstart -->
 ```sh
-cd frontend && npx --yes npm@11 install && cd ..
+cd frontend && npm install && cd ..
 karni check
 ```
 
-The frontend needs npm 11 or later. `npx --yes npm@11 install` runs npm 11 for
-this one install, whichever npm is on your PATH, and `--yes` lets npx download
-it without asking first. On npm 11 or later, which Node 24 bundles, plain `npm
-install` does the same. Node 20 and 22 bundle npm 10, and npm 10 crashes in
-this install with `Cannot read properties of null (reading 'edgesOut')` while
-it resolves Vite 8's optional peers. To upgrade npm for good, run `npm install
--g npm@11`. `karni doctor` shows your Node and npm and flags either one when
-it is too old.
+`npm install` works on npm 10.8 or later, the npm that Node 20.19 and Node 22
+bundle, and on npm 11. It installs the versions `frontend/package-lock.json`
+pins. The lock leaves out `@karni/ui`, which npm resolves and adds, so commit
+the lock it writes. `karni doctor` shows your Node and npm and flags either
+one when it is too old.
 
-The project's `frontend/package.json` declares the requirement in `engines`
-and `frontend/.npmrc` sets `engine-strict`. Once `package-lock.json` exists,
-an older npm stops there with `EBADENGINE` instead of installing.
+The project's `frontend/package.json` declares the Node and npm it needs in
+`engines`, and `frontend/.npmrc` sets `engine-strict`, so an older Node or npm
+stops with `EBADENGINE` instead of installing.
 
 Plain `karni check` now runs the frontend checks too: ESLint with
 `@karni/ui`'s rules, and jscpd for duplicated code.

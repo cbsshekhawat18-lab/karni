@@ -77,20 +77,29 @@ Framework and React 18 with TypeScript, and CI tests every Python version on
 each push. Python 3.12 is the floor because Karni's admin is built on
 django-unfold, whose current releases require Python 3.12.
 
-The frontend needs Node 20.19 or later and npm 11 or later. Node 24 LTS
-bundles both. CI runs the quickstart page on Node 20, with its bundled npm 10,
-and on Node 24, so the page's install step works on both.
+The frontend needs Node 20.19 or later (22.12 or later on Node 22) and npm
+10.8 or later, which those Node versions bundle. Node 24 LTS is recommended.
+CI runs the quickstart page on Node 20, 22 and 24, each with the npm it
+bundles.
 
 ## Why does `npm install` fail with "Cannot read properties of null (reading 'edgesOut')"?
 
-The npm running it is version 10, which Node 20 and Node 22 bundle. npm 10
-crashes on a fresh install of a Karni frontend while it resolves Vite 8's
-optional peer dependencies. The crash comes before npm reads the project's
-`engines` field, so npm cannot print a clearer message. npm 11 fixed the bug.
-Run `npx npm@11 install` in `frontend/` in place of `npm install`, upgrade with
-`npm install -g npm@11`, or move to Node 24 LTS, which bundles npm 11.
-`karni doctor` shows the Node and npm on your PATH and flags either one when
-it is too old.
+npm before 11.6 crashes this way while it resolves optional peer dependencies
+([npm/cli#8261](https://github.com/npm/cli/issues/8261), fixed in npm 11.6.0
+and not in npm 10). Node 20 and 22 bundle npm 10. Vite 8 declares optional
+peers that lead to vitest, whose own optional peers each pin one vitest
+version. When those packages are out of step on the registry, an npm that
+resolves them crashes, although none of them is ever installed.
+
+A new project's `frontend/package-lock.json` pins every package but
+`@karni/ui`, and npm installs what the lock pins without resolving Vite's
+peers, so plain `npm install` works on npm 10. npm resolves them again when
+`package-lock.json` is missing, on `npm update`, and when you add a package
+that peers on Vite. If one of those crashes, run the same command once with
+npm 11.6 or later, for example `npx --yes npm@11 install`, or upgrade with
+`npm install -g npm@11`. Node 24 LTS bundles npm 11. The lock that npm 11
+writes then installs on npm 10 too. `karni doctor` shows the Node and npm on
+your PATH and flags either one when it is too old.
 
 ## How does Karni handle permissions?
 

@@ -6,10 +6,11 @@ from the page is the install: CI installs the checkout's packages instead of
 PyPI's (``--install`` names the command), which the page documents too.
 After the blocks, the app is started and its liveness URL must answer.
 
-CI runs it on Node 24 and on Node 20 with its bundled npm 10. npm 10 crashes
-in a plain ``npm install`` of the scaffold's frontend, so the page installs the
-frontend with npm 11 through npx, and this script refuses a page without that
-step: dropping it would let the Node 20 run pass without installing anything.
+CI runs it on Node 24, 22 and 20, each with the npm it bundles (npm 10.8 on
+Node 20 and 10.9 on Node 22). The page installs the frontend with plain ``npm
+install``, which npm 10 runs from the scaffold's ``package-lock.json``, and this
+script refuses a page without that step: dropping it would let every run pass
+without installing the frontend.
 
     python .github/ci/quickstart.py \
         --install "pip install -e packages/karni -e packages/karni-cli pytest pytest-django"
@@ -32,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PAGE = ROOT / "docs" / "quickstart.md"
 BLOCK = re.compile(r"<!-- karni:quickstart -->\s*```sh\n(.*?)```", re.S)
 INSTALL_LINE = "pip install karni karni-cli pytest pytest-django"
-FRONTEND_INSTALL = "cd frontend && npx --yes npm@11 install"
+FRONTEND_INSTALL = "cd frontend && npm install"
 CI_VARIABLES = ("CI", "GITHUB_ACTIONS", "GITHUB_RUN_ID", "RUNNER_OS")
 
 
@@ -54,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
     if FRONTEND_INSTALL not in script:
         sys.exit(
             f"{PAGE}: the frontend install {FRONTEND_INSTALL!r} is missing. It is the step "
-            "that works on Node 20's bundled npm 10, where a plain npm install crashes."
+            "that proves the scaffold's frontend installs on the npm each Node bundles."
         )
     script = script.replace(INSTALL_LINE, args.install)
     work = Path(tempfile.mkdtemp(prefix="karni-quickstart-"))

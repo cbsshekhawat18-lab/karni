@@ -77,7 +77,7 @@ writes `src/karni-theme.css`, and `KARNI_THEME_CSS` serves it to the admin too.
 
 ```sh
 cd frontend
-npm install     # needs npm 11 or later. On npm 10 (Node 20 and 22): npx npm@11 install
+npm install     # Node 20.19+ and npm 10.8+, from package-lock.json
 npm run dev     # http://localhost:5173, proxies /api and /health to Django
 npm run build   # tsc + vite build into frontend/dist
 npm run lint    # ESLint with the karni/* enforcement rules
@@ -90,6 +90,12 @@ compose publishes Django on it. For its container, docker compose sets
 `KARNI_API_PROXY=http://django:8000`, which wins over `KARNI_DEV_PORT`.
 `karni serve --local --port 8030` prints how to point the dev server at that
 port: `cd frontend && KARNI_API_PROXY=http://127.0.0.1:8030 npm run dev`.
+
+`package-lock.json` pins every package but @karni/ui, which the first `npm
+install` resolves and adds. Commit the lock it writes. Without a lock, npm
+before 11.6 can crash while it resolves Vite's optional peers (`Cannot read
+properties of null (reading 'edgesOut')`), so keep it: after removing it, run
+the next install with npm 11.6 or later (`npx --yes npm@11 install`).
 {%- endif %}
 
 ## Using a local Karni checkout

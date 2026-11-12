@@ -203,7 +203,7 @@ def _manifest(project: Path) -> str:
     if found is None:
         return (
             "@karni/ui manifest absent (COMPONENTS/HOOKS hidden). "
-            f"Run `npm install` in frontend/ with npm {toolchain.NPM_FLOOR} or later"
+            f"Run `npm install` in frontend/ with npm {toolchain.NPM_FLOOR_TEXT} or later"
         )
     return f"@karni/ui manifest: {_display(found, project)}"
 

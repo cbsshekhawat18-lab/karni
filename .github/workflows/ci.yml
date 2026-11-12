@@ -345,10 +345,10 @@ jobs:
   # docs/quickstart.md, run verbatim on a clean machine: every `sh` block on
   # the page, in a fresh venv and an empty directory, with this checkout's
   # packages in place of PyPI's (the one documented substitution).
-  # On Node 24 (the LTS the docs recommend) and on Node 20 with its bundled
-  # npm 10, the oldest setup the docs support. npm 10 crashes in a plain
-  # `npm install` of the scaffold's frontend, so the page's own install step
-  # must carry it.
+  # On Node 24 (the LTS the docs recommend), and on Node 22 and Node 20 with
+  # their bundled npm 10 (10.9 and 10.8, the oldest npm the docs support).
+  # The page's plain `npm install` runs from the scaffold's package-lock.json:
+  # without a lock, npm before 11.6 can crash resolving Vite 8's optional peers.
   # ---------------------------------------------------------------------------
   quickstart:
     # The Node 24 job keeps the name branch protection requires.
@@ -360,6 +360,8 @@ jobs:
         include:
           - node: 24
             name: Quickstart (docs/quickstart.md, verbatim)
+          - node: 22
+            name: Quickstart on Node 22 (docs/quickstart.md, verbatim)
           - node: 20
             name: Quickstart on Node 20 (docs/quickstart.md, verbatim)
     steps:
@@ -370,7 +372,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
-      - name: Node and npm (Node 20 keeps its bundled npm 10)
+      - name: Node and npm (Node 20 and 22 keep their bundled npm 10)
         run: node --version && npm --version
       # Before the build below: the test fetches this commit into a fresh
       # checkout, lets `karni new` build that checkout's @karni/ui, and fails
