@@ -1392,6 +1392,83 @@ CODES: Final[tuple[CliCode, ...]] = (
         "letters, digits and -, starting with a letter or digit, at most 16 characters, such as v1.",
         "Write a name like v1 or 2026-11, or leave the key out for an unversioned API.",
     ),
+    # C760-C769 rules of an entity (karni.rules in core, experimental)
+    _c(
+        "C760",
+        "An entity's bounds do not fit its fields",
+        "karni spec validate (karni_cli.spec.rules)",
+        "bounds gives a number, date or datetime field its lowest and highest value. It names a "
+        "field of the entity, takes min or max, a number for a number and a date, $now or "
+        "$today for a date, and becomes class Karni: bounds (E990 when a write breaks it).",
+        "Name a number, date or datetime field, e.g. bounds: {quantity: {min: 1}} or "
+        "{expected_close: {min: $today}}.",
+    ),
+    _c(
+        "C761",
+        "An entity's unique does not fit its fields",
+        "karni spec validate (karni_cli.spec.rules)",
+        "unique lists fields whose values are unique together among the live rows, as a list or "
+        "as {fields, where}. It becomes a partial unique index, so it names fields of the entity, "
+        "its where filter takes fixed values only, and an external entity takes none.",
+        "Write unique: [[slot, member]] or [{fields: [slot, member], where: {status: {not: "
+        "cancelled}}}] with fields of the entity.",
+    ),
+    _c(
+        "C762",
+        "An entity's targets name something that is not a foreign key",
+        "karni spec validate (karni_cli.spec.rules)",
+        "targets maps a foreign key of the entity to a row filter the row it points at must "
+        "match (E993 when a write breaks it).",
+        "Name an fk or o2o field: targets: {listing: {active: true}}.",
+    ),
+    _c(
+        "C763",
+        "An entity's frozen names a field it does not have",
+        "karni spec validate (karni_cli.spec.rules)",
+        "frozen maps a field to true (never changes after create) or to a row filter (cannot "
+        "change while the row matches it, E994).",
+        "Name a field of the entity: frozen: {slot: true, value: {stage: won}}.",
+    ),
+    _c(
+        "C764",
+        "An entity's delete rule does not fit",
+        "karni spec validate (karni_cli.spec.rules)",
+        "delete takes when (a row filter the row must match to be deleted) and blocked_by "
+        "(entities with an fk to this one whose live rows keep it). E995 refuses such a delete.",
+        "Write delete: {when: {status: pending}, blocked_by: [Deal]}, naming an entity that "
+        "points here (Entity.field when it has two fks to it).",
+    ),
+    _c(
+        "C765",
+        "An entity's moves do not fit its states and fields",
+        "karni spec validate (karni_cli.spec.rules)",
+        "moves maps a state of the entity's state field (or a boolean field becoming true) to "
+        "requires (fields), needs (entities that point here) and stamps (date or datetime "
+        "fields). E996 refuses a move that misses one.",
+        "Write moves: {lost: {requires: [lost_reason], stamps: [closed_at]}} with a state the "
+        "field declares and fields of the entity.",
+    ),
+    _c(
+        "C766",
+        "An entity's actions do not fit its states or roles",
+        "karni spec validate (karni_cli.spec.rules)",
+        "actions are row actions: from (the states it runs from), to (the state it moves to), "
+        "by (who may, in access words) and field (the state field when there are two). They "
+        "become the viewset's row_actions and x-karni-actions (E997 when called in another "
+        "state).",
+        "Name states of the entity's state field and access words of the spec: actions: {ship: "
+        "{from: paid, to: shipped, by: owned:listing__seller__user}}.",
+    ),
+    _c(
+        "C767",
+        "A row filter cannot be read",
+        "karni spec validate (karni_cli.spec.rules)",
+        "A row filter is {path: value}: a field or a path through relations (ending in gt, gte, "
+        "lt, lte, in or isnull), and a literal, $me, $now, $today, $<field of the row> or "
+        "{not: <value>}. targets, frozen, delete, unique and blocked_by take one.",
+        "Fix the path or the value the message names: {active: true}, {seller__user: {not: "
+        "$me}}, {company: $company}.",
+    ),
     # C780-C799 suggestions from code (experimental)
     _c(
         "C780",

@@ -105,10 +105,8 @@ _OWNED_NEAR: Final = ("own", "owner", "owned", "owns", "mine", "self", "owner_on
 _ROLE_NEAR: Final = ("role", "roles", "group", "groups", "has_role", "hasrole")
 #: Experimental. Keys people write in access, by the slot that covers them.
 _ACCESS_KEYS_NEAR: Final = {
-    **dict.fromkeys(
-        ("delete", "destroy", "remove", "update", "change", "edit", "patch", "put", "modify"),
-        "write",
-    ),
+    **dict.fromkeys(("destroy", "remove"), "delete"),
+    **dict.fromkeys(("update", "change", "edit", "patch", "put", "modify"), "write"),
     **dict.fromkeys(("list", "retrieve", "view", "get", "detail", "see", "show"), "read"),
     **dict.fromkeys(("add", "new", "post", "insert", "make"), "create"),
 }  # fmt: skip
@@ -376,12 +374,12 @@ def _access_key_fix(path: Loc) -> str:
     slot = _ACCESS_KEYS_NEAR.get(str(path[-1]).lower())
     if slot is None:
         return ""
-    fix = f"Use {slot}: access takes read, write and create, and {slot} covers {path[-1]}."
-    if slot == "write" and str(path[-1]).lower() in ("delete", "destroy", "remove"):
-        fix += (
-            " A role that may change rows but not delete them: access granted, with :view, :add "
-            "and :change in the role's grants and no :delete."
-        )
+    fix = (
+        f"Use {slot}: access takes read, write, create, delete and assign, and {slot} covers "
+        f"{path[-1]}."
+    )
+    if slot == "delete":
+        fix += " delete defaults to write: write it only for who may delete less (or more)."
     return fix + " karni explain access lists the rules."
 
 
@@ -537,6 +535,7 @@ class _Meaning:
             self.renames(entity)
             self.tree(entity)
             self.cache(entity)
+            self.rules(entity)
         for entity in self.entities.values():
             self.taxonomies(entity)
         self.roles()
@@ -1028,7 +1027,13 @@ class _Meaning:
             if part in ("created_by", "updated_by"):
                 return index == len(parts) - 1
             spec = current.fields.get(part)
-            if spec is None or not spec.is_relation:
+            if spec is None:
+                reverse = self.reverse(current, part)
+                if reverse is None:
+                    return False
+                current = reverse
+                continue
+            if not spec.is_relation:
                 return False
             target = current.targets.get(part)
             if target == _USER_TARGET:
@@ -1040,7 +1045,13 @@ class _Meaning:
         rule = entity.entity.access
         if rule == "code" or not isinstance(rule, schema.Access):
             return
-        slots = {"read": rule.read, "write": rule.write, "create": rule.create}
+        slots = {
+            "read": rule.read,
+            "write": rule.write,
+            "create": rule.create,
+            "delete": rule.delete,
+            "assign": rule.assign,
+        }
         for slot, items in slots.items():
             if items is None:
                 continue
@@ -1069,6 +1080,9 @@ class _Meaning:
                             + f"eclare it under roles ({arg}: {{name: ...}}) or fix the slug.",
                         )
                     continue
+                if word == "where" and arg:
+                    self.where_word(entity, where, slot, arg)
+                    continue
                 if word == "owned" and arg:
                     if not self.leads_to_user(entity, arg):
                         self.add(
@@ -1091,6 +1105,41 @@ class _Meaning:
                     "list of them (karni explain access lists the common rules). For anything "
                     "else write access: code and declare Access(...) in the viewset.",
                 )
+
+    def rules(self, entity: _Entity) -> None:
+        """bounds, unique, targets, frozen, delete, moves, actions (:mod:`karni_cli.spec.rules`)."""
+        from karni_cli.spec import rules
+
+        rules.check(self, entity)
+
+    def reverse(self, entity: _Entity, part: str) -> _Entity | None:
+        """The entity whose fk to ``entity`` Django names ``part`` (``enrolment``), or ``None``."""
+        for other in self.entities.values():
+            if other.name.lower() != part:
+                continue
+            if any(target == entity.label for target in other.targets.values()):
+                return other
+        return None
+
+    def where_word(self, entity: _Entity, where: Loc, slot: str, arg: str) -> None:
+        """``where:<field>[=<value>]``: a field of the entity (bare: a boolean field)."""
+        name, equals, _value = arg.partition("=")
+        spec = entity.fields.get(name)
+        if spec is None or (not equals and spec.kind != "bool"):
+            booleans = [n for n, s in entity.fields.items() if s.kind == "bool"]
+            shown = ", ".join(booleans) or "none"
+            self.add(
+                "C217",
+                where,
+                f"{entity.name}.access.{slot} has where:{arg}, but "
+                + (
+                    f"{entity.name} has no field {name!r}."
+                    if spec is None
+                    else f"{name} is not a boolean field: write where:{name}=<value>."
+                ),
+                f"Name a field of {entity.name}: where:<boolean field> (booleans: {shown}) or "
+                "where:<field>=<value>.",
+            )
 
     def _role_like(self, name: str) -> str | None:
         """The declared role ``name`` means with another case or separator, or ``None``."""
@@ -2182,3 +2231,6 @@ def iter_codes() -> Iterator[str]:
     yield from ("C520", "C521")
     yield "C720"  # file:protected / image:protected without the storage module
     yield "C740"
+    from karni_cli.spec.rules import CODES
+
+    yield from CODES  # the rules: bounds, unique, targets, frozen, delete, moves, actions

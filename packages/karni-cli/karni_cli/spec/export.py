@@ -166,6 +166,13 @@ KARNI_KEYS: Final = {
     "scope_paths": "scope_paths",
     "field_groups": "groups",
     "column_sets": "column_sets",
+    # rules every write keeps (karni.rules): the spec's data, unchanged
+    "bounds": "bounds",
+    "unique": "unique",
+    "targets": "targets",
+    "frozen": "frozen",
+    "delete": "delete",
+    "moves": "moves",
 }
 _IMPORT: Final = re.compile(
     r"""^import\s+(\w+)\s+from\s+["']\./pages/([\w./-]+)["'];?""", re.MULTILINE
@@ -480,6 +487,17 @@ def _access_items(described: dict[str, Any]) -> list[str] | None:
         return [f"role:{name}" for name in described["role"]]
     if set(described) == {"owned"}:
         return [f"owned:{described['owned']}"]
+    matching = described.get("matching")
+    if (
+        set(described) == {"where", "matching"}
+        and isinstance(matching, dict)
+        and len(matching) == 1
+    ):
+        ((name, value),) = matching.items()
+        if value is True:
+            return [f"where:{name}"]
+        shown = ("true" if value else "false") if isinstance(value, bool) else str(value)
+        return [f"where:{name}={shown}"]
     return None
 
 
@@ -497,7 +515,7 @@ def _access(viewset: dict[str, Any] | None, label: str, left_out: list[str]) -> 
         return "code"
     declared = viewset["access"]
     slots: dict[str, list[str]] = {}
-    for slot in ("read", "write", "create"):
+    for slot in ("read", "write", "create", "delete", "assign"):
         items = _access_items(declared[slot]) if slot in declared else []
         if items is None:
             break
@@ -724,6 +742,9 @@ def _entity(
     cache = _cache(viewset, label, ctx.left_out)
     if cache is not None:
         entity["cache"] = cache
+    actions = _actions(viewset, label, ctx.left_out)
+    if actions:
+        entity["actions"] = actions
     _drop_unknown(entity, label, ctx.left_out)
     return entity
 
@@ -779,6 +800,29 @@ def aggregate_of(declared: Any) -> dict[str, Any] | None:
         found["values"] = list(lists["values"])
     if lists["metrics"] and set(lists["metrics"]) != set(AGGREGATE_METRICS):
         found["metrics"] = list(lists["metrics"])
+    return found
+
+
+def _actions(viewset: dict[str, Any] | None, label: str, left_out: list[str]) -> dict[str, Any]:
+    """The viewset's row actions as the spec's ``actions`` (a ``by`` it cannot write: left out)."""
+    found: dict[str, Any] = {}
+    for name, rule in ((viewset or {}).get("row_actions") or {}).items():
+        action: dict[str, Any] = {}
+        if rule.get("from"):
+            action["from"] = _one(list(rule["from"]))
+        if rule.get("to") is not None:
+            action["to"] = rule["to"]
+        if rule.get("by") is not None:
+            items = _access_items(rule["by"])
+            if items is None:
+                left_out.append(
+                    f"{label}: the row action {name}'s by (a shape the spec cannot write)"
+                )
+                continue
+            action["by"] = _one(sorted(dict.fromkeys(items)))
+        if rule.get("field") is not None:
+            action["field"] = rule["field"]
+        found[str(name)] = action
     return found
 
 

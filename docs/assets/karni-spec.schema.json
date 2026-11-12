@@ -6,7 +6,7 @@
   "$defs": {
     "Access": {
       "additionalProperties": false,
-      "description": "Experimental. ``access:`` of an entity: the viewset's ``Access(...)``.\n\nEach slot takes ``public``, ``authenticated``, ``granted``,\n``role:<slug>``, ``owned:<field>``, or a list of them (any of them\nadmits). ``read`` and ``write`` default to ``granted``, ``create`` to\n``write``.",
+      "description": "Experimental. ``access:`` of an entity: the viewset's ``Access(...)``.\n\nEach slot takes ``public``, ``authenticated``, ``granted``,\n``role:<slug>``, ``owned:<field>``, ``where:<field>[=<value>]``, or a\nlist of them (any of them admits). ``read`` and ``write`` default to\n``granted``, ``create`` and ``delete`` to ``write``; ``assign`` (who may\nset the owner to another user) to nobody.",
       "patternProperties": {
         "^x-": {}
       },
@@ -55,6 +55,103 @@
             }
           ],
           "description": "Who creates rows (default: write)."
+        },
+        "delete": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Experimental. Who deletes which rows (default: write)."
+        },
+        "assign": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Experimental. Who may set the owner field (owned:<field> in write or create) to another user. Default: nobody, the owner is the signed-in user."
+        }
+      },
+      "type": "object"
+    },
+    "ActionRule": {
+      "additionalProperties": false,
+      "description": "Experimental. One ``actions:`` entry: a row action (the viewset's row_actions).",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "The states the action runs from (default: any)."
+        },
+        "to": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The state it moves the row to. Without it the viewset's own method of the action's name does the work."
+        },
+        "by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Who may run it, in access words (default: write)."
+        },
+        "field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The state field (default: the entity's only state field)."
         }
       },
       "type": "object"
@@ -202,6 +299,97 @@
       "required": [
         "name"
       ],
+      "type": "object"
+    },
+    "Bound": {
+      "additionalProperties": false,
+      "description": "Experimental. One field's ``bounds``: its lowest and highest value.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "min": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The lowest value: a number, a date, $now or $today."
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The highest value: a number, a date, $now or $today."
+        }
+      },
+      "type": "object"
+    },
+    "DeleteRule": {
+      "additionalProperties": false,
+      "description": "Experimental. ``delete:`` of an entity: when a row may be deleted (class Karni: delete).",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "when": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A row filter the row must match to be deleted (its state)."
+        },
+        "blocked_by": {
+          "description": "Entities whose live rows pointing here keep the row (Deal, Deal.company), or a mapping of them to a row filter of the rows that count.",
+          "oneOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            }
+          ]
+        }
+      },
       "type": "object"
     },
     "DetailOptions": {
@@ -508,6 +696,81 @@
             }
           ],
           "description": "The viewset's response caching: a lifetime in seconds (Cache(ttl=...)), or false (Uncached(reason=\"spec\")). Default: KARNI_API_CACHE and KARNI_API_CACHE_TTL."
+        },
+        "bounds": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Bound"
+          },
+          "description": "Experimental. Field -> {min, max}: the lowest and highest value of a number, date or datetime ($now and $today for dates). class Karni: bounds.",
+          "type": "object"
+        },
+        "unique": {
+          "description": "Experimental. Fields unique together among the live rows: a list of fields, or {fields, where} with a row filter. A partial unique index (class Karni: unique).",
+          "items": {
+            "oneOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/$defs/UniqueEntry"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "targets": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "description": "Experimental. Foreign key -> a row filter the row it points at must match ($me, $now, $today, $<field>). class Karni: targets.",
+          "type": "object"
+        },
+        "frozen": {
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              }
+            ]
+          },
+          "description": "Experimental. Field -> true (never changes after create) or a row filter (cannot change while the row matches it). class Karni: frozen.",
+          "type": "object"
+        },
+        "delete": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DeleteRule"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Experimental. When a row may be deleted: {when, blocked_by} (class Karni: delete). Who may delete is access.delete."
+        },
+        "moves": {
+          "additionalProperties": {
+            "$ref": "#/$defs/MoveRule"
+          },
+          "description": "Experimental. State (or boolean field becoming true) -> {requires, needs, stamps} (class Karni: moves).",
+          "type": "object"
+        },
+        "actions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ActionRule"
+          },
+          "description": "Experimental. Row actions: name -> {from, to, by, field}, POST <resource>/<id>/<name>/ (the viewset's row_actions, x-karni-actions).",
+          "propertyNames": {
+            "pattern": "^(?:x-.*|[a-z][a-z0-9_]*)$"
+          },
+          "type": "object"
         }
       },
       "type": "object"
@@ -660,6 +923,58 @@
           "default": 1,
           "description": "Multiplies the entity's scores across entities (default 1).",
           "gt": 0
+        }
+      },
+      "type": "object"
+    },
+    "MoveRule": {
+      "additionalProperties": false,
+      "description": "Experimental. One ``moves:`` entry: what a move into a state needs (class Karni: moves).",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "requires": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Fields that must hold a value after the move."
+        },
+        "needs": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Entities that must have a live row pointing here (Lesson, Lesson.course)."
+        },
+        "stamps": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Date or datetime fields set to now by the move."
         }
       },
       "type": "object"
@@ -841,6 +1156,38 @@
       "required": [
         "version",
         "url"
+      ],
+      "type": "object"
+    },
+    "UniqueEntry": {
+      "additionalProperties": false,
+      "description": "Experimental. One ``unique`` entry written as a mapping: its fields and a row filter.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "fields": {
+          "description": "The fields whose values are unique together.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "where": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Only the live rows matching this filter count (fixed values only)."
+        }
+      },
+      "required": [
+        "fields"
       ],
       "type": "object"
     }

@@ -272,6 +272,17 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C681", SHOP + "        fields: {name: str}\n        column_sets: {default: []}\n", 8),
     ("C681", SHOP + "        fields: {name: str}\n        column_sets: {Money: [name]}\n", 8),
     ("C740", "version: 1\napp: {name: X, api_version: V1}\n", 2),
+    # the rules (karni.rules): bounds, unique, targets, frozen, delete, moves, actions, row filters
+    ("C760", SHOP + "        fields: {name: str}\n        bounds: {name: {min: 1}}\n", 8),
+    ("C760", SHOP + "        fields: {n: int}\n        bounds: {n: {min: many}}\n", 8),
+    ("C761", SHOP + "        fields: {name: str}\n        unique: [[nam]]\n", 8),
+    ("C762", SHOP + "        fields: {name: str}\n        targets: {name: {a: 1}}\n", 8),
+    ("C763", SHOP + "        fields: {name: str}\n        frozen: {nam: true}\n", 8),
+    ("C764", SHOP + "        fields: {name: str}\n        delete: {blocked_by: [Deal]}\n", 8),
+    ("C765", SHOP + "        fields: {name: str}\n        moves: {won: {stamps: [name]}}\n", 8),
+    ("C766", SHOP + "        fields: {s: 'state:a>b'}\n        actions: {go: {from: c, to: b}}\n",
+     8),
+    ("C767", SHOP + "        fields: {name: str}\n        frozen: {name: {nme: x}}\n", 8),
 ]  # fmt: skip
 
 
@@ -362,11 +373,11 @@ def test_an_undeclared_role_in_another_case_and_an_access_key_name_the_right_for
     issues = validate_text(ACCESS_SHOP + "        access: {read: 'role:STAFF'}\n").issues
     assert issues[0].code == "C232" and issues[0].message.endswith("Did you mean role:staff?")
     issues = validate_text(
-        ACCESS_SHOP + "        access: {read: public, delete: 'role:staff'}\n"
+        ACCESS_SHOP + "        access: {read: public, destroy: 'role:staff'}\n"
     ).issues
     assert issues[0].code == "C212"
-    assert issues[0].fix.startswith("Use write: access takes read, write and create")
-    assert "no :delete" in issues[0].fix
+    assert issues[0].fix.startswith("Use delete: access takes read, write, create, delete")
+    assert validate_text(ACCESS_SHOP + "        access: {read: public, delete: 'role:staff'}\n").ok
     issues = validate_text(ACCESS_SHOP + "        access: {list: public}\n").issues
     assert issues[0].fix.startswith("Use read: ")
     plain = validate_text(ACCESS_SHOP + "        access: {read: anyone_at_all}\n").issues
@@ -387,6 +398,7 @@ def test_every_code_is_tested_and_registered() -> None:
     assert all(
         200 <= int(code[1:]) <= 269
         or code in ("C324", "C720", "C740")
+        or 760 <= int(code[1:]) <= 769
         or 460 <= int(code[1:]) <= 479
         or 500 <= int(code[1:]) <= 579
         or 620 <= int(code[1:]) <= 659

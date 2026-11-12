@@ -471,6 +471,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write dashboard = True, or a dict with the keys label, order, total, new_days, by, values, counts, recent, columns and date_field, naming fields of the model: e.g. dashboard = {'by': 'status', 'counts': {'Due today': {'due_on': 'today'}}, 'recent': 5}.
 
+<a id="e134"></a>
+
+#### E134: The written row is outside the caller's write scope
+
+*exception* · from `karni.api.viewsets.BaseViewSet.check_written_row (perform_create / perform_update)`
+
+**Why Karni objects.** An access rule such as Owned('seller__user') limits the rows a caller may change. A create or an update that leaves the row outside that rule (a listing in someone else's shop, a lesson in another instructor's course) would let the caller write rows that are not theirs, so it is refused with a 403 and nothing is saved.
+
+**Fix.** Point the row at something of yours (your shop, your course), or give the caller a role the rule admits.
+
+<a id="e135"></a>
+
+#### E135: Only some roles may set the owner of a row
+
+*exception* · from `karni.api.viewsets.BaseViewSet.perform_create / perform_update (Access(assign=...))`
+
+**Why Karni objects.** The owner field of a row (the member of a booking) is the caller. Access(assign=...) names who may set it to someone else (staff booking for a member, a manager reassigning a deal). Anyone else who sends another user is refused with a 403.
+
+**Fix.** Leave the owner field out (it becomes you), or ask someone the assign rule admits.
+
+<a id="e136"></a>
+
+#### E136: A row action has nothing to run, or is declared wrongly
+
+*system check (error)* · from `karni.api.actions (RowAction, row_actions); karni.checks.check_viewsets`
+
+**Why Karni objects.** A row action without to= is the viewset's own @action method of that name (pay opens a payment): Karni checks the state and who may, then runs it. Without the method nothing would answer the route. row_actions maps names to RowAction(...), and states belong to the model's one StateField unless field= names another.
+
+**Fix.** Write the @action(detail=True, methods=['post']) method of that name in the project's viewset (&lt;app>/viewsets.py), give the action a to= state, or name the StateField with field=.
+
 ### 2xx · Accounts
 
 <a id="e201"></a>
@@ -2636,6 +2666,86 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** StateField, CapacityField and NoOverlap rely on karni.models.GuardedModel for the loaded-state tracking, the conditional UPDATE, the transition history and the named conflicts. Without it saves would skip all of that silently.
 
 **Fix.** Inherit karni.models.BaseModel (which includes GuardedModel), or add karni.models.GuardedModel to the model's bases.
+
+<a id="e990"></a>
+
+#### E990: A value is outside the bounds of its field
+
+*exception* · from `karni.rules (class Karni: bounds); the API's serializer limits`
+
+**Why Karni objects.** class Karni: bounds gives a number, date or datetime field its lowest and highest value ($now and $today for dates). A value written new or changed outside them is refused before any SQL: from the API (a 400 on the field), the admin (a form error) and the ORM. A value that was stored before the rule existed is not checked again until it changes.
+
+**Fix.** Send a value inside the bounds the message names, or change the bound in class Karni (karni.yaml: bounds) if the rule is wrong.
+
+<a id="e991"></a>
+
+#### E991: A row with the same values already exists
+
+*exception* · from `karni.rules (class Karni: unique); karni.rules.UniqueRule`
+
+**Why Karni objects.** class Karni: unique makes the fields unique among the live rows (and, with where, among the rows that match it), with a partial unique index PostgreSQL and SQLite enforce. Karni checks it before the write (a 400 on the first field), and the index refuses a duplicate that two requests write at the same moment (a 409).
+
+**Fix.** Change one of the values, or cancel or delete the row that holds them first.
+
+<a id="e993"></a>
+
+#### E993: A relation points at a row its rule does not allow
+
+*exception* · from `karni.rules (class Karni: targets)`
+
+**Why Karni objects.** class Karni: targets says which rows a foreign key may point at: a row filter on the target, with $me (the signed-in user), $now, $today and $&lt;field> (a field of the row being written, so two relations agree). A key that points elsewhere is refused with a 400 on the field.
+
+**Fix.** Point the field at a row that matches the filter the message names (an active listing, a course of yours, a contact of the deal's company).
+
+<a id="e994"></a>
+
+#### E994: A field cannot change
+
+*exception* · from `karni.rules (class Karni: frozen)`
+
+**Why Karni objects.** class Karni: frozen names fields that are set on create and never change (true), or that cannot change while the stored row matches a row filter (a won deal's value). Changing one would break what was decided from it (a reserved place, a paid amount).
+
+**Fix.** Leave the field as it is, or create a new row (a new booking for another slot).
+
+<a id="e995"></a>
+
+#### E995: The row cannot be deleted now
+
+*exception* · from `karni.rules (class Karni: delete)`
+
+**Why Karni objects.** class Karni: delete keeps a row while related rows point at it (blocked_by) or while it is not in a deletable state (when). Deleting it would leave orphans or erase a record that money or people depend on. The API answers 409.
+
+**Fix.** Delete or move the related rows the message counts first, or move the row to a state where it may be deleted (cancel it).
+
+<a id="e996"></a>
+
+#### E996: A move into a state misses what it needs
+
+*exception* · from `karni.rules (class Karni: moves)`
+
+**Why Karni objects.** class Karni: moves says what a move into a state (or a boolean becoming true) requires: fields that must hold a value (a lost reason) and related rows that must exist (a lesson before publishing). The move is refused with a 400 naming the field.
+
+**Fix.** Send the field the message names with the move, or add the related row first.
+
+<a id="e997"></a>
+
+#### E997: A row action is not legal in the row's state
+
+*exception* · from `karni.api.actions (RowAction, the viewset's row_actions; karni.yaml: actions)`
+
+**Why Karni objects.** A row action (pay, cancel, ship) declares the states it may run from. Called in another state it is refused with a 409 naming the state and the legal ones. An action that moves the row (to=) and finds it already there answers 200 and changes nothing, so calling it twice is safe.
+
+**Fix.** Reload the row and offer only the actions x-karni-actions lists for its state.
+
+<a id="e998"></a>
+
+#### E998: A rule of class Karni is declared wrongly
+
+*system check (error)* · from `karni.rules.rules_of; karni.checks.check_rules`
+
+**Why Karni objects.** bounds, unique, targets, frozen, delete and moves must name fields and relations the model has, with values of the right kind, so a rule never silently checks nothing.
+
+**Fix.** Fix the declaration the message names (karni.yaml: the entity's key of that name).
 
 ## Suggestions (`SUG`)
 
@@ -5238,6 +5348,86 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** app.api_version is the API's current version. karni build writes it as KARNI_API_VERSION, and the API is then mounted at /api/&lt;version>/. The name is a URL segment: lower case letters, digits and -, starting with a letter or digit, at most 16 characters, such as v1.
 
 **Fix.** Write a name like v1 or 2026-11, or leave the key out for an unversioned API.
+
+<a id="c760"></a>
+
+### C760: An entity's bounds do not fit its fields
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** bounds gives a number, date or datetime field its lowest and highest value. It names a field of the entity, takes min or max, a number for a number and a date, $now or $today for a date, and becomes class Karni: bounds (E990 when a write breaks it).
+
+**Fix.** Name a number, date or datetime field, e.g. bounds: {quantity: {min: 1}} or {expected_close: {min: $today}}.
+
+<a id="c761"></a>
+
+### C761: An entity's unique does not fit its fields
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** unique lists fields whose values are unique together among the live rows, as a list or as {fields, where}. It becomes a partial unique index, so it names fields of the entity, its where filter takes fixed values only, and an external entity takes none.
+
+**Fix.** Write unique: [[slot, member]] or [{fields: [slot, member], where: {status: {not: cancelled}}}] with fields of the entity.
+
+<a id="c762"></a>
+
+### C762: An entity's targets name something that is not a foreign key
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** targets maps a foreign key of the entity to a row filter the row it points at must match (E993 when a write breaks it).
+
+**Fix.** Name an fk or o2o field: targets: {listing: {active: true}}.
+
+<a id="c763"></a>
+
+### C763: An entity's frozen names a field it does not have
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** frozen maps a field to true (never changes after create) or to a row filter (cannot change while the row matches it, E994).
+
+**Fix.** Name a field of the entity: frozen: {slot: true, value: {stage: won}}.
+
+<a id="c764"></a>
+
+### C764: An entity's delete rule does not fit
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** delete takes when (a row filter the row must match to be deleted) and blocked_by (entities with an fk to this one whose live rows keep it). E995 refuses such a delete.
+
+**Fix.** Write delete: {when: {status: pending}, blocked_by: [Deal]}, naming an entity that points here (Entity.field when it has two fks to it).
+
+<a id="c765"></a>
+
+### C765: An entity's moves do not fit its states and fields
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** moves maps a state of the entity's state field (or a boolean field becoming true) to requires (fields), needs (entities that point here) and stamps (date or datetime fields). E996 refuses a move that misses one.
+
+**Fix.** Write moves: {lost: {requires: [lost_reason], stamps: [closed_at]}} with a state the field declares and fields of the entity.
+
+<a id="c766"></a>
+
+### C766: An entity's actions do not fit its states or roles
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** actions are row actions: from (the states it runs from), to (the state it moves to), by (who may, in access words) and field (the state field when there are two). They become the viewset's row_actions and x-karni-actions (E997 when called in another state).
+
+**Fix.** Name states of the entity's state field and access words of the spec: actions: {ship: {from: paid, to: shipped, by: owned:listing__seller__user}}.
+
+<a id="c767"></a>
+
+### C767: A row filter cannot be read
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** A row filter is {path: value}: a field or a path through relations (ending in gt, gte, lt, lte, in or isnull), and a literal, $me, $now, $today, $&lt;field of the row> or {not: &lt;value>}. targets, frozen, delete, unique and blocked_by take one.
+
+**Fix.** Fix the path or the value the message names: {active: true}, {seller__user: {not: $me}}, {company: $company}.
 
 <a id="c780"></a>
 

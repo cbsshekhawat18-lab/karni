@@ -122,7 +122,9 @@ _FEATURE_SETTINGS: Final = {
 #: A text column becoming a markdown one, or back: the same column, only its rendering changes.
 _TEXT_SWAPS: Final = frozenset({("text", "markdown"), ("markdown", "text")})
 #: Entity options whose change writes a migration (the others live in class Karni or the viewset).
-_MIGRATED: Final = frozenset({"order", "pk", "external", "table", "database", "tree", "taxonomies"})
+_MIGRATED: Final = frozenset(
+    {"order", "pk", "external", "table", "database", "tree", "taxonomies", "unique"}
+)
 _OPTIONS: Final = (
     "pk",
     "external",
@@ -143,6 +145,13 @@ _OPTIONS: Final = (
     "scope_paths",
     "aggregate",
     "cache",
+    "bounds",
+    "unique",
+    "targets",
+    "frozen",
+    "delete",
+    "moves",
+    "actions",
 )
 
 
@@ -819,8 +828,10 @@ def _entity_line(label: str, entity: dict[str, Any], pk: str) -> str:
             options.append(key)
         elif key == "aggregate":
             options.append(f"aggregate {_aggregate_text(value)}")
-        elif key in ("groups", "column_sets", "scope_paths"):
+        elif key in ("groups", "column_sets", "scope_paths", *_RULE_MAPS):
             options.append(f"{key} {', '.join(value)}")
+        elif key == "unique":
+            options.append(f"unique {_unique_text(value)}")
         elif key == "global_search":
             options.append(f"{key} {_search_text(value)}")
         else:
@@ -971,10 +982,17 @@ def _options(
                 "switching the key type of a table that holds rows is out of scope, so karni "
                 "build will not apply it"
             )
+        elif key == "unique" and _new_unique(old, new):
+            risky = True
+            reason = "rows that already share the new unique values stop the migration"
         elif key == "database" and not after.get("external") and not before.get("external"):
             risky = True
             reason = f"the rows stay on {old or 'default'}, karni build does not move them"
-        shown = {"aggregate": _aggregate_text, "global_search": _search_text}.get(key, _show)
+        shown = {
+            "aggregate": _aggregate_text,
+            "global_search": _search_text,
+            "unique": _unique_text,
+        }.get(key, _show)
         ctx.add(
             Change(
                 "entities",
@@ -988,6 +1006,30 @@ def _options(
         )
         if key in _MIGRATED or (key == "global_search" and _search_indexes_change(before, after)):
             ctx.migrate(label)
+
+
+#: Rule keys (karni.rules) shown by their keys in a plan line: ``bounds quantity, price``.
+_RULE_MAPS: Final = ("bounds", "targets", "frozen", "moves", "actions")
+
+
+def _unique_text(value: Any) -> str:
+    """``unique``'s entries in words: ``slot+member (status = not cancelled), user``."""
+    shown: list[str] = []
+    for entry in value or []:
+        if isinstance(entry, dict):
+            text = "+".join(entry.get("fields") or [])
+            where = entry.get("where")
+            if where:
+                text += f" ({_show(where)})"
+            shown.append(text)
+        else:
+            shown.append("+".join(entry))
+    return ", ".join(shown) or "none"
+
+
+def _new_unique(old: Any, new: Any) -> bool:
+    """Whether ``unique`` gains an entry: a new index the existing rows must satisfy."""
+    return any(entry not in (old or []) for entry in new or [])
 
 
 def _search_indexes_change(before: dict[str, Any], after: dict[str, Any]) -> bool:

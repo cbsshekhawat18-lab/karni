@@ -42,22 +42,27 @@ __all__ = [
     "UNCACHED_REASON",
     "VERSION",
     "Access",
+    "ActionRule",
     "Aggregate",
     "ApiCache",
     "App",
     "AppInfo",
+    "Bound",
+    "DeleteRule",
     "DetailOptions",
     "DetailPage",
     "Entity",
     "Features",
     "FieldEntry",
     "GlobalSearch",
+    "MoveRule",
     "NavigationEntry",
     "NavigationOptions",
     "NavigationValue",
     "Role",
     "Spec",
     "Terms",
+    "UniqueEntry",
     "json_schema",
     "page_kind_names",
     "page_related",
@@ -229,9 +234,10 @@ class Access(_Node):
     """Experimental. ``access:`` of an entity: the viewset's ``Access(...)``.
 
     Each slot takes ``public``, ``authenticated``, ``granted``,
-    ``role:<slug>``, ``owned:<field>``, or a list of them (any of them
-    admits). ``read`` and ``write`` default to ``granted``, ``create`` to
-    ``write``.
+    ``role:<slug>``, ``owned:<field>``, ``where:<field>[=<value>]``, or a
+    list of them (any of them admits). ``read`` and ``write`` default to
+    ``granted``, ``create`` and ``delete`` to ``write``; ``assign`` (who may
+    set the owner to another user) to nobody.
     """
 
     read: Names = Field(
@@ -242,6 +248,16 @@ class Access(_Node):
         description="Who changes and deletes which rows.",
     )
     create: Names | None = Field(None, description="Who creates rows (default: write).")
+    delete: Names | None = Field(
+        None, description="Experimental. Who deletes which rows (default: write)."
+    )
+    assign: Names | None = Field(
+        None,
+        description=(
+            "Experimental. Who may set the owner field (owned:<field> in write or create) to "
+            "another user. Default: nobody, the owner is the signed-in user."
+        ),
+    )
 
 
 AccessValue = Annotated[
@@ -349,6 +365,115 @@ class Aggregate(_Node):
             + ", ".join(AGGREGATE_METRICS)
             + " (default: all of them)."
         ),
+    )
+
+
+#: Experimental. A row filter: path (``seller__user``, optionally ``__gt``, ``__in``, ...) to a
+#: value: a literal, ``$me``, ``$now``, ``$today``, ``$<field of the row>`` or ``{not: value}``.
+RowFilter = dict[str, Any]
+
+
+class Bound(_Node):
+    """Experimental. One field's ``bounds``: its lowest and highest value."""
+
+    min: int | float | str | None = Field(
+        None, description="The lowest value: a number, a date, $now or $today."
+    )
+    max: int | float | str | None = Field(
+        None, description="The highest value: a number, a date, $now or $today."
+    )
+
+
+class UniqueEntry(_Node):
+    """Experimental. One ``unique`` entry written as a mapping: its fields and a row filter."""
+
+    fields: list[str] = Field(description="The fields whose values are unique together.")
+    where: RowFilter | None = Field(
+        None,
+        description="Only the live rows matching this filter count (fixed values only).",
+    )
+
+
+def _unique_member(value: Any) -> str:
+    return "=list" if isinstance(value, list) else "=entry"
+
+
+UniqueValue = Annotated[
+    Annotated[list[str], Tag("=list")] | Annotated[UniqueEntry, Tag("=entry")],
+    Discriminator(_unique_member),
+]
+
+
+def _frozen_member(value: Any) -> str:
+    return "=bool" if isinstance(value, bool) else "=filter"
+
+
+FrozenValue = Annotated[
+    Annotated[bool, Tag("=bool")] | Annotated[RowFilter, Tag("=filter")],
+    Discriminator(_frozen_member),
+]
+
+
+def _blocked_member(value: Any) -> str:
+    return "=list" if isinstance(value, list) else "=map"
+
+
+BlockedBy = Annotated[
+    Annotated[list[str], Tag("=list")] | Annotated[dict[str, RowFilter | None], Tag("=map")],
+    Discriminator(_blocked_member),
+]
+
+
+class DeleteRule(_Node):
+    """Experimental. ``delete:`` of an entity: when a row may be deleted (class Karni: delete)."""
+
+    when: RowFilter | None = Field(
+        None, description="A row filter the row must match to be deleted (its state)."
+    )
+    blocked_by: BlockedBy = Field(
+        default_factory=list,
+        description=(
+            "Entities whose live rows pointing here keep the row (Deal, Deal.company), or a "
+            "mapping of them to a row filter of the rows that count."
+        ),
+    )
+
+
+class MoveRule(_Node):
+    """Experimental. One ``moves:`` entry: what a move into a state needs (class Karni: moves)."""
+
+    requires: Names = Field(
+        default_factory=list, description="Fields that must hold a value after the move."
+    )
+    needs: Names = Field(
+        default_factory=list,
+        description="Entities that must have a live row pointing here (Lesson, Lesson.course).",
+    )
+    stamps: Names = Field(
+        default_factory=list, description="Date or datetime fields set to now by the move."
+    )
+
+
+class ActionRule(_Node):
+    """Experimental. One ``actions:`` entry: a row action (the viewset's row_actions)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    from_: Names = Field(
+        default_factory=list,
+        alias="from",
+        description="The states the action runs from (default: any).",
+    )
+    to: str | None = Field(
+        None,
+        description=(
+            "The state it moves the row to. Without it the viewset's own method of the "
+            "action's name does the work."
+        ),
+    )
+    by: Names | None = Field(None, description="Who may run it, in access words (default: write).")
+    field: str | None = Field(
+        None, description="The state field (default: the entity's only state field)."
     )
 
 
@@ -475,6 +600,56 @@ class Entity(_Node):
             "The viewset's response caching: a lifetime in seconds (Cache(ttl=...)), or false "
             '(Uncached(reason="spec")). Default: KARNI_API_CACHE and KARNI_API_CACHE_TTL.'
         ),
+    )
+    bounds: dict[str, Bound] = Field(
+        default_factory=dict,
+        description=(
+            "Experimental. Field -> {min, max}: the lowest and highest value of a number, date "
+            "or datetime ($now and $today for dates). class Karni: bounds."
+        ),
+    )
+    unique: list[UniqueValue] = Field(
+        default_factory=list,
+        description=(
+            "Experimental. Fields unique together among the live rows: a list of fields, or "
+            "{fields, where} with a row filter. A partial unique index (class Karni: unique)."
+        ),
+    )
+    targets: dict[str, RowFilter] = Field(
+        default_factory=dict,
+        description=(
+            "Experimental. Foreign key -> a row filter the row it points at must match "
+            "($me, $now, $today, $<field>). class Karni: targets."
+        ),
+    )
+    frozen: dict[str, FrozenValue] = Field(
+        default_factory=dict,
+        description=(
+            "Experimental. Field -> true (never changes after create) or a row filter (cannot "
+            "change while the row matches it). class Karni: frozen."
+        ),
+    )
+    delete: DeleteRule | None = Field(
+        None,
+        description=(
+            "Experimental. When a row may be deleted: {when, blocked_by} (class Karni: delete). "
+            "Who may delete is access.delete."
+        ),
+    )
+    moves: dict[str, MoveRule] = Field(
+        default_factory=dict,
+        description=(
+            "Experimental. State (or boolean field becoming true) -> {requires, needs, stamps} "
+            "(class Karni: moves)."
+        ),
+    )
+    actions: dict[str, ActionRule] = Field(
+        default_factory=dict,
+        description=(
+            "Experimental. Row actions: name -> {from, to, by, field}, POST "
+            "<resource>/<id>/<name>/ (the viewset's row_actions, x-karni-actions)."
+        ),
+        json_schema_extra=_names(FIELD_NAME),
     )
 
     def tokens(self) -> dict[str, str]:

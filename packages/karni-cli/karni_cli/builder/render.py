@@ -323,6 +323,7 @@ def _model_class(
         options.append(("field_groups", {t: list(names) for t, names in entity.groups.items()}))
     if entity.column_sets:
         options.append(("column_sets", {n: list(cols) for n, cols in entity.column_sets.items()}))
+    options += rule_options(entity)
     if options:
         lines += ["", "    class Karni:"]
         lines += [_literal(value, "        ", line, f"{key} = ") for key, value in options]
@@ -330,6 +331,56 @@ def _model_class(
     if shown is not None:
         lines += ["", "    def __str__(self) -> str:", f"        return self.{shown}"]
     return lines, imports, body.notes
+
+
+def _bare(value: Any) -> Any:
+    """A spec value as plain data: ``None`` and empty lists left out of mappings."""
+    if hasattr(value, "model_dump"):
+        value = value.model_dump(mode="json", by_alias=True)
+    if isinstance(value, dict):
+        return {
+            str(key): _bare(item)
+            for key, item in value.items()
+            if item is not None and item != [] and item != {}
+        }
+    if isinstance(value, list):
+        return [_bare(item) for item in value]
+    return value
+
+
+def rule_options(entity: schema.Entity) -> list[tuple[str, Any]]:
+    """Experimental. ``class Karni`` options of the rules (karni.rules), the spec's data as written."""
+    options: list[tuple[str, Any]] = []
+    for key in ("bounds", "unique", "targets", "frozen", "delete", "moves"):
+        value = getattr(entity, key)
+        if value in (None, [], {}):
+            continue
+        options.append((key, _bare(value)))
+    return options
+
+
+def _row_actions(entity: schema.Entity, line: int) -> tuple[list[str], set[str]]:
+    """``row_actions = {...}`` of the viewset from ``actions``, and the names it imports."""
+    if not entity.actions:
+        return [], set()
+    used = {"RowAction"}
+    lines = ["    row_actions = {"]
+    for name, rule in entity.actions.items():
+        args: list[str] = []
+        if rule.from_:
+            states = rule.from_
+            args.append(f"from_={_flat(states[0] if len(states) == 1 else tuple(states))}")
+        if rule.to is not None:
+            args.append(f"to={pystr(rule.to)}")
+        if rule.by is not None:
+            expression, names = access_expression(list(rule.by))
+            args.append(f"by={expression}")
+            used |= set(names)
+        if rule.field is not None:
+            args.append(f"field={pystr(rule.field)}")
+        lines.append(call(f"{pystr(name)}: RowAction", args, "        ", line, ","))
+    lines.append("    }")
+    return lines, used
 
 
 def protects(name: str, entity: schema.Entity, specs: list[FieldSpec]) -> bool:
@@ -391,6 +442,21 @@ def _module(ws: Workspace, rel: str, purpose: str, imports: list[Import], blocks
 # access ---------------------------------------------------------------------------
 
 
+def where_value(arg: str) -> tuple[str, Any]:
+    """Experimental. ``where:<field>[=<value>]`` as ``(field, value)``: ``true`` when bare.
+
+    ``true`` / ``false`` are booleans, a whole number an int, anything else text.
+    """
+    name, equals, raw = arg.partition("=")
+    if not equals:
+        return name, True
+    if raw in ("true", "false"):
+        return name, raw == "true"
+    if raw.lstrip("-").isdigit():
+        return name, int(raw)
+    return name, raw
+
+
 def access_expression(items: list[str]) -> tuple[str, list[str]]:
     """Experimental. ``(predicate expression, names to import)`` for one access slot of the spec."""
     parts: list[str] = []
@@ -403,6 +469,10 @@ def access_expression(items: list[str]) -> tuple[str, list[str]]:
         elif kind == "role":
             parts.append(f"HasRole({pystr(arg)})")
             names.append("HasRole")
+        elif kind == "where":
+            name, value = where_value(arg)
+            parts.append(f"Where(Matching({name}={_flat(value)}))")
+            names += ["Where", "Matching"]
         else:
             parts.append(f"Owned({pystr(arg)})")
             names.append("Owned")
@@ -411,11 +481,16 @@ def access_expression(items: list[str]) -> tuple[str, list[str]]:
 
 def _access_line(access: schema.Access, line: int) -> tuple[str, list[str]]:
     """``access = ...`` for a rule (``Granted()`` alone for the default), and the names it uses."""
-    if access.read == access.write == ["granted"] and access.create is None:
+    if (
+        access.read == access.write == ["granted"]
+        and access.create is None
+        and access.delete is None
+        and access.assign is None
+    ):
         return "    access = Granted()", ["Granted"]
     args: list[str] = []
     names = ["Access"]
-    for slot in ("read", "write", "create"):
+    for slot in ("read", "write", "create", "delete", "assign"):
         items = getattr(access, slot)
         if items is None:
             continue
@@ -464,6 +539,9 @@ def _api_file(ws: Workspace, inputs: Inputs, app: str, names: list[str]) -> str:
         if entity.search:
             items = [pystr(item) for item in entity.search]
             body.append(tuple_literal("search_fields = ", items, "    ", line))
+        actions, action_names = _row_actions(entity, line)
+        body += actions
+        used |= action_names
         if entity.cache is False:
             body.append(f"    cache = Uncached(reason={pystr(schema.UNCACHED_REASON)})")
             used.add("Uncached")
