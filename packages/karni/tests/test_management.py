@@ -97,6 +97,7 @@ def test_models_section_covers_testapp_and_skips_framework() -> None:
             "taxoapp",
             "aggregateapp",
             "searchapp",
+            "rulesapp",
         }
     ):
         output = build_context()
