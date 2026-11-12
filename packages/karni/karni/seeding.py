@@ -115,6 +115,7 @@ from factory.random import reseed_random
 
 from karni.errorcodes import KarniError
 from karni.exceptions import KarniValueError
+from karni.placeholder import placeholder_image
 from karni.testing.factories import DEFAULT_PASSWORD, FactoryBuilder, auto_factory, factory_for
 from karni.testing.values import ValueInference
 
@@ -130,6 +131,7 @@ __all__ = [
     "clear_cache",
     "cycled",
     "occupied",
+    "placeholder_image",
     "planned_rows",
     "seed",
     "seed_plan",

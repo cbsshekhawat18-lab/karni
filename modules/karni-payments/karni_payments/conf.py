@@ -48,6 +48,11 @@ DEFAULTS: dict[str, Any] = {
     # Extra URLs whose origins are allowed as checkout success/cancel
     # redirects, on top of KARNI_FRONTEND_URL's origin.
     "KARNI_PAYMENTS_ALLOWED_REDIRECTS": env.list("KARNI_PAYMENTS_ALLOWED_REDIRECTS", default=[]),
+    # The test provider's checkout page (experimental): True serves it at
+    # payments/test-checkout/<session>/, where a person pays or declines a
+    # test payment in the browser. None (the default) serves it while DEBUG
+    # is on. False keeps the imaginary https://checkout.test/ address.
+    "KARNI_PAYMENTS_TEST_CHECKOUT_PAGE": None,
     # Provider credentials: blank by default, validated lazily at use.
     "STRIPE_SECRET_KEY": env("STRIPE_SECRET_KEY", default=""),
     "STRIPE_WEBHOOK_SECRET": env("STRIPE_WEBHOOK_SECRET", default=""),

@@ -20,6 +20,7 @@ endpoints = [
     "/api/payments/{id}/refund/",
     "/api/refunds/",
     "/payments/webhook/<provider>/",
+    "/payments/test-checkout/<session>/",
 ]
 ui = "@karni/payments-ui"
 
@@ -29,6 +30,7 @@ KARNI_PAYMENTS_CURRENCY = "string"
 KARNI_PAYMENTS_CHECKOUT_VALIDATOR = "string"
 KARNI_PAYMENTS_EVENT_HANDLER = "string"
 KARNI_PAYMENTS_ALLOWED_REDIRECTS = "array"
+KARNI_PAYMENTS_TEST_CHECKOUT_PAGE = "null"
 STRIPE_SECRET_KEY = "string"
 STRIPE_WEBHOOK_SECRET = "string"
 RAZORPAY_KEY_ID = "string"
