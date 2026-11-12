@@ -1,0 +1,3 @@
+{% for line in lines %}{{ line.quantity }} x {{ line.name }}{% if line.sku %} ({{ line.sku }}){% endif %}  {{ line.line_total|floatformat:2 }} {{ order.currency }}
+{% endfor %}
+Total: {{ order.total|floatformat:2 }} {{ order.currency }}

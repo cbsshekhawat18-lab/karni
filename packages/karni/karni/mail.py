@@ -26,6 +26,11 @@ transaction sends nothing: ``@on_transition(Order, "status", to="paid",
 queued=True)`` runs in a worker after the commit (docs/events.md), and
 ``transaction.on_commit(lambda: send_templated(...))`` does it in the request.
 
+A message may carry a ``kind``, a stable name for what it is
+(``commerce.order_paid``, ``shop.shipment_shipped``): it goes out in the
+``X-Karni-Kind`` header, and a kind listed in ``KARNI_MAIL_DISABLED_KINDS``
+is not sent at all, so a project switches one email off without code.
+
 Override / escape hatch: put a template of the same name earlier in
 ``TEMPLATES`` ``DIRS`` to change a message without code, pass
 ``from_email=`` (else ``DEFAULT_FROM_EMAIL``), ``reply_to=``, ``cc=`` or
@@ -44,7 +49,17 @@ from django.core.mail import EmailMultiAlternatives
 from django.template import TemplateDoesNotExist
 from django.template.loader import render_to_string
 
-__all__ = ["Rendered", "base_context", "render_templated", "send_templated"]
+__all__ = [
+    "KIND_HEADER",
+    "Rendered",
+    "base_context",
+    "kind_enabled",
+    "render_templated",
+    "send_templated",
+]
+
+#: The header a message's kind goes out in.
+KIND_HEADER = "X-Karni-Kind"
 
 
 @dataclass(frozen=True)
@@ -59,6 +74,13 @@ class Rendered:
 def base_context() -> dict[str, Any]:
     """Experimental. What every template gets besides the caller's context."""
     return {"frontend_url": str(getattr(settings, "KARNI_FRONTEND_URL", "") or "").rstrip("/")}
+
+
+def kind_enabled(kind: str | None) -> bool:
+    """Experimental. Whether a message of ``kind`` goes out (not in ``KARNI_MAIL_DISABLED_KINDS``)."""
+    if not kind:
+        return True
+    return kind not in set(getattr(settings, "KARNI_MAIL_DISABLED_KINDS", None) or ())
 
 
 def render_templated(template: str, context: Mapping[str, Any] | None = None) -> Rendered:
@@ -86,14 +108,16 @@ def send_templated(
     reply_to: Iterable[str] | None = None,
     cc: Iterable[str] | None = None,
     bcc: Iterable[str] | None = None,
+    kind: str | None = None,
 ) -> int:
     """Experimental. Render ``template`` (see the module docstring) and send it to ``to``.
 
     Returns the number of messages sent: ``0`` when ``to`` holds no address,
-    so a row without an email address never fails the code that saves it.
+    so a row without an email address never fails the code that saves it, and
+    ``0`` when ``kind`` is switched off (``KARNI_MAIL_DISABLED_KINDS``).
     """
     addresses = [str(address).strip() for address in to if str(address or "").strip()]
-    if not addresses:
+    if not addresses or not kind_enabled(kind):
         return 0
     rendered = render_templated(template, context)
     message = EmailMultiAlternatives(
@@ -104,6 +128,7 @@ def send_templated(
         cc=list(cc) if cc else None,
         bcc=list(bcc) if bcc else None,
         reply_to=list(reply_to) if reply_to else None,
+        headers={KIND_HEADER: kind} if kind else None,
     )
     if rendered.html is not None:
         message.attach_alternative(rendered.html, "text/html")

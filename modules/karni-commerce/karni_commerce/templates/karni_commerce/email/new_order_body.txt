@@ -1,0 +1,7 @@
+Order {{ order.number }} is paid and waits to be fulfilled.
+
+Buyer: {% if order.name %}{{ order.name }}, {% endif %}{{ order.email }}
+
+{% include "karni_commerce/email/_lines.txt" %}{% if order.note %}
+Note from the buyer: {{ order.note }}
+{% endif %}

@@ -1,0 +1,6 @@
+{% if order.name %}Hello {{ order.name }},{% else %}Hello,{% endif %}
+
+Thank you for your order. We have your payment, and order {{ order.number }} is confirmed.
+
+{% include "karni_commerce/email/_lines.txt" %}
+See your order: {{ link }}

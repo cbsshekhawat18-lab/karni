@@ -1,0 +1,5 @@
+{% if order.name %}Hello {{ order.name }},{% else %}Hello,{% endif %}
+
+Order {{ order.number }} is cancelled.{% if order.amount_paid %} What you paid goes back to you, and you get a separate email when the refund goes through.{% else %} Nothing was charged.{% endif %}
+
+See the order: {{ link }}

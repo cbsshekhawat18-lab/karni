@@ -75,3 +75,12 @@ def test_reply_to_and_sender_are_passed_on(templates: Path) -> None:
 def test_a_missing_template_is_an_error(templates: Path) -> None:
     with pytest.raises(TemplateDoesNotExist):
         send_templated("shop/email/missing", to=["a@example.com"])
+
+
+def test_a_kind_goes_out_in_a_header_and_can_be_switched_off(templates: Path) -> None:
+    assert send_templated("shop/email/plain", to=["a@example.com"], kind="shop.plain") == 1
+    assert mail.outbox[-1].extra_headers["X-Karni-Kind"] == "shop.plain"
+    with override_settings(KARNI_MAIL_DISABLED_KINDS=["shop.plain"]):
+        assert send_templated("shop/email/plain", to=["a@example.com"], kind="shop.plain") == 0
+        assert send_templated("shop/email/plain", to=["a@example.com"], kind="shop.other") == 1
+    assert len(mail.outbox) == 2

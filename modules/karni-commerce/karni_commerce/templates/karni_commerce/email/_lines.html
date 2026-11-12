@@ -1,0 +1,4 @@
+<table role="presentation" cellpadding="4">
+{% for line in lines %}<tr><td>{{ line.quantity }} x {{ line.name }}</td><td align="right">{{ line.line_total|floatformat:2 }} {{ order.currency }}</td></tr>
+{% endfor %}<tr><td><strong>Total</strong></td><td align="right"><strong>{{ order.total|floatformat:2 }} {{ order.currency }}</strong></td></tr>
+</table>

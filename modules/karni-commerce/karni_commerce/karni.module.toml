@@ -1,0 +1,59 @@
+# The catalog entry of karni-commerce: what `karni modules show commerce` prints,
+# what `karni add commerce` wires and `karni remove commerce` takes out.
+name = "commerce"
+kind = "module"
+title = "Commerce"
+purpose = "One cart, checkout and order path for anything a project sells."
+status = "experimental"
+use_when = [
+    "online shop",
+    "shopping cart",
+    "checkout",
+    "orders",
+    "sell products",
+    "sell bookings or courses",
+    "refunds by order line",
+]
+requires = ["payments"]
+services = ["a Celery worker: payments settle orders through webhook tasks"]
+docs = "docs/commerce.md"
+
+[provides]
+models = ["Cart", "CartLine", "Order", "OrderLine", "OrderPayment", "OrderRefund"]
+endpoints = [
+    "/api/carts/current/",
+    "/api/carts/current/lines/",
+    "/api/carts/current/merge/",
+    "/api/carts/current/checkout/",
+    "/api/orders/",
+    "/api/orders/lookup/",
+    "/api/orders/pay/",
+    "/api/orders/{id}/cancel/",
+    "/api/orders/{id}/refund/",
+    "/api/order-lines/",
+    "/api/order-payments/",
+    "/api/order-refunds/",
+    "/api/cart-lines/",
+]
+pages = ["the cart, checkout and order pages of @karni/commerce-ui"]
+ui = "@karni/commerce-ui"
+
+[provides.settings]
+KARNI_COMMERCE_CURRENCY = "string"
+KARNI_COMMERCE_HOLD_MINUTES = "integer"
+KARNI_COMMERCE_MAX_QUANTITY = "integer"
+KARNI_COMMERCE_FIRST_NUMBER = "integer"
+KARNI_COMMERCE_NUMBER = "string"
+KARNI_COMMERCE_ORDER_PATH = "string"
+KARNI_COMMERCE_STAFF_EMAILS = "array"
+KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR = "string"
+KARNI_COMMERCE_SELLABLES = "object"
+
+[[asks]]
+question = "How many minutes does checkout hold an order's items for its payment?"
+setting = "KARNI_COMMERCE_HOLD_MINUTES"
+default = 30
+
+[wiring]
+apps = ["karni_commerce"]
+settings = "karni_commerce.conf:DEFAULTS"
