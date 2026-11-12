@@ -71,7 +71,7 @@ apps:
           available: "capacity:stock"
           active: bool
           featured: bool
-          tags: "m2m:Tag"
+          tags: "m2m:Tag?"
         taxonomies: {categories: Category}
         key: slug
         search: [name, sku, short_description, description]

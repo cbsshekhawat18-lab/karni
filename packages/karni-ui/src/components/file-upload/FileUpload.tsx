@@ -225,6 +225,26 @@ function DefaultDropzone({
   );
 }
 
+const IMAGE_URL = /\.(png|jpe?g|gif|webp|avif|svg)(\?.*)?$/i;
+
+/** A small picture of an image file: a stored one by its URL, a chosen one read locally. */
+function Thumbnail({ file }: { file: File | string }): React.ReactElement | null {
+  const chosen = typeof file !== "string" && file.type.startsWith("image/");
+  const local = React.useMemo(
+    () => (chosen && typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : null),
+    [chosen, file],
+  );
+  React.useEffect(
+    () => () => {
+      if (local !== null) URL.revokeObjectURL(local);
+    },
+    [local],
+  );
+  const src = typeof file === "string" ? (IMAGE_URL.test(file) ? file : null) : local;
+  if (src === null) return null;
+  return <img src={src} alt="" className="h-10 w-10 shrink-0 rounded-sm object-cover" />;
+}
+
 function DefaultFileRow({
   file,
   name,
@@ -235,8 +255,9 @@ function DefaultFileRow({
     <li className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted-subtle px-3 py-1.5 text-sm">
       {typeof file === "string" ? (
         // A file already stored (the record's value on an edit form): says so,
-        // and links to it. Choosing a new file replaces it.
+        // shows a picture of an image, and links to it. A new file replaces it.
         <span className="flex min-w-0 items-center gap-2">
+          <Thumbnail file={file} />
           <span className="shrink-0 text-xs text-muted-foreground">Current file</span>
           <a
             href={file}
@@ -248,9 +269,12 @@ function DefaultFileRow({
           </a>
         </span>
       ) : (
-        <span className="truncate">
-          {name}
-          <span className="ml-2 text-xs text-muted-foreground">{size}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <Thumbnail file={file} />
+          <span className="truncate">
+            {name}
+            <span className="ml-2 text-xs text-muted-foreground">{size}</span>
+          </span>
         </span>
       )}
       {onRemove !== undefined ? (

@@ -284,3 +284,16 @@ describe("FileUpload accessibility", () => {
     expect(onChange).toHaveBeenCalledWith(null);
   });
 });
+
+describe("FileUpload pictures", () => {
+  it("shows a stored image as a small picture, and a stored document without one", () => {
+    const { container, rerender } = render(
+      <FileUpload value="http://karni.test/media/shop/lamp.png" onChange={() => undefined} />,
+    );
+    expect(container.querySelector("img")?.getAttribute("src")).toBe(
+      "http://karni.test/media/shop/lamp.png",
+    );
+    rerender(<FileUpload value="http://karni.test/media/manual.pdf" onChange={() => undefined} />);
+    expect(container.querySelector("img")).toBeNull();
+  });
+});
