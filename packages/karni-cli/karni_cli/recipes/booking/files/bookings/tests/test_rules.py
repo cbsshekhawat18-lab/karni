@@ -1,4 +1,4 @@
-"""The booking rules of karni.yaml: what a member or staff may send, and what is refused."""
+"""The booking rules of karni.yaml: what a member or staff may send, or may not."""
 
 import datetime as dt
 from decimal import Decimal
@@ -27,7 +27,9 @@ def _slot(**values: Any) -> Slot:
     start = timezone.now() + dt.timedelta(days=2)
     values.setdefault("resource", create(Resource, price=Decimal("30.00")))
     values.setdefault("capacity", 5)
-    return create(Slot, starts_at=start, ends_at=start + dt.timedelta(hours=1), **values)
+    return create(
+        Slot, starts_at=start, ends_at=start + dt.timedelta(hours=1), **values
+    )
 
 
 def _book(client: Any, slot: Slot, **extra: Any) -> Any:
@@ -39,7 +41,7 @@ def _code(response: Any, field: str) -> str:
 
 
 def test_a_booking_keeps_its_slot(client_as: Any) -> None:
-    """PATCH of the slot was 200 and left both slots' places wrong (then cancel was a 500)."""
+    """A PATCH of the slot was 200, left both places wrong, then cancel was a 500."""
     client = client_as("member")
     first, second = _slot(), _slot()
     booking = _book(client, first).json()
@@ -58,7 +60,9 @@ def test_a_member_books_only_for_themselves(client_as: Any) -> None:
     refused = _book(client, _slot(), member=str(other.pk))
     assert refused.status_code == 403 and refused.json()["detail"].startswith("E135: ")
     staff = client_as("staff").post(
-        "/api/bookings/", {"slot": str(_slot().pk), "member": str(other.pk)}, format="json"
+        "/api/bookings/",
+        {"slot": str(_slot().pk), "member": str(other.pk)},
+        format="json",
     )
     assert staff.status_code == 201, staff.content
     assert Booking.objects.get(pk=staff.json()["id"]).member == other
@@ -77,7 +81,9 @@ def test_a_member_books_a_slot_once(client_as: Any) -> None:
 def test_a_started_slot_cannot_be_booked(client_as: Any) -> None:
     start = timezone.now() - dt.timedelta(minutes=30)
     with unchecked(reason="test: a slot that has started"):
-        slot = create(Slot, starts_at=start, ends_at=start + dt.timedelta(hours=1), capacity=5)
+        slot = create(
+            Slot, starts_at=start, ends_at=start + dt.timedelta(hours=1), capacity=5
+        )
     refused = _book(client_as("member"), slot)
     assert refused.status_code == 400 and _code(refused, "slot") == "E993"
 
@@ -97,7 +103,9 @@ def test_pay_twice_opens_one_payment_and_a_cancelled_booking_is_not_paid(
     assert refused.status_code == 409 and refused.json()["code"] == "E997"
 
 
-def test_a_paid_booking_is_not_paid_again_and_its_cancel_refunds(client_as: Any) -> None:
+def test_a_paid_booking_is_not_paid_again_and_its_cancel_refunds(
+    client_as: Any,
+) -> None:
     client = client_as("member")
     booking = _book(client, _slot()).json()
     paid = client.post(f"/api/bookings/{booking['id']}/pay/")
@@ -134,7 +142,9 @@ def test_a_slot_with_live_bookings_is_not_deleted(client_as: Any) -> None:
 
 def test_prices_and_capacities_keep_their_bounds(client_as: Any) -> None:
     staff = client_as("staff")
-    price = staff.post("/api/resources/", {"name": "Room", "price": "-5"}, format="json")
+    price = staff.post(
+        "/api/resources/", {"name": "Room", "price": "-5"}, format="json"
+    )
     assert price.status_code == 400 and _code(price, "price") == "E990"
     resource = create(Resource, price=Decimal("10.00"))
     start = timezone.now() + dt.timedelta(days=1)

@@ -21,7 +21,7 @@ and gets, for each one:
   ``transition()`` (the fields ``class Karni: moves`` requires for that state
   are read from the request body) and answers the row. An action without
   ``to`` runs the viewset's own ``@action`` method of that name (``pay``
-  opens a payment); ``karni check`` reports one that has none (``E136``);
+  opens a payment); ``karni check`` warns about one that has none yet (``W136``);
 * **who may**: ``by`` is the action's access predicate (gate and row), like
   ``@action(access=...)``; without it the action follows ``access.write``;
 * **where it is legal**: called while the row's state is not one of
@@ -251,7 +251,7 @@ def install(cls: Any) -> None:
 
 
 def missing_methods(cls: Any) -> list[str]:
-    """Row actions without ``to`` that the class has no ``@action`` method for (``E136``)."""
+    """Row actions without ``to`` that the class has no ``@action`` method for (``W136``)."""
     return [
         name
         for name, item in (getattr(cls, "row_actions", None) or {}).items()

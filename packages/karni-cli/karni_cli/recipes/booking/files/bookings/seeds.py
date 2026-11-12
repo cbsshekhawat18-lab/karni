@@ -136,7 +136,9 @@ class BookingSeeder(karni.BookingSeeder):
     def seed(self, context: SeedContext) -> list[Any]:
         members = list(get_user_model().objects.order_by("email"))
         taken: set[tuple[Any, Any]] = set(
-            Booking.objects.exclude(status="cancelled").values_list("slot_id", "member_id")
+            Booking.objects.exclude(status="cancelled").values_list(
+                "slot_id", "member_id"
+            )
         )
         rows: list[Any] = []
         for number in range(context.count):

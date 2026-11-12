@@ -297,7 +297,7 @@ STUDENTS = [
 
 
 def _students(count: int) -> None:
-    """Make sure ``count`` demo students exist, the same ones on every run (no password)."""
+    """Make sure ``count`` demo students exist, the same on every run (no password)."""
     from karni.accounts.permissions import assign_role
 
     users = get_user_model().objects
@@ -310,7 +310,7 @@ def _students(count: int) -> None:
 
 
 class EnrolmentSeeder(karni.EnrolmentSeeder):
-    """Students in the published courses, each student once per course (karni.yaml: unique).
+    """Students in the published courses, each once per course (karni.yaml: unique).
 
     A course's own instructor never enrols in it. A run with more enrolments
     than students times courses stops at the last free pair.
@@ -333,12 +333,13 @@ class EnrolmentSeeder(karni.EnrolmentSeeder):
                 (
                     user
                     for user in students[number % max(len(students), 1) :] + students
-                    if (course.pk, user.pk) not in taken and user.pk != course.instructor_id
+                    if (course.pk, user.pk) not in taken
+                    and user.pk != course.instructor_id
                 ),
                 None,
             )
             if student is None:
-                break  # every student is in every course already: fewer rows, never a duplicate
+                break  # every student is in every course: fewer rows, never a duplicate
             taken.add((course.pk, student.pk))
             rows += context.create(1, course=course, student=student)
         return rows

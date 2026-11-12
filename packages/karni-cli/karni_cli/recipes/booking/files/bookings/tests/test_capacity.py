@@ -33,7 +33,9 @@ def test_a_slot_never_takes_more_bookings_than_its_capacity() -> None:
     full = late.post("/api/bookings/", {"slot": str(slot.pk)})
     assert full.status_code == 409 and full.json()["code"] == "E985"
     owner = Booking.objects.get(pk=first.json()["id"]).member
-    cancelled = client_as(user=owner).post(f"/api/bookings/{first.json()['id']}/cancel/")
+    cancelled = client_as(user=owner).post(
+        f"/api/bookings/{first.json()['id']}/cancel/"
+    )
     assert cancelled.status_code == 200 and cancelled.json()["status"] == "cancelled"
     slot.refresh_from_db()
     assert slot.remaining == 1

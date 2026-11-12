@@ -47,13 +47,19 @@ class OrderViewSet(karni.OrderViewSet):
         payment = order.payment
         if payment is not None and payment.status == Payment.Status.SUCCEEDED:
             raise RowActionRefused(
-                f"Order {order.pk} is paid already: it is marked paid when the provider's "
-                "webhook arrives.",
+                f"Order {order.pk} is paid already: it is marked paid when the "
+                "provider's webhook arrives.",
                 field="payment",
                 details={"action": "pay", "payment": str(payment.pk)},
             )
-        if payment is not None and payment.status in OPEN and payment.metadata.get("url"):
-            return Response({"payment": str(payment.pk), "url": payment.metadata["url"]})
+        if (
+            payment is not None
+            and payment.status in OPEN
+            and payment.metadata.get("url")
+        ):
+            return Response(
+                {"payment": str(payment.pk), "url": payment.metadata["url"]}
+            )
         back = f"{settings.KARNI_FRONTEND_URL}/orders/{order.pk}"
         payment, session = create_checkout(
             request.user,
@@ -70,7 +76,7 @@ class OrderViewSet(karni.OrderViewSet):
 
     @action(detail=True, methods=["post"])
     def refund(self, request: Request, pk: str | None = None) -> Response:
-        """Refund a paid order in full: its payout is voided and the payment refunded."""
+        """Refund a paid order in full: its payout is void, its payment refunded."""
         order = self.get_object()
         refund = None
         with transaction.atomic():
@@ -85,7 +91,11 @@ class OrderViewSet(karni.OrderViewSet):
         data["refund"] = (
             None
             if refund is None
-            else {"id": str(refund.pk), "amount": str(refund.amount), "status": refund.status}
+            else {
+                "id": str(refund.pk),
+                "amount": str(refund.amount),
+                "status": refund.status,
+            }
         )
         return Response(data)
 

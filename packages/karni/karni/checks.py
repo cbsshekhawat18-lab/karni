@@ -173,15 +173,15 @@ def check_viewsets(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckM
 
 
 def _row_actions(viewset: type[Any]) -> list[checks.CheckMessage]:
-    """karni.E136: a row action without ``to`` whose viewset has no method to run."""
+    """karni.W136: a row action without ``to`` whose viewset has no method to run yet."""
     from karni.api.actions import missing_methods
 
     return [
-        check_error(
-            "E136",
+        check_warning(
+            "W136",
             f"{viewset.__name__}.row_actions[{name!r}] has no to=, so the viewset's own "
             f"@action method {name} does the work, and it has none.",
-            hint=_fix("E136"),
+            hint=_fix("W136"),
             obj=viewset,
         )
         for name in missing_methods(viewset)

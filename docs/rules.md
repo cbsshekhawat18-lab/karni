@@ -280,7 +280,8 @@ hand, with no key: it is what `owned:` in `write` and `create` means.
   the viewset; define the method of a row action yourself.
 - `Seeder.Meta.after` seeds a model after others no foreign key names
   (enrolments after the lessons that publish a course).
-- `karni check` reports a declaration that cannot work (`E998`, `E136`), and
+- `karni check` reports a declaration that cannot work (`E998`, `E136`) and a
+  row action whose method is not written yet (`W136`), and
   `karni spec validate` the same in karni.yaml (`C760` to `C767`).
 
 ## Codes
@@ -297,5 +298,6 @@ hand, with no key: it is what `owned:` in `write` and `create` means.
 | [E998](errors.md#e998) | a rule declared wrongly (`karni check`) |
 | [E134](errors.md#e134) | a written row outside the caller's write scope (403) |
 | [E135](errors.md#e135) | an owner set to someone else without `assign` (403) |
-| [E136](errors.md#e136) | a row action with nothing to run (`karni check`) |
+| [E136](errors.md#e136) | a row action declared wrongly |
+| [W136](errors.md#w136) | a row action whose method is not written yet (`karni check`) |
 | [C760](errors.md#c760) to [C767](errors.md#c767) | `karni spec validate`: bounds, unique, targets, frozen, delete, moves, actions, a row filter |

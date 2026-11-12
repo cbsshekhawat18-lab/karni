@@ -44,13 +44,19 @@ class BookingViewSet(karni.BookingViewSet):
         payment = booking.payment
         if payment is not None and payment.status == Payment.Status.SUCCEEDED:
             raise RowActionRefused(
-                f"Booking {booking.pk} is paid already: it is confirmed when the provider's "
-                "webhook arrives.",
+                f"Booking {booking.pk} is paid already: it is confirmed when the "
+                "provider's webhook arrives.",
                 field="payment",
                 details={"action": "pay", "payment": str(payment.pk)},
             )
-        if payment is not None and payment.status in OPEN and payment.metadata.get("url"):
-            return Response({"payment": str(payment.pk), "url": payment.metadata["url"]})
+        if (
+            payment is not None
+            and payment.status in OPEN
+            and payment.metadata.get("url")
+        ):
+            return Response(
+                {"payment": str(payment.pk), "url": payment.metadata["url"]}
+            )
         back = f"{settings.KARNI_FRONTEND_URL}/bookings/{booking.pk}"
         payment, session = create_checkout(
             request.user,
@@ -67,7 +73,7 @@ class BookingViewSet(karni.BookingViewSet):
 
     @action(detail=True, methods=["post"])
     def cancel(self, request: Request, pk: str | None = None) -> Response:
-        """Cancel the booking: its place is free again, and a paid one is refunded in full."""
+        """Cancel the booking: its place is free again, a paid one is refunded."""
         booking = self.get_object()
         refund = None
         with transaction.atomic():
@@ -79,6 +85,10 @@ class BookingViewSet(karni.BookingViewSet):
         data["refund"] = (
             None
             if refund is None
-            else {"id": str(refund.pk), "amount": str(refund.amount), "status": refund.status}
+            else {
+                "id": str(refund.pk),
+                "amount": str(refund.amount),
+                "status": refund.status,
+            }
         )
         return Response(data)

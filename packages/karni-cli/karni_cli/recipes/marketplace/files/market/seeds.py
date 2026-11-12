@@ -227,7 +227,7 @@ def _shopfront(seller: Seller, position: int) -> Shopfront:
 
 
 def _person(email: str, role: str) -> Any:
-    """The demo user ``email`` with ``role``, the same one on every run (no password)."""
+    """The demo user ``email`` with ``role``, the same on every run (no password)."""
     from karni.accounts.permissions import assign_role
 
     users = get_user_model().objects
@@ -251,7 +251,7 @@ class SellerSeeder(karni.SellerSeeder):
             name = cycled(names, number)
             owner = _person(f"{slugify(name)}@sellers.example", "seller")
             if Seller.objects.filter(user=owner).exists():
-                continue  # a shop per person (karni.yaml: unique), kept from an earlier run
+                continue  # one shop per person (karni.yaml: unique), made before
             rows += context.create(
                 1,
                 user=owner,
@@ -323,9 +323,14 @@ class OrderSeeder(karni.OrderSeeder):
             )
         with any_initial_state("seed data: payouts of orders paid earlier"):
             for order in rows:
-                if order.status in PAYOUT_STATES and not Payout.objects.filter(order=order).exists():
+                if (
+                    order.status in PAYOUT_STATES
+                    and not Payout.objects.filter(order=order).exists()
+                ):
                     Payout.objects.create(
-                        id=uuid.uuid5(order.pk, "payout"),  # the same on every run of a seed
+                        id=uuid.uuid5(
+                            order.pk, "payout"
+                        ),  # the same on every run of a seed
                         seller=order.listing.seller,
                         order=order,
                         amount=order.payout_amount(),
@@ -336,7 +341,12 @@ class OrderSeeder(karni.OrderSeeder):
 
 
 #: The payout an order in each paid-or-later state owes its seller (OrderSeeder).
-PAYOUT_STATES = {"paid": "pending", "shipped": "pending", "delivered": "paid", "refunded": "void"}
+PAYOUT_STATES = {
+    "paid": "pending",
+    "shipped": "pending",
+    "delivered": "paid",
+    "refunded": "void",
+}
 
 
 class PayoutSeeder(karni.PayoutSeeder):

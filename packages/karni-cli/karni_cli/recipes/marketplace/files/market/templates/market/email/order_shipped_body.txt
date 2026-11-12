@@ -1,6 +1,7 @@
 Hello,
 
-{{ row.listing.seller }} has shipped {{ row.quantity }} x {{ row.listing }}. Mark it delivered when it arrives.
+{{ row.listing.seller }} has shipped {{ row.quantity }} x {{ row.listing }}.
+Mark it delivered when it arrives.
 {% if frontend %}
 Your order: {{ frontend }}/orders/{{ row.pk }}
 {% endif %}

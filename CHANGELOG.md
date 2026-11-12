@@ -95,7 +95,8 @@ apply codemods and list the manual steps. This file is the human summary.
   `POST <resource>/<id>/<name>/` with the states and roles where it is legal. It is
   refused elsewhere with a 409 (`E997`), safe to call twice, routed by Karni when it only
   moves the state, and published as `x-karni-actions` and `x-karni-action` so a UI shows
-  the right buttons. `karni check` reports one with nothing to run (`E136`).
+  the right buttons. `karni check` warns about one whose method is not written yet
+  (`W136`).
 - **Added: `Access(delete=..., assign=...)` and `Where(Matching(...))` (experimental).**
   `delete` governs `destroy` (default: `write`). `assign` names who may set an owner
   field to another user: anyone else who sends one gets a 403 (`E135`). `Matching`

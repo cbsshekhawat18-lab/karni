@@ -288,7 +288,7 @@ Each one is `POST <resource>/<id>/<name>/`:
 | where it is legal | the row's state is one of `from_` (empty: any). Elsewhere: **409**, `E997`, naming the state and the legal ones |
 | an action with `to` | Karni routes it when the class has no method of that name: it moves the row with `transition()`, reading the fields `class Karni: moves` requires for that state from the body, and answers the row |
 | twice | an action with `to` whose row is there already answers **200** and changes nothing |
-| an action without `to` | the viewset's own `@action` method of that name runs after the checks. `karni check` reports one that has none (`E136`) |
+| an action without `to` | the viewset's own `@action` method of that name runs after the checks. `karni check` warns about one that has none yet (`W136`) |
 
 The list and retrieve operations carry `x-karni-actions` (each action's
 `from`, `to`, `field`, `by` as `x-karni-access` writes it, and `requires`),

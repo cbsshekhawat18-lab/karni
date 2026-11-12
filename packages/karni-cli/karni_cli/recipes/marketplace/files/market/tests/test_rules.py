@@ -1,4 +1,4 @@
-"""The marketplace rules of karni.yaml: what buyers, sellers and staff may send or not."""
+"""The marketplace rules: what buyers, sellers and staff may send, or may not."""
 
 from decimal import Decimal
 from typing import Any
@@ -44,14 +44,18 @@ def test_a_listing_goes_only_into_your_own_shop(client_as: Any) -> None:
     body = {"seller": str(shop.pk), "title": "Mug", "price": "12.00", "active": True}
     for role in ("buyer", "seller"):
         refused = client_as(role).post("/api/listings/", body, format="json")
-        assert refused.status_code == 403 and refused.json()["detail"].startswith("E134: ")
+        assert refused.status_code == 403 and refused.json()["detail"].startswith(
+            "E134: "
+        )
     owner = client_as("seller", user=shop.user)
     assert owner.post("/api/listings/", body, format="json").status_code == 201
 
 
 def test_one_shop_per_person(client_as: Any) -> None:
     client = client_as("seller")
-    assert client.post("/api/sellers/", {"name": "Kiln"}, format="json").status_code == 201
+    assert (
+        client.post("/api/sellers/", {"name": "Kiln"}, format="json").status_code == 201
+    )
     again = client.post("/api/sellers/", {"name": "Kiln Two"}, format="json")
     assert again.status_code == 400 and _code(again, "user") == "E991"
 
@@ -117,7 +121,10 @@ def test_the_seller_ships_and_the_buyer_confirms_delivery(client_as: Any) -> Non
     assert early.status_code == 409  # not paid yet
     _paid(order["id"], buyer)
     assert buyer.post(f"{url}/ship/").status_code == 403  # only the seller (or staff)
-    assert client_as("seller").post(f"{url}/ship/").status_code in (403, 404)  # another seller
+    assert client_as("seller").post(f"{url}/ship/").status_code in (
+        403,
+        404,
+    )  # another seller
     shipped = client_as("seller", user=listing.seller.user).post(f"{url}/ship/")
     assert shipped.status_code == 200 and shipped.json()["status"] == "shipped"
     delivered = buyer.post(f"{url}/deliver/")
@@ -147,9 +154,13 @@ def test_staff_mark_a_payout_paid_and_it_says_when(client_as: Any) -> None:
 
 def test_seeded_paid_orders_owe_their_sellers() -> None:
     seed(seed=5, reset=True)
-    for order in Order.objects.filter(status__in=["paid", "shipped", "delivered", "refunded"]):
+    for order in Order.objects.filter(
+        status__in=["paid", "shipped", "delivered", "refunded"]
+    ):
         payout = Payout.objects.get(order=order)
-        assert payout.seller == order.listing.seller and order.buyer != payout.seller.user
+        assert (
+            payout.seller == order.listing.seller and order.buyer != payout.seller.user
+        )
 
 
 def test_the_buyer_hears_the_order_was_paid_and_shipped(
@@ -161,7 +172,9 @@ def test_the_buyer_hears_the_order_was_paid_and_shipped(
     with django_capture_on_commit_callbacks(execute=True):
         _paid(order["id"], buyer)
     with django_capture_on_commit_callbacks(execute=True):
-        client_as("seller", user=listing.seller.user).post(f"/api/orders/{order['id']}/ship/")
+        client_as("seller", user=listing.seller.user).post(
+            f"/api/orders/{order['id']}/ship/"
+        )
     assert [message.subject for message in mailoutbox] == [
         "Order received: Stoneware mug",
         "On its way: Stoneware mug",

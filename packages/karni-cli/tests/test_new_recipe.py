@@ -120,9 +120,11 @@ def test_a_recipe_validates_and_leaves_no_question_open(name: str, runner: CliRu
     assert recipe.files
     assert all(rel.split("/")[0] == RECIPES[name] for rel in recipe.files)
     assert not [rel for rel in recipe.files if recipes_mod.karni_owned(rel)]
-    # a project's code, at the 88 columns Karni's generators write (ruff format in a project)
+    # a project's code, at the 88 columns Karni's generators write (ruff format in a project);
+    # a file that is not Python (an email template) keeps the same width
     for rel, text in apply.contents(recipe).items():
-        ast.parse(text, rel)
+        if rel.endswith(".py"):
+            ast.parse(text, rel)
         assert max(len(line) for line in text.splitlines()) <= 88, rel
 
 

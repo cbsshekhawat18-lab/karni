@@ -1,4 +1,4 @@
-"""The CRM rules of karni.yaml: what sales and managers may send, and what is refused."""
+"""The CRM rules of karni.yaml: what sales and managers may send, or may not."""
 
 from decimal import Decimal
 from typing import Any
@@ -35,10 +35,14 @@ def test_a_deal_takes_a_contact_of_its_own_company(client_as: Any) -> None:
     sales = client_as("sales")
     company, other = create(Company), create(Company)
     stranger = create(Contact, company=other)
-    refused = sales.post("/api/deals/", _deal(company, contact=str(stranger.pk)), format="json")
+    refused = sales.post(
+        "/api/deals/", _deal(company, contact=str(stranger.pk)), format="json"
+    )
     assert refused.status_code == 400 and _code(refused, "contact") == "E993"
     colleague = create(Contact, company=company)
-    made = sales.post("/api/deals/", _deal(company, contact=str(colleague.pk)), format="json")
+    made = sales.post(
+        "/api/deals/", _deal(company, contact=str(colleague.pk)), format="json"
+    )
     assert made.status_code == 201, made.content
 
 
@@ -47,7 +51,9 @@ def test_a_deal_value_and_close_date_keep_their_bounds(client_as: Any) -> None:
     company = create(Company)
     negative = sales.post("/api/deals/", _deal(company, value="-50"), format="json")
     assert negative.status_code == 400 and _code(negative, "value") == "E990"
-    past = sales.post("/api/deals/", _deal(company, expected_close="2001-01-01"), format="json")
+    past = sales.post(
+        "/api/deals/", _deal(company, expected_close="2001-01-01"), format="json"
+    )
     assert past.status_code == 400 and _code(past, "expected_close") == "E990"
 
 
@@ -64,7 +70,9 @@ def test_lost_needs_a_reason_and_a_closed_deal_says_when(client_as: Any) -> None
     url = f"/api/deals/{deal['id']}/"
     refused = sales.patch(url, {"stage": "lost"}, format="json")
     assert refused.status_code == 400 and _code(refused, "lost_reason") == "E996"
-    lost = sales.patch(url, {"stage": "lost", "lost_reason": "Budget cut"}, format="json")
+    lost = sales.patch(
+        url, {"stage": "lost", "lost_reason": "Budget cut"}, format="json"
+    )
     assert lost.status_code == 200, lost.content
     assert lost.json()["closed_at"] is not None
 
@@ -88,7 +96,12 @@ def test_only_a_manager_deletes_or_reassigns_a_deal(client_as: Any) -> None:
     moved = sales.patch(url, {"salesperson": str(colleague.pk)}, format="json")
     assert moved.status_code == 403 and moved.json()["detail"].startswith("E135: ")
     manager = client_as("manager")
-    assert manager.patch(url, {"salesperson": str(colleague.pk)}, format="json").status_code == 200
+    assert (
+        manager.patch(
+            url, {"salesperson": str(colleague.pk)}, format="json"
+        ).status_code
+        == 200
+    )
     assert Deal.objects.get(pk=deal.pk).salesperson == colleague
     assert manager.delete(url).status_code == 204
 

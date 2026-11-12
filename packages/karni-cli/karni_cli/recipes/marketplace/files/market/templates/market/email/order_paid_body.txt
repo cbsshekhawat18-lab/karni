@@ -1,6 +1,7 @@
 Hello,
 
-We have your payment of {{ row.amount }} for {{ row.quantity }} x {{ row.listing }}. The seller ships it next.
+We have your payment of {{ row.amount }} for {{ row.quantity }} x {{ row.listing }}.
+The seller ships it next.
 {% if frontend %}
 Your order: {{ frontend }}/orders/{{ row.pk }}
 {% endif %}

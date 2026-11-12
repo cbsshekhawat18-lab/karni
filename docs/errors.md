@@ -493,13 +493,23 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="e136"></a>
 
-#### E136: A row action has nothing to run, or is declared wrongly
+#### E136: A row action is declared wrongly
 
-*system check (error)* · from `karni.api.actions (RowAction, row_actions); karni.checks.check_viewsets`
+*exception* · from `karni.api.actions (RowAction, row_actions)`
 
-**Why Karni objects.** A row action without to= is the viewset's own @action method of that name (pay opens a payment): Karni checks the state and who may, then runs it. Without the method nothing would answer the route. row_actions maps names to RowAction(...), and states belong to the model's one StateField unless field= names another.
+**Why Karni objects.** row_actions maps action names to RowAction(...), whose by= is an access predicate, and the states it names belong to the model's one StateField unless field= names another.
 
-**Fix.** Write the @action(detail=True, methods=['post']) method of that name in the project's viewset (&lt;app>/viewsets.py), give the action a to= state, or name the StateField with field=.
+**Fix.** Write row_actions = {'ship': RowAction(from_='paid', to='shipped', by=Owned(...))}, and name the StateField with field= when the model has two.
+
+<a id="w136"></a>
+
+#### W136: A row action has nothing to run yet
+
+*system check (warning)* · from `karni.api.actions.missing_methods; karni.checks.check_viewsets`
+
+**Why Karni objects.** A row action without to= is the viewset's own @action method of that name (pay opens a payment): Karni checks the state and who may, then runs it. Until the method exists no route answers the action. It is a warning so a project built from karni.yaml migrates and runs while the method is being written.
+
+**Fix.** Write the @action(detail=True, methods=['post']) method of that name in the project's viewset (&lt;app>/viewsets.py), or give the action a to= state.
 
 ### 2xx · Accounts
 

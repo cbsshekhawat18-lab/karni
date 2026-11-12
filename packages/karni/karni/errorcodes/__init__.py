@@ -630,16 +630,25 @@ CODES: Final[tuple[ErrorCode, ...]] = (
     ),
     _e(
         "E136",
-        "A row action has nothing to run, or is declared wrongly",
-        "check",
-        "karni.api.actions (RowAction, row_actions); karni.checks.check_viewsets",
+        "A row action is declared wrongly",
+        "exception",
+        "karni.api.actions (RowAction, row_actions)",
+        "row_actions maps action names to RowAction(...), whose by= is an access predicate, and "
+        "the states it names belong to the model's one StateField unless field= names another.",
+        "Write row_actions = {'ship': RowAction(from_='paid', to='shipped', by=Owned(...))}, "
+        "and name the StateField with field= when the model has two.",
+    ),
+    _e(
+        "W136",
+        "A row action has nothing to run yet",
+        "warning",
+        "karni.api.actions.missing_methods; karni.checks.check_viewsets",
         "A row action without to= is the viewset's own @action method of that name (pay opens a "
-        "payment): Karni checks the state and who may, then runs it. Without the method nothing "
-        "would answer the route. row_actions maps names to RowAction(...), and states belong to "
-        "the model's one StateField unless field= names another.",
+        "payment): Karni checks the state and who may, then runs it. Until the method exists no "
+        "route answers the action. It is a warning so a project built from karni.yaml migrates "
+        "and runs while the method is being written.",
         "Write the @action(detail=True, methods=['post']) method of that name in the project's "
-        "viewset (<app>/viewsets.py), give the action a to= state, or name the StateField with "
-        "field=.",
+        "viewset (<app>/viewsets.py), or give the action a to= state.",
     ),
     _e(
         "W101",

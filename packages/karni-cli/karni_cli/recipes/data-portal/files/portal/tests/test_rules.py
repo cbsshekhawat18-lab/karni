@@ -1,4 +1,4 @@
-"""The portal's data rules of karni.yaml: one value per dataset, place, topic and year."""
+"""The data rules of karni.yaml: one value per dataset, place, topic and year."""
 
 from typing import Any
 
@@ -36,7 +36,9 @@ def test_one_indicator_per_dataset_region_sector_and_year(
     assert editor.post("/api/indicators/", body, format="json").status_code == 201
     same_label = editor.post("/api/indicators/", {**body, "year": 2023}, format="json")
     assert same_label.status_code == 400 and _code(same_label, "label") == "E991"
-    same_cell = editor.post("/api/indicators/", {**body, "label": "Other"}, format="json")
+    same_cell = editor.post(
+        "/api/indicators/", {**body, "label": "Other"}, format="json"
+    )
     assert same_cell.status_code == 400 and _code(same_cell, "dataset") == "E991"
 
 
