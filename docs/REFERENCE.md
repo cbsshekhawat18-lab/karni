@@ -2371,7 +2371,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E133`](errors.md#e133) | check | Karni.dashboard is malformed or names a field the model does not have |
 | [`E134`](errors.md#e134) | exception | The written row is outside the caller's write scope |
 | [`E135`](errors.md#e135) | exception | Only some roles may set the owner of a row |
-| [`E136`](errors.md#e136) | check | A row action has nothing to run, or is declared wrongly |
+| [`E136`](errors.md#e136) | exception | A row action is declared wrongly |
+| [`W136`](errors.md#w136) | warning | A row action has nothing to run yet |
 | [`E201`](errors.md#e201) | exception | KARNI_ACCOUNTS_EMAIL_BACKEND is not an accounts email backend |
 | [`E202`](errors.md#e202) | exception | No KARNI_ACCOUNTS_LINKS entry for a token purpose |
 | [`E203`](errors.md#e203) | exception | create_user() or create_superuser() was called with invalid arguments |
