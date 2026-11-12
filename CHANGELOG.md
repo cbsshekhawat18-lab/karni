@@ -70,6 +70,10 @@ apply codemods and list the manual steps. This file is the human summary.
   production settings behind the deploy gate. No framework change: the demo uses the
   project's `MIDDLEWARE`, the `AuthGuard` slot and the admin's `login_template`.
 
+- **The shop demo is live.** [karni-shop-demo.onrender.com](https://karni-shop-demo.onrender.com/) runs the Blueprint on
+  Render's free plan. The README links it as "Live demo", and docs/demo.md says what the
+  first deploy showed.
+
 - **Tests skip when their dependency is missing.** Tests that run git skip with "needs git on
   PATH" when git is missing, and the PostgreSQL backup round trip skips when `DATABASE_URL`
   points at a server that is not listening. Before, they failed.

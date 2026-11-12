@@ -124,8 +124,8 @@ def test_the_image_installs_released_packages() -> None:
     assert '"@karni/ui": "^' in package and "file:" not in package
 
 
-def test_the_readme_has_the_deploy_button_and_a_place_for_the_live_link() -> None:
+def test_the_readme_has_the_deploy_button_and_the_live_demo_link() -> None:
     readme = (REPO / "README.md").read_text()
     assert "https://render.com/deploy?repo=https://github.com/cbsshekhawat18-lab/karni" in readme
     assert "https://render.com/images/deploy-to-render-button.svg" in readme
-    assert readme.count("<!-- live-demo-link -->") == 1
+    assert readme.count('<a href="https://karni-shop-demo.onrender.com/">Live demo</a>') == 1

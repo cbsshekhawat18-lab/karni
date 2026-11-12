@@ -26,7 +26,7 @@ Karni is an open-source Django + React framework for building with AI coding age
 </p>
 
 <p align="center">
-  <!-- live-demo-link -->
+  <b><a href="https://karni-shop-demo.onrender.com/">Live demo</a></b> (sign in as <code>demo@example.com</code> / <code>karni-password</code>, the first page can take a minute to wake) &nbsp;·&nbsp;
   <a href="https://render.com/deploy?repo=https://github.com/cbsshekhawat18-lab/karni"><img alt="Deploy to Render" src="https://render.com/images/deploy-to-render-button.svg"></a>
   <br>
   The <a href="docs/demo.md">shop demo</a>: the shop recipe as one service, with a public demo login and a daily reset.
