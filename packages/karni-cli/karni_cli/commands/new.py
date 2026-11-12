@@ -60,7 +60,6 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import click
 import typer
 
 from karni_cli import agent_data, kinds, scaffold, toolchain
@@ -210,7 +209,13 @@ def _ask_kind(design: bool) -> str:
     typer.echo("What kind of project is it?")
     for kind in choices:
         typer.echo(f"  {kind:<9} {kinds.summary(kind)}")
-    return str(typer.prompt("Kind", default=default, type=click.Choice(choices)))
+    # Checked here, not with click.Choice: typer 0.29 vendors click and refuses the
+    # separate click package's types in typer.prompt (an AssertionError, not a prompt).
+    while True:
+        answer = str(typer.prompt("Kind", default=default)).strip()
+        if answer in choices:
+            return answer
+        typer.echo(f"Error: {answer!r} is not one of {', '.join(choices)}.", err=True)
 
 
 def choose_kind(kind: str | None, design: Path | None, *, ask: bool) -> str:

@@ -216,6 +216,19 @@ def test_the_question_in_a_terminal(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     assert _kind(tmp_path / "asked_app") == "app"
 
 
+def test_the_question_asks_again_after_an_answer_that_is_not_a_kind(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Typer 0.29 refused click.Choice in typer.prompt (an AssertionError): the kind is
+    checked by karni itself, on every typer version, and a wrong answer is asked again."""
+    monkeypatch.setattr(new_cmd, "interactive", lambda: True)
+    result = _new(tmp_path, monkeypatch, "Asked Twice", input="blog\napp\n")
+    assert result.exit_code == 0, f"{result.output}\n{result.exception!r}"
+    assert "'blog' is not one of site, app, site+app" in result.output
+    assert result.output.count("Kind [app]") == 2
+    assert _kind(tmp_path / "asked_twice") == "app"
+
+
 def test_the_question_with_a_design_offers_the_kinds_with_a_site(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

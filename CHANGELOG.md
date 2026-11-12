@@ -9,6 +9,23 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
+## 0.5.1 (2026-11-12)
+
+- **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind
+  question when Typer 0.29 was installed** (released 9 and 11 November 2026). Typer 0.29
+  bundles its own click and refuses the separate click package's `Choice` in
+  `typer.prompt`. karni checks the answer itself now, on every Typer version: an answer
+  that is not a kind is asked again. Agents, scripts and `karni new --kind` never ask,
+  and were not affected. karni-cli no longer imports click.
+- **Fixed: the `docs/cli.md` generator failed on Typer 0.29** (`'TyperOption' object has
+  no attribute 'type'`). It reads a parameter's type from click where there is one and
+  from Typer's annotation otherwise, so the page is the same on Typer 0.27 and 0.29.
+- **Licence.** `LICENSE` and its package copies name the copyright owner, Chandrabhan
+  Shekhawat, Gigai Kripa Services; a `NOTICE` file carries the same line, and the npm
+  packages name their author.
+- **Dependencies.** @karni/ui's dependency group (marked 18.1.3 among them) and the
+  development tools of the UI packages are updated.
+
 ## 0.5.0 (2026-11-07)
 
 - **Documentation refresh.** A new README and docs home (the /new-app flow, the recipes and modules, a quickstart checked on a clean machine, one diagram), a [features page](docs/features.md) that `scripts/gen_reference.py` keeps complete, every package page on PyPI and npm in one shape, and the docs site in the look of the Karni page on gigaikripaservices.com.
