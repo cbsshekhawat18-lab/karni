@@ -51,7 +51,7 @@ _ANY: Any = object()
 def _show(events: list[Event]) -> str:
     if not events:
         return "nothing was published"
-    return "published: " + "; ".join(
+    return "published: " + " | ".join(
         f"{e.name} v{e.version} subject={e.subject_ref} person={e.person} {dict(e.data)}"
         for e in events
     )
@@ -111,7 +111,7 @@ class PublishedEvents:
             expected = f"{count} x " if count is not None else ""
             raise KarniAssertionError(
                 f"expected {expected}{name!r} with {fields or 'any fields'}, found "
-                f"{len(found)}; {_show(self.events)}. (assert_not_published checks for none.)",
+                f"{len(found)}. {_show(self.events)}. (assert_not_published checks for none.)",
                 code="E456",
             )
         return found[-1]
@@ -121,7 +121,7 @@ class PublishedEvents:
         found = self.named(name)
         if found:
             raise KarniAssertionError(
-                f"expected no {name!r}, found {len(found)}; {_show(found)}.", code="E456"
+                f"expected no {name!r}, found {len(found)}. {_show(found)}.", code="E456"
             )
 
 

@@ -42,7 +42,7 @@ Dispatcher = Callable[..., Any]
 
 
 def celery(event_id: str, *, countdown: float = 0) -> None:
-    """Queue :func:`karni.outbox.tasks.deliver` for ``event_id``; log, never raise, on failure."""
+    """Queue :func:`karni.outbox.tasks.deliver` for ``event_id``. Log a failure, never raise."""
     from karni.outbox.tasks import deliver
 
     try:
@@ -60,7 +60,7 @@ def celery(event_id: str, *, countdown: float = 0) -> None:
 
 @lru_cache(maxsize=8)
 def load(path: str) -> Dispatcher:
-    """The dispatcher at the dotted ``path``; E455 when it cannot be imported or called."""
+    """The dispatcher at the dotted ``path``. E455 when it cannot be imported or called."""
     try:
         found = import_string(path)
     except ImportError as exc:

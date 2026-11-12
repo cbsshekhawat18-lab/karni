@@ -89,7 +89,7 @@ __all__ = [
 ]
 
 #: The version of the family events contract. A part names the range it
-#: needs; a breaking change raises it.
+#: needs, and a breaking change raises it.
 CONTRACT: Final = 1
 
 #: ``<prefix>.<record>.<moment>``: lower case words joined by underscores.
@@ -244,7 +244,7 @@ class Registry:
         self._subscribers: dict[str, Subscriber] = {}
 
     def add_declaration(self, declaration: Declaration) -> None:
-        """Record ``declaration``; E452 when another module declared the same name and version."""
+        """Record ``declaration``. E452 when another module declared the same name and version."""
         versions = self._declarations.setdefault(declaration.name, {})
         existing = versions.get(declaration.version)
         if existing is not None and existing.source != declaration.source:
@@ -278,7 +278,7 @@ class Registry:
         ]
 
     def add_subscriber(self, subscriber: Subscriber) -> None:
-        """Record ``subscriber``; E454 when another module uses the same name."""
+        """Record ``subscriber``. E454 when another module uses the same name."""
         existing = self._subscribers.get(subscriber.name)
         if existing is not None and existing.source != subscriber.source:
             raise KarniImproperlyConfigured(
@@ -650,7 +650,7 @@ def build(
             parts.append(f"not declared: {', '.join(extra)}")
         raise KarniValueError(
             f"karni.events: publish({name!r}) version {declaration.version}: "
-            f"{'; '.join(parts)}. Pass exactly the declared fields "
+            f"{', and '.join(parts)}. Pass exactly the declared fields "
             f"({', '.join(declaration.fields) or 'none'}), None for a value you do not have, "
             "or declare a new version for a new shape.",
             code="E453",

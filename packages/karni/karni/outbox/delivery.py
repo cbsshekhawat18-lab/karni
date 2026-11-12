@@ -74,7 +74,7 @@ DEFAULT_RETENTION_DAYS: Final = 30
 #: Seconds a pending delivery may be overdue before the sweep sends it again
 #: (the commit's own message usually arrives first).
 SWEEP_AFTER: Final = 60
-#: Events one sweep sends at most; the next minute's sweep takes the rest.
+#: Events one sweep sends at most. The next minute's sweep takes the rest.
 SWEEP_BATCH: Final = 500
 #: The first retry waits this many seconds, each next one four times longer.
 BACKOFF_BASE: Final = 10
@@ -281,7 +281,7 @@ def _attempt(
             delivery.next_attempt_at = now + backoff(delivery.attempts)
             delivery.last_error = error
             logger.warning(
-                "karni.events: %s failed on %s (%s), attempt %s of %s; retried at %s.\n%s",
+                "karni.events: %s failed on %s (%s), attempt %s of %s. Retried at %s.\n%s",
                 delivery.subscriber,
                 event.name,
                 event.id,
@@ -369,7 +369,7 @@ def overdue_events(
 def sweep(
     *, older_than: float = SWEEP_AFTER, limit: int = SWEEP_BATCH, using: str | None = None
 ) -> int:
-    """Send every event with an overdue delivery again; returns how many were sent.
+    """Send every event with an overdue delivery again, and return how many were sent.
 
     The beat entry ``karni-events-sweep`` runs it every minute. An event the
     commit already sent but a busy worker has not reached yet may be sent
@@ -386,7 +386,7 @@ def prune(days: int | None = None, *, using: str | None = None) -> int:
 
     An event with a pending or failed delivery stays, whatever its age.
     Keys of :func:`karni.events.once` older than the window go too. Returns
-    the number of events deleted; 0 while retention is ``None``.
+    the number of events deleted, 0 while retention is ``None``.
     """
     from karni.outbox.models import Delivery, Handled, OutboxEvent
 

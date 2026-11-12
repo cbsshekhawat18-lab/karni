@@ -86,7 +86,7 @@ def remember_status(sender: Any, instance: Payment | Refund, **kwargs: Any) -> N
 
 
 def _moved(instance: Payment | Refund, created: bool) -> str | None:
-    """The new status when this save moved it, else None; remembers it for the next save."""
+    """The new status when this save moved it, else None. Remembers it for the next save."""
     current = instance.__dict__.get("status", _UNKNOWN)
     previous = None if created else instance.__dict__.get(_LOADED, _UNKNOWN)
     instance.__dict__[_LOADED] = current
