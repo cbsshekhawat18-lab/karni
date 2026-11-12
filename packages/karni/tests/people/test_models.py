@@ -119,7 +119,9 @@ def test_a_person_is_a_member_of_an_organisation_once() -> None:
 
 
 def test_an_organisations_domain_is_kept_bare() -> None:
-    org = Organisation.objects.create(name="Lumen Grove School", domain="HTTPS://www.Lumen.Example/x")
+    org = Organisation.objects.create(
+        name="Lumen Grove School", domain="HTTPS://www.Lumen.Example/x"
+    )
     assert org.domain == "lumen.example"
 
 

@@ -60,7 +60,9 @@ def make_user(email: str, *, verified: bool = True, **fields: Any) -> Any:
 @pytest.fixture
 def family() -> dict[str, Any]:
     """Two people known to both parts, the same human twice: Ana's two records."""
-    org = Organisation.objects.create(name="Fernwood Design", domain="https://www.Fernwood.example/")
+    org = Organisation.objects.create(
+        name="Fernwood Design", domain="https://www.Fernwood.example/"
+    )
     other = Organisation.objects.create(name="Riverbend Books", domain="riverbend.example")
     keep = Person.objects.create(given_name="Ana", family_name="Lima", email="ana@example.com")
     drop = Person.objects.create(
@@ -73,16 +75,25 @@ def family() -> dict[str, Any]:
     Visit.objects.create(person=drop, visited_on=dt.date(2026, 11, 3), spent=Decimal("30.00"))
     SupportProfile.objects.create(person=keep, plan="basic")
     SupportProfile.objects.create(person=drop, plan="priority")
-    Ticket.objects.create(person=keep, subject="Wifi", contact_name="Ana Lima", contact_email="ana@example.com")
+    Ticket.objects.create(
+        person=keep, subject="Wifi", contact_name="Ana Lima", contact_email="ana@example.com"
+    )
     for subject in ("Locker", "Invoice"):
         Ticket.objects.create(
-            person=drop, subject=subject, contact_name="Ana L.", contact_email="ana+club@example.com"
+            person=drop,
+            subject=subject,
+            contact_name="Ana L.",
+            contact_email="ana+club@example.com",
         )
     Ticket.objects.filter(subject="Invoice").update(status="closed")
     Note.objects.create(subject=drop, text="Prefers mornings.")
     Membership.objects.create(person=keep, organisation=org, title="")
     Membership.objects.create(person=drop, organisation=org, title="Owner")
     Membership.objects.create(person=drop, organisation=other, title="Buyer")
-    Address.objects.create(person=keep, line1="1 Mill Lane", city="Leeds", country="GB", is_default_billing=True)
-    Address.objects.create(person=drop, line1="9 Park Avenue", city="Leeds", country="GB", is_default_billing=True)
+    Address.objects.create(
+        person=keep, line1="1 Mill Lane", city="Leeds", country="GB", is_default_billing=True
+    )
+    Address.objects.create(
+        person=drop, line1="9 Park Avenue", city="Leeds", country="GB", is_default_billing=True
+    )
     return {"keep": keep, "drop": drop, "org": org, "other": other}

@@ -166,7 +166,7 @@ class Resolver:
                     family_name=family_name,
                 )
             if user is not None and person.user_id is None:
-                link_account(user, person=person, strict=False)
+                person = link_account(user, person=person, strict=False) or person
         return person
 
     def find(self, *, user: Any = None, email: str = "") -> Any:
