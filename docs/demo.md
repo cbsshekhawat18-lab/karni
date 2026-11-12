@@ -150,7 +150,7 @@ Not confirmed in the documentation, and not tried, since this repository has
 not deployed the demo:
 
 - The free plan page names no runtime limit, and the Blueprint reference lists
-  `plan: free` for any web service, but neither says in so many words that a
+  `plan: free` for any web service, but neither says that a
   Docker service may use it.
 - Whether the free plan's build has enough memory for the React build (Karni's
   [deploy guide](deploy.md#1-a-server) measured about 1.5 GB).
