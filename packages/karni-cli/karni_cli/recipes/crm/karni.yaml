@@ -32,6 +32,8 @@ apps:
         search: [name, industry]
         order: name
         audit: true
+        unique: [[name]]
+        delete: {blocked_by: [Contact, Deal]}
         access: {read: granted, write: granted}
       Contact:
         fields:
@@ -45,6 +47,7 @@ apps:
         search: [first_name, last_name, email]
         order: [last_name, first_name]
         audit: true
+        delete: {blocked_by: [Deal]}
         access: {read: granted, write: granted}
       Deal:
         fields:
@@ -55,11 +58,24 @@ apps:
           salesperson: fk:User
           stage: "state:lead>qualified|lead>lost|qualified>proposal|qualified>lost|proposal>won|proposal>lost"
           expected_close: "date?"
+          lost_reason: "text?"
+          closed_at: "datetime?"
         owner: salesperson
         search: [title]
         order: -created_at
         audit: true
-        access: {read: granted, write: granted}
+        bounds: {value: {min: 0}, expected_close: {min: $today}}
+        targets: {contact: {company: $company}}
+        frozen: {value: {stage: won}, company: {stage: won}}
+        delete: {blocked_by: [Activity]}
+        moves:
+          lost: {requires: [lost_reason], stamps: [closed_at]}
+          won: {stamps: [closed_at]}
+        access:
+          read: granted
+          write: granted
+          delete: ["role:manager", "role:admin"]
+          assign: ["role:manager", "role:admin"]
       Activity:
         fields:
           deal: fk:Deal
@@ -67,10 +83,12 @@ apps:
           kind: "choice:call|email|meeting|note"
           due_at: "datetime?"
           done: bool
+          done_at: "datetime?"
           notes: "text?"
         owner: salesperson
         order: due_at
-        access: {read: granted, write: granted}
+        moves: {done: {stamps: [done_at]}}
+        access: {read: granted, write: granted, assign: ["role:manager", "role:admin"]}
 pages:
   - home: dashboard
   - Company: [list, detail, form]

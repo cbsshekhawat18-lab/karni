@@ -188,8 +188,10 @@ class AutoSubFactory(factory.SubFactory):
     Explicit nested overrides (``venue__name="x"``) always create.
     """
 
-    def __init__(self, model: type[models.Model], *, nullable: bool, max_depth: int) -> None:
-        super().__init__(AutoFactory)
+    def __init__(
+        self, model: type[models.Model], *, nullable: bool, max_depth: int, **values: Any
+    ) -> None:
+        super().__init__(AutoFactory, **values)
         self.model = model
         self.nullable = nullable
         self.max_depth = max_depth
@@ -257,6 +259,56 @@ def _missing_value(model: type[models.Model], field: models.Field[Any, Any]) -> 
         )
 
     return factory.LazyFunction(fail)
+
+
+def _target_rule(model: type[models.Model], name: str) -> Any:
+    """The ``class Karni: targets`` filter of ``model.<name>``, or ``None`` (karni.rules)."""
+    from karni.errorcodes import KarniError
+    from karni.rules import rules_of
+
+    if model._meta.abstract:
+        return None
+    try:
+        return rules_of(model).targets.get(name)
+    except KarniError:
+        return None
+
+
+def _same_row(target: type[models.Model], rule: Any) -> Any:
+    """``{pk: $purchase__item_id}``: the row the path names, not a new one."""
+    for key in ("pk", "id", target._meta.pk.name):
+        value = rule.get(key)
+        if isinstance(value, str) and value.startswith("$") and value not in ("$me", "$now"):
+            path = value[1:].split("__")
+
+            def same(row: Any, path: list[str] = path) -> Any:
+                found: Any = row
+                for part in path:
+                    found = getattr(found, part)
+                return target._default_manager.get(pk=found)
+
+            return factory.LazyAttribute(same)
+    return None
+
+
+def _fitting(rule: Any) -> dict[str, Any]:
+    """Factory values that make a related row match a targets filter, where they can be set.
+
+    A literal (``active: true``) is set as it is and ``$<field>`` follows the
+    row being built (``company: $company``); a path, a lookup, ``{not: ...}``
+    and ``$me`` / ``$now`` / ``$today`` are left to the factory.
+    """
+    values: dict[str, Any] = {}
+    for key, value in rule.items():
+        if "__" in key or isinstance(value, dict | list):
+            continue
+        if isinstance(value, str) and value.startswith("$"):
+            if value in ("$me", "$now", "$today"):
+                continue
+            values[key] = factory.SelfAttribute(".." + value[1:].replace("__", "."))
+        else:
+            values[key] = value
+    return values
 
 
 def _bounds(field: models.Field[Any, Any], low: float, high: float) -> tuple[float, float]:
@@ -370,6 +422,17 @@ class FactoryBuilder:
             from django.contrib.contenttypes.models import ContentType
 
             return factory.LazyFunction(lambda: ContentType.objects.get_for_model(model))
+        ruled = _target_rule(model, field.name)
+        if ruled is not None:
+            # class Karni: targets: an optional one stays empty, a required one is made to fit.
+            if field.null:
+                return None
+            same = _same_row(target, ruled)
+            if same is not None:
+                return same
+            return AutoSubFactory(
+                target, nullable=False, max_depth=self.max_depth, **_fitting(ruled)
+            )
         return AutoSubFactory(target, nullable=field.null, max_depth=self.max_depth)
 
     def choice_value(self, field: models.Field[Any, Any]) -> Any:

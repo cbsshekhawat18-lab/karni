@@ -242,6 +242,12 @@ STAGES = [
     "won",
 ]
 OPEN = {"lead", "qualified", "proposal"}
+LOST_REASONS = [
+    "Chose a cheaper supplier.",
+    "Budget moved to next year.",
+    "Went with the tool their parent company uses.",
+    "No reply after the proposal.",
+]
 KINDS = ["call", "email", "meeting"]
 NOTES = {
     "call": [
@@ -343,11 +349,8 @@ class DealSeeder(karni.DealSeeder):
                 title = cycled([title], round_ // len(firm.deals))
             people = list(Contact.objects.filter(company=company).order_by("email"))
             stage = STAGES[number % len(STAGES)]
-            close = (
-                today + dt.timedelta(days=21 + number * 3 % 90)
-                if stage in OPEN
-                else today - dt.timedelta(days=7 + number * 5 % 80)
-            )
+            # An open deal closes ahead (karni.yaml: bounds); a closed one says when it closed.
+            closed = context.run.anchor - dt.timedelta(days=7 + number * 5 % 80)
             rows += context.create(
                 1,
                 company=company,
@@ -355,7 +358,11 @@ class DealSeeder(karni.DealSeeder):
                 title=title,
                 value=Decimal(value + round_ // len(firm.deals) * 1000),
                 stage=stage,
-                expected_close=close,
+                expected_close=(
+                    today + dt.timedelta(days=21 + number * 3 % 90) if stage in OPEN else None
+                ),
+                closed_at=None if stage in OPEN else closed,
+                lost_reason=LOST_REASONS[number % len(LOST_REASONS)] if stage == "lost" else "",
             )
         return rows
 
@@ -388,6 +395,7 @@ class ActivitySeeder(karni.ActivitySeeder):
                 kind=kind,
                 due_at=due,
                 done=due < now,
+                done_at=due if due < now else None,
                 notes=NOTES[kind][number % len(NOTES[kind])],
             )
         return rows

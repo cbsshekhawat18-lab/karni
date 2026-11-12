@@ -269,3 +269,12 @@ def test_seeding_reads_now_as_its_anchor(item: Item, buyer: Any) -> None:
         purchase.transition("status", "refunded", reason="late")
     purchase.refresh_from_db()
     assert purchase.refunded_at == anchor
+
+
+def test_factories_make_related_rows_that_fit_the_targets() -> None:
+    from karni.testing.factories import create
+
+    review = create(Review)
+    assert review.item == review.purchase.item
+    purchase = create(Purchase)
+    assert purchase.item.active is True
