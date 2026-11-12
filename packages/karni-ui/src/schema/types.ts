@@ -290,6 +290,24 @@ export interface ResourceSchema {
   fieldGroups?: FieldGroupsDef;
   /** Experimental. Its column presets (`x-karni-column-sets`), when the model declares them. */
   columnSets?: ColumnSetsDef;
+  /**
+   * Experimental. Its declared row actions (`x-karni-actions`, karni.yaml's
+   * `actions:`): `POST <resource>/<id>/<name>/`, by name.
+   */
+  rowActions?: Readonly<Record<string, RowActionDef>>;
+}
+
+/**
+ * Experimental. One declared row action: the states it runs from, the state
+ * it moves to (`null`: the viewset's own method), the state field, who may
+ * (an `x-karni-access` rule) and the fields the move requires.
+ */
+export interface RowActionDef {
+  from: readonly string[];
+  to: string | null;
+  field: string | null;
+  by: KarniAccessRule | null;
+  requires: readonly string[];
 }
 
 /** The whole parsed registry, produced once per schema fetch by parseOpenApi. */

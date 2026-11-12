@@ -141,7 +141,8 @@ export type {
   ResourceTableSlots,
   ResourceTableStateStore,
 } from "./components/resource/ResourceTable";
-export type { KarniAccessRule } from "./schema/types";
+export type { KarniAccessRule, RowActionDef } from "./schema/types";
+export { parseRowActions, rowActionOpen } from "./schema/parse";
 
 export { ResourceForm, defaultResourceFormSlots } from "./components/resource/ResourceForm";
 export type {
