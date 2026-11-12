@@ -55,7 +55,7 @@ def test_a_fact_filters_and_orders_in_the_database(family: dict[str, Any]) -> No
 
 
 def test_a_deleted_row_does_not_count(family: dict[str, Any]) -> None:
-    Visit.objects.filter(person=family["keep"]).first().delete()  # type: ignore[union-attr]
+    Visit.objects.filter(person=family["keep"]).first().delete()
     assert Person.objects.with_facts("visits").get(pk=family["keep"].pk).visits == 1
 
 

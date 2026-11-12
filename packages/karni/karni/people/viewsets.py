@@ -200,7 +200,7 @@ class PersonViewSet(_MergeActions, BaseViewSet):
     auto_register = _ROUTED
     access = Access(read=Granted(), write=Granted())
     query_budget = Budget(merge=None, erase=None, reason=_BULK)
-    search_fields: ClassVar[list[str]] = ["display_name", "email", "phone"]
+    search_fields = ["display_name", "email", "phone"]
 
     _MERGE = Can("people.person:merge")
 
@@ -380,7 +380,7 @@ class OrganisationViewSet(_MergeActions, BaseViewSet):
     auto_register = _ROUTED
     access = Access(read=Granted(), write=Granted())
     query_budget = Budget(merge=None, reason=_BULK)
-    search_fields: ClassVar[list[str]] = ["name", "domain"]
+    search_fields = ["name", "domain"]
 
     _MERGE = Can("people.organisation:merge")
 
@@ -410,7 +410,7 @@ class MembershipViewSet(BaseViewSet):
     route = "people-memberships"
     auto_register = _ROUTED
     access = Access(read=Granted(), write=Granted())
-    search_fields: ClassVar[list[str]] = ["title"]
+    search_fields = ["title"]
 
 
 class AddressViewSet(BaseViewSet):
@@ -420,4 +420,4 @@ class AddressViewSet(BaseViewSet):
     route = "people-addresses"
     auto_register = _ROUTED
     access = Access(read=Granted(), write=Granted())
-    search_fields: ClassVar[list[str]] = ["label", "line1", "city", "postcode"]
+    search_fields = ["label", "line1", "city", "postcode"]

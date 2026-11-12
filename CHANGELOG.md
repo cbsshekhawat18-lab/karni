@@ -74,6 +74,26 @@ apply codemods and list the manual steps. This file is the human summary.
   PATH" when git is missing, and the PostgreSQL backup round trip skips when `DATABASE_URL`
   points at a server that is not listening. Before, they failed.
 
+- **Added (experimental): the people contract, `karni.people`.** One `Person` per human and
+  one `Organisation` per company for every part of a project, with `Membership` and
+  `Address`. `KARNI_PEOPLE = True` installs it, and `karni build` writes that when
+  karni.yaml points at `people.Person` (`fk:people.Person`, `o2o:people.Person`,
+  `people.Organisation`, `people.Membership`, `people.Address`). `people.resolve()` finds
+  or creates a person by account or email (one email is one person), and an account is
+  linked to its person only once its email is verified. Parts contribute person facts
+  (SQL expressions from `count_of`, `sum_of`, `latest_of`, `exists_of`), merge hooks and
+  erase hooks in their own `people.py`. `people.duplicates()`, `people.merge_plan()` and
+  `people.merge()` (every foreign key, one-to-one and generic reference moved in one
+  transaction and one audit batch, refused with `E250` to `E252`), and `people.erase()`
+  for a person's request to delete their data. Signals for `people.person.created`,
+  `linked`, `merged`, `erased` and `people.organisation.created`, `merged` from
+  `karni.people.events`. `/api/people/` (with `me/`, `?facts=`, `merge-plan/`, `merge/`,
+  `duplicates/`, `erase/`), `/api/organisations/`, `/api/people-memberships/` and
+  `/api/people-addresses/` answer the roles granted on them, and `merge` and `erase` are
+  explicit actions. Admin pages with merge and erase actions, cross-model search, and a
+  shared seed pool (`people.pool()`). The contract is versioned (`karni.people.CONTRACT =
+  1`). Error codes `E250` to `E259`. See [people](docs/people.md).
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

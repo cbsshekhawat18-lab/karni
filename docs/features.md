@@ -110,6 +110,7 @@ coming, not in the code. Each capability's evidence is in the
 - `experimental` Tree models: `TreeModel` and `OrderedTreeModel` with cycle-safe walks (`roots`, `children`, `ancestors`, `descendants`, `subtree_ids`), `move_to()` and `delete_branch()`, and the tree changelist in the admin. Experimental tier
 - `experimental` Taxonomy tagging: one declaration tags a model to tree models (`class Karni: taxonomies`), a generated or adopted many-to-many per key, import and export columns by natural key, and the `tree:<key>` scope. Experimental tier
 - `planned` A tenant scope on every model (the `karni-tenancy` module)
+- `experimental` The people contract (`karni.people`, `KARNI_PEOPLE`): one person and one organisation record for every part of a project, `people.resolve` by account or email, the account linked once its email is verified, person facts in SQL, duplicates, merge with a preview and hooks, erase on request, `/api/people/`. Experimental tier
 
 Base classes: `AuditedModel`, `BaseModel`, `BigIntBaseModel`, `GuardedModel`, `IntegerKeyModel`, `OrderedTreeModel`, `SoftDeleteModel`, `TimestampedModel`, `TreeModel`, `UUIDModel`.
 <!-- /generated:models -->

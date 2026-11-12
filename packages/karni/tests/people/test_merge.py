@@ -107,11 +107,11 @@ def test_a_merge_publishes_the_merged_event(family: dict[str, Any]) -> None:
     def collect(sender: Any, payload: dict[str, Any], **kwargs: Any) -> None:
         seen.append(payload)
 
-    people.events.person_merged.connect(collect, dispatch_uid="test-merged", weak=False)  # type: ignore[attr-defined]
+    people.events.person_merged.connect(collect, dispatch_uid="test-merged", weak=False)
     try:
         people.merge(family["keep"], family["drop"])
     finally:
-        people.events.person_merged.disconnect(dispatch_uid="test-merged")  # type: ignore[attr-defined]
+        people.events.person_merged.disconnect(dispatch_uid="test-merged")
     assert seen[0]["kept"] == str(family["keep"].pk)
     assert seen[0]["removed"] == str(family["drop"].pk)
     assert seen[0]["person"] == str(family["keep"].pk)

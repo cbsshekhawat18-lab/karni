@@ -86,7 +86,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_PEOPLE": "Experimental. `True` installs the people contract, `karni.people`: one Person per human and one Organisation per company for every part of the project. Read during the call. `karni build` writes it when karni.yaml points at `people.Person`. See [people](people.md).",
     "KARNI_PEOPLE_RESOLVER": "Experimental. Dotted path of the `Resolver` class (or a subclass) `people.resolve()` finds or creates people with.",
     "KARNI_PEOPLE_LINK_ON_VERIFY": "Experimental. Link an account to the person with its email as soon as the email is verified (sign-up with verification, a sign-in code, a social sign-in with a verified address). `False` leaves linking to `people.link_account()`.",
-    "KARNI_PEOPLE_API": "Experimental. Route `/api/people/`, `/api/organisations/`, `/api/memberships/` and `/api/addresses/`. `False` leaves them out, for a project that routes its own viewsets over the people tables.",
+    "KARNI_PEOPLE_API": "Experimental. Route `/api/people/`, `/api/organisations/`, `/api/people-memberships/` and `/api/people-addresses/`. `False` leaves them out, for a project that routes its own viewsets over the people tables.",
     "KARNI_PEOPLE_MERGE_SKIP": 'Experimental. Models a person or organisation merge leaves alone, as `"app_label.Model"`: their rows keep pointing at the merged record.',
     "KARNI_PEOPLE_AUTODISCOVER": "Experimental. Import every installed app's `people.py` at startup, where a part registers its person facts, merge hooks and erase hooks. `False`: register them in the part's `AppConfig.ready()`.",
     "KARNI_ROLES_AUTOSYNC": "Reconcile the role tables with `KARNI_ROLES` after every `migrate` (`karni sync-roles` does the same by hand).",

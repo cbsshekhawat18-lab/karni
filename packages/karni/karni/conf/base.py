@@ -369,7 +369,7 @@ BASE: dict[str, Any] = {
     "KARNI_PEOPLE_RESOLVER": "karni.people.services.Resolver",
     # Link an account to the person with its email once the email is verified.
     "KARNI_PEOPLE_LINK_ON_VERIFY": True,
-    # Route /api/people/, /api/organisations/, /api/memberships/ and /api/addresses/.
+    # Route /api/people/, /api/organisations/, /api/people-memberships/ and /api/people-addresses/.
     "KARNI_PEOPLE_API": True,
     # Models ("app_label.Model") a merge leaves alone: their rows keep the merged record.
     "KARNI_PEOPLE_MERGE_SKIP": [],
