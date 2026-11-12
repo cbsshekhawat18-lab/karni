@@ -18,7 +18,7 @@ from typing import Any
 
 from karni_cli.spec.validate import validate_text
 
-from .conftest import REPO_ROOT
+from .conftest import REPO_ROOT, requires_git
 
 SCRIPT = REPO_ROOT / "scripts" / "benchmark" / "large_project.py"
 
@@ -69,6 +69,7 @@ def test_the_stored_baseline_is_a_100_model_run() -> None:
     assert set(bench.STEPS) <= set(baseline["times"]) and baseline["calibration"] > 0
 
 
+@requires_git
 def test_a_five_model_project_is_made_and_timed(tmp_path: Path) -> None:
     out = tmp_path / "bench.json"
     baseline = tmp_path / "baseline.json"

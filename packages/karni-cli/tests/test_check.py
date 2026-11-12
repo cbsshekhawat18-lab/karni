@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
+
+import pytest
 
 import karni_cli.commands.check as check_mod
 from karni_cli import project as project_mod
@@ -193,6 +196,8 @@ def test_the_build_check_step_agrees_with_karni_check(runner, tmp_path, monkeypa
 
 
 def _git(repo: Path, *args: str) -> None:
+    if shutil.which("git") is None:
+        pytest.skip("needs git on PATH")
     subprocess.run(
         ["git", "-c", "user.email=t@example.com", "-c", "user.name=t", *args],
         cwd=repo,

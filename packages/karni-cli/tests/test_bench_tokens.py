@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 
-from .conftest import REPO_ROOT
+from .conftest import REPO_ROOT, requires_git
 
 TOKENS = REPO_ROOT / "scripts" / "benchmarks" / "tokens"
 pytestmark = pytest.mark.skipif(not TOKENS.is_dir(), reason="needs the Karni checkout")
@@ -122,6 +122,7 @@ def test_numstat_counts_added_plus_deleted_with_and_without_lockfiles_and_migrat
     )  # the binary logo is a file with no counted lines
 
 
+@requires_git
 def test_measure_counts_new_and_changed_files_against_the_start_commit(tmp_path: Path) -> None:
     (tmp_path / ".gitignore").write_text("ignored/\n")
     (tmp_path / "a.py").write_text("one\ntwo\n")
@@ -137,6 +138,7 @@ def test_measure_counts_new_and_changed_files_against_the_start_commit(tmp_path:
     assert (size.lines_code, size.lines_all) == (5, 15)
 
 
+@requires_git
 def test_measure_counts_work_the_agent_committed_itself(tmp_path: Path) -> None:
     (tmp_path / "a.py").write_text("one\n")
     commit = diffsize.commit_start(tmp_path)
@@ -387,6 +389,7 @@ def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
     return config, starts.Start(name="plain", project=project)
 
 
+@requires_git
 def test_a_fake_run_makes_the_folder_the_repo_the_database_and_one_recorded_line(
     world: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -430,6 +433,7 @@ def test_a_fake_run_makes_the_folder_the_repo_the_database_and_one_recorded_line
     assert records.done(saved) == {("mini", "plain", 1)}
 
 
+@requires_git
 def test_a_run_over_the_time_limit_is_killed_and_recorded_as_a_failure(
     world: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -445,6 +449,7 @@ def test_a_run_over_the_time_limit_is_killed_and_recorded_as_a_failure(
     assert config.database.calls[-1][0] == "drop"
 
 
+@requires_git
 def test_a_crashing_agent_and_a_crashing_harness_both_leave_a_failed_record(
     world: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -473,6 +478,7 @@ def test_resume_skips_runs_already_in_the_data(tmp_path: Path) -> None:
 # --- runs the agent CLI did not finish --------------------------------------------------------------
 
 
+@requires_git
 @pytest.mark.parametrize(
     ("env", "kind"),
     [

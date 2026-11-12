@@ -9,6 +9,13 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
+## Unreleased
+
+### Tests
+
+- Tests that run git skip with "needs git on PATH" when git is missing, instead of failing.
+- The PostgreSQL backup round trip skips when DATABASE_URL points at a server that is not listening.
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind
