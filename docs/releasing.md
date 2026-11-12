@@ -23,6 +23,7 @@ One tag publishes every package at the same version:
 | `karni-reports` | PyPI | `modules/karni-reports` |
 | `karni-ai` | PyPI | `modules/karni-ai` |
 | `karni-storage` | PyPI | `modules/karni-storage` |
+| `karni-commerce` | PyPI | `modules/karni-commerce` |
 | `@karni/ui` | npm | `packages/karni-ui` |
 | `@karni/payments-ui` | npm | `modules/karni-payments/ui` |
 | `@karni/approvals-ui` | npm | `modules/karni-approvals/ui` |
@@ -31,6 +32,7 @@ One tag publishes every package at the same version:
 | `@karni/reports-ui` | npm | `modules/karni-reports/ui` |
 | `@karni/ai-ui` | npm | `modules/karni-ai/ui` |
 | `@karni/storage-ui` | npm | `modules/karni-storage/ui` |
+| `@karni/commerce-ui` | npm | `modules/karni-commerce/ui` |
 
 The table is `PYTHON_PACKAGES` and `NPM_PACKAGES` in
 `.github/ci/check_release.py`, the one list of what a tag publishes. A test
@@ -141,7 +143,7 @@ accepts the same version twice.
 
   | Field | Value |
   |---|---|
-  | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site`, `karni-charts`, `karni-reports`, `karni-ai`, `karni-storage` (one publisher each) |
+  | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site`, `karni-charts`, `karni-reports`, `karni-ai`, `karni-storage`, `karni-commerce` (one publisher each) |
   | Owner | `cbsshekhawat18-lab` |
   | Repository name | `karni` |
   | Workflow name | `release.yml` |

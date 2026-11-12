@@ -1801,6 +1801,12 @@ class Lead(BaseModel):
 |---|---|---|---|
 | `KARNI_CACHE` | `KARNI_CACHE` | `"redis"` | `redis` (the default cache at `REDIS_URL`) or `locmem`, an in-process cache for a host run without Redis (development only: throttle counters are then per process). |
 
+### Email
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_MAIL_DISABLED_KINDS` | `KARNI_MAIL_DISABLED_KINDS` | `[]` | Experimental. The kinds of email karni.mail does not send, by name (commerce.new_order). A kind is the stable name a part gives each email. |
+
 ### Files & storage
 
 | Setting | Env | Default | What it controls |
@@ -1977,6 +1983,20 @@ class Lead(BaseModel):
 |---|---|---|---|
 | `KARNI_CHARTS_READ` | `KARNI_CHARTS_READ` | `"authenticated"` | Who may read the chart definitions (/api/charts/): "authenticated" (the default), "public" (anyone, for charts on a public page) or "granted" (the roles' grants on karni_charts.chart). The data always follows the source resource's own access, whoever reads the definition. |
 
+### Module: karni-commerce
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_COMMERCE_CURRENCY` | `KARNI_COMMERCE_CURRENCY` | `""` | The project's currency, as an ISO 4217 code. Blank (the default) takes KARNI_PAYMENTS_CURRENCY, so a project names its currency once. |
+| `KARNI_COMMERCE_HOLD_MINUTES` | `KARNI_COMMERCE_HOLD_MINUTES` | `30` | How long checkout holds an order's items for its payment, in minutes. An order not paid by then is cancelled and its items are free again. |
+| `KARNI_COMMERCE_MAX_QUANTITY` | `KARNI_COMMERCE_MAX_QUANTITY` | `99` | The most of one item a cart line takes. |
+| `KARNI_COMMERCE_FIRST_NUMBER` | `KARNI_COMMERCE_FIRST_NUMBER` | `1001` | The number of the first order. Later orders count up from it. |
+| `KARNI_COMMERCE_NUMBER` | `KARNI_COMMERCE_NUMBER` | `""` | The dotted path of the function that gives a new order its number: number(order) -&gt; int. Blank (the default) counts up from KARNI_COMMERCE_FIRST_NUMBER (karni_commerce.services.next_number). |
+| `KARNI_COMMERCE_ORDER_PATH` | `KARNI_COMMERCE_ORDER_PATH` | `"/orders/{number}?key={key}"` | Where a person reads an order in the app, after KARNI_FRONTEND_URL: {number} and {key} (the guest's secret) are filled in. The payment's return address and the emails' links point here. |
+| `KARNI_COMMERCE_STAFF_EMAILS` | `KARNI_COMMERCE_STAFF_EMAILS` | `[]` | Who gets the new-order email (commerce.new_order): a list of addresses. Empty (the default) sends none. |
+| `KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR` | `KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR` | `"karni_payments.services.default_checkout_validator"` | The checkout validator for payments that are not an order's (the dotted path karni_commerce.payments.checkout_validator hands them to). |
+| `KARNI_COMMERCE_SELLABLES` |  | `{}` | Sellable adapters by kind, as dotted paths, over the ones the apps register in their sellables.py: {"product": "myapp.sellables.MyProduct"}. |
+
 ### Module: karni-impersonation
 
 | Setting | Env | Default | What it controls |
@@ -1998,6 +2018,7 @@ class Lead(BaseModel):
 | `KARNI_PAYMENTS_CHECKOUT_VALIDATOR` |  | `"karni_payments.services.default_checkout_validator"` | Dotted path called with (user=, amount=, currency=, metadata=) BEFORE a Payment is created. It is the server-side pricing authority. The default is a pass-through, and production projects should replace it (never trust client amounts). |
 | `KARNI_PAYMENTS_EVENT_HANDLER` |  | `"karni_payments.services.apply_event"` | Dotted path of the webhook state machine applied by the Celery task. |
 | `KARNI_PAYMENTS_ALLOWED_REDIRECTS` | `KARNI_PAYMENTS_ALLOWED_REDIRECTS` | `[]` | Extra URLs whose origins are allowed as checkout success/cancel redirects, on top of KARNI_FRONTEND_URL's origin. |
+| `KARNI_PAYMENTS_TEST_CHECKOUT_PAGE` |  | `None` | The test provider's checkout page (experimental): True serves it at payments/test-checkout/&lt;session&gt;/, where a person pays or declines a test payment in the browser. None (the default) serves it while DEBUG is on. False keeps the imaginary https://checkout.test/ address. |
 | `STRIPE_SECRET_KEY` | `STRIPE_SECRET_KEY` | `""` | Provider credentials: blank by default, validated lazily at use. |
 | `STRIPE_WEBHOOK_SECRET` | `STRIPE_WEBHOOK_SECRET` | `""` | Provider credentials: blank by default, validated lazily at use. |
 | `RAZORPAY_KEY_ID` | `RAZORPAY_KEY_ID` | `""` | Provider credentials: blank by default, validated lazily at use. |
@@ -2165,6 +2186,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `Stat` | `label: React.ReactNode`, `value: React.ReactNode` | KPI tile: label, value, optional delta and icon. | [stat.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/stat/stat.tsx) |
 | `Dashboard` |  | The staff app's home page: a Stat per count and the newest rows of every model that opts in with `Karni.dashboard`. | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
 | `DataChart` | `kind: DataChartKind`, `title: string` | Minimal line/bar chart driven by `{label, value}` points, named series, or the response of `useAggregate` (`aggregate`), with stacked bars (`stacked`). | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
+| `ResourceGrid` | `resource: string`, `renderCard: (row: T) => React.ReactNode` | Experimental. A resource's rows as cards, with search, sort, filters and paging. | [ResourceGrid.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource-grid/ResourceGrid.tsx) |
 | `DashboardGrid` |  | Experimental. A responsive grid of cards (`DashboardCard`, `ChartCard`, or any element). | [dashboard-grid.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard-grid/dashboard-grid.tsx) |
 | `DashboardCard` | `title: string` | Experimental. One card of a DashboardGrid: a labelled region with a heading, optional description and actions, and loading, empty and error states. | [dashboard-grid.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard-grid/dashboard-grid.tsx) |
 | `ChartCard` | `title: string`, `kind: DataChartKind` | Experimental. A dashboard card holding one DataChart, with loading, empty and error states. | [chart-card.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard-grid/chart-card.tsx) |
@@ -2206,6 +2228,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `useOtpLogin` | `options?: UseOtpLoginOptions` | Experimental. Sign in with a code sent by email: `{ step, send, verify, resend, back, status }`. | [useOtpLogin.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/useOtpLogin.ts) |
 | `useNavigation` | `options?: Omit<UseQueryOptions<NavigationMenu, Error, NavigationMenu, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Experimental. The menu for the signed-in user (`GET /navigation/`), cached per user. | [useNavigation.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useNavigation.ts) |
 | `useToast` |  | Imperative toast API + the live toast list. | [use-toast.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/toast/use-toast.ts) |
+| `usePageMeta` | `__0: PageMeta` | Experimental. Sets `document.title` and the description meta tag while the caller is mounted. | [usePageMeta.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/usePageMeta.ts) |
 
 ### Functions and constants
 
@@ -2284,6 +2307,8 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `resolveSection` | function | The counts and table of one resource, from its declaration (exported for tests and overrides). | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
 | `aggregateSeries` | function | Experimental. An aggregate response as DataChart series: one per series of the response, a point per category. | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
 | `defaultDataChartSlots` | constant | The default pieces of the chart, for wrapping one. | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
+| `defaultResourceGridSlots` | constant | Experimental. Karni's own slots, to wrap one instead of rewriting it. | [ResourceGrid.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource-grid/ResourceGrid.tsx) |
+| `formatMoney` | function | Experimental. `formatMoney("1234.5000", "USD")` is `$1,234.50`: an amount as people read it. | [money.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/lib/money.ts) |
 | `defaultDashboardCardSlots` | constant | The card's default states, exported so a project can wrap one. | [dashboard-grid.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard-grid/dashboard-grid.tsx) |
 | `defaultAccordionSlots` | constant | The accordion's default slots, exported so a project can wrap one. | [accordion.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/accordion/accordion.tsx) |
 | `toggleAccordion` | function | The ids open after `id` was toggled, by the accordion's rules. | [accordion.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/accordion/accordion.tsx) |
@@ -2303,6 +2328,7 @@ Optional apps for anything with a RAM cost or a separate service. `karni add <na
 | [`karni-ai`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-ai) | experimental | `karni add ai` | `@karni/ai-ui` | Rows for any resource read from text, a web page or a PDF by a language model, always through the import preview. |
 | [`karni-approvals`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-approvals) | experimental | `karni add approvals` | `@karni/approvals-ui` | A second person approves high-value changes before they are written, with a queue, an API and an audit trail. |
 | [`karni-charts`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-charts) | experimental | `karni add charts` | `@karni/charts-ui` | Charts defined and previewed in the admin, served through each resource's aggregate action under its access. |
+| [`karni-commerce`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-commerce) | experimental | `karni add commerce` | `@karni/commerce-ui` | One cart, checkout, orders, order numbers, payment settlement and refunds for anything a project sells, through a sellable adapter per kind. |
 | [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail. |
 | [`karni-payments`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-payments) | stable | `karni add payments` | `@karni/payments-ui` | Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI. |
 | [`karni-reports`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-reports) | experimental | `karni add reports` | `@karni/reports-ui` | A row printed to PDF from an HTML template in the background, cached by template and data, served only to users who may see the row. |

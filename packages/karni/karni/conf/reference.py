@@ -57,6 +57,8 @@ def _checkout_modules() -> Path | None:
 
 #: One line per setting: what it does, and the values it takes.
 DESCRIPTIONS: Final[dict[str, str]] = {
+    "KARNI_MAIL_DISABLED_KINDS": "Experimental. The kinds of email karni.mail does not send, by name "
+    "(commerce.new_order). A kind is the stable name a part gives each email.",
     "KARNI_AUTH_MODE": "`jwt` (SimpleJWT token pairs) or `session` (cookie auth + CSRF bootstrap). See [accounts](accounts.md#auth-modes).",
     "KARNI_2FA": "Enable TOTP two-factor auth with `django-otp` (needs `karni[2fa]`).",
     "KARNI_SOCIAL_AUTH": "Enable social login through django-allauth (`karni[social]`, session mode only).",

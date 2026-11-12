@@ -259,6 +259,7 @@ A recipe is a ready `karni.yaml` plus the little domain code a spec cannot expre
 | [`karni-reports`](modules/karni-reports/README.md) | A row printed to PDF from an HTML template in the background, served only to users who may see the row | `pip install karni-reports && karni add reports` |
 | [`karni-ai`](modules/karni-ai/README.md) | Rows for any resource read from text, a web page or a PDF by a language model, always through the import preview | `pip install "karni-ai[<provider>]" && karni add ai` |
 | [`karni-storage`](modules/karni-storage/README.md) | Files a row owns, in S3 or an S3-compatible service, served only to whoever may read the row | `pip install "karni-storage[images]" && karni add storage` |
+| [`karni-commerce`](modules/karni-commerce/README.md) | One cart, checkout and order path for anything a project sells: products, seats, bookings | `pip install karni-commerce && karni add commerce` |
 
 ## Quickstart
 
