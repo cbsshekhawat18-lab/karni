@@ -32,14 +32,14 @@ KARNI_ROLES = {
         "name": "Clerk",
         "grants": {
             "karni_commerce.order:view": "all",
-            "karni_commerce.order:cancel": "all",
+            "karni_commerce.order:change": "all",
             "karni_commerce.orderline:view": "all",
             "karni_commerce.cart:view": "all",
         },
     },
     "manager": {
         "name": "Manager",
-        "grants": {"karni_commerce.*:*": "all", "karni_commerce.order:refund": "all"},
+        "grants": {"karni_commerce.*:*": "all"},
     },
     "customer": {"name": "Customer", "default": True, "grants": {}},
 }

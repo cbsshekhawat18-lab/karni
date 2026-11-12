@@ -187,9 +187,9 @@ The API reads the roles' grants (`karni_commerce.order:view` and so on), and
 a person always reads their own orders and lines. A guest reads their order
 with the key checkout gave them (`GET /api/orders/lookup/?number=&key=`, the
 link in the emails). Orders change only through the actions: the standard
-writes answer 405. Cancelling needs `karni_commerce.order:cancel`. Refunding
-needs `karni_commerce.order:refund`, an explicit action: a `"*"` grant does
-not give it, so a role that refunds names it.
+writes answer 405. Cancelling needs `karni_commerce.order:change`. Refunding
+needs that and `karni_commerce.orderrefund:add` too, so a role can handle
+orders without giving money back.
 
 ## Settings
 

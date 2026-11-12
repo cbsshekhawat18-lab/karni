@@ -19,9 +19,8 @@ Shoppers (visitors included, each check below):
 The lists and details read the roles' grants, and a person always reads
 their own orders (``Owned("user")``). Orders change only through these
 actions and :mod:`karni_commerce.services`: the standard writes answer 405.
-Staff with ``karni_commerce.order:cancel`` cancel an order and staff with
-``karni_commerce.order:refund`` (an explicit action: a ``"*"`` grant does not
-give it) refund one.
+Staff with ``karni_commerce.order:change`` cancel an order, and staff who may
+also add a refund (``karni_commerce.orderrefund:add``) refund one.
 
 Override / escape hatch: subclass a viewset, set ``auto_register = False`` on
 this one, and register yours. ``TOKEN_HEADER`` names the cart header.
@@ -33,9 +32,14 @@ from typing import Any
 
 from django.db.models import QuerySet
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from karni.api import Access, Authenticated, BaseViewSet, Budget, Granted, Owned, Public
+from karni.api import Access, Authenticated, BaseViewSet, Budget, Can, Granted, Owned, Public
 from rest_framework.decorators import action
-from rest_framework.exceptions import MethodNotAllowed, NotFound, ValidationError
+from rest_framework.exceptions import (
+    MethodNotAllowed,
+    NotFound,
+    PermissionDenied,
+    ValidationError,
+)
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -229,7 +233,12 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
         return Response(PayResultSerializer({"url": services.open_payment(order)}).data)
 
     @extend_schema(request=CancelInputSerializer, responses=OrderViewSerializer)
-    @action(detail=True, methods=["post"], url_path="cancel")
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="cancel",
+        access=Can("karni_commerce.order:change"),
+    )
     def cancel(self, request: Request, pk: Any = None) -> Response:
         """Cancel the order: its items are let go, and what was paid goes back."""
         body = CancelInputSerializer(data=request.data)
@@ -238,13 +247,20 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
         return Response(OrderViewSerializer(order, context={"request": request}).data)
 
     @extend_schema(request=RefundInputSerializer, responses=OrderViewSerializer)
-    @action(detail=True, methods=["post"], url_path="refund")
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="refund",
+        access=Can("karni_commerce.order:change"),
+    )
     def refund(self, request: Request, pk: Any = None) -> Response:
         """Refund an amount or lines through the payment, with the items back when asked."""
         body = RefundInputSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
         order = self.get_object()
+        if not request.user.can("karni_commerce.orderrefund:add"):
+            raise PermissionDenied("Refunds need karni_commerce.orderrefund:add.")
         services.refund(
             order,
             amount=data["amount"],

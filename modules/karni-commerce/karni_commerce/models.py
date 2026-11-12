@@ -196,8 +196,17 @@ class Order(BaseModel):
 
     class Karni:
         owner_field = "user"
-        actions = ["cancel", "refund"]
-        explicit_actions = ["refund"]
+        # The staff home's tile (docs/api.md, "The staff dashboard"): the orders by
+        # money state, those placed today, and the newest.
+        dashboard = {
+            "label": "Orders",
+            "order": 1,
+            "by": "status",
+            "values": ["pending", "paid", "failed", "refunded"],
+            "counts": {"Placed today": {"created_at__gte": "today"}},
+            "recent": 8,
+            "columns": ["number", "email", "status", "total", "created_at"],
+        }
         search = {
             "fields": ["reference", "email", "name"],
             "title": "reference",
