@@ -37,6 +37,7 @@ from :func:`publish` too, so a receiver written now keeps working.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, Final
 
@@ -49,6 +50,7 @@ from karni.exceptions import KarniValueError
 __all__ = [
     "EVENTS",
     "EventSpec",
+    "declare_all",
     "organisation_created",
     "organisation_merged",
     "person_created",
@@ -75,26 +77,85 @@ organisation_merged = Signal()
 
 @dataclass(frozen=True)
 class EventSpec:
-    """Experimental. One declared event: its signal, version and fields."""
+    """Experimental. One declared event: its signal, version, fields and person.
+
+    ``fields`` maps each payload field to what it holds. ``person`` says where
+    the person the event is about comes from: ``"person"`` (``publish``'s
+    ``person=``), a declared field (``"kept"``), or ``None`` for an event
+    about an organisation. The names and arguments are those of the family
+    bus's ``declare()``, so :func:`declare_all` hands them over unchanged.
+    """
 
     name: str
     signal: Signal
     version: int
-    fields: tuple[str, ...]
+    fields: Mapping[str, str]
+    person: str | None
+    describe: str
 
+
+_SOURCE = {"source": "the app label of the part that created it"}
+_MERGED = {"kept": "the id of the record that stays", "removed": "the id of the merged record"}
 
 #: Experimental. Every event of the people contract, by name.
 EVENTS: Final[dict[str, EventSpec]] = {
     spec.name: spec
     for spec in (
-        EventSpec("people.person.created", person_created, 1, ("source",)),
-        EventSpec("people.person.linked", person_linked, 1, ("user",)),
-        EventSpec("people.person.merged", person_merged, 1, ("kept", "removed")),
-        EventSpec("people.person.erased", person_erased, 1, ()),
-        EventSpec("people.organisation.created", organisation_created, 1, ("source",)),
-        EventSpec("people.organisation.merged", organisation_merged, 1, ("kept", "removed")),
+        EventSpec(
+            "people.person.created",
+            person_created,
+            1,
+            _SOURCE,
+            "person",
+            "A part created a person.",
+        ),
+        EventSpec(
+            "people.person.linked",
+            person_linked,
+            1,
+            {"user": "the id of the account linked to the person"},
+            "person",
+            "An account was linked to a person once its email was verified.",
+        ),
+        EventSpec(
+            "people.person.merged", person_merged, 1, _MERGED, "kept", "Two people became one."
+        ),
+        EventSpec(
+            "people.person.erased", person_erased, 1, {}, "person", "A person's data was erased."
+        ),
+        EventSpec(
+            "people.organisation.created",
+            organisation_created,
+            1,
+            _SOURCE,
+            None,
+            "A part created an organisation.",
+        ),
+        EventSpec(
+            "people.organisation.merged",
+            organisation_merged,
+            1,
+            _MERGED,
+            None,
+            "Two organisations became one.",
+        ),
     )
 }
+
+
+def declare_all(declare: Callable[..., Any]) -> None:
+    """Experimental. Call ``declare(name, version=, fields=, person=, describe=)`` for each event.
+
+    What hands the people events to a family event bus: pass its ``declare``.
+    """
+    for spec in EVENTS.values():
+        declare(
+            spec.name,
+            version=spec.version,
+            fields=dict(spec.fields),
+            person=spec.person,
+            describe=spec.describe,
+        )
 
 
 def signal_for(name: str) -> Signal:
@@ -144,7 +205,7 @@ def publish(
         "actor": _value(getattr(actor, "pk", None)),
         "person": _value(person.pk) if person is not None else None,
         "subject": {"model": subject._meta.label_lower, "id": str(subject.pk)},
-        "request_id": get_request_id() or "",
+        "request_id": get_request_id(),
         **{key: _value(value) for key, value in fields.items()},
     }
     spec.signal.send(sender=type(subject), payload=payload, subject=subject)

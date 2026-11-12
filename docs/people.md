@@ -280,10 +280,15 @@ Each is a Django signal (`person_created`, `person_linked`, `person_merged`,
 `person_erased`, `organisation_created`, `organisation_merged`). A receiver
 gets `payload`, which holds ids and values only (`id`, `name`, `version`,
 `occurred_at`, `actor`, `person`, `subject` as `{"model", "id"}`,
-`request_id` and the declared fields), and `subject`, the row itself. A
-receiver runs inside the publisher's transaction, so raising undoes the
-change. Publishing an event that is not declared, or with other fields, is
-`E259`.
+`request_id`, null outside a request, and the declared fields), and
+`subject`, the row itself. A receiver runs inside the publisher's
+transaction, so raising undoes the change. Publishing an event that is not
+declared, or with other fields, is `E259`.
+
+The table is `karni.people.events.EVENTS`: each entry has the name,
+version, fields, person and description a family event bus declares, and
+`declare_all(declare)` hands them to one. The person of a merged person is the
+kept one; an organisation's events are about no person.
 
 ## The API
 

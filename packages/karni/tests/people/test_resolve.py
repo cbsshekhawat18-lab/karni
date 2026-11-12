@@ -161,3 +161,21 @@ def test_a_receiver_written_against_a_signal_gets_ids_only() -> None:
         events.organisation_created.disconnect(dispatch_uid="test-org-created")
     assert seen[0]["subject"]["id"] == str(org.pk) and seen[0]["source"] == "crm"
     assert seen[0]["person"] is None
+
+
+def test_the_events_hand_over_to_a_family_bus_unchanged() -> None:
+    declared: list[tuple[str, dict[str, Any]]] = []
+    events.declare_all(lambda name, **options: declared.append((name, options)))
+    by_name = dict(declared)
+    assert list(by_name) == list(events.EVENTS)
+    assert by_name["people.person.merged"]["person"] == "kept"
+    assert by_name["people.person.created"] == {
+        "version": 1,
+        "fields": {"source": "the app label of the part that created it"},
+        "person": "person",
+        "describe": "A part created a person.",
+    }
+    assert by_name["people.organisation.merged"]["person"] is None
+    person = Person.objects.create(email="wren@example.com")
+    payload = events.publish("people.person.erased", subject=person, person=person)
+    assert payload["request_id"] is None and payload["actor"] is None
