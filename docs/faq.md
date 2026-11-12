@@ -95,11 +95,13 @@ A new project's `frontend/package-lock.json` pins every package but
 `@karni/ui`, and npm installs what the lock pins without resolving Vite's
 peers, so plain `npm install` works on npm 10. npm resolves them again when
 `package-lock.json` is missing, on `npm update`, and when you add a package
-that peers on Vite. If one of those crashes, run the same command once with
-npm 11.6 or later, for example `npx --yes npm@11 install`, or upgrade with
-`npm install -g npm@11`. Node 24 LTS bundles npm 11. The lock that npm 11
-writes then installs on npm 10 too. `karni doctor` shows the Node and npm on
-your PATH and flags either one when it is too old.
+that peers on Vite. The first install also resolves `@karni/ui` and the
+optional peers its own peers declare, so a family among those that goes out
+of step would crash npm 10 the same way. If one of those crashes, run the
+same command once with npm 11.6 or later, for example `npx --yes npm@11
+install`, or upgrade with `npm install -g npm@11`. Node 24 LTS bundles npm 11.
+The lock that npm 11 writes then installs on npm 10 too. `karni doctor` shows
+the Node and npm on your PATH and flags either one when it is too old.
 
 ## How does Karni handle permissions?
 
