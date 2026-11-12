@@ -750,3 +750,19 @@ def test_a_delivery_another_worker_holds_is_skipped() -> None:
         worker.join(10)
     assert report.delivered == [TALLY]
     assert Delivery.objects.get(subscriber=WRITE_NOTE).status == "pending"
+
+
+# karni check
+
+
+def test_karni_check_lists_the_events_and_passes(db: None) -> None:
+    from io import StringIO
+
+    from django.core.management import call_command
+
+    out = StringIO()
+    call_command("karni_check", stdout=out, stderr=StringIO())
+    text = out.getvalue()
+    assert f"events: desk.ticket.closed v1 (tests.deskapp.events): {TALLY}, {WRITE_NOTE}" in text
+    assert "events: absent.thing.happened v1 is not declared here" in text
+    assert "backend checks: ok" in text

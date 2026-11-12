@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from django.db import models
 
+from karni.models import BaseModel
 
-class Ticket(models.Model):
+
+class Ticket(BaseModel):
     """A request for help, open until staff close it."""
 
     title = models.CharField(max_length=200)

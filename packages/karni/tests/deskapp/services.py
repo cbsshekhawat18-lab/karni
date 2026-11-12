@@ -12,7 +12,7 @@ def close(ticket: Ticket, minutes: int) -> Ticket:
     """Close ``ticket`` and publish ``desk.ticket.closed`` in the same transaction."""
     with transaction.atomic():
         ticket.status = "closed"
-        ticket.save(update_fields=["status"])
+        ticket.save(update_fields=["status", "updated_at"])
         publish(
             "desk.ticket.closed",
             subject=ticket,
