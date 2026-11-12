@@ -120,7 +120,8 @@ apply codemods and list the manual steps. This file is the human summary.
   register (`registerAccountSection`) and `SignInPage` (a code or a password, then a safe
   `next`). Tables and details show money in its currency: a `MoneyField` publishes
   `x-karni-money` in the schema (left out of schema snapshots). An id, a year or a number
-  people quote reads without a thousands separator.
+  people quote reads without a thousands separator. `FileUpload` shows a picture of an
+  image file, stored or chosen, so a form shows the record's photo.
 
 - **karni (experimental):** `send_templated(kind=...)` with `KARNI_MAIL_DISABLED_KINDS`,
   and `karni.mail.silenced()` for demo data and imports. `Seeder.Meta.after` names the
