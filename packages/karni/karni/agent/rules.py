@@ -982,8 +982,13 @@ ACCESS_LINES: tuple[str, ...] = (
     "  role:<slug>     the users with a role the spec declares under roles",
     "  owned:<field>   the rows whose <field> is the user: a user fk, or a path (order__customer)",
     "  granted         what each role's grants allow (the default)",
+    "  where:<field>   in read: the rows whose boolean field is true, for anyone (drafts: "
+    "[where:published, owned:author, role:staff])",
     "read: lists, details and GET actions. write: changes, deletes and POST actions. "
-    "create: defaults to write.",
+    "create and delete: default to write. assign: who may set the owner to another user "
+    "(default: nobody).",
+    "A created or changed row must stay inside its own rule: with write: owned:seller__user a "
+    "listing in someone else's shop is refused (E134).",
     "owned:<field> in write or create, with <field> a user fk of the entity, also sets it to "
     "the signed-in user on create, and the API makes it read-only. Name it in owner: too.",
     "",
@@ -1008,6 +1013,8 @@ ACCESS_LINES: tuple[str, ...] = (
     "read (GET) or write (POST).",
     "The generated tests act as the roles access names: a rule only your code enforces (a "
     "perform_create that refuses staff) fails them. Declare it in access instead.",
+    "Business rules are keys of the entity too, never hand code: bounds, unique, targets, "
+    "frozen, delete, moves and actions (docs/rules.md).",
     "Anything else: access: code, then Access(...) in <app>/viewsets.py (docs/api.md, access "
     "control).",
 )
