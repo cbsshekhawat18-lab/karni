@@ -11,7 +11,9 @@ and the field DSL reference (:data:`karni_cli.generators.fields.FIELD_DOCS`).
 
 from __future__ import annotations
 
+import enum
 import textwrap
+import typing
 from pathlib import PurePath
 from typing import Any
 
@@ -147,9 +149,36 @@ def _subcommands(command: Command) -> dict[str, Command]:
 _TYPE_LABELS = {"str": "TEXT", "string": "TEXT", "text": "TEXT", "int": "INTEGER"}
 
 
+#: An annotation's label where the parameter has no click type (typer 0.29 and later).
+_ANNOTATION_NAMES = {bool: "boolean", str: "text", int: "integer", float: "float", PurePath: "path"}
+
+
+def _type_name(param: Parameter) -> str:
+    """The parameter type's name: click's ``param.type``, else typer's annotation."""
+    kind = getattr(param, "type", None)
+    if kind is not None:
+        return str(getattr(kind, "name", "text")).lower()
+    annotation = getattr(getattr(param, "type_descriptor", None), "annotation", str)
+    while typing.get_origin(annotation) is not None:  # list[str], Optional[Path], ...
+        args = [arg for arg in typing.get_args(annotation) if arg is not type(None)]
+        annotation = args[0] if args else str
+    if isinstance(annotation, type) and issubclass(annotation, enum.Enum):
+        return "choice"
+    for base, name in _ANNOTATION_NAMES.items():
+        if isinstance(annotation, type) and issubclass(annotation, base):
+            info = getattr(getattr(param, "type_descriptor", None), "parameter_info", None)
+            bounded = any(getattr(info, side, None) is not None for side in ("min", "max"))
+            if bounded and name == "integer":
+                return "int range"  # click's IntRange.name
+            if bounded and name == "float":
+                return "float range"  # click's FloatRange.name
+            return name
+    return "text"
+
+
 def _metavar(param: Parameter) -> str:
-    """A stable value label (click and typer's vendored click name types differently)."""
-    name = str(getattr(param.type, "name", "text")).lower()
+    """A stable value label (click, typer's vendored click and typer 0.29 differ)."""
+    name = _type_name(param)
     return _TYPE_LABELS.get(name, name.upper())
 
 

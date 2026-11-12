@@ -1,6 +1,6 @@
 {
   "name": "@karni/ai-ui",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "React components for the Karni AI extraction module: ExtractButton and the useExtract hook. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.",
   "keywords": [
     "react",

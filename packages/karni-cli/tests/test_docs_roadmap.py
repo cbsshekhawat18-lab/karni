@@ -28,12 +28,6 @@ def _pages() -> dict[str, dict[str, str]]:
     return {page.stem: _statuses(page) for page in sorted(ROADMAP.glob("*.md"))}
 
 
-def _unreleased() -> str:
-    """The CHANGELOG's newest section: what is merged and not yet released."""
-    sections = re.split(r"^## ", CHANGELOG.read_text(), flags=re.MULTILINE)
-    return sections[1]
-
-
 def test_every_status_is_planned_in_progress_or_done() -> None:
     for name, statuses in _pages().items():
         assert statuses, f"docs/roadmap/{name}.md: no item rows found"
@@ -48,10 +42,25 @@ def test_every_sub_item_a_status_names_has_a_row() -> None:
                 assert sub in statuses, f"docs/roadmap/{name}.md: {item} names {sub}, no row"
 
 
+ITEM = re.compile(r"\b(large-apps|app-builder) item ([A-Z]?\d+[a-z]?)\b")
+
+
+def _newest_cited() -> list[tuple[str, str]]:
+    """The roadmap items the newest CHANGELOG section that cites any of them ships.
+
+    A patch release (0.5.1) fixes and cites no roadmap item; the release before it does.
+    """
+    for section in re.split(r"^## ", CHANGELOG.read_text(), flags=re.MULTILINE)[1:]:
+        cited = ITEM.findall(section)
+        if cited:
+            return cited
+    return []
+
+
 def test_an_item_the_changelog_ships_is_not_planned() -> None:
     pages = _pages()
-    cited = re.findall(r"\b(large-apps|app-builder) item ([A-Z]?\d+[a-z]?)\b", _unreleased())
-    assert cited, "the CHANGELOG's newest section cites no roadmap item"
+    cited = _newest_cited()
+    assert cited, "no CHANGELOG section cites a roadmap item"
     planned = [
         f"{page} item {item}"
         for page, item in cited
