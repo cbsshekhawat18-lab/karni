@@ -107,6 +107,7 @@ seeded data can never reach a real inbox.
 ```python
 # events/seeds.py
 import factory
+from factory.fuzzy import FuzzyChoice
 
 from karni.seeding import SeedContext, Seeder
 
@@ -118,7 +119,7 @@ class VenueSeeder(Seeder):
         model = Venue
         count = 3                       # always 3 venues (None = --count, 0 = skip)
 
-    name = factory.Iterator(["Main Hall", "Studio B", "Rooftop"])
+    name = FuzzyChoice(["Main Hall", "Studio B", "Rooftop"])
 
 
 class EventSeeder(Seeder):
@@ -131,7 +132,9 @@ class EventSeeder(Seeder):
 ```
 
 Any class attribute other than `Meta` is a field override, using any
-factory-boy declaration. Override `seed()` for full control. `context.create()`
+factory-boy declaration. Use `factory.fuzzy.FuzzyChoice` for a value picked
+from a list: it follows `--seed`, while a `factory.Iterator` goes on from where
+the last run stopped, so a second run with the same seed would differ. Override `seed()` for full control. `context.create()`
 builds rows with everything inferred except what you pass.
 
 ## Volume seeding
@@ -200,6 +203,7 @@ with how long it takes.
 |---|---|
 | A model never seeded | `class Meta: count = 0` in its seeder |
 | Different values for one field | A class attribute on the seeder |
+| A fixed list of names that never runs out | `karni.seeding.cycled(names, index)`: the names in order, then `Name 2`, `Name 3`. `suffix=` changes the tag |
 | Different inference everywhere | Subclass `karni.testing.values.ValueInference`, change its `rules`, and pass it to the builder |
 | Seed from your own code | `karni.seeding.seed(count=..., seed=..., models=...)`. It does not refuse: check `karni.seeding.occupied(seed_plan())` yourself |
 | Volume rows of your own | Subclass `karni.bulk_seeding.BulkSeeder` (`rows`, `insert`, `pick_key`, ...) and pass `bulk=` to `karni.seeding.seed(volume=...)` (experimental) |

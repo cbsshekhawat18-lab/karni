@@ -1,0 +1,17 @@
+{% extends "karni_admin/login.html" %}
+{% load demo %}
+{% comment %}
+Karni's admin sign-in page with the demo login above the form (demo/apps.py).
+{% endcomment %}
+
+{% block content %}
+    {% demo_login as login %}
+    {% if login %}
+        <p class="mb-6" data-demo-login>
+            Demo: sign in as <strong>{{ login.email }}</strong> with the password
+            <strong>{{ login.password }}</strong>. Only this account can change data,
+            and the data resets every {{ login.hours }} hours.
+        </p>
+    {% endif %}
+    {{ block.super }}
+{% endblock %}

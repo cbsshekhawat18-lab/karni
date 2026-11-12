@@ -9,6 +9,71 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
+## 0.5.2 (unreleased)
+
+- **Changed: `karni seed` in a project built from a recipe writes realistic demo data.** The
+  shop, booking, CRM, LMS, marketplace and data-portal recipes now ship their own
+  `<app>/seeds.py` (new for booking, CRM and marketplace) with invented, real-sounding names:
+  products in categories that fit them, courses with lessons that belong to them, companies
+  with contacts on their own domain, bookable spaces with slots that match, sellers with
+  their own listings, and measures with values in their range. Related fields agree (an
+  order costs its listing's price, a deal's contact works at the deal's company). The same
+  `--seed` gives the same rows, the counts in each `karni.yaml` `seed:` line are exact, and a
+  larger count repeats names with a number instead of clashing. Each recipe has a
+  `tests/test_seeds.py` that checks this. The shop's quantities and stock no longer drift
+  between two runs with one seed.
+- **Added: `karni.seeding.cycled(names, index, suffix=...)`**, the name at a position of a list
+  that repeats, tagged `Name 2`, `Name 3` on later passes.
+
+- **A new project's frontend installs with plain `npm install` on npm 10 and
+  11.** The crash that made the docs ask for `npx --yes npm@11 install` is an
+  npm bug that Vite 8's optional peers reach. `{"devDependencies": {"vite":
+  "^8.3.4"}}` alone crashes, and the minimatch override, `engines`, `.npmrc`
+  and `@karni/ui` play no part. npm before 11.6 builds a tree without a lock
+  by resolving every optional peer, and Vite 8's optional peers lead through
+  `@vitejs/devtools` and `@vitejs/devtools-vitest` to vitest, whose own
+  optional peers each pin one vitest version. When those packages are out of
+  step on the registry, npm replaces a node while it still walks it and
+  crashes with `Cannot read properties of null (reading 'edgesOut')`
+  (npm/cli#8261, fixed in npm 11.6.0 and not in npm 10). On Node 20 that was
+  the case from 15 to 30 October 2026, while `@vitest/browser-webdriverio`
+  4.1.12 lagged vitest 4.1.12. After that window npm 10.8.2, 10.9.9 and
+  10.9.10 installed the scaffold again, and its own `engines` (`"npm":
+  ">=11"` with `engine-strict`) was what stopped them. The scaffold now ships
+  `frontend/package-lock.json`, which pins every package but `@karni/ui`, and
+  npm installs what a lock pins without resolving those peers.
+  `scripts/template_lock.py` writes the lock on Node 20, and a test fails
+  when it disagrees with the scaffold's package.json. `@karni/ui` stays out
+  of the lock, so a new project still gets the newest `@karni/ui` in its
+  range, and the production image runs `npm ci` once the project's lock
+  lists it (`npm install` before that).
+- **npm 10.8 is the floor.** `engines` in the scaffold and in
+  `examples/medintel` asks for npm 10.8 (the npm Node 20.19 bundles) instead
+  of npm 11, `karni doctor` flags an npm below 10.8, and `karni new`,
+  `karni check`, the README, the quickstart, the FAQ and the migration notes
+  say plain `npm install`. CI runs the quickstart page on Node 22 (npm 10.9)
+  as well as Node 20 (npm 10.8) and Node 24. `karni upgrade` changes an
+  earlier project's `"npm": ">=11"` to `"npm": ">=10.8"`
+  ([migration note](docs/migrations/0.5.md#the-frontend-installs-with-plain-npm-install)).
+
+- **A one-click shop demo.** `examples/shop-demo` is the shop recipe as `karni new
+  "Shop Demo" --recipe shop` builds it, deployed by `render.yaml` at the repository root
+  as one free Render web service: the API, the admin and the React app from one
+  container, SQLite and a file cache on the instance, Celery tasks inside the request.
+  The image installs the released `karni`, `karni-payments` and `@karni/ui`. With
+  `DEMO_MODE` on, the sign-in pages show the demo login (`demo@example.com` /
+  `karni-password`), only that account writes and it cannot change its password, email
+  or roles, sign-up is closed, and the data goes back to `karni seed --seed 42` at boot
+  and every 24 hours, in one transaction under a lock that one worker takes. The
+  README has a Deploy to Render button, [docs/demo.md](docs/demo.md) says how it runs
+  and what the free plan limits, and a CI job runs the demo's tests and starts it with
+  production settings behind the deploy gate. No framework change: the demo uses the
+  project's `MIDDLEWARE`, the `AuthGuard` slot and the admin's `login_template`.
+
+- **Tests skip when their dependency is missing.** Tests that run git skip with "needs git on
+  PATH" when git is missing, and the PostgreSQL backup round trip skips when `DATABASE_URL`
+  points at a server that is not listening. Before, they failed.
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

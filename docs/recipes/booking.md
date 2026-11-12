@@ -54,6 +54,12 @@ bookings.
 - `bookings/viewsets.py`: `POST /api/bookings/<id>/pay/` opens the payment
   for the resource's price, and `POST /api/bookings/<id>/cancel/` cancels.
 - `bookings/tests/test_capacity.py`: the capacity and the paid booking.
+- `bookings/seeds.py`: four bookable spaces (a meeting room, a workshop
+  studio, a podcast booth, a courtyard) with a price, slots in the hours,
+  length and size that fit each, and bookings spread over the slots that
+  have room. The spaces come from `RESOURCES`.
+- `bookings/tests/test_seeds.py`: the demo data is the same for one seed, has
+  the counts of `karni.yaml`, and never overbooks a slot.
 
 ## What people usually change
 

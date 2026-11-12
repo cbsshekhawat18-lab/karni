@@ -41,6 +41,7 @@ and rows created by a field's custom default function are the exceptions.)
 <Model>`` writes one)::
 
     import factory
+    from factory.fuzzy import FuzzyChoice
 
     from karni.seeding import Seeder
 
@@ -52,7 +53,7 @@ and rows created by a field's custom default function are the exceptions.)
             model = Event
             count = 30  # rows per run (default: --count; 0 skips the model)
 
-        status = factory.Iterator(["published", "published", "draft"])
+        status = FuzzyChoice(["published", "published", "draft"])
         title = factory.Faker("catch_phrase")
 
 Every class attribute other than ``Meta`` overrides one field (a value or
@@ -113,6 +114,7 @@ from factory.declarations import BaseDeclaration
 from factory.random import reseed_random
 
 from karni.errorcodes import KarniError
+from karni.exceptions import KarniValueError
 from karni.testing.factories import DEFAULT_PASSWORD, FactoryBuilder, auto_factory, factory_for
 from karni.testing.values import ValueInference
 
@@ -126,6 +128,7 @@ __all__ = [
     "SeedReport",
     "Seeder",
     "clear_cache",
+    "cycled",
     "occupied",
     "planned_rows",
     "seed",
@@ -452,6 +455,23 @@ def occupied(plan: Iterable[type[models.Model]]) -> dict[str, int]:
         if total:
             found[model._meta.label] = total
     return found
+
+
+def cycled(names: Sequence[str], index: int, *, suffix: str = "{name} {round}") -> str:
+    """The ``index``-th name of a list that repeats, tagged once the list has run out.
+
+    A seeder with a fixed list of names (products, courses, companies) calls
+    this for row ``index``: the first pass through the list gives the names
+    as they are, the second ``"Name 2"``, the third ``"Name 3"``, so a value
+    never runs out and a unique column never clashes whatever the row count.
+    ``suffix`` is the escape hatch: a format string over ``name`` and
+    ``round`` (2 on the second pass, 3 on the third).
+    """
+    if not names:
+        raise KarniValueError("cycled() needs at least one name.", code="E620")
+    name = names[index % len(names)]
+    round_ = index // len(names) + 1
+    return name if round_ == 1 else suffix.format(name=name, round=round_)
 
 
 # the run

@@ -59,9 +59,14 @@ form), orders (list, detail) and a cart's detail. Demo data: 5 categories,
 - `shop/viewsets.py`: `POST /api/carts/<id>/checkout/` checks the cart out
   and opens the payment (`karni_payments.services.create_checkout`). It
   answers the order, the payment and the provider's checkout URL.
-- `shop/seeds.py`: products on sale, and order items at their product's
-  price, so every demo order's total is right.
+- `shop/seeds.py`: five categories (kitchen, garden, stationery, bags,
+  lighting) and eight products in each, with a price and a description that
+  fit the product, and order items at their product's price, so every demo
+  order's total is right. The names come from `CATALOG`. Past 40 products
+  a name repeats with a number (`Brass Desk Lamp 2`).
 - `shop/tests/test_checkout.py`: the total, checkout and the paid order.
+- `shop/tests/test_seeds.py`: the demo data is the same for one seed, has the
+  counts of `karni.yaml`, and its products fit their categories.
 
 ## What people usually change
 

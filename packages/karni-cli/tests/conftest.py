@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, NoReturn
@@ -46,6 +47,11 @@ def require_modules(*projects: str) -> None:
     if REQUIRE_MODULES:
         pytest.fail(f"{reason}. KARNI_REQUIRE_MODULES=1 requires every module.")
     pytest.skip(reason)
+
+
+#: For a test that runs git: skips, naming the cause, where git is not on PATH. A test that
+#: needs a commit supplies its own identity (``git -c user.name=... -c user.email=...``).
+requires_git = pytest.mark.skipif(shutil.which("git") is None, reason="needs git on PATH")
 
 
 @pytest.fixture

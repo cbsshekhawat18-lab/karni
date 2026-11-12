@@ -25,6 +25,13 @@ Karni is an open-source Django + React framework for building with AI coding age
   <b><a href="docs/recipes/index.md">Recipes</a></b>
 </p>
 
+<p align="center">
+  <!-- live-demo-link -->
+  <a href="https://render.com/deploy?repo=https://github.com/cbsshekhawat18-lab/karni"><img alt="Deploy to Render" src="https://render.com/images/deploy-to-render-button.svg"></a>
+  <br>
+  The <a href="docs/demo.md">shop demo</a>: the shop recipe as one service, with a public demo login and a daily reset.
+</p>
+
 ## Why Karni exists
 
 Every web project starts with the same work: sign-in, a user model, the admin, permissions, CRUD endpoints, tables, forms, Docker and Celery. Only after that does the work on the product begin.
@@ -271,10 +278,10 @@ karni serve --local
 In a second terminal, in the same directory:
 
 ```sh
-cd corner_shop/frontend && npx --yes npm@11 install && npm run dev
+cd corner_shop/frontend && npm install && npm run dev
 ```
 
-Open `http://127.0.0.1:8000/admin/` for the admin and `http://localhost:5173/` for the React app. Sign in as `demo@example.com` with the password `karni-password`. `npx --yes npm@11` runs npm 11 for this one install, because the npm 10 that Node 20 and 22 bundle cannot install the frontend.
+Open `http://127.0.0.1:8000/admin/` for the admin and `http://localhost:5173/` for the React app. Sign in as `demo@example.com` with the password `karni-password`.
 
 PostgreSQL is Karni's default database, and the [quickstart guide](docs/quickstart.md) runs it with Docker. CI runs that page verbatim on every push. `karni doctor` checks your Python, Node, npm and database.
 

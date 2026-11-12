@@ -176,6 +176,11 @@ The failure message gives the exact command to regenerate them:
 - the OpenAPI schema snapshots, `packages/karni/tests/api/fixtures/schema.testapp.json`
   and (with `KARNI_TEST_PK=bigint`) `schema.testapp.bigint.json`, which the
   `@karni/ui` parser tests also use
+- the scaffold's `frontend/package-lock.json` (under `templates/project/`),
+  generated from the scaffold's `frontend/package.json` on Node 20:
+  `python scripts/template_lock.py`. Run it after any change to that
+  package.json. A new project installs what the lock pins, which keeps plain
+  `npm install` working on npm 10 (`docs/faq.md` says why)
 
 ## Breaking changes
 

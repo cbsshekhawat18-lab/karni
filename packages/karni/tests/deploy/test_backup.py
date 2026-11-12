@@ -12,6 +12,7 @@ import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import uuid
 from collections.abc import Iterator
@@ -207,6 +208,18 @@ def _tools_present() -> bool:
     return all(shutil.which(name) for name in names)
 
 
+def _reachable(url: str) -> bool:
+    """Whether a server accepts TCP connections at the URL (a unix socket: assume so)."""
+    parts = urlsplit(url)
+    if not parts.hostname or parts.hostname.startswith("/"):
+        return True
+    try:
+        with socket.create_connection((parts.hostname, parts.port or 5432), timeout=3):
+            return True
+    except OSError:
+        return False
+
+
 @pytest.fixture
 def server() -> Iterator[tuple[str, list[str]]]:
     url = _postgres_url()
@@ -215,6 +228,8 @@ def server() -> Iterator[tuple[str, list[str]]]:
             "needs DATABASE_URL=postgres://... and the PostgreSQL client tools "
             "(pg_dump, pg_restore, psql, createdb) on PATH or in KARNI_BACKUP_PG_BIN"
         )
+    if not _reachable(url):
+        pytest.skip("needs a PostgreSQL server listening at DATABASE_URL's host and port")
     config = Config(pg_bin=_pg_bin())
     # The maintenance database: DATABASE_URL's own database need not exist.
     maintenance = backup.connection(backup.with_database(url, "postgres"))

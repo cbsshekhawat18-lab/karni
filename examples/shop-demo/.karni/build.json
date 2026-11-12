@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "spec": "f8838b7f95302aae5ae2cd27bc5bf6eb6e57be167570ec3b02233e79ad87a471",
+  "entities": [
+    "shop.Cart",
+    "shop.CartItem",
+    "shop.Category",
+    "shop.Order",
+    "shop.OrderItem",
+    "shop.Product"
+  ],
+  "pages": [
+    "shop.Cart:detail",
+    "shop.Category:form",
+    "shop.Category:list",
+    "shop.Order:detail",
+    "shop.Order:list",
+    "shop.Product:detail",
+    "shop.Product:form",
+    "shop.Product:list"
+  ],
+  "files": {
+    "frontend/src/pages/karni/cart-detail.tsx": "c017c1c50f28f0d9dada6b68afa43b0f091b3c7ccf3dab21f22bbc6e38e72fd5",
+    "frontend/src/pages/karni/categories.tsx": "55d8475e904b528693b7ebfc2b8d5135525aac98509a1423cb06cb1d425f1fc3",
+    "frontend/src/pages/karni/category-form.tsx": "1dd69cd333eae3e52fa0d7ee64e58238f320bfb6575d70eaa1c6036d6b47aa0b",
+    "frontend/src/pages/karni/order-detail.tsx": "c203023549fd0aa27efd45d637513bdb37b5cb9b98720629a371ca00b551393f",
+    "frontend/src/pages/karni/orders.tsx": "c944eabc00ad3eb98447b81c96ffc1564ef973be14b03ea55c1c42042357dafc",
+    "frontend/src/pages/karni/product-detail.tsx": "7c691f93e5d42ba0845e32ee427fbbb88a05522d62c25ef4bc95aad26b640b92",
+    "frontend/src/pages/karni/product-form.tsx": "cd35c8b1191fbdb7effab5d63419df6d7eefb34bbfbde41fd5f4b463c062ef08",
+    "frontend/src/pages/karni/products.tsx": "ecbbda8c2bf98eb613ad763c9354819f625eb38f7811ecde4d0eb91dde4183bc",
+    "shop/karni/__init__.py": "6d9c3201c188332d74dfbecab35a9069627c2a69d50ff2c725662a500a3d0727",
+    "shop/karni/api.py": "a4c1376b88d71a3b90f5a8c803616c71d6e83f2c1cc5035bcf2c60af34e48f6e",
+    "shop/karni/models.py": "5d14954c1c3605b7917e188f24befa249e29bc926744663fa919e98e5ae96568",
+    "shop/karni/seeds.py": "b9a275feeefad55b0b0cb971eb23d9501aa671aa4fddab1409ce7d53db120cfa",
+    "shop/tests/karni/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "shop/tests/karni/test_cart.py": "f2063537b228dd3e13f9af81f67f212d3f6d14ca830a5602cfa61a05289c66bf",
+    "shop/tests/karni/test_cart_item.py": "0119eda131403a2a065d03a52cf315d6b3ac03cff27205a0c78d3379da631925",
+    "shop/tests/karni/test_category.py": "5669c3d183f5731ab63069551d47266b1652dce2bfdcbbda07f1d59252146300",
+    "shop/tests/karni/test_order.py": "5b683e20b6db35d6789f4535179942f41c821a375aa5cfae465c9e4821cd7af0",
+    "shop/tests/karni/test_order_item.py": "75a4742a1c8e075fb60ea45eee19444353da133d5ec36a24b67d6122d9ccbc42",
+    "shop/tests/karni/test_product.py": "d60e464a737620b994fe01cdc2e9db3bb996fb4fcdbb3f64f2416bdd540364cb"
+  },
+  "blocks": {
+    "config/settings.py": "4d8fa0bd20fd28a0677251fe294b0da369b2a4d82294d68b7609a1a62d7b573d",
+    "frontend/src/routes.tsx imports": "ef45233c31c15aabb0b13e37f93e463037a0365412f9a632c0b193c8085c88c7",
+    "frontend/src/routes.tsx routes": "12c8a83bb30dea2f6ca6102c8aed9300ca6292f61a4a808b42a3aba9a3d4e114"
+  },
+  "adopted": []
+}

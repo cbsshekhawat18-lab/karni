@@ -2091,6 +2091,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Give the user model the attribute (a field or a property holding a node of the tree, e.g. region), or give each user their nodes with user grants of the same scope (features: user_grants, then karni.accounts.grants.grant(..., targets=[...])). The check is silent while KARNI_USER_GRANTS is on, since the nodes come from the grants. Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] otherwise when something else gives the nodes on purpose.
 
+<a id="e620"></a>
+
+#### E620: cycled() was given an empty list of names
+
+*exception* · from `karni.seeding.cycled`
+
+**Why Karni objects.** cycled() picks a row's name from a fixed list and repeats the list with a number once it runs out. An empty list has no name to give.
+
+**Fix.** Pass at least one name, for example cycled(["Oak Table", "Pine Shelf"], index).
+
 <a id="w630"></a>
 
 #### W630: The database menu could not be read

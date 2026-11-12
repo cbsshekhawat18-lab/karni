@@ -22,6 +22,7 @@ from karni.seeding import (
     SeedError,
     _order,
     clear_cache,
+    cycled,
     seed,
     seed_plan,
     seeders,
@@ -384,3 +385,16 @@ def factory_lazy(function: Any) -> Any:
     import factory
 
     return factory.LazyFunction(function)
+
+
+def test_cycled_gives_the_names_then_the_same_names_tagged_by_round() -> None:
+    names = ["Oak", "Elm"]
+    got = [cycled(names, n) for n in range(5)]
+    assert got == ["Oak", "Elm", "Oak 2", "Elm 2", "Oak 3"]
+    assert len(set(cycled(names, n) for n in range(200))) == 200
+
+
+def test_cycled_takes_its_own_suffix_and_refuses_an_empty_list() -> None:
+    assert cycled(["Oak"], 1, suffix="{name} (batch {round})") == "Oak (batch 2)"
+    with pytest.raises(ValueError):
+        cycled([], 0)

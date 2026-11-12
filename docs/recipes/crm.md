@@ -60,6 +60,13 @@ deals and 120 activities.
   value of the deals per stage, of the deals the user may see.
 - `crm/tests/test_pipeline.py`: the pipeline as sales and as a manager, and
   a contacts import that updates by email.
+- `crm/seeds.py`: twenty companies in different trades, three contacts at
+  each with an email on the company's own `.example` domain, two deals each
+  that fit the trade, a contact from the same company on every deal, and
+  calls, emails and meetings that are done when their date has passed. The
+  companies come from `COMPANIES`.
+- `crm/tests/test_seeds.py`: the demo data is the same for one seed, has the
+  counts of `karni.yaml`, and its people and deals agree with their company.
 
 ## What people usually change
 

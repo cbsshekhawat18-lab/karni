@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni-ai"
-version = "0.5.1"
+version = "0.5.2"
 description = "Structured extraction for Karni: rows for any resource read from text, a web page or a PDF by a language model, always through the import preview. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"

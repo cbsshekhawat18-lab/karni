@@ -126,23 +126,33 @@ def _versions(node: str, npm: str):
     return lambda name: {"node": node, "npm": npm}[name]
 
 
-def test_doctor_flags_npm_10(runner, project: Path, monkeypatch) -> None:
-    """Node 20's bundled npm 10.8.2 crashes in the frontend's npm install: doctor says so and how."""
+def test_doctor_accepts_the_npm_node_20_bundles(runner, project: Path, monkeypatch) -> None:
+    """npm 10.8.2 (Node 20) installs the frontend: the scaffold ships its package-lock.json."""
     monkeypatch.setattr(doctor_mod, "tool_version", _versions("v20.20.1", "10.8.2"))
+    out = runner.invoke(app, ["doctor", "-q"]).stdout
+    assert "v20.20.1 (npm 10.8.2)" in out and "too old" not in out
+
+
+def test_doctor_flags_an_npm_below_the_floor(runner, project: Path, monkeypatch) -> None:
+    """Below engines' npm 10.8, the frontend's npm install stops: doctor says so and how."""
+    monkeypatch.setattr(doctor_mod, "tool_version", _versions("v20.20.1", "10.7.0"))
     out = runner.invoke(app, ["doctor", "-q"]).stdout
     lines = out.splitlines()
     at = next(i for i, line in enumerate(lines) if line.startswith("node"))
     node_line, flag = lines[at : at + 2]
-    assert node_line.split() == ["node", "v20.20.1", "(npm", "10.8.2)"]
-    assert flag.startswith(" " * 12 + "too old: npm 10.8.2 is below 11")
-    for fix in ("npx npm@11 install", "npm install -g npm@11", "Node 24 LTS"):
+    assert node_line.split() == ["node", "v20.20.1", "(npm", "10.7.0)"]
+    assert flag.startswith(" " * 12 + "too old: npm 10.7.0 is below 10.8")
+    for fix in ("EBADENGINE", "npm install -g npm@11", "Node 24 LTS"):
         assert fix in flag
+    assert "npx" not in flag
 
 
-def test_doctor_flags_npm_10_outside_a_project(runner, tmp_path: Path, monkeypatch, no_ci) -> None:
+def test_doctor_is_quiet_about_npm_10_outside_a_project(
+    runner, tmp_path: Path, monkeypatch, no_ci
+) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(doctor_mod, "tool_version", _versions("v22.22.0", "10.9.4"))
-    assert "too old: npm 10.9.4 is below 11" in runner.invoke(app, ["doctor"]).stdout
+    assert "too old" not in runner.invoke(app, ["doctor"]).stdout
 
 
 def test_doctor_is_quiet_about_a_supported_toolchain(runner, project: Path, monkeypatch) -> None:
@@ -154,12 +164,16 @@ def test_doctor_is_quiet_about_a_supported_toolchain(runner, project: Path, monk
 @pytest.mark.parametrize(
     ("node", "npm", "expected"),
     [
-        ("v20.20.1", "10.8.2", "npm 10.8.2 is below 11"),
-        ("v22.12.0", "10.9.0", "npm 10.9.0 is below 11"),
+        ("v20.20.1", "10.7.0", "npm 10.7.0 is below 10.8"),
+        ("v22.12.0", "9.9.4", "npm 9.9.4 is below 10.8"),
+        ("v20.19.0", "10", "npm 10 is below 10.8"),
         ("v20.18.3", "10.8.2", "Node v20.18.3 cannot run Vite 8"),  # Node first: 24 fixes both
         ("v21.7.3", "11.0.0", "Node v21.7.3 cannot run Vite 8"),
         ("v22.11.0", "11.0.0", "Node v22.11.0 cannot run Vite 8"),
         ("v18.20.8", None, "Node v18.20.8 cannot run Vite 8"),
+        ("v20.19.0", "10.8.2", None),
+        ("v22.12.0", "10.9.0", None),
+        ("v22.23.5", "10.9.9", None),
         ("v20.19.0", "11.0.0", None),
         ("v22.12.0", "11.21.1", None),
         ("v26.7.0", "11.19.0", None),
@@ -179,8 +193,9 @@ def test_toolchain_shortfall(node: str | None, npm: str | None, expected: str | 
 
 def test_install_hint_names_the_npm_floor() -> None:
     hint = toolchain.install_hint()
-    for part in ("npm 11 or later", "npx npm@11 install", "npm install -g npm@11", "karni doctor"):
+    for part in ("`npm install` in frontend/", "npm 10.8 or later", "karni doctor"):
         assert part in hint
+    assert "npx" not in hint
 
 
 # the tip

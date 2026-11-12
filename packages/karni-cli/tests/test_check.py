@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
+
+import pytest
 
 import karni_cli.commands.check as check_mod
 from karni_cli import project as project_mod
@@ -97,17 +100,16 @@ def test_missing_jscpd_fails_with_instructions(tmp_path: Path, capsys) -> None:
     (tmp_path / "frontend" / "src").mkdir(parents=True)
     assert check_mod._frontend_duplication(tmp_path) == 1
     err = capsys.readouterr().err
-    # "run npm install" alone loops a user whose npm 10 crashes in that install
-    assert "jscpd not installed" in err and "npm 11 or later" in err
-    assert "npx npm@11 install" in err and "--no-frontend" in err
+    assert "jscpd not installed" in err and "`npm install` in frontend/" in err
+    assert "npm 10.8 or later" in err and "--no-frontend" in err
 
 
 def test_missing_eslint_names_the_npm_floor(tmp_path: Path, capsys) -> None:
     (tmp_path / "frontend").mkdir()
     assert check_mod._frontend_lint(tmp_path) == 1
     err = capsys.readouterr().err
-    assert "eslint not installed" in err and "npm 11 or later" in err
-    assert "npx npm@11 install" in err and "--no-frontend" in err
+    assert "eslint not installed" in err and "`npm install` in frontend/" in err
+    assert "npm 10.8 or later" in err and "--no-frontend" in err
 
 
 def test_no_frontend_dir_is_clean(tmp_path: Path) -> None:
@@ -155,8 +157,8 @@ def test_a_fresh_frontend_is_skipped_with_the_exact_command(runner, tmp_path, mo
     assert "skipped: the frontend checks (eslint and jscpd) need frontend/node_modules" in (
         result.output
     )
-    assert "`(cd frontend && npm install)`" in result.output
-    assert "`(cd frontend && npx --yes npm@11 install)`" in result.output
+    assert "`(cd frontend && npm install)`, which needs npm 10.8 or later" in result.output
+    assert "npx" not in result.output
     assert result.output.count("frontend/node_modules") == 1  # one message, not one per tool
 
 
@@ -193,6 +195,8 @@ def test_the_build_check_step_agrees_with_karni_check(runner, tmp_path, monkeypa
 
 
 def _git(repo: Path, *args: str) -> None:
+    if shutil.which("git") is None:
+        pytest.skip("needs git on PATH")
     subprocess.run(
         ["git", "-c", "user.email=t@example.com", "-c", "user.name=t", *args],
         cwd=repo,

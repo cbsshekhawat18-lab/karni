@@ -237,7 +237,7 @@ karni build
 karni serve --local
 ```
 
-Then, in a second terminal: `cd corner_shop/frontend && npx --yes npm@11 install && npm run dev`.
+Then, in a second terminal: `cd corner_shop/frontend && npm install && npm run dev`.
 The [quickstart guide](quickstart.md) does the same on PostgreSQL, Karni's
 default database.
 
