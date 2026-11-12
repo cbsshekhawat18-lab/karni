@@ -208,3 +208,27 @@ def test_every_move_of_the_money_is_in_the_history(clerk: Any, make_gadget: Make
     assert history.status_code == 200
     changed = [set(entry["fields_changed"]) for entry in history.data["results"]]
     assert any("status" in fields for fields in changed)
+
+
+def test_the_revenue_tiles_count_paid_money_less_refunds_for_staff_only(
+    clerk: Any, manager: Any, buyer: Any, make_gadget: MakeGadget
+) -> None:
+    lamp = make_gadget(price=Decimal("25.00"), stock=10)
+    pay(place(cart_with(("gadget", lamp, 2))))
+    paid = pay(place(cart_with(("gadget", lamp, 1))))
+    as_user(manager).post(f"/api/orders/{paid.pk}/refund/", {"amount": "5.00"}, format="json")
+    refund_webhook(paid)
+    place(cart_with(("gadget", lamp, 1)))  # waiting: no money yet
+    tiles = {tile["key"]: tile for tile in as_user(clerk).get("/api/dashboard/").data["tiles"]}
+    values = {row["label"]: row["value"] for row in tiles["commerce.revenue"]["data"]["values"]}
+    assert values == {
+        "Today": "70.00",
+        "Last 7 days": "70.00",
+        "Last 30 days": "70.00",
+        "Orders paid in 30 days": 2,
+    }
+    points = tiles["commerce.revenue_chart"]["data"]["points"]
+    assert len(points) == 30 and points[-1]["value"] == "70.00" and points[0]["value"] == "0.00"
+    latest = tiles["commerce.latest_orders"]["data"]["rows"]
+    assert len(latest) == 3 and latest[0]["link"].startswith("/orders/")
+    assert as_user(buyer).get("/api/dashboard/").data["tiles"] == []
