@@ -93,8 +93,9 @@ declare(
   `"person"` (the `person=` argument of `publish()`) or one of the fields.
   When it is set, a publish without a person is refused. Leave it out for an
   event where the person is optional.
-- **`timeline`** is kept for the timeline: a title template, or a mapping of
-  its options. The bus does not read it.
+- **`timeline`** is read by the [timeline](timeline.md): a title template, or
+  a mapping of its options. With `karni.timeline` installed, each event
+  then writes a timeline entry. The bus itself does not read it.
 - **`describe`** says in one line when the event happens. `karni check`
   shows it.
 
@@ -290,7 +291,9 @@ karni-payments publishes these when a payment's or a refund's status moves
 | `payments.payment.failed` | `payment`, `amount` |
 | `payments.refund.succeeded` | `refund`, `payment`, `amount` |
 
-Their subject is the payment (or the refund), and the person is empty.
+Their subject is the payment (or the refund). The person is the payer's
+person when `karni.people` is installed and the payment's user is linked to
+one, else empty. `payments.payment.succeeded` names a timeline title.
 
 The [people contract](people.md#events) publishes `people.person.created`,
 `people.person.linked`, `people.person.merged`, `people.person.erased`,

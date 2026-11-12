@@ -34,7 +34,8 @@ aggregations (``karni.aggregation``) · ``E43x``/``W59x`` cross-model search
 (``karni.global_search``) · ``E55x`` field groups and column sets
 (``karni.layout``) · ``E45x``/``W45x`` family events and the outbox
 (``karni.events``, ``karni.outbox``) · ``E25x`` the people contract
-(``karni.people``).
+(``karni.people``) · ``E46x``/``W46x`` the timeline contract
+(``karni.timeline``).
 ``SUG001`` to ``SUG099`` suggestions from code (``karni.suggestions``): what
 ``karni check`` and ``karni doctor`` print after the errors and warnings, never a
 failure. The prefix has three letters because the registry's code pattern reads
@@ -1919,6 +1920,60 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "other versions only, nothing is ever delivered to this subscriber.",
         "Move the subscriber to a declared version (@subscribe(name, version=N)) and adapt it "
         "to that payload, or keep the publisher publishing the old version too.",
+    ),
+    # E46x/W46x the timeline contract (experimental, karni.timeline)
+    _e(
+        "E460",
+        "A timeline= option of an event declaration is not valid",
+        "check",
+        "karni.timeline.checks.check_timeline; karni.timeline.parse_option",
+        "An event's timeline= option writes the title of every entry the event makes. A "
+        "template that reads attributes or fields the event does not declare would show "
+        "more than the payload holds, or nothing.",
+        "Write a title template with {field} for declared fields only (no attribute, index, "
+        "conversion or format), or a mapping with the keys title, body, subjects "
+        "({field: 'app_label.model'}) and kind.",
+    ),
+    _e(
+        "E461",
+        "The timeline needs the people contract",
+        "check",
+        "karni.timeline.checks.check_timeline",
+        "Every timeline entry may point at a person (people.Person), so karni.timeline "
+        "cannot work without karni.people.",
+        "Set KARNI_PEOPLE = True above karni_settings(globals()), or add 'karni.people' to "
+        "INSTALLED_APPS, and run migrate.",
+    ),
+    _e(
+        "E462",
+        "timeline.record() was given an argument it cannot use",
+        "exception",
+        "karni.timeline.record",
+        "An entry needs a kind (lower-case words joined by dots), a title, and a person or a "
+        "subject to show on. A person is a people.Person, a subject a saved record, and data "
+        "holds JSON values only.",
+        "Pass kind='part.what', a title, person=<Person or id> and/or subjects=[record or "
+        "('app_label.model', id)], and ids instead of model instances in data.",
+    ),
+    _e(
+        "E463",
+        "A timeline request names no record, or a malformed one",
+        "api",
+        "karni.timeline.api.TimelineView",
+        "GET /api/timeline/ lists the timeline of exactly one person, organisation or record, "
+        "and pages with the cursor it gave.",
+        "Name exactly one of ?person=<id>, ?organisation=<id> or ?subject=<app_label.model>:"
+        "<id>, and pass ?cursor= as the previous page's next.",
+    ),
+    _e(
+        "W460",
+        "Events declare a timeline title and the outbox is not installed",
+        "warning",
+        "karni.timeline.checks.check_timeline",
+        "Entries from family events are written by a subscriber, and subscribers are "
+        "delivered through karni.outbox. Without it, no entry is written from events.",
+        "Add 'karni.outbox' to INSTALLED_APPS and run migrate, or set "
+        "KARNI_TIMELINE_FROM_EVENTS = False and write entries with timeline.record().",
     ),
     # E47x/E48x/W61x tooling for large projects (experimental): context slices, the
     # check cache, volume seeding, the scaling budgets and query plans

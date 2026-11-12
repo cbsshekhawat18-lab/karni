@@ -41,6 +41,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Taxonomy tagging: one declaration tags a model to tree models (`class Karni: taxonomies`), a generated or adopted many-to-many per key, import and export columns by natural key, and the `tree:<key>` scope. Experimental tier | `experimental` | Karni's own tests |
 | A tenant scope on every model (the `karni-tenancy` module) | `planned` | [documented](models.md#scopes-the-filters-every-default-manager-applies) |
 | The people contract (`karni.people`, `KARNI_PEOPLE`): one person and one organisation record for every part of a project, `people.resolve` by account or email, the account linked once its email is verified, person facts in SQL, duplicates, merge with a preview and hooks, erase on request, `/api/people/`. Experimental tier | `experimental` | Karni's own tests |
+| The timeline contract (`karni.timeline`): one stream of moments per person and per record, `timeline.record` by hand, entries from family events that declare `timeline=`, `GET /api/timeline/` with each entry checked against the row scope of every record it is about, cursor paging, retention. Experimental tier | `experimental` | Karni's own tests |
 
 ### API
 
@@ -1802,6 +1803,12 @@ class Lead(BaseModel):
 | `KARNI_PEOPLE_API` |  | `True` | Experimental. Route `/api/people/`, `/api/organisations/`, `/api/people-memberships/` and `/api/people-addresses/`. `False` leaves them out, for a project that routes its own viewsets over the people tables. |
 | `KARNI_PEOPLE_MERGE_SKIP` |  | `[]` | Experimental. Models a person or organisation merge leaves alone, as `"app_label.Model"`: their rows keep pointing at the merged record. |
 | `KARNI_PEOPLE_AUTODISCOVER` |  | `True` | Experimental. Import every installed app's `people.py` at startup, where a part registers its person facts, merge hooks and erase hooks. `False`: register them in the part's `AppConfig.ready()`. |
+| `KARNI_TIMELINE_API` |  | `True` | Experimental. Route `GET /api/timeline/`, a person's, an organisation's or a record's timeline, when `karni.timeline` is installed. `False` leaves it out, for a project that mounts its own `TimelineView`. See [timeline](timeline.md). |
+| `KARNI_TIMELINE_FROM_EVENTS` |  | `True` | Experimental. Write a timeline entry for each family event whose declaration names a timeline title (`declare(..., timeline=...)`). `False` writes entries with `timeline.record()` only. |
+| `KARNI_TIMELINE_PAGE_SIZE` |  | `25` | Experimental. Timeline entries per page of `GET /api/timeline/` when `?limit=` is not given. |
+| `KARNI_TIMELINE_MAX_PAGE_SIZE` |  | `100` | Experimental. The largest `?limit=` of `GET /api/timeline/`. |
+| `KARNI_TIMELINE_RETENTION_DAYS` |  | `None` | Experimental. Days a timeline entry is kept. `None` (the default) keeps them all and schedules no pruning. |
+| `KARNI_TIMELINE_VISIBILITY` |  | `"karni.timeline.access.Visibility"` | Experimental. Dotted path of the class (a subclass of `karni.timeline.access.Visibility`) that says which records a request may read, so which timeline entries it sees. |
 | `KARNI_ACCOUNTS_TOKEN_TTL` |  | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
 | `KARNI_ACCOUNTS_LINKS` |  | `{ "verify_email": "{frontend}/auth/verify-email?token={token}", "reset_password": "{frontend}/auth/reset-password?token={token}", "change_email": "{frontend}/auth/confirm-email-change?token={token}"}` | Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders. |
 | `KARNI_AUTH_THROTTLE_RATES` |  | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object. `null` disables a scope. |
@@ -2475,6 +2482,11 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E454`](errors.md#e454) | exception | A subscriber is malformed |
 | [`E455`](errors.md#e455) | check | KARNI_EVENTS_DISPATCHER cannot be used |
 | [`E456`](errors.md#e456) | test | An assertion about family events failed |
+| [`E460`](errors.md#e460) | check | A timeline= option of an event declaration is not valid |
+| [`W460`](errors.md#w460) | warning | Events declare a timeline title and the outbox is not installed |
+| [`E461`](errors.md#e461) | check | The timeline needs the people contract |
+| [`E462`](errors.md#e462) | exception | timeline.record() was given an argument it cannot use |
+| [`E463`](errors.md#e463) | api | A timeline request names no record, or a malformed one |
 | [`E470`](errors.md#e470) | exception | A context slice names no app or model |
 | [`E471`](errors.md#e471) | exception | A context slice names a model two apps share |
 | [`E473`](errors.md#e473) | exception | A volume seed refused tables that hold rows no seed run left |

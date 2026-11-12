@@ -103,6 +103,12 @@ class KarniSettingsModel(BaseModel):
     KARNI_EVENTS_DISPATCHER: Any = "karni.outbox.dispatch.celery"
     KARNI_EVENTS_MAX_ATTEMPTS: int = Field(default=8, ge=1, le=100)
     KARNI_EVENTS_RETENTION_DAYS: int | None = Field(default=30, ge=1)
+    KARNI_TIMELINE_API: bool = True
+    KARNI_TIMELINE_FROM_EVENTS: bool = True
+    KARNI_TIMELINE_PAGE_SIZE: int = Field(default=25, ge=1, le=1000)
+    KARNI_TIMELINE_MAX_PAGE_SIZE: int = Field(default=100, ge=1, le=1000)
+    KARNI_TIMELINE_RETENTION_DAYS: int | None = Field(default=None, ge=1)
+    KARNI_TIMELINE_VISIBILITY: Any = "karni.timeline.access.Visibility"
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)
     KARNI_ADMIN_GRANTS_OPEN_PAGES: bool = True
     KARNI_MATRIX_EXCLUDE: list[Any] = Field(default_factory=list)

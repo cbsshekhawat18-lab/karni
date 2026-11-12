@@ -35,6 +35,7 @@ class Ticket(BaseModel):
 
     class Karni:
         audit = True
+        owner_field = "person__user"
 
 
 class Note(BaseModel):

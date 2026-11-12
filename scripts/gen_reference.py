@@ -434,6 +434,13 @@ CAPABILITIES: tuple[Capability, ...] = (
         "linked once its email is verified, person facts in SQL, duplicates, merge with a "
         "preview and hooks, erase on request, `/api/people/`. Experimental tier",
     ),
+    Capability(
+        "models",
+        "The timeline contract (`karni.timeline`): one stream of moments per person and per "
+        "record, `timeline.record` by hand, entries from family events that declare "
+        "`timeline=`, `GET /api/timeline/` with each entry checked against the row scope of "
+        "every record it is about, cursor paging, retention. Experimental tier",
+    ),
     Capability("permissions", "Field visibility per role (`class Karni: field_roles`)"),
     Capability("permissions", "Row scope in the admin, from the same grants as the API"),
     Capability(

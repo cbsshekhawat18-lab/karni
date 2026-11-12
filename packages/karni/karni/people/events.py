@@ -85,8 +85,10 @@ class EventSpec:
     ``fields`` maps each payload field to what it holds. ``person`` says where
     the person the event is about comes from: ``"person"`` (``publish``'s
     ``person=``), a declared field (``"kept"``), or ``None`` for an event
-    about an organisation. The names and arguments are those of the family
-    bus's ``declare()``, so :func:`declare_all` hands them over unchanged.
+    about an organisation. ``timeline`` is the title of the timeline entry
+    the event writes (:mod:`karni.timeline`), or ``None`` for none. The
+    names and arguments are those of the family bus's ``declare()``, so
+    :func:`declare_all` hands them over unchanged.
     """
 
     name: str
@@ -95,6 +97,7 @@ class EventSpec:
     fields: Mapping[str, str]
     person: str | None
     describe: str
+    timeline: str | None = None
 
 
 _SOURCE = {"source": "the app label of the part that created it"}
@@ -119,9 +122,16 @@ EVENTS: Final[dict[str, EventSpec]] = {
             {"user": "the id of the account linked to the person"},
             "person",
             "An account was linked to a person once its email was verified.",
+            "Account linked",
         ),
         EventSpec(
-            "people.person.merged", person_merged, 1, _MERGED, "kept", "Two people became one."
+            "people.person.merged",
+            person_merged,
+            1,
+            _MERGED,
+            "kept",
+            "Two people became one.",
+            "Merged with a duplicate record",
         ),
         EventSpec(
             "people.person.erased", person_erased, 1, {}, "person", "A person's data was erased."
@@ -141,6 +151,7 @@ EVENTS: Final[dict[str, EventSpec]] = {
             _MERGED,
             None,
             "Two organisations became one.",
+            "Merged with a duplicate record",
         ),
     )
 }
@@ -150,15 +161,18 @@ def declare_all(declare: Callable[..., Any]) -> None:
     """Experimental. Call ``declare(name, version=, fields=, person=, describe=)`` for each event.
 
     What hands the people events to a family event bus: pass its ``declare``.
+    An event with a timeline title gets ``timeline=`` too.
     """
     for spec in EVENTS.values():
-        declare(
-            spec.name,
-            version=spec.version,
-            fields=dict(spec.fields),
-            person=spec.person,
-            describe=spec.describe,
-        )
+        options: dict[str, Any] = {
+            "version": spec.version,
+            "fields": dict(spec.fields),
+            "person": spec.person,
+            "describe": spec.describe,
+        }
+        if spec.timeline is not None:
+            options["timeline"] = spec.timeline
+        declare(spec.name, **options)
 
 
 def signal_for(name: str) -> Signal:

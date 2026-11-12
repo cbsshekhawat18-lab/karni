@@ -54,6 +54,16 @@ TALLY = "notes.tally_closures"
 
 
 @pytest.fixture(autouse=True)
+def _bus_only() -> Iterator[None]:
+    """These tests count the bus's own subscribers: the timeline's are left out (tests/timeline)."""
+    from karni.timeline import subscribers
+
+    subscribers.disconnect()
+    yield
+    subscribers.connect()
+
+
+@pytest.fixture(autouse=True)
 def _notes_behave() -> Iterator[None]:
     listeners.behaviour["fail"] = 0
     listeners.never.clear()

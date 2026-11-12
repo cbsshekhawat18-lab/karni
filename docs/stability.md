@@ -272,6 +272,15 @@ Experimental now:
   check`, the outbox rows in `karni trace`, karni-payments' `payments.*`
   events, and `capture_events`, `deliver_now` and `assert_events_declared`
   in `karni.testing`.
+- [Timeline](timeline.md): the `karni.timeline` app (its models
+  `TimelineEntry` and `TimelineLink`, admin, task and beat entry,
+  `karni.timeline.api`, `access`, `checks`, `services` and `subscribers`),
+  `record`, `prune`, `render`, `parse_option`, `write_from_event`,
+  `live_person`, `connect`, `disconnect`, `installed` and `CONTRACT` in
+  `karni.timeline`, the `timeline=` option of `declare()`,
+  `GET /api/timeline/`, the `KARNI_TIMELINE_*` settings, the timeline titles
+  of the people events and of `payments.payment.succeeded`, and the person
+  karni-payments' events carry.
 - [The module catalog](modules.md#the-module-catalog): the `karni.module.toml`
   manifest format and the feature manifests, the `karni.modules` entry point
   group, `karni.catalog` (with `python -m karni.catalog`),

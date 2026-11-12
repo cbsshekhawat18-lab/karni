@@ -62,6 +62,8 @@ KARNI_API_CACHE_LEGACY_HEADER = False
 # is: tests/people/urls.py routes them.
 KARNI_PEOPLE = True
 KARNI_PEOPLE_API = False
+# The timeline's route too: tests/timeline mounts its own URLconf.
+KARNI_TIMELINE_API = False
 
 karni_settings(globals(), env_name="dev")
 
@@ -107,6 +109,8 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # the people contract (tests/people): their viewsets are mounted by tests.people.urls.
     "tests.loyaltyapp",
     "tests.helpdeskapp",
+    # The timeline contract (tests/timeline): its API is mounted by tests.timeline.urls.
+    "karni.timeline",
 ]
 # tests.searchapp's models declare search, and the default router does not serve
 # them (their router is tests.searchapp.urls'), so karni.W591 is expected here.

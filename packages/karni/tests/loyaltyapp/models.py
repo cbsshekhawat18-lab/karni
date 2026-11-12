@@ -31,3 +31,6 @@ class Visit(BaseModel):
 
     class Meta(BaseModel.Meta):
         app_label = "loyaltyapp"
+
+    class Karni:
+        owner_field = "person__user"

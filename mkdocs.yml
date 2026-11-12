@@ -93,6 +93,7 @@ nav:
       - Admin: admin.md
       - Navigation from data: navigation.md
       - People: people.md
+      - Timeline: timeline.md
       - Change history: change-history.md
       - Import and export: import-export.md
       - Loading content: content-loading.md

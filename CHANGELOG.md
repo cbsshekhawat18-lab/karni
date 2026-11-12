@@ -114,6 +114,24 @@ apply codemods and list the manual steps. This file is the human summary.
   shared seed pool (`people.pool()`). The contract is versioned (`karni.people.CONTRACT =
   1`). Error codes `E250` to `E259`. See [people](docs/people.md).
 
+- **Added (experimental): the timeline contract, `karni.timeline`.** One stream of moments
+  per person and per record for every part of a project. `TimelineEntry` (kind, title
+  written at the time, body, actor, person, source, the family event's id, data) and
+  `TimelineLink` (any record, by content type and id). An event whose declaration names a
+  title (`declare(..., timeline="Ticket closed: {topic}")`, or a mapping with `title`,
+  `body`, `subjects` and `kind`) writes an entry after the commit through a core
+  subscriber, once per event and person. `timeline.record()` writes one by hand and does
+  nothing when the app is not installed. `GET /api/timeline/?person=`, `?organisation=`
+  or `?subject=<app_label.model>:<id>` lists entries newest first with a cursor, and an
+  entry shows only to a caller who may read its person and every linked record, through
+  each model's list endpoint (one query per model on the page). A person merge moves
+  entries and links, an erase deletes them, `KARNI_TIMELINE_RETENTION_DAYS` prunes them.
+  Admin page, `KARNI_TIMELINE_*` settings. Add `"karni.timeline"` to `INSTALLED_APPS` with
+  `karni.people` and `karni.outbox`. The people events `people.person.linked`, `merged`
+  and `people.organisation.merged` name timeline titles. karni-payments' events carry the payer's person when the payment's user is
+  linked to one, and `payments.payment.succeeded` names a timeline title. New codes: E460
+  to E463 and W460. See [timeline](docs/timeline.md).
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

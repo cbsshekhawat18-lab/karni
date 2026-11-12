@@ -1487,6 +1487,56 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Read the events the message lists: publish the expected event inside the action's transaction, with the expected fields, and declare every event an app publishes.
 
+<a id="e460"></a>
+
+#### E460: A timeline= option of an event declaration is not valid
+
+*system check (error)* · from `karni.timeline.checks.check_timeline; karni.timeline.parse_option`
+
+**Why Karni objects.** An event's timeline= option writes the title of every entry the event makes. A template that reads attributes or fields the event does not declare would show more than the payload holds, or nothing.
+
+**Fix.** Write a title template with {field} for declared fields only (no attribute, index, conversion or format), or a mapping with the keys title, body, subjects ({field: 'app_label.model'}) and kind.
+
+<a id="w460"></a>
+
+#### W460: Events declare a timeline title and the outbox is not installed
+
+*system check (warning)* · from `karni.timeline.checks.check_timeline`
+
+**Why Karni objects.** Entries from family events are written by a subscriber, and subscribers are delivered through karni.outbox. Without it, no entry is written from events.
+
+**Fix.** Add 'karni.outbox' to INSTALLED_APPS and run migrate, or set KARNI_TIMELINE_FROM_EVENTS = False and write entries with timeline.record().
+
+<a id="e461"></a>
+
+#### E461: The timeline needs the people contract
+
+*system check (error)* · from `karni.timeline.checks.check_timeline`
+
+**Why Karni objects.** Every timeline entry may point at a person (people.Person), so karni.timeline cannot work without karni.people.
+
+**Fix.** Set KARNI_PEOPLE = True above karni_settings(globals()), or add 'karni.people' to INSTALLED_APPS, and run migrate.
+
+<a id="e462"></a>
+
+#### E462: timeline.record() was given an argument it cannot use
+
+*exception* · from `karni.timeline.record`
+
+**Why Karni objects.** An entry needs a kind (lower-case words joined by dots), a title, and a person or a subject to show on. A person is a people.Person, a subject a saved record, and data holds JSON values only.
+
+**Fix.** Pass kind='part.what', a title, person=&lt;Person or id> and/or subjects=[record or ('app_label.model', id)], and ids instead of model instances in data.
+
+<a id="e463"></a>
+
+#### E463: A timeline request names no record, or a malformed one
+
+*API 400 response* · from `karni.timeline.api.TimelineView`
+
+**Why Karni objects.** GET /api/timeline/ lists the timeline of exactly one person, organisation or record, and pages with the cursor it gave.
+
+**Fix.** Name exactly one of ?person=&lt;id>, ?organisation=&lt;id> or ?subject=&lt;app_label.model>:&lt;id>, and pass ?cursor= as the previous page's next.
+
 <a id="e470"></a>
 
 #### E470: A context slice names no app or model

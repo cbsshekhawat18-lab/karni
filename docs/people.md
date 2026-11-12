@@ -306,6 +306,9 @@ The table is `karni.people.events.EVENTS`: each entry has the name,
 version, fields, person and description the bus declares, and
 `declare_all(declare)` hands them to a `declare` function. The person of a
 merged person is the kept one. An organisation's events are about no person.
+`people.person.linked`, `people.person.merged` and `people.organisation.merged`
+name a title for the [timeline](timeline.md), so with `karni.timeline`
+installed each one writes an entry.
 
 ## The API
 

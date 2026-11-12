@@ -375,6 +375,15 @@ BASE: dict[str, Any] = {
     "KARNI_PEOPLE_MERGE_SKIP": [],
     # Import every installed app's people.py (its person facts, merge and erase hooks).
     "KARNI_PEOPLE_AUTODISCOVER": True,
+    # The timeline contract (experimental, the karni.timeline app): route GET /api/timeline/,
+    # write entries from events that declare timeline=, the page sizes, the days an entry
+    # is kept (None keeps them all) and the class that says which records a caller may read.
+    "KARNI_TIMELINE_API": True,
+    "KARNI_TIMELINE_FROM_EVENTS": True,
+    "KARNI_TIMELINE_PAGE_SIZE": 25,
+    "KARNI_TIMELINE_MAX_PAGE_SIZE": 100,
+    "KARNI_TIMELINE_RETENTION_DAYS": None,
+    "KARNI_TIMELINE_VISIBILITY": "karni.timeline.access.Visibility",
     "KARNI_ACCOUNTS_TOKEN_TTL": {
         "verify_email": 86400,
         "reset_password": 3600,
