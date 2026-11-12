@@ -157,6 +157,11 @@ def email_tracking_link(sender, order, **kwargs) -> None:
 To queue the work from a custom event, have the receiver call a Celery task
 inside `transaction.on_commit(...)`.
 
+A signal's receiver imports the module that declares it and runs inside the
+sender's transaction. For one app reacting to another app that may not be
+installed, use [family events](family-events.md) instead: subscribers name the
+event as a string, and each runs after the commit in its own transaction.
+
 ## Escape hatches
 
 - **Plain receivers keep working.** `@receiver(post_save, sender=Order)` in

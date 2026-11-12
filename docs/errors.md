@@ -1307,6 +1307,86 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Name resources from the response's resources list (the router prefixes, e.g. products), or declare class Karni: search on the model and route a BaseViewSet for it.
 
+<a id="e450"></a>
+
+#### E450: An event is published that is not declared
+
+*exception* · from `karni.events.publish`
+
+**Why Karni objects.** A family event is an API between parts: subscribers read its declared fields and karni check lists it. An event published without a declaration, or with a version nobody declared, would reach subscribers with a payload no one agreed on.
+
+**Fix.** Declare it in the publishing app's events.py with declare('&lt;prefix>.&lt;record>.&lt;moment>', version=1, fields={...}) before publishing it, or publish a declared version.
+
+<a id="w450"></a>
+
+#### W450: A subscriber reads a version its event does not have
+
+*system check (warning)* · from `karni.outbox.checks.check_event_bus`
+
+**Why Karni objects.** Subscribers name the payload version they read. When the installed publisher declares other versions only, nothing is ever delivered to this subscriber.
+
+**Fix.** Move the subscriber to a declared version (@subscribe(name, version=N)) and adapt it to that payload, or keep the publisher publishing the old version too.
+
+<a id="e451"></a>
+
+#### E451: Family events need the karni.outbox app
+
+*system check (error)* · from `karni.outbox.checks.check_event_bus; karni.events.publish; karni.events.once`
+
+**Why Karni objects.** Subscribers are delivered from the outbox tables, written in the publisher's transaction. Without the app there is nowhere to write the event, so the subscribers would never be called.
+
+**Fix.** Add 'karni.outbox' to INSTALLED_APPS and run migrate.
+
+<a id="e452"></a>
+
+#### E452: An event declaration is malformed
+
+*exception* · from `karni.events.declare`
+
+**Why Karni objects.** A name is &lt;prefix>.&lt;record>.&lt;moment> in lower case, a version is a whole number from 1, fields are lower case names with a description each, and one part owns each name and version.
+
+**Fix.** Fix what the message names: declare('shop.order.paid', version=1, fields={'order': 'the order id', 'total': 'a decimal string'}). Declare a changed shape as the next version, next to the old one.
+
+<a id="e453"></a>
+
+#### E453: A published event's fields do not match its declaration
+
+*exception* · from `karni.events.publish; karni.events.once`
+
+**Why Karni objects.** Subscribers rely on the declared fields being there, and on plain JSON values: ids, states and amounts, never model instances, so no subscriber depends on another part's models.
+
+**Fix.** Pass exactly the declared fields (None for a value you do not have), ids instead of model instances (str(obj.pk)), and a person when the declaration names one.
+
+<a id="e454"></a>
+
+#### E454: A subscriber is malformed
+
+*exception* · from `karni.events.subscribe`
+
+**Why Karni objects.** A delivery row names its subscriber, and every process (web, worker) finds it by that name. A nested function or a lambda has no stable name, and two subscribers cannot share one.
+
+**Fix.** Define the subscriber at the top level of &lt;app>/listeners.py and decorate it with @subscribe('&lt;event name>', version=1), or pass a distinct name='...'.
+
+<a id="e455"></a>
+
+#### E455: KARNI_EVENTS_DISPATCHER cannot be used
+
+*system check (error)* · from `karni.outbox.checks.check_event_bus; karni.outbox.dispatch.load`
+
+**Why Karni objects.** After a commit, Karni calls the dispatcher with each event's id to hand it to a worker. A path that does not import, or names something that cannot be called, would leave every event waiting for the sweep.
+
+**Fix.** Name a function taking (event_id, *, countdown=0), as 'package.module.function', or remove the setting for the default (karni.outbox.dispatch.celery).
+
+<a id="e456"></a>
+
+#### E456: An assertion about family events failed
+
+*test failure* · from `karni.testing.events (capture_events, assert_events_declared)`
+
+**Why Karni objects.** The test expected an event to be published with given values, or an app's published events to be declared, and the code did otherwise.
+
+**Fix.** Read the events the message lists: publish the expected event inside the action's transaction, with the expected fields, and declare every event an app publishes.
+
 <a id="e470"></a>
 
 #### E470: A context slice names no app or model

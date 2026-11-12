@@ -74,6 +74,25 @@ apply codemods and list the manual steps. This file is the human summary.
   PATH" when git is missing, and the PostgreSQL backup round trip skips when `DATABASE_URL`
   points at a server that is not listening. Before, they failed.
 
+- **Added: family events with an outbox (experimental).** One app reacts to another
+  without importing it. `karni.events` gains `declare` (an event named
+  `<prefix>.<record>.<moment>`, versioned, with its payload fields), `publish` (inside the
+  writer's transaction: the event and one delivery per subscriber are written to the new
+  core app `karni.outbox`) and `subscribe` (by name, so a subscriber whose publisher is not
+  installed is never called). After the commit, `KARNI_EVENTS_DISPATCHER` (a Celery task)
+  runs each subscriber in its own transaction. A failure is retried with backoff up to
+  `KARNI_EVENTS_MAX_ATTEMPTS`, then marked failed. A beat entry every minute sends what a
+  down broker refused, and delivered events are pruned after
+  `KARNI_EVENTS_RETENTION_DAYS`. Delivery is at least once, and `once()` keeps a subscriber
+  idempotent. The admin lists events and deliveries with a Retry action,
+  `karni.outbox.health.check_outbox` counts failed and stuck deliveries, `karni check`
+  lists the events and their subscribers, `karni trace` shows each delivery, and
+  `karni.testing` gains `capture_events`, `deliver_now` and `assert_events_declared`.
+  karni-payments publishes `payments.payment.succeeded`, `payments.payment.failed` and
+  `payments.refund.succeeded`. Add `"karni.outbox"` to `INSTALLED_APPS` to use it: a
+  project without it gains no tables. Every earlier name of `karni.events` is unchanged.
+  New codes: E450 to E456 and W450. See [docs/family-events.md](docs/family-events.md).
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

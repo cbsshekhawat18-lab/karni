@@ -96,6 +96,7 @@ nav:
       - Import and export: import-export.md
       - Loading content: content-loading.md
       - Events and listeners: events.md
+      - Family events: family-events.md
       - Scheduling: scheduling.md
       - Testing: testing.md
       - Seeding: seeding.md

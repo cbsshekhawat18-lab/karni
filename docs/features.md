@@ -34,6 +34,7 @@ Reference or Debugging sections.
 - **[Accounts](accounts.md)**: email sign-in, the auth endpoints, roles as data, per-user grants, two-factor and social login.
 - **[Change history](change-history.md)**: who changed which field from what to what, in the admin, the API and the UI.
 - **[Events and listeners](events.md)**: react to model changes from `listeners.py`, inline or queued to Celery.
+- **[Family events](family-events.md)** (experimental): one app reacts to another by an event's name, through an outbox written in the writer's transaction and delivered after the commit, with retries.
 - **[Scheduling](scheduling.md)**: periodic and background work in `schedules.py`, run by Celery beat and workers.
 
 ## Large apps
@@ -103,6 +104,7 @@ coming, not in the code. Each capability's evidence is in the
 - `experimental` Real content from a JSON or YAML file, created or updated by natural key (`karni load`)
 - `experimental` Models and real rows from a designer's pages: the repeated content, its fields and relations (`karni design analyze`, `karni design extract`)
 - `stable` Model events and listeners, optionally queued to Celery (`@on_updated`)
+- `experimental` Family events with an outbox: `declare`, `publish` in the writer's transaction, `subscribe` by name, delivered after the commit with retries and a sweep (`karni.outbox`). Experimental tier
 - `stable` Field-level change history (`class Karni: audit = True`)
 - `experimental` Scheduled tasks (`<app>/schedules.py`, `karni schedule`)
 - `experimental` External tables, SQL views and a second database as models Karni reads (`class Karni: external`, `writable`, `database`, `karni make model --external`). Experimental tier
@@ -224,7 +226,7 @@ Procedures: `/new-model`, `/new-page`, `/add-module`, `/new-module`, `/site-from
 - `experimental` `assert_pages`: a public site's pages, their title, description, alt text and links, in one call
 - `stable` Architecture rules that fail the build (`karni check`, the ESLint preset)
 
-Helpers: `APITestCase`, `assert_admin_row_hidden`, `assert_crud`, `assert_isolated`, `assert_module_manifest`, `assert_pages`, `assert_row_hidden`, `assert_schema_snapshot`, `client_as`, `create_external_tables`, `load_content`, `query_budget`, `user_with_roles`.
+Helpers: `APITestCase`, `assert_admin_row_hidden`, `assert_crud`, `assert_events_declared`, `assert_isolated`, `assert_module_manifest`, `assert_pages`, `assert_row_hidden`, `assert_schema_snapshot`, `capture_events`, `client_as`, `create_external_tables`, `deliver_now`, `load_content`, `query_budget`, `user_with_roles`.
 <!-- /generated:testing -->
 
 ## Every module

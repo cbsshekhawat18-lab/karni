@@ -33,6 +33,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Real content from a JSON or YAML file, created or updated by natural key (`karni load`) | `experimental` | Karni's own tests |
 | Models and real rows from a designer's pages: the repeated content, its fields and relations (`karni design analyze`, `karni design extract`) | `experimental` | Karni's own tests |
 | Model events and listeners, optionally queued to Celery (`@on_updated`) | `stable` | [listeners.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/listeners.py) |
+| Family events with an outbox: `declare`, `publish` in the writer's transaction, `subscribe` by name, delivered after the commit with retries and a sweep (`karni.outbox`). Experimental tier | `experimental` | Karni's own tests |
 | Field-level change history (`class Karni: audit = True`) | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/models.py) |
 | Scheduled tasks (`<app>/schedules.py`, `karni schedule`) | `experimental` | Karni's own tests |
 | External tables, SQL views and a second database as models Karni reads (`class Karni: external`, `writable`, `database`, `karni make model --external`). Experimental tier | `experimental` | Karni's own tests |
@@ -1694,13 +1695,16 @@ The public names of the four packages a project builds on, from their `__all__`.
 | `APITestCase` | class | DRF's `APITestCase` with clients per role and the one-call checks. | methods `user_as`, `client_as`, `assert_crud`, `assert_isolated`, `assert_row_hidden`, `assert_admin_row_hidden`, `assert_pages` |
 | `assert_admin_row_hidden` | function | Assert `row` behaves as "does not exist" in the admin for `client`'s staff user. | `assert_admin_row_hidden(client: Any, row: models.Model, *, visible: models.Model \| None = None, checks: Iterable[str] \| None = None, skip: Iterable[str] = (), site: Any = None, search: str \| None = None, probe: type[AdminHiddenRowProbe] \| None = None) -> HiddenRowReport` |
 | `assert_crud` | function | Assert the full CRUD surface of `resource` for `role` (see the module docstring). | `assert_crud(resource: Any, role: str \| None = None, *, user: Any = None, values: Mapping[str, Any] \| None = None, payload: Mapping[str, Any] \| None = None, expect: Mapping[str, int] \| None = None, skip: Iterable[str] = (), read_only: bool \| None = None) -> CrudReport` |
+| `assert_events_declared` | function | Experimental. Every `publish("<name>")` in the app's code names a declared event. | `assert_events_declared(app_label: str) -> list[str]` |
 | `assert_isolated` | function | Assert `role` cannot reach another owner's (or scope's) rows of `resource`. | `assert_isolated(resource: Any, role: str \| None = None, *, by: str \| tuple[str, ...] \| None = None, owner: str \| None = None, values: Mapping[str, Any] \| None = None) -> IsolationReport` |
 | `assert_module_manifest` | function | Experimental. Check `<package>/karni.module.toml` against the module; return it. | `assert_module_manifest(package: str) -> Manifest` |
 | `assert_pages` | function | Assert that every page in `urls` passes the page checks (see the module docstring). | `assert_pages(client: Any, urls: Iterable[str], *, follow: bool = False, check_links: bool = True, require_title: bool = True, require_description: bool = True, require_alt: bool = True, not_found_url: str \| None = '/karni-assert-pages-404/', ignore: Iterable[str \| re.Pattern[str]] = (), hosts: Iterable[str] = (), parser: type[PageParser] \| None = None) -> PagesReport` |
 | `assert_row_hidden` | function | Assert `row` is hidden from `client` on every API surface of `resource`. | `assert_row_hidden(client: Any, resource: Any, row: models.Model, *, visible: models.Model \| None = None, checks: Iterable[str] \| None = None, skip: Iterable[str] = (), search: str \| None = None, formats: Iterable[str] = ('csv', 'xlsx'), probe: type[HiddenRowProbe] \| None = None) -> HiddenRowReport` |
 | `assert_schema_snapshot` | function | Fail when the generated OpenAPI schema differs from the committed snapshot. | `assert_schema_snapshot(path: str \| Path \| None = None, *, update: bool \| None = None, urlconf: str \| None = None, hint: str = '') -> None` |
+| `capture_events` | function | Experimental. Collect every family event published inside the block. | `capture_events() -> Iterator[PublishedEvents]` |
 | `client_as` | function | A client authenticated as a new user holding `roles` (`None` alone: anonymous). | `client_as(*roles: str \| None, user: Any = None) -> KarniAPIClient` |
 | `create_external_tables` | function | Experimental. Create the missing table of each external model routed to `using`. | `create_external_tables(using: str = 'default', models: Iterable[type[Model]] \| None = None) -> list[str]` |
+| `deliver_now` | function | Experimental. Run every pending delivery now (or those of `event`), backoff ignored. | `deliver_now(*, event: Event \| str \| None = None, using: str \| None = None) -> Any` |
 | `load_content` | function | Load the content file at `path` into the test database and return the report. | `load_content(path: str \| Path = 'content/site.json', *, missing_ok: bool = False, **options: Any) -> Any` |
 | `query_budget` | function | Fail with the grouped duplicate report if the block runs more than `limit` queries. | `query_budget(limit: int, *, label: str = 'block', using: str \| None = None) -> Iterator[QueryRecorder]` |
 | `user_with_roles` | function | A new user (generated factory, or the explicit one) holding `roles` (Django groups). | `user_with_roles(*roles: str, **fields: Any) -> Any` |
@@ -1858,7 +1862,7 @@ class Lead(BaseModel):
 | `KARNI_ADMIN_SEARCH_MAX` |  | `5` | Fields a derived admin searches at most. |
 | `KARNI_ADMIN_SITE` |  | `"django.contrib.admin.site"` | Dotted path of the admin site models are registered on. |
 | `KARNI_ADMIN_BASE` |  | `"unfold.admin.ModelAdmin"` | Dotted path of the `ModelAdmin` every derived admin is built on. |
-| `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_admin", "karni_audit", "karni_transfer", "karni_accounts.OneTimeToken", "karni_accounts.Permission", "karni_accounts.SocialIdentity", "karni_accounts.LoginCode"]` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
+| `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_admin", "karni_audit", "karni_transfer", "karni_outbox", "karni_accounts.OneTimeToken", "karni_accounts.Permission", "karni_accounts.SocialIdentity", "karni_accounts.LoginCode"]` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
 
 ### Security headers (karni.security)
 
@@ -1923,6 +1927,9 @@ class Lead(BaseModel):
 |---|---|---|---|
 | `KARNI_EVENTS_AUTODISCOVER` | `KARNI_EVENTS_AUTODISCOVER` | `True` | Import every app's `events.py` and `listeners.py` at startup. |
 | `KARNI_SCHEDULES_AUTODISCOVER` | `KARNI_SCHEDULES_AUTODISCOVER` | `True` | Import every app's `schedules.py` at startup. |
+| `KARNI_EVENTS_DISPATCHER` |  | `"karni.outbox.dispatch.celery"` | Experimental. Dotted path of the function that hands a committed family event to a worker: `(event_id, *, countdown=0)`. The default queues a Celery task, and the sweep sends what a down broker refused. See [family events](family-events.md). |
+| `KARNI_EVENTS_MAX_ATTEMPTS` | `KARNI_EVENTS_MAX_ATTEMPTS` | `8` | Experimental. Runs of one family event delivery before it is marked failed (1 to 100). Retries wait 10 seconds, then four times longer each time, at most 6 hours. |
+| `KARNI_EVENTS_RETENTION_DAYS` | `KARNI_EVENTS_RETENTION_DAYS` | `30` | Experimental. Days a delivered family event stays in the outbox. Events with a pending or failed delivery stay. `None` keeps them all and schedules no pruning. |
 | `KARNI_PK` |  | `"uuid"` | Experimental. The primary key `karni make model` writes: `uuid` (`BaseModel`) or `bigint` (`BigIntBaseModel`). The CLI reads it from a plain `KARNI_PK = "bigint"` line in `config/settings.py`, and `--pk` overrides it per model. Nothing else reads it: each model's class line decides its key. See [choosing the key type](models.md#choosing-the-key-type). |
 | `KARNI_ARCHITECTURE` |  | `{ "skip_apps": [], "sql_allowed": ["*/sql/*", "*/migrations/*"], "http_allowed": ["*/services/*", "*/providers/*", "*/tests/*", "conftest.py"], "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]}}` | Configuration of the architecture rules: `skip_apps`, `sql_allowed`, `http_allowed`, `dup`. See [enforcement](enforcement.md). |
 | `KARNI_CHECK_CACHE` |  | `True` | Experimental. `karni check` keeps each file check's results under the file's hash in `.karni/local/check-cache.json`, so an unchanged file is not checked again. `False` turns it off, a path (relative to the project root) moves it. See [the check cache](enforcement.md#the-check-cache). |
@@ -2443,6 +2450,14 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E411`](errors.md#e411) | exception | KARNI_API_CACHE_FLUSH is not a time of day |
 | [`E430`](errors.md#e430) | check | Karni.search is malformed or names a field the model does not have |
 | [`E431`](errors.md#e431) | api | ?models= names a resource cross-model search does not cover |
+| [`E450`](errors.md#e450) | exception | An event is published that is not declared |
+| [`W450`](errors.md#w450) | warning | A subscriber reads a version its event does not have |
+| [`E451`](errors.md#e451) | check | Family events need the karni.outbox app |
+| [`E452`](errors.md#e452) | exception | An event declaration is malformed |
+| [`E453`](errors.md#e453) | exception | A published event's fields do not match its declaration |
+| [`E454`](errors.md#e454) | exception | A subscriber is malformed |
+| [`E455`](errors.md#e455) | check | KARNI_EVENTS_DISPATCHER cannot be used |
+| [`E456`](errors.md#e456) | test | An assertion about family events failed |
 | [`E470`](errors.md#e470) | exception | A context slice names no app or model |
 | [`E471`](errors.md#e471) | exception | A context slice names a model two apps share |
 | [`E473`](errors.md#e473) | exception | A volume seed refused tables that hold rows no seed run left |

@@ -137,6 +137,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "models",
+        "Family events with an outbox: `declare`, `publish` in the writer's transaction, "
+        "`subscribe` by name, delivered after the commit with retries and a sweep "
+        "(`karni.outbox`). Experimental tier",
+    ),
+    Capability(
+        "models",
         "Field-level change history (`class Karni: audit = True`)",
         ((f"{SL}/crm/models.py", "audit = True"),),
     ),
