@@ -104,9 +104,10 @@ apply codemods and list the manual steps. This file is the human summary.
   erase hooks in their own `people.py`. `people.duplicates()`, `people.merge_plan()` and
   `people.merge()` (every foreign key, one-to-one and generic reference moved in one
   transaction and one audit batch, refused with `E250` to `E252`), and `people.erase()`
-  for a person's request to delete their data. Signals for `people.person.created`,
-  `linked`, `merged`, `erased` and `people.organisation.created`, `merged` from
-  `karni.people.events`. `/api/people/` (with `me/`, `?facts=`, `merge-plan/`, `merge/`,
+  for a person's request to delete their data. Family events `people.person.created`,
+  `linked`, `merged`, `erased` and `people.organisation.created`, `merged`, declared on
+  the bus by `karni.people.events` and also sent as signals with the same payload and
+  event id. `/api/people/` (with `me/`, `?facts=`, `merge-plan/`, `merge/`,
   `duplicates/`, `erase/`), `/api/organisations/`, `/api/people-memberships/` and
   `/api/people-addresses/` answer the roles granted on them, and `merge` and `erase` are
   explicit actions. Admin pages with merge and erase actions, cross-model search, and a

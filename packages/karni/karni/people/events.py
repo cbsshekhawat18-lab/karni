@@ -29,9 +29,13 @@ declared ones. ``subject`` is the row itself, for a receiver in the same
 process. A receiver runs inside the publisher's transaction: raising undoes
 the change.
 
-Override / escape hatch: these are plain :class:`django.dispatch.Signal`
-objects. The family event bus (outbox delivery after commit) will publish
-from :func:`publish` too, so a receiver written now keeps working.
+Every event is also declared on the family event bus (:mod:`karni.events`)
+when this module is imported, and :func:`publish` publishes it there first,
+so a part in another app subscribes with ``@subscribe("people.person.merged")``
+and gets the delivery after the commit, in its own transaction.
+
+Override / escape hatch: the signals are plain :class:`django.dispatch.Signal`
+objects, for a receiver that must run inside the publisher's transaction.
 """
 
 from __future__ import annotations
@@ -43,7 +47,6 @@ from typing import Any, Final
 
 from django.db import models
 from django.dispatch import Signal
-from django.utils import timezone
 
 from karni.exceptions import KarniValueError
 
@@ -180,13 +183,16 @@ def _value(value: Any) -> Any:
 def publish(
     name: str, *, subject: models.Model, person: models.Model | None = None, **fields: Any
 ) -> dict[str, Any]:
-    """Experimental. Send the event ``name`` about ``subject`` and return its payload.
+    """Experimental. Publish the event ``name`` about ``subject`` and return its payload.
 
-    ``fields`` must be exactly the event's declared fields (``E259``); a row
-    among them is sent as its key.
+    The event goes to the family bus first (:func:`karni.events.publish`:
+    an outbox row in the current transaction when ``karni.outbox`` is
+    installed, delivered to subscribers after the commit), then its signal is
+    sent with the same payload, so a receiver and a subscriber see one event
+    id. ``fields`` must be exactly the event's declared fields (``E259``); a
+    row among them is sent as its key.
     """
-    from karni.middleware import get_current_user
-    from karni.tracing import get_request_id
+    from karni import events as bus
 
     spec = EVENTS.get(name)
     if spec is None or set(fields) != set(spec.fields):
@@ -196,17 +202,24 @@ def publish(
             f"{', '.join(sorted(fields)) or 'none'}.",
             code="E259",
         )
-    actor = get_current_user()
-    payload: dict[str, Any] = {
-        "id": str(uuid.uuid4()),
-        "name": name,
-        "version": spec.version,
-        "occurred_at": timezone.now().isoformat(),
-        "actor": _value(getattr(actor, "pk", None)),
-        "person": _value(person.pk) if person is not None else None,
-        "subject": {"model": subject._meta.label_lower, "id": str(subject.pk)},
-        "request_id": get_request_id(),
+    event = bus.publish(
+        name,
+        subject=subject,
+        person=person,
+        version=spec.version,
         **{key: _value(value) for key, value in fields.items()},
-    }
+    )
+    payload = event.payload
     spec.signal.send(sender=type(subject), payload=payload, subject=subject)
     return payload
+
+
+def _declare() -> None:
+    from karni import events as bus
+
+    declare_all(bus.declare)
+
+
+# Every people event is declared on the family bus when this module is imported
+# (karni.events.autodiscover imports it at startup).
+_declare()

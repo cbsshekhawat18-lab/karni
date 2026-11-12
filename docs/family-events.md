@@ -292,6 +292,12 @@ karni-payments publishes these when a payment's or a refund's status moves
 
 Their subject is the payment (or the refund), and the person is empty.
 
+The [people contract](people.md#events) publishes `people.person.created`,
+`people.person.linked`, `people.person.merged`, `people.person.erased`,
+`people.organisation.created` and `people.organisation.merged`
+(`karni/people/events.py`). The person of a person's event is that person
+(the kept one for a merge), and an organisation's events have none.
+
 ## Escape hatches
 
 - **`KARNI_EVENTS_DISPATCHER`** names the function that hands a committed

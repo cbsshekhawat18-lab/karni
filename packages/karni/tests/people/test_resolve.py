@@ -179,3 +179,36 @@ def test_the_events_hand_over_to_a_family_bus_unchanged() -> None:
     person = Person.objects.create(email="wren@example.com")
     payload = events.publish("people.person.erased", subject=person, person=person)
     assert payload["request_id"] is None and payload["actor"] is None
+
+
+def test_people_events_are_declared_on_the_family_bus() -> None:
+    from karni.outbox.bus import registry
+
+    for name, spec in events.EVENTS.items():
+        declaration = registry.declaration(name, spec.version)
+        assert declaration is not None, name
+        assert dict(declaration.fields) == dict(spec.fields)
+        assert declaration.person == spec.person
+        assert declaration.source == "karni.people.events"
+
+
+def test_the_signal_and_the_bus_share_one_event(published: list[dict[str, Any]]) -> None:
+    from karni.outbox.models import OutboxEvent
+    from karni.people.models import Organisation
+    from karni.testing import capture_events
+
+    keep = Person.objects.create(email="ash@example.com")
+    drop = Person.objects.create(email="ash.work@example.com")
+    with capture_events() as captured:
+        people.merge(keep, drop)
+        first = Organisation.objects.create(name="Fernhill Supplies")
+        second = Organisation.objects.create(name="Fernhill Supplies Ltd")
+        people.merge(first, second)
+    merged = captured.assert_published("people.person.merged", person=keep, kept=str(keep.pk))
+    signal = next(p for p in published if p["name"] == "people.person.merged")
+    assert signal["id"] == merged.id and signal == merged.payload
+    assert signal["person"] == str(keep.pk) and signal["removed"] == str(drop.pk)
+    row = OutboxEvent.objects.get(id=merged.id)
+    assert row.person_id == str(keep.pk) and row.payload == signal
+    organisation = captured.assert_published("people.organisation.merged")
+    assert organisation.person is None

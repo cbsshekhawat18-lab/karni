@@ -276,8 +276,25 @@ Published from `karni.people.events`, inside the transaction of the change:
 | `people.organisation.created` | any part creates an organisation | `source` |
 | `people.organisation.merged` | two organisations became one | `kept`, `removed` |
 
-Each is a Django signal (`person_created`, `person_linked`, `person_merged`,
-`person_erased`, `organisation_created`, `organisation_merged`). A receiver
+Each is a [family event](family-events.md), declared on the bus when
+`karni.people.events` is imported, so a part subscribes by name and never
+imports the people app:
+
+```python
+# crm/listeners.py
+from karni.events import Event, subscribe
+
+
+@subscribe("people.person.merged", version=1)
+def follow_merge(event: Event) -> None:
+    ...  # event["kept"], event["removed"], event.person (the kept person)
+```
+
+With `karni.outbox` installed, each event is written to the outbox in the
+transaction of the change and delivered after the commit. Each is also a
+Django signal (`person_created`, `person_linked`, `person_merged`,
+`person_erased`, `organisation_created`, `organisation_merged`), sent right
+after the bus publish with the same payload and the same event id. A receiver
 gets `payload`, which holds ids and values only (`id`, `name`, `version`,
 `occurred_at`, `actor`, `person`, `subject` as `{"model", "id"}`,
 `request_id`, null outside a request, and the declared fields), and
@@ -286,9 +303,9 @@ transaction, so raising undoes the change. Publishing an event that is not
 declared, or with other fields, is `E259`.
 
 The table is `karni.people.events.EVENTS`: each entry has the name,
-version, fields, person and description a family event bus declares, and
-`declare_all(declare)` hands them to one. The person of a merged person is the
-kept one; an organisation's events are about no person.
+version, fields, person and description the bus declares, and
+`declare_all(declare)` hands them to a `declare` function. The person of a
+merged person is the kept one. An organisation's events are about no person.
 
 ## The API
 
