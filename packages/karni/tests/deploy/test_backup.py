@@ -209,7 +209,7 @@ def _tools_present() -> bool:
 
 
 def _reachable(url: str) -> bool:
-    """Whether something accepts TCP connections where DATABASE_URL points (unix sockets: assume so)."""
+    """Whether a server accepts TCP connections at the URL (a unix socket: assume so)."""
     parts = urlsplit(url)
     if not parts.hostname or parts.hostname.startswith("/"):
         return True
