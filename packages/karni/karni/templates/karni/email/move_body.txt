@@ -1,0 +1,6 @@
+Hello,
+
+Your {{ model }} "{{ row }}" is now {{ state }}.
+{% if frontend %}
+{{ frontend }}
+{% endif %}

@@ -89,6 +89,7 @@ def guards_for(model: type[models.Model]) -> Guards:
             total = capacity.total_field()
             if total is not None:
                 tracked.append(total.attname)
+        tracked += _rule_fields(model)
         found = Guards(
             states=states,
             capacities=capacities,
@@ -97,6 +98,20 @@ def guards_for(model: type[models.Model]) -> Guards:
         )
         _GUARDS[model] = found
     return found
+
+
+def _rule_fields(model: type[models.Model]) -> list[str]:
+    """The attnames ``class Karni``'s rules compare with what the row held (karni.rules)."""
+    from karni.errorcodes import KarniError
+    from karni.rules import rules_of
+
+    if model._meta.abstract:
+        return []
+    try:
+        names = rules_of(model).tracked()
+    except KarniError:
+        return []  # karni check reports it (E998)
+    return [model._meta.get_field(name).attname for name in sorted(names)]
 
 
 def clear_caches() -> None:

@@ -150,3 +150,19 @@ def test_seeded_paid_orders_owe_their_sellers() -> None:
     for order in Order.objects.filter(status__in=["paid", "shipped", "delivered", "refunded"]):
         payout = Payout.objects.get(order=order)
         assert payout.seller == order.listing.seller and order.buyer != payout.seller.user
+
+
+def test_the_buyer_hears_the_order_was_paid_and_shipped(
+    client_as: Any, mailoutbox: list[Any], django_capture_on_commit_callbacks: Any
+) -> None:
+    listing = create(Listing, active=True, title="Stoneware mug")
+    buyer = client_as("buyer")
+    order = _order(buyer, listing).json()
+    with django_capture_on_commit_callbacks(execute=True):
+        _paid(order["id"], buyer)
+    with django_capture_on_commit_callbacks(execute=True):
+        client_as("seller", user=listing.seller.user).post(f"/api/orders/{order['id']}/ship/")
+    assert [message.subject for message in mailoutbox] == [
+        "Order received: Stoneware mug",
+        "On its way: Stoneware mug",
+    ]

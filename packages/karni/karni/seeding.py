@@ -949,10 +949,11 @@ def seed(
         bulk=bulk,
         batch_size=batch_size,
     )
-    from karni.rules import clock
+    from karni.rules import clock, silent
 
-    # The rules of class Karni read $now as the anchor, so the rows pass them the same way.
-    with transaction.atomic(), clock(run.anchor):
+    # The rules of class Karni read $now as the anchor, so the rows pass them the same way,
+    # and demo rows email nobody.
+    with transaction.atomic(), clock(run.anchor), silent("karni seed: demo data"):
         report = run.run(plan, reset=reset)
     report.seconds = time.perf_counter() - started
     return report

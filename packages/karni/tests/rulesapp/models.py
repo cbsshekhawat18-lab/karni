@@ -61,7 +61,11 @@ class Purchase(BaseModel):
         targets = {"item": {"active": True, "shop__owner": {"not": "$me"}}}
         frozen = {"item": True, "quantity": {"status": "paid"}}
         delete = {"when": {"status__in": ["pending", "cancelled"]}}
-        moves = {"refunded": {"requires": ["reason"], "stamps": ["refunded_at"]}}
+        moves = {
+            "refunded": {"requires": ["reason"], "stamps": ["refunded_at"]},
+            "paid": {"notify": "buyer"},
+            "cancelled": {"notify": "buyer"},  # no template of its own: Karni's
+        }
 
 
 class Review(BaseModel):

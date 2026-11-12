@@ -50,6 +50,7 @@ apps:
         unique: [{fields: [slot, member], where: {status: {not: cancelled}}}]
         targets: {slot: {starts_at__gt: $now}}
         frozen: {slot: true}
+        moves: {confirmed: {notify: member}, cancelled: {notify: member}}
         actions:
           pay: {from: pending, by: "owned:member"}
           cancel: {from: [pending, confirmed], to: cancelled, by: ["owned:member", "role:staff"]}

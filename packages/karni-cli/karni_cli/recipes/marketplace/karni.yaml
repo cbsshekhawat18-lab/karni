@@ -72,6 +72,10 @@ apps:
         targets: {listing: {active: true, seller__user: {not: $me}}}
         frozen: {listing: true, quantity: true}
         delete: {when: {status__in: [pending, cancelled]}}
+        moves:
+          paid: {notify: buyer}
+          shipped: {notify: buyer}
+          delivered: {notify: listing__seller__user}
         actions:
           pay: {from: pending, by: "owned:buyer"}
           cancel: {from: pending, to: cancelled, by: ["owned:buyer", "role:staff"]}

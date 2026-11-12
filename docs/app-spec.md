@@ -256,7 +256,7 @@ model on `BaseModel` (PascalCase), with its viewset.
 | `targets` | foreign key to a row filter | `Karni.targets`, [rules](rules.md#targets): the rows a relation may point at |
 | `frozen` | field to `true` or a row filter | `Karni.frozen`, [rules](rules.md#frozen): fields that never change, or not in a state |
 | `delete` | `{when, blocked_by}` | `Karni.delete`, [rules](rules.md#delete): when a row may be deleted |
-| `moves` | state to `{requires, needs, stamps}` | `Karni.moves`, [rules](rules.md#moves): what a move into a state needs and stamps |
+| `moves` | state to `{requires, needs, stamps, notify}` | `Karni.moves`, [rules](rules.md#moves): what a move into a state needs and stamps, and who is emailed |
 | `actions` | name to `{from, to, by, field}` | the viewset's `row_actions`, [rules](rules.md#actions): row actions with their states and roles |
 | `was` | the entity's old name | a rename that keeps the table and its rows (`karni plan`) |
 

@@ -112,6 +112,8 @@ __all__ = [
     "filter_q",
     "related_rows",
     "rules_of",
+    "send_move_email",
+    "silent",
     "unchecked",
     "unique_conflict",
 ]
@@ -126,13 +128,14 @@ NOW: Final = "$now"
 TODAY: Final = "$today"
 _NUMBER_FIELDS: Final = (models.IntegerField, models.FloatField, models.DecimalField)
 _DATE_FIELDS: Final = (models.DateField,)  # DateTimeField is a DateField subclass
-_MOVE_KEYS: Final = frozenset({"requires", "needs", "stamps"})
+_MOVE_KEYS: Final = frozenset({"requires", "needs", "stamps", "notify"})
 _DELETE_KEYS: Final = frozenset({"when", "blocked_by"})
 _BOUND_KEYS: Final = frozenset({"min", "max"})
 _UNIQUE_KEYS: Final = frozenset({"fields", "where"})
 
 _UNCHECKED: ContextVar[str | None] = ContextVar("karni_rules_unchecked", default=None)
 _CLOCK: ContextVar[dt.datetime | None] = ContextVar("karni_rules_clock", default=None)
+_SILENT: ContextVar[str | None] = ContextVar("karni_rules_silent", default=None)
 #: An entry of a row filter that is left out (``$me`` with nobody signed in).
 _SKIP: Final = object()
 
@@ -200,6 +203,8 @@ class Move:
     requires: tuple[str, ...] = ()
     needs: tuple[str, ...] = ()
     stamps: tuple[str, ...] = ()
+    #: A path from the row to the user an email about the move goes to (``member``).
+    notify: str | None = None
 
 
 @dataclass(frozen=True)
@@ -469,8 +474,30 @@ def _parse_moves(model: type[models.Model], declared: Any) -> tuple[Move, ...]:
         needs = _names(model, "moves", spec.get("needs"))
         for ref in needs:
             _relation(model, f"moves[{key!r}].needs", ref)
-        found.append(Move(str(key), state_field, to, requires, needs, stamps))
+        notify = spec.get("notify")
+        if notify is not None:
+            _user_path(model, f"moves[{key!r}].notify", notify)
+        found.append(Move(str(key), state_field, to, requires, needs, stamps, notify))
     return tuple(found)
+
+
+def _user_path(model: type[models.Model], option: str, path: Any) -> None:
+    """``E998`` unless ``path`` leads from ``model`` through relations to the user model."""
+    from django.contrib.auth import get_user_model
+
+    if not isinstance(path, str) or not path:
+        raise _bad(model, option, f"{path!r} is not a path to the user.")
+    current: Any = model
+    for part in path.split(LOOKUP_SEP):
+        try:
+            found = current._meta.get_field(part)
+        except FieldDoesNotExist:
+            raise _bad(model, option, f"{path!r}: {current.__name__} has no {part!r}.") from None
+        current = found.related_model
+        if not isinstance(current, type):
+            raise _bad(model, option, f"{path!r}: {part} is not a relation.")
+    if current is not get_user_model():
+        raise _bad(model, option, f"{path!r} ends at {current.__name__}, not the user.")
 
 
 # relation references ------------------------------------------------------------------
@@ -841,6 +868,18 @@ def clock(now: dt.datetime) -> Iterator[None]:
         _CLOCK.reset(token)
 
 
+@contextmanager
+def silent(reason: str) -> Iterator[None]:
+    """Send no move email inside the block (``karni seed``, data loading); the rules still hold."""
+    if not isinstance(reason, str) or not reason.strip():
+        raise KarniValueError("silent() needs reason='...'.", code="E998")
+    token = _SILENT.set(reason)
+    try:
+        yield
+    finally:
+        _SILENT.reset(token)
+
+
 def _written(instance: models.Model, update_fields: Any) -> set[str]:
     fields = instance._meta.concrete_fields
     if update_fields is None:
@@ -850,18 +889,28 @@ def _written(instance: models.Model, update_fields: Any) -> set[str]:
 
 
 def _stored(instance: models.Model, names: set[str]) -> dict[str, Any] | None:
-    """What the database holds for ``names`` (``None``: the row is not there)."""
+    """What the row held for ``names`` (``None``: the row is not there).
+
+    The values the instance was loaded with (:mod:`karni.guards` remembers
+    them), else one query for the ones it was not.
+    """
+    from karni.guards import MISSING, loaded
+
     model = type(instance)
     attnames = {name: model._meta.get_field(name).attname for name in names}
+    found = {name: loaded(instance, attname) for name, attname in attnames.items()}
+    missing = {name: attnames[name] for name, value in found.items() if value is MISSING}
+    if not missing:
+        return found
     row = (
         model._base_manager.using(instance._state.db or "default")
         .filter(pk=instance.pk)
-        .values(*attnames.values())
+        .values(*missing.values())
         .first()
     )
     if row is None:
         return None
-    return {name: row[attname] for name, attname in attnames.items()}
+    return {**found, **{name: row[attname] for name, attname in missing.items()}}
 
 
 def _skew() -> dt.timedelta:
@@ -1136,6 +1185,8 @@ def _check_moves(
                 )
         if not stamp:
             continue
+        if move.notify is not None and _SILENT.get() is None:
+            _on_commit(instance, move)
         for name in move.stamps:
             if not adding and changed(name):
                 continue  # the write sets it itself
@@ -1148,6 +1199,65 @@ def _check_moves(
             setattr(instance, name, value)
             stamped.add(name)
     return stamped
+
+
+def _on_commit(instance: models.Model, move: Move) -> None:
+    """Email the move once the write commits (a rolled-back move sends nothing)."""
+    from django.db import transaction
+
+    def send() -> None:
+        hook = getattr(instance, "notify_move", None)
+        if callable(hook):
+            hook(move.key)
+        else:
+            send_move_email(instance, move.key)
+
+    transaction.on_commit(send, using=instance._state.db or "default")
+
+
+def send_move_email(instance: models.Model, key: str) -> int:
+    """Email the user ``moves[key].notify`` names about the move; returns the messages sent.
+
+    Templates, overridable like any Django template: ``<app>/email/<model>_<key>``
+    (``bookings/email/booking_confirmed``) with ``_subject.txt``, ``_body.txt``
+    and an optional ``_body.html``, else Karni's ``karni/email/move_*``. The
+    context: ``row``, ``key``, ``state``, ``recipient`` and ``frontend``
+    (``KARNI_FRONTEND_URL``). Sent through the project's ``EMAIL_BACKEND``
+    (the console in development). A user without an email gets nothing.
+    """
+    from django.core.mail import EmailMultiAlternatives
+    from django.template import TemplateDoesNotExist
+    from django.template.loader import render_to_string, select_template
+
+    move = next(item for item in rules_of(type(instance)).moves if item.key == key)
+    recipient = _walk(instance, move.notify or "")
+    address = getattr(recipient, "email", "") or ""
+    if not address:
+        return 0
+    meta = instance._meta
+    own = f"{meta.app_label}/email/{meta.model_name}_{key.replace(':', '_')}"
+    context = {
+        "row": instance,
+        "key": key,
+        "state": "true" if move.to is True else move.to,
+        "recipient": recipient,
+        "frontend": str(getattr(settings, "KARNI_FRONTEND_URL", "")).rstrip("/"),
+        "model": meta.verbose_name,
+    }
+
+    def render(part: str) -> str:
+        names = [f"{own}_{part}", f"karni/email/move_{part}"]
+        return str(select_template(names).render(context))
+
+    subject = " ".join(render("subject.txt").split())  # one header line
+    message = EmailMultiAlternatives(subject=subject, body=render("body.txt"), to=[address])
+    try:
+        html = render_to_string(f"{own}_body.html", context)
+    except TemplateDoesNotExist:
+        html = None
+    if html is not None:
+        message.attach_alternative(html, "text/html")
+    return int(message.send())
 
 
 def check_delete(instance: models.Model) -> None:

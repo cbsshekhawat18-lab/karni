@@ -383,6 +383,8 @@ class _KarniModel(GuardedModel, TimestampedModel, SoftDeleteModel, AuditedModel)
                 update_fields=kwargs.get("update_fields"),
             )
         super().save(*args, **kwargs)
+        if guards.guards_for(type(self)).tracked:
+            guards.remember(self)  # the next save compares with what this one wrote
 
     def delete(
         self,
@@ -410,6 +412,16 @@ class _KarniModel(GuardedModel, TimestampedModel, SoftDeleteModel, AuditedModel)
         from karni.rules import check_write
 
         return check_write(self, update_fields, stamp=stamp)
+
+    def notify_move(self, key: str) -> None:
+        """Email the user ``Karni.moves[key].notify`` names, after the move commits.
+
+        Override / escape hatch: override it to post elsewhere, or to send
+        nothing for this model (:func:`karni.rules.send_move_email`).
+        """
+        from karni.rules import send_move_email
+
+        send_move_email(self, key)
 
     def check_delete_rules(self) -> None:
         """Check ``Karni.delete`` before this row is deleted (:func:`karni.rules.check_delete`)."""

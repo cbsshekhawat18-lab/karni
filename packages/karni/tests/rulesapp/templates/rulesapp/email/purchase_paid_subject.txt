@@ -1,0 +1,1 @@
+Paid: {{ row.item }}

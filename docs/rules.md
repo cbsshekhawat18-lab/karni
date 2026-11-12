@@ -195,6 +195,7 @@ moves:
   won: {stamps: [closed_at]}
   published: {needs: [Lesson]}        # a boolean field becoming true
   done: {stamps: [done_at]}
+  confirmed: {notify: member}          # email the member
 ```
 
 A key is a state of the entity's state field, `<field>:<state>` when two
@@ -209,6 +210,19 @@ state (`E982`), and the schema says which (`x-karni-initial`).
 Refusal: `E996`, 400 on the missing field. Uses: a lost deal's reason, the
 time a deal closed, an activity was done, a payout was paid; publishing a
 course that has a lesson.
+
+`notify` names a path from the row to a user, who gets an email once the
+move commits (a rolled-back move sends nothing, and `karni seed` sends
+none). The templates are ordinary Django templates a project edits:
+`<app>/email/<entity>_<state>_subject.txt` and `_body.txt` in the app's
+`templates` folder, and an optional `_body.html`
+(`bookings/email/booking_confirmed_subject.txt`), with `row`, `state`,
+`recipient` and `frontend` (`KARNI_FRONTEND_URL`) in their context. Without
+them Karni's `karni/email/move_*` says "Your booking is now confirmed". Mail
+goes through the project's `EMAIL_BACKEND`, the console in development.
+Override `notify_move(key)` on the model to send it elsewhere, or
+`with karni.rules.silent(reason="..."):` to send none. Uses: a booking
+confirmed or cancelled, an order paid, shipped or delivered.
 
 ## actions
 

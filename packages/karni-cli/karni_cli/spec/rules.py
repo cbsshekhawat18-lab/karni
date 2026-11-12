@@ -389,6 +389,15 @@ def _moves(meaning: _Meaning, entity: _Entity) -> None:
                     "datetime field of the entity.",
                     "Stamp a date or datetime field (closed_at: datetime?).",
                 )
+        if rule.notify is not None and not meaning.leads_to_user(entity, rule.notify):
+            meaning.add(
+                "C765",
+                (*where, "notify"),
+                f"{entity.name}.moves.{key}.notify is {rule.notify!r}, which does not lead from "
+                f"{entity.name} to the user.",
+                "Name a relation to the user, e.g. notify: member, or a path such as "
+                "listing__seller__user.",
+            )
         for ref in rule.needs:
             problem = related(meaning, entity, ref)
             if problem is not None:

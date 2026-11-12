@@ -86,7 +86,10 @@ apply codemods and list the manual steps. This file is the human summary.
   of the same name (`karni.rules`), checked in `save()`, `clean()` and `delete()`, and
   the API answers 400 naming the field (`E990`, `E991`, `E993` to `E996`, a delete 409).
   `karni spec validate` checks the keys (`C760` to `C767`) and `karni check` the options
-  (`E998`). See [docs/rules.md](docs/rules.md).
+  (`E998`). A move's `notify` emails the user it names once the move commits, from
+  templates the project edits (`<app>/email/<entity>_<state>_subject.txt`), and the
+  booking and marketplace recipes use it for a booking confirmed or cancelled and an order
+  paid, shipped or delivered. See [docs/rules.md](docs/rules.md).
 - **Added: row actions (experimental).** `row_actions = {"ship": RowAction(from_="paid",
   to="shipped", by=Owned("listing__seller__user"))}` on a viewset declares a named
   `POST <resource>/<id>/<name>/` with the states and roles where it is legal. It is

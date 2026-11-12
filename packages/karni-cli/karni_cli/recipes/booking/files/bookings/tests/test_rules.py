@@ -148,3 +148,17 @@ def test_prices_and_capacities_keep_their_bounds(client_as: Any) -> None:
     assert empty.status_code == 400 and _code(empty, "capacity") == "E990"
     past = {**slot, "capacity": 2, "starts_at": "2001-01-01T09:00:00Z"}
     assert _code(staff.post("/api/slots/", past, format="json"), "starts_at") == "E990"
+
+
+def test_the_member_hears_of_a_confirmed_and_a_cancelled_booking(
+    client_as: Any, mailoutbox: list[Any], django_capture_on_commit_callbacks: Any
+) -> None:
+    member = client_as("member")
+    booking = _book(member, _slot()).json()
+    with django_capture_on_commit_callbacks(execute=True):
+        client_as("staff").post(f"/api/bookings/{booking['id']}/confirm/")
+    with django_capture_on_commit_callbacks(execute=True):
+        member.post(f"/api/bookings/{booking['id']}/cancel/")
+    subjects = [message.subject for message in mailoutbox]
+    assert [subject.split(":")[0] for subject in subjects] == ["Booked", "Cancelled"]
+    assert all(message.to == [member.user.email] for message in mailoutbox)

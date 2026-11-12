@@ -291,3 +291,27 @@ def test_a_money_bound_written_as_a_float_is_exact(monkeypatch: pytest.MonkeyPat
     finally:
         monkeypatch.undo()
         rules.clear_caches()
+
+
+def test_a_move_emails_the_user_it_names_after_the_commit(
+    item: Item, buyer: Any, mailoutbox: list[Any], django_capture_on_commit_callbacks: Any
+) -> None:
+    purchase = Purchase.objects.create(item=item, buyer=buyer)
+    with django_capture_on_commit_callbacks(execute=True):
+        purchase.transition("status", "paid")
+    (message,) = mailoutbox
+    assert message.to == ["buyer@example.com"] and message.subject == "Paid: Lamp"
+    assert "We have your payment for Lamp" in message.body
+    with django_capture_on_commit_callbacks(execute=True):
+        purchase.transition("status", "refunded", reason="late")
+    assert len(mailoutbox) == 1  # no notify on refunded
+
+
+def test_the_generic_template_says_the_new_state(item: Item, buyer: Any, mailoutbox: Any) -> None:
+    from karni.rules import send_move_email
+
+    purchase = Purchase.objects.create(item=item, buyer=buyer)
+    assert send_move_email(purchase, "cancelled") == 1
+    assert mailoutbox[0].subject == "Your purchase is now cancelled"
+    nobody = Purchase(item=item, buyer=get_user_model()(email=""))
+    assert send_move_email(nobody, "cancelled") == 0  # nobody to tell

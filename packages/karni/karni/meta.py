@@ -315,9 +315,9 @@ OPTIONS: Final[tuple[Option, ...]] = (
     Option(
         "moves",
         "`{}`",
-        "Experimental. What a move into a state (or a boolean becoming true) requires, needs "
-        "and stamps: `{state: {requires: [fields], needs: [entities], stamps: [fields]}}` "
-        "(`E996`).",
+        "Experimental. What a move into a state (or a boolean becoming true) requires, needs, "
+        "stamps and who is emailed: `{state: {requires: [fields], needs: [entities], stamps: "
+        "[fields], notify: <path to a user>}}` (`E996`).",
         'moves = {"lost": {"requires": ["lost_reason"], "stamps": ["closed_at"]}}',
     ),
     # external tables, SQL views and a second database (karni.db, experimental)

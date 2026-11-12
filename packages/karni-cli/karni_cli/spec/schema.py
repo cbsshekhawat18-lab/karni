@@ -452,6 +452,13 @@ class MoveRule(_Node):
     stamps: Names = Field(
         default_factory=list, description="Date or datetime fields set to now by the move."
     )
+    notify: str | None = Field(
+        None,
+        description=(
+            "A path to the user an email about the move goes to (member), from the "
+            "templates <app>/email/<entity>_<state>_subject.txt and _body.txt."
+        ),
+    )
 
 
 class ActionRule(_Node):
