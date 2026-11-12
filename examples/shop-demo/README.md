@@ -1,5 +1,26 @@
 # Shop Demo
 
+The [shop recipe](../../docs/recipes/shop.md) as a public demo that deploys with
+one button (`render.yaml` at the repository root). [docs/demo.md](../../docs/demo.md)
+says what runs, the demo login, who may write and how the data resets.
+
+`karni new "Shop Demo" --recipe shop` wrote everything here except the demo's
+own code: the `demo/` app (the write rule, the reset, the boot command, the app
+page and their tests), `frontend/src/demo.tsx` and its line in `layout.tsx`, the
+demo section at the end of `config/settings.py`, `scripts/start.sh` and
+`scripts/smoke.sh`, and the Dockerfile's stage order, app path and command.
+
+```sh
+python3.12 -m venv .venv && .venv/bin/pip install -e . pytest pytest-django
+DATABASE_URL=sqlite:///data/db.sqlite3 KARNI_CACHE=locmem .venv/bin/python -m pytest
+(cd frontend && npm ci && npm run build)
+PATH=$PWD/.venv/bin:$PATH PORT=8950 ./scripts/smoke.sh   # production settings, then curl
+```
+
+The rest of this file is the scaffold's README.
+
+---
+
 A [Karni](https://github.com/cbsshekhawat18-lab/karni) project: batteries-included Django + DRF +
 Celery, configured almost entirely by `karni_settings(globals())` in
 `config/settings.py`. Every Karni default can be overridden from that file.

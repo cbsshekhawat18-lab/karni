@@ -71,6 +71,13 @@ def test_django_paths_never_answer_the_app(built: Path, path: str) -> None:
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("path", ["/admin", "/api"])
+def test_a_django_path_without_its_slash_is_redirected_to_it(built: Path, path: str) -> None:
+    answer = Client().get(path)
+    assert answer.status_code == 301 and answer["Location"] == f"{path}/"
+
+
+@pytest.mark.django_db
 def test_an_unbuilt_app_says_how_to_build_it(demo: Any, tmp_path: Path) -> None:
     demo.DEMO_APP_INDEX = str(tmp_path / "missing" / "index.html")
     answer = Client().get("/")

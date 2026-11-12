@@ -1,7 +1,8 @@
 """The React app's routes: ``/`` and every path Django does not answer itself.
 
 ``config/urls.py`` puts them last. The paths below stay Django's (or WhiteNoise's),
-so an unknown API path answers 404, not the app's page.
+so an unknown API path answers 404, not the app's page, and ``/admin`` without
+its slash is redirected to the admin as usual.
 """
 
 from __future__ import annotations
@@ -15,22 +16,22 @@ from demo import views
 
 
 def reserved() -> list[str]:
-    """Path prefixes the app's page never answers."""
-    static = str(settings.STATIC_URL).strip("/")
-    media = str(settings.MEDIA_URL).strip("/")
+    """The first path segments the app's page never answers."""
     names = [
-        "api/",
-        "health/",
+        "api",
+        "health",
         "healthz",
         "readyz",
-        "payments/",
-        "assets/",
+        "payments",
+        "assets",
         settings.KARNI_ADMIN_PATH,
+        settings.STATIC_URL,
+        settings.MEDIA_URL,
     ]
-    return [*names, *(f"{prefix}/" for prefix in (static, media) if prefix)]
+    return [segment for name in names if (segment := str(name).strip("/"))]
 
 
 def app_urls() -> list[URLPattern]:
-    """One pattern: any path outside :func:`reserved` renders the app."""
-    skipped = "|".join(re.escape(prefix) for prefix in reserved())
-    return [re_path(rf"^(?!{skipped})(?P<path>.*)$", views.app, name="demo-app")]
+    """One pattern: any path whose first segments are not :func:`reserved` renders the app."""
+    skipped = "|".join(re.escape(segment) for segment in reserved())
+    return [re_path(rf"^(?!(?:{skipped})(?:/|$))(?P<path>.*)$", views.app, name="demo-app")]
