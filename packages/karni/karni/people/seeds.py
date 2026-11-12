@@ -24,9 +24,9 @@ person is the shop's customer, the CRM's contact and next week's guest::
                 for i in range(context.count)
             ]
 
-The same ``--seed`` gives the same people. The accounts the run already
-made come first, the demo login before the others, so the demo login is the
-first person of the pool with an account.
+The same ``--seed`` gives the same people, and a run after ``--reset``
+finds the accounts the last one made by their email. The demo login is the
+first person of the pool, so it has an account and every part's rows.
 
 Override / escape hatch: a project's own ``PersonSeeder`` (in its
 ``seeds.py``, for ``people.Person``) replaces this one; ``Meta.count`` sets
@@ -138,9 +138,11 @@ class PersonSeeder(Seeder):
         from karni.people.models import Address, Membership, Organisation, Person
 
         organisations = list(Organisation.objects.order_by("name", "pk"))
-        free_users = sorted(
-            get_user_model()._default_manager.filter(person__isnull=True).order_by("pk"),
-            key=lambda user: str(getattr(user, "email", "")) != DEMO_LOGIN,
+        demo = (
+            get_user_model()
+            ._default_manager.filter(**{get_user_model().USERNAME_FIELD: DEMO_LOGIN})
+            .filter(person__isnull=True)
+            .first()
         )
         taken = set(Person._base_manager.values_list("email", flat=True))
         rows: list[Any] = []
@@ -158,11 +160,11 @@ class PersonSeeder(Seeder):
             local = f"{given}.{family}{round_ + 1 if round_ else ''}".lower()
             email = f"{local}@{domain}"
             user = None
-            if index % 3 == 0 and free_users:
-                user = free_users.pop(0)
-                email = str(getattr(user, "email", "") or email).lower()
-                given = str(getattr(user, "first_name", "") or given)
-                family = str(getattr(user, "last_name", "") or family)
+            if index == 0 and demo is not None:
+                user = demo
+                email = str(getattr(demo, "email", "") or email).lower()
+                given = str(getattr(demo, "first_name", "") or given)
+                family = str(getattr(demo, "last_name", "") or family)
             if email in taken:
                 continue
             taken.add(email)

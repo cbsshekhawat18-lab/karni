@@ -46,7 +46,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from karni.api import Access, Authenticated, BaseViewSet, Can, Granted
+from karni.api import Access, Authenticated, BaseViewSet, Budget, Can, Granted
 from karni.people import registry, services
 from karni.people.models import Address, Membership, Organisation, Person
 
@@ -185,6 +185,13 @@ class _MergeActions:
         return Response(services.merge(keep, drop).as_dict())
 
 
+#: Why a merge and an erase have no query budget.
+_BULK = (
+    "A merge moves the rows of every model that points at the record, and an erase runs every "
+    "part's erase hook: their queries grow with the installed parts, not with the request."
+)
+
+
 class PersonViewSet(_MergeActions, BaseViewSet):
     """Experimental. ``/api/people/``: the people, with facts, merge, duplicates and erase."""
 
@@ -192,6 +199,7 @@ class PersonViewSet(_MergeActions, BaseViewSet):
     route = "people"
     auto_register = _ROUTED
     access = Access(read=Granted(), write=Granted())
+    query_budget = Budget(merge=None, erase=None, reason=_BULK)
     search_fields: ClassVar[list[str]] = ["display_name", "email", "phone"]
 
     _MERGE = Can("people.person:merge")
@@ -204,11 +212,11 @@ class PersonViewSet(_MergeActions, BaseViewSet):
 
     def _fact_names(self) -> tuple[list[str], list[str]]:
         """``(shown, used)``: the facts the response shows, and every fact the query needs."""
-        request = getattr(self, "request", None)
-        if request is None:
+        params = getattr(getattr(self, "request", None), "query_params", None)
+        if params is None:  # no DRF request: the schema, or the admin's import screen
             return [], []
         registered = registry.facts()
-        raw = str(request.query_params.get("facts", "") or "").strip()
+        raw = str(params.get("facts", "") or "").strip()
         shown = list(registered) if raw == "all" else [n.strip() for n in raw.split(",") if n]
         unknown = [name for name in shown if name not in registered]
         if unknown:
@@ -221,11 +229,11 @@ class PersonViewSet(_MergeActions, BaseViewSet):
                 }
             )
         used = list(shown)
-        for key in request.query_params:
+        for key in params:
             name = key.split("__", 1)[0]
             if name in registered and name not in used:
                 used.append(name)
-        for term in str(request.query_params.get("ordering", "") or "").split(","):
+        for term in str(params.get("ordering", "") or "").split(","):
             name = term.strip().lstrip("-")
             if name in registered and name not in used:
                 used.append(name)
@@ -371,6 +379,7 @@ class OrganisationViewSet(_MergeActions, BaseViewSet):
     route = "organisations"
     auto_register = _ROUTED
     access = Access(read=Granted(), write=Granted())
+    query_budget = Budget(merge=None, reason=_BULK)
     search_fields: ClassVar[list[str]] = ["name", "domain"]
 
     _MERGE = Can("people.organisation:merge")
