@@ -1270,9 +1270,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
                 [name for name in self.get_owner_fields() if _other(given.get(name), user)]
             )
             stamps = {name: user for name in self.get_owner_fields() if given.get(name) is None}
-        with transaction.atomic(using=router.db_for_write(self.get_model())):
-            serializer.save(**stamps)
-            self.check_written_row(serializer.instance)
+        self._save_in_scope(lambda: serializer.save(**stamps), serializer)
 
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
         """Save, then check the row is still inside the write predicate (``E134``).
@@ -1288,9 +1286,25 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             if name in given and _key(given[name]) != _key(getattr(instance, name, None))
         ]
         self.check_assigned(changed)
+        self._save_in_scope(serializer.save, serializer)
+
+    def _save_in_scope(self, save: Callable[[], Any], serializer: BaseSerializer[Any]) -> None:
+        """``save()`` and :meth:`check_written_row` in one transaction.
+
+        A write a ``pre_write`` receiver defers (``karni-approvals`` holds it for a
+        second person) commits what the receiver wrote, the pending change, and
+        is re-raised outside the transaction: nothing of the row was written.
+        """
+        deferred: KarniWriteDeferred | None = None
         with transaction.atomic(using=router.db_for_write(self.get_model())):
-            serializer.save()
-            self.check_written_row(serializer.instance)
+            try:
+                save()
+            except KarniWriteDeferred as exc:
+                deferred = exc
+            else:
+                self.check_written_row(serializer.instance)
+        if deferred is not None:
+            raise deferred
 
     def may_assign(self) -> bool:
         """Experimental. Whether the caller may set an owner field to another user."""

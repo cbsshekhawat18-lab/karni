@@ -220,3 +220,24 @@ def test_the_schema_lists_the_row_actions() -> None:
     assert one["to"] == "cancelled"
     access = schema["paths"]["/api/items/"]["get"]["x-karni-access"]
     assert {"where": "active=True", "matching": {"active": True}} in access["any"]
+
+
+def test_a_deferred_write_keeps_what_its_receiver_wrote(item: Item, seller: Any) -> None:
+    """karni-approvals writes the pending change, then defers: the scope check keeps it."""
+    from karni.exceptions import KarniWriteDeferred
+    from karni.signals import pre_write
+
+    def hold(sender: Any, instance: Any, action: str, **kwargs: Any) -> None:
+        if sender is Item and action == "create":
+            Shop.objects.create(owner=_user("held@example.com"), name="Held")
+            raise KarniWriteDeferred("held for a second person", payload={"held": True})
+
+    pre_write.connect(hold)
+    try:
+        body = {"shop": str(item.shop.pk), "title": "Desk", "price": "5.00"}
+        response = _client(seller).post("/api/items/", body, format="json")
+    finally:
+        pre_write.disconnect(hold)
+    assert response.status_code == 202 and response.json() == {"held": True}
+    assert Shop.objects.filter(name="Held").exists()
+    assert not Item.objects.filter(title="Desk").exists()
