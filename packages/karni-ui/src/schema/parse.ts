@@ -47,6 +47,7 @@ import type {
 export interface KarniRelationExtension {
   resource?: string;
   many?: boolean;
+  label?: string;
 }
 
 export interface SchemaObject {
@@ -202,6 +203,7 @@ interface PropertyInfo {
   taxonomy?: string;
   protectedFile?: true;
   money?: MoneyRef;
+  person?: true;
 }
 
 function normalizeType(schema: SchemaObject): { type: string | undefined; nullable: boolean } {
@@ -219,7 +221,12 @@ function normalizeType(schema: SchemaObject): { type: string | undefined; nullab
 function relationFromExtension(schema: SchemaObject): RelationRef | undefined {
   const ext = schema["x-karni-relation"];
   if (isRecord(ext) && typeof ext.resource === "string" && ext.resource.length > 0) {
-    return { resource: ext.resource, many: ext.many === true };
+    const label = ext.label;
+    return {
+      resource: ext.resource,
+      many: ext.many === true,
+      ...(typeof label === "string" && label !== "" ? { label } : {}),
+    };
   }
   return undefined;
 }
@@ -414,6 +421,7 @@ function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo 
   if (isRecord(storage) && storage["protected"] === true) info.protectedFile = true;
   const money = parseMoneyExtension(resolved["x-karni-money"] ?? raw["x-karni-money"]);
   if (money !== undefined) info.money = money;
+  if ((resolved["x-karni-user"] ?? raw["x-karni-user"]) === true) info.person = true;
 
   // drf-spectacular nullable/blank enums: oneOf [XEnum, BlankEnum?, NullEnum?].
   const composition = resolved.oneOf ?? resolved.anyOf;
@@ -582,6 +590,7 @@ function mergeField(
   if (responseInfo?.protectedFile === true || requestInfo?.protectedFile === true) {
     field.protected = true;
   }
+  if (responseInfo?.person === true || requestInfo?.person === true) field.person = true;
 
   return field;
 }

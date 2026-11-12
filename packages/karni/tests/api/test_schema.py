@@ -173,6 +173,27 @@ def test_forward_relations_carry_x_karni_relation(schema: dict[str, Any]) -> Non
     assert properties["organizer"]["x-karni-relation"] == {"resource": "users", "many": False}
 
 
+def test_a_relation_to_a_person_says_so(schema: dict[str, Any]) -> None:
+    properties = _component(schema, "TestappEvent")["properties"]
+    assert properties["organizer"]["x-karni-user"] is True
+    assert "x-karni-user" not in properties["venue"]
+
+
+def test_a_relation_names_the_field_that_labels_its_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tests.testapp.models import Venue
+
+    monkeypatch.setattr(Venue.Karni, "label", "city", raising=False)
+    schema, _messages = _generate()
+    venue = _component(schema, "TestappEvent")["properties"]["venue"]
+    assert venue["x-karni-relation"] == {"resource": "venues", "many": False, "label": "city"}
+    monkeypatch.setattr(Venue.Karni, "label", "nothing_like_it", raising=False)
+    schema, _messages = _generate()
+    venue = _component(schema, "TestappEvent")["properties"]["venue"]
+    assert venue["x-karni-relation"] == {"resource": "venues", "many": False}
+
+
 def test_relation_extension_is_omitted_without_a_route(schema: dict[str, Any]) -> None:
     # Tag has no registered viewset by default: no extension, no error.
     assert "x-karni-relation" not in _component(schema, "TestappEvent")["properties"]["tags"]

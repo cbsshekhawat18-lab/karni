@@ -291,7 +291,16 @@ export type {
   UseImportJobOptions,
 } from "./hooks/useResourceImport";
 
-export { displayLabel } from "./components/resource/displayLabel";
+export { displayLabel, personName, relationLabel } from "./components/resource/displayLabel";
+export type { LabelledField } from "./components/resource/displayLabel";
+export {
+  RecordLink,
+  recordHref,
+  registerRecordLink,
+  setRecordNavigate,
+  unregisterRecordLink,
+} from "./components/resource/record-links";
+export type { RecordHref, RecordLinkProps } from "./components/resource/record-links";
 export { EmptyValue, EMPTY_VALUE_LABEL } from "./components/resource/empty-value";
 export type { EmptyValueProps } from "./components/resource/empty-value";
 export { AUDIT_FIELDS } from "./components/resource/audit-fields";

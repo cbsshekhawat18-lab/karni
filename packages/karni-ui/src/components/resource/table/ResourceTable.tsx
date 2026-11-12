@@ -631,12 +631,12 @@ export function ResourceTable<T = Record<string, unknown>>(
     if (expand !== undefined) return expand;
     const allowed = schema?.operations.list?.expandEnum;
     if (schema === undefined || allowed === undefined) return [];
+    // A single relation shows its row's name, and a person their name: both expanded.
     return schema.fields
       .filter(
         (field) =>
-          field.kind === "relation" &&
-          field.relation !== undefined &&
-          !field.relation.many &&
+          ((field.kind === "relation" && field.relation !== undefined && !field.relation.many) ||
+            field.person === true) &&
           allowed.includes(field.name),
       )
       .map((field) => field.name);

@@ -196,6 +196,8 @@ class Order(BaseModel):
 
     class Karni:
         owner_field = "user"
+        # A shipment's order column, or any relation to an order, shows its number.
+        label = "number"
         # The staff home's tile (docs/api.md, "The staff dashboard"): the orders by
         # money state, those placed today, and the newest.
         dashboard = {

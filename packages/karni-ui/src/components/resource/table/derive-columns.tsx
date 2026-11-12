@@ -27,10 +27,11 @@ import type { FieldDef, FieldKind } from "../../../schema/types";
 import { protectedFileLinkFor } from "../protected-file";
 import { CheckIcon } from "../../primitives/icons";
 import { isAuditField, partitionAuditFields } from "../audit-fields";
-import { displayLabel } from "../displayLabel";
+import { personName, relationLabel } from "../displayLabel";
 import { EmptyValue } from "../empty-value";
 import { isMarkdownField, markdownExcerpt } from "../markdown-field";
 import { formatMoneyValue, formatNumberValue } from "../number-value";
+import { RecordLink } from "../record-links";
 import { asRecord, enumLabel } from "./table-utils";
 
 /** Per-field override merged over the schema-derived column. */
@@ -71,25 +72,39 @@ function IdCode({ value }: { value: unknown }): React.ReactElement {
   return <code className="rounded bg-muted px-1 py-0.5 text-xs">{String(value)}</code>;
 }
 
-function relationItem(item: unknown, label: RowLabeler): React.ReactNode {
+function relationItem(item: unknown, label: RowLabeler, resource?: string): React.ReactNode {
   if (item === null || item === undefined) return <EmptyValue />;
-  if (typeof item === "object" && !Array.isArray(item)) return label(asRecord(item));
+  if (typeof item === "object" && !Array.isArray(item)) {
+    return (
+      <RecordLink resource={resource} row={item}>
+        {label(asRecord(item))}
+      </RecordLink>
+    );
+  }
   return <IdCode value={item} />;
 }
 
-function RelationCell({ value, label }: { value: unknown; label: RowLabeler }): React.ReactElement {
+function RelationCell({
+  value,
+  label,
+  resource,
+}: {
+  value: unknown;
+  label: RowLabeler;
+  resource?: string;
+}): React.ReactElement {
   if (value === null || value === undefined) return <EmptyValue />;
   if (Array.isArray(value)) {
     if (value.length === 0) return <EmptyValue />;
     return (
       <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
         {value.map((item, index) => (
-          <React.Fragment key={index}>{relationItem(item, label)}</React.Fragment>
+          <React.Fragment key={index}>{relationItem(item, label, resource)}</React.Fragment>
         ))}
       </span>
     );
   }
-  return <>{relationItem(value, label)}</>;
+  return <>{relationItem(value, label, resource)}</>;
 }
 
 function dateText(value: unknown, withTime: boolean): string {
@@ -154,6 +169,10 @@ export function renderFieldCell(
   if (value === null || value === undefined || value === "") return <EmptyValue />;
   const money = formatMoneyValue(field, value, row);
   if (money !== null) return <span className="tabular-nums">{money}</span>;
+  // A person (x-karni-user): their name once the table expanded them, never the id.
+  if (field.person === true && typeof value === "object" && !Array.isArray(value)) {
+    return <>{(getRowLabel ?? personName)(asRecord(value))}</>;
+  }
   switch (field.kind) {
     case "boolean":
       return <BooleanCell value={value === true} />;
@@ -166,7 +185,13 @@ export function renderFieldCell(
         ? enumLabel(value, field.enumLabels)
         : String(value);
     case "relation":
-      return <RelationCell value={value} label={getRowLabel ?? displayLabel} />;
+      return (
+        <RelationCell
+          value={value}
+          label={getRowLabel ?? ((item) => relationLabel(field, item))}
+          resource={field.relation?.resource}
+        />
+      );
     case "number":
     case "integer":
       return (

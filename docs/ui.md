@@ -26,6 +26,28 @@ is a few lines that compose them (see the [tutorial](tutorial.md)).
 - `TreeBreadcrumb` (role `tree-breadcrumb`, experimental)
 - `FacetPanel` (role `facet-panel`, experimental)
 
+### How a related row is named (experimental)
+
+A table cell or a detail value that points at another row shows that row's
+name, never its id. The model says which field names its rows with
+`class Karni: label = "number"` (an order shows as `1021`, not as its
+buyer's email). Without it, the first of `name`, `title`, `label` and
+`email` is taken. A relation to the user model shows the person's name
+(first and last name, else the email): ResourceTable and ResourceDetail
+expand it on their own.
+
+An app turns those names into links once at startup:
+
+```tsx
+import { registerRecordLink, setRecordNavigate } from "@karni/ui";
+
+registerRecordLink("orders", (row) => `/orders/${String(row.number)}`);
+setRecordNavigate((to) => router.history.push(to));
+```
+
+`getRowLabel` on ResourceTable and `fields` on ResourceDetail still render
+a value any other way.
+
 ## App shell and pages
 
 - `Layout` (role `layout-shell`)

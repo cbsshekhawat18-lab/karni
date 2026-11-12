@@ -26,6 +26,11 @@ export type FieldKind =
 export interface RelationRef {
   resource: string;
   many: boolean;
+  /**
+   * Experimental. The field that names a row of the target (`class Karni: label`
+   * on the server): a table cell and a detail show it instead of guessing.
+   */
+  label?: string;
 }
 
 /**
@@ -73,6 +78,11 @@ export interface FieldDef {
   description?: string;
   /** Present only when x-karni-relation was emitted (degrades gracefully). */
   relation?: RelationRef;
+  /**
+   * Experimental. A relation to a person (the user model, `x-karni-user`): tables
+   * and details expand it and show the person's name, never the id.
+   */
+  person?: true;
   /**
    * Underlying pk value type of a relation field, derived from the property's
    * own emitted type/format, never assumed (D3). Drives zodFor's relation
