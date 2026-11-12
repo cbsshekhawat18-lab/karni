@@ -1269,7 +1269,8 @@ A recipe is a folder:
   recipe.toml   what it is and when it fits
   karni.yaml    the spec, with app.recipe naming the recipe
   files/        optional: the recipe's own domain code, seeds and tests, each at the
-                path it takes in the project (files/shop/models.py is shop/models.py)
+                path it takes in the project (files/shop/models.py is shop/models.py),
+                and its React pages and components under files/frontend/src/
 ```
 
 The files under `files/` go where the project owns the code: the methods of
@@ -1288,6 +1289,31 @@ rule](recipes/index.md#the-stub-rule)).
 | `purpose` | yes | what the app does, in one line of at most 80 characters |
 | `use_when` | yes | plain phrases of what someone asks for when the recipe fits, e.g. `["online shop", "sell products", "checkout"]`. `--match` ranks by them |
 | `usually_changed` | no | what people usually change in the spec after starting from it, in plain words, e.g. `["the product fields", "the currency"]` |
+| `routes` | no | experimental: the recipe's React pages, a `[[routes]]` table each (below) |
+
+Each `[[routes]]` entry registers one page of the recipe's own files in
+`frontend/src/routes.tsx` on the first build, at the `// karni:page-imports`
+and `// karni:routes` markers, as `karni make page` does:
+
+| Key | Required | Takes |
+|---|---|---|
+| `path` | yes | the route as TanStack Router writes it: `/cart`, `/shop/products/$slug` |
+| `page` | yes | the file of `files/frontend/src/` that serves it, without `.tsx` (`pages/cart`). Its default export is the page |
+| `public` | no | `true`: a visitor sees the page without signing in (`staticData.public`). The scaffold's layout leaves such a route out of the sign-in guard and the terms gate |
+| `data` | no | more `staticData` for the recipe's own layout to read, e.g. `{ area = "store" }` |
+
+A route at `/<name>` is a code page of the spec too: list it in the
+recipe's `pages` (`- cart: code`), so `karni plan` matches the project after
+the build. A file `karni new` wrote (`frontend/src/layout.tsx`,
+`frontend/src/pages/home.tsx`) counts as a stub while it is still what
+`karni new` wrote, so a recipe may replace the layout and the home page.
+
+```toml
+[[routes]]
+path = "/cart"
+page = "pages/cart"
+public = true
+```
 
 An example:
 

@@ -162,6 +162,21 @@ server's items into those entries on their own, and the `NavGroup` slot
 replaces how a group renders. The scaffold's `layout.tsx` keeps its menu from
 the routes until you pass `navSource="server"`.
 
+### Pages a visitor sees without signing in
+
+The scaffold's layout puts every page behind `<AuthGuard explain>`, so a
+visitor gets the sign-in prompt in place of a page. A route with
+`staticData: { public: true }` in `frontend/src/routes.tsx` is left out of
+it, and out of the terms gate: a catalogue, a product page, a cart. Its data
+must be public in the API too (`access: {read: public}`), or the page shows
+its error state. A recipe marks its pages `public = true` in `recipe.toml`
+([recipes](app-spec.md#the-format)).
+
+```tsx
+createRoute({ getParentRoute: () => root, path: "/shop", component: ShopPage,
+  staticData: { public: true } }),
+```
+
 ## The admin
 
 `NavItem` has the tree changelist of the [admin](admin.md): entries in tree

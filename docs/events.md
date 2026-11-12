@@ -157,6 +157,41 @@ def email_tracking_link(sender, order, **kwargs) -> None:
 To queue the work from a custom event, have the receiver call a Celery task
 inside `transaction.on_commit(...)`.
 
+## Emails at business moments (experimental)
+
+A confirmation, a shipping notice or a reminder is a listener that sends a
+template the project can edit. `karni.mail.send_templated` renders
+`<template>_subject.txt` (one line), `<template>_body.txt` and, when it
+exists, `<template>_body.html`, and sends them with Django's mail backend
+(the console in development):
+
+```python
+from django.db import transaction
+from karni.events import on_transition
+from karni.mail import send_templated
+
+
+@on_transition(Shipment, "status", to="shipped")
+def tell_the_buyer(shipment):
+    transaction.on_commit(
+        lambda: send_templated(
+            "shop/email/shipment_shipped",
+            to=[shipment.order.email],
+            context={"shipment": shipment},
+            kind="shop.shipment_shipped",
+        )
+    )
+```
+
+Every template also gets `frontend_url`. Send after the commit, so a
+rolled-back change mails nobody. `kind` is a stable name for the email: it
+goes out in the `X-Karni-Kind` header, and `KARNI_MAIL_DISABLED_KINDS`
+switches a kind off without code. A template of the same name earlier in
+`TEMPLATES` `DIRS` replaces the default. `with karni.mail.silenced():`
+sends nothing inside the block, nor from what it queued for the commit (demo
+data, imports). `render_templated` gives the rendered parts to build a
+message yourself.
+
 ## Escape hatches
 
 - **Plain receivers keep working.** `@receiver(post_save, sender=Order)` in

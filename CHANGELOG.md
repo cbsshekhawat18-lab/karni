@@ -74,11 +74,16 @@ apply codemods and list the manual steps. This file is the human summary.
   PATH" when git is missing, and the PostgreSQL backup round trip skips when `DATABASE_URL`
   points at a server that is not listening. Before, they failed.
 
-- **The shop recipe, first slice (experimental, work in progress).** A storefront open to
-  visitors (home, catalogue with search, category and price filters, sort and pages,
-  product page, cart, guest or signed-in checkout, order page, account), stock held at
-  checkout and taken on payment, readable order numbers and the confirmation email. The
-  cart and orders move to a karni-commerce module next.
+- **The shop recipe, milestone 1 (experimental).** A storefront open to visitors under
+  `/shop` (home, catalogue with search, category and price filters, sort and pages,
+  product page), a cart for visitors and customers that joins at sign-in, guest or
+  signed-in checkout, the order page and the person's orders, and a staff home with
+  orders, parcels and stock. The cart, checkout and orders are karni-commerce's: the shop
+  sells its products through an adapter (`shop/sellables.py`) and keeps its own parcels
+  (Shipment: processing, shipped with a tracking number, delivered). Stock is held at
+  checkout through `karni.capacity`, taken on payment and given back on a failed,
+  cancelled or late order. Roles `admin`, `shop-manager`, `shop-staff` and `customer`.
+  Emails by kind, and signals under their family names. docs/recipes/shop.md is a guide.
 
 - **Recipe pages and routes (experimental).** A recipe lists its React pages as
   `[[routes]]` in recipe.toml, and the first `karni build` registers them in
@@ -96,7 +101,34 @@ apply codemods and list the manual steps. This file is the human summary.
 
 - **karni-payments (experimental):** the test provider's checkout page
   (`KARNI_PAYMENTS_TEST_CHECKOUT_PAGE`, on while `DEBUG`), and the signals
-  `payment_status_changed`, `refund_created` and `refund_status_changed`.
+  `payment_status_changed`, `refund_created` and `refund_status_changed`. The test
+  provider never reuses a checkout session a stored payment has.
+
+- **karni-commerce, a new module (experimental).** One cart, checkout and order path for
+  anything a project sells (`karni add commerce`, needs karni-payments). An app registers
+  a `Sellable` adapter per kind in its `sellables.py`, and commerce calls it without
+  importing the app. Orders hold money states only, with readable numbers
+  (`KARNI_COMMERCE_NUMBER`), the buyer's user, email and name, several payments
+  (`OrderPayment`), refunds by line or amount (`OrderRefund`), a free order settled at
+  once and a late payment given back. The checkout validator checks an order's payment
+  against the order. Signals in `karni_commerce.events`, emails by kind, what the selling
+  app reports about the goods (`karni_commerce.fulfilment`), and `@karni/commerce-ui`:
+  `CartPage`, `MiniCart`, `AddToCart`, `CheckoutPage`, `OrderPage`, `MyOrders`. See
+  docs/commerce.md.
+
+- **@karni/ui (experimental):** `AccountPage` with sections the installed parts
+  register (`registerAccountSection`) and `SignInPage` (a code or a password, then a safe
+  `next`). Tables and details show money in its currency: a `MoneyField` publishes
+  `x-karni-money` in the schema (left out of schema snapshots). An id, a year or a number
+  people quote reads without a thousands separator.
+
+- **karni (experimental):** `send_templated(kind=...)` with `KARNI_MAIL_DISABLED_KINDS`,
+  and `karni.mail.silenced()` for demo data and imports. `Seeder.Meta.after` names the
+  models a seeder reads with no foreign key to them, and `karni spec export` reads a
+  seeder's count through `Meta` inheritance.
+
+- **karni-cli (experimental):** a recipe's own pages at `/<name>` count as managed on the
+  build that writes them, so `karni new --recipe` ends with `karni plan` empty.
 
 ## 0.5.1 (2026-11-12)
 

@@ -57,6 +57,7 @@ then `make migrate`. Register `https://<host>/payments/webhook/stripe/` (or
 | `KARNI_PAYMENTS_CHECKOUT_VALIDATOR` | pass-through | dotted path called with `(user=, amount=, currency=, metadata=)` **before** a Payment exists. Set it, and never trust client amounts |
 | `KARNI_PAYMENTS_EVENT_HANDLER` | `karni_payments.services.apply_event` | dotted path the webhook task calls (the state-machine escape hatch) |
 | `KARNI_PAYMENTS_ALLOWED_REDIRECTS` | `[]` | extra origins allowed for checkout redirect URLs (on top of `KARNI_FRONTEND_URL`) |
+| `KARNI_PAYMENTS_TEST_CHECKOUT_PAGE` | `None` | experimental: the test provider's checkout page. `None` serves it while `DEBUG` is on, `True` always, `False` never |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | `""` | validated lazily at provider use |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` / `RAZORPAY_WEBHOOK_SECRET` | `""` | validated lazily at provider use |
 
@@ -77,6 +78,35 @@ then `make migrate`. Register `https://<host>/payments/webhook/stripe/` (or
 - Razorpay webhooks take their event id from the `X-Razorpay-Event-Id`
   header. Payment Links have a single `callback_url`, so `cancel_url` is
   unused there.
+
+## Signals (experimental)
+
+`karni_payments.events` sends Django signals any app can receive in its
+`listeners.py`, so an order, a booking or an enrolment reacts to its payment
+without reading the webhook:
+
+- `payment_status_changed` (`payment`, `source`, `target`): a payment moved,
+  for example from `pending` to `succeeded`, `failed` or `refunded`.
+- `refund_created` (`refund`, `payment`): `create_refund` asked the provider.
+- `refund_status_changed` (`refund`, `payment`, `source`, `target`): a refund
+  went through or failed.
+
+They are sent by the webhook state machine inside its transaction: a
+receiver that raises undoes the change, and the webhook task retries. A
+project that replaces the state machine sends them with
+`karni_payments.events.announce(row, source)`.
+
+## Trying a checkout in the browser (experimental)
+
+With `KARNI_PAYMENTS_PROVIDER = "test"` and `DEBUG` on, a checkout started in
+a request points at `/payments/test-checkout/<session>/` on that host
+instead of a provider: a page with the amount, **Pay** and **Decline**. A
+choice is applied the way the provider's webhook would be (a signed test
+event through `KARNI_PAYMENTS_EVENT_HANDLER`, at once), then the page sends
+the person to the checkout's `success_url` or `cancel_url`. No money moves.
+Session ids never repeat one a stored payment has, so a development server
+that restarts keeps working. Replace the template
+`karni_payments/test_checkout.html` to change the page.
 
 ## Testing your project
 

@@ -795,6 +795,54 @@ it, so a tree needs no code of its own:
   are the hooks underneath.
   `--karni-tree-indent` and `--karni-tree-max-height` theme it.
 
+### Catalogues, money and page titles (experimental)
+
+A public catalogue is cards, not a table. `ResourceGrid` reads one page of a
+resource and renders each row with `renderCard`, with a search box, a sort
+menu, filters the page passes, paging, and the loading, empty and error
+states. Search, sort and page are controlled when you pass them (keep them in
+the address), and a change goes back to page 1:
+
+```tsx
+<ResourceGrid<Product>
+  resource="products"
+  sortOptions={[{ value: "name", label: "Name" }, { value: "-created_at", label: "Newest" }]}
+  filters={{ categories: categoryId }}
+  renderCard={(product) => <ProductCard product={product} />}
+/>
+```
+
+`formatMoney("1234.5000", "USD")` is `$1,234.50`: an amount in its
+currency's digits, in the browser's language. Tables and details use it for
+every money field: a `MoneyField` publishes its currency in the schema
+(`x-karni-money`, fixed or another field of the row), so `ResourceTable` and
+`ResourceDetail` show `$60.00`, not `60.0000`. A field named `id`, `year`,
+`number` or ending in `_year` or `_number` reads without a thousands
+separator (`2024`, order `1027`).
+
+`usePageMeta({ title, description, siteName })` sets the browser tab's title
+(`Title | Site`) and the description search engines show, while the page is
+mounted. A public page sets both.
+
+### The family pages: account and sign-in (experimental)
+
+`AccountPage` is a signed-in person's `/account`: the sections the installed
+parts register, then their name and email, and sign-out. A part registers
+its section once at startup:
+
+```tsx
+registerAccountSection({ key: "orders", title: "Your orders", order: 10, component: MyOrders });
+```
+
+`roles` limits a section to some roles, `order` places it, and
+`unregisterAccountSection(key)` takes one out.
+
+`SignInPage` is `/signin`: a code sent by email (which opens an account for a
+new address when the project allows it, `KARNI_EMAIL_OTP_SIGNUP = "open"`)
+or a password, then `next` (a path of this app only: `safeNext` refuses
+another site). Pass the router's push as `navigate`, and `notice` for a
+line above the forms (the demo logins).
+
 ## Hooks
 
 ```tsx

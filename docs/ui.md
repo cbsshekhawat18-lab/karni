@@ -210,7 +210,7 @@ suite).
 
 Styled Radix parts and basics. Each one always merges `className` and forwards refs.
 
-`Button`, `Checkbox`, `Dashboard`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `EmptyValue`, `ErrorState`, `Input`, `KarniPrimitivesProvider`, `Label`, `PendingButton`, `PermissionDenied`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`, `ThemeProvider`, `ThemeToggle`
+`AccountPage`, `Button`, `Checkbox`, `Dashboard`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `EmptyValue`, `ErrorState`, `Input`, `KarniPrimitivesProvider`, `Label`, `PendingButton`, `PermissionDenied`, `ResourceGrid`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `SignInPage`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`, `ThemeProvider`, `ThemeToggle`
 
 ## Hooks
 
@@ -227,6 +227,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useNavigation`: Experimental. The menu the signed-in user gets (`GET /navigation/`, Django's `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `<Layout navSource="server">` renders it.
 - `useOnlineStatus`: See the package README.
 - `useOtpLogin`: Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).
+- `usePageMeta`: See the package README.
 - `usePermission`: `{ hasRole(...names), isAuthenticated }` for gating UI on roles.
 - `useResourceAccessForest`: Experimental. The requester's access forest of a tree resource (`GET /<resource>/access/?permission=`): `{ results, all, truncated }`, the granted nodes with their ancestors and every other root, each with `granted`. `TreeView`'s `access` shows it.
 - `useResourceAncestors`: Experimental. The nodes above a tree node, root first (`GET /<resource>/<id>/ancestors/`).
@@ -276,6 +277,7 @@ role that another component holds (compose it instead), and `karni context` list
 | `page-shell` | `Page` |
 | `permission-denied` | `PermissionDenied` |
 | `resource-form` | `ResourceForm` |
+| `resource-grid` | `ResourceGrid` |
 | `resource-import` | `ResourceImport` |
 | `social-sign-in` | `SocialButton` |
 | `stat` | `Stat` |
