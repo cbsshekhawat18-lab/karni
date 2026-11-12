@@ -9,7 +9,7 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
-## Unreleased
+## 0.5.2 (unreleased)
 
 - **Changed: `karni seed` in a project built from a recipe writes realistic demo data.** The
   shop, booking, CRM, LMS, marketplace and data-portal recipes now ship their own
@@ -24,11 +24,6 @@ apply codemods and list the manual steps. This file is the human summary.
   between two runs with one seed.
 - **Added: `karni.seeding.cycled(names, index, suffix=...)`**, the name at a position of a list
   that repeats, tagged `Name 2`, `Name 3` on later passes.
-
-### Tests
-
-- Tests that run git skip with "needs git on PATH" when git is missing, instead of failing.
-- The PostgreSQL backup round trip skips when DATABASE_URL points at a server that is not listening.
 
 - **A new project's frontend installs with plain `npm install` on npm 10 and
   11.** The crash that made the docs ask for `npx --yes npm@11 install` is an
@@ -74,6 +69,10 @@ apply codemods and list the manual steps. This file is the human summary.
   and what the free plan limits, and a CI job runs the demo's tests and starts it with
   production settings behind the deploy gate. No framework change: the demo uses the
   project's `MIDDLEWARE`, the `AuthGuard` slot and the admin's `login_template`.
+
+- **Tests skip when their dependency is missing.** Tests that run git skip with "needs git on
+  PATH" when git is missing, and the PostgreSQL backup round trip skips when `DATABASE_URL`
+  points at a server that is not listening. Before, they failed.
 
 ## 0.5.1 (2026-11-12)
 
