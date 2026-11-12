@@ -59,6 +59,14 @@ Custom events are plain :class:`django.dispatch.Signal` objects declared in
 ``<app>/events.py`` (autodiscovered with the listeners) and received in
 ``<app>/listeners.py`` with ``@receiver`` — see ``docs/events.md``.
 
+Family events (experimental, :mod:`karni.outbox`) are how one part reacts to
+another without importing it: :func:`declare` in ``<app>/events.py``,
+:func:`publish` inside the writer's transaction (an outbox row, delivered
+after commit, retried, at least once), and :func:`subscribe` by name in
+another app's ``<app>/listeners.py``. :func:`once` keeps a subscriber
+idempotent. See ``docs/family-events.md``. The listeners above stay what a
+part uses for its own rules inside its own transaction.
+
 Override / escape hatches: plain ``@receiver(post_save, sender=...)`` keeps
 working next to these helpers (use it when you need ``update_fields``,
 ``using`` or the raw signal kwargs); :func:`is_soft_delete` is public for such
@@ -83,10 +91,29 @@ from django.utils.module_loading import autodiscover_modules
 from karni.celery import resolve_task
 from karni.exceptions import KarniImproperlyConfigured, KarniTypeError
 
+# Family events (experimental): the API of the karni.outbox app, re-exported here.
+from karni.outbox.bus import (
+    CONTRACT,
+    Declaration,
+    Event,
+    Registry,
+    Subscriber,
+    declare,
+    once,
+    publish,
+    subscribe,
+)
+
 __all__ = [
     "AUTODISCOVER_MODULES",
+    "CONTRACT",
+    "Declaration",
+    "Event",
     "QueuedListener",
+    "Registry",
+    "Subscriber",
     "autodiscover",
+    "declare",
     "is_restore",
     "is_soft_delete",
     "on_created",
@@ -94,7 +121,10 @@ __all__ = [
     "on_restored",
     "on_transition",
     "on_updated",
+    "once",
+    "publish",
     "queued",
+    "subscribe",
 ]
 
 logger = logging.getLogger(__name__)

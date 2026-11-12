@@ -689,6 +689,7 @@ BASE: dict[str, Any] = {
             "karni_admin",
             "karni_audit",
             "karni_transfer",
+            "karni_outbox",
             "karni_accounts.OneTimeToken",
             "karni_accounts.Permission",
             "karni_accounts.SocialIdentity",
@@ -774,6 +775,12 @@ BASE: dict[str, Any] = {
     # autodiscovered at startup; set False to wire them yourself.
     "KARNI_EVENTS_AUTODISCOVER": env.bool("KARNI_EVENTS_AUTODISCOVER", default=True),
     "KARNI_SCHEDULES_AUTODISCOVER": env.bool("KARNI_SCHEDULES_AUTODISCOVER", default=True),
+    # Family events with an outbox (experimental, the karni.outbox app): how a committed
+    # event reaches a worker, the runs of one delivery before it is failed, and the days a
+    # delivered event is kept (None keeps them all).
+    "KARNI_EVENTS_DISPATCHER": "karni.outbox.dispatch.celery",
+    "KARNI_EVENTS_MAX_ATTEMPTS": env.int("KARNI_EVENTS_MAX_ATTEMPTS", default=8),
+    "KARNI_EVENTS_RETENTION_DAYS": env.int("KARNI_EVENTS_RETENTION_DAYS", default=30),
     # The key type `karni make model` writes (experimental): "uuid" (BaseModel) or
     # "bigint" (BigIntBaseModel). Read by the CLI from config/settings.py, nothing
     # else: each model's class line decides its key.

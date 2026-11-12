@@ -263,6 +263,15 @@ Experimental now:
   `karni_ai.extraction`, `karni_ai.schema`, `karni_ai.sources`,
   `karni_ai.services.fetch`, `karni_ai.usage`) and `@karni/ai-ui`
   (`ExtractButton`, `ExtractPreview`, `useExtract`).
+- [Family events](family-events.md): `declare`, `publish`, `subscribe`, `once`,
+  `Event`, `Declaration`, `Subscriber`, `Registry` and `CONTRACT` in
+  `karni.events`, the `karni.outbox` app (its models, admin, tasks, beat
+  entries, `karni.outbox.delivery`, `dispatch`, `checks` and `health`), the
+  `KARNI_EVENTS_DISPATCHER`, `KARNI_EVENTS_MAX_ATTEMPTS` and
+  `KARNI_EVENTS_RETENTION_DAYS` settings, the `events:` lines of `karni
+  check`, the outbox rows in `karni trace`, karni-payments' `payments.*`
+  events, and `capture_events`, `deliver_now` and `assert_events_declared`
+  in `karni.testing`.
 - [The module catalog](modules.md#the-module-catalog): the `karni.module.toml`
   manifest format and the feature manifests, the `karni.modules` entry point
   group, `karni.catalog` (with `python -m karni.catalog`),

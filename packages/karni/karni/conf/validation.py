@@ -100,6 +100,9 @@ class KarniSettingsModel(BaseModel):
     KARNI_API_CACHE_LEGACY_HEADER: bool = True
     KARNI_EVENTS_AUTODISCOVER: bool = True
     KARNI_SCHEDULES_AUTODISCOVER: bool = True
+    KARNI_EVENTS_DISPATCHER: Any = "karni.outbox.dispatch.celery"
+    KARNI_EVENTS_MAX_ATTEMPTS: int = Field(default=8, ge=1, le=100)
+    KARNI_EVENTS_RETENTION_DAYS: int | None = Field(default=30, ge=1)
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)
     KARNI_ADMIN_GRANTS_OPEN_PAGES: bool = True
     KARNI_MATRIX_EXCLUDE: list[Any] = Field(default_factory=list)
