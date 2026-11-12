@@ -411,6 +411,24 @@ def test_the_scaffold_locks_its_frontend_except_karni_ui(
     assert "node_modules/vitest" not in lock["packages"]
 
 
+def test_the_lock_generator_reads_the_template_and_writes_it_back() -> None:
+    """scripts/template_lock.py renders the template's package.json without @karni/ui and puts
+    the template expression back into the lock npm writes."""
+    import importlib.util
+
+    script = REPO_ROOT / "scripts" / "template_lock.py"
+    spec = importlib.util.spec_from_file_location("template_lock", script)
+    assert spec is not None and spec.loader is not None
+    generator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generator)
+    template = generator.FRONTEND / "package.json"
+    package = json.loads(generator.render_package(template.read_text()))
+    assert "@karni/ui" not in package["dependencies"]
+    assert package["name"] == f"{generator.PLACEHOLDER}-frontend"
+    written = json.dumps({"name": package["name"], "packages": {"": {"name": package["name"]}}})
+    assert generator.template_lock(written).count('"name": "{{ cookiecutter.project_slug }}') == 2
+
+
 def test_new_builds_a_missing_ui_dist(runner, tmp_path: Path, monkeypatch) -> None:
     ui = _fake_ui(tmp_path / "karni", built=False)
     calls: list[list[str]] = []
