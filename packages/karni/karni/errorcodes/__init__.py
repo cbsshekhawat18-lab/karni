@@ -2475,6 +2475,15 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "With no page to request, every check would pass without checking anything.",
         'Pass the site\'s pages, for example assert_pages(client, ["/", "/about/"]).',
     ),
+    _e(
+        "E620",
+        "cycled() was given an empty list of names",
+        "exception",
+        "karni.seeding.cycled",
+        "cycled() picks a row's name from a fixed list and repeats the list with a number "
+        "once it runs out. An empty list has no name to give.",
+        'Pass at least one name, for example cycled(["Oak Table", "Pine Shelf"], index).',
+    ),
     # E7xx agent tooling
     _e(
         "E701",

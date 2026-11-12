@@ -2521,6 +2521,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E618`](errors.md#e618) | test | A public page fails the page checks |
 | [`E619`](errors.md#e619) | exception | assert_pages was given no URLs |
 | [`W620`](errors.md#w620) | warning | A role grant of a tree scope gives its members no node |
+| [`E620`](errors.md#e620) | exception | cycled() was given an empty list of names |
 | [`W630`](errors.md#w630) | warning | The database menu could not be read |
 | [`W631`](errors.md#w631) | warning | No frontend pages file to compare the menu with |
 | [`W660`](errors.md#w660) | warning | An API version is past its sunset date |

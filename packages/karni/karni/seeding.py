@@ -114,6 +114,7 @@ from factory.declarations import BaseDeclaration
 from factory.random import reseed_random
 
 from karni.errorcodes import KarniError
+from karni.exceptions import KarniValueError
 from karni.testing.factories import DEFAULT_PASSWORD, FactoryBuilder, auto_factory, factory_for
 from karni.testing.values import ValueInference
 
@@ -467,7 +468,7 @@ def cycled(names: Sequence[str], index: int, *, suffix: str = "{name} {round}") 
     ``round`` (2 on the second pass, 3 on the third).
     """
     if not names:
-        raise ValueError("cycled() needs at least one name.")
+        raise KarniValueError("cycled() needs at least one name.", code="E620")
     name = names[index % len(names)]
     round_ = index // len(names) + 1
     return name if round_ == 1 else suffix.format(name=name, round=round_)
