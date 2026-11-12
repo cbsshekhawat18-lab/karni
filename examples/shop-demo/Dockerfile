@@ -3,10 +3,10 @@
 #
 # The demo's changes to the scaffold's Dockerfile (render.yaml builds it with
 # no --target, so the stage it serves is the last one):
-#   - prod is the last stage, after backup;
-#   - the React app is built for the site's root (KARNI_APP_PATH=/) and Django
-#     serves it with WhiteNoise, so one service answers everything;
-#   - the command is scripts/start.sh: demo_boot (migrate, then seed or reset),
+#   - prod is the last stage, after backup.
+#   - The React app is built for the site's root (KARNI_APP_PATH=/) and Django
+#     serves it with WhiteNoise, so one service answers everything.
+#   - The command is scripts/start.sh: demo_boot (migrate, then seed or reset),
 #     then gunicorn on PORT.
 #
 # Targets:
@@ -25,7 +25,7 @@
 #                     installed instead of frontend/package.json's spec. Needed
 #                     when that spec is a local checkout ("file:..."), which is
 #                     outside this build.
-#   KARNI_APP_PATH    where the staff app is served (/app/), its Vite base.
+#   KARNI_APP_PATH    where the staff app is served (/ in this demo), its Vite base.
 #   POSTGRES_VERSION  the database's major version (16). pg_dump must match it.
 
 ARG POSTGRES_VERSION=16

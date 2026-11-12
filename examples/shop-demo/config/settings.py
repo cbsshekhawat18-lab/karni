@@ -127,8 +127,8 @@ if _APP_BUILD.is_dir():
 WHITENOISE_IMMUTABLE_FILE_TEST = r"^/assets/.+-[0-9A-Za-z_-]{8}\.[0-9a-z]+$"
 DEMO_APP_INDEX = env.path("DEMO_APP_INDEX", default=str(_APP_BUILD / "index.html"))  # noqa: F821
 
-# The demo rules (demo/): only the demo account writes, and never to its own
-# account; the data resets every DEMO_RESET_HOURS hours to the same seed; the
+# The demo rules (demo/). Only the demo account writes, and never to its own
+# account. The data resets every DEMO_RESET_HOURS hours to the same seed. The
 # sign-in pages show the demo login. Off by default: the project is a plain
 # shop until DEMO_MODE=True.
 DEMO_MODE = env.bool("DEMO_MODE", default=False)  # noqa: F821

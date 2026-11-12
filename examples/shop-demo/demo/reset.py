@@ -2,10 +2,10 @@
 
 When it runs:
 
-* at boot (``manage.py demo_boot``, before the web server starts): a database
+* At boot (``manage.py demo_boot``, before the web server starts): a database
   without the demo account is seeded, and data older than ``DEMO_RESET_HOURS``
-  is reset;
-* while serving: :class:`demo.middleware.DemoResetMiddleware` asks
+  is reset.
+* While serving: :class:`demo.middleware.DemoResetMiddleware` asks
   :func:`reset_if_due` at most once a minute per worker process. No outside
   scheduler is needed.
 
