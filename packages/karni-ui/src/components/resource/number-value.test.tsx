@@ -5,7 +5,9 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { FieldDef } from "../../schema/types";
-import { formatNumberValue } from "./number-value";
+import { formatMoney } from "../../lib/money";
+import { parseMoneyExtension } from "../../schema/parse";
+import { formatMoneyValue, formatNumberValue } from "./number-value";
 import { renderFieldCell } from "./table/derive-columns";
 
 function integer(name: string): FieldDef {
@@ -41,5 +43,40 @@ describe("renderFieldCell", () => {
     );
     expect(screen.getByText("9876543")).toBeInTheDocument();
     expect(screen.getByText((9876543).toLocaleString())).toBeInTheDocument();
+  });
+});
+
+describe("years and money", () => {
+  it("leaves a year without separators", () => {
+    expect(formatNumberValue(integer("year"), 2024)).toBe("2024");
+    expect(formatNumberValue(integer("founded_year"), 1998)).toBe("1998");
+  });
+
+  it("shows money in its fixed currency, or the row's, and nothing it cannot know", () => {
+    const price: FieldDef = { ...integer("price"), kind: "text", money: { currency: "EUR" } };
+    const total: FieldDef = {
+      ...integer("total"),
+      kind: "text",
+      money: { currencyField: "currency" },
+    };
+    expect(formatMoneyValue(price, "60.0000")).toBe(formatMoney("60.0000", "EUR"));
+    expect(formatMoneyValue(total, "12.5000", { currency: "USD" })).toBe(
+      formatMoney("12.5000", "USD"),
+    );
+    expect(formatMoneyValue(total, "12.5000", {})).toBeNull();
+    expect(formatMoneyValue(integer("count"), 3)).toBeNull();
+    render(<>{renderFieldCell(total, "1234.5000", undefined, { currency: "USD" })}</>);
+    expect(screen.getByText(formatMoney("1234.5", "USD"))).toBeInTheDocument();
+  });
+});
+
+describe("x-karni-money", () => {
+  it("reads a fixed currency or a currency field, and nothing else", () => {
+    expect(parseMoneyExtension({ currency: "EUR" })).toEqual({ currency: "EUR" });
+    expect(parseMoneyExtension({ currency_field: "currency" })).toEqual({
+      currencyField: "currency",
+    });
+    expect(parseMoneyExtension({})).toBeUndefined();
+    expect(parseMoneyExtension("EUR")).toBeUndefined();
   });
 });

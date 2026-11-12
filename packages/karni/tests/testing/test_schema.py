@@ -147,3 +147,10 @@ def test_normalise_drops_backend_integer_bounds_only() -> None:
     assert normalised["properties"]["big"] == {"type": "integer"}
     assert normalised["properties"]["small"] == {"type": "integer", "minimum": 0, "maximum": 32767}
     assert normalised["properties"]["rating"] == {"type": "integer", "minimum": 1, "maximum": 5}
+
+
+def test_a_snapshot_leaves_out_display_hints() -> None:
+    from karni.testing.schema import normalise_schema
+
+    schema = {"properties": {"price": {"type": "string", "x-karni-money": {"currency": "EUR"}}}}
+    assert normalise_schema(schema) == {"properties": {"price": {"type": "string"}}}

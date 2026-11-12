@@ -40,6 +40,12 @@ export interface TreeRef {
   ordered: boolean;
 }
 
+/** Experimental. Which currency a money field is in: fixed, or another field of the row. */
+export interface MoneyRef {
+  currency?: string;
+  currencyField?: string;
+}
+
 export interface FieldDef {
   name: string;
   /** Humanized from the property name (or the schema `title` when present). */
@@ -81,6 +87,12 @@ export interface FieldDef {
   transitions?: Readonly<Record<string, readonly string[]>>;
   /** The states a new row may start in (`x-karni-initial`), with `transitions`. */
   initial?: readonly string[];
+  /**
+   * Experimental. An amount of money (`x-karni-money`, a MoneyField on the
+   * server): tables and details show it in its currency, which is fixed
+   * (`currency`) or read from another field of the row (`currencyField`).
+   */
+  money?: MoneyRef;
   /**
    * Experimental. Set on a relation whose target is a tree model
    * (`x-karni-tree`): ResourceForm edits it with TreeSelect.

@@ -577,6 +577,16 @@ export type {
 // money and page metadata for public pages (experimental)
 export { formatMoney } from "./lib/money";
 export { usePageMeta } from "./hooks/usePageMeta";
+export { AccountPage } from "./components/account/AccountPage";
+export type { AccountPageProps } from "./components/account/AccountPage";
+export {
+  accountSections,
+  registerAccountSection,
+  unregisterAccountSection,
+} from "./components/account/sections";
+export type { AccountSection } from "./components/account/sections";
+export { SignInPage, safeNext } from "./components/account/SignInPage";
+export type { SignInPageProps } from "./components/account/SignInPage";
 export type { PageMeta } from "./hooks/usePageMeta";
 
 // page blocks beyond CRUD (experimental)

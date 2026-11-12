@@ -27,7 +27,7 @@ import { chosenGroups, chosenLayout, groupFields, GroupedFields } from "../field
 import { humanizeValue } from "../form/prepare";
 import { isMarkdownField } from "../markdown-field";
 import { singularNoun } from "../nouns";
-import { formatNumberValue } from "../number-value";
+import { formatMoneyValue, formatNumberValue } from "../number-value";
 import { offlineError, useRetryUnlessClientError, useRetryWhenOnline } from "../query-state";
 import { evaluateAccess } from "../table/access";
 import { TreeBreadcrumb, type TreeBreadcrumbProps } from "../tree/TreeBreadcrumb";
@@ -277,9 +277,14 @@ function DefaultValue(props: {
   field: FieldDef;
   value: unknown;
   Empty: React.ComponentType<ResourceDetailEmptyValueProps>;
+  item?: unknown;
 }): React.ReactElement {
-  const { field, value, Empty } = props;
+  const { field, value, Empty, item } = props;
   if (isEmpty(value)) return <Empty field={field} />;
+  const row =
+    item !== null && typeof item === "object" ? (item as Readonly<Record<string, unknown>>) : null;
+  const money = formatMoneyValue(field, value, row);
+  if (money !== null) return <>{money}</>;
   // A MarkdownField: formatted, sanitized HTML (raw HTML in it shows as text).
   if (isMarkdownField(field)) return <MarkdownView source={String(value)} />;
   switch (field.kind) {
@@ -555,7 +560,7 @@ function DetailRow(props: {
         {override?.render !== undefined ? (
           override.render(value, item)
         ) : (
-          <DefaultValue field={field} value={value} Empty={Empty} />
+          <DefaultValue field={field} value={value} Empty={Empty} item={item} />
         )}
       </dd>
     </div>

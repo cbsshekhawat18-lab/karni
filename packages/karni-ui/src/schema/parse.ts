@@ -33,6 +33,7 @@ import type {
   FieldGroupDef,
   FieldGroupsDef,
   FieldKind,
+  MoneyRef,
   OperationDef,
   ParsedSchema,
   RelatedDef,
@@ -200,6 +201,7 @@ interface PropertyInfo {
   tree?: TreeRef;
   taxonomy?: string;
   protectedFile?: true;
+  money?: MoneyRef;
 }
 
 function normalizeType(schema: SchemaObject): { type: string | undefined; nullable: boolean } {
@@ -236,6 +238,19 @@ export function parseTreeExtension(raw: unknown): TreeRef | undefined {
 function stringList(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   return value.filter((item): item is string => typeof item === "string");
+}
+
+/**
+ * Experimental. `x-karni-money` (`{"currency": "EUR"}` or `{"currency_field":
+ * "price_currency"}`), when well formed: the field is an amount of money.
+ */
+export function parseMoneyExtension(raw: unknown): MoneyRef | undefined {
+  if (!isRecord(raw)) return undefined;
+  const currency = raw["currency"];
+  const currencyField = raw["currency_field"];
+  if (typeof currency === "string" && currency !== "") return { currency };
+  if (typeof currencyField === "string" && currencyField !== "") return { currencyField };
+  return undefined;
 }
 
 /** `x-karni-transitions` (state → next states) and `x-karni-initial`, when well formed. */
@@ -397,6 +412,8 @@ function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo 
 
   const storage = resolved["x-karni-storage"] ?? raw["x-karni-storage"];
   if (isRecord(storage) && storage["protected"] === true) info.protectedFile = true;
+  const money = parseMoneyExtension(resolved["x-karni-money"] ?? raw["x-karni-money"]);
+  if (money !== undefined) info.money = money;
 
   // drf-spectacular nullable/blank enums: oneOf [XEnum, BlankEnum?, NullEnum?].
   const composition = resolved.oneOf ?? resolved.anyOf;
@@ -560,6 +577,8 @@ function mergeField(
   if (tree !== undefined && relation !== undefined) field.tree = tree;
   const taxonomy = responseInfo?.taxonomy ?? requestInfo?.taxonomy;
   if (taxonomy !== undefined && relation !== undefined) field.taxonomy = taxonomy;
+  const money = responseInfo?.money ?? requestInfo?.money;
+  if (money !== undefined) field.money = money;
   if (responseInfo?.protectedFile === true || requestInfo?.protectedFile === true) {
     field.protected = true;
   }

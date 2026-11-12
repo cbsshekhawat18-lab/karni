@@ -30,7 +30,7 @@ import { isAuditField, partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
 import { EmptyValue } from "../empty-value";
 import { isMarkdownField, markdownExcerpt } from "../markdown-field";
-import { formatNumberValue } from "../number-value";
+import { formatMoneyValue, formatNumberValue } from "../number-value";
 import { asRecord, enumLabel } from "./table-utils";
 
 /** Per-field override merged over the schema-derived column. */
@@ -148,9 +148,12 @@ export function renderFieldCell(
   field: FieldDef,
   value: unknown,
   getRowLabel?: RowLabeler,
+  row?: Readonly<Record<string, unknown>> | null,
 ): React.ReactNode {
   // The same empty rendering as ResourceDetail: a dash, read as "empty".
   if (value === null || value === undefined || value === "") return <EmptyValue />;
+  const money = formatMoneyValue(field, value, row);
+  if (money !== null) return <span className="tabular-nums">{money}</span>;
   switch (field.kind) {
     case "boolean":
       return <BooleanCell value={value === true} />;
@@ -218,7 +221,13 @@ function columnForField<T>(
     cell:
       customCell !== undefined
         ? (ctx) => customCell(ctx.row.original)
-        : (ctx) => renderFieldCell(field, ctx.getValue(), getRowLabel),
+        : (ctx) =>
+            renderFieldCell(
+              field,
+              ctx.getValue(),
+              getRowLabel,
+              ctx.row.original as Readonly<Record<string, unknown>>,
+            ),
     enableSorting: override?.sortable ?? !UNSORTABLE_KINDS.has(field.kind),
   };
 }
