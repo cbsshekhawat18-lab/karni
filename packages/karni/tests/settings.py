@@ -71,6 +71,8 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # Typed field layer (karni.fields): portable fields, no viewsets.
     "tests.fieldsapp",
     "tests.lifecycleapp",
+    # Rules every write keeps (karni.rules): viewsets mounted by its own URLconf only.
+    "tests.rulesapp",
     # Required FileField and ImageField (assert_crud's uploads), no routed viewsets.
     "tests.uploadsapp",
     # Content loading (karni load): no viewsets, so the API never sees it.

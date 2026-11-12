@@ -3027,6 +3027,84 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Use PostgreSQL wherever overlaps matter (production, CI). Silence karni.W980 only for a "
         "development database where accepting overlaps is fine.",
     ),
+    # E990-E998 rules every write keeps (karni.rules, class Karni: bounds, unique, targets,
+    # frozen, delete, moves; row actions, experimental)
+    _e(
+        "E990",
+        "A value is outside the bounds of its field",
+        "exception",
+        "karni.rules (class Karni: bounds); the API's serializer limits",
+        "class Karni: bounds gives a number, date or datetime field its lowest and highest "
+        "value ($now and $today for dates). A value written new or changed outside them is "
+        "refused before any SQL: from the API (a 400 on the field), the admin (a form error) "
+        "and the ORM. A value that was stored before the rule existed is not checked again "
+        "until it changes.",
+        "Send a value inside the bounds the message names, or change the bound in class Karni "
+        "(karni.yaml: bounds) if the rule is wrong.",
+    ),
+    _e(
+        "E991",
+        "A row with the same values already exists",
+        "exception",
+        "karni.rules (class Karni: unique); karni.rules.UniqueRule",
+        "class Karni: unique makes the fields unique among the live rows (and, with where, "
+        "among the rows that match it), with a partial unique index PostgreSQL and SQLite "
+        "enforce. Karni checks it before the write (a 400 on the first field), and the index "
+        "refuses a duplicate that two requests write at the same moment (a 409).",
+        "Change one of the values, or cancel or delete the row that holds them first.",
+    ),
+    _e(
+        "E993",
+        "A relation points at a row its rule does not allow",
+        "exception",
+        "karni.rules (class Karni: targets)",
+        "class Karni: targets says which rows a foreign key may point at: a row filter on the "
+        "target, with $me (the signed-in user), $now, $today and $<field> (a field of the row "
+        "being written, so two relations agree). A key that points elsewhere is refused with a "
+        "400 on the field.",
+        "Point the field at a row that matches the filter the message names (an active "
+        "listing, a course of yours, a contact of the deal's company).",
+    ),
+    _e(
+        "E994",
+        "A field cannot change",
+        "exception",
+        "karni.rules (class Karni: frozen)",
+        "class Karni: frozen names fields that are set on create and never change (true), or "
+        "that cannot change while the stored row matches a row filter (a won deal's value). "
+        "Changing one would break what was decided from it (a reserved place, a paid amount).",
+        "Leave the field as it is, or create a new row (a new booking for another slot).",
+    ),
+    _e(
+        "E995",
+        "The row cannot be deleted now",
+        "exception",
+        "karni.rules (class Karni: delete)",
+        "class Karni: delete keeps a row while related rows point at it (blocked_by) or while "
+        "it is not in a deletable state (when). Deleting it would leave orphans or erase a "
+        "record that money or people depend on. The API answers 409.",
+        "Delete or move the related rows the message counts first, or move the row to a state "
+        "where it may be deleted (cancel it).",
+    ),
+    _e(
+        "E996",
+        "A move into a state misses what it needs",
+        "exception",
+        "karni.rules (class Karni: moves)",
+        "class Karni: moves says what a move into a state (or a boolean becoming true) "
+        "requires: fields that must hold a value (a lost reason) and related rows that must "
+        "exist (a lesson before publishing). The move is refused with a 400 naming the field.",
+        "Send the field the message names with the move, or add the related row first.",
+    ),
+    _e(
+        "E998",
+        "A rule of class Karni is declared wrongly",
+        "check",
+        "karni.rules.rules_of; karni.checks.check_rules",
+        "bounds, unique, targets, frozen, delete and moves must name fields and relations the "
+        "model has, with values of the right kind, so a rule never silently checks nothing.",
+        "Fix the declaration the message names (karni.yaml: the entity's key of that name).",
+    ),
     # E430-E449 / W590-W599 cross-model search (karni.global_search, experimental)
     _e(
         "E430",

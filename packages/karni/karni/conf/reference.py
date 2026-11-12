@@ -164,6 +164,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_SEED_BULK_THRESHOLD": "Experimental. Rows per model from which `karni seed` inserts in bulk (a large `seed` count of `karni.yaml`). `karni seed --volume` always does. See [volume seeding](seeding.md#volume-seeding).",
     "KARNI_SEED_BATCH_SIZE": "Experimental. Rows per bulk insert of `karni seed` (`--batch-size` overrides it).",
     "KARNI_SEED_LEDGER": "Experimental. `karni seed` records the row count each table holds after a run in `.karni/local/seeded.json`, and `--volume` refuses a table holding rows no seed run left there. `False` turns it off, a path moves it.",
+    "KARNI_RULES_CLOCK_SKEW": "Experimental. Seconds a `$now` bound of `class Karni: bounds` forgives, so a browser clock a little ahead or behind the server is not refused. See [rules](rules.md#bounds).",
     "KARNI_EXPLAIN_SEQ_SCAN_ROWS": "Experimental. `karni queries --explain` flags each sequential scan on a table of this many rows or more, with the index that would serve it (PostgreSQL).",
     "KARNI_SCOPES": "The active model scopes in pipeline order. Leaving it unset runs every registered scope. See [models](models.md#scopes-the-filters-every-default-manager-applies).",
     "KARNI_PAYMENTS_PROVIDER": "karni-payments: `stripe`, `razorpay`, `test` or a dotted `PaymentProvider` path.",

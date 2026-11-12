@@ -577,6 +577,22 @@ def check_dashboards(app_configs: Any = None, **kwargs: Any) -> list[checks.Chec
 
 
 @checks.register(checks.Tags.models)
+def check_rules(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E998: every rule of ``class Karni`` (bounds, unique, targets, ...) can work."""
+    from karni.rules import rules_of
+
+    configs = app_configs if app_configs is not None else apps.get_app_configs()
+    messages: list[checks.CheckMessage] = []
+    for config in configs:
+        for model in config.get_models():
+            try:
+                rules_of(model)
+            except KarniError as exc:
+                messages.append(_as_check(exc, model))
+    return messages
+
+
+@checks.register(checks.Tags.models)
 def check_global_search(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
     """karni.E430: every ``Karni.search`` declaration names text fields and a real title."""
     from karni.global_search import search_declaration
