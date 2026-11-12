@@ -59,7 +59,6 @@ class Product(karni.Product):
             },
             "recent": 0,
         }
-        search = {"fields": ["name", "sku"], "title": "name", "subtitle": "sku"}
 
     def on_sale(self, at: datetime | None = None) -> bool:
         moment = at or timezone.now()

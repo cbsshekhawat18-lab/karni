@@ -95,7 +95,30 @@ class Record:
 
     def managed(self) -> Managed:
         """What the plan needs to mark each change managed or not."""
-        return Managed(frozenset(self.entities), frozenset(self.pages), frozenset(self.adopted))
+        return Managed(
+            frozenset(self.entities),
+            frozenset(self.pages),
+            frozenset(self.adopted),
+            self.recipe_pages(),
+        )
+
+    def recipe_pages(self) -> frozenset[str]:
+        """The code pages the next build writes from :attr:`recipe`: its routes at ``/<name>``."""
+        if not self.recipe:
+            return frozenset()
+        from karni_cli import recipes
+
+        try:
+            found = recipes.load().get(self.recipe)
+        except CliError:
+            return frozenset()
+        if found is None:
+            return frozenset()
+        return frozenset(
+            route.path[1:]
+            for route in found.routes
+            if route.path.count("/") == 1 and "$" not in route.path
+        )
 
     def as_dict(self) -> dict[str, Any]:
         return {

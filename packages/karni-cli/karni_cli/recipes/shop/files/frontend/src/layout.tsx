@@ -44,7 +44,6 @@ function BackOffice() {
     <Layout
       navSource="server"
       pathname={pathname}
-      navItems={[{ label: "Storefront", href: "/shop" }]}
       mobileNavOpen={navOpen}
       onMobileNavOpenChange={setNavOpen}
       sidebarHeader={
@@ -55,6 +54,13 @@ function BackOffice() {
       }
       sidebarFooter={
         <div className="space-y-1">
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => router.history.push("/shop")}
+          >
+            Storefront
+          </Button>
           {status === "authenticated" ? (
             <Button
               variant="ghost"

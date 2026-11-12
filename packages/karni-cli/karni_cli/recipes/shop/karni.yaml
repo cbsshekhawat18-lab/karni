@@ -75,6 +75,7 @@ apps:
         taxonomies: {categories: Category}
         key: slug
         search: [name, sku, short_description, description]
+        global_search: {fields: [name, sku], title: name, subtitle: sku}
         order: name
         groups:
           Product: [name, slug, sku, short_description, description, image, active, featured, tags]
@@ -103,10 +104,17 @@ pages:
   - Product: [list, detail, form]
   - Category: [list, form]
   - Tag: [list, form]
+  # The pages of the recipe's own files (recipe.toml [[routes]]): the storefront and the
+  # family pages, each a code page of the project.
   - shop: code
+  - cart: code
+  - checkout: code
+  - orders: code
+  - account: code
+  - signin: code
+  - terms: code
 navigation:
   - home: {label: Dashboard, icon: dashboard, requires: "shop.shipment:change"}
   - Shipment: {label: Shipments, icon: list, requires: "shop.shipment:change"}
   - Catalogue: {icon: box, requires: "shop.product:change", items: [Product, Category, Tag]}
-  - shop: {label: Storefront, icon: grid, requires: public}
 seed: {Category: 15, Tag: 8, Product: 40, ProductImage: 60, Shipment: 20}

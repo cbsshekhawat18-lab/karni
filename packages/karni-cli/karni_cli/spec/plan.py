@@ -221,11 +221,15 @@ class Managed:
     ``adopted`` the Karni-owned files and blocks handed to the project with
     ``karni build --adopt``. A change on anything else that already exists is
     not managed. Something new (an entity, a page, a module) is managed.
+    ``recipe_pages`` are the code pages the next build writes from the recipe
+    ``karni new --recipe`` named (its ``[[routes]]`` at ``/<name>``):
+    adding one is managed.
     """
 
     entities: frozenset[str] = frozenset()
     pages: frozenset[str] = frozenset()
     adopted: frozenset[str] = frozenset()
+    recipe_pages: frozenset[str] = frozenset()
 
 
 @dataclass
@@ -1345,6 +1349,8 @@ def _page_managed(
     after = schema.page_kind_names(
         next((k for e in ctx.desired["pages"] for n, k in e.items() if n == name), [])
     )
+    if change.action == "add" and "code" in after and name in managed.recipe_pages:
+        return True  # the recipe's own page, which the next build writes (karni new --recipe)
     if change.action == "add" and ("code" in after or ("dashboard" in after and name == "home")):
         return False  # the project's page (code), or the scaffold's home page (dashboard)
     dropped = [kind for kind in schema.page_kind_names(before) if kind not in after]

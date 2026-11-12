@@ -472,3 +472,14 @@ def test_the_blank_start_writes_only_the_name(
     }
     assert not (root / ".karni" / "build.json").exists()
     assert "Blank start: wrote karni.yaml" in result.output
+
+
+def test_the_recipe_named_for_the_next_build_manages_its_own_route_pages() -> None:
+    """A code page at a recipe route's path is the recipe's: the first build writes it."""
+    from karni_cli.builder.record import Record
+
+    assert Record(recipe="shop").recipe_pages() == frozenset(
+        {"shop", "cart", "checkout", "orders", "account", "signin", "terms"}
+    )
+    assert Record().recipe_pages() == frozenset()
+    assert Record(recipe="no-such-recipe").recipe_pages() == frozenset()
