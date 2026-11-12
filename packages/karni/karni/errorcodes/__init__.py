@@ -32,7 +32,8 @@ tree models (``karni.tree``) · ``E49x``/``W62x`` the tree scope
 (``karni.taxonomy``) · ``E38x``/``W57x``
 aggregations (``karni.aggregation``) · ``E43x``/``W59x`` cross-model search
 (``karni.global_search``) · ``E55x`` field groups and column sets
-(``karni.layout``).
+(``karni.layout``) · ``E25x`` the people contract
+(``karni.people``).
 ``SUG001`` to ``SUG099`` suggestions from code (``karni.suggestions``): what
 ``karni check`` and ``karni doctor`` print after the errors and warnings, never a
 failure. The prefix has three letters because the registry's code pattern reads
@@ -1037,6 +1038,119 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "while it was set answers 404 with this code once it is unset.",
         'Set KARNI_TERMS = {"version": "<version>", "url": "<where the terms are>"} to ask '
         "users to accept terms, or remove the client's call.",
+    ),
+    # E250-E259 the people contract (karni.people, experimental)
+    _e(
+        "E250",
+        "A merge of two people who both have an account",
+        "exception",
+        "karni.people.merge (MergeRefused, HTTP 409)",
+        "A person is linked to at most one account. Merging two people who each have one "
+        "would have to merge the accounts too: their passwords, roles and sign-ins, which "
+        "only a person can decide.",
+        "Merge the accounts first, by hand: deactivate or delete one account (or unlink it "
+        "from its person), then merge the people.",
+    ),
+    _e(
+        "E251",
+        "A merge clash that only a merge hook can resolve",
+        "exception",
+        "karni.people.merge (MergeRefused, HTTP 409), karni.people.merge_plan",
+        "Both records have a one-to-one row of the same model (two CRM profiles), or moving "
+        "the dropped record's rows breaks a unique rule of their model (two bookings for one "
+        "slot). Karni cannot know which row wins, so it refuses instead of guessing.",
+        "Register a merge hook for the model named in the message, in its app's people.py: "
+        "@people.merge_hook(Model) def merge(keep, drop): fold the dropped record's row into "
+        "the kept one and delete it. Or skip the model with KARNI_PEOPLE_MERGE_SKIP.",
+    ),
+    _e(
+        "E252",
+        "A merge or an erase of records it does not take",
+        "exception",
+        "karni.people.merge, karni.people.merge_plan, karni.people.erase",
+        "A merge takes two live records of the same kind (two people or two organisations) "
+        "that are not the same row, and an erase takes a person. A deleted or already merged "
+        "record has nothing left to merge.",
+        "Pass two different live people (or organisations). To merge into a record that was "
+        "merged already, merge into the record it points at (merged_into).",
+    ),
+    _e(
+        "E253",
+        "people.resolve() cannot run",
+        "exception",
+        "karni.people.resolve, karni.people.get_resolver (KARNI_PEOPLE_RESOLVER)",
+        "One email is one person, so a person is found or created by an account or an email, "
+        "never by a name alone. The resolver itself comes from KARNI_PEOPLE_RESOLVER.",
+        "Pass user= (a signed-in user) or email=. Point KARNI_PEOPLE_RESOLVER at "
+        "karni.people.services.Resolver or a subclass of it.",
+    ),
+    _e(
+        "E254",
+        "Another person has this email",
+        "api",
+        "karni.people.models.Person.clean (the API and the admin)",
+        "Email is the identity of a person: one live person per email, kept in lower case, so "
+        "every part finds the same person for the same address.",
+        "Open the person who has the email instead, or merge the two people "
+        "(people.merge, POST /api/people/<id>/merge/).",
+    ),
+    _e(
+        "E255",
+        "The email of a person with an account changes through the account",
+        "api",
+        "karni.people.models.Person.clean (the API and the admin)",
+        "A person linked to an account has the account's verified email. Changing it on the "
+        "person alone would let anyone with write access point the person at an address "
+        "nobody verified.",
+        "Change the email through the account (the email change flow verifies the new "
+        "address), or unlink the account first.",
+    ),
+    _e(
+        "E256",
+        "A value the people tables do not take",
+        "api",
+        "karni.people.models (clean of Person, Address, Membership)",
+        "A person's time zone is an IANA name and its language a language tag, an address "
+        "belongs to exactly one owner (a person or an organisation), and a person is a "
+        "member of an organisation once.",
+        "Use a time zone such as Europe/Paris and a language such as en or pt-BR; set "
+        "exactly one of person and organisation on an address; change the existing "
+        "membership instead of adding a second one.",
+    ),
+    _e(
+        "E257",
+        "A person fact, merge hook, erase hook or duplicate rule cannot be registered",
+        "exception",
+        "karni.people.registry (register_fact, merge_hook, erase_hook, "
+        "register_duplicate_rule, annotate_facts, duplicates)",
+        "Facts become annotations, filters and orderings on Person, so a fact's name must "
+        "be an identifier that is not a Person field, and every contribution has one owner: "
+        "a second registration under a taken name would silently replace the first.",
+        "Name the fact after what it measures (orders, total_spent), give a second "
+        "contribution its own name, or pass replace=True to swap one on purpose. Ask only "
+        "for registered facts and rules (people.facts(), people.duplicate_rules()).",
+    ),
+    _e(
+        "E258",
+        "An account cannot be linked to this person",
+        "exception",
+        "karni.people.link_account",
+        "An account is linked to a person only after its email is verified, only to the "
+        "person with that email, and a person has one account. Otherwise anyone could take "
+        "over a guest's orders by signing up with their address.",
+        "Verify the account's email first (the verification link, a sign-in code or a "
+        "provider that verified it), link it to the person with the same email, and merge "
+        "the accounts by hand when the person has another one.",
+    ),
+    _e(
+        "E259",
+        "A people event that is not declared",
+        "exception",
+        "karni.people.events.publish, karni.people.events.signal_for",
+        "The people contract's events are declared with their fields (karni.people.events."
+        "EVENTS), so every subscriber gets the same payload.",
+        "Publish one of the declared events (people.person.created, linked, merged, erased, "
+        "people.organisation.created, merged) with exactly its declared fields.",
     ),
     # E260-E269: command-line input the management commands refuse
     _e(
