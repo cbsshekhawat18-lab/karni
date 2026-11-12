@@ -879,7 +879,12 @@ def _limit(found: Any, value: Any, ctx: _Context, *, low: bool) -> Any:
             return start if low else start + dt.timedelta(days=1) - dt.timedelta(microseconds=1)
     elif isinstance(found, models.DateField) and value in (NOW, TODAY):
         return timezone.localdate(ctx.now)
-    return found.to_python(value)
+    return found.to_python(_exact(value))
+
+
+def _exact(value: Any) -> Any:
+    """A bound as written, a float as its text (money takes no binary float, ``E962``)."""
+    return str(value) if isinstance(value, float) else value
 
 
 def _shown_limit(value: Any) -> str:
@@ -930,8 +935,8 @@ def number_limits(model_field: Any) -> tuple[Any, Any]:
         return None, None
     for bound in bounds:
         if bound.field == model_field.name:
-            low = None if bound.min is None else model_field.to_python(bound.min)
-            high = None if bound.max is None else model_field.to_python(bound.max)
+            low = None if bound.min is None else model_field.to_python(_exact(bound.min))
+            high = None if bound.max is None else model_field.to_python(_exact(bound.max))
             return low, high
     return None, None
 

@@ -278,3 +278,16 @@ def test_factories_make_related_rows_that_fit_the_targets() -> None:
     assert review.item == review.purchase.item
     purchase = create(Purchase)
     assert purchase.item.active is True
+
+
+def test_a_money_bound_written_as_a_float_is_exact(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Item.Karni, "bounds", {"price": {"min": 0.01}})
+    rules.clear_caches()
+    try:
+        shop = Shop.objects.create(owner=_user("float@example.com"), name="F")
+        with _refused("E990", "price"):
+            Item.objects.create(shop=shop, title="Free", price=Decimal("0"))
+        Item.objects.create(shop=shop, title="Cent", price=Decimal("0.01"))
+    finally:
+        monkeypatch.undo()
+        rules.clear_caches()

@@ -308,11 +308,46 @@ def owner_values(declaration: Any, model: type[models.Model], user: Any) -> dict
         if getattr(relation, "many_to_many", False) and "__" not in owned.path:
             found[owned.path] = [user]
         elif getattr(relation, "concrete", False):
-            found[owned.path] = user
+            mine = _one_per_user(model, owned.path, user)
+            if mine is not None:
+                found[mine[0]] = mine[1]  # one shop per person (class Karni: unique): theirs
+            else:
+                found[owned.path] = user
     leaves = predicate_leaves(declaration.read)
     if user is not None and any(isinstance(leaf, Granted | Can) for leaf in leaves):
         found.update(granted_values(model, user))
     return found
+
+
+def _one_per_user(model: type[models.Model], path: str, user: Any) -> tuple[str, Any] | None:
+    """``(path to the row, the row)`` ``user`` already has where ``path`` ends on a model unique
+    per user, else ``None``.
+
+    ``listing__seller__user`` on an order, where a seller is unique on ``user``
+    (``class Karni: unique``): the order's listing goes into the user's one shop.
+    """
+    from karni.errorcodes import KarniError
+    from karni.rules import rules_of
+
+    parts = path.split("__")
+    if len(parts) < 2:
+        return None
+    current: Any = model
+    for part in parts[:-1]:
+        try:
+            current = current._meta.get_field(part).related_model
+        except FieldDoesNotExist:
+            return None
+        if current is None:
+            return None
+    try:
+        unique = rules_of(current).unique
+    except KarniError:
+        return None
+    if not any(entry.fields == (parts[-1],) and not entry.where for entry in unique):
+        return None
+    row = current._default_manager.filter(**{parts[-1]: user}).first()
+    return None if row is None else ("__".join(parts[:-1]), row)
 
 
 def granted_values(model: type[models.Model], user: Any) -> dict[str, Any]:
@@ -369,7 +404,17 @@ def readable_row(model: type[models.Model], user: Any, **values: Any) -> Any:
         return user_with_roles()
     viewset = viewset_for_model(model)
     owned = owner_values(getattr(viewset, "access", None), model, user) if viewset else {}
+    owned = {  # a value given for the same relation (seller__user, seller) wins
+        key: value
+        for key, value in owned.items()
+        if not any(_overlaps(key, given) for given in values)
+    }
     return create(model, **{**owned, **values})
+
+
+def _overlaps(one: str, other: str) -> bool:
+    """Whether two factory paths set the same relation (``seller`` and ``seller__user``)."""
+    return one == other or one.startswith(f"{other}__") or other.startswith(f"{one}__")
 
 
 # what the declaration promises
@@ -659,10 +704,10 @@ def _fitting_row(
     rule = _target_rule(model, name) or {}
     values: dict[str, Any] = {}
     for key, value in rule.items():
-        if "__" in key or isinstance(value, list):
-            continue
         if value == {"not": "$me"}:
-            values[key] = user_with_roles()
+            values[key] = user_with_roles()  # someone else's (seller__user: another seller)
+            continue
+        if "__" in key or isinstance(value, list):
             continue
         if isinstance(value, dict):
             continue
