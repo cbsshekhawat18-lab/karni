@@ -22,6 +22,19 @@ actions and :mod:`karni_commerce.services`: the standard writes answer 405.
 Staff with ``karni_commerce.order:change`` cancel an order, and staff who may
 also add a refund (``karni_commerce.orderrefund:add``) refund one.
 
+Staff (``karni_commerce.order:view``, the rows their grants give):
+
+* ``GET orders/{id}/staff/``: the order with every note, its payments and
+  refunds, the buyer and what may be done with it now.
+* ``POST orders/{id}/notes/``: ``{body, kind}`` writes a note (``order:change``).
+  A note to the customer is emailed to them.
+* ``POST orders/manual/``: an order placed by hand for a buyer (``order:add``),
+  waiting for their payment, with the link emailed to them.
+* ``GET orders/items/?kind=&search=``: what may go on such an order.
+* ``GET orders/customers/?search=&ordering=``: the buyers, one row per email,
+  and ``GET orders/customer/?email=``: one buyer's page
+  (:mod:`karni_commerce.customers`, a seam ``karni.people`` replaces).
+
 Override / escape hatch: subclass a viewset, set ``auto_register = False`` on
 this one, and register yours. ``TOKEN_HEADER`` names the cart header.
 """
@@ -49,14 +62,23 @@ from karni_commerce.api import (
     CartSerializer,
     CheckoutResultSerializer,
     CheckoutSerializer,
+    CustomerPageSerializer,
+    CustomerRowSerializer,
+    ItemSerializer,
+    ManualOrderSerializer,
+    ManualResultSerializer,
     MergeSerializer,
+    NoteInputSerializer,
     OrderKeySerializer,
+    OrderStaffSerializer,
     OrderViewSerializer,
     PayResultSerializer,
     RefundInputSerializer,
     SetLineSerializer,
 )
+from karni_commerce.customers import customers_backend
 from karni_commerce.models import Cart, CartLine, Order, OrderLine, OrderPayment, OrderRefund
+from karni_commerce.sellables import kinds
 
 __all__ = [
     "TOKEN_HEADER",
@@ -192,12 +214,19 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
     query_budget = Budget(
         cancel=40,
         refund=40,
-        reason="cancelling and refunding run each line's adapter and the selling apps' "
-        "listeners (a parcel cancelled, stock back on the shelf): a few queries per line",
+        pay=25,
+        manual=80,
+        staff=30,
+        notes=20,
+        reason="cancelling, refunding and placing an order run each line's adapter and the "
+        "selling apps' listeners (a parcel cancelled, stock back on the shelf, each line "
+        "held): a few queries per line, and each move of the order is in its history. The "
+        "staff view reads the payments, refunds, notes and the buyer's totals: one query each",
     )
     filterset_fields = {
         "status": ["exact", "in"],
         "currency": ["exact"],
+        "email": ["exact", "iexact"],
         "user": ["exact"],
         "needs_shipping": ["exact"],
         "created_at": ["gte", "lte"],
@@ -300,6 +329,156 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
         )
         order.refresh_from_db()
         return Response(OrderViewSerializer(order, context={"request": request}).data)
+
+    # -- staff ----------------------------------------------------------------------------
+
+    def _staff_view(self, request: Request, order: Order) -> Response:
+        context = {"request": request, "orders": self.get_queryset()}
+        return Response(OrderStaffSerializer(order, context=context).data)
+
+    @extend_schema(responses=OrderStaffSerializer)
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="staff",
+        access=Can("karni_commerce.order:view"),
+    )
+    def staff(self, request: Request, pk: Any = None) -> Response:
+        """The order as staff read it: notes, payments, refunds, the buyer, the moves left."""
+        return self._staff_view(request, self.get_object())
+
+    @extend_schema(request=NoteInputSerializer, responses=OrderStaffSerializer)
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="notes",
+        access=Can("karni_commerce.order:change"),
+    )
+    def notes(self, request: Request, pk: Any = None) -> Response:
+        """Write a note: for the staff, or to the customer (who gets it by email too)."""
+        body = NoteInputSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        order = self.get_object()
+        services.add_note(
+            order,
+            body.validated_data["body"],
+            kind=body.validated_data["kind"],
+            author=request.user,
+        )
+        return self._staff_view(request, order)
+
+    @extend_schema(request=ManualOrderSerializer, responses={201: ManualResultSerializer})
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="manual",
+        access=Can("karni_commerce.order:add"),
+    )
+    def manual(self, request: Request) -> Response:
+        """Place an order for a buyer by hand (a phone order). It waits for their payment."""
+        body = ManualOrderSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        billing = dict(data["billing"])
+        order = services.place_manual_order(
+            [
+                (line["kind"], line["item"], line["quantity"], line["options"])
+                for line in data["lines"]
+            ],
+            staff=request.user,
+            email=data["email"],
+            name=data["name"] or billing.get("name", ""),
+            billing=billing,
+            shipping=dict(data["shipping"] or billing),
+            note=data["note"],
+            send_link=data["send_link"],
+        )
+        result = {"id": str(order.pk), "number": order.number, "link": services.order_link(order)}
+        return Response(ManualResultSerializer(result).data, status=201)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("kind", str, description="One kind (blank: every kind)."),
+            OpenApiParameter("search", str, description="Text in the item's search fields."),
+        ],
+        responses=ItemSerializer(many=True),
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="items",
+        access=Can("karni_commerce.order:add"),
+    )
+    def items(self, request: Request) -> Response:
+        """What staff may put on an order placed by hand: at most 20 items, priced today."""
+        wanted = str(request.query_params.get("kind", "") or "")
+        text = str(request.query_params.get("search", "") or "")
+        found: list[dict[str, Any]] = []
+        for kind, adapter in sorted(kinds().items()):
+            if wanted and kind != wanted:
+                continue
+            for item in adapter.search(text)[: 20 - len(found)]:
+                found.append(
+                    {
+                        "kind": kind,
+                        "item": adapter.key(item),
+                        "name": adapter.name(item, {}),
+                        "sku": adapter.sku(item, {}),
+                        "price": f"{services.money(adapter.price(item, {}, None).unit):.2f}",
+                        "available": adapter.available(item, {}),
+                    }
+                )
+            if len(found) >= 20:
+                break
+        return Response(ItemSerializer(found, many=True).data)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("search", str, description="Text in the email, name or number."),
+            OpenApiParameter(
+                "ordering",
+                str,
+                description="last_order, first_order, orders, spent, email or name (- first: "
+                "the other way).",
+            ),
+        ],
+        responses=CustomerRowSerializer(many=True),
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="customers",
+        access=Can("karni_commerce.order:view"),
+    )
+    def customers(self, request: Request) -> Response:
+        """The buyers of the orders the caller may read: one row per email, paged."""
+        rows = customers_backend().customers(
+            self.get_queryset(),
+            search=str(request.query_params.get("search", "") or ""),
+            ordering=str(request.query_params.get("ordering", "") or "-last_order"),
+        )
+        page = self.paginate_queryset(rows)
+        if page is not None:
+            return self.get_paginated_response(CustomerRowSerializer(page, many=True).data)
+        return Response(CustomerRowSerializer(rows, many=True).data)
+
+    @extend_schema(
+        parameters=[OpenApiParameter("email", str, required=True)],
+        responses=CustomerPageSerializer,
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="customer",
+        access=Can("karni_commerce.order:view"),
+    )
+    def customer(self, request: Request) -> Response:
+        """One buyer: their orders, what they spent, their addresses and their account."""
+        email = str(request.query_params.get("email", "") or "")
+        found = customers_backend().customer(self.get_queryset(), email) if email else None
+        if found is None:
+            raise NotFound("No customer with that email.")
+        return Response(CustomerPageSerializer(found).data)
 
 
 class OrderLineViewSet(_ReadOnly, BaseViewSet):

@@ -13,7 +13,7 @@ from karni_payments.events import payment_status_changed, refund_status_changed
 from karni_payments.models import Payment, Refund
 
 from karni_commerce import events, messages, services
-from karni_commerce.models import Order, OrderRefund
+from karni_commerce.models import Order, OrderNote, OrderRefund
 
 
 @receiver(payment_status_changed)
@@ -54,3 +54,10 @@ def say_it_was_cancelled(sender: Any, order: Order, **kwargs: Any) -> None:
 @receiver(events.order_refunded)
 def say_it_was_refunded(sender: Any, order: Order, refund: OrderRefund, **kwargs: Any) -> None:
     _mail("commerce.order_refunded", order, refund=refund)
+
+
+@receiver(events.order_note_added)
+def send_the_note(sender: Any, order: Order, note: OrderNote, **kwargs: Any) -> None:
+    """A note to the customer goes to the buyer by email. An internal note stays here."""
+    if note.kind == OrderNote.Kind.CUSTOMER:
+        _mail("commerce.order_note", order, note=note)

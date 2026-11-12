@@ -5,6 +5,9 @@
   an order is paid and waits to be fulfilled.
 * ``commerce.order_cancelled``, to the buyer: the order was cancelled.
 * ``commerce.order_refunded``, to the buyer: a refund went through.
+* ``commerce.order_note``, to the buyer: staff wrote a note to the customer.
+* ``commerce.payment_request``, to the buyer: staff placed an order for them
+  (a phone order) and ask for its payment, with the link to pay.
 
 An order waiting for its payment sends nothing: most never-paid orders are
 a person who changed their mind.
@@ -38,6 +41,8 @@ KINDS: dict[str, tuple[str, str]] = {
     "commerce.new_order": ("karni_commerce/email/new_order", "staff"),
     "commerce.order_cancelled": ("karni_commerce/email/order_cancelled", "buyer"),
     "commerce.order_refunded": ("karni_commerce/email/order_refunded", "buyer"),
+    "commerce.order_note": ("karni_commerce/email/order_note", "buyer"),
+    "commerce.payment_request": ("karni_commerce/email/payment_request", "buyer"),
 }
 
 

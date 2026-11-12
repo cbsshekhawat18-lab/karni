@@ -39,6 +39,18 @@ DEFAULTS: dict[str, Any] = {
     "KARNI_COMMERCE_ORDER_PATH": env(
         "KARNI_COMMERCE_ORDER_PATH", default="/orders/{number}?key={key}"
     ),
+    # How long an order staff place by hand (a phone order) holds its items for
+    # the buyer's payment, in minutes. Two days by default.
+    "KARNI_COMMERCE_MANUAL_HOLD_MINUTES": env.int(
+        "KARNI_COMMERCE_MANUAL_HOLD_MINUTES", default=2880
+    ),
+    # The dotted path of the class behind the staff's customers list and
+    # customer page: customers(orders, search, ordering) and customer(orders,
+    # email). The default groups the orders by the buyer's email; karni.people
+    # replaces it with the people of the project.
+    "KARNI_COMMERCE_CUSTOMERS": env(
+        "KARNI_COMMERCE_CUSTOMERS", default="karni_commerce.customers.OrderCustomers"
+    ),
     # Who gets the new-order email (commerce.new_order): a list of
     # addresses. Empty (the default) sends none.
     "KARNI_COMMERCE_STAFF_EMAILS": env.list("KARNI_COMMERCE_STAFF_EMAILS", default=[]),

@@ -30,6 +30,7 @@ __all__ = [
     "cart_merged",
     "order_cancelled",
     "order_failed",
+    "order_note_added",
     "order_paid",
     "order_part_paid",
     "order_placed",
@@ -50,6 +51,9 @@ order_cancelled = Signal()
 #: A refund of the order went through: ``order``, ``refund`` (an OrderRefund), ``amount``,
 #: ``full`` (True when everything paid went back).
 order_refunded = Signal()
+#: Staff wrote a note on the order: ``order``, ``note`` (an OrderNote; ``note.kind`` is
+#: ``internal`` or ``customer``).
+order_note_added = Signal()
 #: A visitor's cart joined the cart of the person who signed in: ``cart``, ``user``.
 cart_merged = Signal()
 #: A person who signed in with a verified email got the orders placed as a guest with it:

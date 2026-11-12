@@ -1,0 +1,8 @@
+{% if order.buyer_name %}Hello {{ order.buyer_name }},{% else %}Hello,{% endif %}
+
+We have put together order {{ order.number }} for you:
+
+{% include "karni_commerce/email/_lines.txt" %}
+Pay for it here: {{ link }}
+
+We keep the items for you until {{ order.hold_until|date:"j F Y, H:i" }}.

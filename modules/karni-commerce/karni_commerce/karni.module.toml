@@ -19,7 +19,7 @@ services = ["a Celery worker: payments settle orders through webhook tasks"]
 docs = "docs/commerce.md"
 
 [provides]
-models = ["Cart", "CartLine", "Order", "OrderLine", "OrderPayment", "OrderRefund"]
+models = ["Cart", "CartLine", "Order", "OrderLine", "OrderNote", "OrderPayment", "OrderRefund"]
 endpoints = [
     "/api/carts/current/",
     "/api/carts/current/lines/",
@@ -30,6 +30,12 @@ endpoints = [
     "/api/orders/pay/",
     "/api/orders/{id}/cancel/",
     "/api/orders/{id}/refund/",
+    "/api/orders/{id}/staff/",
+    "/api/orders/{id}/notes/",
+    "/api/orders/manual/",
+    "/api/orders/items/",
+    "/api/orders/customers/",
+    "/api/orders/customer/",
     "/api/order-lines/",
     "/api/order-payments/",
     "/api/order-refunds/",
@@ -41,6 +47,7 @@ ui = "@karni/commerce-ui"
 [provides.settings]
 KARNI_COMMERCE_CURRENCY = "string"
 KARNI_COMMERCE_HOLD_MINUTES = "integer"
+KARNI_COMMERCE_MANUAL_HOLD_MINUTES = "integer"
 KARNI_COMMERCE_MAX_QUANTITY = "integer"
 KARNI_COMMERCE_FIRST_NUMBER = "integer"
 KARNI_COMMERCE_NUMBER = "string"
@@ -48,6 +55,7 @@ KARNI_COMMERCE_ORDER_PATH = "string"
 KARNI_COMMERCE_STAFF_EMAILS = "array"
 KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR = "string"
 KARNI_COMMERCE_SELLABLES = "object"
+KARNI_COMMERCE_CUSTOMERS = "string"
 
 [[asks]]
 question = "How many minutes does checkout hold an order's items for its payment?"

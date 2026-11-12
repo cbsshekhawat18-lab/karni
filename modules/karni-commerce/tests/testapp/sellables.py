@@ -18,6 +18,7 @@ from tests.testapp.models import Gadget, Workshop
 class GadgetSellable(Sellable):
     kind = "gadget"
     model = Gadget
+    search_fields = ("name", "sku")
 
     def name(self, item: Gadget, options: Any) -> str:
         colour = options.get("colour")

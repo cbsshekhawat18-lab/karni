@@ -101,6 +101,8 @@ class Sellable:
     model: ClassVar[type[models.Model] | str] = ""
     #: Whether another app may offer this kind as an extra to its own (a mat with a class).
     addon: ClassVar[bool] = False
+    #: The text fields staff find an item by when they place an order by hand.
+    search_fields: ClassVar[tuple[str, ...]] = ()
 
     # -- finding items ------------------------------------------------------------------
 
@@ -129,6 +131,24 @@ class Sellable:
     def get(self, key: str) -> Any | None:
         """The item of ``key``, or ``None``."""
         return self.get_many([key]).get(str(key))
+
+    def search(self, text: str) -> models.QuerySet[Any]:
+        """The items staff may pick for an order placed by hand, matching ``text``.
+
+        The default matches ``text`` in :attr:`search_fields` (case blind), and
+        with no text gives every row of :meth:`queryset`. A kind with no
+        ``search_fields`` is not offered to search.
+        """
+        rows = self.queryset()
+        words = text.strip()
+        if not words:
+            return rows
+        if not self.search_fields:
+            return rows.none()
+        query = models.Q()
+        for name in self.search_fields:
+            query |= models.Q(**{f"{name}__icontains": words})
+        return rows.filter(query)
 
     def item_of(self, line: OrderLine) -> Any | None:
         """The item an order line names, or ``None`` when it is gone."""

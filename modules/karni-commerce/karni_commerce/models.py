@@ -35,6 +35,7 @@ __all__ = [
     "CartLine",
     "Order",
     "OrderLine",
+    "OrderNote",
     "OrderPayment",
     "OrderRefund",
     "new_key",
@@ -164,6 +165,8 @@ class Order(BaseModel):
         indexes = [
             models.Index(fields=["status", "hold_until"], name="karni_commerce_order_hold"),
             models.Index(fields=["email"], name="karni_commerce_order_email"),
+            # revenue by day (the dashboard's tiles and chart)
+            models.Index(fields=["paid_at"], name="karni_commerce_order_paid_at"),
         ]
 
     class APIMeta:
@@ -198,6 +201,8 @@ class Order(BaseModel):
         owner_field = "user"
         # A shipment's order column, or any relation to an order, shows its number.
         label = "number"
+        # The order page's history: every move of the money (GET orders/{id}/history/).
+        audit = ["status", "amount_paid", "amount_refunded"]
         # The staff home's tile (docs/api.md, "The staff dashboard"): the orders by
         # money state, those placed today, and the newest.
         dashboard = {
@@ -359,3 +364,34 @@ class OrderRefund(BaseModel):
         """``{order line id: quantity}`` this refund covers."""
         found: dict[str, Any] = dict(self.lines or {})
         return {str(key): int(value) for key, value in found.items()}
+
+
+class OrderNote(BaseModel):
+    """A note on an order: for the staff only, or for the buyer (who gets it by email too)."""
+
+    class Kind(models.TextChoices):
+        INTERNAL = "internal", "Internal"
+        CUSTOMER = "customer", "To the customer"
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="notes")
+    kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.INTERNAL)
+    body = models.TextField()
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="commerce_order_notes",
+    )
+
+    class Meta:
+        ordering = ["created_at"]
+
+    class APIMeta:
+        read_only = ["order", "kind", "body", "author"]
+
+    class Karni:
+        cascade = {"order": "a note is part of its order and goes with it"}
+
+    def __str__(self) -> str:
+        return f"{self.get_kind_display()} note on order {self.order_id}"

@@ -167,6 +167,8 @@ Emails go through [`karni.mail`](#karnimail), each under a kind:
 | `commerce.new_order` | `KARNI_COMMERCE_STAFF_EMAILS` | an order is paid and waits to be fulfilled |
 | `commerce.order_cancelled` | the buyer | the order was cancelled |
 | `commerce.order_refunded` | the buyer | a refund went through |
+| `commerce.order_note` | the buyer | staff wrote them a note on the order |
+| `commerce.payment_request` | the buyer | staff placed an order for them: the link to pay |
 
 An order that waits for its payment sends no email: most orders that are
 never paid are a person who changed their mind, and a "we got your order"
@@ -198,12 +200,45 @@ writes answer 405. Cancelling needs `karni_commerce.order:change`. Refunding
 needs that and `karni_commerce.orderrefund:add` too, so a role can handle
 orders without giving money back.
 
+## The staff's side
+
+Staff read the orders their grants give (`karni_commerce.order:view`):
+
+- `GET /api/orders/?status=&created_at__gte=&email__iexact=&search=`: the
+  list, by money state, date and buyer.
+- `GET /api/orders/{id}/staff/`: one order with every note, its payments
+  and refunds, the buyer (with how many orders and what they spent) and what
+  may be done with it now (`can_cancel`, `can_refund`, `refundable`).
+- `GET /api/orders/{id}/history/`: every move of its money (the order's
+  `status`, `amount_paid` and `amount_refunded` are audited).
+- `POST /api/orders/{id}/notes/` (`order:change`): `{body, kind}`. An
+  `internal` note stays with the staff. A `customer` note shows on the
+  buyer's order page and goes to them by email (`commerce.order_note`).
+- `POST /api/orders/manual/` (`order:add`): an order placed by hand for a
+  buyer who called. The server prices and holds the lines as checkout does,
+  for `KARNI_COMMERCE_MANUAL_HOLD_MINUTES`, the order is the account's whose
+  verified email it names, and the buyer gets the link to pay
+  (`commerce.payment_request`) unless `send_link` is false.
+  `GET /api/orders/items/?kind=&search=` finds what may go on it: an adapter
+  offers its items by its `search_fields`.
+- `GET /api/orders/customers/?search=&ordering=`: the buyers, one row per
+  email, with their orders, what they spent (paid less refunded) and their
+  first and last order, and `GET /api/orders/customer/?email=`: one buyer's
+  orders, addresses and account.
+
+The customers come from `KARNI_COMMERCE_CUSTOMERS`
+(`karni_commerce.customers.OrderCustomers`, which groups the orders by
+email). It is a seam: the family's people contract replaces it with the
+project's people and keeps the two calls.
+
 ## Settings
 
 | Setting | Default | What |
 |---|---|---|
 | `KARNI_COMMERCE_CURRENCY` | blank: the payments currency | the project's currency |
 | `KARNI_COMMERCE_HOLD_MINUTES` | `30` | how long checkout holds an order's items |
+| `KARNI_COMMERCE_MANUAL_HOLD_MINUTES` | `2880` | how long an order staff place by hand holds its items |
+| `KARNI_COMMERCE_CUSTOMERS` | `karni_commerce.customers.OrderCustomers` | the class behind the customers list and page |
 | `KARNI_COMMERCE_MAX_QUANTITY` | `99` | the most of one item a cart line takes |
 | `KARNI_COMMERCE_FIRST_NUMBER` | `1001` | the first order's number |
 | `KARNI_COMMERCE_NUMBER` | blank | a dotted path `number(order) -> int` that replaces the numbering |

@@ -20,11 +20,18 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from karni_commerce import conf, services
-from karni_commerce.models import Order, OrderLine
+from karni_commerce.models import Order, OrderLine, OrderNote
 from karni_commerce.services import PricedLine
 
 __all__ = [
     "AddressSerializer",
+    "CustomerPageSerializer",
+    "CustomerRowSerializer",
+    "ItemSerializer",
+    "ManualOrderSerializer",
+    "ManualResultSerializer",
+    "NoteInputSerializer",
+    "OrderStaffSerializer",
     "CartSerializer",
     "CheckoutResultSerializer",
     "CheckoutSerializer",
@@ -203,6 +210,27 @@ class CancelInputSerializer(serializers.Serializer[Any]):
     reason = serializers.CharField(required=False, allow_blank=True, default="", max_length=255)
 
 
+def person_name(user: Any) -> str:
+    """A user as staff read them: their full name, else their email."""
+    if user is None:
+        return ""
+    full = str(getattr(user, "get_full_name", lambda: "")() or "").strip()
+    return full or str(getattr(user, "email", "") or "")
+
+
+class NoteSerializer(serializers.ModelSerializer[OrderNote]):
+    """A note on an order, with who wrote it (by name)."""
+
+    author_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderNote
+        fields = ["id", "kind", "body", "author_name", "created_at"]
+
+    def get_author_name(self, note: OrderNote) -> str:
+        return person_name(note.author)
+
+
 class FulfilmentSerializer(serializers.Serializer[Any]):
     """One thing a selling app reports about an order's goods (:mod:`karni_commerce.fulfilment`)."""
 
@@ -265,6 +293,7 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
     """An order as its buyer (or the guest with its key) reads it."""
 
     lines = serializers.SerializerMethodField()
+    notes = serializers.SerializerMethodField()
     payable = serializers.SerializerMethodField()
     subtotal = serializers.SerializerMethodField()
     total = serializers.SerializerMethodField()
@@ -295,8 +324,17 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
             "hold_until",
             "payable",
             "lines",
+            "notes",
             "fulfilment",
         ]
+
+    #: The notes the reader may see: the notes to the customer (staff see every note).
+    note_kinds: tuple[str, ...] = ("customer",)
+
+    @extend_schema_field(NoteSerializer(many=True))
+    def get_notes(self, order: Order) -> list[dict[str, Any]]:
+        rows = order.notes.filter(kind__in=self.note_kinds).select_related("author")
+        return list(NoteSerializer(rows, many=True).data)
 
     @extend_schema_field(OrderLineViewSerializer(many=True))
     def get_lines(self, order: Order) -> list[dict[str, Any]]:
@@ -339,3 +377,250 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
         from karni_commerce.fulfilment import report
 
         return report(order)
+
+
+class NoteInputSerializer(serializers.Serializer[Any]):
+    """A note to write: ``internal`` (staff only) or ``customer`` (the buyer gets it too)."""
+
+    body = serializers.CharField(max_length=5000)
+    kind = serializers.ChoiceField(choices=OrderNote.Kind.choices, default=OrderNote.Kind.INTERNAL)
+
+
+class PaymentRowSerializer(serializers.Serializer[Any]):
+    """One payment of an order, as staff read it."""
+
+    id = serializers.CharField()
+    purpose = serializers.CharField()
+    amount = serializers.CharField()
+    status = serializers.CharField()
+    provider = serializers.CharField()
+    created_at = serializers.DateTimeField()
+
+
+class RefundRowSerializer(serializers.Serializer[Any]):
+    """One refund of an order: how much, of which lines, and where it stands."""
+
+    id = serializers.CharField()
+    amount = serializers.CharField()
+    lines = serializers.DictField(child=serializers.IntegerField())
+    restock = serializers.BooleanField()
+    reason = serializers.CharField(allow_blank=True)
+    status = serializers.CharField()
+    settled_at = serializers.DateTimeField(allow_null=True)
+    created_at = serializers.DateTimeField()
+
+
+class BuyerSerializer(serializers.Serializer[Any]):
+    """Who bought: the account (when there is one) and what they bought so far."""
+
+    user = serializers.CharField(allow_null=True)
+    name = serializers.CharField(allow_blank=True)
+    email = serializers.CharField()
+    orders = serializers.IntegerField()
+    spent = serializers.CharField()
+
+
+class OrderStaffSerializer(OrderViewSerializer):
+    """An order as staff read it: the buyer's view, every note, the payments and refunds,
+    the buyer, and what may be done with it now."""
+
+    payments = serializers.SerializerMethodField()
+    refunds = serializers.SerializerMethodField()
+    buyer = serializers.SerializerMethodField()
+    refundable = serializers.SerializerMethodField()
+    can_cancel = serializers.SerializerMethodField()
+    can_refund = serializers.SerializerMethodField()
+
+    class Meta(OrderViewSerializer.Meta):
+        fields = [
+            *OrderViewSerializer.Meta.fields,
+            "payments",
+            "refunds",
+            "buyer",
+            "refundable",
+            "can_cancel",
+            "can_refund",
+        ]
+
+    note_kinds: tuple[str, ...] = ("internal", "customer")
+
+    @extend_schema_field(PaymentRowSerializer(many=True))
+    def get_payments(self, order: Order) -> list[dict[str, Any]]:
+        rows = order.payments.select_related("payment").order_by("created_at")
+        return [
+            {
+                "id": str(row.pk),
+                "purpose": row.purpose,
+                "amount": _amount(row.amount),
+                "status": str(row.payment.status),
+                "provider": str(row.payment.provider),
+                "created_at": row.created_at,
+            }
+            for row in rows
+        ]
+
+    @extend_schema_field(RefundRowSerializer(many=True))
+    def get_refunds(self, order: Order) -> list[dict[str, Any]]:
+        rows = order.refunds.select_related("refund").order_by("created_at")
+        return [
+            {
+                "id": str(row.pk),
+                "amount": _amount(row.amount),
+                "lines": row.line_quantities(),
+                "restock": row.restock,
+                "reason": row.reason,
+                "status": str(row.refund.status),
+                "settled_at": row.settled_at,
+                "created_at": row.created_at,
+            }
+            for row in rows
+        ]
+
+    @extend_schema_field(BuyerSerializer)
+    def get_buyer(self, order: Order) -> dict[str, Any]:
+        from karni_commerce.customers import customers_backend
+
+        readable = self.context.get("orders")
+        rows = readable if readable is not None else Order.objects.all()
+        summary = (
+            customers_backend().customers(rows.filter(email__iexact=order.email)).first() or {}
+        )
+        return {
+            "user": str(order.user_id) if order.user_id else None,
+            "name": person_name(order.user) or order.buyer_name,
+            "email": order.email,
+            "orders": int(summary.get("order_count") or 0),
+            "spent": _amount(summary.get("spent") or 0),
+        }
+
+    def get_refundable(self, order: Order) -> str:
+        return _amount(order.refundable)
+
+    def get_can_cancel(self, order: Order) -> bool:
+        return order.status in ("pending", "failed", "paid")
+
+    def get_can_refund(self, order: Order) -> bool:
+        return order.status in services.PAID_STATES and order.refundable > 0
+
+
+class ManualLineSerializer(serializers.Serializer[Any]):
+    kind = serializers.CharField(max_length=40)
+    item = serializers.CharField(max_length=64)
+    quantity = serializers.IntegerField(min_value=1)
+    options = serializers.DictField(required=False, default=dict)
+
+
+class ManualOrderSerializer(serializers.Serializer[Any]):
+    """An order staff place for a buyer (a phone order). Never a price: the server prices it."""
+
+    email = serializers.EmailField()
+    name = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
+    billing = AddressSerializer()
+    shipping = AddressSerializer(required=False, allow_null=True, default=None)
+    note = serializers.CharField(required=False, allow_blank=True, default="", max_length=2000)
+    lines = ManualLineSerializer(many=True, allow_empty=False)
+    send_link = serializers.BooleanField(
+        required=False, default=True, help_text="Email the buyer the link to pay."
+    )
+
+
+class ManualResultSerializer(serializers.Serializer[Any]):
+    """The order placed by hand, and the link the buyer pays it at."""
+
+    id = serializers.CharField()
+    number = serializers.IntegerField()
+    link = serializers.CharField()
+
+
+class ItemSerializer(serializers.Serializer[Any]):
+    """Something for sale, as staff pick it for an order placed by hand."""
+
+    kind = serializers.CharField()
+    item = serializers.CharField()
+    name = serializers.CharField()
+    sku = serializers.CharField(allow_blank=True)
+    price = serializers.CharField()
+    available = serializers.IntegerField(allow_null=True)
+
+
+class CustomerRowSerializer(serializers.Serializer[Any]):
+    """A buyer in the staff's customers list."""
+
+    email = serializers.CharField()
+    name = serializers.CharField(allow_blank=True)
+    has_account = serializers.BooleanField()
+    order_count = serializers.IntegerField()
+    spent = serializers.CharField()
+    currency = serializers.CharField()
+    first_order = serializers.DateTimeField()
+    last_order = serializers.DateTimeField()
+
+    def to_representation(self, instance: Any) -> dict[str, Any]:
+        row = dict(instance)
+        return {
+            "email": row["email"],
+            "name": row.get("name") or "",
+            "has_account": bool(row.get("has_account")),
+            "order_count": int(row.get("order_count") or 0),
+            "spent": _amount(row.get("spent") or 0),
+            "currency": conf.currency(),
+            "first_order": serializers.DateTimeField().to_representation(row["first_order"]),
+            "last_order": serializers.DateTimeField().to_representation(row["last_order"]),
+        }
+
+
+class CustomerOrderSerializer(serializers.Serializer[Any]):
+    id = serializers.CharField()
+    number = serializers.IntegerField()
+    status = serializers.CharField()
+    total = serializers.CharField()
+    created_at = serializers.DateTimeField()
+
+
+class CustomerPageSerializer(serializers.Serializer[Any]):
+    """One buyer: their orders, what they spent, their addresses and their account."""
+
+    email = serializers.CharField()
+    name = serializers.CharField(allow_blank=True)
+    account = serializers.DictField(allow_null=True)
+    order_count = serializers.IntegerField()
+    spent = serializers.CharField()
+    currency = serializers.CharField()
+    first_order = serializers.DateTimeField()
+    last_order = serializers.DateTimeField()
+    addresses = serializers.ListField(child=serializers.DictField())
+    orders = CustomerOrderSerializer(many=True)
+
+    def to_representation(self, instance: Any) -> dict[str, Any]:
+        stamp = serializers.DateTimeField()
+        account = instance.account
+        return {
+            "email": instance.email,
+            "name": person_name(account) or instance.name,
+            "account": None
+            if account is None
+            else {
+                "id": str(account.pk),
+                "name": person_name(account),
+                "email": str(account.email),
+                "joined": stamp.to_representation(getattr(account, "date_joined", None))
+                if getattr(account, "date_joined", None)
+                else None,
+            },
+            "order_count": instance.order_count,
+            "spent": _amount(instance.spent),
+            "currency": instance.currency,
+            "first_order": stamp.to_representation(instance.first_order),
+            "last_order": stamp.to_representation(instance.last_order),
+            "addresses": instance.addresses,
+            "orders": [
+                {
+                    "id": str(order.pk),
+                    "number": order.number,
+                    "status": order.status,
+                    "total": _amount(order.total),
+                    "created_at": stamp.to_representation(order.created_at),
+                }
+                for order in instance.orders
+            ],
+        }

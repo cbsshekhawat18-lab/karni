@@ -15,8 +15,10 @@ every price and total is computed here from the sellable adapters
   (``Sellable.release``). Money that arrives for an order that stopped
   waiting goes back at once.
 * :func:`cancel`, :func:`refund` and :func:`release_expired` are the other
-  moves. A refund by lines or by amount settles when the provider confirms it
-  (``Sellable.on_refunded``, with the items back on the shelf when asked).
+  moves. :func:`place_manual_order` is staff placing an order for a buyer (a
+  phone order), and :func:`add_note` a note on an order. A refund by lines or
+  by amount settles when the provider confirms it (``Sellable.on_refunded``,
+  with the items back on the shelf when asked).
 
 Each move sends its signal from :mod:`karni_commerce.events`.
 
@@ -49,6 +51,7 @@ from karni_commerce.models import (
     CartLine,
     Order,
     OrderLine,
+    OrderNote,
     OrderPayment,
     OrderRefund,
     new_key,
@@ -57,6 +60,7 @@ from karni_commerce.sellables import Price, Sellable, adapter_for, kinds, refuse
 
 __all__ = [
     "PricedLine",
+    "add_note",
     "cancel",
     "cart_lines",
     "checkout",
@@ -66,6 +70,7 @@ __all__ = [
     "next_number",
     "open_payment",
     "order_link",
+    "place_manual_order",
     "place_order",
     "refund",
     "release_expired",
@@ -717,3 +722,88 @@ def staff_lines(orders: Iterable[Order]) -> dict[Any, list[OrderLine]]:
     for line in OrderLine.objects.filter(order_id__in=ids).order_by("position"):
         found.setdefault(line.order_id, []).append(line)
     return found
+
+
+# -- staff: notes and orders placed by hand ------------------------------------------------
+
+
+@transaction.atomic
+def add_note(order: Order, body: str, *, kind: str = "internal", author: Any = None) -> OrderNote:
+    """A note on ``order``: ``internal`` for the staff, ``customer`` for the buyer too.
+
+    A note to the customer is emailed to them (``commerce.order_note``) and shows
+    on their order page.
+
+    :raises ValidationError: for an empty note or an unknown kind.
+    """
+    text = str(body or "").strip()
+    if not text:
+        raise refuse("Write the note.", field="body")
+    if kind not in OrderNote.Kind.values:
+        raise refuse(f"A note is {' or '.join(OrderNote.Kind.values)}.", field="kind")
+    note = OrderNote.objects.create(order=order, kind=kind, body=text, author=_user(author))
+    events.order_note_added.send(sender=Order, order=order, note=note)
+    return note
+
+
+def account_for(email: str) -> Any:
+    """The user whose verified email is ``email``, or ``None``: an order placed for them is
+    theirs."""
+    from django.contrib.auth import get_user_model
+
+    if not email:
+        return None
+    found = get_user_model()._default_manager.filter(email__iexact=email.strip()).first()
+    if found is None or not getattr(found, "email_verified", False):
+        return None
+    return found
+
+
+@transaction.atomic
+def place_manual_order(
+    lines: Sequence[tuple[str, str, int, Mapping[str, Any]]],
+    *,
+    staff: Any,
+    email: str,
+    name: str = "",
+    billing: Mapping[str, Any] | None = None,
+    shipping: Mapping[str, Any] | None = None,
+    note: str = "",
+    send_link: bool = True,
+) -> Order:
+    """An order staff place for a buyer (a phone order), waiting for the buyer's payment.
+
+    The lines are priced and held as at checkout (:func:`place_order`), for
+    ``KARNI_COMMERCE_MANUAL_HOLD_MINUTES``. The order belongs to the account
+    whose verified email is ``email``, when there is one. An internal note says
+    who placed it, and with ``send_link`` the buyer gets the link to pay
+    (``commerce.payment_request``).
+
+    :raises ValidationError: as :func:`place_order` does.
+    """
+    order = place_order(
+        lines,
+        user=account_for(email),
+        email=email,
+        name=name,
+        billing=billing,
+        shipping=shipping,
+        note=note,
+    )
+    minutes = int(conf.get("KARNI_COMMERCE_MANUAL_HOLD_MINUTES"))
+    order.hold_until = timezone.now() + timedelta(minutes=minutes)
+    order.save(update_fields=["hold_until", "updated_at"])
+    who = getattr(staff, "get_full_name", lambda: "")() or getattr(staff, "email", "") or "staff"
+    add_note(order, f"Placed by hand by {who}.", author=staff)
+    if send_link:
+        pk = order.pk
+
+        def ask_for_payment() -> None:
+            from karni_commerce import messages
+
+            found = Order.objects.filter(pk=pk).first()
+            if found is not None:
+                messages.send("commerce.payment_request", found)
+
+        transaction.on_commit(ask_for_payment)
+    return order
