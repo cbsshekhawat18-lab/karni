@@ -74,6 +74,53 @@ apply codemods and list the manual steps. This file is the human summary.
   PATH" when git is missing, and the PostgreSQL backup round trip skips when `DATABASE_URL`
   points at a server that is not listening. Before, they failed.
 
+- **Added: rules a karni.yaml can say (experimental).** An entity takes `bounds` (the
+  lowest and highest value of a number or a date, with `$now` and `$today`), `unique`
+  (fields unique among the live rows, with a `where` filter: a partial unique index
+  SQLite and PostgreSQL enforce), `targets` (the rows a relation may point at, with `$me`
+  and `$<field>` so two relations agree), `frozen` (fields that never change, or not in a
+  state), `delete` (`when` and `blocked_by`), `moves` (what a move into a state
+  `requires`, `needs` and `stamps`) and `actions` (row actions). `access` takes `delete`,
+  `assign` (who may set the owner to another user) and the read word `where:<field>`,
+  and `owned:` paths may follow a reverse relation. Each key is the `class Karni` option
+  of the same name (`karni.rules`), checked in `save()`, `clean()` and `delete()`, and
+  the API answers 400 naming the field (`E990`, `E991`, `E993` to `E996`, a delete 409).
+  `karni spec validate` checks the keys (`C760` to `C767`) and `karni check` the options
+  (`E998`). See [docs/rules.md](docs/rules.md).
+- **Added: row actions (experimental).** `row_actions = {"ship": RowAction(from_="paid",
+  to="shipped", by=Owned("listing__seller__user"))}` on a viewset declares a named
+  `POST <resource>/<id>/<name>/` with the states and roles where it is legal. It is
+  refused elsewhere with a 409 (`E997`), safe to call twice, routed by Karni when it only
+  moves the state, and published as `x-karni-actions` and `x-karni-action` so a UI shows
+  the right buttons. `karni check` reports one with nothing to run (`E136`).
+- **Added: `Access(delete=..., assign=...)` and `Where(Matching(...))` (experimental).**
+  `delete` governs `destroy` (default: `write`). `assign` names who may set an owner
+  field to another user: anyone else who sends one gets a 403 (`E135`). `Matching`
+  reads rows on a flag without a new predicate.
+- **Changed: a written row must stay inside the caller's write scope.** This is a
+  security fix. A create or an update is checked against its own predicate's rows in the
+  save's transaction, so a listing posted into someone else's shop under
+  `write=Owned("seller__user")` is now a 403 (`E134`) and nothing is saved. See the
+  [migration note](docs/migrations/0.5.md#a-written-row-must-stay-inside-the-callers-write-scope).
+- **Fixed: the booking, CRM, LMS, marketplace and data-portal recipes keep their business
+  rules.** Each declares them in its `karni.yaml`, with a `tests/test_rules.py` that sends
+  the request an audit of the recipe sent and gets the refusal: one booking per member
+  and slot, no booking of a started slot, a booking's slot fixed (a changed slot used to
+  end in a 500), pay once and only while pending, a refund on a cancelled paid booking; a
+  deal's contact of its company, no negative value, a lost reason, managers delete and
+  reassign; drafts hidden, enrolments once and only in a published course, lessons only in
+  your own course and read by its students; one shop per person, listings only in your
+  own shop, no order of a paused or your own listing, quantity at least 1 and fixed, ship,
+  deliver and refund as actions, the refund voiding the payout; one indicator per
+  dataset, place, topic and year. Their seeds keep the rules (a payout for every paid
+  order, demo students enrolled once). A project built from one before 0.5.2 takes the
+  rules by hand: see the [migration note](docs/migrations/0.5.md#rules-a-karniyaml-can-say-and-the-recipes-that-use-them).
+- **Changed: test factories and `assert_crud` follow the rules.** Generated values stay
+  inside `bounds`, a required relation with a `targets` rule gets a row that fits it, a
+  flag whose move needs a related row gets one, `assert_crud` leaves owner fields to the
+  server and keeps frozen fields, and `karni seed` reads `$now` as its anchor, draws again
+  on a duplicate, and takes `Seeder.Meta.after` for an order no foreign key gives.
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

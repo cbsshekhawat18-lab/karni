@@ -251,6 +251,13 @@ model on `BaseModel` (PascalCase), with its viewset.
 | `taxonomies` | key to a tree entity | `Karni.taxonomies`, [taxonomy tagging](models.md#taxonomies): a many-to-many per key, its filters, facets and the `tree:<key>` scope |
 | `aggregate` | `{group_by, values, metrics}` | `Karni.aggregate`, the [aggregate action](aggregations.md) (experimental) |
 | `cache` | seconds, or `false` | the viewset's [response caching](api.md#response-caching): `cache = Cache(ttl=<seconds>)`, or `cache = Uncached(reason="spec")` for `false` (default: `KARNI_API_CACHE_TTL`) |
+| `bounds` | field to `{min, max}` | `Karni.bounds`, [rules](rules.md#bounds) (experimental): the lowest and highest value of a number, date or datetime |
+| `unique` | a list of field lists, or `{fields, where}` | `Karni.unique`, [rules](rules.md#unique): a partial unique index over the live rows |
+| `targets` | foreign key to a row filter | `Karni.targets`, [rules](rules.md#targets): the rows a relation may point at |
+| `frozen` | field to `true` or a row filter | `Karni.frozen`, [rules](rules.md#frozen): fields that never change, or not in a state |
+| `delete` | `{when, blocked_by}` | `Karni.delete`, [rules](rules.md#delete): when a row may be deleted |
+| `moves` | state to `{requires, needs, stamps}` | `Karni.moves`, [rules](rules.md#moves): what a move into a state needs and stamps |
+| `actions` | name to `{from, to, by, field}` | the viewset's `row_actions`, [rules](rules.md#actions): row actions with their states and roles |
 | `was` | the entity's old name | a rename that keeps the table and its rows (`karni plan`) |
 
 Field types are exactly `karni make model`'s syntax, checked by its own
@@ -411,8 +418,8 @@ change: its tags go with its table.
 ### Access
 
 `access` maps onto Karni's [`Access`](api.md#access-control). `read`,
-`write` and `create` each take one of these, or a list of them, any of which
-admits:
+`write`, `create`, `delete` and `assign` (experimental) each take one of
+these, or a list of them, any of which admits:
 
 | In the spec | In the viewset |
 |---|---|
@@ -420,16 +427,19 @@ admits:
 | `authenticated` | `Authenticated()` |
 | `granted` | `Granted()`: what the roles' grants allow |
 | `role:<slug>` | `HasRole("<slug>")`, a role the spec declares (`C232`) |
-| `owned:<field>` | `Owned("<field>")`, a relation or a path that ends at the user (`C240`) |
+| `owned:<field>` | `Owned("<field>")`, a relation or a path that ends at the user (`C240`). A path may follow a reverse relation by the entity's name in lower case: `owned:course__enrolment__student` |
+| `where:<field>`, `where:<field>=<value>` | `Where(Matching(<field>=True))` (experimental): the rows whose field holds the value, for anyone. Drafts: `read: [where:published, owned:instructor, role:staff]` |
 | a list | the items joined with `\|` |
 
-`read` and `write` default to `granted`, and `create` to `write`. An entity
+`read` and `write` default to `granted`, `create` and `delete` to `write`,
+and `assign`, who may set the owner field to another user, to nobody
+([rules](rules.md#access-delete-assign-and-the-read-word-where)). An entity
 without `access` has `Granted()`, the default of `karni make viewset`.
 `owned:<field>` in `write` or `create` also sets the field to the signed-in
 user on create. `karni explain access` prints the words and the rules most
 apps need, and a value close to one is refused with the rule it stands for:
 `staff` with "Did you mean role:staff?", `signed_in` with `authenticated`,
-`own` with `owned:<the owner field>`, a `delete:` key with `write`. The
+`own` with `owned:<the owner field>`, a `destroy:` key with `delete`. The
 shapes the `--access` presets make:
 
 | `--access` | In the spec |
@@ -650,6 +660,14 @@ means. `karni explain <code>` prints any code's entry.
 | [C520](errors.md#c520) | an entity's `cache` is not seconds above 0 or `false` |
 | [C521](errors.md#c521) | with `api_cache` on, an entity reads an external table or one on another database and has no `cache` |
 | [C720](errors.md#c720) | `file:protected` or `image:protected` without the storage module |
+| [C760](errors.md#c760) | `bounds` names a field that is not a number, date or datetime, or a value that is not one |
+| [C761](errors.md#c761) | `unique` names a field the entity does not have, a `where` with a `$` value, or an external entity |
+| [C762](errors.md#c762) | `targets` names a field that is not a foreign key |
+| [C763](errors.md#c763) | `frozen` names a field the entity does not have |
+| [C764](errors.md#c764) | `delete` is empty, or `blocked_by` names an entity that does not point here |
+| [C765](errors.md#c765) | `moves` names something that is not a state or a boolean field, or a field `requires`, `needs` or `stamps` cannot take |
+| [C766](errors.md#c766) | `actions` names a state the field does not have, or a `by` that is not an access rule |
+| [C767](errors.md#c767) | a row filter with a path or a value that cannot be read |
 | [C245](errors.md#c245) | `karni spec export` cannot read the project |
 | [C246](errors.md#c246) | the export's output file exists |
 
@@ -676,6 +694,8 @@ built with `karni make` or by hand. It prints the spec, or writes it with
 - **tree** is `true` for a model on `TreeModel` and `ordered` for one on
   `OrderedTreeModel`. Their `parent` and `position` fields are not written
   under `fields`.
+- **bounds, unique, targets, frozen, delete, moves** come from `class Karni`
+  as they are, and **actions** from the viewset's `row_actions`.
 - **key, owner, audit, scope_paths** come from `class Karni`, **groups** and
   **column_sets** from its `field_groups` and `column_sets` (groups from
   `AdminMeta`'s fieldsets when it has no `field_groups`), **order** from
@@ -747,7 +767,8 @@ The areas, in order: the app (kind, name), modules to add or remove,
 features with the setting each one sets, roles and their grants, apps,
 entities with their fields and options (key, search, owner, audit,
 global_search, groups, column_sets, order, pk, external, table, writable,
-database, tree, aggregate, cache), field changes of existing
+database, tree, aggregate, cache, and the rules: bounds, unique, targets,
+frozen, delete, moves, actions), field changes of existing
 entities, access, pages and navigation (the page order, and the menu as
 `KARNI_NAVIGATION`), the apps that get migrations, seed
 counts, and the API tests `karni make test` writes for new entities. The

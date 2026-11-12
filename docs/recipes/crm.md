@@ -45,6 +45,21 @@ Every list exports as CSV or XLSX and imports from a file with a preview
 and Contact (`email`) makes a row of an import an update of the row with
 that name or email.
 
+## Rules
+
+Declared in `karni.yaml` ([rules](../rules.md)), so a rebuild keeps them:
+
+- A company's name is unique, and a company or contact with deals, or a deal
+  with activities, is not deleted (`E991`, `E995`).
+- A deal's contact works at the deal's company (`E993`), its value is not
+  negative and an open deal does not close in the past (`E990`). A new deal
+  starts as a lead (`E982`).
+- Marking a deal lost needs a reason (`lost_reason`, `E996`); won and lost
+  stamp `closed_at`. A won deal keeps its value and company (`E994`).
+- Only a manager or admin deletes a deal or gives it to another salesperson
+  (`E135`); a salesperson marks it lost. An activity marked done stamps
+  `done_at`.
+
 ## Modules and settings
 
 - `two_factor`: people can protect their sign-in with an authenticator

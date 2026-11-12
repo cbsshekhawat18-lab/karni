@@ -22,8 +22,8 @@ The app `courses`:
 
 | Entity | Fields | Owner | Who reads, who writes |
 |---|---|---|---|
-| Course | title, slug (the import key), summary, instructor, published | instructor | anyone reads, the instructor and staff write, instructors and staff create |
-| Lesson | course, title, body, position | course's instructor | anyone signed in reads, the instructor and staff write |
+| Course | title, slug (the import key), summary, instructor, published | instructor | anyone reads a published one, its instructor, students and staff read a draft; the instructor and staff write, instructors and staff create |
+| Lesson | course, title, body, position | course's instructor | the course's students, its instructor and staff read, the instructor and staff write |
 | Enrolment | course, student | student | the student, the course's instructor and staff read, the student and staff write |
 | LessonProgress | enrolment, lesson, completed_at | enrolment's student | the student, the instructor and staff read, the student and staff write |
 
@@ -35,6 +35,21 @@ change history.
 | `staff` | a system role: everything |
 | `instructor` | `own:instructor` on courses, `own` on lessons |
 | `student` | the role every account that signs up gets: `own` on enrolments and lesson progress |
+
+## Rules
+
+Declared in `karni.yaml` ([rules](../rules.md)), so a rebuild keeps them:
+
+- A course is read when it is published, and by its instructor, its
+  students and staff (a draft stays with its instructor). Publishing needs a
+  lesson (`E996`), and a course with enrolments is not deleted (`E995`).
+- A lesson is read by the course's students, its instructor and staff. It
+  goes only into a course of the writer's own (`E134`), with a position from
+  1, unique in the course (`E990`, `E991`).
+- A student enrols once (`E991`), only in a published course and never in
+  their own (`E993`); the enrolment's course never changes.
+- Progress is once per lesson, on a lesson of the enrolment's course, and
+  never in the future (`E991`, `E993`, `E990`).
 
 ## Modules and settings
 

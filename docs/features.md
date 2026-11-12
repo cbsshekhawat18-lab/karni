@@ -29,6 +29,7 @@ Reference or Debugging sections.
 - **[Models](models.md)**: `BaseModel` with a UUID key, timestamps, soft delete and audit fields, integer keys, external tables and SQL views, [tree models](models.md#tree-models) and [taxonomies](models.md#taxonomies).
 - **[Typed fields](fields.md)**: money, percent, quantity, phone, country, currency, markdown and more, with rules the database enforces.
 - **[Lifecycle and capacity](lifecycle-and-capacity.md)**: declared states and transitions, capacity that never oversells, no-overlap constraints.
+- **[Rules](rules.md)** (experimental): bounds, unique among live rows, which rows a relation may point at, frozen fields, delete rules, what a state change needs and stamps, and row actions with the states and roles where each is legal, declared in karni.yaml.
 - **[The API](api.md)**: `BaseViewSet` with a required `access` rule, generated serializers, filters, search, `?expand=`, query budgets and the OpenAPI schema.
 - **[Permissions at the queryset](concepts/queryset-permissions.md)**: one row filter for list, detail, relations and expansion, so a row outside your scope is a 404.
 - **[Accounts](accounts.md)**: email sign-in, the auth endpoints, roles as data, per-user grants, two-factor and social login.
@@ -134,7 +135,7 @@ Base classes: `AuditedModel`, `BaseModel`, `BigIntBaseModel`, `GuardedModel`, `I
 - `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
 - `experimental` Grouped counts and sums under the list's filters and access: `GET <resource>/aggregate/` from `class Karni: aggregate`, with date buckets, top N and Other, a second dimension and numbers stored as text (`TextNumber`). Experimental tier
 
-Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Scaling`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
+Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Matching`, `Owned`, `Public`, `RowAction`, `Scaling`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
 <!-- /generated:api -->
 
 ### Admin

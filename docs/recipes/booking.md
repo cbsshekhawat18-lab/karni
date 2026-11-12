@@ -24,7 +24,7 @@ The app `bookings`:
 |---|---|---|---|
 | Resource | name, slug (the import key), description, price (`money:USD`) | | anyone reads, staff write |
 | Slot | resource, starts_at, ends_at, capacity, remaining (`capacity:capacity`) | | anyone reads, staff write |
-| Booking | slot, member, status (`state`), note, payment | member | the member and staff read, the member writes |
+| Booking | slot, member, status (`state`), note, payment | member | the member and staff read and write, staff delete and book for a member |
 
 `remaining` is a [capacity field](../lifecycle-and-capacity.md): it starts
 at `capacity` and the database never lets it drop below zero. A booking's
@@ -33,6 +33,22 @@ status moves `pending > confirmed`, `pending > cancelled` and
 
 Roles: `staff` (a system role, everything) and `member`, the role every
 account that signs up gets, with an `own` grant on bookings.
+
+## Rules
+
+Declared in `karni.yaml` ([rules](../rules.md)), so a rebuild keeps them:
+
+- A resource's price is not negative, a slot holds at least one place and
+  does not start in the past, and a resource with slots or a slot with live
+  bookings is not deleted (`E990`, `E995`).
+- A member books a slot once while the booking is not cancelled (`E991`),
+  never a slot that has started (`E993`), and the booking's slot never
+  changes (`E994`). The member is the signed-in user, unless staff book for
+  a member (`E135`). Members cancel, staff delete.
+- Row actions: `pay` while pending (a second call returns the open payment,
+  a paid booking is refused), `cancel` while pending or confirmed (a paid
+  booking is refunded in full), and `confirm` by staff for a free one. In
+  another state they answer 409 (`E997`).
 
 ## Modules and settings
 
@@ -52,7 +68,10 @@ bookings.
   and `payment` are read-only in the API, and a listener confirms the
   pending booking when its payment succeeds.
 - `bookings/viewsets.py`: `POST /api/bookings/<id>/pay/` opens the payment
-  for the resource's price, and `POST /api/bookings/<id>/cancel/` cancels.
+  for the resource's price (or returns the open one), and
+  `POST /api/bookings/<id>/cancel/` cancels and refunds a paid booking.
+- `bookings/tests/test_rules.py`: each rule above, as the request a member or
+  staff would send.
 - `bookings/tests/test_capacity.py`: the capacity and the paid booking.
 - `bookings/seeds.py`: four bookable spaces (a meeting room, a workshop
   studio, a podcast booth, a courtyard) with a price, slots in the hours,

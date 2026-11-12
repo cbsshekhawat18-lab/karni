@@ -61,6 +61,16 @@ Regions and sectors are open to read for every role of the portal, so a
 filter or a form can list them. Only the datasets and indicators follow the
 tree scope.
 
+## Rules
+
+Declared in `karni.yaml` ([rules](../rules.md)), so a rebuild keeps them:
+
+- One indicator per dataset, region, sector and year, and one per label, so
+  an import by label updates a row and never doubles it (`E991`).
+- An indicator's year is between 1900 and 2100 (`E990`). A negative value is
+  allowed: rates of change are negative.
+- A dataset with indicators is not deleted (`E995`).
+
 ## Modules and features
 
 - `charts` ([saved charts](../charts.md)): `Indicators per year`, one saved

@@ -1658,16 +1658,18 @@ The public names of the four packages a project builds on, from their `__all__`.
 
 | Name | Kind | Purpose | What you get |
 |---|---|---|---|
-| `Access` | class | A viewset's access declaration: `access = Access(read=..., write=..., create=...)`. | `Access(*, read: Predicate, write: Predicate, create: Predicate \| None = None) -> None` |
+| `Access` | class | A viewset's access declaration: `access = Access(read=..., write=..., create=...)`. | `Access(*, read: Predicate, write: Predicate, create: Predicate \| None = None, delete: Predicate \| None = None, assign: Predicate \| None = None) -> None` |
 | `Authenticated` | class | Any authenticated user, on every row. | methods `allows`, `rows`, `facts`, `describe` |
-| `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `query_scaling`, `pagination`, `cache`, `throttle`, `scope_exempt`, `scope_exempt_reason`, `aggregation`, `read_only_refused_actions`, `tree_actions`, `tree_max_nodes`, `tree_default_depth`, `tree_max_depth`, `taxonomy_actions`, `write_or_create_actions`, `unbudgeted_actions` and get the endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `aggregate`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
+| `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `query_scaling`, `pagination`, `cache`, `throttle`, `scope_exempt`, `scope_exempt_reason`, `aggregation`, `row_actions`, `read_only_refused_actions`, `tree_actions`, `tree_max_nodes`, `tree_default_depth`, `tree_max_depth`, `taxonomy_actions`, `write_or_create_actions`, `unbudgeted_actions` and get the endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `aggregate`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
 | `Budget` | class | `query_budget = Budget(list=25, reason="...")`: a viewset's own query budgets. | `Budget(*, reason: str, default: Any = …, **actions: int \| None) -> None` |
 | `Cache` | class | `cache = Cache(ttl=60, depends_on=[Price])`: tune caching for one viewset. | `Cache(*, ttl: int \| None = None, depends_on: tuple[type[Model] \| str, ...] = ()) -> None` |
 | `Can` | class | The requesting user holds a grant for **any** of the named permissions (ADR 0002). | `Can(*keys: str) -> None` |
 | `Granted` | class | Whatever the roles say: `Can` for the viewset's own model and current action. | methods `bind`, `allows`, `rows`, `explain`, `describe` |
 | `HasRole` | class | The requesting user holds **any** of the named roles (Django groups). | `HasRole(*names: str) -> None` |
+| `Matching` | class | The row function of `Where(Matching(published=True))`: rows whose fields hold values. | `Matching(**lookups: Any) -> None` |
 | `Owned` | class | Rows whose `path` points at the requesting user. | `Owned(path: str \| None = None, *, bypass: Predicate \| None = None) -> None` |
 | `Public` | class | Everyone, anonymous included, on every row. The explicit public form. | methods `allows`, `rows`, `describe` |
+| `RowAction` | class | One row action: the states it runs from, the state it moves to, who may run it. | `RowAction(*, from_: str \| Iterable[str] \| None = None, to: str \| None = None, by: Any = None, field: str \| None = None) -> None` |
 | `Scaling` | class | Experimental. `query_scaling = Scaling(rows=(5, 500), seconds=0.3)`: a viewset's scaling. | `Scaling(*, rows: Any = None, seconds: float \| None = None) -> None` |
 | `Throttle` | class | `throttle = Throttle(create="10/hour")`: a rate per action. | `Throttle(**rates: str \| None) -> None` |
 | `Uncached` | class | `cache = Uncached(reason="...")`: never cache this viewset's responses. | `Uncached(*, reason: str) -> None` |
@@ -1743,6 +1745,12 @@ class Lead(BaseModel):
 | `financial` | karni | inferred | Whether the model holds money for the CASCADE check. It is inferred from money fields and payments-like model names. | `financial = True` |
 | `not_money` | karni | `{}` | FloatFields whose money-like name is not money, each with what it is (silences `karni.E960` for that field). | `not_money = {"total_score": "a game score"}` |
 | `no_overlap` | karni | `None` | Rows that may not overlap in time per resource: a `NoOverlap(...)`, a tuple of the resource field(s) then the range, or a list of them. PostgreSQL enforces it with an `EXCLUDE` constraint the model's migration creates. Soft-deleted rows never block. | `no_overlap = NoOverlap("room", "during", ignore={"status": ["cancelled"]})` |
+| `bounds` | karni | `{}` | Experimental. The lowest and highest value of a number, date or datetime field, checked when the value is written new or changed: `{field: {min, max}}`, with `$now` and `$today` for dates (`E990`). The API schema publishes a number's limits. | `bounds = {"quantity": {"min": 1}, "expected_close": {"min": "$today"}}` |
+| `unique` | karni | `None` | Experimental. Fields whose values are unique among the live rows: a list of field lists, or `{fields, where}` with a row filter of fixed values. Each one is a partial unique index PostgreSQL and SQLite enforce (`E991`). | `unique = [["slot", "member"], {"fields": ["user"], "where": {"active": True}}]` |
+| `targets` | karni | `{}` | Experimental. The rows a foreign key may point at: `{field: <row filter>}`, with `$me`, `$now`, `$today` and `$<field of the row>` as values (`E993`). | `targets = {"listing": {"active": True, "seller__user": {"not": "$me"}}}` |
+| `frozen` | karni | `{}` | Experimental. Fields that never change after create (`True`), or not while the stored row matches a row filter (`E994`). | `frozen = {"slot": True, "value": {"stage": "won"}}` |
+| `delete` | karni | `None` | Experimental. When a row may be deleted: `when` (a row filter it must match) and `blocked_by` (related entities whose live rows keep it). A refusal is `E995` (409). | `delete = {"when": {"status": "pending"}, "blocked_by": ["Deal"]}` |
+| `moves` | karni | `{}` | Experimental. What a move into a state (or a boolean becoming true) requires, needs and stamps: `{state: {requires: [fields], needs: [entities], stamps: [fields]}}` (`E996`). | `moves = {"lost": {"requires": ["lost_reason"], "stamps": ["closed_at"]}}` |
 | `external` | karni | `False` | Experimental. Another system owns the table or view: with `Meta.managed = False`, the model may inherit plain `models.Model`, Karni runs no DDL for it, the API answers its writes with 405 and the admin shows it read-only ([models: external tables](models.md#external-tables-views-and-a-second-database)). | `external = True` |
 | `writable` | karni | `False` | Experimental. Let the API and the admin write an external model's table. | `writable = True` |
 | `database` | karni | `None` (the default database) | Experimental. The `DATABASES` alias the model's reads, writes and migrations go to (`karni.db.DatabaseRouter`). | `database = "warehouse"` |
@@ -1932,6 +1940,7 @@ class Lead(BaseModel):
 | `KARNI_SEED_BATCH_SIZE` |  | `2000` | Experimental. Rows per bulk insert of `karni seed` (`--batch-size` overrides it). |
 | `KARNI_SEED_LEDGER` |  | `True` | Experimental. `karni seed` records the row count each table holds after a run in `.karni/local/seeded.json`, and `--volume` refuses a table holding rows no seed run left there. `False` turns it off, a path moves it. |
 | `KARNI_EXPLAIN_SEQ_SCAN_ROWS` |  | `1000` | Experimental. `karni queries --explain` flags each sequential scan on a table of this many rows or more, with the index that would serve it (PostgreSQL). |
+| `KARNI_RULES_CLOCK_SKEW` |  | `300` | Experimental. Seconds a `$now` bound of `class Karni: bounds` forgives, so a browser clock a little ahead or behind the server is not refused. See [rules](rules.md#bounds). |
 
 ### Module: karni-ai
 
@@ -2360,6 +2369,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E131`](errors.md#e131) | check | search_fields names a write-only field |
 | [`E132`](errors.md#e132) | exception | Throttle(...) is invalid |
 | [`E133`](errors.md#e133) | check | Karni.dashboard is malformed or names a field the model does not have |
+| [`E134`](errors.md#e134) | exception | The written row is outside the caller's write scope |
+| [`E135`](errors.md#e135) | exception | Only some roles may set the owner of a row |
+| [`E136`](errors.md#e136) | check | A row action has nothing to run, or is declared wrongly |
 | [`E201`](errors.md#e201) | exception | KARNI_ACCOUNTS_EMAIL_BACKEND is not an accounts email backend |
 | [`E202`](errors.md#e202) | exception | No KARNI_ACCOUNTS_LINKS entry for a token purpose |
 | [`E203`](errors.md#e203) | exception | create_user() or create_superuser() was called with invalid arguments |
@@ -2575,6 +2587,14 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E986`](errors.md#e986) | exception | A capacity counter is used the wrong way |
 | [`E987`](errors.md#e987) | check | A no_overlap declaration is invalid |
 | [`E988`](errors.md#e988) | check | A guarded field on a model without GuardedModel |
+| [`E990`](errors.md#e990) | exception | A value is outside the bounds of its field |
+| [`E991`](errors.md#e991) | exception | A row with the same values already exists |
+| [`E993`](errors.md#e993) | exception | A relation points at a row its rule does not allow |
+| [`E994`](errors.md#e994) | exception | A field cannot change |
+| [`E995`](errors.md#e995) | exception | The row cannot be deleted now |
+| [`E996`](errors.md#e996) | exception | A move into a state misses what it needs |
+| [`E997`](errors.md#e997) | exception | A row action is not legal in the row's state |
+| [`E998`](errors.md#e998) | check | A rule of class Karni is declared wrongly |
 | [`SUG001`](errors.md#sug001) | suggestion | A foreign key to itself, named like a parent, is a hand-written tree |
 | [`SUG002`](errors.md#sug002) | suggestion | A text field that holds markdown is not a MarkdownField |
 | [`SUG003`](errors.md#sug003) | suggestion | Raw SQL with GROUP BY, opted out of the raw-sql rule, is an aggregate |
@@ -2843,6 +2863,14 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C582`](errors.md#c582) | cli | The project's karni has no check cache |
 | [`C720`](errors.md#c720) | cli | A protected file field needs the storage module |
 | [`C740`](errors.md#c740) | cli | app.api_version is not a version name |
+| [`C760`](errors.md#c760) | cli | An entity's bounds do not fit its fields |
+| [`C761`](errors.md#c761) | cli | An entity's unique does not fit its fields |
+| [`C762`](errors.md#c762) | cli | An entity's targets name something that is not a foreign key |
+| [`C763`](errors.md#c763) | cli | An entity's frozen names a field it does not have |
+| [`C764`](errors.md#c764) | cli | An entity's delete rule does not fit |
+| [`C765`](errors.md#c765) | cli | An entity's moves do not fit its states and fields |
+| [`C766`](errors.md#c766) | cli | An entity's actions do not fit its states or roles |
+| [`C767`](errors.md#c767) | cli | A row filter cannot be read |
 | [`C780`](errors.md#c780) | cli | The project's karni predates suggestions |
 | [`C781`](errors.md#c781) | cli | manage.py karni_suggest failed |
 | [`C850`](errors.md#c850) | cli | The project folder already exists |

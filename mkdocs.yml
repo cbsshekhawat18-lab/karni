@@ -86,6 +86,7 @@ nav:
       - Models: models.md
       - Typed fields: fields.md
       - Lifecycle and capacity: lifecycle-and-capacity.md
+      - Rules: rules.md
       - API: api.md
       - Aggregations: aggregations.md
       - Search across models: global-search.md
