@@ -806,7 +806,10 @@ the address), and a change goes back to page 1:
 ```tsx
 <ResourceGrid<Product>
   resource="products"
-  sortOptions={[{ value: "name", label: "Name" }, { value: "-created_at", label: "Newest" }]}
+  sortOptions={[
+    { value: "name", label: "Name" },
+    { value: "-created_at", label: "Newest" },
+  ]}
   filters={{ categories: categoryId }}
   renderCard={(product) => <ProductCard product={product} />}
 />
