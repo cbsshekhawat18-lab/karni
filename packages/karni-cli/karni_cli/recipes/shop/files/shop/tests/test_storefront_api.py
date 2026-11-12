@@ -200,3 +200,26 @@ def test_checkout_takes_no_price_from_the_client(
     token = put(visitor, make_product(price=Decimal("20.00")), 1).json()["token"]
     placed = checkout(visitor, token, total="0.01", price="0.01", billing=ADDRESS)
     assert Order.objects.get(number=placed.json()["number"]).total == Decimal("20.00")
+
+
+def test_a_product_page_says_the_short_description_once(
+    client_as: Any, make_product: MakeProduct
+) -> None:
+    short = "A pre-seasoned skillet."
+    repeats = make_product(
+        short_description=short, description=f"{short}\n\nMade to last."
+    )
+    same = make_product(short_description=short, description=short)
+    other = make_product(short_description=short, description="Cast in one piece.")
+    visitor = client_as(None)
+
+    def more(product: Product) -> str:
+        answer = visitor.get("/api/products/", {"search": product.sku})
+        [row] = [
+            row for row in answer.json()["results"] if row["id"] == str(product.pk)
+        ]
+        return str(row["more_description"])
+
+    assert more(repeats) == "Made to last."
+    assert more(same) == ""
+    assert more(other) == "Cast in one piece."

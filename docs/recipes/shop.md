@@ -119,10 +119,11 @@ template of the same path under your project's templates
 ## Trying it without a payment account
 
 `modules.payments.provider` is `stripe`, with the keys in `.env`. To try the
-whole journey on your machine without an account, set it to `test` in
-karni.yaml and run `karni build`: while `DEBUG` is on, checkout sends the
-buyer to a test page with Pay and Decline, which settles the payment the way
-the provider's webhook would. Set the real provider before the shop opens.
+whole journey on your machine without an account, put
+`KARNI_PAYMENTS_PROVIDER=test` in `.env`: the environment wins over
+karni.yaml's provider, so no file changes. While `DEBUG` is on, checkout then
+sends the buyer to a test page with Pay and Decline, which settles the payment
+the way the provider's webhook would. Take the line out before the shop opens.
 
 The API answers a visitor 100 times a minute by default (`THROTTLE_ANON`).
 A busy storefront raises it.

@@ -18,8 +18,9 @@ Profiles: ``DJANGO_ENV=dev`` (default) or ``DJANGO_ENV=prod`` select the
 from __future__ import annotations
 
 import copy
+import os
 from collections.abc import Iterable, MutableMapping, Sequence
-from importlib import metadata
+from importlib import import_module, metadata
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -159,8 +160,11 @@ def _settings_fragment_entry_points() -> tuple[metadata.EntryPoint, ...]:
     return _fragment_entry_points
 
 
-def _merge_settings_fragments(merged: dict[str, Any]) -> None:
+def _merge_settings_fragments(merged: dict[str, Any]) -> list[str]:
     """Merge every installed module's settings fragment into ``merged``.
+
+    Returns the names the modules read from the environment first (each
+    fragment module's ``FROM_ENVIRONMENT``, see :func:`_environment_first`).
 
     A fragment is a plain dict of defaults exposed through the
     ``karni.settings`` entry-point group (e.g. ``payments =
@@ -190,6 +194,7 @@ def _merge_settings_fragments(merged: dict[str, Any]) -> None:
     and your value wins; modules should read settings through their own
     accessor (``conf.get``) so they also work without ``karni_settings()``.
     """
+    environment_first: list[str] = []
     for entry_point in _settings_fragment_entry_points():
         try:
             fragment = entry_point.load()
@@ -214,6 +219,42 @@ def _merge_settings_fragments(merged: dict[str, Any]) -> None:
                 code="E503",
             )
         merged.update(copy.deepcopy(fragment))
+        module = getattr(entry_point, "module", "") or ""
+        if module:
+            try:
+                names = getattr(import_module(module), "FROM_ENVIRONMENT", ())
+            except ImportError:
+                names = ()
+            environment_first += [str(name) for name in names if name in fragment]
+    return environment_first
+
+
+#: The names a project's settings kept although the environment named another value:
+#: ``{name: the value written before the call}`` (:func:`_environment_first`).
+FROM_ENVIRONMENT_SETTING = "KARNI_SETTINGS_FROM_ENVIRONMENT"
+
+
+def _environment_first(namespace: MutableMapping[str, Any], names: Iterable[str]) -> None:
+    """The environment beats a value written before the call, for ``names``.
+
+    A module lists in its conf module's ``FROM_ENVIRONMENT`` the settings that
+    choose something per environment, such as the payment provider. karni.yaml's
+    value (the spec block, written before the call) is then the default, and the
+    environment variable of the same name, when set, wins: a local try or a demo
+    switches to the test provider in ``.env`` with no code edit. The value that
+    was written is kept in ``KARNI_SETTINGS_FROM_ENVIRONMENT``, so ``karni plan``
+    and ``karni spec export`` still read karni.yaml's value. A value assigned
+    after the call wins over both.
+    """
+    replaced: dict[str, Any] = {}
+    for name in names:
+        value = os.environ.get(name)
+        if value is None or value == "" or namespace.get(name) == value:
+            continue
+        replaced[name] = namespace.get(name)
+        namespace[name] = value
+    if replaced:
+        namespace[FROM_ENVIRONMENT_SETTING] = replaced
 
 
 def _apply_feature_wiring(
@@ -419,6 +460,10 @@ def karni_settings(
        overwritten,
     6. anything assigned in the settings module after the call — always wins.
 
+    One exception to 5: a setting a module lists in ``FROM_ENVIRONMENT`` (the
+    payment provider) takes the environment variable of the same name when it
+    is set, over a value written before the call (:func:`_environment_first`).
+
     Special cases:
 
     * ``INSTALLED_APPS`` / ``MIDDLEWARE`` / ``DATABASE_ROUTERS``: when the
@@ -488,7 +533,7 @@ def karni_settings(
     # Deep-copy so callers mutating nested defaults never corrupt BASE/DEV/PROD.
     merged: dict[str, Any] = copy.deepcopy(BASE)
     merged.update(copy.deepcopy(_PROFILES[profile]))
-    _merge_settings_fragments(merged)
+    environment_first = _merge_settings_fragments(merged)
     merged.update(overrides)
 
     def final(name: str) -> Any:
@@ -544,6 +589,7 @@ def karni_settings(
     predefined = set(namespace)
     for key, value in merged.items():
         namespace.setdefault(key, value)
+    _environment_first(namespace, environment_first)
     # The reader behind every env-backed default, for settings added after the call.
     namespace.setdefault("env", env)
     _anchor_file_roots(namespace, predefined)

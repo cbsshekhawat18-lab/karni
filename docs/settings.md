@@ -15,7 +15,10 @@ reads its own defaults with, in the module, so a setting added after it reads
 the environment the same way: `FEATURE_X = env.bool("FEATURE_X", default=False)`.
 `SILENCED_SYSTEM_CHECKS` starts as an empty list, so
 `SILENCED_SYSTEM_CHECKS += ["karni.W967"]` silences a check without a NameError.
-Settings read during the call are the exception (see below).
+Settings read during the call are the exception (see below). So is a setting a
+module chooses from the environment first (`KARNI_PAYMENTS_PROVIDER`): its
+environment variable, when set, wins over a value written before the call, such
+as karni.yaml's, so `.env` switches a local try to the test provider.
 This page lists the `KARNI_*` settings. The Django and
 DRF settings Karni derives are documented where the feature is.
 

@@ -46,16 +46,26 @@ def _store_serializer(base: type[serializers.ModelSerializer[Any]]) -> type[Any]
     class Store(base):  # type: ignore[valid-type,misc]
         current_price = serializers.SerializerMethodField()
         on_sale = serializers.SerializerMethodField()
+        more_description = serializers.SerializerMethodField()
         gallery = serializers.SerializerMethodField()
 
         class Meta(base.Meta):  # type: ignore[name-defined]
-            fields = [*base.Meta.fields, "current_price", "on_sale", "gallery"]
+            fields = [
+                *base.Meta.fields,
+                "current_price",
+                "on_sale",
+                "more_description",
+                "gallery",
+            ]
 
         def get_current_price(self, product: Product) -> str:
             return f"{product.current_price():.2f}"
 
         def get_on_sale(self, product: Product) -> bool:
             return product.on_sale()
+
+        def get_more_description(self, product: Product) -> str:
+            return product.more_description()
 
         @extend_schema_field(ProductImageSerializer(many=True))
         def get_gallery(self, product: Product) -> list[dict[str, str]]:

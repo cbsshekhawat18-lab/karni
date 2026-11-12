@@ -311,10 +311,15 @@ def _modules() -> list[dict[str, Any]]:
         except (ImportError, AttributeError):
             defaults = {}
         keys = [key for key in defaults if key.startswith(prefix)]
+        # A value the environment replaced (karni.conf FROM_ENVIRONMENT): the written one.
+        written = dict(getattr(settings, "KARNI_SETTINGS_FROM_ENVIRONMENT", None) or {})
         found.append(
             {
                 "name": name,
-                "settings": {key: _safe(getattr(settings, key, defaults[key])) for key in keys},
+                "settings": {
+                    key: _safe(written.get(key, getattr(settings, key, defaults[key])))
+                    for key in keys
+                },
                 "defaults": {key: _safe(defaults[key]) for key in keys},
             }
         )

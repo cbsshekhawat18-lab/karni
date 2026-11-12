@@ -168,6 +168,13 @@ Emails go through [`karni.mail`](#karnimail), each under a kind:
 | `commerce.order_cancelled` | the buyer | the order was cancelled |
 | `commerce.order_refunded` | the buyer | a refund went through |
 
+An order that waits for its payment sends no email: most orders that are
+never paid are a person who changed their mind, and a "we got your order"
+message for them reads like a charge that did not happen. The buyer's
+confirmation and the staff's new-order email go out once the order is paid.
+`order_placed` is still sent for every order, so a project that wants a
+placed email sends one from its own receiver.
+
 The templates are `karni_commerce/email/<name>_subject.txt`, `_body.txt` and
 `_body.html`. Put a file at the same path in your project's templates to
 change one, and list a kind in `KARNI_MAIL_DISABLED_KINDS` to stop it.

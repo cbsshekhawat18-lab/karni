@@ -5,6 +5,8 @@ app:
   kind: app
   recipe: shop
 modules:
+  # KARNI_PAYMENTS_PROVIDER in the environment wins over `provider`, so .env switches a
+  # local try or a demo to `test` with no code edit.
   payments:
     provider: stripe
     currency: usd

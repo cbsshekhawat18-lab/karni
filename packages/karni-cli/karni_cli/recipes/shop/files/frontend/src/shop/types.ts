@@ -14,6 +14,8 @@ export interface Product {
   sku: string;
   short_description: string;
   description: string;
+  /** The description less what the short description already says (blank: nothing more). */
+  more_description: string;
   image: string | null;
   price: string;
   sale_price: string | null;

@@ -31,6 +31,11 @@ from django.conf import settings
 
 env = environ.Env()
 
+#: Settings the environment chooses first (karni.conf): KARNI_PAYMENTS_PROVIDER in the
+#: environment wins over a provider written in settings.py or karni.yaml, so .env
+#: switches a local try or a demo to the test provider with no code edit.
+FROM_ENVIRONMENT = ("KARNI_PAYMENTS_PROVIDER",)
+
 DEFAULTS: dict[str, Any] = {
     # Active provider: "stripe", "razorpay", "test" or any dotted path to a
     # karni_payments.providers.base.PaymentProvider subclass (the escape

@@ -1,4 +1,5 @@
-// A product's page: its pictures, price, what is left, description, and Add to cart.
+// A product's page: its pictures, price, what is left, description, and Add to cart. The
+// short description shows at the top, and below it only what the description adds.
 import { AddToCart, ItemImage, PriceTag } from "@karni/commerce-ui";
 import {
   Button,
@@ -97,9 +98,9 @@ export function ProductView({ slug }: { slug: string }) {
           available={product.available}
         />
         <p className="text-sm text-muted-foreground">SKU {product.sku}</p>
-        {product.description ? (
+        {product.more_description ? (
           <div className="space-y-2 whitespace-pre-line border-t border-border pt-4">
-            {product.description}
+            {product.more_description}
           </div>
         ) : null}
       </div>

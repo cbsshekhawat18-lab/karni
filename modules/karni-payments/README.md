@@ -52,7 +52,7 @@ then `make migrate`. Register `https://<host>/payments/webhook/stripe/` (or
 
 | Setting (env var of the same name)  | Default | Meaning |
 | --- | --- | --- |
-| `KARNI_PAYMENTS_PROVIDER` | `"stripe"` | `"stripe"`, `"razorpay"`, `"test"` or a dotted path to your own `PaymentProvider` subclass |
+| `KARNI_PAYMENTS_PROVIDER` | `"stripe"` | `"stripe"`, `"razorpay"`, `"test"` or a dotted path to your own `PaymentProvider` subclass. The environment variable wins over a value in `settings.py` or karni.yaml (`FROM_ENVIRONMENT`), so `.env` switches a local try to `test` |
 | `KARNI_PAYMENTS_CURRENCY` | `"usd"` | default checkout currency |
 | `KARNI_PAYMENTS_CHECKOUT_VALIDATOR` | pass-through | dotted path called with `(user=, amount=, currency=, metadata=)` **before** a Payment exists. Set it, and never trust client amounts |
 | `KARNI_PAYMENTS_EVENT_HANDLER` | `karni_payments.services.apply_event` | dotted path the webhook task calls (the state-machine escape hatch) |

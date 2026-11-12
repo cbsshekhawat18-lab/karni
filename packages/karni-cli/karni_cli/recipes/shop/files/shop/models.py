@@ -60,6 +60,19 @@ class Product(karni.Product):
             "recent": 0,
         }
 
+    def more_description(self) -> str:
+        """The description without what the short description already says.
+
+        A product page shows the short description at the top and this below it: the
+        whole description when it says something else, the rest of it when it starts
+        with the short description, and nothing when the two are the same.
+        """
+        short = (self.short_description or "").strip()
+        full = (self.description or "").strip()
+        if short and full.startswith(short):
+            return full[len(short) :].strip()
+        return full
+
     def on_sale(self, at: datetime | None = None) -> bool:
         moment = at or timezone.now()
         return (
