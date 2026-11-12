@@ -59,7 +59,14 @@
           "type": "string"
         },
         "files": {
-          "description": "Its own domain code, seeds and tests, at the paths they take in the project.",
+          "description": "Its own domain code, seeds, tests and React files, at the paths they take in the project.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "routes": {
+          "description": "The React routes the first karni build registers for its own pages.",
           "items": {
             "type": "string"
           },
@@ -103,6 +110,7 @@
         "usually_changed",
         "source",
         "files",
+        "routes",
         "spec",
         "score",
         "matched"

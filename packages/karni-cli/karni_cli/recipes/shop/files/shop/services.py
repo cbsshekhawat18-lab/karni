@@ -107,7 +107,11 @@ def reserve(order: Order) -> None:
             left = product.available if product is not None and product.active else 0
             name = product.name if product is not None else "A product"
             raise ValidationError(
-                {"stock": [f"{name}: only {left} left." if left else f"{name} is sold out."]}
+                {
+                    "stock": [
+                        f"{name}: only {left} left." if left else f"{name} is sold out."
+                    ]
+                }
             )
         _announce(pk, quantity, order, "reserved")
 
@@ -124,7 +128,9 @@ def release(order: Order) -> None:
 def take(order: Order) -> None:
     """The paid order takes what it held off the shelf."""
     for pk, quantity in _lines(order):
-        Product.objects.filter(pk=pk, reserved__gte=quantity, stock__gte=quantity).update(
+        Product.objects.filter(
+            pk=pk, reserved__gte=quantity, stock__gte=quantity
+        ).update(
             stock=F("stock") - quantity,
             reserved=F("reserved") - quantity,
             updated_at=timezone.now(),
@@ -137,7 +143,9 @@ def take(order: Order) -> None:
 def restock(order: Order) -> None:
     """A paid order was cancelled or refunded: its items go back on the shelf."""
     for pk, quantity in _lines(order):
-        Product.objects.filter(pk=pk).update(stock=F("stock") + quantity, updated_at=timezone.now())
+        Product.objects.filter(pk=pk).update(
+            stock=F("stock") + quantity, updated_at=timezone.now()
+        )
         _announce(pk, quantity, order, "returned")
 
 
@@ -172,7 +180,11 @@ def set_quantity(cart: Cart, product: Product, quantity: int) -> None:
     if quantity > min(product.available, MAX_QUANTITY):
         left = product.available
         raise ValidationError(
-            {"quantity": [f"Only {left} of {product.name} left." if left else "Sold out."]}
+            {
+                "quantity": [
+                    f"Only {left} of {product.name} left." if left else "Sold out."
+                ]
+            }
         )
     item = CartItem.objects.filter(cart=cart, product=product).first()
     if item is None:
@@ -191,7 +203,11 @@ def merge(user: Any, token: str | None) -> Cart:
     """
     cart = find_cart(user, None, create=True)
     assert cart is not None
-    visitor = Cart.objects.filter(customer__isnull=True, token=token).first() if token else None
+    visitor = (
+        Cart.objects.filter(customer__isnull=True, token=token).first()
+        if token
+        else None
+    )
     if visitor is not None and visitor.pk != cart.pk:
         for item in visitor.lines():
             mine = CartItem.objects.filter(cart=cart, product=item.product).first()
@@ -213,7 +229,8 @@ def claim_orders(user: Any) -> list[Order]:
     found = list(Order.objects.filter(customer__isnull=True, email__iexact=user.email))
     if found:
         rows = Order.objects.filter(pk__in=[order.pk for order in found])
-        rows.update(customer=user)  # karni: allow(audited-bulk-write): audit keeps status only
+        claim = {"customer": user}  # the change history keeps the status only
+        rows.update(**claim)  # karni: allow(audited-bulk-write): status only
         events.customer_orders_claimed.send(sender=Order, user=user, orders=found)
     return found
 
@@ -272,7 +289,9 @@ def place_order(
         raise ValidationError({"cart": ["The cart is empty."]})
     subtotal = cart_total(lines)
     order = _new_order(
-        customer=customer if customer is not None and customer.is_authenticated else None,
+        customer=customer
+        if customer is not None and customer.is_authenticated
+        else None,
         email=email,
         status="pending",
         subtotal=subtotal,
@@ -311,7 +330,8 @@ def open_payment(order: Order) -> str:
         metadata={"order": str(order.pk), "number": order.number},
     )
     rows = Order.objects.filter(pk=order.pk)
-    rows.update(payment=payment)  # karni: allow(audited-bulk-write): audit keeps status only
+    link = {"payment": payment}  # the change history keeps the status only
+    rows.update(**link)  # karni: allow(audited-bulk-write): status only
     order.payment = payment
     return session.url
 
@@ -341,7 +361,9 @@ def settle(payment: Payment) -> None:
             if order.status == "pending":
                 order.transition("status", "paid", paid_at=timezone.now())
             elif order.status in ("failed", "cancelled"):
-                transaction.on_commit(lambda p=payment: refund(p, "the order had expired"))
+                transaction.on_commit(
+                    lambda p=payment: refund(p, "the order had expired")
+                )
         elif payment.status in (Payment.Status.FAILED, Payment.Status.CANCELED):
             if order.status == "pending":
                 order.transition("status", "failed")

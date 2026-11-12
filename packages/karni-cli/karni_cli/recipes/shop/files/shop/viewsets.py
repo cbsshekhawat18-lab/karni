@@ -64,19 +64,32 @@ def _store_serializer(base: type[serializers.ModelSerializer[Any]]) -> type[Any]
     """``base`` with what a shopper needs: the price today, what is left and every picture."""
 
     class Store(base):  # type: ignore[valid-type,misc]
-        current_price = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+        current_price = serializers.DecimalField(
+            max_digits=12, decimal_places=2, read_only=True
+        )
         on_sale = serializers.BooleanField(read_only=True)
         available = serializers.IntegerField(read_only=True)
         gallery = serializers.SerializerMethodField()
 
         class Meta(base.Meta):  # type: ignore[name-defined]
-            fields = [*base.Meta.fields, "current_price", "on_sale", "available", "gallery"]
+            fields = [
+                *base.Meta.fields,
+                "current_price",
+                "on_sale",
+                "available",
+                "gallery",
+            ]
 
         @extend_schema_field(_ProductImageSerializer(many=True))
         def get_gallery(self, product: Product) -> list[dict[str, str]]:
-            images = sorted(product.productimage_set.all(), key=lambda row: row.position)
+            images = sorted(
+                product.productimage_set.all(), key=lambda row: row.position
+            )
             return [
-                {"image": image_url(self.context, row.image) or "", "alt": row.alt or ""}
+                {
+                    "image": image_url(self.context, row.image) or "",
+                    "alt": row.alt or "",
+                }
                 for row in images
             ]
 
@@ -86,7 +99,8 @@ def _store_serializer(base: type[serializers.ModelSerializer[Any]]) -> type[Any]
 
 
 class ProductViewSet(karni.ProductViewSet):
-    """Products. A shopper sees the active ones, with their price today and what is left.
+    """Products. A shopper sees the active ones, with their price today and what is
+    left.
 
     ``?min_price=`` and ``?max_price=`` filter by the price a customer pays now,
     and ``?ordering=effective_price`` sorts by it.
@@ -108,7 +122,9 @@ class ProductViewSet(karni.ProductViewSet):
             value = params.get(name)
             if value:
                 try:
-                    queryset = queryset.filter(**{f"effective_price__{lookup}": float(value)})
+                    queryset = queryset.filter(
+                        **{f"effective_price__{lookup}": float(value)}
+                    )
                 except ValueError:
                     raise ValidationError({name: ["A number."]}) from None
         return queryset
@@ -116,7 +132,9 @@ class ProductViewSet(karni.ProductViewSet):
     @extend_schema(
         parameters=[
             OpenApiParameter("min_price", float, description="The lowest price today."),
-            OpenApiParameter("max_price", float, description="The highest price today."),
+            OpenApiParameter(
+                "max_price", float, description="The highest price today."
+            ),
         ]
     )
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -138,10 +156,14 @@ class CartViewSet(karni.CartViewSet):
     )
 
     def _current(self, request: Request, *, create: bool = False) -> Any:
-        return services.find_cart(request.user, request.headers.get(TOKEN_HEADER), create=create)
+        return services.find_cart(
+            request.user, request.headers.get(TOKEN_HEADER), create=create
+        )
 
     def _cart(self, request: Request, cart: Any, status: int = 200) -> Response:
-        return Response(CartSerializer.of(cart, context={"request": request}), status=status)
+        return Response(
+            CartSerializer.of(cart, context={"request": request}), status=status
+        )
 
     @extend_schema(responses=CartSerializer)
     @action(detail=False, methods=["get"], url_path="current", access=Public())
@@ -156,19 +178,29 @@ class CartViewSet(karni.CartViewSet):
         body = SetQuantitySerializer(data=request.data)
         body.is_valid(raise_exception=True)
         cart = self._current(request, create=True)
-        services.set_quantity(cart, body.validated_data["product"], body.validated_data["quantity"])
+        services.set_quantity(
+            cart, body.validated_data["product"], body.validated_data["quantity"]
+        )
         return self._cart(request, cart)
 
     @extend_schema(request=MergeSerializer, responses=CartSerializer)
-    @action(detail=False, methods=["post"], url_path="current/merge", access=Authenticated())
+    @action(
+        detail=False, methods=["post"], url_path="current/merge", access=Authenticated()
+    )
     def merge(self, request: Request) -> Response:
         """The visitor's cart (by its token) joins the signed-in customer's cart."""
         body = MergeSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        return self._cart(request, services.merge(request.user, body.validated_data["token"]))
+        return self._cart(
+            request, services.merge(request.user, body.validated_data["token"])
+        )
 
-    @extend_schema(request=CheckoutSerializer, responses={201: CheckoutResultSerializer})
-    @action(detail=False, methods=["post"], url_path="current/checkout", access=Public())
+    @extend_schema(
+        request=CheckoutSerializer, responses={201: CheckoutResultSerializer}
+    )
+    @action(
+        detail=False, methods=["post"], url_path="current/checkout", access=Public()
+    )
     def checkout(self, request: Request) -> Response:
         """The cart becomes an order, its stock is held, and its payment starts."""
         body = CheckoutSerializer(data=request.data)
@@ -177,14 +209,21 @@ class CartViewSet(karni.CartViewSet):
         user = request.user if request.user.is_authenticated else None
         email = (user.email if user is not None else "") or data["email"]
         if not email:
-            raise ValidationError({"email": ["An email address, for the confirmation."]})
+            raise ValidationError(
+                {"email": ["An email address, for the confirmation."]}
+            )
         cart = self._current(request)
         if cart is None:
             raise ValidationError({"cart": ["The cart is empty."]})
         billing = dict(data["billing"])
         shipping = dict(data["shipping"] or billing)
         order = services.place_order(
-            cart, customer=user, email=email, billing=billing, shipping=shipping, note=data["note"]
+            cart,
+            customer=user,
+            email=email,
+            billing=billing,
+            shipping=shipping,
+            note=data["note"],
         )
         if user is not None and data["save_address"]:
             Address.objects.get_or_create(
@@ -192,7 +231,11 @@ class CartViewSet(karni.CartViewSet):
                 line1=shipping["line1"],
                 postcode=shipping["postcode"],
                 defaults={
-                    **{k: v for k, v in shipping.items() if k not in ("line1", "postcode")},
+                    **{
+                        k: v
+                        for k, v in shipping.items()
+                        if k not in ("line1", "postcode")
+                    },
                     "is_default": not Address.objects.filter(customer=user).exists(),
                 },
             )
@@ -220,7 +263,9 @@ class OrderViewSet(karni.OrderViewSet):
     def _find(self, request: Request, number: Any, key: str) -> Order:
         order = Order.objects.filter(number=number).first()
         user = request.user
-        mine = order is not None and user.is_authenticated and order.customer_id == user.pk
+        mine = (
+            order is not None and user.is_authenticated and order.customer_id == user.pk
+        )
         staff = user.is_authenticated and user.can("shop.order:change")
         if order is None or not (mine or staff or (key and key == order.key)):
             raise NotFound("No such order.")
@@ -238,7 +283,9 @@ class OrderViewSet(karni.OrderViewSet):
         """One order with its lines and addresses, for its customer or the guest with its key."""
         body = _OrderKeySerializer(data=request.query_params)
         body.is_valid(raise_exception=True)
-        order = self._find(request, body.validated_data["number"], body.validated_data["key"])
+        order = self._find(
+            request, body.validated_data["number"], body.validated_data["key"]
+        )
         return Response(OrderViewSerializer(order, context={"request": request}).data)
 
     @extend_schema(request=_OrderKeySerializer, responses=PayResultSerializer)
@@ -247,7 +294,9 @@ class OrderViewSet(karni.OrderViewSet):
         """Start the payment again for an order that still waits for it."""
         body = _OrderKeySerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        order = self._find(request, body.validated_data["number"], body.validated_data["key"])
+        order = self._find(
+            request, body.validated_data["number"], body.validated_data["key"]
+        )
         return Response(PayResultSerializer({"url": services.open_payment(order)}).data)
 
 

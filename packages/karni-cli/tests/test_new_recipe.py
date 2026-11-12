@@ -116,14 +116,19 @@ def test_a_recipe_validates_and_leaves_no_question_open(name: str, runner: CliRu
     result = runner.invoke(app, ["plan", "--questions", "--json", "--spec", str(spec)])
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout)["total"] == 0
-    # its own files go where the project owns the code, under the app it builds
+    # its own files go where the project owns the code: under the app it builds, and its
+    # React pages and components under frontend/src/
     assert recipe.files
-    assert all(rel.split("/")[0] == RECIPES[name] for rel in recipe.files)
+    assert all(
+        rel.split("/")[0] == RECIPES[name] or rel.startswith(recipes_mod.FRONTEND_SRC + "/")
+        for rel in recipe.files
+    )
     assert not [rel for rel in recipe.files if recipes_mod.karni_owned(rel)]
-    # a project's code, at the 88 columns Karni's generators write (ruff format in a project)
+    # a project's Python, at the 88 columns Karni's generators write (ruff format in a project)
     for rel, text in apply.contents(recipe).items():
-        ast.parse(text, rel)
-        assert max(len(line) for line in text.splitlines()) <= 88, rel
+        if rel.endswith(".py"):
+            ast.parse(text, rel)
+            assert max(len(line) for line in text.splitlines()) <= 88, rel
 
 
 @pytest.mark.parametrize(("request_line", "name"), sorted(REQUESTS.items()))
@@ -361,7 +366,8 @@ def _pending(root: Path, name: str) -> None:
     assert found is not None
     (root / "karni.yaml").write_text(found.spec())
     (root / ".karni").mkdir(exist_ok=True)
-    (root / ".karni" / "build.json").write_text(record.Record(recipe=name).text())
+    stubs = apply.scaffold_digests(root, found)
+    (root / ".karni" / "build.json").write_text(record.Record(recipe=name, scaffold=stubs).text())
 
 
 def _build(*args: str) -> tuple[int, str]:
@@ -379,7 +385,7 @@ def test_karni_build_after_new_recipe_plans_the_recipe_files(
     code, out = _build("--dry-run")
     assert code == 0, out
     assert "would create shop/models.py (project)" in out
-    assert "would create shop/tests/test_checkout.py (project)" in out
+    assert "would create shop/tests/test_rules.py (project)" in out
     assert record.load(empty.root).recipe == "shop"  # a dry run writes nothing
 
 

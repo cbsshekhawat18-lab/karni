@@ -33,7 +33,8 @@ def snapshot(app: str) -> dict[str, list[tuple[Any, ...]]]:
             if not getattr(field, "auto_now", False)
             and not getattr(field, "auto_now_add", False)
             and field.attname not in ("key", "token", "reserved_until")
-            # a file keeps its name, but storage adds a suffix when the old one is still there
+            # a file keeps its name, but storage adds a suffix when the old one is still
+            # there
             and field.get_internal_type() not in ("FileField", "ImageField")
         ]
         rows = model._base_manager.values_list(*names)
@@ -52,8 +53,11 @@ def test_the_same_seed_gives_the_same_rows_and_the_yaml_counts() -> None:
 
 def test_the_demo_shop_looks_alive() -> None:
     seed(seed=3, now=NOW, reset=True)
-    # The categories are a tree, and every product sits in a leaf with its catalogue entry.
-    tops = set(Category.objects.filter(parent__isnull=True).values_list("name", flat=True))
+    # The categories are a tree, and every product sits in a leaf with its catalogue
+    # entry.
+    tops = set(
+        Category.objects.filter(parent__isnull=True).values_list("name", flat=True)
+    )
     assert tops == set(CATALOG)
     for product in Product.objects.prefetch_related("categories__parent"):
         [child] = product.categories.all()

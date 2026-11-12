@@ -19,19 +19,32 @@ def image_url(context: dict[str, Any], image: Any) -> str | None:
     if not image:
         return None
     request = context.get("request")
-    return request.build_absolute_uri(image.url) if request is not None else str(image.url)
+    return (
+        request.build_absolute_uri(image.url) if request is not None else str(image.url)
+    )
 
 
 class ProductCardSerializer(serializers.ModelSerializer[Product]):
     """A product as a cart line shows it."""
 
     image = serializers.SerializerMethodField()
-    current_price = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    current_price = serializers.DecimalField(
+        max_digits=12, decimal_places=2, read_only=True
+    )
     available = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Product
-        fields = ["id", "name", "slug", "sku", "image", "price", "current_price", "available"]
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "sku",
+            "image",
+            "price",
+            "current_price",
+            "available",
+        ]
 
     def get_image(self, product: Product) -> str | None:
         return image_url(self.context, product.image)
@@ -72,7 +85,9 @@ class CartSerializer(serializers.Serializer[Cart | None]):
         lines = cart.lines() if cart is not None else []
         problems = services.cart_problems(lines)
         data = {
-            "token": cart.token if cart is not None and cart.customer_id is None else None,
+            "token": cart.token
+            if cart is not None and cart.customer_id is None
+            else None,
             "lines": lines,
             "count": sum(line.quantity for line in lines),
             "subtotal": f"{services.cart_total(lines):.2f}",
@@ -93,14 +108,22 @@ class MergeSerializer(serializers.Serializer[Any]):
 
 class AddressInputSerializer(serializers.Serializer[Any]):
     name = serializers.CharField(max_length=120)
-    company = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+    company = serializers.CharField(
+        max_length=120, required=False, allow_blank=True, default=""
+    )
     line1 = serializers.CharField(max_length=200)
-    line2 = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
+    line2 = serializers.CharField(
+        max_length=200, required=False, allow_blank=True, default=""
+    )
     city = serializers.CharField(max_length=120)
-    region = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+    region = serializers.CharField(
+        max_length=120, required=False, allow_blank=True, default=""
+    )
     postcode = serializers.CharField(max_length=20)
     country = serializers.CharField(max_length=2, min_length=2)
-    phone = serializers.CharField(max_length=40, required=False, allow_blank=True, default="")
+    phone = serializers.CharField(
+        max_length=40, required=False, allow_blank=True, default=""
+    )
 
     def validate_country(self, value: str) -> str:
         return value.upper()
@@ -112,7 +135,9 @@ class CheckoutSerializer(serializers.Serializer[Any]):
     email = serializers.EmailField(required=False, allow_blank=True, default="")
     billing = AddressInputSerializer()
     shipping = AddressInputSerializer(required=False, allow_null=True, default=None)
-    note = serializers.CharField(required=False, allow_blank=True, default="", max_length=2000)
+    note = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=2000
+    )
     save_address = serializers.BooleanField(required=False, default=False)
 
 
@@ -128,7 +153,16 @@ class OrderLineSerializer(serializers.ModelSerializer[OrderItem]):
 
     class Meta:
         model = OrderItem
-        fields = ["id", "name", "sku", "quantity", "unit_price", "line_total", "slug", "image"]
+        fields = [
+            "id",
+            "name",
+            "sku",
+            "quantity",
+            "unit_price",
+            "line_total",
+            "slug",
+            "image",
+        ]
 
     def get_slug(self, line: OrderItem) -> str | None:
         return line.product.slug if line.product is not None else None
@@ -165,7 +199,9 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
         ]
 
     def get_lines(self, order: Order) -> list[dict[str, Any]]:
-        return list(OrderLineSerializer(order.lines(), many=True, context=self.context).data)
+        return list(
+            OrderLineSerializer(order.lines(), many=True, context=self.context).data
+        )
 
     def get_currency(self, order: Order) -> str:
         return currency()

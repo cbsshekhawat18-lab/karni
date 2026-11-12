@@ -44,7 +44,9 @@ class Product(karni.Product):
     class Meta(karni.Product.Meta):
         constraints = [
             LiveUniqueConstraint(fields=["sku"], name="shop_product_sku_unique"),
-            models.CheckConstraint(condition=Q(stock__gte=0), name="shop_product_stock_gte_0"),
+            models.CheckConstraint(
+                condition=Q(stock__gte=0), name="shop_product_stock_gte_0"
+            ),
             models.CheckConstraint(
                 condition=Q(reserved__gte=0) & Q(reserved__lte=F("stock")),
                 name="shop_product_reserved_in_stock",
@@ -62,7 +64,10 @@ class Product(karni.Product):
             "order": 2,
             "total": False,
             "new_days": 0,
-            "counts": {"Sold out": {"stock__lte": 0}, "Low (3 or fewer)": {"stock__lte": 3}},
+            "counts": {
+                "Sold out": {"stock__lte": 0},
+                "Low (3 or fewer)": {"stock__lte": 3},
+            },
             "recent": 0,
         }
 
@@ -76,7 +81,11 @@ class Product(karni.Product):
 
     def current_price(self, at: datetime | None = None) -> Decimal:
         """The price a customer pays now: the sale price while the sale runs."""
-        price = self.sale_price if self.on_sale(at) and self.sale_price is not None else self.price
+        price = (
+            self.sale_price
+            if self.on_sale(at) and self.sale_price is not None
+            else self.price
+        )
         return Decimal(price).quantize(Decimal("0.01"))
 
     @property
@@ -94,7 +103,9 @@ class Cart(karni.Cart):
 
     def lines(self) -> list[CartItem]:
         return list(
-            self.cartitem_set.select_related("product").order_by("created_at", "product__name")
+            self.cartitem_set.select_related("product").order_by(
+                "created_at", "product__name"
+            )
         )
 
 
@@ -106,7 +117,16 @@ class Address(karni.Address):
     """An address a customer keeps for their next checkout."""
 
     def as_dict(self) -> dict[str, str]:
-        fields = ("name", "company", "line1", "line2", "city", "region", "postcode", "phone")
+        fields = (
+            "name",
+            "company",
+            "line1",
+            "line2",
+            "city",
+            "region",
+            "postcode",
+            "phone",
+        )
         found = {name: str(getattr(self, name) or "") for name in fields}
         found["country"] = str(self.country or "")
         return found
@@ -116,12 +136,21 @@ class Order(karni.Order):
     """An order: its lines are copied from the cart, and its totals come from them."""
 
     class Meta(karni.Order.Meta):
-        constraints = [LiveUniqueConstraint(fields=["number"], name="shop_order_number_unique")]
+        constraints = [
+            LiveUniqueConstraint(fields=["number"], name="shop_order_number_unique")
+        ]
 
     class APIMeta:
         # The server writes these: the number, the money and the times. The guest's key
         # never leaves the server but in checkout's answer.
-        read_only = ["number", "subtotal", "total", "payment", "paid_at", "reserved_until"]
+        read_only = [
+            "number",
+            "subtotal",
+            "total",
+            "payment",
+            "paid_at",
+            "reserved_until",
+        ]
         exclude = ["key"]
 
     class Karni(karni.Order.Karni):
@@ -152,7 +181,9 @@ class Order(karni.Order):
         return f"Order {self.number}"
 
     def lines(self) -> list[OrderItem]:
-        return list(self.orderitem_set.select_related("product").order_by("created_at", "name"))
+        return list(
+            self.orderitem_set.select_related("product").order_by("created_at", "name")
+        )
 
     def items_total(self) -> Decimal:
         """The sum of the lines, as the server computes it."""

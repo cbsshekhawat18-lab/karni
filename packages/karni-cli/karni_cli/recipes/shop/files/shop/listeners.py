@@ -1,4 +1,5 @@
-"""The shop's reactions: a payment moves its order, and an order's status moves its stock.
+"""The shop's reactions: a payment moves its order, and an order's status moves its
+stock.
 
 Karni imports this module at startup (``karni.events`` autodiscovery).
 """
@@ -37,12 +38,16 @@ def release_the_stock(order: Order) -> None:
     services.release(order)
 
 
-@on_transition(Order, "status", to=["cancelled", "refunded"], source=list(services.STOCK_TAKEN))
+@on_transition(
+    Order, "status", to=["cancelled", "refunded"], source=list(services.STOCK_TAKEN)
+)
 def return_the_stock(order: Order) -> None:
     """A paid order that is cancelled or refunded puts its items back and refunds the payment."""
     services.restock(order)
     payment = order.payment
-    transaction.on_commit(lambda: services.refund(payment, f"order {order.number} {order.status}"))
+    transaction.on_commit(
+        lambda: services.refund(payment, f"order {order.number} {order.status}")
+    )
 
 
 def send_confirmation(order_pk: Any) -> None:
@@ -53,5 +58,9 @@ def send_confirmation(order_pk: Any) -> None:
     send_templated(
         "shop/email/order_paid",
         to=[order.email],
-        context={"order": order, "lines": order.lines(), "link": services.order_link(order)},
+        context={
+            "order": order,
+            "lines": order.lines(),
+            "link": services.order_link(order),
+        },
     )

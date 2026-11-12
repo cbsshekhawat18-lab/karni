@@ -74,6 +74,30 @@ apply codemods and list the manual steps. This file is the human summary.
   PATH" when git is missing, and the PostgreSQL backup round trip skips when `DATABASE_URL`
   points at a server that is not listening. Before, they failed.
 
+- **The shop recipe, first slice (experimental, work in progress).** A storefront open to
+  visitors (home, catalogue with search, category and price filters, sort and pages,
+  product page, cart, guest or signed-in checkout, order page, account), stock held at
+  checkout and taken on payment, readable order numbers and the confirmation email. The
+  cart and orders move to a karni-commerce module next.
+
+- **Recipe pages and routes (experimental).** A recipe lists its React pages as
+  `[[routes]]` in recipe.toml, and the first `karni build` registers them in
+  `frontend/src/routes.tsx`. A file `karni new` wrote counts as a stub while it is
+  unchanged (`scaffold` in `.karni/build.json`).
+
+- **Public pages (experimental).** The scaffold's layout shows a route with
+  `staticData: { public: true }` to visitors, and puts `TermsGate` behind the sign-in guard.
+
+- **@karni/ui (experimental):** `ResourceGrid` (a resource's rows as cards, with search,
+  sort, filters and pages), `formatMoney` and `usePageMeta`.
+
+- **karni (experimental):** `karni.mail.send_templated` (karni-site's notify now uses it)
+  and `karni.placeholder.placeholder_image`, also in `karni.seeding`.
+
+- **karni-payments (experimental):** the test provider's checkout page
+  (`KARNI_PAYMENTS_TEST_CHECKOUT_PAGE`, on while `DEBUG`), and the signals
+  `payment_status_changed`, `refund_created` and `refund_status_changed`.
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

@@ -52,7 +52,9 @@ def fresh(product: Product) -> Product:
     return product
 
 
-def test_checkout_reserves_the_stock_and_the_payment_takes_it(make_product: MakeProduct) -> None:
+def test_checkout_reserves_the_stock_and_the_payment_takes_it(
+    make_product: MakeProduct,
+) -> None:
     lamp = make_product(stock=5)
     order = place(cart_with((lamp, 2)))
     assert (fresh(lamp).stock, lamp.reserved, lamp.available) == (5, 2, 3)
@@ -62,7 +64,9 @@ def test_checkout_reserves_the_stock_and_the_payment_takes_it(make_product: Make
     assert (fresh(lamp).stock, lamp.reserved) == (3, 0)
 
 
-def test_two_buyers_of_the_last_item_never_both_get_it(make_product: MakeProduct) -> None:
+def test_two_buyers_of_the_last_item_never_both_get_it(
+    make_product: MakeProduct,
+) -> None:
     last = make_product(stock=1)
     first, second = cart_with((last, 1)), cart_with((last, 1))
     stale = Product.objects.get(pk=last.pk)  # what the second buyer's page loaded
@@ -131,7 +135,9 @@ def test_a_refund_returns_the_stock(make_product: MakeProduct) -> None:
     assert fresh(sack).stock == 3
 
 
-def test_the_line_keeps_the_name_and_price_of_the_day(make_product: MakeProduct) -> None:
+def test_the_line_keeps_the_name_and_price_of_the_day(
+    make_product: MakeProduct,
+) -> None:
     board = make_product(name="Oak Board", sku="KIT-9", price=Decimal("30.00"))
     order = place(cart_with((board, 2)))
     board.name, board.price = "Renamed Board", Decimal("99.00")
@@ -155,13 +161,23 @@ def test_a_running_sale_sets_the_price(make_product: MakeProduct) -> None:
         sale_ends=now + timedelta(days=1),
     )
     later = make_product(
-        price=Decimal("20.00"), sale_price=Decimal("5.00"), sale_starts=now + timedelta(days=2)
+        price=Decimal("20.00"),
+        sale_price=Decimal("5.00"),
+        sale_starts=now + timedelta(days=2),
     )
     order = place(cart_with((running, 1), (later, 1)))
-    assert sorted(line.unit_price for line in order.lines()) == [Decimal("15.00"), Decimal("20.00")]
+    assert sorted(line.unit_price for line in order.lines()) == [
+        Decimal("15.00"),
+        Decimal("20.00"),
+    ]
     assert order.total == Decimal("35.00")
-    prices = services.with_effective_price(Product.objects.filter(pk__in=[running.pk, later.pk]))
-    assert sorted(p.effective_price for p in prices) == [Decimal("15.00"), Decimal("20.00")]
+    prices = services.with_effective_price(
+        Product.objects.filter(pk__in=[running.pk, later.pk])
+    )
+    assert sorted(p.effective_price for p in prices) == [
+        Decimal("15.00"),
+        Decimal("20.00"),
+    ]
 
 
 def test_only_the_allowed_moves_happen(make_product: MakeProduct) -> None:
@@ -229,5 +245,10 @@ def test_what_happens_is_published(make_product: MakeProduct) -> None:
         events.order_placed.disconnect(placed)
         events.stock_changed.disconnect(stock)
         events.stock_low.disconnect(low)
-    assert heard == [("reserved", 2), ("placed", order.number), ("taken", 2), ("low", 2)]
+    assert heard == [
+        ("reserved", 2),
+        ("placed", order.number),
+        ("taken", 2),
+        ("low", 2),
+    ]
     assert order.payment.status == Payment.Status.SUCCEEDED

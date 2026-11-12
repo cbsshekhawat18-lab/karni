@@ -264,7 +264,16 @@ CATALOG: dict[str, dict[str, list[tuple[str, str, str]]]] = {
     },
 }
 
-TAGS = ["Gift idea", "Handmade", "Bestseller", "Eco", "New", "Limited", "Local", "Classic"]
+TAGS = [
+    "Gift idea",
+    "Handmade",
+    "Bestseller",
+    "Eco",
+    "New",
+    "Limited",
+    "Local",
+    "Classic",
+]
 
 #: The people of the demo: (email, first name, last name, city, postcode, country, role).
 PEOPLE = [
@@ -317,7 +326,11 @@ def people() -> list[Any]:
 
 
 def customers() -> list[Any]:
-    return [user for user, entry in zip(people(), PEOPLE, strict=True) if entry[6] == "customer"]
+    return [
+        user
+        for user, entry in zip(people(), PEOPLE, strict=True)
+        if entry[6] == "customer"
+    ]
 
 
 def address_of(user: Any) -> dict[str, str]:
@@ -352,14 +365,19 @@ class CategorySeeder(karni.CategorySeeder):
                 if len(rows) >= context.count:
                     return rows
                 rows += context.create(
-                    1, name=child, parent=top, image=placeholder_image(child, key=top.name)
+                    1,
+                    name=child,
+                    parent=top,
+                    image=placeholder_image(child, key=top.name),
                 )
         return rows
 
 
 class TagSeeder(karni.TagSeeder):
     def seed(self, context: SeedContext) -> list[Any]:
-        return [context.create(1, name=cycled(TAGS, n))[0] for n in range(context.count)]
+        return [
+            context.create(1, name=cycled(TAGS, n))[0] for n in range(context.count)
+        ]
 
 
 def _catalogue() -> list[tuple[Category, Category, tuple[str, str, str]]]:
@@ -404,16 +422,22 @@ class ProductSeeder(karni.ProductSeeder):
                 "image": placeholder_image(name, key=top.name),
             }
             if number % 6 == 1:  # on sale now, until next week
-                values["sale_price"] = (regular * Decimal("0.8")).quantize(Decimal("0.01"))
+                values["sale_price"] = (regular * Decimal("0.8")).quantize(
+                    Decimal("0.01")
+                )
                 values["sale_starts"] = now - timedelta(days=3)
                 values["sale_ends"] = now + timedelta(days=7)
             elif number % 6 == 4:  # a sale that starts next week
-                values["sale_price"] = (regular * Decimal("0.9")).quantize(Decimal("0.01"))
+                values["sale_price"] = (regular * Decimal("0.9")).quantize(
+                    Decimal("0.01")
+                )
                 values["sale_starts"] = now + timedelta(days=7)
             [product] = context.create(1, **values)
             product.categories.set([child])
             if tags:
-                product.tags.set([tags[number % len(tags)], tags[(number * 3 + 1) % len(tags)]])
+                product.tags.set(
+                    [tags[number % len(tags)], tags[(number * 3 + 1) % len(tags)]]
+                )
             rows.append(product)
         return rows
 
@@ -469,8 +493,11 @@ class OrderSeeder(karni.OrderSeeder):
         found = customers()
         rows: list[Any] = []
         now = anchor(context)
-        # The payments of a seed before this one (karni seed --reset wipes the orders only).
-        Refund.objects.filter(payment__checkout_session_id__startswith="seed_cs_").hard_delete()
+        # The payments of a seed before this one (karni seed --reset wipes the orders
+        # only).
+        Refund.objects.filter(
+            payment__checkout_session_id__startswith="seed_cs_"
+        ).hard_delete()
         Payment.objects.filter(checkout_session_id__startswith="seed_cs_").hard_delete()
         for number in range(context.count):
             state = STATES[number % len(STATES)]
@@ -478,7 +505,9 @@ class OrderSeeder(karni.OrderSeeder):
             customer = None if guest else found[number % len(found)]
             email = f"guest{number}@example.com" if guest else customer.email
             address = address_of(found[number % len(found)])
-            placed = now - timedelta(days=(context.count - number) // 2, hours=number % 7)
+            placed = now - timedelta(
+                days=(context.count - number) // 2, hours=number % 7
+            )
             if state == "pending":
                 placed = now - timedelta(minutes=5)
             with any_initial_state("demo orders start in every state"):
@@ -492,22 +521,29 @@ class OrderSeeder(karni.OrderSeeder):
                     total=Decimal("0.00"),
                     billing=address,
                     shipping=address,
-                    note="Please leave it with the neighbour." if number % 5 == 0 else "",
+                    note="Please leave it with the neighbour."
+                    if number % 5 == 0
+                    else "",
                     payment=None,
                     paid_at=None if state in ("pending", "failed") else placed,
                     # a demo order waiting for its payment keeps its stock for two days
-                    reserved_until=now + timedelta(days=2) if state == "pending" else None,
+                    reserved_until=now + timedelta(days=2)
+                    if state == "pending"
+                    else None,
                     key=new_key(),
                 )
-            rows = Order.objects.filter(pk=order.pk)
-            rows.update(created_at=placed)  # karni: allow(audited-bulk-write): demo backdating
+            this = Order.objects.filter(pk=order.pk)
+            when = {"created_at": placed}
+            this.update(**when)  # karni: allow(audited-bulk-write): demo data
             rows.append(order)
         return rows
 
 
 class OrderItemSeeder(karni.OrderItemSeeder):
-    """One to three lines per order at their product's price, then each order's totals, its
-    payment and, for a cancelled or refunded order, its refund. A pending order holds its stock.
+    """One to three lines per order at their product's price, then each order's totals,
+    its
+    payment and, for a cancelled or refunded order, its refund. A pending order holds
+    its stock.
     """
 
     def seed(self, context: SeedContext) -> list[Any]:
@@ -518,20 +554,32 @@ class OrderItemSeeder(karni.OrderItemSeeder):
         rows: list[Any] = []
         for number, order in enumerate(orders):
             left = context.count - len(rows)
-            wanted = min(1 + number % 3, max(left - (len(orders) - number - 1), 1), left)
+            wanted = min(
+                1 + number % 3, max(left - (len(orders) - number - 1), 1), left
+            )
             for k in range(wanted):
                 product = products[(number * 3 + k) % len(products)]
                 line = OrderItem.from_product(order, product, k + 1)
                 values = {
                     name: getattr(line, name)
-                    for name in ("product", "name", "sku", "quantity", "unit_price", "line_total")
+                    for name in (
+                        "product",
+                        "name",
+                        "sku",
+                        "quantity",
+                        "unit_price",
+                        "line_total",
+                    )
                 }
                 rows += context.create(1, order=order, **values)
             total = order.items_total()
-            payment = payment_for(order, total, uuid.UUID(int=context.random.getrandbits(128)))
-            rows = Order.objects.filter(pk=order.pk)
+            payment = payment_for(
+                order, total, uuid.UUID(int=context.random.getrandbits(128))
+            )
+            this = Order.objects.filter(pk=order.pk)
             # the history keeps the status only (audit: [status]): nothing is lost here
-            rows.update(subtotal=total, total=total, payment=payment)  # karni: allow(audited-bulk-write): demo data
+            money = {"subtotal": total, "total": total, "payment": payment}
+            this.update(**money)  # karni: allow(audited-bulk-write): demo data
             if order.status == "pending":
                 order.refresh_from_db()
                 try:
