@@ -567,6 +567,43 @@ RULES: tuple[Rule, ...] = (
             "aggregations lists every parameter."
         ),
     ),
+    Rule(
+        code="K315",
+        category="architecture",
+        severity="error",
+        summary="Parts: never name another part.",
+        rule=(
+            "A project may hold several recipes (`app.recipes`), each one a part with its app "
+            "label as its prefix. A part's files (its app folder and `frontend/src/<prefix>/`) "
+            "never import another part's code and never name its app label: no `import crm`, "
+            'no `"crm.Deal"` in a foreign key, no `"crm.deal:own"`, no `"crm:deal-list"`, no '
+            '`apps.get_model("crm", ...)`, no migration dependency on it, no `{% include '
+            '"crm/..." %}`, no frontend import of another part\'s folder. Parts meet through the '
+            "contracts: `karni.people`, `karni.events` (publish and subscribe by event name), "
+            "`karni.timeline`, `karni.preferences`, `karni_commerce` and the modules the recipe "
+            "requires. A connection to another part is code in `<prefix>/connections.py` that "
+            "needs contracts and modules, never a recipe. Once a project holds a second part, "
+            "every role a part adds is named `<prefix>-<role>` (`bookings-staff`) except "
+            "`admin` and `customer`, and its pages live under its own base route "
+            "(`apps.<label>.route`), never a family page's route (`/`, `/signin`, `/account`, "
+            "`/search`, `/inbox`, `/settings`, `/people`, `/cart`, `/checkout`, `/orders`) and "
+            "never another app's. `karni check` reads karni.yaml and `.karni/recipes/` and fails "
+            "a role or route that breaks this, even after the merge accepted it."
+        ),
+        rationale=(
+            "Every part must work alone and stay removable (`karni recipes remove`). One import "
+            "or one foreign key to a sibling's model makes the pair inseparable and breaks the "
+            "third part that was never meant to know either."
+        ),
+        fix=(
+            "Replace the reference with a contract: a person through `karni.people`, an event "
+            "through `karni.events.publish` and a subscriber, a timeline entry through "
+            "`karni.timeline.record`. Opt out with `# karni: allow(part-imports-part): <reason>` "
+            "(`//` in TypeScript) only for a file that is meant to join two parts. Rename a role "
+            "`<prefix>-<role>`, or give the app its own `apps.<label>.route`, then `karni build`."
+        ),
+        enforced_by=("part-imports-part", "part-role-prefix", "part-route"),
+    ),
     # backend
     Rule(
         code="K101",

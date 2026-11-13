@@ -406,6 +406,14 @@ apply codemods and list the manual steps. This file is the human summary.
   demo stays as it is until the release and a redeploy.
   [docs/demo-mode.md](docs/demo-mode.md) lists every setting and how to move from a copied
   `demo/` app. No public name was renamed.
+- **Added (experimental): the family rules, `part-imports-part`, `part-role-prefix` and `part-route` (K315).**
+  `karni check` fails a part that imports another part or names its app label (a model string, a
+  permission, a URL name, a template tag, a migration dependency, a frontend import), a part after the
+  first with a role that is not `<prefix>-<role>`, and a part whose base route is a family page's or
+  another app's or whose generated page is routed outside it. They read `.karni/recipes/` and
+  karni.yaml, so a project without parts is unaffected, and they check the built project, not only
+  the merge. The contracts are not parts and stay allowed. The allow marker also takes `//`.
+  See [the family](docs/family.md).
 
 ## 0.5.1 (2026-11-12)
 

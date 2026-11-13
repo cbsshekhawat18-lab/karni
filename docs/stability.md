@@ -285,6 +285,11 @@ Experimental now:
   `GET /api/timeline/`, the `KARNI_TIMELINE_*` settings, the timeline titles
   of the people events and of `payments.payment.succeeded`, and the person
   karni-payments' events carry.
+- [The family rules](family.md#how-the-rules-are-kept): the architecture rules
+  `part-imports-part`, `part-role-prefix` and `part-route` (K315),
+  `karni.testing.parts` (`installed_parts`, `references_in`,
+  `check_part_imports`, `check_part_roles`, `check_part_routes`), and the
+  `//` form of the `karni: allow(...)` marker.
 - [The module catalog](modules.md#the-module-catalog): the `karni.module.toml`
   manifest format and the feature manifests, the `karni.modules` entry point
   group, `karni.catalog` (with `python -m karni.catalog`),

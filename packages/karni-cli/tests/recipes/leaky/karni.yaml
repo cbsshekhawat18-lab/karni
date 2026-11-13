@@ -1,0 +1,21 @@
+version: 1
+app:
+  name: Leaky
+  kind: app
+roles:
+  customer: {name: Customer, default: true, grants: {leaks.leak: own}}
+  leaks-staff: {name: Leak staff, description: Logs every leak., grants: {"leaks.*": all}}
+apps:
+  leaks:
+    entities:
+      Leak:
+        fields:
+          note: "str:200"
+        search: [note]
+        order: -created_at
+        access: {read: granted, write: granted}
+pages:
+  - Leak: [list]
+navigation:
+  - Leak
+seed: {Leak: 2}

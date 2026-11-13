@@ -6529,6 +6529,18 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Declare the groups and values in `class Karni: aggregate`, then call <code>GET &lt;resource&gt;/aggregate/?group_by=...&amp;metric=...&amp;value=...</code>. Karni's docs page aggregations lists every parameter.
 
+<a id="k315"></a>
+
+### K315: Parts: never name another part.
+
+*agent rule, error* · enforced by `part-imports-part`, `part-role-prefix`, `part-route`
+
+**Rule.** A project may hold several recipes (`app.recipes`), each one a part with its app label as its prefix. A part's files (its app folder and <code>frontend/src/&lt;prefix&gt;/</code>) never import another part's code and never name its app label: no `import crm`, no `"crm.Deal"` in a foreign key, no `"crm.deal:own"`, no `"crm:deal-list"`, no `apps.get_model("crm", ...)`, no migration dependency on it, no `{% include "crm/..." %}`, no frontend import of another part's folder. Parts meet through the contracts: `karni.people`, `karni.events` (publish and subscribe by event name), `karni.timeline`, `karni.preferences`, `karni_commerce` and the modules the recipe requires. A connection to another part is code in <code>&lt;prefix&gt;/connections.py</code> that needs contracts and modules, never a recipe. Once a project holds a second part, every role a part adds is named <code>&lt;prefix&gt;-&lt;role&gt;</code> (`bookings-staff`) except `admin` and `customer`, and its pages live under its own base route (<code>apps.&lt;label&gt;.route</code>), never a family page's route (`/`, `/signin`, `/account`, `/search`, `/inbox`, `/settings`, `/people`, `/cart`, `/checkout`, `/orders`) and never another app's. `karni check` reads karni.yaml and `.karni/recipes/` and fails a role or route that breaks this, even after the merge accepted it.
+
+**Why Karni objects.** Every part must work alone and stay removable (`karni recipes remove`). One import or one foreign key to a sibling's model makes the pair inseparable and breaks the third part that was never meant to know either.
+
+**Fix.** Replace the reference with a contract: a person through `karni.people`, an event through `karni.events.publish` and a subscriber, a timeline entry through `karni.timeline.record`. Opt out with <code># karni: allow(part-imports-part): &lt;reason&gt;</code> (`//` in TypeScript) only for a file that is meant to join two parts. Rename a role <code>&lt;prefix&gt;-&lt;role&gt;</code>, or give the app its own <code>apps.&lt;label&gt;.route</code>, then `karni build`.
+
 ## ESLint rules (`@karni/ui/eslint-plugin`)
 
 Every rule is an error in `karni.configs.recommended`. An opt-out needs an `eslint-disable` comment with a `-- reason`.

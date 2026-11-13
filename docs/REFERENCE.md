@@ -1874,7 +1874,7 @@ class Lead(BaseModel):
 | `KARNI_TIMELINE_RETENTION_DAYS` |  | `None` | Experimental. Days a timeline entry is kept. `None` (the default) keeps them all and schedules no pruning. |
 | `KARNI_TIMELINE_VISIBILITY` |  | `"karni.timeline.access.Visibility"` | Experimental. Dotted path of the class (a subclass of `karni.timeline.access.Visibility`) that says which records a request may read, so which timeline entries it sees. |
 | `KARNI_PREFERENCES_LOCKED` |  | `{}` | Experimental. Values the deployment fixes, by group then name: `{"details": {"currency": "EUR"}, "bookings": {"refund_notice_hours": 48}, "connections": {"crm.deal_timeline": False}, "emails": {...}}`. Every read answers the lock, the Settings page shows it read only and a change is refused (`E324`). `karni check` refuses a name nobody declared or a value its field refuses (`E320`). See [preferences](preferences.md). |
-| `KARNI_PREFERENCES_DEFAULTS` |  | `{}` | Experimental. Values the deployment starts with, in the shape of `KARNI_PREFERENCES_LOCKED`. The business can change them in Settings. `karni build` writes the project's name and currency here. |
+| `KARNI_PREFERENCES_DEFAULTS` |  | `{}` | Experimental. Values the deployment starts with, in the shape of `KARNI_PREFERENCES_LOCKED`. The business can change them in Settings. `karni build` writes the project's name here, and its currency (`app.currency`) in `KARNI_PREFERENCES_LOCKED`. |
 | `KARNI_PREFERENCES_API` |  | `True` | Experimental. Route `/api/preferences/`, the API behind the Settings page, when `karni.preferences` is installed. `False` leaves it out. |
 | `KARNI_PREFERENCES_AUTODISCOVER` |  | `True` | Experimental. Import every installed app's `preferences.py` and `connections.py` at startup, where parts declare their settings sections, connections and email kinds. |
 | `KARNI_ACCOUNTS_TOKEN_TTL` |  | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
@@ -2105,7 +2105,7 @@ class Lead(BaseModel):
 | `KARNI_COMMERCE_TAX` | `KARNI_COMMERCE_TAX` | `"karni_commerce.pricing.RateTax"` | The dotted path of the class that gives the tax rate of a tax class at an address (karni_commerce.pricing.RateTax: the rates staff set up). |
 | `KARNI_COMMERCE_SELLABLES` |  | `{}` | Sellable adapters by kind, as dotted paths, over the ones the apps register in their sellables.py: {"product": "myapp.sellables.MyProduct"}. |
 | `KARNI_COMMERCE_FIRST_INVOICE` | `KARNI_COMMERCE_FIRST_INVOICE` | `1001` | The first invoice's number (karni_commerce.services.issue_invoice). |
-| `KARNI_MAIL_SOURCE` | `KARNI_MAIL_SOURCE` | `"karni_commerce.preferences_seam.MailSource"` | karni.mail's source of the emails a business edits, their switches and the sender (karni_commerce.preferences_seam.MailSource, until the family's notifications). |
+| `KARNI_MAIL_SOURCE` | `KARNI_MAIL_SOURCE` | `"karni_commerce.mail.MailSource"` | karni.mail's source of the emails a business edits (karni_commerce.EmailTemplate), with the switches and the sender of karni.preferences (until the family's notifications keep the edited emails). |
 
 ### Module: karni-impersonation
 
@@ -3141,6 +3141,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K311`](errors.md#k311) | rule | New app: /new-app. Never hand-write what karni.yaml expresses. |
 | [`K312`](errors.md#k312) | rule | Trees: TreeModel. |
 | [`K314`](errors.md#k314) | rule | GROUP BY: Karni.aggregate. |
+| [`K315`](errors.md#k315) | rule | Parts: never name another part. |
 
 ### ESLint plugin (`karni/…`)
 
