@@ -1,7 +1,7 @@
-# A tiny part for the family tests: it requires the people and events contracts.
+# A tiny part for the family tests: it requires the people, events and timeline contracts.
 name = "visits"
 title = "Visits"
 version = "1.0.0"
-purpose = "Visits of people, for the family tests: a part that needs people and events."
+purpose = "Visits of people, for the family tests: needs people, events and the timeline."
 use_when = ["visits"]
-requires = ["people>=1", "events>=1"]
+requires = ["people>=1", "events>=1", "timeline>=1"]

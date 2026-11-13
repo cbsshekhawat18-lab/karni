@@ -851,10 +851,11 @@ def contract_settings(spec: schema.Spec) -> list[str]:
     ``fk:people.Person`` (an app the spec does not define itself) needs the
     people contract, so the build writes ``KARNI_PEOPLE = True``.
     """
+    on = features_on(spec)
     used: list[str] = [
         setting
         for label, setting in catalog.CONTRACT_SETTINGS.items()
-        if getattr(spec.features, label, False) and label not in spec.apps
+        if label in on and label not in spec.apps
     ]
     for app in spec.apps.values():
         for entity in app.entities.values():
@@ -1251,13 +1252,30 @@ def _render_settings(ws: Workspace, out: Output, inputs: Inputs) -> None:
 
 
 #: Experimental. The app each core contract switched on by a feature adds to INSTALLED_APPS,
-#: when no setting installs it (``features.events``: the family events outbox).
-CONTRACT_APPS: Final[dict[str, str]] = {"events": "karni.outbox"}
+#: when no setting installs it (``features.events``: the family events outbox,
+#: ``features.timeline``: the timeline).
+CONTRACT_APPS: Final[dict[str, str]] = {"events": "karni.outbox", "timeline": "karni.timeline"}
+
+
+def features_on(spec: schema.Spec) -> list[str]:
+    """Experimental. The contracts ``features`` switches on, with the ones they need.
+
+    ``features.timeline`` needs people and events (``catalog.CONTRACT_NEEDS``), so
+    it switches them on too.
+    """
+    named = [name for name in catalog.CONTRACT_NEEDS if getattr(spec.features, name, False)]
+    named += [
+        name
+        for name in (*catalog.CONTRACT_SETTINGS, *CONTRACT_APPS)
+        if getattr(spec.features, name, False)
+    ]
+    return catalog.contracts_with_needs(named)
 
 
 def contract_apps(spec: schema.Spec) -> list[str]:
-    """Experimental. The apps of the contracts ``features`` switches on (``karni.outbox``)."""
-    return [app for name, app in CONTRACT_APPS.items() if getattr(spec.features, name, False)]
+    """Experimental. The apps of the contracts ``features`` switches on, needs first."""
+    on = features_on(spec)
+    return [CONTRACT_APPS[name] for name in on if name in CONTRACT_APPS]
 
 
 def _render_pages(ws: Workspace, out: Output, inputs: Inputs) -> None:

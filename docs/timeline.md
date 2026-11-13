@@ -48,6 +48,10 @@ INSTALLED_APPS += [
 ]
 ```
 
+In a project built from karni.yaml, `features: {timeline: true}` writes the
+same, and a recipe whose `recipe.toml` has `requires = ["timeline>=1"]`
+switches it on when it is added ([the family](family.md)).
+
 Then run `migrate`. The timeline needs the people contract (`karni.E461`
 without it) and takes its entries from events through the outbox. Without
 `karni.outbox`, `record()` still works and `karni.W460` says that no entry

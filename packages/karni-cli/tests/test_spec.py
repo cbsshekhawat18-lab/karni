@@ -79,6 +79,7 @@ def test_a_minimal_spec_and_its_defaults() -> None:
         "api_cache": False,
         "people": False,
         "events": False,
+        "timeline": False,
     }
 
 

@@ -2,7 +2,8 @@
 
 ``pytest -m recipes tests/test_family_build.py`` runs these, and CI's family job
 runs them on every push. One part alone: ``karni new --recipe visits`` (a tiny
-test recipe in tests/recipes/ that requires the people and events contracts).
+test recipe in tests/recipes/ that requires the people, events and timeline
+contracts).
 Two parts together: ``karni new --recipe booking --recipe crm``, then ``karni
 recipes add visits`` on the built project and ``karni recipes remove visits``.
 Each build runs the migrations, the seed, the project's tests (every part's
@@ -95,9 +96,10 @@ def test_one_part_alone_gets_the_contracts_it_requires(
     spec = _spec(root)
     assert spec["app"]["recipes"] == ["visits"]
     assert spec["features"]["people"] is True and spec["features"]["events"] is True
+    assert spec["features"]["timeline"] is True
     settings = (root / "config" / "settings.py").read_text(encoding="utf-8")
     assert "KARNI_PEOPLE = True" in settings
-    assert '"karni.outbox"' in settings
+    assert '"karni.outbox"' in settings and '"karni.timeline"' in settings
     parts_ts = (root / "frontend" / "src" / "karni" / "parts.ts").read_text(encoding="utf-8")
     assert 'import { register as registerVisits } from "../visits";' in parts_ts
     assert 'import "./karni/parts";' in (root / "frontend/src/routes.tsx").read_text()

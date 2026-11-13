@@ -216,6 +216,21 @@ def test_requires_switches_contracts_on_and_lists_modules() -> None:
         assert words in error.message
 
 
+def test_the_timeline_switches_on_the_contracts_it_needs() -> None:
+    from karni_cli.builder.render import contract_apps, contract_settings
+    from karni_cli.spec import schema
+
+    recipe = _Recipe("club", "Club", requires=("timeline>=1",))
+    data = compose.merge(_project(), recipe, _club(), modules=MODULES).data
+    assert data["features"] == {"people": True, "events": True, "timeline": True}
+    # a project that names only the timeline gets people and events from the build
+    spec = schema.Spec.model_validate(
+        {**_project(), "features": {"timeline": True}, "apps": {"club": _club()["apps"]["club"]}}
+    )
+    assert contract_apps(spec) == ["karni.outbox", "karni.timeline"]
+    assert contract_settings(spec) == ["KARNI_PEOPLE"]
+
+
 def test_conflicts_are_refused_both_ways() -> None:
     project = compose.merge(_project(), _Recipe("desk"), _desk(), modules=MODULES).data
     error = _refused(project, _club(), recipe=_Recipe("club", conflicts=("desk",)))

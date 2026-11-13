@@ -19,6 +19,7 @@ manifest (docs/modules.md#the-module-catalog). One without is added with
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
@@ -30,6 +31,7 @@ if TYPE_CHECKING:
 __all__ = [
     "CONTRACT_ACTIONS",
     "CONTRACT_MODELS",
+    "CONTRACT_NEEDS",
     "CONTRACT_SETTINGS",
     "DEFAULT_CACHE_TTL",
     "FEATURES",
@@ -39,6 +41,7 @@ __all__ = [
     "USER_MODEL",
     "KnownFeature",
     "KnownModule",
+    "contracts_with_needs",
     "known_feature",
     "known_module",
     "module_setting",
@@ -58,6 +61,24 @@ CONTRACT_SETTINGS: Final[dict[str, str]] = {"people": "KARNI_PEOPLE"}
 #: Experimental. The explicit actions of each contract a role grants by name (``"*"`` does not
 #: reach them): ``people.*:merge``, ``people.person:erase``.
 CONTRACT_ACTIONS: Final[dict[str, tuple[str, ...]]] = {"people": ("merge", "erase")}
+#: Experimental. The contracts each contract needs, switched on with it: the timeline points
+#: at people and writes its entries from family events.
+CONTRACT_NEEDS: Final[dict[str, tuple[str, ...]]] = {"timeline": ("people", "events")}
+
+
+def contracts_with_needs(names: Iterable[str]) -> list[str]:
+    """Experimental. ``names`` and every contract they need (:data:`CONTRACT_NEEDS`), needs first."""
+    found: list[str] = []
+
+    def add(name: str) -> None:
+        for needed in CONTRACT_NEEDS.get(name, ()):
+            add(needed)
+        if name not in found:
+            found.append(name)
+
+    for name in names:
+        add(name)
+    return found
 
 
 @dataclass(frozen=True)

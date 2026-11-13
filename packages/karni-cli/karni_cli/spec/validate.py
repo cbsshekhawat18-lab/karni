@@ -1670,9 +1670,10 @@ class _Meaning:
         """Whether the core contract ``label`` is on: its feature, or a relation to its models."""
         if label in self.spec.apps:
             return False
-        if getattr(self.spec.features, label, False):
+        from karni_cli.builder.render import contract_settings, features_on
+
+        if label in features_on(self.spec):
             return True
-        from karni_cli.builder.render import contract_settings
 
         setting = CONTRACT_SETTINGS.get(label)
         return setting is not None and setting in contract_settings(self.spec)

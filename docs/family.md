@@ -7,7 +7,7 @@ description: "Several recipes in one Karni project (experimental): app.recipes, 
 !!! warning "Experimental"
     Everything on this page is [experimental](stability.md#experimental-names):
     `app.recipes`, `app.currency`, `apps.<label>.route`, `features.people`,
-    `features.events`, the `requires`, `conflicts` and `version` keys of
+    `features.events`, `features.timeline`, the `requires`, `conflicts` and `version` keys of
     `recipe.toml`, `karni recipes add`, `remove` and `upgrade`, `karni new
     --recipe a --recipe b`, the `.karni/recipes/` record,
     `frontend/src/karni/parts.ts` and `karni_cli.recipes.compose`. The error
@@ -85,6 +85,7 @@ requires is installed with it:
 |---|---|
 | `people` | `features.people: true`: `karni build` writes `KARNI_PEOPLE = True`, which installs `karni.people` ([people](people.md)), and `admin` gets the explicit grants `people.*:merge` and `people.person:erase` |
 | `events` | `features.events: true`: `karni build` adds `karni.outbox` to `INSTALLED_APPS` ([family events](family-events.md)) |
+| `timeline` | `features.timeline: true`, with `features.people` and `features.events`, which it needs: `karni build` adds `karni.timeline` after `karni.outbox` ([timeline](timeline.md)) |
 | a module (`storage`, `payments`) | lists it under `modules`, so the build adds it |
 
 A contract version the installed Karni does not have, or a name that is

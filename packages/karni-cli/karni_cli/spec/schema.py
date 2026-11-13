@@ -229,6 +229,13 @@ class Features(_Node):
         False,
         description="Experimental. Family events: karni.outbox in INSTALLED_APPS.",
     )
+    timeline: bool = Field(
+        False,
+        description=(
+            "Experimental. The timeline contract: karni.timeline in INSTALLED_APPS. It needs "
+            "people and events, which it switches on too."
+        ),
+    )
     user_grants: bool = Field(
         False, description="KARNI_USER_GRANTS: per-user grants next to the role grants."
     )

@@ -178,7 +178,9 @@ apply codemods and list the manual steps. This file is the human summary.
   `karni.people` and `karni.outbox`. The people events `people.person.linked`, `merged`
   and `people.organisation.merged` name timeline titles. karni-payments' events carry the payer's person when the payment's user is
   linked to one, and `payments.payment.succeeded` names a timeline title. New codes: E460
-  to E463 and W460. See [timeline](docs/timeline.md).
+  to E463 and W460. karni.yaml's `features: {timeline: true}`, or a recipe whose
+  `requires` names `timeline`, installs it with the people and events contracts it needs.
+  See [timeline](docs/timeline.md).
 - **Added (experimental): several recipes in one project.** karni.yaml lists the parts in
   `app.recipes`. `karni recipes add <name>` merges a recipe's karni.yaml into the project's
   and runs `karni build`, which writes the recipe's own files by the stub rule, migrates and

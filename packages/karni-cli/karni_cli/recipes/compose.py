@@ -57,6 +57,7 @@ from dataclasses import dataclass, field
 from typing import Any, Final
 
 from karni_cli.project import CliError
+from karni_cli.spec.catalog import contracts_with_needs
 
 __all__ = [
     "ADMIN_CONTRACT_GRANTS",
@@ -74,7 +75,7 @@ __all__ = [
 
 #: Experimental. The core contracts a recipe may require, and the version this release has.
 #: ``features.<name>`` switches each one on.
-CONTRACTS: Final[dict[str, int]] = {"people": 1, "events": 1}
+CONTRACTS: Final[dict[str, int]] = {"people": 1, "events": 1, "timeline": 1}
 #: Experimental. The roles every part shares. Every other role is ``<prefix>-<role>``.
 FAMILY_ROLES: Final = ("admin", "customer")
 #: Experimental. Pages that belong to the family (core and commerce), never to a part.
@@ -716,13 +717,15 @@ def _install_requires(out: dict[str, Any], part: _Part, merged: Merged) -> None:
     """Switch on each contract and list each module the part requires."""
     features: dict[str, Any] = dict(out.get("features") or {})
     modules: dict[str, Any] = dict(out.get("modules") or {})
-    for text in part.requires:
-        name = parse_requirement(text).name
+    names = [parse_requirement(text).name for text in part.requires]
+    for name in contracts_with_needs(name for name in names if name in CONTRACTS):
+        if not features.get(name):
+            features[name] = True
+            merged.notes.append(f"features.{name}: switched on ({part.name} requires it).")
+    for name in names:
         if name in CONTRACTS:
-            if not features.get(name):
-                features[name] = True
-                merged.notes.append(f"features.{name}: switched on ({part.name} requires it).")
-        elif name not in modules:
+            continue
+        if name not in modules:
             modules[name] = {}
             merged.changed.append(("modules", name))
             merged.notes.append(f"modules.{name}: added ({part.name} requires it).")
