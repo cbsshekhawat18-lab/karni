@@ -48,6 +48,21 @@ setRecordNavigate((to) => router.history.push(to));
 `getRowLabel` on ResourceTable and `fields` on ResourceDetail still render
 a value any other way.
 
+### Only the buttons a role may use (experimental)
+
+`/me/` lists the permission keys the signed-in person holds
+(`permissions: ["shop.product:add", ...]`), so ResourceTable and
+ResourceDetail offer New, Edit, Delete and Import only to a role whose
+grants allow them: a reader sees no button that ends in "You can't". The
+pages `karni build` writes pass `onCreate` and `onEdit`, so they follow the
+same rule. The server checks every write again.
+
+A list whose resource takes imports (every Karni viewset) has an **Import**
+button for those who may create rows: it opens ResourceImport above the table
+(upload a CSV or XLSX file, check the preview with each row's problems,
+commit), and the table reads its rows again afterwards. `importable={false}`
+hides it.
+
 ## App shell and pages
 
 - `Layout` (role `layout-shell`)

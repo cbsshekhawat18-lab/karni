@@ -602,6 +602,34 @@ class SeedContext:
         pool = self.run.pool(model)
         return self.random.choice(pool) if pool else None
 
+    def account(self, login: str, *roles: str, first_name: str = "", last_name: str = "") -> Any:
+        """Experimental. A demo login holding ``roles``, made once and found again.
+
+        For the demo accounts a recipe's rules need (a shop manager, a member
+        with bookings): the password is ``karni-password``, the email counts as
+        verified, the roles are assigned, and ``karni seed`` lists the login
+        with its roles at the end. Give it rows of its own, so each role signs
+        in to a screen that shows what that role works on.
+        """
+        from django.contrib.auth import get_user_model
+
+        from karni.accounts.permissions import assign_role
+
+        model = get_user_model()
+        login_field = model.USERNAME_FIELD
+        user = model._default_manager.filter(**{login_field: login}).first()
+        if user is None:
+            user = model._default_manager.create_user(
+                login, password=DEFAULT_PASSWORD, first_name=first_name, last_name=last_name
+            )
+        if hasattr(user, "email_verified") and not user.email_verified:
+            user.email_verified = True
+            user.save(update_fields=["email_verified"])
+        for role in roles:
+            assign_role(user, role)
+        self.run.report.logins[login] = sorted({*self.run.report.logins.get(login, []), *roles})
+        return user
+
 
 class _Run:
     def __init__(

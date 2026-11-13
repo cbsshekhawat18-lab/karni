@@ -351,21 +351,23 @@ def render(spec: PageSpec, routes: set[str]) -> str:
             props.append(f"onRowClick={{(row) =>\n    {_go(detail, 'id: String(row.id)')}\n}}")
         if edit in routes:
             props.append(f"onEdit={{(row) =>\n    {_go(edit, 'id: String(row.id)')}\n}}")
-        actions = f"<Button onClick={{() => {_go(new)}}}>New</Button>" if new in routes else None
-        return _shell(spec, "ResourceTable", props, actions, hooks=[], ui={"ResourceTable"})
+        # New in the table's toolbar: shown only to a role that may create (its access rule).
+        if new in routes:
+            props.append(f"onCreate={{() => {_go(new)}}}")
+        return _shell(spec, "ResourceTable", props, None, hooks=[], ui={"ResourceTable"})
     if spec.kind == "detail":
         hooks = [f'const {{ id }} = useParams({{ from: "{detail}" }});']
-        actions = None
-        if edit in routes:
-            actions = f"<Button onClick={{() => {_go(edit, 'id')}}}>\n    Edit\n</Button>"
         props = [f'resource="{resource}"', "id={id}"]
+        # Edit in the record's header: shown only to a role that may change it.
+        if edit in routes:
+            props.append(f"onEdit={{() => {_go(edit, 'id')}}}")
         if spec.expand:
             names = ", ".join(f'"{name}"' for name in spec.expand)
             props.append(f"expand={{[{names}]}}")
         if spec.related:
             names = ", ".join(f'"{name}"' for name in spec.related)
             props.append(f"related={{[{names}]}}")
-        return _shell(spec, "ResourceDetail", props, actions, hooks=hooks, ui={"ResourceDetail"})
+        return _shell(spec, "ResourceDetail", props, None, hooks=hooks, ui={"ResourceDetail"})
     hooks = ["const { id } = useParams({ strict: false });"]
     props = [f'resource="{resource}"', "id={id}"]
     if detail in routes:

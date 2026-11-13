@@ -71,6 +71,7 @@ import { Button } from "../../primitives/button";
 import { isAuditField, partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
 import { FacetPanel } from "../facets/FacetPanel";
+import { ResourceImport } from "../import/ResourceImport";
 import { evaluateAccess, type AccessIdentity } from "./access";
 import type { BulkAction, BulkOutcome, BulkResult } from "./BulkActionsBar";
 import { CardList } from "./CardList";
@@ -209,6 +210,13 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
    * `false` hides them.
    */
   exportFormats?: readonly ExportFormat[] | false;
+  /**
+   * Experimental. An Import button that opens ResourceImport above the table
+   * (upload, preview with each row's problems, commit), when the resource
+   * serves `POST /<resource>/import/` and the user may create its rows.
+   * Default true. `false` hides it.
+   */
+  importable?: boolean;
   /** Extra toolbar content, rendered to the right of the search/filter row. */
   toolbar?: React.ReactNode;
   /**
@@ -427,6 +435,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     facets,
     params,
     exportFormats,
+    importable = true,
     toolbar,
     empty,
     footer,
@@ -793,6 +802,13 @@ export function ResourceTable<T = Record<string, unknown>>(
     (canCreate ??
       (schema?.operations.create !== undefined && evaluateAccess(createRule, identity) !== false));
   const createText = createLabel ?? `New ${one}`;
+  // CSV import: open above the table, for those who may create rows (SHARED 9).
+  const [importing, setImporting] = React.useState(false);
+  const importAllowed =
+    importable &&
+    schema?.operations.import !== undefined &&
+    (canCreate ??
+      (schema.operations.create !== undefined && evaluateAccess(createRule, identity) !== false));
 
   // row delete
   const [deleteTarget, setDeleteTarget] = React.useState<DeleteTarget<T> | null>(null);
@@ -1233,7 +1249,8 @@ export function ResourceTable<T = Record<string, unknown>>(
       exportEnabled ||
       viewOptions ||
       presets.length > 0 ||
-      createAllowed);
+      createAllowed ||
+      importAllowed);
 
   const liveText = slow ? `Loading ${plural}…` : announcement;
 
@@ -1274,6 +1291,16 @@ export function ResourceTable<T = Record<string, unknown>>(
             {exportEnabled && (
               <ExportButtons resource={resource} params={listParams} formats={exportList} />
             )}
+            {importAllowed && (
+              <Button
+                size="sm"
+                variant="outline"
+                aria-expanded={importing}
+                onClick={() => setImporting(!importing)}
+              >
+                {importing ? "Close the import" : "Import"}
+              </Button>
+            )}
             {toolbar}
             {createAllowed && (
               <Button size="sm" onClick={onCreate}>
@@ -1282,6 +1309,17 @@ export function ResourceTable<T = Record<string, unknown>>(
               </Button>
             )}
           </div>
+        </div>
+      )}
+      {importing && importAllowed && (
+        <div className="rounded-lg border border-border p-4">
+          <ResourceImport
+            resource={resource}
+            resourceLabel={plural}
+            onDone={() =>
+              void queryClient.invalidateQueries({ queryKey: karniKeys.resource(resource) })
+            }
+          />
         </div>
       )}
       {facetFields.length > 0 && schema !== undefined && !blocking && (

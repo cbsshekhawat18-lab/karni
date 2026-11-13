@@ -73,7 +73,10 @@ class MeSerializer(serializers.ModelSerializer):
     email-change flow and everything else is audit data. ``roles`` (amendment
     A15) lists the user's Django group names via
     :func:`karni.accounts.permissions.user_roles` — the ``@karni/ui``
-    ``usePermission`` hook consumes it.
+    ``usePermission`` hook consumes it. ``permissions`` (experimental) lists
+    the permission keys the user's roles and grants hold
+    (``shop.product:add``), so the UI offers New, Edit and Delete only to
+    those who may: the server checks every write again.
 
     Override / escape hatch: subclass and redeclare ``Meta.fields`` to expose
     extra fields of a swapped user model, then point a subclassed view (or
@@ -81,6 +84,7 @@ class MeSerializer(serializers.ModelSerializer):
     """
 
     roles = serializers.SerializerMethodField()
+    permissions = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
@@ -92,6 +96,7 @@ class MeSerializer(serializers.ModelSerializer):
             "email_verified",
             "date_joined",
             "roles",
+            "permissions",
             "created_at",
             "updated_at",
         ]
@@ -122,6 +127,12 @@ class MeSerializer(serializers.ModelSerializer):
     def get_roles(self, user: AbstractBaseUser) -> list[str]:
         """The user's role (Django group) names, read-only (amendment A15)."""
         return user_roles(user)
+
+    def get_permissions(self, user: AbstractBaseUser) -> list[str]:
+        """Experimental. The permission keys the user holds (``app.model:action``), sorted."""
+        from karni.accounts.roles import grants_for
+
+        return sorted(key for key, grants in grants_for(user).items() if grants)
 
     @extend_schema_field(MeTermsSerializer)
     def get_terms(self, user: AbstractBaseUser) -> dict[str, Any] | None:
