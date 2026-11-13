@@ -6473,25 +6473,13 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### K315: Parts: never name another part.
 
-*agent rule, error* · enforced by `part-imports-part`
+*agent rule, error* · enforced by `part-imports-part`, `part-role-prefix`, `part-route`
 
-**Rule.** A project may hold several recipes (`app.recipes`), each one a part with its app label as its prefix. A part's files (its app folder and <code>frontend/src/&lt;prefix&gt;/</code>) never import another part's code and never name its app label: no `import crm`, no `"crm.Deal"` in a foreign key, no `"crm.deal:own"`, no `"crm:deal-list"`, no `apps.get_model("crm", ...)`, no migration dependency on it, no `{% include "crm/..." %}`, no frontend import of another part's folder. Parts meet through the contracts: `karni.people`, `karni.events` (publish and subscribe by event name), `karni.timeline`, `karni.preferences`, `karni_commerce` and the modules the recipe requires. A connection to another part is code in <code>&lt;prefix&gt;/connections.py</code> that needs contracts and modules, never a recipe.
+**Rule.** A project may hold several recipes (`app.recipes`), each one a part with its app label as its prefix. A part's files (its app folder and <code>frontend/src/&lt;prefix&gt;/</code>) never import another part's code and never name its app label: no `import crm`, no `"crm.Deal"` in a foreign key, no `"crm.deal:own"`, no `"crm:deal-list"`, no `apps.get_model("crm", ...)`, no migration dependency on it, no `{% include "crm/..." %}`, no frontend import of another part's folder. Parts meet through the contracts: `karni.people`, `karni.events` (publish and subscribe by event name), `karni.timeline`, `karni.preferences`, `karni_commerce` and the modules the recipe requires. A connection to another part is code in <code>&lt;prefix&gt;/connections.py</code> that needs contracts and modules, never a recipe. Once a project holds a second part, every role a part adds is named <code>&lt;prefix&gt;-&lt;role&gt;</code> (`bookings-staff`) except `admin` and `customer`, and its pages live under its own base route (<code>apps.&lt;label&gt;.route</code>), never a family page's route (`/`, `/signin`, `/account`, `/search`, `/inbox`, `/settings`, `/people`, `/cart`, `/checkout`, `/orders`) and never another app's. `karni check` reads karni.yaml and `.karni/recipes/` and fails a role or route that breaks this, even after the merge accepted it.
 
 **Why Karni objects.** Every part must work alone and stay removable (`karni recipes remove`). One import or one foreign key to a sibling's model makes the pair inseparable and breaks the third part that was never meant to know either.
 
-**Fix.** Replace the reference with a contract: a person through `karni.people`, an event through `karni.events.publish` and a subscriber, a timeline entry through `karni.timeline.record`. Opt out with <code># karni: allow(part-imports-part): &lt;reason&gt;</code> (`//` in TypeScript) only for a file that is meant to join two parts.
-
-<a id="k316"></a>
-
-### K316: Parts: &lt;prefix>-&lt;role> roles, pages under the part's route.
-
-*agent rule, error* · enforced by `part-role-prefix`, `part-route`
-
-**Rule.** Once a project holds a second part, every role a part adds is named <code>&lt;prefix&gt;-&lt;role&gt;</code> (`bookings-staff`), except the family roles `admin` and `customer`, and the part's pages live under its base route (<code>apps.&lt;label&gt;.route</code>, <code>/&lt;label&gt;</code> by default), which is never a family page's route (`/`, `/signin`, `/account`, `/search`, `/inbox`, `/settings`, `/people`, `/cart`, `/checkout`, `/orders`) and never another app's. `karni check` reads karni.yaml and `.karni/recipes/` and fails a role or a route that breaks this, even after the merge accepted it.
-
-**Why Karni objects.** A role name that carries its part cannot collide with another part's, and a route that is the part's own cannot shadow a family page or another part's screens. The merge refuses both once (C443, C444), and a later edit of karni.yaml or routes.tsx must not undo it.
-
-**Fix.** Rename the role <code>&lt;prefix&gt;-&lt;role&gt;</code> in karni.yaml (and every <code>role:&lt;name&gt;</code> that names it), or give the app its own <code>apps.&lt;label&gt;.route</code>, then run `karni build`.
+**Fix.** Replace the reference with a contract: a person through `karni.people`, an event through `karni.events.publish` and a subscriber, a timeline entry through `karni.timeline.record`. Opt out with <code># karni: allow(part-imports-part): &lt;reason&gt;</code> (`//` in TypeScript) only for a file that is meant to join two parts. Rename a role <code>&lt;prefix&gt;-&lt;role&gt;</code>, or give the app its own <code>apps.&lt;label&gt;.route</code>, then `karni build`.
 
 ## ESLint rules (`@karni/ui/eslint-plugin`)
 

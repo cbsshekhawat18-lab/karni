@@ -21,7 +21,7 @@ FIXTURES = REPO_ROOT / "packages" / "karni" / "tests" / "agent" / "fixtures"
 # fields, K115 and K116 lifecycle and capacity, K206 token classes, K309 public site, K307
 # naming the module catalog, K310 and K311 the new-app flow, K312 tree models, K314
 # aggregations, K109 naming karni explain access). The README quotes the figure.
-TOKEN_BUDGET = 630
+TOKEN_BUDGET = 645
 
 
 def _rules_output(runner, monkeypatch, cwd: Path) -> str:

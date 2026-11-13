@@ -2,7 +2,7 @@
 
 ``karni new --recipe a --recipe b`` for each pair of the parts below runs the migrations, the seed,
 the project's tests (both parts' own among them) and ``karni check`` (the architecture rules K315
-and K316 too), and then ``karni check`` is run once more on the built project. A connection that
+and K315 too), and then ``karni check`` is run once more on the built project. A connection that
 leans on a third part by accident, a role or a route two parts share, or one part naming the
 other, fails here and not in a customer's project.
 

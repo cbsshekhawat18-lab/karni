@@ -282,7 +282,7 @@ Experimental now:
   of the people events and of `payments.payment.succeeded`, and the person
   karni-payments' events carry.
 - [The family rules](family.md#how-the-rules-are-kept): the architecture rules
-  `part-imports-part` (K315), `part-role-prefix` and `part-route` (K316),
+  `part-imports-part`, `part-role-prefix` and `part-route` (K315),
   `karni.testing.parts` (`installed_parts`, `references_in`,
   `check_part_imports`, `check_part_roles`, `check_part_routes`), and the
   `//` form of the `karni: allow(...)` marker.

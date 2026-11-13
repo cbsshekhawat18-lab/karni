@@ -16,11 +16,11 @@ karni.testing.architecture``:
     ``"crm:deal-list"``, ``"crm/x.html"``, ``apps.get_model("crm", ...)``, a
     migration dependency on it, a template ``{% include "crm/..." %}`` or a
     frontend import of ``frontend/src/crm/``.
-``part-role-prefix`` (K316)
+``part-role-prefix`` (K315)
     A part added after the first one declares a role that is not
     ``<prefix>-<role>`` and not ``admin`` or ``customer`` (what ``karni recipes
     add`` already refuses at merge time, checked again on the built project).
-``part-route`` (K316)
+``part-route`` (K315)
     A part's base route is a family page's route or another app's, or one of
     its generated pages is routed outside its base.
 
@@ -359,7 +359,7 @@ def _role_owner(slug: str, role: object, parts: list[Part], base: Path) -> Part 
 
 
 def check_part_roles(root: Path | None = None) -> list[Violation]:
-    """``part-role-prefix`` (K316): a part after the first holding a role without its prefix.
+    """``part-role-prefix`` (K315): a part after the first holding a role without its prefix.
 
     A role belongs to the part whose fragment declared it, or, when it was renamed since, to
     the one part its grants name alone. The first part keeps its roles as its recipe wrote them.
@@ -412,7 +412,7 @@ _ROUTE_LINE = re.compile(r"""path:\s*["']([^"']+)["'][^\n]*?component:\s*(\w+)""
 
 
 def check_part_routes(root: Path | None = None) -> list[Violation]:
-    """``part-route`` (K316): a part's base is a family or another app's route, or a page strays."""
+    """``part-route`` (K315): a part's base is a family or another app's route, or a page strays."""
     base = root or project_root()
     parts = installed_parts(base)
     if not parts:

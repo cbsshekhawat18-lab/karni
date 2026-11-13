@@ -1,4 +1,4 @@
-"""The part rules (K315, K316): a part never names another part, and keeps its roles and routes."""
+"""The part rules (K315, K315): a part never names another part, and keeps its roles and routes."""
 
 from __future__ import annotations
 

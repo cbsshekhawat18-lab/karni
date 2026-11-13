@@ -1,4 +1,4 @@
-"""The rules that keep parts independent (K315, K316), on the recipes and on built projects.
+"""The rules that keep parts independent (K315, K315), on the recipes and on built projects.
 
 The first test reads every recipe's own files and asserts no part names another one.
 ``leaky`` (tests/recipes/leaky) is the deliberately bad part: it must be caught.
