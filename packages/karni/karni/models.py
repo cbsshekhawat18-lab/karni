@@ -40,6 +40,7 @@ from django.utils import timezone
 import karni.fields.base  # noqa: E402,F401,I001
 from karni import constraints as _constraints  # noqa: F401 - connects class Karni: no_overlap
 from karni import guards
+from karni import rules as _rules  # noqa: F401 - connects class Karni: unique
 from karni import taxonomy as _taxonomy  # noqa: F401 - connects class Karni: taxonomies
 from karni.managers import (
     AuditedQuerySet,
@@ -371,6 +372,10 @@ class _KarniModel(GuardedModel, TimestampedModel, SoftDeleteModel, AuditedModel)
         if not getattr(self, "_karni_in_delete", False):
             # An illegal state change is refused before anyone may defer it.
             guards.plan_write(self, kwargs.get("update_fields"))
+            # So is a write that breaks a rule of class Karni (karni.rules).
+            stamped = self.check_rules(kwargs.get("update_fields"))
+            if stamped and kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = {*kwargs["update_fields"], *stamped}
             pre_write.send(
                 sender=type(self),
                 instance=self,
@@ -378,6 +383,8 @@ class _KarniModel(GuardedModel, TimestampedModel, SoftDeleteModel, AuditedModel)
                 update_fields=kwargs.get("update_fields"),
             )
         super().save(*args, **kwargs)
+        if guards.guards_for(type(self)).tracked:
+            guards.remember(self)  # the next save compares with what this one wrote
 
     def delete(
         self,
@@ -385,6 +392,7 @@ class _KarniModel(GuardedModel, TimestampedModel, SoftDeleteModel, AuditedModel)
         keep_parents: bool = False,
     ) -> tuple[int, dict[str, int]]:
         """Soft-delete after ``pre_write`` (sent once: not again for the ``deleted_at`` save)."""
+        self.check_delete_rules()
         pre_write.send(sender=type(self), instance=self, action="delete", update_fields=None)
         self._karni_in_delete = True
         try:
@@ -393,6 +401,49 @@ class _KarniModel(GuardedModel, TimestampedModel, SoftDeleteModel, AuditedModel)
             self._karni_in_delete = False
 
     delete.alters_data = True  # type: ignore[attr-defined]
+
+    def check_rules(self, update_fields: Any = None, *, stamp: bool = True) -> set[str]:
+        """Check this write against ``class Karni``'s rules (:mod:`karni.rules`).
+
+        Returns the fields a move stamped (written with the row). Raises
+        :class:`karni.rules.RuleViolation`. Override / escape hatch: override
+        it to skip or add a rule for this model.
+        """
+        from karni.rules import check_write
+
+        return check_write(self, update_fields, stamp=stamp)
+
+    def notify_move(self, key: str) -> None:
+        """Email the user ``Karni.moves[key].notify`` names, after the move commits.
+
+        Override / escape hatch: override it to post elsewhere, or to send
+        nothing for this model (:func:`karni.rules.send_move_email`).
+        """
+        from karni.rules import send_move_email
+
+        send_move_email(self, key)
+
+    def check_delete_rules(self) -> None:
+        """Check ``Karni.delete`` before this row is deleted (:func:`karni.rules.check_delete`)."""
+        from karni.rules import check_delete
+
+        check_delete(self)
+
+    def clean(self) -> None:
+        """Django's validation, plus the rules of ``class Karni`` as form errors.
+
+        The API's serializer sets ``_karni_rules_at_save`` on its probe: the
+        save checks the rules once, so they are not checked twice.
+        """
+        super().clean()
+        if self.__dict__.get("_karni_rules_at_save"):
+            return
+        from karni.rules import RuleViolation
+
+        try:
+            self.check_rules(stamp=False)
+        except RuleViolation as exc:
+            raise exc.as_validation_error() from exc
 
 
 class BaseModel(_KarniModel, UUIDModel):

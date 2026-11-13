@@ -293,9 +293,13 @@ def owner_values(declaration: Any, model: type[models.Model], user: Any) -> dict
     if not isinstance(declaration, Access):
         return {}
     found: dict[str, Any] = {}
+    from karni.testing.isolation import _forward
+
     for owned in declaration.read.owned():
         if model is get_user_model() and owned.path in {"pk", model._meta.pk.name}:
             continue
+        if not _forward(model, owned.path):
+            continue  # through a reverse relation (a course's students): a new row has none
         head = owned.path.split("__", 1)[0]
         try:
             relation = model._meta.get_field(head)
@@ -304,11 +308,46 @@ def owner_values(declaration: Any, model: type[models.Model], user: Any) -> dict
         if getattr(relation, "many_to_many", False) and "__" not in owned.path:
             found[owned.path] = [user]
         elif getattr(relation, "concrete", False):
-            found[owned.path] = user
+            mine = _one_per_user(model, owned.path, user)
+            if mine is not None:
+                found[mine[0]] = mine[1]  # one shop per person (class Karni: unique): theirs
+            else:
+                found[owned.path] = user
     leaves = predicate_leaves(declaration.read)
     if user is not None and any(isinstance(leaf, Granted | Can) for leaf in leaves):
         found.update(granted_values(model, user))
     return found
+
+
+def _one_per_user(model: type[models.Model], path: str, user: Any) -> tuple[str, Any] | None:
+    """``(path to the row, the row)`` ``user`` already has where ``path`` ends on a model unique
+    per user, else ``None``.
+
+    ``listing__seller__user`` on an order, where a seller is unique on ``user``
+    (``class Karni: unique``): the order's listing goes into the user's one shop.
+    """
+    from karni.errorcodes import KarniError
+    from karni.rules import rules_of
+
+    parts = path.split("__")
+    if len(parts) < 2:
+        return None
+    current: Any = model
+    for part in parts[:-1]:
+        try:
+            current = current._meta.get_field(part).related_model
+        except FieldDoesNotExist:
+            return None
+        if current is None:
+            return None
+    try:
+        unique = rules_of(current).unique
+    except KarniError:
+        return None
+    if not any(entry.fields == (parts[-1],) and not entry.where for entry in unique):
+        return None
+    row = current._default_manager.filter(**{parts[-1]: user}).first()
+    return None if row is None else ("__".join(parts[:-1]), row)
 
 
 def granted_values(model: type[models.Model], user: Any) -> dict[str, Any]:
@@ -365,7 +404,17 @@ def readable_row(model: type[models.Model], user: Any, **values: Any) -> Any:
         return user_with_roles()
     viewset = viewset_for_model(model)
     owned = owner_values(getattr(viewset, "access", None), model, user) if viewset else {}
+    owned = {  # a value given for the same relation (seller__user, seller) wins
+        key: value
+        for key, value in owned.items()
+        if not any(_overlaps(key, given) for given in values)
+    }
     return create(model, **{**owned, **values})
+
+
+def _overlaps(one: str, other: str) -> bool:
+    """Whether two factory paths set the same relation (``seller`` and ``seller__user``)."""
+    return one == other or one.startswith(f"{other}__") or other.startswith(f"{one}__")
 
 
 # what the declaration promises
@@ -627,6 +676,58 @@ def _unreachable_reason(model: type[models.Model], name: str, target: Any, user:
     )
 
 
+def _frozen(model: Any) -> set[str]:
+    """The fields ``class Karni: frozen`` keeps (an update leaves them as they are)."""
+    from karni.errorcodes import KarniError
+    from karni.rules import rules_of
+
+    try:
+        return set(rules_of(model).frozen)
+    except KarniError:
+        return set()
+
+
+def _fitting_row(
+    model: type[models.Model],
+    name: str,
+    target: type[models.Model],
+    user: Any,
+    made: dict[str, Any],
+) -> Any:
+    """A readable row for ``model.<name>`` that its ``class Karni: targets`` rule accepts.
+
+    Literal values are set, ``$<field>`` follows the rows made for this body
+    already, ``{pk: $<field>}`` is that row, and ``{not: $me}`` is someone else.
+    """
+    from karni.testing.factories import _target_rule
+
+    rule = _target_rule(model, name) or {}
+    values: dict[str, Any] = {}
+    for key, value in rule.items():
+        if value == {"not": "$me"}:
+            values[key] = user_with_roles()  # someone else's (seller__user: another seller)
+            continue
+        if "__" in key or isinstance(value, list):
+            continue
+        if isinstance(value, dict):
+            continue
+        if isinstance(value, str) and value.startswith("$"):
+            if value in ("$me", "$now", "$today"):
+                continue
+            head, *rest = value[1:].split("__")
+            found = made.get(head)
+            if found is None:
+                continue
+            for part in rest:
+                found = getattr(found, part)
+            if key in ("pk", "id", target._meta.pk.name):
+                return target._default_manager.get(pk=found)
+            values[key] = found
+        else:
+            values[key] = value
+    return readable_row(target, user, **values)
+
+
 def build_payload(
     resource: Resource,
     user: Any,
@@ -652,8 +753,10 @@ def build_payload(
     serializer = view.get_serializer_class()(context=view.get_serializer_context())
     template = build(resource.model, **dict(values or {}))
     body = Payload({})
+    owners = set(view.get_owner_fields())  # set server-side, even where Access(assign=) opens them
+    made: dict[str, Any] = {}
     for name, serializer_field in serializer.fields.items():
-        if serializer_field.read_only:
+        if serializer_field.read_only or name in owners:
             continue
         if isinstance(serializer_field, ManyRelatedField | RelatedField):
             if not serializer_field.required:
@@ -661,7 +764,8 @@ def build_payload(
             target = _related_model(resource.model, name, serializer_field)
             if target is None:
                 continue
-            related = readable_row(target, user)
+            related = _fitting_row(resource.model, name, target, user, made)
+            made[name] = related
             if not _referenceable(serializer_field, related):
                 body.unreachable[name] = _unreachable_reason(resource.model, name, target, user)
             pk = _json_value(related.pk)
@@ -1086,11 +1190,17 @@ class _Crud:
         fresh = build_payload(self.resource, self.user, values=self.values, payload=self.payload)
         view = _view(self.resource, "partial_update", self.user)
         current = view.get_serializer_class()(row, context=view.get_serializer_context()).data
+        frozen = _frozen(self.resource.model)
+        for name in frozen & set(fresh.data):  # class Karni: frozen: the row keeps its value
+            if name in current and name not in (self.payload or {}):
+                fresh.data[name] = _json_value(current[name])
         change = next(
             (
                 name
                 for name in fresh.scalars
-                if name in current and _json_value(current[name]) != fresh.data.get(name)
+                if name in current
+                and name not in frozen
+                and _json_value(current[name]) != fresh.data.get(name)
             ),
             None,
         )

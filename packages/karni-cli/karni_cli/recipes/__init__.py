@@ -4,7 +4,7 @@ A recipe is a folder::
 
     <name>/
       recipe.toml   what it is: name, title, purpose, use_when, usually_changed
-      karni.yaml    the spec, with app.recipe naming the recipe
+      karni.yaml    the spec fragment merged into a project (karni_cli.recipes.compose)
       files/        optional: the recipe's own domain code, seeds and tests, each at the
                     path it takes in the project (files/shop/models.py is shop/models.py)
 
@@ -52,7 +52,14 @@ from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Annotated, Any, Final
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    ValidationError,
+    field_validator,
+)
 
 __all__ = [
     "BLANK",
@@ -66,6 +73,7 @@ __all__ = [
     "RECIPE_SCHEMA_URL",
     "SPEC_FILE",
     "STOPWORDS",
+    "VERSION",
     "Loaded",
     "Match",
     "Recipe",
@@ -106,6 +114,8 @@ RECIPE_SCHEMA_URL: Final = (
 PURPOSE_MAX: Final = 80
 #: Experimental. What a recipe's name looks like.
 NAME: Final = r"^[a-z][a-z0-9_-]*$"
+#: Experimental. What a recipe's version looks like: numbers and dots, e.g. 1.0.0.
+VERSION: Final = r"^\d+(\.\d+){0,2}$"
 
 _STOPWORDS_TEXT: Final = """
     a about all an and any app application apps are as at be build built but by can could
@@ -151,6 +161,30 @@ class RecipeToml(BaseModel):
         description="What people usually change in the spec after starting from it, in plain "
         'words, e.g. ["the product fields", "the currency"].',
     )
+    version: Annotated[str, StringConstraints(pattern=VERSION)] | None = Field(
+        None,
+        description="Experimental. The recipe's own version, e.g. 1.0.0, recorded when a project "
+        "adds it and compared by karni recipes upgrade. Default: karni-cli's version.",
+    )
+    requires: list[str] = Field(
+        default_factory=list,
+        description="Experimental. Core contracts and modules the recipe needs, each with an "
+        'optional version range: ["people>=1", "events>=1", "storage"]. Adding the recipe '
+        "switches each contract on and lists each module.",
+    )
+    conflicts: list[str] = Field(
+        default_factory=list,
+        description="Experimental. Recipes and modules the recipe cannot share a project with.",
+    )
+
+    @field_validator("requires")
+    @classmethod
+    def _requirements(cls, value: list[str]) -> list[str]:
+        from karni_cli.recipes.compose import parse_requirement
+
+        for text in value:
+            parse_requirement(text)
+        return value
 
 
 def json_schema() -> dict[str, Any]:
@@ -185,6 +219,10 @@ class Recipe:
     folder: Traversable = field(repr=False)
     #: The recipe's own files under ``files/``, as the paths they take in the project.
     files: tuple[str, ...] = ()
+    #: Experimental. ``recipe.toml``'s version (empty: none), requires and conflicts.
+    version: str = ""
+    requires: tuple[str, ...] = ()
+    conflicts: tuple[str, ...] = ()
 
     def spec(self) -> str:
         """Experimental. The recipe's ``karni.yaml``, as written."""
@@ -199,6 +237,9 @@ class Recipe:
             "usually_changed": list(self.usually_changed),
             "source": self.source,
             "files": list(self.files),
+            "version": self.version or None,
+            "requires": list(self.requires),
+            "conflicts": list(self.conflicts),
             "spec": self.spec() if spec else None,
         }
 
@@ -306,6 +347,7 @@ def karni_owned(rel: str) -> bool:
     """Experimental. Whether ``karni build`` owns the project path ``rel`` (so a recipe file cannot).
 
     ``<app>/karni/``, ``<app>/tests/karni/``, ``frontend/src/pages/karni/``,
+    ``frontend/src/karni/`` (``parts.ts``),
     ``.karni/``, karni.yaml, and the files with a ``karni:spec`` block.
     """
     parts = rel.split("/")
@@ -314,7 +356,7 @@ def karni_owned(rel: str) -> bool:
         or parts[0] == ".karni"
         or (len(parts) > 2 and parts[1] == "karni")
         or (len(parts) > 3 and parts[1:3] == ["tests", "karni"])
-        or rel.startswith("frontend/src/pages/karni/")
+        or rel.startswith(("frontend/src/pages/karni/", "frontend/src/karni/"))
     )
 
 
@@ -352,6 +394,9 @@ def read_folder(folder: Traversable, *, name: str, source: str) -> Recipe:
         source=source,
         folder=folder,
         files=files,
+        version=found.version or "",
+        requires=tuple(found.requires),
+        conflicts=tuple(found.conflicts),
     )
 
 

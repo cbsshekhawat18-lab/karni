@@ -57,7 +57,9 @@ from karni_cli.generators.pysource import pystr
 from karni_cli.project import CliError
 from karni_cli.spec import schema
 from karni_cli.spec.catalog import (
+    CONTRACT_ACTIONS,
     CONTRACT_MODELS,
+    CONTRACT_SETTINGS,
     FEATURES,
     MODULES,
     OTHER_MODELS,
@@ -106,10 +108,8 @@ _OWNED_NEAR: Final = ("own", "owner", "owned", "owns", "mine", "self", "owner_on
 _ROLE_NEAR: Final = ("role", "roles", "group", "groups", "has_role", "hasrole")
 #: Experimental. Keys people write in access, by the slot that covers them.
 _ACCESS_KEYS_NEAR: Final = {
-    **dict.fromkeys(
-        ("delete", "destroy", "remove", "update", "change", "edit", "patch", "put", "modify"),
-        "write",
-    ),
+    **dict.fromkeys(("destroy", "remove"), "delete"),
+    **dict.fromkeys(("update", "change", "edit", "patch", "put", "modify"), "write"),
     **dict.fromkeys(("list", "retrieve", "view", "get", "detail", "see", "show"), "read"),
     **dict.fromkeys(("add", "new", "post", "insert", "make"), "create"),
 }  # fmt: skip
@@ -377,12 +377,12 @@ def _access_key_fix(path: Loc) -> str:
     slot = _ACCESS_KEYS_NEAR.get(str(path[-1]).lower())
     if slot is None:
         return ""
-    fix = f"Use {slot}: access takes read, write and create, and {slot} covers {path[-1]}."
-    if slot == "write" and str(path[-1]).lower() in ("delete", "destroy", "remove"):
-        fix += (
-            " A role that may change rows but not delete them: access granted, with :view, :add "
-            "and :change in the role's grants and no :delete."
-        )
+    fix = (
+        f"Use {slot}: access takes read, write, create, delete and assign, and {slot} covers "
+        f"{path[-1]}."
+    )
+    if slot == "delete":
+        fix += " delete defaults to write: write it only for who may delete less (or more)."
     return fix + " karni explain access lists the rules."
 
 
@@ -538,6 +538,7 @@ class _Meaning:
             self.renames(entity)
             self.tree(entity)
             self.cache(entity)
+            self.rules(entity)
         for entity in self.entities.values():
             self.taxonomies(entity)
         self.roles()
@@ -1040,7 +1041,13 @@ class _Meaning:
             if part in ("created_by", "updated_by"):
                 return index == len(parts) - 1
             spec = current.fields.get(part)
-            if spec is None or not spec.is_relation:
+            if spec is None:
+                reverse = self.reverse(current, part)
+                if reverse is None:
+                    return False
+                current = reverse
+                continue
+            if not spec.is_relation:
                 return False
             target = current.targets.get(part)
             if target == _USER_TARGET:
@@ -1052,7 +1059,13 @@ class _Meaning:
         rule = entity.entity.access
         if rule == "code" or not isinstance(rule, schema.Access):
             return
-        slots = {"read": rule.read, "write": rule.write, "create": rule.create}
+        slots = {
+            "read": rule.read,
+            "write": rule.write,
+            "create": rule.create,
+            "delete": rule.delete,
+            "assign": rule.assign,
+        }
         for slot, items in slots.items():
             if items is None:
                 continue
@@ -1081,6 +1094,9 @@ class _Meaning:
                             + f"eclare it under roles ({arg}: {{name: ...}}) or fix the slug.",
                         )
                     continue
+                if word == "where" and arg:
+                    self.where_word(entity, where, slot, arg)
+                    continue
                 if word == "owned" and arg:
                     if not self.leads_to_user(entity, arg):
                         self.add(
@@ -1103,6 +1119,41 @@ class _Meaning:
                     "list of them (karni explain access lists the common rules). For anything "
                     "else write access: code and declare Access(...) in the viewset.",
                 )
+
+    def rules(self, entity: _Entity) -> None:
+        """bounds, unique, targets, frozen, delete, moves, actions (:mod:`karni_cli.spec.rules`)."""
+        from karni_cli.spec import rules
+
+        rules.check(self, entity)
+
+    def reverse(self, entity: _Entity, part: str) -> _Entity | None:
+        """The entity whose fk to ``entity`` Django names ``part`` (``enrolment``), or ``None``."""
+        for other in self.entities.values():
+            if other.name.lower() != part:
+                continue
+            if any(target == entity.label for target in other.targets.values()):
+                return other
+        return None
+
+    def where_word(self, entity: _Entity, where: Loc, slot: str, arg: str) -> None:
+        """``where:<field>[=<value>]``: a field of the entity (bare: a boolean field)."""
+        name, equals, _value = arg.partition("=")
+        spec = entity.fields.get(name)
+        if spec is None or (not equals and spec.kind != "bool"):
+            booleans = [n for n, s in entity.fields.items() if s.kind == "bool"]
+            shown = ", ".join(booleans) or "none"
+            self.add(
+                "C217",
+                where,
+                f"{entity.name}.access.{slot} has where:{arg}, but "
+                + (
+                    f"{entity.name} has no field {name!r}."
+                    if spec is None
+                    else f"{name} is not a boolean field: write where:{name}=<value>."
+                ),
+                f"Name a field of {entity.name}: where:<boolean field> (booleans: {shown}) or "
+                "where:<field>=<value>.",
+            )
 
     def _role_like(self, name: str) -> str | None:
         """The declared role ``name`` means with another case or separator, or ``None``."""
@@ -1461,7 +1512,14 @@ class _Meaning:
                     key=True,
                 )
                 return
-            if action and action != "*" and "*" not in action and action not in STANDARD_ACTIONS:
+            explicit_actions = CONTRACT_ACTIONS.get(app, ())
+            if (
+                action
+                and action != "*"
+                and "*" not in action
+                and action not in STANDARD_ACTIONS
+                and action not in explicit_actions
+            ):
                 self.add(
                     "C218",
                     where,
@@ -1608,6 +1666,17 @@ class _Meaning:
             return None
         return current
 
+    def contract_on(self, label: str) -> bool:
+        """Whether the core contract ``label`` is on: its feature, or a relation to its models."""
+        if label in self.spec.apps:
+            return False
+        if getattr(self.spec.features, label, False):
+            return True
+        from karni_cli.builder.render import contract_settings
+
+        setting = CONTRACT_SETTINGS.get(label)
+        return setting is not None and setting in contract_settings(self.spec)
+
     def matching(self, app: str, model: str) -> list[_Entity | None]:
         found: list[_Entity | None] = [
             entity
@@ -1615,6 +1684,13 @@ class _Meaning:
             if fnmatch.fnmatchcase(entity.app, app)
             and fnmatch.fnmatchcase(entity.name.lower(), model.lower())
         ]
+        for label, models in CONTRACT_MODELS.items():
+            if (
+                self.contract_on(label)
+                and fnmatch.fnmatchcase(label, app)
+                and any(fnmatch.fnmatchcase(m.lower(), model.lower()) for m in models)
+            ):
+                found.append(None)
         for name in self.modules:
             known = MODULES.get(name)
             if (
@@ -1777,7 +1853,38 @@ class _Meaning:
             return f"apps {apps} all define {name} (write app.{name})"
         return f"no app of the spec has an entity {name}"
 
+    def app_route(self, label: str) -> str:
+        """The base an app's entity pages are mounted under (``""``: none)."""
+        app = self.spec.apps.get(label)
+        return app.route if app is not None and app.route else ""
+
+    def app_routes(self) -> None:
+        """``apps.<label>.route`` (experimental): each app's own, and never a family page's."""
+        from karni_cli.recipes.compose import FAMILY_ROUTES
+
+        taken: dict[str, str] = {}
+        for label, app in self.spec.apps.items():
+            if not app.route:
+                continue
+            where: Loc = ("apps", label, "route")
+            if app.route in FAMILY_ROUTES:
+                self.add(
+                    "C444",
+                    where,
+                    f"apps.{label}.route is {app.route}, the route of a family page.",
+                    f"Give the app a base of its own, e.g. /{label}.",
+                )
+            elif app.route in taken:
+                self.add(
+                    "C444",
+                    where,
+                    f"apps.{label}.route is {app.route}, the route of the app {taken[app.route]}.",
+                    "Give each app a route of its own.",
+                )
+            taken.setdefault(app.route, label)
+
     def pages(self) -> None:
+        self.app_routes()
         routes: dict[str, int] = {}
         seen: set[str] = set()
         for index, item in enumerate(self.spec.pages):
@@ -1844,7 +1951,7 @@ class _Meaning:
                 )
                 if detail_at is not None:
                     self.related(entity, schema.page_related(written), (*where, detail_at))
-                base = f"/{default_route(entity.name)}"
+                base = f"{self.app_route(entity.app)}/{default_route(entity.name)}"
                 paths = [
                     *([base] if "list" in kinds else []),
                     *([f"{base}/$id"] if "detail" in kinds else []),
@@ -2172,8 +2279,34 @@ def validate_text(text: str, *, databases: Collection[str] | None = None) -> Rep
             spec = _without_unknown_keys(exc, data)
     if spec is not None and not any(issue.code == "C214" for issue in check.issues):
         _Meaning(check, spec, databases).run()
+    app = data.get("app") if isinstance(data, dict) else None
+    if isinstance(app, dict) and app.get("recipe") is not None:
+        _warn_recipe_key()
     issues = sorted(check.issues, key=lambda issue: (issue.line or 0, issue.code))
     return Report(spec, issues, source)
+
+
+def _warn_recipe_key() -> None:
+    """``app.recipe`` is deprecated (0.5.2): ``app.recipes``, removed in 1.0."""
+    import warnings
+
+    try:
+        from karni.deprecation import KarniDeprecationWarning, deprecation_message
+    except ImportError:  # karni-cli without Karni installed
+        category: type[Warning] = DeprecationWarning
+        message = (
+            "app.recipe in karni.yaml is deprecated; use app.recipes: [<name>] instead. It will "
+            "be removed in Karni 1.0. karni upgrade rewrites it."
+        )
+    else:
+        category = KarniDeprecationWarning
+        message = deprecation_message(
+            "app.recipe in karni.yaml",
+            "app.recipes: [<name>]",
+            removed_in="1.0",
+            doc_anchor="migrations/0.5.md#a-project-lists-its-recipes-in-apprecipes",
+        )
+    warnings.warn(message, category, stacklevel=3)
 
 
 def iter_codes() -> Iterator[str]:
@@ -2187,6 +2320,7 @@ def iter_codes() -> Iterator[str]:
     yield from ("C680", "C681")
     yield "C324"
     yield "C460"
+    yield "C444"  # apps.<label>.route (experimental)
     yield "C620"
     yield from ("C640", "C641", "C642")
     yield from ("C700", "C701", "C702", "C703")
@@ -2194,3 +2328,6 @@ def iter_codes() -> Iterator[str]:
     yield from ("C520", "C521")
     yield "C720"  # file:protected / image:protected without the storage module
     yield "C740"
+    from karni_cli.spec.rules import CODES
+
+    yield from CODES  # the rules: bounds, unique, targets, frozen, delete, moves, actions

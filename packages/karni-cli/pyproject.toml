@@ -102,7 +102,7 @@ line-length = 100
 target-version = "py312"
 # A recipe's files/ are a project's code, laid out and imported as in a project (its apps are
 # first-party there), at the 88 columns Karni's generators write: tests/test_new_recipe.py.
-extend-exclude = ["karni_cli/_templates", "*.md", "karni_cli/recipes/*/files"]
+extend-exclude = ["karni_cli/_templates", "*.md", "karni_cli/recipes/*/files", "tests/recipes/*/files"]
 
 [tool.ruff.lint]
 # B008: typer's documented pattern puts typer.Option() in argument defaults.

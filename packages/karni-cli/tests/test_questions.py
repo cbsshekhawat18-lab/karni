@@ -558,8 +558,9 @@ def test_the_writer_keeps_everything_else(
 def test_the_writer_refuses_what_it_cannot_place() -> None:
     with pytest.raises(EditError, match="not a mapping"):
         set_value("a: 1\n", ("a", "b"), 2)
-    with pytest.raises(EditError, match="block"):
-        set_value("a:\n  b: 1\n", ("a",), {"c": 2})
+    # a block value is written again over its own lines, every other line kept
+    assert set_value("a:\n  b: 1\nc: 2  # kept\n", ("a",), {"c": 2}) == "a: {c: 2}\nc: 2  # kept\n"
+    assert set_value("x:\n  - 1\n  - 2\ny: 3\n", ("x",), [1, 2, 3]) == "x: [1, 2, 3]\ny: 3\n"
     with pytest.raises(EditError, match="more than that key"):
         set_value("a: &x {b: 1}\nc: *x\n", ("a", "d"), 2)
     with pytest.raises(EditError, match="not valid YAML"):

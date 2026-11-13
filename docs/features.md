@@ -29,6 +29,7 @@ Reference or Debugging sections.
 - **[Models](models.md)**: `BaseModel` with a UUID key, timestamps, soft delete and audit fields, integer keys, external tables and SQL views, [tree models](models.md#tree-models) and [taxonomies](models.md#taxonomies).
 - **[Typed fields](fields.md)**: money, percent, quantity, phone, country, currency, markdown and more, with rules the database enforces.
 - **[Lifecycle and capacity](lifecycle-and-capacity.md)**: declared states and transitions, capacity that never oversells, no-overlap constraints.
+- **[Rules](rules.md)** (experimental): bounds, unique among live rows, which rows a relation may point at, frozen fields, delete rules, what a state change needs and stamps, and row actions with the states and roles where each is legal, declared in karni.yaml.
 - **[The API](api.md)**: `BaseViewSet` with a required `access` rule, generated serializers, filters, search, `?expand=`, query budgets and the OpenAPI schema.
 - **[Permissions at the queryset](concepts/queryset-permissions.md)**: one row filter for list, detail, relations and expansion, so a row outside your scope is a 404.
 - **[Accounts](accounts.md)**: email sign-in, the auth endpoints, roles as data, per-user grants, two-factor and social login.
@@ -42,6 +43,7 @@ Reference or Debugging sections.
 - **[Aggregations](aggregations.md)**: counts, sums and averages at `<resource>/aggregate/` by category, relation or date.
 - **[Search across models](global-search.md)**: `GET /api/search/` with access applied per model, and a command palette.
 - **[Navigation from data](navigation.md)**: each user's menu, opened by the same roles and grants as the API.
+- **[Several recipes in one project](family.md)** (experimental): `karni recipes add`, `remove` and `upgrade`, parts under their own routes, roles named `<prefix>-<role>`, one currency, and what each part requires installed with it.
 - **[People](people.md)**: one person and one organisation record for every part of a project, found or created by email, merged with a preview, erased on request, with person facts in SQL (experimental).
 - **[Timeline](timeline.md)**: one stream of moments per person and per record, written from family events that declare a title or by hand, and shown only to callers who may read every record an entry is about (experimental).
 - **[Import and export](import-export.md)**: CSV and XLSX from any list, and uploads with a mandatory dry run.
@@ -140,7 +142,7 @@ Base classes: `AuditedModel`, `BaseModel`, `BigIntBaseModel`, `GuardedModel`, `I
 - `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
 - `experimental` Grouped counts and sums under the list's filters and access: `GET <resource>/aggregate/` from `class Karni: aggregate`, with date buckets, top N and Other, a second dimension and numbers stored as text (`TextNumber`). Experimental tier
 
-Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Scaling`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
+Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Matching`, `Owned`, `Public`, `RowAction`, `Scaling`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
 <!-- /generated:api -->
 
 ### Admin
@@ -297,7 +299,7 @@ Each command links to its entry in the [reference](REFERENCE.md#commands).
 | [`karni build`](REFERENCE.md#karni-build) | Make the project match karni.yaml, without touching hand-written code |
 | [`karni trace`](REFERENCE.md#karni-trace) | Follow a captured request: its tasks, retries, email, webhooks, audit |
 | [`karni replay`](REFERENCE.md#karni-replay) | Re-run a captured request against the current code, as any user |
-| [`karni recipes`](REFERENCE.md#karni-recipes) | Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show): [list](REFERENCE.md#karni-recipes-list), [show](REFERENCE.md#karni-recipes-show) |
+| [`karni recipes`](REFERENCE.md#karni-recipes) | Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show), and the parts of a project (add, remove, upgrade): [list](REFERENCE.md#karni-recipes-list), [show](REFERENCE.md#karni-recipes-show), [add](REFERENCE.md#karni-recipes-add), [remove](REFERENCE.md#karni-recipes-remove), [upgrade](REFERENCE.md#karni-recipes-upgrade) |
 <!-- /generated:commands -->
 
 ## Make targets

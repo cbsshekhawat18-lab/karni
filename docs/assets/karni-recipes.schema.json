@@ -65,6 +65,31 @@
           },
           "type": "array"
         },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Experimental. Its recipe.toml version. null when it has none."
+        },
+        "requires": {
+          "description": "Experimental. The core contracts and modules it needs, with version ranges.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "conflicts": {
+          "description": "Experimental. The recipes and modules it cannot share a project with.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "spec": {
           "anyOf": [
             {
@@ -103,6 +128,9 @@
         "usually_changed",
         "source",
         "files",
+        "version",
+        "requires",
+        "conflicts",
         "spec",
         "score",
         "matched"

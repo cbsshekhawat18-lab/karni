@@ -180,7 +180,7 @@ def test_selection_between_versions() -> None:
     assert in_0_4_1 <= set(_ids("0.4.0", "0.5.0"))
     assert not in_0_4 & set(_ids("0.4.0", "0.5.0"))  # 0.4.0's changes are behind a 0.4.0 project
     assert not in_0_4_1 & set(_ids("0.3.0", "0.4.0"))
-    assert in_0_5_2 == {"frontend-npm-floor"}
+    assert in_0_5_2 == {"frontend-npm-floor", "written-row-scope", "recipe-rules", "app-recipes"}
     assert in_0_5_2 <= set(_ids("0.5.1", "0.5.2"))
     assert not in_0_5_2 & set(_ids("0.4.0", "0.5.0"))
     assert _ids("1.0.0", "1.1") == []
@@ -295,7 +295,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     result = runner.invoke(app, ["upgrade"])
     assert result.exit_code == 0, result.output
     out = result.output
-    assert "karni 0.1.0 -> 0.5.2: 98 change(s), 7 mechanical, 91 manual" in out
+    assert "karni 0.1.0 -> 0.5.2: 101 change(s), 8 mechanical, 93 manual" in out
 
     views = (git_project / "library" / "views.py").read_text()
     assert (

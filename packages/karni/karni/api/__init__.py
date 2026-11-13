@@ -43,11 +43,13 @@ if TYPE_CHECKING:
         Can,
         Granted,
         HasRole,
+        Matching,
         Owned,
         Public,
         Unscoped,
         Where,
     )
+    from karni.api.actions import RowAction
     from karni.api.caching import Cache, Uncached
     from karni.api.viewsets import BaseViewSet
     from karni.pagination import Unpaginated
@@ -62,8 +64,10 @@ __all__ = [
     "Can",
     "Granted",
     "HasRole",
+    "Matching",
     "Owned",
     "Public",
+    "RowAction",
     "Scaling",
     "Throttle",
     "Uncached",
@@ -81,8 +85,10 @@ _LAZY = {
     "Can": "karni.api.access",
     "Granted": "karni.api.access",
     "HasRole": "karni.api.access",
+    "Matching": "karni.api.access",
     "Owned": "karni.api.access",
     "Public": "karni.api.access",
+    "RowAction": "karni.api.actions",
     "Scaling": "karni.performance",
     "Throttle": "karni.api.throttling",
     "Uncached": "karni.api.caching",

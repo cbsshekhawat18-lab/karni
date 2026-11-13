@@ -86,6 +86,7 @@ nav:
       - Models: models.md
       - Typed fields: fields.md
       - Lifecycle and capacity: lifecycle-and-capacity.md
+      - Rules: rules.md
       - API: api.md
       - Aggregations: aggregations.md
       - Search across models: global-search.md
@@ -119,6 +120,7 @@ nav:
       - "App spec (karni.yaml)": app-spec.md
       - Recipes:
           - All recipes: recipes/index.md
+          - Several recipes in one project: family.md
           - Online shop: recipes/shop.md
           - Booking: recipes/booking.md
           - CRM: recipes/crm.md

@@ -168,7 +168,24 @@ def check_viewsets(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckM
         if model is not None:
             messages.extend(_duplicate_serializer(viewset, model))
             messages.extend(_write_only_search(viewset, model))
+        messages.extend(_row_actions(viewset))
     return messages
+
+
+def _row_actions(viewset: type[Any]) -> list[checks.CheckMessage]:
+    """karni.W136: a row action without ``to`` whose viewset has no method to run yet."""
+    from karni.api.actions import missing_methods
+
+    return [
+        check_warning(
+            "W136",
+            f"{viewset.__name__}.row_actions[{name!r}] has no to=, so the viewset's own "
+            f"@action method {name} does the work, and it has none.",
+            hint=_fix("W136"),
+            obj=viewset,
+        )
+        for name in missing_methods(viewset)
+    ]
 
 
 @checks.register(checks.Tags.urls, checks.Tags.caches)
@@ -571,6 +588,22 @@ def check_dashboards(app_configs: Any = None, **kwargs: Any) -> list[checks.Chec
         for model in config.get_models():
             try:
                 dashboard_spec(model)
+            except KarniError as exc:
+                messages.append(_as_check(exc, model))
+    return messages
+
+
+@checks.register(checks.Tags.models)
+def check_rules(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E998: every rule of ``class Karni`` (bounds, unique, targets, ...) can work."""
+    from karni.rules import rules_of
+
+    configs = app_configs if app_configs is not None else apps.get_app_configs()
+    messages: list[checks.CheckMessage] = []
+    for config in configs:
+        for model in config.get_models():
+            try:
+                rules_of(model)
             except KarniError as exc:
                 messages.append(_as_check(exc, model))
     return messages

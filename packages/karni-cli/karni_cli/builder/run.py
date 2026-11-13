@@ -217,7 +217,8 @@ def build(root: Path, spec: schema.Spec, facts: dict[str, Any], file: str, opts:
         module_lines = _plan_modules(ws, plan)
         _plan_extras(ws, feature_extras(spec))
         rendered = render.render(ws, inputs)
-        _recipe_files(ws, rec)
+        staged = _recipe_files(ws, rec)
+        render.render_parts(ws, rendered, inputs)
         deletes = _deletions(root, rec, rendered)
         edits = _hand_edits(root, rec, rendered, deletes)
     except Stop as stop:
@@ -273,13 +274,14 @@ def build(root: Path, spec: schema.Spec, facts: dict[str, Any], file: str, opts:
         with contextlib.suppress(FileNotFoundError):
             (root / rel).unlink()
     _save_record(root, new_record)
+    _record_parts(root, staged)
     if changes or deletes:
         state = _merge(pending, _state(plan, inputs, created, facts, module_lines))
     else:
         state = pending
     record.save_pending(root, state)
     result = _steps(root, result, state, opts, written=bool(changes or deletes))
-    unwritten = _recipe_not_written(rec, spec)
+    unwritten = _recipe_not_written(root, rec, spec)
     if unwritten and result.status == "built":
         base = result.message or f"Built: the project matches {file}."
         result.message = f"{base} {unwritten}"
@@ -500,42 +502,63 @@ def _plan_extras(ws: Workspace, extras: list[str]) -> None:
             ws.write("pyproject.toml", updated)
 
 
-def _recipe_files(ws: Workspace, rec: Record) -> list[str]:
-    """The recipe's own files over build's stubs, when ``karni new --recipe`` left one to write."""
-    name = rec.recipe
-    if not name:
-        return []
+def _recipe_files(ws: Workspace, rec: Record) -> dict[str, tuple[Any, list[str]]]:
+    """Each pending recipe's own files over build's stubs (``karni new --recipe``, ``karni
+    recipes add``): the recipe and the paths it wrote, by name."""
+    if not rec.recipes:
+        return {}
     from karni_cli import recipes
     from karni_cli.recipes import apply
 
-    try:
-        recipe = recipes.load().require(name)
-    except CliError as exc:
-        raise CliError(
-            f"{layout.RECORD} or the spec names the recipe {name!r}, whose own files this build writes "
-            f'over its stubs: {exc.message} Install it, or delete "{apply.RECORD_KEY}" from '
-            f"{layout.RECORD} to build without them.",
-            code=exc.code,
-        ) from None
-    return apply.stage(ws, recipe) if recipe is not None else []
+    loaded = recipes.load()
+    staged: dict[str, tuple[Any, list[str]]] = {}
+    for name in rec.recipes:
+        try:
+            recipe = loaded.require(name)
+        except CliError as exc:
+            raise CliError(
+                f"{layout.RECORD} names the recipe {name!r}, whose own files this build writes "
+                f"over its stubs: {exc.message} Install it, or delete it from "
+                f'"{apply.RECORD_KEY}" in {layout.RECORD} to build without them.',
+                code=exc.code,
+            ) from None
+        if recipe is not None:
+            apply.stage(ws, recipe)
+            staged[name] = (recipe, list(recipe.files))
+    return staged
 
 
-def _recipe_not_written(rec: Record, spec: schema.Spec) -> str:
+def _record_parts(root: Path, staged: dict[str, tuple[Any, list[str]]]) -> None:
+    """The sha256 of each part's file as written, in ``.karni/recipes/<name>/record.json``."""
+    from karni_cli.recipes import parts
+
+    for recipe, files in staged.values():
+        written = {rel: _read(root / rel) or "" for rel in files}
+        parts.record_files(root, recipe, written)
+
+
+def _recipe_not_written(root: Path, rec: Record, spec: schema.Spec) -> str:
     """Say so when the spec names a recipe whose domain code this build did not write.
 
-    Only ``karni new --recipe`` writes a recipe's own models, viewsets, seeds and tests. A
-    karni.yaml started from a recipe in an existing project (the /new-app flow) names it in
-    ``app.recipe`` and gets the spec alone.
+    Only ``karni new --recipe`` and ``karni recipes add`` write a recipe's own models,
+    viewsets, seeds and tests. A karni.yaml started from a recipe in an existing project
+    (the /new-app flow) names it in ``app.recipes`` and gets the spec alone.
     """
     from karni_cli import recipes
+    from karni_cli.recipes import parts
 
-    name = spec.app.recipe
-    if not name or rec.recipe or rec.entities or name not in recipes.load().recipes:
+    names = [
+        name
+        for name in spec.app.recipes
+        if name in recipes.load().recipes and parts.load_record(root, name) is None
+    ]
+    if not names or rec.recipes or rec.entities:
         return ""
+    name = names[0]
     return (
         f"The recipe {name}'s own code (its model methods, actions, seeders and tests) was not "
-        f"written: only karni new --recipe {name} writes it. karni recipes show {name} --files "
-        "prints it to copy from."
+        f"written: only karni new --recipe {name} or karni recipes add {name} writes it. "
+        f"karni recipes show {name} --files prints it to copy from."
     )
 
 

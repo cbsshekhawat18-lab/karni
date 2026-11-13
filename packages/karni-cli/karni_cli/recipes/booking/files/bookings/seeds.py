@@ -9,9 +9,10 @@ from decimal import Decimal
 from typing import Any, NamedTuple
 
 from bookings.karni import seeds as karni
+from django.contrib.auth import get_user_model
 from karni.seeding import SeedContext, cycled
 
-from bookings.models import Resource, Slot
+from bookings.models import Booking, Resource, Slot
 
 
 class Offer(NamedTuple):
@@ -127,20 +128,37 @@ class SlotSeeder(karni.SlotSeeder):
 class BookingSeeder(karni.BookingSeeder):
     """Members' places, spread over the slots that still have room.
 
-    A booking that finds every slot full is made cancelled, so it takes no place.
+    A member books a slot once (karni.yaml: unique), so each booking takes a
+    slot that member has no live booking in. A booking that finds no such
+    slot is made cancelled, so it takes no place.
     """
 
     def seed(self, context: SeedContext) -> list[Any]:
+        members = list(get_user_model().objects.order_by("email"))
+        taken: set[tuple[Any, Any]] = set(
+            Booking.objects.exclude(status="cancelled").values_list(
+                "slot_id", "member_id"
+            )
+        )
         rows: list[Any] = []
         for number in range(context.count):
+            note = NOTES[number % len(NOTES)] if number % 3 == 0 else ""
             open_slots = list(
                 Slot.objects.filter(remaining__gt=0).order_by("starts_at", "pk")
             )
-            note = NOTES[number % len(NOTES)] if number % 3 == 0 else ""
-            if open_slots:
-                rows += context.create(
-                    1, slot=context.random.choice(open_slots), note=note
-                )
+            context.random.shuffle(open_slots)
+            free = [
+                (slot, member)
+                for slot in open_slots
+                for member in members[number % max(len(members), 1) :] + members
+                if (slot.pk, member.pk) not in taken
+            ]
+            if not members and open_slots:
+                rows += context.create(1, slot=open_slots[0], note=note)
+            elif free:
+                slot, member = free[0]
+                taken.add((slot.pk, member.pk))
+                rows += context.create(1, slot=slot, member=member, note=note)
             else:
                 rows += context.create(1, status="cancelled", note=note)
         return rows

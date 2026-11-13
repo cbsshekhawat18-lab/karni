@@ -1299,7 +1299,12 @@ def test_a_spec_that_names_a_recipe_says_its_domain_code_was_not_written(
     """The /new-app flow: karni.yaml started from a recipe in an existing project."""
     require_modules("karni-payments")  # the booking recipe takes payments
     recipe = REPO_ROOT / "packages" / "karni-cli" / "karni_cli" / "recipes" / "booking"
-    root = _project(tmp_path, monkeypatch, "Yoga Flow", (recipe / "karni.yaml").read_text())
+    spec = (
+        (recipe / "karni.yaml")
+        .read_text()
+        .replace("  kind: app\n", "  kind: app\n  recipes: [booking]\n")
+    )
+    root = _project(tmp_path, monkeypatch, "Yoga Flow", spec)
     code, out = _build()
     assert code == 0, out
     assert "recipe booking's own code" in out and "karni new --recipe booking" in out

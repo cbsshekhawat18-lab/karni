@@ -165,8 +165,9 @@ def translate(
     from karni.capacity import capacity_conflict
     from karni.constraints import overlap_conflict
     from karni.lifecycle import undeclared_state
+    from karni.rules import unique_conflict
 
-    for translator in (overlap_conflict, capacity_conflict, undeclared_state):
+    for translator in (overlap_conflict, capacity_conflict, undeclared_state, unique_conflict):
         error = translator(found, model, instance, using)
         if error is not None:
             return error
@@ -176,7 +177,8 @@ def translate(
 def api_exception(exc: BaseException) -> Exception | None:
     """The DRF exception for a Karni lifecycle/capacity error, or ``None`` to leave ``exc`` alone.
 
-    An illegal transition, or a tree parent below the node (``E340``), is a
+    An illegal transition, a tree parent below the node (``E340``), or a
+    write that breaks a rule of ``class Karni`` (``E990``, ``E991``, ``E993`` to ``E996``) is a
     400 naming the field; a conflict (taken slot, a tree node with children,
     sold out, changed concurrently) is a 409 with :meth:`KarniConflict.payload`;
     an ``IntegrityError`` from a Karni constraint is translated first.
@@ -185,10 +187,11 @@ def api_exception(exc: BaseException) -> Exception | None:
 
     from karni.exceptions import api_error
     from karni.lifecycle import IllegalTransition
+    from karni.rules import RuleViolation
     from karni.tree import TreeCycleError
 
     error = translate(exc) if isinstance(exc, IntegrityError) else exc
-    if isinstance(error, IllegalTransition | TreeCycleError):
+    if isinstance(error, IllegalTransition | TreeCycleError | RuleViolation):
         return api_error(error.code, error.message, field=error.field)
     if isinstance(error, KarniConflict):
         response = APIException(error.message, code=error.code)

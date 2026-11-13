@@ -306,6 +306,8 @@ class KarniModelSerializer(serializers.ModelSerializer):
         field_class, kwargs = super().build_standard_field(field_name, model_field)
         from karni.fields.text import PhoneField
 
+        _rule_bounds(model_field, field_class, kwargs)
+
         if isinstance(model_field, PhoneField) and field_class is serializers.CharField:
             field_class = PhoneNumberField  # national numbers, formatted input: E.164
         live_unique = _live_unique_validator(model_field)
@@ -346,10 +348,14 @@ class KarniModelSerializer(serializers.ModelSerializer):
         validators = list(super().get_unique_together_validators())
         model = self.Meta.model
         writable = {name for name, f in self.fields.items() if not f.read_only}
+        from karni.rules import UniqueRule
+
         for constraint in model._meta.constraints:
             names = list(constraint.fields) if isinstance(constraint, LiveUniqueConstraint) else []
             if len(names) < 2 or constraint.extra_condition is not None:
                 continue
+            if isinstance(constraint, UniqueRule):
+                continue  # class Karni: unique is checked on save, with its own code (E991)
             if set(names) <= writable:
                 validators.append(
                     UniqueTogetherValidator(queryset=model._default_manager.all(), fields=names)
@@ -395,10 +401,44 @@ class KarniModelSerializer(serializers.ModelSerializer):
         for name, value in validated_data.items():
             if name in concrete:
                 setattr(probe, name, value)
+        # The save checks class Karni's rules (karni.rules) once: not here as well.
+        probe.__dict__["_karni_rules_at_save"] = True
         try:
             probe.clean()
         except DjangoValidationError as exc:
             raise serializers.ValidationError(serializers.as_serializer_error(exc)) from exc
+
+
+def _rule_bounds(model_field: Any, field_class: Any, kwargs: dict[str, Any]) -> None:
+    """A number's ``class Karni: bounds`` as ``min_value`` / ``max_value``: the schema's limits.
+
+    The OpenAPI document then says ``minimum`` and ``maximum``, so a form can
+    say the limit before it sends; the refusal carries the rule's code (E990).
+    """
+    from karni.exceptions import docs_url
+    from karni.rules import number_limits
+
+    numbers = serializers.IntegerField | serializers.DecimalField | serializers.FloatField
+    if not (isinstance(field_class, type) and issubclass(field_class, numbers)):
+        return
+    low, high = number_limits(model_field)
+    if low is None and high is None:
+        return
+    messages = dict(kwargs.get("error_messages") or {})
+    where = f"{model_field.model.__name__}.{model_field.name}"
+    if low is not None:
+        kwargs["min_value"] = low
+        messages["min_value"] = (
+            f"E990: {where} is below its minimum {low}. Send a value of at least {low}. "
+            f"See {docs_url('E990')}"
+        )
+    if high is not None:
+        kwargs["max_value"] = high
+        messages["max_value"] = (
+            f"E990: {where} is above its maximum {high}. Send a value of at most {high}. "
+            f"See {docs_url('E990')}"
+        )
+    kwargs["error_messages"] = messages
 
 
 def _live_unique_validator(model_field: Any) -> UniqueValidator | None:
@@ -410,12 +450,14 @@ def _live_unique_validator(model_field: Any) -> UniqueValidator | None:
     partial index; a case-insensitive field compares with ``iexact``.
     """
     from karni.fields.constraints import LiveUniqueConstraint
+    from karni.rules import UniqueRule
 
     model = getattr(model_field, "model", None)
     if model is None:
         return None
     single_live = any(
         isinstance(c, LiveUniqueConstraint)
+        and not isinstance(c, UniqueRule)  # class Karni: unique: checked on save (E991)
         and list(c.fields) == [model_field.name]
         and c.extra_condition is None
         for c in model._meta.constraints

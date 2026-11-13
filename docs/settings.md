@@ -181,6 +181,7 @@ reads it on every request.
 | <a id="karni_seed_batch_size"></a>`KARNI_SEED_BATCH_SIZE` |  | `2000` | Experimental. Rows per bulk insert of `karni seed` (`--batch-size` overrides it). |
 | <a id="karni_seed_ledger"></a>`KARNI_SEED_LEDGER` |  | `True` | Experimental. `karni seed` records the row count each table holds after a run in `.karni/local/seeded.json`, and `--volume` refuses a table holding rows no seed run left there. `False` turns it off, a path moves it. |
 | <a id="karni_explain_seq_scan_rows"></a>`KARNI_EXPLAIN_SEQ_SCAN_ROWS` |  | `1000` | Experimental. `karni queries --explain` flags each sequential scan on a table of this many rows or more, with the index that would serve it (PostgreSQL). |
+| <a id="karni_rules_clock_skew"></a>`KARNI_RULES_CLOCK_SKEW` |  | `300` | Experimental. Seconds a `$now` bound of `class Karni: bounds` forgives, so a browser clock a little ahead or behind the server is not refused. See [rules](rules.md#bounds). |
 
 Settings listed as computed derive from others. The defaults of env-backed
 settings are what an absent variable yields. `KARNI_VALIDATE` checks the merged

@@ -34,10 +34,13 @@ apps:
         key: slug
         search: [name]
         order: name
+        unique: [[user]]
+        delete: {blocked_by: [Listing]}
         access:
           read: public
           write: ["owned:user", "role:staff"]
           create: authenticated
+          assign: "role:staff"
       Listing:
         fields:
           seller: fk:Seller
@@ -50,8 +53,9 @@ apps:
         key: slug
         search: [title, description]
         order: -created_at
+        bounds: {price: {min: 0.01}}
         access:
-          read: public
+          read: ["where:active", "owned:seller__user", "role:staff"]
           write: ["owned:seller__user", "role:staff"]
       Order:
         fields:
@@ -64,19 +68,37 @@ apps:
         owner: buyer
         audit: [status]
         order: -created_at
+        bounds: {quantity: {min: 1}}
+        targets: {listing: {active: true, seller__user: {not: $me}}}
+        frozen: {listing: true, quantity: true}
+        delete: {when: {status__in: [pending, cancelled]}}
+        moves:
+          paid: {notify: buyer}
+          shipped: {notify: buyer}
+          delivered: {notify: listing__seller__user}
+        actions:
+          pay: {from: pending, by: "owned:buyer"}
+          cancel: {from: pending, to: cancelled, by: ["owned:buyer", "role:staff"]}
+          ship: {from: paid, to: shipped, by: ["owned:listing__seller__user", "role:staff"]}
+          deliver: {from: shipped, to: delivered, by: ["owned:buyer", "role:staff"]}
+          refund: {from: paid, to: refunded, by: "role:staff"}
         access:
           read: ["owned:buyer", "owned:listing__seller__user", "role:staff"]
           write: ["owned:buyer", "role:staff"]
+          delete: "role:staff"
       Payout:
         fields:
           seller: fk:Seller
           order: "o2o:Order"
           amount: "money:USD"
           fee: "money:USD"
-          status: "state:pending>paid"
+          status: "state:pending>paid|pending>void"
+          paid_at: "datetime?"
         owner: seller__user
         audit: [status]
         order: -created_at
+        moves: {paid: {stamps: [paid_at]}}
+        actions: {mark_paid: {from: pending, to: paid, by: "role:staff"}}
         access:
           read: ["owned:seller__user", "role:staff"]
           write: "role:staff"

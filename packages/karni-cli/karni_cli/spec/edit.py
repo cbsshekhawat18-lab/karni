@@ -9,7 +9,9 @@ order and the flow style, so :func:`set_value` changes the text itself:
   before the ``}`` in a flow mapping.
 - An empty value (``payments:`` with nothing after it, or ``null``) becomes
   the new mapping, on the key's own line.
-- A value that is there already is replaced where it is written.
+- A value that is there already is replaced where it is written. A block
+  mapping or list is written again over its own lines (a comment inside it
+  goes, every other line stays).
 
 The value is written the way :mod:`karni_cli.spec.emit` writes a spec (flow
 style for a short mapping, a string quoted only when YAML would read it as
@@ -191,7 +193,9 @@ def _replace(
     """The value of ``key`` written over ``value_node``: a scalar, an empty value or ``{...}``."""
     start, end = value_node.start_mark.index, value_node.end_mark.index
     if isinstance(value_node, yaml.MappingNode | yaml.SequenceNode) and not value_node.flow_style:
-        raise EditError(f"{key} holds a block that this writer does not replace.")
+        if flow:
+            raise EditError(f"{key} holds a block that this writer does not replace.")
+        return _replace_block(text, key_node, value_node, key, value)
     if flow or not isinstance(value, dict | list):
         written = emit.flow(value) if flow else _block_scalar(value)
         head = "" if start > 0 and text[start - 1] in " \t" else " "
@@ -207,6 +211,23 @@ def _replace(
     if line_end < 0:
         return changed + newline + rest
     return changed[: line_end + 1] + rest + changed[line_end + 1 :]
+
+
+def _replace_block(
+    text: str, key_node: yaml.Node, value_node: yaml.Node, key: str, value: Any
+) -> str:
+    """``key``'s block value (its lines, up to its last) written again as ``value``.
+
+    The lines of the block are replaced, so a comment inside them goes. Every
+    line before and after stays.
+    """
+    newline = _newline(text)
+    lines = text.splitlines(keepends=True)
+    last = _last_line(value_node)
+    indent = key_node.start_mark.column
+    written = newline.join(emit.entry(key, value, indent))[indent:]
+    tail = "".join(lines[last + 1 :])
+    return text[: key_node.start_mark.index] + written + newline + tail
 
 
 def _block_scalar(value: Any) -> str:

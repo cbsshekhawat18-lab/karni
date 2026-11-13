@@ -23,7 +23,7 @@ def test_a_paid_order_pays_its_seller_less_the_fee(
     client_as: Any, settings: Any
 ) -> None:
     settings.MARKETPLACE_FEE_PERCENT = 12.5
-    listing = create(Listing, price=Decimal("40.00"))
+    listing = create(Listing, active=True, price=Decimal("40.00"))
     buyer = client_as("buyer")
     ordered = buyer.post("/api/orders/", {"listing": str(listing.pk), "quantity": 2})
     assert ordered.status_code == 201, ordered.content
@@ -43,5 +43,6 @@ def test_a_paid_order_pays_its_seller_less_the_fee(
 
 
 def test_the_fee_is_ten_percent_unless_the_settings_say() -> None:
-    order = create(Order, listing=create(Listing, price=Decimal("19.99")), quantity=1)
+    listing = create(Listing, active=True, price=Decimal("19.99"))
+    order = create(Order, listing=listing, quantity=1)
     assert (order.fee(), order.payout_amount()) == (Decimal("2.00"), Decimal("17.99"))

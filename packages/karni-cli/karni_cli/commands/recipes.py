@@ -5,17 +5,24 @@
     karni recipes show NAME [--json]              one recipe and its karni.yaml (blank: the
                                                   blank start)
     karni recipes show NAME --files               the recipe's own domain code, to copy from
+    karni recipes add NAME [--no-build]           merge a recipe into this project, then build
+    karni recipes remove NAME [--allow-destructive]   take a part out of this project
+    karni recipes upgrade [NAME]                  each part's newer files and spec keys
 
 The recipes come from :mod:`karni_cli.recipes`: the ones built into
 karni-cli and the ``karni.recipes`` entry points of its environment.
 ``--match`` ranks them by plain word overlap with the request, with no
-language model. See docs/app-spec.md#recipes.
+language model. ``add``, ``remove`` and ``upgrade`` keep the parts of a project
+(:mod:`karni_cli.recipes.parts`, :mod:`karni_cli.recipes.compose`). See
+docs/app-spec.md#recipes and docs/family.md.
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import typer
@@ -28,7 +35,7 @@ if TYPE_CHECKING:
 recipes_app = typer.Typer(
     help=(
         "Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to "
-        "a one-line request (list, show)."
+        "a one-line request (list, show), and the parts of a project (add, remove, upgrade)."
     ),
     no_args_is_help=True,
     add_completion=False,
@@ -194,3 +201,156 @@ def show(
     lines += ["karni.yaml:", *str(entry["spec"]).rstrip("\n").splitlines()]
     lines.append(f"next: {data['next']}")
     typer.echo("\n".join(lines))
+
+
+# the parts of a project ----------------------------------------------------------
+
+_NO_BUILD_HELP = "Write karni.yaml and the record only. karni build does the rest."
+
+
+def _project_spec() -> tuple[Path, Path]:
+    from karni_cli.commands.spec import _default_spec
+    from karni_cli.project import CliError, require_project
+
+    root = require_project()
+    spec = _default_spec()
+    if not spec.is_file():
+        raise CliError(
+            f"No spec at {spec}. A project's parts live in its karni.yaml: export one with "
+            "karni spec export -o karni.yaml first.",
+            code="C210",
+        )
+    return root, spec
+
+
+def _build(root: Path, *, allow_destructive: bool = False) -> None:
+    """``karni build`` in the project. Raises ``typer.Exit(1)`` when it stops."""
+    from karni_cli.commands.build import build as build_command
+
+    typer.echo("")
+    typer.echo("$ karni build")
+    with contextlib.chdir(root):
+        build_command(
+            spec=None,
+            dry_run=False,
+            allow_destructive=allow_destructive,
+            force=False,
+            adopt=None,
+            verbose=False,
+            as_json=False,
+            docker=None,
+            service="django",
+        )
+
+
+@recipes_app.command("add")
+def add(
+    name: str = typer.Argument(..., help="The recipe to add (karni recipes list)."),
+    no_build: bool = typer.Option(False, "--no-build", help=_NO_BUILD_HELP),
+) -> None:
+    """Experimental. Add a recipe to this project as a part, then karni build.
+
+    The recipe's karni.yaml is merged into the project's (docs/family.md has
+    the rules): its app under its own route, its roles named <prefix>-<role>,
+    the family roles admin and customer adding up, what it requires switched
+    on. A conflict stops it before anything is written (C442 to C447). The
+    fragment is kept in .karni/recipes/<name>/, and karni build writes the
+    recipe's own files by the stub rule, migrates and seeds only its new
+    tables.
+    """
+    from karni_cli import recipes as recipes_mod
+    from karni_cli.project import CliError
+    from karni_cli.recipes import parts
+
+    root, spec = _project_spec()
+    loaded = recipes_mod.load()
+    recipe = loaded.require(name)
+    if recipe is None:
+        raise CliError(
+            "blank is the blank start, not a recipe to add. Name a recipe (karni recipes list).",
+            code="C420",
+        )
+    merged = parts.add(root, spec, recipe, loaded)
+    typer.echo(f"Recipe {recipe.name} ({recipe.title}): merged into {spec.name}.")
+    for note in merged.notes:
+        typer.echo(f"  {note}")
+    if no_build:
+        typer.echo(f"next: karni build (it writes {', '.join(recipe.files) or 'no files'})")
+        return
+    _build(root)
+
+
+@recipes_app.command("remove")
+def remove(
+    name: str = typer.Argument(..., help="The part to take out (app.recipes)."),
+    allow_destructive: bool = typer.Option(
+        False,
+        "--allow-destructive",
+        help="Let the build drop the part's tables (C270 stops it otherwise).",
+    ),
+    no_build: bool = typer.Option(False, "--no-build", help=_NO_BUILD_HELP),
+) -> None:
+    """Experimental. Take a part out of this project, then karni build.
+
+    Its apps, roles, pages, menu group and seed counts leave karni.yaml, and
+    its record leaves .karni/recipes/. Dropping its tables is a risky change:
+    pass --allow-destructive. Its own files stay on disk, each one listed.
+    """
+    from karni_cli.recipes import parts
+
+    root, spec = _project_spec()
+    _merged, left = parts.remove(root, spec, name)
+    typer.echo(f"Recipe {name}: taken out of {spec.name} and {parts.PARTS_DIR}/.")
+    if left:
+        typer.echo("Its files stay, for you to delete: " + ", ".join(left))
+    if no_build:
+        typer.echo("next: karni build --allow-destructive (it drops the part's tables)")
+        return
+    _build(root, allow_destructive=allow_destructive)
+
+
+@recipes_app.command("upgrade")
+def upgrade(
+    name: str | None = typer.Argument(None, help="One part (default: every part)."),
+    no_build: bool = typer.Option(False, "--no-build", help=_NO_BUILD_HELP),
+) -> None:
+    """Experimental. Bring each part to the recipe karni-cli has now, then karni build.
+
+    A file of the part's the project never changed (its recorded sha256) is
+    replaced. A file it changed is kept, and the recipe's new file is written
+    beside it as <file>.recipe-<version>. In karni.yaml, each of the part's
+    entities and roles the project left as added is updated, and each one it
+    changed is reported.
+    """
+    from karni_cli import recipes as recipes_mod
+    from karni_cli.project import CliError
+    from karni_cli.recipes import compose, parts
+    from karni_cli.spec.source import load
+
+    root, spec = _project_spec()
+    data = load(spec.read_text(encoding="utf-8")).data
+    present = compose.installed(data if isinstance(data, dict) else {})
+    names = [name] if name else present
+    if name and name not in present:
+        raise CliError(
+            f"The recipe {name} is not in this project (app.recipes lists "
+            f"{', '.join(present) or 'none'}).",
+            code="C448",
+        )
+    loaded = recipes_mod.load()
+    changed = False
+    for part in names:
+        recipe = loaded.require(part)
+        if recipe is None:
+            continue
+        report = parts.upgrade(root, spec, recipe)
+        changed = changed or bool(report.replaced or report.added or report.spec_updated)
+        for line in report.lines():
+            typer.echo(line)
+    if not names:
+        typer.echo("This project holds no recipe (app.recipes is empty).")
+        return
+    if no_build or not changed:
+        typer.echo("next: karni build" if changed else "Nothing to build.")
+        return
+    _build(root)

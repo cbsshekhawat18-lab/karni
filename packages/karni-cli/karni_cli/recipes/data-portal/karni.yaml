@@ -81,6 +81,7 @@ apps:
           source: [title, publisher, license, published_on, updated_at]
         order: title
         audit: true
+        delete: {blocked_by: [Indicator]}
         access: {read: granted, write: granted}
       Indicator:
         fields:
@@ -104,6 +105,8 @@ apps:
           detail: [label, dataset, region, sector, year, value, unit, created_at]
         order: [-year, label]
         audit: [value]
+        bounds: {year: {min: 1900, max: 2100}}
+        unique: [[dataset, region, sector, year], [label]]
         access: {read: granted, write: granted}
 pages:
   - home: dashboard

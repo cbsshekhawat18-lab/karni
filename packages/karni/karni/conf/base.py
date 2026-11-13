@@ -816,6 +816,8 @@ BASE: dict[str, Any] = {
     "KARNI_SEED_LEDGER": True,
     # karni queries --explain flags sequential scans on tables of this many rows or more.
     "KARNI_EXPLAIN_SEQ_SCAN_ROWS": 1000,
+    # Seconds a $now bound of class Karni: bounds forgives (a browser clock a little off).
+    "KARNI_RULES_CLOCK_SKEW": 300,
 }
 """Profile-independent defaults merged first by ``karni_settings()``.
 

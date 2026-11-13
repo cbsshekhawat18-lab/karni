@@ -74,25 +74,56 @@ apply codemods and list the manual steps. This file is the human summary.
   PATH" when git is missing, and the PostgreSQL backup round trip skips when `DATABASE_URL`
   points at a server that is not listening. Before, they failed.
 
-- **Added: family events with an outbox (experimental).** One app reacts to another
-  without importing it. `karni.events` gains `declare` (an event named
-  `<prefix>.<record>.<moment>`, versioned, with its payload fields), `publish` (inside the
-  writer's transaction: the event and one delivery per subscriber are written to the new
-  core app `karni.outbox`) and `subscribe` (by name, so a subscriber whose publisher is not
-  installed is never called). After the commit, `KARNI_EVENTS_DISPATCHER` (a Celery task)
-  runs each subscriber in its own transaction. A failure is retried with backoff up to
-  `KARNI_EVENTS_MAX_ATTEMPTS`, then marked failed. A beat entry every minute sends what a
-  down broker refused, and delivered events are pruned after
-  `KARNI_EVENTS_RETENTION_DAYS`. Delivery is at least once, and `once()` keeps a subscriber
-  idempotent. The admin lists events and deliveries with a Retry action,
-  `karni.outbox.health.check_outbox` counts failed and stuck deliveries, `karni check`
-  lists the events and their subscribers, `karni trace` shows each delivery, and
-  `karni.testing` gains `capture_events`, `deliver_now` and `assert_events_declared`.
-  karni-payments publishes `payments.payment.succeeded`, `payments.payment.failed` and
-  `payments.refund.succeeded`. Add `"karni.outbox"` to `INSTALLED_APPS` to use it: a
-  project without it gains no tables. Every earlier name of `karni.events` is unchanged.
-  New codes: E450 to E456 and W450. See [docs/family-events.md](docs/family-events.md).
-
+- **Added: rules a karni.yaml can say (experimental).** An entity takes `bounds` (the
+  lowest and highest value of a number or a date, with `$now` and `$today`), `unique`
+  (fields unique among the live rows, with a `where` filter: a partial unique index
+  SQLite and PostgreSQL enforce), `targets` (the rows a relation may point at, with `$me`
+  and `$<field>` so two relations agree), `frozen` (fields that never change, or not in a
+  state), `delete` (`when` and `blocked_by`), `moves` (what a move into a state
+  `requires`, `needs` and `stamps`) and `actions` (row actions). `access` takes `delete`,
+  `assign` (who may set the owner to another user) and the read word `where:<field>`,
+  and `owned:` paths may follow a reverse relation. Each key is the `class Karni` option
+  of the same name (`karni.rules`), checked in `save()`, `clean()` and `delete()`, and
+  the API answers 400 naming the field (`E990`, `E991`, `E993` to `E996`, a delete 409).
+  `karni spec validate` checks the keys (`C760` to `C767`) and `karni check` the options
+  (`E998`). A move's `notify` emails the user it names once the move commits, from
+  templates the project edits (`<app>/email/<entity>_<state>_subject.txt`), and the
+  booking and marketplace recipes use it for a booking confirmed or cancelled and an order
+  paid, shipped or delivered. See [docs/rules.md](docs/rules.md).
+- **Added: row actions (experimental).** `row_actions = {"ship": RowAction(from_="paid",
+  to="shipped", by=Owned("listing__seller__user"))}` on a viewset declares a named
+  `POST <resource>/<id>/<name>/` with the states and roles where it is legal. It is
+  refused elsewhere with a 409 (`E997`), safe to call twice, routed by Karni when it only
+  moves the state, and published as `x-karni-actions` and `x-karni-action` so a UI shows
+  the right buttons. `karni check` warns about one whose method is not written yet
+  (`W136`).
+- **Added: `Access(delete=..., assign=...)` and `Where(Matching(...))` (experimental).**
+  `delete` governs `destroy` (default: `write`). `assign` names who may set an owner
+  field to another user: anyone else who sends one gets a 403 (`E135`). `Matching`
+  reads rows on a flag without a new predicate.
+- **Changed: a written row must stay inside the caller's write scope.** This is a
+  security fix. A create or an update is checked against its own predicate's rows in the
+  save's transaction, so a listing posted into someone else's shop under
+  `write=Owned("seller__user")` is now a 403 (`E134`) and nothing is saved. See the
+  [migration note](docs/migrations/0.5.md#a-written-row-must-stay-inside-the-callers-write-scope).
+- **Fixed: the booking, CRM, LMS, marketplace and data-portal recipes keep their business
+  rules.** Each declares them in its `karni.yaml`, with a `tests/test_rules.py` that sends
+  the request an audit of the recipe sent and gets the refusal: one booking per member
+  and slot, no booking of a started slot, a booking's slot fixed (a changed slot used to
+  end in a 500), pay once and only while pending, a refund on a cancelled paid booking; a
+  deal's contact of its company, no negative value, a lost reason, managers delete and
+  reassign; drafts hidden, enrolments once and only in a published course, lessons only in
+  your own course and read by its students; one shop per person, listings only in your
+  own shop, no order of a paused or your own listing, quantity at least 1 and fixed, ship,
+  deliver and refund as actions, the refund voiding the payout; one indicator per
+  dataset, place, topic and year. Their seeds keep the rules (a payout for every paid
+  order, demo students enrolled once). A project built from one before 0.5.2 takes the
+  rules by hand: see the [migration note](docs/migrations/0.5.md#rules-a-karniyaml-can-say-and-the-recipes-that-use-them).
+- **Changed: test factories and `assert_crud` follow the rules.** Generated values stay
+  inside `bounds`, a required relation with a `targets` rule gets a row that fits it, a
+  flag whose move needs a related row gets one, `assert_crud` leaves owner fields to the
+  server and keeps frozen fields, and `karni seed` reads `$now` as its anchor, draws again
+  on a duplicate, and takes `Seeder.Meta.after` for an order no foreign key gives.
 - **Added (experimental): the people contract, `karni.people`.** One `Person` per human and
   one `Organisation` per company for every part of a project, with `Membership` and
   `Address`. `KARNI_PEOPLE = True` installs it, and `karni build` writes that when
@@ -113,7 +144,24 @@ apply codemods and list the manual steps. This file is the human summary.
   explicit actions. Admin pages with merge and erase actions, cross-model search, and a
   shared seed pool (`people.pool()`). The contract is versioned (`karni.people.CONTRACT =
   1`). Error codes `E250` to `E259`. See [people](docs/people.md).
-
+- **Added: family events with an outbox (experimental).** One app reacts to another
+  without importing it. `karni.events` gains `declare` (an event named
+  `<prefix>.<record>.<moment>`, versioned, with its payload fields), `publish` (inside the
+  writer's transaction: the event and one delivery per subscriber are written to the new
+  core app `karni.outbox`) and `subscribe` (by name, so a subscriber whose publisher is not
+  installed is never called). After the commit, `KARNI_EVENTS_DISPATCHER` (a Celery task)
+  runs each subscriber in its own transaction. A failure is retried with backoff up to
+  `KARNI_EVENTS_MAX_ATTEMPTS`, then marked failed. A beat entry every minute sends what a
+  down broker refused, and delivered events are pruned after
+  `KARNI_EVENTS_RETENTION_DAYS`. Delivery is at least once, and `once()` keeps a subscriber
+  idempotent. The admin lists events and deliveries with a Retry action,
+  `karni.outbox.health.check_outbox` counts failed and stuck deliveries, `karni check`
+  lists the events and their subscribers, `karni trace` shows each delivery, and
+  `karni.testing` gains `capture_events`, `deliver_now` and `assert_events_declared`.
+  karni-payments publishes `payments.payment.succeeded`, `payments.payment.failed` and
+  `payments.refund.succeeded`. Add `"karni.outbox"` to `INSTALLED_APPS` to use it: a
+  project without it gains no tables. Every earlier name of `karni.events` is unchanged.
+  New codes: E450 to E456 and W450. See [docs/family-events.md](docs/family-events.md).
 - **Added (experimental): the timeline contract, `karni.timeline`.** One stream of moments
   per person and per record for every part of a project. `TimelineEntry` (kind, title
   written at the time, body, actor, person, source, the family event's id, data) and
@@ -131,6 +179,27 @@ apply codemods and list the manual steps. This file is the human summary.
   and `people.organisation.merged` name timeline titles. karni-payments' events carry the payer's person when the payment's user is
   linked to one, and `payments.payment.succeeded` names a timeline title. New codes: E460
   to E463 and W460. See [timeline](docs/timeline.md).
+- **Added (experimental): several recipes in one project.** karni.yaml lists the parts in
+  `app.recipes`. `karni recipes add <name>` merges a recipe's karni.yaml into the project's
+  and runs `karni build`, which writes the recipe's own files by the stub rule, migrates and
+  seeds only its new tables; `karni recipes remove <name>` takes a part out, and `karni new
+  --recipe a --recipe b` starts with several. The merge keeps one currency
+  (`app.currency`, which a bare `money` field reads), mounts each part's pages under
+  `apps.<label>.route` (`/<label>`), adds up the family roles `admin` and `customer`, and
+  refuses before writing anything: an app label or recipe taken (`C442`), a role without
+  its `<prefix>-` or taken (`C443`), a route two apps share or a family page's (`C444`), a
+  module option two parts set differently (`C445`), a requirement the project cannot meet
+  (`C446`), a recipe's `conflicts` (`C447`). recipe.toml takes `version`, `requires`
+  (`people>=1`, `events>=1`, a module: each is installed with the part, and `admin` gets
+  the explicit people grants) and `conflicts`. Each part's fragment and the sha256 of each
+  file it wrote are kept in `.karni/recipes/<name>/`, and `karni recipes upgrade` replaces
+  the part's files the project did not change and reports the others. The build writes
+  `frontend/src/karni/parts.ts`, which calls each part's `register()`. The booking and CRM
+  recipes follow the family rules (`bookings-staff`, `crm-manager`, `crm-rep`, routes
+  `/bookings` and `/crm`). See [several recipes in one project](docs/family.md).
+- **Deprecated: `app.recipe` in karni.yaml.** Write `app.recipes: [<name>]`. The old key is
+  read as a list of one, with a `KarniDeprecationWarning`, until 1.0, and `karni upgrade`
+  rewrites it. See the [migration note](docs/migrations/0.5.md#a-project-lists-its-recipes-in-apprecipes).
 
 ## 0.5.1 (2026-11-12)
 

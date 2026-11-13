@@ -22,9 +22,9 @@ The app `market`:
 | Entity | Fields | Owner | Who reads, who writes |
 |---|---|---|---|
 | Seller | user, name, slug (the import key), about | user | anyone reads, the user and staff write, anyone signed in creates |
-| Listing | seller, title, slug (the import key), description, price (`money:USD`), active | seller's user | anyone reads, the seller and staff write |
-| Order | listing, buyer, quantity, amount (`money:USD`), status (`state`), payment | buyer | the buyer, the listing's seller and staff read, the buyer and staff write |
-| Payout | seller, order (`o2o`), amount, fee, status (`state:pending>paid`) | seller's user | the seller and staff read, staff write |
+| Listing | seller, title, slug (the import key), description, price (`money:USD`), active | seller's user | anyone reads an active one, the seller and staff read all, the seller and staff write |
+| Order | listing, buyer, quantity, amount (`money:USD`), status (`state`), payment | buyer | the buyer, the listing's seller and staff read, the buyer and staff write, staff delete |
+| Payout | seller, order (`o2o`), amount, fee, status (`state:pending>paid\|pending>void`), paid_at | seller's user | the seller and staff read, staff write |
 
 An order's status moves `pending > paid > shipped > delivered`, and also
 `pending > cancelled` and `paid > refunded`.
@@ -34,6 +34,22 @@ An order's status moves `pending > paid > shipped > delivered`, and also
 | `staff` | a system role: everything |
 | `seller` | `own` on sellers and listings. A seller sees the orders of their listings and their payouts through the entities' access |
 | `buyer` | the role every account that signs up gets: `own` on orders |
+
+## Rules
+
+Declared in `karni.yaml` ([rules](../rules.md)), so a rebuild keeps them:
+
+- One shop per person (`E991`), a listing only in your own shop (`E134`),
+  prices above zero (`E990`), a shop with listings is not deleted. A paused
+  listing is seen by its seller and staff only.
+- An order is of an active listing and never of your own (`E993`), for at
+  least one item (`E990`), and its listing and quantity never change
+  (`E994`). Staff delete pending or cancelled orders only (`E995`).
+- Row actions: the buyer pays a pending order (once: a second call returns
+  the open payment) or cancels it; the seller ships a paid order; the buyer
+  or staff confirm delivery; staff refund a paid order, which voids its
+  payout and refunds the payment; staff mark a payout paid, which stamps
+  `paid_at`. In another state they answer 409 (`E997`).
 
 ## Modules and settings
 

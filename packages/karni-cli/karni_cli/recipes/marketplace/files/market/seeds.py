@@ -4,14 +4,18 @@ market/karni/seeds.py: steer a field's values here.
 The sellers and listings are invented. Replace SELLERS with your own.
 """
 
+import uuid
 from collections import Counter
 from decimal import Decimal
 from typing import Any, NamedTuple
 
+from django.contrib.auth import get_user_model
+from django.utils.text import slugify
+from karni.lifecycle import any_initial_state
 from karni.seeding import SeedContext, cycled
 from market.karni import seeds as karni
 
-from market.models import Listing, Seller
+from market.models import Listing, Payout, Seller
 
 
 class Shopfront(NamedTuple):
@@ -222,19 +226,39 @@ def _shopfront(seller: Seller, position: int) -> Shopfront:
     return SELLERS[position % len(SELLERS)]
 
 
+def _person(email: str, role: str) -> Any:
+    """The demo user ``email`` with ``role``, the same on every run (no password)."""
+    from karni.accounts.permissions import assign_role
+
+    users = get_user_model().objects
+    user = users.filter(email=email).first()
+    if user is None:
+        user = users.create_user(email=email, password=None)
+    assign_role(user, role)
+    return user
+
+
+BUYERS = ["ada.mensah", "ben.okafor", "cleo.dumont", "dev.patel", "eva.lindqvist"]
+
+
 class SellerSeeder(karni.SellerSeeder):
-    """Makers and shops, each with a line about what they make."""
+    """Makers and shops, each with a line about what they make, one shop per person."""
 
     def seed(self, context: SeedContext) -> list[Any]:
         names = [shopfront.name for shopfront in SELLERS]
-        return [
-            context.create(
+        rows: list[Any] = []
+        for number in range(context.count):
+            name = cycled(names, number)
+            owner = _person(f"{slugify(name)}@sellers.example", "seller")
+            if Seller.objects.filter(user=owner).exists():
+                continue  # one shop per person (karni.yaml: unique), made before
+            rows += context.create(
                 1,
-                name=cycled(names, number),
+                user=owner,
+                name=name,
                 about=SELLERS[number % len(SELLERS)].about,
-            )[0]
-            for number in range(context.count)
-        ]
+            )
+        return rows
 
 
 class ListingSeeder(karni.ListingSeeder):
@@ -269,10 +293,15 @@ class ListingSeeder(karni.ListingSeeder):
 
 
 class OrderSeeder(karni.OrderSeeder):
-    """Orders for listings on sale: one to three of each, at the listing's price."""
+    """Orders for listings on sale: one to three of each, at the listing's price.
+
+    A buyer never orders from their own shop. Every order that was paid owes
+    its seller a payout: paid once delivered, void when refunded, else pending.
+    """
 
     def seed(self, context: SeedContext) -> list[Any]:
         listings = list(Listing.objects.filter(active=True).order_by("title", "pk"))
+        buyers = [_person(f"{name}@buyers.example", "buyer") for name in BUYERS]
         rows: list[Any] = []
         for number in range(context.count):
             if not listings:
@@ -280,10 +309,44 @@ class OrderSeeder(karni.OrderSeeder):
                 continue
             listing = listings[number * 7 % len(listings)]
             quantity = (1, 1, 2, 1, 3)[number % 5]
-            rows += context.create(
-                1, listing=listing, quantity=quantity, amount=listing.price * quantity
+            buyer = next(
+                person
+                for person in buyers[number % len(buyers) :] + buyers
+                if person.pk != listing.seller.user_id
             )
+            rows += context.create(
+                1,
+                listing=listing,
+                buyer=buyer,
+                quantity=quantity,
+                amount=listing.price * quantity,
+            )
+        with any_initial_state("seed data: payouts of orders paid earlier"):
+            for order in rows:
+                if (
+                    order.status in PAYOUT_STATES
+                    and not Payout.objects.filter(order=order).exists()
+                ):
+                    Payout.objects.create(
+                        id=uuid.uuid5(
+                            order.pk, "payout"
+                        ),  # the same on every run of a seed
+                        seller=order.listing.seller,
+                        order=order,
+                        amount=order.payout_amount(),
+                        fee=order.fee(),
+                        status=PAYOUT_STATES[order.status],
+                    )
         return rows
+
+
+#: The payout an order in each paid-or-later state owes its seller (OrderSeeder).
+PAYOUT_STATES = {
+    "paid": "pending",
+    "shipped": "pending",
+    "delivered": "paid",
+    "refunded": "void",
+}
 
 
 class PayoutSeeder(karni.PayoutSeeder):

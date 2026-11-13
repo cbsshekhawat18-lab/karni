@@ -398,6 +398,11 @@
       "path": "frontend/src/routes.tsx",
       "action": "modify",
       "owner": "karni"
+    },
+    {
+      "path": "frontend/src/karni/parts.ts",
+      "action": "create",
+      "owner": "karni"
     }
   ],
   "hand_edits": [],

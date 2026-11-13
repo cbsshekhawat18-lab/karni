@@ -156,6 +156,25 @@ class ValueContext:
 Generator = Callable[[ValueContext], Any]
 
 
+def _within_bounds(model: Any, model_field: Any, make: Generator | None) -> Generator | None:
+    """``make``, its values moved inside the field's ``class Karni: bounds`` (karni.rules)."""
+    from karni.rules import clamp, rules_of
+
+    if make is None or getattr(getattr(model, "_meta", None), "abstract", True):
+        return make
+    try:
+        bounded = any(bound.field == model_field.name for bound in rules_of(model).bounds)
+    except Exception:  # noqa: BLE001 - karni check reports a bad declaration (E998)
+        return make
+    if not bounded:
+        return make
+
+    def within(ctx: ValueContext) -> Any:
+        return clamp(model, model_field.name, make(ctx))
+
+    return within
+
+
 @dataclass(frozen=True)
 class NameRule:
     """A value for fields whose name matches ``patterns`` and whose type is one of ``kinds``.
@@ -610,7 +629,7 @@ class ValueInference:
         inferred = rule.make if rule is not None else self.type_generator(model_field)
         sample = getattr(model_field, "karni_sample", None)
         if sample is None:
-            return inferred
+            return _within_bounds(model, model_field, inferred)
 
         def make(ctx: ValueContext) -> Any:
             value = sample(ctx)
@@ -618,7 +637,7 @@ class ValueInference:
                 return inferred(ctx) if inferred is not None else None
             return value
 
-        return make
+        return _within_bounds(model, model_field, make)
 
     def type_generator(self, model_field: Any) -> Generator | None:
         """The type default for ``model_field`` (no name rule matched)."""

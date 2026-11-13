@@ -41,6 +41,32 @@
         "type": "string"
       },
       "type": "array"
+    },
+    "version": {
+      "anyOf": [
+        {
+          "pattern": "^\\d+(\\.\\d+){0,2}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Experimental. The recipe's own version, e.g. 1.0.0, recorded when a project adds it and compared by karni recipes upgrade. Default: karni-cli's version."
+    },
+    "requires": {
+      "description": "Experimental. Core contracts and modules the recipe needs, each with an optional version range: [\"people>=1\", \"events>=1\", \"storage\"]. Adding the recipe switches each contract on and lists each module.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "conflicts": {
+      "description": "Experimental. Recipes and modules the recipe cannot share a project with.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     }
   },
   "required": [

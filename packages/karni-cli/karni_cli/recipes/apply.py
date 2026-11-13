@@ -36,8 +36,8 @@ from karni_cli.recipes import FILES_DIR, Recipe
 
 __all__ = ["RECORD_KEY", "contents", "refused", "stage"]
 
-#: Experimental. The key of ``.karni/build.json`` that names the recipe the next build writes.
-RECORD_KEY: Final = "recipe"
+#: Experimental. The key of ``.karni/build.json`` that names the recipes the next build writes.
+RECORD_KEY: Final = "recipes"
 
 
 def contents(recipe: Recipe) -> dict[str, str]:
@@ -100,7 +100,8 @@ def stage(ws: Workspace, recipe: Recipe) -> list[str]:
             f"recipe {recipe.name} has its own file there, so karni build wrote nothing. A recipe "
             "writes only over the stubs karni build writes. Move your code out of the way (rename "
             "the file), run karni build again, then put your code back into the recipe's file. "
-            f'To build without the recipe\'s files, delete "{RECORD_KEY}" from .karni/build.json.',
+            f'To build without the recipe\'s files, delete it from "{RECORD_KEY}" in '
+            ".karni/build.json.",
             code="C441",
         )
     staged = []
