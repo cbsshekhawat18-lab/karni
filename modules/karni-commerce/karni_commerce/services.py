@@ -42,6 +42,7 @@ from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 from django.utils.module_loading import import_string
 from karni import preferences
+from karni.events import publish
 from karni_payments.models import Payment, Refund
 from karni_payments.services import create_checkout, create_refund, refunded_amount
 from rest_framework.exceptions import ValidationError
@@ -1119,7 +1120,7 @@ def issue_invoice(order: Order) -> Invoice:
         number = next_invoice_number()
         try:
             with transaction.atomic():
-                return Invoice.objects.create(
+                made = Invoice.objects.create(
                     order=order,
                     number=number,
                     reference=f"{prefix}{number}",
@@ -1128,6 +1129,15 @@ def issue_invoice(order: Order) -> Invoice:
                 )
         except IntegrityError:
             continue  # another order took the number at the same moment
+        publish(
+            "commerce.invoice.issued",
+            subject=made,
+            person=order.person_id,
+            invoice=str(made.pk),
+            order=str(order.pk),
+            number=made.reference,
+        )
+        return made
     raise ValidationError({"invoice": ["Too many invoices at once. Try again."]})
 
 

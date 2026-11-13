@@ -79,7 +79,8 @@ def tell_the_staff_it_runs_low(
 
 
 def _on_the_timeline(shipment: Shipment, moment: str) -> None:
-    """The parcel's move on its order's timeline, while shop.parcel_timeline is on."""
+    """The parcel's move on its order's timeline and its buyer's, while shop.parcel_timeline
+    is on. The order's own moves (placed, paid, refunded, cancelled) are commerce's events."""
     if not preferences.active("shop.parcel_timeline"):
         return
     order = shipment.order
@@ -88,6 +89,7 @@ def _on_the_timeline(shipment: Shipment, moment: str) -> None:
         kind=f"shop.shipment.{moment}",
         title=f"Parcel {moment}: order {order.number}",
         body=f"{shipment.carrier} {tracking}".strip() if moment == "shipped" else "",
+        person=order.person_id,
         subjects=[order, shipment],
         data={"order": order.number, "tracking_number": tracking},
     )
