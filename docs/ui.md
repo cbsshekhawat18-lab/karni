@@ -63,6 +63,12 @@ button for those who may create rows: it opens ResourceImport above the table
 commit), and the table reads its rows again afterwards. `importable={false}`
 hides it.
 
+`bulkEdit={["price", "stock", "active"]}` (experimental) adds a "Select rows,
+then set … to …" line above the table and a bulk action that saves that value
+on every selected row, each through the row's own update, so its rules and
+history apply and a row the server refuses is marked with the reason. It
+shows to roles that may update rows.
+
 ## App shell and pages
 
 - `Layout` (role `layout-shell`)

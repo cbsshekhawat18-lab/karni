@@ -4,7 +4,7 @@
  * create its rows, and opens ResourceImport above the table.
  */
 import { QueryClient } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
@@ -70,5 +70,34 @@ describe("ResourceTable import", () => {
     expect(await screen.findByRole("searchbox", { name: "Search" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Import" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /New/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("ResourceTable bulk edit", () => {
+  it("sets one field on every selected row through each row's update", async () => {
+    const patched: Array<{ id: string; body: unknown }> = [];
+    server.use(
+      http.patch("*/api/events/:id/", async ({ request, params }) => {
+        patched.push({ id: String(params["id"]), body: await request.json() });
+        return HttpResponse.json({ id: Number(params["id"]) });
+      }),
+    );
+    const client = createKarniClient({ baseUrl: "http://localhost/api" });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <AuthContext.Provider value={identity(["events.event:change"])}>
+        <KarniProvider client={client} queryClient={queryClient}>
+          <ResourceTable resource="events" syncUrl={false} bulkEdit={["capacity"]} />
+        </KarniProvider>
+      </AuthContext.Provider>,
+    );
+    const boxes = (await screen.findAllByRole("checkbox", { name: /^Select / })).filter(
+      (box) => !/all/i.test(box.getAttribute("aria-label") ?? ""),
+    );
+    for (const box of boxes.slice(0, 2)) await userEvent.click(box);
+    await userEvent.type(screen.getByRole("textbox", { name: "New value" }), "40");
+    await userEvent.click(screen.getByRole("button", { name: "Set capacity" }));
+    await waitFor(() => expect(patched).toHaveLength(2));
+    expect(patched.map((call) => call.body)).toEqual([{ capacity: 40 }, { capacity: 40 }]);
   });
 });
