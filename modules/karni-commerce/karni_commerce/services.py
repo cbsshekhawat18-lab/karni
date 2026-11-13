@@ -8,8 +8,9 @@ every price and total is computed here from the sellable adapters
 * :func:`checkout` turns a cart into a pending :class:`Order`: each line's
   name, SKU and price are copied, every line is held (``Sellable.hold``) or
   none is, and the order holds them for ``KARNI_COMMERCE_HOLD_MINUTES``.
-* :func:`open_payment` starts the payment at the provider for what is due.
-  A total of zero settles at once, with no payment.
+* :func:`open_payment` starts the payment at the provider for what is due,
+  or answers the one still open (its address is kept in the payment's
+  ``metadata["url"]``). A total of zero settles at once, with no payment.
 * :func:`settle` moves the order when karni-payments reports its payment
   (:mod:`karni_commerce.listeners`): paid (``Sellable.on_paid``), or failed
   (``Sellable.release``). Money that arrives for an order that stopped
@@ -459,6 +460,16 @@ def open_payment(order: Order) -> str | None:
             _mark_paid(locked)
             order.refresh_from_db()
             return None
+        # A payment of this order still open at the provider: send the buyer back to it
+        # (a second Pay, or a page reloaded), instead of starting another.
+        waiting = (
+            locked.payments.filter(payment__status=Payment.Status.PENDING, amount=due)
+            .select_related("payment")
+            .order_by("-created_at")
+            .first()
+        )
+        if waiting is not None and (waiting.payment.metadata or {}).get("url"):
+            return str(waiting.payment.metadata["url"])
         purpose = (
             OrderPayment.Purpose.RETRY if locked.payments.exists() else OrderPayment.Purpose.FULL
         )
@@ -474,6 +485,9 @@ def open_payment(order: Order) -> str | None:
     OrderPayment.objects.create(
         order=locked, payment=payment, purpose=purpose, currency=locked.currency, amount=due
     )
+    if session.url:
+        payment.metadata = {**(payment.metadata or {}), "url": session.url}
+        payment.save(update_fields=["metadata", "updated_at"])
     order.refresh_from_db()
     return session.url
 

@@ -53,7 +53,9 @@ payments currency. Every order and line stores the currency it was placed in.
    it covers the total the order is `paid` and each line is taken
    (`on_paid`). A declined payment makes the order `failed` and lets its
    lines go (`release`). The buyer can try again (`POST /api/orders/pay/`):
-   the lines are held again first.
+   the lines are held again first. A second Pay while a payment is still
+   open at the provider answers that payment's address (kept in its
+   `metadata["url"]`) instead of starting another.
 4. An order not paid in time is cancelled by `release_expired` (checkout runs
    it, and so can a beat task, `karni_commerce.tasks.release_expired`).
    Money that arrives for an order that is no longer waiting goes back at

@@ -161,6 +161,10 @@ def test_pay_starts_the_payment_again_for_the_guest_with_the_key(
     assert api.post("/api/orders/pay/", {"number": order.number}, format="json").status_code == 404
     again = api.post("/api/orders/pay/", {"number": order.number, "key": order.key}, format="json")
     assert again.status_code == 200 and again.data["url"]
+    # Pay again while that payment is open: the same payment, not a second one.
+    twice = api.post("/api/orders/pay/", {"number": order.number, "key": order.key}, format="json")
+    assert twice.data["url"] == again.data["url"]
+    assert order.payments.count() == 2  # the declined one and the open one
 
 
 def test_the_cart_reads_its_items_in_a_few_queries(
