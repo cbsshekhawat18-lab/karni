@@ -114,10 +114,10 @@ def test_a_tile_on_something_the_spec_lacks_is_c643() -> None:
             """
         )
     )
-    codes = sorted(issue.code for issue in report.issues)  # type: ignore[attr-defined]
+    codes = sorted(issue.code for issue in report.issues)
     assert codes == ["C643", "C643", "C643"]
 
 
 def test_a_key_without_its_part_is_refused() -> None:
     report = validate_text(SPEC + "dashboard:\n  - {key: revenue}\n")
-    assert not report.ok  # type: ignore[attr-defined]
+    assert not report.ok
