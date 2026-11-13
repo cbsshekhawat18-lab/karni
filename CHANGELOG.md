@@ -191,6 +191,46 @@ apply codemods and list the manual steps. This file is the human summary.
   width it is drawn (`xLabelStep`). A card on a phone gives long values room and wraps an
   email at its dots, never inside a word (`softBreaks`). `useResourceSchemaIfKnown`.
 
+- **karni.mail:** a part declares each email with `register_kind` (title, audience, merge
+  fields, whether it can be switched off) in its `messages.py`, and `kinds()` lists them.
+  `KARNI_MAIL_SOURCE` names where a business's changes are kept (`template`, `enabled`,
+  `sender`): an edited email wins over the files and renders with a restricted engine, the
+  declared merge fields only, as plain values, and no tag that loads code or another
+  template. The account emails (sign-in code, password reset, email checks) go through it
+  as `accounts.*` kinds that are never switched off.
+
+- **karni-commerce:** invoices numbered when an order is paid (`KARNI_COMMERCE_FIRST_INVOICE`),
+  with a printable invoice and packing slip (`GET /api/orders/document/`), as PDF through
+  karni-reports when it is installed; abandoned carts (`GET /api/carts/abandoned/`, a cart's
+  `touched_at` and `email`); sales reports by date, item and coupon with CSV
+  (`GET /api/orders/reports/`, a registry a selling app adds to, `karni_commerce.order:report`);
+  a quote for an order placed by hand (`POST /api/orders/manual/quote/`); the Checkout
+  settings (guest checkout, the terms, invoices, staff emails, when a cart is abandoned);
+  settings and emails a business edits behind `karni_commerce.preferences_seam`
+  (`/api/preferences/`, the family preferences contract's names and shape) and
+  `/api/email-templates/`. A fulfilment entry may carry a link. Every order email is
+  declared with its merge fields and comes from the sender in the details.
+
+- **karni-storage:** `serve(name)` hands out a protected file to code that checked access
+  itself.
+
+- **@karni/ui:** `SettingsPage` (the details, a tab per settings section, every email with
+  its switch) and `EmailTemplateEditor` (subject, text, merge fields, preview, back to the
+  default).
+
+- **@karni/commerce-ui:** `ReportsPage`, `AbandonedCartsPage`, `OrderDocumentPage`, invoice
+  and download links on the order pages, a coupon and a shipping method with the totals on
+  `NewOrderPage`, checkout's guest and terms options, `useBusiness`, and `Money` in the
+  business's currency display. `CommercePaths` gains `invoice` and `packingSlip`.
+
+- **Shop recipe:** settings without code (details, checkout, stock and catalogue, every
+  email's text), digital products delivered by a signed link with a download limit, reports
+  by date, item, category, coupon and stock with CSV, invoices and packing slips, abandoned
+  carts, and the shop's name and address from Settings. A product with variations reads its
+  stock from them everywhere, and a different figure for it is refused. The demo seeds 26
+  orders, its reviews meet karni.yaml's count, two printable files and three carts left
+  behind.
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

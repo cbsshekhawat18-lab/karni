@@ -1,5 +1,5 @@
 ---
-description: "karni-commerce (experimental): one cart, checkout and order path for anything a project sells, through a sellable adapter per kind, with options per line, coupons, shipping zones and methods, tax rates, orders in money states, several payments per order, refunds by line or amount, emails by kind and @karni/commerce-ui."
+description: "karni-commerce (experimental): one cart, checkout and order path for anything a project sells, through a sellable adapter per kind, with options per line, coupons, shipping zones and methods, tax rates, orders in money states, several payments per order, refunds by line or amount, invoices and packing slips, abandoned carts, sales reports with CSV, settings and emails a business edits, and @karni/commerce-ui."
 ---
 
 # Commerce (karni-commerce)
@@ -239,6 +239,142 @@ give the methods and the rates (`karni_commerce.pricing.ZoneShipping` and
 `RateTax`): subclass one to price shipping by weight, or read rates from a
 tax service.
 
+## Invoices and packing slips
+
+An order gets its invoice when it is paid: an `Invoice` with its own number,
+counting up from `KARNI_COMMERCE_FIRST_INVOICE` (1001) with no gap, printed
+with the Checkout setting's prefix (`INV-1001`). The invoice keeps the
+business's details (name, legal name, address, tax number) as they were that
+day, so changing them later never changes an invoice already issued.
+
+`GET /api/orders/document/?number=&key=&kind=invoice` answers the invoice as a
+page to print, for the order's buyer, a guest with the key from checkout and
+staff. `kind=packing_slip` answers what goes in the parcel and where, with no
+prices, for staff only. One template each,
+`karni_commerce/documents/invoice.html` and `packing_slip.html`: put a file of
+the same name in your project's templates to change one. With
+[karni-reports](reports.md) installed, the same templates print to PDF in the
+background: `POST /api/reports/commerce-invoice/<order id>/` and
+`commerce-packing-slip`, under the order's own access.
+
+`@karni/commerce-ui`'s `OrderDocumentPage` shows either one with a Print
+button (the browser saves it as PDF too), and the order pages link to it.
+
+## Abandoned carts
+
+A cart remembers when a line last changed (`touched_at`) and the email a
+visitor typed at checkout (the quote keeps it). `GET /api/carts/abandoned/`
+lists the carts with items that nobody touched for the Checkout setting
+`abandoned_after_hours` (1), newest first: who left it when they are known,
+the lines in words, what it comes to now and the coupon. `?search=` finds an
+email or a name. A cart that checked out has no lines left, so it is never
+there. It needs `karni_commerce.cart:view`. `AbandonedCartsPage` shows it.
+
+## Reports
+
+`GET /api/orders/reports/` lists the reports the caller may run, and
+`GET /api/orders/reports/<key>/?start=&end=&by=day` runs one: its columns,
+rows and totals, worked out by the server. `&export=csv` answers the same as a
+CSV file (a cell a spreadsheet would run as a formula is written as text).
+Without dates a report covers the last 30 days, and `by` is `day`, `week` or
+`month`.
+
+| Report | What |
+|---|---|
+| `commerce.sales_by_date` | the orders paid each day, week or month: their items, discounts, shipping, tax, what was paid, refunded and kept |
+| `commerce.sales_by_item` | what sold, by item: how many, how many came back, the sales and discounts |
+| `commerce.coupons` | each coupon used: on how many orders, what it took off, what those orders came to |
+
+A report counts the orders paid in the range, refunded ones included (their
+refunds are a column). It needs `karni_commerce.order:report`, an action a role
+is granted like any other (`"karni_commerce.*": all` holds it), so staff can
+run the orders without seeing the figures. A selling app adds its own in its
+`reports.py`:
+
+```python
+from karni_commerce.reports import Column, register_report
+
+
+@register_report(key="workshops.seats", title="Seats sold", order=50)
+def seats(query):
+    rows = [...]  # query.start, query.end, query.by
+    return {"columns": [Column("title", "Workshop"), Column("sold", "Seats", "number")],
+            "rows": rows, "totals": {"sold": sum(row["sold"] for row in rows)}}
+```
+
+These are tables, so they export to CSV. karni-reports prints one record to
+PDF, which is what an invoice is.
+
+## Settings a business changes
+
+The business's details, each part's settings and a switch per email are on
+one Settings page (`SettingsPage` in @karni/ui), over `/api/preferences/`.
+The names and the API are those of the family's preferences contract
+(`karni.preferences`): until it is installed, karni-commerce keeps the values
+itself, in `Setting`, behind one module,
+`karni_commerce.preferences_seam`. Read them with a typed default:
+
+```python
+from karni_commerce import preferences_seam as preferences
+
+preferences.value("details.name", "")              # the business's name
+preferences.value("commerce.guest_checkout", True)  # a part's setting
+preferences.email_on("commerce.order_paid")
+preferences.sender()                              # "Harbour Goods <hello@harbour.example>"
+```
+
+A part declares its section in its `preferences.py`, with a default for each
+field. Commerce's own, Checkout:
+
+| Field | Default | What |
+|---|---|---|
+| `guest_checkout` | on | visitors may buy without an account (off: checkout asks them to sign in, 403) |
+| `accept_terms` | off | buyers tick that they accept the terms of sale (`accept_terms` in the checkout body) |
+| `terms_url` | `/terms` | where the terms are |
+| `invoice_prefix` | `INV-` | printed before an invoice's number |
+| `invoice_footer` | blank | a line at the foot of every invoice |
+| `staff_emails` | blank | who gets the new-order email, with commas (blank: `KARNI_COMMERCE_STAFF_EMAILS`) |
+| `abandoned_after_hours` | 1 | when a cart counts as abandoned |
+
+The cart answers what checkout asks (`checkout: {guest_checkout,
+accept_terms, terms_url}`), and `GET /api/preferences/public/` the details
+anyone may see, so the storefront shows the name and address and `Money` shows
+the currency the way the details say (`currency_display`).
+
+A value is, in this order: a test's `preferences.override(...)`, the
+deployment's `KARNI_PREFERENCES_LOCKED` (shown read only), what someone saved,
+`KARNI_PREFERENCES_DEFAULTS`, and the declared default. The details'
+currency is the project's and is not changed here (one currency per shop).
+`karni_commerce.setting:change` changes every setting, and a section's
+`change` (a permission, or `role:<slug>`) lets its own people change it.
+
+When the preferences contract is installed, each
+`from karni_commerce import preferences_seam as preferences` becomes
+`from karni import preferences`, and the seam, the `Setting` table and its API
+go. The sections, the screens and the tests stay as they are. What the seam
+does not do (the contract does): a logo, connections and the change history
+page.
+
+## Emails a business edits
+
+Every email declares what it is and what an edited one may use, in its app's
+`messages.py` ([karni.mail](#karnimail)). Settings, Emails lists them, each
+with its switch and an editor: the subject and the text, the merge fields with
+what each means, a preview with sample values, and "Back to the default".
+
+`/api/email-templates/` is the editor's API: `GET` lists every email with its
+text now (edited, else the files), `GET`, `PUT` and `DELETE`
+`email-templates/<kind>/` read, change and put back one, and
+`POST email-templates/<kind>/preview/` renders a draft. An edit is kept in
+`EmailTemplate` and wins over the files. It renders with a restricted engine:
+the declared merge fields only, as plain values (`{{ order.total }}` shows
+`12.00`, `{{ order.password }}` shows nothing), and no tag that loads code or
+another template (`{% load %}`, `{% include %}` and `{% extends %}` are
+refused when it is saved). Editing needs `karni_commerce.emailtemplate:change`.
+
+The template files are where an edit starts: each is written on its merge
+fields only, so it reads the same in the editor as it sends.
+
 ## What the goods are doing
 
 ```python
@@ -252,7 +388,9 @@ def shipments(order):
                "detail": f"Tracking {shipment.tracking_number}", "at": shipment.shipped_at}
 ```
 
-The buyer's order page lists every reporter's entries under the order.
+The buyer's order page lists every reporter's entries under the order. An
+entry with `link` and `link_label` shows a link the buyer may follow (a
+download, a ticket).
 
 ## Signals and emails
 
@@ -265,8 +403,8 @@ Emails go through [`karni.mail`](#karnimail), each under a kind:
 
 | Kind | To | When |
 |---|---|---|
-| `commerce.order_paid` | the buyer | the order is paid (the confirmation) |
-| `commerce.new_order` | `KARNI_COMMERCE_STAFF_EMAILS` | an order is paid and waits to be fulfilled |
+| `commerce.order_paid` | the buyer | the order is paid: the confirmation, and it is being prepared |
+| `commerce.new_order` | the Checkout setting's staff emails, else `KARNI_COMMERCE_STAFF_EMAILS` | an order is paid and waits to be fulfilled |
 | `commerce.order_cancelled` | the buyer | the order was cancelled |
 | `commerce.order_refunded` | the buyer | a refund went through |
 | `commerce.order_note` | the buyer | staff wrote them a note on the order |
@@ -280,8 +418,10 @@ confirmation and the staff's new-order email go out once the order is paid.
 placed email sends one from its own receiver.
 
 The templates are `karni_commerce/email/<name>_subject.txt`, `_body.txt` and
-`_body.html`. Put a file at the same path in your project's templates to
-change one, and list a kind in `KARNI_MAIL_DISABLED_KINDS` to stop it.
+`_body.html`. A business rewrites one in the app ([above](#emails-a-business-edits)),
+a project puts a file at the same path in its templates, and Settings, Emails
+or `KARNI_MAIL_DISABLED_KINDS` stops one. Each comes from the sender in the
+details.
 
 ### karni.mail
 
@@ -291,6 +431,35 @@ renders `<template>_subject.txt`, `_body.txt` and, when it exists,
 development). The subject is one line. The kind goes out in the
 `X-Karni-Kind` header, and a kind listed in `KARNI_MAIL_DISABLED_KINDS` is not
 sent. Send from `transaction.on_commit` so a rolled-back change sends nothing.
+
+A part declares each email in its `messages.py`:
+
+```python
+from karni.mail import register_kind
+
+register_kind(
+    "workshops.seat_confirmed",
+    title="Seat confirmed",
+    template="workshops/email/seat_confirmed",
+    audience="the buyer",
+    describe="The seat is paid for.",
+    fields={"order.number": "The order's number", "lines.name": "Each line's name"},
+)
+```
+
+`fields` are dotted paths into the context the sender passes. A path through
+a list gives one value per row (`lines.name`), and a meaning that starts with
+"Each" tells the editor it is one per row. `switchable=False` marks an email a
+person cannot do without (the sign-in code and the password emails of
+`karni.accounts`, which go through karni.mail too, as `accounts.login_code`,
+`accounts.reset_password`, `accounts.verify_email` and
+`accounts.change_email`).
+
+`KARNI_MAIL_SOURCE` names where a business's changes are kept: an object (or
+a class) with `template(kind)`, `enabled(kind)` and `sender()`. karni-commerce
+sets it to `karni_commerce.preferences_seam.MailSource`. Without one, the files
+and `DEFAULT_FROM_EMAIL` are used. `render_edited`, `check_edited` and
+`merge_values` are the restricted engine's parts.
 
 ## Who sees what
 
@@ -351,6 +520,9 @@ project's people and keeps the two calls.
 | `KARNI_COMMERCE_PRICES_INCLUDE_TAX` | `False` | whether the prices the adapters give include their tax |
 | `KARNI_COMMERCE_SHIPPING` | `karni_commerce.pricing.ZoneShipping` | the class that gives an address's shipping methods |
 | `KARNI_COMMERCE_TAX` | `karni_commerce.pricing.RateTax` | the class that gives a tax class's rate at an address |
+| `KARNI_COMMERCE_FIRST_INVOICE` | `1001` | the first invoice's number |
+| `KARNI_MAIL_SOURCE` | `karni_commerce.preferences_seam.MailSource` | where karni.mail finds the emails a business edited, their switches and the sender |
+| `KARNI_PREFERENCES_LOCKED`, `KARNI_PREFERENCES_DEFAULTS` | `{}` | settings the deployment fixes, and starts with: `{"details": {"name": "..."}, "commerce": {...}}` |
 
 ## The React package
 
@@ -365,8 +537,12 @@ For staff it has `StaffOrders` (the orders list with search, filters by
 state, date and buyer, and a CSV export), `StaffOrderPage` (one order: the
 buyer, lines, payments, refunds, notes and history, with Cancel and Refund
 following the order's declared row actions when the schema has them),
-`NewOrderPage` (an order placed by hand), `CustomersPage` and
-`CustomerPage`. A selling app adds its own panel to the order page once at
+`NewOrderPage` (an order placed by hand: it prices the order with
+`POST /api/orders/manual/quote/` as staff fill it in, with the coupon and the
+way to send it, before they place it), `CustomersPage`, `CustomerPage`,
+`ReportsPage` (each report with dates, totals and a CSV file),
+`AbandonedCartsPage` and `OrderDocumentPage` (an invoice or a packing slip to
+print). `useBusiness()` reads the business's public details. A selling app adds its own panel to the order page once at
 startup:
 
 ```tsx
@@ -397,8 +573,8 @@ registerCouponLimit({ key: "categories", label: "Categories", resource: "categor
 
 ## What it does not do yet
 
-Invoices, deposits with a balance link, bundles, abandoned-cart reports and
-reports of coupons used are planned in this module. Shipping is priced by
+Deposits with a balance link, bundles, credit notes for refunds and emails to
+the people who left a cart are planned in this module. Shipping is priced by
 zone and method, not by weight or a carrier's live rates (subclass
 `ZoneShipping` for that). One rate applies per tax class and address: no
 compound taxes.
