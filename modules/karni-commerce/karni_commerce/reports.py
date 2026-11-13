@@ -18,6 +18,9 @@ date, by item, the coupons used), and a selling app adds its own in its
 ``GET /api/orders/reports/<key>/?start=&end=&by=day`` runs one, as JSON or,
 with ``?export=csv``, as a CSV file. Every figure is the server's.
 
+A report needs ``karni_commerce.order:report`` (an action of the order a role is
+granted, ``"karni_commerce.*": all`` includes it), or the ``requires`` it names.
+
 A report covers the orders paid in the range: ``paid``, ``part_paid``,
 ``part_refunded`` and ``refunded`` (a refunded order was paid, and its refund
 shows in the refunds column). Days are the project's time zone.
@@ -108,7 +111,7 @@ class Report:
     key: str
     title: str
     source: Source
-    requires: str = "karni_commerce.order:view"
+    requires: str = "karni_commerce.order:report"
     describe: str = ""
     dated: bool = True
     order: int = 100
@@ -128,7 +131,7 @@ def register_report(
     *,
     key: str,
     title: str,
-    requires: str = "karni_commerce.order:view",
+    requires: str = "karni_commerce.order:report",
     describe: str = "",
     dated: bool = True,
     order: int = 100,

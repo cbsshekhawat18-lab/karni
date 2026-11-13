@@ -249,6 +249,8 @@ class Order(BaseModel):
         label = "number"
         # The order page's history: every move of the money (GET orders/{id}/history/).
         audit = ["status", "amount_paid", "amount_refunded"]
+        # karni_commerce.order:report runs the sales reports (karni_commerce.reports).
+        actions = ["report"]
         # The staff home's tile (docs/api.md, "The staff dashboard"): the orders by
         # money state, those placed today, and the newest.
         dashboard = {

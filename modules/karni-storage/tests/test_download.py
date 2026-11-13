@@ -7,6 +7,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from django.core.files.base import ContentFile
+from rest_framework.exceptions import NotFound
 from rest_framework.test import APIClient
 
 from tests.testapp.models import Product
@@ -182,3 +183,25 @@ def test_on_a_bucket_the_json_link_is_the_signed_url(
     assert url.netloc == "karni-test-bucket.s3.eu-west-1.amazonaws.com"
     # HTML is never shown inline from the bucket either.
     assert parse_qs(url.query)["response-content-disposition"][0].startswith("attachment")
+
+
+def test_serve_hands_out_a_file_the_caller_checked_itself(product: Product) -> None:
+    """``serve`` is for code with its own check (a paid download): local, then a bucket."""
+    from karni_storage.views import serve
+
+    streamed = serve(product.manual.name, filename="Lamp guide.txt")
+    assert _body(streamed) == b"how to use the lamp"
+    assert streamed["Content-Disposition"].startswith("attachment")
+    assert "Lamp guide.txt" in streamed["Content-Disposition"]
+    assert streamed["Cache-Control"] == "private, no-store"
+    with pytest.raises(NotFound):
+        serve("products/manuals/missing.txt")
+
+
+def test_serve_on_a_bucket_redirects_to_a_signed_url(bucket: Any) -> None:
+    from karni_storage.views import serve
+
+    redirected = serve("products/manuals/abc/guide.pdf")
+    assert redirected.status_code == 302
+    query = parse_qs(urlsplit(redirected["Location"]).query)
+    assert query["response-content-disposition"] == ['attachment; filename="guide.pdf"']
