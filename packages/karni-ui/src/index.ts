@@ -706,3 +706,21 @@ export type {
   ResourceBoardEmptyProps,
   ResourceBoardLoadingProps,
 } from "./components/resource-board/ResourceBoard";
+
+// calendar (experimental)
+export {
+  ResourceCalendar,
+  defaultResourceCalendarSlots,
+} from "./components/resource-calendar/ResourceCalendar";
+export type {
+  ResourceCalendarProps,
+  ResourceCalendarSlots,
+  CalendarAvailability,
+  CalendarCapacity,
+  CalendarCreateRequest,
+  CalendarEmptyProps,
+  CalendarEventContext,
+  CalendarLoadingProps,
+  CalendarTone,
+  CalendarView,
+} from "./components/resource-calendar/ResourceCalendar";

@@ -228,6 +228,12 @@
   --karni-tree-max-height: 20rem;
   /* ResourceBoard (experimental): how tall a column grows before it scrolls. */
   --karni-board-max-height: 40rem;
+  /* ResourceCalendar (experimental): the height of one hour in the day and
+     week views, how tall they grow before they scroll, and the narrowest the
+     month grid gets before it scrolls sideways. */
+  --karni-calendar-hour-height: 3rem;
+  --karni-calendar-max-height: 36rem;
+  --karni-calendar-month-min-width: 42rem;
   /* GlobalSearch, the command palette: its widest, and the tallest its results
      list grows before it scrolls. */
   --karni-search-width: 40rem;
