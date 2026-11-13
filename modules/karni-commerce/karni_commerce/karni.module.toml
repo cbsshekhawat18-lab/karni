@@ -19,12 +19,31 @@ services = ["a Celery worker: payments settle orders through webhook tasks"]
 docs = "docs/commerce.md"
 
 [provides]
-models = ["Cart", "CartLine", "Order", "OrderLine", "OrderNote", "OrderPayment", "OrderRefund"]
+models = [
+    "Cart",
+    "CartLine",
+    "Coupon",
+    "CouponUse",
+    "Order",
+    "OrderLine",
+    "OrderNote",
+    "OrderPayment",
+    "OrderRefund",
+    "ShippingMethod",
+    "ShippingZone",
+    "TaxRate",
+]
 endpoints = [
     "/api/carts/current/",
     "/api/carts/current/lines/",
     "/api/carts/current/merge/",
     "/api/carts/current/checkout/",
+    "/api/carts/current/coupon/",
+    "/api/carts/current/quote/",
+    "/api/coupons/",
+    "/api/shipping-zones/",
+    "/api/shipping-methods/",
+    "/api/tax-rates/",
     "/api/orders/",
     "/api/orders/lookup/",
     "/api/orders/pay/",
@@ -56,6 +75,9 @@ KARNI_COMMERCE_STAFF_EMAILS = "array"
 KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR = "string"
 KARNI_COMMERCE_SELLABLES = "object"
 KARNI_COMMERCE_CUSTOMERS = "string"
+KARNI_COMMERCE_PRICES_INCLUDE_TAX = "boolean"
+KARNI_COMMERCE_SHIPPING = "string"
+KARNI_COMMERCE_TAX = "string"
 
 [[asks]]
 question = "How many minutes does checkout hold an order's items for its payment?"

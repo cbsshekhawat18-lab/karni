@@ -25,6 +25,9 @@ from karni_commerce.services import PricedLine
 
 __all__ = [
     "AddressSerializer",
+    "CouponInputSerializer",
+    "QuoteInputSerializer",
+    "QuoteSerializer",
     "CustomerPageSerializer",
     "CustomerRowSerializer",
     "ItemSerializer",
@@ -71,6 +74,7 @@ class CartLineSerializer(serializers.Serializer[PricedLine]):
     url = serializers.CharField(allow_blank=True)
     image = serializers.CharField(allow_null=True)
     options = serializers.DictField()
+    details = serializers.ListField(child=serializers.DictField(child=serializers.CharField()))
     quantity = serializers.IntegerField()
     unit_price = serializers.CharField()
     compare_at_price = serializers.CharField(allow_null=True)
@@ -92,6 +96,7 @@ class CartLineSerializer(serializers.Serializer[PricedLine]):
             if found and adapter is not None
             else None,
             "options": dict(line.options or {}),
+            "details": list(instance.details),
             "quantity": line.quantity,
             "unit_price": _amount(instance.unit_price),
             "compare_at_price": _amount(compare)
@@ -115,14 +120,26 @@ class CartSerializer(serializers.Serializer[Any]):
     currency = serializers.CharField()
     needs_shipping = serializers.BooleanField()
     ready = serializers.BooleanField()
+    coupon = serializers.CharField(allow_null=True, help_text="The coupon applied, or null.")
+    coupon_description = serializers.CharField(allow_blank=True)
+    coupon_problem = serializers.CharField(
+        allow_blank=True, help_text="Why the coupon on the cart takes nothing off now."
+    )
+    discount = serializers.CharField()
 
     @staticmethod
     def of(cart: Any, *, buyer: Any, context: dict[str, Any]) -> dict[str, Any]:
         priced = services.cart_lines(cart, buyer)
+        quoted = services.quote_cart(cart, buyer=buyer) if cart is not None else None
+        applied = cart.coupon if cart is not None else None
         data = {
             "token": cart.token if cart is not None and cart.user_id is None else None,
             "lines": priced,
             "count": sum(row.line.quantity for row in priced),
+            "coupon": applied.code if applied is not None else None,
+            "coupon_description": applied.description if applied is not None else "",
+            "coupon_problem": quoted.coupon_problem if quoted is not None else "",
+            "discount": _amount(quoted.discount if quoted is not None else 0),
             "subtotal": _amount(sum((row.line_total for row in priced), Decimal("0"))),
             "currency": conf.currency(),
             "needs_shipping": any(
@@ -145,6 +162,96 @@ class SetLineSerializer(serializers.Serializer[Any]):
     add = serializers.BooleanField(
         required=False, default=False, help_text="Add to what the cart holds instead of setting it."
     )
+
+
+class CouponInputSerializer(serializers.Serializer[Any]):
+    """A coupon code to put on the cart (blank takes the coupon off)."""
+
+    code = serializers.CharField(max_length=40, allow_blank=True)
+
+
+class PlaceSerializer(serializers.Serializer[Any]):
+    """Where an order goes, as much as the shipping and the tax need: a country, at least."""
+
+    country = serializers.CharField(max_length=2, required=False, allow_blank=True, default="")
+    region = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+    postcode = serializers.CharField(max_length=20, required=False, allow_blank=True, default="")
+
+    def validate_country(self, value: str) -> str:
+        return value.upper()
+
+
+class QuoteInputSerializer(serializers.Serializer[Any]):
+    """What the checkout page asks a quote for: the address, the method, the email."""
+
+    address = PlaceSerializer(required=False, default=dict)
+    shipping_method = serializers.CharField(required=False, allow_blank=True, default="")
+    email = serializers.EmailField(required=False, allow_blank=True, default="")
+
+
+class MethodSerializer(serializers.Serializer[Any]):
+    id = serializers.CharField()
+    name = serializers.CharField()
+    kind = serializers.CharField()
+    cost = serializers.CharField()
+
+
+class TaxLineSerializer(serializers.Serializer[Any]):
+    name = serializers.CharField()
+    rate = serializers.CharField()
+    amount = serializers.CharField()
+
+
+class QuoteSerializer(serializers.Serializer[Any]):
+    """What the cart comes to for an address: the coupon, the ways to send it, the tax."""
+
+    currency = serializers.CharField()
+    subtotal = serializers.CharField()
+    discount = serializers.CharField()
+    shipping = serializers.CharField()
+    tax = serializers.CharField()
+    total = serializers.CharField()
+    prices_include_tax = serializers.BooleanField()
+    needs_shipping = serializers.BooleanField()
+    coupon = serializers.CharField(allow_null=True)
+    coupon_problem = serializers.CharField(allow_blank=True)
+    methods = MethodSerializer(many=True)
+    method = serializers.CharField(allow_null=True)
+    shipping_problem = serializers.CharField(allow_blank=True)
+    tax_lines = TaxLineSerializer(many=True)
+
+    @staticmethod
+    def of(found: Any) -> dict[str, Any]:
+        return dict(
+            QuoteSerializer(
+                {
+                    "currency": found.currency,
+                    "subtotal": _amount(found.subtotal),
+                    "discount": _amount(found.discount),
+                    "shipping": _amount(found.shipping),
+                    "tax": _amount(found.tax),
+                    "total": _amount(found.total),
+                    "prices_include_tax": found.prices_include_tax,
+                    "needs_shipping": found.needs_shipping,
+                    "coupon": found.coupon.code if found.coupon is not None else None,
+                    "coupon_problem": found.coupon_problem,
+                    "methods": [
+                        {"id": m.id, "name": m.name, "kind": m.kind, "cost": _amount(m.cost)}
+                        for m in found.methods
+                    ],
+                    "method": found.method.id if found.method is not None else None,
+                    "shipping_problem": found.shipping_problem,
+                    "tax_lines": [
+                        {
+                            "name": t.name,
+                            "rate": f"{t.rate.normalize():f}",
+                            "amount": _amount(t.amount),
+                        }
+                        for t in found.tax_lines
+                    ],
+                }
+            ).data
+        )
 
 
 class MergeSerializer(serializers.Serializer[Any]):
@@ -176,6 +283,9 @@ class CheckoutSerializer(serializers.Serializer[Any]):
     billing = AddressSerializer()
     shipping = AddressSerializer(required=False, allow_null=True, default=None)
     note = serializers.CharField(required=False, allow_blank=True, default="", max_length=2000)
+    shipping_method = serializers.CharField(
+        required=False, allow_blank=True, default="", help_text="The id of the method chosen."
+    )
 
 
 class CheckoutResultSerializer(serializers.Serializer[Any]):
@@ -246,6 +356,10 @@ class OrderLineViewSerializer(serializers.ModelSerializer[OrderLine]):
 
     unit_price = serializers.SerializerMethodField()
     line_total = serializers.SerializerMethodField()
+    discount = serializers.SerializerMethodField()
+    tax = serializers.SerializerMethodField()
+    total = serializers.SerializerMethodField()
+    details = serializers.ListField(child=serializers.DictField(child=serializers.CharField()))
     url = serializers.SerializerMethodField()
     image = serializers.SerializerMethodField()
 
@@ -258,10 +372,14 @@ class OrderLineViewSerializer(serializers.ModelSerializer[OrderLine]):
             "name",
             "sku",
             "options",
+            "details",
             "quantity",
             "quantity_refunded",
             "unit_price",
             "line_total",
+            "discount",
+            "tax",
+            "total",
             "needs_shipping",
             "url",
             "image",
@@ -272,6 +390,15 @@ class OrderLineViewSerializer(serializers.ModelSerializer[OrderLine]):
 
     def get_line_total(self, line: OrderLine) -> str:
         return _amount(line.line_total)
+
+    def get_discount(self, line: OrderLine) -> str:
+        return _amount(line.discount)
+
+    def get_tax(self, line: OrderLine) -> str:
+        return _amount(line.tax)
+
+    def get_total(self, line: OrderLine) -> str:
+        return _amount(line.paid_total)
 
     def _item(self, line: OrderLine) -> tuple[Any, Any]:
         items: dict[tuple[str, str], Any] = self.context.get("items", {})
@@ -296,6 +423,10 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
     notes = serializers.SerializerMethodField()
     payable = serializers.SerializerMethodField()
     subtotal = serializers.SerializerMethodField()
+    discount_total = serializers.SerializerMethodField()
+    shipping_total = serializers.SerializerMethodField()
+    tax_total = serializers.SerializerMethodField()
+    tax_lines = TaxLineSerializer(many=True)
     total = serializers.SerializerMethodField()
     amount_paid = serializers.SerializerMethodField()
     amount_refunded = serializers.SerializerMethodField()
@@ -311,7 +442,14 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
             "buyer_name",
             "currency",
             "subtotal",
+            "discount_total",
+            "shipping_total",
+            "tax_total",
+            "tax_lines",
             "total",
+            "prices_include_tax",
+            "coupon_code",
+            "shipping_method",
             "amount_paid",
             "amount_refunded",
             "billing",
@@ -364,6 +502,15 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
 
     def get_total(self, order: Order) -> str:
         return _amount(order.total)
+
+    def get_discount_total(self, order: Order) -> str:
+        return _amount(order.discount_total)
+
+    def get_shipping_total(self, order: Order) -> str:
+        return _amount(order.shipping_total)
+
+    def get_tax_total(self, order: Order) -> str:
+        return _amount(order.tax_total)
 
     def get_amount_paid(self, order: Order) -> str:
         return _amount(order.amount_paid)
@@ -519,6 +666,8 @@ class ManualOrderSerializer(serializers.Serializer[Any]):
     shipping = AddressSerializer(required=False, allow_null=True, default=None)
     note = serializers.CharField(required=False, allow_blank=True, default="", max_length=2000)
     lines = ManualLineSerializer(many=True, allow_empty=False)
+    coupon = serializers.CharField(max_length=40, required=False, allow_blank=True, default="")
+    shipping_method = serializers.CharField(required=False, allow_blank=True, default="")
     send_link = serializers.BooleanField(
         required=False, default=True, help_text="Email the buyer the link to pay."
     )

@@ -60,6 +60,20 @@ DEFAULTS: dict[str, Any] = {
         "KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR",
         default="karni_payments.services.default_checkout_validator",
     ),
+    # Whether the prices the sellables give include their tax. Off (the default):
+    # tax is added on top at checkout. On: the tax is the part of each price
+    # that is tax, and the total is the prices (with the discount and shipping).
+    "KARNI_COMMERCE_PRICES_INCLUDE_TAX": env.bool(
+        "KARNI_COMMERCE_PRICES_INCLUDE_TAX", default=False
+    ),
+    # The dotted path of the class that gives the shipping methods of an address
+    # (karni_commerce.pricing.ZoneShipping: the zones and methods staff set up).
+    "KARNI_COMMERCE_SHIPPING": env(
+        "KARNI_COMMERCE_SHIPPING", default="karni_commerce.pricing.ZoneShipping"
+    ),
+    # The dotted path of the class that gives the tax rate of a tax class at an
+    # address (karni_commerce.pricing.RateTax: the rates staff set up).
+    "KARNI_COMMERCE_TAX": env("KARNI_COMMERCE_TAX", default="karni_commerce.pricing.RateTax"),
     # Sellable adapters by kind, as dotted paths, over the ones the apps
     # register in their sellables.py: {"product": "myapp.sellables.MyProduct"}.
     "KARNI_COMMERCE_SELLABLES": {},

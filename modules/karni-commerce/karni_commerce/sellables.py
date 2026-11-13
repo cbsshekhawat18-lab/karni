@@ -38,6 +38,8 @@ which wins over every registration.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
@@ -154,6 +156,37 @@ class Sellable:
         """The item an order line names, or ``None`` when it is gone."""
         return self.get(line.item)
 
+    # -- options: a size, a colour, a date ------------------------------------------------
+
+    def clean_options(self, item: Any, options: Mapping[str, Any]) -> dict[str, Any]:
+        """The options a buyer picked, checked and in their stored form.
+
+        Called when a line goes in the cart and at checkout. Raise
+        :func:`refuse` for options that do not fit the item (a size it does not
+        come in, no size picked when one must be). The default keeps every
+        option whose name does not start with ``_`` (those are the adapter's
+        own notes on an order line).
+        """
+        return {str(key): value for key, value in options.items() if not str(key).startswith("_")}
+
+    def option_key(self, item: Any, options: Mapping[str, Any]) -> str:
+        """What tells two lines of one item apart: two sizes of a shirt are two cart lines.
+
+        Blank for no options. The default is a short hash of the options.
+        """
+        chosen = {key: value for key, value in options.items() if not str(key).startswith("_")}
+        if not chosen:
+            return ""
+        text = json.dumps(chosen, sort_keys=True, default=str)
+        return hashlib.sha256(text.encode()).hexdigest()[:32]
+
+    def details(self, item: Any, options: Mapping[str, Any]) -> list[dict[str, str]]:
+        """The options in words for a cart and an order line: ``[{"label": "Size", "value": "M"}]``.
+
+        Copied to the order line at checkout. The default lists none.
+        """
+        return []
+
     # -- what it is and costs -------------------------------------------------------------
 
     def name(self, item: Any, options: Mapping[str, Any]) -> str:
@@ -193,7 +226,11 @@ class Sellable:
         return Decimal("0")
 
     def coupon_keys(self, item: Any) -> dict[str, Any]:
-        """What a coupon may be limited to for this item (category ids, a seller)."""
+        """What a coupon may be limited to for this item: ``{"categories": ["3", "7"]}``.
+
+        A coupon's ``limits`` name these keys (a category, a seller). Each value
+        is a list of texts.
+        """
         return {}
 
     # -- rules ----------------------------------------------------------------------------
@@ -226,9 +263,13 @@ class Sellable:
         """``quantity`` of the line was refunded. ``restock``: staff asked for the items back."""
 
     def refund_limit(self, line: OrderLine, now: datetime) -> Decimal:
-        """How much of the line may still be refunded at ``now`` (default: what is left of it)."""
-        refunded = Decimal(line.unit_price) * line.quantity_refunded
-        return max(Decimal(line.line_total) - refunded, Decimal("0"))
+        """How much of the line may still be refunded at ``now`` (default: what is left of it).
+
+        What is left is what the buyer paid for the line (its discount off, its
+        tax in) less what went back.
+        """
+        refunded = line.unit_paid() * line.quantity_refunded
+        return max(line.paid_total - refunded, Decimal("0"))
 
 
 def register[S: type[Sellable]](adapter: S) -> S:

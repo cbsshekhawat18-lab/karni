@@ -45,11 +45,13 @@ from karni_payments.models import Payment, Refund
 from karni_payments.services import create_checkout, create_refund, refunded_amount
 from rest_framework.exceptions import ValidationError
 
-from karni_commerce import conf, events
+from karni_commerce import conf, events, pricing
 from karni_commerce.models import (
     ZERO,
     Cart,
     CartLine,
+    Coupon,
+    CouponUse,
     Order,
     OrderLine,
     OrderNote,
@@ -62,6 +64,7 @@ from karni_commerce.sellables import Price, Sellable, adapter_for, kinds, refuse
 __all__ = [
     "PricedLine",
     "add_note",
+    "apply_coupon",
     "cancel",
     "cart_lines",
     "checkout",
@@ -73,6 +76,8 @@ __all__ = [
     "order_link",
     "place_manual_order",
     "place_order",
+    "quote_cart",
+    "quote_line",
     "refund",
     "release_expired",
     "set_line",
@@ -115,6 +120,7 @@ class PricedLine:
     problem: str = ""
     name: str = ""
     extra: dict[str, Any] = field(default_factory=dict)
+    details: list[dict[str, str]] = field(default_factory=list)
 
     @property
     def unit_price(self) -> Decimal:
@@ -185,6 +191,7 @@ def cart_lines(cart: Cart | None, buyer: Any = None) -> list[PricedLine]:
                 adapter.price(item, row.options, person),
                 _problem(adapter, item, row.quantity, row.options, person),
                 adapter.name(item, row.options),
+                details=adapter.details(item, row.options),
             )
         )
     return priced
@@ -209,7 +216,18 @@ def set_line(
     item = adapter.get(str(key))
     if item is None:
         raise refuse("Nothing like that is for sale here.")
-    current = CartLine.objects.filter(cart=cart, kind=kind, item=adapter.key(item)).first()
+    if int(quantity) <= 0 and not add:
+        # Taking a line out needs no valid options: the line's own are enough.
+        variant = adapter.option_key(item, dict(options or {}))
+        CartLine.objects.filter(
+            cart=cart, kind=kind, item=adapter.key(item), variant=variant
+        ).delete()
+        return None
+    chosen = adapter.clean_options(item, dict(options or {}))
+    variant = adapter.option_key(item, chosen)
+    current = CartLine.objects.filter(
+        cart=cart, kind=kind, item=adapter.key(item), variant=variant
+    ).first()
     wanted = int(quantity) + (current.quantity if add and current is not None else 0)
     if wanted <= 0:
         if current is not None:
@@ -217,16 +235,94 @@ def set_line(
         return None
     if wanted > max_quantity():
         raise refuse(f"At most {max_quantity()} of one item.", field="quantity")
-    chosen = dict(options or {})
     adapter.validate(item, wanted, chosen, _user(buyer))
     if current is None:
         return CartLine.objects.create(
-            cart=cart, kind=kind, item=adapter.key(item), quantity=wanted, options=chosen
+            cart=cart,
+            kind=kind,
+            item=adapter.key(item),
+            variant=variant,
+            quantity=wanted,
+            options=chosen,
         )
     current.quantity = wanted
-    current.options = chosen or current.options
+    current.options = chosen
     current.save(update_fields=["quantity", "options", "updated_at"])
     return current
+
+
+def apply_coupon(cart: Cart, code: str, *, buyer: Any = None, email: str = "") -> Coupon | None:
+    """Put the coupon ``code`` on ``cart`` (blank takes it off).
+
+    :raises ValidationError: for a code that is not a coupon, or one that
+        cannot be used on this cart now (expired, used up, nothing it applies to).
+    """
+    text = str(code or "").strip()
+    if not text:
+        cart.coupon = None
+        cart.save(update_fields=["coupon", "updated_at"])
+        return None
+    coupon = pricing.find_coupon(text)
+    if coupon is None:
+        raise refuse("No coupon has that code.", field="code")
+    found = [quote_line_of(row) for row in cart_lines(cart, buyer) if row.problem == ""]
+    lines = [line for line in found if line is not None]
+    problem = pricing.coupon_problem(coupon, lines, buyer=_user(buyer), email=email)
+    if problem:
+        raise refuse(problem, field="code")
+    cart.coupon = coupon
+    cart.save(update_fields=["coupon", "updated_at"])
+    return coupon
+
+
+def quote_line(
+    adapter: Sellable, item: Any, quantity: int, options: Mapping[str, Any], buyer: Any
+) -> pricing.QuoteLine:
+    """One line priced by its adapter, as :func:`karni_commerce.pricing.quote` takes it."""
+    price = adapter.price(item, options, _user(buyer))
+    return pricing.QuoteLine(
+        kind=adapter.kind,
+        item=adapter.key(item),
+        quantity=int(quantity),
+        options=dict(options),
+        unit=money(price.unit),
+        compare_at=money(price.compare_at) if price.compare_at else None,
+        tax_class=price.tax_class,
+        needs_shipping=adapter.needs_shipping(item, options),
+        coupon_keys=adapter.coupon_keys(item),
+        name=adapter.name(item, options)[:200],
+        sku=adapter.sku(item, options)[:64],
+        details=adapter.details(item, options),
+    )
+
+
+def quote_line_of(row: PricedLine) -> pricing.QuoteLine | None:
+    """A cart line as a quote line (``None`` when its item is gone)."""
+    if row.adapter is None or row.item is None:
+        return None
+    return quote_line(row.adapter, row.item, row.line.quantity, row.line.options, None)
+
+
+def quote_cart(
+    cart: Cart | None,
+    *,
+    buyer: Any = None,
+    email: str = "",
+    address: Mapping[str, Any] | None = None,
+    method: str | None = None,
+) -> pricing.Quote:
+    """What ``cart`` comes to now: its coupon, the shipping for ``address`` and the tax."""
+    rows = cart_lines(cart, buyer)
+    lines = [line for line in (quote_line_of(row) for row in rows) if line is not None]
+    return pricing.quote(
+        lines,
+        currency=conf.currency(),
+        buyer=_user(buyer),
+        email=email,
+        address=address,
+        coupon=cart.coupon if cart is not None else None,
+        method=method,
+    )
 
 
 @transaction.atomic
@@ -318,16 +414,21 @@ def place_order(
     billing: Mapping[str, Any] | None = None,
     shipping: Mapping[str, Any] | None = None,
     note: str = "",
+    coupon: Coupon | str | None = None,
+    method: str | None = None,
 ) -> Order:
     """A pending order of ``lines`` (``(kind, key, quantity, options)``), every line held.
 
     The one way to create an order: :func:`checkout` calls it with a cart's
     lines, and an app calls it for an order made another way (a quote, staff
-    by hand). Each line copies the item's name, SKU and price now. The totals
-    are the sum of the lines.
+    by hand). Each line copies the item's name, SKU, options in words and
+    price now. The totals come from :func:`karni_commerce.pricing.quote`: the
+    coupon (a code or a :class:`Coupon`), the shipping ``method`` (an id of
+    the methods offered for the address) and the tax.
 
-    :raises ValidationError: for no lines, an item that is gone, or a line an
-        adapter refuses or cannot hold. Nothing is held then.
+    :raises ValidationError: for no lines, an item that is gone, a line an
+        adapter refuses or cannot hold, a coupon that cannot be used, or no
+        way to send the order to its address. Nothing is held then.
     """
     if not lines:
         raise ValidationError({"cart": ["The cart is empty."]})
@@ -335,33 +436,61 @@ def place_order(
         raise ValidationError({"email": ["An email address, for the confirmation."]})
     person = _user(user)
     currency = conf.currency()
-    built: list[OrderLine] = []
-    for position, (kind, key, quantity, options) in enumerate(lines):
+    priced: list[pricing.QuoteLine] = []
+    for kind, key, quantity, options in lines:
         adapter = adapter_for(kind)
         item = adapter.get(str(key))
         if item is None:
             raise refuse("An item in the cart is no longer for sale.")
-        adapter.validate(item, int(quantity), options, person)
-        price = adapter.price(item, options, person)
-        unit = money(price.unit)
+        chosen = adapter.clean_options(item, dict(options))
+        adapter.validate(item, int(quantity), chosen, person)
+        priced.append(quote_line(adapter, item, int(quantity), chosen, person))
+    found = pricing.find_coupon(coupon) if isinstance(coupon, str) else coupon
+    if isinstance(coupon, str) and coupon.strip() and found is None:
+        raise refuse("No coupon has that code.", field="coupon")
+    if found is not None:
+        # One checkout at a time per coupon, so its limits hold with two buyers at once.
+        found = Coupon.objects.select_for_update().get(pk=found.pk)
+    shipped = any(line.needs_shipping for line in priced)
+    address = dict(shipping or {}) if shipped and shipping else dict(billing or {})
+    result = pricing.quote(
+        priced,
+        currency=currency,
+        buyer=person,
+        email=str(email),
+        address=address,
+        coupon=found,
+        method=method,
+    )
+    if result.coupon_problem:
+        raise refuse(result.coupon_problem, field="coupon")
+    if result.shipping_problem:
+        raise refuse(result.shipping_problem, field="shipping_method")
+    if result.methods and result.method is None:
+        raise refuse("Choose a way to send it.", field="shipping_method")
+    built: list[OrderLine] = []
+    for position, line in enumerate(priced):
         built.append(
             OrderLine(
-                kind=kind,
-                item=adapter.key(item),
-                options=dict(options),
-                name=adapter.name(item, options)[:200],
-                sku=adapter.sku(item, options)[:64],
-                quantity=int(quantity),
+                kind=line.kind,
+                item=line.item,
+                options=dict(line.options),
+                name=line.name,
+                sku=line.sku,
+                details=list(line.details),
+                quantity=line.quantity,
                 currency=currency,
-                unit_price=unit,
-                compare_at_price=money(price.compare_at) if price.compare_at else None,
-                line_total=money(unit * int(quantity)),
-                needs_shipping=adapter.needs_shipping(item, options),
+                unit_price=line.unit,
+                compare_at_price=line.compare_at,
+                line_total=line.line_total,
+                discount=line.discount,
+                tax_rate=line.tax_rate,
+                tax=line.tax,
+                total=money(line.total),
+                needs_shipping=line.needs_shipping,
                 position=position,
             )
         )
-    subtotal = sum((line.line_total for line in built), ZERO)
-    shipped = any(line.needs_shipping for line in built)
     order = _save_new(
         Order(
             user=person,
@@ -369,8 +498,18 @@ def place_order(
             buyer_name=str(name).strip(),
             status="pending",
             currency=currency,
-            subtotal=subtotal,
-            total=subtotal,
+            subtotal=result.subtotal,
+            discount_total=money(result.discount),
+            shipping_total=money(result.shipping),
+            tax_total=money(result.tax),
+            total=result.total,
+            prices_include_tax=result.prices_include_tax,
+            coupon_code=result.coupon.code if result.coupon is not None else "",
+            shipping_method=result.method.name if result.method is not None else "",
+            tax_lines=[
+                {"name": tax.name, "rate": f"{tax.rate:.4f}", "amount": f"{tax.amount:.2f}"}
+                for tax in result.tax_lines
+            ],
             billing=dict(billing or {}),
             shipping=dict(shipping or {}) if shipped else {},
             needs_shipping=shipped,
@@ -384,6 +523,15 @@ def place_order(
     OrderLine.objects.bulk_create(built)
     for line in sorted(built, key=lambda row: (row.kind, row.item)):  # one order: no deadlocks
         adapter_for(line.kind).hold(line)
+    if result.coupon is not None:
+        CouponUse.objects.create(
+            coupon=result.coupon,
+            order=order,
+            user=person,
+            email=order.email,
+            currency=currency,
+            amount=money(result.discount),
+        )
     events.order_placed.send(sender=Order, order=order)
     return order
 
@@ -398,8 +546,12 @@ def checkout(
     billing: Mapping[str, Any] | None = None,
     shipping: Mapping[str, Any] | None = None,
     note: str = "",
+    method: str | None = None,
 ) -> Order:
     """Turn ``cart`` into a pending order (:func:`place_order`), and empty the cart.
+
+    The cart's coupon goes on the order, and ``method`` is the shipping method
+    the buyer chose.
 
     :raises ValidationError: for an empty cart, or a line that cannot be bought.
     """
@@ -414,8 +566,13 @@ def checkout(
         billing=billing,
         shipping=shipping,
         note=note,
+        coupon=cart.coupon,
+        method=method,
     )
     cart.lines.all().delete()
+    if cart.coupon_id is not None:
+        cart.coupon = None
+        cart.save(update_fields=["coupon", "updated_at"])
     return order
 
 
@@ -625,7 +782,7 @@ def _refund_amount(order: Order, lines: Mapping[str, int], now: datetime) -> Dec
                 f"{line.name}: at most {line.quantity - line.quantity_refunded} can be refunded.",
                 field="lines",
             )
-        amount = money(Decimal(line.unit_price) * quantity)
+        amount = money(line.unit_paid() * quantity)
         adapter = kinds().get(line.kind)
         limit = adapter.refund_limit(line, now) if adapter is not None else amount
         total += min(amount, money(limit))
@@ -784,6 +941,8 @@ def place_manual_order(
     shipping: Mapping[str, Any] | None = None,
     note: str = "",
     send_link: bool = True,
+    coupon: str = "",
+    method: str | None = None,
 ) -> Order:
     """An order staff place for a buyer (a phone order), waiting for the buyer's payment.
 
@@ -803,6 +962,8 @@ def place_manual_order(
         billing=billing,
         shipping=shipping,
         note=note,
+        coupon=coupon or None,
+        method=method,
     )
     minutes = int(conf.get("KARNI_COMMERCE_MANUAL_HOLD_MINUTES"))
     order.hold_until = timezone.now() + timedelta(minutes=minutes)

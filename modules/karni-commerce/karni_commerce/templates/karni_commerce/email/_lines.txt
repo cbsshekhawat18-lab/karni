@@ -1,3 +1,6 @@
 {% for line in lines %}{{ line.quantity }} x {{ line.name }}{% if line.sku %} ({{ line.sku }}){% endif %}  {{ line.line_total|floatformat:2 }} {{ order.currency }}
 {% endfor %}
-Total: {{ order.total|floatformat:2 }} {{ order.currency }}
+{% if order.discount_total %}Discount{% if order.coupon_code %} ({{ order.coupon_code }}){% endif %}: -{{ order.discount_total|floatformat:2 }} {{ order.currency }}
+{% endif %}{% if order.shipping_method %}Shipping ({{ order.shipping_method }}): {{ order.shipping_total|floatformat:2 }} {{ order.currency }}
+{% endif %}{% for tax in order.tax_lines %}{{ tax.name }}{% if order.prices_include_tax %} (included){% endif %}: {{ tax.amount }} {{ order.currency }}
+{% endfor %}Total: {{ order.total|floatformat:2 }} {{ order.currency }}

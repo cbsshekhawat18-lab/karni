@@ -33,15 +33,27 @@ __all__ = [
     "ZERO",
     "Cart",
     "CartLine",
+    "Coupon",
+    "CouponUse",
     "Order",
     "OrderLine",
     "OrderNote",
     "OrderPayment",
     "OrderRefund",
+    "ShippingMethod",
+    "ShippingZone",
+    "TaxRate",
     "new_key",
+    "split_codes",
 ]
 
 ZERO = Decimal("0.00")
+
+
+def split_codes(text: str) -> list[str]:
+    """``"fr, de;ES"`` as ``["FR", "DE", "ES"]``: a list typed with commas, upper case."""
+    found = [part.strip().upper() for part in str(text or "").replace(";", ",").split(",")]
+    return [part for part in found if part]
 
 
 def new_key() -> str:
@@ -60,13 +72,21 @@ class Cart(BaseModel):
         related_name="commerce_carts",
     )
     token = models.CharField(max_length=64, default=new_key)
+    # The coupon the shopper applied (POST carts/current/coupon/): checkout uses it.
+    coupon = models.ForeignKey(
+        "karni_commerce.Coupon",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="carts",
+    )
 
     class Meta:
         constraints = [LiveUniqueConstraint(fields=["token"], name="karni_commerce_cart_token")]
 
     class APIMeta:
         exclude = ["token"]
-        read_only = ["user"]
+        read_only = ["user", "coupon"]
 
     class AdminMeta:
         list_display = ["user", "created_at", "updated_at"]
@@ -85,12 +105,15 @@ class CartLine(BaseModel):
     kind = models.CharField(max_length=40)
     item = models.CharField(max_length=64)
     options = models.JSONField(default=dict, blank=True)
+    # The options as a key (Sellable.option_key): two sizes of one shirt are two lines.
+    variant = models.CharField(max_length=64, blank=True, default="")
     quantity = models.PositiveIntegerField(default=1)
 
     class Meta:
         constraints = [
             LiveUniqueConstraint(
-                fields=["cart", "kind", "item"], name="karni_commerce_cartline_unique"
+                fields=["cart", "kind", "item", "variant"],
+                name="karni_commerce_cartline_unique",
             ),
             models.CheckConstraint(
                 condition=Q(quantity__gte=1), name="karni_commerce_cartline_quantity_gte_1"
@@ -98,7 +121,7 @@ class CartLine(BaseModel):
         ]
 
     class APIMeta:
-        read_only = ["cart", "kind", "item", "options", "quantity"]
+        read_only = ["cart", "kind", "item", "options", "variant", "quantity"]
 
     class Karni:
         owner_field = "cart__user"
@@ -145,7 +168,16 @@ class Order(BaseModel):
     )
     currency = CurrencyField()
     subtotal = MoneyField(currency_field="currency", default=ZERO)
+    discount_total = MoneyField(currency_field="currency", default=ZERO)
+    shipping_total = MoneyField(currency_field="currency", default=ZERO)
+    tax_total = MoneyField(currency_field="currency", default=ZERO)
     total = MoneyField(currency_field="currency", default=ZERO)
+    # Whether the prices of this order included their tax (KARNI_COMMERCE_PRICES_INCLUDE_TAX).
+    prices_include_tax = models.BooleanField(default=False)
+    coupon_code = models.CharField(max_length=40, blank=True, default="")
+    shipping_method = models.CharField(max_length=120, blank=True, default="")
+    # The tax by rate: [{"name": "VAT", "rate": "20.0000", "amount": "4.00"}].
+    tax_lines = models.JSONField(default=list, blank=True)
     amount_paid = MoneyField(currency_field="currency", default=ZERO)
     amount_refunded = MoneyField(currency_field="currency", default=ZERO)
     billing = models.JSONField(default=dict, blank=True)
@@ -180,7 +212,14 @@ class Order(BaseModel):
             "status",
             "currency",
             "subtotal",
+            "discount_total",
+            "shipping_total",
+            "tax_total",
             "total",
+            "prices_include_tax",
+            "coupon_code",
+            "shipping_method",
+            "tax_lines",
             "amount_paid",
             "amount_refunded",
             "billing",
@@ -260,6 +299,13 @@ class OrderLine(BaseModel):
     unit_price = MoneyField(currency_field="currency")
     compare_at_price = MoneyField(currency_field="currency", null=True, blank=True)
     line_total = MoneyField(currency_field="currency")
+    # What the options read as ([{"label": "Size", "value": "M"}]), copied at checkout.
+    details = models.JSONField(default=list, blank=True)
+    discount = MoneyField(currency_field="currency", default=ZERO)
+    tax_rate = models.DecimalField(max_digits=7, decimal_places=4, default=Decimal("0"))
+    tax = MoneyField(currency_field="currency", default=ZERO)
+    # What the buyer pays for the line: less its discount, with its tax.
+    total = MoneyField(currency_field="currency", null=True, blank=True)
     needs_shipping = models.BooleanField(default=False)
     position = models.PositiveIntegerField(default=0)
 
@@ -287,6 +333,11 @@ class OrderLine(BaseModel):
             "unit_price",
             "compare_at_price",
             "line_total",
+            "details",
+            "discount",
+            "tax_rate",
+            "tax",
+            "total",
             "needs_shipping",
             "position",
         ]
@@ -297,6 +348,15 @@ class OrderLine(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.quantity} x {self.name}"
+
+    @property
+    def paid_total(self) -> Decimal:
+        """What the buyer pays for the whole line (its ``total``, or ``line_total`` before M3)."""
+        return Decimal(self.total if self.total is not None else self.line_total)
+
+    def unit_paid(self) -> Decimal:
+        """What one item of the line cost the buyer, discount off and tax in."""
+        return self.paid_total / self.quantity if self.quantity else ZERO
 
 
 class OrderPayment(BaseModel):
@@ -395,3 +455,221 @@ class OrderNote(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.get_kind_display()} note on order {self.order_id}"
+
+
+class Coupon(BaseModel):
+    """A code that takes money off: a percent, a fixed amount, or the shipping.
+
+    ``minimum_spend`` is what the items must come to first. ``starts_at`` and
+    ``ends_at`` bound when it works. ``usage_limit`` caps its uses in all,
+    ``usage_limit_per_person`` per buyer (by account, else by email). ``kinds``
+    limits it to some kinds for sale (``product, seat``), ``items`` to some
+    items (``["product:12"]``), and ``limits`` to the coupon keys the kinds'
+    adapters give (``{"categories": ["3"]}``, ``Sellable.coupon_keys``). A
+    line matches when it is one of ``items`` or shares a value with a key of
+    ``limits``. With neither, every line of its kinds matches.
+    """
+
+    class Kind(models.TextChoices):
+        PERCENT = "percent", "Percent off"
+        FIXED = "fixed", "Amount off"
+        FREE_SHIPPING = "free_shipping", "Free shipping"
+
+    code = models.CharField(max_length=40, help_text="What the buyer types, any case.")
+    description = models.CharField(max_length=200, blank=True, default="")
+    kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.PERCENT)
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="The percent off, or the amount off. Not used for free shipping.",
+    )
+    minimum_spend = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    usage_limit = models.PositiveIntegerField(null=True, blank=True)
+    usage_limit_per_person = models.PositiveIntegerField(null=True, blank=True)
+    kinds = models.CharField(
+        max_length=200, blank=True, default="", help_text="Kinds it works on, with commas."
+    )
+    items = models.JSONField(default=list, blank=True)
+    limits = models.JSONField(default=dict, blank=True)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["code"]
+        constraints = [
+            LiveUniqueConstraint(fields=["code"], name="karni_commerce_coupon_code"),
+            models.CheckConstraint(
+                condition=Q(amount__gte=0), name="karni_commerce_coupon_amount_gte_0"
+            ),
+        ]
+
+    class AdminMeta:
+        list_display = ["code", "kind", "amount", "active", "ends_at"]
+        search_fields = ["code", "description"]
+
+    class Karni:
+        search = {"fields": ["code", "description"], "title": "code", "subtitle": "description"}
+
+    def __str__(self) -> str:
+        return self.code
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.code = str(self.code or "").strip().upper()
+        super().save(*args, **kwargs)
+
+    def kind_list(self) -> list[str]:
+        return [kind.lower() for kind in split_codes(self.kinds)]
+
+
+class CouponUse(BaseModel):
+    """One use of a coupon, by an order: what counts toward its limits."""
+
+    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, related_name="uses")
+    order = models.ForeignKey("karni_commerce.Order", on_delete=models.CASCADE, related_name="+")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="commerce_coupon_uses",
+    )
+    email = models.EmailField()
+    currency = CurrencyField()
+    amount = MoneyField(currency_field="currency", default=ZERO)
+
+    class Meta:
+        indexes = [models.Index(fields=["coupon", "email"], name="karni_commerce_use_email")]
+
+    class APIMeta:
+        read_only = ["coupon", "order", "user", "email", "currency", "amount"]
+
+    class Karni:
+        cascade = {"coupon": "a use is part of its coupon", "order": "and of its order"}
+
+    def __str__(self) -> str:
+        return f"{self.coupon_id} on order {self.order_id}"
+
+
+class ShippingZone(BaseModel):
+    """Where methods of shipping apply: some countries (and regions in them), or anywhere.
+
+    Checkout takes the first zone, by ``position``, whose countries hold the
+    address's country (and whose regions, when it names any, its region). A
+    zone with no countries is everywhere else.
+    """
+
+    name = models.CharField(max_length=120)
+    countries = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        help_text="Country codes with commas (FR, DE). Blank: everywhere else.",
+    )
+    regions = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        help_text="Regions or postcode starts, with commas (NY, 75*). Blank: the whole country.",
+    )
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "name"]
+
+    class Karni:
+        search = {"fields": ["name", "countries"], "title": "name", "subtitle": "countries"}
+
+    def __str__(self) -> str:
+        return self.name
+
+    def covers(self, country: str, region: str = "", postcode: str = "") -> bool:
+        """Whether an address in ``country`` (``region``, ``postcode``) is in this zone."""
+        countries = split_codes(self.countries)
+        if countries and str(country or "").upper() not in countries:
+            return False
+        regions = split_codes(self.regions)
+        if not regions:
+            return True
+        place = str(region or "").strip().upper()
+        code = str(postcode or "").replace(" ", "").upper()
+        for wanted in regions:
+            if wanted.endswith("*") and code.startswith(wanted[:-1]):
+                return True
+            if wanted == place:
+                return True
+        return False
+
+
+class ShippingMethod(BaseModel):
+    """A way to send an order in a zone: a flat rate, free above an amount, or pickup.
+
+    ``flat`` costs ``cost`` (free once the items reach ``free_above``, when set).
+    ``free`` costs nothing and shows once the items reach ``free_above``.
+    ``pickup`` is collected from the business and costs ``cost``.
+    """
+
+    class Kind(models.TextChoices):
+        FLAT = "flat", "Flat rate"
+        FREE = "free", "Free shipping"
+        PICKUP = "pickup", "Local pickup"
+
+    zone = models.ForeignKey(ShippingZone, on_delete=models.CASCADE, related_name="methods")
+    name = models.CharField(max_length=120)
+    kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.FLAT)
+    cost = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    free_above = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    taxable = models.BooleanField(default=True)
+    active = models.BooleanField(default=True)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["zone", "position", "name"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(cost__gte=0), name="karni_commerce_method_cost_gte_0"
+            ),
+        ]
+
+    class Karni:
+        cascade = {"zone": "a method is part of its zone and goes with it"}
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class TaxRate(BaseModel):
+    """The tax of a country (and a region in it, or anywhere), for one tax class.
+
+    The most specific rate wins: the country and region, then the country,
+    then the rate with neither. ``tax_class`` matches a sellable's
+    ``Price.tax_class`` (blank: the standard class). ``shipping``: the rate
+    applies to shipping too.
+    """
+
+    name = models.CharField(max_length=80, help_text="What the tax line says (VAT, Sales tax).")
+    country = models.CharField(max_length=2, blank=True, default="", help_text="Blank: anywhere.")
+    region = models.CharField(
+        max_length=120, blank=True, default="", help_text="Blank: the country."
+    )
+    rate = models.DecimalField(max_digits=7, decimal_places=4, help_text="In percent: 20 is 20%.")
+    tax_class = models.CharField(max_length=40, blank=True, default="")
+    shipping = models.BooleanField(default=True)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["country", "region", "tax_class", "position"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(rate__gte=0) & Q(rate__lte=100), name="karni_commerce_tax_rate_range"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} {self.rate.normalize()}%"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.country = str(self.country or "").strip().upper()
+        self.region = str(self.region or "").strip().upper()
+        super().save(*args, **kwargs)

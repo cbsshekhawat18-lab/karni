@@ -1,4 +1,7 @@
 <table role="presentation" cellpadding="4">
 {% for line in lines %}<tr><td>{{ line.quantity }} x {{ line.name }}</td><td align="right">{{ line.line_total|floatformat:2 }} {{ order.currency }}</td></tr>
+{% endfor %}{% if order.discount_total %}<tr><td>Discount{% if order.coupon_code %} ({{ order.coupon_code }}){% endif %}</td><td align="right">-{{ order.discount_total|floatformat:2 }} {{ order.currency }}</td></tr>
+{% endif %}{% if order.shipping_method %}<tr><td>Shipping ({{ order.shipping_method }})</td><td align="right">{{ order.shipping_total|floatformat:2 }} {{ order.currency }}</td></tr>
+{% endif %}{% for tax in order.tax_lines %}<tr><td>{{ tax.name }}{% if order.prices_include_tax %} (included){% endif %}</td><td align="right">{{ tax.amount }} {{ order.currency }}</td></tr>
 {% endfor %}<tr><td><strong>Total</strong></td><td align="right"><strong>{{ order.total|floatformat:2 }} {{ order.currency }}</strong></td></tr>
 </table>

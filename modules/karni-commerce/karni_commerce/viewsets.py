@@ -9,8 +9,13 @@ Shoppers (visitors included, each check below):
   cart, and the answer carries its token.
 * ``POST carts/current/merge/``: after sign-in, ``{token}`` joins the
   visitor's cart to the person's.
+* ``POST carts/current/coupon/``: ``{code}`` puts a coupon on the cart (blank
+  takes it off). The cart answers with the discount.
+* ``POST carts/current/quote/``: ``{address, shipping_method, email}`` answers
+  what the cart comes to there: the ways to send it, the tax and the total.
 * ``POST carts/current/checkout/``: the cart becomes an order waiting for its
-  payment, and the answer says where to pay.
+  payment (with the cart's coupon and the ``shipping_method`` chosen), and the
+  answer says where to pay.
 * ``GET orders/lookup/?number=&key=``: one order, for its buyer, the guest
   with its key, or staff.
 * ``POST orders/pay/``: ``{number, key}`` starts the payment of an order that
@@ -34,6 +39,10 @@ Staff (``karni_commerce.order:view``, the rows their grants give):
 * ``GET orders/customers/?search=&ordering=``: the buyers, one row per email,
   and ``GET orders/customer/?email=``: one buyer's page
   (:mod:`karni_commerce.customers`, a seam ``karni.people`` replaces).
+
+Coupons, shipping zones and methods and tax rates (``coupons/``,
+``shipping-zones/``, ``shipping-methods/``, ``tax-rates/``) are read and
+changed by the roles' grants, and the uses of coupons (``coupon-uses/``) read.
 
 Override / escape hatch: subclass a viewset, set ``auto_register = False`` on
 this one, and register yours. ``TOKEN_HEADER`` names the cart header.
@@ -62,6 +71,7 @@ from karni_commerce.api import (
     CartSerializer,
     CheckoutResultSerializer,
     CheckoutSerializer,
+    CouponInputSerializer,
     CustomerPageSerializer,
     CustomerRowSerializer,
     ItemSerializer,
@@ -73,21 +83,40 @@ from karni_commerce.api import (
     OrderStaffSerializer,
     OrderViewSerializer,
     PayResultSerializer,
+    QuoteInputSerializer,
+    QuoteSerializer,
     RefundInputSerializer,
     SetLineSerializer,
 )
 from karni_commerce.customers import customers_backend
-from karni_commerce.models import Cart, CartLine, Order, OrderLine, OrderPayment, OrderRefund
+from karni_commerce.models import (
+    Cart,
+    CartLine,
+    Coupon,
+    CouponUse,
+    Order,
+    OrderLine,
+    OrderPayment,
+    OrderRefund,
+    ShippingMethod,
+    ShippingZone,
+    TaxRate,
+)
 from karni_commerce.sellables import kinds
 
 __all__ = [
     "TOKEN_HEADER",
     "CartLineViewSet",
     "CartViewSet",
+    "CouponUseViewSet",
+    "CouponViewSet",
     "OrderLineViewSet",
     "OrderPaymentViewSet",
     "OrderRefundViewSet",
     "OrderViewSet",
+    "ShippingMethodViewSet",
+    "ShippingZoneViewSet",
+    "TaxRateViewSet",
 ]
 
 TOKEN_HEADER = "X-Cart-Token"
@@ -119,10 +148,12 @@ class CartViewSet(_ReadOnly, BaseViewSet):
     model = Cart
     access = Access(read=Granted(), write=Granted())
     query_budget = Budget(
-        checkout=80,
+        checkout=90,
         merge=60,
-        set_line=30,
-        current=30,
+        set_line=40,
+        current=40,
+        coupon=40,
+        quote=40,
         reason="checkout writes the order, each line and its hold, and merging moves each "
         "line: a few queries per line, measured with 10 lines",
     )
@@ -169,6 +200,40 @@ class CartViewSet(_ReadOnly, BaseViewSet):
         body.is_valid(raise_exception=True)
         return self._cart(request, services.merge(request.user, body.validated_data["token"]))
 
+    @extend_schema(request=CouponInputSerializer, responses=CartSerializer)
+    @action(detail=False, methods=["post"], url_path="current/coupon", access=Public())
+    def coupon(self, request: Request) -> Response:
+        """Put a coupon on the cart, or take it off with a blank code."""
+        body = CouponInputSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        cart = self._current(request, create=True)
+        assert cart is not None
+        user = _buyer(request)
+        services.apply_coupon(
+            cart,
+            body.validated_data["code"],
+            buyer=user,
+            email=user.email if user is not None else "",
+        )
+        return self._cart(request, cart)
+
+    @extend_schema(request=QuoteInputSerializer, responses=QuoteSerializer)
+    @action(detail=False, methods=["post"], url_path="current/quote", access=Public())
+    def quote(self, request: Request) -> Response:
+        """What the cart comes to at an address: the ways to send it, the tax and the total."""
+        body = QuoteInputSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        user = _buyer(request)
+        found = services.quote_cart(
+            self._current(request),
+            buyer=user,
+            email=(user.email if user is not None else "") or data["email"],
+            address=dict(data["address"]),
+            method=data["shipping_method"] or None,
+        )
+        return Response(QuoteSerializer.of(found))
+
     @extend_schema(request=CheckoutSerializer, responses={201: CheckoutResultSerializer})
     @action(detail=False, methods=["post"], url_path="current/checkout", access=Public())
     def checkout(self, request: Request) -> Response:
@@ -192,6 +257,7 @@ class CartViewSet(_ReadOnly, BaseViewSet):
             billing=billing,
             shipping=shipping,
             note=data["note"],
+            method=data["shipping_method"] or None,
         )
         url = services.open_payment(order)
         result = {"number": order.number, "key": order.key, "url": url}
@@ -392,6 +458,8 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
             shipping=dict(data["shipping"] or billing),
             note=data["note"],
             send_link=data["send_link"],
+            coupon=data["coupon"],
+            method=data["shipping_method"] or None,
         )
         result = {"id": str(order.pk), "number": order.number, "link": services.order_link(order)}
         return Response(ManualResultSerializer(result).data, status=201)
@@ -503,3 +571,46 @@ class OrderRefundViewSet(_ReadOnly, BaseViewSet):
     model = OrderRefund
     access = Access(read=Granted(), write=Granted())
     filterset_fields = ["order", "restock"]
+
+
+class CouponViewSet(BaseViewSet):
+    """Coupons, read and changed by the roles' grants (``karni_commerce.coupon:*``)."""
+
+    model = Coupon
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["kind", "active"]
+    search_fields = ["code", "description"]
+    ordering_fields = ["code", "ends_at", "created_at"]
+
+
+class CouponUseViewSet(_ReadOnly, BaseViewSet):
+    """The uses of coupons: which order took how much off. Read by the roles' grants."""
+
+    model = CouponUse
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["coupon", "order"]
+
+
+class ShippingZoneViewSet(BaseViewSet):
+    """Shipping zones, by the roles' grants. Checkout reads them through the quote."""
+
+    model = ShippingZone
+    access = Access(read=Granted(), write=Granted())
+    search_fields = ["name", "countries"]
+
+
+class ShippingMethodViewSet(BaseViewSet):
+    """The shipping methods of the zones, by the roles' grants."""
+
+    model = ShippingMethod
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["zone", "kind", "active"]
+
+
+class TaxRateViewSet(BaseViewSet):
+    """Tax rates, by the roles' grants. Checkout reads them through the quote."""
+
+    model = TaxRate
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["country", "tax_class"]
+    search_fields = ["name", "country", "region"]

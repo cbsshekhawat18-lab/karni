@@ -38,6 +38,13 @@ class GadgetSellable(Sellable):
     def needs_shipping(self, item: Gadget, options: Any) -> bool:
         return True
 
+    def details(self, item: Gadget, options: Any) -> list[dict[str, str]]:
+        colour = options.get("colour")
+        return [{"label": "Colour", "value": str(colour)}] if colour else []
+
+    def coupon_keys(self, item: Gadget) -> dict[str, Any]:
+        return {"shelves": [item.sku[:3]] if item.sku else []}
+
     def available(self, item: Gadget, options: Any) -> int:
         return int(item.available)
 
