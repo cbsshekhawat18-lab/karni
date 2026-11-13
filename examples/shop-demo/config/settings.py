@@ -57,14 +57,14 @@ INSTALLED_APPS += [  # noqa: F821
     # "myapp",
     "karni_payments",
     "shop",
-    "demo",
+    "karni.demo",
 ]  # karni:apps
 
 # --- Project middleware (runs after Karni's stack) ----------------------------
 MIDDLEWARE += [  # noqa: F821
     # "myapp.middleware.MyMiddleware",
-    "demo.middleware.DemoResetMiddleware",
-    "demo.middleware.DemoWriteGuardMiddleware",
+    "karni.demo.middleware.DemoResetMiddleware",
+    "karni.demo.middleware.DemoWriteGuardMiddleware",
 ]  # karni:middleware
 
 # A new project never read the deprecated X-Karni-Cache header, so it is not sent.
@@ -115,7 +115,7 @@ KARNI_PAYMENTS_PROVIDER = env("KARNI_PAYMENTS_PROVIDER", default=KARNI_PAYMENTS_
 
 # WhiteNoise serves the collected static files, and the React build's own files
 # (frontend/dist: /assets/..., /favicon.svg) at the site's root. Django answers
-# every other path of the app with its index.html (demo/urls.py).
+# every other path of the app with its index.html (karni.demo.urls).
 MIDDLEWARE.insert(  # noqa: F821
     MIDDLEWARE.index("django.middleware.security.SecurityMiddleware") + 1,  # noqa: F821
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -125,27 +125,40 @@ if _APP_BUILD.is_dir():
     WHITENOISE_ROOT = _APP_BUILD
 # The build's hashed files (/assets/index-B2xk9aQe.js) never change: cached for a year.
 WHITENOISE_IMMUTABLE_FILE_TEST = r"^/assets/.+-[0-9A-Za-z_-]{8}\.[0-9a-z]+$"
-DEMO_APP_INDEX = env.path("DEMO_APP_INDEX", default=str(_APP_BUILD / "index.html"))  # noqa: F821
+# The React build's index.html is served by karni.demo.urls.app_urls() (KARNI_DEMO_APP_INDEX
+# defaults to frontend/dist/index.html).
 
-# The demo rules (demo/). Only the demo account writes, and never to its own
-# account. The data resets every DEMO_RESET_HOURS hours to the same seed. The
-# sign-in pages show the demo login. Off by default: the project is a plain
-# shop until DEMO_MODE=True.
-DEMO_MODE = env.bool("DEMO_MODE", default=False)  # noqa: F821
-DEMO_SEED = env.int("DEMO_SEED", default=42)  # noqa: F821
-DEMO_RESET_HOURS = env.int("DEMO_RESET_HOURS", default=24)  # noqa: F821
-DEMO_RESET_CHECK_SECONDS = env.int("DEMO_RESET_CHECK_SECONDS", default=60)  # noqa: F821
-# The last reset's time, next to the SQLite database by default.
-_DB_NAME = str(DATABASES["default"].get("NAME") or "")  # noqa: F821
-_DB_DIR = Path(_DB_NAME).parent if _DB_NAME.endswith(".sqlite3") else BASE_DIR / "data"
-DEMO_RESET_STAMP = env.path("DEMO_RESET_STAMP", default=str(_DB_DIR / "demo-reset.json"))  # noqa: F821
-if DEMO_MODE:
+# Demo mode (karni.demo, docs/demo-mode.md). KARNI_DEMO_MODE is read from DEMO_MODE (or
+# KARNI_DEMO_MODE), the reset period from DEMO_RESET_HOURS and the seed from DEMO_SEED, as
+# render.yaml sets them. Only the demo accounts write, never to their own password, email or
+# roles. The data resets to `karni seed` with the fixed seed every KARNI_DEMO_RESET_HOURS
+# hours. The sign-in pages list the accounts below with what each can do. Off by default:
+# the project is a plain shop until DEMO_MODE=True.
+KARNI_DEMO_ACCOUNTS = [
+    {
+        "login": "demo@example.com",
+        "label": "Staff",
+        "can": "Manage categories, products, carts and orders, and open the admin.",
+        "roles": "all",
+        "staff": True,
+        "superuser": True,
+    },
+    {
+        "login": "customer@example.com",
+        "label": "Customer",
+        "can": "Fill a cart, check out with the test provider and read their own orders.",
+        "roles": ["customer"],
+    },
+]
+# The payment webhook stays Django's, not the app's page.
+KARNI_DEMO_APP_RESERVED = ["payments"]
+if KARNI_DEMO_MODE:  # noqa: F821
     # No sign-up: nobody opens an account, and a sign-in code goes only to an existing one.
     KARNI_ACCOUNTS_REGISTRATION = False
     KARNI_EMAIL_OTP_SIGNUP = "existing"
     SILENCED_SYSTEM_CHECKS += [  # noqa: F821
         # The demo sends no email: sign-up, password resets and sign-in codes are
-        # closed (demo/guard.py), and Render's free plan blocks the SMTP ports.
+        # closed (karni.demo.guard), and Render's free plan blocks the SMTP ports.
         "karni.W520",
         # The admin stays at /admin/ on purpose: the sign-in page shows it to every
         # visitor, and the only account that can change anything there is the

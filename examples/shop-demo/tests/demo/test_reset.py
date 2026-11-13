@@ -1,4 +1,4 @@
-"""The reset every DEMO_RESET_HOURS: due by the clock, once across workers, back to the seed."""
+"""The reset every KARNI_DEMO_RESET_HOURS: due by the clock, once across workers, back to the seed."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from django.test import Client
 from karni_payments.models import Payment
 from shop.models import Category, Product
 
-from demo import reset
+from karni.demo import reset
 
 from .conftest import demo_user, write_stamp
 
@@ -90,7 +90,7 @@ def test_a_request_resets_data_that_is_due(seeded: dt.datetime) -> None:
 
 @pytest.mark.django_db
 def test_a_request_checks_at_most_once_per_interval(seeded: dt.datetime, demo: Any) -> None:
-    demo.DEMO_RESET_CHECK_SECONDS = 3600
+    demo.KARNI_DEMO_RESET_CHECK_SECONDS = 3600
     client = Client()
     client.get("/healthz")  # this worker's first check: not due
     Category.objects.create(name="Added by a visitor")
@@ -103,7 +103,7 @@ def test_a_request_checks_at_most_once_per_interval(seeded: dt.datetime, demo: A
 
 @pytest.mark.django_db
 def test_nothing_resets_outside_demo_mode(seeded: dt.datetime, demo: Any) -> None:
-    demo.DEMO_MODE = False
+    demo.KARNI_DEMO_MODE = False
     Category.objects.create(name="Added by a visitor")
     write_stamp(seeded - dt.timedelta(hours=25))
 

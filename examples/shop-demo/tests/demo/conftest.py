@@ -12,9 +12,12 @@ import pytest
 from django.core.cache import cache
 from django.test import Client
 
-from demo import account, reset
+from karni.demo import accounts, reset
 
-CUSTOMER = "customer@example.com"
+STAFF = "demo@example.com"
+CUSTOMER = "customer@example.com"  # the second demo account
+OTHER = "visitor@example.com"  # an account that is not a demo account
+PASSWORD = "karni-password"
 
 
 @pytest.fixture(autouse=True)
@@ -27,11 +30,11 @@ def _fresh_cache() -> Iterator[None]:
 
 @pytest.fixture
 def demo(settings: Any, tmp_path: Path) -> Any:
-    """DEMO_MODE on, the reset stamp in tmp_path, a reset check on every request."""
-    settings.DEMO_MODE = True
-    settings.DEMO_RESET_STAMP = str(tmp_path / "demo-reset.json")
-    settings.DEMO_RESET_CHECK_SECONDS = 0
-    settings.KARNI_SEED_LOGINS = {CUSTOMER: ["customer"]}
+    """Demo mode on, the reset stamp in tmp_path, a reset check on every request."""
+    settings.KARNI_DEMO_MODE = True
+    settings.KARNI_DEMO_RESET_STAMP = str(tmp_path / "demo-reset.json")
+    settings.KARNI_DEMO_RESET_CHECK_SECONDS = 0
+    settings.KARNI_SEED_LOGINS = {OTHER: ["customer"]}
     return settings
 
 
@@ -44,11 +47,16 @@ def seeded(demo: Any, db: None) -> dt.datetime:
     return found
 
 
-def demo_user() -> Any:
-    """The demo account, which the seed made."""
-    user = account.find()
+def user_of(login: str) -> Any:
+    """The account with this login, which the seed or the boot made."""
+    user = accounts.find(login)
     assert user is not None
     return user
+
+
+def demo_user() -> Any:
+    """The staff demo account, which the seed made."""
+    return user_of(STAFF)
 
 
 def write_stamp(when: dt.datetime) -> None:
@@ -59,7 +67,7 @@ def token(client: Client, email: str) -> str:
     """Sign in through the API: the access token."""
     answer = client.post(
         "/api/auth/login/",
-        {"email": email, "password": account.password()},
+        {"email": email, "password": PASSWORD},
         content_type="application/json",
     )
     assert answer.status_code == 200, answer.content

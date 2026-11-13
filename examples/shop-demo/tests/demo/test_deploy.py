@@ -66,6 +66,7 @@ def test_the_blueprint_is_one_free_docker_service_built_from_this_project() -> N
     assert keys["SECRET_KEY"] == {"key": "SECRET_KEY", "generateValue": True}
     assert keys["SECRET_KEY_PART_2"] == {"key": "SECRET_KEY_PART_2", "generateValue": True}
     assert keys["DEMO_MODE"]["value"] == "True"
+    assert keys["DEMO_RESET_HOURS"]["value"] == "24"
     assert "DEBUG" not in keys  # production's default: off
 
 
@@ -90,7 +91,8 @@ def test_the_blueprint_environment_passes_the_deploy_gate(tmp_path: Path) -> Non
             "-c",
             "from django.conf import settings as s; "
             "print(s.DEBUG, s.ALLOWED_HOSTS, s.CSRF_TRUSTED_ORIGINS, "
-            "s.KARNI_ACCOUNTS_REGISTRATION, s.CACHES['default']['BACKEND'])",
+            "s.KARNI_ACCOUNTS_REGISTRATION, s.CACHES['default']['BACKEND'], "
+            "s.KARNI_DEMO_MODE, s.KARNI_DEMO_RESET_HOURS)",
         ],
         cwd=PROJECT,
         env=env,
@@ -101,7 +103,7 @@ def test_the_blueprint_environment_passes_the_deploy_gate(tmp_path: Path) -> Non
     assert shown.returncode == 0, shown.stderr
     assert shown.stdout.strip().splitlines()[-1] == (
         f"False ['{HOST}'] ['https://{HOST}'] False "
-        "django.core.cache.backends.filebased.FileBasedCache"
+        "django.core.cache.backends.filebased.FileBasedCache True 24"  # DEMO_MODE, DEMO_RESET_HOURS
     )
 
 
@@ -114,12 +116,12 @@ def test_the_dockerfile_serves_the_start_command_from_its_last_stage() -> None:
     assert 'CMD ["sh", "scripts/start.sh"]' in last
     assert "ARG KARNI_APP_PATH=/\n" in dockerfile
     start = (PROJECT / "scripts" / "start.sh").read_text()
-    assert "python manage.py demo_boot" in start and "exec gunicorn" in start
+    assert "python manage.py karni_demo_boot" in start and "exec gunicorn" in start
 
 
 def test_the_image_installs_released_packages() -> None:
     pyproject = (PROJECT / "pyproject.toml").read_text()
-    assert '"karni>=0.5,<0.6"' in pyproject and '"karni-payments>=0.5,<0.6"' in pyproject
+    assert '"karni>=0.5.2,<0.6"' in pyproject and '"karni-payments>=0.5,<0.6"' in pyproject
     package = (PROJECT / "frontend" / "package.json").read_text()
     assert '"@karni/ui": "^' in package and "file:" not in package
 

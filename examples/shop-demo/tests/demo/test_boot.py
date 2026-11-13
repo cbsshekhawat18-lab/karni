@@ -12,28 +12,32 @@ from django.utils import timezone
 from karni.accounts import terms
 from shop.models import Category, Order, Product
 
-from demo import account, reset
+from karni.demo import accounts as account
+from karni.demo import reset
 
-from .conftest import write_stamp
+from .conftest import CUSTOMER, demo_user, user_of, write_stamp
 
 
 def boot() -> str:
     out = StringIO()
-    call_command("demo_boot", stdout=out)
+    call_command("karni_demo_boot", "--no-migrate", stdout=out)
     return out.getvalue()
 
 
 @pytest.mark.django_db
 def test_an_empty_database_is_seeded_with_the_fixed_seed(demo: Any) -> None:
-    assert account.find() is None
+    assert not account.seeded()
 
     output = boot()
 
     assert "Empty database, seeded" in output
     assert (Category.objects.count(), Product.objects.count(), Order.objects.count()) == (5, 40, 30)
-    user = account.find()
-    assert user is not None and user.check_password("karni-password")
+    user = demo_user()
+    assert user.check_password("karni-password")
     assert user.is_superuser and user.is_staff and user.is_active
+    customer = user_of(CUSTOMER)  # the second demo account, made by the boot
+    assert customer.check_password("karni-password") and not customer.is_staff
+    assert [g.name for g in customer.groups.all()] == ["customer"]
     current = terms.config()
     assert current is not None and terms.has_accepted(user.pk, current.version)
     assert reset.last_reset() is not None
@@ -71,7 +75,7 @@ def test_a_boot_resets_data_older_than_the_reset_period(seeded: dt.datetime) -> 
 
 @pytest.mark.django_db
 def test_boot_refuses_outside_demo_mode_in_production(settings: Any) -> None:
-    settings.DEMO_MODE = False
+    settings.KARNI_DEMO_MODE = False
     settings.DEBUG = False
-    with pytest.raises(CommandError, match="DEMO_MODE"):
+    with pytest.raises(CommandError, match="KARNI_DEMO_MODE"):
         boot()

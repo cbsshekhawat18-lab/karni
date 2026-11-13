@@ -26,6 +26,7 @@ from typing import Any, ClassVar
 
 from django.http import HttpRequest, HttpResponse
 from django.urls import NoReverseMatch, reverse
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -86,6 +87,8 @@ class DemoInfoView(APIView):
     permission_classes: ClassVar[list[type]] = [AllowAny]
     authentication_classes: ClassVar[list[type]] = []
 
+    # Left out of the OpenAPI schema: a demo's description is not part of the project's API.
+    @extend_schema(exclude=True)
     def get(self, request: Request, **kwargs: Any) -> Response:
         if not conf.demo_mode():
             return turned_off()

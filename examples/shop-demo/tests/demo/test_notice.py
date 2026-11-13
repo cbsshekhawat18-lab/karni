@@ -1,7 +1,8 @@
-"""The sign-in pages show the demo login, and the React app is served at /."""
+"""The sign-in pages list the demo accounts, and the React app is served at /."""
 
 from __future__ import annotations
 
+import datetime as dt
 from pathlib import Path
 from typing import Any
 
@@ -20,36 +21,50 @@ def built(demo: Any, tmp_path: Path) -> Path:
     """A built index.html, as frontend/dist holds one after npm run build."""
     index = tmp_path / "index.html"
     index.write_text(INDEX)
-    demo.DEMO_APP_INDEX = str(index)
+    demo.KARNI_DEMO_APP_INDEX = str(index)
     return index
 
 
 @pytest.mark.django_db
-def test_the_sign_in_page_carries_the_demo_login(built: Path) -> None:
-    page = Client().get("/").content.decode()
+def test_the_sign_in_notice_lists_both_demo_accounts_with_what_they_can_do(
+    seeded: dt.datetime,
+) -> None:
+    body = Client().get("/api/demo/").json()
 
-    assert '<meta name="demo-login-email" content="demo@example.com">' in page
-    assert '<meta name="demo-login-password" content="karni-password">' in page
-    assert '<meta name="demo-reset-hours" content="24">' in page
-    assert '<meta name="demo-admin-url" content="/admin/">' in page
-    assert page.index("demo-login-email") < page.index("</head>")
+    assert body["enabled"] is True and body["reset_hours"] == 24 and body["admin_url"] == "/admin/"
+    staff, customer = body["accounts"]
+    assert (staff["login"], staff["label"], staff["password"]) == (
+        "demo@example.com",
+        "Staff",
+        "karni-password",
+    )
+    assert "admin" in staff["can"]
+    assert (customer["login"], customer["label"], customer["roles"]) == (
+        "customer@example.com",
+        "Customer",
+        ["customer"],
+    )
+    assert "cart" in customer["can"]
 
 
 @pytest.mark.django_db
-def test_without_demo_mode_the_page_carries_no_login(built: Path, demo: Any) -> None:
-    demo.DEMO_MODE = False
+def test_without_demo_mode_there_is_no_notice_and_the_page_carries_no_login(
+    built: Path, demo: Any
+) -> None:
+    demo.KARNI_DEMO_MODE = False
+    assert Client().get("/api/demo/").status_code == 404
     page = Client().get("/").content.decode()
-    assert "demo-login" not in page
-    assert "karni-password" not in page
+    assert "demo-login" not in page and "karni-password" not in page
 
 
 @pytest.mark.django_db
-def test_the_admin_sign_in_page_shows_the_demo_login(demo: Any) -> None:
+def test_the_admin_sign_in_page_shows_both_demo_accounts(demo: Any) -> None:
     page = Client().get("/admin/login/").content.decode()
     assert "data-demo-login" in page
-    assert "demo@example.com" in page and "karni-password" in page
+    assert "demo@example.com" in page and "customer@example.com" in page
+    assert "karni-password" in page
 
-    demo.DEMO_MODE = False
+    demo.KARNI_DEMO_MODE = False
     assert "karni-password" not in Client().get("/admin/login/").content.decode()
 
 
@@ -79,7 +94,7 @@ def test_a_django_path_without_its_slash_is_redirected_to_it(built: Path, path: 
 
 @pytest.mark.django_db
 def test_an_unbuilt_app_says_how_to_build_it(demo: Any, tmp_path: Path) -> None:
-    demo.DEMO_APP_INDEX = str(tmp_path / "missing" / "index.html")
+    demo.KARNI_DEMO_APP_INDEX = str(tmp_path / "missing" / "index.html")
     answer = Client().get("/")
     assert answer.status_code == 503
     assert b"npm run build" in answer.content

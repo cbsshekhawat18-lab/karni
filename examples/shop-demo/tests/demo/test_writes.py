@@ -1,4 +1,4 @@
-"""The write rule: only the demo account writes, and never to its own account."""
+"""The write rule: only demo accounts write, and never to their own account."""
 
 from __future__ import annotations
 
@@ -11,9 +11,7 @@ from django.urls import reverse
 from karni.accounts import terms
 from shop.models import Category, Product
 
-from demo import account
-
-from .conftest import CUSTOMER, bearer, demo_user, token
+from .conftest import CUSTOMER, OTHER, PASSWORD, STAFF, bearer, demo_user, token, user_of
 
 JSON = "application/json"
 
@@ -33,6 +31,7 @@ def test_anonymous_callers_read_and_never_write(seeded: dt.datetime) -> None:
     answer = client.post("/api/categories/", {"name": "Spam"}, content_type=JSON)
     assert refused(answer, "demo_read_only")
     assert "demo@example.com" in answer.json()["detail"]
+    assert "1 more demo accounts" in answer.json()["detail"]
     assert Category.objects.count() == 5
 
 
@@ -57,7 +56,7 @@ def test_sign_in_refresh_and_sign_out_stay_open(seeded: dt.datetime) -> None:
     client = Client()
     signed_in = client.post(
         "/api/auth/login/",
-        {"email": account.email(), "password": account.password()},
+        {"email": STAFF, "password": PASSWORD},
         content_type=JSON,
     )
     assert signed_in.status_code == 200
@@ -82,7 +81,7 @@ def test_sign_in_refresh_and_sign_out_stay_open(seeded: dt.datetime) -> None:
 @pytest.mark.django_db
 def test_another_account_signs_in_and_reads_but_never_writes(seeded: dt.datetime) -> None:
     client = Client()
-    access = token(client, CUSTOMER)
+    access = token(client, OTHER)
     current = terms.config()
     assert current is not None
     accepted = client.post(
@@ -102,13 +101,13 @@ def test_another_account_signs_in_and_reads_but_never_writes(seeded: dt.datetime
     assert refused(renamed, "demo_read_only")
 
 
-# the demo account
+# the demo accounts
 
 
 @pytest.mark.django_db
-def test_the_demo_account_writes(seeded: dt.datetime) -> None:
+def test_the_staff_demo_account_writes(seeded: dt.datetime) -> None:
     client = Client()
-    access = token(client, account.email())
+    access = token(client, STAFF)
     product = Product.objects.order_by("pk").first()
 
     created = client.post(
@@ -124,6 +123,22 @@ def test_the_demo_account_writes(seeded: dt.datetime) -> None:
 
 
 @pytest.mark.django_db
+def test_the_customer_demo_account_writes_what_its_role_allows(seeded: dt.datetime) -> None:
+    client = Client()
+    access = token(client, CUSTOMER)
+
+    cart = client.post("/api/carts/", {}, content_type=JSON, **bearer(access))
+    category = client.post(
+        "/api/categories/", {"name": "Not for customers"}, content_type=JSON, **bearer(access)
+    )
+
+    assert cart.status_code == 201, cart.content  # a demo account: the write rule lets it through
+    assert category.status_code == 403 and category.json().get("code") != "demo_read_only"
+    assert not Category.objects.filter(name="Not for customers").exists()  # its role stops it
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("login", [STAFF, CUSTOMER])
 @pytest.mark.parametrize(
     "method, path, body",
     [
@@ -137,27 +152,27 @@ def test_the_demo_account_writes(seeded: dt.datetime) -> None:
         ("post", "/api/auth/permissions/matrix/", {"changes": []}),
     ],
 )
-def test_the_demo_account_cannot_change_its_account_or_roles(
-    seeded: dt.datetime, method: str, path: str, body: dict[str, Any]
+def test_no_demo_account_can_change_its_account_or_roles(
+    seeded: dt.datetime, login: str, method: str, path: str, body: dict[str, Any]
 ) -> None:
     client = Client()
-    access = token(client, account.email())
+    access = token(client, login)
 
     answer = getattr(client, method)(path, body, content_type=JSON, **bearer(access))
 
     assert refused(answer, "demo_account_locked")
-    assert token(Client(), account.email())  # the next visitor still signs in
+    assert token(Client(), login)  # the next visitor still signs in
 
 
 # the admin
 
 
 @pytest.mark.django_db
-def test_the_admin_blocks_changes_to_the_demo_account(seeded: dt.datetime) -> None:
+@pytest.mark.parametrize("login", [STAFF, CUSTOMER])
+def test_the_admin_blocks_changes_to_a_demo_account(seeded: dt.datetime, login: str) -> None:
     client = Client()
-    demo = demo_user()
-    client.force_login(demo)
-    pk = demo.pk
+    client.force_login(demo_user())  # the staff demo account is the one that can open the admin
+    pk = user_of(login).pk
 
     change = reverse("admin:karni_accounts_user_change", args=[pk])
     delete = reverse("admin:karni_accounts_user_delete", args=[pk])
@@ -173,8 +188,9 @@ def test_the_admin_blocks_changes_to_the_demo_account(seeded: dt.datetime) -> No
         assert answer.status_code == 403, path
         assert b"Read-only demo" in answer.content
 
-    demo = demo_user()
-    assert demo.pk == pk and demo.is_superuser and demo.check_password("karni-password")
+    account = user_of(login)
+    assert account.pk == pk and account.check_password("karni-password")
+    assert account.is_superuser is (login == STAFF)
 
 
 @pytest.mark.django_db
@@ -210,7 +226,7 @@ def test_another_staff_account_is_read_only_in_the_admin(seeded: dt.datetime) ->
 def test_admin_sign_in_stays_open(seeded: dt.datetime) -> None:
     answer = Client().post(
         reverse("admin:login"),
-        {"username": account.email(), "password": account.password(), "next": "/admin/"},
+        {"username": STAFF, "password": PASSWORD, "next": "/admin/"},
     )
     assert answer.status_code == 302
 
@@ -220,7 +236,7 @@ def test_admin_sign_in_stays_open(seeded: dt.datetime) -> None:
 
 @pytest.mark.django_db
 def test_without_demo_mode_the_shop_rules_alone_apply(seeded: dt.datetime, demo: Any) -> None:
-    demo.DEMO_MODE = False
+    demo.KARNI_DEMO_MODE = False
     answer = Client().post("/api/categories/", {"name": "Spam"}, content_type=JSON)
     assert answer.status_code in (401, 403)
     assert "code" not in answer.json() or answer.json()["code"] != "demo_read_only"
