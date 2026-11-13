@@ -131,6 +131,41 @@ apply codemods and list the manual steps. This file is the human summary.
 - **karni-cli (experimental):** a recipe's own pages at `/<name>` count as managed on the
   build that writes them, so `karni new --recipe` ends with `karni plan` empty.
 
+- **Shop recipe, back office:** a staff home of tiles per role (orders to fulfil, revenue
+  today, in 7 and 30 days with a chart, stock running low, latest orders, best sellers),
+  Orders first in the menu, the staff's order page (refund all or part, by items back into
+  stock or by an amount, cancel, notes to staff or to the customer, the parcel shipped with
+  its tracking number, the history), orders placed by hand, customers, products changed in
+  bulk and imported from a CSV, a low-stock level per product and backorders. The shipments
+  table names each order by its number and links to it. A product page says its short
+  description once.
+
+- **karni-commerce (experimental):** the staff's view of an order
+  (`GET /api/orders/{id}/staff/`), notes (`OrderNote`, migration `0002`), orders placed by
+  hand (`POST /api/orders/manual/`, `KARNI_COMMERCE_MANUAL_HOLD_MINUTES`, the
+  `commerce.payment_request` email), items to put on them (`Sellable.search_fields`),
+  customers by email behind a seam (`KARNI_COMMERCE_CUSTOMERS`), the order's money history,
+  and the home tiles `commerce.revenue`, `commerce.revenue_chart` and
+  `commerce.latest_orders`. `@karni/commerce-ui` adds `StaffOrders`, `StaffOrderPage`
+  (with `registerOrderPanel`), `NewOrderPage`, `CustomersPage` and `CustomerPage`.
+
+- **karni (experimental):** home tiles per role (`karni.tiles`, `GET /api/dashboard/`, code
+  tiles in `<app>/dashboard.py`, karni.yaml's `dashboard:` written to
+  `KARNI_DASHBOARD_TILES`, `C643`). `class Karni: label` names a related row, and a relation
+  to the user model is marked `x-karni-user`. `/me/` lists the permission keys the user
+  holds. `SeedContext.account()` makes a demo login per role. A module's
+  `FROM_ENVIRONMENT` settings take their environment variable over a value written before
+  `karni_settings()`, so `KARNI_PAYMENTS_PROVIDER=test` in `.env` switches karni.yaml's
+  provider. karni-payments' test provider confirms a refund on a local try.
+
+- **@karni/ui (experimental):** `DashboardTiles` (with `registerTile` and
+  `registerTileKind`), names instead of ids for related rows and people (`relationLabel`,
+  `personName`) with links a project registers (`registerRecordLink`), New, Edit, Delete and
+  Import shown only to roles that may (the `can` rule read from `/me/`), an Import button on
+  every list, `bulkEdit` on ResourceTable, and `rowActions` read from `x-karni-actions`
+  (`rowActionOpen`). ResourceDetail asks for its record once the schema is in. A new
+  project's Tailwind scans every `@karni/*` package. A list's toolbar wraps on a phone.
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind
