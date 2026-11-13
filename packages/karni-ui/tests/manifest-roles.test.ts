@@ -61,7 +61,7 @@ describe("generate-manifest role scan", () => {
     const result = runScript();
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/wrote \d+ components, \d+ hooks, 36 roles/);
+    expect(result.stdout).toMatch(/wrote \d+ components, \d+ hooks, 38 roles/);
 
     const manifest = JSON.parse(
       readFileSync(resolve(packageRoot, "dist/manifest.json"), "utf8"),
@@ -95,6 +95,8 @@ describe("generate-manifest role scan", () => {
       "page-shell": "Page",
       "permission-denied": "PermissionDenied",
       "resource-form": "ResourceForm",
+      "resource-board": "ResourceBoard",
+      "resource-calendar": "ResourceCalendar",
       "resource-grid": "ResourceGrid",
       "dashboard-tiles": "DashboardTiles",
       "social-sign-in": "SocialButton",
