@@ -11,7 +11,7 @@ class KarniDemoConfig(AppConfig):
     """Experimental. Demo mode (see :mod:`karni.demo`)."""
 
     name = "karni.demo"
-    label = "karni_demo"
+    label = "karni_demo_mode"
     verbose_name = "Public demo"
 
     def ready(self) -> None:
