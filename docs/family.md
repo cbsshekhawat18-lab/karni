@@ -140,6 +140,44 @@ A part must not:
 - own a family page or route.
 - assume it is alone: no test that counts every row of a shared table.
 
+## How the rules are kept
+
+`karni check` enforces the rules above on the built project, not only when
+`karni recipes add` merges a part. It reads `.karni/recipes/` (the fragment each
+part was added with) and karni.yaml, so a project without parts is unaffected.
+`pytest --pyargs karni.testing.architecture` runs the same rules.
+
+| Rule | Code | What fails |
+|---|---|---|
+| `part-imports-part` | [K315](errors.md#k315) | a file of one part (its app folder or `frontend/src/<prefix>/`) imports another part or names its app label: `"crm.Deal"`, `"crm.deal:own"`, `"crm:deal-list"`, `"crm/x.html"`, `apps.get_model("crm", ...)`, a migration dependency, a template `include`, `extends` or `url`, a frontend import |
+| `part-role-prefix` | [K316](errors.md#k316) | with two or more parts, a part after the first has a role that is not `<prefix>-<role>` and not `admin` or `customer` |
+| `part-route` | [K316](errors.md#k316) | a part's base route is a family page's or another app's, or one of its generated pages in routes.tsx is outside its base |
+
+The contracts are not parts, so `karni.people`, `karni.events`, `karni.timeline`,
+`karni.preferences` and `karni_commerce` are always allowed. The first part keeps
+its roles as its recipe wrote them, as the merge does. To join two parts on
+purpose, put the reason in an allow marker on the line or the line above:
+`# karni: allow(part-imports-part): <reason>` (`//` in TypeScript, `{# ... #}`
+in a template).
+
+## How the family is tested
+
+- Each recipe's own tests run when its project is built alone.
+- `tests/test_family_build.py` builds one part alone and two together, adds a
+  third and removes it, on every push (the `family` job).
+- `tests/test_family_rules.py` builds booking and crm together and breaks each
+  rule in the built project (a bridge file, a role without its prefix, a route
+  that is a family page's), and builds a deliberately bad test part that must
+  fail `karni check`.
+- `tests/test_family_pairs.py` builds every pair of the family's parts together:
+  its tests and `karni check` must be green. The `pairs` job in
+  `.github/workflows/family-pairs.yml` runs it nightly and on demand, not on
+  every push. The list of parts (`PARTS`) grows with the family, and a test fails
+  when a recipe with connections is missing from it.
+- `tests/test_family_matrix.py` reads every recipe's `connections.py` and fails
+  when a declared connection has no test with it on, no test with it off, or
+  names another recipe in `needs`.
+
 ## Codes
 
 | Code | When |
@@ -152,3 +190,5 @@ A part must not:
 | [C447](errors.md#c447) | a recipe's `conflicts` |
 | [C448](errors.md#c448) | `karni recipes remove` of a recipe the project does not hold |
 | [C449](errors.md#c449) | `karni recipes upgrade` without the part's record |
+| [K315](errors.md#k315) | a part importing or naming another part |
+| [K316](errors.md#k316) | a part's role without its prefix, or its route outside its base |

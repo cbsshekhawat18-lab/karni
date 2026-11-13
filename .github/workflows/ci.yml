@@ -438,7 +438,9 @@ jobs:
   # contracts), then booking and crm together, a third part added with
   # `karni recipes add` and taken out with `karni recipes remove`. Every build
   # runs the migrations, the seed, every part's tests and `karni check`
-  # (tests/test_family_build.py).
+  # (tests/test_family_build.py). The part rules K315 and K316 are tried on
+  # built projects too (tests/test_family_rules.py). Every pair of parts is built
+  # nightly by family-pairs.yml.
   # ---------------------------------------------------------------------------
   family:
     name: Family (recipes alone and together)
@@ -461,7 +463,7 @@ jobs:
         run: make install-py
       - name: One part alone, two parts together, a part added and removed
         working-directory: packages/karni-cli
-        run: python -m pytest -q -p no:cacheprovider -m recipes tests/test_family_build.py
+        run: python -m pytest -q -p no:cacheprovider -m recipes tests/test_family_build.py tests/test_family_rules.py
 
   # ---------------------------------------------------------------------------
   # The documentation site (Material for MkDocs): built strictly on every
