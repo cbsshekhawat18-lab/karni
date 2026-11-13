@@ -1,0 +1,11 @@
+{% if order.buyer_name %}Hello {{ order.buyer_name }},{% else %}Hello,{% endif %}
+
+Thank you for order {{ order.number }}. Your files are ready:
+
+{% for file in downloads %}{{ file.name }} ({{ file.product }})
+{{ file.link }}
+{% if file.limit %}You can download it {{ file.limit }} time{{ file.limit|pluralize }}{% if file.expires_at %}, until {{ file.expires_at|date:"j F Y" }}{% endif %}.{% endif %}
+
+{% endfor %}The links are also on your order's page: {{ link }}
+{% if business.name %}
+{{ business.name }}{% endif %}

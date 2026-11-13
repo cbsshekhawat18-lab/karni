@@ -1,7 +1,9 @@
-{% if order.name %}Hello {{ order.name }},{% else %}Hello,{% endif %}
+{% if order.buyer_name %}Hello {{ order.buyer_name }},{% else %}Hello,{% endif %}
 
 Your parcel for order {{ order.number }} left today.{% if shipment.tracking_number %} {% if shipment.carrier %}{{ shipment.carrier }} {% endif %}tracking number: {{ shipment.tracking_number }}.{% endif %}
 
 {% for line in lines %}{{ line.quantity }} x {{ line.name }}
 {% endfor %}
 See your order: {{ link }}
+{% if business.name %}
+{{ business.name }}{% endif %}

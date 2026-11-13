@@ -12,6 +12,8 @@ modules:
     currency: usd
     checkout_validator: karni_commerce.payments.checkout_validator
   commerce: {hold_minutes: 30}
+  # Protected files: what a digital product delivers, by a signed link after payment.
+  storage: {}
 features:
   email_code_login: true
   terms: {version: "2026-01", url: /terms, required: true, paths: [/api/carts/current/checkout/]}
@@ -37,6 +39,7 @@ roles:
       "karni_commerce.orderrefund:view": all
       "karni_commerce.cart:view": all
       "karni_commerce.cartline:view": all
+      "karni_commerce.invoice:view": all
       "karni_payments.payment:view": all
   customer:
     name: Customer
@@ -80,6 +83,11 @@ apps:
           related: "m2m:self?"
           rating_average: "decimal:3:2?"
           rating_count: int
+          # A digital product: its files (ProductFile) go to the buyer by a signed link
+          # once paid, each at most download_limit times (blank: the shop's setting).
+          digital: bool
+          download_limit: "int?"
+          download_days: "int?"
         taxonomies: {categories: Category}
         key: slug
         search: [name, sku, short_description, description]
@@ -89,6 +97,7 @@ apps:
           Product: [name, slug, sku, short_description, description, image, active, featured, tags]
           Price: [price, sale_price, sale_starts, sale_ends]
           Inventory: [stock, available, low_stock, backorders]
+          Downloads: [digital, download_limit, download_days]
           More: [related, rating_average, rating_count]
         access: {read: public, write: granted}
       ProductImage:
@@ -145,6 +154,26 @@ apps:
         owner: user
         order: -created_at
         access: {read: "owned:user", write: "owned:user"}
+      # A file a digital product delivers: protected, never public.
+      ProductFile:
+        fields: {product: fk:Product, name: "str:200", file: "file:protected"}
+        search: [name]
+        order: [product, name]
+        access: {read: granted, write: granted}
+      # A buyer's right to download a file they paid for: a signed link, counted.
+      Download:
+        fields:
+          order: fk:karni_commerce.Order
+          product: fk:Product
+          file: fk:ProductFile
+          email: email
+          downloads: int
+          limit: "int?"
+          expires_at: "datetime?"
+          last_at: "datetime?"
+        search: [email]
+        order: -created_at
+        access: {read: granted, write: granted}
       Shipment:
         fields:
           order: fk:karni_commerce.Order
@@ -160,7 +189,9 @@ apps:
 pages:
   - home: dashboard
   - Shipment: [list, detail, form]
-  - Product: [{detail: {related: [ProductImage, Variation]}}, form]
+  - Product: [{detail: {related: [ProductImage, Variation, ProductFile]}}, form]
+  - ProductFile: [form]
+  - Download: [list, detail]
   - Variation: [form]
   - Attribute: [list, {detail: {related: [AttributeValue]}}, form]
   - AttributeValue: [form]
@@ -179,6 +210,9 @@ pages:
   - coupons: code
   - shipping: code
   - tax-rates: code
+  - settings: code
+  - reports: code
+  - abandoned-carts: code
   - account: code
   - signin: code
   - terms: code
@@ -187,6 +221,7 @@ navigation:
   - orders: {label: Orders, icon: list, requires: "karni_commerce.order:view"}
   - Shipment: {label: Shipments, icon: box, requires: "shop.shipment:change"}
   - customers: {label: Customers, icon: users, requires: "karni_commerce.order:view"}
+  - abandoned-carts: {label: Abandoned carts, icon: box, requires: "karni_commerce.cart:view"}
   - Catalogue:
       icon: tag
       requires: "shop.product:change"
@@ -196,6 +231,7 @@ navigation:
         - Tag
         - Attribute
         - Review
+        - Download
   - Selling:
       icon: settings
       requires: "karni_commerce.coupon:change"
@@ -203,6 +239,8 @@ navigation:
         - {coupons: {label: Coupons, requires: "karni_commerce.coupon:change"}}
         - {shipping: {label: Shipping, requires: "karni_commerce.shippingzone:change"}}
         - {tax-rates: {label: Tax rates, requires: "karni_commerce.taxrate:change"}}
+  - reports: {label: Reports, icon: chart, requires: "karni_commerce.order:report"}
+  - settings: {label: Settings, icon: sliders, requires: "karni_commerce.setting:change"}
 # The staff home: each tile shows to the roles that may read what it counts. The shop's
 # own figures are code tiles in shop/dashboard.py (stock running low, best sellers), and
 # karni-commerce gives the revenue ones (commerce.revenue, commerce.revenue_chart,
@@ -233,3 +271,5 @@ seed:
   Shipment: 20
   Review: 10
   WishlistItem: 4
+  ProductFile: 3
+  Download: 4

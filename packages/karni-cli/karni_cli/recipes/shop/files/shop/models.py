@@ -247,6 +247,27 @@ class WishlistItem(karni.WishlistItem):
         ]
 
 
+class ProductFile(karni.ProductFile):
+    """A file a digital product delivers. Protected: only staff reach it directly, and a
+    buyer through their signed download link (shop/services.py)."""
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Download(karni.Download):
+    """A buyer's right to a file they paid for: how often they took it, the most they may,
+    and until when."""
+
+    class Meta(karni.Download.Meta):
+        constraints = [
+            LiveUniqueConstraint(fields=["order", "file"], name="shop_download_once"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.file.name} for {self.email}" if self.file_id else "Download"
+
+
 class Shipment(karni.Shipment):
     """The parcel of an order's products: processing, shipped with tracking, delivered.
 

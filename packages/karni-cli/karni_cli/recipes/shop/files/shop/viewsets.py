@@ -22,7 +22,8 @@ from __future__ import annotations
 from functools import cache
 from typing import Any
 
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Prefetch, Q, QuerySet
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_field
 from karni.api import Budget, Can, Public
 from rest_framework import serializers
@@ -67,6 +68,7 @@ def _store_serializer(base: type[serializers.ModelSerializer[Any]]) -> type[Any]
         price_to = serializers.SerializerMethodField()
         stock_left = serializers.SerializerMethodField()
         stock_from_variations = serializers.SerializerMethodField()
+        runs_low = serializers.SerializerMethodField()
 
         class Meta(base.Meta):  # type: ignore[name-defined]
             fields = [
@@ -81,6 +83,7 @@ def _store_serializer(base: type[serializers.ModelSerializer[Any]]) -> type[Any]
                 "price_to",
                 "stock_left",
                 "stock_from_variations",
+                "runs_low",
             ]
 
         def to_representation(self, instance: Any) -> Any:
@@ -189,13 +192,34 @@ def _store_serializer(base: type[serializers.ModelSerializer[Any]]) -> type[Any]
             return f"{max(self._prices(product)):.2f}"
 
         def get_stock_left(self, product: Product) -> int | None:
-            """What is left to buy: of the product, or of all its variations."""
-            if product.backorders:
+            """What is left to buy: of the product, or of all its variations. ``None``
+            when it never runs out (backorders, a file), and for a shopper when Settings,
+            Shop hides the figure (0 still says it is sold out)."""
+            if product.backorders or product.digital:
                 return None
             rows = self._variations(product)
             if rows:
-                return sum(int(row.available) for row in rows)
-            return int(product.available)
+                left = sum(int(row.available) for row in rows)
+            else:
+                left = int(product.available)
+            if left > 0 and not self._staff() and not _show_stock_left():
+                return None
+            return left
+
+        def get_runs_low(self, product: Product) -> bool:
+            """Whether it is at or under its low-stock level (and still for sale)."""
+            if product.backorders or product.digital:
+                return False
+            return product.runs_low()
+
+        def _staff(self) -> bool:
+            request = self.context.get("request")
+            user = getattr(request, "user", None)
+            return bool(
+                user is not None
+                and user.is_authenticated
+                and user.can("shop.product:change")
+            )
 
         def get_current_price(self, product: Product) -> str:
             return f"{product.current_price():.2f}"
@@ -225,6 +249,12 @@ def _store_serializer(base: type[serializers.ModelSerializer[Any]]) -> type[Any]
 
 
 STOCK_FIELDS = ("stock", "available")
+
+
+def _show_stock_left() -> bool:
+    from karni_commerce import preferences_seam as preferences
+
+    return preferences.value("shop.show_stock_left", True)
 
 
 @cache
@@ -306,6 +336,12 @@ class ProductViewSet(karni.ProductViewSet):
         user = self.request.user
         if not (user.is_authenticated and user.can("shop.product:change")):
             queryset = queryset.filter(active=True)
+            from karni_commerce import preferences_seam as preferences
+
+            if preferences.value("shop.hide_sold_out", False):
+                queryset = queryset.filter(
+                    Q(available_total__gt=0) | Q(backorders=True) | Q(digital=True)
+                )
         params = self.request.query_params
         ids = [part for part in str(params.get("ids", "") or "").split(",") if part]
         if ids:
@@ -484,6 +520,50 @@ class WishlistItemViewSet(karni.WishlistItemViewSet):
             serializer.instance = found
             return
         super().perform_create(serializer)
+
+
+class ProductFileViewSet(karni.ProductFileViewSet):
+    """The files of digital products, for staff (karni-storage keeps them protected)."""
+
+    select_related = ("product",)
+
+
+class DownloadViewSet(karni.DownloadViewSet):
+    """Who may download what, for staff. ``GET downloads/get/<token>/`` hands the file to
+    whoever has the signed link, while it works (shop/services.py, ``take_download``)."""
+
+    select_related = ("order", "product", "file")
+    filterset_fields = ["order", "product", "email"]
+
+    @extend_schema(
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            302: OpenApiTypes.NONE,
+        }
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path=r"get/(?P<token>[-\w:.]+)",
+        url_name="get-file",
+        access=Public(),
+    )
+    def get_file(self, request: Request, token: str = "") -> Any:
+        """The file, counted: a signed link to the bucket, or the file itself."""
+        from karni_storage.views import serve
+
+        download = services.take_download(token)
+        return serve(download.file.file.name, filename=_file_name(download))
+
+
+def _file_name(download: Any) -> str:
+    """The file's name as the buyer saves it: its title and its own extension."""
+    import posixpath
+
+    stored = str(download.file.file.name)
+    extension = posixpath.splitext(stored)[1]
+    title = str(download.file.name).strip() or posixpath.basename(stored)
+    return title if title.lower().endswith(extension.lower()) else f"{title}{extension}"
 
 
 class ShipmentViewSet(karni.ShipmentViewSet):

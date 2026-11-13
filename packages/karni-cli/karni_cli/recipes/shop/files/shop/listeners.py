@@ -23,6 +23,20 @@ def prepare_the_parcel(sender: Any, order: Order, **kwargs: Any) -> None:
     services.open_shipment(order)
 
 
+@receiver(order_paid)
+def hand_over_the_files(sender: Any, order: Order, **kwargs: Any) -> None:
+    """A paid order's digital products: their downloads, and the email with the links."""
+    if services.grant_downloads(order):
+        pk = order.pk
+
+        def send() -> None:
+            found = Order.objects.filter(pk=pk).first()
+            if found is not None:
+                messages.downloads_ready(found)
+
+        transaction.on_commit(send)
+
+
 @receiver(order_cancelled)
 def stop_the_parcel(sender: Any, order: Order, **kwargs: Any) -> None:
     """A cancelled order's parcel is not sent."""

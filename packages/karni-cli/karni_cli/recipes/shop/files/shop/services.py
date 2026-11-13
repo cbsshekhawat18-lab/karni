@@ -4,19 +4,21 @@ The cart, checkout, the payments and refunds are karni-commerce's
 (``karni_commerce.services``). The shop decides what a product costs and how its
 stock moves (shop/sellables.py) and what happens to the parcel (here).
 
-Settings: ``SHOP_LOW_STOCK`` (3: the level at which ``product_low_stock`` is sent and
-staff get an email), ``SHOP_STAFF_EMAILS`` (who gets that email, else
-``KARNI_COMMERCE_STAFF_EMAILS``), ``SHOP_REVIEWS_NEED_APPROVAL`` (True: a review
-waits for staff before it shows) and ``SHOP_RELATED_COUNT`` (4: the related products
-a product page shows).
+The shop's settings are on the Settings page (shop/preferences.py): the low-stock
+level, what shoppers see of the stock, reviews, related products and downloads. The
+project's ``SHOP_LOW_STOCK``, ``SHOP_REVIEWS_NEED_APPROVAL`` and ``SHOP_RELATED_COUNT``
+are their first values. ``SHOP_STAFF_EMAILS`` names who gets the low-stock email (else
+the Checkout settings' staff emails).
 """
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Any
 
 from django.conf import settings
-from django.db import transaction
+from django.core import signing
+from django.db import models, transaction
 from django.db.models import (
     Case,
     DecimalField,
@@ -32,22 +34,28 @@ from django.db.models import (
 )
 from django.db.models.functions import Coalesce
 from django.utils import timezone
+from karni_commerce import preferences_seam as preferences
 from karni_commerce.models import Order
 
-from shop.models import Product, Review, Shipment, Variation
+from shop.models import Download, Product, Review, Shipment, Variation
 
 #: The money states of an order whose buyer paid for what they got.
 PAID = ("paid", "part_paid", "part_refunded")
 
 
 def low_stock_level() -> int:
-    return int(getattr(settings, "SHOP_LOW_STOCK", 3))
+    """Settings, Shop: the level a product runs low at (``SHOP_LOW_STOCK`` at first)."""
+    return preferences.value(
+        "shop.low_stock", int(getattr(settings, "SHOP_LOW_STOCK", 3))
+    )
 
 
 def staff_emails() -> list[str]:
     found = getattr(settings, "SHOP_STAFF_EMAILS", None)
     if found is None:
-        found = getattr(settings, "KARNI_COMMERCE_STAFF_EMAILS", [])
+        from karni_commerce.services import staff_emails as commerce_staff
+
+        return commerce_staff()
     return [str(address) for address in found or []]
 
 
@@ -148,11 +156,11 @@ def shipment_context(shipment: Any) -> dict[str, Any]:
 
 
 def reviews_need_approval() -> bool:
-    return bool(getattr(settings, "SHOP_REVIEWS_NEED_APPROVAL", True))
+    return preferences.value("shop.reviews_need_approval", True)
 
 
 def related_count() -> int:
-    return int(getattr(settings, "SHOP_RELATED_COUNT", 4))
+    return preferences.value("shop.related_count", 4)
 
 
 def received(user: Any, product: Product) -> bool:
@@ -198,3 +206,102 @@ def related(product: Product, count: int | None = None) -> list[Product]:
         )
         chosen += list(more[: wanted - len(chosen)])
     return chosen
+
+
+# -- digital products ------------------------------------------------------------------
+
+
+#: The salt of a download link's signature.
+DOWNLOAD_SALT = "shop.download"
+
+
+def grant_downloads(order: Order) -> list[Download]:
+    """The paid order's digital products: a download per file, counted and dated.
+
+    Each allows the product's ``download_limit`` (else Settings, Shop) and works for
+    its ``download_days`` (0: always). Asking twice changes nothing.
+    """
+    lines = order.lines.filter(kind="product")
+    products = Product.objects.filter(
+        pk__in=[line.item for line in lines], digital=True
+    ).prefetch_related("productfile_set")
+    found: list[Download] = []
+    now = timezone.now()
+    for product in products:
+        limit = product.download_limit or preferences.value("shop.download_limit", 5)
+        days = product.download_days
+        if days is None:
+            days = preferences.value("shop.download_days", 30)
+        for file in product.productfile_set.all():
+            row, _ = Download.objects.get_or_create(
+                order=order,
+                file=file,
+                defaults={
+                    "product": product,
+                    "email": order.email,
+                    "downloads": 0,
+                    "limit": limit,
+                    "expires_at": now + timedelta(days=days) if days else None,
+                },
+            )
+            found.append(row)
+    return found
+
+
+def download_link(download: Download) -> str:
+    """The signed link that hands the file to whoever has it (the buyer's email)."""
+    token = signing.dumps(str(download.pk), salt=DOWNLOAD_SALT)
+    frontend = str(getattr(settings, "KARNI_FRONTEND_URL", "") or "").rstrip("/")
+    return f"{frontend}/api/downloads/get/{token}/"
+
+
+def download_problem(download: Download, now: Any = None) -> str:
+    """Why the download no longer works, in words, or "" when it does."""
+    order = download.order
+    if order.status not in ("paid", "part_refunded"):
+        return "This order is no longer paid, so its downloads have stopped."
+    refunded = order.lines.filter(
+        kind="product",
+        item=str(download.product_id),
+        quantity_refunded__gte=models.F("quantity"),
+    ).exists()
+    if refunded:
+        return "This product was refunded, so its download has stopped."
+    if download.expires_at is not None and download.expires_at <= (
+        now or timezone.now()
+    ):
+        return "This download link has expired."
+    if download.limit is not None and download.downloads >= download.limit:
+        return f"This file was downloaded {download.downloads} times, the most allowed."
+    return ""
+
+
+@transaction.atomic
+def take_download(token: str) -> Download:
+    """Count one download of the file the signed ``token`` names, or say why not.
+
+    The row is locked while it is counted, so two clicks at once never pass the limit.
+
+    :raises PermissionDenied: for a link that was changed or no longer works.
+    """
+    from rest_framework.exceptions import PermissionDenied
+
+    try:
+        pk = signing.loads(token, salt=DOWNLOAD_SALT)
+    except signing.BadSignature:
+        raise PermissionDenied("That is not a download link of this shop.") from None
+    download = (
+        Download.objects.select_for_update()
+        .select_related("order", "file")
+        .filter(pk=pk)
+        .first()
+    )
+    if download is None:
+        raise PermissionDenied("That is not a download link of this shop.")
+    problem = download_problem(download)
+    if problem:
+        raise PermissionDenied(problem)
+    download.downloads += 1
+    download.last_at = timezone.now()
+    download.save(update_fields=["downloads", "last_at", "updated_at"])
+    return download

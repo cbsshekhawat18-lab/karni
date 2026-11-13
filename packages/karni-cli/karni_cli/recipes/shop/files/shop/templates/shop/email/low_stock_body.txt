@@ -1,3 +1,3 @@
-{{ stocked }} ({{ stocked.sku }}) has {{ stocked.available }} left to sell, at or below the low-stock level of {{ level }}.
+{{ name }} ({{ stocked.sku }}) has {{ stocked.available }} left to sell, at or below the low-stock level of {{ level }}.
 
 On the shelf: {{ stocked.stock }}. Restock it from the product's page.

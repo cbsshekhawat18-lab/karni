@@ -39,6 +39,7 @@ from karni_commerce import services as commerce
 from karni_commerce.models import (
     Coupon,
     CouponUse,
+    Invoice,
     Order,
     OrderLine,
     OrderPayment,
@@ -55,7 +56,9 @@ from shop.models import (
     Attribute,
     AttributeValue,
     Category,
+    Download,
     Product,
+    ProductFile,
     Review,
     Shipment,
     Tag,
@@ -200,14 +203,20 @@ CATALOG: dict[str, dict[str, list[tuple[str, str, str]]]] = {
                 ),
             ),
             (
-                "Pencil Case in Waxed Canvas",
-                "17.00",
-                "A zipped canvas case that holds a dozen pencils and a ruler.",
+                "Weekly Planner Pages (PDF)",
+                "6.00",
+                (
+                    "Printable weekly planner pages in A4 and A5, to print as often "
+                    "as you like."
+                ),
             ),
             (
-                "Desk Organiser in Oak",
-                "36.00",
-                "An oak tray with slots for pens, cards and a phone.",
+                "Lettering Practice Sheets (PDF)",
+                "8.00",
+                (
+                    "Forty printable sheets of guided lettering practice, with a "
+                    "short guide."
+                ),
             ),
         ],
     },
@@ -408,6 +417,12 @@ STORIES = [
     "delivered",
 ]
 
+#: The products of CATALOG that are files: a buyer downloads them once paid.
+DIGITAL = {
+    "Weekly Planner Pages (PDF)": ["Planner pages, A4", "Planner pages, A5"],
+    "Lettering Practice Sheets (PDF)": ["Lettering practice sheets"],
+}
+
 #: Where a seeded payment says it came from (karni seed --reset removes these).
 SEED_SESSION = "seed_cs_"
 
@@ -527,6 +542,9 @@ class ProductSeeder(karni.ProductSeeder):
                 "backorders": number in (12, 28),
                 "active": number % 13 != 12,
                 "featured": number % 5 == 0,
+                "digital": name in DIGITAL,
+                "download_limit": None,
+                "download_days": None,
                 "image": placeholder_image(name, key=top.name),
                 # the reviews count them (ReviewSeeder)
                 "rating_average": None,
@@ -543,6 +561,8 @@ class ProductSeeder(karni.ProductSeeder):
                     Decimal("0.01")
                 )
                 values["sale_starts"] = now + timedelta(days=7)
+            if values["digital"]:
+                values.update(stock=0, low_stock=None, backorders=False, active=True)
             [product] = context.create(1, **values)
             product.categories.set([child])
             if tags:
@@ -694,9 +714,26 @@ class OrderSeeder(Seeder):
         count = 0
 
 
+class InvoiceSeeder(Seeder):
+    """Invoices come with the paid orders. Named here so a reset clears them first."""
+
+    class Meta:
+        model = Invoice
+        count = 0
+        after = ("karni_commerce.Order",)
+
+
 def _forget_the_last_demo() -> None:
     """karni seed --reset: the orders, payments and refunds of the last demo go."""
-    for model in (CouponUse, OrderRefund, OrderPayment, OrderLine, Order):
+    for model in (
+        Download,
+        Invoice,
+        CouponUse,
+        OrderRefund,
+        OrderPayment,
+        OrderLine,
+        Order,
+    ):
         model.objects.without("soft_delete", reason="a new demo").all().hard_delete()
     seeded = Payment.objects.filter(checkout_session_id__startswith=SEED_SESSION)
     Refund.objects.filter(payment__in=seeded).hard_delete()
@@ -900,16 +937,26 @@ class ReviewSeeder(karni.ReviewSeeder):
         Review.objects.without("soft_delete", reason="a new demo").all().hard_delete()
         pairs = self.pairs()
         # Only a buyer whose parcel arrived reviews: when too few did for the count,
-        # more of the parcels on their way arrive, keeping one on its way.
-        moving = list(
-            Shipment.objects.filter(status="shipped", order__user__isnull=False)
-            .exclude(order__user__email="customer@example.com")
-            .order_by("created_at")
-        )
+        # more parcels arrive (those on their way, then those being prepared), keeping
+        # one in each state.
         with silenced():
-            while len(pairs) < context.count and len(moving) > 1:
-                moving.pop(0).transition("status", "delivered")
-                pairs = self.pairs()
+            for state in ("shipped", "processing"):
+                waiting = list(
+                    Shipment.objects.filter(status=state, order__user__isnull=False)
+                    .exclude(order__user__email="customer@example.com")
+                    .order_by("created_at")
+                )
+                while len(pairs) < context.count and len(waiting) > 1:
+                    parcel = waiting.pop(0)
+                    if parcel.status == "processing":
+                        parcel.transition(
+                            "status",
+                            "shipped",
+                            carrier="Parcel Post",
+                            tracking_number=f"PP{parcel.order.number}R",
+                        )
+                    parcel.transition("status", "delivered")
+                    pairs = self.pairs()
         rows: list[Any] = []
         ratings = [5, 4, 5, 3, 4, 5, 2, 4]
         for number, (author, item) in enumerate(pairs[: context.count]):
@@ -954,3 +1001,98 @@ class WishlistItemSeeder(karni.WishlistItemSeeder):
         for product in products[: context.count]:
             rows += context.create(1, user=customer, product=product)
         return rows
+
+
+def demo_pdf(title: str) -> bytes:
+    """A one-page PDF that says what it is: the demo's files."""
+    text = title.replace("\\", "").replace("(", "").replace(")", "")
+    stream = f"BT /F1 24 Tf 72 720 Td ({text}) Tj ET".encode()
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        (
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R "
+            b"/Resources << /Font << /F1 5 0 R >> >> >>"
+        ),
+        b"<< /Length "
+        + str(len(stream)).encode()
+        + b" >>\nstream\n"
+        + stream
+        + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    out = b"%PDF-1.4\n"
+    offsets = []
+    for number, body in enumerate(objects, start=1):
+        offsets.append(len(out))
+        out += f"{number} 0 obj\n".encode() + body + b"\nendobj\n"
+    start = len(out)
+    out += f"xref\n0 {len(objects) + 1}\n0000000000 65535 f \n".encode()
+    out += b"".join(f"{offset:010d} 00000 n \n".encode() for offset in offsets)
+    out += f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{start}\n%%EOF\n".encode()
+    return out
+
+
+class ProductFileSeeder(karni.ProductFileSeeder):
+    """The files of the digital products: a small PDF each."""
+
+    class Meta(karni.ProductFileSeeder.Meta):
+        after = ("shop.Product",)
+
+    def seed(self, context: SeedContext) -> list[Any]:
+        from django.core.files.base import ContentFile
+
+        ProductFile.objects.without(
+            "soft_delete", reason="a new demo"
+        ).all().hard_delete()
+        rows: list[Any] = []
+        for product in Product.objects.filter(digital=True).order_by("sku"):
+            for title in DIGITAL.get(product.name, [])[
+                : max(context.count - len(rows), 0)
+            ]:
+                row = ProductFile(product=product, name=title)
+                slug = title.lower().replace(",", "").replace(" ", "-")
+                row.file.save(f"{slug}.pdf", ContentFile(demo_pdf(title)), save=False)
+                row.save()
+                rows.append(row)
+        return rows
+
+
+class DownloadSeeder(karni.DownloadSeeder):
+    """The demo customer bought both digital products and downloaded one file once, and
+    another customer bought one: each paid order holds its download links."""
+
+    class Meta(karni.DownloadSeeder.Meta):
+        after = ("shop.ProductFile", "shop.Review")
+
+    def seed(self, context: SeedContext) -> list[Any]:
+        products = list(Product.objects.filter(digital=True).order_by("sku"))
+        buyers = [
+            get_user_model().objects.filter(email="customer@example.com").first(),
+            *customers(context)[:1],
+        ]
+        if not products:
+            return []
+        now = anchor(context)
+        with silenced():
+            for number, buyer in enumerate(person for person in buyers if person):
+                bought = products if number == 0 else products[1:]
+                order = commerce.place_order(
+                    [("product", str(product.pk), 1, {}) for product in bought],
+                    user=buyer,
+                    email=buyer.email,
+                    name=address_of(buyer)["name"],
+                    billing=address_of(buyer),
+                )
+                _pay(order)
+                placed = now - timedelta(days=2 + number)
+                Order.objects.filter(
+                    pk=order.pk
+                ).update(  # karni: allow(audited-bulk-write): demo data
+                    created_at=placed, paid_at=placed + timedelta(minutes=5)
+                )
+        first = Download.objects.order_by("created_at", "pk").first()
+        if first is not None:
+            first.downloads, first.last_at = 1, now - timedelta(days=1)
+            first.save(update_fields=["downloads", "last_at", "updated_at"])
+        return list(Download.objects.order_by("created_at", "pk"))[: context.count]

@@ -18,6 +18,9 @@ A product with ``backorders`` may be ordered past what is left: checkout holds w
 is on the shelf and the rest waits for new stock. The line remembers how many it
 held (``options["_held"]``), so only those are taken, given back or put back.
 
+A digital product sends nothing and has no stock to hold: once paid, its buyer gets a
+signed link to each of its files (shop/services.py, ``grant_downloads``).
+
 A product with active variations (sizes, colours) is bought by one of them: the line's
 options name it (``{"variation": "<id>"}``), and its price, SKU and stock are the
 variation's. Two variations of one product are two lines of the cart.
@@ -138,12 +141,12 @@ class ProductSellable(Sellable):
         return Price(unit=current, compare_at=item.price if item.on_sale() else None)
 
     def needs_shipping(self, item: Product, options: Mapping[str, Any]) -> bool:
-        return True
+        return not item.digital
 
     def available(self, item: Product, options: Mapping[str, Any]) -> int | None:
         if not item.active:
             return 0
-        if item.backorders:
+        if item.backorders or item.digital:
             return None
         chosen = self.variation(item, options)
         if chosen is not None:
@@ -161,6 +164,11 @@ class ProductSellable(Sellable):
 
     # -- the stock ---------------------------------------------------------------------
 
+    def _digital(self, line: OrderLine) -> bool:
+        if (line.options or {}).get("variation"):
+            return False
+        return Product.objects.filter(pk=line.item, digital=True).exists()
+
     def _stocked(self, line: OrderLine) -> Product | Variation:
         """The row whose stock the line moves: its variation, else its product."""
         wanted = (line.options or {}).get("variation")
@@ -169,6 +177,9 @@ class ProductSellable(Sellable):
         return Product.objects.get(pk=line.item)
 
     def hold(self, line: OrderLine) -> None:
+        if self._digital(line):
+            self._held(line, 0)  # a file has no stock: nothing to hold or give back
+            return
         row = self._stocked(line)
         product = row if isinstance(row, Product) else row.product
         wanted = line.quantity
@@ -194,6 +205,8 @@ class ProductSellable(Sellable):
 
     def on_paid(self, line: OrderLine) -> None:
         held = self.held(line)
+        if held == 0 and self._digital(line):
+            return
         row = self._stocked(line)
         if held:
             type(row).objects.filter(pk=row.pk).update(
@@ -261,4 +274,29 @@ def shipments(order: Order) -> Iterator[dict[str, Any]]:
             "label": SHIPMENT_WORDS.get(shipment.status, shipment.status),
             "detail": detail,
             "at": shipment.delivered_at or shipment.shipped_at or shipment.created_at,
+        }
+
+
+@register_reporter
+def downloads(order: Order) -> Iterator[dict[str, Any]]:
+    """The order's files for its buyer's page: the link, and how many downloads are left."""
+    from shop.models import Download
+    from shop.services import download_link, download_problem
+
+    for row in Download.objects.filter(order=order).select_related("file", "order"):
+        problem = download_problem(row)
+        left = None if row.limit is None else max(row.limit - row.downloads, 0)
+        detail = problem or (
+            f"{left} of {row.limit} downloads left"
+            if left is not None
+            else "Download it"
+        )
+        yield {
+            "title": "Download",
+            "status": "stopped" if problem else "ready",
+            "label": row.file.name,
+            "detail": detail,
+            "at": row.last_at,
+            "link": "" if problem else download_link(row),
+            "link_label": f"Download {row.file.name}",
         }
