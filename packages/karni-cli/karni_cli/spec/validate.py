@@ -1994,9 +1994,10 @@ class _Meaning:
                         key=True,
                     )
                     continue
-                paths = self.entity_paths(name, entity, written, where)
-                if paths is None:
+                entity_paths = self.entity_paths(name, entity, written, where)
+                if entity_paths is None:
                     continue
+                paths = entity_paths
             elif name[:1].isupper() and not re.fullmatch(schema.ENTITY_NAME, name):
                 # Not a class name, so not an entity: say the name is wrong, not missing.
                 suggestion = "-".join(words(name))

@@ -481,6 +481,7 @@ computed `get_access()`.
 | `- about: blank` | `karni make page about`: a bare page at `/about` |
 | `- login: login` | `karni make page login --kind login` |
 | `- reports: code` | a page of the project's own at `/reports`: `karni build` leaves it alone |
+| `- shop.reports: code` | a page of the project's own under the app `shop`'s route, at `/shop/reports` (experimental) |
 
 Two pages may not share a route (`C242`).
 
@@ -509,7 +510,8 @@ navigation:
 
 | Entry | Means |
 |---|---|
-| `- <page>` | the page whose key in `pages` is `<page>` (`Product`, `shop.Product`, `home`) |
+| `- <page>` | the page whose key in `pages` is `<page>` (`Product`, `shop.Product`, `home`, `shop.reports`) |
+| `- <family page>` | a page of Karni and its contracts, not listed in `pages`: `home`, `account` and `search` always, `orders`, `cart` and `checkout` with the commerce module, `settings` with `features.preferences`, `people` with `features.people` (experimental) |
 | `- <page>: {label, icon, requires}` | the page, with its label, icon or requirement replaced |
 | `- <label>: [entries]` | a group: a label that names no page, and its entries |
 | `- <label>: {items, icon, requires}` | a group with an icon or a requirement |
@@ -1369,8 +1371,10 @@ and `// karni:routes` markers, as `karni make page` does:
 | `data` | no | more `staticData` for the recipe's own layout to read, e.g. `{ area = "store" }` |
 
 A route at `/<name>` is a code page of the spec too: list it in the
-recipe's `pages` (`- cart: code`), so `karni plan` matches the project after
-the build. A file `karni new` wrote (`frontend/src/layout.tsx`,
+recipe's `pages` (`- terms: code`), so `karni plan` matches the project after
+the build. A route under an app's route (`/shop/reports`, with
+`apps.shop.route` at `/shop`) is the code page `shop.reports: code`, and a
+menu entry names it the same way. A file `karni new` wrote (`frontend/src/layout.tsx`,
 `frontend/src/pages/home.tsx`) counts as a stub while it is still what
 `karni new` wrote, so a recipe may replace the layout and the home page.
 

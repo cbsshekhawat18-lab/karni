@@ -414,6 +414,44 @@ apply codemods and list the manual steps. This file is the human summary.
   karni.yaml, so a project without parts is unaffected, and they check the built project, not only
   the merge. The contracts are not parts and stay allowed. The allow marker also takes `//`.
   See [the family](docs/family.md).
+- **Changed (experimental): the shop is a part of the family.** Its karni.yaml has
+  `app.currency` and money fields without a code (payments' currency follows), no family page in
+  `pages`, its storefront at `/shop` and `/shop/catalogue` and its back office's own screens under
+  `/shop` (`/shop/products`, `/shop/customers`, `/shop/reports` and the others). The cart, checkout
+  and orders stay at `/cart`, `/checkout` and `/orders` (karni-commerce's), the account, sign-in and
+  Settings at `/account`, `/signin` and `/settings` (Karni's). recipe.toml has `version` and
+  `requires` (payments, commerce, storage, people, events, timeline, preferences), and the shop
+  declares the connection `shop.parcel_timeline`. `frontend/src/shop/index.ts` is registered from
+  `parts.ts`. The shop joins the family pairs. See [the shop recipe](docs/recipes/shop.md).
+- **Changed (experimental): karni-commerce's settings are the preferences contract's.** The seam
+  `karni_commerce.preferences_seam`, the `Setting` model (migration `0005_drop_setting`) and
+  commerce's `/api/preferences/` are gone: commerce and the shop read `karni.preferences`, whose
+  API serves the Settings page. `KARNI_MAIL_SOURCE` defaults to `karni_commerce.mail.MailSource`.
+  `karni.preferences` lists every `karni.mail.register_kind` message on Settings, Emails (with who
+  gets it, and refusing to switch off one that is not switchable, `E323`), and its details have a
+  tax number (migration `0002_details_tax_number`). `karni.mail.DefaultSource` reads the switches
+  and the sender from `karni.preferences` while it is installed. The build locks the details'
+  currency to `app.currency` (`KARNI_PREFERENCES_LOCKED`). @karni/ui's `SettingsPage` reads the
+  contract: one Emails tab with the switches and the editor, a Connections tab and the logo.
+- **Added (experimental): a code page under an app's route, and family pages in a menu.**
+  `pages` takes `shop.reports: code` for the page at `/shop/reports`, and `navigation` may name a
+  family page the project's modules and contracts provide (`orders` with commerce, `settings` with
+  preferences) without listing it in `pages`. The merge carries `dashboard` tiles, a required module
+  brings the modules its manifest requires, and `app.currency` answers the payments currency.
+- **Fixed: the email editor's preview shows real values.** It renders with the business's details
+  and the latest record the email would be about (the last paid order, the last parcel sent), or
+  the values the email declares while there is none, never `[business.name]`
+  (`karni.mail.sample_context`, `register_kind(sample=..., samples=...)`).
+- **Fixed: the shop's sales by category count a sale once.** A product in a category and in one
+  inside it counted twice in the parent's row, and a product in two trees twice in the totals. Each
+  row now counts a sale once, the totals count each sale once, and the report says that a
+  category's row includes the categories in it (the Includes column names them).
+- **Fixed: seeding gives the same rows whatever other parts a project holds.** Each model now
+  draws from its own random stream (the seed and its label), a nullable relation to a model the run
+  does not seed stays empty (a demo booking no longer points at a payment the shop's checkout
+  made), and `SeedContext.pool(model)` gives the rows a run seeded, so a seeder reads the users it
+  seeded and not the demo logins another part adds during the run. A seed gives other rows than
+  before this change, and the same rows on every run.
 
 ## 0.5.1 (2026-11-12)
 

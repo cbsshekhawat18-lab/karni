@@ -192,3 +192,44 @@ def test_export_lists_what_the_spec_cannot_say() -> None:
     assert navigation.entries_from_setting("db", known, db) is None
     assert "a menu the admin edits" in db[0]
     assert navigation.entries_from_setting(None, known, []) is None
+
+
+def test_a_code_page_under_an_app_route_and_the_family_pages_a_menu_names() -> None:
+    from karni_cli.spec import navigation as nav
+    from karni_cli.spec.validate import validate_text
+
+    text = """version: 1
+app: {name: Shop, kind: app}
+modules: {commerce: {}, payments: {}}
+features: {preferences: true}
+apps:
+  shop:
+    route: /shop
+    entities:
+      Product: {fields: {name: "str:20"}, access: {read: public, write: granted}}
+pages:
+  - Product: [detail]
+  - shop.reports: code
+navigation:
+  - home
+  - orders
+  - shop.reports: {label: Reports, requires: "shop.product:change"}
+  - settings
+"""
+    report = validate_text(text)
+    assert report.ok and report.spec is not None, [issue.as_dict() for issue in report.issues]
+    menu = nav.menu(report.spec)
+    assert [(item["label"], item["route"]) for item in menu or []] == [
+        ("Home", "/"),
+        ("Orders", "/orders"),
+        ("Reports", "/shop/reports"),
+        ("Settings", "/settings"),
+    ]
+    # a family page whose module or contract the project lacks is no page
+    bare = validate_text(text.replace("modules: {commerce: {}, payments: {}}\n", ""))
+    assert [issue.code for issue in bare.issues] == ["C640"]
+    # a page under an app's route is code, and names an app of the spec
+    wrong = validate_text(
+        text.replace("  - shop.reports: code", "  - shop.reports: blank\n  - crm.deals: code")
+    )
+    assert sorted(issue.code for issue in wrong.issues) == ["C220", "C235"]

@@ -62,8 +62,9 @@ delete. Adding the recipe again writes the deleted ones again.
 | `roles` | `admin` and `customer` are the family roles: their grants add up and the project's name stays. Every other role is `<prefix>-<role>`, is new to the project, holds no `"*"` and is not a default role. | `C443` |
 | `apps` | The part's app label must be new. | `C442` |
 | `apps.<label>.route` | Where the part's pages live: `/<label>` unless the recipe names another. It must be the part's own and not a family page's. | `C444` |
-| `pages` | Appended. `home` belongs to the family: the build writes `home: dashboard`, and a part that lists it when the project has one is refused, as is a page at another family route. An entity name two apps define is written `app.Name`. | `C444` |
-| `navigation` | A part's menu becomes one group, labelled with the recipe's title. A part installed alone keeps its entries flat. | none |
+| `pages` | Appended. `home` belongs to the family: the build writes `home: dashboard`, and a part that lists it when the project has one is refused, as is a page at another family route. An entity name two apps define is written `app.Name`. A part's own code pages live under its route: `shop.reports: code` is the page at `/shop/reports`. | `C444` |
+| `navigation` | A part's menu becomes one group, labelled with the recipe's title. A part installed alone keeps its entries flat. A menu may name a family page the project's modules and contracts provide without listing it in `pages`: `orders`, `cart` and `checkout` with commerce, `settings` with preferences, `people` with people, and `home`, `account` and `search` always. | none |
+| `dashboard` | The part's home tiles are appended. A tile whose key the project has already (two parts that both show `commerce.revenue`) is kept once. `karni recipes remove` takes the part's own tiles out and keeps a contract's. | none |
 | `seed` | Counts add up per entity. | none |
 
 The family pages are `home` (`/`), `signin`, `account`, `search`, `inbox`,
@@ -89,7 +90,7 @@ requires is installed with it:
 | `events` | `features.events: true`: `karni build` adds `karni.outbox` to `INSTALLED_APPS` ([family events](family-events.md)) |
 | `timeline` | `features.timeline: true`, with `features.people` and `features.events`, which it needs: `karni build` adds `karni.timeline` after `karni.outbox` ([timeline](timeline.md)) |
 | `preferences` | `features.preferences: true`: `karni build` adds `karni.preferences` to `INSTALLED_APPS` and writes `KARNI_PREFERENCES_DEFAULTS` with the project's name, and `KARNI_PREFERENCES_LOCKED` with its currency (every money field is in it, so Settings does not change it). The part declares its settings section and its connections ([preferences](preferences.md)) |
-| a module (`storage`, `payments`) | lists it under `modules`, so the build adds it |
+| a module (`storage`, `payments`, `commerce`) | lists it under `modules`, so the build adds it, with the modules its manifest requires (`commerce` brings `payments`) |
 
 A contract version the installed Karni does not have, or a name that is
 neither a contract nor a module karni-cli knows, is refused (`C446`).

@@ -134,7 +134,8 @@ class BookingSeeder(karni.BookingSeeder):
     """
 
     def seed(self, context: SeedContext) -> list[Any]:
-        members = list(get_user_model().objects.order_by("email"))
+        # the users this run seeded: another part's demo logins join the table mid-run
+        members = sorted(context.pool(get_user_model()), key=lambda user: user.email)
         taken: set[tuple[Any, Any]] = set(
             Booking.objects.exclude(status="cancelled").values_list(
                 "slot_id", "member_id"

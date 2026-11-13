@@ -403,3 +403,45 @@ def test_the_codemod_writes_app_recipes() -> None:
         "version: 1\napp: {name: Shop, recipes: [shop]}\n"
     )
     assert recipes_key("version: 1\napp: {name: Shop}\n") is None
+
+
+def test_home_tiles_are_merged_once_and_a_part_takes_its_own_away() -> None:
+    desk = {
+        **_desk(),
+        "dashboard": [
+            {"key": "desk.open", "title": "Open", "kind": "stat", "entity": "Ticket"},
+            {"key": "commerce.revenue"},
+        ],
+    }
+    club = {
+        **_club(),
+        "pages": [*_club()["pages"], {"club": "code"}, {"club.report": "code"}],
+        "dashboard": [
+            {"key": "club.visits", "title": "Visits", "kind": "stat", "entity": "Visit"},
+            {"key": "commerce.revenue", "order": 9},
+        ],
+    }
+    first = compose.merge(_project(), _Recipe("desk", "Help desk"), desk, modules=MODULES)
+    second = compose.merge(
+        first.data,
+        _Recipe("club", "Club"),
+        club,
+        modules=MODULES,
+        bases={"desk": desk},
+        parts={"desk": _Recipe("desk", "Help desk")},
+    )
+    keys = [tile["key"] for tile in second.data["dashboard"]]
+    assert keys == ["desk.open", "commerce.revenue", "club.visits"]  # a shared tile once
+    assert "club.report" in {next(iter(entry)) for entry in second.data["pages"]}
+    out = compose.unmerge(second.data, "club", club).data
+    # the part's own tile and code pages go, the contract's tile stays for the others
+    assert [tile["key"] for tile in out["dashboard"]] == ["desk.open", "commerce.revenue"]
+    names = {next(iter(entry)) for entry in out["pages"]}
+    assert not {"club", "club.report"} & names
+
+
+def test_a_required_module_brings_the_modules_its_manifest_requires() -> None:
+    recipe = _Recipe("club", "Club", requires=("commerce",))
+    fragment = {**_club(), "modules": {}}
+    data = compose.merge(_project(), recipe, fragment).data
+    assert list(data["modules"]) == ["payments", "commerce"]

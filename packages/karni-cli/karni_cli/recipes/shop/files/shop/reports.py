@@ -1,7 +1,9 @@
 """The shop's reports beside karni-commerce's (sales by date, by item, coupons used).
 
-* ``shop.sales_by_category``: what sold in each category, in the range. A sale counts
-  in its category and in each one above it, and the totals count the top ones.
+* ``shop.sales_by_category``: what sold in each category, in the range. A category's
+  row includes the categories in it (its Includes column names them): a sale counts
+  once in its category and once in each one above it, never twice in one row, and the
+  totals count each sale once.
 * ``shop.stock``: every product (and variation) with what is left, the low-stock level
   and its state now.
 
@@ -26,7 +28,11 @@ from shop.services import low_stock_level, with_stock
 @register_report(
     key="shop.sales_by_category",
     title="Sales by category",
-    describe="What sold in each category, top categories first, in the range.",
+    describe=(
+        "What sold in each category, in the range. A category's row includes the sales "
+        "of the categories in it (listed under Includes), and each sale counts once in "
+        "a row and once in the totals."
+    ),
     order=25,
 )
 def sales_by_category(query: ReportQuery) -> dict[str, Any]:
@@ -43,23 +49,33 @@ def sales_by_category(query: ReportQuery) -> dict[str, Any]:
         )
     }
     categories = {category.pk: category for category in Category.objects.all()}
-    totals: dict[Any, dict[str, Any]] = {}
+    # each sold product's categories and every category above them, each once: a
+    # product in Garden and in Growing (in Garden) counts in Garden once
+    reached: dict[str, set[Any]] = {}
     products = Product.categories.through.objects.filter(
-        product_id__in=[key for key in sold]
+        product_id__in=list(sold)
     ).values_list("product_id", "category_id")
     for product_id, category_id in products:
-        row = sold.get(str(product_id))
+        found = reached.setdefault(str(product_id), set())
         node = categories.get(category_id)
-        counted: set[Any] = set()
-        while row is not None and node is not None and node.pk not in counted:
-            counted.add(node.pk)  # a sale counts in its category and each one above
+        while node is not None and node.pk not in found:
+            found.add(node.pk)
+            node = categories.get(node.parent_id) if node.parent_id else None
+    totals: dict[Any, dict[str, Any]] = {}
+    for product_id, found in reached.items():
+        row = sold.get(product_id)
+        for pk in found if row is not None else ():
+            node = categories[pk]
             entry = totals.setdefault(
-                node.pk,
+                pk,
                 {
                     "category": node.name,
                     "parent": categories[node.parent_id].name
                     if node.parent_id in categories
                     else "",
+                    "includes": ", ".join(
+                        sorted(c.name for c in categories.values() if c.parent_id == pk)
+                    ),
                     "sold": 0,
                     "sales": Decimal(0),
                     "discounts": Decimal(0),
@@ -68,22 +84,27 @@ def sales_by_category(query: ReportQuery) -> dict[str, Any]:
             entry["sold"] += row["quantity"]
             entry["sales"] += row["sales"]
             entry["discounts"] += row["discounts"]
-            node = categories.get(node.parent_id) if node.parent_id else None
     rows = sorted(
         totals.values(), key=lambda entry: (entry["parent"] != "", -entry["sales"])
     )
     for entry in rows:
         entry["net"] = entry["sales"] - entry["discounts"]
-    tops = [entry for entry in rows if not entry["parent"]]  # each sale counted once
-    totals = {
-        key: sum((entry[key] for entry in tops), Decimal(0))
-        for key in ("sales", "discounts", "net")
+    # the totals count each sold product once, however many categories it is in
+    counted = [sold[product_id] for product_id in reached if product_id in sold]
+    sums = {
+        "sales": sum((row["sales"] for row in counted), Decimal(0)),
+        "discounts": sum((row["discounts"] for row in counted), Decimal(0)),
     }
     return {
-        "totals": {"sold": sum(entry["sold"] for entry in tops), **totals},
+        "totals": {
+            "sold": sum(row["quantity"] for row in counted),
+            **sums,
+            "net": sums["sales"] - sums["discounts"],
+        },
         "columns": [
             Column("category", "Category"),
             Column("parent", "In"),
+            Column("includes", "Includes"),
             Column("sold", "Sold", "number"),
             Column("sales", "Sales", "money"),
             Column("discounts", "Discounts", "money"),

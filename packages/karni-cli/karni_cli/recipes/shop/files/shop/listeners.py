@@ -9,6 +9,7 @@ from typing import Any
 
 from django.db import transaction
 from django.dispatch import receiver
+from karni import preferences, timeline
 from karni.events import on_transition
 from karni_commerce.events import order_cancelled, order_paid
 from karni_commerce.models import Order
@@ -46,6 +47,7 @@ def stop_the_parcel(sender: Any, order: Order, **kwargs: Any) -> None:
 @on_transition(Shipment, "status", to="shipped")
 def tell_the_buyer_it_left(shipment: Shipment) -> None:
     events.shipment_shipped.send(sender=Shipment, shipment=shipment)
+    _on_the_timeline(shipment, "shipped")
     pk = shipment.pk
     transaction.on_commit(lambda: _send(pk, messages.shipment_shipped))
 
@@ -53,6 +55,7 @@ def tell_the_buyer_it_left(shipment: Shipment) -> None:
 @on_transition(Shipment, "status", to="delivered")
 def tell_the_buyer_it_arrived(shipment: Shipment) -> None:
     events.shipment_delivered.send(sender=Shipment, shipment=shipment)
+    _on_the_timeline(shipment, "delivered")
     pk = shipment.pk
     transaction.on_commit(lambda: _send(pk, messages.shipment_delivered))
 
@@ -73,6 +76,21 @@ def tell_the_staff_it_runs_low(
             messages.low_stock(found, which)
 
     transaction.on_commit(send)
+
+
+def _on_the_timeline(shipment: Shipment, moment: str) -> None:
+    """The parcel's move on its order's timeline, while shop.parcel_timeline is on."""
+    if not preferences.active("shop.parcel_timeline"):
+        return
+    order = shipment.order
+    tracking = shipment.tracking_number or ""
+    timeline.record(
+        kind=f"shop.shipment.{moment}",
+        title=f"Parcel {moment}: order {order.number}",
+        body=f"{shipment.carrier} {tracking}".strip() if moment == "shipped" else "",
+        subjects=[order, shipment],
+        data={"order": order.number, "tracking_number": tracking},
+    )
 
 
 def _send(pk: Any, send: Any) -> None:

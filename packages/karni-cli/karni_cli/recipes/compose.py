@@ -959,11 +959,11 @@ def unmerge(project: Mapping[str, Any], name: str, base: Mapping[str, Any]) -> M
 
     # the part's own named pages (shop, shop.reports): an entity's are handled by name above
     own_pages = {
-        name
+        named
         for entry in base.get("pages") or []
-        if (name := _page_name(entry)) is not None
-        and not name[:1].isupper()
-        and name not in FAMILY_PAGES
+        if (named := _page_name(entry)) is not None
+        and not named[:1].isupper()
+        and named not in FAMILY_PAGES
     }
 
     def gone(key: Any) -> bool:

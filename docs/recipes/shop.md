@@ -24,15 +24,29 @@ The cart, checkout, orders, payments and refunds come from
 would use in the same project. The shop adds its catalogue, its stock rules
 and its parcels.
 
+The shop is a part of the [family](../family.md): it can share a project with
+the CRM, booking and the other recipes (`karni new "Studio" --recipe shop
+--recipe crm`, or `karni recipes add shop` in a built project). Its pages
+live under `/shop`: the storefront at `/shop` and `/shop/catalogue`, and the
+back office's own screens at `/shop/products`, `/shop/customers` and the
+others below. The cart, checkout and orders (`/cart`, `/checkout`,
+`/orders`) are karni-commerce's pages, and the account, sign-in and Settings
+pages (`/account`, `/signin`, `/settings`) are Karni's: every part in the
+project shares them. Its roles are `admin` and `customer` (the family's) and
+`shop-manager` and `shop-staff`. Its settings are a section of the
+[preferences contract](../preferences.md), and the connection
+`shop.parcel_timeline` (on by default, switched in Settings, Connections)
+writes each parcel sent or delivered on its order's timeline.
+
 ## What each person does
 
 ### A visitor
 
 - Browses the storefront at `/shop`: the categories, featured products and
-  new arrivals. `/shop/products` is the catalogue, with search, a category
+  new arrivals. `/shop/catalogue` is the catalogue, with search, a category
   (and its sub-categories), a price range, the sort order (name, newest,
   price) and pages, all kept in the address so a link finds them again.
-- Opens a product at `/shop/products/<slug>`: its pictures, the price (the
+- Opens a product at `/shop/catalogue/<slug>`: its pictures, the price (the
   sale price next to the regular one while a sale runs), how many are left,
   its rating and reviews, and the description. Every page has a title and a
   description for search engines.
@@ -83,7 +97,7 @@ and its parcels.
 - Reviews a product once its parcel reached them: a rating from one to five
   stars and a few words. The review shows once staff approve it, marked as
   bought here.
-- Keeps products for later on `/wishlist` (Add to wishlist on a product).
+- Keeps products for later on `/shop/wishlist` (Add to wishlist on a product).
 
 ### Staff (`shop-staff`)
 
@@ -107,7 +121,7 @@ and its parcels.
   and the way to send it. The totals (the discount, the shipping, the tax)
   show before the order is placed. The server prices it and holds the stock
   for two days, and the customer gets the link to pay.
-- `/customers` lists who bought, how often and for how much, and each
+- `/shop/customers` lists who bought, how often and for how much, and each
   customer's page their orders and addresses.
 - `/reviews` lists the reviews, newest first, with the ones waiting for
   approval counted on the home page. A review's page approves or rejects
@@ -118,12 +132,12 @@ and its parcels.
 - `/shipments` lists the parcels, each with its order's number linking to
   the order. An order's page prints its packing slip (what goes in the
   parcel and where, no prices) and its invoice.
-- `/abandoned-carts` lists the carts with items nobody touched for an hour
+- `/shop/abandoned-carts` lists the carts with items nobody touched for an hour
   (Settings, Checkout): who left it when known (a customer, or the email a
   visitor typed at checkout), what is in it and what it comes to.
 - `/downloads` lists who may download which file, how often they did and
   until when.
-- Manage the catalogue: `/products` with search, filters, CSV and XLSX export,
+- Manage the catalogue: `/shop/products` with search, filters, CSV and XLSX export,
   **Import** (upload a CSV, check the preview with each row's problems, then
   commit) and bulk changes (select products, then set the price, the sale
   price, the stock, the low-stock level, active or featured). A product's
@@ -137,19 +151,22 @@ and its parcels.
   them back in stock or not) or by an amount. The refund goes through the
   payment provider, and the order shows part refunded or refunded once the
   provider confirms it.
-- `/coupons`: codes with a percent, an amount or free shipping, a minimum
+- `/shop/coupons`: codes with a percent, an amount or free shipping, a minimum
   spend, start and end dates, uses allowed in all and per customer, and the
   products or categories they apply to (picked by name).
-- `/shipping`: the zones (countries, and regions or postcode starts) and
+- `/shop/shipping`: the zones (countries, and regions or postcode starts) and
   each zone's methods (flat rate, free above an amount, local pickup).
-- `/tax-rates`: the rates by country and region, and whether they apply to
+- `/shop/tax-rates`: the rates by country and region, and whether they apply to
   shipping.
-- `/reports`: sales by date (by day, week or month), by item, by category,
+- `/shop/reports`: sales by date (by day, week or month), by item, by category,
   the coupons used, and the stock (each product and variation: on the shelf,
   held by orders, left, its low-stock level and its state), each for the
-  days chosen, with its totals and a CSV file. Staff do not see them
+  days chosen, with its totals and a CSV file. In sales by category, a
+  category's row includes the categories in it (its Includes column names
+  them), a product in a category and in one inside it counts once in each
+  row, and the totals count each sale once. Staff do not see them
   (`karni_commerce.order:report`).
-- `/settings`, with no code:
+- `/settings` (the project's Settings page), with no code:
     - Details: the shop's name (in the header, the footer, the emails and on
       invoices), legal name, address, phone, contact email, tax number, the
       email sender and where answers go, and how money shows its currency.
@@ -163,7 +180,9 @@ and its parcels.
     - Emails: every email the shop sends, each with a switch and its text.
       Edit opens the subject and the text with the merge fields it may use
       (`{{ order.number }}`, `{{ shipment.tracking_number }}`), a preview
-      and Back to the default. The next email of that kind is the edited
+      and Back to the default. The preview shows the shop's own details and
+      the latest order, parcel or product the email would be about, or a
+      sample order before there is one. The next email of that kind is the edited
       one. The sign-in code and the password emails are always sent.
 - Each role sees only the buttons it may use: staff see no Refund, a role
   that may only read sees no New, Edit or Import.
@@ -326,10 +345,10 @@ works the orders and parcels, `manager@example.com` refunds, and
 | the product fields | `apps.shop.entities.Product.fields`, for example `weight: "decimal:6:2?"`, then `karni build`: the storefront keeps working |
 | the payment provider and the currency | `modules.payments: {provider: razorpay, currency: inr}`, and `money:INR` on the product prices. Orders take the currency of the payments module |
 | the parcel states | `apps.shop.entities.Shipment.fields.status` and the words in `frontend/src/` and `shop/sellables.py` |
-| the terms version and url | `features.terms: {version: "2026-06", url: /terms, required: true}`, and the text in `frontend/src/shop/Terms.tsx` |
+| the terms version and url | `features.terms: {version: "2026-06", url: /shop/terms, required: true}`, and the text in `frontend/src/shop/Terms.tsx` |
 | how long checkout holds the stock | `modules.commerce: {hold_minutes: 60}` |
 | the options products come in | `/attributes` in the app, or another field on `apps.shop.entities.Variation` in karni.yaml (`weight: "decimal:6:2?"`) |
-| shipping zones, tax rates and coupons | `/shipping`, `/tax-rates` and `/coupons` in the app |
+| shipping zones, tax rates and coupons | `/shop/shipping`, `/shop/tax-rates` and `/shop/coupons` in the app |
 | prices that include tax | `modules.commerce: {prices_include_tax: true}` |
 | the shop's name, address, sender and currency display | Settings, Details in the app |
 | guest checkout, the terms, invoices, who gets new orders | Settings, Checkout |

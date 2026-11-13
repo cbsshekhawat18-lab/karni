@@ -620,3 +620,17 @@ def test_the_docs_show_the_fixture_with_keys_removed() -> None:
     assert q.render(ask(spec), q.DEFAULT_MAX) == shown
     for line in (*REMOVED, "default: true"):
         assert line.strip() in section, line
+
+
+def test_the_project_currency_answers_the_payments_currency() -> None:
+    from karni_cli.spec.questions import questions
+    from karni_cli.spec.validate import validate_text
+
+    text = "version: 1\napp: {name: Shop, kind: app, currency: EUR}\nmodules: {payments: {}}\n"
+    report = validate_text(text)
+    assert report.ok and report.spec is not None and report.source is not None
+    asked = {question.id for question in questions(report.spec, report.source.data)}
+    assert "modules.payments.currency" not in asked
+    bare = validate_text(text.replace(", currency: EUR", ""))
+    assert bare.spec is not None and bare.source is not None
+    assert "modules.payments.currency" in {q.id for q in questions(bare.spec, bare.source.data)}

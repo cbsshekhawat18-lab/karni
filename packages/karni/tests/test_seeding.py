@@ -117,6 +117,26 @@ def test_the_same_seed_reproduces_the_same_rows() -> None:
     assert _dump(*plan)["testapp.Event"] != first["testapp.Event"]
 
 
+def test_a_model_s_rows_do_not_depend_on_what_else_the_run_seeds() -> None:
+    """Each model draws from its own stream (the seed and its label): seeding another
+    model too, or more of it, leaves its rows as they were (two parts in one project)."""
+    seed(models=["testapp.Tag"], count=5, seed=11, now=NOW, reset=True)
+    alone = _dump(Tag)
+    seed(models=["testapp.Tag", "testapp.Shelf"], count=5, seed=11, now=NOW, reset=True)
+    assert _dump(Tag) == alone
+
+
+def test_a_nullable_relation_to_a_model_the_run_does_not_seed_stays_empty() -> None:
+    from karni.seeding import _Run
+
+    Venue.objects.create(name="Hall")  # a row another app made, outside the run
+    run = _Run(seed_value=1, count=1, now=None, builder=None)
+    run.plan = {Tag}
+    nullable = type("Relation", (), {"null": True, "one_to_one": False, "name": "venue"})()
+    for _ in range(20):  # whatever the fill draw says, a row of another app is not this one's
+        assert run.pick(Venue, nullable) is None
+
+
 def test_integer_keys_give_the_same_rows_after_a_reset() -> None:
     """--reset restarts the sequences of the tables it wipes, so integer ids repeat too."""
     plan = [Part, Reading]

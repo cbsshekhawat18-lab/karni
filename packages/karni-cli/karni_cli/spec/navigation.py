@@ -152,8 +152,8 @@ def pages(spec: schema.Spec) -> dict[str, Page]:
         for key, kinds in item.items():
             label, dot, rest = key.partition(".")
             if dot and rest[:1].islower():  # <app>.<name>: a code page under the app's route
-                app = spec.apps.get(label)
-                base = (app.route if app is not None else None) or f"/{label}"
+                owner = spec.apps.get(label)
+                base = (owner.route if owner is not None else None) or f"/{label}"
                 found[key] = Page(key, f"{base}/{rest}", humanize(rest), AUTHENTICATED, "code")
                 continue
             if key[:1].isupper() or "." in key:

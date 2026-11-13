@@ -31,7 +31,9 @@ login field, so re-running never duplicates them and ``--reset`` never
 deletes them.
 
 **Determinism.** ``--seed`` (default 0) seeds every random choice, UUID
-primary keys are drawn from it, integer sequences are reset by ``--reset``,
+primary keys are drawn from it (each model from its own stream, seeded by the
+seed and the model's label, so one app's rows never depend on what another
+app seeded before it), integer sequences are reset by ``--reset``,
 ``created_at``/``updated_at``-style timestamps are backdated from it, and
 relative dates are anchored at the start of the current day — so the same
 seed gives the same rows, byte for byte, on the same day. (Generated files
@@ -603,6 +605,16 @@ class SeedContext:
         pool = self.run.pool(model)
         return self.random.choice(pool) if pool else None
 
+    def pool(self, model: type[models.Model]) -> list[Any]:
+        """Experimental. The rows of ``model`` this run picks from: the ones it seeded (or
+        found again), else the table's first rows by key.
+
+        Read users from here, not from the table: another app's demo logins
+        (:meth:`account`) join the table during a run, so a seeder that reads every
+        user would give other rows on the next run.
+        """
+        return list(self.run.pool(model))
+
     def account(self, login: str, *roles: str, first_name: str = "", last_name: str = "") -> Any:
         """Experimental. A demo login holding ``roles``, made once and found again.
 
@@ -671,6 +683,10 @@ class _Run:
 
     def pick(self, target: type[models.Model], relation: Any) -> Any:
         if relation.null and self.random.random() >= FILL_RATE:
+            return None
+        if relation.null and self.plan and target not in self.plan:
+            # A row this run does not seed (a payment another app's checkout made) is not
+            # this row's to point at: a demo booking stays without a payment.
             return None
         pool = self.pool(target)
         if relation.one_to_one:
@@ -881,6 +897,10 @@ class _Run:
                 continue
             started = time.perf_counter()
             label = model._meta.label
+            # Each model draws from its own stream, seeded by the run's seed and its label:
+            # a part's rows stay the same whatever other parts the project holds and seeds.
+            self.random.seed(f"{self.seed_value}:{label}")
+            reseed_random(f"{self.seed_value}:{label}")
             if self.bulk_for(model, seeder_class, count):
                 self.report.rows[label] = self.bulk().seed_model(model, count, seeder_class)
                 self.report.bulk.append(label)

@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pair: [booking+crm, booking+visits, crm+visits]
+        pair: [booking+crm, booking+shop, booking+visits, crm+shop, crm+visits, shop+visits]
     env:
       PYTHON: python
       PIP_DISABLE_PIP_VERSION_CHECK: "1"

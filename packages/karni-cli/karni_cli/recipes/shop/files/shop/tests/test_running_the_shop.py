@@ -292,6 +292,39 @@ def test_the_cart_holds_no_stock_for_a_file_and_it_never_sells_out(
 # -- reports ---------------------------------------------------------------------------
 
 
+def test_sales_by_category_counts_a_sale_once_in_a_row_and_in_the_totals(
+    make_product: MakeProduct,
+) -> None:
+    """A product in a parent and in its child counts once in the parent's row (which
+    includes its children) and once in the totals."""
+    garden = Category.objects.create(name="Garden", slug="garden")
+    growing = Category.objects.create(name="Growing", slug="growing", parent=garden)
+    tools = Category.objects.create(name="Tools", slug="tools")
+    seeds = make_product(name="Seeds", sku="SDS", price=Decimal("5.00"), stock=50)
+    seeds.categories.set([garden, growing])  # in the parent and in its child
+    trowel = make_product(name="Trowel", sku="TRW", price=Decimal("12.00"), stock=50)
+    trowel.categories.set([growing, tools])  # in two trees
+    hose = make_product(name="Hose", sku="HSE", price=Decimal("30.00"), stock=50)
+    hose.categories.set([garden])
+    pay(place(cart_with((seeds, 3), (trowel, 2), (hose, 1))))
+    report = as_role("shop-manager").get(
+        "/api/orders/reports/shop.sales_by_category/"
+    ).data
+    rows = {row["category"]: row for row in report["rows"]}
+    assert (rows["Garden"]["sold"], rows["Garden"]["sales"]) == (6, "69.00")
+    assert rows["Garden"]["includes"] == "Growing"
+    assert (rows["Growing"]["sold"], rows["Growing"]["parent"]) == (5, "Garden")
+    assert (rows["Tools"]["sold"], rows["Tools"]["sales"]) == (2, "24.00")
+    # each sale once: 15 + 24 + 30, though the trowel is in two rows at the top
+    assert (report["totals"]["sold"], report["totals"]["sales"]) == (6, "69.00")
+    info = next(
+        row
+        for row in as_role("shop-manager").get("/api/orders/reports/").data
+        if row["key"] == "shop.sales_by_category"
+    )
+    assert "includes the sales of the categories in it" in info["describe"]
+
+
 def test_the_shop_reports_for_the_manager_only(make_product: MakeProduct) -> None:
     lamp = make_product(
         name="Lamp", sku="LMP", price=Decimal("20.00"), stock=10, available=10
@@ -314,6 +347,7 @@ def test_the_shop_reports_for_the_manager_only(make_product: MakeProduct) -> Non
         ("Lighting", 2, "40.00"),
         ("Lamps", 2, "40.00"),
     ]
+    assert [row["includes"] for row in rows] == ["Lamps", ""]
     stock = manager.get("/api/orders/reports/shop.stock/").data
     lamp_row = next(row for row in stock["rows"] if row["sku"] == "LMP")
     assert (

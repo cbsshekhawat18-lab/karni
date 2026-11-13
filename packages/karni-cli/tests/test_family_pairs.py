@@ -9,8 +9,8 @@ other, fails here and not in a customer's project.
 Run it with ``pytest -m recipes tests/test_family_pairs.py``. CI runs it nightly and on demand
 (the ``pairs`` job), not on every push: each pair is a full build.
 
-``PARTS`` grows with the family: the shop joins it after its branch is merged. The first test fails
-when a recipe that has connections is missing from it, so a new part cannot be forgotten.
+``PARTS`` grows with the family. The first test fails when a recipe that has connections is
+missing from it, so a new part cannot be forgotten.
 """
 
 from __future__ import annotations
@@ -26,8 +26,8 @@ from . import test_family_build
 from .test_family_build import _new, _spec
 from .test_family_matrix import _recipe_dirs, declared_connections
 
-#: The recipes that are parts of the family (they declare connections). The shop joins after the merge.
-PARTS = ("booking", "crm", "visits")
+#: The recipes that are parts of the family (they declare connections).
+PARTS = ("booking", "crm", "shop", "visits")
 PAIRS = list(itertools.combinations(PARTS, 2))
 
 family = test_family_build.family

@@ -145,3 +145,37 @@ def test_two_parts_together_then_a_third_added_and_removed(
     assert spec["app"]["recipes"] == ["booking", "crm"]
     assert "visits" not in spec["apps"] and "visits-staff" not in spec["roles"]
     assert not (root / ".karni/recipes/visits").exists()
+
+
+def test_the_shop_and_the_crm_together_then_booking_added(
+    family: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The shop is a part like any other: built with the CRM, then booking joins them."""
+    require_modules("karni-commerce", "karni-storage")
+    root = _new(family, monkeypatch, "family_shop", "shop", "crm")
+    spec = _spec(root)
+    assert spec["app"]["recipes"] == ["shop", "crm"]
+    assert spec["app"]["currency"] == "USD"
+    assert spec["apps"]["shop"]["route"] == "/shop" and spec["apps"]["crm"]["route"] == "/crm"
+    assert {"commerce", "payments", "storage"} <= set(spec["modules"])
+    assert spec["modules"]["payments"]["currency"] == "usd"  # follows app.currency
+    assert {"admin", "customer", "shop-manager", "shop-staff", "crm-manager"} <= set(spec["roles"])
+    assert spec["features"]["preferences"] is True and spec["features"]["timeline"] is True
+    family_pages = {"home", "cart", "checkout", "orders", "account", "signin", "settings"}
+    pages = {next(iter(entry)) for entry in spec["pages"]}
+    assert "shop.reports" in pages and not (family_pages - {"home"}) & pages
+    routes = (root / "frontend/src/routes.tsx").read_text(encoding="utf-8")
+    assert 'path: "/shop/categories"' in routes and 'path: "/crm/deals"' in routes
+    assert 'path: "/shop/catalogue/$slug"' in routes and 'path: "/cart"' in routes
+    parts_ts = (root / "frontend/src/karni/parts.ts").read_text(encoding="utf-8")
+    assert 'import { register as registerShop } from "../shop";' in parts_ts
+    settings = (root / "config/settings.py").read_text(encoding="utf-8")
+    assert 'KARNI_PREFERENCES_LOCKED = {"details": {"currency": "USD"}}' in settings
+    assert '"route": "/shop/reports"' in settings  # the menu reaches the shop's own pages
+
+    monkeypatch.chdir(root)
+    _green(_run("recipes", "add", "booking"))
+    spec = _spec(root)
+    assert spec["app"]["recipes"] == ["shop", "crm", "booking"]
+    assert spec["apps"]["bookings"]["route"] == "/bookings"
+    assert "bookings-staff" in spec["roles"] and "shop-manager" in spec["roles"]
