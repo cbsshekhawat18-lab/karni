@@ -161,6 +161,27 @@ apply codemods and list the manual steps. This file is the human summary.
   `payments.refund.succeeded`. Add `"karni.outbox"` to `INSTALLED_APPS` to use it: a
   project without it gains no tables. Every earlier name of `karni.events` is unchanged.
   New codes: E450 to E456 and W450. See [docs/family-events.md](docs/family-events.md).
+- **Added (experimental): several recipes in one project.** karni.yaml lists the parts in
+  `app.recipes`. `karni recipes add <name>` merges a recipe's karni.yaml into the project's
+  and runs `karni build`, which writes the recipe's own files by the stub rule, migrates and
+  seeds only its new tables; `karni recipes remove <name>` takes a part out, and `karni new
+  --recipe a --recipe b` starts with several. The merge keeps one currency
+  (`app.currency`, which a bare `money` field reads), mounts each part's pages under
+  `apps.<label>.route` (`/<label>`), adds up the family roles `admin` and `customer`, and
+  refuses before writing anything: an app label or recipe taken (`C442`), a role without
+  its `<prefix>-` or taken (`C443`), a route two apps share or a family page's (`C444`), a
+  module option two parts set differently (`C445`), a requirement the project cannot meet
+  (`C446`), a recipe's `conflicts` (`C447`). recipe.toml takes `version`, `requires`
+  (`people>=1`, `events>=1`, a module: each is installed with the part, and `admin` gets
+  the explicit people grants) and `conflicts`. Each part's fragment and the sha256 of each
+  file it wrote are kept in `.karni/recipes/<name>/`, and `karni recipes upgrade` replaces
+  the part's files the project did not change and reports the others. The build writes
+  `frontend/src/karni/parts.ts`, which calls each part's `register()`. The booking and CRM
+  recipes follow the family rules (`bookings-staff`, `crm-manager`, `crm-rep`, routes
+  `/bookings` and `/crm`). See [several recipes in one project](docs/family.md).
+- **Deprecated: `app.recipe` in karni.yaml.** Write `app.recipes: [<name>]`. The old key is
+  read as a list of one, with a `KarniDeprecationWarning`, until 1.0, and `karni upgrade`
+  rewrites it. See the [migration note](docs/migrations/0.5.md#a-project-lists-its-recipes-in-apprecipes).
 
 ## 0.5.1 (2026-11-12)
 

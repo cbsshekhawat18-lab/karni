@@ -57,7 +57,9 @@ from karni_cli.generators.pysource import pystr
 from karni_cli.project import CliError
 from karni_cli.spec import schema
 from karni_cli.spec.catalog import (
+    CONTRACT_ACTIONS,
     CONTRACT_MODELS,
+    CONTRACT_SETTINGS,
     FEATURES,
     MODULES,
     OTHER_MODELS,
@@ -1510,7 +1512,14 @@ class _Meaning:
                     key=True,
                 )
                 return
-            if action and action != "*" and "*" not in action and action not in STANDARD_ACTIONS:
+            explicit_actions = CONTRACT_ACTIONS.get(app, ())
+            if (
+                action
+                and action != "*"
+                and "*" not in action
+                and action not in STANDARD_ACTIONS
+                and action not in explicit_actions
+            ):
                 self.add(
                     "C218",
                     where,
@@ -1657,6 +1666,17 @@ class _Meaning:
             return None
         return current
 
+    def contract_on(self, label: str) -> bool:
+        """Whether the core contract ``label`` is on: its feature, or a relation to its models."""
+        if label in self.spec.apps:
+            return False
+        if getattr(self.spec.features, label, False):
+            return True
+        from karni_cli.builder.render import contract_settings
+
+        setting = CONTRACT_SETTINGS.get(label)
+        return setting is not None and setting in contract_settings(self.spec)
+
     def matching(self, app: str, model: str) -> list[_Entity | None]:
         found: list[_Entity | None] = [
             entity
@@ -1664,6 +1684,13 @@ class _Meaning:
             if fnmatch.fnmatchcase(entity.app, app)
             and fnmatch.fnmatchcase(entity.name.lower(), model.lower())
         ]
+        for label, models in CONTRACT_MODELS.items():
+            if (
+                self.contract_on(label)
+                and fnmatch.fnmatchcase(label, app)
+                and any(fnmatch.fnmatchcase(m.lower(), model.lower()) for m in models)
+            ):
+                found.append(None)
         for name in self.modules:
             known = MODULES.get(name)
             if (
@@ -1826,7 +1853,38 @@ class _Meaning:
             return f"apps {apps} all define {name} (write app.{name})"
         return f"no app of the spec has an entity {name}"
 
+    def app_route(self, label: str) -> str:
+        """The base an app's entity pages are mounted under (``""``: none)."""
+        app = self.spec.apps.get(label)
+        return app.route if app is not None and app.route else ""
+
+    def app_routes(self) -> None:
+        """``apps.<label>.route`` (experimental): each app's own, and never a family page's."""
+        from karni_cli.recipes.compose import FAMILY_ROUTES
+
+        taken: dict[str, str] = {}
+        for label, app in self.spec.apps.items():
+            if not app.route:
+                continue
+            where: Loc = ("apps", label, "route")
+            if app.route in FAMILY_ROUTES:
+                self.add(
+                    "C444",
+                    where,
+                    f"apps.{label}.route is {app.route}, the route of a family page.",
+                    f"Give the app a base of its own, e.g. /{label}.",
+                )
+            elif app.route in taken:
+                self.add(
+                    "C444",
+                    where,
+                    f"apps.{label}.route is {app.route}, the route of the app {taken[app.route]}.",
+                    "Give each app a route of its own.",
+                )
+            taken.setdefault(app.route, label)
+
     def pages(self) -> None:
+        self.app_routes()
         routes: dict[str, int] = {}
         seen: set[str] = set()
         for index, item in enumerate(self.spec.pages):
@@ -1893,7 +1951,7 @@ class _Meaning:
                 )
                 if detail_at is not None:
                     self.related(entity, schema.page_related(written), (*where, detail_at))
-                base = f"/{default_route(entity.name)}"
+                base = f"{self.app_route(entity.app)}/{default_route(entity.name)}"
                 paths = [
                     *([base] if "list" in kinds else []),
                     *([f"{base}/$id"] if "detail" in kinds else []),
@@ -2221,8 +2279,34 @@ def validate_text(text: str, *, databases: Collection[str] | None = None) -> Rep
             spec = _without_unknown_keys(exc, data)
     if spec is not None and not any(issue.code == "C214" for issue in check.issues):
         _Meaning(check, spec, databases).run()
+    app = data.get("app") if isinstance(data, dict) else None
+    if isinstance(app, dict) and app.get("recipe") is not None:
+        _warn_recipe_key()
     issues = sorted(check.issues, key=lambda issue: (issue.line or 0, issue.code))
     return Report(spec, issues, source)
+
+
+def _warn_recipe_key() -> None:
+    """``app.recipe`` is deprecated (0.5.2): ``app.recipes``, removed in 1.0."""
+    import warnings
+
+    try:
+        from karni.deprecation import KarniDeprecationWarning, deprecation_message
+    except ImportError:  # karni-cli without Karni installed
+        category: type[Warning] = DeprecationWarning
+        message = (
+            "app.recipe in karni.yaml is deprecated; use app.recipes: [<name>] instead. It will "
+            "be removed in Karni 1.0. karni upgrade rewrites it."
+        )
+    else:
+        category = KarniDeprecationWarning
+        message = deprecation_message(
+            "app.recipe in karni.yaml",
+            "app.recipes: [<name>]",
+            removed_in="1.0",
+            doc_anchor="migrations/0.5.md#a-project-lists-its-recipes-in-apprecipes",
+        )
+    warnings.warn(message, category, stacklevel=3)
 
 
 def iter_codes() -> Iterator[str]:
@@ -2236,6 +2320,7 @@ def iter_codes() -> Iterator[str]:
     yield from ("C680", "C681")
     yield "C324"
     yield "C460"
+    yield "C444"  # apps.<label>.route (experimental)
     yield "C620"
     yield from ("C640", "C641", "C642")
     yield from ("C700", "C701", "C702", "C703")

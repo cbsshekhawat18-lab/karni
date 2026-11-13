@@ -53,6 +53,15 @@ class _RecipeOut(_Out):
     files: list[str] = Field(
         description="Its own domain code, seeds and tests, at the paths they take in the project."
     )
+    version: str | None = Field(
+        description="Experimental. Its recipe.toml version. null when it has none."
+    )
+    requires: list[str] = Field(
+        description="Experimental. The core contracts and modules it needs, with version ranges."
+    )
+    conflicts: list[str] = Field(
+        description="Experimental. The recipes and modules it cannot share a project with."
+    )
     spec: str | None = Field(description="Its karni.yaml (karni recipes show). null in a list.")
     score: int | None = Field(
         description="With --match: 2 for each word of the request a use_when phrase has, 1 for "

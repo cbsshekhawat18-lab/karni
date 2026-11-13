@@ -163,6 +163,10 @@ HISTORY_MARKER = "history_provider"
 #: job runs one per recipe).
 RECIPES_MARKER = "recipes"
 
+#: Recipes only the family tests use (tests/test_family_build.py): their files are a project's
+#: code, collected by that project's own test run, never by this suite.
+collect_ignore_glob = ["recipes/*"]
+
 
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(

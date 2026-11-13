@@ -42,7 +42,7 @@ def _code(response: Any, field: str) -> str:
 
 def test_a_booking_keeps_its_slot(client_as: Any) -> None:
     """A PATCH of the slot was 200, left both places wrong, then cancel was a 500."""
-    client = client_as("member")
+    client = client_as("customer")
     first, second = _slot(), _slot()
     booking = _book(client, first).json()
     moved = client.patch(f"/api/bookings/{booking['id']}/", {"slot": str(second.pk)})
@@ -55,11 +55,11 @@ def test_a_booking_keeps_its_slot(client_as: Any) -> None:
 
 
 def test_a_member_books_only_for_themselves(client_as: Any) -> None:
-    other = user_with_roles("member")
-    client = client_as("member")
+    other = user_with_roles("customer")
+    client = client_as("customer")
     refused = _book(client, _slot(), member=str(other.pk))
     assert refused.status_code == 403 and refused.json()["detail"].startswith("E135: ")
-    staff = client_as("staff").post(
+    staff = client_as("bookings-staff").post(
         "/api/bookings/",
         {"slot": str(_slot().pk), "member": str(other.pk)},
         format="json",
@@ -69,7 +69,7 @@ def test_a_member_books_only_for_themselves(client_as: Any) -> None:
 
 
 def test_a_member_books_a_slot_once(client_as: Any) -> None:
-    client = client_as("member")
+    client = client_as("customer")
     slot = _slot()
     first = _book(client, slot)
     again = _book(client, slot)
@@ -84,14 +84,14 @@ def test_a_started_slot_cannot_be_booked(client_as: Any) -> None:
         slot = create(
             Slot, starts_at=start, ends_at=start + dt.timedelta(hours=1), capacity=5
         )
-    refused = _book(client_as("member"), slot)
+    refused = _book(client_as("customer"), slot)
     assert refused.status_code == 400 and _code(refused, "slot") == "E993"
 
 
 def test_pay_twice_opens_one_payment_and_a_cancelled_booking_is_not_paid(
     client_as: Any,
 ) -> None:
-    client = client_as("member")
+    client = client_as("customer")
     booking = _book(client, _slot()).json()
     first = client.post(f"/api/bookings/{booking['id']}/pay/")
     second = client.post(f"/api/bookings/{booking['id']}/pay/")
@@ -106,7 +106,7 @@ def test_pay_twice_opens_one_payment_and_a_cancelled_booking_is_not_paid(
 def test_a_paid_booking_is_not_paid_again_and_its_cancel_refunds(
     client_as: Any,
 ) -> None:
-    client = client_as("member")
+    client = client_as("customer")
     booking = _book(client, _slot()).json()
     paid = client.post(f"/api/bookings/{booking['id']}/pay/")
     payment = Payment.objects.get(pk=paid.json()["payment"])
@@ -122,18 +122,19 @@ def test_a_paid_booking_is_not_paid_again_and_its_cancel_refunds(
 
 
 def test_staff_confirm_and_delete_members_cancel(client_as: Any) -> None:
-    member = client_as("member")
+    member = client_as("customer")
     booking = _book(member, _slot()).json()
     assert member.post(f"/api/bookings/{booking['id']}/confirm/").status_code == 403
     assert member.delete(f"/api/bookings/{booking['id']}/").status_code == 403
-    confirmed = client_as("staff").post(f"/api/bookings/{booking['id']}/confirm/")
+    staff = client_as("bookings-staff")
+    confirmed = staff.post(f"/api/bookings/{booking['id']}/confirm/")
     assert confirmed.status_code == 200 and confirmed.json()["status"] == "confirmed"
 
 
 def test_a_slot_with_live_bookings_is_not_deleted(client_as: Any) -> None:
     slot = _slot()
-    booking = _book(client_as("member"), slot).json()
-    staff = client_as("staff")
+    booking = _book(client_as("customer"), slot).json()
+    staff = client_as("bookings-staff")
     refused = staff.delete(f"/api/slots/{slot.pk}/")
     assert refused.status_code == 409 and refused.json()["code"] == "E995"
     staff.post(f"/api/bookings/{booking['id']}/cancel/")
@@ -141,7 +142,7 @@ def test_a_slot_with_live_bookings_is_not_deleted(client_as: Any) -> None:
 
 
 def test_prices_and_capacities_keep_their_bounds(client_as: Any) -> None:
-    staff = client_as("staff")
+    staff = client_as("bookings-staff")
     price = staff.post(
         "/api/resources/", {"name": "Room", "price": "-5"}, format="json"
     )
@@ -163,10 +164,10 @@ def test_prices_and_capacities_keep_their_bounds(client_as: Any) -> None:
 def test_the_member_hears_of_a_confirmed_and_a_cancelled_booking(
     client_as: Any, mailoutbox: list[Any], django_capture_on_commit_callbacks: Any
 ) -> None:
-    member = client_as("member")
+    member = client_as("customer")
     booking = _book(member, _slot()).json()
     with django_capture_on_commit_callbacks(execute=True):
-        client_as("staff").post(f"/api/bookings/{booking['id']}/confirm/")
+        client_as("bookings-staff").post(f"/api/bookings/{booking['id']}/confirm/")
     with django_capture_on_commit_callbacks(execute=True):
         member.post(f"/api/bookings/{booking['id']}/cancel/")
     subjects = [message.subject for message in mailoutbox]

@@ -3,14 +3,22 @@ version: 1
 app:
   name: Booking
   kind: app
-  recipe: booking
+  currency: USD
 modules:
   payments: {provider: stripe, currency: usd}
 features:
   email_code_login: true
 roles:
-  staff: {name: Staff, system: true, grants: {"*": all}}
-  member: {name: Member, default: true, grants: {bookings.booking: own}}
+  admin: {name: Admin, description: "Everything, users and roles too.", system: true, grants: {"*": all}}
+  bookings-staff:
+    name: Staff
+    description: Runs the resources, the slots and every booking.
+    grants: {"bookings.*": all}
+  customer:
+    name: Member
+    description: Books slots and pays for them.
+    default: true
+    grants: {bookings.booking: own}
 apps:
   bookings:
     entities:
@@ -19,13 +27,13 @@ apps:
           name: "str:120"
           slug: "slug:name"
           description: "text?"
-          price: "money:USD"
+          price: money
         key: slug
         search: [name]
         order: name
         bounds: {price: {min: 0}}
         delete: {blocked_by: [Slot]}
-        access: {read: public, write: "role:staff"}
+        access: {read: public, write: ["role:bookings-staff", "role:admin"]}
       Slot:
         fields:
           resource: fk:Resource
@@ -36,7 +44,7 @@ apps:
         order: starts_at
         bounds: {capacity: {min: 1}, starts_at: {min: $now}}
         delete: {blocked_by: {Booking: {status: {not: cancelled}}}}
-        access: {read: public, write: "role:staff"}
+        access: {read: public, write: ["role:bookings-staff", "role:admin"]}
       Booking:
         fields:
           slot: fk:Slot
@@ -53,15 +61,17 @@ apps:
         moves: {confirmed: {notify: member}, cancelled: {notify: member}}
         actions:
           pay: {from: pending, by: "owned:member"}
-          cancel: {from: [pending, confirmed], to: cancelled, by: ["owned:member", "role:staff"]}
-          confirm: {from: pending, to: confirmed, by: "role:staff"}
+          cancel:
+            from: [pending, confirmed]
+            to: cancelled
+            by: ["owned:member", "role:bookings-staff", "role:admin"]
+          confirm: {from: pending, to: confirmed, by: ["role:bookings-staff", "role:admin"]}
         access:
-          read: ["owned:member", "role:staff"]
-          write: ["owned:member", "role:staff"]
-          delete: "role:staff"
-          assign: "role:staff"
+          read: ["owned:member", "role:bookings-staff", "role:admin"]
+          write: ["owned:member", "role:bookings-staff", "role:admin"]
+          delete: ["role:bookings-staff", "role:admin"]
+          assign: ["role:bookings-staff", "role:admin"]
 pages:
-  - home: dashboard
   - Resource: [list, detail, form]
   - Slot: [list, form]
   - Booking: [list, detail]

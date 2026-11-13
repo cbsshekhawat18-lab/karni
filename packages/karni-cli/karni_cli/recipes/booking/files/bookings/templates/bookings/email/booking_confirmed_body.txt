@@ -3,5 +3,5 @@ Hello,
 Your booking of {{ row.slot.resource }} is confirmed:
 {{ row.slot.starts_at|date:"l j F Y" }} at {{ row.slot.starts_at|date:"H:i" }}.
 {% if frontend %}
-See it, or cancel it: {{ frontend }}/bookings/{{ row.pk }}
+See it, or cancel it: {{ frontend }}/bookings/bookings/{{ row.pk }}
 {% endif %}

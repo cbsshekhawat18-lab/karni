@@ -3,17 +3,17 @@ version: 1
 app:
   name: CRM
   kind: app
-  recipe: crm
+  currency: USD
 features:
   two_factor: true
 roles:
   admin: {name: Admin, description: "Everything, users and roles too.", system: true, grants: {"*": all}}
-  manager:
+  crm-manager:
     name: Manager
     description: Sees and changes every deal and activity.
     default: false
     grants: {"crm.*": all}
-  sales:
+  crm-rep:
     name: Sales
     description: Works their own deals and activities, and every company and contact.
     default: false
@@ -54,7 +54,7 @@ apps:
           company: fk:Company
           contact: "fk:Contact?"
           title: "str:200"
-          value: "money:USD"
+          value: money
           salesperson: fk:User
           stage: "state:lead>qualified|lead>lost|qualified>proposal|qualified>lost|proposal>won|proposal>lost"
           expected_close: "date?"
@@ -74,8 +74,8 @@ apps:
         access:
           read: granted
           write: granted
-          delete: ["role:manager", "role:admin"]
-          assign: ["role:manager", "role:admin"]
+          delete: ["role:crm-manager", "role:admin"]
+          assign: ["role:crm-manager", "role:admin"]
       Activity:
         fields:
           deal: fk:Deal
@@ -88,9 +88,8 @@ apps:
         owner: salesperson
         order: due_at
         moves: {done: {stamps: [done_at]}}
-        access: {read: granted, write: granted, assign: ["role:manager", "role:admin"]}
+        access: {read: granted, write: granted, assign: ["role:crm-manager", "role:admin"]}
 pages:
-  - home: dashboard
   - Company: [list, detail, form]
   - Contact: [list, detail, form]
   - Deal: [list, detail, form]

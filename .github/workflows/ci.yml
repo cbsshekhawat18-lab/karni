@@ -433,6 +433,37 @@ jobs:
         run: python -m pytest -q -p no:cacheprovider -m recipes -k ${{ matrix.recipe }} tests/test_recipe_builds.py
 
   # ---------------------------------------------------------------------------
+  # The family test project (docs/family.md): parts built alone and together.
+  # One part alone (a test recipe that requires the people and events
+  # contracts), then booking and crm together, a third part added with
+  # `karni recipes add` and taken out with `karni recipes remove`. Every build
+  # runs the migrations, the seed, every part's tests and `karni check`
+  # (tests/test_family_build.py).
+  # ---------------------------------------------------------------------------
+  family:
+    name: Family (recipes alone and together)
+    runs-on: ubuntu-latest
+    env:
+      PYTHON: python
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      KARNI_REQUIRE_MODULES: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/karni/pyproject.toml
+            packages/karni-cli/pyproject.toml
+            modules/karni-payments/pyproject.toml
+      - name: Install Karni and its modules from this checkout (editable)
+        run: make install-py
+      - name: One part alone, two parts together, a part added and removed
+        working-directory: packages/karni-cli
+        run: python -m pytest -q -p no:cacheprovider -m recipes tests/test_family_build.py
+
+  # ---------------------------------------------------------------------------
   # The documentation site (Material for MkDocs): built strictly on every
   # push and pull request, deployed to GitHub Pages from main.
   # ---------------------------------------------------------------------------

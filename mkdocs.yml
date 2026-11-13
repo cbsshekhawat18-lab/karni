@@ -119,6 +119,7 @@ nav:
       - "App spec (karni.yaml)": app-spec.md
       - Recipes:
           - All recipes: recipes/index.md
+          - Several recipes in one project: family.md
           - Online shop: recipes/shop.md
           - Booking: recipes/booking.md
           - CRM: recipes/crm.md

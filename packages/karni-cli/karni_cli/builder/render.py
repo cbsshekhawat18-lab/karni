@@ -55,7 +55,7 @@ from karni_cli.generators.fields import (
     render_model_body,
 )
 from karni_cli.generators.introspect import ModelInfo
-from karni_cli.generators.naming import default_route, verbose_plural
+from karni_cli.generators.naming import default_route, pascal, verbose_plural
 from karni_cli.generators.pysource import (
     Import,
     call,
@@ -67,6 +67,8 @@ from karni_cli.generators.pysource import (
     tuple_literal,
 )
 from karni_cli.project import CliError
+from karni_cli.settings_edit import MARKER as APPS_MARKER
+from karni_cli.settings_edit import add_entry
 from karni_cli.spec import catalog, navigation, schema
 from karni_cli.spec.normal import related_tab
 
@@ -849,7 +851,11 @@ def contract_settings(spec: schema.Spec) -> list[str]:
     ``fk:people.Person`` (an app the spec does not define itself) needs the
     people contract, so the build writes ``KARNI_PEOPLE = True``.
     """
-    used: list[str] = []
+    used: list[str] = [
+        setting
+        for label, setting in catalog.CONTRACT_SETTINGS.items()
+        if getattr(spec.features, label, False) and label not in spec.apps
+    ]
     for app in spec.apps.values():
         for entity in app.entities.values():
             for field_spec in _specs(entity):
@@ -963,6 +969,7 @@ def _pages(inputs: Inputs) -> list[_Page]:
             label = name if "." in name else by_name.get(name, name)
             _app, entity_name, entity = entities[label]
             route = default_route(entity_name)
+            base = inputs.spec.apps[_app].route if _app in inputs.spec.apps else None
             names = layout.page_names(entity_name)
             expand = [
                 s.name
@@ -976,7 +983,7 @@ def _pages(inputs: Inputs) -> list[_Page]:
                         names[kind],
                         resource=route,
                         kind=kind,
-                        path=None,
+                        path=f"{base}/{route}" if base else None,
                         expand=expand if kind == "detail" else None,
                         related=(
                             [related_tab(ref, label, apps) for ref in schema.page_related(written)]
@@ -1069,6 +1076,42 @@ def render(ws: Workspace, inputs: Inputs) -> Output:
     return out
 
 
+#: Experimental. The file that registers each part's frontend (``app.recipes``), Karni's.
+PARTS_FILE: Final = "frontend/src/karni/parts.ts"
+#: The line routes.tsx's import block gets when the project holds parts.
+PARTS_IMPORT: Final = 'import "./karni/parts";'
+
+
+def parts_text(ws: Workspace, spec: schema.Spec) -> str:
+    """Experimental. ``frontend/src/karni/parts.ts``: each part's ``register()``, in order.
+
+    A part with a frontend has ``frontend/src/<app label>/index.ts`` exporting
+    ``register()``. The file imports and calls each one, so a part adds its
+    screens, sections and routes without a list anyone edits by hand.
+    """
+    labels = [label for label in spec.apps if ws.read(f"frontend/src/{label}/index.ts") is not None]
+    names = {label: f"register{pascal(label)}" for label in labels}
+    lines = [
+        f"// {HEADER}",
+        "// The parts this project holds (app.recipes). Each part with a frontend has",
+        "// frontend/src/<app label>/index.ts, whose register() runs here at startup.",
+        *(f'import {{ register as {names[label]} }} from "../{label}";' for label in labels),
+        "",
+        "export const PARTS: readonly string[] = ["
+        + ", ".join(pystr(name) for name in spec.app.recipes)
+        + "];",
+    ]
+    if labels:
+        lines += ["", *(f"{names[label]}();" for label in labels)]
+    return "\n".join(lines) + "\n"
+
+
+def render_parts(ws: Workspace, out: Output, inputs: Inputs) -> None:
+    """Experimental. Write ``parts.ts`` once the parts' own files are in ``ws``."""
+    if inputs.spec.app.recipes and ws.read(page_gen.ROUTES) is not None:
+        _owned(out, inputs, PARTS_FILE, parts_text(ws, inputs.spec))
+
+
 def _owned(out: Output, inputs: Inputs, rel: str, text: str) -> None:
     if rel in inputs.adopted:
         return
@@ -1086,7 +1129,9 @@ def _render_app(
     removed: set[str],
 ) -> None:
     spec = inputs.spec
-    if names:
+    # An app whose last entity goes keeps its (empty) Karni modules: its own files import them
+    # until the project deletes the app.
+    if names or removed:
         _owned(
             out, inputs, f"{app}/karni/__init__.py", docstring(HEADER, "", ws.line_length) + "\n"
         )
@@ -1101,7 +1146,7 @@ def _render_app(
         for ref in (name, label):
             if ref in spec.seed:
                 counts[name] = spec.seed[ref]
-    if counts:
+    if counts or (removed and not names and ws.exists(f"{app}/seeds.py")):
         _owned(out, inputs, layout.seeds_file(app), _seeds_file(ws, inputs, app, counts))
     models_wanted: list[tuple[str, str, list[str]]] = [(name, name, []) for name in names]
     access_code = [n for n in names if spec.apps[app].entities[n].access == "code"]
@@ -1195,7 +1240,24 @@ def _render_settings(ws: Workspace, out: Output, inputs: Inputs) -> None:
     if inputs.spec.features.social_login:
         # At the top with the other imports: inside the block it is an E402 in the project's lint.
         updated = ensure_imports(ws, SETTINGS, updated, [Import("karni.conf", "env")])
+    for app in contract_apps(inputs.spec):
+        # Installed apps go in the project's list (karni.conf reads the block before it builds
+        # INSTALLED_APPS), as karni add wires a module's.
+        with_app = add_entry(
+            updated, app, setting="INSTALLED_APPS", marker=APPS_MARKER, filename="settings.py"
+        )
+        updated = with_app if with_app is not None else updated
     ws.write(SETTINGS, updated)
+
+
+#: Experimental. The app each core contract switched on by a feature adds to INSTALLED_APPS,
+#: when no setting installs it (``features.events``: the family events outbox).
+CONTRACT_APPS: Final[dict[str, str]] = {"events": "karni.outbox"}
+
+
+def contract_apps(spec: schema.Spec) -> list[str]:
+    """Experimental. The apps of the contracts ``features`` switches on (``karni.outbox``)."""
+    return [app for name, app in CONTRACT_APPS.items() if getattr(spec.features, name, False)]
 
 
 def _render_pages(ws: Workspace, out: Output, inputs: Inputs) -> None:
@@ -1234,6 +1296,8 @@ def _render_pages(ws: Workspace, out: Output, inputs: Inputs) -> None:
         _owned(out, inputs, layout.page_file(page.spec.name), page_text(page.spec, routes))
         imports.append(f'import {page.spec.component} from "./pages/karni/{page.spec.name}";')
         entries += [page_gen.route_line(page.spec, path).strip() for path in page.spec.paths]
+    if inputs.spec.app.recipes:
+        imports.append(PARTS_IMPORT)
     blocks = {
         layout.ROUTES_BLOCKS[0]: "\n".join(imports),
         layout.ROUTES_BLOCKS[1]: "\n".join(entries),

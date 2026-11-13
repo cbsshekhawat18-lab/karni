@@ -20,6 +20,7 @@ plain Pydantic, so a tool can build a :class:`Spec` in code and validate it.
 
 from __future__ import annotations
 
+import re
 from typing import Annotated, Any, Final, Literal
 
 from pydantic import (
@@ -30,6 +31,7 @@ from pydantic import (
     Field,
     Tag,
     WithJsonSchema,
+    model_validator,
 )
 
 from karni_cli.generators.fields import TYPES
@@ -83,6 +85,8 @@ API_VERSION: Final = r"[a-z0-9][a-z0-9-]{0,15}"
 FIELD_NAME: Final = r"[a-z][a-z0-9_]*"
 ROLE_SLUG: Final = r"[A-Za-z0-9][A-Za-z0-9_.-]*"
 PAGE_NAME: Final = r"[a-z][a-z0-9-]*"
+#: Experimental. An app's ``route``: a base path of kebab-case segments.
+ROUTE: Final = r"^/[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)*$"
 #: Experimental. The metrics ``aggregate.metrics`` takes: ``karni.aggregation.METRICS``.
 AGGREGATE_METRICS: Final = ("count", "sum", "avg", "min", "max", "distinct_count")
 #: Experimental. The date buckets a group takes after a colon: ``karni.aggregation.BUCKETS``.
@@ -128,7 +132,26 @@ class AppInfo(_Node):
         "app", description="The project's kind, as karni new --kind: site, app or site+app."
     )
     recipe: str | None = Field(
-        None, description="The recipe the spec started from. For the record only."
+        None,
+        description=(
+            "Deprecated: write recipes: [<name>]. Read as a list of one until Karni 1.0, with a "
+            "deprecation warning."
+        ),
+    )
+    recipes: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Experimental. The recipes this project holds, in the order they were added. "
+            "karni recipes add and remove keep it, and karni build writes a new one's files."
+        ),
+    )
+    currency: str | None = Field(
+        default=None,
+        description=(
+            "Experimental. The project's currency, an ISO 4217 code (EUR). A money field without "
+            "a currency of its own is in it, and the payments module's currency follows it."
+        ),
+        pattern="^[A-Z]{3}$",
     )
     api_version: str | None = Field(
         None,
@@ -195,6 +218,17 @@ class Features(_Node):
         ),
     )
     terms: Terms | None = Field(None, description="KARNI_TERMS: the terms acceptance gate.")
+    people: bool = Field(
+        False,
+        description=(
+            "Experimental. KARNI_PEOPLE: the people contract (karni.people). A relation to "
+            "people.Person switches it on too."
+        ),
+    )
+    events: bool = Field(
+        False,
+        description="Experimental. Family events: karni.outbox in INSTALLED_APPS.",
+    )
     user_grants: bool = Field(
         False, description="KARNI_USER_GRANTS: per-user grants next to the role grants."
     )
@@ -678,6 +712,15 @@ class Entity(_Node):
 class App(_Node):
     """Experimental. One Django app of ``apps:`` and its entities."""
 
+    route: str | None = Field(
+        default=None,
+        description=(
+            "Experimental. The base path its entity pages are mounted under (/bookings: the "
+            "resources list is /bookings/resources). Default: none, each page at /<route>. "
+            "karni recipes add sets /<label> for a recipe's app."
+        ),
+        pattern=ROUTE,
+    )
     entities: dict[str, Entity] = Field(
         default_factory=dict,
         description="Entity name (PascalCase) -> entity.",
@@ -855,6 +898,39 @@ class Spec(_Node):
         description="Entity -> demo rows per karni seed run (a Seeder's Meta.count).",
         json_schema_extra=_names(ENTITY_NAME),
     )
+
+    @model_validator(mode="after")
+    def _currency(self) -> Spec:
+        return _project_currency(self)
+
+
+_BARE_MONEY: Final = re.compile(r"^money(\??)$")
+
+
+def _in_currency(token: str, currency: str) -> str:
+    """``money`` (and ``money?``) as ``money:<currency>``; any other token as written."""
+    found = _BARE_MONEY.match(token)
+    return f"money:{currency}{found.group(1)}" if found else token
+
+
+def _project_currency(spec: Spec) -> Spec:
+    """Experimental. A money field without a currency reads ``app.currency`` when it is set.
+
+    The old ``app.recipe`` is read as ``app.recipes`` of one.
+    """
+    if spec.app.recipe and not spec.app.recipes:
+        spec.app.recipes = [spec.app.recipe]
+    currency = spec.app.currency
+    if not currency:
+        return spec
+    for app in spec.apps.values():
+        for entity in app.entities.values():
+            for name, value in list(entity.fields.items()):
+                if isinstance(value, str):
+                    entity.fields[name] = _in_currency(value, currency)
+                else:
+                    value.type = _in_currency(value.type, currency)
+    return spec
 
 
 def _tidy(node: Any, *, names: bool = False) -> Any:

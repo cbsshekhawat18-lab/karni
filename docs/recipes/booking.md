@@ -22,7 +22,7 @@ The app `bookings`:
 
 | Entity | Fields | Owner | Who reads, who writes |
 |---|---|---|---|
-| Resource | name, slug (the import key), description, price (`money:USD`) | | anyone reads, staff write |
+| Resource | name, slug (the import key), description, price (`money`, in `app.currency`) | | anyone reads, staff write |
 | Slot | resource, starts_at, ends_at, capacity, remaining (`capacity:capacity`) | | anyone reads, staff write |
 | Booking | slot, member, status (`state`), note, payment | member | the member and staff read and write, staff delete and book for a member |
 
@@ -31,8 +31,10 @@ at `capacity` and the database never lets it drop below zero. A booking's
 status moves `pending > confirmed`, `pending > cancelled` and
 `confirmed > cancelled`, each move in its change history.
 
-Roles: `staff` (a system role, everything) and `member`, the role every
-account that signs up gets, with an `own` grant on bookings.
+Roles: `admin` (a system role, everything), `bookings-staff` (every
+resource, slot and booking) and `customer`, named Member, the role every
+account that signs up gets, with an `own` grant on bookings. Staff rights in
+`access` name `role:bookings-staff` and `role:admin`.
 
 ## Rules
 
@@ -52,11 +54,13 @@ Declared in `karni.yaml` ([rules](../rules.md)), so a rebuild keeps them:
 
 ## Modules and settings
 
-- `payments` (karni-payments) with `provider: stripe` and `currency: usd`.
+- `payments` (karni-payments) with `provider: stripe`. Its currency follows
+  `app.currency` (`USD`). recipe.toml lists it under `requires`.
 - `email_code_login`: members sign in with a code sent by email.
 
-Pages: the staff dashboard, resources (list, detail, form), slots (list,
-form) and bookings (list, detail). Demo data: 4 resources, 30 slots and 60
+Pages: the staff dashboard, and under the app's route `/bookings`:
+resources (list, detail, form), slots (list, form) and bookings (list,
+detail). Demo data: 4 resources, 30 slots and 60
 bookings.
 
 ## Domain code
@@ -87,6 +91,6 @@ bookings.
 | what a resource is, and its fields | rename the entity with `was:` (`Room: {was: Resource, ...}`), and its fields under `fields` |
 | the booking states | `apps.bookings.entities.Booking.fields.status`, for example `"state:requested>confirmed\|requested>declined\|confirmed>cancelled"` (keep `cancelled`: the domain code gives the place back on it) |
 | whether a booking is paid | leave `payments` out of `modules`, remove the `payment` field, and delete the `pay` action and the payment listener |
-| the payment provider and the currency | `modules.payments: {provider: razorpay, currency: inr}`, and `money:INR` on the price |
+| the payment provider and the currency | `modules.payments: {provider: razorpay}` and `app.currency: INR` |
 
 Then run `karni build`.

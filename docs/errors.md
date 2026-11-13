@@ -5317,7 +5317,87 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The first karni build after karni new --recipe writes the recipe's own files (its domain code, seeds and tests) over the stubs it writes itself. It never writes over anything else: a file that holds code of the project's stops the build, and nothing is written.
 
-**Fix.** Move your code out of the way (rename the file), run karni build again, then put your code back into the recipe's file. To build without the recipe's files, delete "recipe" from .karni/build.json.
+**Fix.** Move your code out of the way (rename the file), run karni build again, then put your code back into the recipe's file. To build without the recipe's files, delete it from "recipes" in .karni/build.json.
+
+<a id="c442"></a>
+
+### C442: A recipe's app label, or the recipe itself, is in the project already
+
+*karni command* · from `karni recipes add and karni new --recipe a --recipe b (karni_cli.recipes.compose)`
+
+**Why Karni objects.** A part is one Django app, so its app label must be new to the project, and a recipe is added once. The merge stops before anything is written.
+
+**Fix.** Rename the project's app (apps.&lt;new label>, with was: on each entity), or remove the part that brought it (karni recipes remove &lt;name>). For a newer version of a part, run karni recipes upgrade &lt;name>.
+
+<a id="c443"></a>
+
+### C443: A recipe's role does not follow the family rules
+
+*karni command* · from `karni recipes add and karni new --recipe a --recipe b (karni_cli.recipes.compose)`
+
+**Why Karni objects.** admin and customer are the family roles every part shares. Every other role of a part must be new to the project, and once the project holds another part it is named &lt;prefix>-&lt;role> (its app label first: bookings-staff), holds no "*" (only admin does) and is not a default role (customer is). Two parts with a staff role would otherwise give one part's staff the other part's rows.
+
+**Fix.** Rename the role in the recipe's karni.yaml (and every role:&lt;slug> and every test that signs in with it), move a default role's grants to customer, or grant the role its own app's patterns instead of "*".
+
+<a id="c444"></a>
+
+### C444: A route two apps want, or a family page's
+
+*karni command* · from `karni spec validate, karni recipes add (karni_cli.spec.validate, karni_cli.recipes.compose)`
+
+**Why Karni objects.** Each app's pages live under its own apps.&lt;label>.route, and the family pages (home at /, signin, account, search, inbox, settings, people, cart, checkout, orders) belong to Karni and its contracts, never to a part. A part that lists home when the project has one, or a page another part lists, would take a route twice.
+
+**Fix.** Give the app a route of its own (apps.&lt;label>.route: /&lt;label>), and drop the family page from the recipe's pages.
+
+<a id="c445"></a>
+
+### C445: Two recipes set a module option differently
+
+*karni command* · from `karni recipes add and karni new --recipe a --recipe b (karni_cli.recipes.compose)`
+
+**Why Karni objects.** Each part's module options are merged into one modules: section. A value the project wrote itself wins. Two parts that ask for different values of an option the project did not write leave karni-cli nothing to choose by.
+
+**Fix.** Write the value you want under modules.&lt;module>.&lt;option> in karni.yaml, then add the recipe again.
+
+<a id="c446"></a>
+
+### C446: A recipe requires what the project cannot have
+
+*karni command* · from `karni recipes add and karni new --recipe (karni_cli.recipes.compose)`
+
+**Why Karni objects.** recipe.toml's requires names core contracts (people, events) and modules, each with an optional version range. A version of a contract this Karni does not have, or a name that is neither a contract nor a module karni-cli knows, cannot be met.
+
+**Fix.** Upgrade Karni and karni-cli (karni upgrade), install the module (pip install karni-&lt;name>), or use a version of the recipe made for this Karni.
+
+<a id="c447"></a>
+
+### C447: A recipe conflicts with a part or a module of the project
+
+*karni command* · from `karni recipes add and karni new --recipe a --recipe b (karni_cli.recipes.compose)`
+
+**Why Karni objects.** recipe.toml's conflicts names recipes and modules a part cannot share a project with. It is checked both ways: the new recipe's list and each installed part's.
+
+**Fix.** Remove the other part first (karni recipes remove &lt;name>), or leave the recipe out.
+
+<a id="c448"></a>
+
+### C448: The project does not hold that recipe
+
+*karni command* · from `karni recipes remove and karni recipes upgrade (karni_cli.recipes.compose)`
+
+**Why Karni objects.** Only a recipe app.recipes lists is a part of the project.
+
+**Fix.** Name a recipe app.recipes lists in karni.yaml.
+
+<a id="c449"></a>
+
+### C449: A part has no record to upgrade from
+
+*karni command* · from `karni recipes upgrade (karni_cli.recipes.parts)`
+
+**Why Karni objects.** .karni/recipes/&lt;name>/ holds the fragment a part was added with and the sha256 of each of its files. Without it, karni-cli cannot tell the recipe's files from the project's changes, so it changes nothing.
+
+**Fix.** Compare with karni recipes show &lt;name> --files and copy what you want by hand, or restore .karni/recipes/&lt;name>/ from version control.
 
 <a id="c460"></a>
 

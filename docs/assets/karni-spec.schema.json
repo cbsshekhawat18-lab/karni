@@ -238,6 +238,18 @@
         "^x-": {}
       },
       "properties": {
+        "route": {
+          "anyOf": [
+            {
+              "pattern": "^/[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Experimental. The base path its entity pages are mounted under (/bookings: the resources list is /bookings/resources). Default: none, each page at /<route>. karni recipes add sets /<label> for a recipe's app."
+        },
         "entities": {
           "additionalProperties": {
             "$ref": "#/$defs/Entity"
@@ -281,7 +293,26 @@
               "type": "null"
             }
           ],
-          "description": "The recipe the spec started from. For the record only."
+          "description": "Deprecated: write recipes: [<name>]. Read as a list of one until Karni 1.0, with a deprecation warning."
+        },
+        "recipes": {
+          "description": "Experimental. The recipes this project holds, in the order they were added. karni recipes add and remove keep it, and karni build writes a new one's files.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z]{3}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Experimental. The project's currency, an ISO 4217 code (EUR). A money field without a currency of its own is in it, and the payments module's currency follows it."
         },
         "api_version": {
           "anyOf": [
@@ -816,6 +847,16 @@
             }
           ],
           "description": "KARNI_TERMS: the terms acceptance gate."
+        },
+        "people": {
+          "default": false,
+          "description": "Experimental. KARNI_PEOPLE: the people contract (karni.people). A relation to people.Person switches it on too.",
+          "type": "boolean"
+        },
+        "events": {
+          "default": false,
+          "description": "Experimental. Family events: karni.outbox in INSTALLED_APPS.",
+          "type": "boolean"
         },
         "user_grants": {
           "default": false,

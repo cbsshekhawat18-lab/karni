@@ -108,9 +108,10 @@ def pages(spec: schema.Spec) -> dict[str, Page]:
                     continue
                 app, name, entity = resolved
                 base = default_route(name)
+                prefix = spec.apps[app].route or "" if app in spec.apps else ""
                 found[key] = Page(
                     key,
-                    f"/{base}" if "list" in kinds else None,
+                    f"{prefix}/{base}" if "list" in kinds else None,
                     humanize(base),
                     _entity_requirement(app, name, entity),
                     "list",

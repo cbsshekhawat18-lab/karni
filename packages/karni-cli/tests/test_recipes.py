@@ -147,13 +147,14 @@ def test_an_invalid_recipe_toml_names_its_problem(text: str, problem: str) -> No
 
 
 def test_every_built_in_recipe_is_valid() -> None:
-    """Each built-in recipe's recipe.toml, karni.yaml and app.recipe (A6 adds them)."""
+    """Each built-in recipe's recipe.toml and karni.yaml (A6 adds them)."""
     loaded = recipes_mod.load(installed=False)
     assert loaded.problems == []
     for name, recipe in loaded.recipes.items():
         report = validate_text(recipe.spec())
         assert report.ok, (name, [issue.as_dict() for issue in report.issues])
-        assert yaml.safe_load(recipe.spec())["app"].get("recipe") == name
+        app = yaml.safe_load(recipe.spec())["app"]
+        assert app.get("recipe") in (name, None) and "recipes" not in app  # the merge writes it
 
 
 def test_a_recipe_that_cannot_be_used_is_left_out_and_reported(builtin: Path, runner: Any) -> None:

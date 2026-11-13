@@ -41,3 +41,17 @@ clears rows that a new unique rule would refuse, and runs karni build \
 --allow-destructive."""
 mechanical = false
 migration = "migrations/0.5.md#rules-a-karniyaml-can-say-and-the-recipes-that-use-them"
+
+[[change]]
+id = "app-recipes"
+kind = "project-files"
+symbol = "karni.yaml app.recipe"
+replacement = "app.recipes: [<name>]"
+summary = """\
+A project may hold several recipes, so karni.yaml lists them in \
+app.recipes. karni-cli still reads app.recipe, as a list of one, with a \
+KarniDeprecationWarning, and stops reading it in 1.0. The codemod rewrites \
+the key in place and keeps the rest of the file."""
+mechanical = true
+codemod = "v0_5.recipe_list"
+migration = "migrations/0.5.md#a-project-lists-its-recipes-in-apprecipes"

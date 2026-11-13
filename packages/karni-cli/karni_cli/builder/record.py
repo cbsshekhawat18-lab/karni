@@ -12,12 +12,14 @@ and pages Karni manages, and the files the project adopted::
       "files": {"classes/karni/models.py": "<sha256>", ...},
       "blocks": {"config/settings.py": "<sha256>", ...},
       "adopted": ["classes/karni/api.py"],
-      "recipe": "booking"
+      "recipes": ["booking", "crm"]
     }
 
-``recipe`` is there only between ``karni new --recipe`` and the first build
-that writes: it names the recipe whose own files (its domain code, seeds and
-tests) that build writes over its stubs (:mod:`karni_cli.recipes.apply`).
+``recipes`` is there only between ``karni new --recipe`` (or ``karni recipes
+add``) and the next build that writes: it names the recipes whose own files
+(their domain code, seeds and tests) that build writes over its stubs
+(:mod:`karni_cli.recipes.apply`). A record that names one in the old
+``recipe`` key is read the same way.
 
 Before it writes anything, ``karni build`` compares every recorded hash
 with the file on disk. A Karni-owned file whose content differs was edited
@@ -79,8 +81,13 @@ class Record:
     files: dict[str, str] = field(default_factory=dict)
     blocks: dict[str, str] = field(default_factory=dict)
     adopted: list[str] = field(default_factory=list)
-    #: Experimental. The recipe whose own files the next build writes (``karni new --recipe``).
-    recipe: str = ""
+    #: Experimental. The recipes whose own files the next build writes, in order.
+    recipes: list[str] = field(default_factory=list)
+
+    @property
+    def recipe(self) -> str:
+        """Experimental. The first recipe the next build writes (empty: none). Read-only."""
+        return self.recipes[0] if self.recipes else ""
 
     @property
     def owned(self) -> dict[str, str]:
@@ -100,7 +107,7 @@ class Record:
             "files": dict(sorted(self.files.items())),
             "blocks": dict(sorted(self.blocks.items())),
             "adopted": sorted(self.adopted),
-            **({"recipe": self.recipe} if self.recipe else {}),
+            **({"recipes": list(self.recipes)} if self.recipes else {}),
         }
 
     def text(self) -> str:
@@ -144,7 +151,7 @@ def load(root: Path) -> Record:
         files=hashes("files"),
         blocks=hashes("blocks"),
         adopted=strings("adopted"),
-        recipe=str(data.get("recipe") or ""),
+        recipes=strings("recipes") or ([str(data["recipe"])] if data.get("recipe") else []),
     )
 
 

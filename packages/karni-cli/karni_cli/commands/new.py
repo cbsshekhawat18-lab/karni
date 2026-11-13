@@ -408,29 +408,57 @@ def choose_recipe(
     return found, kind or (str(given) if given else kinds.DEFAULT)
 
 
+def more_recipes(names: list[str]) -> list[Recipe]:
+    """The recipes after the first ``--recipe``, checked before anything is written.
+
+    :raises CliError: ``C420``/``C421`` for one that is not there, ``C440`` for the
+        blank start among several or a recipe named twice.
+    """
+    if len(names) < 2:
+        return []
+    from karni_cli import recipes
+
+    if recipes.BLANK in names or len(set(names)) != len(names):
+        raise CliError(
+            f"--recipe {' --recipe '.join(names)}: several recipes go together, each once, and "
+            "the blank start goes alone.",
+            code="C440",
+        )
+    loaded = recipes.load()
+    found = [loaded.require(name) for name in names[1:]]
+    return [recipe for recipe in found if recipe is not None]
+
+
 def write_recipe_spec(project: Path, name: str, kind: str, recipe: Recipe | None) -> Path:
     """karni.yaml from ``recipe`` (the blank start when ``None``) with this project's name and kind.
 
     A recipe is also named in ``.karni/build.json``, so the first ``karni
-    build`` writes its own files (:mod:`karni_cli.recipes.apply`).
+    build`` writes its own files (:mod:`karni_cli.recipes.apply`), and its
+    fragment is kept in ``.karni/recipes/<name>/`` (:mod:`karni_cli.recipes.parts`).
     """
     from karni_cli import recipes
-    from karni_cli.builder import layout, record
-    from karni_cli.spec import edit
+    from karni_cli.recipes import parts
 
     path = project / recipes.SPEC_FILE
     if recipe is None:
         path.write_text(recipes.blank_spec(name), encoding="utf-8")
         return path
-    text = edit.set_values(
-        recipe.spec(),
-        [(("app", "name"), name), (("app", "kind"), kind), (("app", "recipe"), recipe.name)],
-    )
-    path.write_text(text, encoding="utf-8")
-    pending = project / layout.RECORD
-    pending.parent.mkdir(parents=True, exist_ok=True)
-    pending.write_text(record.Record(recipe=recipe.name).text(), encoding="utf-8")
+    parts.start(project, path, recipe, name=name, kind=kind)
     return path
+
+
+def add_more_recipes(project: Path, more: list[Recipe]) -> list[str]:
+    """Merge each recipe after the first into karni.yaml, as karni recipes add does (no build)."""
+    from karni_cli import recipes
+    from karni_cli.recipes import parts
+
+    lines: list[str] = []
+    loaded = recipes.load()
+    for recipe in more:
+        merged = parts.add(project, project / recipes.SPEC_FILE, recipe, loaded)
+        lines.append(f"Recipe {recipe.name} ({recipe.title}): merged into karni.yaml.")
+        lines += [f"  {note}" for note in merged.notes]
+    return lines
 
 
 def build_blocker(project: Path) -> str | None:
@@ -466,7 +494,7 @@ def _recipe_line(recipe: Recipe | None, spec: Path) -> str:
     from karni_cli.builder import layout
 
     return (
-        f"Recipe {recipe.name} ({recipe.title}): wrote {spec.name} (app.recipe: {recipe.name}) "
+        f"Recipe {recipe.name} ({recipe.title}): wrote {spec.name} (app.recipes: [{recipe.name}]) "
         f"and named the recipe in {layout.RECORD}. The first karni build writes its own files "
         f"over its stubs: {', '.join(recipe.files) or 'none'}."
     )
@@ -557,14 +585,16 @@ def new(
         help="Make the project a git repository with a first commit of what karni new wrote. "
         "Skipped inside an existing repository and when git is not installed.",
     ),
-    recipe: str | None = typer.Option(
+    recipe: list[str] | None = typer.Option(
         None,
         "--recipe",
         help=(
             "Experimental. Start the app from a recipe (karni recipes list, or blank): its "
             "karni.yaml with this name, then karni build, which also writes the recipe's own "
-            "domain code, seeds and tests and runs the tests and karni check. Without the "
-            "project's interpreter or database it stops after karni.yaml: run karni build next."
+            "domain code, seeds and tests and runs the tests and karni check. Repeat it for "
+            "several recipes in one project (--recipe booking --recipe crm): each one after "
+            "the first is merged as karni recipes add does. Without the project's interpreter "
+            "or database it stops after karni.yaml: run karni build next."
         ),
         show_default=False,
     ),
@@ -590,6 +620,8 @@ def new(
     Example: karni new "Crumb Bakery" --kind site --design ../design
 
     Example: karni new "Corner Shop" --recipe shop
+
+    Example: karni new "Studio" --recipe booking --recipe crm
     """
     from cookiecutter.main import cookiecutter  # lazy: heavy import
 
@@ -602,7 +634,14 @@ def new(
             code="C850",
         )
     require_snake(site_app, "Site app name")
-    picked, recipe_kind = choose_recipe(recipe, kind=kind, design=design, staff_app=staff_app)
+    chosen_recipes = list(recipe or [])
+    picked, recipe_kind = choose_recipe(
+        chosen_recipes[0] if chosen_recipes else None,
+        kind=kind,
+        design=design,
+        staff_app=staff_app,
+    )
+    more = more_recipes(chosen_recipes)
     source = _design_folder(design) if design is not None else None
     ask = interactive()
     chosen = choose_kind(recipe_kind or kind, source, ask=ask)
@@ -660,8 +699,10 @@ def new(
             f"@karni/ui: {scaffold.UI_REGISTRY_SPEC} from npm "
             "(KARNI_UI_SRC=/path/to/Karni/packages/karni-ui uses a checkout instead)"
         )
-    if recipe is not None:
+    if recipe:
         typer.echo(_recipe_line(picked, write_recipe_spec(project, name, chosen, picked)))
+        for line in add_more_recipes(project, more):
+            typer.echo(line)
         blocker = build_blocker(project) if picked is not None else None
         if picked is not None and blocker is None:
             try:

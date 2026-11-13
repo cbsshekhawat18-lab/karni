@@ -13,14 +13,14 @@ pytestmark = pytest.mark.django_db
 
 
 def test_the_pipeline_counts_the_deals_each_role_may_see(client_as: Any) -> None:
-    sales = client_as("sales")
+    sales = client_as("crm-rep")
     create(Deal, salesperson=sales.user, value=Decimal("100.00"))
     create(Deal, salesperson=sales.user, value=Decimal("50.00"))
     create(Deal, value=Decimal("900.00"))  # another salesperson's
     mine = sales.get("/api/deals/pipeline/")
     assert mine.status_code == 200, mine.content
     assert mine.json() == [{"stage": "lead", "deals": 2, "value": "150.00"}]
-    every = client_as("manager").get("/api/deals/pipeline/").json()
+    every = client_as("crm-manager").get("/api/deals/pipeline/").json()
     assert every == [{"stage": "lead", "deals": 3, "value": "1050.00"}]
 
 
@@ -30,7 +30,7 @@ def test_an_import_updates_contacts_by_their_email(
     settings.MEDIA_ROOT = str(
         tmp_path
     )  # the uploaded file is kept until the import is done
-    client = client_as("sales")
+    client = client_as("crm-rep")
     create(Contact, email="pat@example.com", first_name="Pat", last_name="Old")
     rows = (
         "first_name,last_name,email\nPat,New,pat@example.com\nLee,Doe,lee@example.com\n"

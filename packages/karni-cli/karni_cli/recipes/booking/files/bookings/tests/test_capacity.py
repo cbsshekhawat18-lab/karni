@@ -20,7 +20,7 @@ def _test_payments(settings: Any) -> None:
 
 
 def _member() -> Any:
-    return client_as("member")
+    return client_as("customer")
 
 
 def test_a_slot_never_takes_more_bookings_than_its_capacity() -> None:
@@ -43,7 +43,7 @@ def test_a_slot_never_takes_more_bookings_than_its_capacity() -> None:
 
 
 def test_a_paid_booking_is_confirmed(client_as: Any) -> None:
-    client = client_as("member")
+    client = client_as("customer")
     booked = client.post("/api/bookings/", {"slot": str(create(Slot, capacity=5).pk)})
     paid = client.post(f"/api/bookings/{booked.json()['id']}/pay/")
     assert paid.status_code == 200, paid.content

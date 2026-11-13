@@ -57,7 +57,7 @@ class BookingViewSet(karni.BookingViewSet):
             return Response(
                 {"payment": str(payment.pk), "url": payment.metadata["url"]}
             )
-        back = f"{settings.KARNI_FRONTEND_URL}/bookings/{booking.pk}"
+        back = f"{settings.KARNI_FRONTEND_URL}/bookings/bookings/{booking.pk}"
         payment, session = create_checkout(
             request.user,
             amount=booking.slot.resource.price,

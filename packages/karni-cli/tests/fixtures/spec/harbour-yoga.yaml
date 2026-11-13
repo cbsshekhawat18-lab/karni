@@ -3,7 +3,7 @@ version: 1
 app:
   name: Harbour Yoga
   kind: site+app
-  recipe: booking
+  recipes: [booking]
 modules:
   payments:
     provider: stripe

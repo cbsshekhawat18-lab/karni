@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from karni.catalog import Ask, Manifest
 
 __all__ = [
+    "CONTRACT_ACTIONS",
     "CONTRACT_MODELS",
     "CONTRACT_SETTINGS",
     "DEFAULT_CACHE_TTL",
@@ -54,6 +55,9 @@ CONTRACT_MODELS: Final[dict[str, tuple[str, ...]]] = {
 }
 #: Experimental. The setting that installs each contract (``karni.conf`` reads it).
 CONTRACT_SETTINGS: Final[dict[str, str]] = {"people": "KARNI_PEOPLE"}
+#: Experimental. The explicit actions of each contract a role grants by name (``"*"`` does not
+#: reach them): ``people.*:merge``, ``people.person:erase``.
+CONTRACT_ACTIONS: Final[dict[str, tuple[str, ...]]] = {"people": ("merge", "erase")}
 
 
 @dataclass(frozen=True)

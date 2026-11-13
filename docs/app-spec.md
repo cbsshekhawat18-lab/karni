@@ -41,7 +41,7 @@ version: 1
 app:
   name: Harbour Yoga
   kind: site+app
-  recipe: booking
+  recipes: [booking]
 modules:
   payments:
     provider: stripe
@@ -143,7 +143,9 @@ published file differs from the code: regenerate it with
 |---|---|---|
 | `name` | text, required | `karni new "<name>"` |
 | `kind` | `site`, `app` (default) or `site+app` | `karni new --kind` |
-| `recipe` | text | the recipe the spec started from, for the record only |
+| `recipes` | a list of recipe names. Experimental | the recipes the project holds, in the order they were added. `karni recipes add` and `remove` keep it, and `karni build` writes a new one's own files ([several recipes in one project](family.md)) |
+| `recipe` | text. Deprecated | read as `recipes: [<recipe>]` until 1.0, with a `KarniDeprecationWarning`. `karni upgrade` rewrites it |
+| `currency` | an ISO 4217 code such as `EUR`. Experimental | the project's currency: a `money` field without a currency of its own is in it (a `MoneyField(currency=...)`), and the payments module's `currency` follows it. Without `currency`, a bare `money` field keeps a currency per row |
 | `api_version` | a version name such as `v1` (lower case letters, digits and `-`, at most 16 characters). Experimental | `KARNI_API_VERSION`: the API is mounted at `/api/v1/`, with a document and a client per version ([API versions](api.md#api-versions)) |
 
 ### `modules`
@@ -177,6 +179,8 @@ takes (`karni modules show <name>` prints each one's questions).
 | `terms` | `{version, url}`, plus `required`, `paths`, `exempt` | `KARNI_TERMS`, [terms acceptance](accounts.md#terms-acceptance) |
 | `user_grants` | `true` / `false` | `KARNI_USER_GRANTS`, [per-user grants](accounts.md#per-user-grants). The grants themselves are data, written in the admin or the API |
 | `api_cache` | `true` / `false`, or `{ttl: <seconds>}` | `KARNI_API_CACHE`, and `KARNI_API_CACHE_TTL` with a `ttl`, [response caching](api.md#response-caching). `true` keeps the default lifetime (300 seconds) |
+| `people` | `true` / `false`. Experimental | `KARNI_PEOPLE`: the [people contract](people.md). A relation to `people.Person` turns it on too |
+| `events` | `true` / `false`. Experimental | `karni.outbox` in the project's `INSTALLED_APPS`: [family events](family-events.md) |
 
 A feature that needs an extra of `karni` gets it named on the `karni` dependency
 when the build turns it on. If the project's interpreter cannot import it, the
@@ -226,7 +230,12 @@ path in the entity's access: `owned:session__instructor`.
 ### `apps` and their entities
 
 `apps` maps an app label (snake_case) to its `entities`. An entity is a
-model on `BaseModel` (PascalCase), with its viewset.
+model on `BaseModel` (PascalCase), with its viewset. An app also takes
+`route` (experimental): the base path its entity pages are mounted under.
+With `route: /crm`, the deals list is `/crm/deals`. Without it each page is
+at `/<route of the entity>`. `karni recipes add` sets `/<label>` for a
+recipe's app, and `karni spec validate` refuses a route two apps share or a
+family page's (`C444`).
 
 | Key | Takes | Maps to |
 |---|---|---|
@@ -1274,6 +1283,12 @@ with the project's name, then `karni build`, which also writes the recipe's
 own domain code, seeds and tests over its stubs and runs the tests and
 `karni check`.
 
+A project may hold several recipes, each one a part with its own app,
+route and roles. `karni new --recipe booking --recipe crm` starts with two,
+and `karni recipes add <name>` adds one to a built project. [Several
+recipes in one project](family.md) has the merge rules, `karni recipes
+remove` and `karni recipes upgrade`.
+
 ```sh
 karni recipes list                                  # every recipe, and the blank start
 karni recipes list --match "a booking app for a yoga studio"
@@ -1290,7 +1305,7 @@ A recipe is a folder:
 ```text
 <name>/
   recipe.toml   what it is and when it fits
-  karni.yaml    the spec, with app.recipe naming the recipe
+  karni.yaml    the spec: a project's whole spec, or the fragment merged into one
   files/        optional: the recipe's own domain code, seeds and tests, each at the
                 path it takes in the project (files/shop/models.py is shop/models.py)
 ```
@@ -1311,6 +1326,9 @@ rule](recipes/index.md#the-stub-rule)).
 | `purpose` | yes | what the app does, in one line of at most 80 characters |
 | `use_when` | yes | plain phrases of what someone asks for when the recipe fits, e.g. `["online shop", "sell products", "checkout"]`. `--match` ranks by them |
 | `usually_changed` | no | what people usually change in the spec after starting from it, in plain words, e.g. `["the product fields", "the currency"]` |
+| `version` | no | the recipe's own version, e.g. `1.0.0`, recorded when a project adds it (experimental) |
+| `requires` | no | core contracts and modules it needs, each with an optional version range: `["people>=1", "events>=1", "storage"]` (experimental, [what each installs](family.md#recipetoml-requires-conflicts-and-version)) |
+| `conflicts` | no | recipes and modules it cannot share a project with (experimental) |
 
 An example:
 

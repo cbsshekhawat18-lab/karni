@@ -176,6 +176,12 @@ Example:
 karni new "Corner Shop" --recipe shop
 ```
 
+Example:
+
+```sh
+karni new "Studio" --recipe booking --recipe crm
+```
+
 ```
 karni new [OPTIONS] NAME
 ```
@@ -190,7 +196,7 @@ karni new [OPTIONS] NAME
 | `--staff-app/--no-staff-app` |  | The React staff app in frontend/. An app always has it. A site has it unless --no-staff-app, and then staff work in the admin. |
 | `--site-app` TEXT | `website` | The label of the site app a kind with a site gets. |
 | `--git/--no-git` | on | Make the project a git repository with a first commit of what karni new wrote. Skipped inside an existing repository and when git is not installed. |
-| `--recipe` TEXT |  | Experimental. Start the app from a recipe (karni recipes list, or blank): its karni.yaml with this name, then karni build, which also writes the recipe's own domain code, seeds and tests and runs the tests and karni check. Without the project's interpreter or database it stops after karni.yaml: run karni build next. |
+| `--recipe` TEXT (repeatable) |  | Experimental. Start the app from a recipe (karni recipes list, or blank): its karni.yaml with this name, then karni build, which also writes the recipe's own domain code, seeds and tests and runs the tests and karni check. Repeat it for several recipes in one project (--recipe booking --recipe crm): each one after the first is merged as karni recipes add does. Without the project's interpreter or database it stops after karni.yaml: run karni build next. |
 
 #### `karni add`
 
@@ -1598,7 +1604,7 @@ karni replay [OPTIONS] REQUEST_ID
 
 #### `karni recipes`
 
-Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show).
+Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show), and the parts of a project (add, remove, upgrade).
 
 ```
 karni recipes COMMAND [ARGS]...
@@ -1634,6 +1640,52 @@ karni recipes show [OPTIONS] NAME
 | `NAME` (required) |  | A recipe, or blank for the blank start. |
 | `--files` |  | Print the recipe's own domain code instead: each file of its files/ folder, with the path it takes in a project (with --json: {recipe, files: {path: text}}). |
 | `--json` |  | Print {version, request, threshold, recipes, blank, next, problems} (docs/assets/karni-recipes.schema.json). |
+
+##### `karni recipes add`
+
+Experimental. Add a recipe to this project as a part, then karni build.
+
+The recipe's karni.yaml is merged into the project's (docs/family.md has the rules): its app under its own route, its roles named &lt;prefix&gt;-&lt;role&gt;, the family roles admin and customer adding up, what it requires switched on. A conflict stops it before anything is written (C442 to C447). The fragment is kept in .karni/recipes/&lt;name&gt;/, and karni build writes the recipe's own files by the stub rule, migrates and seeds only its new tables.
+
+```
+karni recipes add [OPTIONS] NAME
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | The recipe to add (karni recipes list). |
+| `--no-build` |  | Write karni.yaml and the record only. karni build does the rest. |
+
+##### `karni recipes remove`
+
+Experimental. Take a part out of this project, then karni build.
+
+Its apps, roles, pages, menu group and seed counts leave karni.yaml, and its record leaves .karni/recipes/. Dropping its tables is a risky change: pass --allow-destructive. Its own files stay on disk, each one listed.
+
+```
+karni recipes remove [OPTIONS] NAME
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | The part to take out (app.recipes). |
+| `--allow-destructive` |  | Let the build drop the part's tables (C270 stops it otherwise). |
+| `--no-build` |  | Write karni.yaml and the record only. karni build does the rest. |
+
+##### `karni recipes upgrade`
+
+Experimental. Bring each part to the recipe karni-cli has now, then karni build.
+
+A file of the part's the project never changed (its recorded sha256) is replaced. A file it changed is kept, and the recipe's new file is written beside it as &lt;file&gt;.recipe-&lt;version&gt;. In karni.yaml, each of the part's entities and roles the project left as added is updated, and each one it changed is reported.
+
+```
+karni recipes upgrade [OPTIONS] [NAME]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` |  | One part (default: every part). |
+| `--no-build` |  | Write karni.yaml and the record only. karni build does the rest. |
 
 ## Base classes
 
@@ -2874,6 +2926,14 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C421`](errors.md#c421) | cli | A recipe cannot be used |
 | [`C440`](errors.md#c440) | cli | karni new --recipe with an option it cannot go with |
 | [`C441`](errors.md#c441) | cli | A recipe's file would replace code of the project's |
+| [`C442`](errors.md#c442) | cli | A recipe's app label, or the recipe itself, is in the project already |
+| [`C443`](errors.md#c443) | cli | A recipe's role does not follow the family rules |
+| [`C444`](errors.md#c444) | cli | A route two apps want, or a family page's |
+| [`C445`](errors.md#c445) | cli | Two recipes set a module option differently |
+| [`C446`](errors.md#c446) | cli | A recipe requires what the project cannot have |
+| [`C447`](errors.md#c447) | cli | A recipe conflicts with a part or a module of the project |
+| [`C448`](errors.md#c448) | cli | The project does not hold that recipe |
+| [`C449`](errors.md#c449) | cli | A part has no record to upgrade from |
 | [`C460`](errors.md#c460) | cli | A tree entity's keys do not fit |
 | [`C620`](errors.md#c620) | cli | A role grant's tree:&lt;path&gt; does not lead to a tree entity |
 | [`C640`](errors.md#c640) | cli | A navigation entry names a page the spec does not have |

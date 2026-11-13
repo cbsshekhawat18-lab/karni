@@ -110,7 +110,7 @@ def test_a_recipe_validates_and_leaves_no_question_open(name: str, runner: CliRu
     report = validate_text(recipe.spec())
     assert report.ok, [issue.as_dict() for issue in report.issues]
     data = yaml.safe_load(recipe.spec())
-    assert data["app"]["recipe"] == name and data["app"]["kind"] == "app"
+    assert data["app"].get("recipe") in (name, None) and data["app"]["kind"] == "app"
     assert data["seed"], "a recipe gives its demo volumes"
     spec = Path(str(recipe.folder.joinpath(recipes_mod.SPEC_FILE)))
     result = runner.invoke(app, ["plan", "--questions", "--json", "--spec", str(spec)])
@@ -271,7 +271,7 @@ def _pending(root: Path, name: str) -> None:
     assert found is not None
     (root / "karni.yaml").write_text(found.spec())
     (root / ".karni").mkdir(exist_ok=True)
-    (root / ".karni" / "build.json").write_text(record.Record(recipe=name).text())
+    (root / ".karni" / "build.json").write_text(record.Record(recipes=[name]).text())
 
 
 def _build(*args: str) -> tuple[int, str]:
@@ -353,12 +353,19 @@ def test_without_an_interpreter_it_stops_after_the_spec(
     assert result.exit_code == 0, result.output
     root = tmp_path / "corner_shop"
     spec = yaml.safe_load((root / "karni.yaml").read_text())
-    assert spec["app"] == {"name": "Corner Shop", "kind": "site+app", "recipe": "booking"}
+    assert spec["app"] == {
+        "name": "Corner Shop",
+        "kind": "site+app",
+        "currency": "USD",
+        "recipes": ["booking"],
+    }
+    assert spec["apps"]["bookings"]["route"] == "/bookings"
+    assert (root / ".karni" / "recipes" / "booking" / "karni.yaml").is_file()
     assert validate_text((root / "karni.yaml").read_text()).ok
     assert record.load(root).recipe == "booking"
     assert "$ karni build" not in result.output
     lines = result.output.splitlines()
-    assert "Recipe booking (Booking): wrote karni.yaml (app.recipe: booking)" in result.output
+    assert "Recipe booking (Booking): wrote karni.yaml (app.recipes: [booking])" in result.output
     assert any(line.startswith("karni build did not run here: no interpreter") for line in lines)
     assert lines[-1] == "next: karni build"
 

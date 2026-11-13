@@ -77,6 +77,8 @@ def test_a_minimal_spec_and_its_defaults() -> None:
         "terms": None,
         "user_grants": False,
         "api_cache": False,
+        "people": False,
+        "events": False,
     }
 
 
@@ -195,6 +197,8 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C720", SHOP + "        fields: {manual: 'file:protected?'}\n", 7),
     ("C254", SHOP + "        fields: {title: {type: str, was: name}, name: str}\n", 7),
     ("C254", SHOP + "        fields: {a: {type: str, was: x}, b: {type: str, was: x}}\n", 7),
+    ("C444", HEAD + "apps:\n  shop: {route: /cart}\n", 4),
+    ("C444", HEAD + "apps:\n  shop: {route: /s}\n  crm: {route: /s}\n", 5),
     ("C460", SHOP + "        {external: true, table: sales, tree: true}\n", 7),
     ("C460", SHOP + "        fields: {name: str, parent: 'fk:Product?'}\n        tree: true\n", 7),
     ("C460", SHOP + "        fields: {position: int}\n        tree: ordered\n", 7),
@@ -397,7 +401,7 @@ def test_every_code_is_tested_and_registered() -> None:
     # C680-C699 and the taxonomies' C700-C719.
     assert all(
         200 <= int(code[1:]) <= 269
-        or code in ("C324", "C720", "C740")
+        or code in ("C324", "C444", "C720", "C740")
         or 760 <= int(code[1:]) <= 769
         or 460 <= int(code[1:]) <= 479
         or 500 <= int(code[1:]) <= 579

@@ -630,9 +630,13 @@ def build(facts: dict[str, Any], root: Path) -> Exported:
         left_out += roles[1]
     if apps:
         data["apps"] = apps
-    pages = _pages(root, routes, entities, names_count, left_out)
+    prefixes: dict[str, str] = {}
+    pages = _pages(root, routes, entities, names_count, left_out, prefixes)
     if pages:
         data["pages"] = pages
+    for label, prefix in prefixes.items():
+        if label in apps and prefix:
+            apps[label] = {"route": prefix, **apps[label]}
     menu = navigation.entries_from_setting(
         settings.get("KARNI_NAVIGATION"),
         navigation.pages(schema.Spec.model_validate(data)),
@@ -1049,6 +1053,7 @@ def _pages(
     entities: dict[str, Any],
     names_count: dict[str, int],
     left_out: list[str],
+    prefixes: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     frontend = root / "frontend" / "src"
     text = (
@@ -1065,7 +1070,7 @@ def _pages(
             candidates = [frontend / "pages" / f"{file}{ext}" for ext in ("", ".tsx", ".ts")]
             found = next((c for c in candidates if c.is_file()), None)
             source = found.read_text(encoding="utf-8") if found else ""
-        named = _page_entry(path, source, routes, entities, names_count)
+        named = _page_entry(path, source, routes, entities, names_count, prefixes)
         if named is None:
             if component != "AppLayout":
                 left_out.append(f"pages: {path} ({component}), a page of the project's own")
@@ -1109,6 +1114,7 @@ def _page_entry(
     routes: dict[str, str],
     entities: dict[str, Any],
     names_count: dict[str, int],
+    prefixes: dict[str, str] | None = None,
 ) -> tuple[str, Any] | None:
     if path == "/" and "<Dashboard" in source:
         return "home", "dashboard"
@@ -1125,8 +1131,22 @@ def _page_entry(
             "detail": [f"{base}/$id"],
             "form": [f"{base}/new", f"{base}/$id/edit"],
         }
-        if path not in expected[kind] or resource != base[1:]:
+        if resource != base[1:]:
             return None
+        # under the app's route (apps.<label>.route): /crm/deals is the deals list of crm
+        prefix = next(
+            (
+                path[: -len(written)]
+                for written in expected[kind]
+                if path.endswith(written)
+                and (path == written or re.fullmatch(schema.ROUTE, path[: -len(written)]))
+            ),
+            None,
+        )
+        if prefix is None:
+            return None
+        if prefixes is not None and prefix:
+            prefixes.setdefault(label.split(".", 1)[0], prefix)
         related = _related(source, routes, names_count) if kind == "detail" else []
         if related:
             return _entity_ref(label, names_count), {"detail": {"related": related}}

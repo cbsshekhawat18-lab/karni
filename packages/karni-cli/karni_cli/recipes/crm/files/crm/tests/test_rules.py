@@ -20,7 +20,7 @@ def _deal(company: Company, **extra: Any) -> dict[str, Any]:
 
 
 def test_a_company_or_contact_with_deals_is_not_deleted(client_as: Any) -> None:
-    sales = client_as("sales")
+    sales = client_as("crm-rep")
     company = create(Company)
     contact = create(Contact, company=company)
     create(Deal, company=company, contact=contact, salesperson=sales.user)
@@ -32,7 +32,7 @@ def test_a_company_or_contact_with_deals_is_not_deleted(client_as: Any) -> None:
 
 
 def test_a_deal_takes_a_contact_of_its_own_company(client_as: Any) -> None:
-    sales = client_as("sales")
+    sales = client_as("crm-rep")
     company, other = create(Company), create(Company)
     stranger = create(Contact, company=other)
     refused = sales.post(
@@ -47,7 +47,7 @@ def test_a_deal_takes_a_contact_of_its_own_company(client_as: Any) -> None:
 
 
 def test_a_deal_value_and_close_date_keep_their_bounds(client_as: Any) -> None:
-    sales = client_as("sales")
+    sales = client_as("crm-rep")
     company = create(Company)
     negative = sales.post("/api/deals/", _deal(company, value="-50"), format="json")
     assert negative.status_code == 400 and _code(negative, "value") == "E990"
@@ -58,14 +58,14 @@ def test_a_deal_value_and_close_date_keep_their_bounds(client_as: Any) -> None:
 
 
 def test_a_new_deal_starts_as_a_lead(client_as: Any) -> None:
-    refused = client_as("sales").post(
+    refused = client_as("crm-rep").post(
         "/api/deals/", _deal(create(Company), stage="won"), format="json"
     )
     assert refused.status_code == 400 and _code(refused, "stage") == "E982"
 
 
 def test_lost_needs_a_reason_and_a_closed_deal_says_when(client_as: Any) -> None:
-    sales = client_as("sales")
+    sales = client_as("crm-rep")
     deal = sales.post("/api/deals/", _deal(create(Company)), format="json").json()
     url = f"/api/deals/{deal['id']}/"
     refused = sales.patch(url, {"stage": "lost"}, format="json")
@@ -78,7 +78,7 @@ def test_lost_needs_a_reason_and_a_closed_deal_says_when(client_as: Any) -> None
 
 
 def test_a_won_deal_keeps_its_value(client_as: Any) -> None:
-    sales = client_as("sales")
+    sales = client_as("crm-rep")
     deal = create(Deal, salesperson=sales.user, value=Decimal("500.00"))
     for stage in ("qualified", "proposal", "won"):
         deal.transition("stage", stage)
@@ -88,14 +88,14 @@ def test_a_won_deal_keeps_its_value(client_as: Any) -> None:
 
 
 def test_only_a_manager_deletes_or_reassigns_a_deal(client_as: Any) -> None:
-    sales = client_as("sales")
-    colleague = user_with_roles("sales")
+    sales = client_as("crm-rep")
+    colleague = user_with_roles("crm-rep")
     deal = create(Deal, salesperson=sales.user)
     url = f"/api/deals/{deal.pk}/"
     assert sales.delete(url).status_code == 403
     moved = sales.patch(url, {"salesperson": str(colleague.pk)}, format="json")
     assert moved.status_code == 403 and moved.json()["detail"].startswith("E135: ")
-    manager = client_as("manager")
+    manager = client_as("crm-manager")
     assert (
         manager.patch(
             url, {"salesperson": str(colleague.pk)}, format="json"
@@ -109,12 +109,12 @@ def test_only_a_manager_deletes_or_reassigns_a_deal(client_as: Any) -> None:
 def test_a_deal_with_activities_is_not_deleted(client_as: Any) -> None:
     deal = create(Deal)
     create(Activity, deal=deal, salesperson=deal.salesperson)
-    refused = client_as("manager").delete(f"/api/deals/{deal.pk}/")
+    refused = client_as("crm-manager").delete(f"/api/deals/{deal.pk}/")
     assert refused.status_code == 409 and refused.json()["code"] == "E995"
 
 
 def test_an_activity_done_says_when(client_as: Any) -> None:
-    sales = client_as("sales")
+    sales = client_as("crm-rep")
     deal = create(Deal, salesperson=sales.user)
     activity = create(Activity, salesperson=sales.user, deal=deal, done=False)
     done = sales.patch(f"/api/activities/{activity.pk}/", {"done": True}, format="json")

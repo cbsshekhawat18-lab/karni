@@ -43,6 +43,7 @@ Reference or Debugging sections.
 - **[Aggregations](aggregations.md)**: counts, sums and averages at `<resource>/aggregate/` by category, relation or date.
 - **[Search across models](global-search.md)**: `GET /api/search/` with access applied per model, and a command palette.
 - **[Navigation from data](navigation.md)**: each user's menu, opened by the same roles and grants as the API.
+- **[Several recipes in one project](family.md)** (experimental): `karni recipes add`, `remove` and `upgrade`, parts under their own routes, roles named `<prefix>-<role>`, one currency, and what each part requires installed with it.
 - **[People](people.md)**: one person and one organisation record for every part of a project, found or created by email, merged with a preview, erased on request, with person facts in SQL (experimental).
 - **[Import and export](import-export.md)**: CSV and XLSX from any list, and uploads with a mandatory dry run.
 - **[Large projects](large-projects.md)**: `karni context` one area at a time, a cached `karni check`, volume seeding and query plans for 100 models or more.
@@ -296,7 +297,7 @@ Each command links to its entry in the [reference](REFERENCE.md#commands).
 | [`karni build`](REFERENCE.md#karni-build) | Make the project match karni.yaml, without touching hand-written code |
 | [`karni trace`](REFERENCE.md#karni-trace) | Follow a captured request: its tasks, retries, email, webhooks, audit |
 | [`karni replay`](REFERENCE.md#karni-replay) | Re-run a captured request against the current code, as any user |
-| [`karni recipes`](REFERENCE.md#karni-recipes) | Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show): [list](REFERENCE.md#karni-recipes-list), [show](REFERENCE.md#karni-recipes-show) |
+| [`karni recipes`](REFERENCE.md#karni-recipes) | Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show), and the parts of a project (add, remove, upgrade): [list](REFERENCE.md#karni-recipes-list), [show](REFERENCE.md#karni-recipes-show), [add](REFERENCE.md#karni-recipes-add), [remove](REFERENCE.md#karni-recipes-remove), [upgrade](REFERENCE.md#karni-recipes-upgrade) |
 <!-- /generated:commands -->
 
 ## Make targets
