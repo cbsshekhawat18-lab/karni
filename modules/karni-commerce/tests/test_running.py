@@ -14,12 +14,13 @@ from django.template import Context, Engine
 from django.test import override_settings
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
+from karni import preferences
 from karni.mail import _engine, kinds, merge_values
+from karni.preferences.models import SectionValue
 from rest_framework.test import APIClient
 
-from karni_commerce import preferences_seam as preferences
 from karni_commerce import reports, services
-from karni_commerce.models import Cart, Coupon, EmailTemplate, Invoice, Setting
+from karni_commerce.models import Cart, Coupon, EmailTemplate, Invoice
 from tests.conftest import ADDRESS, cart_with, pay, place
 from tests.testapp.models import Gadget
 
@@ -55,7 +56,7 @@ def test_a_value_reads_override_lock_saved_default_then_declared() -> None:
         with preferences.override(commerce={"abandoned_after_hours": 9}):
             assert preferences.value("commerce.abandoned_after_hours", 1) == 9
     assert preferences.value("nobody.declared", 5) == 5
-    assert preferences.value("commerce.abandoned_after_hours", "x") == "6"  # the default's type
+    assert preferences.value("commerce.abandoned_after_hours", 0.0) == 6.0  # the default's type
 
 
 def test_a_refused_value_says_why_and_keeps_nothing() -> None:
@@ -64,11 +65,12 @@ def test_a_refused_value_says_why_and_keeps_nothing() -> None:
     assert refused.value.code == "E323" and "abandoned_after_hours" in refused.value.errors
     with pytest.raises(preferences.PreferenceRefused) as unknown:
         preferences.save_section("commerce", {"colour": "red"})
-    assert unknown.value.code == "E325"
+    assert unknown.value.code == "E323" and "colour" in unknown.value.errors
     with pytest.raises(preferences.PreferenceRefused):
-        preferences.save_details({"currency": "GBP"})  # one currency per shop
+        # one currency for the project: the build locks app.currency (tests/settings.py)
+        preferences.save_details({"currency": "GBP"})
     assert preferences.details().currency == "EUR"
-    assert not Setting.objects.filter(group="commerce").exclude(values={}).exists()
+    assert not SectionValue.objects.filter(section="commerce").exclude(values={}).exists()
 
 
 def test_the_settings_api_for_each_role(manager: Any, clerk: Any, buyer: Any) -> None:
@@ -233,8 +235,9 @@ def test_the_email_editor_api(
         },
         format="json",
     )
-    assert preview.data["subject"] == "Order [order.number]"
-    assert preview.data["text"] == "[lines.name];[lines.name];"
+    # no order yet: the declared sample order, never a [placeholder]
+    assert preview.data["subject"] == "Order 1001"
+    assert preview.data["text"] == "Linen apron;Garden twine;"
     saved = as_user(manager).put(
         "/api/email-templates/commerce.order_paid/",
         {"subject": "Thank you for order {{ order.number }}", "text": "Total {{ order.total }}"},
@@ -251,6 +254,41 @@ def test_the_email_editor_api(
     back = as_user(manager).delete("/api/email-templates/commerce.order_paid/")
     assert back.data["edited"] is False and not EmailTemplate.objects.exists()
     assert as_user(manager).get("/api/email-templates/nope.kind/").status_code == 404
+
+
+def test_a_preview_shows_the_business_and_the_latest_matching_order(
+    manager: Any, make_gadget: MakeGadget, django_capture_on_commit_callbacks: Any
+) -> None:
+    """The editor's preview renders with real values: Settings' details and the last
+    record the email would be about, never the merge fields' names."""
+    preferences.save_details({"name": "Harbour Goods", "phone": "555 0100"})
+    draft = {
+        "subject": "{{ business.name }}: order {{ order.number }}",
+        "text": "{{ business.phone }} {% for line in lines %}{{ line.name }} {% endfor %}"
+        "{{ order.total }} {{ refund.amount }}",
+    }
+
+    def preview(kind: str) -> dict[str, Any]:
+        answer = as_user(manager).post(
+            f"/api/email-templates/{kind}/preview/", draft, format="json"
+        )
+        assert answer.status_code == 200, answer.data
+        assert "[" not in answer.data["subject"] + answer.data["text"]
+        return dict(answer.data)
+
+    before = preview("commerce.order_paid")
+    assert before["subject"] == "Harbour Goods: order 1001"  # the declared sample order
+    with django_capture_on_commit_callbacks(execute=True):
+        order = pay(place(cart_with(("gadget", make_gadget(price=Decimal("12.00")), 2))))
+    paid = preview("commerce.order_paid")
+    assert paid["subject"] == f"Harbour Goods: order {order.number}"
+    assert paid["text"].startswith("555 0100 Lamp 24.00")
+    # no refund yet: the refund email shows the declared sample refund
+    assert preview("commerce.order_refunded")["text"].endswith("10.00")
+    # every declared email of commerce previews without a placeholder
+    for kind in kinds():
+        if kind.name.startswith("commerce."):
+            preview(kind.name)
 
 
 # -- invoices ----------------------------------------------------------------------------------

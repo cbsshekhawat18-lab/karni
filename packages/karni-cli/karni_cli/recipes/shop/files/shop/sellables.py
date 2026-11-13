@@ -125,7 +125,7 @@ class ProductSellable(Sellable):
         return chosen.sku if chosen is not None else item.sku
 
     def url(self, item: Product) -> str:
-        return f"/shop/products/{item.slug}"
+        return f"/shop/catalogue/{item.slug}"
 
     def image(self, item: Product) -> Any:
         return item.image

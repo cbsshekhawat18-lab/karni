@@ -61,6 +61,7 @@ PUBLIC_DETAILS = (
     "address",
     "phone",
     "email",
+    "tax_number",
     "logo",
     "time_zone",
     "language",
@@ -158,9 +159,12 @@ def settings_page(user: Any) -> dict[str, Any]:
                 "describe": kind.describe,
                 "transactional": kind.transactional,
                 "source": kind.source,
+                "audience": kind.audience,
+                "switchable": kind.switchable,
+                "editable": kind.editable,
                 "default": kind.default,
-                "on": services.switch_position("email", kind.name, kind.default),
-                "locked": services.locked("emails", kind.name),
+                "on": services.email_on(kind.name, kind.default),
+                "locked": services.locked("emails", kind.name) or not kind.switchable,
             }
         )
     return {

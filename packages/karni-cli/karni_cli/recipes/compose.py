@@ -52,7 +52,7 @@ from __future__ import annotations
 
 import copy
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Final
 
@@ -62,6 +62,7 @@ from karni_cli.spec.catalog import contracts_with_needs
 __all__ = [
     "ADMIN_CONTRACT_GRANTS",
     "CONTRACTS",
+    "CURRENCY_OPTIONS",
     "FAMILY_PAGES",
     "FAMILY_ROLES",
     "FAMILY_ROUTES",
@@ -103,8 +104,8 @@ FAMILY_ROUTES: Final = frozenset(FAMILY_PAGES.values())
 ADMIN_CONTRACT_GRANTS: Final[dict[str, dict[str, str]]] = {
     "people": {"people.*:merge": "all", "people.person:erase": "all"},
 }
-#: The module option that follows ``app.currency``.
-_CURRENCY_OPTIONS: Final = {"payments": "currency"}
+#: Experimental. The module options that follow ``app.currency`` (a project has one).
+CURRENCY_OPTIONS: Final[dict[str, str]] = {"payments": "currency"}
 _REQUIREMENT: Final = re.compile(
     r"^\s*(?P<name>[a-z][a-z0-9_-]*)\s*(?P<rest>(?:(?:>=|<=|==|!=|>|<)\s*\d+(?:\.\d+)*\s*,?\s*)*)$"
 )
@@ -309,7 +310,7 @@ def _merge_modules(
         mine = dict(modules.get(module) or {})
         added = module not in modules
         for option, value in (options or {}).items():
-            if _CURRENCY_OPTIONS.get(module) == option:
+            if CURRENCY_OPTIONS.get(module) == option:
                 continue  # follows app.currency below
             if option not in mine:
                 mine[option] = copy.deepcopy(value)
@@ -660,6 +661,34 @@ def _requalify(out: dict[str, Any], merged: Merged) -> None:
         if qualified != navigation:
             out["navigation"] = qualified
             merged.changed.append(("navigation",))
+    tiles = out.get("dashboard")
+    if isinstance(tiles, list):
+        written = [
+            {**tile, "entity": f"{first[tile['entity']]}.{tile['entity']}"}
+            if isinstance(tile, Mapping) and tile.get("entity") in twice
+            else tile
+            for tile in tiles
+        ]
+        if written != tiles:
+            out["dashboard"] = written
+            merged.changed.append(("dashboard",))
+
+
+def _merge_dashboard(out: dict[str, Any], fragment: Mapping[str, Any], merged: Merged) -> None:
+    """The part's home tiles are added. A tile whose key the project has already (two parts
+    showing commerce's revenue) is shown once, as the project has it."""
+    theirs = fragment.get("dashboard")
+    if not isinstance(theirs, list) or not theirs:
+        return
+    tiles = list(out.get("dashboard") or [])
+    keys = {tile.get("key") for tile in tiles if isinstance(tile, Mapping)}
+    for tile in theirs:
+        if isinstance(tile, Mapping) and tile.get("key") not in keys:
+            tiles.append(copy.deepcopy(dict(tile)))
+            keys.add(tile.get("key"))
+    if tiles != list(out.get("dashboard") or []):
+        out["dashboard"] = tiles
+        merged.changed.append(("dashboard",))
 
 
 def _merge_navigation(
@@ -718,6 +747,26 @@ def _merge_seed(out: dict[str, Any], fragment: Mapping[str, Any], merged: Merged
     merged.changed.append(("seed",))
 
 
+def _with_module_requires(names: Iterable[str]) -> list[str]:
+    """The modules ``names`` and, before each, the modules its manifest requires (commerce:
+    payments), each once."""
+    from karni_cli.spec.catalog import MODULES
+
+    found: list[str] = []
+
+    def visit(name: str, path: tuple[str, ...]) -> None:
+        if name in found or name in path:
+            return
+        known = MODULES.get(name)
+        for needed in known.requires if known is not None else ():
+            visit(needed, (*path, name))
+        found.append(name)
+
+    for name in names:
+        visit(name, ())
+    return found
+
+
 def _install_requires(out: dict[str, Any], part: _Part, merged: Merged) -> None:
     """Switch on each contract and list each module the part requires."""
     features: dict[str, Any] = dict(out.get("features") or {})
@@ -727,9 +776,7 @@ def _install_requires(out: dict[str, Any], part: _Part, merged: Merged) -> None:
         if not features.get(name):
             features[name] = True
             merged.notes.append(f"features.{name}: switched on ({part.name} requires it).")
-    for name in names:
-        if name in CONTRACTS:
-            continue
+    for name in _with_module_requires(name for name in names if name not in CONTRACTS):
         if name not in modules:
             modules[name] = {}
             merged.changed.append(("modules", name))
@@ -745,7 +792,7 @@ def _follow_currency(out: dict[str, Any], merged: Merged) -> None:
     currency = _currency((out.get("app") or {}).get("currency"))
     if currency is None:
         return
-    for module, option in _CURRENCY_OPTIONS.items():
+    for module, option in CURRENCY_OPTIONS.items():
         options = (out.get("modules") or {}).get(module)
         if options is None:
             continue
@@ -836,6 +883,7 @@ def merge(
     _merge_pages(out, part, fragment, merged)
     titles = {name: found.title for name, found in known.items()}
     _merge_navigation(out, part, fragment, bases, titles, merged)
+    _merge_dashboard(out, fragment, merged)
     _requalify(out, merged)
     _merge_seed(out, fragment, merged)
     _follow_currency(out, merged)
@@ -861,8 +909,9 @@ def unmerge(project: Mapping[str, Any], name: str, base: Mapping[str, Any]) -> M
     """Experimental. ``project``'s spec data with the part ``name`` taken out.
 
     Its apps, its roles (a family role loses the grants only it added), its
-    pages, navigation group and seed counts go. Modules, features and the
-    currency stay: another part, or the project, may use them.
+    pages, navigation group, seed counts and own home tiles go. Modules,
+    features, the currency and a contract's tiles stay: another part, or the
+    project, may use them.
 
     :raises CliError: ``C448`` when the part is not in the project.
     """
@@ -908,7 +957,18 @@ def unmerge(project: Mapping[str, Any], name: str, base: Mapping[str, Any]) -> M
         for entity in ((app_data or {}).get("entities") or {})
     }
 
+    # the part's own named pages (shop, shop.reports): an entity's are handled by name above
+    own_pages = {
+        name
+        for entry in base.get("pages") or []
+        if (name := _page_name(entry)) is not None
+        and not name[:1].isupper()
+        and name not in FAMILY_PAGES
+    }
+
     def gone(key: Any) -> bool:
+        if isinstance(key, str) and key in own_pages:
+            return True
         if not isinstance(key, str) or key not in entity_names:
             return False
         return "." in key or key not in still
@@ -929,6 +989,22 @@ def unmerge(project: Mapping[str, Any], name: str, base: Mapping[str, Any]) -> M
             kept.append(entry)
         out["navigation"] = kept
     out["seed"] = {key: n for key, n in (out.get("seed") or {}).items() if not gone(key)}
+    # the part's own tiles (shop.to_send) go; a contract's (commerce.revenue) stay for the others
+    their_tiles = {
+        tile.get("key")
+        for tile in base.get("dashboard") or []
+        if isinstance(tile, Mapping) and str(tile.get("key", "")).split(".")[0] in labels
+    }
+    if isinstance(out.get("dashboard"), list):
+        out["dashboard"] = [
+            tile
+            for tile in out["dashboard"]
+            if not (
+                isinstance(tile, Mapping)
+                and (tile.get("key") in their_tiles or gone(tile.get("entity")))
+            )
+        ]
+        merged.changed.append(("dashboard",))
     for key in ("roles", "apps", "pages", "navigation", "seed"):
         merged.changed.append((key,))
     return merged

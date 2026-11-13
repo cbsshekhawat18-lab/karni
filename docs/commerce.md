@@ -307,15 +307,14 @@ PDF, which is what an invoice is.
 
 ## Settings a business changes
 
-The business's details, each part's settings and a switch per email are on
-one Settings page (`SettingsPage` in @karni/ui), over `/api/preferences/`.
-The names and the API are those of the family's preferences contract
-(`karni.preferences`): until it is installed, karni-commerce keeps the values
-itself, in `Setting`, behind one module,
-`karni_commerce.preferences_seam`. Read them with a typed default:
+The business's details, each part's settings, a switch per email and the
+connections are on one Settings page (`SettingsPage` in @karni/ui), over
+`/api/preferences/`: the [preferences contract](preferences.md)
+(`karni.preferences`). A project with the shop recipe has it installed
+(`requires = ["preferences>=1"]`). Read a value with a typed default:
 
 ```python
-from karni_commerce import preferences_seam as preferences
+from karni import preferences
 
 preferences.value("details.name", "")              # the business's name
 preferences.value("commerce.guest_checkout", True)  # a part's setting
@@ -343,17 +342,14 @@ the currency the way the details say (`currency_display`).
 
 A value is, in this order: a test's `preferences.override(...)`, the
 deployment's `KARNI_PREFERENCES_LOCKED` (shown read only), what someone saved,
-`KARNI_PREFERENCES_DEFAULTS`, and the declared default. The details'
-currency is the project's and is not changed here (one currency per shop).
-`karni_commerce.setting:change` changes every setting, and a section's
-`change` (a permission, or `role:<slug>`) lets its own people change it.
-
-When the preferences contract is installed, each
-`from karni_commerce import preferences_seam as preferences` becomes
-`from karni import preferences`, and the seam, the `Setting` table and its API
-go. The sections, the screens and the tests stay as they are. What the seam
-does not do (the contract does): a logo, connections and the change history
-page.
+`KARNI_PREFERENCES_DEFAULTS`, and the declared default. Without
+`karni.preferences` installed, every value reads its lock or its default, so
+commerce works the same with the defaults. The details' currency is the
+project's: `karni build` locks it to `app.currency`, so Settings shows it and
+does not change it. Holders of `preferences.sectionvalue:change` change every
+section (the shop's `shop-manager` holds `preferences.*:change`), and a
+section's `change` (a permission, or `role:<slug>`) lets its own people change
+it. The details have a tax number for invoices (`details.tax_number`).
 
 ## Emails a business edits
 
@@ -457,8 +453,13 @@ person cannot do without (the sign-in code and the password emails of
 
 `KARNI_MAIL_SOURCE` names where a business's changes are kept: an object (or
 a class) with `template(kind)`, `enabled(kind)` and `sender()`. karni-commerce
-sets it to `karni_commerce.preferences_seam.MailSource`. Without one, the files
-and `DEFAULT_FROM_EMAIL` are used. `render_edited`, `check_edited` and
+sets it to `karni_commerce.mail.MailSource`: an email edited here wins over
+the files, and the switches and the sender are the preferences contract's.
+Without one, `karni.mail.DefaultSource` reads the files, and the switches and
+the sender of `karni.preferences` while it is installed (else every email on
+and `DEFAULT_FROM_EMAIL`). Settings, Emails lists every email of
+`karni.mail.register_kind` with its switch, and an Edit button for each one
+with merge fields while `KARNI_MAIL_SOURCE` keeps edited emails. `render_edited`, `check_edited` and
 `merge_values` are the restricted engine's parts.
 
 ## Who sees what
@@ -521,7 +522,7 @@ project's people and keeps the two calls.
 | `KARNI_COMMERCE_SHIPPING` | `karni_commerce.pricing.ZoneShipping` | the class that gives an address's shipping methods |
 | `KARNI_COMMERCE_TAX` | `karni_commerce.pricing.RateTax` | the class that gives a tax class's rate at an address |
 | `KARNI_COMMERCE_FIRST_INVOICE` | `1001` | the first invoice's number |
-| `KARNI_MAIL_SOURCE` | `karni_commerce.preferences_seam.MailSource` | where karni.mail finds the emails a business edited, their switches and the sender |
+| `KARNI_MAIL_SOURCE` | `karni_commerce.mail.MailSource` | where karni.mail finds the emails a business edited (the switches and the sender are the preferences contract's) |
 | `KARNI_PREFERENCES_LOCKED`, `KARNI_PREFERENCES_DEFAULTS` | `{}` | settings the deployment fixes, and starts with: `{"details": {"name": "..."}, "commerce": {...}}` |
 
 ## The React package

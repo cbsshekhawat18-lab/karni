@@ -22,7 +22,7 @@ the timeline. Preferences keeps them in one place, with one Settings page for
 the whole project:
 
 - **Details**: the business's name, legal name, address, phone, contact email,
-  the sender of its emails (name, address, reply-to), logo, time zone,
+  tax number (for invoices), the sender of its emails (name, address, reply-to), logo, time zone,
   language, currency and how money shows it.
 - **One section per part.** Each part declares its settings as a Pydantic
   model, with defaults and the role that may change them.
@@ -46,7 +46,9 @@ Then run `migrate`. In a project built from karni.yaml,
 `features: {preferences: true}` writes the same, and a recipe whose
 `recipe.toml` has `requires = ["preferences>=1"]` switches it on when it is
 added. The build also writes `KARNI_PREFERENCES_DEFAULTS` with the project's
-name and currency from karni.yaml, so the details start filled in.
+name from karni.yaml, so the details start filled in, and
+`KARNI_PREFERENCES_LOCKED` with its currency (`app.currency`): every money
+field is in that currency, so Settings shows it and does not change it.
 
 ## Declare a section
 
@@ -112,7 +114,7 @@ the project installed preferences.
 
 | Path | Answer |
 |---|---|
-| `details.<field>` | a detail: `name`, `legal_name`, `address`, `phone`, `email`, `sender_name`, `sender_email`, `reply_to`, `time_zone`, `language`, `currency`, `currency_display`, `logo` (its address) |
+| `details.<field>` | a detail: `name`, `legal_name`, `address`, `phone`, `email`, `tax_number`, `sender_name`, `sender_email`, `reply_to`, `time_zone`, `language`, `currency`, `currency_display`, `logo` (its address) |
 | `<section>.<field>` | a field of a section |
 | `connections.<name>` | whether the connection is active |
 | `emails.<kind>` | whether the email goes out |
@@ -168,10 +170,21 @@ Settings, Emails lists every email the project sends, each with a switch:
   [rules](rules.md#moves)), named `<app>.<model>_<state>`
   (`bookings.booking_confirmed`), without a declaration,
 - emails a part declares: `preferences.email("crm.quote_sent", title="Quote
-  sent", describe="...")`.
+  sent", describe="...")`,
+- the messages a part declares in its `messages.py` with
+  `karni.mail.register_kind(...)` (the order confirmation, the parcel
+  shipped), with who gets them. One declared `switchable=False` (a sign-in
+  code) always goes out: its switch is fixed, and switching it off is refused
+  (`E323`).
 
 `preferences.email_on(kind)` answers whether an email goes out. A move's
-email checks it, and comes from the details' sender.
+email checks it, and comes from the details' sender. So does every message
+`karni.mail` sends: its default source (`karni.mail.DefaultSource`) reads the
+switches and the sender from here while `karni.preferences` is installed. A
+`karni.mail` message with merge fields shows an Edit button on the Settings
+page when the project's `KARNI_MAIL_SOURCE` keeps emails a business rewrote
+(karni-commerce's `karni_commerce.mail.MailSource`, over
+`/api/email-templates/`).
 
 ## Locks and deployment defaults
 
@@ -202,7 +215,7 @@ connection or email nobody declared, or a value its field refuses (`E320`).
 | `PATCH /api/preferences/connections/<name>/` | `{"on": true}`, `{"on": false}` or `{"on": null}` (the default again). |
 | `PATCH /api/preferences/emails/<kind>/` | The same, for an email. |
 | `GET /api/preferences/history/` | The latest 100 changes: table, record, action, the fields that moved, who. |
-| `GET /api/preferences/public/` | The details anyone may see (name, legal name, address, phone, contact email, logo, time zone, language, currency, currency display), for the header, the footer and money formatting. No sign-in. |
+| `GET /api/preferences/public/` | The details anyone may see (name, legal name, address, phone, contact email, tax number, logo, time zone, language, currency, currency display), for the header, the footer and money formatting. No sign-in. |
 
 Who may change what: `preferences.details:change` for the details,
 `preferences.switch:change` for connections and emails, and each section's

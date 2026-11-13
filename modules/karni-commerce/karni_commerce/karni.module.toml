@@ -31,7 +31,6 @@ models = [
     "OrderNote",
     "OrderPayment",
     "OrderRefund",
-    "Setting",
     "ShippingMethod",
     "ShippingZone",
     "TaxRate",
@@ -68,7 +67,6 @@ endpoints = [
     "/api/orders/reports/",
     "/api/orders/reports/<key>/",
     "/api/invoices/",
-    "/api/preferences/",
     "/api/email-templates/",
 ]
 pages = ["the cart, checkout and order pages of @karni/commerce-ui"]

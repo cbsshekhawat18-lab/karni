@@ -846,9 +846,12 @@ def settings_block(spec: schema.Spec, line: int) -> str:
     if "preferences" in features_on(spec):
         # Where the business's details start: Settings, Details changes them.
         details = {"name": spec.app.name}
-        if spec.app.currency:
-            details["currency"] = spec.app.currency.upper()
         rows.append(_literal({"details": details}, "", line, "KARNI_PREFERENCES_DEFAULTS = "))
+        if spec.app.currency:
+            # The project's one currency (app.currency): every money field is written in it,
+            # so Settings shows it and does not change it.
+            fixed = {"details": {"currency": spec.app.currency.upper()}}
+            rows.append(_literal(fixed, "", line, "KARNI_PREFERENCES_LOCKED = "))
     for module, options in spec.modules.items():
         for option, value in (options or {}).items():
             rows.append(_literal(value, "", line, f"{catalog.module_setting(module, option)} = "))

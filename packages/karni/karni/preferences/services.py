@@ -196,6 +196,7 @@ class DetailsView:
     address: str
     phone: str
     email: str
+    tax_number: str
     sender_name: str
     sender_email: str
     reply_to: str
@@ -388,10 +389,18 @@ def active(name: str) -> bool:
 
 
 def email_on(name: str, default: bool = True) -> bool:
-    """Experimental. Does the email kind ``name`` go out? Its switch, else its declared default."""
+    """Experimental. Does the email kind ``name`` go out? Its switch, else its declared default.
+
+    A message :func:`karni.mail.register_kind` declared not ``switchable`` (a
+    sign-in code) always goes out.
+    """
+    from karni.mail import find_kind
     from karni.preferences.registry import _registry, ensure_discovered
 
     ensure_discovered()
+    message = find_kind(name)
+    if message is not None and not message.switchable:
+        return True
     declared = _registry.emails.get(name)
     return switch_position("email", name, declared.default if declared else default)
 
@@ -621,12 +630,14 @@ def switch(kind: str, name: str, on: bool | None, *, user: Any = None) -> bool:
     :param kind: ``"connection"`` or ``"email"``.
     :returns: the switch's position now.
     :raises KarniLookupError: E325, no such connection or email kind.
-    :raises PreferenceRefused: E324, the deployment fixes it.
+    :raises PreferenceRefused: E324, the deployment fixes it. E323, an email that is
+        not switchable.
     """
     from karni.preferences.models import Switch
     from karni.preferences.registry import find_email
 
     _require_installed("switch()")
+    declared_email: Any = None
     if kind == "connection":
         declared = find_connection(name)
         group, default = "connections", declared.default if declared else True
@@ -643,6 +654,8 @@ def switch(kind: str, name: str, on: bool | None, *, user: Any = None) -> bool:
         raise KarniLookupError(
             f"karni.preferences: no {kind} named {name!r} is declared.", code="E325"
         )
+    if kind == "email" and declared_email is not None and not declared_email.switchable:
+        raise PreferenceRefused(f"{declared_email.title} always goes out.", code="E323")
     _refuse_locked(group, [name])
     with transaction.atomic(), _audited(user):
         if on is None:

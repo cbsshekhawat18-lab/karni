@@ -50,7 +50,7 @@ this one, and register yours. ``TOKEN_HEADER`` names the cart header.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import Any
 
 from django.db.models import Q, QuerySet
 from django.http import HttpResponse
@@ -68,8 +68,7 @@ from rest_framework.exceptions import (
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from karni_commerce import documents, email_templates, services, settings_page
-from karni_commerce import preferences_seam as preferences
+from karni_commerce import documents, email_templates, services
 from karni_commerce import reports as reports_registry
 from karni_commerce.api import (
     AbandonedCartSerializer,
@@ -98,7 +97,6 @@ from karni_commerce.api import (
     ReportListSerializer,
     ReportQuerySerializer,
     SetLineSerializer,
-    SettingSerializer,
     checkout_options,
 )
 from karni_commerce.customers import customers_backend
@@ -113,7 +111,6 @@ from karni_commerce.models import (
     OrderLine,
     OrderPayment,
     OrderRefund,
-    Setting,
     ShippingMethod,
     ShippingZone,
     TaxRate,
@@ -132,7 +129,6 @@ __all__ = [
     "OrderPaymentViewSet",
     "OrderRefundViewSet",
     "OrderViewSet",
-    "PreferenceViewSet",
     "ShippingMethodViewSet",
     "ShippingZoneViewSet",
     "TaxRateViewSet",
@@ -804,122 +800,6 @@ class InvoiceViewSet(_ReadOnly, BaseViewSet):
     filterset_fields = ["order"]
     search_fields = ["reference", "order__email"]
     ordering_fields = ["number", "issued_at"]
-
-
-class PreferenceViewSet(BaseViewSet):
-    """Experimental. The Settings page's API, ``/api/preferences/`` (the family contract's
-    shape, :mod:`karni_commerce.preferences_seam`): the details, each section and the
-    email switches. It goes once the family's preferences contract is installed."""
-
-    model = Setting
-    route = "preferences"
-    # Each action checks who may change what (preferences.can_change): signed in to ask.
-    access = Access(read=Authenticated(), write=Granted())
-    serializer_class = SettingSerializer
-    settings_actions: ClassVar[tuple[str, ...]] = (
-        "details",
-        "change_section",
-        "change_email",
-        "public",
-    )
-
-    @classmethod
-    def get_extra_actions(cls) -> list[Any]:
-        return [
-            extra for extra in super().get_extra_actions() if extra.__name__ in cls.settings_actions
-        ]
-
-    def _refused(self, exc: preferences.PreferenceRefused) -> Response:
-        body: dict[str, Any] = {"code": exc.code, "detail": exc.message}
-        if exc.errors:
-            body["errors"] = exc.errors
-        return Response(body, status={"E324": 409, "E325": 404}.get(exc.code, 400))
-
-    @extend_schema(responses=OpenApiTypes.OBJECT)
-    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Everything the Settings page shows: details, sections, emails (connections are
-        the family contract's)."""
-        if not settings_page.may_open(request.user):
-            raise PermissionDenied("You may not change any setting.")
-        # karni: allow(unpaginated-action): one page of settings
-        return Response(settings_page.page(request.user))
-
-    def retrieve(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        raise NotFound("Read the settings at preferences/.")
-
-    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        raise MethodNotAllowed("POST")
-
-    def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        raise MethodNotAllowed(request.method or "PUT")
-
-    def partial_update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        raise MethodNotAllowed("PATCH")
-
-    def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        raise MethodNotAllowed("DELETE")
-
-    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
-    @action(detail=False, methods=["patch"], url_path="details", access=Authenticated())
-    def details(self, request: Request) -> Response:
-        """Change some details. A blank value goes back to the default."""
-        if not preferences.can_change(request.user, "details"):
-            raise PermissionDenied("You may not change the details.")
-        try:
-            preferences.save_details(dict(request.data), user=request.user)
-        except preferences.PreferenceRefused as exc:
-            return self._refused(exc)
-        return Response(settings_page.page(request.user)["details"])
-
-    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
-    @action(
-        detail=False,
-        methods=["patch"],
-        url_path=r"sections/(?P<key>[a-z0-9_-]+)",
-        url_name="section",
-        access=Authenticated(),
-    )
-    def change_section(self, request: Request, key: str = "") -> Response:
-        """Change some fields of a section. ``null`` puts one back to its default."""
-        if preferences.find_section(key) is None:
-            return Response({"code": "E325", "detail": f"No section {key!r}."}, status=404)
-        if not preferences.can_change(request.user, key):
-            raise PermissionDenied(f"You may not change the {key} settings.")
-        try:
-            found = preferences.save_section(key, dict(request.data), user=request.user)
-        except preferences.PreferenceRefused as exc:
-            return self._refused(exc)
-        return Response({"key": key, "values": found.model_dump(mode="json")})
-
-    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
-    @action(
-        detail=False,
-        methods=["patch"],
-        url_path=r"emails/(?P<name>[a-z0-9_.-]+)",
-        url_name="email",
-        access=Authenticated(),
-    )
-    def change_email(self, request: Request, name: str = "") -> Response:
-        """Switch an email on or off: ``{"on": true | false | null}``."""
-        if not preferences.can_change(request.user, "emails"):
-            raise PermissionDenied("You may not change the emails.")
-        on = request.data.get("on") if isinstance(request.data, dict) else None
-        if "on" not in request.data or (on is not None and not isinstance(on, bool)):
-            return Response(
-                {"code": "E323", "detail": 'Send {"on": true}, {"on": false} or {"on": null}.'},
-                status=400,
-            )
-        try:
-            position = preferences.switch("email", name, on, user=request.user)
-        except preferences.PreferenceRefused as exc:
-            return self._refused(exc)
-        return Response({"name": name, "on": position})
-
-    @extend_schema(responses=OpenApiTypes.OBJECT)
-    @action(detail=False, methods=["get"], url_path="public", access=Public())
-    def public(self, request: Request) -> Response:
-        """The details any visitor may see: for the header, the footer and money."""
-        return Response(settings_page.public())
 
 
 class EmailTemplateViewSet(BaseViewSet):

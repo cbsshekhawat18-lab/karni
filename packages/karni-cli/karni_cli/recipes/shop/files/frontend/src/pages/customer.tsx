@@ -5,6 +5,6 @@ import { useShopName } from "../shop/StoreLayout";
 
 export default function Customer() {
   const shopName = useShopName();
-  const { email } = useParams({ from: "/customers/$email" });
+  const { email } = useParams({ from: "/shop/customers/$email" });
   return <CustomerPage email={decodeURIComponent(email)} siteName={shopName} />;
 }

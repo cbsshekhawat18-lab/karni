@@ -45,7 +45,7 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <article className="flex w-full flex-col gap-3 rounded-lg border border-border bg-card p-3 text-card-foreground">
       <Link
-        to="/shop/products/$slug"
+        to="/shop/catalogue/$slug"
         params={{ slug: product.slug }}
         className="flex flex-col gap-3"
       >
@@ -66,7 +66,7 @@ export function ProductCard({ product }: { product: Product }) {
           </span>
           <ProductStock product={product} />
           <Link
-            to="/shop/products/$slug"
+            to="/shop/catalogue/$slug"
             params={{ slug: product.slug }}
             className="mt-auto inline-flex h-9 items-center justify-center rounded-md border border-input px-3 text-sm font-medium hover:bg-accent"
           >

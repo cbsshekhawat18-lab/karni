@@ -110,7 +110,8 @@ class Record:
         )
 
     def recipe_pages(self) -> frozenset[str]:
-        """The code pages the next build writes from :attr:`recipes`: their routes at ``/<name>``."""
+        """The code pages the next build writes from :attr:`recipes`: their routes at
+        ``/<name>`` and ``/<app>/<name>`` (the page ``<app>.<name>``)."""
         if not self.recipes:
             return frozenset()
         from karni_cli import recipes
@@ -123,9 +124,10 @@ class Record:
                 continue
             if recipe is not None:
                 found |= {
-                    route.path[1:]
+                    # /cart is the page cart, /shop/reports the page shop.reports
+                    route.path[1:].replace("/", ".")
                     for route in recipe.routes
-                    if route.path.count("/") == 1 and "$" not in route.path
+                    if route.path.count("/") in (1, 2) and "$" not in route.path
                 }
         return frozenset(found)
 

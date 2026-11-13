@@ -1,7 +1,9 @@
 /**
- * Experimental. The one Settings page of a project, built on
- * `GET /preferences/`: the details of the business, one tab for each
- * settings section a part declares, and the emails the project sends.
+ * Experimental. The one Settings page of a project, built on the preferences
+ * contract's `GET /preferences/` (karni.preferences): the details of the
+ * business, one tab for each settings section a part declares, the emails the
+ * project sends (each with its switch, and an editor for the ones the business
+ * may rewrite), and the connections between the parts installed together.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState, type ReactNode } from "react";
@@ -30,7 +32,7 @@ export interface SettingsPageProps {
 interface DetailField {
   name: string;
   label: string;
-  type: "text" | "textarea" | "email" | "choice";
+  type: "text" | "textarea" | "email" | "choice" | "file";
   help?: string;
   choices?: { value: string; label: string }[];
 }
@@ -69,12 +71,29 @@ interface EmailItem {
   name: string;
   title: string;
   describe: string;
-  audience: string;
+  /** Who gets it ("the buyer"). Blank for an email declared without one. */
+  audience?: string;
   transactional: boolean;
-  switchable: boolean;
+  /** False: it always goes out (a sign-in code). */
+  switchable?: boolean;
+  /** The business may rewrite its text (/email-templates/<kind>/). */
+  editable?: boolean;
   source: string;
   default: boolean;
   on: boolean;
+  locked: boolean;
+}
+
+interface ConnectionItem {
+  name: string;
+  title: string;
+  describe: string;
+  part: string;
+  needs: string[];
+  installed: boolean;
+  default: boolean;
+  on: boolean;
+  active: boolean;
   locked: boolean;
 }
 
@@ -82,6 +101,7 @@ interface Preferences {
   contract: number;
   details: Details;
   sections: Section[];
+  connections: { items: ConnectionItem[]; can_change: boolean };
   emails: {
     sender: { sender_name: string; sender_email: string; reply_to: string; from: string };
     items: EmailItem[];
@@ -90,7 +110,8 @@ interface Preferences {
 }
 
 const PREFERENCES_KEY = ["karni", "preferences"];
-const SOURCE_TITLES: Record<string, string> = {
+/** The heading of a group of emails, by the prefix of their names (commerce.order_paid). */
+const GROUP_TITLES: Record<string, string> = {
   commerce: "Orders",
   shop: "Shop",
   accounts: "Accounts",
@@ -98,9 +119,9 @@ const SOURCE_TITLES: Record<string, string> = {
 const CONTROL =
   "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-destructive";
 
-function sourceTitle(source: string): string {
-  const head = source.split(".")[0] ?? source;
-  return SOURCE_TITLES[head] ?? head.charAt(0).toUpperCase() + head.slice(1);
+function groupTitle(name: string): string {
+  const head = name.split(".")[0] ?? name;
+  return GROUP_TITLES[head] ?? head.charAt(0).toUpperCase() + head.slice(1);
 }
 
 function show(value: unknown): string {
@@ -195,6 +216,70 @@ function SaveRow({
   );
 }
 
+/** The logo: shown, replaced by choosing a file (sent at once), or removed. */
+function LogoField({
+  id,
+  label,
+  url,
+  readOnly,
+}: {
+  id: string;
+  label: string;
+  url: string;
+  readOnly: boolean;
+}) {
+  const client = useKarniClient();
+  const queryClient = useQueryClient();
+  const { success, error } = useToast();
+  const send = useMutation({
+    mutationFn: (body: FormData | { logo: null }) =>
+      client.request<unknown>("/preferences/details/", { method: "PATCH", body }),
+    onSuccess: async () => {
+      success("Saved");
+      await queryClient.invalidateQueries({ queryKey: PREFERENCES_KEY });
+    },
+    onError: () => error("The logo was not changed", { description: "Try another file." }),
+  });
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      {url !== "" ? (
+        <img src={url} alt={label} className="h-16 w-auto max-w-full rounded border" />
+      ) : (
+        <p className="text-sm text-muted-foreground">No logo yet</p>
+      )}
+      {readOnly ? null : (
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            id={id}
+            type="file"
+            accept="image/*"
+            className="max-w-full text-sm"
+            disabled={send.isPending}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file === undefined) return;
+              const body = new FormData();
+              body.append("logo", file);
+              send.mutate(body);
+            }}
+          />
+          {url !== "" ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={send.isPending}
+              onClick={() => send.mutate({ logo: null })}
+            >
+              Remove the logo
+            </Button>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DetailsForm({ details }: { details: Details }) {
   const prefix = useId();
   const form = useSettingsSave("/preferences/details/", (_name, value) => show(value));
@@ -210,6 +295,17 @@ function DetailsForm({ details }: { details: Details }) {
         const id = `${prefix}-${field.name}`;
         const locked = details.locked.includes(field.name);
         const readOnly = locked || !details.can_change;
+        if (field.type === "file") {
+          return (
+            <LogoField
+              key={field.name}
+              id={id}
+              label={field.label}
+              url={show(details.values[field.name])}
+              readOnly={readOnly}
+            />
+          );
+        }
         const original = show(details.values[field.name]);
         const value = field.name in form.draft ? show(form.draft[field.name]) : original;
         const messages = form.errors.fields[field.name];
@@ -429,15 +525,19 @@ function EmailRow({
     onSuccess: () => queryClient.invalidateQueries({ queryKey: PREFERENCES_KEY }),
     onError: () => error("The switch was not changed", { description: "Try again." }),
   });
-  const fixed = !item.switchable;
+  const fixed = item.switchable === false;
   return (
     <li className="flex flex-wrap items-start justify-between gap-3 py-3">
       <div className="min-w-0 flex-1 space-y-1">
         <p id={`${id}-title`} className="font-medium">
           {item.title}
         </p>
-        <p className="text-sm text-muted-foreground">{item.describe}</p>
-        <p className="text-sm text-muted-foreground">To: {item.audience}</p>
+        {item.describe !== "" ? (
+          <p className="text-sm text-muted-foreground">{item.describe}</p>
+        ) : null}
+        {item.audience !== undefined && item.audience !== "" ? (
+          <p className="text-sm text-muted-foreground">To: {item.audience}</p>
+        ) : null}
       </div>
       <div className="flex items-center gap-3">
         {fixed ? (
@@ -456,14 +556,16 @@ function EmailRow({
         {item.locked && !fixed ? (
           <span className="text-sm text-muted-foreground">Fixed by the deployment</span>
         ) : null}
-        <Button
-          variant="outline"
-          aria-label={`Edit ${item.title}`}
-          disabled={!canChange}
-          onClick={onEdit}
-        >
-          Edit
-        </Button>
+        {item.editable === true ? (
+          <Button
+            variant="outline"
+            aria-label={`Edit ${item.title}`}
+            disabled={!canChange}
+            onClick={onEdit}
+          >
+            Edit
+          </Button>
+        ) : null}
       </div>
     </li>
   );
@@ -483,7 +585,7 @@ function EmailsPanel({ emails }: { emails: Preferences["emails"] }) {
   }
   const groups = new Map<string, EmailItem[]>();
   for (const item of emails.items) {
-    const title = sourceTitle(item.source);
+    const title = groupTitle(item.name);
     groups.set(title, [...(groups.get(title) ?? []), item]);
   }
   const from = emails.sender.from;
@@ -511,6 +613,67 @@ function EmailsPanel({ emails }: { emails: Preferences["emails"] }) {
           </ul>
         </section>
       ))}
+    </div>
+  );
+}
+
+function ConnectionRow({ item, canChange }: { item: ConnectionItem; canChange: boolean }) {
+  const client = useKarniClient();
+  const queryClient = useQueryClient();
+  const { error } = useToast();
+  const id = useId();
+  const toggle = useMutation({
+    mutationFn: (on: boolean) =>
+      client.request<unknown>(`/preferences/connections/${item.name}/`, {
+        method: "PATCH",
+        body: { on },
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: PREFERENCES_KEY }),
+    onError: () => error("The switch was not changed", { description: "Try again." }),
+  });
+  return (
+    <li className="flex flex-wrap items-start justify-between gap-3 py-3">
+      <div className="min-w-0 flex-1 space-y-1">
+        <p id={`${id}-title`} className="font-medium">
+          {item.title}
+        </p>
+        {item.describe !== "" ? (
+          <p className="text-sm text-muted-foreground">{item.describe}</p>
+        ) : null}
+        {!item.installed ? (
+          <p className="text-sm text-muted-foreground">Needs {item.needs.join(", ")}</p>
+        ) : null}
+      </div>
+      <div className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          role="switch"
+          className="h-5 w-5 accent-primary"
+          aria-labelledby={`${id}-title`}
+          checked={item.on}
+          disabled={!canChange || item.locked || toggle.isPending}
+          onChange={(event) => toggle.mutate(event.target.checked)}
+        />
+        {item.locked ? (
+          <span className="text-sm text-muted-foreground">Fixed by the deployment</span>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+function ConnectionsPanel({ connections }: { connections: Preferences["connections"] }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-muted-foreground">
+        What the parts of this project do together. Each one switches itself on when what it needs
+        is installed.
+      </p>
+      <ul className="[&>*+*]:border-t [&>*+*]:border-border">
+        {connections.items.map((item) => (
+          <ConnectionRow key={item.name} item={item} canChange={connections.can_change} />
+        ))}
+      </ul>
     </div>
   );
 }
@@ -544,6 +707,9 @@ export function SettingsPage({ title = "Settings", siteName }: SettingsPageProps
               </TabsTrigger>
             ))}
             <TabsTrigger value="emails">Emails</TabsTrigger>
+            {prefs.connections.items.length > 0 ? (
+              <TabsTrigger value="connections">Connections</TabsTrigger>
+            ) : null}
           </TabsList>
         </div>
         <TabsContent value="details" className="pt-4">
@@ -557,6 +723,11 @@ export function SettingsPage({ title = "Settings", siteName }: SettingsPageProps
         <TabsContent value="emails" className="pt-4">
           <EmailsPanel emails={prefs.emails} />
         </TabsContent>
+        {prefs.connections.items.length > 0 ? (
+          <TabsContent value="connections" className="pt-4">
+            <ConnectionsPanel connections={prefs.connections} />
+          </TabsContent>
+        ) : null}
       </Tabs>
     );
   }

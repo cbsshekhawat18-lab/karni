@@ -18,13 +18,16 @@ import {
 } from "@karni/ui";
 import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { register as registerShop } from "./shop";
 import { StoreLayout, useShopName } from "./shop/StoreLayout";
 import { usePerson } from "./shop/staff";
 
-registerShop();
-
-const PATHS = { browse: "/shop/products" };
+// The shop's own pages under its route; the family pages (/cart, /orders) keep theirs.
+const PATHS = {
+  browse: "/shop/catalogue",
+  terms: "/shop/terms",
+  customers: "/shop/customers",
+  customer: (email: string) => `/shop/customers/${encodeURIComponent(email)}`,
+};
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {

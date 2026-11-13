@@ -75,7 +75,7 @@ export function StoreHome() {
         </p>
         <Button
           className="mt-6"
-          onClick={() => router.history.push("/shop/products")}
+          onClick={() => router.history.push("/shop/catalogue")}
         >
           Shop everything
         </Button>
@@ -91,7 +91,7 @@ export function StoreHome() {
             {tops.map((category) => (
               <li key={category.id}>
                 <Link
-                  to="/shop/products"
+                  to="/shop/catalogue"
                   search={{ category: category.id }}
                   className="flex flex-col gap-2 rounded-lg border border-border p-2 hover:bg-muted"
                 >

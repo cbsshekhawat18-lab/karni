@@ -639,7 +639,7 @@ def build(facts: dict[str, Any], root: Path) -> Exported:
             apps[label] = {"route": prefix, **apps[label]}
     menu = navigation.entries_from_setting(
         settings.get("KARNI_NAVIGATION"),
-        navigation.pages(schema.Spec.model_validate(data)),
+        navigation.known_pages(schema.Spec.model_validate(data)),
         left_out,
     )
     if menu:
@@ -1157,6 +1157,15 @@ def _page_entry(
             return _entity_ref(label, names_count), {"detail": {"related": related}}
         return _entity_ref(label, names_count), kind
     name = path.lstrip("/")
+    parent, _slash, last = path.rpartition("/")
+    if parent and re.fullmatch(schema.PAGE_NAME, last):
+        # a code page under an app's route (/shop/reports): <app>.<name>
+        owners = {label.split(".", 1)[0] for label in routes.values()}
+        app = next(
+            (label for label, prefix in (prefixes or {}).items() if prefix == parent),
+            parent[1:] if parent[1:] in owners else None,
+        )
+        return (f"{app}.{last}", "code") if app is not None else None
     if not re.fullmatch(schema.PAGE_NAME, name):
         return None
     if "<LoginForm" in source:

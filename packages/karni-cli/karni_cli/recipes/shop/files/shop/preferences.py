@@ -9,7 +9,7 @@ tab, and checkout's options are karni-commerce's Checkout tab.
 from __future__ import annotations
 
 from django.conf import settings
-from karni_commerce import preferences_seam as preferences
+from karni import preferences
 from pydantic import Field
 
 

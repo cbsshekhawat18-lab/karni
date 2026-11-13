@@ -25,7 +25,7 @@ export default function WishlistPage() {
       <EmptyState
         title="Your wishlist is empty"
         description="Keep a product for later from its page."
-        action={<Link to="/shop/products">Browse the products</Link>}
+        action={<Link to="/shop/catalogue">Browse the products</Link>}
       />
     );
   } else {

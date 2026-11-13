@@ -34,7 +34,7 @@ from django.db.models import (
 )
 from django.db.models.functions import Coalesce
 from django.utils import timezone
-from karni_commerce import preferences_seam as preferences
+from karni import preferences
 from karni_commerce.models import Order
 
 from shop.models import Download, Product, Review, Shipment, Variation

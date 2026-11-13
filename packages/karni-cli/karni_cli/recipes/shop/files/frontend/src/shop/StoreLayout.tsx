@@ -37,7 +37,7 @@ function Account() {
       <Link to="/orders" className="font-medium hover:underline">
         My orders
       </Link>
-      <Link to="/wishlist" className="font-medium hover:underline">
+      <Link to="/shop/wishlist" className="font-medium hover:underline">
         Wishlist
       </Link>
       <Link to="/account" className="font-medium hover:underline">
@@ -72,7 +72,7 @@ export function StoreLayout({ children }: { children: ReactNode }) {
             {name}
           </Link>
           <nav aria-label="Shop" className="flex gap-4 text-sm font-medium">
-            <Link to="/shop/products" className="hover:underline">
+            <Link to="/shop/catalogue" className="hover:underline">
               Products
             </Link>
           </nav>
@@ -98,7 +98,7 @@ export function StoreLayout({ children }: { children: ReactNode }) {
               {business.email}
             </a>
           ) : null}
-          <Link to="/terms" className="hover:underline">
+          <Link to="/shop/terms" className="hover:underline">
             Terms
           </Link>
           <Link to="/orders" className="hover:underline">

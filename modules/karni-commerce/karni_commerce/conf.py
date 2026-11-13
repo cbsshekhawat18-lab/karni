@@ -79,11 +79,10 @@ DEFAULTS: dict[str, Any] = {
     "KARNI_COMMERCE_SELLABLES": {},
     # The first invoice's number (karni_commerce.services.issue_invoice).
     "KARNI_COMMERCE_FIRST_INVOICE": env.int("KARNI_COMMERCE_FIRST_INVOICE", default=1001),
-    # karni.mail's source of the emails a business edits, their switches and the sender
-    # (karni_commerce.preferences_seam.MailSource, until the family's notifications).
-    "KARNI_MAIL_SOURCE": env(
-        "KARNI_MAIL_SOURCE", default="karni_commerce.preferences_seam.MailSource"
-    ),
+    # karni.mail's source of the emails a business edits (karni_commerce.EmailTemplate),
+    # with the switches and the sender of karni.preferences (until the family's
+    # notifications keep the edited emails).
+    "KARNI_MAIL_SOURCE": env("KARNI_MAIL_SOURCE", default="karni_commerce.mail.MailSource"),
 }
 """The karni-commerce settings fragment (``karni.settings`` entry point)."""
 

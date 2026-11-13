@@ -10,10 +10,13 @@ in the order ``pages`` lists them (a sign-in page and an entity without a
       - Region: {icon: map}                   # a page, with options
       - Reports: {icon: bar-chart, items: [sales, stock]}
 
-An entry is a page of ``pages`` (its key: ``Product``, ``shop.Product`` or
-``home``), a one-key mapping from a page to its options (``label``, ``icon``,
-``requires``), or a one-key mapping from a group's label to its entries (a
-list, or ``{items, icon, requires}``). A key that names a page is the page.
+An entry is a page of ``pages`` (its key: ``Product``, ``shop.Product``,
+``home`` or ``shop.reports``, a code page under the app's route), a one-key
+mapping from a page to its options (``label``, ``icon``, ``requires``), or a
+one-key mapping from a group's label to its entries (a list, or ``{items,
+icon, requires}``). A key that names a page is the page. A family page the
+project's modules provide (``orders`` with commerce, ``settings`` with
+preferences) may be named without being listed in ``pages``.
 
 Each page's requirement comes from its access, the way the API reads it:
 ``public`` reads stay ``public``, ``authenticated`` and ``owned:`` reads are
@@ -42,9 +45,12 @@ from karni_cli.generators.naming import default_route, humanize
 from karni_cli.spec import schema
 
 __all__ = [
+    "FAMILY_PROVIDERS",
     "SETTING",
     "Page",
     "entries_from_setting",
+    "family_pages",
+    "known_pages",
     "menu",
     "pages",
     "requirement_problem",
@@ -93,6 +99,48 @@ def _entity(spec: schema.Spec, ref: str) -> tuple[str, str, schema.Entity] | Non
     return found[0] if len(found) == 1 else None
 
 
+#: Experimental. The family pages a menu may name without listing them in ``pages``, each
+#: with what provides it: a module (``modules.commerce``), a contract (``features.people``)
+#: or Karni itself (``""``). They belong to Karni and its contracts, never to a part.
+FAMILY_PROVIDERS: Final[dict[str, str]] = {
+    "home": "",
+    "account": "",
+    "search": "",
+    "people": "features.people",
+    "settings": "features.preferences",
+    "cart": "modules.commerce",
+    "checkout": "modules.commerce",
+    "orders": "modules.commerce",
+}
+
+
+def _provided(spec: schema.Spec, provider: str) -> bool:
+    group, _dot, name = provider.partition(".")
+    if group == "modules":
+        return name in spec.modules
+    if group == "features":
+        return bool(getattr(spec.features, name, False))
+    return True
+
+
+def family_pages(spec: schema.Spec) -> dict[str, Page]:
+    """Experimental. The family pages this spec's modules and contracts provide, by name."""
+    from karni_cli.recipes.compose import FAMILY_PAGES
+
+    return {
+        name: Page(name, FAMILY_PAGES[name], humanize(name), AUTHENTICATED, "family")
+        for name, provider in FAMILY_PROVIDERS.items()
+        if _provided(spec, provider)
+    }
+
+
+def known_pages(spec: schema.Spec) -> dict[str, Page]:
+    """Experimental. The pages a menu entry may name: the family pages the project's
+    modules and contracts provide (:func:`family_pages`: ``orders`` with commerce,
+    ``settings`` with preferences), then every page of ``pages`` (:func:`pages`)."""
+    return {**family_pages(spec), **pages(spec)}
+
+
 def pages(spec: schema.Spec) -> dict[str, Page]:
     """Experimental. Every page of ``pages`` by its key, with its route, label and requirement.
 
@@ -102,6 +150,12 @@ def pages(spec: schema.Spec) -> dict[str, Page]:
     found: dict[str, Page] = {}
     for item in spec.pages:
         for key, kinds in item.items():
+            label, dot, rest = key.partition(".")
+            if dot and rest[:1].islower():  # <app>.<name>: a code page under the app's route
+                app = spec.apps.get(label)
+                base = (app.route if app is not None else None) or f"/{label}"
+                found[key] = Page(key, f"{base}/{rest}", humanize(rest), AUTHENTICATED, "code")
+                continue
             if key[:1].isupper() or "." in key:
                 resolved = _entity(spec, key)
                 if resolved is None:
@@ -191,9 +245,10 @@ def menu(spec: schema.Spec) -> list[dict[str, Any]] | None:
     """Experimental. The ``KARNI_NAVIGATION`` value of ``spec``, or ``None`` without ``navigation``."""
     if spec.navigation is False:
         return None
-    known = pages(spec)
     if spec.navigation is True:
-        return [_item(page, None) for page in known.values() if page.route and page.kind != "login"]
+        listed = pages(spec).values()
+        return [_item(page, None) for page in listed if page.route and page.kind != "login"]
+    known = known_pages(spec)
     found = [_entry(entry, known) for entry in spec.navigation]
     return [item for item in found if item is not None]
 

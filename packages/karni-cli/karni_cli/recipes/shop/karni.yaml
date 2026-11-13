@@ -3,13 +3,13 @@ version: 1
 app:
   name: Shop
   kind: app
-  recipe: shop
+  # One currency for the project: every money field and the payments follow it.
+  currency: USD
 modules:
   # KARNI_PAYMENTS_PROVIDER in the environment wins over `provider`, so .env switches a
   # local try or a demo to `test` with no code edit.
   payments:
     provider: stripe
-    currency: usd
     checkout_validator: karni_commerce.payments.checkout_validator
   commerce: {hold_minutes: 30}
   # Protected files: what a digital product delivers, by a signed link after payment.
@@ -18,16 +18,21 @@ modules:
   storage: {provider: aws}
 features:
   email_code_login: true
-  terms: {version: "2026-01", url: /terms, required: true, paths: [/api/carts/current/checkout/]}
+  # The business's details, the shop's and checkout's settings and the email switches
+  # (Settings). recipe.toml's requires switches it on too.
+  preferences: true
+  terms: {version: "2026-01", url: /shop/terms, required: true, paths: [/api/carts/current/checkout/]}
 roles:
   admin: {name: Admin, system: true, grants: {"*": all}}
   shop-manager:
     name: Shop manager
-    description: The whole shop, refunds included.
+    description: The whole shop, refunds included, and its settings.
     grants:
       "shop.*": all
       "karni_commerce.*": all
       "karni_payments.*": all
+      # Settings: the business's details, every section and the email switches.
+      "preferences.*:change": all
   shop-staff:
     name: Shop staff
     description: Orders, shipments and the catalogue.
@@ -71,8 +76,8 @@ apps:
           short_description: "str:300?"
           description: "text?"
           image: "image?"
-          price: "money:USD"
-          sale_price: "money:USD?"
+          price: money
+          sale_price: "money?"
           sale_starts: "datetime?"
           sale_ends: "datetime?"
           stock: int
@@ -125,8 +130,8 @@ apps:
           product: fk:Product
           values: "m2m:AttributeValue"
           sku: "str:64"
-          price: "money:USD?"
-          sale_price: "money:USD?"
+          price: "money?"
+          sale_price: "money?"
           stock: int
           available: "capacity:stock"
           image: "image?"
@@ -188,8 +193,10 @@ apps:
         search: [tracking_number]
         order: -created_at
         access: {read: granted, write: granted}
+# The shop's pages live under its route, /shop (apps.shop.route, set when the recipe is
+# added). The family pages (/, /cart, /checkout, /orders, /account, /signin, /settings)
+# are not listed here: they belong to Karni and karni-commerce.
 pages:
-  - home: dashboard
   - Shipment: [list, detail, form]
   - Product: [{detail: {related: [ProductImage, Variation, ProductFile]}}, form]
   - ProductFile: [form]
@@ -200,35 +207,32 @@ pages:
   - Review: [list, detail]
   - Category: [list, form]
   - Tag: [list, form]
-  # The pages of the recipe's own files (recipe.toml [[routes]]): the storefront and the
-  # family pages, each a code page of the project.
+  # The pages of the recipe's own files (recipe.toml [[routes]]): the storefront (/shop,
+  # /shop/catalogue, the wishlist and the terms) and the back office's own screens.
   - shop: code
-  - cart: code
-  - checkout: code
-  - orders: code
-  - customers: code
-  - products: code
-  - wishlist: code
-  - coupons: code
-  - shipping: code
-  - tax-rates: code
-  - settings: code
-  - reports: code
-  - abandoned-carts: code
-  - account: code
-  - signin: code
-  - terms: code
+  - shop.catalogue: code
+  - shop.wishlist: code
+  - shop.terms: code
+  - shop.products: code
+  - shop.customers: code
+  - shop.coupons: code
+  - shop.shipping: code
+  - shop.tax-rates: code
+  - shop.reports: code
+  - shop.abandoned-carts: code
 navigation:
-  - home: {label: Dashboard, icon: dashboard, requires: "karni_commerce.order:view"}
   - orders: {label: Orders, icon: list, requires: "karni_commerce.order:view"}
   - Shipment: {label: Shipments, icon: box, requires: "shop.shipment:change"}
-  - customers: {label: Customers, icon: users, requires: "karni_commerce.order:view"}
-  - abandoned-carts: {label: Abandoned carts, icon: box, requires: "karni_commerce.cart:view"}
+  - shop.customers: {label: Customers, icon: users, requires: "karni_commerce.order:view"}
+  - shop.abandoned-carts:
+      label: Abandoned carts
+      icon: box
+      requires: "karni_commerce.cart:view"
   - Catalogue:
       icon: tag
       requires: "shop.product:change"
       items:
-        - {products: {label: Products, requires: "shop.product:change"}}
+        - {shop.products: {label: Products, requires: "shop.product:change"}}
         - Category
         - Tag
         - Attribute
@@ -238,27 +242,27 @@ navigation:
       icon: settings
       requires: "karni_commerce.coupon:change"
       items:
-        - {coupons: {label: Coupons, requires: "karni_commerce.coupon:change"}}
-        - {shipping: {label: Shipping, requires: "karni_commerce.shippingzone:change"}}
-        - {tax-rates: {label: Tax rates, requires: "karni_commerce.taxrate:change"}}
-  - reports: {label: Reports, icon: chart, requires: "karni_commerce.order:report"}
-  - settings: {label: Settings, icon: sliders, requires: "karni_commerce.setting:change"}
+        - {shop.coupons: {label: Coupons, requires: "karni_commerce.coupon:change"}}
+        - {shop.shipping: {label: Shipping, requires: "karni_commerce.shippingzone:change"}}
+        - {shop.tax-rates: {label: Tax rates, requires: "karni_commerce.taxrate:change"}}
+  - shop.reports: {label: Reports, icon: chart, requires: "karni_commerce.order:report"}
+  - settings: {label: Settings, icon: sliders, requires: "preferences.details:change"}
 # The staff home: each tile shows to the roles that may read what it counts. The shop's
 # own figures are code tiles in shop/dashboard.py (stock running low, best sellers), and
 # karni-commerce gives the revenue ones (commerce.revenue, commerce.revenue_chart,
 # commerce.latest_orders).
 dashboard:
   - {key: shop.to_send, title: Orders to fulfil, kind: stat, entity: Shipment,
-     filters: {status: processing}, link: "/shipments?shipments.status=processing",
+     filters: {status: processing}, link: "/shop/shipments?shipments.status=processing",
      description: "Paid, waiting to be sent", order: 1}
   - {key: shop.in_transit, title: On their way, kind: stat, entity: Shipment,
-     filters: {status: shipped}, link: "/shipments?shipments.status=shipped", order: 2}
+     filters: {status: shipped}, link: "/shop/shipments?shipments.status=shipped", order: 2}
   - {key: shop.sold_out, title: Sold out, kind: stat, entity: Product,
      filters: {available__lte: 0, active: true}, requires: "shop.product:change",
-     link: "/products?products.available__lte=0", order: 3}
+     link: "/shop/products?products.available__lte=0", order: 3}
   - {key: shop.reviews_waiting, title: Reviews to approve, kind: stat, entity: Review,
      filters: {status: pending}, requires: "shop.review:change",
-     link: "/reviews?reviews.status=pending", order: 4}
+     link: "/shop/reviews?reviews.status=pending", order: 4}
   - {key: commerce.revenue, order: 5}
   - {key: commerce.revenue_chart, order: 6}
   - {key: commerce.latest_orders, order: 7}

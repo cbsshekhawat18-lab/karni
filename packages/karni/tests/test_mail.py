@@ -49,6 +49,8 @@ def templates(tmp_path: Path):
         yield tmp_path
 
 
+# The sender and the switches come from karni.preferences (installed here): a query.
+@pytest.mark.django_db
 def test_the_subject_is_one_line_and_the_bodies_get_the_context(templates: Path) -> None:
     sent = send_templated(
         "shop/email/confirmed", to=["a@example.com"], context={"number": 7, "name": "Ana"}
@@ -90,6 +92,8 @@ def test_a_missing_template_is_an_error(templates: Path) -> None:
         send_templated("shop/email/missing", to=["a@example.com"])
 
 
+# The sender and the switches come from karni.preferences (installed here): a query.
+@pytest.mark.django_db
 def test_a_kind_goes_out_in_a_header_and_can_be_switched_off(templates: Path) -> None:
     assert send_templated("shop/email/plain", to=["a@example.com"], kind="shop.plain") == 1
     assert mail.outbox[-1].extra_headers["X-Karni-Kind"] == "shop.plain"
@@ -244,3 +248,47 @@ def test_an_account_email_follows_an_edit_and_the_sender(
     assert (message.subject, message.body) == ("Your code for Corner Shop", "Code: 123456 (10 min)")
     assert message.from_email == "Corner Shop <hello@corner.example>"
     assert message.extra_headers["X-Karni-Kind"] == "accounts.login_code"
+
+
+# The sender and the business's details come from karni.preferences (installed here).
+@pytest.mark.django_db
+def test_a_preview_renders_with_the_latest_record_else_the_declared_samples() -> None:
+    from karni import preferences
+    from karni.mail import (
+        EditedTemplate,
+        merge_values,
+        register_kind,
+        render_edited,
+        sample_context,
+        unregister_kind,
+    )
+
+    latest: list[dict[str, object]] = []
+    kind = register_kind(
+        "tests.visit_booked",
+        title="Visit booked",
+        template="tests/email/visit_booked",
+        fields={
+            "business.name": "The business's name",
+            "visit.day": "The day",
+            "visit.room": "The room",
+            "guests.name": "Each guest's name",
+        },
+        sample=lambda: latest[-1] if latest else None,
+        samples={"visit": {"day": "Monday"}, "guests": [{"name": "Sam"}]},
+    )
+    edited = EditedTemplate(
+        "{{ business.name }} {{ visit.day }}",
+        "{{ visit.room }} {% for guest in guests %}{{ guest.name }} {% endfor %}",
+    )
+    try:
+        preferences.save_details({"name": "Harbour Yoga"})
+        before = render_edited(edited, merge_values(kind.fields, sample_context(kind)))
+        # no record yet: the declared samples, and a field nobody declared shows its path
+        assert before.subject == "Harbour Yoga Monday"
+        assert before.text == "[visit.room] Sam "
+        latest.append({"visit": {"day": "Friday", "room": "Blue"}, "guests": [{"name": "Ada"}]})
+        after = render_edited(edited, merge_values(kind.fields, sample_context(kind.name)))
+        assert (after.subject, after.text) == ("Harbour Yoga Friday", "Blue Ada ")
+    finally:
+        unregister_kind("tests.visit_booked")

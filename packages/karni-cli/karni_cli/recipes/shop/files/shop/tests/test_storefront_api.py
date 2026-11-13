@@ -30,7 +30,7 @@ def test_a_visitor_cart_lives_by_its_token(
     token = answer.json()["token"]
     assert token and answer.json()["subtotal"] == "25.00"
     [line] = answer.json()["lines"]
-    assert (line["name"], line["url"]) == ("Lamp", f"/shop/products/{lamp.slug}")
+    assert (line["name"], line["url"]) == ("Lamp", f"/shop/catalogue/{lamp.slug}")
     mine = visitor.get("/api/carts/current/", HTTP_X_CART_TOKEN=token).json()
     assert [row["quantity"] for row in mine["lines"]] == [2]
     assert other.get("/api/carts/current/").json()["lines"] == []

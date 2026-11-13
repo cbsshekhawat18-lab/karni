@@ -155,7 +155,12 @@ class EmailKind:
     ``name`` is ``<prefix>.<message>`` (``bookings.booking_confirmed``).
     ``transactional`` messages (a receipt, a confirmation) are on by
     default. ``source`` says where it was declared (``rules`` for a move's
-    email from ``moves.<state>.notify``).
+    email from ``moves.<state>.notify``, ``mail`` for a message a part
+    declared with :func:`karni.mail.register_kind`). ``audience`` says who
+    gets it, and an email that is not ``switchable`` (a sign-in code) always
+    goes out. ``editable``: the business may rewrite its text (a
+    :func:`karni.mail.register_kind` message with merge fields, in a project whose
+    ``KARNI_MAIL_SOURCE`` keeps edited emails).
     """
 
     name: str
@@ -164,6 +169,9 @@ class EmailKind:
     default: bool = True
     transactional: bool = True
     source: str = ""
+    audience: str = ""
+    switchable: bool = True
+    editable: bool = False
 
 
 @dataclass
@@ -399,12 +407,31 @@ def connections() -> list[Connection]:
 
 
 def emails() -> list[EmailKind]:
-    """Experimental. Every email kind: the declared ones and each move's email, by name."""
+    """Experimental. Every email kind, by name: the declared ones, each move's email and
+    each message a part declared with :func:`karni.mail.register_kind`."""
     ensure_discovered()
     found = dict(_registry.emails)
-    for kind in _move_emails():
+    for kind in [*_move_emails(), *_mail_emails()]:
         found.setdefault(kind.name, kind)
     return [found[name] for name in sorted(found)]
+
+
+def _mail_emails() -> Iterable[EmailKind]:
+    from karni.mail import DefaultSource, kinds, mail_source
+
+    # Editable when the project's mail source keeps edited emails (KARNI_MAIL_SOURCE).
+    keeps = getattr(type(mail_source()), "template", None) not in (None, DefaultSource.template)
+    for kind in kinds():
+        yield EmailKind(
+            name=kind.name,
+            title=kind.title,
+            describe=kind.describe,
+            transactional=kind.transactional,
+            source="mail",
+            audience=kind.audience,
+            switchable=kind.switchable,
+            editable=keeps and bool(kind.fields),
+        )
 
 
 def _move_emails() -> Iterable[EmailKind]:

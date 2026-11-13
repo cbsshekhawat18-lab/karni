@@ -1,4 +1,4 @@
-// /shop/products: the catalogue (shop/Catalogue.tsx).
+// /shop/catalogue: the catalogue (shop/Catalogue.tsx).
 import { Catalogue } from "../../shop/Catalogue";
 
 export default function ProductsPage() {

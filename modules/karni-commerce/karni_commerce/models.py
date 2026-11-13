@@ -42,7 +42,6 @@ __all__ = [
     "OrderNote",
     "OrderPayment",
     "OrderRefund",
-    "Setting",
     "ShippingMethod",
     "ShippingZone",
     "TaxRate",
@@ -717,24 +716,6 @@ class Invoice(BaseModel):
 
     def __str__(self) -> str:
         return self.reference
-
-
-class Setting(BaseModel):
-    """What a business changed in Settings, one row per group: ``details``, ``emails``,
-    or a part's section (``shop``). Experimental, and only until the family's
-    preferences contract is installed (:mod:`karni_commerce.preferences`)."""
-
-    group = models.CharField(max_length=60)
-    values = models.JSONField(default=dict, blank=True)
-
-    class Meta:
-        constraints = [LiveUniqueConstraint(fields=["group"], name="karni_commerce_setting_group")]
-
-    class Karni:
-        audit = True
-
-    def __str__(self) -> str:
-        return self.group
 
 
 class EmailTemplate(BaseModel):

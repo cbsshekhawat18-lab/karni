@@ -1,5 +1,19 @@
 name = "shop"
 title = "Online shop"
+version = "1.0.0"
+# commerce: the cart, checkout, orders, refunds, coupons, tax and invoices (it needs
+# payments). storage: the files of digital products. preferences: Settings (details,
+# Checkout, Shop, Emails). people, events and timeline: the payer of each payment is a
+# person and its moments go on the timeline (karni-payments publishes them).
+requires = [
+    "payments",
+    "commerce",
+    "storage",
+    "people>=1",
+    "events>=1",
+    "timeline>=1",
+    "preferences>=1",
+]
 purpose = "Products in categories, a cart, orders and checkout with online payments."
 use_when = [
     "online shop",
@@ -22,12 +36,17 @@ usually_changed = [
 ]
 
 # The shop's pages (files/frontend/src/pages/): the first karni build registers each in
-# frontend/src/routes.tsx. The storefront is under /shop. /cart, /checkout, /orders,
-# /account and /signin are the family pages: thin files that mount @karni/commerce-ui's
-# and @karni/ui's components. area = "store" puts a page in the storefront's own header
-# and footer (files/frontend/src/layout.tsx). area = "family" shows a page in the
-# storefront to a customer and in the back office to staff (/orders: a customer's own
-# orders, or every order for staff). The other pages are the back office's.
+# frontend/src/routes.tsx. Every page of the shop is under its route, /shop: the
+# storefront (/shop, /shop/catalogue, a product, the wishlist and the terms) and the back
+# office's own screens (products, customers, coupons, shipping, tax rates, reports and
+# abandoned carts). area = "store" puts a page in the storefront's own header and footer
+# (files/frontend/src/layout.tsx).
+#
+# The family pages come last: the cart, checkout and orders are karni-commerce's
+# (@karni/commerce-ui), the account, sign-in and Settings pages are Karni's (@karni/ui).
+# The shop mounts them from thin page files until the build writes them itself.
+# area = "family" shows a page in the storefront to a customer and in the back office
+# to staff (/orders: a customer's own orders, or every order for staff).
 
 [[routes]]
 path = "/shop"
@@ -36,16 +55,59 @@ public = true
 data = { area = "store" }
 
 [[routes]]
-path = "/shop/products"
+path = "/shop/catalogue"
 page = "pages/shop/products"
 public = true
 data = { area = "store" }
 
 [[routes]]
-path = "/shop/products/$slug"
+path = "/shop/catalogue/$slug"
 page = "pages/shop/product"
 public = true
 data = { area = "store" }
+
+[[routes]]
+path = "/shop/wishlist"
+page = "pages/wishlist"
+data = { area = "store" }
+
+[[routes]]
+path = "/shop/terms"
+page = "pages/terms"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/shop/products"
+page = "pages/products"
+
+[[routes]]
+path = "/shop/customers"
+page = "pages/customers"
+
+[[routes]]
+path = "/shop/customers/$email"
+page = "pages/customer"
+
+[[routes]]
+path = "/shop/coupons"
+page = "pages/coupons"
+
+[[routes]]
+path = "/shop/shipping"
+page = "pages/shipping"
+
+[[routes]]
+path = "/shop/tax-rates"
+page = "pages/tax-rates"
+
+[[routes]]
+path = "/shop/reports"
+page = "pages/reports"
+
+[[routes]]
+path = "/shop/abandoned-carts"
+page = "pages/abandoned-carts"
 
 [[routes]]
 path = "/cart"
@@ -75,12 +137,14 @@ public = true
 data = { area = "family" }
 
 [[routes]]
-path = "/customers"
-page = "pages/customers"
+path = "/orders/$number/invoice"
+page = "pages/order-invoice"
+public = true
+data = { area = "family" }
 
 [[routes]]
-path = "/customers/$email"
-page = "pages/customer"
+path = "/orders/$number/packing-slip"
+page = "pages/order-packing-slip"
 
 [[routes]]
 path = "/account"
@@ -94,50 +158,5 @@ public = true
 data = { area = "store" }
 
 [[routes]]
-path = "/terms"
-page = "pages/terms"
-public = true
-data = { area = "store" }
-
-[[routes]]
-path = "/products"
-page = "pages/products"
-
-[[routes]]
-path = "/wishlist"
-page = "pages/wishlist"
-data = { area = "store" }
-
-[[routes]]
-path = "/coupons"
-page = "pages/coupons"
-
-[[routes]]
-path = "/shipping"
-page = "pages/shipping"
-
-[[routes]]
-path = "/tax-rates"
-page = "pages/tax-rates"
-
-[[routes]]
 path = "/settings"
 page = "pages/settings"
-
-[[routes]]
-path = "/reports"
-page = "pages/reports"
-
-[[routes]]
-path = "/abandoned-carts"
-page = "pages/abandoned-carts"
-
-[[routes]]
-path = "/orders/$number/invoice"
-page = "pages/order-invoice"
-public = true
-data = { area = "family" }
-
-[[routes]]
-path = "/orders/$number/packing-slip"
-page = "pages/order-packing-slip"

@@ -231,7 +231,7 @@ def test_the_timeline_switches_on_the_contracts_it_needs() -> None:
     assert contract_settings(spec) == ["KARNI_PEOPLE"]
 
 
-def test_preferences_are_installed_with_the_project_name_and_currency() -> None:
+def test_preferences_are_installed_with_the_project_name_and_its_fixed_currency() -> None:
     from karni_cli.builder.render import contract_apps, settings_block
     from karni_cli.spec import schema
 
@@ -243,10 +243,9 @@ def test_preferences_are_installed_with_the_project_name_and_currency() -> None:
     spec = schema.Spec.model_validate(data)
     assert contract_apps(spec) == ["karni.preferences"]
     block = settings_block(spec, 100)
-    assert (
-        'KARNI_PREFERENCES_DEFAULTS = {"details": {"name": "Harbour Yoga", "currency": "USD"}}'
-        in block
-    )
+    assert 'KARNI_PREFERENCES_DEFAULTS = {"details": {"name": "Harbour Yoga"}}' in block
+    # the project's one currency: shown on Settings, never changed there
+    assert 'KARNI_PREFERENCES_LOCKED = {"details": {"currency": "USD"}}' in block
 
 
 def test_conflicts_are_refused_both_ways() -> None:

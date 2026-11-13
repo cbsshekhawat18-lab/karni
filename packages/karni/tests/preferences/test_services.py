@@ -10,8 +10,9 @@ from django.test import override_settings
 from karni import preferences
 from karni.audit.models import ChangeLog
 from karni.errorcodes import KarniError
+from karni.mail import DefaultSource, EditedTemplate
 from karni.preferences.models import Details, SectionValue, Switch
-from karni.preferences.registry import find_section
+from karni.preferences.registry import find_email, find_section
 from tests.helpdeskapp.preferences import HelpdeskPreferences
 
 pytestmark = pytest.mark.django_db
@@ -210,6 +211,64 @@ def test_a_move_email_follows_its_switch_and_the_sender(
     preferences.switch("email", "rulesapp.purchase_paid", False)
     assert send_move_email(purchase, "paid") == 0
     assert len(mailoutbox) == 1
+
+
+class KeepsEdits(DefaultSource):
+    """A mail source that keeps emails a business rewrote (none, here)."""
+
+    def template(self, kind: str) -> EditedTemplate | None:
+        return None
+
+
+def test_a_message_a_part_declared_in_karni_mail_is_an_email_of_settings(
+    mailoutbox: list[Any],
+) -> None:
+    """karni.mail's kinds are listed with their audience, switched here, and sent from the
+    details' sender (the default mail source reads preferences while it is installed)."""
+    from karni.mail import register_kind, send_templated, unregister_kind
+
+    register_kind(
+        "helpdeskapp.reply",
+        title="Reply sent",
+        template="helpdeskapp/email/reply",
+        audience="the customer",
+        fields={"ticket.subject": "The ticket's subject"},
+    )
+    try:
+        with override_settings(KARNI_MAIL_SOURCE="tests.preferences.test_services.KeepsEdits"):
+            kinds = {kind.name: kind for kind in preferences.emails()}
+        reply = kinds["helpdeskapp.reply"]
+        assert (reply.source, reply.audience, reply.switchable, reply.editable) == (
+            "mail",
+            "the customer",
+            True,
+            True,
+        )
+        with override_settings(KARNI_MAIL_SOURCE=""):  # nothing keeps an edited email
+            found = find_email("helpdeskapp.reply")
+            assert found is not None and not found.editable
+        code = kinds["accounts.login_code"]
+        assert code.switchable is False
+        with pytest.raises(preferences.PreferenceRefused) as refused:
+            preferences.switch("email", "accounts.login_code", False)
+        assert _code(refused) == "E323"
+        assert preferences.email_on("accounts.login_code")
+        preferences.save_details({"name": "Help Desk", "sender_email": "help@desk.example"})
+        preferences.switch("email", "helpdeskapp.reply", False)
+        sent = send_templated(
+            "helpdeskapp/email/reply", to=["a@example.com"], kind="helpdeskapp.reply"
+        )
+        assert sent == 0 and mailoutbox == []
+        preferences.switch("email", "helpdeskapp.reply", None)
+        assert preferences.email_on("helpdeskapp.reply")
+    finally:
+        unregister_kind("helpdeskapp.reply")
+
+
+def test_the_details_keep_a_tax_number_for_invoices() -> None:
+    preferences.save_details({"tax_number": "GB 123 456 789"})
+    assert preferences.details().tax_number == "GB 123 456 789"
+    assert preferences.value("details.tax_number", "") == "GB 123 456 789"
 
 
 def test_override_sets_values_for_a_block() -> None:

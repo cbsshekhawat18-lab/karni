@@ -493,21 +493,24 @@ def test_the_recipe_named_for_the_next_build_manages_its_own_route_pages() -> No
     assert Record(recipes=["shop"]).recipe_pages() == frozenset(
         {
             "shop",
+            "shop.catalogue",
+            "shop.wishlist",
+            "shop.terms",
+            "shop.products",
+            "shop.customers",
+            "shop.coupons",
+            "shop.shipping",
+            "shop.tax-rates",
+            "shop.reports",
+            "shop.abandoned-carts",
+            # the family pages the shop mounts until the build writes them
             "cart",
             "checkout",
             "orders",
-            "customers",
-            "products",
+            "orders.new",
             "account",
             "signin",
-            "terms",
-            "wishlist",
-            "coupons",
-            "shipping",
-            "tax-rates",
             "settings",
-            "reports",
-            "abandoned-carts",
         }
     )
     assert Record().recipe_pages() == frozenset()

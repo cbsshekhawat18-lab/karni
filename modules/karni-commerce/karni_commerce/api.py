@@ -165,7 +165,7 @@ class CartSerializer(serializers.Serializer[Any]):
 
 def checkout_options() -> dict[str, Any]:
     """Experimental. What checkout asks, from the Checkout settings."""
-    from karni_commerce import preferences_seam as preferences
+    from karni import preferences
 
     return {
         "guest_checkout": preferences.value("commerce.guest_checkout", True),
@@ -856,13 +856,6 @@ class ReportQuerySerializer(serializers.Serializer[Any]):
     end = serializers.DateField(required=False)
     by = serializers.ChoiceField(["day", "week", "month"], required=False, default="day")
     export = serializers.ChoiceField(["json", "csv"], required=False, default="json")
-
-
-class SettingSerializer(serializers.Serializer[Any]):
-    """A group of settings someone changed (the page reads ``preferences/``)."""
-
-    group = serializers.CharField()
-    values = serializers.DictField()
 
 
 class EmailFieldSerializer(serializers.Serializer[Any]):

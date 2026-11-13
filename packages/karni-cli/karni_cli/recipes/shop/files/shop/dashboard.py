@@ -32,7 +32,7 @@ PAID = ("paid", "part_paid", "part_refunded")
     requires="shop.product:change",
     order=20,
     size="half",
-    link="/products?ordering=available",
+    link="/shop/products?ordering=available",
 )
 def low_stock(request: Any) -> dict[str, Any]:
     """Active products at or under their low-stock level, the fewest left first. A
@@ -57,7 +57,7 @@ def low_stock(request: Any) -> dict[str, Any]:
                 "name": product.name,
                 "sku": product.sku,
                 "available": product.available_total,
-                "link": f"/products/{product.pk}",
+                "link": f"/shop/products/{product.pk}",
             }
             for product in rows
         ],
@@ -84,7 +84,11 @@ def top_products(request: Any) -> dict[str, Any]:
         .order_by("-sold", "name")[:5]
     )
     rows = [
-        {"name": row["name"], "sold": row["sold"], "link": f"/products/{row['item']}"}
+        {
+            "name": row["name"],
+            "sold": row["sold"],
+            "link": f"/shop/products/{row['item']}",
+        }
         for row in sold
     ]
     return {

@@ -24,8 +24,8 @@ from __future__ import annotations
 from typing import Any
 
 from django.template.loader import render_to_string
+from karni import preferences
 
-from karni_commerce import preferences_seam as preferences
 from karni_commerce.models import Invoice, Order
 
 __all__ = ["KINDS", "context", "render"]

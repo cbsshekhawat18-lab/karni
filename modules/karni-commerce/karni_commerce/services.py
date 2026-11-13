@@ -41,12 +41,12 @@ from django.conf import settings
 from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 from django.utils.module_loading import import_string
+from karni import preferences
 from karni_payments.models import Payment, Refund
 from karni_payments.services import create_checkout, create_refund, refunded_amount
 from rest_framework.exceptions import ValidationError
 
 from karni_commerce import conf, events, pricing
-from karni_commerce import preferences_seam as preferences
 from karni_commerce.models import (
     ZERO,
     Cart,

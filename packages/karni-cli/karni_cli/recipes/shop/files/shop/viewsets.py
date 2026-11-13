@@ -252,7 +252,7 @@ STOCK_FIELDS = ("stock", "available")
 
 
 def _show_stock_left() -> bool:
-    from karni_commerce import preferences_seam as preferences
+    from karni import preferences
 
     return preferences.value("shop.show_stock_left", True)
 
@@ -336,7 +336,7 @@ class ProductViewSet(karni.ProductViewSet):
         user = self.request.user
         if not (user.is_authenticated and user.can("shop.product:change")):
             queryset = queryset.filter(active=True)
-            from karni_commerce import preferences_seam as preferences
+            from karni import preferences
 
             if preferences.value("shop.hide_sold_out", False):
                 queryset = queryset.filter(

@@ -1,6 +1,6 @@
 /**
- * SettingsPage (details, sections, emails) and EmailTemplateEditor, against
- * a simulated `/preferences/` and `/email-templates/`.
+ * SettingsPage (details, sections, emails, connections) and EmailTemplateEditor,
+ * against a simulated `/preferences/` (karni.preferences) and `/email-templates/`.
  */
 import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -75,7 +75,8 @@ const PREFERENCES = {
         audience: "the buyer",
         transactional: true,
         switchable: true,
-        source: "commerce.order",
+        editable: true,
+        source: "mail",
         default: true,
         on: true,
         locked: false,
@@ -87,7 +88,18 @@ const PREFERENCES = {
         audience: "the person signing in",
         transactional: true,
         switchable: false,
-        source: "accounts.login",
+        editable: false,
+        source: "mail",
+        default: true,
+        on: true,
+        locked: true,
+      },
+      {
+        name: "bookings.booking_confirmed",
+        title: "Booking: confirmed",
+        describe: "",
+        transactional: true,
+        source: "rules",
         default: true,
         on: true,
         locked: false,
@@ -158,6 +170,98 @@ describe("SettingsPage", () => {
     await userEvent.type(level, "9");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(bodies).toEqual([{ track_stock: true, low_stock: 9 }]));
+  });
+
+  it("offers the editor only for an email the business may rewrite", async () => {
+    servePreferences();
+    mount(<SettingsPage />);
+    await userEvent.click(await screen.findByRole("tab", { name: "Emails" }));
+    expect(screen.getByRole("button", { name: "Edit Order paid" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit Sign-in code" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Edit Booking: confirmed" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Bookings" })).toBeInTheDocument();
+  });
+
+  it("lists the connections and switches one", async () => {
+    server.use(
+      http.get("*/api/preferences/", () =>
+        HttpResponse.json({
+          ...PREFERENCES,
+          connections: {
+            can_change: true,
+            items: [
+              {
+                name: "crm.deal_timeline",
+                title: "Deals on the timeline",
+                describe: "A won or lost deal is written on the deal's timeline.",
+                part: "crm",
+                needs: ["timeline"],
+                installed: true,
+                default: true,
+                on: true,
+                active: true,
+                locked: false,
+              },
+            ],
+          },
+        }),
+      ),
+    );
+    const bodies: unknown[] = [];
+    server.use(
+      http.patch("*/api/preferences/connections/crm.deal_timeline/", async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({});
+      }),
+    );
+    mount(<SettingsPage />);
+    await userEvent.click(await screen.findByRole("tab", { name: "Connections" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Deals on the timeline" }));
+    await waitFor(() => expect(bodies).toEqual([{ on: false }]));
+  });
+
+  it("has no Connections tab when nothing connects", async () => {
+    servePreferences();
+    mount(<SettingsPage />);
+    await screen.findAllByRole("tab");
+    expect(screen.queryByRole("tab", { name: "Connections" })).not.toBeInTheDocument();
+  });
+
+  it("uploads and removes the logo", async () => {
+    server.use(
+      http.get("*/api/preferences/", () =>
+        HttpResponse.json({
+          ...PREFERENCES,
+          details: {
+            ...PREFERENCES.details,
+            values: { ...PREFERENCES.details.values, logo: "/media/logo.png" },
+            fields: [
+              ...PREFERENCES.details.fields,
+              { name: "logo", label: "Logo", type: "file", help: "" },
+            ],
+          },
+        }),
+      ),
+    );
+    const sent: string[] = [];
+    server.use(
+      http.patch("*/api/preferences/details/", async ({ request }) => {
+        sent.push(request.headers.get("content-type") ?? "");
+        return HttpResponse.json({});
+      }),
+    );
+    mount(<SettingsPage />);
+    expect(await screen.findByRole("img", { name: "Logo" })).toHaveAttribute(
+      "src",
+      "/media/logo.png",
+    );
+    const file = new File(["png"], "logo.png", { type: "image/png" });
+    await userEvent.upload(screen.getByLabelText("Logo"), file);
+    await waitFor(() => expect(sent[0]).toContain("multipart/form-data"));
+    await userEvent.click(screen.getByRole("button", { name: "Remove the logo" }));
+    await waitFor(() => expect(sent[1]).toContain("application/json"));
   });
 
   it("switches an email and groups by source", async () => {

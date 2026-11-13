@@ -45,6 +45,7 @@ DETAIL_FIELDS: tuple[str, ...] = (
     "address",
     "phone",
     "email",
+    "tax_number",
     "sender_name",
     "sender_email",
     "reply_to",
@@ -84,6 +85,9 @@ class Details(models.Model):
     address = models.TextField(blank=True, default="")
     phone = models.CharField(max_length=50, blank=True, default="")
     email = models.EmailField(blank=True, default="", help_text="Where customers write to.")
+    tax_number = models.CharField(
+        max_length=60, blank=True, default="", help_text="The tax number, on invoices."
+    )
     sender_name = models.CharField(
         max_length=200, blank=True, default="", help_text="The name emails come from."
     )

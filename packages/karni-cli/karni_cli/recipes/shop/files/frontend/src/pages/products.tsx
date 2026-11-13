@@ -12,12 +12,12 @@ export default function ProductsPage() {
         resource="products"
         bulkEdit={["price", "sale_price", "stock", "low_stock", "active", "featured"]}
         onRowClick={(row) =>
-          void navigate({ to: "/products/$id", params: { id: String(row.id) } })
+          void navigate({ to: "/shop/products/$id", params: { id: String(row.id) } })
         }
         onEdit={(row) =>
-          void navigate({ to: "/products/$id/edit", params: { id: String(row.id) } })
+          void navigate({ to: "/shop/products/$id/edit", params: { id: String(row.id) } })
         }
-        onCreate={() => void navigate({ to: "/products/new" })}
+        onCreate={() => void navigate({ to: "/shop/products/new" })}
       />
     </Page>
   );

@@ -57,8 +57,10 @@ template edited in the app (:class:`EditedTemplate`) wins over the files and
 renders with a restricted engine (:func:`render_edited`) that sees the
 declared merge fields only, as plain values, and has no tag that loads code
 or other templates. ``enabled(kind)`` switches an email off, and ``sender()``
-gives the ``From``. Without the setting, the files and ``DEFAULT_FROM_EMAIL``
-are used, as before.
+gives the ``From``. Without the setting, :class:`DefaultSource` answers: the
+files, and the switches and the sender of the preferences contract while
+``karni.preferences`` is installed, else every email on and
+``DEFAULT_FROM_EMAIL``.
 
 Override / escape hatch: put a template of the same name earlier in
 ``TEMPLATES`` ``DIRS`` to change a message without code, pass
@@ -70,7 +72,7 @@ Override / escape hatch: put a template of the same name earlier in
 from __future__ import annotations
 
 import threading
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -89,6 +91,7 @@ from django.utils.module_loading import autodiscover_modules, import_string
 __all__ = [
     "KIND_HEADER",
     "SAFE_TAGS",
+    "DefaultSource",
     "EditedTemplate",
     "MessageKind",
     "Rendered",
@@ -104,6 +107,7 @@ __all__ = [
     "register_kind",
     "render_edited",
     "render_templated",
+    "sample_context",
     "send_templated",
     "sender",
     "silenced",
@@ -131,6 +135,11 @@ class MessageKind:
     passes: ``order.number``, ``lines.name`` for each line) to what it means.
     An edited template sees these and nothing else. ``switchable`` is false for
     an email a person cannot do without (a sign-in code).
+
+    A preview (:func:`sample_context`) renders with real values: ``sample()``
+    gives the context the sender would pass for the latest matching record
+    (the last paid order), or ``None`` when there is none, and ``samples`` is a
+    context of declared values for then (``{"order": {"number": 1001}}``).
     """
 
     name: str
@@ -141,6 +150,8 @@ class MessageKind:
     fields: Mapping[str, str] = field(default_factory=dict)
     transactional: bool = True
     switchable: bool = True
+    sample: Callable[[], Mapping[str, Any] | None] | None = field(default=None, compare=False)
+    samples: Mapping[str, Any] = field(default_factory=dict, compare=False)
 
 
 @dataclass(frozen=True)
@@ -165,8 +176,13 @@ def register_kind(
     fields: Mapping[str, str] | None = None,
     transactional: bool = True,
     switchable: bool = True,
+    sample: Callable[[], Mapping[str, Any] | None] | None = None,
+    samples: Mapping[str, Any] | None = None,
 ) -> MessageKind:
-    """Experimental. Declare the email ``name`` (registering it again replaces it)."""
+    """Experimental. Declare the email ``name`` (registering it again replaces it).
+
+    ``sample`` and ``samples`` feed the editor's preview (:func:`sample_context`).
+    """
     found = MessageKind(
         name=name,
         title=title,
@@ -176,6 +192,8 @@ def register_kind(
         fields=dict(fields or {}),
         transactional=transactional,
         switchable=switchable,
+        sample=sample,
+        samples=dict(samples or {}),
     )
     _KINDS[name] = found
     return found
@@ -213,20 +231,39 @@ def find_kind(name: str) -> MessageKind | None:
     return _KINDS.get(name)
 
 
-class _NoSource:
-    """What a project without ``KARNI_MAIL_SOURCE`` has: the files, the settings."""
+class DefaultSource:
+    """Experimental. What a project without ``KARNI_MAIL_SOURCE`` has: the template files,
+    and the switches and the sender of the preferences contract (Settings, Emails and
+    Details) while ``karni.preferences`` is installed, else every email on and
+    ``DEFAULT_FROM_EMAIL``. A source of your own may subclass it and add
+    ``template(kind)``.
+    """
+
+    @staticmethod
+    def _preferences() -> bool:
+        from django.apps import apps
+
+        return apps.is_installed("karni.preferences")
 
     def template(self, kind: str) -> EditedTemplate | None:
         return None
 
     def enabled(self, kind: str) -> bool:
-        return True
+        if not self._preferences():
+            return True
+        from karni import preferences
+
+        return preferences.email_on(kind)
 
     def sender(self) -> str | None:
-        return None
+        if not self._preferences():
+            return None
+        from karni import preferences
+
+        return preferences.sender()
 
 
-default_source = _NoSource()
+default_source = DefaultSource()
 
 
 def mail_source() -> Any:
@@ -356,6 +393,60 @@ def merge_values(fields: Iterable[str], context: Mapping[str, Any]) -> dict[str,
     for path in fields:
         found = _merge(found, _build(dict(context), str(path).split(".")))
     return found
+
+
+def _placeholders(kind: MessageKind) -> dict[str, Any]:
+    """Each merge field shown as ``[path]``: what a preview falls back to, last.
+
+    A field whose meaning starts with "Each" is one per row: the part of its
+    path before the last is a list of two rows.
+    """
+    found: dict[str, Any] = {}
+    for path, meaning in kind.fields.items():
+        parts = str(path).split(".")
+        many = str(meaning).startswith("Each") and len(parts) > 1
+        value: Any = f"[{path}]"
+        for depth in range(len(parts) - 1, -1, -1):
+            value = {parts[depth]: value}
+            if many and depth == len(parts) - 1:
+                value = [value, value]
+        found = _merge(found, value) if isinstance(value, dict) else found
+    return found
+
+
+def _business() -> dict[str, Any]:
+    """The business's details (``karni.preferences``) while the contract is installed."""
+    from django.apps import apps
+
+    if not apps.is_installed("karni.preferences"):
+        return {}
+    from karni import preferences
+
+    return dict(preferences.details().as_dict())
+
+
+def sample_context(kind: MessageKind | str) -> dict[str, Any]:
+    """Experimental. What a preview of the email ``kind`` renders with: real values.
+
+    In this order, each over the one before: each merge field as ``[path]``,
+    the kind's declared ``samples``, the business's details as ``business``
+    (Settings, Details), and the context of the latest matching record
+    (``sample()``: the last paid order for a confirmation). Pass the result to
+    :func:`merge_values` with the kind's fields.
+
+    :raises LookupError: ``kind`` names no declared email.
+    """
+    found = find_kind(kind) if isinstance(kind, str) else kind
+    if found is None:
+        raise LookupError(f"karni.mail: no email kind {kind!r} is declared.")
+    context = _merge(_placeholders(found), _plain(dict(found.samples)))
+    business = _business()
+    if business:
+        context = _merge(context, {"business": business})
+    record = found.sample() if found.sample is not None else None
+    if record:
+        context.update(dict(record))  # the sender's own context: top-level keys replace
+    return context
 
 
 def check_edited(subject: str, text: str) -> dict[str, str]:

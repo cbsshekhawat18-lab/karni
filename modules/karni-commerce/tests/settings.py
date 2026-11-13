@@ -25,6 +25,8 @@ KARNI_PAYMENTS_CURRENCY = "eur"
 KARNI_PAYMENTS_CHECKOUT_VALIDATOR = "karni_commerce.payments.checkout_validator"
 KARNI_FRONTEND_URL = "http://localhost:5173"
 KARNI_COMMERCE_STAFF_EMAILS = ["orders@example.com"]
+# What karni build writes for a project whose app.currency is EUR: Settings does not change it.
+KARNI_PREFERENCES_LOCKED = {"details": {"currency": "EUR"}}
 
 KARNI_ROLES = {
     "admin": {"name": "Admin", "system": True, "grants": {"*": "all"}},
@@ -39,11 +41,18 @@ KARNI_ROLES = {
     },
     "manager": {
         "name": "Manager",
-        "grants": {"karni_commerce.*:*": "all"},
+        "grants": {"karni_commerce.*:*": "all", "preferences.*:change": "all"},
     },
     "customer": {"name": "Customer", "default": True, "grants": {}},
 }
 
 karni_settings(globals(), env_name="dev")
 
-INSTALLED_APPS += ["karni_payments", "karni_commerce", "tests.testapp"]  # type: ignore[name-defined]  # noqa: F821
+# karni.preferences: the Settings page (/api/preferences/), commerce's Checkout section
+# and the email switches.
+INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
+    "karni.preferences",
+    "karni_payments",
+    "karni_commerce",
+    "tests.testapp",
+]

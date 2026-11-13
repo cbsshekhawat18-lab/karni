@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "CONTRACT_ACTIONS",
+    "CONTRACT_GRANT_MODELS",
     "CONTRACT_MODELS",
     "CONTRACT_NEEDS",
     "CONTRACT_SETTINGS",
@@ -55,6 +56,13 @@ OTHER_MODELS: Final = frozenset({"auth.Group", "contenttypes.ContentType"})
 #: relation to one (``fk:people.Person``) makes the build turn the contract on.
 CONTRACT_MODELS: Final[dict[str, tuple[str, ...]]] = {
     "people": ("Person", "Organisation", "Membership", "Address"),
+}
+#: Experimental. The models of each core contract a role's grant may name while the contract
+#: is on (``preferences.*:change`` for a part's settings manager): :data:`CONTRACT_MODELS`
+#: and the contracts no relation targets.
+CONTRACT_GRANT_MODELS: Final[dict[str, tuple[str, ...]]] = {
+    **CONTRACT_MODELS,
+    "preferences": ("Details", "SectionValue", "Switch"),
 }
 #: Experimental. The setting that installs each contract (``karni.conf`` reads it).
 CONTRACT_SETTINGS: Final[dict[str, str]] = {"people": "KARNI_PEOPLE"}

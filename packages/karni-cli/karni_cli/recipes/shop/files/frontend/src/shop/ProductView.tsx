@@ -84,7 +84,7 @@ export function ProductView({ slug }: { slug: string }) {
       <EmptyState
         title="This product is not here"
         description="It may have sold out for good, or the link is old."
-        action={<Link to="/shop/products">Back to the products</Link>}
+        action={<Link to="/shop/catalogue">Back to the products</Link>}
       />
     );
   }
@@ -98,7 +98,7 @@ export function ProductView({ slug }: { slug: string }) {
             aria-label="Breadcrumb"
             className="text-sm text-muted-foreground"
           >
-            <Link to="/shop/products" className="hover:underline">
+            <Link to="/shop/catalogue" className="hover:underline">
               Products
             </Link>{" "}
             / {product.name}

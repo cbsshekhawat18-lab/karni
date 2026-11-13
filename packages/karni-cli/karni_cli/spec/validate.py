@@ -58,6 +58,7 @@ from karni_cli.project import CliError
 from karni_cli.spec import schema
 from karni_cli.spec.catalog import (
     CONTRACT_ACTIONS,
+    CONTRACT_GRANT_MODELS,
     CONTRACT_MODELS,
     CONTRACT_SETTINGS,
     FEATURES,
@@ -1686,7 +1687,7 @@ class _Meaning:
             if fnmatch.fnmatchcase(entity.app, app)
             and fnmatch.fnmatchcase(entity.name.lower(), model.lower())
         ]
-        for label, models in CONTRACT_MODELS.items():
+        for label, models in CONTRACT_GRANT_MODELS.items():
             if (
                 self.contract_on(label)
                 and fnmatch.fnmatchcase(label, app)
@@ -1885,6 +1886,69 @@ class _Meaning:
                 )
             taken.setdefault(app.route, label)
 
+    def entity_paths(
+        self, name: str, entity: _Entity, written: list[Any], where: Loc
+    ) -> list[str] | None:
+        """The routes of an entity's pages, or ``None`` (reported) when its kinds are wrong."""
+        kinds = schema.page_kind_names(written)
+        bad = [kind for kind in kinds if kind not in ENTITY_PAGES]
+        if bad or not kinds or len(set(kinds)) != len(kinds):
+            self.add(
+                "C220",
+                where,
+                f"{name}'s pages are {kinds!r}: an entity takes list, detail and form, each once.",
+                f"Write e.g. - {name}: [list, detail, form].",
+            )
+            return None
+        detail_at = next(
+            (i for i, kind in enumerate(written) if isinstance(kind, schema.DetailPage)),
+            None,
+        )
+        if detail_at is not None:
+            self.related(entity, schema.page_related(written), (*where, detail_at))
+        base = f"{self.app_route(entity.app)}/{default_route(entity.name)}"
+        return [
+            *([base] if "list" in kinds else []),
+            *([f"{base}/$id"] if "detail" in kinds else []),
+            *([f"{base}/new", f"{base}/$id/edit"] if "form" in kinds else []),
+        ]
+
+    def app_page(
+        self, index: int, name: str, label: str, rest: str, written: list[Any]
+    ) -> list[str]:
+        """``<app>.<name>: code`` (experimental): a code page under the app's route."""
+        where: Loc = ("pages", index, name)
+        if label not in self.spec.apps:
+            self.add(
+                "C235",
+                where,
+                f"pages names {name}, and the spec has no app {label}.",
+                f"Write the app's label before the dot, or drop {label}. for a page at /{rest}.",
+                key=True,
+            )
+            return []
+        if not re.fullmatch(schema.PAGE_NAME, rest):
+            self.add(
+                "C215",
+                where,
+                f"Page name {rest!r} in {name!r} must be kebab-case.",
+                f"Rename it, e.g. {label}.price-list.",
+                key=True,
+            )
+            return []
+        kinds = schema.page_kind_names(written)
+        if kinds != ["code"] or not isinstance(written[0], str):
+            self.add(
+                "C220",
+                where,
+                f"Page {name!r} is {kinds!r}: a page under an app's route is the project's own "
+                "code.",
+                f"Write - {name}: code.",
+            )
+            return []
+        base = self.app_route(label) or f"/{label}"
+        return [f"{base}/{rest}"]
+
     def pages(self) -> None:
         self.app_routes()
         routes: dict[str, int] = {}
@@ -1914,7 +1978,26 @@ class _Meaning:
                 continue
             seen.add(name)
             paths: list[str] = []
-            if name[:1].isupper() and not re.fullmatch(schema.ENTITY_NAME, name):
+            app_label, dot, rest = name.partition(".")
+            if dot and rest[:1].islower():
+                paths = self.app_page(index, name, app_label, rest, written)
+                if not paths:
+                    continue
+            elif dot and rest[:1].isupper():
+                entity = self.find(name)
+                if not isinstance(entity, _Entity):
+                    self.add(
+                        "C235",
+                        where,
+                        f"pages names the entity {name}, but {entity}.",
+                        "Name an entity of the spec, or add it under apps.",
+                        key=True,
+                    )
+                    continue
+                paths = self.entity_paths(name, entity, written, where)
+                if paths is None:
+                    continue
+            elif name[:1].isupper() and not re.fullmatch(schema.ENTITY_NAME, name):
                 # Not a class name, so not an entity: say the name is wrong, not missing.
                 suggestion = "-".join(words(name))
                 example = suggestion if re.fullmatch(schema.PAGE_NAME, suggestion) else "about"
@@ -1926,7 +2009,7 @@ class _Meaning:
                     key=True,
                 )
                 continue
-            if name[:1].isupper():
+            elif name[:1].isupper():
                 entity = self.find(name)
                 if not isinstance(entity, _Entity):
                     self.add(
@@ -1937,28 +2020,10 @@ class _Meaning:
                         key=True,
                     )
                     continue
-                bad = [kind for kind in kinds if kind not in ENTITY_PAGES]
-                if bad or not kinds or len(set(kinds)) != len(kinds):
-                    self.add(
-                        "C220",
-                        where,
-                        f"{name}'s pages are {kinds!r}: an entity takes list, detail and form, "
-                        "each once.",
-                        f"Write e.g. - {name}: [list, detail, form].",
-                    )
+                found_paths = self.entity_paths(name, entity, written, where)
+                if found_paths is None:
                     continue
-                detail_at = next(
-                    (i for i, kind in enumerate(written) if isinstance(kind, schema.DetailPage)),
-                    None,
-                )
-                if detail_at is not None:
-                    self.related(entity, schema.page_related(written), (*where, detail_at))
-                base = f"{self.app_route(entity.app)}/{default_route(entity.name)}"
-                paths = [
-                    *([base] if "list" in kinds else []),
-                    *([f"{base}/$id"] if "detail" in kinds else []),
-                    *([f"{base}/new", f"{base}/$id/edit"] if "form" in kinds else []),
-                ]
+                paths = found_paths
             else:
                 if not re.fullmatch(schema.PAGE_NAME, name):
                     self.add(
@@ -2001,7 +2066,7 @@ class _Meaning:
 
         if isinstance(self.spec.navigation, bool):
             return
-        known = nav.pages(self.spec)
+        known = nav.known_pages(self.spec)
         seen: set[str] = set()
 
         def options(where: Loc, value: schema.NavigationOptions, *, group: bool) -> None:
