@@ -255,7 +255,7 @@ shows to roles that may update rows.
 
 Styled Radix parts and basics. Each one always merges `className` and forwards refs.
 
-`AccountPage`, `Button`, `Checkbox`, `Dashboard`, `DashboardTiles`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `EmptyValue`, `ErrorState`, `Input`, `KarniPrimitivesProvider`, `Label`, `PendingButton`, `PermissionDenied`, `RecordLink`, `ResourceGrid`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `SignInPage`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`, `ThemeProvider`, `ThemeToggle`
+`AccountPage`, `Button`, `Checkbox`, `Dashboard`, `DashboardTiles`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `EmailTemplateEditor`, `EmptyValue`, `ErrorState`, `Input`, `KarniPrimitivesProvider`, `Label`, `PendingButton`, `PermissionDenied`, `RecordLink`, `ResourceGrid`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `SettingsPage`, `SignInPage`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`, `ThemeProvider`, `ThemeToggle`
 
 ## Hooks
 
