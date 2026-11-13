@@ -18,7 +18,7 @@ import {
 } from "@karni/ui";
 import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { registerShop } from "./shop/register";
+import { register as registerShop } from "./shop";
 import { StoreLayout, SHOP_NAME } from "./shop/StoreLayout";
 import { usePerson } from "./shop/staff";
 
