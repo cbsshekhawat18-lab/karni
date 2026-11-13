@@ -184,7 +184,8 @@ apply codemods and list the manual steps. This file is the human summary.
 - **Added (experimental): several recipes in one project.** karni.yaml lists the parts in
   `app.recipes`. `karni recipes add <name>` merges a recipe's karni.yaml into the project's
   and runs `karni build`, which writes the recipe's own files by the stub rule, migrates and
-  seeds only its new tables; `karni recipes remove <name>` takes a part out, and `karni new
+  seeds only its new tables; `karni recipes remove <name>` takes a part out (and deletes
+  its files the project never changed), and `karni new
   --recipe a --recipe b` starts with several. The merge keeps one currency
   (`app.currency`, which a bare `money` field reads), mounts each part's pages under
   `apps.<label>.route` (`/<label>`), adds up the family roles `admin` and `customer`, and
