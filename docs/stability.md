@@ -176,6 +176,10 @@ Experimental now:
   (with `TermsGateMiddleware`), the `TermsAcceptance` model, the `terms` field
   of `me/`, the client's `onError` hook, and `TermsGate` and `useAuth()`'s
   `terms`, `termsRequired` and `acceptTerms` in `@karni/ui`.
+- [Demo mode](demo-mode.md): `karni.demo` (its accounts, write rule, reset,
+  middlewares, `manage.py karni_demo_boot`, `GET /api/demo/` and `app_urls()`),
+  the `KARNI_DEMO_*` settings, `karni.E950` to `E954`, and `DemoNotice`,
+  `DemoSignInPrompt`, `useDemo` and `karniKeys.demo` in `@karni/ui`.
 - [Integer primary keys](models.md#choosing-the-key-type):
   `karni.models.BigIntBaseModel` and `IntegerKeyModel`, the `KARNI_PK`
   setting, `karni make model --pk`, `karni.api.filters.IntegerFilter`, the

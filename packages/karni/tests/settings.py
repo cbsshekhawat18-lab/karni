@@ -118,6 +118,8 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # The preferences contract (tests/preferences): its API is mounted by
     # tests.preferences.urls.
     "karni.preferences",
+    # Demo mode (karni.demo): inert unless a test sets KARNI_DEMO_MODE.
+    "karni.demo",
 ]
 # tests.searchapp's models declare search, and the default router does not serve
 # them (their router is tests.searchapp.urls'), so karni.W591 is expected here.
@@ -133,3 +135,9 @@ if os.environ.get("KARNI_TEST_USER_PK") == "bigint":
 
     if importlib.util.find_spec("django_otp") is not None:
         INSTALLED_APPS += ["django_otp", "django_otp.plugins.otp_totp"]  # type: ignore[name-defined]  # noqa: F821
+
+# Demo mode's middlewares do nothing while KARNI_DEMO_MODE is off (tests/demo/).
+MIDDLEWARE += [  # type: ignore[name-defined]  # noqa: F821
+    "karni.demo.middleware.DemoResetMiddleware",
+    "karni.demo.middleware.DemoWriteGuardMiddleware",
+]

@@ -104,6 +104,7 @@ nav:
       - Scheduling: scheduling.md
       - Testing: testing.md
       - Seeding: seeding.md
+      - "Demo mode (public demos)": demo-mode.md
       - Large projects: large-projects.md
       - Settings: settings.md
       - "@karni/ui": ui.md

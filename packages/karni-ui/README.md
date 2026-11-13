@@ -1111,6 +1111,25 @@ mid-session bring the gate back. If the version changed again before the user
 accepts (`E246`), the gate shows the new one. The `Panel` slot replaces the
 whole panel. These names are experimental: they may change in a minor release.
 
+### Demo accounts (experimental)
+
+A server in [demo mode](https://cbsshekhawat18-lab.github.io/karni/demo-mode/)
+answers `GET /api/demo/` with its demo accounts, what each can do and the reset
+period. `DemoNotice` shows them and renders nothing when the server is not a
+demo, and `DemoSignInPrompt` is `AuthGuard`'s `Anonymous` slot with the notice
+above Karni's sign-in prompt:
+
+```tsx
+<AuthGuard explain slots={{ Anonymous: DemoSignInPrompt }}>
+  <Outlet />
+</AuthGuard>
+```
+
+`DemoNotice`'s `onPick` adds a "Use" button per account, and its `Notice` prop
+replaces the body. `createDemoSignInPrompt(props)` builds the slot with your
+props, and `useDemo()` gives the data to a notice of your own. These names are
+experimental: they may change in a minor release.
+
 In JWT mode the refresh token is stored through a pluggable `TokenStorage`.
 The default is `localStorage`, which is simple but readable by any XSS on your
 page. For stricter setups use `createMemoryTokenStorage()` or your own adapter,

@@ -2,13 +2,16 @@
 
 The [shop recipe](../../docs/recipes/shop.md) as a public demo that deploys with
 one button (`render.yaml` at the repository root). [docs/demo.md](../../docs/demo.md)
-says what runs, the demo login, who may write and how the data resets.
+says what runs, the demo logins, who may write and how the data resets.
 
 `karni new "Shop Demo" --recipe shop` wrote everything here except the demo's
-own code: the `demo/` app (the write rule, the reset, the boot command, the app
-page and their tests), `frontend/src/demo.tsx` and its line in `layout.tsx`, the
-demo section at the end of `config/settings.py`, `scripts/start.sh` and
-`scripts/smoke.sh`, and the Dockerfile's stage order, app path and command.
+settings: the demo section at the end of `config/settings.py` (the two demo
+accounts, the SQLite and WhiteNoise setup), `karni.demo` in `INSTALLED_APPS`,
+`MIDDLEWARE` and `config/urls.py`, `DemoSignInPrompt` in `frontend/src/layout.tsx`,
+`scripts/start.sh` and `scripts/smoke.sh`, the Dockerfile's stage order, app path
+and command, and the tests in `tests/demo/`. The rules themselves (write guard,
+reset, boot command, sign-in notice) are Karni's
+[demo mode](../../docs/demo-mode.md), shared by every demo.
 
 ```sh
 python3.12 -m venv .venv && .venv/bin/pip install -e . pytest pytest-django

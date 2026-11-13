@@ -5,14 +5,14 @@
 #
 #   python -m karni.deploy.entrypoint sh scripts/start.sh
 #
-# 1. demo_boot: migrate, then seed an empty database or reset data older than
+# 1. karni_demo_boot: migrate, then seed an empty database or reset data older than
 #    DEMO_RESET_HOURS. It runs alone, before any worker serves a request.
 # 2. gunicorn with uvicorn workers on PORT (Render sets it, default 8000).
 #    WEB_CONCURRENCY sets the workers (default 2). Each worker serves the API,
 #    the admin and the React app, and checks once a minute whether a reset is due.
 set -eu
 cd "$(dirname "$0")/.."
-python manage.py demo_boot
+python manage.py karni_demo_boot
 exec gunicorn config.asgi:application \
     --worker-class uvicorn_worker.UvicornWorker \
     --bind "${HOST:-0.0.0.0}:${PORT:-8000}" \

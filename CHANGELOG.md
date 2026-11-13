@@ -390,6 +390,22 @@ apply codemods and list the manual steps. This file is the human summary.
   stock from them everywhere, and a different figure for it is refused. The demo seeds 26
   orders, its reviews meet karni.yaml's count, two printable files and three carts left
   behind.
+- **Demo mode.** `karni.demo` (experimental, in core because it has no service and no
+  memory cost) is the rules of a public demo as settings. `KARNI_DEMO_ACCOUNTS` lists one
+  demo account per role, each with a label and a sentence about what it can do. Only those
+  accounts write, and none can change its own password, email or roles or delete itself,
+  while sign-in, refresh, sign-out and accepting the terms stay open. The data goes back to
+  `karni seed` with a fixed seed at boot when old and every `KARNI_DEMO_RESET_HOURS` hours,
+  by one worker under a lock, safe on SQLite. `manage.py karni_demo_boot` migrates, then
+  seeds or resets, and `GET /api/demo/` lists the accounts for `DemoNotice`,
+  `DemoSignInPrompt` and `useDemo` in `@karni/ui`. Escape hatches: `KARNI_DEMO_OPEN_PATHS`,
+  `KARNI_DEMO_LOCKED_PATHS`, `KARNI_DEMO_WRITE_RULE`, `KARNI_DEMO_SEEDER`,
+  `KARNI_DEMO_KEEP_APPS`. New codes `karni.E950` to `E954`. `examples/shop-demo` lost its
+  own `demo/` app and uses this (two demo accounts now, a staff and a customer), with the
+  same `render.yaml` variables. It needs `karni>=0.5.2` and `@karni/ui` 0.5.2, so the live
+  demo stays as it is until the release and a redeploy.
+  [docs/demo-mode.md](docs/demo-mode.md) lists every setting and how to move from a copied
+  `demo/` app. No public name was renamed.
 
 ## 0.5.1 (2026-11-12)
 

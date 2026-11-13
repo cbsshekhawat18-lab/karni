@@ -6,6 +6,7 @@
  * - `["karni", resource]`: the invalidation root for one resource.
  * - `["karni", resource, "list", normalizedParams]`: one list page.
  * - `["karni", "$navigation", user]`: the menu one user gets (experimental).
+ * - `["karni", "$demo"]`: the demo accounts of a demo-mode server (experimental).
  * - `["karni", "$search", normalizedParams]`: one cross-model search
  *   (experimental, `useGlobalSearch`).
  * - `["karni", resource, "detail", String(id)]`: one item. When the item was
@@ -119,6 +120,11 @@ export const karniKeys = {
       "$navigation",
       user === undefined || user === null ? null : String(user),
     ] as const;
+  },
+
+  /** Experimental. Key of the demo accounts (`GET /demo/`, `useDemo`). */
+  demo(): readonly unknown[] {
+    return ["karni", "$demo"] as const;
   },
 
   /** Experimental. Key for a node's `ancestors/` (the path above it, root first). */

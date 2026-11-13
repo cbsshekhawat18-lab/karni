@@ -13,12 +13,12 @@ script on that page either. Add project routes to
 inserts its include at the ``# karni:urls`` marker, so keep that line.
 """
 
-from demo.urls import app_urls
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerSplitView
 from karni.api.versions import api_urls
+from karni.demo.urls import app_urls
 from karni.health.probe_urls import urlpatterns as probe_urls
 from karni.welcome import media_urls, welcome_urls
 
@@ -32,6 +32,8 @@ urlpatterns = [
         name="swagger-ui",
     ),
     path("api/auth/", include("karni.accounts.urls")),
+    # The demo accounts for the sign-in pages (404 while KARNI_DEMO_MODE is off).
+    path("api/demo/", include("karni.demo.urls")),
     # /api/, or a mount per version once KARNI_API_VERSION is set.
     *api_urls(),
     path("health/", include("karni.health.urls")),
@@ -42,7 +44,7 @@ urlpatterns = [
     # Project routes that `karni make` wires (a public site's include goes here).
     path("payments/", include("karni_payments.urls")),
     # karni:urls
-    # The built React app at "/" and every deeper path of it (demo/urls.py).
+    # The built React app at "/" and every deeper path of it (karni.demo.urls).
     *app_urls(),
     # Only while DEBUG is on, and only until a route above answers "/".
     *welcome_urls(),

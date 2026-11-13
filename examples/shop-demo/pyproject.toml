@@ -5,7 +5,7 @@ description = "Shop Demo, a Karni project."
 requires-python = ">=3.12"
 dependencies = [
     # The released packages from PyPI (the image installs these, never a checkout).
-    "karni>=0.5,<0.6",
+    "karni>=0.5.2,<0.6",
     "gunicorn",
     "uvicorn-worker",
     "psycopg[binary]",

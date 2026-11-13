@@ -384,6 +384,17 @@ export type {
 export { AuthProvider, useAuth } from "./auth/provider";
 export type { AuthProviderProps, AuthContextValue } from "./auth/provider";
 
+// demo mode (experimental): the demo accounts on a sign-in page
+export { DEMO_PATH, useDemo } from "./demo/useDemo";
+export type { DemoAccount, DemoInfo } from "./demo/useDemo";
+export {
+  DemoNotice,
+  DemoNoticeBody,
+  DemoSignInPrompt,
+  createDemoSignInPrompt,
+} from "./demo/DemoNotice";
+export type { DemoNoticeBodyProps, DemoNoticeProps } from "./demo/DemoNotice";
+
 export { AuthGuard, defaultAuthGuardSlots } from "./auth/AuthGuard";
 export type {
   AuthGuardProps,

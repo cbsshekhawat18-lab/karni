@@ -786,7 +786,7 @@ jobs:
   # examples/shop-demo: the shop recipe as the one-service demo that render.yaml
   # deploys (docs/demo.md). Karni's checks, the demo's tests (boot, the reset,
   # the write rule, the sign-in notice, the Blueprint passing the deploy gate),
-  # the React build from the npm release, then scripts/smoke.sh: production
+  # the React build (the lock's packages with this checkout's @karni/ui), then scripts/smoke.sh: production
   # settings, the deploy gate and the exact start command on SQLite, checked
   # with curl. A framework change that breaks the demo breaks this job.
   # ---------------------------------------------------------------------------
@@ -828,7 +828,9 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: examples/shop-demo/frontend/package-lock.json
+          cache-dependency-path: |
+            packages/karni-ui/package-lock.json
+            examples/shop-demo/frontend/package-lock.json
 
       # The image installs the PyPI releases. CI installs this checkout instead,
       # so the demo is tested against the framework it ships with next.
@@ -838,9 +840,16 @@ jobs:
             -e ../../modules/karni-payments \
             whitenoise gunicorn uvicorn-worker pytest pytest-django
 
-      - name: Install the frontend (@karni/ui from npm, as the image does)
-        working-directory: examples/shop-demo/frontend
-        run: npm ci
+      # The image installs the npm release. The demo uses what this checkout's
+      # @karni/ui added (DemoSignInPrompt), so CI installs the lock's packages and
+      # then puts this checkout's packed @karni/ui over the released one.
+      - name: Install the frontend (the lock's packages, then this checkout's @karni/ui)
+        run: |
+          (cd ../../packages/karni-ui && npm ci && npm run build \
+            && npm pack --pack-destination "$RUNNER_TEMP/karni-ui")
+          cd frontend
+          npm ci
+          npm install --no-save --no-audit --no-fund "$RUNNER_TEMP"/karni-ui/karni-ui-*.tgz
 
       - name: Spec, architecture rules, duplication, agent adapters
         run: |
