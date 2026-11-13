@@ -11,7 +11,7 @@ import {
 import { useId } from "react";
 import { ProductCard } from "./ProductCard";
 import { useSearchValues, useSetSearch } from "./search";
-import { SHOP_NAME } from "./StoreLayout";
+import { useShopName } from "./StoreLayout";
 import type { Category, Product } from "./types";
 
 const SORTS = [
@@ -38,6 +38,7 @@ function useCategoryOptions() {
 }
 
 export function Catalogue() {
+  const shopName = useShopName();
   const values = useSearchValues();
   const setSearch = useSetSearch();
   const options = useCategoryOptions();
@@ -45,8 +46,8 @@ export function Catalogue() {
   const chosen = options.find((option) => option.value === values.category);
   usePageMeta({
     title: chosen ? `${chosen.label} | Products` : "Products",
-    siteName: SHOP_NAME,
-    description: `Everything ${SHOP_NAME} sells${chosen ? ` in ${chosen.label}` : ""}.`,
+    siteName: shopName,
+    description: `Everything ${shopName} sells${chosen ? ` in ${chosen.label}` : ""}.`,
   });
   const filters = {
     ...(values.category

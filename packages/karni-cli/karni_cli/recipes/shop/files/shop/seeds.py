@@ -1086,11 +1086,9 @@ class DownloadSeeder(karni.DownloadSeeder):
                 )
                 _pay(order)
                 placed = now - timedelta(days=2 + number)
-                Order.objects.filter(
-                    pk=order.pk
-                ).update(  # karni: allow(audited-bulk-write): demo data
-                    created_at=placed, paid_at=placed + timedelta(minutes=5)
-                )
+                when = {"created_at": placed, "paid_at": placed + timedelta(minutes=5)}
+                this = Order.objects.filter(pk=order.pk)
+                this.update(**when)  # karni: allow(audited-bulk-write): demo data
         first = Download.objects.order_by("created_at", "pk").first()
         if first is not None:
             first.downloads, first.last_at = 1, now - timedelta(days=1)

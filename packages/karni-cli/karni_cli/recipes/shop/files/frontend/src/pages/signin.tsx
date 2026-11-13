@@ -3,14 +3,15 @@
 import { SignInPage as SignIn } from "@karni/ui";
 import { useRouter } from "@tanstack/react-router";
 import { useSearchValues } from "../shop/search";
-import { SHOP_NAME } from "../shop/StoreLayout";
+import { useShopName } from "../shop/StoreLayout";
 
 export default function SignInPage() {
+  const shopName = useShopName();
   const router = useRouter();
   const next = useSearchValues().next;
   return (
     <SignIn
-      siteName={SHOP_NAME}
+      siteName={shopName}
       next={next}
       fallback="/"
       navigate={(to) => router.history.push(to)}

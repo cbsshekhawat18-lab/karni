@@ -17,6 +17,8 @@ usually_changed = [
     "the terms version and url",
     "the product options (attributes) and variations",
     "shipping zones, tax rates and coupons",
+    "the shop's name, sender, checkout and stock options (Settings)",
+    "the text of each email (Settings, Emails)",
 ]
 
 # The shop's pages (files/frontend/src/pages/): the first karni build registers each in
@@ -117,3 +119,25 @@ page = "pages/shipping"
 [[routes]]
 path = "/tax-rates"
 page = "pages/tax-rates"
+
+[[routes]]
+path = "/settings"
+page = "pages/settings"
+
+[[routes]]
+path = "/reports"
+page = "pages/reports"
+
+[[routes]]
+path = "/abandoned-carts"
+page = "pages/abandoned-carts"
+
+[[routes]]
+path = "/orders/$number/invoice"
+page = "pages/order-invoice"
+public = true
+data = { area = "family" }
+
+[[routes]]
+path = "/orders/$number/packing-slip"
+page = "pages/order-packing-slip"

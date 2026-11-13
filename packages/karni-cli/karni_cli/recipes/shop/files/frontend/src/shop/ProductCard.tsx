@@ -4,21 +4,41 @@ import { Link } from "@tanstack/react-router";
 import { Rating } from "./Rating";
 import type { Product } from "./types";
 
-/** In stock, a few left, or sold out, in words. */
-export function StockState({ available }: { available: number }) {
-  if (available <= 0) {
-    return (
-      <span className="text-sm font-medium text-destructive">Sold out</span>
-    );
+/**
+ * In stock, a few left, or sold out, in words. `left` is null when the shop does not
+ * show the figure (Settings, Shop) or it never runs out; `low` says it runs low at
+ * the shop's level. A file is a download, never out of stock.
+ */
+export function StockState({
+  left,
+  low = false,
+  digital = false,
+}: {
+  left: number | null;
+  low?: boolean;
+  digital?: boolean;
+}) {
+  if (digital) {
+    return <span className="text-sm text-muted-foreground">Digital download</span>;
   }
-  if (available <= 3) {
+  if (left !== null && left <= 0) {
+    return <span className="text-sm font-medium text-destructive">Sold out</span>;
+  }
+  if (low) {
     return (
       <span className="text-sm text-muted-foreground">
-        Only {available} left
+        {left !== null ? `Only ${left} left` : "Running low"}
       </span>
     );
   }
   return <span className="text-sm text-muted-foreground">In stock</span>;
+}
+
+/** A product's stock in words, from what the API says of it. */
+export function ProductStock({ product }: { product: Product }) {
+  return (
+    <StockState left={product.stock_left} low={product.runs_low} digital={product.digital} />
+  );
 }
 
 export function ProductCard({ product }: { product: Product }) {
@@ -44,7 +64,7 @@ export function ProductCard({ product }: { product: Product }) {
               </>
             )}
           </span>
-          <StockState available={product.stock_left ?? 1} />
+          <ProductStock product={product} />
           <Link
             to="/shop/products/$slug"
             params={{ slug: product.slug }}
@@ -59,7 +79,7 @@ export function ProductCard({ product }: { product: Product }) {
             price={product.current_price}
             compareAt={product.on_sale ? product.price : null}
           />
-          <StockState available={product.stock_left ?? 1} />
+          <ProductStock product={product} />
           <AddToCart
             className="mt-auto"
             kind="product"

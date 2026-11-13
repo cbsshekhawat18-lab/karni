@@ -14,10 +14,10 @@ import {
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { RecentlyViewed, RelatedProducts } from "./MoreProducts";
-import { StockState } from "./ProductCard";
+import { ProductStock } from "./ProductCard";
 import { Rating } from "./Rating";
 import { Reviews } from "./Reviews";
-import { SHOP_NAME } from "./StoreLayout";
+import { useShopName } from "./StoreLayout";
 import type { Product } from "./types";
 import { VariationPicker } from "./VariationPicker";
 import { WishlistButton } from "./WishlistButton";
@@ -62,6 +62,7 @@ function Gallery({
 }
 
 export function ProductView({ slug }: { slug: string }) {
+  const shopName = useShopName();
   const [picked, setPicked] = useState<string | null>(null);
   const found = useResourceList<Product>("products", {
     filters: { slug },
@@ -70,7 +71,7 @@ export function ProductView({ slug }: { slug: string }) {
   const product = found.data?.results[0];
   usePageMeta({
     title: product?.name ?? "Product",
-    siteName: SHOP_NAME,
+    siteName: shopName,
     description: product?.short_description || product?.name,
   });
   if (found.isPending) return <Skeleton className="h-96 w-full" />;
@@ -116,9 +117,7 @@ export function ProductView({ slug }: { slug: string }) {
                 className="text-xl"
               />
               <p>
-                <StockState
-                  available={product.stock_left ?? product.available}
-                />
+                <ProductStock product={product} />
               </p>
             </>
           )}

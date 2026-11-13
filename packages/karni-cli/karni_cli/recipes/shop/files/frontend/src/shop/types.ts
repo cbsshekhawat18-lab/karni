@@ -53,8 +53,13 @@ export interface Product {
   /** The lowest and highest price today (the same for a product sold as it is). */
   price_from: string;
   price_to: string;
-  /** What is left to buy, of the product or of all its variations (null: backorders). */
+  /** What is left to buy, of the product or of all its variations (null: it never runs
+   * out, or the shop does not show the figure). */
   stock_left: number | null;
+  /** At or under the low-stock level. */
+  runs_low: boolean;
+  /** A file the buyer downloads once paid: nothing is sent. */
+  digital: boolean;
   /** The average of the approved reviews (null: none yet), and how many. */
   rating_average: string | null;
   rating_count: number;

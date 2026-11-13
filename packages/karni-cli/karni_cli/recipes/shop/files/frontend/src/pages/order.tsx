@@ -4,21 +4,22 @@
 import { OrderPage as Order, StaffOrderPage } from "@karni/commerce-ui";
 import { useParams } from "@tanstack/react-router";
 import { useSearchValues } from "../shop/search";
-import { SHOP_NAME } from "../shop/StoreLayout";
+import { useShopName } from "../shop/StoreLayout";
 import { usePerson } from "../shop/staff";
 
 export default function OrderPage() {
+  const shopName = useShopName();
   const { number } = useParams({ from: "/orders/$number" });
   const search = useSearchValues();
   const person = usePerson();
   if (person === "loading") return null;
-  if (person === "staff") return <StaffOrderPage number={number} siteName={SHOP_NAME} />;
+  if (person === "staff") return <StaffOrderPage number={number} siteName={shopName} />;
   return (
     <Order
       number={number}
       orderKey={search.key ?? ""}
       justPaid={search.paid === "1"}
-      siteName={SHOP_NAME}
+      siteName={shopName}
     />
   );
 }

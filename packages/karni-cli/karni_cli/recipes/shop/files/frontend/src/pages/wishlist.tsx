@@ -2,13 +2,14 @@
 import { EmptyState, Skeleton, useResourceList, usePageMeta } from "@karni/ui";
 import { Link } from "@tanstack/react-router";
 import { ProductCard } from "../shop/ProductCard";
-import { SHOP_NAME } from "../shop/StoreLayout";
+import { useShopName } from "../shop/StoreLayout";
 import type { Product } from "../shop/types";
 import { WishlistButton } from "../shop/WishlistButton";
 import { useWishlist } from "../shop/wishlist";
 
 export default function WishlistPage() {
-  usePageMeta({ title: "Your wishlist", siteName: SHOP_NAME });
+  const shopName = useShopName();
+  usePageMeta({ title: "Your wishlist", siteName: shopName });
   const wishlist = useWishlist();
   const ids = wishlist.products;
   const products = useResourceList<Product>(

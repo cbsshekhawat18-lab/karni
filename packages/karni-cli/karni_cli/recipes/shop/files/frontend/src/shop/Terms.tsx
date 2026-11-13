@@ -1,13 +1,14 @@
 // The shop's terms. Replace the text with your own, and move features.terms.version in
 // karni.yaml forward when it changes: customers then accept the new version at checkout.
 import { usePageMeta } from "@karni/ui";
-import { SHOP_NAME } from "./StoreLayout";
+import { useShopName } from "./StoreLayout";
 
 export function Terms() {
+  const shopName = useShopName();
   usePageMeta({
     title: "Terms",
-    siteName: SHOP_NAME,
-    description: `The terms of sale of ${SHOP_NAME}.`,
+    siteName: shopName,
+    description: `The terms of sale of ${shopName}.`,
   });
   return (
     <article className="space-y-4">

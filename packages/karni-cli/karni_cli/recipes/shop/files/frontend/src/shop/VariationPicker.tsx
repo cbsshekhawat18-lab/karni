@@ -105,7 +105,7 @@ export function VariationPicker({
             {variation.available === null ? (
               <span className="text-sm text-muted-foreground">In stock</span>
             ) : (
-              <StockState available={variation.available} />
+              <StockState left={variation.available} low={variation.available <= 3} />
             )}
           </p>
           <p className="text-sm text-muted-foreground">SKU {variation.sku}</p>

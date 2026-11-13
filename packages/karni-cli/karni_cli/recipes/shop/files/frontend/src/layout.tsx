@@ -19,7 +19,7 @@ import {
 import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { register as registerShop } from "./shop";
-import { StoreLayout, SHOP_NAME } from "./shop/StoreLayout";
+import { StoreLayout, useShopName } from "./shop/StoreLayout";
 import { usePerson } from "./shop/staff";
 
 registerShop();
@@ -34,6 +34,7 @@ declare module "@tanstack/react-router" {
 }
 
 function BackOffice() {
+  const shopName = useShopName();
   const router = useRouter();
   const { status, logout } = useAuth();
   const person = usePerson();
@@ -51,7 +52,7 @@ function BackOffice() {
       sidebarHeader={
         <span className="flex items-center gap-2 px-3 text-lg font-semibold">
           <span aria-hidden="true" className="h-6 w-6 rounded-md bg-primary" />
-          {SHOP_NAME}
+          {shopName}
         </span>
       }
       sidebarFooter={

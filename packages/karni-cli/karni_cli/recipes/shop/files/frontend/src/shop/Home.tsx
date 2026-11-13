@@ -9,7 +9,7 @@ import {
 } from "@karni/ui";
 import { Link, useRouter } from "@tanstack/react-router";
 import { ProductCard } from "./ProductCard";
-import { SHOP_NAME } from "./StoreLayout";
+import { useShopName } from "./StoreLayout";
 import type { Category, Product } from "./types";
 
 function Shelf({
@@ -45,10 +45,11 @@ function Shelf({
 }
 
 export function StoreHome() {
+  const shopName = useShopName();
   const router = useRouter();
   usePageMeta({
-    title: SHOP_NAME,
-    description: `${SHOP_NAME}: browse the catalogue, add to the cart and pay online.`,
+    title: shopName,
+    description: `${shopName}: browse the catalogue, add to the cart and pay online.`,
   });
   const categories = useResourceList<Category>("categories", {
     pageSize: 100,
@@ -67,7 +68,7 @@ export function StoreHome() {
   return (
     <div className="space-y-10">
       <section className="rounded-lg bg-muted px-6 py-10">
-        <h1 className="text-3xl font-semibold">{SHOP_NAME}</h1>
+        <h1 className="text-3xl font-semibold">{shopName}</h1>
         <p className="mt-2 text-muted-foreground">
           Things for the kitchen, the garden, the desk and the road, made to
           last.
