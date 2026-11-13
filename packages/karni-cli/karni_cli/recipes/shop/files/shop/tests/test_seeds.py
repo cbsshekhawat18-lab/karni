@@ -86,9 +86,17 @@ def test_the_demo_shop_looks_alive() -> None:
         "part_refunded",
     }
     for order in Order.objects.prefetch_related("lines"):
-        assert order.total == sum(
-            (line.line_total for line in order.lines.all()), Decimal("0.00")
+        lines = list(order.lines.all())
+        assert order.subtotal == sum((line.line_total for line in lines), Decimal(0))
+        assert order.total == (
+            order.subtotal
+            - order.discount_total
+            + order.shipping_total
+            + order.tax_total
         )
+        assert order.total == sum(
+            (line.paid_total for line in lines), order.shipping_total
+        ) + (order.tax_total - sum((line.tax for line in lines), Decimal(0)))
         if order.status != "pending" and order.status != "cancelled":
             assert order.payments.exists()
     assert set(Shipment.objects.values_list("status", flat=True)) >= {

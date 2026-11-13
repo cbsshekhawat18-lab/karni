@@ -17,6 +17,10 @@ Stock goes through karni.capacity, so two buyers of the last item never both get
 A product with ``backorders`` may be ordered past what is left: checkout holds what
 is on the shelf and the rest waits for new stock. The line remembers how many it
 held (``options["_held"]``), so only those are taken, given back or put back.
+
+A product with active variations (sizes, colours) is bought by one of them: the line's
+options name it (``{"variation": "<id>"}``), and its price, SKU and stock are the
+variation's. Two variations of one product are two lines of the cart.
 """
 
 from __future__ import annotations
@@ -32,7 +36,7 @@ from karni_commerce.models import Order, OrderLine
 from karni_commerce.sellables import Price, Sellable, refuse, register
 
 from shop import events
-from shop.models import Product, Shipment
+from shop.models import Category, Product, Shipment, Variation
 
 SHIPMENT_WORDS = {
     "processing": "Being prepared",
@@ -52,11 +56,70 @@ class ProductSellable(Sellable):
     def key(self, item: Product) -> str:
         return str(item.pk)
 
+    search_fields = ("name", "sku")
+
+    def queryset(self) -> Any:
+        return Product.objects.all()
+
+    # -- variations ------------------------------------------------------------------
+
+    def variations(self, item: Product) -> list[Variation]:
+        """The product's variations for sale, in their order (cached on the product)."""
+        found = getattr(item, "_shop_variations", None)
+        if found is None:
+            found = list(
+                Variation.objects.filter(product=item, active=True)
+                .prefetch_related("values__attribute")
+                .order_by("position", "sku")
+            )
+            item._shop_variations = found  # type: ignore[attr-defined]
+        return found
+
+    def variation(self, item: Product, options: Mapping[str, Any]) -> Variation | None:
+        """The variation the options name, or ``None`` (a product sold as it is)."""
+        wanted = str(options.get("variation") or "")
+        if not wanted:
+            return None
+        return next(
+            (row for row in self.variations(item) if str(row.pk) == wanted), None
+        )
+
+    def clean_options(
+        self, item: Product, options: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        """A product with variations needs one of them, and keeps nothing else."""
+        choices = self.variations(item)
+        if not choices:
+            return {}
+        chosen = self.variation(item, options)
+        if chosen is None:
+            if options.get("variation"):
+                raise refuse(f"{item.name} does not come that way.", field="options")
+            raise refuse(f"Choose the options of {item.name}.", field="options")
+        return {"variation": str(chosen.pk)}
+
+    def option_key(self, item: Product, options: Mapping[str, Any]) -> str:
+        return str(options.get("variation") or "")
+
+    def choices(self, item: Product) -> list[dict[str, Any]]:
+        found = self.variations(item)
+        return [{"variation": str(row.pk)} for row in found] if found else [{}]
+
+    def details(
+        self, item: Product, options: Mapping[str, Any]
+    ) -> list[dict[str, str]]:
+        chosen = self.variation(item, options)
+        return chosen.details() if chosen is not None else []
+
+    # -- what it is and costs ----------------------------------------------------------
+
     def name(self, item: Product, options: Mapping[str, Any]) -> str:
-        return item.name
+        chosen = self.variation(item, options)
+        return f"{item.name}, {chosen.label()}" if chosen is not None else item.name
 
     def sku(self, item: Product, options: Mapping[str, Any]) -> str:
-        return item.sku
+        chosen = self.variation(item, options)
+        return chosen.sku if chosen is not None else item.sku
 
     def url(self, item: Product) -> str:
         return f"/shop/products/{item.slug}"
@@ -65,21 +128,29 @@ class ProductSellable(Sellable):
         return item.image
 
     def price(self, item: Product, options: Mapping[str, Any], buyer: Any) -> Price:
+        chosen = self.variation(item, options)
+        if chosen is not None:
+            return Price(
+                unit=chosen.current_price(),
+                compare_at=chosen.regular_price() if chosen.on_sale() else None,
+            )
         current = item.current_price()
         return Price(unit=current, compare_at=item.price if item.on_sale() else None)
 
     def needs_shipping(self, item: Product, options: Mapping[str, Any]) -> bool:
         return True
 
-    search_fields = ("name", "sku")
-
-    def queryset(self) -> Any:
-        return Product.objects.all()
-
     def available(self, item: Product, options: Mapping[str, Any]) -> int | None:
         if not item.active:
             return 0
-        return None if item.backorders else int(item.available)
+        if item.backorders:
+            return None
+        chosen = self.variation(item, options)
+        if chosen is not None:
+            return int(chosen.available)
+        if self.variations(item):
+            return sum(int(row.available) for row in self.variations(item))
+        return int(item.available)
 
     def validate(
         self, item: Product, quantity: int, options: Mapping[str, Any], buyer: Any
@@ -88,45 +159,61 @@ class ProductSellable(Sellable):
             raise refuse(f"{item.name} is not for sale.")
         super().validate(item, quantity, options, buyer)
 
+    # -- the stock ---------------------------------------------------------------------
+
+    def _stocked(self, line: OrderLine) -> Product | Variation:
+        """The row whose stock the line moves: its variation, else its product."""
+        wanted = (line.options or {}).get("variation")
+        if wanted:
+            return Variation.objects.get(pk=wanted)
+        return Product.objects.get(pk=line.item)
+
     def hold(self, line: OrderLine) -> None:
-        product = Product.objects.get(pk=line.item)
+        row = self._stocked(line)
+        product = row if isinstance(row, Product) else row.product
         wanted = line.quantity
         if product.backorders:
-            wanted = min(line.quantity, max(int(product.available), 0))
+            wanted = min(line.quantity, max(int(row.available), 0))
         try:
             if wanted:
-                reserve(product, wanted, field="available")
+                reserve(row, wanted, field="available")
         except CapacityExceeded:
-            product.refresh_from_db()
-            left = product.available
+            row.refresh_from_db()
+            left = row.available
             raise refuse(
-                f"{product.name}: only {left} left."
+                f"{line.name}: only {left} left."
                 if left
-                else f"{product.name} is sold out."
+                else f"{line.name} is sold out."
             ) from None
         self._held(line, wanted)
 
     def release(self, line: OrderLine) -> None:
         held = self.held(line)
         if held:
-            release(Product.objects.get(pk=line.item), held, field="available")
+            release(self._stocked(line), held, field="available")
 
     def on_paid(self, line: OrderLine) -> None:
         held = self.held(line)
+        row = self._stocked(line)
         if held:
-            Product.objects.filter(pk=line.item).update(
+            type(row).objects.filter(pk=row.pk).update(
                 stock=F("stock") - held, updated_at=timezone.now()
             )
-        product = Product.objects.get(pk=line.item)
-        if product.runs_low():
-            events.product_low_stock.send(sender=Product, product=product)
+            row.refresh_from_db()
+        product = row if isinstance(row, Product) else row.product
+        if row.runs_low():
+            events.product_low_stock.send(
+                sender=Product,
+                product=product,
+                variation=None if isinstance(row, Product) else row,
+            )
 
     def on_cancelled(self, line: OrderLine) -> None:
-        self._back_on_the_shelf(line.item, self.held(line))
+        self._back_on_the_shelf(line, self.held(line))
 
     def on_refunded(self, line: OrderLine, quantity: int, restock: bool) -> None:
         if restock:
-            self._back_on_the_shelf(line.item, min(quantity, self.held(line)))
+            self._back_on_the_shelf(line, min(quantity, self.held(line)))
 
     def held(self, line: OrderLine) -> int:
         """How many of the line came off the shelf (all of it, unless backordered)."""
@@ -138,20 +225,26 @@ class ProductSellable(Sellable):
         line.options = {**(line.options or {}), "_held": count}
         OrderLine.objects.filter(pk=line.pk).update(options=line.options)
 
-    def _back_on_the_shelf(self, key: str, quantity: int) -> None:
+    def _back_on_the_shelf(self, line: OrderLine, quantity: int) -> None:
         if quantity <= 0:
             return
-        Product.objects.filter(pk=key).update(
+        row = self._stocked(line)
+        type(row).objects.filter(pk=row.pk).update(
             stock=F("stock") + quantity, updated_at=timezone.now()
         )
-        release(Product.objects.get(pk=key), quantity, field="available")
+        row.refresh_from_db()
+        release(row, quantity, field="available")
 
     def coupon_keys(self, item: Product) -> dict[str, Any]:
-        return {
-            "categories": [
-                str(pk) for pk in item.categories.values_list("pk", flat=True)
-            ]
-        }
+        """Its categories and every category above them: a coupon for Kitchen takes off
+        Cookware too."""
+        found: set[str] = set()
+        for category in item.categories.all():
+            node: Category | None = category
+            while node is not None:
+                found.add(str(node.pk))
+                node = node.parent
+        return {"categories": sorted(found)}
 
 
 @register_reporter

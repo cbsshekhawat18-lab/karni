@@ -1,6 +1,7 @@
 // A product in a grid: its picture, name, price, what is left and a button that adds one.
-import { AddToCart, ItemImage, PriceTag } from "@karni/commerce-ui";
+import { AddToCart, ItemImage, Money, PriceTag } from "@karni/commerce-ui";
 import { Link } from "@tanstack/react-router";
+import { Rating } from "./Rating";
 import type { Product } from "./types";
 
 /** In stock, a few left, or sold out, in words. */
@@ -31,19 +32,44 @@ export function ProductCard({ product }: { product: Product }) {
         <ItemImage src={product.image} alt="" />
         <h3 className="font-medium">{product.name}</h3>
       </Link>
-      <PriceTag
-        price={product.current_price}
-        compareAt={product.on_sale ? product.price : null}
-      />
-      <StockState available={product.available} />
-      <AddToCart
-        className="mt-auto"
-        kind="product"
-        item={product.id}
-        name={product.name}
-        available={product.available}
-        quantity={false}
-      />
+      <Rating average={product.rating_average} count={product.rating_count} />
+      {product.variations.length > 0 ? (
+        <>
+          <span className="font-semibold">
+            {product.price_from === product.price_to ? (
+              <Money value={product.price_from} />
+            ) : (
+              <>
+                From <Money value={product.price_from} />
+              </>
+            )}
+          </span>
+          <StockState available={product.stock_left ?? 1} />
+          <Link
+            to="/shop/products/$slug"
+            params={{ slug: product.slug }}
+            className="mt-auto inline-flex h-9 items-center justify-center rounded-md border border-input px-3 text-sm font-medium hover:bg-accent"
+          >
+            Choose options<span className="sr-only"> of {product.name}</span>
+          </Link>
+        </>
+      ) : (
+        <>
+          <PriceTag
+            price={product.current_price}
+            compareAt={product.on_sale ? product.price : null}
+          />
+          <StockState available={product.stock_left ?? 1} />
+          <AddToCart
+            className="mt-auto"
+            kind="product"
+            item={product.id}
+            name={product.name}
+            available={product.stock_left}
+            quantity={false}
+          />
+        </>
+      )}
     </article>
   );
 }

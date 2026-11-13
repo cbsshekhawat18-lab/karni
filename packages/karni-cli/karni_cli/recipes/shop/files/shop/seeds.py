@@ -5,11 +5,17 @@ The categories, products, prices, people and addresses are invented. Replace CAT
 with your own, or load real rows with an import. Every picture is drawn
 (karni.seeding.placeholder_image): the same seed gives the same shop.
 
+Some products come in sizes or colours (VARIABLE): each way is a variation with its
+own SKU and stock. The shop sends by zones (Europe, the United Kingdom, the United
+States, the rest of the world) with a flat rate, free shipping above an amount and
+local pickup, charges tax by country, and has coupons of each kind (SHOP_SETUP).
+
 Orders are placed through karni-commerce, as a shopper's would be: each holds its
 stock, a paid one takes it and gets its parcel, and the demo shows every money state
 (waiting, paid, failed, cancelled, refunded) and every parcel state (processing,
-shipped, delivered). Payments are the test provider's, made on the spot, and no email
-goes out while the demo is made (karni.mail.silenced).
+shipped, delivered). Some use a coupon. Payments are the test provider's, made on the
+spot, and no email goes out while the demo is made (karni.mail.silenced). The buyers
+whose parcels arrived review what they bought, and the customer keeps a wishlist.
 
 Demo logins (password karni-password): demo@example.com (admin, every permission),
 manager@example.com (the whole shop, refunds included), staff@example.com (orders,
@@ -30,12 +36,32 @@ from karni.accounts.permissions import assign_role
 from karni.mail import silenced
 from karni.seeding import SeedContext, Seeder, cycled, placeholder_image
 from karni_commerce import services as commerce
-from karni_commerce.models import Order, OrderLine, OrderPayment, OrderRefund
+from karni_commerce.models import (
+    Coupon,
+    CouponUse,
+    Order,
+    OrderLine,
+    OrderPayment,
+    OrderRefund,
+    ShippingMethod,
+    ShippingZone,
+    TaxRate,
+)
 from karni_payments.models import Payment, Refund
 from rest_framework.exceptions import ValidationError
-from shop.karni import seeds as karni
 
-from shop.models import Category, Product, Shipment, Tag
+from shop.karni import seeds as karni
+from shop.models import (
+    Attribute,
+    AttributeValue,
+    Category,
+    Product,
+    Review,
+    Shipment,
+    Tag,
+    Variation,
+    WishlistItem,
+)
 
 CATALOG: dict[str, dict[str, list[tuple[str, str, str]]]] = {
     "Kitchen": {
@@ -293,6 +319,67 @@ TAGS = [
     "Classic",
 ]
 
+#: The options products come in, with their values in order.
+ATTRIBUTES: dict[str, list[str]] = {
+    "Size": ["S", "M", "L", "XL"],
+    "Colour": ["Natural", "Charcoal", "Sage"],
+}
+
+#: The products sold in several ways: name -> (attribute, [(value, price or None)]).
+VARIABLE: dict[str, tuple[str, list[tuple[str, str | None]]]] = {
+    "Linen Tea Towel Set": (
+        "Colour",
+        [("Natural", None), ("Charcoal", None), ("Sage", None)],
+    ),
+    "Cotton Tote Bag": (
+        "Colour",
+        [("Natural", None), ("Charcoal", None), ("Sage", None)],
+    ),
+    "Canvas Duffel, 40 L": ("Colour", [("Natural", None), ("Charcoal", "72.00")]),
+    "Terracotta Planter, Medium": (
+        "Size",
+        [("S", "15.00"), ("M", None), ("L", "26.00")],
+    ),
+    "Crossbody Satchel": ("Colour", [("Charcoal", None), ("Sage", None)]),
+    "A5 Dot Grid Notebook": (
+        "Colour",
+        [("Natural", None), ("Charcoal", None), ("Sage", None)],
+    ),
+    "Drawstring Gym Sack": ("Size", [("M", None), ("L", "21.50")]),
+}
+
+#: Where the shop sends and for how much: zone -> (countries, [(method, kind, cost,
+#: free above)]). The last zone, with no countries, is everywhere else.
+ZONES: list[tuple[str, str, list[tuple[str, str, str, str | None]]]] = [
+    (
+        "United States",
+        "US",
+        [
+            ("Standard", "flat", "5.00", "50.00"),
+            ("Local pickup", "pickup", "0.00", None),
+        ],
+    ),
+    (
+        "Europe",
+        "AT, BE, DE, DK, ES, FI, FR, IE, IT, NL, PT, SE",
+        [("Standard", "flat", "6.50", "75.00"), ("Express", "flat", "14.00", None)],
+    ),
+    ("United Kingdom", "GB", [("Standard", "flat", "9.00", None)]),
+    ("Rest of the world", "", [("International", "flat", "19.00", None)]),
+]
+
+#: The demo's tax: (name, country, rate). Blank country: everywhere else.
+TAXES = [("Sales tax", "US", "7"), ("VAT", "", "20")]
+
+#: The demo's coupons: (code, description, kind, amount, minimum spend, per person).
+COUPONS: list[tuple[str, str, str, str, str | None, int | None]] = [
+    ("WELCOME10", "10% off a first order", "percent", "10", None, 1),
+    ("SAVE5", "5 off orders of 40 or more", "fixed", "5", "40.00", None),
+    ("FREESHIP", "Free shipping over 30", "free_shipping", "0", "30.00", None),
+    ("KITCHEN15", "15% off the kitchen", "percent", "15", None, None),
+    ("SUMMER20", "20% off, ended last month", "percent", "20", None, None),
+]
+
 #: The people of the demo: (email, first name, last name, city, postcode, country,
 #: role).
 PEOPLE = [
@@ -486,6 +573,116 @@ class ProductImageSeeder(karni.ProductImageSeeder):
         return rows
 
 
+class AttributeSeeder(karni.AttributeSeeder):
+    """The options: Size and Colour."""
+
+    def seed(self, context: SeedContext) -> list[Any]:
+        rows: list[Any] = []
+        for position, name in enumerate(list(ATTRIBUTES)[: context.count]):
+            rows += context.create(1, name=name, position=position)
+        return rows
+
+
+class AttributeValueSeeder(karni.AttributeValueSeeder):
+    """Each option's values, in their order."""
+
+    def seed(self, context: SeedContext) -> list[Any]:
+        rows: list[Any] = []
+        for attribute in Attribute.objects.order_by("position"):
+            for position, value in enumerate(ATTRIBUTES.get(attribute.name, [])):
+                if len(rows) >= context.count:
+                    return rows
+                rows += context.create(
+                    1, attribute=attribute, value=value, position=position
+                )
+        return rows
+
+
+class VariationSeeder(karni.VariationSeeder):
+    """The ways the VARIABLE products are sold: own SKUs and stock, some sold out."""
+
+    class Meta(karni.VariationSeeder.Meta):
+        after = ("shop.Product", "shop.AttributeValue")
+
+    def seed(self, context: SeedContext) -> list[Any]:
+        rows: list[Any] = []
+        stocks = [12, 6, 0, 20, 2, 9]
+        for name, (attribute, ways) in VARIABLE.items():
+            product = Product.objects.filter(name=name).order_by("sku").first()
+            if product is None:
+                continue
+            for position, (value, price) in enumerate(ways):
+                if len(rows) >= context.count:
+                    return rows
+                found = AttributeValue.objects.filter(
+                    attribute__name=attribute, value=value
+                ).first()
+                stock = stocks[len(rows) % len(stocks)]
+                [row] = context.create(
+                    1,
+                    product=product,
+                    sku=f"{product.sku}-{value[:3].upper()}",
+                    price=Decimal(price) if price else None,
+                    sale_price=None,
+                    stock=stock,
+                    available=stock,
+                    image=placeholder_image(f"{name} {value}", key=value),
+                    active=True,
+                    position=position,
+                )
+                if found is not None:
+                    row.values.set([found])
+                rows.append(row)
+            # The product's own stock is its variations' (staff read one figure).
+            total = sum(row.stock for row in rows if row.product_id == product.pk)
+            Product.objects.filter(pk=product.pk).update(stock=total, available=total)
+        return rows
+
+
+def shop_setup(now: datetime) -> list[Coupon]:
+    """The demo's shipping zones and methods, tax rates and coupons (made again)."""
+    CouponUse.objects.without("soft_delete", reason="a new demo").all().hard_delete()
+    for model in (Coupon, ShippingMethod, ShippingZone, TaxRate):
+        model.objects.without("soft_delete", reason="a new demo").all().hard_delete()
+    for position, (zone_name, countries, methods) in enumerate(ZONES):
+        zone = ShippingZone.objects.create(
+            name=zone_name, countries=countries, position=position
+        )
+        for order, (name, kind, cost, free_above) in enumerate(methods):
+            ShippingMethod.objects.create(
+                zone=zone,
+                name=name,
+                kind=kind,
+                cost=Decimal(cost),
+                free_above=Decimal(free_above) if free_above else None,
+                position=order,
+            )
+    for name, country, rate in TAXES:
+        TaxRate.objects.create(name=name, country=country, rate=Decimal(rate))
+    kitchen = Category.objects.filter(name="Kitchen", parent__isnull=True).first()
+    coupons = []
+    for code, description, kind, amount, minimum, per_person in COUPONS:
+        ended = code == "SUMMER20"
+        coupons.append(
+            Coupon.objects.create(
+                code=code,
+                description=description,
+                kind=kind,
+                amount=Decimal(amount),
+                minimum_spend=Decimal(minimum) if minimum else None,
+                usage_limit_per_person=per_person,
+                starts_at=now - timedelta(days=60) if ended else None,
+                ends_at=now - timedelta(days=30) if ended else None,
+                limits=(
+                    {"categories": [{"key": str(kitchen.pk), "name": kitchen.name}]}
+                    if code == "KITCHEN15" and kitchen is not None
+                    else {}
+                ),
+            )
+        )
+    return coupons
+
+
 class OrderSeeder(Seeder):
     """Orders come with the parcels (ShipmentSeeder runs after the products exist)."""
 
@@ -496,7 +693,7 @@ class OrderSeeder(Seeder):
 
 def _forget_the_last_demo() -> None:
     """karni seed --reset: the orders, payments and refunds of the last demo go."""
-    for model in (OrderRefund, OrderPayment, OrderLine, Order):
+    for model in (CouponUse, OrderRefund, OrderPayment, OrderLine, Order):
         model.objects.without("soft_delete", reason="a new demo").all().hard_delete()
     seeded = Payment.objects.filter(checkout_session_id__startswith=SEED_SESSION)
     Refund.objects.filter(payment__in=seeded).hard_delete()
@@ -526,7 +723,11 @@ def _pay(order: Order, ok: bool = True) -> Payment:
 def _refund(order: Order, payment: Payment, *, full: bool) -> None:
     """A refund the provider confirmed: all of it, or the first line back in stock."""
     first = order.lines.order_by("position").first()
-    amount = order.amount_paid if full or first is None else first.unit_price
+    amount = (
+        order.amount_paid
+        if full or first is None
+        else first.unit_paid().quantize(Decimal("0.01"))
+    )
     refund = Refund.objects.create(
         payment=payment,
         amount=amount,
@@ -561,6 +762,7 @@ class ShipmentSeeder(karni.ShipmentSeeder):
 
     def seed(self, context: SeedContext) -> list[Any]:
         _forget_the_last_demo()
+        shop_setup(anchor(context))
         buyers = customers(context)
         products = list(
             Product.objects.filter(active=True, stock__gt=0).order_by("sku")
@@ -584,10 +786,18 @@ class ShipmentSeeder(karni.ShipmentSeeder):
         story = STORIES[number % len(STORIES)]
         guest = number % 9 == 8
         buyer = buyers[number % len(buyers)]
-        lines: list[tuple[str, str, int, dict[str, Any]]] = [
-            ("product", str(products[(number * 3 + k) % len(products)].pk), k + 1, {})
-            for k in range(1 + number % 3)
-        ]
+        lines: list[tuple[str, str, int, dict[str, Any]]] = []
+        for k in range(1 + number % 3):
+            product = products[(number * 3 + k) % len(products)]
+            ways = list(
+                Variation.objects.filter(
+                    product=product, active=True, available__gt=0
+                ).order_by("position")
+            )
+            options = {"variation": str(ways[number % len(ways)].pk)} if ways else {}
+            lines.append(("product", str(product.pk), k + 1, options))
+        # A few demo orders used a coupon: the welcome one, and free shipping.
+        coupon = {1: "WELCOME10", 9: "FREESHIP", 13: "SAVE5"}.get(number)
         try:
             order = commerce.place_order(
                 lines,
@@ -597,9 +807,20 @@ class ShipmentSeeder(karni.ShipmentSeeder):
                 billing=address_of(buyer),
                 shipping=address_of(buyer),
                 note="Please leave it with the neighbour." if number % 5 == 0 else "",
+                coupon=coupon,
             )
         except ValidationError:
-            return  # sold out since: this story is skipped
+            try:  # the coupon does not fit this order: placed without it
+                order = commerce.place_order(
+                    lines,
+                    user=None if guest else buyer,
+                    email=f"guest{number}@example.com" if guest else buyer.email,
+                    name=address_of(buyer)["name"],
+                    billing=address_of(buyer),
+                    shipping=address_of(buyer),
+                )
+            except ValidationError:
+                return  # sold out since: this story is skipped
         placed = now - timedelta(days=(context.count - number) // 2, hours=number % 7)
         this = Order.objects.filter(pk=order.pk)
         if story == "pending":
@@ -632,3 +853,81 @@ class ShipmentSeeder(karni.ShipmentSeeder):
         parcels = Shipment.objects.filter(order=order)
         later = {"created_at": placed + timedelta(hours=1)}
         parcels.update(**later)  # karni: allow(audited-bulk-write): demo data
+
+
+#: The words of the demo's reviews, by rating.
+REVIEW_WORDS = {
+    5: (
+        "Just what I wanted",
+        "Well made and it arrived quickly. I would buy it again.",
+    ),
+    4: ("Very good", "Good quality for the price. The colour is a little darker."),
+    3: ("Fine", "It does the job, though the finish could be better."),
+    2: ("Not for me", "Smaller than I expected from the pictures."),
+}
+
+
+class ReviewSeeder(karni.ReviewSeeder):
+    """Reviews by the buyers whose parcels arrived: most approved, one waiting, one
+    rejected. Each product's rating counts the approved ones."""
+
+    class Meta(karni.ReviewSeeder.Meta):
+        after = ("shop.Shipment",)
+
+    def seed(self, context: SeedContext) -> list[Any]:
+        Review.objects.without("soft_delete", reason="a new demo").all().hard_delete()
+        delivered = Shipment.objects.filter(
+            status="delivered", order__user__isnull=False
+        ).order_by("created_at")
+        pairs: list[tuple[Any, str]] = []
+        for shipment in delivered:
+            for line in shipment.order.lines.filter(kind="product").order_by(
+                "position"
+            ):
+                pair = (shipment.order.user, line.item)
+                if pair not in pairs:
+                    pairs.append(pair)
+        rows: list[Any] = []
+        ratings = [5, 4, 5, 3, 4, 5, 2, 4]
+        for number, (author, item) in enumerate(pairs[: context.count]):
+            product = Product.objects.filter(pk=item).first()
+            if product is None:
+                continue
+            rating = ratings[number % len(ratings)]
+            title, body = REVIEW_WORDS[rating]
+            status = (
+                "pending" if number == 1 else "rejected" if number == 6 else "approved"
+            )
+            [review] = context.create(
+                1,
+                product=product,
+                author=author,
+                rating=rating,
+                title=title,
+                body=body,
+                status="pending",
+                verified=True,
+            )
+            if status != "pending":
+                review.transition("status", status)
+            rows.append(review)
+        return rows
+
+
+class WishlistItemSeeder(karni.WishlistItemSeeder):
+    """What the demo customer keeps for later."""
+
+    def seed(self, context: SeedContext) -> list[Any]:
+        WishlistItem.objects.without(
+            "soft_delete", reason="a new demo"
+        ).all().hard_delete()
+        customer = get_user_model().objects.filter(email="customer@example.com").first()
+        if customer is None:
+            return []
+        products = list(
+            Product.objects.filter(active=True, featured=True).order_by("sku")
+        )
+        rows: list[Any] = []
+        for product in products[: context.count]:
+            rows += context.create(1, user=customer, product=product)
+        return rows

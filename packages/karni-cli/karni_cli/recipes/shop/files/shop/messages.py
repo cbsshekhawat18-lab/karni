@@ -16,7 +16,7 @@ from typing import Any
 from karni.mail import send_templated
 
 from shop import services
-from shop.models import Product, Shipment
+from shop.models import Product, Shipment, Variation
 
 
 def shipment_shipped(shipment: Shipment) -> int:
@@ -37,8 +37,14 @@ def shipment_delivered(shipment: Shipment) -> int:
     )
 
 
-def low_stock(product: Product) -> int:
-    context: dict[str, Any] = {"product": product, "level": product.low_stock_level()}
+def low_stock(product: Product, variation: Variation | None = None) -> int:
+    """A product (or one of its variations) runs low: ``variation`` is the one, or None."""
+    context: dict[str, Any] = {
+        "product": product,
+        "variation": variation,
+        "stocked": variation if variation is not None else product,
+        "level": product.low_stock_level(),
+    }
     return send_templated(
         "shop/email/low_stock",
         to=services.staff_emails(),

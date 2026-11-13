@@ -93,4 +93,3 @@ def top_products(request: Any) -> dict[str, Any]:
         ],
         "rows": rows,
     }
-

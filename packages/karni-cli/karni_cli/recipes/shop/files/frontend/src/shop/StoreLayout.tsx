@@ -30,6 +30,9 @@ function Account() {
       <Link to="/orders" className="font-medium hover:underline">
         My orders
       </Link>
+      <Link to="/wishlist" className="font-medium hover:underline">
+        Wishlist
+      </Link>
       <Link to="/account" className="font-medium hover:underline">
         Account
       </Link>

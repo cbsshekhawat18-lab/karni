@@ -14,7 +14,7 @@ from karni_commerce.events import order_cancelled, order_paid
 from karni_commerce.models import Order
 
 from shop import events, messages, services
-from shop.models import Product, Shipment
+from shop.models import Product, Shipment, Variation
 
 
 @receiver(order_paid)
@@ -44,13 +44,19 @@ def tell_the_buyer_it_arrived(shipment: Shipment) -> None:
 
 
 @receiver(events.product_low_stock)
-def tell_the_staff_it_runs_low(sender: Any, product: Product, **kwargs: Any) -> None:
+def tell_the_staff_it_runs_low(
+    sender: Any, product: Product, variation: Variation | None = None, **kwargs: Any
+) -> None:
     pk = product.pk
+    variation_pk = variation.pk if variation is not None else None
 
     def send() -> None:
         found = Product.objects.filter(pk=pk).first()
+        which = (
+            Variation.objects.filter(pk=variation_pk).first() if variation_pk else None
+        )
         if found is not None:
-            messages.low_stock(found)
+            messages.low_stock(found, which)
 
     transaction.on_commit(send)
 

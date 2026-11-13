@@ -1,1 +1,1 @@
-Low stock: {{ product.name }} ({{ product.available }} left)
+Low stock: {{ stocked }} ({{ stocked.available }} left)

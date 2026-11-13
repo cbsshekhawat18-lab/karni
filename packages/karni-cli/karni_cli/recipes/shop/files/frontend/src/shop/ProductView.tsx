@@ -1,5 +1,7 @@
-// A product's page: its pictures, price, what is left, description, and Add to cart. The
-// short description shows at the top, and below it only what the description adds.
+// A product's page: its pictures, price, what is left, description, and Add to cart, or
+// its options to choose first (VariationPicker). The short description shows at the
+// top, and below it only what the description adds. Then its reviews, related products
+// and the ones this browser saw before.
 import { AddToCart, ItemImage, PriceTag } from "@karni/commerce-ui";
 import {
   Button,
@@ -11,17 +13,30 @@ import {
 } from "@karni/ui";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { RecentlyViewed, RelatedProducts } from "./MoreProducts";
 import { StockState } from "./ProductCard";
+import { Rating } from "./Rating";
+import { Reviews } from "./Reviews";
 import { SHOP_NAME } from "./StoreLayout";
 import type { Product } from "./types";
+import { VariationPicker } from "./VariationPicker";
+import { WishlistButton } from "./WishlistButton";
 
-function Gallery({ product }: { product: Product }) {
+function Gallery({
+  product,
+  picked,
+}: {
+  product: Product;
+  picked: string | null;
+}) {
   const pictures = [
     ...(product.image ? [{ image: product.image, alt: product.name }] : []),
     ...product.gallery,
   ];
   const [shown, setShown] = useState(0);
-  const current = pictures[shown];
+  const current = picked
+    ? { image: picked, alt: product.name }
+    : pictures[shown];
   return (
     <div className="space-y-3">
       <ItemImage src={current?.image} alt={current?.alt || product.name} />
@@ -47,6 +62,7 @@ function Gallery({ product }: { product: Product }) {
 }
 
 export function ProductView({ slug }: { slug: string }) {
+  const [picked, setPicked] = useState<string | null>(null);
   const found = useResourceList<Product>("products", {
     filters: { slug },
     pageSize: 1,
@@ -71,39 +87,67 @@ export function ProductView({ slug }: { slug: string }) {
       />
     );
   }
+  const sold = product.variations.length > 0;
   return (
-    <article className="grid gap-8 md:grid-cols-2">
-      <Gallery product={product} />
-      <div className="space-y-4">
-        <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground">
-          <Link to="/shop/products" className="hover:underline">
-            Products
-          </Link>{" "}
-          / {product.name}
-        </nav>
-        <h1 className="text-2xl font-semibold">{product.name}</h1>
-        <PriceTag
-          price={product.current_price}
-          compareAt={product.on_sale ? product.price : null}
-          className="text-xl"
-        />
-        <p>
-          <StockState available={product.available} />
-        </p>
-        {product.short_description ? <p>{product.short_description}</p> : null}
-        <AddToCart
-          kind="product"
-          item={product.id}
-          name={product.name}
-          available={product.available}
-        />
-        <p className="text-sm text-muted-foreground">SKU {product.sku}</p>
-        {product.more_description ? (
-          <div className="space-y-2 whitespace-pre-line border-t border-border pt-4">
-            {product.more_description}
-          </div>
-        ) : null}
-      </div>
-    </article>
+    <div className="space-y-10">
+      <article className="grid gap-8 md:grid-cols-2">
+        <Gallery product={product} picked={picked} />
+        <div className="space-y-4">
+          <nav
+            aria-label="Breadcrumb"
+            className="text-sm text-muted-foreground"
+          >
+            <Link to="/shop/products" className="hover:underline">
+              Products
+            </Link>{" "}
+            / {product.name}
+          </nav>
+          <h1 className="text-2xl font-semibold">{product.name}</h1>
+          <Rating
+            average={product.rating_average}
+            count={product.rating_count}
+          />
+          {sold ? null : (
+            <>
+              <PriceTag
+                price={product.current_price}
+                compareAt={product.on_sale ? product.price : null}
+                className="text-xl"
+              />
+              <p>
+                <StockState
+                  available={product.stock_left ?? product.available}
+                />
+              </p>
+            </>
+          )}
+          {product.short_description ? (
+            <p>{product.short_description}</p>
+          ) : null}
+          {sold ? (
+            <VariationPicker product={product} onPicture={setPicked} />
+          ) : (
+            <>
+              <AddToCart
+                kind="product"
+                item={product.id}
+                name={product.name}
+                available={product.stock_left}
+              />
+              <p className="text-sm text-muted-foreground">SKU {product.sku}</p>
+            </>
+          )}
+          <WishlistButton product={product.id} name={product.name} />
+          {product.more_description ? (
+            <div className="space-y-2 whitespace-pre-line border-t border-border pt-4">
+              {product.more_description}
+            </div>
+          ) : null}
+        </div>
+      </article>
+      <Reviews product={product} />
+      <RelatedProducts product={product} />
+      <RecentlyViewed key={product.id} current={product.id} />
+    </div>
   );
 }

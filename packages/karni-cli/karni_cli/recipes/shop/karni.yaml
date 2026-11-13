@@ -77,6 +77,9 @@ apps:
           active: bool
           featured: bool
           tags: "m2m:Tag?"
+          related: "m2m:self?"
+          rating_average: "decimal:3:2?"
+          rating_count: int
         taxonomies: {categories: Category}
         key: slug
         search: [name, sku, short_description, description]
@@ -86,11 +89,62 @@ apps:
           Product: [name, slug, sku, short_description, description, image, active, featured, tags]
           Price: [price, sale_price, sale_starts, sale_ends]
           Inventory: [stock, available, low_stock, backorders]
+          More: [related, rating_average, rating_count]
         access: {read: public, write: granted}
       ProductImage:
         fields: {product: fk:Product, image: image, alt: "str:200?", position: int}
         order: [product, position]
         access: {read: public, write: granted}
+      # Options a product comes in (Size, Colour), each with its values (S, M, L).
+      Attribute:
+        fields: {name: "str:60", slug: "slug:name", position: int}
+        key: slug
+        search: [name]
+        order: [position, name]
+        access: {read: public, write: granted}
+      AttributeValue:
+        fields: {attribute: fk:Attribute, value: "str:60", position: int}
+        search: [value]
+        order: [attribute, position, value]
+        access: {read: public, write: granted}
+      # One way a product is sold (a size and a colour), with its own SKU, price, stock
+      # and picture. A blank price is the product's.
+      Variation:
+        fields:
+          product: fk:Product
+          values: "m2m:AttributeValue"
+          sku: "str:64"
+          price: "money:USD?"
+          sale_price: "money:USD?"
+          stock: int
+          available: "capacity:stock"
+          image: "image?"
+          active: bool
+          position: int
+        search: [sku]
+        order: [product, position]
+        access: {read: public, write: granted}
+      # A buyer's word on a product they received: staff approve it before it shows.
+      Review:
+        fields:
+          product: fk:Product
+          author: fk:User
+          rating: int
+          title: "str:120?"
+          body: text
+          status: "state:pending>approved|pending>rejected|approved>rejected|rejected>approved"
+          verified: bool
+        owner: author
+        audit: [status]
+        search: [title, body]
+        order: -created_at
+        access: {read: public, create: authenticated, write: granted}
+      # What a customer keeps for later.
+      WishlistItem:
+        fields: {user: fk:User, product: fk:Product}
+        owner: user
+        order: -created_at
+        access: {read: "owned:user", write: "owned:user"}
       Shipment:
         fields:
           order: fk:karni_commerce.Order
@@ -106,7 +160,11 @@ apps:
 pages:
   - home: dashboard
   - Shipment: [list, detail, form]
-  - Product: [{detail: {related: [ProductImage]}}, form]
+  - Product: [{detail: {related: [ProductImage, Variation]}}, form]
+  - Variation: [form]
+  - Attribute: [list, {detail: {related: [AttributeValue]}}, form]
+  - AttributeValue: [form]
+  - Review: [list, detail]
   - Category: [list, form]
   - Tag: [list, form]
   # The pages of the recipe's own files (recipe.toml [[routes]]): the storefront and the
@@ -117,6 +175,10 @@ pages:
   - orders: code
   - customers: code
   - products: code
+  - wishlist: code
+  - coupons: code
+  - shipping: code
+  - tax-rates: code
   - account: code
   - signin: code
   - terms: code
@@ -128,7 +190,19 @@ navigation:
   - Catalogue:
       icon: tag
       requires: "shop.product:change"
-      items: [{products: {label: Products, requires: "shop.product:change"}}, Category, Tag]
+      items:
+        - {products: {label: Products, requires: "shop.product:change"}}
+        - Category
+        - Tag
+        - Attribute
+        - Review
+  - Selling:
+      icon: settings
+      requires: "karni_commerce.coupon:change"
+      items:
+        - {coupons: {label: Coupons, requires: "karni_commerce.coupon:change"}}
+        - {shipping: {label: Shipping, requires: "karni_commerce.shippingzone:change"}}
+        - {tax-rates: {label: Tax rates, requires: "karni_commerce.taxrate:change"}}
 # The staff home: each tile shows to the roles that may read what it counts. The shop's
 # own figures are code tiles in shop/dashboard.py (stock running low, best sellers), and
 # karni-commerce gives the revenue ones (commerce.revenue, commerce.revenue_chart,
@@ -142,7 +216,20 @@ dashboard:
   - {key: shop.sold_out, title: Sold out, kind: stat, entity: Product,
      filters: {available__lte: 0, active: true}, requires: "shop.product:change",
      link: "/products?products.available__lte=0", order: 3}
+  - {key: shop.reviews_waiting, title: Reviews to approve, kind: stat, entity: Review,
+     filters: {status: pending}, requires: "shop.review:change",
+     link: "/reviews?reviews.status=pending", order: 4}
   - {key: commerce.revenue, order: 5}
   - {key: commerce.revenue_chart, order: 6}
   - {key: commerce.latest_orders, order: 7}
-seed: {Category: 15, Tag: 8, Product: 40, ProductImage: 60, Shipment: 20}
+seed:
+  Category: 15
+  Tag: 8
+  Product: 40
+  ProductImage: 60
+  Attribute: 2
+  AttributeValue: 7
+  Variation: 18
+  Shipment: 20
+  Review: 24
+  WishlistItem: 4

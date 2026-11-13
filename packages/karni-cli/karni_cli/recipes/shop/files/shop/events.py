@@ -29,7 +29,7 @@ shipment_shipped = Signal()
 shipment_delivered = Signal()
 
 #: A product's stock that no order holds fell to the low-stock level or below after an
-#: order took it: ``product``.
+#: order took it: ``product``, and ``variation`` when it is one of its variations.
 product_low_stock = Signal()
 
 #: The family event name of each signal.

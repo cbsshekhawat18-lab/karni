@@ -5,8 +5,10 @@ The cart, checkout, the payments and refunds are karni-commerce's
 stock moves (shop/sellables.py) and what happens to the parcel (here).
 
 Settings: ``SHOP_LOW_STOCK`` (3: the level at which ``product_low_stock`` is sent and
-staff get an email) and ``SHOP_STAFF_EMAILS`` (who gets that email, else
-``KARNI_COMMERCE_STAFF_EMAILS``).
+staff get an email), ``SHOP_STAFF_EMAILS`` (who gets that email, else
+``KARNI_COMMERCE_STAFF_EMAILS``), ``SHOP_REVIEWS_NEED_APPROVAL`` (True: a review
+waits for staff before it shows) and ``SHOP_RELATED_COUNT`` (4: the related products
+a product page shows).
 """
 
 from __future__ import annotations
@@ -19,7 +21,10 @@ from django.db.models import Case, DecimalField, F, Q, QuerySet, When
 from django.utils import timezone
 from karni_commerce.models import Order
 
-from shop.models import Product, Shipment
+from shop.models import Product, Review, Shipment
+
+#: The money states of an order whose buyer paid for what they got.
+PAID = ("paid", "part_paid", "part_refunded")
 
 
 def low_stock_level() -> int:
@@ -96,3 +101,56 @@ def shipment_context(shipment: Any) -> dict[str, Any]:
         "lines": list(order.lines.filter(kind="product")),
         "link": order_link(order),
     }
+
+
+def reviews_need_approval() -> bool:
+    return bool(getattr(settings, "SHOP_REVIEWS_NEED_APPROVAL", True))
+
+
+def related_count() -> int:
+    return int(getattr(settings, "SHOP_RELATED_COUNT", 4))
+
+
+def received(user: Any, product: Product) -> bool:
+    """Whether ``user`` paid for ``product`` (any of its variations) and its parcel arrived."""
+    if user is None or not getattr(user, "is_authenticated", False):
+        return False
+    orders = Order.objects.filter(
+        user=user,
+        status__in=PAID,
+        lines__kind="product",
+        lines__item=str(product.pk),
+    )
+    return Shipment.objects.filter(order__in=orders, status="delivered").exists()
+
+
+def review_problem(user: Any, product: Product) -> str:
+    """Why ``user`` may not review ``product``, in words, or "" when they may."""
+    if user is None or not getattr(user, "is_authenticated", False):
+        return "Sign in to review a product you bought."
+    if Review.objects.filter(product=product, author=user).exists():
+        return "You have reviewed this product."
+    if not received(user, product):
+        return "You can review a product once it has reached you."
+    return ""
+
+
+def related(product: Product, count: int | None = None) -> list[Product]:
+    """The products to show beside ``product``: the ones staff chose, then its category's.
+
+    Active products only, never the product itself. Staff's choices come first in
+    their order, and the rest are the same categories' best rated and featured.
+    """
+    wanted = related_count() if count is None else count
+    chosen = list(
+        product.related.filter(active=True).exclude(pk=product.pk).order_by("name")
+    )[:wanted]
+    if len(chosen) < wanted:
+        more = (
+            Product.objects.filter(active=True, categories__in=product.categories.all())
+            .exclude(pk__in=[product.pk, *[row.pk for row in chosen]])
+            .order_by("-featured", "-rating_average", "name")
+            .distinct()
+        )
+        chosen += list(more[: wanted - len(chosen)])
+    return chosen
