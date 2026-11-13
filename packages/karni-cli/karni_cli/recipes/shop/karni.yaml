@@ -13,7 +13,9 @@ modules:
     checkout_validator: karni_commerce.payments.checkout_validator
   commerce: {hold_minutes: 30}
   # Protected files: what a digital product delivers, by a signed link after payment.
-  storage: {}
+  # On disk in development (KARNI_STORAGE=local), in this S3-compatible service in
+  # production (KARNI_STORAGE=s3 and its keys in .env).
+  storage: {provider: aws}
 features:
   email_code_login: true
   terms: {version: "2026-01", url: /terms, required: true, paths: [/api/carts/current/checkout/]}

@@ -256,8 +256,8 @@ class ProductFile(karni.ProductFile):
 
 
 class Download(karni.Download):
-    """A buyer's right to a file they paid for: how often they took it, the most they may,
-    and until when."""
+    """A buyer's right to a file they paid for: how often they took it, the most they
+    may, and until when."""
 
     class Meta(karni.Download.Meta):
         constraints = [

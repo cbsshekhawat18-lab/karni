@@ -493,6 +493,9 @@ def test_the_recipe_named_for_the_next_build_manages_its_own_route_pages() -> No
             "coupons",
             "shipping",
             "tax-rates",
+            "settings",
+            "reports",
+            "abandoned-carts",
         }
     )
     assert Record().recipe_pages() == frozenset()

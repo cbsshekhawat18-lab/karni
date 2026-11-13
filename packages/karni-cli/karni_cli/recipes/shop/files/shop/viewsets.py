@@ -193,8 +193,8 @@ def _store_serializer(base: type[serializers.ModelSerializer[Any]]) -> type[Any]
 
         def get_stock_left(self, product: Product) -> int | None:
             """What is left to buy: of the product, or of all its variations. ``None``
-            when it never runs out (backorders, a file), and for a shopper when Settings,
-            Shop hides the figure (0 still says it is sold out)."""
+            when it never runs out (backorders, a file), and for a shopper when the
+            shop's settings hide the figure (0 still says it is sold out)."""
             if product.backorders or product.digital:
                 return None
             rows = self._variations(product)
@@ -529,8 +529,9 @@ class ProductFileViewSet(karni.ProductFileViewSet):
 
 
 class DownloadViewSet(karni.DownloadViewSet):
-    """Who may download what, for staff. ``GET downloads/get/<token>/`` hands the file to
-    whoever has the signed link, while it works (shop/services.py, ``take_download``)."""
+    """Who may download what, for staff. ``GET downloads/get/<token>/`` hands the file
+    to whoever has the signed link, while it works (shop/services.py,
+    ``take_download``)."""
 
     select_related = ("order", "product", "file")
     filterset_fields = ["order", "product", "email"]

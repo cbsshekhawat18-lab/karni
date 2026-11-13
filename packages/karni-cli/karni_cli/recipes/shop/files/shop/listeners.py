@@ -25,7 +25,7 @@ def prepare_the_parcel(sender: Any, order: Order, **kwargs: Any) -> None:
 
 @receiver(order_paid)
 def hand_over_the_files(sender: Any, order: Order, **kwargs: Any) -> None:
-    """A paid order's digital products: their downloads, and the email with the links."""
+    """A paid order's digital products: their downloads, and the email of links."""
     if services.grant_downloads(order):
         pk = order.pk
 

@@ -1,4 +1,4 @@
-"""Running the shop: its settings, digital products, reports and the emails staff edit."""
+"""Running the shop: its settings, digital products, reports, the emails staff edit."""
 
 from __future__ import annotations
 
@@ -52,7 +52,7 @@ def booklet(make_product: MakeProduct, settings: Any, tmp_path: Path) -> Product
     return product
 
 
-# -- settings ------------------------------------------------------------------------------
+# -- settings --------------------------------------------------------------------------
 
 
 def test_the_shop_settings_change_the_catalogue_and_the_stock_alerts(
@@ -117,7 +117,7 @@ def test_the_business_name_reaches_the_emails(
     assert "Parcel Post tracking number: PP123" in sent.body
 
 
-# -- emails staff edit ---------------------------------------------------------------------
+# -- emails staff edit -----------------------------------------------------------------
 
 
 def test_every_shop_email_file_is_an_editable_template_on_its_merge_fields(
@@ -199,7 +199,7 @@ def test_an_edited_parcel_email_is_the_one_sent(
     assert EmailTemplate.objects.count() == 1
 
 
-# -- digital products ----------------------------------------------------------------------
+# -- digital products ------------------------------------------------------------------
 
 
 def test_a_digital_product_is_downloaded_by_its_signed_link_up_to_its_limit(
@@ -289,7 +289,7 @@ def test_the_cart_holds_no_stock_for_a_file_and_it_never_sells_out(
     assert (booklet.stock, booklet.available) == (0, 0)
 
 
-# -- reports -------------------------------------------------------------------------------
+# -- reports ---------------------------------------------------------------------------
 
 
 def test_the_shop_reports_for_the_manager_only(make_product: MakeProduct) -> None:

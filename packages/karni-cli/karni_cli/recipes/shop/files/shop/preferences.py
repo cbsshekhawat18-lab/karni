@@ -13,8 +13,8 @@ from karni_commerce import preferences_seam as preferences
 from pydantic import Field
 
 
-def _setting(name: str, default: object) -> object:
-    return getattr(settings, name, default)
+def _number(name: str, default: int) -> int:
+    return int(getattr(settings, name, default))
 
 
 @preferences.section("shop", title="Shop", change="role:shop-manager")
@@ -22,10 +22,10 @@ class ShopPreferences(preferences.Section):
     """The catalogue, the stock and the reviews."""
 
     low_stock: int = Field(
-        default_factory=lambda: int(_setting("SHOP_LOW_STOCK", 3)),  # type: ignore[call-overload]
+        default_factory=lambda: _number("SHOP_LOW_STOCK", 3),
         ge=0,
         le=10000,
-        description="A product runs low at this many left (unless it has its own level).",
+        description="A product runs low at this many left (unless it has its own).",
     )
     show_stock_left: bool = Field(
         True,
@@ -35,11 +35,11 @@ class ShopPreferences(preferences.Section):
         False, description="Sold out products leave the catalogue until they are back."
     )
     reviews_need_approval: bool = Field(
-        default_factory=lambda: bool(_setting("SHOP_REVIEWS_NEED_APPROVAL", True)),
+        default_factory=lambda: bool(_number("SHOP_REVIEWS_NEED_APPROVAL", 1)),
         description="A review shows once staff approve it.",
     )
     related_count: int = Field(
-        default_factory=lambda: int(_setting("SHOP_RELATED_COUNT", 4)),  # type: ignore[call-overload]
+        default_factory=lambda: _number("SHOP_RELATED_COUNT", 4),
         ge=0,
         le=12,
         description="How many related products a product page shows.",

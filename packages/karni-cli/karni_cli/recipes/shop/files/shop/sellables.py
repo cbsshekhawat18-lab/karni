@@ -279,7 +279,7 @@ def shipments(order: Order) -> Iterator[dict[str, Any]]:
 
 @register_reporter
 def downloads(order: Order) -> Iterator[dict[str, Any]]:
-    """The order's files for its buyer's page: the link, and how many downloads are left."""
+    """The order's files for its buyer's page: the link, and the downloads left."""
     from shop.models import Download
     from shop.services import download_link, download_problem
 

@@ -96,7 +96,7 @@ def sales_by_category(query: ReportQuery) -> dict[str, Any]:
 @register_report(
     key="shop.stock",
     title="Stock",
-    describe="Every product and variation: what is left, its low-stock level, its state.",
+    describe="Each product and variation: what is left and its low-stock level.",
     dated=False,
     order=40,
 )

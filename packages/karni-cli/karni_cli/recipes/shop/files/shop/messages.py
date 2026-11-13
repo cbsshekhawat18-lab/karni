@@ -72,7 +72,7 @@ register_kind(
     title="Low stock",
     template="shop/email/low_stock",
     audience="the staff",
-    describe="An order left a product (or one of its variations) at its low-stock level.",
+    describe="An order left a product (or a variation) at its low-stock level.",
     fields={
         "business.name": "The business's name",
         "name": "The product, or the variation, in words",
