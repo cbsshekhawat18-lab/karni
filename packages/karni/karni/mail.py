@@ -434,11 +434,11 @@ def sample_context(kind: MessageKind | str) -> dict[str, Any]:
     (``sample()``: the last paid order for a confirmation). Pass the result to
     :func:`merge_values` with the kind's fields.
 
-    :raises LookupError: ``kind`` names no declared email.
+    A name no email declares gives what every template gets (:func:`base_context`).
     """
     found = find_kind(kind) if isinstance(kind, str) else kind
-    if found is None:
-        raise LookupError(f"karni.mail: no email kind {kind!r} is declared.")
+    if found is None:  # no declared email: nothing but what every template gets
+        return base_context()
     context = _merge(_placeholders(found), _plain(dict(found.samples)))
     business = _business()
     if business:
