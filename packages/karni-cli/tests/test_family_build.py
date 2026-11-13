@@ -12,7 +12,6 @@ tests/test_recipe_builds.py does. npm is stubbed, and so are the frontend tools.
 
 from __future__ import annotations
 
-import json
 import re
 import sys
 from pathlib import Path
@@ -133,10 +132,9 @@ def test_two_parts_together_then_a_third_added_and_removed(
     assert (root / "visits" / "events.py").is_file()
 
     output = _run("recipes", "remove", "visits", "--allow-destructive")
+    _green(output)  # the other parts' tests and karni check, with the part's tables dropped
     assert "visits/events.py" in output  # the part's files stay, each one listed
     spec = _spec(root)
     assert spec["app"]["recipes"] == ["booking", "crm"]
     assert "visits" not in spec["apps"] and "visits-staff" not in spec["roles"]
     assert not (root / ".karni/recipes/visits").exists()
-    checked = CliRunner().invoke(app, ["check", "--json", "--no-docker"])
-    assert json.loads(checked.stdout)["ok"] is True, checked.stdout
