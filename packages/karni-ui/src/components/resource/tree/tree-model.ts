@@ -114,3 +114,63 @@ export function matchPrefix(
   }
   return -1;
 }
+
+/**
+ * A copy of the loaded tree cut down to the nodes `isMatch` accepts and the
+ * nodes above them, so a search result keeps its ancestors. `matched` holds
+ * the keys that matched themselves.
+ */
+export function pruneToMatches(
+  tops: readonly Node[],
+  kidsOf: (node: Node) => readonly Node[] | null,
+  isMatch: (node: Node) => boolean,
+): { tops: Node[]; matched: Set<string> } {
+  const matched = new Set<string>();
+  const seen = new Set<string>();
+  const cut = (node: Node): Node | null => {
+    const key = keyOf(node);
+    if (seen.has(key)) return null;
+    seen.add(key);
+    const kept = (kidsOf(node) ?? []).map(cut).filter((kid): kid is Node => kid !== null);
+    const self = isMatch(node);
+    if (self) matched.add(key);
+    if (!self && kept.length === 0) return null;
+    return { ...node, has_children: kept.length > 0, children: kept };
+  };
+  return { tops: tops.map(cut).filter((node): node is Node => node !== null), matched };
+}
+
+/**
+ * A forest of search results from each match and the nodes above it (root
+ * first, as `ancestors/` answers). Shared ancestors appear once. A match
+ * whose path is not known yet stands at the top.
+ */
+export function forestFromPaths(found: ReadonlyArray<{ match: Node; above: readonly Node[] }>): {
+  tops: Node[];
+  matched: Set<string>;
+} {
+  const byKey = new Map<string, Node>();
+  const tops: Node[] = [];
+  const matched = new Set<string>();
+  const place = (node: Node, parent: Node | null): Node => {
+    const key = keyOf(node);
+    const existing = byKey.get(key);
+    if (existing !== undefined) return existing;
+    const fresh: Node = { ...node, has_children: false, children: [] };
+    byKey.set(key, fresh);
+    if (parent === null) {
+      tops.push(fresh);
+    } else {
+      (parent.children as Node[]).push(fresh);
+      parent.has_children = true;
+    }
+    return fresh;
+  };
+  for (const { match, above } of found) {
+    let parent: Node | null = null;
+    for (const node of above) parent = place(node, parent);
+    place(match, parent);
+    matched.add(keyOf(match));
+  }
+  return { tops, matched };
+}

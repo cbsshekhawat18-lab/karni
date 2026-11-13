@@ -1,7 +1,7 @@
 import { useQueries, type UseQueryResult } from "@tanstack/react-query";
 import * as React from "react";
 import { karniKeys } from "../../../hooks/keys";
-import { listPath } from "../../../hooks/params";
+import { detailPath, listPath } from "../../../hooks/params";
 import { useResourceList } from "../../../hooks/useResourceList";
 import {
   treeQuery,
@@ -23,9 +23,11 @@ import { resourceNames, type ResourceLabel } from "../resource-names";
 import { useDebouncedValue } from "../select/use-debounced-value";
 import {
   expandableSiblings,
+  forestFromPaths,
   keyOf,
   knownNodes,
   matchPrefix,
+  pruneToMatches,
   visibleRows,
   type Node,
   type VisibleRow,
@@ -76,6 +78,20 @@ export interface TreeViewProps {
   getNodeLabel?: (node: Node) => React.ReactNode;
   /** Show the search field. Default true. */
   searchable?: boolean;
+  /**
+   * Experimental. Show a search result under its ancestors, in place, instead
+   * of the matches flat: the path from the root to each match, every branch
+   * on it open, the matches in bold. The server's search finds the matches
+   * and `ancestors/` gives each one's path (for the first 20 matches).
+   */
+  searchKeepsAncestors?: boolean;
+  /**
+   * Experimental. A field of each node holding a count (`dataset_count`):
+   * shown at the end of the row. A node without a number shows none.
+   */
+  countField?: string;
+  /** What the count counts, said to screen readers after the number ("datasets"). */
+  countNoun?: string;
   /** Debounce for the `?search=` request in ms. Default 300. */
   searchDebounceMs?: number;
   /** How the resource is named in messages. Default: derived from `resource`. */
@@ -89,6 +105,7 @@ export interface TreeViewProps {
 }
 
 const LOADING_ROWS = 5;
+const ANCESTOR_MATCH_LIMIT = 20;
 const TYPEAHEAD_RESET_MS = 500;
 
 function ChevronRightIcon(props: React.SVGAttributes<SVGSVGElement>): React.ReactElement {
@@ -155,6 +172,9 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
       autoFocus = false,
       getNodeLabel,
       searchable = true,
+      searchKeepsAncestors = false,
+      countField,
+      countNoun,
       searchDebounceMs = 300,
       resourceLabel,
       slots: slotOverrides,
@@ -278,8 +298,65 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
       { search: debounced, pageSize: 50 },
       { enabled: searching && serverSearch, retry: false },
     );
+    // With `searchKeepsAncestors`, each match shows under its path from the root.
+    const keeping = searching && searchKeepsAncestors && !accessMode;
+    const matchRows = serverSearch ? (matches.data?.results ?? []) : [];
+    const pathed = keeping && serverSearch ? matchRows.slice(0, ANCESTOR_MATCH_LIMIT) : [];
+    const pathQueries = useQueries({
+      queries: pathed.map((match) => {
+        const id = keyOf(match);
+        return {
+          queryKey: karniKeys.ancestors(resource, id),
+          queryFn: ({ signal }: { signal: AbortSignal }) =>
+            client.request<Node[]>(`${detailPath(resource, id)}ancestors/`, { signal }),
+          retry: false,
+        };
+      }),
+    });
+    const pathsPending = pathQueries.some((query) => query.isPending);
+    const pathsStamp = pathQueries.map((query) => query.dataUpdatedAt).join(",");
+    const [collapsedInSearch, setCollapsedInSearch] = React.useState<ReadonlySet<string>>(
+      new Set(),
+    );
+    React.useEffect(() => setCollapsedInSearch(new Set()), [debounced]);
+
+    const searchForest: { tops: Node[]; matched: ReadonlySet<string> } | null =
+      React.useMemo(() => {
+        if (!keeping) return null;
+        const needle = debounced.toLocaleLowerCase();
+        if (!serverSearch) {
+          return pruneToMatches(tops, kidsOf, (node) =>
+            labelTextOf(node).toLocaleLowerCase().includes(needle),
+          );
+        }
+        const found = pathed.map((match, index) => ({
+          match: match as Node,
+          above: pathQueries[index]?.data ?? [],
+        }));
+        return forestFromPaths(found);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- kidsOf and pathQueries read the queries listed
+      }, [
+        keeping,
+        serverSearch,
+        debounced,
+        top.data,
+        lazyQueries,
+        matches.data,
+        pathsStamp,
+        labelTextOf,
+      ]);
+
     const searchRows: VisibleRow[] = React.useMemo(() => {
       if (!searching) return [];
+      if (searchForest !== null) {
+        const open = new Set<string>();
+        for (const node of knownNodes(searchForest.tops, (item) => item.children ?? null)) {
+          if ((node.children ?? []).length > 0 && !collapsedInSearch.has(keyOf(node))) {
+            open.add(keyOf(node));
+          }
+        }
+        return visibleRows(searchForest.tops, open, (node) => node.children ?? null);
+      }
       let found: Node[];
       if (serverSearch) {
         found = (matches.data?.results ?? []).map(asLeaf);
@@ -300,7 +377,17 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
         expanded: false,
       }));
       // eslint-disable-next-line react-hooks/exhaustive-deps -- kidsOf reads the queries listed
-    }, [searching, serverSearch, matches.data, debounced, top.data, lazyQueries, labelTextOf]);
+    }, [
+      searching,
+      searchForest,
+      collapsedInSearch,
+      serverSearch,
+      matches.data,
+      debounced,
+      top.data,
+      lazyQueries,
+      labelTextOf,
+    ]);
 
     const rows = searching ? searchRows : treeRows;
 
@@ -369,6 +456,17 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
 
     // --- expand and collapse -------------------------------------------------
     const setOpen = (keys: readonly string[], open: boolean): void => {
+      if (searchForest !== null) {
+        setCollapsedInSearch((previous) => {
+          const next = new Set(previous);
+          for (const key of keys) {
+            if (open) next.delete(key);
+            else next.add(key);
+          }
+          return next;
+        });
+        return;
+      }
       setExpanded((previous) => {
         const next = new Set(previous);
         for (const key of keys) {
@@ -469,7 +567,10 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
     const firstLoad = top.data === undefined && top.error == null;
     const loadError = top.data === undefined ? top.error : null;
     const searchPending =
-      searching && (term.trim() !== debounced || (serverSearch && matches.isFetching));
+      searching &&
+      (term.trim() !== debounced ||
+        (serverSearch && matches.isFetching) ||
+        (keeping && pathsPending));
     const searchError = searching && serverSearch ? matches.error : null;
     const failed = lazyRoots.filter((key) => lazy.get(key)?.isError === true);
     const loadingBranches = lazyRoots.filter((key) => lazy.get(key)?.isPending === true);
@@ -501,6 +602,15 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
     })();
 
     const Item = slots.Node;
+    const countOf = (node: Node): number | null => {
+      if (countField === undefined) return null;
+      const raw = node[countField];
+      if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+      if (typeof raw === "string" && raw.trim() !== "" && Number.isFinite(Number(raw))) {
+        return Number(raw);
+      }
+      return null;
+    };
     const label = props["aria-label"] ?? capitalised(names.plural);
 
     const tree = (
@@ -583,6 +693,9 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
                 level={row.level}
                 selected={selectable && rowSelected}
                 expanded={row.expanded}
+                count={countOf(row.node)}
+                countNoun={countNoun}
+                matched={searchForest?.matched.has(row.key) ?? false}
               />
               {branchLoading ? (
                 <SpinnerIcon className="h-3 w-3 shrink-0 animate-spin text-muted-foreground" />
@@ -681,7 +794,17 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
             Some branches are too large to show at once. Open a branch or search to see the rest.
           </p>
         ) : null}
-        {searching && serverSearch && matches.data !== undefined && matches.data.next !== null ? (
+        {keeping && serverSearch && matchRows.length > ANCESTOR_MATCH_LIMIT ? (
+          <p className="text-xs text-muted-foreground">
+            Showing the first {ANCESTOR_MATCH_LIMIT} of {matches.data?.count.toLocaleString()}{" "}
+            matches. Type more to narrow.
+          </p>
+        ) : null}
+        {!keeping &&
+        searching &&
+        serverSearch &&
+        matches.data !== undefined &&
+        matches.data.next !== null ? (
           <p className="text-xs text-muted-foreground">
             Showing the first {rows.length.toLocaleString()} of{" "}
             {matches.data.count.toLocaleString()} matches. Type more to narrow.

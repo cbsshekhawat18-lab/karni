@@ -701,3 +701,35 @@ export type {
   ComparisonTableSlots,
   ComparisonTableEmptyProps,
 } from "./components/comparison-table/comparison-table";
+
+// board by state (experimental)
+export {
+  ResourceBoard,
+  defaultResourceBoardSlots,
+} from "./components/resource-board/ResourceBoard";
+export type {
+  ResourceBoardProps,
+  ResourceBoardSlots,
+  ResourceBoardCardContext,
+  ResourceBoardHeaderProps,
+  ResourceBoardEmptyProps,
+  ResourceBoardLoadingProps,
+} from "./components/resource-board/ResourceBoard";
+
+// calendar (experimental)
+export {
+  ResourceCalendar,
+  defaultResourceCalendarSlots,
+} from "./components/resource-calendar/ResourceCalendar";
+export type {
+  ResourceCalendarProps,
+  ResourceCalendarSlots,
+  CalendarAvailability,
+  CalendarCapacity,
+  CalendarCreateRequest,
+  CalendarEmptyProps,
+  CalendarEventContext,
+  CalendarLoadingProps,
+  CalendarTone,
+  CalendarView,
+} from "./components/resource-calendar/ResourceCalendar";

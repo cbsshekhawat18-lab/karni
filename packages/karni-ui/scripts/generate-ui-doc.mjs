@@ -25,6 +25,9 @@ const GROUPS = [
       "ResourceSelect",
       "ChangeHistory",
       "ResourceImport",
+      "ResourceGrid",
+      "ResourceBoard",
+      "ResourceCalendar",
       "TreeView",
       "TreeSelect",
       "TreeBreadcrumb",
@@ -65,6 +68,9 @@ const GROUPS = [
 
 /** Components and hooks under the experimental tier (docs/stability.md#experimental-names). */
 const EXPERIMENTAL = new Set([
+  "ResourceGrid",
+  "ResourceBoard",
+  "ResourceCalendar",
   "SocialButton",
   "OtpLoginForm",
   "TermsGate",

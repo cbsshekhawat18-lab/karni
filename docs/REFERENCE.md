@@ -2295,6 +2295,8 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `MarkdownView` | `source: string \| null \| undefined` | Experimental. Markdown shown as formatted, sanitized HTML (the parser loads on first use). | [markdown-view.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/markdown/markdown-view.tsx) |
 | `DataTable` | `caption: string`, `columns: readonly DataTableColumn<T>[]`, `rows: readonly T[]` | Experimental. A sortable, exportable table of rows the page computed, with a sticky header and first column, virtualized past `virtualizeAfter` rows. | [data-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/data-table/data-table.tsx) |
 | `ComparisonTable` | `caption: string`, `entities: readonly T[]`, `metrics: readonly ComparisonMetric<T>[]` | Experimental. Entities side by side: metrics as rows, entities as columns, the best value marked. | [comparison-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/comparison-table/comparison-table.tsx) |
+| `ResourceBoard` | `resource: string`, `renderCard: (row: T, context: ResourceBoardCardContext) => React.ReactNode` | Experimental. A resource's rows in columns by a state field, with legal moves by drag, keyboard or menu. | [ResourceBoard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource-board/ResourceBoard.tsx) |
+| `ResourceCalendar` | `resource: string`, `startField: string` | Experimental. A resource's rows on a day, week or month calendar, with free and full slots, moves and resizes. | [ResourceCalendar.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource-calendar/ResourceCalendar.tsx) |
 
 ### Hooks
 
@@ -2441,6 +2443,8 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `compareValues` | function | Ascending order of two values: empty values last, numbers and dates by size, text naturally. | [data-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/data-table/data-table.tsx) |
 | `sortRows` | function | The rows in `sort`'s order (a stable sort: equal rows keep their order). | [data-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/data-table/data-table.tsx) |
 | `defaultComparisonTableSlots` | constant | ComparisonTable's default states, exported so a project can wrap one. | [comparison-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/comparison-table/comparison-table.tsx) |
+| `defaultResourceBoardSlots` | constant | Experimental. Karni's own slots, to wrap one instead of rewriting it. | [ResourceBoard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource-board/ResourceBoard.tsx) |
+| `defaultResourceCalendarSlots` | constant | Experimental. Karni's own slots, to wrap one instead of rewriting it. | [ResourceCalendar.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource-calendar/ResourceCalendar.tsx) |
 
 ## Modules
 

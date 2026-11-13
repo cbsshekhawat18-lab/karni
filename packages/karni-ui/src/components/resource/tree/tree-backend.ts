@@ -22,6 +22,8 @@ export interface TreeRow {
   /** Sibling order (categories only). */
   position?: number;
   deleted?: boolean;
+  /** A count the node carries (a TreeView `countField`). */
+  dataset_count?: number;
 }
 
 export interface ProductRow {
@@ -460,6 +462,7 @@ function childrenOf(store: Store, parent: number | null): TreeRow[] {
 function plain(store: Store, row: TreeRow): Record<string, unknown> {
   const out: Record<string, unknown> = { id: row.id, name: row.name, parent: row.parent };
   if (store.ordered) out.position = row.position ?? 0;
+  if (row.dataset_count !== undefined) out.dataset_count = row.dataset_count;
   return out;
 }
 

@@ -74,7 +74,7 @@ property defined in `@karni/ui/styles.css`:
 | `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                                                                                                                            |
 | `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                                                                                                                         |
 | `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                                                                                                                              |
-| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box), `--karni-tree-indent` and `--karni-tree-max-height` (TreeView), and `--karni-search-*` (GlobalSearch) |
+| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box), `--karni-tree-indent` and `--karni-tree-max-height` (TreeView), `--karni-board-max-height` (ResourceBoard), `--karni-calendar-*` (ResourceCalendar), and `--karni-search-*` (GlobalSearch) |
 
 The Tailwind preset maps its scales onto these properties, so `bg-primary`,
 `p-4` or `rounded-md`, in a component or in your own code, reads them. Import
@@ -794,6 +794,130 @@ it, so a tree needs no code of its own:
   `useResourceAccessForest` and `useTreeMutations` (`move`, `removeBranch`)
   are the hooks underneath.
   `--karni-tree-indent` and `--karni-tree-max-height` theme it.
+
+### Trees: counts and search with ancestors (experimental)
+
+`TreeView` takes two more props for a tree that people browse, such as
+regions, topics or categories:
+
+```tsx
+<TreeView
+  resource="topics"
+  countField="dataset_count"
+  countNoun="datasets"
+  searchKeepsAncestors
+  onActivate={(topic) => navigate(`/topics/${topic.id}`)}
+/>
+```
+
+- `countField` names a number on each node. It shows at the end of the row. A
+  node without a number shows none. `countNoun` is said to screen readers
+  after the number. The number must be a field of the tree's own
+  serializer (a model property or an annotation): the component does not
+  count.
+- `searchKeepsAncestors` shows a search result under its path from the root
+  instead of flat. The matches are bold, every branch on a path is open and
+  can be closed, and two matches share their ancestors. The list's
+  `?search=` finds the matches and `ancestors/` gives each path, for the
+  first 20 matches (the tree says so when there are more). Without
+  `search_fields` the loaded nodes are cut down the same way.
+- `TreeSelect` takes both, for a parent or a foreign key picker that shows
+  the tree indented. `treeSlots.Node` receives `count`, `countNoun` and
+  `matched` to draw the row its own way.
+
+### ResourceBoard: a board by state (experimental)
+
+A pipeline is a board, not a table. `ResourceBoard` makes a column for each
+choice of a state field, in the order the schema lists them, with a card per
+row and the count and the sum of a money field in each header:
+
+```tsx
+<ResourceBoard<Deal>
+  resource="deals"
+  field="stage"
+  totalField="value"
+  renderCard={(deal) => <DealCard deal={deal} />}
+  onOpen={(deal) => navigate(`/deals/${deal.id}`)}
+/>
+```
+
+- It reads the field's choices and labels, `x-karni-transitions`, the money
+  field's currency (`x-karni-money`), `x-karni-actions` and the update
+  operation's access rule from the schema. `field` defaults to the first
+  field with transitions. `columns` shows some states in an order you give.
+- Each column is its own request (`?<field>=<state>`), `pageSize` cards at a
+  time with a "Show more" button. A column with more rows than loaded marks
+  its total with a plus, since the sum covers the loaded cards.
+- A card moves only where the schema lets it: to a state listed under its
+  current state, through the declared row action that makes the move when
+  there is one (its `by` rule and `from` states are checked), else by
+  PATCHing the field when it is writable and the update rule does not refuse.
+  `canMove(row, from, to)` narrows that further.
+- A move shows at once and rolls back when the server refuses it, with the
+  server's sentence in an alert. `onMove` hears each move that was accepted.
+- Drag a card to a column (columns it may not enter dim). The keyboard works
+  too: Tab reaches the first card of each column, the arrows move between
+  cards and columns, Shift with Left or Right moves the card to the nearest
+  column it may enter and keeps the focus on it, and Enter opens it. Every
+  card also has a "Move to" menu, which is the way on a phone.
+- On a narrow screen the columns scroll sideways inside the board, never the
+  page.
+- `renderCard` is the card body. `slots` replaces `Loading`, `Empty` (a column
+  with no cards), `Error` and `ColumnHeader` (`defaultResourceBoardSlots`).
+  `--karni-board-max-height` sets how tall a column grows before it scrolls.
+
+### ResourceCalendar: day, week, month and list (experimental)
+
+Anything with a start and an end is a calendar. `ResourceCalendar` draws a
+resource's rows in a day, week or month view, and as a list at phone width:
+
+```tsx
+<ResourceCalendar<Slot>
+  resource="slots"
+  startField="starts_at"
+  endField="ends_at"
+  stateField="status"
+  capacity={{ capacity: "capacity", remaining: "remaining" }}
+  timeZone="Europe/Berlin"
+  onSelectEvent={(slot) => navigate(`/slots/${slot.id}`)}
+  onCreate={({ start, end }) => openNewBooking(start, end)}
+/>
+```
+
+- It loads one range for the visible dates through the list's
+  `<startField>__lte` and `<endField>__gte` filters (the start field alone,
+  widened by a day, when there is no end field). A row has an end, or a
+  `durationField` in minutes, or lasts `defaultDurationMinutes`. `limit` caps
+  the rows of a range (200) and the calendar says when more exist.
+- `stateField` gives each event its label from the schema's choices and a
+  colour on its left edge (`stateTones` picks them). The state is also said
+  in words, never by colour alone.
+- Free and full: `capacity` names a row's capacity and its taken or
+  remaining field, so each event says "3 free" or "Full". `availability`
+  names a second resource of slots, drawn behind the events. A click on an
+  open one calls `onCreate` with `slot` set. A full one is not clickable.
+- Time zone: `timeZone` is the business zone the times are shown in. When
+  the viewer's zone is another one, a switch offers "Business time" and "My
+  time" and each event's tooltip gives both. The arithmetic uses `Intl`, so
+  a day that is 23 or 25 hours long where the clocks change is handled and
+  there is no date library.
+- Click an empty time (`onCreate`, with `start`, `end` and `allDay` for a
+  click on a month cell) or an event (`onSelectEvent`). Drag an event to move
+  it and its bottom edge to resize it, in steps of `slotMinutes`. The change
+  is PATCHed (or sent to `onReschedule`, or POSTed to the declared row action
+  `rescheduleAction`), shows at once and rolls back with the server's own
+  sentence when refused. It is offered only when the caller may: `canEdit`,
+  else the schema (the start and end fields are writable and the update rule
+  does not refuse, or the row action is open for the row and its `by` rule
+  allows the role).
+- Keyboard: Tab reaches an event, Shift with the arrows moves it, Alt with
+  Up or Down resizes it, Enter opens it. In the time grid the arrows walk the
+  empty times and Enter creates. In the month grid the arrows walk the days.
+  Page Up and Page Down change the period.
+- `renderEvent` is the event body, `view` and `date` are controlled when
+  given, `views` limits the switch, and `slots` replaces `Loading`, `Empty`
+  and `Error`. `--karni-calendar-hour-height`, `--karni-calendar-max-height`
+  and `--karni-calendar-month-min-width` theme it.
 
 ### Catalogues, money and page titles (experimental)
 

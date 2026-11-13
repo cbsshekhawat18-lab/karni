@@ -36,6 +36,10 @@ export interface TreeSelectProps {
   getOptionLabel?: (item: Record<string, unknown>) => React.ReactNode;
   /** Levels the tree loads per request. Default 2. */
   depth?: number;
+  /** Experimental. A search result shows under its ancestors (see TreeView). */
+  searchKeepsAncestors?: boolean;
+  /** Experimental. A field of each node with a count, shown at the end of its row (see TreeView). */
+  countField?: string;
   /** Set false to hide the clear button (which emits null). Default true. */
   clearable?: boolean;
   id?: string;
@@ -330,6 +334,8 @@ export const TreeSelect = React.forwardRef<HTMLButtonElement, TreeSelectProps>(
               onChange={handleChange}
               multiple={multiple}
               depth={depth}
+              searchKeepsAncestors={props.searchKeepsAncestors}
+              countField={props.countField}
               reveal={single ?? null}
               autoFocus
               getNodeLabel={getOptionLabel}
