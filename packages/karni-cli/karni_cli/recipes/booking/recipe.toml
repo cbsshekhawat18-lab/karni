@@ -1,7 +1,7 @@
 name = "booking"
 title = "Booking"
 version = "1.0.0"
-requires = ["payments"]
+requires = ["payments", "preferences>=1"]
 purpose = "Resources with time slots that members book and pay for, never over capacity."
 use_when = [
     "book a class",

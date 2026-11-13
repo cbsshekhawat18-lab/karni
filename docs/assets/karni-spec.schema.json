@@ -858,6 +858,11 @@
           "description": "Experimental. Family events: karni.outbox in INSTALLED_APPS.",
           "type": "boolean"
         },
+        "preferences": {
+          "default": false,
+          "description": "Experimental. The preferences contract: karni.preferences in INSTALLED_APPS, the business's details, one settings section per part, connections and email switches behind the Settings page.",
+          "type": "boolean"
+        },
         "timeline": {
           "default": false,
           "description": "Experimental. The timeline contract: karni.timeline in INSTALLED_APPS. It needs people and events, which it switches on too.",

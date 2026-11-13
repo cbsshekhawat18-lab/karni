@@ -57,6 +57,7 @@ Declared in `karni.yaml` ([rules](../rules.md)), so a rebuild keeps them:
 - `payments` (karni-payments) with `provider: stripe`. Its currency follows
   `app.currency` (`USD`). recipe.toml lists it under `requires`.
 - `email_code_login`: members sign in with a code sent by email.
+- `preferences` (core, required): Settings, Bookings has `refund_notice_hours`. A paid booking cancelled later than that many hours before its slot starts is not refunded (0, the default, refunds every one). Staff and admins change it. The connection `bookings.family_events` (on) publishes `bookings.booking.confirmed` and `cancelled` as [family events](../family-events.md) when the project has them, and Settings, Connections switches it off. The emails of a confirmed and a cancelled booking are listed in Settings, Emails, each with its switch.
 
 Pages: the staff dashboard, and under the app's route `/bookings`:
 resources (list, detail, form), slots (list, form) and bookings (list,
@@ -77,6 +78,7 @@ bookings.
 - `bookings/tests/test_rules.py`: each rule above, as the request a member or
   staff would send.
 - `bookings/tests/test_capacity.py`: the capacity and the paid booking.
+- `bookings/preferences.py`, `bookings/connections.py` and `bookings/events.py`: the settings section, the connection and the events it publishes. `bookings/tests/test_family.py` tests the refund notice, who may change it, and the events with the connection on and off.
 - `bookings/seeds.py`: four bookable spaces (a meeting room, a workshop
   studio, a podcast booth, a courtyard) with a price, slots in the hours,
   length and size that fit each, and bookings spread over the slots that

@@ -839,6 +839,12 @@ def settings_block(spec: schema.Spec, line: int) -> str:
         rows.append(f"KARNI_API_VERSION = {pystr(spec.app.api_version)}")
     for setting in contract_settings(spec):
         rows.append(f"{setting} = True")
+    if "preferences" in features_on(spec):
+        # Where the business's details start: Settings, Details changes them.
+        details = {"name": spec.app.name}
+        if spec.app.currency:
+            details["currency"] = spec.app.currency.upper()
+        rows.append(_literal({"details": details}, "", line, "KARNI_PREFERENCES_DEFAULTS = "))
     for module, options in spec.modules.items():
         for option, value in (options or {}).items():
             rows.append(_literal(value, "", line, f"{catalog.module_setting(module, option)} = "))
@@ -1253,8 +1259,12 @@ def _render_settings(ws: Workspace, out: Output, inputs: Inputs) -> None:
 
 #: Experimental. The app each core contract switched on by a feature adds to INSTALLED_APPS,
 #: when no setting installs it (``features.events``: the family events outbox,
-#: ``features.timeline``: the timeline).
-CONTRACT_APPS: Final[dict[str, str]] = {"events": "karni.outbox", "timeline": "karni.timeline"}
+#: ``features.timeline``: the timeline, ``features.preferences``: the Settings page's store).
+CONTRACT_APPS: Final[dict[str, str]] = {
+    "events": "karni.outbox",
+    "timeline": "karni.timeline",
+    "preferences": "karni.preferences",
+}
 
 
 def features_on(spec: schema.Spec) -> list[str]:

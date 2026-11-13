@@ -229,6 +229,14 @@ class Features(_Node):
         False,
         description="Experimental. Family events: karni.outbox in INSTALLED_APPS.",
     )
+    preferences: bool = Field(
+        False,
+        description=(
+            "Experimental. The preferences contract: karni.preferences in INSTALLED_APPS, the "
+            "business's details, one settings section per part, connections and email "
+            "switches behind the Settings page."
+        ),
+    )
     timeline: bool = Field(
         False,
         description=(

@@ -64,6 +64,7 @@ Declared in `karni.yaml` ([rules](../rules.md)), so a rebuild keeps them:
 
 - `two_factor`: people can protect their sign-in with an authenticator
   app (`karni[2fa]`).
+- `preferences` (core, required): Settings, CRM has `stale_after_days` (30): an open deal nobody changed for that long is listed by `GET /api/deals/stale/`. Managers and admins change it. The connection `crm.deal_timeline` (on) writes a won or lost deal on the deal's and its company's [timeline](../timeline.md) when the project has one, and Settings, Connections switches it off.
 
 Pages: the staff dashboard, and under the app's route `/crm`: companies,
 contacts and deals (list, detail, form) and activities (list, form). Demo data: 20 companies, 60 contacts, 40
@@ -75,6 +76,7 @@ deals and 120 activities.
   value of the deals per stage, of the deals the user may see.
 - `crm/tests/test_pipeline.py`: the pipeline as sales and as a manager, and
   a contacts import that updates by email.
+- `crm/preferences.py`, `crm/connections.py` and `crm/listeners.py`: the settings section, the connection and the timeline entries it writes. `crm/tests/test_family.py` tests the stale deals, who may change the setting, and the timeline with the connection on and off.
 - `crm/seeds.py`: twenty companies in different trades, three contacts at
   each with an email on the company's own `.example` domain, two deals each
   that fit the trade, a contact from the same company on every deal, and

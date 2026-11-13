@@ -4,4 +4,4 @@ title = "Visits"
 version = "1.0.0"
 purpose = "Visits of people, for the family tests: needs people, events and the timeline."
 use_when = ["visits"]
-requires = ["people>=1", "events>=1", "timeline>=1"]
+requires = ["people>=1", "events>=1", "timeline>=1", "preferences>=1"]

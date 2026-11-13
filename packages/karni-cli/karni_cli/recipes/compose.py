@@ -75,7 +75,12 @@ __all__ = [
 
 #: Experimental. The core contracts a recipe may require, and the version this release has.
 #: ``features.<name>`` switches each one on.
-CONTRACTS: Final[dict[str, int]] = {"people": 1, "events": 1, "timeline": 1}
+CONTRACTS: Final[dict[str, int]] = {
+    "people": 1,
+    "events": 1,
+    "timeline": 1,
+    "preferences": 1,
+}
 #: Experimental. The roles every part shares. Every other role is ``<prefix>-<role>``.
 FAMILY_ROLES: Final = ("admin", "customer")
 #: Experimental. Pages that belong to the family (core and commerce), never to a part.

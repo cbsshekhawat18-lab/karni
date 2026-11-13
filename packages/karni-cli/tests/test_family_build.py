@@ -96,8 +96,9 @@ def test_one_part_alone_gets_the_contracts_it_requires(
     spec = _spec(root)
     assert spec["app"]["recipes"] == ["visits"]
     assert spec["features"]["people"] is True and spec["features"]["events"] is True
-    assert spec["features"]["timeline"] is True
+    assert spec["features"]["timeline"] is True and spec["features"]["preferences"] is True
     settings = (root / "config" / "settings.py").read_text(encoding="utf-8")
+    assert '"karni.preferences"' in settings and "KARNI_PREFERENCES_DEFAULTS" in settings
     assert "KARNI_PEOPLE = True" in settings
     assert '"karni.outbox"' in settings and '"karni.timeline"' in settings
     parts_ts = (root / "frontend" / "src" / "karni" / "parts.ts").read_text(encoding="utf-8")
@@ -107,7 +108,10 @@ def test_one_part_alone_gets_the_contracts_it_requires(
     assert kept is not None and kept.recipe_version == "1.0.0"
     assert set(kept.files) == {
         "frontend/src/visits/index.ts",
+        "visits/connections.py",
         "visits/events.py",
+        "visits/preferences.py",
+        "visits/services.py",
         "visits/tests/test_family.py",
     }
     assert (root / ".karni/recipes/visits/karni.yaml").is_file()

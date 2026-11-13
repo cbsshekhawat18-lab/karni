@@ -6,12 +6,16 @@ roles where each is legal: Karni refuses them elsewhere (409, E997) and routes
 confirm itself. pay and cancel do more than move the state, so they are here.
 """
 
+import datetime as dt
 from typing import Any
 
 from bookings.karni import api as karni
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
+from karni import preferences
 from karni.api.actions import RowActionRefused
+from karni.performance import Budget
 from karni_payments.models import Payment
 from karni_payments.services import create_checkout, create_refund
 from rest_framework.decorators import action
@@ -20,6 +24,11 @@ from rest_framework.response import Response
 
 #: A payment still waiting for the customer: pay again sends them back to it.
 OPEN = (Payment.Status.PENDING, Payment.Status.PROCESSING)
+
+
+def _in_time_for_a_refund(booking: Any) -> bool:
+    hours = preferences.value("bookings.refund_notice_hours", 0)
+    return booking.slot.starts_at - timezone.now() >= dt.timedelta(hours=hours)
 
 
 class ResourceViewSet(karni.ResourceViewSet):
@@ -32,6 +41,10 @@ class SlotViewSet(karni.SlotViewSet):
 
 class BookingViewSet(karni.BookingViewSet):
     """A member's bookings: pay for one, or cancel it (a paid one is refunded)."""
+
+    # Measured: a paid cancel refunds at the provider, reads the refund notice and,
+    # in a family project, publishes bookings.booking.cancelled to the outbox.
+    query_budget = Budget(cancel=25, reason="refund, settings and the family event")
 
     @action(detail=True, methods=["post"])
     def pay(self, request: Request, pk: str | None = None) -> Response:
@@ -73,13 +86,21 @@ class BookingViewSet(karni.BookingViewSet):
 
     @action(detail=True, methods=["post"])
     def cancel(self, request: Request, pk: str | None = None) -> Response:
-        """Cancel the booking: its place is free again, a paid one is refunded."""
+        """Cancel the booking: its place is free again, a paid one is refunded.
+
+        Settings, Bookings, refund_notice_hours: a booking cancelled later than
+        that many hours before its slot starts is not refunded.
+        """
         booking = self.get_object()
         refund = None
         with transaction.atomic():
             booking.transition("status", "cancelled")
             payment = booking.payment
-            if payment is not None and payment.status == Payment.Status.SUCCEEDED:
+            if (
+                payment is not None
+                and payment.status == Payment.Status.SUCCEEDED
+                and _in_time_for_a_refund(booking)
+            ):
                 refund = create_refund(payment, reason="booking cancelled")
         data: dict[str, Any] = dict(self.get_serializer(booking).data)
         data["refund"] = (

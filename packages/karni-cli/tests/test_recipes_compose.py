@@ -231,6 +231,24 @@ def test_the_timeline_switches_on_the_contracts_it_needs() -> None:
     assert contract_settings(spec) == ["KARNI_PEOPLE"]
 
 
+def test_preferences_are_installed_with_the_project_name_and_currency() -> None:
+    from karni_cli.builder.render import contract_apps, settings_block
+    from karni_cli.spec import schema
+
+    recipe = _Recipe("club", "Club", requires=("preferences>=1",))
+    data = compose.merge(
+        _project(app={"name": "Harbour Yoga", "kind": "app"}), recipe, _club(), modules=MODULES
+    ).data
+    assert data["features"] == {"preferences": True}
+    spec = schema.Spec.model_validate(data)
+    assert contract_apps(spec) == ["karni.preferences"]
+    block = settings_block(spec, 100)
+    assert (
+        'KARNI_PREFERENCES_DEFAULTS = {"details": {"name": "Harbour Yoga", "currency": "USD"}}'
+        in block
+    )
+
+
 def test_conflicts_are_refused_both_ways() -> None:
     project = compose.merge(_project(), _Recipe("desk"), _desk(), modules=MODULES).data
     error = _refused(project, _club(), recipe=_Recipe("club", conflicts=("desk",)))

@@ -7,8 +7,9 @@ from typing import Any
 from bookings.karni import models as karni
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from karni import preferences
 from karni.capacity import release, reserve
-from karni.events import on_deleted, on_restored, on_transition, on_updated
+from karni.events import on_deleted, on_restored, on_transition, on_updated, publish
 from karni_payments.models import Payment
 
 
@@ -61,3 +62,26 @@ def confirm_the_paid_booking(payment: Payment) -> None:
         return
     for booking in Booking.objects.filter(payment=payment, status="pending"):
         booking.transition("status", "confirmed")
+
+
+@on_transition(Booking, "status", to="confirmed")
+def announce_a_confirmed_booking(booking: Booking) -> None:
+    _announce(booking, "confirmed")
+
+
+@on_transition(Booking, "status", to="cancelled")
+def announce_a_cancelled_booking(booking: Booking) -> None:
+    _announce(booking, "cancelled")
+
+
+def _announce(booking: Booking, moment: str) -> None:
+    """Publish the move as a family event while bookings.family_events is on."""
+    if not preferences.active("bookings.family_events"):
+        return
+    publish(
+        f"bookings.booking.{moment}",
+        subject=booking,
+        booking=str(booking.pk),
+        slot=str(booking.slot_id),
+        starts_at=booking.slot.starts_at.isoformat(),
+    )
