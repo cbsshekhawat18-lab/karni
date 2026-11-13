@@ -1807,6 +1807,7 @@ class Lead(BaseModel):
 | Setting | Env | Default | What it controls |
 |---|---|---|---|
 | `KARNI_MAIL_DISABLED_KINDS` | `KARNI_MAIL_DISABLED_KINDS` | `[]` | Experimental. The kinds of email karni.mail does not send, by name (commerce.new_order). A kind is the stable name a part gives each email. |
+| `KARNI_MAIL_SOURCE` | `KARNI_MAIL_SOURCE` | `""` | Experimental. A dotted path to where the business's changes to its emails are kept: an object or class with template(kind), enabled(kind) and sender(). An edited template wins over the files. Blank: the files and DEFAULT_FROM_EMAIL. |
 
 ### Files & storage
 
