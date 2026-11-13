@@ -1,5 +1,5 @@
 ---
-description: "karni-commerce (experimental): one cart, checkout and order path for anything a project sells, through a sellable adapter per kind, with orders in money states, several payments per order, refunds by line or amount, emails by kind and @karni/commerce-ui."
+description: "karni-commerce (experimental): one cart, checkout and order path for anything a project sells, through a sellable adapter per kind, with options per line, coupons, shipping zones and methods, tax rates, orders in money states, several payments per order, refunds by line or amount, emails by kind and @karni/commerce-ui."
 ---
 
 # Commerce (karni-commerce)
@@ -45,10 +45,12 @@ payments currency. Every order and line stores the currency it was placed in.
    keeps (`X-Cart-Token`), and joins the person's cart when they sign in
    (`POST /api/carts/current/merge/`).
 2. Checkout, `POST /api/carts/current/checkout/`, in one transaction: each
-   line's name, SKU and price are copied to an order line, each line is held
-   (`hold`), the totals are the sum of the lines, and the order waits for its
-   payment for `KARNI_COMMERCE_HOLD_MINUTES` (30). The answer says where to
-   pay. A total of zero is paid at once, with no payment.
+   line's name, SKU, options in words and price are copied to an order line,
+   each line is held (`hold`), the totals are worked out once (the coupon,
+   the shipping method chosen and the tax, [below](#what-an-order-costs)),
+   and the order waits for its payment for `KARNI_COMMERCE_HOLD_MINUTES`
+   (30). The answer says where to pay. A total of zero is paid at once, with
+   no payment.
 3. karni-payments reports the payment. Commerce counts the money, and once
    it covers the total the order is `paid` and each line is taken
    (`on_paid`). A declined payment makes the order `failed` and lets its
@@ -128,7 +130,12 @@ class SeatSellable(Sellable):
 | `hold`, `release` | nothing | checkout, and a failed, cancelled or expired order |
 | `on_paid`, `on_cancelled` | nothing | the order is paid, a paid order is cancelled |
 | `on_refunded(line, quantity, restock)` | nothing | a refund of the line went through |
-| `refund_limit(line, now)` | what is left of the line | how much may still go back |
+| `refund_limit(line, now)` | what is left of the line (what the buyer paid for it, discount off and tax in) | how much may still go back |
+| `clean_options(item, options)` | keeps the options not starting with `_` | a line goes in the cart and at checkout: refuse options that do not fit (a size it does not come in) |
+| `option_key(item, options)` | a short hash of the options | what tells two lines of one item apart (two sizes are two lines) |
+| `details(item, options)` | none | the options in words, `[{"label": "Size", "value": "M"}]`, shown on the cart and copied to the order line |
+| `choices(item)` | one choice with no options | every set of options the item is sold with, for staff placing an order by hand |
+| `coupon_keys(item)` | none | what a coupon may be limited to: `{"categories": ["3", "7"]}` |
 | `get_many`, `queryset`, `key` | by primary key | how items are found, one query per kind |
 
 Every hook runs inside commerce's transaction: a hook that raises undoes the
@@ -138,6 +145,99 @@ never both get it.
 
 `KARNI_COMMERCE_SELLABLES = {"seat": "myapp.sellables.MySeats"}` replaces the
 adapter of a kind without touching the app that registered it.
+
+## What an order costs
+
+`karni_commerce.pricing.quote` works out the price of a cart or an order
+once, and the cart page, the checkout page and checkout itself all call it,
+so what the buyer sees is what the order stores:
+
+1. Each line is priced by its adapter (`price`).
+2. A coupon takes money off the lines it applies to.
+3. Shipping, when a line is sent somewhere: the methods of the zone that
+   covers the address.
+4. Tax: each line at the rate of its tax class for the address, and the
+   shipping at the standard rate.
+
+The order keeps each part: `subtotal`, `discount_total`, `shipping_total`,
+`tax_total` and `total`, the `coupon_code`, the `shipping_method`'s name and
+the `tax_lines` (`[{"name", "rate", "amount"}]`). Each order line keeps its
+`discount`, `tax_rate`, `tax` and `total` (what the buyer pays for the line),
+so a refund by lines gives back what the line cost.
+
+### Options
+
+An item may be sold in several ways (a size and a colour, a date). The
+cart line and the order line keep the options the buyer picked, and the
+adapter decides what they mean: `clean_options` refuses options that do not
+fit, `option_key` tells two lines of one item apart, `details` says them in
+words, and `name`, `sku`, `price` and the stock hooks read them. The shop
+recipe keeps its variations in its own table and names one in the options
+(`{"variation": "<id>"}`). Another kind can do the same with its own table.
+
+### Coupons
+
+A coupon (`Coupon`, staff edit them at `/api/coupons/`) is a code a buyer
+types at the cart or at checkout (`POST /api/carts/current/coupon/
+{code}`, a blank code takes it off):
+
+| Field | What |
+|---|---|
+| `kind` | `percent` (of each line it applies to), `fixed` (shared between those lines by their price, never more than they cost) or `free_shipping` |
+| `amount` | the percent or the amount |
+| `minimum_spend` | what the items must come to first |
+| `starts_at`, `ends_at` | when it works |
+| `usage_limit`, `usage_limit_per_person` | its uses in all, and per buyer (by account, else by email) |
+| `kinds` | the kinds it works on, with commas (`product, seat`) |
+| `items` | some items: `["product:12"]` or `[{"key": "product:12", "name": "Lamp"}]` |
+| `limits` | the coupon keys the adapters give: `{"categories": ["3"]}` |
+
+A line it applies to is one of `items`, or shares a value with a key of
+`limits`, and with neither every line of its kinds. Each use is a
+`CouponUse` of its order. A cancelled order gives its use back. Checkout
+locks the coupon, so two buyers at once never pass its limits. A coupon the
+cart holds that stopped working (it expired, it was used up) is refused at
+checkout with the reason.
+
+### Shipping
+
+Staff set up zones (`ShippingZone`: a name, country codes with commas,
+regions or postcode starts such as `75*`, and an order) and each zone's
+methods (`ShippingMethod`):
+
+| `kind` | Costs |
+|---|---|
+| `flat` | `cost`, and nothing once the items (less the discount) reach `free_above` when it is set |
+| `free` | nothing, and it shows only once the items reach `free_above` |
+| `pickup` | `cost` (often nothing): the buyer collects it |
+
+Checkout offers the methods of the first zone, by its order, that covers the
+address (`POST /api/carts/current/quote/ {address, shipping_method, email}`
+answers them with the totals), and takes the one chosen
+(`shipping_method` in the checkout body; blank takes the first). A zone with
+no countries covers everywhere else. An address no zone covers cannot check
+out ("We do not send orders to US yet."). With no zone at all, shipping is
+not charged. A free-shipping coupon makes every method free.
+
+### Tax
+
+Staff set up rates (`TaxRate`: a name, a country or blank for anywhere, a
+region or blank for the whole country, the rate in percent, a tax class and
+whether it applies to shipping). The rate of an address is the most specific
+one: the country and region, then the country, then the rate with neither.
+A sellable's `Price.tax_class` picks the class (blank: the standard one).
+The address is where the order goes, or where it is billed when nothing
+ships.
+
+Prices are entered without their tax by default, and the tax is added on
+top. With `KARNI_COMMERCE_PRICES_INCLUDE_TAX` on, prices include it: the tax
+is the part of each price that is tax, the total is the prices, and the
+order and the emails say the tax is included.
+
+`KARNI_COMMERCE_SHIPPING` and `KARNI_COMMERCE_TAX` name the classes that
+give the methods and the rates (`karni_commerce.pricing.ZoneShipping` and
+`RateTax`): subclass one to price shipping by weight, or read rates from a
+tax service.
 
 ## What the goods are doing
 
@@ -248,6 +348,9 @@ project's people and keeps the two calls.
 | `KARNI_COMMERCE_STAFF_EMAILS` | `[]` | who gets the new-order email |
 | `KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR` | payments' default | the validator for payments that are not an order's |
 | `KARNI_COMMERCE_SELLABLES` | `{}` | adapters by kind, over the registered ones |
+| `KARNI_COMMERCE_PRICES_INCLUDE_TAX` | `False` | whether the prices the adapters give include their tax |
+| `KARNI_COMMERCE_SHIPPING` | `karni_commerce.pricing.ZoneShipping` | the class that gives an address's shipping methods |
+| `KARNI_COMMERCE_TAX` | `karni_commerce.pricing.RateTax` | the class that gives a tax class's rate at an address |
 
 ## The React package
 
@@ -276,9 +379,26 @@ registerOrderPanel({ key: "parcel", title: "Parcel", component: Parcel,
 The panel gets the order and `refresh()`. `CommercePaths` gains
 `customers`, `customer(email)` and `newOrder`.
 
+The cart page and checkout take a coupon (`CouponBox`, `useApplyCoupon`),
+checkout offers the shipping methods for the address and shows the tax
+(`useQuote`, `Totals`), and `CheckoutPage`'s `defaultCountry` starts the
+address in the business's own country. A line shows its options in words
+(`LineDetails`), and an order its stored totals (`OrderTotals`). For staff,
+`CouponsPage`, `ShippingPage` (the zones, and a zone's methods) and
+`TaxRatesPage` edit what checkout charges. A coupon's form picks the items
+it applies to by name, and a selling app adds its own coupon keys to it once
+at startup:
+
+```tsx
+import { registerCouponLimit } from "@karni/commerce-ui";
+
+registerCouponLimit({ key: "categories", label: "Categories", resource: "categories" });
+```
+
 ## What it does not do yet
 
-Coupons, tax, shipping zones and methods, invoices, deposits with a balance
-link, bundles and abandoned-cart reports are planned in this module. Until
-then an order's total is the sum of its lines, and a project adds its own
-charges in its adapters' prices.
+Invoices, deposits with a balance link, bundles, abandoned-cart reports and
+reports of coupons used are planned in this module. Shipping is priced by
+zone and method, not by weight or a carrier's live rates (subclass
+`ZoneShipping` for that). One rate applies per tax class and address: no
+compound taxes.

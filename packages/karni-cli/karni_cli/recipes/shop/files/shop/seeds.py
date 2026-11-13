@@ -528,6 +528,9 @@ class ProductSeeder(karni.ProductSeeder):
                 "active": number % 13 != 12,
                 "featured": number % 5 == 0,
                 "image": placeholder_image(name, key=top.name),
+                # the reviews count them (ReviewSeeder)
+                "rating_average": None,
+                "rating_count": 0,
             }
             if number % 6 == 1:  # on sale now, until next week
                 values["sale_price"] = (regular * Decimal("0.8")).quantize(
@@ -869,7 +872,8 @@ REVIEW_WORDS = {
 
 class ReviewSeeder(karni.ReviewSeeder):
     """Reviews by the buyers whose parcels arrived: most approved, one waiting, one
-    rejected. Each product's rating counts the approved ones."""
+    rejected. Each product's rating counts the approved ones. The demo customer's
+    parcels are left unreviewed, so customer@example.com has something to review."""
 
     class Meta(karni.ReviewSeeder.Meta):
         after = ("shop.Shipment",)
@@ -885,6 +889,8 @@ class ReviewSeeder(karni.ReviewSeeder):
                 "position"
             ):
                 pair = (shipment.order.user, line.item)
+                if shipment.order.user.email == "customer@example.com":
+                    continue
                 if pair not in pairs:
                     pairs.append(pair)
         rows: list[Any] = []

@@ -84,6 +84,7 @@ export function AddToCart({
         ) : null}
         <PendingButton pending={set.isPending} disabled={soldOut} onClick={add}>
           {soldOut ? "Sold out" : label}
+          {name ? <span className="sr-only"> {name}</span> : null}
         </PendingButton>
       </div>
       {set.isError ? (

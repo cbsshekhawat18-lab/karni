@@ -166,6 +166,31 @@ apply codemods and list the manual steps. This file is the human summary.
   (`rowActionOpen`). ResourceDetail asks for its record once the schema is in. A new
   project's Tailwind scans every `@karni/*` package. A list's toolbar wraps on a phone.
 
+- **karni-commerce (experimental):** options on a cart line (`Sellable.clean_options`,
+  `option_key`, `details`, `choices`), so two sizes of one item are two lines and an order
+  line keeps its options in words. Coupons (percent, amount, free shipping, minimum spend,
+  dates, uses in all and per person, limits by kind, item and the adapters' coupon keys),
+  shipping zones and methods (flat rate, free above an amount, local pickup) and tax rates
+  by country and region, priced once by `karni_commerce.pricing.quote` for the cart, the
+  checkout page (`POST carts/current/quote/`) and the order. Prices with or without tax
+  (`KARNI_COMMERCE_PRICES_INCLUDE_TAX`), `KARNI_COMMERCE_SHIPPING` and `KARNI_COMMERCE_TAX`
+  as escape hatches. The order stores its discount, shipping, tax and tax lines, and a
+  refund by lines gives back what the lines cost. `@karni/commerce-ui` adds the coupon box,
+  shipping methods and tax at checkout (`defaultCountry`), order totals, and
+  `CouponsPage`, `ShippingPage` and `TaxRatesPage` (`registerCouponLimit`). Each Add to
+  cart button names its item for screen readers.
+
+- **Shop recipe:** attributes and variations with their own SKU, price, stock and picture,
+  picked on the product page; reviews by customers whose parcel arrived, approved by staff,
+  with the average on cards and pages; a wishlist; related and recently viewed products;
+  coupons, shipping and tax pages for the manager; demo data for each.
+
+- **@karni/ui:** `ChangeHistory` says each change in words (field labels, money in its
+  currency, state labels, "Status changed from Paid to Part refunded"), with `record`,
+  `historyHeadline` and `historyValueText`. `DataChart` thins its x-axis labels to the
+  width it is drawn (`xLabelStep`). A card on a phone gives long values room and wraps an
+  email at its dots, never inside a word (`softBreaks`). `useResourceSchemaIfKnown`.
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

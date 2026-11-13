@@ -9,7 +9,8 @@ describe("AddToCart", () => {
     cartState.lines = [{ kind: "product", item: "lamp", quantity: 1 }];
     renderWithCommerce(<AddToCart kind="product" item="lamp" name="Brass Lamp" available={3} />);
     fireEvent.change(screen.getByLabelText("Quantity"), { target: { value: "2" } });
-    await userEvent.click(screen.getByRole("button", { name: "Add to cart" }));
+    // Each button names its item for screen readers: a grid has many of them.
+    await userEvent.click(screen.getByRole("button", { name: "Add to cart Brass Lamp" }));
     await waitFor(() =>
       expect(cartState.lines).toEqual([{ kind: "product", item: "lamp", quantity: 3 }]),
     );

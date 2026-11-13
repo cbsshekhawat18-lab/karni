@@ -8,6 +8,7 @@ import {
   PendingButton,
   Skeleton,
   Textarea,
+  useAuth,
   useKarniClient,
   useResourceList,
   useResourceMutations,
@@ -126,9 +127,12 @@ export function Reviews({ product }: { product: Product }) {
     ordering: "-created_at",
     pageSize: 10,
   });
-  const key = ["shop", "review-eligibility", product.id];
+  const { status, user } = useAuth();
+  // Asked once the sign-in is known: a signed-in reader may review what reached them.
+  const key = ["shop", "review-eligibility", product.id, user?.id ?? null];
   const eligibility = useQuery<Eligibility>({
     queryKey: key,
+    enabled: status !== "loading",
     queryFn: ({ signal }) =>
       client.request<Eligibility>("/reviews/eligibility/", {
         query: { product: product.id },

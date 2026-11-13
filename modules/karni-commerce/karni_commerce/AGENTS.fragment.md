@@ -18,4 +18,13 @@
 - Set `KARNI_PAYMENTS_CHECKOUT_VALIDATOR =
   "karni_commerce.payments.checkout_validator"` (karni.yaml:
   `modules: {payments: {checkout_validator: ...}}`).
-- UI: `@karni/commerce-ui` has the cart, mini cart, checkout and order pages.
+- Options (a size, a colour, a date) go in the line's `options`. The adapter
+  checks them (`clean_options`), tells lines apart (`option_key`) and says
+  them in words (`details`). Never add a variant column to commerce's tables.
+- Coupons, shipping zones and methods and tax rates are commerce's
+  (`Coupon`, `ShippingZone`, `ShippingMethod`, `TaxRate`), priced by
+  `karni_commerce.pricing.quote`. Never compute a discount, shipping or tax
+  in your app: give `Price.tax_class` and `coupon_keys`, or replace
+  `KARNI_COMMERCE_SHIPPING` / `KARNI_COMMERCE_TAX`.
+- UI: `@karni/commerce-ui` has the cart, mini cart, checkout and order pages,
+  and `CouponsPage`, `ShippingPage` and `TaxRatesPage` for staff.

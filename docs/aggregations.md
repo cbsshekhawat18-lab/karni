@@ -203,7 +203,10 @@ a value of your own:
 ## In React
 
 `useAggregate` builds the request and `DataChart` reads the response
-directly:
+directly. With many categories (30 days of revenue) the chart draws every
+second, third or later x-axis label, as many as fit side by side at the
+width it is drawn, so a phone shows fewer of them (`xLabelStep` is the
+rule):
 
 ```tsx
 import { DataChart, useAggregate } from "@karni/ui";

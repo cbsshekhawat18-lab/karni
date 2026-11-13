@@ -130,7 +130,7 @@ def test_coupon_rules_minimum_dates_limits_and_what_it_applies_to(
     def refused(code: str, *lines: tuple[str, Any, int], email: str = "") -> str:
         with pytest.raises(ValidationError) as caught:
             services.apply_coupon(cart_with(*lines), code, email=email)
-        return str(caught.value.detail["code"][0])  # type: ignore[index]
+        return str(caught.value.detail["code"][0])
 
     Coupon.objects.create(code="MIN50", amount=Decimal("5"), minimum_spend=Decimal("50"))
     assert "Spend at least 50.00" in refused("MIN50", ("gadget", lamp, 1))

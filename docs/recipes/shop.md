@@ -1,5 +1,5 @@
 ---
-description: "The shop recipe: a storefront with categories, products on sale, a cart for visitors and customers, guest checkout through karni-commerce and karni-payments, order emails, parcels with tracking, and a staff home. What each role does, how to change it, and what it does not do yet."
+description: "The shop recipe: a storefront with categories, products in sizes and colours, reviews, a wishlist, a cart with coupons, checkout with shipping methods and tax through karni-commerce and karni-payments, order emails, parcels with tracking, and a staff home. What each role does, how to change it, and what it does not do yet."
 ---
 
 # Recipe: online shop
@@ -33,14 +33,27 @@ and its parcels.
   price) and pages, all kept in the address so a link finds them again.
 - Opens a product at `/shop/products/<slug>`: its pictures, the price (the
   sale price next to the regular one while a sale runs), how many are left,
-  and the description. Every page has a title and a description for search
-  engines.
+  its rating and reviews, and the description. Every page has a title and a
+  description for search engines.
+- Picks the options of a product sold in several ways (a size, a colour):
+  the price, what is left, the SKU and the picture follow the choice, and a
+  value no way for sale has is off. A card shows the price range ("From
+  $14.00") and opens the product to choose.
+- Sees related products under a product (the ones staff chose, then the
+  same category's best rated) and the products this browser looked at
+  last.
 - Adds products to the cart from a card or a product page. The mini cart in
   the header shows the count and the first lines. `/cart` changes quantities
   and takes lines out, and says when a line cannot be bought (sold out, fewer
   left, no longer for sale).
+- Types a coupon code at the cart or at checkout. The cart says what it
+  takes off, or why it does not work (expired, used up, a minimum spend,
+  nothing in the cart it applies to).
 - Checks out at `/checkout` as a guest: an email, the billing address, a
-  different shipping address if they want, and a note. The order holds the
+  different shipping address if they want, and a note. Once the country is
+  in, checkout offers the ways to send it there (a flat rate, free above an
+  amount, local pickup) with their prices, and shows the tax lines and the
+  total. The order holds the
   products for 30 minutes while they pay at the provider. Back from the
   provider, the order page confirms the payment, and the confirmation email
   arrives with a link to the order.
@@ -55,8 +68,13 @@ and its parcels.
   sale (`features.terms`).
 - Sees their orders at `/orders` and each one at `/orders/<number>`: where
   the money stands, where the parcel is (being prepared, shipped with its
-  tracking number, delivered), the lines, the totals and the addresses.
-  `/account` shows their orders and their name.
+  tracking number, delivered), the lines with their options, the coupon,
+  the shipping, the tax and the addresses. `/account` shows their orders
+  and their name.
+- Reviews a product once its parcel reached them: a rating from one to five
+  stars and a few words. The review shows once staff approve it, marked as
+  bought here.
+- Keeps products for later on `/wishlist` (Add to wishlist on a product).
 
 ### Staff (`shop-staff`)
 
@@ -81,6 +99,12 @@ and its parcels.
   the link to pay.
 - `/customers` lists who bought, how often and for how much, and each
   customer's page their orders and addresses.
+- `/reviews` lists the reviews, newest first, with the ones waiting for
+  approval counted on the home page. A review's page approves or rejects
+  it.
+- A product's page lists its variations (each with its values, SKU, price,
+  stock and picture). `/attributes` holds the options (Size, Colour) and
+  their values.
 - `/shipments` lists the parcels, each with its order's number linking to
   the order.
 - Manage the catalogue: `/products` with search, filters, CSV and XLSX export,
@@ -97,6 +121,13 @@ and its parcels.
   them back in stock or not) or by an amount. The refund goes through the
   payment provider, and the order shows part refunded or refunded once the
   provider confirms it.
+- `/coupons`: codes with a percent, an amount or free shipping, a minimum
+  spend, start and end dates, uses allowed in all and per customer, and the
+  products or categories they apply to (picked by name).
+- `/shipping`: the zones (countries, and regions or postcode starts) and
+  each zone's methods (flat rate, free above an amount, local pickup).
+- `/tax-rates`: the rates by country and region, and whether they apply to
+  shipping.
 - Each role sees only the buttons it may use: staff see no Refund, a role
   that may only read sees no New, Edit or Import.
 
@@ -124,6 +155,21 @@ The demo logins (password `karni-password`) are `demo@example.com` (admin),
   failed, cancelled, part refunded, refunded. The parcel has its own:
   processing, shipped, delivered or cancelled. A payment that arrives after
   the order stopped waiting goes back at once.
+- A product with active variations is bought by one of them: the cart
+  refuses it without its options, and the variation's own stock is held,
+  taken and given back as a product's is. Two buyers of the last of one
+  size never both get it. The product's own stock is not used for it.
+- A coupon is checked when it is applied and again at checkout, inside the
+  checkout's transaction, so its limits hold with two buyers at once. A
+  cancelled order gives its use back.
+- The total is the items less the coupon, plus the shipping, plus the tax
+  (prices are entered without tax; `modules.commerce: {prices_include_tax:
+  true}` when they include it). The order keeps each part and its tax lines,
+  and a refund by items gives back what those items cost after the discount
+  and with their tax.
+- A review needs a paid order of the product whose parcel was delivered,
+  one per customer and product. It waits for staff (`SHOP_REVIEWS_NEED_APPROVAL`,
+  on), and a product's rating counts its approved reviews only.
 - Order numbers count up from 1001.
 - Every move of an order and a parcel is in its change history.
 
@@ -172,12 +218,25 @@ A busy storefront raises it.
 - `shop/viewsets.py`: the price filters of the catalogue
   (`?min_price=`, `?max_price=`, `?ordering=effective_price`), what a shopper
   reads of a product, and `POST /api/shipments/<id>/ship/` and `deliver/`.
+- `shop/models.py` also holds a variation's price and stock, and a review's
+  rating rules (`Product.count_ratings`). `shop/services.py` says who may
+  review (`review_problem`) and picks related products (`related`).
+- `frontend/src/shop/VariationPicker.tsx`, `Reviews.tsx`, `Rating.tsx`,
+  `WishlistButton.tsx` and `MoreProducts.tsx` (related and recently viewed):
+  the product page's parts. `pages/wishlist.tsx` is the wishlist, and
+  `pages/coupons.tsx`, `shipping.tsx` and `tax-rates.tsx` mount
+  @karni/commerce-ui's pages.
 - `shop/dashboard.py`: the home tiles that need the server (running low, best
   sellers). The counts are karni.yaml's `dashboard:`.
 - `shop/seeds.py`: the demo shop. Five categories with their children, 40
-  products (some on sale, some sold out, one not for sale), and 20 orders
-  placed through karni-commerce in every money and parcel state, with their
-  payments and refunds. Seeding sends no email.
+  products (some on sale, some sold out, one not for sale, seven sold in
+  sizes or colours), shipping zones in Europe, the United Kingdom, the
+  United States and the rest of the world, a sales tax and a VAT rate, five
+  coupons (one of them ended), and 20 orders placed through karni-commerce
+  in every money and parcel state, some with a coupon, with their payments
+  and refunds. The buyers whose parcels arrived reviewed them, and the demo
+  customer keeps a wishlist and has one product left to review. Seeding
+  sends no email.
 - `frontend/src/shop/`: the storefront (home, catalogue, product page,
   header and footer) and `ParcelPanel.tsx`, the parcel on the staff's order
   page. `frontend/src/pages/` holds a thin file per page: `cart.tsx`,
@@ -204,17 +263,23 @@ works the orders and parcels, `manager@example.com` refunds, and
 | the parcel states | `apps.shop.entities.Shipment.fields.status` and the words in `frontend/src/` and `shop/sellables.py` |
 | the terms version and url | `features.terms: {version: "2026-06", url: /terms, required: true}`, and the text in `frontend/src/shop/Terms.tsx` |
 | how long checkout holds the stock | `modules.commerce: {hold_minutes: 60}` |
+| the options products come in | `/attributes` in the app, or another field on `apps.shop.entities.Variation` in karni.yaml (`weight: "decimal:6:2?"`) |
+| shipping zones, tax rates and coupons | `/shipping`, `/tax-rates` and `/coupons` in the app |
+| prices that include tax | `modules.commerce: {prices_include_tax: true}` |
+| whether reviews wait for approval | `SHOP_REVIEWS_NEED_APPROVAL = False` in settings |
+| how many related products show | `SHOP_RELATED_COUNT` (4) |
 | who may do what | `roles` in karni.yaml |
 | what each role sees at home | `dashboard:` in karni.yaml (a tile counts an entity's rows, or places a code tile of `shop/dashboard.py` or karni-commerce by its key) |
 
 ## What it does not do yet
 
-Not yet built: saved addresses in the account, product variations, coupons,
-shipping zones and rates, tax, reviews, wishlists, reports, invoices and
-packing slips, abandoned carts, a settings screen and digital products. They
-are planned in later steps. The customers list is built from the orders (one
-customer per email). When the family's people records arrive it moves onto
-them, with the same screens.
+Not yet built: saved addresses in the account, reports, invoices and
+packing slips, abandoned carts, a settings screen and digital products.
+They are planned in later steps. Shipping is priced by zone and method, not
+by weight. The customers list is built from the orders (one customer per
+email). When the family's people records arrive it moves onto them, with
+the same screens. Recently viewed products are kept in the browser, not in
+the account.
 
 Out of scope for this recipe: a plugin or theme system, subscriptions,
 several currencies at once, live carrier rates, several warehouses and a

@@ -106,6 +106,7 @@ export function ProductView({ slug }: { slug: string }) {
           <Rating
             average={product.rating_average}
             count={product.rating_count}
+            className="flex"
           />
           {sold ? null : (
             <>
