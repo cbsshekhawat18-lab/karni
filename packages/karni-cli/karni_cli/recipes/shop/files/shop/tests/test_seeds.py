@@ -11,7 +11,8 @@ from django.core import mail
 from karni.seeding import seed, seeders
 from karni_commerce.models import Order
 
-from shop.models import Category, Product, ProductImage, Shipment, Tag
+from shop import services
+from shop.models import Category, Product, ProductImage, Review, Shipment, Tag
 from shop.seeds import CATALOG
 
 pytestmark = pytest.mark.django_db
@@ -50,8 +51,11 @@ def snapshot(*labels: str) -> dict[str, list[tuple[Any, ...]]]:
 def test_the_same_seed_gives_the_same_rows_and_the_yaml_counts() -> None:
     seed(seed=7, now=NOW, reset=True)
     first = snapshot("shop", "karni_commerce")
-    for model in (Category, Tag, Product, ProductImage):
+    for model in (Category, Tag, Product, ProductImage, Review):
         assert model.objects.count() == seeders()[model].row_count(10), model
+    # Every review is by a signed-in buyer whose parcel of the product arrived.
+    for review in Review.objects.select_related("author", "product"):
+        assert services.received(review.author, review.product), review
     seed(seed=7, now=NOW, reset=True)
     assert snapshot("shop", "karni_commerce") == first
     assert mail.outbox == []  # the demo mails nobody

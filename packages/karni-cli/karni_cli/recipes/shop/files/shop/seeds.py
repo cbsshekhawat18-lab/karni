@@ -404,7 +404,7 @@ STORIES = [
     "refunded",
     "part_refunded",
     "shipped",
-    "processing",
+    "delivered",
     "delivered",
 ]
 
@@ -878,21 +878,38 @@ class ReviewSeeder(karni.ReviewSeeder):
     class Meta(karni.ReviewSeeder.Meta):
         after = ("shop.Shipment",)
 
-    def seed(self, context: SeedContext) -> list[Any]:
-        Review.objects.without("soft_delete", reason="a new demo").all().hard_delete()
-        delivered = Shipment.objects.filter(
-            status="delivered", order__user__isnull=False
-        ).order_by("created_at")
-        pairs: list[tuple[Any, str]] = []
+    def pairs(self) -> list[tuple[Any, str]]:
+        """Each (buyer, product) whose parcel arrived, but for the demo customer's."""
+        delivered = (
+            Shipment.objects.filter(status="delivered", order__user__isnull=False)
+            .exclude(order__user__email="customer@example.com")
+            .select_related("order__user")
+            .order_by("created_at")
+        )
+        found: list[tuple[Any, str]] = []
         for shipment in delivered:
             for line in shipment.order.lines.filter(kind="product").order_by(
                 "position"
             ):
                 pair = (shipment.order.user, line.item)
-                if shipment.order.user.email == "customer@example.com":
-                    continue
-                if pair not in pairs:
-                    pairs.append(pair)
+                if pair not in found:
+                    found.append(pair)
+        return found
+
+    def seed(self, context: SeedContext) -> list[Any]:
+        Review.objects.without("soft_delete", reason="a new demo").all().hard_delete()
+        pairs = self.pairs()
+        # Only a buyer whose parcel arrived reviews: when too few did for the count,
+        # more of the parcels on their way arrive, keeping one on its way.
+        moving = list(
+            Shipment.objects.filter(status="shipped", order__user__isnull=False)
+            .exclude(order__user__email="customer@example.com")
+            .order_by("created_at")
+        )
+        with silenced():
+            while len(pairs) < context.count and len(moving) > 1:
+                moving.pop(0).transition("status", "delivered")
+                pairs = self.pairs()
         rows: list[Any] = []
         ratings = [5, 4, 5, 3, 4, 5, 2, 4]
         for number, (author, item) in enumerate(pairs[: context.count]):
