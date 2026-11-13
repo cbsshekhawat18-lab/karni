@@ -106,7 +106,7 @@ apps:
 pages:
   - home: dashboard
   - Shipment: [list, detail, form]
-  - Product: [list, {detail: {related: [ProductImage]}}, form]
+  - Product: [{detail: {related: [ProductImage]}}, form]
   - Category: [list, form]
   - Tag: [list, form]
   # The pages of the recipe's own files (recipe.toml [[routes]]): the storefront and the
@@ -116,6 +116,7 @@ pages:
   - checkout: code
   - orders: code
   - customers: code
+  - products: code
   - account: code
   - signin: code
   - terms: code
@@ -124,7 +125,10 @@ navigation:
   - orders: {label: Orders, icon: list, requires: "karni_commerce.order:view"}
   - Shipment: {label: Shipments, icon: box, requires: "shop.shipment:change"}
   - customers: {label: Customers, icon: users, requires: "karni_commerce.order:view"}
-  - Catalogue: {icon: tag, requires: "shop.product:change", items: [Product, Category, Tag]}
+  - Catalogue:
+      icon: tag
+      requires: "shop.product:change"
+      items: [{products: {label: Products, requires: "shop.product:change"}}, Category, Tag]
 # The staff home: each tile shows to the roles that may read what it counts. The shop's
 # own figures are code tiles in shop/dashboard.py (stock running low, best sellers), and
 # karni-commerce gives the revenue ones (commerce.revenue, commerce.revenue_chart,

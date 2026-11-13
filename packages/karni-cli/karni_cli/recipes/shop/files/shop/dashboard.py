@@ -56,7 +56,7 @@ def low_stock(request: Any) -> dict[str, Any]:
                 "name": product.name,
                 "sku": product.sku,
                 "available": product.available,
-                "link": f"/products/{product.slug}",
+                "link": f"/products/{product.pk}",
             }
             for product in rows
         ],
@@ -82,21 +82,10 @@ def top_products(request: Any) -> dict[str, Any]:
         .annotate(sold=Sum(F("quantity") - F("quantity_refunded")))
         .order_by("-sold", "name")[:5]
     )
-    slugs = dict(
-        Product.objects.filter(pk__in=[row["item"] for row in sold]).values_list(
-            "pk", "slug"
-        )
-    )
-    rows = []
-    for row in sold:
-        slug = slugs.get(_key(row["item"]))
-        rows.append(
-            {
-                "name": row["name"],
-                "sold": row["sold"],
-                "link": f"/products/{slug}" if slug else None,
-            }
-        )
+    rows = [
+        {"name": row["name"], "sold": row["sold"], "link": f"/products/{row['item']}"}
+        for row in sold
+    ]
     return {
         "columns": [
             {"key": "name", "label": "Product", "format": "text"},
@@ -105,8 +94,3 @@ def top_products(request: Any) -> dict[str, Any]:
         "rows": rows,
     }
 
-
-def _key(value: str) -> Any:
-    """An order line's item as the product's primary key."""
-    field = Product._meta.pk
-    return field.to_python(value) if field is not None else value

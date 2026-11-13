@@ -479,7 +479,7 @@ def test_the_recipe_named_for_the_next_build_manages_its_own_route_pages() -> No
     from karni_cli.builder.record import Record
 
     assert Record(recipe="shop").recipe_pages() == frozenset(
-        {"shop", "cart", "checkout", "orders", "customers", "account", "signin", "terms"}
+        {"shop", "cart", "checkout", "orders", "customers", "products", "account", "signin", "terms"}
     )
     assert Record().recipe_pages() == frozenset()
     assert Record(recipe="no-such-recipe").recipe_pages() == frozenset()

@@ -94,3 +94,7 @@ path = "/terms"
 page = "pages/terms"
 public = true
 data = { area = "store" }
+
+[[routes]]
+path = "/products"
+page = "pages/products"
