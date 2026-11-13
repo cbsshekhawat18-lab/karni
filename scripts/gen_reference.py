@@ -221,6 +221,13 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "api",
+        "Demo mode (`karni.demo`): demo accounts with one login per role, a write rule that "
+        "lets only those accounts write, a reset to a fixed seed every N hours under a lock, "
+        "`manage.py karni_demo_boot` and `GET /api/demo/` (`KARNI_DEMO_MODE`, "
+        "`KARNI_DEMO_ACCOUNTS`, `karni.E950` to `E954`). Experimental tier",
+    ),
+    Capability(
+        "api",
         "Tree endpoints on a tree model's viewset (`tree/`, `children/`, `ancestors/`, `move/`, "
         "`?parent=`, `?descendants_of=`, `DELETE ?branch=true`) and `x-karni-tree` in the "
         "OpenAPI document. Experimental tier",
@@ -330,6 +337,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         "ui",
         "`TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once "
         "the user accepts the current terms. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`DemoNotice`, `DemoSignInPrompt` and `useDemo`: the demo accounts of a demo-mode "
+        "server above the sign-in form (`GET /api/demo/`). Experimental tier",
     ),
     Capability(
         "ui",

@@ -59,7 +59,8 @@ def test_an_unlisted_seed_account_is_closed(demo: Any) -> None:
 
     accounts.ensure()
 
-    assert accounts.find(conf.seed_login()).is_active is False
+    closed = accounts.find(conf.seed_login())
+    assert closed is not None and closed.is_active is False
     assert user(CUSTOMER).is_active
 
 

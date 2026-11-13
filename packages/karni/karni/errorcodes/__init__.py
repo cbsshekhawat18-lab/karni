@@ -24,9 +24,9 @@ settings, optional dependencies, deploy checks and production
 why``, request ids, the development capture, ``karni trace``, ``karni replay``,
 ``karni queries``) · ``E96x``/``E97x`` typed fields and database guarantees
 (``karni.fields``) · ``E98x``/``W98x`` lifecycle and limited resources
-(``StateField``, capacity, ``no_overlap``) · ``E95x`` demo mode (``karni.demo``) · ``E27x``/``W54x`` external
-tables, SQL views and a second database (``karni.db``) · ``E34x``/``W55x``
-tree models (``karni.tree``) · ``E49x``/``W62x`` the tree scope
+(``StateField``, capacity, ``no_overlap``) · ``E95x`` demo mode (``karni.demo``) ·
+``E27x``/``W54x`` external tables, SQL views and a second database (``karni.db``) ·
+``E34x``/``W55x`` tree models (``karni.tree``) · ``E49x``/``W62x`` the tree scope
 (``karni.accounts.tree_scope``) · ``E53x``/``W63x`` navigation from data
 (``karni.navigation``) · ``E57x``/``E58x``/``W65x`` taxonomy tagging
 (``karni.taxonomy``) · ``E38x``/``W57x``
@@ -2781,7 +2781,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Each demo account is a dict with a login and optional label, can, roles, staff, superuser "
         "and password. Roles are a list of role names or 'all'. A login can be listed only once.",
         "Fix the entry the message names. Example: KARNI_DEMO_ACCOUNTS = [{'login': "
-        "'customer@example.com', 'label': 'Customer', 'roles': ['customer'], 'can': 'Place orders.'}].",
+        "'customer@example.com', 'label': 'Customer', 'roles': ['customer'], "
+        "'can': 'Place orders.'}].",
     ),
     _e(
         "E951",

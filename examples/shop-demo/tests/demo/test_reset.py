@@ -1,4 +1,4 @@
-"""The reset every KARNI_DEMO_RESET_HOURS: due by the clock, once across workers, back to the seed."""
+"""The reset every KARNI_DEMO_RESET_HOURS: due by the clock, once, back to the seed."""
 
 from __future__ import annotations
 
