@@ -206,6 +206,11 @@ class Review(karni.Review):
                 name="shop_review_rating_1_to_5",
             ),
         ]
+        # the moderation list (by status) and a product's approved reviews
+        indexes = [
+            models.Index(fields=["status", "created_at"], name="shop_review_status"),
+            models.Index(fields=["product", "status"], name="shop_review_product"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.rating} stars for {self.product.name}" if self.product_id else ""

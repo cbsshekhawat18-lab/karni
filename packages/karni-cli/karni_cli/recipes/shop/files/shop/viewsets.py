@@ -24,7 +24,7 @@ from typing import Any
 
 from django.db.models import Prefetch, QuerySet
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_field
-from karni.api import Can, Public
+from karni.api import Budget, Can, Public
 from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -202,6 +202,16 @@ class ProductViewSet(karni.ProductViewSet):
             to_attr="shop_active_variations",
         ),
     )
+    query_budget = Budget(
+        list=12,
+        retrieve=12,
+        update=18,
+        partial_update=18,
+        related=16,
+        reason="a product reads its pictures, its variations with their values and "
+        "options (three prefetches), its tags, categories and related products: one "
+        "query each, however many products",
+    )
     ordering_fields = "__all__"
 
     def get_serializer_class(self) -> type[Any]:
@@ -245,7 +255,11 @@ class ProductViewSet(karni.ProductViewSet):
         """The products to show beside this one: staff's choice, then its category's."""
         product: Product = self.get_object()
         found = services.related(product)
-        rows = self.get_queryset().filter(pk__in=[row.pk for row in found])
+        rows = (
+            self.get_queryset()
+            .filter(pk__in=[row.pk for row in found])
+            .prefetch_related("tags", "categories", "related")
+        )
         order = {row.pk: index for index, row in enumerate(found)}
         ordered = sorted(rows, key=lambda row: order.get(row.pk, 0))
         # karni: allow(unpaginated-action): at most SHOP_RELATED_COUNT rows
@@ -309,7 +323,7 @@ class ReviewViewSet(karni.ReviewViewSet):
     """
 
     select_related = ("author", "product")
-    filterset_fields = ["product", "status", "rating", "verified"]
+    filterset_fields = ["product", "status"]
 
     def get_serializer_class(self) -> type[Any]:
         writing = getattr(self, "action", None) == "create"
