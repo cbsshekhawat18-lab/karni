@@ -12,14 +12,18 @@ and pages Karni manages, and the files the project adopted::
       "files": {"classes/karni/models.py": "<sha256>", ...},
       "blocks": {"config/settings.py": "<sha256>", ...},
       "adopted": ["classes/karni/api.py"],
-      "recipes": ["booking", "crm"]
+      "recipes": ["booking", "crm"],
+      "scaffold": {"frontend/src/layout.tsx": "<sha256>"}
     }
 
 ``recipes`` is there only between ``karni new --recipe`` (or ``karni recipes
 add``) and the next build that writes: it names the recipes whose own files
 (their domain code, seeds and tests) that build writes over its stubs
 (:mod:`karni_cli.recipes.apply`). A record that names one in the old
-``recipe`` key is read the same way.
+``recipe`` key is read the same way. ``scaffold`` lives as long: the sha256
+of each file ``karni new`` wrote where a recipe has a file of its own
+(``frontend/src/layout.tsx``), so the build replaces it only while it is
+still exactly that.
 
 Before it writes anything, ``karni build`` compares every recorded hash
 with the file on disk. A Karni-owned file whose content differs was edited
@@ -83,6 +87,8 @@ class Record:
     adopted: list[str] = field(default_factory=list)
     #: Experimental. The recipes whose own files the next build writes, in order.
     recipes: list[str] = field(default_factory=list)
+    #: Experimental. The sha256 of each file ``karni new`` wrote where a recipe has its own.
+    scaffold: dict[str, str] = field(default_factory=dict)
 
     @property
     def recipe(self) -> str:
@@ -96,7 +102,32 @@ class Record:
 
     def managed(self) -> Managed:
         """What the plan needs to mark each change managed or not."""
-        return Managed(frozenset(self.entities), frozenset(self.pages), frozenset(self.adopted))
+        return Managed(
+            frozenset(self.entities),
+            frozenset(self.pages),
+            frozenset(self.adopted),
+            self.recipe_pages(),
+        )
+
+    def recipe_pages(self) -> frozenset[str]:
+        """The code pages the next build writes from :attr:`recipes`: their routes at ``/<name>``."""
+        if not self.recipes:
+            return frozenset()
+        from karni_cli import recipes
+
+        found: set[str] = set()
+        for name in self.recipes:
+            try:
+                recipe = recipes.load().get(name)
+            except CliError:
+                continue
+            if recipe is not None:
+                found |= {
+                    route.path[1:]
+                    for route in recipe.routes
+                    if route.path.count("/") == 1 and "$" not in route.path
+                }
+        return frozenset(found)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -108,6 +139,7 @@ class Record:
             "blocks": dict(sorted(self.blocks.items())),
             "adopted": sorted(self.adopted),
             **({"recipes": list(self.recipes)} if self.recipes else {}),
+            **({"scaffold": dict(sorted(self.scaffold.items()))} if self.scaffold else {}),
         }
 
     def text(self) -> str:
@@ -152,6 +184,7 @@ def load(root: Path) -> Record:
         blocks=hashes("blocks"),
         adopted=strings("adopted"),
         recipes=strings("recipes") or ([str(data["recipe"])] if data.get("recipe") else []),
+        scaffold=hashes("scaffold"),
     )
 
 

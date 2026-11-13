@@ -1,0 +1,9 @@
+{% if order.buyer_name %}Hello {{ order.buyer_name }},{% else %}Hello,{% endif %}
+
+A note about your order {{ order.number }}:
+
+{{ note.body }}
+
+See the order: {{ link }}
+{% if business.name %}
+{{ business.name }}{% endif %}

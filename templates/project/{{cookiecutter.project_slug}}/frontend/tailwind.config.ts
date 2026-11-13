@@ -7,7 +7,8 @@ export default {
     presets: [karniPreset],
     content: [
         "./src/**/*.{ts,tsx}",
-        // So Tailwind sees the classes used inside @karni/ui:
-        "./node_modules/@karni/ui/dist/**/*.js",
+        // So Tailwind sees the classes used inside @karni/ui and the module UI packages
+        // (@karni/commerce-ui, @karni/payments-ui, ...):
+        "./node_modules/@karni/*/dist/**/*.js",
     ],
 } satisfies Config;

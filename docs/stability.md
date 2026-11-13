@@ -399,6 +399,13 @@ Stable since 0.4.1:
   `application/vnd.karni.upload` reference part, `manage.py
   karni_thumbnails`, the `file:protected` and `image:protected` field types,
   and everything in `@karni/storage-ui`.
+- [The `karni-commerce` module](commerce.md): the whole of `karni_commerce`
+  (the models, the `Sellable` adapter and its registry, `karni_commerce.services`,
+  the signals of `karni_commerce.events`, `karni_commerce.fulfilment`, the
+  checkout validator, the email kinds), the `KARNI_COMMERCE_*` settings, the
+  cart and order endpoints and their answers, and everything in
+  `@karni/commerce-ui`. `karni.mail` (`send_templated`, its `kind` and
+  `KARNI_MAIL_DISABLED_KINDS`) is experimental too.
 - [API versions](api.md#api-versions): the `KARNI_API_VERSION`,
   `KARNI_API_VERSIONS` and `KARNI_API_UNVERSIONED` settings, `karni.api.versions`
   (with `api_urls`, `ApiVersionHeadersMiddleware` and `VersionedSchemaGenerator`),

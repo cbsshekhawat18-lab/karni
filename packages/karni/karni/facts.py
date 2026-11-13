@@ -42,7 +42,8 @@ from django.utils.functional import Promise
 
 __all__ = ["COUNT_KINDS", "count_rows", "project_apps", "project_facts"]
 
-#: The settings a spec's ``features``, ``roles`` and ``navigation`` come from, and the key type.
+#: The settings a spec's ``features``, ``roles``, ``navigation`` and ``dashboard`` come from,
+#: and the key type.
 FEATURE_SETTINGS: tuple[str, ...] = (
     "KARNI_2FA",
     "KARNI_EMAIL_OTP",
@@ -50,6 +51,7 @@ FEATURE_SETTINGS: tuple[str, ...] = (
     "KARNI_TERMS",
     "KARNI_USER_GRANTS",
     "KARNI_NAVIGATION",
+    "KARNI_DASHBOARD_TILES",
     "KARNI_API_CACHE",
     "KARNI_API_CACHE_TTL",
     "KARNI_API_VERSION",
@@ -332,10 +334,15 @@ def _modules() -> list[dict[str, Any]]:
         except (ImportError, AttributeError):
             defaults = {}
         keys = [key for key in defaults if key.startswith(prefix)]
+        # A value the environment replaced (karni.conf FROM_ENVIRONMENT): the written one.
+        written = dict(getattr(settings, "KARNI_SETTINGS_FROM_ENVIRONMENT", None) or {})
         found.append(
             {
                 "name": name,
-                "settings": {key: _safe(getattr(settings, key, defaults[key])) for key in keys},
+                "settings": {
+                    key: _safe(written.get(key, getattr(settings, key, defaults[key])))
+                    for key in keys
+                },
                 "defaults": {key: _safe(defaults[key]) for key in keys},
             }
         )

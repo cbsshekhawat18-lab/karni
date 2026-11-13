@@ -6,7 +6,13 @@ A recipe is a folder::
       recipe.toml   what it is: name, title, purpose, use_when, usually_changed
       karni.yaml    the spec fragment merged into a project (karni_cli.recipes.compose)
       files/        optional: the recipe's own domain code, seeds and tests, each at the
-                    path it takes in the project (files/shop/models.py is shop/models.py)
+                    path it takes in the project (files/shop/models.py is shop/models.py),
+                    and its own React pages and components under files/frontend/src/
+
+``recipe.toml`` may list ``[[routes]]``: a path of the React app and the page
+of ``files/frontend/src/`` that serves it, and whether a visitor sees it
+without signing in (``public``). The first build registers each one in
+``frontend/src/routes.tsx`` (:mod:`karni_cli.recipes.apply`).
 
 :class:`RecipeToml` is the format of ``recipe.toml`` (published as
 ``docs/assets/karni-recipe.schema.json``, regenerate it with
@@ -65,6 +71,7 @@ __all__ = [
     "BLANK",
     "ENTRY_POINT_GROUP",
     "FILES_DIR",
+    "FRONTEND_SRC",
     "MATCH_LIMIT",
     "MATCH_THRESHOLD",
     "NAME",
@@ -78,6 +85,7 @@ __all__ = [
     "Match",
     "Recipe",
     "RecipeError",
+    "RecipeRoute",
     "RecipeToml",
     "app_name",
     "blank_spec",
@@ -99,6 +107,8 @@ RECIPE_FILE: Final = "recipe.toml"
 SPEC_FILE: Final = "karni.yaml"
 #: Experimental. The folder of the recipe's own files, at their paths in the project.
 FILES_DIR: Final = "files"
+#: Experimental. Where a recipe's React files go in the project: its pages are named from here.
+FRONTEND_SRC: Final = "frontend/src"
 #: Experimental. The name of the blank start. No recipe takes it.
 BLANK: Final = "blank"
 #: Experimental. How many recipes :func:`match` returns at most.
@@ -134,6 +144,46 @@ _Line = Annotated[str, StringConstraints(min_length=1, pattern=r"^[^\n]+$")]
 
 class RecipeError(ValueError):
     """Experimental. A recipe that cannot be used: the message names the folder and each problem."""
+
+
+class RecipeRoute(BaseModel):
+    """Experimental. A ``[[routes]]`` entry: a path of the React app and the recipe's page for it."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    path: str = Field(
+        pattern=r"^/([A-Za-z0-9_.-]+|\$[a-z][A-Za-z0-9_]*)(/([A-Za-z0-9_.-]+|\$[a-z][A-Za-z0-9_]*))*$",
+        description="The route, as TanStack Router writes it: /cart, /shop/$slug.",
+    )
+    page: str = Field(
+        pattern=r"^[a-z0-9_-]+(/[a-z0-9_-]+)*$",
+        description="The page that serves it: a file of the recipe's files/frontend/src/, "
+        "without .tsx (pages/store/cart), whose default export is the page.",
+    )
+    public: bool = Field(
+        False,
+        description="true: a visitor sees the page without signing in (staticData.public). "
+        "Default: the app's sign-in guard applies.",
+    )
+    data: dict[Annotated[str, StringConstraints(pattern=r"^[a-z][A-Za-z0-9]*$")], str | bool] = (
+        Field(
+            default_factory=dict,
+            description="More staticData of the route for the recipe's own layout to read, e.g. "
+            '{area = "store"}. The recipe declares their types (StaticDataRouteOption).',
+        )
+    )
+
+    @property
+    def file(self) -> str:
+        """The page's path in the project."""
+        return f"{FRONTEND_SRC}/{self.page}.tsx"
+
+    @property
+    def component(self) -> str:
+        """The name the routes file imports the page under: pages/store/cart is StoreCartPage."""
+        parts = [part for part in self.page.split("/") if part != "pages"]
+        stem = "".join(word.capitalize() for part in parts for word in re.split(r"[-_]", part))
+        return stem if stem.endswith("Page") else f"{stem}Page"
 
 
 class RecipeToml(BaseModel):
@@ -186,6 +236,12 @@ class RecipeToml(BaseModel):
             parse_requirement(text)
         return value
 
+    routes: list[RecipeRoute] = Field(
+        default_factory=list,
+        description="The React pages of the recipe's files and their paths: the first karni "
+        "build registers each in frontend/src/routes.tsx.",
+    )
+
 
 def json_schema() -> dict[str, Any]:
     """Experimental. The JSON Schema of ``recipe.toml``, as published at :data:`RECIPE_SCHEMA_URL`."""
@@ -223,6 +279,8 @@ class Recipe:
     version: str = ""
     requires: tuple[str, ...] = ()
     conflicts: tuple[str, ...] = ()
+    #: Experimental. The React routes the first build registers (``[[routes]]``).
+    routes: tuple[RecipeRoute, ...] = ()
 
     def spec(self) -> str:
         """Experimental. The recipe's ``karni.yaml``, as written."""
@@ -240,6 +298,7 @@ class Recipe:
             "version": self.version or None,
             "requires": list(self.requires),
             "conflicts": list(self.conflicts),
+            "routes": [route.path for route in self.routes],
             "spec": self.spec() if spec else None,
         }
 
@@ -385,6 +444,16 @@ def read_folder(folder: Traversable, *, name: str, source: str) -> Recipe:
             "files go where the project owns the code: <app>/models.py, viewsets.py, seeds.py "
             "and tests of its own."
         )
+    for route in found.routes:
+        if route.file not in files:
+            raise RecipeError(
+                f"{source}: routes: {route.path} names the page {route.page}, and the recipe has "
+                f"no {FILES_DIR}/{route.file}."
+            )
+    paths = [route.path for route in found.routes]
+    twice = sorted({path for path in paths if paths.count(path) > 1})
+    if twice:
+        raise RecipeError(f"{source}: routes: {', '.join(twice)} listed twice.")
     return Recipe(
         name=found.name,
         title=found.title,
@@ -397,6 +466,7 @@ def read_folder(folder: Traversable, *, name: str, source: str) -> Recipe:
         version=found.version or "",
         requires=tuple(found.requires),
         conflicts=tuple(found.conflicts),
+        routes=tuple(found.routes),
     )
 
 

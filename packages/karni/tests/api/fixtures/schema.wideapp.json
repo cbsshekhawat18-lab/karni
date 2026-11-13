@@ -997,7 +997,8 @@
             "format": "uuid",
             "nullable": true,
             "readOnly": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "id": {
             "format": "uuid",
@@ -1017,7 +1018,8 @@
             "format": "uuid",
             "nullable": true,
             "readOnly": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           }
         },
         "required": [
@@ -1089,7 +1091,8 @@
             "format": "uuid",
             "nullable": true,
             "readOnly": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "date_01": {
             "format": "date",
@@ -1721,7 +1724,8 @@
             "format": "uuid",
             "nullable": true,
             "readOnly": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "warranty": {
             "oneOf": [

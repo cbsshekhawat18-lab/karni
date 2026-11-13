@@ -49,6 +49,7 @@ PYTHON_PACKAGES = (
     "modules/karni-reports",
     "modules/karni-ai",
     "modules/karni-storage",
+    "modules/karni-commerce",
 )
 MODULES = (
     "modules/karni-payments",
@@ -59,6 +60,7 @@ MODULES = (
     "modules/karni-reports",
     "modules/karni-ai",
     "modules/karni-storage",
+    "modules/karni-commerce",
 )
 #: The modules that ship a React package in ui/.
 UI_MODULES = (
@@ -69,6 +71,7 @@ UI_MODULES = (
     "modules/karni-reports",
     "modules/karni-ai",
     "modules/karni-storage",
+    "modules/karni-commerce",
 )
 NPM_PACKAGES = ("packages/karni-ui", *(f"{module}/ui" for module in UI_MODULES))
 #: Every PyPI upload step passes these besides its own ``packages-dir``: a re-run

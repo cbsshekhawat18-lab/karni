@@ -187,6 +187,15 @@ OPTIONS: Final[tuple[Option, ...]] = (
         'after_import = "shop.imports.reindex"',
     ),
     Option(
+        "label",
+        "`None`",
+        "Experimental. The field that names a row for people, where another model's "
+        "relation shows it: a table cell, a detail page, a select. Published as `label` in "
+        "`x-karni-relation`. Unset, @karni/ui takes the first of name, title, label and "
+        "email.",
+        'label = "number"',
+    ),
+    Option(
         "dashboard",
         "`None`",
         "Put the model on the staff app's dashboard: counts (all rows, new ones, one per "

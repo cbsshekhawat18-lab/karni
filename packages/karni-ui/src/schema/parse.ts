@@ -33,11 +33,14 @@ import type {
   FieldGroupDef,
   FieldGroupsDef,
   FieldKind,
+  KarniAccessRule,
+  MoneyRef,
   OperationDef,
   ParsedSchema,
   RelatedDef,
   RelationRef,
   ResourceSchema,
+  RowActionDef,
   TreeRef,
 } from "./types";
 
@@ -46,6 +49,7 @@ import type {
 export interface KarniRelationExtension {
   resource?: string;
   many?: boolean;
+  label?: string;
 }
 
 export interface SchemaObject {
@@ -200,6 +204,8 @@ interface PropertyInfo {
   tree?: TreeRef;
   taxonomy?: string;
   protectedFile?: true;
+  money?: MoneyRef;
+  person?: true;
 }
 
 function normalizeType(schema: SchemaObject): { type: string | undefined; nullable: boolean } {
@@ -217,7 +223,12 @@ function normalizeType(schema: SchemaObject): { type: string | undefined; nullab
 function relationFromExtension(schema: SchemaObject): RelationRef | undefined {
   const ext = schema["x-karni-relation"];
   if (isRecord(ext) && typeof ext.resource === "string" && ext.resource.length > 0) {
-    return { resource: ext.resource, many: ext.many === true };
+    const label = ext.label;
+    return {
+      resource: ext.resource,
+      many: ext.many === true,
+      ...(typeof label === "string" && label !== "" ? { label } : {}),
+    };
   }
   return undefined;
 }
@@ -236,6 +247,19 @@ export function parseTreeExtension(raw: unknown): TreeRef | undefined {
 function stringList(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   return value.filter((item): item is string => typeof item === "string");
+}
+
+/**
+ * Experimental. `x-karni-money` (`{"currency": "EUR"}` or `{"currency_field":
+ * "price_currency"}`), when well formed: the field is an amount of money.
+ */
+export function parseMoneyExtension(raw: unknown): MoneyRef | undefined {
+  if (!isRecord(raw)) return undefined;
+  const currency = raw["currency"];
+  const currencyField = raw["currency_field"];
+  if (typeof currency === "string" && currency !== "") return { currency };
+  if (typeof currencyField === "string" && currencyField !== "") return { currencyField };
+  return undefined;
 }
 
 /** `x-karni-transitions` (state → next states) and `x-karni-initial`, when well formed. */
@@ -397,6 +421,9 @@ function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo 
 
   const storage = resolved["x-karni-storage"] ?? raw["x-karni-storage"];
   if (isRecord(storage) && storage["protected"] === true) info.protectedFile = true;
+  const money = parseMoneyExtension(resolved["x-karni-money"] ?? raw["x-karni-money"]);
+  if (money !== undefined) info.money = money;
+  if ((resolved["x-karni-user"] ?? raw["x-karni-user"]) === true) info.person = true;
 
   // drf-spectacular nullable/blank enums: oneOf [XEnum, BlankEnum?, NullEnum?].
   const composition = resolved.oneOf ?? resolved.anyOf;
@@ -560,9 +587,12 @@ function mergeField(
   if (tree !== undefined && relation !== undefined) field.tree = tree;
   const taxonomy = responseInfo?.taxonomy ?? requestInfo?.taxonomy;
   if (taxonomy !== undefined && relation !== undefined) field.taxonomy = taxonomy;
+  const money = responseInfo?.money ?? requestInfo?.money;
+  if (money !== undefined) field.money = money;
   if (responseInfo?.protectedFile === true || requestInfo?.protectedFile === true) {
     field.protected = true;
   }
+  if (responseInfo?.person === true || requestInfo?.person === true) field.person = true;
 
   return field;
 }
@@ -613,6 +643,46 @@ export function parseDashboard(raw: unknown): DashboardDef | undefined {
     recent: Math.max(0, whole(raw.recent, 0)),
     columns: stringList(raw.columns) ?? null,
   };
+}
+
+// row actions (x-karni-actions)
+
+/**
+ * Experimental. The `x-karni-actions` extension of a list operation: each
+ * declared row action's `from`, `to`, `field`, `by` and `requires`.
+ */
+export function parseRowActions(raw: unknown): Record<string, RowActionDef> | undefined {
+  if (!isRecord(raw)) return undefined;
+  const found: Record<string, RowActionDef> = {};
+  for (const [name, value] of Object.entries(raw)) {
+    if (!isRecord(value)) continue;
+    const strings = (list: unknown): string[] =>
+      Array.isArray(list) ? list.filter((item): item is string => typeof item === "string") : [];
+    found[name] = {
+      from: strings(value["from"]),
+      to: typeof value["to"] === "string" ? value["to"] : null,
+      field: typeof value["field"] === "string" ? value["field"] : null,
+      by: isRecord(value["by"]) ? (value["by"] as KarniAccessRule) : null,
+      requires: strings(value["requires"]),
+    };
+  }
+  return Object.keys(found).length > 0 ? found : undefined;
+}
+
+/**
+ * Experimental. Whether the declared row action `name` may run on `row` now:
+ * `true` or `false` from its `from` states, `undefined` when the schema
+ * declares no such action (the caller then falls back on its own rule).
+ */
+export function rowActionOpen(
+  schema: Pick<ResourceSchema, "rowActions"> | undefined,
+  name: string,
+  row: Readonly<Record<string, unknown>>,
+): boolean | undefined {
+  const action = schema?.rowActions?.[name];
+  if (action === undefined) return undefined;
+  if (action.field === null || action.from.length === 0) return true;
+  return action.from.includes(String(row[action.field]));
 }
 
 // reverse relations (x-karni-related)
@@ -883,6 +953,8 @@ export function parseOpenApi(input: unknown): ParsedSchema {
     if (fieldGroups !== undefined) parsedResource.fieldGroups = fieldGroups;
     const columnSets = parseColumnSets(listOp["x-karni-column-sets"]);
     if (columnSets !== undefined) parsedResource.columnSets = columnSets;
+    const rowActions = parseRowActions(listOp["x-karni-actions"]);
+    if (rowActions !== undefined) parsedResource.rowActions = rowActions;
     resources[resource] = parsedResource;
   }
 

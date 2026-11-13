@@ -571,6 +571,29 @@ entity of the spec, each counted with one list request (`useResourceCounts`),
 under the user's access. `- home: dashboard` stays the scaffold's own home
 page, which `karni build` leaves to the project.
 
+### `dashboard` (experimental)
+
+The home tiles of each role, which `karni build` writes to
+`KARNI_DASHBOARD_TILES` ([home tiles](api.md#home-tiles-per-role-experimental)):
+
+```yaml
+dashboard:
+  - {key: shop.to_send, title: Parcels to send, kind: stat, entity: Shipment,
+     filters: {status: processing}, link: /shipments}
+  - {key: shop.low_stock, title: Running low, kind: list, entity: Product,
+     filters: {stock__lte: 3}, columns: [name, stock], limit: 5, roles: [shop-manager]}
+  - {key: commerce.revenue, order: 1}
+```
+
+A tile with `entity` counts (`stat`) or lists (`list`) that entity's rows
+matching `filters` (a date may be `today`, `today-7` or `today+1`), for the
+roles that may read them (`requires` defaults to the entity's view
+permission). A tile without `entity` places a tile an app declares in code by
+its key, or hides it with `hidden: true`. `roles` shows a tile to those roles
+only, `order` and `size` (`third`, `half`, `full`) lay it out, and `link`
+says where a click goes. A tile on an entity or a role the spec does not have
+is `C643`.
+
 ### `seed`
 
 `seed` maps an entity to its demo rows per `karni seed` run (`karni make
@@ -1309,7 +1332,8 @@ A recipe is a folder:
   recipe.toml   what it is and when it fits
   karni.yaml    the spec: a project's whole spec, or the fragment merged into one
   files/        optional: the recipe's own domain code, seeds and tests, each at the
-                path it takes in the project (files/shop/models.py is shop/models.py)
+                path it takes in the project (files/shop/models.py is shop/models.py),
+                and its React pages and components under files/frontend/src/
 ```
 
 The files under `files/` go where the project owns the code: the methods of
@@ -1331,6 +1355,31 @@ rule](recipes/index.md#the-stub-rule)).
 | `version` | no | the recipe's own version, e.g. `1.0.0`, recorded when a project adds it (experimental) |
 | `requires` | no | core contracts and modules it needs, each with an optional version range: `["people>=1", "events>=1", "storage"]` (experimental, [what each installs](family.md#recipetoml-requires-conflicts-and-version)) |
 | `conflicts` | no | recipes and modules it cannot share a project with (experimental) |
+| `routes` | no | experimental: the recipe's React pages, a `[[routes]]` table each (below) |
+
+Each `[[routes]]` entry registers one page of the recipe's own files in
+`frontend/src/routes.tsx` on the first build, at the `// karni:page-imports`
+and `// karni:routes` markers, as `karni make page` does:
+
+| Key | Required | Takes |
+|---|---|---|
+| `path` | yes | the route as TanStack Router writes it: `/cart`, `/shop/products/$slug` |
+| `page` | yes | the file of `files/frontend/src/` that serves it, without `.tsx` (`pages/cart`). Its default export is the page |
+| `public` | no | `true`: a visitor sees the page without signing in (`staticData.public`). The scaffold's layout leaves such a route out of the sign-in guard and the terms gate |
+| `data` | no | more `staticData` for the recipe's own layout to read, e.g. `{ area = "store" }` |
+
+A route at `/<name>` is a code page of the spec too: list it in the
+recipe's `pages` (`- cart: code`), so `karni plan` matches the project after
+the build. A file `karni new` wrote (`frontend/src/layout.tsx`,
+`frontend/src/pages/home.tsx`) counts as a stub while it is still what
+`karni new` wrote, so a recipe may replace the layout and the home page.
+
+```toml
+[[routes]]
+path = "/cart"
+page = "pages/cart"
+public = true
+```
 
 An example:
 

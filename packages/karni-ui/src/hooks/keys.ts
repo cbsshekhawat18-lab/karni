@@ -103,6 +103,11 @@ export const karniKeys = {
     ] as const;
   },
 
+  /** Experimental. Key of the home tiles (`GET /dashboard/`) of one user (`null`: nobody). */
+  dashboardTiles(user?: string | number | null): readonly unknown[] {
+    return ["karni", "$dashboard", user === undefined || user === null ? null : String(user)];
+  },
+
   /**
    * Experimental. Key of the navigation menu (`GET /navigation/`) for one
    * user (`null`: nobody signed in). Each user has their own entry, so a

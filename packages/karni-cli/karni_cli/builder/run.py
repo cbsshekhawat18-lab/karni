@@ -523,7 +523,7 @@ def _recipe_files(ws: Workspace, rec: Record) -> dict[str, tuple[Any, list[str]]
                 code=exc.code,
             ) from None
         if recipe is not None:
-            apply.stage(ws, recipe)
+            apply.stage(ws, recipe, scaffold=rec.scaffold)
             staged[name] = (recipe, list(recipe.files))
     return staged
 

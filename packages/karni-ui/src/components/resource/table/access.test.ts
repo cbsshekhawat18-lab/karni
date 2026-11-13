@@ -57,3 +57,27 @@ describe("evaluateAccess (x-karni-access, a display hint)", () => {
     );
   });
 });
+
+describe("evaluateAccess: can, from /me/'s permissions", () => {
+  const writer = {
+    status: "authenticated" as const,
+    user: { id: 1, email: "w@x.io", roles: ["staff"], permissions: ["shop.product:add"] },
+  };
+  const reader = {
+    status: "authenticated" as const,
+    user: { id: 2, email: "r@x.io", roles: ["viewer"], permissions: ["shop.product:view"] },
+  };
+  const older = { status: "authenticated" as const, user: { id: 3, email: "o@x.io", roles: [] } };
+
+  it("allows a holder of every key and refuses anyone else", () => {
+    expect(evaluateAccess({ can: ["shop.product:add"] }, writer)).toBe(true);
+    expect(evaluateAccess({ can: ["shop.product:add"] }, reader)).toBe(false);
+    expect(evaluateAccess({ can: "shop.product:add" }, { status: "anonymous", user: null })).toBe(
+      false,
+    );
+  });
+
+  it("leaves it to the server when /me/ sends no permissions", () => {
+    expect(evaluateAccess({ can: ["shop.product:add"] }, older)).toBeUndefined();
+  });
+});

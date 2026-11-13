@@ -7,6 +7,7 @@ import {
   DataChart,
   aggregateSeries,
   defaultDataChartSlots,
+  xLabelStep,
   type DataChartSeries,
 } from "./data-chart";
 
@@ -339,6 +340,64 @@ describe("DataChart on a narrow screen", () => {
     // Wider than the viewBox: labels stay at their drawn size.
     act(() => report(1280));
     expect(q<SVGTextElement>(container, "text").getAttribute("font-size")).toBe("10");
+  });
+});
+
+describe("DataChart x-axis labels", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const days = Array.from({ length: 30 }, (_, index) => ({
+    label: `Oct ${String(index + 1)}`,
+    value: index,
+  }));
+
+  it("xLabelStep draws every label when there is room, fewer when there is not", () => {
+    expect(xLabelStep(["Jan", "Feb"], 100, 10)).toBe(1);
+    // "Oct 15" is about 36 units plus 8 of space: a band of 19 units needs every 3rd.
+    expect(xLabelStep(["Oct 15", "Oct 16"], 19, 10)).toBe(3);
+    expect(xLabelStep([], 10, 10)).toBe(1);
+  });
+
+  it("thins 30 day labels so none overlap, more so at phone width", () => {
+    let report: (width: number) => void = () => undefined;
+    class MeasuringObserver {
+      constructor(callback: ResizeObserverCallback) {
+        report = (width) =>
+          callback(
+            [{ contentRect: { width } } as ResizeObserverEntry],
+            this as unknown as ResizeObserver,
+          );
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    vi.stubGlobal("ResizeObserver", MeasuringObserver);
+    const { container } = render(<DataChart kind="bar" data={days} title="Revenue" />);
+    const drawn = (): SVGTextElement[] =>
+      Array.from(container.querySelectorAll<SVGTextElement>('[data-testid="x-tick"]'));
+    const fits = (): boolean => {
+      const ticks = drawn();
+      const size = Number(ticks[0]?.getAttribute("font-size"));
+      return ticks.every((tick, index) => {
+        const next = ticks[index + 1];
+        if (next === undefined) return true;
+        const gap = Number(next.getAttribute("x")) - Number(tick.getAttribute("x"));
+        const widest = Math.max(tick.textContent.length, next.textContent.length) * size * 0.6;
+        return gap >= widest;
+      });
+    };
+    const desktop = drawn().length;
+    expect(desktop).toBeLessThan(30);
+    expect(desktop).toBeGreaterThan(3);
+    expect(drawn()[0]).toHaveTextContent("Oct 1");
+    expect(fits()).toBe(true);
+
+    act(() => report(340));
+    expect(drawn().length).toBeLessThan(desktop);
+    expect(fits()).toBe(true);
   });
 });
 

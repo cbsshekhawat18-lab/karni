@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Packing slip, order {{ order.number }}</title>
+{% include "karni_commerce/documents/_style.html" %}
+</head>
+<body>
+<div class="sheet">
+  <header>
+    <div>
+      <h1>Packing slip</h1>
+      <div>Order <strong>{{ order.number }}</strong></div>
+      <div class="muted">Placed {{ order.created_at|date:"j F Y" }}{% if order.shipping_method %}, {{ order.shipping_method }}{% endif %}</div>
+    </div>
+    <div class="pre" style="text-align: right"><strong>{{ business|default:seller.name }}</strong>
+{{ seller.address }}</div>
+  </header>
+  <section class="parties">
+    <div>
+      <h2>Send to</h2>
+      {% with address=shipping %}{% include "karni_commerce/documents/_address.html" %}{% endwith %}
+      {% if shipping.phone %}<br>{{ shipping.phone }}{% endif %}
+    </div>
+    {% if order.note %}<div>
+      <h2>Note from the buyer</h2>
+      <div class="pre">{{ order.note }}</div>
+    </div>{% endif %}
+  </section>
+  <table>
+    <thead><tr><th style="width: 28px"></th><th>Item</th><th>SKU</th><th class="num">Quantity</th></tr></thead>
+    <tbody>
+    {% for line in shipped %}<tr>
+      <td><span class="box" aria-hidden="true"></span></td>
+      <td>{{ line.name }}{% for detail in line.details %}<div class="muted">{{ detail.label }}: {{ detail.value }}</div>{% endfor %}</td>
+      <td>{{ line.sku }}</td>
+      <td class="num">{{ line.quantity }}</td>
+    </tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+</body>
+</html>

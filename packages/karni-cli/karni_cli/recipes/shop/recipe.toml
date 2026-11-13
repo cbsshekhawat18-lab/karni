@@ -13,6 +13,131 @@ use_when = [
 usually_changed = [
     "the product fields",
     "the payment provider and the currency",
-    "the order states",
+    "the parcel states",
     "the terms version and url",
+    "the product options (attributes) and variations",
+    "shipping zones, tax rates and coupons",
+    "the shop's name, sender, checkout and stock options (Settings)",
+    "the text of each email (Settings, Emails)",
 ]
+
+# The shop's pages (files/frontend/src/pages/): the first karni build registers each in
+# frontend/src/routes.tsx. The storefront is under /shop. /cart, /checkout, /orders,
+# /account and /signin are the family pages: thin files that mount @karni/commerce-ui's
+# and @karni/ui's components. area = "store" puts a page in the storefront's own header
+# and footer (files/frontend/src/layout.tsx). area = "family" shows a page in the
+# storefront to a customer and in the back office to staff (/orders: a customer's own
+# orders, or every order for staff). The other pages are the back office's.
+
+[[routes]]
+path = "/shop"
+page = "pages/shop/index"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/shop/products"
+page = "pages/shop/products"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/shop/products/$slug"
+page = "pages/shop/product"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/cart"
+page = "pages/cart"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/checkout"
+page = "pages/checkout"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/orders"
+page = "pages/orders"
+data = { area = "family" }
+
+[[routes]]
+path = "/orders/new"
+page = "pages/order-new"
+
+[[routes]]
+path = "/orders/$number"
+page = "pages/order"
+public = true
+data = { area = "family" }
+
+[[routes]]
+path = "/customers"
+page = "pages/customers"
+
+[[routes]]
+path = "/customers/$email"
+page = "pages/customer"
+
+[[routes]]
+path = "/account"
+page = "pages/account"
+data = { area = "store" }
+
+[[routes]]
+path = "/signin"
+page = "pages/signin"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/terms"
+page = "pages/terms"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/products"
+page = "pages/products"
+
+[[routes]]
+path = "/wishlist"
+page = "pages/wishlist"
+data = { area = "store" }
+
+[[routes]]
+path = "/coupons"
+page = "pages/coupons"
+
+[[routes]]
+path = "/shipping"
+page = "pages/shipping"
+
+[[routes]]
+path = "/tax-rates"
+page = "pages/tax-rates"
+
+[[routes]]
+path = "/settings"
+page = "pages/settings"
+
+[[routes]]
+path = "/reports"
+page = "pages/reports"
+
+[[routes]]
+path = "/abandoned-carts"
+page = "pages/abandoned-carts"
+
+[[routes]]
+path = "/orders/$number/invoice"
+page = "pages/order-invoice"
+public = true
+data = { area = "family" }
+
+[[routes]]
+path = "/orders/$number/packing-slip"
+page = "pages/order-packing-slip"

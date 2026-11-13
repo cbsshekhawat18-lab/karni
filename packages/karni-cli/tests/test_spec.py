@@ -219,6 +219,7 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C641", NAV + "navigation:\n  - {Catalog: [Product], Other: [home]}\n", 12),
     ("C642", NAV + "navigation:\n  - Product: {requires: staff}\n", 12),
     ("C642", NAV + "navigation:\n  - Product: {requires: 'shop.prodct:view'}\n", 12),
+    ("C643", NAV + "dashboard:\n  - {key: shop.deals, entity: Deal}\n", 12),
     ("C700", tagged("{region_descendants: Category}"), 8),
     ("C700", tagged("{created_by: Category}"), 8),
     ("C700", tagged("{Region: Category}"), 8),

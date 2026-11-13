@@ -13,9 +13,17 @@ where ``status`` is a :class:`ParsedEventStatus` value (or absent for a
 no-op event), signed with ``X-Test-Signature: sha256(body + secret)``.
 :meth:`TestProvider.build_webhook` assembles body + headers for you.
 
-Override / escape hatch: subclass to change ``secret`` or the id scheme;
-:meth:`TestProvider.reset` restores the deterministic counters between
-tests.
+The checkout page (experimental): while
+``KARNI_PAYMENTS_TEST_CHECKOUT_PAGE`` is on (by default, while ``DEBUG``
+is), a checkout started in a request gets the address of
+``payments/test-checkout/<session>/`` on that request's host
+(:mod:`karni_payments.test_checkout`), where a person pays or declines the
+payment in a browser. Without a request, or with the page off, the address
+is the imaginary ``https://checkout.test/pay/<session>``.
+
+Override / escape hatch: subclass to change ``secret``, the id scheme or
+:meth:`TestProvider.checkout_url`; :meth:`TestProvider.reset` restores the
+deterministic counters between tests.
 """
 
 from __future__ import annotations
@@ -38,7 +46,12 @@ from karni_payments.providers.base import (
 if TYPE_CHECKING:
     from karni_payments.models import Payment, Refund
 
-__all__ = ["TestProvider"]
+__all__ = ["IMAGINARY", "PAGE_KEY", "TestProvider"]
+
+#: The checkout address when the page is off: no page answers there.
+IMAGINARY = "https://checkout.test/pay/"
+#: The key of ``Payment.metadata`` that holds where the page sends the person back.
+PAGE_KEY = "test_checkout"
 
 
 class TestProvider(PaymentProvider):
@@ -75,18 +88,49 @@ class TestProvider(PaymentProvider):
     def create_checkout(
         self, payment: Payment, success_url: str, cancel_url: str
     ) -> CheckoutSession:
-        """Issue a deterministic session id and remember the payment."""
-        number = next(self._sequence)
-        session = CheckoutSession(
-            id=f"test_cs_{number}", url=f"https://checkout.test/pay/test_cs_{number}"
-        )
+        """Issue a deterministic session id and remember the payment.
+
+        The ids count up from 1 in each process. A development server that
+        restarts keeps the rows of the run before, so an id a stored payment
+        already has is skipped: the checkout page finds each payment by it.
+        """
+        from karni_payments.models import Payment
+
+        session_id = f"test_cs_{next(self._sequence)}"
+        taken = Payment.objects.filter(provider=self.name)
+        while taken.filter(checkout_session_id=session_id).exists():
+            session_id = f"test_cs_{next(self._sequence)}"
+        url = self.checkout_url(session_id)
+        if not url.startswith(IMAGINARY):
+            # The page sends the person back to these once they pay or decline.
+            payment.metadata = {
+                **payment.metadata,
+                PAGE_KEY: {"success_url": success_url, "cancel_url": cancel_url},
+            }
+            payment.save(update_fields=["metadata", "updated_at"])
+        session = CheckoutSession(id=session_id, url=url)
         self.sessions[session.id] = str(payment.pk)
         return session
+
+    def checkout_url(self, session_id: str) -> str:
+        """Where the person pays: the checkout page, or the imaginary address."""
+        from karni_payments.test_checkout import page_url
+
+        return page_url(session_id) or f"{IMAGINARY}{session_id}"
 
     def create_refund(self, refund: Refund) -> str:
         """Issue a deterministic refund id and remember the refund."""
         provider_refund_id = f"test_re_{next(self._sequence)}"
         self.refunds[provider_refund_id] = str(refund.pk)
+        from karni_payments import test_checkout
+
+        if test_checkout.enabled():
+            # A local try (DEBUG): the refund goes through once it is saved, as the
+            # provider's webhook would say. Tests confirm their refunds themselves.
+            from django.db import transaction
+
+            payment_pk = refund.payment_id
+            transaction.on_commit(lambda: _confirm(payment_pk))
         return provider_refund_id
 
     def parse_webhook(self, body: bytes, headers: Mapping[str, str]) -> ParsedEvent:
@@ -114,3 +158,12 @@ class TestProvider(PaymentProvider):
             status=status,
             raw=payload,
         )
+
+
+def _confirm(payment_pk: Any) -> None:
+    from karni_payments import test_checkout
+    from karni_payments.models import Payment
+
+    payment = Payment.objects.filter(pk=payment_pk).first()
+    if payment is not None:
+        test_checkout.confirm_refund(payment)

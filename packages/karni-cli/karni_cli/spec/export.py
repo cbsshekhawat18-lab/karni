@@ -51,7 +51,7 @@ from karni_cli import project as project_mod
 from karni_cli.generators.naming import default_route, snake
 from karni_cli.kinds import project_kind
 from karni_cli.project import CliError
-from karni_cli.spec import emit, navigation, schema
+from karni_cli.spec import dashboard, emit, navigation, schema
 from karni_cli.spec.catalog import (
     CONTRACT_MODELS,
     DEFAULT_CACHE_TTL,
@@ -644,6 +644,11 @@ def build(facts: dict[str, Any], root: Path) -> Exported:
     )
     if menu:
         data["navigation"] = menu
+    tiles = dashboard.entries_from_setting(
+        settings.get(dashboard.SETTING), schema.Spec.model_validate(data), left_out
+    )
+    if tiles:
+        data["dashboard"] = tiles
     seed = {
         _entity_ref(label, names_count): count
         for label, count in facts["seeders"].items()

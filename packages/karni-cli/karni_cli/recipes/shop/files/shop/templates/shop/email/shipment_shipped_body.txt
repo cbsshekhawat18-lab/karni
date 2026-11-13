@@ -1,0 +1,11 @@
+{% if order.buyer_name %}Hello {{ order.buyer_name }},{% else %}Hello,{% endif %}
+
+Your parcel for order {{ order.number }} left today.
+{% with carrier=shipment.carrier number=shipment.tracking_number %}{% if number %}
+{% if carrier %}{{ carrier }} {% endif %}tracking number: {{ number }}.
+{% endif %}{% endwith %}
+{% for line in lines %}{{ line.quantity }} x {{ line.name }}
+{% endfor %}
+See your order: {{ link }}
+{% if business.name %}
+{{ business.name }}{% endif %}

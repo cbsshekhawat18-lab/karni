@@ -16,7 +16,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { parseOpenApi } from "./parse";
-import { useKarniClient } from "./provider";
+import { useKarniClient, useOptionalKarniClient } from "./provider";
 import type { ParsedSchema, ResourceSchema } from "./types";
 
 /** D4-pinned query key for the parsed schema document. */
@@ -69,4 +69,23 @@ export function useSchema(resource: string): UseSchemaResult {
     refetch: () => void query.refetch(),
     isFetching: query.isFetching,
   };
+}
+
+/**
+ * Experimental. One resource's parsed schema when it is known, else `undefined`:
+ * never throws, and outside a <KarniProvider> it reads nothing. For a component
+ * that reads better with the schema (labels, money, states) and works without it.
+ */
+export function useResourceSchemaIfKnown(resource: string): ResourceSchema | undefined {
+  const client = useOptionalKarniClient();
+  const query = useQuery<ParsedSchema>({
+    queryKey: SCHEMA_QUERY_KEY,
+    staleTime: Infinity,
+    enabled: client !== null,
+    queryFn: async () => {
+      if (client === null) throw new Error("No KarniProvider.");
+      return parseOpenApi(await client.request<unknown>(client.schemaUrl));
+    },
+  });
+  return query.data?.resources[resource];
 }

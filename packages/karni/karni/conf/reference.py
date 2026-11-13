@@ -57,6 +57,8 @@ def _checkout_modules() -> Path | None:
 
 #: One line per setting: what it does, and the values it takes.
 DESCRIPTIONS: Final[dict[str, str]] = {
+    "KARNI_MAIL_DISABLED_KINDS": "Experimental. The kinds of email karni.mail does not send, by name "
+    "(commerce.new_order). A kind is the stable name a part gives each email.",
     "KARNI_AUTH_MODE": "`jwt` (SimpleJWT token pairs) or `session` (cookie auth + CSRF bootstrap). See [accounts](accounts.md#auth-modes).",
     "KARNI_2FA": "Enable TOTP two-factor auth with `django-otp` (needs `karni[2fa]`).",
     "KARNI_SOCIAL_AUTH": "Enable social login through django-allauth (`karni[social]`, session mode only).",
@@ -434,7 +436,10 @@ def render(found: list[Setting] | None = None, modules: list[Setting] | None = N
         'the environment the same way: `FEATURE_X = env.bool("FEATURE_X", default=False)`.',
         "`SILENCED_SYSTEM_CHECKS` starts as an empty list, so",
         '`SILENCED_SYSTEM_CHECKS += ["karni.W967"]` silences a check without a NameError.',
-        "Settings read during the call are the exception (see below).",
+        "Settings read during the call are the exception (see below). So is a setting a",
+        "module chooses from the environment first (`KARNI_PAYMENTS_PROVIDER`): its",
+        "environment variable, when set, wins over a value written before the call, such",
+        "as karni.yaml's, so `.env` switches a local try to the test provider.",
         "This page lists the `KARNI_*` settings. The Django and",
         "DRF settings Karni derives are documented where the feature is.",
         "",

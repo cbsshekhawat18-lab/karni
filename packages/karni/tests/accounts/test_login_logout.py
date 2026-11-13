@@ -239,3 +239,16 @@ def test_auth_mode_is_read_at_request_time(settings: Settings) -> None:
     session_data = _login(APIClient())
     assert "access" not in session_data
     assert "refresh" not in session_data
+
+
+def test_me_lists_the_permission_keys_the_user_holds(api_client: APIClient) -> None:
+    admin = _make_user()
+    admin.is_superuser = True
+    admin.save(update_fields=["is_superuser"])
+    api_client.force_authenticate(admin)
+    held = api_client.get(ME_URL).json()["permissions"]
+    assert held == sorted(held) and "testapp.event:add" in held
+    assert all(":" in key for key in held)
+    nobody = _make_user("nobody@example.com")
+    api_client.force_authenticate(nobody)
+    assert api_client.get(ME_URL).json()["permissions"] == []

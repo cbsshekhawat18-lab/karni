@@ -180,3 +180,57 @@ def test_entry_point_scan_is_cached_module_level(monkeypatch: pytest.MonkeyPatch
     assert ns1["KARNI_FAKE_CACHED"] is True
     assert ns2["KARNI_FAKE_CACHED"] is True
     assert calls == ["karni.settings"]
+
+
+# ---------------------------------------------------------------------------
+# FROM_ENVIRONMENT: the environment beats a value written before the call
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ModuleEntryPoint(FakeEntryPoint):
+    """An entry point whose module names its environment-first settings."""
+
+    module: str = "karni_fake_payments_conf"
+
+
+@pytest.fixture
+def provider_module(
+    monkeypatch: pytest.MonkeyPatch, install_fragments: Callable[..., None]
+) -> None:
+    import sys
+
+    fake = SimpleNamespace(FROM_ENVIRONMENT=("KARNI_FAKE_PROVIDER",))
+    monkeypatch.setitem(sys.modules, "karni_fake_payments_conf", fake)
+    fragment = {"KARNI_FAKE_PROVIDER": "stripe"}
+    install_fragments(ModuleEntryPoint("payments", loader=lambda: fragment))
+
+
+def test_the_environment_beats_a_provider_written_before_the_call(
+    provider_module: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("KARNI_FAKE_PROVIDER", "test")
+    ns: dict[str, Any] = {"KARNI_FAKE_PROVIDER": "razorpay"}
+    karni_settings(ns, env_name="dev")
+    assert ns["KARNI_FAKE_PROVIDER"] == "test"
+    assert ns["KARNI_SETTINGS_FROM_ENVIRONMENT"] == {"KARNI_FAKE_PROVIDER": "razorpay"}
+
+
+def test_without_the_variable_the_written_provider_stays(
+    provider_module: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("KARNI_FAKE_PROVIDER", raising=False)
+    ns: dict[str, Any] = {"KARNI_FAKE_PROVIDER": "razorpay"}
+    karni_settings(ns, env_name="dev")
+    assert ns["KARNI_FAKE_PROVIDER"] == "razorpay"
+    assert "KARNI_SETTINGS_FROM_ENVIRONMENT" not in ns
+
+
+def test_a_setting_not_listed_keeps_the_written_value(
+    install_fragments: Callable[..., None], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install_fragments(FakeEntryPoint("payments", loader=lambda: {"KARNI_FAKE_PROVIDER": "stripe"}))
+    monkeypatch.setenv("KARNI_FAKE_PROVIDER", "test")
+    ns: dict[str, Any] = {"KARNI_FAKE_PROVIDER": "razorpay"}
+    karni_settings(ns, env_name="dev")
+    assert ns["KARNI_FAKE_PROVIDER"] == "razorpay"

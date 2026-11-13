@@ -171,6 +171,57 @@ function pageBlocks(manifest) {
   return lines;
 }
 
+/** Related rows by name, record links, buttons by rights, import and bulk edit (shop M2). */
+function namesAndRights() {
+  return [
+    "## Names, links and rights on resource pages (experimental)",
+    "",
+    "### How a related row is named",
+    "",
+    "A table cell or a detail value that points at another row shows that row's",
+    "name, never its id. The model says which field names its rows with",
+    '`class Karni: label = "number"` (an order shows as `1021`, not as its',
+    "buyer's email). Without it, the first of `name`, `title`, `label` and",
+    "`email` is taken. A relation to the user model shows the person's name",
+    "(first and last name, else the email): ResourceTable and ResourceDetail",
+    "expand it on their own.",
+    "",
+    "An app turns those names into links once at startup:",
+    "",
+    "```tsx",
+    'import { registerRecordLink, setRecordNavigate } from "@karni/ui";',
+    "",
+    'registerRecordLink("orders", (row) => `/orders/${String(row.number)}`);',
+    "setRecordNavigate((to) => router.history.push(to));",
+    "```",
+    "",
+    "`getRowLabel` on ResourceTable and `fields` on ResourceDetail still render",
+    "a value any other way.",
+    "",
+    "### Only the buttons a role may use",
+    "",
+    "`/me/` lists the permission keys the signed-in person holds",
+    '(`permissions: ["shop.product:add", ...]`), so ResourceTable and',
+    "ResourceDetail offer New, Edit, Delete and Import only to a role whose",
+    'grants allow them: a reader sees no button that ends in "You can\'t". The',
+    "pages `karni build` writes pass `onCreate` and `onEdit`, so they follow the",
+    "same rule. The server checks every write again.",
+    "",
+    "A list whose resource takes imports (every Karni viewset) has an **Import**",
+    "button for those who may create rows: it opens ResourceImport above the table",
+    "(upload a CSV or XLSX file, check the preview with each row's problems,",
+    "commit), and the table reads its rows again afterwards. `importable={false}`",
+    "hides it.",
+    "",
+    '`bulkEdit={["price", "stock", "active"]}` (experimental) adds a "Select rows,',
+    'then set \u2026 to \u2026" line above the table and a bulk action that saves that value',
+    "on every selected row, each through the row's own update, so its rules and",
+    "history apply and a row the server refuses is marked with the reason. It",
+    "shows to roles that may update rows.",
+    "",
+  ];
+}
+
 /** Field groups, column sets and MarkdownField: a model with many fields (item 12). */
 function wideModels() {
   return [
@@ -253,6 +304,8 @@ const HOOKS = {
   useResourceList:
     "A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.",
   useResourceItem: "One row by id, optionally expanded.",
+  useResourceSchemaIfKnown:
+    "Experimental. One resource's parsed schema when it is known, else `undefined`: never throws, and reads nothing outside a `KarniProvider`.",
   useResourceTree:
     "Experimental. The nested nodes of a tree resource (`GET /<resource>/tree/?root=&depth=`): `{ results, truncated }`, each node with `has_children` and `children` (`null` until loaded).",
   useResourceChildren:
@@ -331,6 +384,7 @@ export function render(manifest) {
   }
   lines.push(...pageBlocks(manifest));
   lines.push(...wideModels());
+  lines.push(...namesAndRights());
   for (const [name] of PAGE_BLOCKS) placed.add(name);
   const rest = manifest.components.filter((name) => !placed.has(name));
   lines.push(

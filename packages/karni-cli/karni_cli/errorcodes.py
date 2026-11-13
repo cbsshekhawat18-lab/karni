@@ -1310,6 +1310,16 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Write public, authenticated, or a pattern such as shop.product:view, or leave requires "
         "out: each page takes its requirement from its access.",
     ),
+    _c(
+        "C643",
+        "A dashboard tile names something the spec does not have",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "A dashboard: tile counts or lists the rows of an entity of the spec, for the roles of "
+        "the spec, or places a tile an app declares in code by its key. An entity or a role the "
+        "spec does not have would show nothing, and two tiles with one key would hide one.",
+        "Name an entity of apps (Shipment, shop.Shipment) and roles of roles, give each tile its "
+        "own key, or leave entity out to place a code tile (commerce.revenue).",
+    ),
     # C700-C719 taxonomies in karni.yaml (experimental)
     _c(
         "C700",

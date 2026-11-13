@@ -81,6 +81,10 @@ PREFIXES = {
         "Protected files for Karni: files a row owns, in S3 or an S3-compatible service, "
         "served only to whoever may read that row, with direct uploads and thumbnails."
     ),
+    "modules/karni-commerce/pyproject.toml": (
+        "Commerce for Karni: one cart, checkout, orders, order numbers, payment settlement and "
+        "refunds for anything a project sells, through a sellable adapter per kind."
+    ),
     "packages/karni-ui/package.json": (
         "React components for Karni: schema-driven tables, forms, detail views and auth."
     ),
@@ -106,6 +110,10 @@ PREFIXES = {
     "modules/karni-storage/ui/package.json": (
         "React components for the Karni storage module: protected uploads straight to the "
         "bucket, download links and images."
+    ),
+    "modules/karni-commerce/ui/package.json": (
+        "React components for the Karni commerce module: the cart, the mini cart, add to cart, "
+        "checkout, an order's page and a person's orders."
     ),
 }
 

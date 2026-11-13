@@ -206,17 +206,63 @@ A 120-field test model with twelve markdown sections keeps these budgets: a list
 ResourceForm under 1,000 ms and ResourceDetail under 600 ms to render in jsdom (the UI
 suite).
 
+## Names, links and rights on resource pages (experimental)
+
+### How a related row is named
+
+A table cell or a detail value that points at another row shows that row's
+name, never its id. The model says which field names its rows with
+`class Karni: label = "number"` (an order shows as `1021`, not as its
+buyer's email). Without it, the first of `name`, `title`, `label` and
+`email` is taken. A relation to the user model shows the person's name
+(first and last name, else the email): ResourceTable and ResourceDetail
+expand it on their own.
+
+An app turns those names into links once at startup:
+
+```tsx
+import { registerRecordLink, setRecordNavigate } from "@karni/ui";
+
+registerRecordLink("orders", (row) => `/orders/${String(row.number)}`);
+setRecordNavigate((to) => router.history.push(to));
+```
+
+`getRowLabel` on ResourceTable and `fields` on ResourceDetail still render
+a value any other way.
+
+### Only the buttons a role may use
+
+`/me/` lists the permission keys the signed-in person holds
+(`permissions: ["shop.product:add", ...]`), so ResourceTable and
+ResourceDetail offer New, Edit, Delete and Import only to a role whose
+grants allow them: a reader sees no button that ends in "You can't". The
+pages `karni build` writes pass `onCreate` and `onEdit`, so they follow the
+same rule. The server checks every write again.
+
+A list whose resource takes imports (every Karni viewset) has an **Import**
+button for those who may create rows: it opens ResourceImport above the table
+(upload a CSV or XLSX file, check the preview with each row's problems,
+commit), and the table reads its rows again afterwards. `importable={false}`
+hides it.
+
+`bulkEdit={["price", "stock", "active"]}` (experimental) adds a "Select rows,
+then set … to …" line above the table and a bulk action that saves that value
+on every selected row, each through the row's own update, so its rules and
+history apply and a row the server refuses is marked with the reason. It
+shows to roles that may update rows.
+
 ## Primitives
 
 Styled Radix parts and basics. Each one always merges `className` and forwards refs.
 
-`Button`, `Checkbox`, `Dashboard`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `EmptyValue`, `ErrorState`, `Input`, `KarniPrimitivesProvider`, `Label`, `PendingButton`, `PermissionDenied`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`, `ThemeProvider`, `ThemeToggle`
+`AccountPage`, `Button`, `Checkbox`, `Dashboard`, `DashboardTiles`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `EmailTemplateEditor`, `EmptyValue`, `ErrorState`, `Input`, `KarniPrimitivesProvider`, `Label`, `PendingButton`, `PermissionDenied`, `RecordLink`, `ResourceGrid`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `SettingsPage`, `SignInPage`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`, `ThemeProvider`, `ThemeToggle`
 
 ## Hooks
 
 - `useAggregate`: Experimental. Grouped counts and sums of a resource (`GET /<resource>/aggregate/`): `{ groupBy, metric, value, top, stack, series, filters, search }` → `{ categories, series }`, which `<DataChart aggregate>` reads directly.
 - `useAuth`: `{ user, status, login(email, password), logout, refresh }` from `AuthProvider`, and (experimental) `{ terms, termsRequired, acceptTerms(client) }` for terms acceptance.
 - `useChangeHistory`: One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).
+- `useDashboardTiles`: See the package README.
 - `useDelayedFlag`: See the package README.
 - `useGlobalSearch`: Experimental. `{ q, models, limit }` → `{ query, groups: [{ resource, label, hits: [{ resource, id, title, subtitle, score }] }] }`: cross-model search (`GET /search/`), each model under its own list access. A query under `minLength` (2) sends nothing.
 - `useImportActions`: `upload`, `preview` (the dry run) and `commit` mutations of an import.
@@ -227,6 +273,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useNavigation`: Experimental. The menu the signed-in user gets (`GET /navigation/`, Django's `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `<Layout navSource="server">` renders it.
 - `useOnlineStatus`: See the package README.
 - `useOtpLogin`: Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).
+- `usePageMeta`: See the package README.
 - `usePermission`: `{ hasRole(...names), isAuthenticated }` for gating UI on roles.
 - `useResourceAccessForest`: Experimental. The requester's access forest of a tree resource (`GET /<resource>/access/?permission=`): `{ results, all, truncated }`, the granted nodes with their ancestors and every other root, each with `granted`. `TreeView`'s `access` shows it.
 - `useResourceAncestors`: Experimental. The nodes above a tree node, root first (`GET /<resource>/<id>/ancestors/`).
@@ -236,6 +283,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useResourceItem`: One row by id, optionally expanded.
 - `useResourceList`: A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.
 - `useResourceMutations`: `create`, `update` and `remove` for a resource. On success they invalidate the resource's queries.
+- `useResourceSchemaIfKnown`: Experimental. One resource's parsed schema when it is known, else `undefined`: never throws, and reads nothing outside a `KarniProvider`.
 - `useResourceTree`: Experimental. The nested nodes of a tree resource (`GET /<resource>/tree/?root=&depth=`): `{ results, truncated }`, each node with `has_children` and `children` (`null` until loaded).
 - `useSchema`: The parsed OpenAPI schema of one resource (fields, operations, access).
 - `useSocialLogin`: Experimental. `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).
@@ -262,6 +310,7 @@ role that another component holds (compose it instead), and `karni context` list
 | `computed-table` | `DataTable` |
 | `dashboard` | `Dashboard` |
 | `dashboard-grid` | `DashboardGrid` |
+| `dashboard-tiles` | `DashboardTiles` |
 | `data-table` | `ResourceTable` |
 | `detail-view` | `ResourceDetail` |
 | `empty-state` | `EmptyState` |
@@ -276,6 +325,7 @@ role that another component holds (compose it instead), and `karni context` list
 | `page-shell` | `Page` |
 | `permission-denied` | `PermissionDenied` |
 | `resource-form` | `ResourceForm` |
+| `resource-grid` | `ResourceGrid` |
 | `resource-import` | `ResourceImport` |
 | `social-sign-in` | `SocialButton` |
 | `stat` | `Stat` |

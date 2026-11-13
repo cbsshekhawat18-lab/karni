@@ -71,6 +71,10 @@ import { Button } from "../../primitives/button";
 import { isAuditField, partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
 import { FacetPanel } from "../facets/FacetPanel";
+import { Input } from "../../primitives/input";
+import { Select } from "../../primitives/select";
+import { describeError } from "../../../states/describe-error";
+import { ResourceImport } from "../import/ResourceImport";
 import { evaluateAccess, type AccessIdentity } from "./access";
 import type { BulkAction, BulkOutcome, BulkResult } from "./BulkActionsBar";
 import { CardList } from "./CardList";
@@ -159,6 +163,14 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   enableDelete?: boolean;
   bulkActions?: ReadonlyArray<BulkAction>;
   /**
+   * Experimental. Fields staff may set on many rows at once (`["price",
+   * "stock", "active"]`): a "Set … to …" line above the table and a bulk
+   * action that saves that value on every selected row, each through the
+   * row's own update (its rules and history), with the rows that failed
+   * marked. Shown when the role may update rows.
+   */
+  bulkEdit?: readonly string[];
+  /**
    * Opens a row. The whole row is clickable, and its first cell is a button,
    * so the row opens from the keyboard too (Enter on any cell of the grid).
    */
@@ -209,6 +221,13 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
    * `false` hides them.
    */
   exportFormats?: readonly ExportFormat[] | false;
+  /**
+   * Experimental. An Import button that opens ResourceImport above the table
+   * (upload, preview with each row's problems, commit), when the resource
+   * serves `POST /<resource>/import/` and the user may create its rows.
+   * Default true. `false` hides it.
+   */
+  importable?: boolean;
   /** Extra toolbar content, rendered to the right of the search/filter row. */
   toolbar?: React.ReactNode;
   /**
@@ -417,7 +436,8 @@ export function ResourceTable<T = Record<string, unknown>>(
     rowActions,
     onEdit,
     enableDelete,
-    bulkActions,
+    bulkActions: bulkActionsProp,
+    bulkEdit,
     onRowClick,
     expand,
     initialSorting,
@@ -427,6 +447,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     facets,
     params,
     exportFormats,
+    importable = true,
     toolbar,
     empty,
     footer,
@@ -631,12 +652,12 @@ export function ResourceTable<T = Record<string, unknown>>(
     if (expand !== undefined) return expand;
     const allowed = schema?.operations.list?.expandEnum;
     if (schema === undefined || allowed === undefined) return [];
+    // A single relation shows its row's name, and a person their name: both expanded.
     return schema.fields
       .filter(
         (field) =>
-          field.kind === "relation" &&
-          field.relation !== undefined &&
-          !field.relation.many &&
+          ((field.kind === "relation" && field.relation !== undefined && !field.relation.many) ||
+            field.person === true) &&
           allowed.includes(field.name),
       )
       .map((field) => field.name);
@@ -793,6 +814,45 @@ export function ResourceTable<T = Record<string, unknown>>(
     (canCreate ??
       (schema?.operations.create !== undefined && evaluateAccess(createRule, identity) !== false));
   const createText = createLabel ?? `New ${one}`;
+  // bulk edit: one field, one value, every selected row (experimental)
+  const { update: updateRow } = useResourceMutations(resource);
+  const editable = React.useMemo<FieldDef[]>(() => {
+    if (bulkEdit === undefined || schema === undefined) return [];
+    if (canEdit === false || evaluateAccess(updateRule, identity) === false) return [];
+    return schema.fields.filter(
+      (field) => bulkEdit.includes(field.name) && !field.readOnly && field.kind !== "file",
+    );
+  }, [bulkEdit, schema, canEdit, updateRule, identity]);
+  const [bulkField, setBulkField] = React.useState<string | null>(null);
+  const [bulkValue, setBulkValue] = React.useState("");
+  const chosenField = editable.find((field) => field.name === bulkField) ?? editable[0];
+  const bulkActions = React.useMemo<ReadonlyArray<BulkAction> | undefined>(() => {
+    if (chosenField === undefined) return bulkActionsProp;
+    const apply: BulkAction = {
+      label: `Set ${chosenField.label.toLowerCase()}`,
+      pendingLabel: "Saving…",
+      onClick: async (ids) => {
+        const value = bulkFieldValue(chosenField, bulkValue);
+        const failed: Array<{ id: string; reason: string }> = [];
+        for (const id of ids) {
+          try {
+            await updateRow.mutateAsync({ id, values: { [chosenField.name]: value } });
+          } catch (error) {
+            failed.push({ id, reason: describeError(error).title });
+          }
+        }
+        return { failed };
+      },
+    };
+    return [...(bulkActionsProp ?? []), apply];
+  }, [bulkActionsProp, chosenField, bulkValue, updateRow]);
+  // CSV import: open above the table, for those who may create rows (SHARED 9).
+  const [importing, setImporting] = React.useState(false);
+  const importAllowed =
+    importable &&
+    schema?.operations.import !== undefined &&
+    (canCreate ??
+      (schema.operations.create !== undefined && evaluateAccess(createRule, identity) !== false));
 
   // row delete
   const [deleteTarget, setDeleteTarget] = React.useState<DeleteTarget<T> | null>(null);
@@ -1233,7 +1293,8 @@ export function ResourceTable<T = Record<string, unknown>>(
       exportEnabled ||
       viewOptions ||
       presets.length > 0 ||
-      createAllowed);
+      createAllowed ||
+      importAllowed);
 
   const liveText = slow ? `Loading ${plural}…` : announcement;
 
@@ -1253,7 +1314,7 @@ export function ResourceTable<T = Record<string, unknown>>(
             onFilterChange={handleFilterChange}
             className="min-w-64 flex-1"
           />
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
             {presets.length > 0 && activeSet !== undefined && (
               <ColumnSetMenu sets={presets} value={activeSet.name} onChange={changeColumnSet} />
             )}
@@ -1274,6 +1335,16 @@ export function ResourceTable<T = Record<string, unknown>>(
             {exportEnabled && (
               <ExportButtons resource={resource} params={listParams} formats={exportList} />
             )}
+            {importAllowed && (
+              <Button
+                size="sm"
+                variant="outline"
+                aria-expanded={importing}
+                onClick={() => setImporting(!importing)}
+              >
+                {importing ? "Close the import" : "Import"}
+              </Button>
+            )}
             {toolbar}
             {createAllowed && (
               <Button size="sm" onClick={onCreate}>
@@ -1282,6 +1353,61 @@ export function ResourceTable<T = Record<string, unknown>>(
               </Button>
             )}
           </div>
+        </div>
+      )}
+      {chosenField !== undefined && (
+        <div
+          role="group"
+          aria-label="Change many rows"
+          className="flex flex-wrap items-center gap-2 text-sm"
+        >
+          <span>Select rows, then set</span>
+          <Select
+            aria-label="Field to change"
+            className="w-40"
+            value={chosenField.name}
+            options={editable.map((field) => ({ value: field.name, label: field.label }))}
+            onValueChange={(name) => {
+              setBulkField(name);
+              setBulkValue("");
+            }}
+          />
+          <span>to</span>
+          {chosenField.kind === "boolean" ? (
+            <Select
+              aria-label="New value"
+              className="w-28"
+              value={bulkValue || "true"}
+              options={[
+                { value: "true", label: "Yes" },
+                { value: "false", label: "No" },
+              ]}
+              onValueChange={(next) => setBulkValue(next ?? "true")}
+            />
+          ) : (
+            <Input
+              aria-label="New value"
+              className="h-9 w-32"
+              inputMode={
+                chosenField.kind === "number" || chosenField.kind === "integer"
+                  ? "decimal"
+                  : undefined
+              }
+              value={bulkValue}
+              onChange={(event) => setBulkValue(event.target.value)}
+            />
+          )}
+        </div>
+      )}
+      {importing && importAllowed && (
+        <div className="rounded-lg border border-border p-4">
+          <ResourceImport
+            resource={resource}
+            resourceLabel={plural}
+            onDone={() =>
+              void queryClient.invalidateQueries({ queryKey: karniKeys.resource(resource) })
+            }
+          />
         </div>
       )}
       {facetFields.length > 0 && schema !== undefined && !blocking && (
@@ -1412,4 +1538,14 @@ function BulkConfirm(props: {
       }}
     />
   );
+}
+
+/** A bulk edit's typed value: a number, a boolean, or the text as typed (`null` when empty). */
+function bulkFieldValue(field: FieldDef, raw: string): unknown {
+  if (field.kind === "boolean") return raw !== "false";
+  const text = raw.trim();
+  if (text === "") return field.nullable ? null : text;
+  if (field.kind === "integer") return Number.parseInt(text, 10);
+  if (field.kind === "number" && field.money === undefined) return Number(text);
+  return text;
 }

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Test payment</title>
+</head>
+<body>
+<main>
+<h1>Test payment</h1>
+<p>This page stands in for a payment provider. No money moves: the shop runs with the test provider.</p>
+<p>Amount: <strong>{{ amount }} {{ currency }}</strong></p>
+{% if open %}
+<form method="post">
+{% csrf_token %}
+<p>
+<button type="submit" name="outcome" value="pay">Pay {{ amount }} {{ currency }}</button>
+<button type="submit" name="outcome" value="decline">Decline the payment</button>
+</p>
+</form>
+{% else %}
+<p>This payment is {{ payment.status }}.</p>
+{% if back %}<p><a href="{{ back }}">Back to the shop</a></p>{% endif %}
+{% endif %}
+</main>
+</body>
+</html>

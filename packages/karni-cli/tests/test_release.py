@@ -179,8 +179,10 @@ def test_the_workflow_check_names_a_missing_package_and_an_unlike_upload_step(
     text = release.read_text()
     # karni-ai drops out of the npm build loop, and karni-site's upload loses skip-existing.
     text = text.replace(
-        ' modules/karni-ai/ui modules/karni-storage/ui; do\n            (cd "$d" && npm ci && npm run build && npm publish --dry-run',
-        ' modules/karni-storage/ui; do\n            (cd "$d" && npm ci && npm run build && npm publish --dry-run',
+        " modules/karni-ai/ui modules/karni-storage/ui modules/karni-commerce/ui; do\n"
+        '            (cd "$d" && npm ci && npm run build && npm publish --dry-run',
+        " modules/karni-storage/ui modules/karni-commerce/ui; do\n"
+        '            (cd "$d" && npm ci && npm run build && npm publish --dry-run',
         1,
     )
     text = text.replace(

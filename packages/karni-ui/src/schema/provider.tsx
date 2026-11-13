@@ -44,6 +44,11 @@ export function KarniProvider(props: KarniProviderProps): ReactElement {
 }
 
 /** Returns the Karni client from `KarniProvider` and throws a descriptive error outside one. */
+/** The client of the nearest <KarniProvider>, or null outside one (a component that works without). */
+export function useOptionalKarniClient(): KarniClient | null {
+  return useContext(KarniClientContext);
+}
+
 export function useKarniClient(): KarniClient {
   const client = useContext(KarniClientContext);
   if (client === null) {

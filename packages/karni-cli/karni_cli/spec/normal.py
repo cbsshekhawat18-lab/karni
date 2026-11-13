@@ -38,7 +38,7 @@ from karni_cli.generators.fields import ALIASES, parse_field
 from karni_cli.generators.lifecycle_fields import _states
 from karni_cli.generators.naming import default_route
 from karni_cli.project import CliError
-from karni_cli.spec import navigation
+from karni_cli.spec import dashboard, navigation
 from karni_cli.spec.catalog import DEFAULT_CACHE_TTL
 from karni_cli.spec.schema import AGGREGATE_METRICS, Spec
 
@@ -284,6 +284,8 @@ def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
     data["seed"] = dict(sorted(data["seed"].items()))
     # The menu as KARNI_NAVIGATION gets it: `true` and the list it means compare equal.
     data["navigation"] = navigation.menu(spec)
+    # The home tiles as KARNI_DASHBOARD_TILES gets them (an entity as its resource).
+    data["dashboard"] = dashboard.tiles(spec)
     social = data["features"]["social_login"]
     data["features"]["social_login"] = sorted(set(social))
     if data["features"]["api_cache"] is True:

@@ -229,7 +229,16 @@ def test_a_missing_app_kind() -> None:
 def test_every_module_ask_is_a_question_until_its_option_is_set(name: str) -> None:
     module = MODULES[name]
     kind = "site+app" if name == "site" else "app"
-    spec = f"version: 1\napp: {{name: X, kind: {kind}}}\nmodules:\n  {name}:\n"
+    # a module that requires another (commerce, payments) lists it, with its asks settled
+    needed = ""
+    for other in module.requires:
+        settled_options = ", ".join(
+            f"{item.setting.removeprefix(f'KARNI_{other.upper()}_').lower()}: "
+            f"{json.dumps(item.default if item.has_default else 'x')}"
+            for item in MODULES[other].asks
+        )
+        needed += f"  {other}: {{{settled_options}}}\n"
+    spec = f"version: 1\napp: {{name: X, kind: {kind}}}\nmodules:\n{needed}  {name}:\n"
     expected = []
     for item in module.asks:
         option = item.setting.removeprefix(f"KARNI_{name.upper()}_").lower()

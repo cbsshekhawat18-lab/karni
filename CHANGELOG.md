@@ -225,6 +225,162 @@ apply codemods and list the manual steps. This file is the human summary.
   stale deal list and the `crm.deal_timeline` connection. New codes: E320 to E325. See
   [preferences](docs/preferences.md).
 - Test suite: a conftest fixture puts Celery's current app back after every test. A test that built an app with `create_celery_app` left it current and `/readyz` failed in later tests, which made four `test_health_probes.py` tests fail in every full run. `test_retries_are_queued_through_the_dispatcher_outside_eager_mode` also took its "previous" app after the new one was already current.
+- **The shop recipe, milestone 1 (experimental).** A storefront open to visitors under
+  `/shop` (home, catalogue with search, category and price filters, sort and pages,
+  product page), a cart for visitors and customers that joins at sign-in, guest or
+  signed-in checkout, the order page and the person's orders, and a staff home with
+  orders, parcels and stock. The cart, checkout and orders are karni-commerce's: the shop
+  sells its products through an adapter (`shop/sellables.py`) and keeps its own parcels
+  (Shipment: processing, shipped with a tracking number, delivered). Stock is held at
+  checkout through `karni.capacity`, taken on payment and given back on a failed,
+  cancelled or late order. Roles `admin`, `shop-manager`, `shop-staff` and `customer`.
+  Emails by kind, and signals under their family names. docs/recipes/shop.md is a guide.
+
+- **Recipe pages and routes (experimental).** A recipe lists its React pages as
+  `[[routes]]` in recipe.toml, and the first `karni build` registers them in
+  `frontend/src/routes.tsx`. A file `karni new` wrote counts as a stub while it is
+  unchanged (`scaffold` in `.karni/build.json`).
+
+- **Public pages (experimental).** The scaffold's layout shows a route with
+  `staticData: { public: true }` to visitors, and puts `TermsGate` behind the sign-in guard.
+
+- **@karni/ui (experimental):** `ResourceGrid` (a resource's rows as cards, with search,
+  sort, filters and pages), `formatMoney` and `usePageMeta`.
+
+- **karni (experimental):** `karni.mail.send_templated` (karni-site's notify now uses it)
+  and `karni.placeholder.placeholder_image`, also in `karni.seeding`.
+
+- **karni-payments (experimental):** the test provider's checkout page
+  (`KARNI_PAYMENTS_TEST_CHECKOUT_PAGE`, on while `DEBUG`), and the signals
+  `payment_status_changed`, `refund_created` and `refund_status_changed`. The test
+  provider never reuses a checkout session a stored payment has.
+
+- **karni-commerce, a new module (experimental).** One cart, checkout and order path for
+  anything a project sells (`karni add commerce`, needs karni-payments). An app registers
+  a `Sellable` adapter per kind in its `sellables.py`, and commerce calls it without
+  importing the app. Orders hold money states only, with readable numbers
+  (`KARNI_COMMERCE_NUMBER`), the buyer's user, email and name, several payments
+  (`OrderPayment`), refunds by line or amount (`OrderRefund`), a free order settled at
+  once and a late payment given back. The checkout validator checks an order's payment
+  against the order. Signals in `karni_commerce.events`, emails by kind, what the selling
+  app reports about the goods (`karni_commerce.fulfilment`), and `@karni/commerce-ui`:
+  `CartPage`, `MiniCart`, `AddToCart`, `CheckoutPage`, `OrderPage`, `MyOrders`. See
+  docs/commerce.md.
+
+- **@karni/ui (experimental):** `AccountPage` with sections the installed parts
+  register (`registerAccountSection`) and `SignInPage` (a code or a password, then a safe
+  `next`). Tables and details show money in its currency: a `MoneyField` publishes
+  `x-karni-money` in the schema (left out of schema snapshots). An id, a year or a number
+  people quote reads without a thousands separator. `FileUpload` shows a picture of an
+  image file, stored or chosen, so a form shows the record's photo.
+
+- **karni (experimental):** `send_templated(kind=...)` with `KARNI_MAIL_DISABLED_KINDS`,
+  and `karni.mail.silenced()` for demo data and imports. `Seeder.Meta.after` names the
+  models a seeder reads with no foreign key to them, and `karni spec export` reads a
+  seeder's count through `Meta` inheritance.
+
+- **karni-cli (experimental):** a recipe's own pages at `/<name>` count as managed on the
+  build that writes them, so `karni new --recipe` ends with `karni plan` empty.
+
+- **Shop recipe, back office:** a staff home of tiles per role (orders to fulfil, revenue
+  today, in 7 and 30 days with a chart, stock running low, latest orders, best sellers),
+  Orders first in the menu, the staff's order page (refund all or part, by items back into
+  stock or by an amount, cancel, notes to staff or to the customer, the parcel shipped with
+  its tracking number, the history), orders placed by hand, customers, products changed in
+  bulk and imported from a CSV, a low-stock level per product and backorders. The shipments
+  table names each order by its number and links to it. A product page says its short
+  description once.
+
+- **karni-commerce (experimental):** the staff's view of an order
+  (`GET /api/orders/{id}/staff/`), notes (`OrderNote`, migration `0002`), orders placed by
+  hand (`POST /api/orders/manual/`, `KARNI_COMMERCE_MANUAL_HOLD_MINUTES`, the
+  `commerce.payment_request` email), items to put on them (`Sellable.search_fields`),
+  customers by email behind a seam (`KARNI_COMMERCE_CUSTOMERS`), the order's money history,
+  and the home tiles `commerce.revenue`, `commerce.revenue_chart` and
+  `commerce.latest_orders`. `@karni/commerce-ui` adds `StaffOrders`, `StaffOrderPage`
+  (with `registerOrderPanel`), `NewOrderPage`, `CustomersPage` and `CustomerPage`.
+
+- **karni (experimental):** home tiles per role (`karni.tiles`, `GET /api/dashboard/`, code
+  tiles in `<app>/dashboard.py`, karni.yaml's `dashboard:` written to
+  `KARNI_DASHBOARD_TILES`, `C643`). `class Karni: label` names a related row, and a relation
+  to the user model is marked `x-karni-user`. `/me/` lists the permission keys the user
+  holds. `SeedContext.account()` makes a demo login per role. A module's
+  `FROM_ENVIRONMENT` settings take their environment variable over a value written before
+  `karni_settings()`, so `KARNI_PAYMENTS_PROVIDER=test` in `.env` switches karni.yaml's
+  provider. karni-payments' test provider confirms a refund on a local try.
+
+- **@karni/ui (experimental):** `DashboardTiles` (with `registerTile` and
+  `registerTileKind`), names instead of ids for related rows and people (`relationLabel`,
+  `personName`) with links a project registers (`registerRecordLink`), New, Edit, Delete and
+  Import shown only to roles that may (the `can` rule read from `/me/`), an Import button on
+  every list, `bulkEdit` on ResourceTable, and `rowActions` read from `x-karni-actions`
+  (`rowActionOpen`). ResourceDetail asks for its record once the schema is in. A new
+  project's Tailwind scans every `@karni/*` package. A list's toolbar wraps on a phone.
+
+- **karni-commerce (experimental):** options on a cart line (`Sellable.clean_options`,
+  `option_key`, `details`, `choices`), so two sizes of one item are two lines and an order
+  line keeps its options in words. Coupons (percent, amount, free shipping, minimum spend,
+  dates, uses in all and per person, limits by kind, item and the adapters' coupon keys),
+  shipping zones and methods (flat rate, free above an amount, local pickup) and tax rates
+  by country and region, priced once by `karni_commerce.pricing.quote` for the cart, the
+  checkout page (`POST carts/current/quote/`) and the order. Prices with or without tax
+  (`KARNI_COMMERCE_PRICES_INCLUDE_TAX`), `KARNI_COMMERCE_SHIPPING` and `KARNI_COMMERCE_TAX`
+  as escape hatches. The order stores its discount, shipping, tax and tax lines, and a
+  refund by lines gives back what the lines cost. `@karni/commerce-ui` adds the coupon box,
+  shipping methods and tax at checkout (`defaultCountry`), order totals, and
+  `CouponsPage`, `ShippingPage` and `TaxRatesPage` (`registerCouponLimit`). Each Add to
+  cart button names its item for screen readers.
+
+- **Shop recipe:** attributes and variations with their own SKU, price, stock and picture,
+  picked on the product page; reviews by customers whose parcel arrived, approved by staff,
+  with the average on cards and pages; a wishlist; related and recently viewed products;
+  coupons, shipping and tax pages for the manager; demo data for each.
+
+- **@karni/ui:** `ChangeHistory` says each change in words (field labels, money in its
+  currency, state labels, "Status changed from Paid to Part refunded"), with `record`,
+  `historyHeadline` and `historyValueText`. `DataChart` thins its x-axis labels to the
+  width it is drawn (`xLabelStep`). A card on a phone gives long values room and wraps an
+  email at its dots, never inside a word (`softBreaks`). `useResourceSchemaIfKnown`.
+
+- **karni.mail:** a part declares each email with `register_kind` (title, audience, merge
+  fields, whether it can be switched off) in its `messages.py`, and `kinds()` lists them.
+  `KARNI_MAIL_SOURCE` names where a business's changes are kept (`template`, `enabled`,
+  `sender`): an edited email wins over the files and renders with a restricted engine, the
+  declared merge fields only, as plain values, and no tag that loads code or another
+  template. The account emails (sign-in code, password reset, email checks) go through it
+  as `accounts.*` kinds that are never switched off.
+
+- **karni-commerce:** invoices numbered when an order is paid (`KARNI_COMMERCE_FIRST_INVOICE`),
+  with a printable invoice and packing slip (`GET /api/orders/document/`), as PDF through
+  karni-reports when it is installed; abandoned carts (`GET /api/carts/abandoned/`, a cart's
+  `touched_at` and `email`); sales reports by date, item and coupon with CSV
+  (`GET /api/orders/reports/`, a registry a selling app adds to, `karni_commerce.order:report`);
+  a quote for an order placed by hand (`POST /api/orders/manual/quote/`); the Checkout
+  settings (guest checkout, the terms, invoices, staff emails, when a cart is abandoned);
+  settings and emails a business edits behind `karni_commerce.preferences_seam`
+  (`/api/preferences/`, the family preferences contract's names and shape) and
+  `/api/email-templates/`. A fulfilment entry may carry a link. Every order email is
+  declared with its merge fields and comes from the sender in the details.
+
+- **karni-storage:** `serve(name)` hands out a protected file to code that checked access
+  itself.
+
+- **@karni/ui:** `SettingsPage` (the details, a tab per settings section, every email with
+  its switch) and `EmailTemplateEditor` (subject, text, merge fields, preview, back to the
+  default).
+
+- **@karni/commerce-ui:** `ReportsPage`, `AbandonedCartsPage`, `OrderDocumentPage`, invoice
+  and download links on the order pages, a coupon and a shipping method with the totals on
+  `NewOrderPage`, checkout's guest and terms options, `useBusiness`, and `Money` in the
+  business's currency display. `CommercePaths` gains `invoice` and `packingSlip`.
+
+- **Shop recipe:** settings without code (details, checkout, stock and catalogue, every
+  email's text), digital products delivered by a signed link with a download limit, reports
+  by date, item, category, coupon and stock with CSV, invoices and packing slips, abandoned
+  carts, and the shop's name and address from Settings. A product with variations reads its
+  stock from them everywhere, and a different figure for it is refused. The demo seeds 26
+  orders, its reviews meet karni.yaml's count, two printable files and three carts left
+  behind.
 
 ## 0.5.1 (2026-11-12)
 

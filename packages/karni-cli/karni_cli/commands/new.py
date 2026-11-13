@@ -444,7 +444,25 @@ def write_recipe_spec(project: Path, name: str, kind: str, recipe: Recipe | None
         path.write_text(recipes.blank_spec(name), encoding="utf-8")
         return path
     parts.start(project, path, recipe, name=name, kind=kind)
+    record_scaffold(project, recipe)
     return path
+
+
+def record_scaffold(project: Path, recipe: Recipe) -> None:
+    """Record the sha256 of each file ``karni new`` wrote where ``recipe`` has its own.
+
+    The first build then writes the recipe's file over it only while it is
+    still exactly what ``karni new`` wrote (:func:`karni_cli.recipes.apply.scaffold_digests`).
+    A file an earlier recipe of the same ``karni new`` recorded keeps its digest.
+    """
+    from karni_cli.builder import layout, record
+    from karni_cli.recipes import apply
+
+    rec = record.load(project)
+    rec.scaffold = {**apply.scaffold_digests(project, recipe), **rec.scaffold}
+    path = project / layout.RECORD
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(rec.text(), encoding="utf-8")
 
 
 def add_more_recipes(project: Path, more: list[Recipe]) -> list[str]:
@@ -456,6 +474,7 @@ def add_more_recipes(project: Path, more: list[Recipe]) -> list[str]:
     loaded = recipes.load()
     for recipe in more:
         merged = parts.add(project, project / recipes.SPEC_FILE, recipe, loaded)
+        record_scaffold(project, recipe)
         lines.append(f"Recipe {recipe.name} ({recipe.title}): merged into karni.yaml.")
         lines += [f"  {note}" for note in merged.notes]
     return lines

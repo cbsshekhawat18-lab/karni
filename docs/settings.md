@@ -15,7 +15,10 @@ reads its own defaults with, in the module, so a setting added after it reads
 the environment the same way: `FEATURE_X = env.bool("FEATURE_X", default=False)`.
 `SILENCED_SYSTEM_CHECKS` starts as an empty list, so
 `SILENCED_SYSTEM_CHECKS += ["karni.W967"]` silences a check without a NameError.
-Settings read during the call are the exception (see below).
+Settings read during the call are the exception (see below). So is a setting a
+module chooses from the environment first (`KARNI_PAYMENTS_PROVIDER`): its
+environment variable, when set, wins over a value written before the call, such
+as karni.yaml's, so `.env` switches a local try to the test provider.
 This page lists the `KARNI_*` settings. The Django and
 DRF settings Karni derives are documented where the feature is.
 
@@ -94,6 +97,8 @@ reads it on every request.
 | <a id="karni_auth_throttle_rates"></a>`KARNI_AUTH_THROTTLE_RATES` |  | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object. `null` disables a scope. |
 | **Database & cache** | | | |
 | <a id="karni_cache"></a>`KARNI_CACHE` | `KARNI_CACHE` | `"redis"` | `redis` (the default cache at `REDIS_URL`) or `locmem`, an in-process cache for a host run without Redis (development only: throttle counters are then per process). |
+| **Email** | | | |
+| <a id="karni_mail_disabled_kinds"></a>`KARNI_MAIL_DISABLED_KINDS` | `KARNI_MAIL_DISABLED_KINDS` | `[]` | Experimental. The kinds of email karni.mail does not send, by name (commerce.new_order). A kind is the stable name a part gives each email. |
 | **Files & storage** | | | |
 | <a id="karni_storage"></a>`KARNI_STORAGE` | `KARNI_STORAGE` | `"local"` | `local` (filesystem) or `s3` (any S3-compatible service, needs `karni[s3]`). |
 | **API (karni.api)** | | | |
@@ -242,6 +247,27 @@ Assign them in `config/settings.py`. A module's README says more about each.
 |---|---|---|---|
 | <a id="karni_charts_read"></a>`KARNI_CHARTS_READ` | `KARNI_CHARTS_READ` | `"authenticated"` | Who may read the chart definitions (/api/charts/): "authenticated" (the default), "public" (anyone, for charts on a public page) or "granted" (the roles' grants on karni_charts.chart). The data always follows the source resource's own access, whoever reads the definition. |
 
+### karni-commerce
+
+| Setting | Env | Default | What it does |
+|---|---|---|---|
+| <a id="karni_commerce_currency"></a>`KARNI_COMMERCE_CURRENCY` | `KARNI_COMMERCE_CURRENCY` | `""` | The project's currency, as an ISO 4217 code. Blank (the default) takes KARNI_PAYMENTS_CURRENCY, so a project names its currency once. |
+| <a id="karni_commerce_hold_minutes"></a>`KARNI_COMMERCE_HOLD_MINUTES` | `KARNI_COMMERCE_HOLD_MINUTES` | `30` | How long checkout holds an order's items for its payment, in minutes. An order not paid by then is cancelled and its items are free again. |
+| <a id="karni_commerce_max_quantity"></a>`KARNI_COMMERCE_MAX_QUANTITY` | `KARNI_COMMERCE_MAX_QUANTITY` | `99` | The most of one item a cart line takes. |
+| <a id="karni_commerce_first_number"></a>`KARNI_COMMERCE_FIRST_NUMBER` | `KARNI_COMMERCE_FIRST_NUMBER` | `1001` | The number of the first order. Later orders count up from it. |
+| <a id="karni_commerce_number"></a>`KARNI_COMMERCE_NUMBER` | `KARNI_COMMERCE_NUMBER` | `""` | The dotted path of the function that gives a new order its number: number(order) -> int. Blank (the default) counts up from KARNI_COMMERCE_FIRST_NUMBER (karni_commerce.services.next_number). |
+| <a id="karni_commerce_order_path"></a>`KARNI_COMMERCE_ORDER_PATH` | `KARNI_COMMERCE_ORDER_PATH` | `"/orders/{number}?key={key}"` | Where a person reads an order in the app, after KARNI_FRONTEND_URL: {number} and {key} (the guest's secret) are filled in. The payment's return address and the emails' links point here. |
+| <a id="karni_commerce_manual_hold_minutes"></a>`KARNI_COMMERCE_MANUAL_HOLD_MINUTES` | `KARNI_COMMERCE_MANUAL_HOLD_MINUTES` | `2880` | How long an order staff place by hand (a phone order) holds its items for the buyer's payment, in minutes. Two days by default. |
+| <a id="karni_commerce_customers"></a>`KARNI_COMMERCE_CUSTOMERS` | `KARNI_COMMERCE_CUSTOMERS` | `"karni_commerce.customers.OrderCustomers"` | The dotted path of the class behind the staff's customers list and customer page: customers(orders, search, ordering) and customer(orders, email). The default groups the orders by the buyer's email; karni.people replaces it with the people of the project. |
+| <a id="karni_commerce_staff_emails"></a>`KARNI_COMMERCE_STAFF_EMAILS` | `KARNI_COMMERCE_STAFF_EMAILS` | `[]` | Who gets the new-order email (commerce.new_order): a list of addresses. Empty (the default) sends none. |
+| <a id="karni_commerce_other_checkout_validator"></a>`KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR` | `KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR` | `"karni_payments.services.default_checkout_validator"` | The checkout validator for payments that are not an order's (the dotted path karni_commerce.payments.checkout_validator hands them to). |
+| <a id="karni_commerce_prices_include_tax"></a>`KARNI_COMMERCE_PRICES_INCLUDE_TAX` | `KARNI_COMMERCE_PRICES_INCLUDE_TAX` | `False` | Whether the prices the sellables give include their tax. Off (the default): tax is added on top at checkout. On: the tax is the part of each price that is tax, and the total is the prices (with the discount and shipping). |
+| <a id="karni_commerce_shipping"></a>`KARNI_COMMERCE_SHIPPING` | `KARNI_COMMERCE_SHIPPING` | `"karni_commerce.pricing.ZoneShipping"` | The dotted path of the class that gives the shipping methods of an address (karni_commerce.pricing.ZoneShipping: the zones and methods staff set up). |
+| <a id="karni_commerce_tax"></a>`KARNI_COMMERCE_TAX` | `KARNI_COMMERCE_TAX` | `"karni_commerce.pricing.RateTax"` | The dotted path of the class that gives the tax rate of a tax class at an address (karni_commerce.pricing.RateTax: the rates staff set up). |
+| <a id="karni_commerce_sellables"></a>`KARNI_COMMERCE_SELLABLES` |  | `{}` | Sellable adapters by kind, as dotted paths, over the ones the apps register in their sellables.py: {"product": "myapp.sellables.MyProduct"}. |
+| <a id="karni_commerce_first_invoice"></a>`KARNI_COMMERCE_FIRST_INVOICE` | `KARNI_COMMERCE_FIRST_INVOICE` | `1001` | The first invoice's number (karni_commerce.services.issue_invoice). |
+| <a id="karni_mail_source"></a>`KARNI_MAIL_SOURCE` | `KARNI_MAIL_SOURCE` | `"karni_commerce.preferences_seam.MailSource"` | karni.mail's source of the emails a business edits, their switches and the sender (karni_commerce.preferences_seam.MailSource, until the family's notifications). |
+
 ### karni-impersonation
 
 | Setting | Env | Default | What it does |
@@ -263,6 +289,7 @@ Assign them in `config/settings.py`. A module's README says more about each.
 | <a id="karni_payments_checkout_validator"></a>`KARNI_PAYMENTS_CHECKOUT_VALIDATOR` |  | `"karni_payments.services.default_checkout_validator"` | Dotted path called with (user=, amount=, currency=, metadata=) BEFORE a Payment is created. It is the server-side pricing authority. The default is a pass-through, and production projects should replace it (never trust client amounts). |
 | <a id="karni_payments_event_handler"></a>`KARNI_PAYMENTS_EVENT_HANDLER` |  | `"karni_payments.services.apply_event"` | Dotted path of the webhook state machine applied by the Celery task. |
 | <a id="karni_payments_allowed_redirects"></a>`KARNI_PAYMENTS_ALLOWED_REDIRECTS` | `KARNI_PAYMENTS_ALLOWED_REDIRECTS` | `[]` | Extra URLs whose origins are allowed as checkout success/cancel redirects, on top of KARNI_FRONTEND_URL's origin. |
+| <a id="karni_payments_test_checkout_page"></a>`KARNI_PAYMENTS_TEST_CHECKOUT_PAGE` |  | `None` | The test provider's checkout page (experimental): True serves it at payments/test-checkout/<session>/, where a person pays or declines a test payment in the browser. None (the default) serves it while DEBUG is on. False keeps the imaginary https://checkout.test/ address. |
 | <a id="stripe_secret_key"></a>`STRIPE_SECRET_KEY` | `STRIPE_SECRET_KEY` | `""` | Provider credentials: blank by default, validated lazily at use. |
 | <a id="stripe_webhook_secret"></a>`STRIPE_WEBHOOK_SECRET` | `STRIPE_WEBHOOK_SECRET` | `""` | Provider credentials: blank by default, validated lazily at use. |
 | <a id="razorpay_key_id"></a>`RAZORPAY_KEY_ID` | `RAZORPAY_KEY_ID` | `""` | Provider credentials: blank by default, validated lazily at use. |

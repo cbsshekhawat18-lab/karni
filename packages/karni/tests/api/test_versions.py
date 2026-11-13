@@ -235,8 +235,10 @@ def test_each_version_has_its_own_openapi_document(setup: Setup, client: Client)
     v2 = client.get("/api/v2/schema/?format=json").json()
     served = {p for p in v1["paths"] if p.startswith("/api/v")}
     assert {"/api/v1/venues/", "/api/v1/venues/{id}/"} <= served
-    # search/ is Karni's own route, mounted in every version beside the router's
-    assert all(p.startswith("/api/v1/venues/") or p == "/api/v1/search/" for p in served)
+    # search/ and dashboard/ are Karni's own routes, mounted in every version beside the
+    # router's
+    own = {"/api/v1/search/", "/api/v1/dashboard/"}
+    assert all(p.startswith("/api/v1/venues/") or p in own for p in served)
     assert "/api/auth/login/" in v1["paths"]  # the auth routes are not versioned
     assert "/api/v2/events/" in v2["paths"]
     assert not any(p.startswith("/api/v1/") for p in v2["paths"])

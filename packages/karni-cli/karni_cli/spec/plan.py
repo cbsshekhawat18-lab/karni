@@ -61,7 +61,7 @@ from karni_cli import project as project_mod
 from karni_cli.builder import layout
 from karni_cli.generators.fields import is_user_target
 from karni_cli.project import CliError
-from karni_cli.spec import export, navigation, schema
+from karni_cli.spec import dashboard, export, navigation, schema
 from karni_cli.spec.catalog import DEFAULT_CACHE_TTL, MODULES, module_setting
 from karni_cli.spec.normal import normalise, role_name
 from karni_cli.spec.validate import validate_text
@@ -107,6 +107,7 @@ ACTIONS: Final = {"add": "+", "change": "~", "rename": "~", "remove": "-"}
 RowStatus = Literal["counted", "offline", "unreachable", "not needed"]
 #: Experimental. The target of the menu's change in the pages area: the setting it writes.
 MENU: Final = "KARNI_NAVIGATION"
+TILES: Final = "KARNI_DASHBOARD_TILES"
 
 _RELATIONS: Final = ("fk", "o2o", "m2m")
 #: Field kinds whose length argument a shorter value must fit, with the default length.
@@ -230,11 +231,15 @@ class Managed:
     ``adopted`` the Karni-owned files and blocks handed to the project with
     ``karni build --adopt``. A change on anything else that already exists is
     not managed. Something new (an entity, a page, a module) is managed.
+    ``recipe_pages`` are the code pages the next build writes from the recipe
+    ``karni new --recipe`` named (its ``[[routes]]`` at ``/<name>``):
+    adding one is managed.
     """
 
     entities: frozenset[str] = frozenset()
     pages: frozenset[str] = frozenset()
     adopted: frozenset[str] = frozenset()
+    recipe_pages: frozenset[str] = frozenset()
 
 
 @dataclass
@@ -1223,6 +1228,19 @@ def _navigation(ctx: _Context) -> None:
         ctx.add(Change("pages", "add" if old is None else "change", MENU, navigation.summary(new)))
 
 
+def _dashboard(ctx: _Context) -> None:
+    """The home tiles (experimental): ``KARNI_DASHBOARD_TILES`` as ``dashboard:`` gives them."""
+    old, new = ctx.current.get("dashboard"), ctx.desired.get("dashboard")
+    if old == new:
+        return
+    if new is not None and ctx.facts.get("settings", {}).get(TILES) == new:
+        return
+    if new is None:
+        ctx.add(Change("pages", "remove", TILES, dashboard.summary(old)))
+    else:
+        ctx.add(Change("pages", "add" if old is None else "change", TILES, dashboard.summary(new)))
+
+
 def _entity_names(data: dict[str, Any]) -> list[tuple[str, str]]:
     """``(app.Name, Name)`` of every entity of ``data`` (a normal form)."""
     return [
@@ -1364,7 +1382,7 @@ def _own(ctx: _Context, managed: Managed) -> None:
             label = renamed_back.get(label, label) if action == "remove" else label
             app = label.split(".", 1)[0]
             change.managed = (new(label) or known(label)) and free(layout.seeds_file(app))
-        elif area == "pages" and target == MENU:
+        elif area == "pages" and target in (MENU, TILES):
             change.managed = free(layout.SETTINGS_BLOCK)
         elif area == "pages":
             change.managed = _page_managed(change, ctx, managed, resolve_new, old_pages)
@@ -1379,7 +1397,7 @@ def _page_managed(
 ) -> bool:
     if any(block in managed.adopted for block in layout.ROUTES_BLOCKS):
         return False
-    if change.target == "navigation":
+    if change.target in ("navigation", TILES):
         return True
     name = change.target
     ident = resolve(name, "") if name[:1].isupper() else name
@@ -1387,6 +1405,8 @@ def _page_managed(
     after = schema.page_kind_names(
         next((k for e in ctx.desired["pages"] for n, k in e.items() if n == name), [])
     )
+    if change.action == "add" and "code" in after and name in managed.recipe_pages:
+        return True  # the recipe's own page, which the next build writes (karni new --recipe)
     if change.action == "add" and ("code" in after or ("dashboard" in after and name == "home")):
         return False  # the project's page (code), or the scaffold's home page (dashboard)
     dropped = [kind for kind in schema.page_kind_names(before) if kind not in after]
@@ -1439,6 +1459,7 @@ def plan_project(
     _entities_and_fields(ctx)
     _pages(ctx)
     _navigation(ctx)
+    _dashboard(ctx)
     for app in ctx.migrations:
         ctx.add(Change("migrations", "add", app))
     _seed(ctx)

@@ -21,13 +21,14 @@ import { Button } from "../../primitives/button";
 import { CheckIcon, SearchIcon } from "../../primitives/icons";
 import { Skeleton } from "../../primitives/skeleton";
 import { partitionAuditFields } from "../audit-fields";
-import { displayLabel } from "../displayLabel";
+import { displayLabel, personName, relationLabel } from "../displayLabel";
+import { RecordLink } from "../record-links";
 import { EmptyValue } from "../empty-value";
 import { chosenGroups, chosenLayout, groupFields, GroupedFields } from "../field-groups";
 import { humanizeValue } from "../form/prepare";
 import { isMarkdownField } from "../markdown-field";
 import { singularNoun } from "../nouns";
-import { formatNumberValue } from "../number-value";
+import { formatMoneyValue, formatNumberValue } from "../number-value";
 import { offlineError, useRetryUnlessClientError, useRetryWhenOnline } from "../query-state";
 import { evaluateAccess } from "../table/access";
 import { TreeBreadcrumb, type TreeBreadcrumbProps } from "../tree/TreeBreadcrumb";
@@ -238,14 +239,19 @@ function formatDateTime(value: string): string {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-function RelationEntry({ value }: { value: unknown }): React.ReactElement {
+function RelationEntry({ value, field }: { value: unknown; field?: FieldDef }): React.ReactElement {
   if (value !== null && typeof value === "object") {
-    return <>{displayLabel(value as Record<string, unknown>)}</>;
+    const row = value as Record<string, unknown>;
+    return (
+      <RecordLink resource={field?.relation?.resource} row={row}>
+        {field !== undefined ? relationLabel(field, row) : displayLabel(row)}
+      </RecordLink>
+    );
   }
   return <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">{String(value)}</code>;
 }
 
-function RelationValue({ value }: { value: unknown }): React.ReactElement {
+function RelationValue({ value, field }: { value: unknown; field?: FieldDef }): React.ReactElement {
   if (Array.isArray(value)) {
     return (
       <span className="flex flex-wrap gap-1.5">
@@ -254,13 +260,13 @@ function RelationValue({ value }: { value: unknown }): React.ReactElement {
             key={index}
             className="inline-flex items-center rounded-sm bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground"
           >
-            <RelationEntry value={entry} />
+            <RelationEntry value={entry} field={field} />
           </span>
         ))}
       </span>
     );
   }
-  return <RelationEntry value={value} />;
+  return <RelationEntry value={value} field={field} />;
 }
 
 function isEmpty(value: unknown): boolean {
@@ -277,9 +283,18 @@ function DefaultValue(props: {
   field: FieldDef;
   value: unknown;
   Empty: React.ComponentType<ResourceDetailEmptyValueProps>;
+  item?: unknown;
 }): React.ReactElement {
-  const { field, value, Empty } = props;
+  const { field, value, Empty, item } = props;
   if (isEmpty(value)) return <Empty field={field} />;
+  const row =
+    item !== null && typeof item === "object" ? (item as Readonly<Record<string, unknown>>) : null;
+  const money = formatMoneyValue(field, value, row);
+  if (money !== null) return <>{money}</>;
+  // A person (x-karni-user), expanded: their name, never the id.
+  if (field.person === true && typeof value === "object" && !Array.isArray(value)) {
+    return <>{personName(value as Record<string, unknown>)}</>;
+  }
   // A MarkdownField: formatted, sanitized HTML (raw HTML in it shows as text).
   if (isMarkdownField(field)) return <MarkdownView source={String(value)} />;
   switch (field.kind) {
@@ -292,7 +307,7 @@ function DefaultValue(props: {
     case "enum":
       return <>{field.enumLabels?.[String(value)] ?? humanizeValue(String(value))}</>;
     case "relation":
-      return <RelationValue value={value} />;
+      return <RelationValue value={value} field={field} />;
     case "file": {
       const Protected = protectedFileLinkFor(field);
       if (Protected !== null) {
@@ -555,7 +570,7 @@ function DetailRow(props: {
         {override?.render !== undefined ? (
           override.render(value, item)
         ) : (
-          <DefaultValue field={field} value={value} Empty={Empty} />
+          <DefaultValue field={field} value={value} Empty={Empty} item={item} />
         )}
       </dd>
     </div>
@@ -688,14 +703,25 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
     error: unknown;
   } | null>(null);
   const [moved, setMoved] = React.useState("");
-  const params: ResourceItemParams | undefined = React.useMemo(
-    () => (expand !== undefined && expand.length > 0 ? { expand } : undefined),
-    [expand],
-  );
+  // The people the record points at are expanded too, so they show by name.
+  const people = React.useMemo<readonly string[]>(() => {
+    const schema = schemaResult.data;
+    const allowed = schema?.operations.detail?.expandEnum ?? schema?.operations.list?.expandEnum;
+    if (schema === undefined || allowed === undefined) return [];
+    return schema.fields
+      .filter((field) => field.person === true && allowed.includes(field.name))
+      .map((field) => field.name);
+  }, [schemaResult.data]);
+  const params: ResourceItemParams | undefined = React.useMemo(() => {
+    const wanted = [...new Set([...(expand ?? []), ...people])];
+    return wanted.length > 0 ? { expand: wanted } : undefined;
+  }, [expand, people]);
+  // Ask once the schema says which people to expand (it is cached after the first page).
+  const schemaSettled = schemaResult.data !== undefined || schemaResult.error != null;
   const itemQuery = useResourceItem(resource, id, params, {
     retry,
     // Once deleted here, the record is gone: do not ask for it again.
-    enabled: !remove.isSuccess,
+    enabled: !remove.isSuccess && schemaSettled,
   });
 
   const [deleteOpen, setDeleteOpen] = React.useState(false);
