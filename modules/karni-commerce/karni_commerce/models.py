@@ -162,6 +162,16 @@ class Order(BaseModel):
     )
     email = models.EmailField()
     buyer_name = models.CharField(max_length=200, blank=True, default="")
+    # Who bought, as the people contract knows them (karni.people.resolve at checkout):
+    # the same Person as the CRM's contact or the booking's guest. The email and the
+    # name stay copied on the order.
+    person = models.ForeignKey(
+        "people.Person",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="commerce_orders",
+    )
     status = StateField(
         states=list(STATES),
         transitions={
@@ -215,6 +225,7 @@ class Order(BaseModel):
             "user",
             "email",
             "buyer_name",
+            "person",
             "status",
             "currency",
             "subtotal",

@@ -66,6 +66,7 @@ from karni_commerce.sellables import Price, Sellable, adapter_for, kinds, refuse
 __all__ = [
     "PricedLine",
     "add_note",
+    "buyer_person",
     "apply_coupon",
     "cancel",
     "cart_lines",
@@ -420,6 +421,24 @@ def _save_new(order: Order) -> Order:
     raise ValidationError({"number": ["Too many orders at once. Try again."]})
 
 
+def buyer_person(*, user: Any = None, email: str = "", name: str = "", phone: str = "") -> Any:
+    """The :class:`karni.people.models.Person` who buys: found or made by ``karni.people.resolve``.
+
+    A signed-in buyer is the person linked to their account (or the person with
+    their email). A guest is the person with the email they typed. Blank names and
+    phone on the person are filled from what checkout knows, never overwritten.
+    """
+    from karni import people
+
+    return people.resolve(
+        user=_user(user),
+        email=str(email or "").strip() or None,
+        name=str(name or "").strip() or None,
+        phone=str(phone or "").strip() or None,
+        source="karni_commerce",
+    )
+
+
 def hold_minutes() -> int:
     return int(conf.get("KARNI_COMMERCE_HOLD_MINUTES"))
 
@@ -515,6 +534,12 @@ def place_order(
     person = _user(user)
     currency = conf.currency()
     priced = priced_lines(lines, person)
+    buyer = buyer_person(
+        user=person,
+        email=str(email),
+        name=str(name),
+        phone=str((billing or {}).get("phone", "") or ""),
+    )
     found = pricing.find_coupon(coupon) if isinstance(coupon, str) else coupon
     if isinstance(coupon, str) and coupon.strip() and found is None:
         raise refuse("No coupon has that code.", field="coupon")
@@ -566,6 +591,7 @@ def place_order(
             user=person,
             email=str(email).strip(),
             buyer_name=str(name).strip(),
+            person=buyer,
             status="pending",
             currency=currency,
             subtotal=result.subtotal,

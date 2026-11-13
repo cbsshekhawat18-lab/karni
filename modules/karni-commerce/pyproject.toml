@@ -49,6 +49,9 @@ commerce = "karni_commerce"
 [project.entry-points."karni.settings"]
 commerce = "karni_commerce.conf:DEFAULTS"
 
+[project.entry-points."karni.errorcodes"]
+commerce = "karni_commerce.errorcodes:CODES"
+
 [dependency-groups]
 dev = [
     "pytest>=8.2",

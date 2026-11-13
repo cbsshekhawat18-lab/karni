@@ -37,6 +37,7 @@ __all__ = [
     "DEFAULT_CACHE_TTL",
     "FEATURES",
     "MODULES",
+    "MODULE_CONTRACTS",
     "OTHER_MODELS",
     "SOCIAL_PROVIDERS",
     "USER_MODEL",
@@ -72,6 +73,9 @@ CONTRACT_ACTIONS: Final[dict[str, tuple[str, ...]]] = {"people": ("merge", "eras
 #: Experimental. The contracts each contract needs, switched on with it: the timeline points
 #: at people and writes its entries from family events.
 CONTRACT_NEEDS: Final[dict[str, tuple[str, ...]]] = {"timeline": ("people", "events")}
+#: Experimental. The contracts a module needs, switched on when karni.yaml lists it:
+#: every order of karni-commerce names its person (karni.COM001 without it).
+MODULE_CONTRACTS: Final[dict[str, tuple[str, ...]]] = {"commerce": ("people",)}
 
 
 def contracts_with_needs(names: Iterable[str]) -> list[str]:
