@@ -56,8 +56,26 @@ class Product(karni.Product):
 
         return self.low_stock if self.low_stock is not None else low_stock_level()
 
+    def stock_figures(self) -> tuple[int, int]:
+        """``(stock, available)`` as people read them: the product's own, or for a
+        product with active variations the sum of theirs (never stored apart).
+
+        Reads the figures :func:`shop.services.with_stock` annotated when they are
+        there, else asks the database once.
+        """
+        if hasattr(self, "available_total"):
+            return int(self.stock_total), int(self.available_total)
+        from django.db.models import Count, Sum
+
+        found = Variation.objects.filter(product=self, active=True).aggregate(
+            count=Count("pk"), stock=Sum("stock"), available=Sum("available")
+        )
+        if found["count"]:
+            return int(found["stock"] or 0), int(found["available"] or 0)
+        return int(self.stock), int(self.available)
+
     def runs_low(self) -> bool:
-        return self.active and self.available <= self.low_stock_level()
+        return self.active and self.stock_figures()[1] <= self.low_stock_level()
 
     def more_description(self) -> str:
         """The description without what the short description already says.

@@ -20,7 +20,7 @@ from karni.tiles import register
 from karni_commerce.models import OrderLine
 
 from shop.models import Product
-from shop.services import low_stock_level
+from shop.services import low_stock_level, with_stock
 
 PAID = ("paid", "part_paid", "part_refunded")
 
@@ -35,15 +35,16 @@ PAID = ("paid", "part_paid", "part_refunded")
     link="/products?ordering=available",
 )
 def low_stock(request: Any) -> dict[str, Any]:
-    """Active products at or under their low-stock level, the fewest left first."""
+    """Active products at or under their low-stock level, the fewest left first. A
+    product with variations counts what is left of all of them."""
     level = Coalesce(
         F("low_stock"), Value(low_stock_level()), output_field=IntegerField()
     )
     rows = (
-        Product.objects.filter(active=True)
+        with_stock(Product.objects.filter(active=True))
         .annotate(level=level)
-        .filter(available__lte=F("level"))
-        .order_by("available", "name")[:8]
+        .filter(available_total__lte=F("level"))
+        .order_by("available_total", "name")[:8]
     )
     return {
         "columns": [
@@ -55,7 +56,7 @@ def low_stock(request: Any) -> dict[str, Any]:
             {
                 "name": product.name,
                 "sku": product.sku,
-                "available": product.available,
+                "available": product.available_total,
                 "link": f"/products/{product.pk}",
             }
             for product in rows

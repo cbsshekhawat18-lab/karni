@@ -66,6 +66,7 @@ def _store_serializer(base: type[serializers.ModelSerializer[Any]]) -> type[Any]
         price_from = serializers.SerializerMethodField()
         price_to = serializers.SerializerMethodField()
         stock_left = serializers.SerializerMethodField()
+        stock_from_variations = serializers.SerializerMethodField()
 
         class Meta(base.Meta):  # type: ignore[name-defined]
             fields = [
@@ -79,7 +80,46 @@ def _store_serializer(base: type[serializers.ModelSerializer[Any]]) -> type[Any]
                 "price_from",
                 "price_to",
                 "stock_left",
+                "stock_from_variations",
             ]
+
+        def to_representation(self, instance: Any) -> Any:
+            """``stock`` and ``available`` as people read them: a product with
+            variations has its variations' stock added up (Product.stock_figures)."""
+            data = super().to_representation(instance)
+            if isinstance(instance, Product):
+                stock, available = instance.stock_figures()
+                if "stock" in data:
+                    data["stock"] = stock
+                if "available" in data:
+                    data["available"] = available
+            return data
+
+        def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+            """A product with variations takes its stock from them: a form that sends
+            back the figure it read changes nothing, another figure is refused."""
+            attrs = super().validate(attrs)
+            product = self.instance
+            if (
+                isinstance(product, Product)
+                and "stock" in attrs
+                and self.get_stock_from_variations(product)
+            ):
+                if int(attrs["stock"]) != product.stock_figures()[0]:
+                    problem = (
+                        "This product is sold in variations: change the stock of "
+                        "each variation."
+                    )
+                    raise ValidationError({"stock": [problem]})
+                attrs.pop("stock")
+            return attrs
+
+        def get_stock_from_variations(self, product: Product) -> bool:
+            """Whether ``stock`` and ``available`` are the variations' added up."""
+            found = getattr(product, "has_variations", None)
+            if found is None:
+                found = bool(self._variations(product))
+            return bool(found)
 
         def _variations(self, product: Product) -> list[Variation]:
             rows = getattr(product, "shop_active_variations", None)
@@ -184,6 +224,26 @@ def _store_serializer(base: type[serializers.ModelSerializer[Any]]) -> type[Any]
     return Store
 
 
+STOCK_FIELDS = ("stock", "available")
+
+
+@cache
+def _product_filters() -> type[Any]:
+    """The products' filters, with ``stock`` and ``available`` (and their ``__gte`` and
+    ``__lte``) on the figures people read: a product with variations by theirs."""
+    from karni.api.filters import IntegerFilter, KarniFilterBackend
+
+    base = KarniFilterBackend().derive_filterset_class(Product)
+    declared: dict[str, Any] = {}
+    for name in STOCK_FIELDS:
+        for lookup in ("exact", "gte", "lte"):
+            key = name if lookup == "exact" else f"{name}__{lookup}"
+            declared[key] = IntegerFilter(
+                field_name=f"{name}_total", lookup_expr=lookup
+            )
+    return type("ProductFilterSet", (base,), declared)
+
+
 class ProductViewSet(karni.ProductViewSet):
     """Products. A shopper sees the active ones, with their price today and what is
     left.
@@ -217,8 +277,32 @@ class ProductViewSet(karni.ProductViewSet):
     def get_serializer_class(self) -> type[Any]:
         return _store_serializer(super().get_serializer_class())
 
+    @property
+    def filterset_class(self) -> type[Any]:  # type: ignore[override]
+        return _product_filters()
+
+    def filter_queryset(self, queryset: QuerySet[Product]) -> QuerySet[Product]:
+        """Sort by ``stock`` and ``available`` as people read them (with_stock)."""
+        found = super().filter_queryset(queryset)
+        terms = [
+            term.strip()
+            for term in str(self.request.query_params.get("ordering", "") or "").split(
+                ","
+            )
+            if term.strip()
+        ]
+        if not any(term.lstrip("-") in STOCK_FIELDS for term in terms):
+            return found
+        mapped = [
+            f"{term}_total" if term.lstrip("-") in STOCK_FIELDS else term
+            for term in terms
+        ]
+        return found.order_by(*mapped, "pk")
+
     def get_queryset(self) -> QuerySet[Product]:
-        queryset = services.with_effective_price(super().get_queryset())
+        queryset = services.with_stock(
+            services.with_effective_price(super().get_queryset())
+        )
         user = self.request.user
         if not (user.is_authenticated and user.can("shop.product:change")):
             queryset = queryset.filter(active=True)

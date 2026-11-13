@@ -17,11 +17,24 @@ from typing import Any
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Case, DecimalField, F, Q, QuerySet, When
+from django.db.models import (
+    Case,
+    DecimalField,
+    Exists,
+    F,
+    IntegerField,
+    OuterRef,
+    Q,
+    QuerySet,
+    Subquery,
+    Sum,
+    When,
+)
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from karni_commerce.models import Order
 
-from shop.models import Product, Review, Shipment
+from shop.models import Product, Review, Shipment, Variation
 
 #: The money states of an order whose buyer paid for what they got.
 PAID = ("paid", "part_paid", "part_refunded")
@@ -52,6 +65,37 @@ def with_effective_price(queryset: QuerySet[Product]) -> QuerySet[Product]:
             default=F("price"),
             output_field=DecimalField(max_digits=19, decimal_places=4),
         )
+    )
+
+
+def with_stock(queryset: QuerySet[Product]) -> QuerySet[Product]:
+    """Each product with its stock as a shopper and staff read it.
+
+    ``stock_total`` and ``available_total`` are the product's own ``stock`` and
+    ``available``, or for a product with active variations the sum of theirs: such a
+    product is bought by its variations, so its own figures do not move.
+    ``has_variations`` says which. The product list, its filters, the home tiles and
+    the API all read these, so "Sold out" and "Running low" follow the variations.
+    """
+    active = Variation.objects.filter(product=OuterRef("pk"), active=True)
+
+    def total(field: str) -> Coalesce:
+        summed = (
+            active.order_by()
+            .values("product")
+            .annotate(total=Sum(field))
+            .values("total")[:1]
+        )
+        return Coalesce(
+            Subquery(summed, output_field=IntegerField()),
+            F(field),
+            output_field=IntegerField(),
+        )
+
+    return queryset.annotate(
+        has_variations=Exists(active),
+        stock_total=total("stock"),
+        available_total=total("available"),
     )
 
 

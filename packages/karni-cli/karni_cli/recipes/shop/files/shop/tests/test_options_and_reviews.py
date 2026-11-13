@@ -109,6 +109,59 @@ def test_a_product_with_variations_is_bought_by_one_with_its_price_and_stock(
     assert (fresh(large).stock, fresh(large).available) == (1, 1)
 
 
+def test_a_product_with_variations_reads_their_stock_everywhere(
+    shirt: Product, settings: Any
+) -> None:
+    """Its stock is its variations' added up: the API, the filters, the sort and the
+    home tiles follow them, and its own figure is never asked for."""
+    settings.SHOP_LOW_STOCK = 2
+    plain = create(
+        Product,
+        name="Plain Mug",
+        sku="MUG",
+        price=Decimal("9.00"),
+        sale_price=None,
+        stock=1,
+        available=1,
+        active=True,
+    )
+    manager = APIClient()
+    manager.force_authenticate(user_with_roles("shop-manager"))
+    row = manager.get(f"/api/products/{shirt.pk}/").data
+    assert (row["stock"], row["available"], row["stock_from_variations"]) == (
+        4,
+        4,
+        True,
+    )
+    assert fresh(shirt).stock == 5 and not shirt.runs_low()
+    # Both sizes sell: the product is sold out though its own stock says 5.
+    for sku, count in (("SHIRT-M", 3), ("SHIRT-L", 1)):
+        cart = Cart.objects.create()
+        variation = {"variation": str(way(shirt, sku).pk)}
+        commerce.set_line(cart, "product", str(shirt.pk), count, variation)
+        pay(place(cart))
+    assert fresh(shirt).stock == 5 and fresh(shirt).runs_low()
+    row = manager.get(f"/api/products/{shirt.pk}/").data
+    assert (row["stock"], row["available"], row["stock_left"]) == (0, 0, 0)
+    sold_out = manager.get("/api/products/", {"available__lte": 0, "active": "true"})
+    assert [found["sku"] for found in sold_out.data["results"]] == ["SHIRT"]
+    in_stock = manager.get("/api/products/", {"stock__gte": 1})
+    assert "SHIRT" not in [found["sku"] for found in in_stock.data["results"]]
+    ordered = manager.get("/api/products/", {"ordering": "available"})
+    assert [found["sku"] for found in ordered.data["results"]][:2] == ["SHIRT", "MUG"]
+    board = manager.get("/api/dashboard/").data["tiles"]
+    tiles = {tile["key"]: tile for tile in board}
+    low = [found["name"] for found in tiles["shop.low_stock"]["data"]["rows"]]
+    assert low[:2] == ["Linen Shirt", plain.name]
+    # The form sends back the stock it read: nothing changes. Another figure is refused.
+    same = manager.patch(f"/api/products/{shirt.pk}/", {"stock": 0}, format="json")
+    assert same.status_code == 200, same.data
+    other = manager.patch(f"/api/products/{shirt.pk}/", {"stock": 9}, format="json")
+    assert other.status_code == 400
+    assert "variation" in str(other.data)
+    assert fresh(shirt).stock == 5
+
+
 def test_the_last_of_a_variation_goes_to_one_buyer(shirt: Product) -> None:
     large = {"variation": str(way(shirt, "SHIRT-L").pk)}
     first, second = Cart.objects.create(), Cart.objects.create()
