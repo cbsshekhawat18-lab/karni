@@ -21,6 +21,12 @@ export interface TreeViewNodeProps {
   selected: boolean;
   /** Whether its branch is open. */
   expanded: boolean;
+  /** Experimental. The node's `countField` number, or null. */
+  count?: number | null;
+  /** Experimental. What the count counts, for screen readers ("datasets"). */
+  countNoun?: string | undefined;
+  /** Experimental. True for a node the search found (shown in bold), not one kept only as an ancestor. */
+  matched?: boolean;
 }
 
 /** Experimental. What the `Empty` slot receives. */
@@ -48,10 +54,22 @@ export interface TreeViewSlots {
   Error: React.ComponentType<ErrorSlotProps>;
 }
 
-export function TreeViewNode({ label, selected }: TreeViewNodeProps): React.ReactElement {
+export function TreeViewNode({
+  label,
+  selected,
+  count = null,
+  countNoun,
+  matched = false,
+}: TreeViewNodeProps): React.ReactElement {
   return (
     <>
-      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <span className={cn("min-w-0 flex-1 truncate", matched && "font-semibold")}>{label}</span>
+      {count !== null ? (
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+          {count.toLocaleString()}
+          {countNoun !== undefined ? <span className="sr-only"> {countNoun}</span> : null}
+        </span>
+      ) : null}
       {selected ? <CheckIcon className="h-4 w-4 shrink-0" /> : null}
     </>
   );
