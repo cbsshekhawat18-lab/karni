@@ -920,6 +920,8 @@ class ShipmentSeeder(karni.ShipmentSeeder):
         when: dict[str, Any] = {"created_at": placed}
         if Order.objects.filter(pk=order.pk, paid_at__isnull=False).exists():
             when["paid_at"] = placed + timedelta(minutes=10)  # paid as it was placed
+            # its invoice is dated the day it was paid
+            Invoice.objects.filter(order=order).update(issued_at=when["paid_at"])
         this.update(**when)  # karni: allow(audited-bulk-write): demo data
         parcels = Shipment.objects.filter(order=order)
         later = {"created_at": placed + timedelta(hours=1)}
@@ -1121,6 +1123,7 @@ class DownloadSeeder(karni.DownloadSeeder):
                 when = {"created_at": placed, "paid_at": placed + timedelta(minutes=5)}
                 this = Order.objects.filter(pk=order.pk)
                 this.update(**when)  # karni: allow(audited-bulk-write): demo data
+                Invoice.objects.filter(order=order).update(issued_at=when["paid_at"])
         first = Download.objects.order_by("created_at", "pk").first()
         if first is not None:
             first.downloads, first.last_at = 1, now - timedelta(days=1)

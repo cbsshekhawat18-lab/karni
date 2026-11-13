@@ -125,7 +125,14 @@ export function EmailTemplateEditor({ kind, onClose }: EmailTemplateEditorProps)
   if (query.isPending) return <p role="status">Loading the email…</p>;
   if (data === undefined) return <p role="alert">The email could not be loaded.</p>;
 
-  const listFields = data.fields.filter((field) => field.name.includes("."));
+  // A field whose meaning starts with "Each" is one value per row of a list: the list is
+  // its path less the last name (lines.name: the list lines, the value name).
+  const listFields = data.fields.filter(
+    (field) => field.name.includes(".") && /^each\b/i.test(field.meaning),
+  );
+  const example = listFields[0]?.name ?? "";
+  const listPath = example.slice(0, example.lastIndexOf("."));
+  const valueName = example.slice(example.lastIndexOf(".") + 1);
   const busy = save.isPending || reset.isPending;
 
   return (
@@ -218,10 +225,10 @@ export function EmailTemplateEditor({ kind, onClose }: EmailTemplateEditorProps)
           </div>
           {listFields.length > 0 ? (
             <p className="text-sm text-muted-foreground">
-              A list field such as <code className="font-mono">{listFields[0]?.name}</code> is used
-              in a loop:{" "}
+              A field that says &ldquo;each&rdquo;, such as{" "}
+              <code className="font-mono">{example}</code>, is one per row, written in a loop:{" "}
               <code className="break-words font-mono">
-                {"{% for line in lines %}{{ line.name }}{% endfor %}"}
+                {`{% for row in ${listPath} %}{{ row.${valueName} }}{% endfor %}`}
               </code>
             </p>
           ) : null}

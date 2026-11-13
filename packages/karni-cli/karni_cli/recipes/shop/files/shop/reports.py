@@ -1,6 +1,7 @@
 """The shop's reports beside karni-commerce's (sales by date, by item, coupons used).
 
-* ``shop.sales_by_category``: what sold in each category, in the range.
+* ``shop.sales_by_category``: what sold in each category, in the range. A sale counts
+  in its category and in each one above it, and the totals count the top ones.
 * ``shop.stock``: every product (and variation) with what is left, the low-stock level
   and its state now.
 
@@ -73,7 +74,13 @@ def sales_by_category(query: ReportQuery) -> dict[str, Any]:
     )
     for entry in rows:
         entry["net"] = entry["sales"] - entry["discounts"]
+    tops = [entry for entry in rows if not entry["parent"]]  # each sale counted once
+    totals = {
+        key: sum((entry[key] for entry in tops), Decimal(0))
+        for key in ("sales", "discounts", "net")
+    }
     return {
+        "totals": {"sold": sum(entry["sold"] for entry in tops), **totals},
         "columns": [
             Column("category", "Category"),
             Column("parent", "In"),

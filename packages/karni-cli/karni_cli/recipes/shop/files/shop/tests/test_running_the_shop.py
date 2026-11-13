@@ -307,7 +307,9 @@ def test_the_shop_reports_for_the_manager_only(make_product: MakeProduct) -> Non
         keys
     )
     assert as_role("shop-staff").get("/api/orders/reports/").data == []
-    rows = manager.get("/api/orders/reports/shop.sales_by_category/").data["rows"]
+    by_category = manager.get("/api/orders/reports/shop.sales_by_category/").data
+    assert by_category["totals"]["sales"] == "40.00"
+    rows = by_category["rows"]
     assert [(row["category"], row["sold"], row["sales"]) for row in rows] == [
         ("Lighting", 2, "40.00"),
         ("Lamps", 2, "40.00"),
