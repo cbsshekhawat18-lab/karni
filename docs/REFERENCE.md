@@ -42,6 +42,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | A tenant scope on every model (the `karni-tenancy` module) | `planned` | [documented](models.md#scopes-the-filters-every-default-manager-applies) |
 | The people contract (`karni.people`, `KARNI_PEOPLE`): one person and one organisation record for every part of a project, `people.resolve` by account or email, the account linked once its email is verified, person facts in SQL, duplicates, merge with a preview and hooks, erase on request, `/api/people/`. Experimental tier | `experimental` | Karni's own tests |
 | The timeline contract (`karni.timeline`): one stream of moments per person and per record, `timeline.record` by hand, entries from family events that declare `timeline=`, `GET /api/timeline/` with each entry checked against the row scope of every record it is about, cursor paging, retention. Experimental tier | `experimental` | Karni's own tests |
+| The preferences contract (`karni.preferences`): the business's details, one settings section per part as a Pydantic model, `preferences.value(path, default)` with a typed default, locks a deployment fixes, connections and email switches, audited changes, `/api/preferences/` behind the Settings page. Experimental tier | `experimental` | Karni's own tests |
 
 ### API
 
@@ -1869,6 +1870,10 @@ class Lead(BaseModel):
 | `KARNI_TIMELINE_MAX_PAGE_SIZE` |  | `100` | Experimental. The largest `?limit=` of `GET /api/timeline/`. |
 | `KARNI_TIMELINE_RETENTION_DAYS` |  | `None` | Experimental. Days a timeline entry is kept. `None` (the default) keeps them all and schedules no pruning. |
 | `KARNI_TIMELINE_VISIBILITY` |  | `"karni.timeline.access.Visibility"` | Experimental. Dotted path of the class (a subclass of `karni.timeline.access.Visibility`) that says which records a request may read, so which timeline entries it sees. |
+| `KARNI_PREFERENCES_LOCKED` |  | `{}` | Experimental. Values the deployment fixes, by group then name: `{"details": {"currency": "EUR"}, "bookings": {"refund_notice_hours": 48}, "connections": {"crm.deal_timeline": False}, "emails": {...}}`. Every read answers the lock, the Settings page shows it read only and a change is refused (`E324`). `karni check` refuses a name nobody declared or a value its field refuses (`E320`). See [preferences](preferences.md). |
+| `KARNI_PREFERENCES_DEFAULTS` |  | `{}` | Experimental. Values the deployment starts with, in the shape of `KARNI_PREFERENCES_LOCKED`. The business can change them in Settings. `karni build` writes the project's name and currency here. |
+| `KARNI_PREFERENCES_API` |  | `True` | Experimental. Route `/api/preferences/`, the API behind the Settings page, when `karni.preferences` is installed. `False` leaves it out. |
+| `KARNI_PREFERENCES_AUTODISCOVER` |  | `True` | Experimental. Import every installed app's `preferences.py` and `connections.py` at startup, where parts declare their settings sections, connections and email kinds. |
 | `KARNI_ACCOUNTS_TOKEN_TTL` |  | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
 | `KARNI_ACCOUNTS_LINKS` |  | `{ "verify_email": "{frontend}/auth/verify-email?token={token}", "reset_password": "{frontend}/auth/reset-password?token={token}", "change_email": "{frontend}/auth/confirm-email-change?token={token}"}` | Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders. |
 | `KARNI_AUTH_THROTTLE_RATES` |  | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object. `null` disables a scope. |
@@ -2507,6 +2512,12 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E304`](errors.md#e304) | exception | karni_makemigrations --renames is not a rename list |
 | [`E305`](errors.md#e305) | exception | An app has more than one latest migration, so the renames have no place |
 | [`E310`](errors.md#e310) | test | A module's manifest does not match the module |
+| [`E320`](errors.md#e320) | check | A preferences lock or default names nothing, or a value its field refuses |
+| [`E321`](errors.md#e321) | exception | A settings section cannot be registered |
+| [`E322`](errors.md#e322) | exception | A connection or an email kind cannot be declared |
+| [`E323`](errors.md#e323) | api | A preferences change has a field or a value it cannot take |
+| [`E324`](errors.md#e324) | api | A preferences value is fixed by the deployment |
+| [`E325`](errors.md#e325) | exception | No such section, connection or email kind |
 | [`E340`](errors.md#e340) | exception | A tree node's new parent is the node itself or a node below it |
 | [`E341`](errors.md#e341) | exception | A tree node with live children cannot be deleted alone |
 | [`E342`](errors.md#e342) | api | A tree endpoint got a parameter it cannot use |

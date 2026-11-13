@@ -384,6 +384,14 @@ BASE: dict[str, Any] = {
     "KARNI_TIMELINE_MAX_PAGE_SIZE": 100,
     "KARNI_TIMELINE_RETENTION_DAYS": None,
     "KARNI_TIMELINE_VISIBILITY": "karni.timeline.access.Visibility",
+    # The preferences contract (experimental, the karni.preferences app): values the
+    # deployment fixes and values it starts with ({"details": {...}, "<section>": {...},
+    # "connections": {...}, "emails": {...}}), route /api/preferences/, and import every
+    # app's preferences.py and connections.py.
+    "KARNI_PREFERENCES_LOCKED": {},
+    "KARNI_PREFERENCES_DEFAULTS": {},
+    "KARNI_PREFERENCES_API": True,
+    "KARNI_PREFERENCES_AUTODISCOVER": True,
     "KARNI_ACCOUNTS_TOKEN_TTL": {
         "verify_email": 86400,
         "reset_password": 3600,

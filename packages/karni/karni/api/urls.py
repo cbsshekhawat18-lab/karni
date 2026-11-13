@@ -57,13 +57,24 @@ def _timeline_urlpatterns() -> list[Any]:
     return build_urlpatterns()
 
 
+def _preferences_urlpatterns() -> list[Any]:
+    """``preferences/`` while ``karni.preferences`` is installed and its API is on."""
+    if not apps.is_installed("karni.preferences"):
+        return []
+    from karni.preferences.api import build_urlpatterns
+
+    return build_urlpatterns()
+
+
 #: What Karni mounts before the router's routes: ``navigation/`` while ``KARNI_NAVIGATION``
-#: is set, ``search/``, and ``timeline/`` with ``karni.timeline``.
+#: is set, ``search/``, ``timeline/`` with ``karni.timeline`` and ``preferences/`` with
+#: ``karni.preferences``.
 #: :func:`karni.api.versions.api_urls` mounts them in each version.
 extra_urlpatterns = [
     *navigation_urlpatterns(),
     path("search/", GlobalSearchView.as_view(), name="karni-global-search"),
     *_timeline_urlpatterns(),
+    *_preferences_urlpatterns(),
 ]
 
 urlpatterns = [*extra_urlpatterns, *router.urls]

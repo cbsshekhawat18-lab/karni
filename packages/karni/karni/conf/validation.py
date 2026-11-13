@@ -109,6 +109,10 @@ class KarniSettingsModel(BaseModel):
     KARNI_TIMELINE_MAX_PAGE_SIZE: int = Field(default=100, ge=1, le=1000)
     KARNI_TIMELINE_RETENTION_DAYS: int | None = Field(default=None, ge=1)
     KARNI_TIMELINE_VISIBILITY: Any = "karni.timeline.access.Visibility"
+    KARNI_PREFERENCES_LOCKED: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    KARNI_PREFERENCES_DEFAULTS: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    KARNI_PREFERENCES_API: bool = True
+    KARNI_PREFERENCES_AUTODISCOVER: bool = True
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)
     KARNI_ADMIN_GRANTS_OPEN_PAGES: bool = True
     KARNI_MATRIX_EXCLUDE: list[Any] = Field(default_factory=list)

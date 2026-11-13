@@ -35,7 +35,8 @@ aggregations (``karni.aggregation``) · ``E43x``/``W59x`` cross-model search
 (``karni.layout``) · ``E45x``/``W45x`` family events and the outbox
 (``karni.events``, ``karni.outbox``) · ``E25x`` the people contract
 (``karni.people``) · ``E46x``/``W46x`` the timeline contract
-(``karni.timeline``).
+(``karni.timeline``) · ``E32x`` the preferences contract
+(``karni.preferences``).
 ``SUG001`` to ``SUG099`` suggestions from code (``karni.suggestions``): what
 ``karni check`` and ``karni doctor`` print after the errors and warnings, never a
 failure. The prefix has three letters because the registry's code pattern reads
@@ -1432,6 +1433,74 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         'provides.models, and add [project.entry-points."karni.modules"] <name> = '
         '"karni_<name>" to pyproject.toml, then reinstall the module. docs/modules.md lists '
         "every key.",
+    ),
+    # E320-E329 the preferences contract (karni.preferences, experimental)
+    _e(
+        "E320",
+        "A preferences lock or default names nothing, or a value its field refuses",
+        "check",
+        "karni.preferences.checks.check_preferences",
+        "KARNI_PREFERENCES_LOCKED and KARNI_PREFERENCES_DEFAULTS map a group (details, a "
+        "section's key, connections, emails) to names and values. A name nobody declared is "
+        "most likely a typo, and a value its field refuses would be refused on the Settings "
+        "page too.",
+        "Write {'details': {'name': ...}, '<section>': {'<field>': ...}, 'connections': "
+        "{'<name>': True}, 'emails': {'<kind>': False}} with the names the message lists, "
+        "and values each field takes.",
+    ),
+    _e(
+        "E321",
+        "A settings section cannot be registered",
+        "exception",
+        "karni.preferences.section",
+        "A section is a subclass of karni.preferences.Section registered under its part's "
+        "prefix, once. Every field needs a valid default, so a project that never opens "
+        "Settings still works. details, connections and emails are kept for the Settings page.",
+        "Subclass preferences.Section, give every field a default its constraints accept, "
+        "and register it as @preferences.section('<prefix>') once.",
+    ),
+    _e(
+        "E322",
+        "A connection or an email kind cannot be declared",
+        "exception",
+        "karni.preferences.connection; karni.preferences.email",
+        "A connection is named '<prefix>.<what>', needs at least one contract or module, "
+        "has a default of True or False and says in one sentence what it does. An email "
+        "kind is named '<prefix>.<message>'. Each name is declared once.",
+        "Correct the name, needs=, default= or describe= the message names, or pass "
+        "replace=True to replace a declaration on purpose.",
+    ),
+    _e(
+        "E323",
+        "A preferences change has a field or a value it cannot take",
+        "api",
+        "karni.preferences.save_details; karni.preferences.save_section; PATCH /api/preferences/",
+        "Details and sections take their declared fields only, and each value must pass "
+        "its field's checks (a time zone name, an ISO currency code, a number in range, "
+        "one of the choices).",
+        "Send the fields the Settings page lists, with values the errors per field "
+        "describe. null puts a section's field back to its default.",
+    ),
+    _e(
+        "E324",
+        "A preferences value is fixed by the deployment",
+        "api",
+        "karni.preferences.save_details; karni.preferences.save_section; karni.preferences.switch",
+        "KARNI_PREFERENCES_LOCKED fixes this value for the deployment. Every read answers "
+        "the lock, so a change would not hold. The API answers 409.",
+        "Change KARNI_PREFERENCES_LOCKED in the deployment's settings, or leave the value "
+        "as it is.",
+    ),
+    _e(
+        "E325",
+        "No such section, connection or email kind",
+        "exception",
+        "karni.preferences.get; karni.preferences.switch; /api/preferences/",
+        "The name is not registered: the part that declares it is not installed, its "
+        "preferences.py or connections.py was not imported, or the name is misspelt. "
+        "preferences.value() never raises it: it returns the default it is given.",
+        "Use a name GET /api/preferences/ lists, install the part, or read the value with "
+        "preferences.value('<section>.<field>', default).",
     ),
     # E340-E359 / W550-W559 tree models (karni.models.TreeModel, karni.tree, experimental)
     _e(

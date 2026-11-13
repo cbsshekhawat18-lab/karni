@@ -103,6 +103,7 @@ def test_models_section_covers_testapp_and_skips_framework() -> None:
             "people",
             "loyaltyapp",
             "helpdeskapp",
+            "preferences",
         }
     ):
         output = build_context()

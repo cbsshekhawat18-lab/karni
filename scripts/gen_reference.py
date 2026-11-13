@@ -441,6 +441,13 @@ CAPABILITIES: tuple[Capability, ...] = (
         "`timeline=`, `GET /api/timeline/` with each entry checked against the row scope of "
         "every record it is about, cursor paging, retention. Experimental tier",
     ),
+    Capability(
+        "models",
+        "The preferences contract (`karni.preferences`): the business's details, one settings "
+        "section per part as a Pydantic model, `preferences.value(path, default)` with a typed "
+        "default, locks a deployment fixes, connections and email switches, audited changes, "
+        "`/api/preferences/` behind the Settings page. Experimental tier",
+    ),
     Capability("permissions", "Field visibility per role (`class Karni: field_roles`)"),
     Capability("permissions", "Row scope in the admin, from the same grants as the API"),
     Capability(

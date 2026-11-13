@@ -1224,12 +1224,20 @@ def send_move_email(instance: models.Model, key: str) -> int:
     context: ``row``, ``key``, ``state``, ``recipient`` and ``frontend``
     (``KARNI_FRONTEND_URL``). Sent through the project's ``EMAIL_BACKEND``
     (the console in development). A user without an email gets nothing.
+    The email kind ``<app_label>.<model>_<key>`` switched off in Settings,
+    Emails sends nothing (:func:`karni.preferences.email_on`), and the
+    project's details give the sender (:func:`karni.preferences.sender`).
     """
     from django.core.mail import EmailMultiAlternatives
     from django.template import TemplateDoesNotExist
     from django.template.loader import render_to_string, select_template
 
+    from karni import preferences
+    from karni.preferences.registry import move_email_name
+
     move = next(item for item in rules_of(type(instance)).moves if item.key == key)
+    if not preferences.email_on(move_email_name(type(instance), key)):
+        return 0  # switched off in Settings, Emails
     recipient = _walk(instance, move.notify or "")
     address = getattr(recipient, "email", "") or ""
     if not address:
@@ -1250,7 +1258,9 @@ def send_move_email(instance: models.Model, key: str) -> int:
         return str(select_template(names).render(context))
 
     subject = " ".join(render("subject.txt").split())  # one header line
-    message = EmailMultiAlternatives(subject=subject, body=render("body.txt"), to=[address])
+    message = EmailMultiAlternatives(
+        subject=subject, body=render("body.txt"), from_email=preferences.sender(), to=[address]
+    )
     try:
         html = render_to_string(f"{own}_body.html", context)
     except TemplateDoesNotExist:

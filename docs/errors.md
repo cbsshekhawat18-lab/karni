@@ -1125,6 +1125,66 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Fix the manifest or the module as the line says: list every KARNI_&lt;NAME>_* setting of conf.DEFAULTS under [provides.settings] with its type, list the app's models under provides.models, and add [project.entry-points."karni.modules"] &lt;name> = "karni_&lt;name>" to pyproject.toml, then reinstall the module. docs/modules.md lists every key.
 
+<a id="e320"></a>
+
+#### E320: A preferences lock or default names nothing, or a value its field refuses
+
+*system check (error)* · from `karni.preferences.checks.check_preferences`
+
+**Why Karni objects.** KARNI_PREFERENCES_LOCKED and KARNI_PREFERENCES_DEFAULTS map a group (details, a section's key, connections, emails) to names and values. A name nobody declared is most likely a typo, and a value its field refuses would be refused on the Settings page too.
+
+**Fix.** Write {'details': {'name': ...}, '&lt;section>': {'&lt;field>': ...}, 'connections': {'&lt;name>': True}, 'emails': {'&lt;kind>': False}} with the names the message lists, and values each field takes.
+
+<a id="e321"></a>
+
+#### E321: A settings section cannot be registered
+
+*exception* · from `karni.preferences.section`
+
+**Why Karni objects.** A section is a subclass of karni.preferences.Section registered under its part's prefix, once. Every field needs a valid default, so a project that never opens Settings still works. details, connections and emails are kept for the Settings page.
+
+**Fix.** Subclass preferences.Section, give every field a default its constraints accept, and register it as @preferences.section('&lt;prefix>') once.
+
+<a id="e322"></a>
+
+#### E322: A connection or an email kind cannot be declared
+
+*exception* · from `karni.preferences.connection; karni.preferences.email`
+
+**Why Karni objects.** A connection is named '&lt;prefix>.&lt;what>', needs at least one contract or module, has a default of True or False and says in one sentence what it does. An email kind is named '&lt;prefix>.&lt;message>'. Each name is declared once.
+
+**Fix.** Correct the name, needs=, default= or describe= the message names, or pass replace=True to replace a declaration on purpose.
+
+<a id="e323"></a>
+
+#### E323: A preferences change has a field or a value it cannot take
+
+*API 400 response* · from `karni.preferences.save_details; karni.preferences.save_section; PATCH /api/preferences/`
+
+**Why Karni objects.** Details and sections take their declared fields only, and each value must pass its field's checks (a time zone name, an ISO currency code, a number in range, one of the choices).
+
+**Fix.** Send the fields the Settings page lists, with values the errors per field describe. null puts a section's field back to its default.
+
+<a id="e324"></a>
+
+#### E324: A preferences value is fixed by the deployment
+
+*API 400 response* · from `karni.preferences.save_details; karni.preferences.save_section; karni.preferences.switch`
+
+**Why Karni objects.** KARNI_PREFERENCES_LOCKED fixes this value for the deployment. Every read answers the lock, so a change would not hold. The API answers 409.
+
+**Fix.** Change KARNI_PREFERENCES_LOCKED in the deployment's settings, or leave the value as it is.
+
+<a id="e325"></a>
+
+#### E325: No such section, connection or email kind
+
+*exception* · from `karni.preferences.get; karni.preferences.switch; /api/preferences/`
+
+**Why Karni objects.** The name is not registered: the part that declares it is not installed, its preferences.py or connections.py was not imported, or the name is misspelt. preferences.value() never raises it: it returns the default it is given.
+
+**Fix.** Use a name GET /api/preferences/ lists, install the part, or read the value with preferences.value('&lt;section>.&lt;field>', default).
+
 <a id="e340"></a>
 
 #### E340: A tree node's new parent is the node itself or a node below it

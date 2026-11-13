@@ -203,6 +203,27 @@ apply codemods and list the manual steps. This file is the human summary.
 - **Deprecated: `app.recipe` in karni.yaml.** Write `app.recipes: [<name>]`. The old key is
   read as a list of one, with a `KarniDeprecationWarning`, until 1.0, and `karni upgrade`
   rewrites it. See the [migration note](docs/migrations/0.5.md#a-project-lists-its-recipes-in-apprecipes).
+- **Added (experimental): the preferences contract, `karni.preferences`.** What a business
+  changes without code, behind one Settings API. `Details` holds the business's name, legal
+  name, address, phone, contact email, the sender of its emails, logo, time zone, language,
+  currency and how money shows it. Each part declares a settings section as a Pydantic model
+  in its own `preferences.py` (`@preferences.section("bookings")`), its connections in
+  `connections.py` (`preferences.connection(name, needs=[...], default=..., describe=...)`,
+  active when what it needs is installed and its switch is on) and its email kinds. A move's
+  email from `moves.<state>.notify` is listed without one, follows its switch and comes from
+  the details' sender. A part reads with one call and a typed default
+  (`preferences.value("bookings.refund_notice_hours", 0)`), installed or not.
+  `KARNI_PREFERENCES_LOCKED` fixes a value for the deployment (read only on the page, a
+  change is a 409) and `KARNI_PREFERENCES_DEFAULTS` gives where one starts. Every change is
+  audited. `/api/preferences/` answers the Settings page (details, a section per part, the
+  Connections and Emails tabs, each with `can_change`), takes changes per part, lists the
+  history, and `/api/preferences/public/` gives the public details. Admin pages,
+  `preferences.override()` for tests, `karni.preferences.CONTRACT = 1`. karni.yaml's
+  `features: {preferences: true}`, or a recipe whose `requires` names `preferences`, installs
+  it, and the build writes the project's name and currency as the details' defaults. The
+  booking recipe has a refund notice and the `bookings.family_events` connection, the CRM a
+  stale deal list and the `crm.deal_timeline` connection. New codes: E320 to E325. See
+  [preferences](docs/preferences.md).
 
 ## 0.5.1 (2026-11-12)
 
