@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -12,7 +13,7 @@ from karni.testing import _source, architecture, parts
 
 def _project(
     root: Path,
-    recipes: dict[str, dict[str, object]],
+    recipes: dict[str, dict[str, Any]],
     files: dict[str, str],
     *,
     spec: dict[str, object] | None = None,
@@ -33,7 +34,7 @@ def _project(
     return root
 
 
-PAIR = {
+PAIR: dict[str, dict[str, Any]] = {
     "booking": {"apps": {"bookings": {"entities": {"Resource": {}}}}},
     "crm": {"apps": {"crm": {"entities": {"Deal": {}}}}},
 }

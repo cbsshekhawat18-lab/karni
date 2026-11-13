@@ -418,7 +418,8 @@ def check_part_routes(root: Path | None = None) -> list[Violation]:
     if not parts:
         return []
     spec = _load_yaml(base / "karni.yaml")
-    apps = spec.get("apps") if isinstance(spec.get("apps"), dict) else {}
+    found_apps = spec.get("apps")
+    apps: dict[Any, Any] = found_apps if isinstance(found_apps, dict) else {}
     bases: dict[str, str] = {}
     for label, app in apps.items():
         route = app.get("route") if isinstance(app, dict) else None
@@ -473,9 +474,10 @@ def _stray_pages(
     violations: list[Violation] = []
     for match in _ROUTE_LINE.finditer(text):
         path, component = match.group(1), match.group(2)
-        label = owned.get(component)
-        if label is None or component in clash or label not in bases:
+        owner = owned.get(component)
+        if owner is None or component in clash or owner not in bases:
             continue
+        label = owner
         home = bases[label].rstrip("/")
         if path == home or path.startswith(f"{home}/"):
             continue
