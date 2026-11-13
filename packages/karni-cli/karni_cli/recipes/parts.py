@@ -15,7 +15,8 @@ with the sha256 of what it wrote. Both files are committed with the project.
 keeps its fragment and names it in ``.karni/build.json``, so the next build
 writes its files by the stub rule (:mod:`karni_cli.recipes.apply`), migrates
 and seeds only its new tables. :func:`remove` is the reverse for the spec and
-the record: the part's files stay on disk for the project to delete.
+the record, and deletes the part's files the project never changed: the ones
+it changed stay on disk for the project to delete.
 :func:`upgrade` replaces each of the part's files the project did not change
 (its hash still matches) with the recipe's newer one, writes
 ``<file>.recipe-<version>`` beside each one it did change, and updates the
@@ -47,6 +48,7 @@ __all__ = [
     "PARTS_DIR",
     "RECORD_FILE",
     "PartRecord",
+    "Removed",
     "Upgrade",
     "add",
     "bases",
@@ -308,10 +310,23 @@ def start(root: Path, spec_file: Path, recipe: Recipe, *, name: str, kind: str) 
     return merged
 
 
-def remove(root: Path, spec_file: Path, name: str) -> tuple[compose.Merged, list[str]]:
-    """Experimental. Take the part ``name`` out of karni.yaml and its record.
+@dataclass
+class Removed:
+    """Experimental. What ``karni recipes remove`` did with the part's files."""
 
-    Returns the merge result and the part's files that stay on disk.
+    #: The part's files the project never changed (their recorded sha256): deleted.
+    deleted: list[str] = field(default_factory=list)
+    #: The part's files the project changed: kept, for the project to delete or keep.
+    kept: list[str] = field(default_factory=list)
+
+
+def remove(root: Path, spec_file: Path, name: str) -> tuple[compose.Merged, Removed]:
+    """Experimental. Take the part ``name`` out of karni.yaml, its record and its files.
+
+    A file of the part's the project never changed (its recorded sha256) is
+    deleted: its app is leaving, and its tests would import models that are
+    gone. A file the project changed stays, and is listed. Adding the recipe
+    again writes the deleted files again.
 
     :raises CliError: ``C448`` when the project does not hold the part.
     """
@@ -325,11 +340,20 @@ def remove(root: Path, spec_file: Path, name: str) -> tuple[compose.Merged, list
         base = _fragment(found) if found is not None else {}
     merged = compose.unmerge(data, name, base)
     part = load_record(root, name)
-    left = sorted(rel for rel in (part.files if part else {}) if (root / rel).is_file())
+    done = Removed()
+    for rel, digest in sorted((part.files if part else {}).items()):
+        path = root / rel
+        if not path.is_file():
+            continue
+        if record.digest(path.read_text(encoding="utf-8")) == digest:
+            path.unlink()
+            done.deleted.append(rel)
+        else:
+            done.kept.append(rel)
     spec_file.write_text(spec_text(text, merged.data, merged.changed), encoding="utf-8")
     shutil.rmtree(_folder(root, name), ignore_errors=True)
     _pending(root, name, add=False)
-    return merged, left
+    return merged, done
 
 
 @dataclass

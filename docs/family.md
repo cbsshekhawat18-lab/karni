@@ -44,8 +44,10 @@ karni recipes upgrade                              # each part's newer files
 `karni recipes remove <name>` takes the part's apps, roles, pages, menu group
 and seed counts out of karni.yaml, and its record out of `.karni/`. Dropping
 its tables is a risky change, so the build that follows needs
-`--allow-destructive` (`C270`). The part's own files stay on disk, each one
-listed, for you to delete.
+`--allow-destructive` (`C270`). The part's files the project never changed
+(their recorded sha256) are deleted, so its tests do not run against models
+that are gone. The files you changed stay on disk, each one listed, for you to
+delete. Adding the recipe again writes the deleted ones again.
 
 ## How a fragment is merged
 

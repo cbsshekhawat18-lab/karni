@@ -294,15 +294,18 @@ def remove(
 
     Its apps, roles, pages, menu group and seed counts leave karni.yaml, and
     its record leaves .karni/recipes/. Dropping its tables is a risky change:
-    pass --allow-destructive. Its own files stay on disk, each one listed.
+    pass --allow-destructive. Its files the project never changed are deleted,
+    and the ones it changed stay on disk, each one listed.
     """
     from karni_cli.recipes import parts
 
     root, spec = _project_spec()
-    _merged, left = parts.remove(root, spec, name)
+    _merged, done = parts.remove(root, spec, name)
     typer.echo(f"Recipe {name}: taken out of {spec.name} and {parts.PARTS_DIR}/.")
-    if left:
-        typer.echo("Its files stay, for you to delete: " + ", ".join(left))
+    if done.deleted:
+        typer.echo("Its files you never changed are deleted: " + ", ".join(done.deleted))
+    if done.kept:
+        typer.echo("Its files you changed stay, for you to delete: " + ", ".join(done.kept))
     if no_build:
         typer.echo("next: karni build --allow-destructive (it drops the part's tables)")
         return

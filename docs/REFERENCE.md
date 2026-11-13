@@ -1661,7 +1661,7 @@ karni recipes add [OPTIONS] NAME
 
 Experimental. Take a part out of this project, then karni build.
 
-Its apps, roles, pages, menu group and seed counts leave karni.yaml, and its record leaves .karni/recipes/. Dropping its tables is a risky change: pass --allow-destructive. Its own files stay on disk, each one listed.
+Its apps, roles, pages, menu group and seed counts leave karni.yaml, and its record leaves .karni/recipes/. Dropping its tables is a risky change: pass --allow-destructive. Its files the project never changed are deleted, and the ones it changed stay on disk, each one listed.
 
 ```
 karni recipes remove [OPTIONS] NAME

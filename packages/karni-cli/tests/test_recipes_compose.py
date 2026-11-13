@@ -344,7 +344,7 @@ def test_a_part_is_recorded_and_upgraded_where_the_project_left_it(tmp_path: Pat
     assert kept is not None and kept.recipe_version == "1.1.0"
 
 
-def test_remove_takes_the_part_out_and_lists_its_files(tmp_path: Path) -> None:
+def test_remove_takes_the_part_out_and_deletes_the_files_it_never_changed(tmp_path: Path) -> None:
     from karni_cli.recipes import parts
 
     root = tmp_path / "project"
@@ -354,9 +354,11 @@ def test_remove_takes_the_part_out_and_lists_its_files(tmp_path: Path) -> None:
     parts.start(root, spec, recipe, name="Demo", kind="app")
     (root / "desk").mkdir()
     (root / "desk/a.py").write_text("A = 1\n")
-    parts.record_files(root, recipe, {"desk/a.py": "A = 1\n"})
-    _merged, left = parts.remove(root, spec, "desk")
-    assert left == ["desk/a.py"]
+    (root / "desk/b.py").write_text("B = 2  # the project's\n")
+    parts.record_files(root, recipe, {"desk/a.py": "A = 1\n", "desk/b.py": "B = 1\n"})
+    _merged, done = parts.remove(root, spec, "desk")
+    assert done.deleted == ["desk/a.py"] and not (root / "desk/a.py").exists()
+    assert done.kept == ["desk/b.py"] and (root / "desk/b.py").is_file()
     data = load(spec.read_text()).data
     assert data["app"]["recipes"] == [] and "desk" not in data.get("apps", {})
     assert not (root / ".karni/recipes/desk").exists()
