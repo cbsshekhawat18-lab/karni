@@ -224,6 +224,7 @@ apply codemods and list the manual steps. This file is the human summary.
   booking recipe has a refund notice and the `bookings.family_events` connection, the CRM a
   stale deal list and the `crm.deal_timeline` connection. New codes: E320 to E325. See
   [preferences](docs/preferences.md).
+- Test suite: a conftest fixture puts Celery's current app back after every test. A test that built an app with `create_celery_app` left it current and `/readyz` failed in later tests, which made four `test_health_probes.py` tests fail in every full run. `test_retries_are_queued_through_the_dispatcher_outside_eager_mode` also took its "previous" app after the new one was already current.
 
 ## 0.5.1 (2026-11-12)
 
