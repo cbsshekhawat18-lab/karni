@@ -190,7 +190,11 @@ def test_a_role_renamed_away_from_its_prefix_is_found_by_its_grants(tmp_path: Pa
 def test_a_route_that_is_a_family_page_or_taken_is_flagged(tmp_path: Path) -> None:
     spec = {
         "app": {"recipes": ["booking", "crm"]},
-        "apps": {"bookings": {"route": "/settings"}, "crm": {"route": "/shared"}, "other": {"route": "/shared"}},
+        "apps": {
+            "bookings": {"route": "/settings"},
+            "crm": {"route": "/shared"},
+            "other": {"route": "/shared"},
+        },
     }
     root = _project(tmp_path, PAIR, {}, spec=spec)
     found = parts.check_part_routes(root)

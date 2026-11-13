@@ -216,7 +216,9 @@ def _python_references(tree: ast.Module, others: Collection[str]) -> list[Refere
                 and re.match(r"\d{4}_", name.value)
             ):
                 found.append(
-                    Reference(node.lineno, str(label.value), f"depends on its migration {name.value}")
+                    Reference(
+                        node.lineno, str(label.value), f"depends on its migration {name.value}"
+                    )
                 )
     return found
 

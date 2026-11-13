@@ -20,7 +20,10 @@ from karni_cli import recipes as recipes_mod
 from karni_cli.commands import check as check_mod
 from karni_cli.main import app
 
-from .test_family_build import TEST_RECIPES, _new, family  # noqa: F401
+from . import test_family_build
+from .test_family_build import TEST_RECIPES, _new
+
+family = test_family_build.family
 
 BUILTIN = Path(recipes_mod.__file__).parent
 
@@ -45,8 +48,10 @@ def _leaks(name: str, folder: Path, labels: dict[str, list[str]]) -> list[str]:
     files = folder / "files"
     for path in sorted(files.rglob("*")) if files.is_dir() else []:
         if path.is_file():
-            found += [f"{path.relative_to(files)}:{ref.line} {ref.what}"
-                      for ref in part_rules.references_in(path, others)]
+            found += [
+                f"{path.relative_to(files)}:{ref.line} {ref.what}"
+                for ref in part_rules.references_in(path, others)
+            ]
     return found
 
 
@@ -76,7 +81,8 @@ def _check(root: Path) -> tuple[int, str]:
 
 @pytest.mark.recipes
 def test_check_refuses_a_part_naming_another_and_a_stray_role_or_route(
-    family: Path, monkeypatch: pytest.MonkeyPatch  # noqa: F811
+    family: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = _new(family, monkeypatch, "family_rules", "booking", "crm")
     monkeypatch.chdir(root)
@@ -113,7 +119,8 @@ def test_check_refuses_a_part_naming_another_and_a_stray_role_or_route(
 
 @pytest.mark.recipes
 def test_a_build_with_the_bad_test_part_fails_karni_check(
-    family: Path, monkeypatch: pytest.MonkeyPatch  # noqa: F811
+    family: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = family / "family_leaky"
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{root / 'db.sqlite3'}")

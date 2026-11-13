@@ -28,7 +28,6 @@ from karni.agent.check import (
 )
 from karni.exceptions import KarniAssertionError
 from karni.testing import checkcache
-from karni.testing.parts import check_part_imports, check_part_roles, check_part_routes
 from karni.testing._source import (
     Violation,
     check_optout,
@@ -39,6 +38,7 @@ from karni.testing._source import (
     project_sources,
     relative,
 )
+from karni.testing.parts import check_part_imports, check_part_roles, check_part_routes
 
 # The N+1 scaling check needs a database, so it lives in karni.testing.performance;
 # importing it here puts it in the suite every Karni project already runs in CI
