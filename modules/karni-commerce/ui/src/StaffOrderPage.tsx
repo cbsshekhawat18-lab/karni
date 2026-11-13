@@ -28,6 +28,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { problemOf } from "./cart";
 import { Money } from "./Money";
+import { LineDetails, OrderTotals } from "./Totals";
 import { orderPanels } from "./panels";
 import { CommerceLink, useCommerce } from "./routes";
 import { ORDER_STATUS_WORDS } from "./status";
@@ -412,6 +413,7 @@ export function StaffOrderPage({ number, siteName, statusWords }: StaffOrderPage
                     <tr key={line.id} className="border-b border-border last:border-0">
                       <td className="py-2 pr-3">
                         {line.name}
+                        <LineDetails details={line.details} className="text-xs" />
                         {line.sku ? (
                           <span className="block text-xs text-muted-foreground">{line.sku}</span>
                         ) : null}
@@ -435,9 +437,9 @@ export function StaffOrderPage({ number, siteName, statusWords }: StaffOrderPage
                 </tbody>
               </table>
             </div>
+            <OrderTotals order={data} className="ml-auto max-w-xs text-sm" />
             <dl className="ml-auto max-w-xs space-y-1 text-sm">
               {[
-                ["Total", data.total],
                 ["Paid", data.amount_paid],
                 ["Refunded", data.amount_refunded],
                 ["Can still be refunded", data.refundable],

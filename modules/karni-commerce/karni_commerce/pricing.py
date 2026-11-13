@@ -178,15 +178,23 @@ def find_coupon(code: str) -> Coupon | None:
     return Coupon.objects.filter(code=text).first() if text else None
 
 
+def _keys(values: Any) -> list[str]:
+    """A coupon's keys: texts, or ``{"key": ..., "name": ...}`` as the staff's form keeps them."""
+    found: list[str] = []
+    for value in values or []:
+        key = value.get("key") if isinstance(value, dict) else value
+        if key not in (None, ""):
+            found.append(str(key))
+    return found
+
+
 def coupon_applies(coupon: Coupon, line: QuoteLine) -> bool:
     """Whether ``coupon`` takes money off ``line``: its kinds, its items and its limits."""
     kinds = coupon.kind_list()
     if kinds and line.kind.lower() not in kinds:
         return False
-    items = [str(value) for value in coupon.items or []]
-    limits = {
-        str(key): [str(v) for v in values or []] for key, values in (coupon.limits or {}).items()
-    }
+    items = _keys(coupon.items)
+    limits = {str(key): _keys(values) for key, values in (coupon.limits or {}).items()}
     limits = {key: values for key, values in limits.items() if values}
     if not items and not limits:
         return True

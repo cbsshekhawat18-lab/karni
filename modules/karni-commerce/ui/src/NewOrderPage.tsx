@@ -70,6 +70,7 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
           lines: chosen.map((line) => ({
             kind: line.kind,
             item: line.item,
+            options: line.options,
             quantity: line.quantity,
           })),
         },
@@ -77,7 +78,11 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
     onSuccess: (placed) => navigate(paths.order(placed.number)),
   });
   const add = (item: SellableItem) => {
-    const known = chosen.find((line) => line.kind === item.kind && line.item === item.item);
+    const same = (line: Chosen) =>
+      line.kind === item.kind &&
+      line.item === item.item &&
+      JSON.stringify(line.options) === JSON.stringify(item.options);
+    const known = chosen.find(same);
     setChosen(
       known
         ? chosen.map((line) => (line === known ? { ...line, quantity: line.quantity + 1 } : line))
@@ -111,7 +116,7 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
           >
             {(items.data ?? []).map((item) => (
               <li
-                key={`${item.kind}:${item.item}`}
+                key={`${item.kind}:${item.item}:${JSON.stringify(item.options)}`}
                 className="flex items-center justify-between gap-2 p-2 text-sm"
               >
                 <span className="min-w-0">
@@ -146,7 +151,10 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
           ) : (
             <ul aria-label="On the order" className="space-y-2">
               {chosen.map((line) => (
-                <li key={`${line.kind}:${line.item}`} className="flex items-center gap-2 text-sm">
+                <li
+                  key={`${line.kind}:${line.item}:${JSON.stringify(line.options)}`}
+                  className="flex items-center gap-2 text-sm"
+                >
                   <Label htmlFor={`qty-${line.item}`} className="min-w-0 flex-1">
                     {line.name}
                   </Label>

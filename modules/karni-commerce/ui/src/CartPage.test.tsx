@@ -19,7 +19,8 @@ describe("CartPage", () => {
       "href",
       "/shop/lamp",
     );
-    expect(screen.getAllByText("€32.00")).toHaveLength(2); // the line and the subtotal
+    expect(screen.getAllByText("€32.00")).toHaveLength(3); // the line, the items, the total
+    expect(screen.getByText("With the address")).toBeInTheDocument(); // shipping at checkout
     expect(screen.getByText("€20.00").closest(".line-through")).not.toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Check out" }));
     expect(navigated).toEqual(["/checkout"]);
@@ -36,5 +37,21 @@ describe("CartPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Remove Brass Lamp" }));
     await waitFor(() => expect(screen.queryByText("Brass Lamp")).not.toBeInTheDocument());
     expect(screen.getByRole("button", { name: "Check out" })).toBeEnabled();
+  });
+
+  it("applies a coupon, says why a code is refused, and takes it off", async () => {
+    cartState.lines = [{ kind: "product", item: "lamp", quantity: 2 }];
+    renderWithCommerce(<CartPage />);
+    const code = await screen.findByLabelText("Coupon code");
+    await userEvent.type(code, "nope");
+    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("No coupon has that code.");
+    await userEvent.clear(screen.getByLabelText("Coupon code"));
+    await userEvent.type(screen.getByLabelText("Coupon code"), "save10");
+    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(await screen.findByText("Discount (SAVE10)")).toBeInTheDocument();
+    expect(screen.getByText("€28.80")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Remove the coupon" }));
+    await waitFor(() => expect(screen.queryByText("Discount (SAVE10)")).not.toBeInTheDocument());
   });
 });

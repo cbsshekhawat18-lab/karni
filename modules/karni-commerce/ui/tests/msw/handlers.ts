@@ -10,7 +10,7 @@
  * 401: the reader is a visitor unless a test signs someone in.
  */
 import { HttpResponse, http } from "msw";
-import type { Cart, CartLine, Order, Placed } from "../../src/types";
+import type { Cart, CartLine, Order, Placed, Quote } from "../../src/types";
 
 export const API_BASE = "http://localhost/api";
 
@@ -27,9 +27,16 @@ export const ITEMS: Record<string, Known> = {
   seat: { name: "Seat at Pottery", price: "45.00", compare: null, available: null, url: "" },
 };
 
-export const cartState: { lines: { kind: string; item: string; quantity: number }[] } = {
+export const cartState: {
+  lines: { kind: string; item: string; quantity: number }[];
+  coupon: string | null;
+} = {
   lines: [],
+  coupon: null,
 };
+
+/** The one coupon the simulated backend knows: 10% off. */
+export const COUPON = "SAVE10";
 
 export const checkoutCalls: unknown[] = [];
 
@@ -47,7 +54,14 @@ export const orderFixture: Order = {
   buyer_name: "Ines Moreau",
   currency: "EUR",
   subtotal: "32.00",
-  total: "32.00",
+  discount_total: "3.20",
+  shipping_total: "5.00",
+  tax_total: "6.76",
+  tax_lines: [{ name: "TVA", rate: "20.0000", amount: "6.76" }],
+  total: "40.56",
+  prices_include_tax: false,
+  coupon_code: "SAVE10",
+  shipping_method: "Standard",
   amount_paid: "32.00",
   amount_refunded: "0.00",
   billing: {
@@ -78,11 +92,15 @@ export const orderFixture: Order = {
       item: "lamp",
       name: "Brass Lamp",
       sku: "BL-1",
-      options: {},
+      options: { colour: "brass" },
+      details: [{ label: "Finish", value: "Brass" }],
       quantity: 2,
       quantity_refunded: 0,
       unit_price: "16.00",
       line_total: "32.00",
+      discount: "3.20",
+      tax: "5.76",
+      total: "34.56",
       needs_shipping: true,
       url: "/shop/lamp",
       image: null,
@@ -104,6 +122,7 @@ export const orderFixture: Order = {
 
 export function resetMswData(): void {
   cartState.lines = [];
+  cartState.coupon = null;
   checkoutCalls.length = 0;
   ITEMS.lamp.available = 3;
 }
@@ -124,6 +143,7 @@ function line(entry: { kind: string; item: string; quantity: number }): CartLine
     url: known.url,
     image: null,
     options: {},
+    details: [],
     quantity: entry.quantity,
     unit_price: known.price,
     compare_at_price: known.compare,
@@ -135,7 +155,12 @@ function line(entry: { kind: string; item: string; quantity: number }): CartLine
 
 export function currentCart(): Cart {
   const lines = cartState.lines.map(line);
+  const subtotal = lines.reduce((sum, row) => sum + Number(row.line_total), 0);
   return {
+    coupon: cartState.coupon,
+    coupon_description: cartState.coupon ? "10% off" : "",
+    coupon_problem: "",
+    discount: (cartState.coupon ? subtotal * 0.1 : 0).toFixed(2),
     token: lines.length ? "t1" : null,
     lines,
     count: lines.reduce((sum, row) => sum + row.quantity, 0),
@@ -171,6 +196,52 @@ export const handlers = [
     cartState.lines = cartState.lines.filter((row) => row.item !== body.item);
     if (wanted > 0) cartState.lines.push({ kind: body.kind, item: body.item, quantity: wanted });
     return HttpResponse.json(currentCart());
+  }),
+  http.post(`${API_BASE}/carts/current/coupon/`, async ({ request }) => {
+    const body = (await request.json()) as { code: string };
+    const code = body.code.trim().toUpperCase();
+    if (code && code !== COUPON) {
+      return HttpResponse.json({ code: ["No coupon has that code."] }, { status: 400 });
+    }
+    cartState.coupon = code || null;
+    return HttpResponse.json(currentCart());
+  }),
+  http.post(`${API_BASE}/carts/current/quote/`, async ({ request }) => {
+    const body = (await request.json()) as {
+      address: { country: string };
+      shipping_method: string;
+    };
+    const cart = currentCart();
+    const country = body.address.country;
+    const methods =
+      country === "FR"
+        ? [
+            { id: "m1", name: "Standard", kind: "flat", cost: "5.00" },
+            { id: "m2", name: "Pickup in Lyon", kind: "pickup", cost: "0.00" },
+          ]
+        : [];
+    const method = methods.find((m) => m.id === body.shipping_method) ?? methods[0] ?? null;
+    const goods = Number(cart.subtotal) - Number(cart.discount);
+    const shipping = method ? Number(method.cost) : 0;
+    const tax = country === "FR" ? (goods + shipping) * 0.2 : 0;
+    const quote: Quote = {
+      currency: "EUR",
+      subtotal: cart.subtotal,
+      discount: cart.discount,
+      shipping: shipping.toFixed(2),
+      tax: tax.toFixed(2),
+      total: (goods + shipping + tax).toFixed(2),
+      prices_include_tax: false,
+      needs_shipping: cart.needs_shipping,
+      coupon: cart.coupon,
+      coupon_problem: "",
+      methods,
+      method: method?.id ?? null,
+      shipping_problem:
+        country && country !== "FR" ? `We do not send orders to ${country} yet.` : "",
+      tax_lines: tax ? [{ name: "TVA", rate: "20.0000", amount: tax.toFixed(2) }] : [],
+    };
+    return HttpResponse.json(quote);
   }),
   http.post(`${API_BASE}/carts/current/checkout/`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;

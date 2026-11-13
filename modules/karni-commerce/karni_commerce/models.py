@@ -465,7 +465,9 @@ class Coupon(BaseModel):
     ``usage_limit_per_person`` per buyer (by account, else by email). ``kinds``
     limits it to some kinds for sale (``product, seat``), ``items`` to some
     items (``["product:12"]``), and ``limits`` to the coupon keys the kinds'
-    adapters give (``{"categories": ["3"]}``, ``Sellable.coupon_keys``). A
+    adapters give (``{"categories": ["3"]}``, ``Sellable.coupon_keys``). Each
+    key may also be ``{"key": "3", "name": "Kitchen"}``, as the staff's form
+    keeps it, with its name for the screen. A
     line matches when it is one of ``items`` or shares a value with a key of
     ``limits``. With neither, every line of its kinds matches.
     """

@@ -15,6 +15,15 @@ describe("OrderPage", () => {
     expect(screen.queryByRole("button", { name: "Pay now" })).not.toBeInTheDocument();
   });
 
+  it("shows the options of a line and the coupon, shipping and tax the order stored", async () => {
+    renderWithCommerce(<OrderPage number="1001" orderKey="k1" />);
+    expect(await screen.findByText("Finish: Brass")).toBeInTheDocument();
+    expect(screen.getByText("Discount (SAVE10)")).toBeInTheDocument();
+    expect(screen.getByText("Shipping (Standard)")).toBeInTheDocument();
+    expect(screen.getByText("TVA 20%")).toBeInTheDocument();
+    expect(screen.getByText("€40.56")).toBeInTheDocument();
+  });
+
   it("says so without the key", async () => {
     renderWithCommerce(<OrderPage number="1001" />);
     expect(await screen.findByRole("link", { name: "Your orders" })).toHaveAttribute(

@@ -10,6 +10,13 @@ export type { AddressFieldsProps } from "./AddressFields";
 export { CartPage } from "./CartPage";
 export type { CartPageProps } from "./CartPage";
 export { CheckoutPage } from "./CheckoutPage";
+export { CouponBox } from "./CouponBox";
+export { couponLimits, registerCouponLimit } from "./couponLimits";
+export type { CouponLimit } from "./couponLimits";
+export { CouponsPage, ShippingPage, TaxRatesPage } from "./SettingsPages";
+export type { NamedKey, SettingsPageProps } from "./SettingsPages";
+export { LineDetails, OrderTotals, Totals } from "./Totals";
+export type { TotalsProps } from "./Totals";
 export type { CheckoutPageProps } from "./CheckoutPage";
 export { ItemImage } from "./ItemImage";
 export type { ItemImageProps } from "./ItemImage";
@@ -40,11 +47,13 @@ export {
   readCartToken,
   useCart,
   useCurrency,
+  useApplyCoupon,
   useMergeOnSignIn,
+  useQuote,
   useSetLine,
   writeCartToken,
 } from "./cart";
-export type { SetLineInput } from "./cart";
+export type { QuotePlace, SetLineInput } from "./cart";
 export { COUNTRY_CODES, countryOptions } from "./countries";
 export type { CountryOption } from "./countries";
 export { CommerceLink, CommerceProvider, DEFAULT_COMMERCE_PATHS, useCommerce } from "./routes";
@@ -62,6 +71,7 @@ export type {
   CustomerPageData,
   CustomerRow,
   Fulfilment,
+  LineDetail,
   Order,
   OrderLine,
   OrderNote,
@@ -70,6 +80,9 @@ export type {
   OrderRow,
   OrderStatus,
   Placed,
+  Quote,
   SellableItem,
+  ShippingOption,
   StaffOrder,
+  TaxLine,
 } from "./types";

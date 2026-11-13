@@ -686,6 +686,7 @@ class ItemSerializer(serializers.Serializer[Any]):
 
     kind = serializers.CharField()
     item = serializers.CharField()
+    options = serializers.DictField()
     name = serializers.CharField()
     sku = serializers.CharField(allow_blank=True)
     price = serializers.CharField()

@@ -143,7 +143,9 @@ def test_coupon_rules_minimum_dates_limits_and_what_it_applies_to(
     assert services.apply_coupon(cart_with(("seat", seat, 1)), "SEATS") is not None
     Coupon.objects.create(code="SHELF", amount=Decimal("5"), limits={"shelves": ["VAS"]})
     assert "does not apply" in refused("SHELF", ("gadget", lamp, 1))
-    Coupon.objects.create(code="LAMP", amount=Decimal("5"), items=[f"gadget:{lamp.pk}"])
+    Coupon.objects.create(
+        code="LAMP", amount=Decimal("5"), items=[{"key": f"gadget:{lamp.pk}", "name": "Lamp"}]
+    )
     assert services.apply_coupon(cart_with(("gadget", lamp, 1)), "LAMP") is not None
     assert refused("NOPE", ("gadget", lamp, 1)) == "No coupon has that code."
 

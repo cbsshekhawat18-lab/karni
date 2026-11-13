@@ -180,6 +180,14 @@ class Sellable:
         text = json.dumps(chosen, sort_keys=True, default=str)
         return hashlib.sha256(text.encode()).hexdigest()[:32]
 
+    def choices(self, item: Any) -> list[dict[str, Any]]:
+        """Every set of options the item is sold with (each size of a shirt), for staff to pick.
+
+        Staff placing an order by hand see one row per choice. The default is
+        one choice with no options.
+        """
+        return [{}]
+
     def details(self, item: Any, options: Mapping[str, Any]) -> list[dict[str, str]]:
         """The options in words for a cart and an order line: ``[{"label": "Size", "value": "M"}]``.
 

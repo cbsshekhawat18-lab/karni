@@ -17,6 +17,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { problemOf } from "./cart";
 import { ItemImage } from "./ItemImage";
 import { Money } from "./Money";
+import { LineDetails, OrderTotals } from "./Totals";
 import { CommerceLink, useCommerce } from "./routes";
 import { ORDER_STATUS_WORDS } from "./status";
 import type { Address, Order } from "./types";
@@ -178,6 +179,7 @@ export function OrderPage({
               ) : (
                 line.name
               )}
+              <LineDetails details={line.details} />
               <span className="block text-sm text-muted-foreground">
                 {line.quantity} x <Money value={line.unit_price} currency={data.currency} />
                 {line.quantity_refunded > 0 ? `, ${line.quantity_refunded} refunded` : ""}
@@ -187,19 +189,8 @@ export function OrderPage({
           </li>
         ))}
       </ul>
+      <OrderTotals order={data} className="ml-auto max-w-xs" />
       <dl className="ml-auto max-w-xs space-y-1">
-        <div className="flex justify-between">
-          <dt>Subtotal</dt>
-          <dd>
-            <Money value={data.subtotal} currency={data.currency} />
-          </dd>
-        </div>
-        <div className="flex justify-between text-lg font-semibold">
-          <dt>Total</dt>
-          <dd>
-            <Money value={data.total} currency={data.currency} />
-          </dd>
-        </div>
         {Number(data.amount_refunded) > 0 ? (
           <div className="flex justify-between text-sm">
             <dt>Refunded</dt>

@@ -478,7 +478,10 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
         access=Can("karni_commerce.order:add"),
     )
     def items(self, request: Request) -> Response:
-        """What staff may put on an order placed by hand: at most 20 items, priced today."""
+        """What staff may put on an order placed by hand: at most 20 rows, priced today.
+
+        An item sold with options (sizes) gives a row per choice (``Sellable.choices``).
+        """
         wanted = str(request.query_params.get("kind", "") or "")
         text = str(request.query_params.get("search", "") or "")
         found: list[dict[str, Any]] = []
@@ -486,17 +489,21 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
             if wanted and kind != wanted:
                 continue
             for item in adapter.search(text)[: 20 - len(found)]:
-                found.append(
-                    {
-                        "kind": kind,
-                        "item": adapter.key(item),
-                        "name": adapter.name(item, {}),
-                        "sku": adapter.sku(item, {}),
-                        "price": f"{services.money(adapter.price(item, {}, None).unit):.2f}",
-                        "available": adapter.available(item, {}),
-                    }
-                )
+                for options in adapter.choices(item):
+                    price = adapter.price(item, options, None)
+                    found.append(
+                        {
+                            "kind": kind,
+                            "item": adapter.key(item),
+                            "options": options,
+                            "name": adapter.name(item, options),
+                            "sku": adapter.sku(item, options),
+                            "price": f"{services.money(price.unit):.2f}",
+                            "available": adapter.available(item, options),
+                        }
+                    )
             if len(found) >= 20:
+                found = found[:20]
                 break
         return Response(ItemSerializer(found, many=True).data)
 

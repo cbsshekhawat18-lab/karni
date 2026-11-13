@@ -6,7 +6,7 @@
 import { KarniApiError, useAuth, useKarniClient, useToast } from "@karni/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import type { Cart } from "./types";
+import type { Address, Cart, Quote } from "./types";
 
 /** Where this browser keeps a visitor's cart token. */
 export const CART_TOKEN_KEY = "karni.cart-token";
@@ -127,4 +127,61 @@ export function useMergeOnSignIn(): void {
         merged.current = false;
       });
   }, [client, queries, status]);
+}
+
+/** Put a coupon on the cart (a blank code takes it off). The error says why a code was refused. */
+export function useApplyCoupon() {
+  const client = useKarniClient();
+  const queries = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) =>
+      client.request<Cart>("/carts/current/coupon/", {
+        method: "POST",
+        body: { code },
+        headers: cartHeaders(),
+      }),
+    onSuccess: (cart) => {
+      if (cart.token) writeCartToken(cart.token);
+      void queries.invalidateQueries({ queryKey: CART_QUERY_KEY });
+    },
+  });
+}
+
+/** Where the order goes, as far as the quote needs it. */
+export type QuotePlace = Pick<Address, "country"> & Partial<Pick<Address, "region" | "postcode">>;
+
+/**
+ * What the cart comes to at `place` with the shipping method `method`: the ways
+ * to send it, the tax and the total. Asked again when the cart, the place or
+ * the method changes.
+ */
+export function useQuote(place: QuotePlace, method: string | null, email = "") {
+  const client = useKarniClient();
+  const cart = useCart();
+  const country = place.country.toUpperCase();
+  return useQuery<Quote>({
+    queryKey: [
+      ...CART_QUERY_KEY,
+      "quote",
+      cart.dataUpdatedAt,
+      country,
+      place.region ?? "",
+      place.postcode ?? "",
+      method ?? "",
+      email,
+    ],
+    enabled: cart.isSuccess,
+    placeholderData: (previous) => previous,
+    queryFn: ({ signal }) =>
+      client.request<Quote>("/carts/current/quote/", {
+        method: "POST",
+        headers: cartHeaders(),
+        body: {
+          address: { country, region: place.region ?? "", postcode: place.postcode ?? "" },
+          shipping_method: method ?? "",
+          email,
+        },
+        signal,
+      }),
+  });
 }

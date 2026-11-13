@@ -3,6 +3,12 @@
  * decimal string with two places, in `currency` (an ISO 4217 code).
  */
 
+/** One option of a line in words: `{label: "Size", value: "M"}`. */
+export interface LineDetail {
+  label: string;
+  value: string;
+}
+
 /** A cart line, priced by its kind's adapter on the server. */
 export interface CartLine {
   id: string;
@@ -13,6 +19,8 @@ export interface CartLine {
   url: string;
   image: string | null;
   options: Record<string, unknown>;
+  /** The options in words: a size, a colour. */
+  details: LineDetail[];
   quantity: number;
   unit_price: string;
   /** The regular price a sale is shown against, or null. */
@@ -35,6 +43,48 @@ export interface Cart {
   needs_shipping: boolean;
   /** True when the cart has lines and none has a problem. */
   ready: boolean;
+  /** The coupon on the cart (its code), or null. */
+  coupon: string | null;
+  coupon_description: string;
+  /** Why the coupon takes nothing off now, or "". */
+  coupon_problem: string;
+  /** What the coupon takes off the items. */
+  discount: string;
+}
+
+/** A way to send the order, priced for this cart. */
+export interface ShippingOption {
+  id: string;
+  name: string;
+  kind: "flat" | "free" | "pickup" | string;
+  cost: string;
+}
+
+/** One tax of an order: its name, its rate in percent and how much. */
+export interface TaxLine {
+  name: string;
+  rate: string;
+  amount: string;
+}
+
+/** POST /api/carts/current/quote/: what the cart comes to at an address. */
+export interface Quote {
+  currency: string;
+  subtotal: string;
+  discount: string;
+  shipping: string;
+  tax: string;
+  total: string;
+  prices_include_tax: boolean;
+  needs_shipping: boolean;
+  coupon: string | null;
+  coupon_problem: string;
+  methods: ShippingOption[];
+  /** The id of the method the quote priced, or null. */
+  method: string | null;
+  /** Why the order cannot be sent to the address, or "". */
+  shipping_problem: string;
+  tax_lines: TaxLine[];
 }
 
 /** An address as checkout takes it and the order keeps it. */
@@ -65,10 +115,16 @@ export interface OrderLine {
   name: string;
   sku: string;
   options: Record<string, unknown>;
+  details: LineDetail[];
   quantity: number;
   quantity_refunded: number;
   unit_price: string;
   line_total: string;
+  /** What a coupon took off the line. */
+  discount: string;
+  tax: string;
+  /** What the buyer pays for the line: its discount off, its tax in. */
+  total: string;
   needs_shipping: boolean;
   url: string;
   image: string | null;
@@ -96,7 +152,16 @@ export interface Order {
   buyer_name: string;
   currency: string;
   subtotal: string;
+  discount_total: string;
+  shipping_total: string;
+  tax_total: string;
+  tax_lines: TaxLine[];
   total: string;
+  /** Whether the prices included their tax (the tax lines then say "included"). */
+  prices_include_tax: boolean;
+  coupon_code: string;
+  /** The shipping method's name, or "". */
+  shipping_method: string;
   amount_paid: string;
   amount_refunded: string;
   billing: Address;
@@ -202,6 +267,8 @@ export interface CustomerPageData {
 export interface SellableItem {
   kind: string;
   item: string;
+  /** The options of this choice (a size), sent with the line. */
+  options: Record<string, unknown>;
   name: string;
   sku: string;
   price: string;

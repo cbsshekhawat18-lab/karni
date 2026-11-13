@@ -5,9 +5,11 @@
  */
 import { Button, EmptyState, ErrorState, Input, Skeleton, usePageMeta } from "@karni/ui";
 import { useCart, useSetLine } from "./cart";
+import { CouponBox } from "./CouponBox";
 import { ItemImage } from "./ItemImage";
 import { Money, PriceTag } from "./Money";
 import { CommerceLink, useCommerce } from "./routes";
+import { LineDetails, Totals } from "./Totals";
 import type { CartLine } from "./types";
 
 export interface CartPageProps {
@@ -21,7 +23,8 @@ function Line({ line }: { line: CartLine }) {
   const set = useSetLine();
   const change = (value: string) => {
     const quantity = Math.max(0, Math.floor(Number(value) || 0));
-    if (quantity !== line.quantity) set.mutate({ kind: line.kind, item: line.item, quantity });
+    if (quantity !== line.quantity)
+      set.mutate({ kind: line.kind, item: line.item, quantity, options: line.options });
   };
   return (
     <li className="flex flex-wrap items-center gap-4 border-b border-border py-4">
@@ -36,6 +39,7 @@ function Line({ line }: { line: CartLine }) {
         ) : (
           <span className="font-medium">{line.name}</span>
         )}
+        <LineDetails details={line.details} />
         <p className="text-sm text-muted-foreground">
           <PriceTag price={line.unit_price} compareAt={line.compare_at_price} /> each
         </p>
@@ -58,7 +62,9 @@ function Line({ line }: { line: CartLine }) {
       <Money value={line.line_total} className="w-24 text-right font-medium" />
       <Button
         variant="ghost"
-        onClick={() => set.mutate({ kind: line.kind, item: line.item, quantity: 0 })}
+        onClick={() =>
+          set.mutate({ kind: line.kind, item: line.item, quantity: 0, options: line.options })
+        }
       >
         Remove<span className="sr-only"> {line.name}</span>
       </Button>
@@ -91,11 +97,19 @@ export function CartPage({ title = "Your cart", siteName }: CartPageProps) {
           ))}
         </ul>
         <div className="ml-auto max-w-sm space-y-3">
-          <p className="flex justify-between text-lg font-semibold">
-            Subtotal <Money value={cart.data.subtotal} />
-          </p>
+          <CouponBox cart={cart.data} />
+          <Totals
+            currency={cart.data.currency}
+            subtotal={cart.data.subtotal}
+            discount={cart.data.discount}
+            coupon={cart.data.coupon}
+            shipping={cart.data.needs_shipping ? null : undefined}
+            total={(Number(cart.data.subtotal) - Number(cart.data.discount)).toFixed(2)}
+          />
           <p className="text-sm text-muted-foreground">
-            The total is worked out again when you check out.
+            {cart.data.needs_shipping
+              ? "Shipping and tax are worked out for your address at checkout."
+              : "Tax is worked out for your address at checkout."}
           </p>
           <Button
             className="w-full"

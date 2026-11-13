@@ -22,10 +22,12 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState, type ReactNode } from "react";
 import { AddressFields, EMPTY_ADDRESS } from "./AddressFields";
-import { CART_QUERY_KEY, cartHeaders, problemOf, useCart } from "./cart";
+import { CART_QUERY_KEY, cartHeaders, problemOf, useCart, useQuote } from "./cart";
+import { CouponBox } from "./CouponBox";
 import { Money } from "./Money";
 import { CommerceLink, useCommerce } from "./routes";
-import type { Address, Placed } from "./types";
+import { LineDetails, Totals } from "./Totals";
+import type { Address, Placed, Quote } from "./types";
 
 export interface CheckoutPageProps {
   title?: string;
@@ -37,6 +39,8 @@ export interface CheckoutPageProps {
   addressPicker?: (pick: (address: Address) => void) => ReactNode;
   /** Ask a signed-in person to accept the current terms before paying (default true). */
   terms?: boolean;
+  /** The country the address starts with (an ISO code: the shop's own country). */
+  defaultCountry?: string;
 }
 
 function fieldErrors(error: unknown, part: string): Record<string, string> {
@@ -51,11 +55,87 @@ function fieldErrors(error: unknown, part: string): Record<string, string> {
   );
 }
 
+const METHOD_HINT: Record<string, string> = {
+  pickup: "Collect it from us",
+  free: "No charge",
+};
+
+/** The ways to send the order to the address, as radio buttons, with what each costs. */
+function ShippingChoice({
+  quote,
+  chosen,
+  onChoose,
+  waiting,
+}: {
+  quote: Quote | undefined;
+  chosen: string | null;
+  onChoose: (id: string) => void;
+  waiting: boolean;
+}) {
+  const name = useId();
+  if (!quote || !quote.needs_shipping) return null;
+  return (
+    <fieldset className="space-y-2" aria-busy={waiting || undefined}>
+      <legend className="text-lg font-semibold">Shipping</legend>
+      {quote.shipping_problem ? (
+        <p role="alert" className="text-sm font-medium text-destructive">
+          {quote.shipping_problem}
+        </p>
+      ) : quote.methods.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          The ways to send it show once you enter the country.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {quote.methods.map((method) => {
+            const id = `${name}-${method.id}`;
+            const selected = (chosen ?? quote.method) === method.id;
+            return (
+              <li key={method.id}>
+                <label
+                  htmlFor={id}
+                  className="flex cursor-pointer items-center gap-3 rounded-md border border-border p-3 has-[:checked]:border-primary"
+                >
+                  <input
+                    id={id}
+                    type="radio"
+                    name={name}
+                    value={method.id}
+                    checked={selected}
+                    onChange={() => onChoose(method.id)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  <span className="flex-1">
+                    {method.name}
+                    {METHOD_HINT[method.kind] ? (
+                      <span className="block text-sm text-muted-foreground">
+                        {METHOD_HINT[method.kind]}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="tabular-nums">
+                    {Number(method.cost) === 0 ? (
+                      "Free"
+                    ) : (
+                      <Money value={method.cost} currency={quote.currency} />
+                    )}
+                  </span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </fieldset>
+  );
+}
+
 export function CheckoutPage({
   title = "Checkout",
   siteName,
   addressPicker,
   terms = true,
+  defaultCountry = "",
 }: CheckoutPageProps) {
   const client = useKarniClient();
   const queries = useQueryClient();
@@ -64,11 +144,21 @@ export function CheckoutPage({
   const cart = useCart();
   const signedIn = status === "authenticated";
   const [email, setEmail] = useState("");
-  const [billing, setBilling] = useState<Address>(EMPTY_ADDRESS);
+  const [billing, setBilling] = useState<Address>({
+    ...EMPTY_ADDRESS,
+    country: defaultCountry.toUpperCase(),
+  });
   const [elsewhere, setElsewhere] = useState(false);
   const [shipping, setShipping] = useState<Address>(EMPTY_ADDRESS);
   const [note, setNote] = useState("");
+  const [method, setMethod] = useState<string | null>(null);
   const ids = { email: useId(), note: useId(), elsewhere: useId() };
+  const destination = elsewhere ? shipping : billing;
+  const quote = useQuote(
+    { country: destination.country, region: destination.region, postcode: destination.postcode },
+    method,
+    signedIn ? "" : email,
+  );
   usePageMeta({ title, siteName });
   const order = useMutation({
     mutationFn: () =>
@@ -80,6 +170,7 @@ export function CheckoutPage({
           billing,
           shipping: elsewhere ? shipping : null,
           note,
+          shipping_method: method ?? quote.data?.method ?? "",
         },
       }),
     onSuccess: (placed) => {
@@ -108,7 +199,7 @@ export function CheckoutPage({
       ) : null}
       <PendingButton
         pending={order.isPending}
-        disabled={!cart.data.ready}
+        disabled={!cart.data.ready || Boolean(quote.data?.shipping_problem)}
         className="w-full"
         onClick={() => order.mutate()}
       >
@@ -184,6 +275,12 @@ export function CheckoutPage({
               errors={fieldErrors(order.error, "shipping")}
             />
           ) : null}
+          <ShippingChoice
+            quote={quote.data}
+            chosen={method}
+            onChoose={setMethod}
+            waiting={quote.isFetching}
+          />
           <div className="flex flex-col gap-1">
             <Label htmlFor={ids.note}>A note for the order (optional)</Label>
             <Textarea
@@ -203,6 +300,7 @@ export function CheckoutPage({
               <li key={line.id} className="flex justify-between gap-2">
                 <span>
                   {line.quantity} x {line.name}
+                  <LineDetails details={line.details} />
                   {line.problem ? (
                     <span className="block text-destructive">{line.problem}</span>
                   ) : null}
@@ -211,9 +309,33 @@ export function CheckoutPage({
               </li>
             ))}
           </ul>
-          <p className="flex justify-between border-t border-border pt-3 font-semibold">
-            Total <Money value={cart.data.subtotal} />
-          </p>
+          <CouponBox cart={cart.data} />
+          {quote.data ? (
+            <Totals
+              className="border-t border-border pt-3 text-sm"
+              currency={quote.data.currency}
+              subtotal={quote.data.subtotal}
+              discount={quote.data.discount}
+              coupon={quote.data.coupon}
+              shipping={
+                !quote.data.needs_shipping
+                  ? undefined
+                  : quote.data.method === null
+                    ? null
+                    : quote.data.shipping
+              }
+              shippingMethod={
+                quote.data.methods.find((option) => option.id === quote.data.method)?.name
+              }
+              taxLines={quote.data.tax_lines}
+              pricesIncludeTax={quote.data.prices_include_tax}
+              total={quote.data.total}
+            />
+          ) : (
+            <p className="flex justify-between border-t border-border pt-3 font-semibold">
+              Items <Money value={cart.data.subtotal} />
+            </p>
+          )}
           {signedIn && terms ? <TermsGate page={false}>{place}</TermsGate> : place}
         </aside>
       </div>
