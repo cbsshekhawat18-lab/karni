@@ -333,6 +333,19 @@ interface ChartPoint {
   value: string | number;
 }
 
+const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** A day on a chart's axis: its number, with the month on the first point and each 1st. */
+function dayLabel(label: string, index: number): string {
+  const match = ISO_DAY.exec(label);
+  if (match === null) return label;
+  const day = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (index === 0 || day.getDate() === 1) {
+    return day.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  }
+  return String(day.getDate());
+}
+
 function ChartTile({ tile }: TileProps): React.ReactElement {
   const money = tile.data?.["format"] === "money";
   const currency = String(tile.data?.["currency"] ?? "");
@@ -340,8 +353,8 @@ function ChartTile({ tile }: TileProps): React.ReactElement {
   const raw = tile.data?.["points"];
   const data = React.useMemo(
     () =>
-      ((raw ?? []) as ChartPoint[]).map((point) => ({
-        label: point.label,
+      ((raw ?? []) as ChartPoint[]).map((point, index) => ({
+        label: dayLabel(point.label, index),
         value: Number(point.value),
       })),
     [raw],

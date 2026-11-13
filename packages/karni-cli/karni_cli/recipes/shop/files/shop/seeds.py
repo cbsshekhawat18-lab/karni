@@ -625,7 +625,9 @@ class ShipmentSeeder(karni.ShipmentSeeder):
                 shipment.transition("status", "delivered")
         elif shipment is not None and story == "refunded":
             shipment.transition("status", "cancelled")  # refunded before it was sent
-        when = {"created_at": placed}
+        when: dict[str, Any] = {"created_at": placed}
+        if Order.objects.filter(pk=order.pk, paid_at__isnull=False).exists():
+            when["paid_at"] = placed + timedelta(minutes=10)  # paid as it was placed
         this.update(**when)  # karni: allow(audited-bulk-write): demo data
         parcels = Shipment.objects.filter(order=order)
         later = {"created_at": placed + timedelta(hours=1)}

@@ -60,21 +60,45 @@ and its parcels.
 
 ### Staff (`shop-staff`)
 
-- Their home `/` is the dashboard: orders by state and the newest ones,
-  parcels to send, and products sold out or running low.
-- `/shipments` lists the parcels. A parcel is created when an order is paid.
-  Staff mark it shipped with a tracking number (it cannot be shipped without
-  one) and then delivered. The buyer gets an email at each step.
-- Manage the catalogue: products (with the price, the sale price and its
-  dates, the stock, the pictures, active and featured), categories in a tree,
-  and tags.
-- Cancel an order. A cancelled order that was paid puts its products back on
-  the shelf and its money goes back through the provider.
+- Their home `/` shows the tiles of their role: orders to fulfil and parcels
+  on their way (each opens the shipments it counts), products sold out and
+  running low (each product at its own level), revenue today, in 7 and in
+  30 days with a chart by day, the latest orders and the best sellers of 30
+  days. A customer has no tiles: their home is the storefront.
+- `/orders` lists every order, newest first: search by number, email or name,
+  filter by state and by the days it was placed, sort, page and export.
+  An order's page (`/orders/<number>`) shows the buyer (with their orders and
+  what they spent), the lines, payments and refunds, the addresses, the
+  buyer's note, the notes (internal, or to the customer, who gets it by
+  email and on their order page) and the history of its money. Its parcel
+  is there too: mark it shipped with its tracking number, then delivered.
+  The buyer gets an email at each step.
+- Cancel an order. A paid one puts its products back on the shelf and its
+  money goes back through the provider.
+- Place an order by hand for a customer who called (`/orders/new`): find the
+  products, set the quantities, type the customer and the address. The
+  server prices it and holds the stock for two days, and the customer gets
+  the link to pay.
+- `/customers` lists who bought, how often and for how much, and each
+  customer's page their orders and addresses.
+- `/shipments` lists the parcels, each with its order's number linking to
+  the order.
+- Manage the catalogue: `/products` with search, filters, CSV and XLSX export,
+  **Import** (upload a CSV, check the preview with each row's problems, then
+  commit) and bulk changes (select products, then set the price, the sale
+  price, the stock, the low-stock level, active or featured). A product's
+  page has its pictures (add, order and remove them), and its form the price
+  and sale dates, the stock, the low-stock level and whether it takes
+  backorders. Categories in a tree, and tags.
 
 ### A manager (`shop-manager`) and an admin (`admin`)
 
-- Everything staff do, and refunds: an amount, or lines with the items back
-  in stock. `admin` holds every permission of the project.
+- Everything staff do, and refunds: all or part of an order, by items (with
+  them back in stock or not) or by an amount. The refund goes through the
+  payment provider, and the order shows part refunded or refunded once the
+  provider confirms it.
+- Each role sees only the buttons it may use: staff see no Refund, a role
+  that may only read sees no New, Edit or Import.
 
 The demo logins (password `karni-password`) are `demo@example.com` (admin),
 `manager@example.com`, `staff@example.com` and `customer@example.com`.
@@ -86,6 +110,11 @@ The demo logins (password `karni-password`) are `demo@example.com` (admin),
   without a payment. A refund with "back in stock" puts the items back too.
   The database refuses stock below zero, and two buyers of the last item
   never both get it (`karni.capacity`).
+- A product that takes backorders may be ordered past what is left: checkout
+  holds what is on the shelf and the rest waits for new stock. Only what
+  came off the shelf goes back on a cancel or a refund with "back in stock".
+- A product runs low at its own low-stock level, or at `SHOP_LOW_STOCK` (3)
+  when it has none: staff get an email and the home tile lists it.
 - A product's `available` is the stock no order holds. Changing `stock` in
   the back office moves `available` by the same amount.
 - The price, name and SKU of each line are copied to the order at checkout,
@@ -143,17 +172,28 @@ A busy storefront raises it.
 - `shop/viewsets.py`: the price filters of the catalogue
   (`?min_price=`, `?max_price=`, `?ordering=effective_price`), what a shopper
   reads of a product, and `POST /api/shipments/<id>/ship/` and `deliver/`.
+- `shop/dashboard.py`: the home tiles that need the server (running low, best
+  sellers). The counts are karni.yaml's `dashboard:`.
 - `shop/seeds.py`: the demo shop. Five categories with their children, 40
   products (some on sale, some sold out, one not for sale), and 20 orders
   placed through karni-commerce in every money and parcel state, with their
   payments and refunds. Seeding sends no email.
 - `frontend/src/shop/`: the storefront (home, catalogue, product page,
-  header and footer). `frontend/src/pages/` holds a thin file per page:
-  `cart.tsx`, `checkout.tsx`, `orders.tsx`, `order.tsx` mount
-  `@karni/commerce-ui`, and `account.tsx` and `signin.tsx` mount `@karni/ui`.
+  header and footer) and `ParcelPanel.tsx`, the parcel on the staff's order
+  page. `frontend/src/pages/` holds a thin file per page: `cart.tsx`,
+  `checkout.tsx`, `orders.tsx`, `order.tsx`, `order-new.tsx`,
+  `customers.tsx` and `customer.tsx` mount `@karni/commerce-ui` (a customer's
+  or the staff's version of each), `products.tsx` is the staff's catalogue,
+  and `account.tsx` and `signin.tsx` mount `@karni/ui`.
 - `shop/tests/`: the stock, price, parcel and email rules, the API for each
-  role (a visitor, a customer, another customer, staff and a manager), query
-  counts on the catalogue, and the demo data.
+  role (a visitor, a customer, another customer, staff and a manager), the
+  home tiles per role, refunds back into stock, orders placed by hand,
+  backorders, query counts on the catalogue and the order lists, and the
+  demo data.
+
+The demo has one login per role, each with rows of its own: `staff@example.com`
+works the orders and parcels, `manager@example.com` refunds, and
+`customer@example.com` has orders in every state.
 
 ## What people usually change
 
@@ -165,14 +205,16 @@ A busy storefront raises it.
 | the terms version and url | `features.terms: {version: "2026-06", url: /terms, required: true}`, and the text in `frontend/src/shop/Terms.tsx` |
 | how long checkout holds the stock | `modules.commerce: {hold_minutes: 60}` |
 | who may do what | `roles` in karni.yaml |
+| what each role sees at home | `dashboard:` in karni.yaml (a tile counts an entity's rows, or places a code tile of `shop/dashboard.py` or karni-commerce by its key) |
 
 ## What it does not do yet
 
-Not yet built: the staff order page with its actions and notes, refunds from
-the screen, bulk product edits and CSV import of products, the customers
-list, saved addresses, product variations, coupons, shipping zones and
-rates, tax, reviews, wishlists, reports, invoices, a settings screen and
-digital products. They are planned in later steps.
+Not yet built: saved addresses in the account, product variations, coupons,
+shipping zones and rates, tax, reviews, wishlists, reports, invoices and
+packing slips, abandoned carts, a settings screen and digital products. They
+are planned in later steps. The customers list is built from the orders (one
+customer per email). When the family's people records arrive it moves onto
+them, with the same screens.
 
 Out of scope for this recipe: a plugin or theme system, subscriptions,
 several currencies at once, live carrier rates, several warehouses and a
