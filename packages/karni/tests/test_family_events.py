@@ -570,8 +570,8 @@ def test_retries_are_queued_through_the_dispatcher_outside_eager_mode(
     listeners.behaviour["fail"] = 1
     close(ticket, minutes=1)
     event_id = str(OutboxEvent.objects.get().pk)
+    previous = celery_state.get_current_app()  # before the factory makes the new app current
     lazy = create_celery_app("karni-family-events-lazy", task_always_eager=False)
-    previous = celery_state.get_current_app()
     lazy.set_current()
     try:
         record = lambda e, countdown=0: sent.append((e, countdown))  # noqa: E731

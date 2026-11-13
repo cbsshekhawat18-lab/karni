@@ -197,3 +197,16 @@ def test_the_request_log_is_quiet_for_a_probe(
     lines = [str(record.msg) for record in caplog.records if "request_" in str(record.msg)]
     assert any("/api/events/" in line for line in lines)
     assert not any("/healthz" in line for line in lines)
+
+
+# a test that builds a Celery app leaves it current, which once broke /readyz for later tests
+
+
+def test_a_test_that_builds_a_celery_app_leaks_it() -> None:
+    from karni.celery import create_celery_app
+
+    create_celery_app("karni-probe-leak", task_always_eager=False)
+
+
+def test_the_probe_after_a_test_that_built_a_celery_app_is_ready(client: Client) -> None:
+    assert client.get("/readyz").status_code == 200
