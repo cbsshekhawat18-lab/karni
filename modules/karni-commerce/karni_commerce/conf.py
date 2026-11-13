@@ -77,6 +77,13 @@ DEFAULTS: dict[str, Any] = {
     # Sellable adapters by kind, as dotted paths, over the ones the apps
     # register in their sellables.py: {"product": "myapp.sellables.MyProduct"}.
     "KARNI_COMMERCE_SELLABLES": {},
+    # The first invoice's number (karni_commerce.services.issue_invoice).
+    "KARNI_COMMERCE_FIRST_INVOICE": env.int("KARNI_COMMERCE_FIRST_INVOICE", default=1001),
+    # karni.mail's source of the emails a business edits, their switches and the sender
+    # (karni_commerce.preferences_seam.MailSource, until the family's notifications).
+    "KARNI_MAIL_SOURCE": env(
+        "KARNI_MAIL_SOURCE", default="karni_commerce.preferences_seam.MailSource"
+    ),
 }
 """The karni-commerce settings fragment (``karni.settings`` entry point)."""
 

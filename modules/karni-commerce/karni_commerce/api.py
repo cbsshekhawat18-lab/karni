@@ -111,6 +111,14 @@ class CartLineSerializer(serializers.Serializer[PricedLine]):
         }
 
 
+class CheckoutOptionsSerializer(serializers.Serializer[Any]):
+    """What checkout asks: whether a visitor may buy as a guest, and the terms to accept."""
+
+    guest_checkout = serializers.BooleanField()
+    accept_terms = serializers.BooleanField()
+    terms_url = serializers.CharField(allow_blank=True)
+
+
 class CartSerializer(serializers.Serializer[Any]):
     """The cart: its lines, the count, the subtotal, and whether it can be checked out."""
 
@@ -127,6 +135,7 @@ class CartSerializer(serializers.Serializer[Any]):
         allow_blank=True, help_text="Why the coupon on the cart takes nothing off now."
     )
     discount = serializers.CharField()
+    checkout = CheckoutOptionsSerializer(help_text="What checkout asks (Settings, Checkout).")
 
     @staticmethod
     def of(cart: Any, *, buyer: Any, context: dict[str, Any]) -> dict[str, Any]:
@@ -149,8 +158,20 @@ class CartSerializer(serializers.Serializer[Any]):
                 if row.adapter is not None and row.item is not None
             ),
             "ready": bool(priced) and not any(row.problem for row in priced),
+            "checkout": checkout_options(),
         }
         return dict(CartSerializer(data, context=context).data)
+
+
+def checkout_options() -> dict[str, Any]:
+    """Experimental. What checkout asks, from the Checkout settings."""
+    from karni_commerce import preferences_seam as preferences
+
+    return {
+        "guest_checkout": preferences.value("commerce.guest_checkout", True),
+        "accept_terms": preferences.value("commerce.accept_terms", False),
+        "terms_url": preferences.value("commerce.terms_url", "/terms"),
+    }
 
 
 class SetLineSerializer(serializers.Serializer[Any]):
@@ -287,6 +308,9 @@ class CheckoutSerializer(serializers.Serializer[Any]):
     shipping_method = serializers.CharField(
         required=False, allow_blank=True, default="", help_text="The id of the method chosen."
     )
+    accept_terms = serializers.BooleanField(
+        required=False, default=False, help_text="The buyer accepts the terms of sale."
+    )
 
 
 class CheckoutResultSerializer(serializers.Serializer[Any]):
@@ -350,6 +374,8 @@ class FulfilmentSerializer(serializers.Serializer[Any]):
     label = serializers.CharField()
     detail = serializers.CharField(allow_blank=True)
     at = serializers.DateTimeField(allow_null=True)
+    link = serializers.CharField(allow_blank=True)
+    link_label = serializers.CharField(allow_blank=True)
 
 
 class OrderLineViewSerializer(serializers.ModelSerializer[OrderLine]):
@@ -432,6 +458,7 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
     amount_paid = serializers.SerializerMethodField()
     amount_refunded = serializers.SerializerMethodField()
     fulfilment = serializers.SerializerMethodField()
+    invoice = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -465,10 +492,19 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
             "lines",
             "notes",
             "fulfilment",
+            "invoice",
         ]
 
     #: The notes the reader may see: the notes to the customer (staff see every note).
     note_kinds: tuple[str, ...] = ("customer",)
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_invoice(self, order: Order) -> str | None:
+        """The invoice's reference once the order is paid (it prints from the order page)."""
+        from karni_commerce.models import Invoice
+
+        found = Invoice.objects.filter(order=order).values_list("reference", flat=True).first()
+        return str(found) if found else None
 
     @extend_schema_field(NoteSerializer(many=True))
     def get_notes(self, order: Order) -> list[dict[str, Any]]:
@@ -786,3 +822,72 @@ class CustomerPageSerializer(serializers.Serializer[Any]):
                 for order in instance.orders
             ],
         }
+
+
+class AbandonedCartSerializer(serializers.Serializer[Any]):
+    """A cart left with items in it: who, what, what it comes to, and since when."""
+
+    id = serializers.CharField()
+    email = serializers.CharField(allow_blank=True)
+    name = serializers.CharField(allow_blank=True)
+    signed_in = serializers.BooleanField()
+    items = serializers.IntegerField()
+    lines = serializers.ListField(child=serializers.CharField())
+    value = serializers.CharField()
+    currency = serializers.CharField()
+    coupon = serializers.CharField(allow_null=True)
+    touched_at = serializers.DateTimeField(allow_null=True)
+    created_at = serializers.DateTimeField()
+
+
+class ReportListSerializer(serializers.Serializer[Any]):
+    """A report the caller may run."""
+
+    key = serializers.CharField()
+    title = serializers.CharField()
+    describe = serializers.CharField(allow_blank=True)
+    dated = serializers.BooleanField()
+
+
+class ReportQuerySerializer(serializers.Serializer[Any]):
+    """The days a report covers, how it splits them, and ``export=csv`` for a file."""
+
+    start = serializers.DateField(required=False)
+    end = serializers.DateField(required=False)
+    by = serializers.ChoiceField(["day", "week", "month"], required=False, default="day")
+    export = serializers.ChoiceField(["json", "csv"], required=False, default="json")
+
+
+class SettingSerializer(serializers.Serializer[Any]):
+    """A group of settings someone changed (the page reads ``preferences/``)."""
+
+    group = serializers.CharField()
+    values = serializers.DictField()
+
+
+class EmailFieldSerializer(serializers.Serializer[Any]):
+    name = serializers.CharField()
+    meaning = serializers.CharField()
+
+
+class EmailTemplateSerializer(serializers.Serializer[Any]):
+    """An email as its editor shows it: its text now, its merge fields, its switch."""
+
+    kind = serializers.CharField()
+    title = serializers.CharField()
+    describe = serializers.CharField(allow_blank=True)
+    audience = serializers.CharField(allow_blank=True)
+    switchable = serializers.BooleanField()
+    on = serializers.BooleanField()
+    fields = EmailFieldSerializer(many=True)
+    edited = serializers.BooleanField()
+    subject = serializers.CharField(allow_blank=True)
+    text = serializers.CharField(allow_blank=True)
+    updated_at = serializers.DateTimeField(allow_null=True)
+
+
+class EmailTemplateInputSerializer(serializers.Serializer[Any]):
+    """An edited email: its subject and its text."""
+
+    subject = serializers.CharField(max_length=300, allow_blank=True)
+    text = serializers.CharField(max_length=20000, allow_blank=True)

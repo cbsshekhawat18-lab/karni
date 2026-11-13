@@ -1,1 +1,1 @@
-Order {{ order.number }} is confirmed
+Order {{ order.number }} is confirmed{% if business.name %}: {{ business.name }}{% endif %}

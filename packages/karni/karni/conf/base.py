@@ -397,7 +397,6 @@ BASE: dict[str, Any] = {
     # Experimental. The kinds of email karni.mail does not send (a list of
     # names such as "commerce.new_order"): a project switches one off here.
     "KARNI_MAIL_DISABLED_KINDS": env.list("KARNI_MAIL_DISABLED_KINDS", default=[]),
-    "KARNI_MAIL_SOURCE": env.str("KARNI_MAIL_SOURCE", default=""),
     # Django's default sends a direct /admin/login/ to /accounts/profile/ (a 404).
     "LOGIN_REDIRECT_URL": f"/{_ADMIN_PATH}",
     # --- DRF & API schema -------------------------------------------------

@@ -276,7 +276,13 @@ def _engine() -> Engine:
     return engine
 
 
+_CENTS = Decimal("0.01")
+
+
 def _plain(value: Any) -> Any:
+    if isinstance(value, Decimal) and value.is_finite() and value == value.quantize(_CENTS):
+        # Money stored with four places reads as it is written: 12.00, not 12.0000.
+        return value.quantize(_CENTS)
     if value is None or isinstance(value, bool | int | float | str | Decimal | date | datetime):
         return value
     if isinstance(value, Mapping):
@@ -334,7 +340,8 @@ def merge_values(fields: Iterable[str], context: Mapping[str, Any]) -> dict[str,
     ``"order.number"`` gives ``{"order": {"number": ...}}``, and a path through
     a list (or a related manager) gives one entry per row: ``"lines.name"``
     gives ``{"lines": [{"name": ...}, ...]}``. Numbers, text, dates and
-    booleans stay as they are, and anything else becomes its text.
+    booleans stay as they are (an amount with no more than two places shows
+    two: ``12.00``), and anything else becomes its text.
     """
     found: dict[str, Any] = {**base_context()}
     for path in fields:

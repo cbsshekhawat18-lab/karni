@@ -46,12 +46,14 @@ from karni_payments.services import create_checkout, create_refund, refunded_amo
 from rest_framework.exceptions import ValidationError
 
 from karni_commerce import conf, events, pricing
+from karni_commerce import preferences_seam as preferences
 from karni_commerce.models import (
     ZERO,
     Cart,
     CartLine,
     Coupon,
     CouponUse,
+    Invoice,
     Order,
     OrderLine,
     OrderNote,
@@ -209,9 +211,27 @@ def set_line(
 ) -> CartLine | None:
     """Put ``quantity`` of the item in ``cart`` (``add``: on top of what is there; 0 removes it).
 
+    The cart's ``touched_at`` moves: a cart nobody touches for a while is abandoned.
+
     :raises ValidationError: for an unknown kind or item, more than
         ``KARNI_COMMERCE_MAX_QUANTITY``, or a line the adapter refuses.
     """
+    found = _set_line(cart, kind, key, quantity, options, buyer=buyer, add=add)
+    cart.touched_at = timezone.now()
+    Cart.objects.filter(pk=cart.pk).update(touched_at=cart.touched_at)
+    return found
+
+
+def _set_line(
+    cart: Cart,
+    kind: str,
+    key: str,
+    quantity: int,
+    options: Mapping[str, Any] | None = None,
+    *,
+    buyer: Any = None,
+    add: bool = False,
+) -> CartLine | None:
     adapter = adapter_for(kind)
     item = adapter.get(str(key))
     if item is None:
@@ -718,6 +738,7 @@ def _each(order: Order, hook: str) -> None:
 
 def _mark_paid(order: Order) -> None:
     order.transition("status", "paid", paid_at=timezone.now())
+    issue_invoice(order)
     _each(order, "on_paid")
     events.order_paid.send(sender=Order, order=order)
 
@@ -1032,3 +1053,135 @@ def place_manual_order(
 
         transaction.on_commit(ask_for_payment)
     return order
+
+
+# -- invoices --------------------------------------------------------------------------------
+
+
+def next_invoice_number() -> int:
+    """One more than the highest invoice number, from ``KARNI_COMMERCE_FIRST_INVOICE``."""
+    highest = Invoice.objects.without("soft_delete", reason="numbers are never reused").aggregate(
+        highest=models.Max("number")
+    )["highest"]
+    return max(int(highest or 0) + 1, int(conf.get("KARNI_COMMERCE_FIRST_INVOICE")))
+
+
+def seller() -> dict[str, str]:
+    """The business's details an invoice prints, as they are now (preferences)."""
+    found = preferences.details()
+    return {
+        "name": found.legal_name or found.name,
+        "trading_name": found.name,
+        "address": found.address,
+        "phone": found.phone,
+        "email": found.email,
+        "tax_number": found.tax_number,
+    }
+
+
+def issue_invoice(order: Order) -> Invoice:
+    """The invoice of ``order``, numbered the first time it is asked for (once paid).
+
+    The number counts up with no gap from ``KARNI_COMMERCE_FIRST_INVOICE``, and
+    the reference carries the ``commerce.invoice_prefix`` of that day.
+    """
+    found = Invoice.objects.filter(order=order).first()
+    if found is not None:
+        return found
+    prefix = preferences.value("commerce.invoice_prefix", "INV-")
+    for _attempt in range(5):
+        number = next_invoice_number()
+        try:
+            with transaction.atomic():
+                return Invoice.objects.create(
+                    order=order,
+                    number=number,
+                    reference=f"{prefix}{number}",
+                    issued_at=order.paid_at or timezone.now(),
+                    seller=seller(),
+                )
+        except IntegrityError:
+            continue  # another order took the number at the same moment
+    raise ValidationError({"invoice": ["Too many invoices at once. Try again."]})
+
+
+def staff_emails() -> list[str]:
+    """Who gets the staff's emails: the Checkout settings' list, else the project's."""
+    typed = preferences.value("commerce.staff_emails", "")
+    found = [part.strip() for part in typed.replace(";", ",").split(",") if part.strip()]
+    return found or [str(address) for address in conf.get("KARNI_COMMERCE_STAFF_EMAILS") or []]
+
+
+# -- abandoned carts -------------------------------------------------------------------------
+
+
+def abandoned_carts(now: datetime | None = None) -> models.QuerySet[Cart]:
+    """Carts with lines that nobody touched for ``commerce.abandoned_after_hours``.
+
+    Each with ``line_count`` and ``item_count``. A cart that checked out has no lines
+    left, so it is never here.
+    """
+    hours = preferences.value("commerce.abandoned_after_hours", 1)
+    before = (now or timezone.now()) - timedelta(hours=max(int(hours), 1))
+    live = models.Q(lines__deleted_at__isnull=True)
+    return (
+        Cart.objects.filter(touched_at__lt=before)
+        .annotate(
+            line_count=models.Count("lines", filter=live),
+            item_count=models.Sum("lines__quantity", filter=live),
+        )
+        .filter(line_count__gt=0)
+        .select_related("user", "coupon")
+        .order_by("-touched_at")
+    )
+
+
+def cart_value(cart: Cart) -> Decimal:
+    """What the lines of ``cart`` come to now, priced by their adapters."""
+    return money(sum((row.line_total for row in cart_lines(cart)), ZERO))
+
+
+def abandoned_rows(carts: list[Cart]) -> list[dict[str, Any]]:
+    """The abandoned ``carts`` as the staff list shows them, priced together: one query
+    for their lines and one per kind for the items, however many carts."""
+    lines = list(CartLine.objects.filter(cart__in=carts).order_by("created_at", "pk"))
+    known = kinds()
+    items: dict[tuple[str, str], Any] = {}
+    by_kind: dict[str, set[str]] = {}
+    for line in lines:
+        by_kind.setdefault(line.kind, set()).add(line.item)
+    for kind, keys in by_kind.items():
+        adapter = known.get(kind)
+        if adapter is not None:
+            for key, item in adapter.get_many(keys).items():
+                items[(kind, key)] = item
+    rows: dict[Any, dict[str, Any]] = {
+        cart.pk: {
+            "id": str(cart.pk),
+            "email": (cart.user.email if cart.user is not None else "") or cart.email,
+            "name": cart.user.get_full_name() if cart.user is not None else "",
+            "signed_in": cart.user_id is not None,
+            "items": 0,
+            "lines": [],
+            "value": ZERO,
+            "currency": conf.currency().upper(),
+            "coupon": cart.coupon.code if cart.coupon is not None else None,
+            "touched_at": cart.touched_at,
+            "created_at": cart.created_at,
+        }
+        for cart in carts
+    }
+    for line in lines:
+        row = rows[line.cart_id]
+        adapter = known.get(line.kind)
+        item = items.get((line.kind, line.item))
+        row["items"] += line.quantity
+        if adapter is None or item is None:
+            row["lines"].append(f"{line.quantity} x (no longer for sale)")
+            continue
+        row["lines"].append(f"{line.quantity} x {adapter.name(item, line.options)}")
+        price = adapter.price(item, line.options, None)
+        row["value"] += money(price.unit) * line.quantity
+    for row in rows.values():
+        row["value"] = f"{money(row['value']):.2f}"
+    return [rows[cart.pk] for cart in carts]

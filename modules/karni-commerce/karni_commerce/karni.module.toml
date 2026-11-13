@@ -24,11 +24,14 @@ models = [
     "CartLine",
     "Coupon",
     "CouponUse",
+    "EmailTemplate",
+    "Invoice",
     "Order",
     "OrderLine",
     "OrderNote",
     "OrderPayment",
     "OrderRefund",
+    "Setting",
     "ShippingMethod",
     "ShippingZone",
     "TaxRate",
@@ -59,6 +62,14 @@ endpoints = [
     "/api/order-payments/",
     "/api/order-refunds/",
     "/api/cart-lines/",
+    "/api/carts/abandoned/",
+    "/api/orders/manual/quote/",
+    "/api/orders/document/",
+    "/api/orders/reports/",
+    "/api/orders/reports/<key>/",
+    "/api/invoices/",
+    "/api/preferences/",
+    "/api/email-templates/",
 ]
 pages = ["the cart, checkout and order pages of @karni/commerce-ui"]
 ui = "@karni/commerce-ui"
@@ -78,6 +89,7 @@ KARNI_COMMERCE_CUSTOMERS = "string"
 KARNI_COMMERCE_PRICES_INCLUDE_TAX = "boolean"
 KARNI_COMMERCE_SHIPPING = "string"
 KARNI_COMMERCE_TAX = "string"
+KARNI_COMMERCE_FIRST_INVOICE = "integer"
 
 [[asks]]
 question = "How many minutes does checkout hold an order's items for its payment?"

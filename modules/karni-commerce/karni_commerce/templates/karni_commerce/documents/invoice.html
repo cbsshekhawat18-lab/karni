@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{% if invoice %}Invoice {{ invoice.reference }}{% else %}Order {{ order.number }}{% endif %}</title>
+{% include "karni_commerce/documents/_style.html" %}
+</head>
+<body>
+<div class="sheet">
+  <header>
+    <div>
+      <h1>{% if invoice %}Invoice{% else %}Order summary{% endif %}</h1>
+      {% if invoice %}<div>Number <strong>{{ invoice.reference }}</strong></div>
+      <div class="muted">Issued {{ invoice.issued_at|date:"j F Y" }}</div>{% else %}<div class="muted">Not paid yet: the invoice is issued with the payment.</div>{% endif %}
+      <div class="muted">Order {{ order.number }}, placed {{ order.created_at|date:"j F Y" }}</div>
+    </div>
+    <div class="pre" style="text-align: right">
+      <strong>{{ seller.name|default:business }}</strong>{% if seller.trading_name and seller.trading_name != seller.name %}
+{{ seller.trading_name }}{% endif %}
+{{ seller.address }}{% if seller.phone %}
+{{ seller.phone }}{% endif %}{% if seller.email %}
+{{ seller.email }}{% endif %}{% if seller.tax_number %}
+Tax number {{ seller.tax_number }}{% endif %}
+    </div>
+  </header>
+  <section class="parties">
+    <div>
+      <h2>Billed to</h2>
+      {% with address=billing %}{% include "karni_commerce/documents/_address.html" %}{% endwith %}<br>{{ order.email }}
+    </div>
+    {% if order.needs_shipping %}<div>
+      <h2>Sent to</h2>
+      {% with address=shipping %}{% include "karni_commerce/documents/_address.html" %}{% endwith %}
+    </div>{% endif %}
+  </section>
+  <table>
+    <thead><tr><th>Item</th><th class="num">Quantity</th><th class="num">Price</th>{% if order.tax_total %}<th class="num">Tax</th>{% endif %}<th class="num">Amount</th></tr></thead>
+    <tbody>
+    {% for line in lines %}<tr>
+      <td>{{ line.name }}{% if line.sku %}<div class="muted">{{ line.sku }}</div>{% endif %}{% for detail in line.details %}<div class="muted">{{ detail.label }}: {{ detail.value }}</div>{% endfor %}</td>
+      <td class="num">{{ line.quantity }}</td>
+      <td class="num">{{ line.unit_price|floatformat:2 }}</td>
+      {% if order.tax_total %}<td class="num">{{ line.tax_rate|floatformat:"-2" }}%</td>{% endif %}
+      <td class="num">{{ line.line_total|floatformat:2 }}</td>
+    </tr>{% endfor %}
+    </tbody>
+  </table>
+  <table class="totals">
+    <tr><td>Items</td><td class="num">{{ order.subtotal|floatformat:2 }} {{ order.currency }}</td></tr>
+    {% if order.discount_total %}<tr><td>Discount{% if order.coupon_code %} ({{ order.coupon_code }}){% endif %}</td><td class="num">-{{ order.discount_total|floatformat:2 }} {{ order.currency }}</td></tr>{% endif %}
+    {% if order.needs_shipping %}<tr><td>Shipping{% if order.shipping_method %} ({{ order.shipping_method }}){% endif %}</td><td class="num">{{ order.shipping_total|floatformat:2 }} {{ order.currency }}</td></tr>{% endif %}
+    {% for tax in order.tax_lines %}<tr><td>{{ tax.name }} {{ tax.rate|floatformat:"-2" }}%{% if order.prices_include_tax %} (included){% endif %}</td><td class="num">{{ tax.amount }} {{ order.currency }}</td></tr>{% endfor %}
+    <tr class="grand"><td>Total</td><td class="num">{{ order.total|floatformat:2 }} {{ order.currency }}</td></tr>
+    {% if order.amount_paid %}<tr><td>Paid</td><td class="num">{{ order.amount_paid|floatformat:2 }} {{ order.currency }}</td></tr>{% endif %}
+    {% if order.amount_refunded %}<tr><td>Refunded</td><td class="num">-{{ order.amount_refunded|floatformat:2 }} {{ order.currency }}</td></tr>{% endif %}
+  </table>
+  {% if footer %}<footer class="pre">{{ footer }}</footer>{% endif %}
+</div>
+</body>
+</html>

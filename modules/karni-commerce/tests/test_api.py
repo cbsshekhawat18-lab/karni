@@ -176,7 +176,8 @@ def test_the_cart_reads_its_items_in_a_few_queries(
     with CaptureQueriesContext(connection) as queries:
         answer = api.get("/api/carts/current/", HTTP_X_CART_TOKEN=token)
     assert answer.data["count"] == 10
-    assert len(queries) <= 6, [query["sql"] for query in queries.captured_queries]
+    # The cart, its lines, the items, the coupon's quote, and the checkout settings (one).
+    assert len(queries) <= 7, [query["sql"] for query in queries.captured_queries]
 
 
 def test_the_orders_list_is_not_n_plus_one(

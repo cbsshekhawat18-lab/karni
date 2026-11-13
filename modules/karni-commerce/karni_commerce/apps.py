@@ -22,6 +22,12 @@ class KarniCommerceConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self) -> None:
+        from django.apps import apps
+
         from karni_commerce import sellables
 
         sellables.autodiscover()
+        if apps.is_installed("karni_reports"):
+            from karni_commerce.documents import register_pdf_reports
+
+            register_pdf_reports()

@@ -82,7 +82,6 @@ reads it on every request.
 | <a id="karni_cache"></a>`KARNI_CACHE` | `KARNI_CACHE` | `"redis"` | `redis` (the default cache at `REDIS_URL`) or `locmem`, an in-process cache for a host run without Redis (development only: throttle counters are then per process). |
 | **Email** | | | |
 | <a id="karni_mail_disabled_kinds"></a>`KARNI_MAIL_DISABLED_KINDS` | `KARNI_MAIL_DISABLED_KINDS` | `[]` | Experimental. The kinds of email karni.mail does not send, by name (commerce.new_order). A kind is the stable name a part gives each email. |
-| <a id="karni_mail_source"></a>`KARNI_MAIL_SOURCE` | `KARNI_MAIL_SOURCE` | `""` | Experimental. A dotted path to where the business's changes to its emails are kept: an object or class with template(kind), enabled(kind) and sender(). An edited template wins over the files. Blank: the files and DEFAULT_FROM_EMAIL. |
 | **Files & storage** | | | |
 | <a id="karni_storage"></a>`KARNI_STORAGE` | `KARNI_STORAGE` | `"local"` | `local` (filesystem) or `s3` (any S3-compatible service, needs `karni[s3]`). |
 | **API (karni.api)** | | | |
@@ -245,6 +244,8 @@ Assign them in `config/settings.py`. A module's README says more about each.
 | <a id="karni_commerce_shipping"></a>`KARNI_COMMERCE_SHIPPING` | `KARNI_COMMERCE_SHIPPING` | `"karni_commerce.pricing.ZoneShipping"` | The dotted path of the class that gives the shipping methods of an address (karni_commerce.pricing.ZoneShipping: the zones and methods staff set up). |
 | <a id="karni_commerce_tax"></a>`KARNI_COMMERCE_TAX` | `KARNI_COMMERCE_TAX` | `"karni_commerce.pricing.RateTax"` | The dotted path of the class that gives the tax rate of a tax class at an address (karni_commerce.pricing.RateTax: the rates staff set up). |
 | <a id="karni_commerce_sellables"></a>`KARNI_COMMERCE_SELLABLES` |  | `{}` | Sellable adapters by kind, as dotted paths, over the ones the apps register in their sellables.py: {"product": "myapp.sellables.MyProduct"}. |
+| <a id="karni_commerce_first_invoice"></a>`KARNI_COMMERCE_FIRST_INVOICE` | `KARNI_COMMERCE_FIRST_INVOICE` | `1001` | The first invoice's number (karni_commerce.services.issue_invoice). |
+| <a id="karni_mail_source"></a>`KARNI_MAIL_SOURCE` | `KARNI_MAIL_SOURCE` | `"karni_commerce.preferences_seam.MailSource"` | karni.mail's source of the emails a business edits, their switches and the sender (karni_commerce.preferences_seam.MailSource, until the family's notifications). |
 
 ### karni-impersonation
 

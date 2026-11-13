@@ -5,3 +5,5 @@ A note about your order {{ order.number }}:
 {{ note.body }}
 
 See the order: {{ link }}
+{% if business.name %}
+{{ business.name }}{% endif %}

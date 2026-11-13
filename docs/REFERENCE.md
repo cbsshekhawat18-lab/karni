@@ -1807,7 +1807,6 @@ class Lead(BaseModel):
 | Setting | Env | Default | What it controls |
 |---|---|---|---|
 | `KARNI_MAIL_DISABLED_KINDS` | `KARNI_MAIL_DISABLED_KINDS` | `[]` | Experimental. The kinds of email karni.mail does not send, by name (commerce.new_order). A kind is the stable name a part gives each email. |
-| `KARNI_MAIL_SOURCE` | `KARNI_MAIL_SOURCE` | `""` | Experimental. A dotted path to where the business's changes to its emails are kept: an object or class with template(kind), enabled(kind) and sender(). An edited template wins over the files. Blank: the files and DEFAULT_FROM_EMAIL. |
 
 ### Files & storage
 
@@ -2003,6 +2002,8 @@ class Lead(BaseModel):
 | `KARNI_COMMERCE_SHIPPING` | `KARNI_COMMERCE_SHIPPING` | `"karni_commerce.pricing.ZoneShipping"` | The dotted path of the class that gives the shipping methods of an address (karni_commerce.pricing.ZoneShipping: the zones and methods staff set up). |
 | `KARNI_COMMERCE_TAX` | `KARNI_COMMERCE_TAX` | `"karni_commerce.pricing.RateTax"` | The dotted path of the class that gives the tax rate of a tax class at an address (karni_commerce.pricing.RateTax: the rates staff set up). |
 | `KARNI_COMMERCE_SELLABLES` |  | `{}` | Sellable adapters by kind, as dotted paths, over the ones the apps register in their sellables.py: {"product": "myapp.sellables.MyProduct"}. |
+| `KARNI_COMMERCE_FIRST_INVOICE` | `KARNI_COMMERCE_FIRST_INVOICE` | `1001` | The first invoice's number (karni_commerce.services.issue_invoice). |
+| `KARNI_MAIL_SOURCE` | `KARNI_MAIL_SOURCE` | `"karni_commerce.preferences_seam.MailSource"` | karni.mail's source of the emails a business edits, their switches and the sender (karni_commerce.preferences_seam.MailSource, until the family's notifications). |
 
 ### Module: karni-impersonation
 

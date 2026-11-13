@@ -35,11 +35,14 @@ __all__ = [
     "CartLine",
     "Coupon",
     "CouponUse",
+    "EmailTemplate",
+    "Invoice",
     "Order",
     "OrderLine",
     "OrderNote",
     "OrderPayment",
     "OrderRefund",
+    "Setting",
     "ShippingMethod",
     "ShippingZone",
     "TaxRate",
@@ -80,13 +83,17 @@ class Cart(BaseModel):
         on_delete=models.SET_NULL,
         related_name="carts",
     )
+    # The email a visitor typed at checkout (the quote keeps it), for the abandoned carts.
+    email = models.EmailField(blank=True, default="")
+    # When a line last changed: a cart left alone since is abandoned (services.abandoned).
+    touched_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     class Meta:
         constraints = [LiveUniqueConstraint(fields=["token"], name="karni_commerce_cart_token")]
 
     class APIMeta:
         exclude = ["token"]
-        read_only = ["user", "coupon"]
+        read_only = ["user", "coupon", "email", "touched_at"]
 
     class AdminMeta:
         list_display = ["user", "created_at", "updated_at"]
@@ -675,3 +682,78 @@ class TaxRate(BaseModel):
         self.country = str(self.country or "").strip().upper()
         self.region = str(self.region or "").strip().upper()
         super().save(*args, **kwargs)
+
+
+class Invoice(BaseModel):
+    """The invoice of a paid order: its own number, counted up, and who sold it.
+
+    Numbered once, when the order is paid (``karni_commerce.services``), from
+    ``KARNI_COMMERCE_FIRST_INVOICE``. ``seller`` keeps the business's details as
+    they were that day (name, legal name, address, tax number), so a printed
+    invoice never changes when the details do.
+    """
+
+    order = models.OneToOneField(
+        "karni_commerce.Order", on_delete=models.PROTECT, related_name="invoice"
+    )
+    number = models.PositiveIntegerField()
+    reference = models.CharField(max_length=40, help_text="The number as printed: INV-1001.")
+    issued_at = models.DateTimeField()
+    seller = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-number"]
+        constraints = [
+            LiveUniqueConstraint(fields=["number"], name="karni_commerce_invoice_number")
+        ]
+
+    class APIMeta:
+        read_only = ["order", "number", "reference", "issued_at", "seller"]
+
+    class Karni:
+        label = "reference"
+
+    def __str__(self) -> str:
+        return self.reference
+
+
+class Setting(BaseModel):
+    """What a business changed in Settings, one row per group: ``details``, ``emails``,
+    or a part's section (``shop``). Experimental, and only until the family's
+    preferences contract is installed (:mod:`karni_commerce.preferences`)."""
+
+    group = models.CharField(max_length=60)
+    values = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        constraints = [LiveUniqueConstraint(fields=["group"], name="karni_commerce_setting_group")]
+
+    class Karni:
+        audit = True
+
+    def __str__(self) -> str:
+        return self.group
+
+
+class EmailTemplate(BaseModel):
+    """An email a business rewrote in the app: its subject and text, by kind.
+
+    It wins over the template files (``karni.mail``'s ``KARNI_MAIL_SOURCE``), and
+    renders with the restricted engine: the kind's merge fields only. Deleting
+    the row puts the files back. Experimental, until the family's notifications
+    contract keeps them.
+    """
+
+    kind = models.CharField(max_length=120)
+    subject = models.CharField(max_length=300)
+    text = models.TextField()
+
+    class Meta:
+        ordering = ["kind"]
+        constraints = [LiveUniqueConstraint(fields=["kind"], name="karni_commerce_email_kind")]
+
+    class Karni:
+        audit = True
+
+    def __str__(self) -> str:
+        return self.kind

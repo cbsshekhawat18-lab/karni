@@ -17,7 +17,8 @@ order, and the order's page shows them::
                    "at": shipment.shipped_at}
 
 Each entry has ``title``, ``status`` (a short name), ``label`` (the status
-in words), ``detail`` (optional) and ``at`` (a datetime or ``None``).
+in words), ``detail`` (optional), ``at`` (a datetime or ``None``) and, when
+the buyer may follow it, ``link`` with ``link_label`` (a download, a ticket).
 
 Override / escape hatch: :func:`unregister_reporter` takes one out.
 """
@@ -64,6 +65,8 @@ def report(order: Order) -> list[dict[str, Any]]:
                     "label": str(entry.get("label", entry.get("status", ""))),
                     "detail": str(entry.get("detail", "") or ""),
                     "at": at.isoformat() if isinstance(at, datetime) else None,
+                    "link": str(entry.get("link", "") or ""),
+                    "link_label": str(entry.get("link_label", "") or ""),
                 }
             )
     return found

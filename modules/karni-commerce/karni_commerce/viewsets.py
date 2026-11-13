@@ -50,9 +50,12 @@ this one, and register yours. ``TOKEN_HEADER`` names the cart header.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
+from django.http import HttpResponse
+from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from karni.api import Access, Authenticated, BaseViewSet, Budget, Can, Granted, Owned, Public
 from rest_framework.decorators import action
@@ -65,8 +68,11 @@ from rest_framework.exceptions import (
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from karni_commerce import services
+from karni_commerce import documents, email_templates, services, settings_page
+from karni_commerce import preferences_seam as preferences
+from karni_commerce import reports as reports_registry
 from karni_commerce.api import (
+    AbandonedCartSerializer,
     CancelInputSerializer,
     CartSerializer,
     CheckoutResultSerializer,
@@ -74,6 +80,8 @@ from karni_commerce.api import (
     CouponInputSerializer,
     CustomerPageSerializer,
     CustomerRowSerializer,
+    EmailTemplateInputSerializer,
+    EmailTemplateSerializer,
     ItemSerializer,
     ManualOrderSerializer,
     ManualQuoteSerializer,
@@ -87,7 +95,11 @@ from karni_commerce.api import (
     QuoteInputSerializer,
     QuoteSerializer,
     RefundInputSerializer,
+    ReportListSerializer,
+    ReportQuerySerializer,
     SetLineSerializer,
+    SettingSerializer,
+    checkout_options,
 )
 from karni_commerce.customers import customers_backend
 from karni_commerce.models import (
@@ -95,10 +107,13 @@ from karni_commerce.models import (
     CartLine,
     Coupon,
     CouponUse,
+    EmailTemplate,
+    Invoice,
     Order,
     OrderLine,
     OrderPayment,
     OrderRefund,
+    Setting,
     ShippingMethod,
     ShippingZone,
     TaxRate,
@@ -111,10 +126,13 @@ __all__ = [
     "CartViewSet",
     "CouponUseViewSet",
     "CouponViewSet",
+    "EmailTemplateViewSet",
+    "InvoiceViewSet",
     "OrderLineViewSet",
     "OrderPaymentViewSet",
     "OrderRefundViewSet",
     "OrderViewSet",
+    "PreferenceViewSet",
     "ShippingMethodViewSet",
     "ShippingZoneViewSet",
     "TaxRateViewSet",
@@ -226,8 +244,12 @@ class CartViewSet(_ReadOnly, BaseViewSet):
         body.is_valid(raise_exception=True)
         data = body.validated_data
         user = _buyer(request)
+        cart = self._current(request)
+        if cart is not None and data["email"] and cart.email != data["email"]:
+            # The email a visitor typed: staff see it on the abandoned carts.
+            Cart.objects.filter(pk=cart.pk).update(email=data["email"])
         found = services.quote_cart(
-            self._current(request),
+            cart,
             buyer=user,
             email=(user.email if user is not None else "") or data["email"],
             address=dict(data["address"]),
@@ -248,6 +270,13 @@ class CartViewSet(_ReadOnly, BaseViewSet):
         cart = self._current(request)
         if cart is None:
             raise ValidationError({"cart": ["The cart is empty."]})
+        options = checkout_options()
+        if user is None and not options["guest_checkout"]:
+            raise PermissionDenied("Sign in to place an order.")
+        if options["accept_terms"] and not data["accept_terms"]:
+            raise ValidationError({"accept_terms": ["Accept the terms of sale to order."]})
+        if email and cart.email != email:
+            Cart.objects.filter(pk=cart.pk).update(email=email)
         billing = dict(data["billing"])
         shipping = dict(data["shipping"] or billing)
         order = services.checkout(
@@ -263,6 +292,33 @@ class CartViewSet(_ReadOnly, BaseViewSet):
         url = services.open_payment(order)
         result = {"number": order.number, "key": order.key, "url": url}
         return Response(CheckoutResultSerializer(result).data, status=201)
+
+    @extend_schema(
+        parameters=[OpenApiParameter("search", str, description="Text in the email or name.")],
+        responses=AbandonedCartSerializer(many=True),
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="abandoned",
+        access=Can("karni_commerce.cart:view"),
+    )
+    def abandoned(self, request: Request) -> Response:
+        """Carts with items that nobody touched for ``commerce.abandoned_after_hours``,
+        newest first: who (when known), what, and what it comes to now."""
+        queryset = services.abandoned_carts()
+        typed = str(request.query_params.get("search", "") or "").strip()
+        if typed:
+            queryset = queryset.filter(
+                Q(email__icontains=typed)
+                | Q(user__email__icontains=typed)
+                | Q(user__first_name__icontains=typed)
+                | Q(user__last_name__icontains=typed)
+            )
+        page = self.paginate_queryset(queryset)
+        rows = services.abandoned_rows(list(page if page is not None else queryset[:50]))
+        data = AbandonedCartSerializer(rows, many=True).data
+        return self.get_paginated_response(data) if page is not None else Response(data)
 
 
 class CartLineViewSet(_ReadOnly, BaseViewSet):
@@ -396,6 +452,93 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
         )
         order.refresh_from_db()
         return Response(OrderViewSerializer(order, context={"request": request}).data)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("number", int, required=True),
+            OpenApiParameter("key", str, description="The guest's key, from checkout."),
+            OpenApiParameter("kind", str, description="invoice (default) or packing_slip."),
+        ],
+        responses={(200, "text/html"): OpenApiTypes.STR},
+    )
+    @action(detail=False, methods=["get"], url_path="document", access=Public())
+    def document(self, request: Request) -> HttpResponse:
+        """The order's invoice or packing slip as a printable page: for its buyer, the
+        guest with its key, and staff. A packing slip is for staff only."""
+        body = OrderKeySerializer(data=request.query_params)
+        body.is_valid(raise_exception=True)
+        kind = str(request.query_params.get("kind", "") or "invoice")
+        if kind not in documents.KINDS:
+            raise ValidationError({"kind": [f"One of {', '.join(documents.KINDS)}."]})
+        order = self._find(request, body.validated_data["number"], body.validated_data["key"])
+        staff = request.user.is_authenticated and request.user.can("karni_commerce.order:view")
+        if kind == "packing_slip" and not staff:
+            raise NotFound("No such order.")
+        response = HttpResponse(documents.render(order, kind), content_type="text/html")
+        response["Cache-Control"] = "private, no-store"
+        return response
+
+    @extend_schema(responses=ReportListSerializer(many=True))
+    @action(detail=False, methods=["get"], url_path="reports", access=Authenticated())
+    def reports(self, request: Request) -> Response:
+        """The reports the caller may run."""
+        found = reports_registry.reports_for(request.user)
+        # karni: allow(unpaginated-action): a few registered reports
+        return Response(
+            ReportListSerializer(
+                [
+                    {
+                        "key": report.key,
+                        "title": report.title,
+                        "describe": report.describe,
+                        "dated": report.dated,
+                    }
+                    for report in found
+                ],
+                many=True,
+            ).data
+        )
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("start", OpenApiTypes.DATE, description="The first day."),
+            OpenApiParameter("end", OpenApiTypes.DATE, description="The last day."),
+            OpenApiParameter("by", str, description="day, week or month."),
+            OpenApiParameter("export", str, description="csv for a CSV file."),
+        ],
+        responses={200: OpenApiTypes.OBJECT, (200, "text/csv"): OpenApiTypes.STR},
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path=r"reports/(?P<key>[a-z0-9_.-]+)",
+        url_name="report",
+        access=Authenticated(),
+    )
+    def report(self, request: Request, key: str = "") -> Any:
+        """One report for a range of days, as JSON or (``?export=csv``) a CSV file."""
+        found = reports_registry.find_report(key)
+        if found is None or not found.visible_to(request.user):
+            raise NotFound("No such report.")
+        body = ReportQuerySerializer(data=request.query_params)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        first, last = reports_registry.default_range()
+        start, end = data.get("start") or first, data.get("end") or last
+        if end < start:
+            raise ValidationError({"end": ["The last day comes after the first."]})
+        if (end - start).days > 3660:
+            raise ValidationError({"start": ["Ten years at most."]})
+        query = reports_registry.ReportQuery(start, end, data["by"], request)
+        answer = reports_registry.run(found, query)
+        if data["export"] == "csv":
+            name = f"{key.replace('.', '-')}-{start.isoformat()}-{end.isoformat()}.csv"
+            if not found.dated:
+                name = f"{key.replace('.', '-')}-{timezone.localdate().isoformat()}.csv"
+            response = HttpResponse(reports_registry.as_csv(answer), content_type="text/csv")
+            response["Content-Disposition"] = f'attachment; filename="{name}"'
+            return response
+        return Response(answer)
 
     # -- staff ----------------------------------------------------------------------------
 
@@ -649,3 +792,215 @@ class TaxRateViewSet(BaseViewSet):
     access = Access(read=Granted(), write=Granted())
     filterset_fields = ["country", "tax_class"]
     search_fields = ["name", "country", "region"]
+
+
+class InvoiceViewSet(_ReadOnly, BaseViewSet):
+    """Invoices, numbered when an order is paid, for staff by their grants. The buyer
+    prints theirs from the order page (``orders/document/``)."""
+
+    model = Invoice
+    access = Access(read=Granted(), write=Granted())
+    select_related = ("order",)
+    filterset_fields = ["order"]
+    search_fields = ["reference", "order__email"]
+    ordering_fields = ["number", "issued_at"]
+
+
+class PreferenceViewSet(BaseViewSet):
+    """Experimental. The Settings page's API, ``/api/preferences/`` (the family contract's
+    shape, :mod:`karni_commerce.preferences_seam`): the details, each section and the
+    email switches. It goes once the family's preferences contract is installed."""
+
+    model = Setting
+    route = "preferences"
+    # Each action checks who may change what (preferences.can_change): signed in to ask.
+    access = Access(read=Authenticated(), write=Granted())
+    serializer_class = SettingSerializer
+    settings_actions: ClassVar[tuple[str, ...]] = (
+        "details",
+        "change_section",
+        "change_email",
+        "public",
+    )
+
+    @classmethod
+    def get_extra_actions(cls) -> list[Any]:
+        return [
+            extra for extra in super().get_extra_actions() if extra.__name__ in cls.settings_actions
+        ]
+
+    def _refused(self, exc: preferences.PreferenceRefused) -> Response:
+        body: dict[str, Any] = {"code": exc.code, "detail": exc.message}
+        if exc.errors:
+            body["errors"] = exc.errors
+        return Response(body, status={"E324": 409, "E325": 404}.get(exc.code, 400))
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Everything the Settings page shows: details, sections, emails (connections are
+        the family contract's)."""
+        if not settings_page.may_open(request.user):
+            raise PermissionDenied("You may not change any setting.")
+        # karni: allow(unpaginated-action): one page of settings
+        return Response(settings_page.page(request.user))
+
+    def retrieve(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        raise NotFound("Read the settings at preferences/.")
+
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        raise MethodNotAllowed("POST")
+
+    def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        raise MethodNotAllowed(request.method or "PUT")
+
+    def partial_update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        raise MethodNotAllowed("PATCH")
+
+    def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        raise MethodNotAllowed("DELETE")
+
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    @action(detail=False, methods=["patch"], url_path="details", access=Authenticated())
+    def details(self, request: Request) -> Response:
+        """Change some details. A blank value goes back to the default."""
+        if not preferences.can_change(request.user, "details"):
+            raise PermissionDenied("You may not change the details.")
+        try:
+            preferences.save_details(dict(request.data), user=request.user)
+        except preferences.PreferenceRefused as exc:
+            return self._refused(exc)
+        return Response(settings_page.page(request.user)["details"])
+
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    @action(
+        detail=False,
+        methods=["patch"],
+        url_path=r"sections/(?P<key>[a-z0-9_-]+)",
+        url_name="section",
+        access=Authenticated(),
+    )
+    def change_section(self, request: Request, key: str = "") -> Response:
+        """Change some fields of a section. ``null`` puts one back to its default."""
+        if preferences.find_section(key) is None:
+            return Response({"code": "E325", "detail": f"No section {key!r}."}, status=404)
+        if not preferences.can_change(request.user, key):
+            raise PermissionDenied(f"You may not change the {key} settings.")
+        try:
+            found = preferences.save_section(key, dict(request.data), user=request.user)
+        except preferences.PreferenceRefused as exc:
+            return self._refused(exc)
+        return Response({"key": key, "values": found.model_dump(mode="json")})
+
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    @action(
+        detail=False,
+        methods=["patch"],
+        url_path=r"emails/(?P<name>[a-z0-9_.-]+)",
+        url_name="email",
+        access=Authenticated(),
+    )
+    def change_email(self, request: Request, name: str = "") -> Response:
+        """Switch an email on or off: ``{"on": true | false | null}``."""
+        if not preferences.can_change(request.user, "emails"):
+            raise PermissionDenied("You may not change the emails.")
+        on = request.data.get("on") if isinstance(request.data, dict) else None
+        if "on" not in request.data or (on is not None and not isinstance(on, bool)):
+            return Response(
+                {"code": "E323", "detail": 'Send {"on": true}, {"on": false} or {"on": null}.'},
+                status=400,
+            )
+        try:
+            position = preferences.switch("email", name, on, user=request.user)
+        except preferences.PreferenceRefused as exc:
+            return self._refused(exc)
+        return Response({"name": name, "on": position})
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    @action(detail=False, methods=["get"], url_path="public", access=Public())
+    def public(self, request: Request) -> Response:
+        """The details any visitor may see: for the header, the footer and money."""
+        return Response(settings_page.public())
+
+
+class EmailTemplateViewSet(BaseViewSet):
+    """Experimental. The emails a business edits: ``/api/email-templates/``.
+
+    ``GET`` lists every declared email (karni.mail kinds) with its merge fields, its
+    switch and its text now (edited, else the files). ``GET``, ``PUT`` and ``DELETE``
+    ``email-templates/<kind>/`` read, change and put back one. ``POST
+    email-templates/<kind>/preview/`` renders a draft with sample values. Until the
+    family's notifications contract keeps them.
+    """
+
+    model = EmailTemplate
+    route = "email-templates"
+    access = Access(read=Granted(), write=Granted())
+    serializer_class = EmailTemplateSerializer
+    lookup_field = "kind"
+    lookup_value_regex = r"[a-z0-9_.-]+"
+    unbudgeted_actions = BaseViewSet.unbudgeted_actions | {"list", "retrieve", "preview"}
+
+    def _kind(self, name: str) -> Any:
+        from karni.mail import find_kind
+
+        found = find_kind(name)
+        if found is None:
+            raise NotFound("No such email.")
+        return found
+
+    @extend_schema(responses=EmailTemplateSerializer(many=True))
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        from karni.mail import kinds as mail_kinds
+
+        edited = {row.kind: row for row in EmailTemplate.objects.all()}
+        # karni: allow(unpaginated-action): the declared emails, a few dozen at most
+        return Response(
+            [email_templates.describe(kind, edited.get(kind.name)) for kind in mail_kinds()]
+        )
+
+    @extend_schema(responses=EmailTemplateSerializer)
+    def retrieve(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        kind = self._kind(str(kwargs.get("kind", "")))
+        row = EmailTemplate.objects.filter(kind=kind.name).first()
+        return Response(email_templates.describe(kind, row))
+
+    @extend_schema(request=EmailTemplateInputSerializer, responses=EmailTemplateSerializer)
+    def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        kind = self._kind(str(kwargs.get("kind", "")))
+        body = EmailTemplateInputSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        row = email_templates.save(
+            kind, body.validated_data["subject"], body.validated_data["text"]
+        )
+        return Response(email_templates.describe(kind, row))
+
+    def partial_update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return self.update(request, *args, **kwargs)
+
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        raise MethodNotAllowed("POST", detail="PUT email-templates/<kind>/ changes one.")
+
+    @extend_schema(responses=EmailTemplateSerializer)
+    def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Put the email back to its files."""
+        kind = self._kind(str(kwargs.get("kind", "")))
+        EmailTemplate.objects.filter(kind=kind.name).delete()
+        return Response(email_templates.describe(kind, None))
+
+    @extend_schema(request=EmailTemplateInputSerializer, responses=OpenApiTypes.OBJECT)
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="preview",
+        access=Can("karni_commerce.emailtemplate:change"),
+    )
+    def preview(self, request: Request, kind: str = "") -> Response:
+        """A draft rendered with sample values: its subject, text and HTML."""
+        found = self._kind(kind)
+        body = EmailTemplateInputSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        return Response(
+            email_templates.preview(
+                found, body.validated_data["subject"], body.validated_data["text"]
+            )
+        )
