@@ -1,0 +1,26 @@
+{% extends "karni_admin/login.html" %}
+{% load karni_demo %}
+{% comment %}
+Karni's admin sign-in page with the demo accounts above the form (karni/demo/apps.py).
+{% endcomment %}
+
+{% block content %}
+    {% demo_info as demo %}
+    {% if demo %}
+        <div class="mb-6" data-demo-login>
+            <p>
+                Demo: sign in as one of these accounts. Only they can change data,
+                and the data resets every {{ demo.reset_hours }} hours.
+            </p>
+            <ul class="mt-2 space-y-1">
+                {% for account in demo.accounts %}
+                    <li>
+                        <strong>{{ account.label }}</strong>:
+                        <code>{{ account.login }}</code>, password <code>{{ account.password }}</code>{% if account.can %}. {{ account.can }}{% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+    {{ block.super }}
+{% endblock %}

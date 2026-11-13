@@ -80,6 +80,19 @@ class KarniSettingsModel(BaseModel):
     KARNI_ROLES: dict[str, dict[str, Any]] = Field(default_factory=dict)
     KARNI_ROLES_AUTOSYNC: bool = True
     KARNI_SEED_LOGINS: dict[str, list[str]] = Field(default_factory=dict)
+    KARNI_DEMO_MODE: bool = False
+    KARNI_DEMO_ACCOUNTS: Any = Field(default_factory=list)
+    KARNI_DEMO_SEED: int = 42
+    KARNI_DEMO_RESET_HOURS: int = Field(default=24, ge=1)
+    KARNI_DEMO_RESET_CHECK_SECONDS: int = Field(default=60, ge=0)
+    KARNI_DEMO_RESET_STAMP: str = ""
+    KARNI_DEMO_APP_INDEX: str = ""
+    KARNI_DEMO_KEEP_APPS: Any = None
+    KARNI_DEMO_OPEN_PATHS: Any = Field(default_factory=list)
+    KARNI_DEMO_LOCKED_PATHS: Any = Field(default_factory=list)
+    KARNI_DEMO_APP_RESERVED: Any = Field(default_factory=list)
+    KARNI_DEMO_WRITE_RULE: str = ""
+    KARNI_DEMO_SEEDER: str = ""
     KARNI_AUTH_THROTTLE_RATES: dict[str, Any] = Field(default_factory=dict)
     KARNI_API_MAX_EXPAND_DEPTH: int = 2
     KARNI_SEARCH_PROVIDER: str = "karni.api.search.postgres.PostgresSearchProvider"

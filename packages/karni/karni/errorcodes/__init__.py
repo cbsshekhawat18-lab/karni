@@ -24,7 +24,7 @@ settings, optional dependencies, deploy checks and production
 why``, request ids, the development capture, ``karni trace``, ``karni replay``,
 ``karni queries``) · ``E96x``/``E97x`` typed fields and database guarantees
 (``karni.fields``) · ``E98x``/``W98x`` lifecycle and limited resources
-(``StateField``, capacity, ``no_overlap``) · ``E27x``/``W54x`` external
+(``StateField``, capacity, ``no_overlap``) · ``E95x`` demo mode (``karni.demo``) · ``E27x``/``W54x`` external
 tables, SQL views and a second database (``karni.db``) · ``E34x``/``W55x``
 tree models (``karni.tree``) · ``E49x``/``W62x`` the tree scope
 (``karni.accounts.tree_scope``) · ``E53x``/``W63x`` navigation from data
@@ -2771,6 +2771,55 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "what karni explain recognises in it.",
         "Fix the exception the traceback names (karni explain - explains a pasted traceback), "
         "then run karni queries again.",
+    ),
+    # E95x demo mode (karni.demo)
+    _e(
+        "E950",
+        "KARNI_DEMO_ACCOUNTS is invalid",
+        "check",
+        "karni.demo.conf.accounts; karni.demo.checks.check_demo_mode",
+        "Each demo account is a dict with a login and optional label, can, roles, staff, superuser "
+        "and password. Roles are a list of role names or 'all'. A login can be listed only once.",
+        "Fix the entry the message names. Example: KARNI_DEMO_ACCOUNTS = [{'login': "
+        "'customer@example.com', 'label': 'Customer', 'roles': ['customer'], 'can': 'Place orders.'}].",
+    ),
+    _e(
+        "E951",
+        "karni_demo_boot refuses to run outside demo mode",
+        "exception",
+        "manage.py karni_demo_boot",
+        "The boot command seeds the database with accounts that have a known password. That is "
+        "right for a public demo and wrong for anything else, so it refuses while KARNI_DEMO_MODE "
+        "is off and DEBUG is off.",
+        "Set KARNI_DEMO_MODE=True (the environment variable DEMO_MODE=True works too) for the "
+        "public demo. Do not run it against real data.",
+    ),
+    _e(
+        "E952",
+        "A demo setting names a function that cannot be imported",
+        "exception",
+        "karni.demo.guard.check_request; karni.demo.reset.reseed",
+        "KARNI_DEMO_WRITE_RULE and KARNI_DEMO_SEEDER are dotted paths to a function. The path "
+        "could not be imported.",
+        "Fix the dotted path (module.function), or unset the setting to use Karni's own rule.",
+    ),
+    _e(
+        "E953",
+        "Demo mode is on and the write guard is not installed",
+        "check",
+        "karni.demo.checks.check_demo_mode",
+        "KARNI_DEMO_MODE only changes behaviour through DemoWriteGuardMiddleware. Without it "
+        "every visitor can write to the demo and to its accounts.",
+        "Add 'karni.demo.middleware.DemoWriteGuardMiddleware' (and DemoResetMiddleware) to "
+        "MIDDLEWARE after Karni's stack, and 'karni.demo' to INSTALLED_APPS.",
+    ),
+    _e(
+        "E954",
+        "Demo mode is turned off",
+        "api",
+        "karni.demo.views.DemoInfoView",
+        "GET /api/demo/ answers only while KARNI_DEMO_MODE is on.",
+        "Set KARNI_DEMO_MODE=True for the public demo, or remove the route from urls.py.",
     ),
     # E96x-E97x typed fields and database guarantees (karni.fields: E960-E970, W964-W967)
     _e(

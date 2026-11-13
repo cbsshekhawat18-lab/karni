@@ -535,6 +535,26 @@ BASE: dict[str, Any] = {
     "KARNI_QUERY_BUDGET_MODE": env("KARNI_QUERY_BUDGET_MODE", default="off"),
     # Per-request query count / duplicates / time log (QueryLogMiddleware).
     "KARNI_QUERY_LOG": env.bool("KARNI_QUERY_LOG", default=False),
+    # Demo mode (karni.demo): a public demo with demo accounts, a write rule and a reset.
+    # The short names DEMO_MODE, DEMO_SEED, DEMO_RESET_HOURS, DEMO_RESET_STAMP and
+    # DEMO_APP_INDEX also work (a Blueprint reads them best). The KARNI_ name wins.
+    "KARNI_DEMO_MODE": env.bool("KARNI_DEMO_MODE", default=env.bool("DEMO_MODE", default=False)),
+    "KARNI_DEMO_ACCOUNTS": env.json("KARNI_DEMO_ACCOUNTS", default=[]),
+    "KARNI_DEMO_SEED": env.int("KARNI_DEMO_SEED", default=env.int("DEMO_SEED", default=42)),
+    "KARNI_DEMO_RESET_HOURS": env.int(
+        "KARNI_DEMO_RESET_HOURS", default=env.int("DEMO_RESET_HOURS", default=24)
+    ),
+    "KARNI_DEMO_RESET_CHECK_SECONDS": env.int("KARNI_DEMO_RESET_CHECK_SECONDS", default=60),
+    "KARNI_DEMO_RESET_STAMP": env(
+        "KARNI_DEMO_RESET_STAMP", default=env("DEMO_RESET_STAMP", default="")
+    ),
+    "KARNI_DEMO_APP_INDEX": env("KARNI_DEMO_APP_INDEX", default=env("DEMO_APP_INDEX", default="")),
+    "KARNI_DEMO_KEEP_APPS": None,
+    "KARNI_DEMO_OPEN_PATHS": [],
+    "KARNI_DEMO_LOCKED_PATHS": [],
+    "KARNI_DEMO_APP_RESERVED": [],
+    "KARNI_DEMO_WRITE_RULE": "",
+    "KARNI_DEMO_SEEDER": "",
     # Extra `karni seed` logins with their roles, e.g. {"organizer@example.com": ["organizer"]}.
     "KARNI_SEED_LOGINS": env.json("KARNI_SEED_LOGINS", default={}),
     # Response caching for BaseViewSet list/retrieve (karni.api.caching).

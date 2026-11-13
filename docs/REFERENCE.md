@@ -1760,6 +1760,24 @@ class Lead(BaseModel):
 
 `karni_settings(globals())` in `config/settings.py` defines every setting below. Anything assigned after the call wins. Each is read from the environment variable in the *Env* column when one is named. The Django and DRF settings Karni derives are described in [settings](settings.md).
 
+### General
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_DEMO_MODE` | `KARNI_DEMO_MODE` | `env.bool("DEMO_MODE", default=False)` | Experimental. Turns demo mode on: only the demo accounts write, the data resets every `KARNI_DEMO_RESET_HOURS` hours, the sign-in pages list the accounts (`GET /api/demo/`). Also `DEMO_MODE`. Needs `karni.demo` in `INSTALLED_APPS` and its two middlewares. See [demo mode](demo-mode.md). |
+| `KARNI_DEMO_ACCOUNTS` | `KARNI_DEMO_ACCOUNTS` | `[]` | Experimental. The demo accounts, one per role: `[{"login": "customer@example.com", "label": "Customer", "can": "Place orders.", "roles": ["customer"]}]`. Keys: `login`, `label`, `can`, `roles` (a list or `"all"`), `staff`, `superuser`, `password`. Empty: the one account `karni seed` makes. Reported by `E950`. |
+| `KARNI_DEMO_SEED` | `KARNI_DEMO_SEED` | `env.int("DEMO_SEED", default=42)` | Experimental. The fixed seed every demo reset uses, so the data is the same each time. Also `DEMO_SEED`. |
+| `KARNI_DEMO_RESET_HOURS` | `KARNI_DEMO_RESET_HOURS` | `env.int("DEMO_RESET_HOURS", default=24)` | Experimental. Hours between two demo resets, and how old data may be at boot. Also `DEMO_RESET_HOURS`. |
+| `KARNI_DEMO_RESET_CHECK_SECONDS` | `KARNI_DEMO_RESET_CHECK_SECONDS` | `60` | Experimental. How often a worker asks whether a demo reset is due. One worker resets, under a lock. |
+| `KARNI_DEMO_RESET_STAMP` | `KARNI_DEMO_RESET_STAMP` | `env("DEMO_RESET_STAMP", default="")` | Experimental. The file that records the last demo reset. Empty: next to the SQLite database, else `<BASE_DIR>/data/demo-reset.json`. Also `DEMO_RESET_STAMP`. |
+| `KARNI_DEMO_APP_INDEX` | `KARNI_DEMO_APP_INDEX` | `env("DEMO_APP_INDEX", default="")` | Experimental. The built React app's `index.html` that `karni.demo.urls.app_urls()` serves. Empty: `<BASE_DIR>/frontend/dist/index.html`. Also `DEMO_APP_INDEX`. |
+| `KARNI_DEMO_KEEP_APPS` |  | `None` | Experimental. App labels whose rows a demo reset keeps. `None`: the accounts, roles, content types, sessions, the token blacklist and the beat schedule. |
+| `KARNI_DEMO_OPEN_PATHS` |  | `[]` | Experimental. Paths anyone may write to in demo mode, besides sign-in, refresh, sign-out and accept-terms. An exact path or a prefix ending in `*`, for example `["/api/contact/*"]`. |
+| `KARNI_DEMO_LOCKED_PATHS` |  | `[]` | Experimental. Paths no demo account may write to, besides the accounts API and the admin's user and role tables. Same pattern rule as `KARNI_DEMO_OPEN_PATHS`. |
+| `KARNI_DEMO_APP_RESERVED` |  | `[]` | Experimental. First path segments the demo's React page never answers, added to `api`, `health`, the admin, static and media, for example `["payments"]`. |
+| `KARNI_DEMO_WRITE_RULE` |  | `""` | Experimental. Dotted path of `f(request) -> Refusal \| None` that replaces `karni.demo.guard.refusal`. |
+| `KARNI_DEMO_SEEDER` |  | `""` | Experimental. Dotted path of `f(seed: int) -> str` that reseeds the emptied tables on a demo reset. Empty: `karni seed --reset` with the fixed seed. |
+
 ### Accounts & auth
 
 | Setting | Env | Default | What it controls |
@@ -2553,6 +2571,11 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E941`](errors.md#e941) | exception | karni queries cannot find the user (--as) |
 | [`E942`](errors.md#e942) | exception | karni queries cannot build the request |
 | [`E943`](errors.md#e943) | exception | The view raised while karni queries requested it |
+| [`E950`](errors.md#e950) | check | KARNI_DEMO_ACCOUNTS is invalid |
+| [`E951`](errors.md#e951) | exception | karni_demo_boot refuses to run outside demo mode |
+| [`E952`](errors.md#e952) | exception | A demo setting names a function that cannot be imported |
+| [`E953`](errors.md#e953) | check | Demo mode is on and the write guard is not installed |
+| [`E954`](errors.md#e954) | api | Demo mode is turned off |
 | [`E960`](errors.md#e960) | check | A FloatField holds money |
 | [`E961`](errors.md#e961) | exception | A MoneyField's currency is not declared |
 | [`E962`](errors.md#e962) | exception | A float reached a MoneyField |
