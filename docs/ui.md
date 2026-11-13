@@ -50,6 +50,7 @@ is a few lines that compose them (see the [tutorial](tutorial.md)).
 - `SocialButton` (role `social-sign-in`, experimental)
 - `OtpLoginForm` (role `code-sign-in`, experimental)
 - `TermsGate` (role `terms-gate`, experimental)
+- `DemoNotice` (role `demo-notice`, experimental)
 - `KarniProvider`
 
 ## Page blocks (experimental)
@@ -210,7 +211,7 @@ suite).
 
 Styled Radix parts and basics. Each one always merges `className` and forwards refs.
 
-`Button`, `Checkbox`, `Dashboard`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `EmptyValue`, `ErrorState`, `Input`, `KarniPrimitivesProvider`, `Label`, `PendingButton`, `PermissionDenied`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`, `ThemeProvider`, `ThemeToggle`
+`Button`, `Checkbox`, `Dashboard`, `DemoNoticeBody`, `DemoSignInPrompt`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `EmptyValue`, `ErrorState`, `Input`, `KarniPrimitivesProvider`, `Label`, `PendingButton`, `PermissionDenied`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`, `ThemeProvider`, `ThemeToggle`
 
 ## Hooks
 
@@ -218,6 +219,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useAuth`: `{ user, status, login(email, password), logout, refresh }` from `AuthProvider`, and (experimental) `{ terms, termsRequired, acceptTerms(client) }` for terms acceptance.
 - `useChangeHistory`: One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).
 - `useDelayedFlag`: See the package README.
+- `useDemo`: See the package README.
 - `useGlobalSearch`: Experimental. `{ q, models, limit }` → `{ query, groups: [{ resource, label, hits: [{ resource, id, title, subtitle, score }] }] }`: cross-model search (`GET /search/`), each model under its own list access. A query under `minLength` (2) sends nothing.
 - `useImportActions`: `upload`, `preview` (the dry run) and `commit` mutations of an import.
 - `useImportDescribe`: The importable fields of a resource and the user's remembered column mapping.
@@ -263,6 +265,7 @@ role that another component holds (compose it instead), and `karni context` list
 | `dashboard` | `Dashboard` |
 | `dashboard-grid` | `DashboardGrid` |
 | `data-table` | `ResourceTable` |
+| `demo-notice` | `DemoNotice` |
 | `detail-view` | `ResourceDetail` |
 | `empty-state` | `EmptyState` |
 | `error-state` | `ErrorState` |

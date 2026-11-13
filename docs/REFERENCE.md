@@ -1760,24 +1760,6 @@ class Lead(BaseModel):
 
 `karni_settings(globals())` in `config/settings.py` defines every setting below. Anything assigned after the call wins. Each is read from the environment variable in the *Env* column when one is named. The Django and DRF settings Karni derives are described in [settings](settings.md).
 
-### General
-
-| Setting | Env | Default | What it controls |
-|---|---|---|---|
-| `KARNI_DEMO_MODE` | `KARNI_DEMO_MODE` | `env.bool("DEMO_MODE", default=False)` | Experimental. Turns demo mode on: only the demo accounts write, the data resets every `KARNI_DEMO_RESET_HOURS` hours, the sign-in pages list the accounts (`GET /api/demo/`). Also `DEMO_MODE`. Needs `karni.demo` in `INSTALLED_APPS` and its two middlewares. See [demo mode](demo-mode.md). |
-| `KARNI_DEMO_ACCOUNTS` | `KARNI_DEMO_ACCOUNTS` | `[]` | Experimental. The demo accounts, one per role: `[{"login": "customer@example.com", "label": "Customer", "can": "Place orders.", "roles": ["customer"]}]`. Keys: `login`, `label`, `can`, `roles` (a list or `"all"`), `staff`, `superuser`, `password`. Empty: the one account `karni seed` makes. Reported by `E950`. |
-| `KARNI_DEMO_SEED` | `KARNI_DEMO_SEED` | `env.int("DEMO_SEED", default=42)` | Experimental. The fixed seed every demo reset uses, so the data is the same each time. Also `DEMO_SEED`. |
-| `KARNI_DEMO_RESET_HOURS` | `KARNI_DEMO_RESET_HOURS` | `env.int("DEMO_RESET_HOURS", default=24)` | Experimental. Hours between two demo resets, and how old data may be at boot. Also `DEMO_RESET_HOURS`. |
-| `KARNI_DEMO_RESET_CHECK_SECONDS` | `KARNI_DEMO_RESET_CHECK_SECONDS` | `60` | Experimental. How often a worker asks whether a demo reset is due. One worker resets, under a lock. |
-| `KARNI_DEMO_RESET_STAMP` | `KARNI_DEMO_RESET_STAMP` | `env("DEMO_RESET_STAMP", default="")` | Experimental. The file that records the last demo reset. Empty: next to the SQLite database, else `<BASE_DIR>/data/demo-reset.json`. Also `DEMO_RESET_STAMP`. |
-| `KARNI_DEMO_APP_INDEX` | `KARNI_DEMO_APP_INDEX` | `env("DEMO_APP_INDEX", default="")` | Experimental. The built React app's `index.html` that `karni.demo.urls.app_urls()` serves. Empty: `<BASE_DIR>/frontend/dist/index.html`. Also `DEMO_APP_INDEX`. |
-| `KARNI_DEMO_KEEP_APPS` |  | `None` | Experimental. App labels whose rows a demo reset keeps. `None`: the accounts, roles, content types, sessions, the token blacklist and the beat schedule. |
-| `KARNI_DEMO_OPEN_PATHS` |  | `[]` | Experimental. Paths anyone may write to in demo mode, besides sign-in, refresh, sign-out and accept-terms. An exact path or a prefix ending in `*`, for example `["/api/contact/*"]`. |
-| `KARNI_DEMO_LOCKED_PATHS` |  | `[]` | Experimental. Paths no demo account may write to, besides the accounts API and the admin's user and role tables. Same pattern rule as `KARNI_DEMO_OPEN_PATHS`. |
-| `KARNI_DEMO_APP_RESERVED` |  | `[]` | Experimental. First path segments the demo's React page never answers, added to `api`, `health`, the admin, static and media, for example `["payments"]`. |
-| `KARNI_DEMO_WRITE_RULE` |  | `""` | Experimental. Dotted path of `f(request) -> Refusal \| None` that replaces `karni.demo.guard.refusal`. |
-| `KARNI_DEMO_SEEDER` |  | `""` | Experimental. Dotted path of `f(seed: int) -> str` that reseeds the emptied tables on a demo reset. Empty: `karni seed --reset` with the fixed seed. |
-
 ### Accounts & auth
 
 | Setting | Env | Default | What it controls |
@@ -1848,6 +1830,19 @@ class Lead(BaseModel):
 | `KARNI_QUERY_BUDGET` |  | `{ "list": 8, "retrieve": 8, "create": 12, "update": 12, "partial_update": 12, "destroy": 10, "*": 15}` | Queries allowed per `BaseViewSet` action (`"*"` for any other), merged over the defaults. Set it per viewset with `query_budget = Budget(...)`. |
 | `KARNI_QUERY_BUDGET_MODE` | `KARNI_QUERY_BUDGET_MODE` | `"off"` | `off`, `warn` (log an exceeded budget) or `raise` (fail the request, which is what the pytest plugin sets). |
 | `KARNI_QUERY_LOG` | `KARNI_QUERY_LOG` | `False` | Log each request's query count, duplicates and SQL time (`QueryLogMiddleware`). |
+| `KARNI_DEMO_MODE` | `KARNI_DEMO_MODE` | `env.bool("DEMO_MODE", default=False)` | Experimental. Turns demo mode on: only the demo accounts write, the data resets every `KARNI_DEMO_RESET_HOURS` hours, the sign-in pages list the accounts (`GET /api/demo/`). Also `DEMO_MODE`. Needs `karni.demo` in `INSTALLED_APPS` and its two middlewares. See [demo mode](demo-mode.md). |
+| `KARNI_DEMO_ACCOUNTS` | `KARNI_DEMO_ACCOUNTS` | `[]` | Experimental. The demo accounts, one per role: `[{"login": "customer@example.com", "label": "Customer", "can": "Place orders.", "roles": ["customer"]}]`. Keys: `login`, `label`, `can`, `roles` (a list or `"all"`), `staff`, `superuser`, `password`. Empty: the one account `karni seed` makes. Reported by `E950`. |
+| `KARNI_DEMO_SEED` | `KARNI_DEMO_SEED` | `env.int("DEMO_SEED", default=42)` | Experimental. The fixed seed every demo reset uses, so the data is the same each time. Also `DEMO_SEED`. |
+| `KARNI_DEMO_RESET_HOURS` | `KARNI_DEMO_RESET_HOURS` | `env.int("DEMO_RESET_HOURS", default=24)` | Experimental. Hours between two demo resets, and how old data may be at boot. Also `DEMO_RESET_HOURS`. |
+| `KARNI_DEMO_RESET_CHECK_SECONDS` | `KARNI_DEMO_RESET_CHECK_SECONDS` | `60` | Experimental. How often a worker asks whether a demo reset is due. One worker resets, under a lock. |
+| `KARNI_DEMO_RESET_STAMP` | `KARNI_DEMO_RESET_STAMP` | `env("DEMO_RESET_STAMP", default="")` | Experimental. The file that records the last demo reset. Empty: next to the SQLite database, else `<BASE_DIR>/data/demo-reset.json`. Also `DEMO_RESET_STAMP`. |
+| `KARNI_DEMO_APP_INDEX` | `KARNI_DEMO_APP_INDEX` | `env("DEMO_APP_INDEX", default="")` | Experimental. The built React app's `index.html` that `karni.demo.urls.app_urls()` serves. Empty: `<BASE_DIR>/frontend/dist/index.html`. Also `DEMO_APP_INDEX`. |
+| `KARNI_DEMO_KEEP_APPS` |  | `None` | Experimental. App labels whose rows a demo reset keeps. `None`: the accounts, roles, content types, sessions, the token blacklist and the beat schedule. |
+| `KARNI_DEMO_OPEN_PATHS` |  | `[]` | Experimental. Paths anyone may write to in demo mode, besides sign-in, refresh, sign-out and accept-terms. An exact path or a prefix ending in `*`, for example `["/api/contact/*"]`. |
+| `KARNI_DEMO_LOCKED_PATHS` |  | `[]` | Experimental. Paths no demo account may write to, besides the accounts API and the admin's user and role tables. Same pattern rule as `KARNI_DEMO_OPEN_PATHS`. |
+| `KARNI_DEMO_APP_RESERVED` |  | `[]` | Experimental. First path segments the demo's React page never answers, added to `api`, `health`, the admin, static and media, for example `["payments"]`. |
+| `KARNI_DEMO_WRITE_RULE` |  | `""` | Experimental. Dotted path of `f(request) -> Refusal \| None` that replaces `karni.demo.guard.refusal`. |
+| `KARNI_DEMO_SEEDER` |  | `""` | Experimental. Dotted path of `f(seed: int) -> str` that reseeds the emptied tables on a demo reset. Empty: `karni seed --reset` with the fixed seed. |
 | `KARNI_SEED_LOGINS` | `KARNI_SEED_LOGINS` | `{}` | Extra `karni seed` logins with their roles, as JSON: `{"organizer@example.com": ["organizer"]}`. |
 | `KARNI_API_CACHE` | `KARNI_API_CACHE` | `False` | Cache `BaseViewSet` list and retrieve responses, invalidated on every write. See [response caching](api.md#response-caching). |
 | `KARNI_API_CACHE_TTL` | `KARNI_API_CACHE_TTL` | `300` | Seconds a cached response lives. |
@@ -2164,6 +2159,8 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `EmptyValue` |  | A field that has no value (null, "", an empty list), the same in every Karni component: ResourceTable's cells, ResourceDetail's rows and ChangeHistory's before/after values. | [empty-value.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/empty-value.tsx) |
 | `KarniProvider` | `client: KarniClient` | Rendered once at the app root, it provides the Karni client and a TanStack QueryClient to everything inside it. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/provider.tsx) |
 | `AuthProvider` |  | Rendered inside `KarniProvider`, it holds the signed-in user and attaches credentials (JWT or session) to every request. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/provider.tsx) |
+| `DemoNotice` |  | Experimental. The demo accounts, or nothing when the server is not a demo. | [DemoNotice.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/demo/DemoNotice.tsx) |
+| `DemoNoticeBody` | `demo: DemoInfo` | Experimental. The default body: a sentence, then one row per account. | [DemoNotice.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/demo/DemoNotice.tsx) |
 | `AuthGuard` |  | Renders its children only for a signed-in user, optionally with one of the given roles, and otherwise says why. | [AuthGuard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/AuthGuard.tsx) |
 | `LoginForm` |  | Email and password sign-in form with inline errors and a callback for the two-factor step. | [LoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/LoginForm.tsx) |
 | `SocialButton` | `provider: string`, `getIdToken: () => Promise<string \| SocialIdToken \| null>` | Experimental. A "Continue with &lt;provider&gt;" button that signs in with the provider's ID token. | [SocialButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/SocialButton.tsx) |
@@ -2219,6 +2216,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `useKarniClient` |  | Returns the Karni client from `KarniProvider` and throws a descriptive error outside one. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/provider.tsx) |
 | `useSchema` | `resource: string` | Returns one resource's parsed schema (fields, types, relations, operations) from the backend's OpenAPI document, fetched once per app. | [useSchema.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/useSchema.ts) |
 | `useAuth` |  | Returns the signed-in user, auth status, `login` and `logout`, and throws a descriptive error outside `AuthProvider`. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/provider.tsx) |
+| `useDemo` | `options?: Omit<UseQueryOptions<DemoInfo, Error, DemoInfo, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Experimental. The demo accounts of the server (`GET /demo/`), cached for five minutes. | [useDemo.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/demo/useDemo.ts) |
 | `usePermission` |  | `isAuthenticated` and `hasRole(...names)` for the signed-in user. | [usePermission.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/usePermission.ts) |
 | `useSocialLogin` | `provider: string` | Experimental. Sign in with a provider's ID token: `{ signIn, status, error, reset }`. | [useSocialLogin.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/useSocialLogin.ts) |
 | `useOtpLogin` | `options?: UseOtpLoginOptions` | Experimental. Sign in with a code sent by email: `{ step, send, verify, resend, back, status }`. | [useOtpLogin.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/useOtpLogin.ts) |
@@ -2269,6 +2267,9 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `createKarniClient` | function | Creates the fetch client every hook in this package uses: base URL, JSON and multipart bodies, DRF errors as `KarniApiError`, and auth hooks. | [client.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/client.ts) |
 | `KarniApiError` | class | Thrown for non-2xx responses, with the parsed DRF error body in `data`. | [client.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/client.ts) |
 | `zodFor` | function | Builds a Zod validator for a resource's create or update payload from its schema. | [zod.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/zod.ts) |
+| `DEMO_PATH` | constant | Experimental. Where the demo's description comes from, relative to the client's `baseUrl`. | [useDemo.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/demo/useDemo.ts) |
+| `DemoSignInPrompt` | constant | Experimental. DemoNotice above Karni's sign-in prompt, as AuthGuard's `Anonymous` slot. | [DemoNotice.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/demo/DemoNotice.tsx) |
+| `createDemoSignInPrompt` | function | Experimental. An `Anonymous` slot for AuthGuard: DemoNotice above Karni's sign-in prompt. | [DemoNotice.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/demo/DemoNotice.tsx) |
 | `defaultAuthGuardSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [AuthGuard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/AuthGuard.tsx) |
 | `defaultLoginFormSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [LoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/LoginForm.tsx) |
 | `createLocalStorageTokenStorage` | function | The default storage, which keeps the refresh token in localStorage. | [storage.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/storage.ts) |

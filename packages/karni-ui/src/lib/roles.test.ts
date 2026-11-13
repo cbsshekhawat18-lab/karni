@@ -122,6 +122,7 @@ describe("package self-registrations", () => {
       dashboard: "Dashboard",
       "dashboard-grid": "DashboardGrid",
       "data-table": "ResourceTable",
+      "demo-notice": "DemoNotice",
       "detail-view": "ResourceDetail",
       "empty-state": "EmptyState",
       "error-state": "ErrorState",
