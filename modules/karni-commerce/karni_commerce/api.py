@@ -32,6 +32,7 @@ __all__ = [
     "CustomerRowSerializer",
     "ItemSerializer",
     "ManualOrderSerializer",
+    "ManualQuoteSerializer",
     "ManualResultSerializer",
     "NoteInputSerializer",
     "OrderStaffSerializer",
@@ -671,6 +672,17 @@ class ManualOrderSerializer(serializers.Serializer[Any]):
     send_link = serializers.BooleanField(
         required=False, default=True, help_text="Email the buyer the link to pay."
     )
+
+
+class ManualQuoteSerializer(serializers.Serializer[Any]):
+    """An order staff are about to place by hand, to price before they place it."""
+
+    email = serializers.EmailField(required=False, allow_blank=True, default="")
+    billing = PlaceSerializer(required=False, allow_null=True, default=None)
+    shipping = PlaceSerializer(required=False, allow_null=True, default=None)
+    lines = ManualLineSerializer(many=True, allow_empty=False)
+    coupon = serializers.CharField(max_length=40, required=False, allow_blank=True, default="")
+    shipping_method = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class ManualResultSerializer(serializers.Serializer[Any]):

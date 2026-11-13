@@ -9,7 +9,7 @@ export { AddressFields, EMPTY_ADDRESS } from "./AddressFields";
 export type { AddressFieldsProps } from "./AddressFields";
 export { CartPage } from "./CartPage";
 export type { CartPageProps } from "./CartPage";
-export { CheckoutPage } from "./CheckoutPage";
+export { CheckoutPage, ShippingChoice } from "./CheckoutPage";
 export { CouponBox } from "./CouponBox";
 export { couponLimits, registerCouponLimit } from "./couponLimits";
 export type { CouponLimit } from "./couponLimits";

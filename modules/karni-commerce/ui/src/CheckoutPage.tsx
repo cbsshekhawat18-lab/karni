@@ -61,7 +61,8 @@ const METHOD_HINT: Record<string, string> = {
 };
 
 /** The ways to send the order to the address, as radio buttons, with what each costs. */
-function ShippingChoice({
+/** Experimental. The ways to send an order to its address, from a quote, to choose one. */
+export function ShippingChoice({
   quote,
   chosen,
   onChoose,

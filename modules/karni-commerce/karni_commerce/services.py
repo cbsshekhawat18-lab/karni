@@ -405,6 +405,64 @@ def hold_minutes() -> int:
 
 
 @transaction.atomic
+def priced_lines(
+    lines: Sequence[tuple[str, str, int, Mapping[str, Any]]], buyer: Any = None
+) -> list[pricing.QuoteLine]:
+    """``lines`` (``(kind, key, quantity, options)``) checked and priced by their adapters.
+
+    :raises ValidationError: for an item that is gone or a line an adapter refuses.
+    """
+    person = _user(buyer)
+    priced: list[pricing.QuoteLine] = []
+    for kind, key, quantity, options in lines:
+        adapter = adapter_for(kind)
+        item = adapter.get(str(key))
+        if item is None:
+            raise refuse("An item in the cart is no longer for sale.")
+        chosen = adapter.clean_options(item, dict(options))
+        adapter.validate(item, int(quantity), chosen, person)
+        priced.append(quote_line(adapter, item, int(quantity), chosen, person))
+    return priced
+
+
+def quote_lines(
+    lines: Sequence[tuple[str, str, int, Mapping[str, Any]]],
+    *,
+    email: str = "",
+    billing: Mapping[str, Any] | None = None,
+    shipping: Mapping[str, Any] | None = None,
+    coupon: str = "",
+    method: str | None = None,
+) -> pricing.Quote:
+    """What an order of ``lines`` would come to, as :func:`place_order` would price it.
+
+    Staff see it before they place an order by hand: the coupon (a code; an unknown
+    one is a ``coupon_problem``), the ways to send it to the address, the tax and
+    the total. Nothing is written or held.
+
+    :raises ValidationError: for no lines, or a line an adapter refuses.
+    """
+    if not lines:
+        raise ValidationError({"lines": ["Add something to the order."]})
+    person = account_for(email) if email else None
+    priced = priced_lines(lines, person)
+    found = pricing.find_coupon(coupon) if coupon.strip() else None
+    shipped = any(line.needs_shipping for line in priced)
+    address = dict(shipping or {}) if shipped and shipping else dict(billing or {})
+    result = pricing.quote(
+        priced,
+        currency=conf.currency(),
+        buyer=person,
+        email=email,
+        address=address,
+        coupon=found,
+        method=method,
+    )
+    if coupon.strip() and found is None:
+        result.coupon_problem = "No coupon has that code."
+    return result
+
+
 def place_order(
     lines: Sequence[tuple[str, str, int, Mapping[str, Any]]],
     *,
@@ -436,15 +494,7 @@ def place_order(
         raise ValidationError({"email": ["An email address, for the confirmation."]})
     person = _user(user)
     currency = conf.currency()
-    priced: list[pricing.QuoteLine] = []
-    for kind, key, quantity, options in lines:
-        adapter = adapter_for(kind)
-        item = adapter.get(str(key))
-        if item is None:
-            raise refuse("An item in the cart is no longer for sale.")
-        chosen = adapter.clean_options(item, dict(options))
-        adapter.validate(item, int(quantity), chosen, person)
-        priced.append(quote_line(adapter, item, int(quantity), chosen, person))
+    priced = priced_lines(lines, person)
     found = pricing.find_coupon(coupon) if isinstance(coupon, str) else coupon
     if isinstance(coupon, str) and coupon.strip() and found is None:
         raise refuse("No coupon has that code.", field="coupon")

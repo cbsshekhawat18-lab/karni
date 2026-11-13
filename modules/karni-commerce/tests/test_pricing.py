@@ -357,3 +357,50 @@ def test_coupons_zones_and_rates_are_staff_records(
     assert rate.status_code == 201 and TaxRate.objects.get().country == "FR"
     api.force_authenticate(clerk)
     assert api.get("/api/coupons/").status_code == 403
+
+
+def test_staff_quote_and_place_an_order_by_hand_with_a_coupon_and_a_shipping_method(
+    make_gadget: Callable[..., Gadget],
+) -> None:
+    from karni.testing.api import user_with_roles
+
+    methods = zones()
+    Coupon.objects.create(code="TENOFF", kind="percent", amount=Decimal("10"))
+    lamp = make_gadget(price=Decimal("20.00"), stock=10)
+    manager = user_with_roles("admin")
+    client = APIClient()
+    client.force_authenticate(manager)
+    body = {
+        "email": "noor@example.com",
+        "billing": {"country": "FR", "postcode": "69001"},
+        "lines": [{"kind": "gadget", "item": str(lamp.pk), "quantity": 2}],
+        "coupon": "tenoff",
+        "shipping_method": str(methods["pickup"].pk),
+    }
+    quoted = client.post("/api/orders/manual/quote/", body, format="json")
+    assert quoted.status_code == 200, quoted.data
+    assert (quoted.data["subtotal"], quoted.data["discount"], quoted.data["total"]) == (
+        "40.00",
+        "4.00",
+        "36.00",
+    )
+    assert quoted.data["coupon"] == "TENOFF"
+    assert [m["name"] for m in quoted.data["methods"]] == ["Standard", "Pickup in Lyon"]
+    assert quoted.data["method"] == str(methods["pickup"].pk)
+    wrong = client.post("/api/orders/manual/quote/", {**body, "coupon": "NOPE"}, format="json")
+    assert wrong.data["coupon_problem"] == "No coupon has that code."
+    lamp.refresh_from_db()
+    assert lamp.available == 10 and Order.objects.count() == 0  # a quote holds nothing
+    placed = client.post(
+        "/api/orders/manual/", {**body, "billing": ADDRESS, "send_link": False}, format="json"
+    )
+    assert placed.status_code == 201, placed.data
+    order = Order.objects.get(number=placed.data["number"])
+    assert (order.coupon_code, order.shipping_method, order.total) == (
+        "TENOFF",
+        "Pickup in Lyon",
+        Decimal("36.00"),
+    )
+    clerk = APIClient()
+    clerk.force_authenticate(user_with_roles("customer"))
+    assert clerk.post("/api/orders/manual/quote/", body, format="json").status_code == 403

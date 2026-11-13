@@ -76,6 +76,7 @@ from karni_commerce.api import (
     CustomerRowSerializer,
     ItemSerializer,
     ManualOrderSerializer,
+    ManualQuoteSerializer,
     ManualResultSerializer,
     MergeSerializer,
     NoteInputSerializer,
@@ -463,6 +464,33 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
         )
         result = {"id": str(order.pk), "number": order.number, "link": services.order_link(order)}
         return Response(ManualResultSerializer(result).data, status=201)
+
+    @extend_schema(request=ManualQuoteSerializer, responses=QuoteSerializer)
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="manual/quote",
+        access=Can("karni_commerce.order:add"),
+    )
+    def manual_quote(self, request: Request) -> Response:
+        """What an order placed by hand would come to: the coupon, the ways to send it to
+        the address, the tax and the total. Nothing is placed or held."""
+        body = ManualQuoteSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        billing = dict(data["billing"] or {})
+        found = services.quote_lines(
+            [
+                (line["kind"], line["item"], line["quantity"], line["options"])
+                for line in data["lines"]
+            ],
+            email=data["email"],
+            billing=billing,
+            shipping=dict(data["shipping"] or billing),
+            coupon=data["coupon"],
+            method=data["shipping_method"] or None,
+        )
+        return Response(QuoteSerializer.of(found))
 
     @extend_schema(
         parameters=[

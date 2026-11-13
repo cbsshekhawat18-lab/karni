@@ -1,8 +1,10 @@
 /**
  * Experimental. An order staff place by hand, for a buyer who called: find
- * the items, set how many, type who it is for and where it goes. The server
- * prices it and holds the items as checkout does, and (unless unticked)
- * emails the buyer the link to pay. The order's page opens once it is placed.
+ * the items, set how many, type who it is for and where it goes, a coupon
+ * and the way to send it. The server prices it (`orders/manual/quote/`, shown
+ * before placing: the discount, the shipping, the tax and the total) and
+ * holds the items as checkout does, and (unless unticked) emails the buyer
+ * the link to pay. The order's page opens once it is placed.
  */
 import {
   Button,
@@ -18,9 +20,11 @@ import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { AddressFields, EMPTY_ADDRESS } from "./AddressFields";
 import { problemOf } from "./cart";
+import { ShippingChoice } from "./CheckoutPage";
 import { Money } from "./Money";
 import { useCommerce } from "./routes";
-import type { Address, SellableItem } from "./types";
+import { Totals } from "./Totals";
+import type { Address, Quote, SellableItem } from "./types";
 
 interface Chosen extends SellableItem {
   quantity: number;
@@ -43,6 +47,8 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
   const [billing, setBilling] = useState<Address>(EMPTY_ADDRESS);
   const [note, setNote] = useState("");
   const [sendLink, setSendLink] = useState(true);
+  const [coupon, setCoupon] = useState("");
+  const [method, setMethod] = useState<string | null>(null);
   usePageMeta({ title, siteName });
   useEffect(() => {
     const wait = setTimeout(() => setSearch(typed.trim()), 300);
@@ -57,6 +63,43 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
         signal,
       }),
   });
+  const lines = chosen.map((line) => ({
+    kind: line.kind,
+    item: line.item,
+    options: line.options,
+    quantity: line.quantity,
+  }));
+  const quote = useQuery<Quote>({
+    queryKey: [
+      "karni-commerce",
+      "manual-quote",
+      JSON.stringify(lines),
+      billing.country,
+      billing.region,
+      billing.postcode,
+      coupon.trim(),
+      method ?? "",
+      email,
+    ],
+    enabled: chosen.length > 0,
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) =>
+      client.request<Quote>("/orders/manual/quote/", {
+        method: "POST",
+        body: {
+          email: email.includes("@") ? email : "",
+          billing: {
+            country: billing.country,
+            region: billing.region ?? "",
+            postcode: billing.postcode,
+          },
+          coupon: coupon.trim(),
+          shipping_method: method ?? "",
+          lines,
+        },
+        signal,
+      }),
+  });
   const place = useMutation({
     mutationFn: () =>
       client.request<{ id: string; number: number; link: string }>("/orders/manual/", {
@@ -67,12 +110,9 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
           billing,
           note,
           send_link: sendLink,
-          lines: chosen.map((line) => ({
-            kind: line.kind,
-            item: line.item,
-            options: line.options,
-            quantity: line.quantity,
-          })),
+          coupon: coupon.trim(),
+          shipping_method: method ?? quote.data?.method ?? "",
+          lines,
         },
       }),
     onSuccess: (placed) => navigate(paths.order(placed.number)),
@@ -89,7 +129,6 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
         : [...chosen, { ...item, quantity: 1 }],
     );
   };
-  const total = chosen.reduce((sum, line) => sum + Number(line.price) * line.quantity, 0);
   const submit = (event: FormEvent) => {
     event.preventDefault();
     place.mutate();
@@ -185,12 +224,35 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
                   </Button>
                 </li>
               ))}
-              <li className="flex justify-between border-t border-border pt-2 font-semibold">
-                <span>Estimated total</span>
-                <Money value={total.toFixed(2)} />
-              </li>
             </ul>
           )}
+          {chosen.length > 0 && quote.data ? (
+            <Totals
+              className="border-t border-border pt-3 text-sm"
+              currency={quote.data.currency}
+              subtotal={quote.data.subtotal}
+              discount={quote.data.discount}
+              coupon={quote.data.coupon}
+              shipping={
+                !quote.data.needs_shipping
+                  ? undefined
+                  : quote.data.method === null
+                    ? null
+                    : quote.data.shipping
+              }
+              shippingMethod={
+                quote.data.methods.find((option) => option.id === quote.data.method)?.name
+              }
+              taxLines={quote.data.tax_lines}
+              pricesIncludeTax={quote.data.prices_include_tax}
+              total={quote.data.total}
+            />
+          ) : null}
+          {quote.isError ? (
+            <p role="alert" className="text-sm text-destructive">
+              {problemOf(quote.error)}
+            </p>
+          ) : null}
         </section>
         <section aria-label="Customer" className="space-y-3">
           <h2 className="font-semibold">Customer</h2>
@@ -205,6 +267,27 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
             />
           </div>
           <AddressFields legend="Address" value={billing} onChange={setBilling} section="billing" />
+          <ShippingChoice
+            quote={quote.data}
+            chosen={method}
+            onChoose={setMethod}
+            waiting={quote.isFetching}
+          />
+          <div className="space-y-1">
+            <Label htmlFor="order-coupon">Coupon (optional)</Label>
+            <Input
+              id="order-coupon"
+              value={coupon}
+              autoComplete="off"
+              aria-describedby="order-coupon-problem"
+              onChange={(event) => setCoupon(event.target.value)}
+            />
+            {quote.data?.coupon_problem ? (
+              <p id="order-coupon-problem" role="alert" className="text-sm text-destructive">
+                {quote.data.coupon_problem}
+              </p>
+            ) : null}
+          </div>
           <div className="space-y-1">
             <Label htmlFor="order-note">Note on the order</Label>
             <Textarea

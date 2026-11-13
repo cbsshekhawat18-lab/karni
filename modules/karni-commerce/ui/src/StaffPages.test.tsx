@@ -197,6 +197,30 @@ describe("NewOrderPage", () => {
           },
         ]),
       ),
+      http.post(`${API_BASE}/orders/manual/quote/`, async ({ request }) => {
+        const body = (await request.json()) as { coupon: string; shipping_method: string };
+        const pickup = body.shipping_method === "m2";
+        const known = body.coupon === "TENOFF";
+        return HttpResponse.json({
+          currency: "EUR",
+          subtotal: "32.00",
+          discount: known ? "3.20" : "0.00",
+          shipping: pickup ? "0.00" : "5.00",
+          tax: "0.00",
+          total: known ? (pickup ? "28.80" : "33.80") : pickup ? "32.00" : "37.00",
+          prices_include_tax: false,
+          needs_shipping: true,
+          coupon: known ? "TENOFF" : null,
+          coupon_problem: body.coupon && !known ? "No coupon has that code." : "",
+          methods: [
+            { id: "m1", name: "Standard", kind: "flat", cost: "5.00" },
+            { id: "m2", name: "Pickup", kind: "pickup", cost: "0.00" },
+          ],
+          method: pickup ? "m2" : "m1",
+          shipping_problem: "",
+          tax_lines: [],
+        });
+      }),
       http.post(`${API_BASE}/orders/manual/`, async ({ request }) => {
         placed = await request.json();
         return HttpResponse.json(
@@ -213,13 +237,25 @@ describe("NewOrderPage", () => {
     await userEvent.type(screen.getByLabelText(/^Address\s*\*?$/), "1 Quay");
     await userEvent.type(screen.getByLabelText(/City/), "Porto");
     await userEvent.type(screen.getByLabelText(/Postcode/), "4000");
+    // The quote shows the shipping and the total before the order is placed.
+    expect(await screen.findByText("Shipping (Standard)")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/Coupon/), "NOPE");
+    expect(await screen.findByText("No coupon has that code.")).toBeInTheDocument();
+    await userEvent.clear(screen.getByLabelText(/Coupon/));
+    await userEvent.type(screen.getByLabelText(/Coupon/), "TENOFF");
+    expect(await screen.findByText("Discount (TENOFF)")).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText(/Pickup/));
+    expect(await screen.findByText("Shipping (Pickup)")).toBeInTheDocument();
+    expect(screen.getAllByText(/28\.80/).length).toBeGreaterThan(0);
     await userEvent.click(screen.getByRole("button", { name: "Place the order" }));
     await waitFor(() => expect(navigated).toContain("/orders/1009"));
     expect(placed).toMatchObject({
       email: "noor@example.com",
       name: "Noor Haddad",
       send_link: true,
+      coupon: "TENOFF",
+      shipping_method: "m2",
       lines: [{ kind: "product", item: "p1", quantity: 2 }],
     });
-  });
+  }, 20000);
 });
