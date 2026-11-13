@@ -53,6 +53,8 @@ from karni_cli.kinds import project_kind
 from karni_cli.project import CliError
 from karni_cli.spec import dashboard, emit, navigation, schema
 from karni_cli.spec.catalog import (
+    CONTRACT_ACTIONS,
+    CONTRACT_GRANT_MODELS,
     CONTRACT_MODELS,
     DEFAULT_CACHE_TTL,
     MODULES,
@@ -538,6 +540,13 @@ def _grant_ok(pattern: str, apps: dict[str, Any], modules: set[str]) -> bool:
         return True
     target, _, action = pattern.partition(":")
     app, _, model = target.partition(".")
+    standard = ("", "*", "view", "add", "change", "delete")
+    for contract, contract_models in CONTRACT_GRANT_MODELS.items():
+        # a grant on a core contract's models (people.*:merge, preferences.*:change)
+        allowed = (*standard, *CONTRACT_ACTIONS.get(contract, ()))
+        named = any(fnmatch.fnmatchcase(name.lower(), model.lower()) for name in contract_models)
+        if fnmatch.fnmatchcase(contract, app) and action in allowed and named:
+            return True
     if action not in ("", "*", "view", "add", "change", "delete"):
         return False
     candidates = [
@@ -622,6 +631,8 @@ def build(facts: dict[str, Any], root: Path) -> Exported:
         data["modules"] = modules
     settings = facts["settings"]
     features = _features(settings, left_out)
+    for contract in facts.get("contracts") or ():  # karni.people, karni.preferences...
+        features[str(contract)] = True
     if features:
         data["features"] = features
     roles = _roles(facts, apps, set(modules) | ({"site"} if app_info["kind"] != "app" else set()))
@@ -1068,14 +1079,25 @@ def _pages(
     )
     files = {component: file for component, file in _IMPORT.findall(text)}
     pages: dict[str, list[Any]] = {}
+    # In a project of parts, a family page (/cart, /settings) is the family's, never a page
+    # of karni.yaml: the parts mount it, the spec does not list it.
+    family: frozenset[str] = frozenset()
+    if (root / ".karni" / "recipes").is_dir():
+        from karni_cli.recipes.compose import FAMILY_ROUTES
+
+        family = FAMILY_ROUTES - {"/"}
     for path, component in _ROUTE.findall(text):
+        if path in family:
+            continue
         file = files.get(component)
         source = ""
         if file is not None:
             candidates = [frontend / "pages" / f"{file}{ext}" for ext in ("", ".tsx", ".ts")]
             found = next((c for c in candidates if c.is_file()), None)
             source = found.read_text(encoding="utf-8") if found else ""
-        named = _page_entry(path, source, routes, entities, names_count, prefixes)
+        named = _page_entry(
+            path, source, routes, entities, names_count, prefixes, file if family else None
+        )
         if named is None:
             if component != "AppLayout":
                 left_out.append(f"pages: {path} ({component}), a page of the project's own")
@@ -1120,11 +1142,16 @@ def _page_entry(
     entities: dict[str, Any],
     names_count: dict[str, int],
     prefixes: dict[str, str] | None = None,
+    file: str | None = None,
 ) -> tuple[str, Any] | None:
     if path == "/" and "<Dashboard" in source:
         return "home", "dashboard"
     found = _RESOURCE.search(source)
-    if found is not None:
+    # In a project of parts (``file`` given), the build writes entity pages under an app's
+    # route in pages/karni/ only: a page of the project's own there (/shop/products with a
+    # ResourceTable) is a code page.
+    own = file is not None and not file.startswith("karni/") and path.count("/") > 1
+    if found is not None and not own:
         kind = _PAGE_KINDS[found.group(1)]
         resource = found.group(2)
         label = routes.get(resource)

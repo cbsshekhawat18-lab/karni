@@ -376,6 +376,17 @@ def project_facts() -> dict[str, Any]:
         ],
         "viewsets": _viewsets(),
         "settings": declared,
+        # the core contracts installed (features.people, .events, .timeline, .preferences)
+        "contracts": [
+            name
+            for name, app in (
+                ("people", "karni.people"),
+                ("events", "karni.outbox"),
+                ("timeline", "karni.timeline"),
+                ("preferences", "karni.preferences"),
+            )
+            if apps.is_installed(app)
+        ],
         "databases": sorted(settings.DATABASES),
         "shipped_roles": shipped_roles,
         "modules": _modules(),

@@ -1342,3 +1342,36 @@ def test_api_version_is_normalised_and_left_out_when_unset() -> None:
     bare = validate_text("version: 1\napp: {name: X}\n").spec
     assert bare is not None
     assert "api_version" not in normalise(bare)["app"]
+
+
+def test_export_reads_the_contracts_and_their_grants_and_leaves_family_pages_out(
+    tmp_path: Path,
+) -> None:
+    """A project of parts: features from the installed contracts, grants on their models,
+    and no family page (/cart, /settings) in pages."""
+    facts = _facts()
+    facts["contracts"] = ["people", "preferences"]
+    facts["settings"]["KARNI_ROLES"] = {
+        "admin": {"grants": {"*": "all", "people.*:merge": "all"}},
+        "shop-manager": {"grants": {"preferences.*:change": "all"}},
+    }
+    (tmp_path / "frontend" / "src" / "pages").mkdir(parents=True)
+    (tmp_path / "frontend" / "src" / "routes.tsx").write_text(
+        'import Cart from "./pages/cart";\nimport Terms from "./pages/terms";\n'
+        'createRoute({ getParentRoute: () => root, path: "/cart", component: Cart }),\n'
+        'createRoute({ getParentRoute: () => root, path: "/terms", component: Terms }),\n',
+        encoding="utf-8",
+    )
+    for name in ("cart", "terms"):
+        (tmp_path / "frontend" / "src" / "pages" / f"{name}.tsx").write_text(
+            "export default function Page() { return null; }\n", encoding="utf-8"
+        )
+    alone = build(facts, tmp_path).data
+    assert {"cart": "code"} in alone["pages"]  # a project without parts keeps its page
+    (tmp_path / ".karni" / "recipes").mkdir(parents=True)
+    data = build(facts, tmp_path).data
+    assert data["features"] == {"people": True, "preferences": True}
+    assert data["roles"]["admin"]["grants"]["people.*:merge"] == "all"
+    assert data["roles"]["shop-manager"]["grants"] == {"preferences.*:change": "all"}
+    assert data["pages"] == [{"terms": "code"}]
+    assert validate_text(build(facts, tmp_path).text()).ok

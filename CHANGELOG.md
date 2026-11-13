@@ -452,6 +452,13 @@ apply codemods and list the manual steps. This file is the human summary.
   made), and `SeedContext.pool(model)` gives the rows a run seeded, so a seeder reads the users it
   seeded and not the demo logins another part adds during the run. A seed gives other rows than
   before this change, and the same rows on every run.
+- **Fixed (experimental): `karni plan` reads a project of parts as it was built.** `manage.py
+  karni_facts` names the core contracts installed (`contracts`), so the export has
+  `features.people` and the others and keeps a role's grants on their models
+  (`people.*:merge`, `preferences.*:change`). In a project of parts, a family page (`/cart`,
+  `/settings`) is not a page of karni.yaml, and a page of the project's own under an app's route
+  is its code page. karni-commerce no longer offers itself for every karni.yaml that says
+  "orders".
 
 ## 0.5.1 (2026-11-12)
 

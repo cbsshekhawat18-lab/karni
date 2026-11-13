@@ -1,4 +1,4 @@
-// /products: the catalogue for staff. Search, filters, sorting and paging, CSV export and
+// /shop/products: the catalogue for staff. Search, filters, sorting and paging, CSV export and
 // import, and many products changed at once: select them, then set the price, the sale
 // price, the stock or whether they are for sale. New and Edit show to the roles that may.
 import { Page, ResourceTable } from "@karni/ui";

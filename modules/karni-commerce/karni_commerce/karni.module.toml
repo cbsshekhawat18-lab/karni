@@ -9,7 +9,6 @@ use_when = [
     "online shop",
     "shopping cart",
     "checkout",
-    "orders",
     "sell products",
     "sell bookings or courses",
     "refunds by order line",
