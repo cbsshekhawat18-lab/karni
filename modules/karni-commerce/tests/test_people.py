@@ -126,3 +126,27 @@ def test_commerce_says_when_the_people_contract_is_missing() -> None:
     with mock.patch("karni_commerce.checks.apps.is_installed", return_value=False):
         found = people_installed()
     assert [message.id for message in found] == ["karni.COM001"]
+
+
+def test_the_customers_are_people_with_commerce_facts(
+    clerk: object, make_gadget: MakeGadget
+) -> None:
+    from rest_framework.test import APIClient
+
+    lamp = make_gadget(price=Decimal("10.00"), stock=20)
+    order = pay(place(cart_with(("gadget", lamp, 1)), email="rio@example.com"))
+    person = Person.objects.get(pk=order.person_id)
+    person.given_name, person.family_name = "Rio", "Tanaka"  # changed in another part
+    person.save()
+    Person.objects.create(email="nobody@example.com")  # never bought: not a customer
+    staff = APIClient()
+    staff.force_authenticate(clerk)
+    rows = staff.get("/api/orders/customers/").data["results"]
+    assert [(row["id"], row["name"], row["order_count"]) for row in rows] == [
+        (str(person.pk), "Rio Tanaka", 1)
+    ]
+    found = staff.get("/api/orders/customers/", {"search": "tanaka"}).data["results"]
+    assert [row["email"] for row in found] == ["rio@example.com"]
+    page = staff.get("/api/orders/customer/", {"person": str(person.pk)})
+    assert (page.status_code, page.data["name"], page.data["spent"]) == (200, "Rio Tanaka", "10.00")
+    assert staff.get("/api/orders/customer/", {"person": "not-an-id"}).status_code == 404

@@ -36,9 +36,9 @@ Staff (``karni_commerce.order:view``, the rows their grants give):
 * ``POST orders/manual/``: an order placed by hand for a buyer (``order:add``),
   waiting for their payment, with the link emailed to them.
 * ``GET orders/items/?kind=&search=``: what may go on such an order.
-* ``GET orders/customers/?search=&ordering=``: the buyers, one row per email,
-  and ``GET orders/customer/?email=``: one buyer's page
-  (:mod:`karni_commerce.customers`, a seam ``karni.people`` replaces).
+* ``GET orders/customers/?search=&ordering=``: the people who bought, with
+  commerce's person facts, and ``GET orders/customer/?email=`` (or
+  ``?person=<id>``): one customer's page (:mod:`karni_commerce.people`).
 
 Coupons, shipping zones and methods and tax rates (``coupons/``,
 ``shipping-zones/``, ``shipping-methods/``, ``tax-rates/``) are read and
@@ -69,6 +69,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from karni_commerce import documents, email_templates, services
+from karni_commerce import people as buyers
 from karni_commerce import reports as reports_registry
 from karni_commerce.api import (
     AbandonedCartSerializer,
@@ -99,7 +100,6 @@ from karni_commerce.api import (
     SetLineSerializer,
     checkout_options,
 )
-from karni_commerce.customers import customers_backend
 from karni_commerce.models import (
     Cart,
     CartLine,
@@ -676,7 +676,7 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter("search", str, description="Text in the email, name or number."),
+            OpenApiParameter("search", str, description="Text in the name, email or number."),
             OpenApiParameter(
                 "ordering",
                 str,
@@ -693,8 +693,8 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
         access=Can("karni_commerce.order:view"),
     )
     def customers(self, request: Request) -> Response:
-        """The buyers of the orders the caller may read: one row per email, paged."""
-        rows = customers_backend().customers(
+        """The people who placed the orders the caller may read, with commerce's facts, paged."""
+        rows = buyers.customers(
             self.get_queryset(),
             search=str(request.query_params.get("search", "") or ""),
             ordering=str(request.query_params.get("ordering", "") or "-last_order"),
@@ -705,7 +705,10 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
         return Response(CustomerRowSerializer(rows, many=True).data)
 
     @extend_schema(
-        parameters=[OpenApiParameter("email", str, required=True)],
+        parameters=[
+            OpenApiParameter("email", str, description="The customer's email."),
+            OpenApiParameter("person", str, description="Or the customer's person id."),
+        ],
         responses=CustomerPageSerializer,
     )
     @action(
@@ -715,9 +718,14 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
         access=Can("karni_commerce.order:view"),
     )
     def customer(self, request: Request) -> Response:
-        """One buyer: their orders, what they spent, their addresses and their account."""
+        """One customer: their orders, what they spent, their addresses and their account."""
         email = str(request.query_params.get("email", "") or "")
-        found = customers_backend().customer(self.get_queryset(), email) if email else None
+        person = str(request.query_params.get("person", "") or "")
+        found = (
+            buyers.customer(self.get_queryset(), email=email, person=person or None)
+            if email or person
+            else None
+        )
         if found is None:
             raise NotFound("No customer with that email.")
         return Response(CustomerPageSerializer(found).data)

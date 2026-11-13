@@ -32,7 +32,14 @@ const staffOrder: StaffOrder = {
     },
   ],
   refunds: [],
-  buyer: { user: null, name: "Ines Moreau", email: "ines@example.com", orders: 2, spent: "50.00" },
+  buyer: {
+    person: "p-1",
+    user: null,
+    name: "Ines Moreau",
+    email: "ines@example.com",
+    orders: 2,
+    spent: "50.00",
+  },
   refundable: "32.00",
   can_cancel: true,
   can_refund: true,
@@ -122,6 +129,7 @@ describe("CustomersPage and CustomerPage", () => {
           previous: null,
           results: [
             {
+              id: "p-1",
               email: "ines@example.com",
               name: "Ines Moreau",
               has_account: true,
@@ -149,6 +157,7 @@ describe("CustomersPage and CustomerPage", () => {
     server.use(
       http.get(`${API_BASE}/orders/customer/`, () =>
         HttpResponse.json({
+          id: "p-1",
           email: "ines@example.com",
           name: "Ines Moreau",
           account: null,

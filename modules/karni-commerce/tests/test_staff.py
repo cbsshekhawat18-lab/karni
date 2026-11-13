@@ -48,6 +48,7 @@ def test_staff_read_an_order_with_its_payments_refunds_notes_and_buyer(
     assert [(r["amount"], r["status"]) for r in data["refunds"]] == [("10.00", "succeeded")]
     assert (data["refundable"], data["can_refund"], data["can_cancel"]) == ("50.00", True, False)
     assert data["buyer"] == {
+        "person": str(order.person_id),
         "user": None,
         "name": "",
         "email": "guest@example.com",

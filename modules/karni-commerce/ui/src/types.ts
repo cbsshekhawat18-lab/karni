@@ -243,14 +243,25 @@ export interface OrderRefundRow {
 export interface StaffOrder extends Order {
   payments: OrderPaymentRow[];
   refunds: OrderRefundRow[];
-  buyer: { user: string | null; name: string; email: string; orders: number; spent: string };
+  /** Who bought: their person (karni.people), account, and commerce's facts about them. */
+  buyer: {
+    person: string | null;
+    user: string | null;
+    name: string;
+    email: string;
+    orders: number;
+    spent: string;
+  };
   refundable: string;
   can_cancel: boolean;
   can_refund: boolean;
 }
 
-/** A buyer in the staff's customers list (GET /api/orders/customers/). */
+/** A customer in the staff's customers list (GET /api/orders/customers/): a person
+ * (karni.people) with commerce's facts. */
 export interface CustomerRow {
+  /** The person's id. */
+  id: string;
   email: string;
   name: string;
   has_account: boolean;
@@ -261,8 +272,10 @@ export interface CustomerRow {
   last_order: string;
 }
 
-/** One buyer's page (GET /api/orders/customer/?email=). */
+/** One customer's page (GET /api/orders/customer/?email= or ?person=). */
 export interface CustomerPageData {
+  /** The person's id. */
+  id: string;
   email: string;
   name: string;
   account: { id: string; name: string; email: string; joined: string | null } | null;

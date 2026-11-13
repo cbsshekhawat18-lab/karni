@@ -595,8 +595,9 @@ class RefundRowSerializer(serializers.Serializer[Any]):
 
 
 class BuyerSerializer(serializers.Serializer[Any]):
-    """Who bought: the account (when there is one) and what they bought so far."""
+    """Who bought: the person, the account (when there is one) and what they bought so far."""
 
+    person = serializers.CharField(allow_null=True)
     user = serializers.CharField(allow_null=True)
     name = serializers.CharField(allow_blank=True)
     email = serializers.CharField()
@@ -662,19 +663,24 @@ class OrderStaffSerializer(OrderViewSerializer):
 
     @extend_schema_field(BuyerSerializer)
     def get_buyer(self, order: Order) -> dict[str, Any]:
-        from karni_commerce.customers import customers_backend
+        """The person who bought, with commerce's facts about them (karni.people)."""
+        from karni.people.models import Person
 
-        readable = self.context.get("orders")
-        rows = readable if readable is not None else Order.objects.all()
-        summary = (
-            customers_backend().customers(rows.filter(email__iexact=order.email)).first() or {}
-        )
+        facts = (
+            Person.objects.with_facts("orders", "total_spent")
+            .filter(pk=order.person_id)
+            .values("orders", "total_spent")
+            .first()
+            if order.person_id
+            else None
+        ) or {}
         return {
+            "person": str(order.person_id) if order.person_id else None,
             "user": str(order.user_id) if order.user_id else None,
             "name": person_name(order.user) or order.buyer_name,
             "email": order.email,
-            "orders": int(summary.get("order_count") or 0),
-            "spent": _amount(summary.get("spent") or 0),
+            "orders": int(facts.get("orders") or 0),
+            "spent": _amount(facts.get("total_spent") or 0),
         }
 
     def get_refundable(self, order: Order) -> str:
@@ -742,9 +748,10 @@ class ItemSerializer(serializers.Serializer[Any]):
 
 
 class CustomerRowSerializer(serializers.Serializer[Any]):
-    """A buyer in the staff's customers list."""
+    """A customer in the staff's customers list: a person, with commerce's facts."""
 
-    email = serializers.CharField()
+    id = serializers.CharField(help_text="The person's id (karni.people).")
+    email = serializers.CharField(allow_blank=True)
     name = serializers.CharField(allow_blank=True)
     has_account = serializers.BooleanField()
     order_count = serializers.IntegerField()
@@ -754,16 +761,17 @@ class CustomerRowSerializer(serializers.Serializer[Any]):
     last_order = serializers.DateTimeField()
 
     def to_representation(self, instance: Any) -> dict[str, Any]:
-        row = dict(instance)
+        stamp = serializers.DateTimeField()
         return {
-            "email": row["email"],
-            "name": row.get("name") or "",
-            "has_account": bool(row.get("has_account")),
-            "order_count": int(row.get("order_count") or 0),
-            "spent": _amount(row.get("spent") or 0),
+            "id": str(instance.pk),
+            "email": instance.email,
+            "name": instance.display_name,
+            "has_account": bool(getattr(instance, "has_account", False)),
+            "order_count": int(getattr(instance, "orders", 0) or 0),
+            "spent": _amount(getattr(instance, "total_spent", 0) or 0),
             "currency": conf.currency(),
-            "first_order": serializers.DateTimeField().to_representation(row["first_order"]),
-            "last_order": serializers.DateTimeField().to_representation(row["last_order"]),
+            "first_order": stamp.to_representation(instance.first_order),
+            "last_order": stamp.to_representation(instance.last_order),
         }
 
 
@@ -776,9 +784,10 @@ class CustomerOrderSerializer(serializers.Serializer[Any]):
 
 
 class CustomerPageSerializer(serializers.Serializer[Any]):
-    """One buyer: their orders, what they spent, their addresses and their account."""
+    """One customer: the person, their orders, what they spent, their addresses and account."""
 
-    email = serializers.CharField()
+    id = serializers.CharField(help_text="The person's id (karni.people).")
+    email = serializers.CharField(allow_blank=True)
     name = serializers.CharField(allow_blank=True)
     account = serializers.DictField(allow_null=True)
     order_count = serializers.IntegerField()
@@ -792,9 +801,11 @@ class CustomerPageSerializer(serializers.Serializer[Any]):
     def to_representation(self, instance: Any) -> dict[str, Any]:
         stamp = serializers.DateTimeField()
         account = instance.account
+        person = instance.person
         return {
-            "email": instance.email,
-            "name": person_name(account) or instance.name,
+            "id": str(person.pk),
+            "email": person.email,
+            "name": person.display_name or person_name(account),
             "account": None
             if account is None
             else {
