@@ -304,6 +304,8 @@ const HOOKS = {
   useResourceList:
     "A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.",
   useResourceItem: "One row by id, optionally expanded.",
+  useResourceSchemaIfKnown:
+    "Experimental. One resource's parsed schema when it is known, else `undefined`: never throws, and reads nothing outside a `KarniProvider`.",
   useResourceTree:
     "Experimental. The nested nodes of a tree resource (`GET /<resource>/tree/?root=&depth=`): `{ results, truncated }`, each node with `has_children` and `children` (`null` until loaded).",
   useResourceChildren:

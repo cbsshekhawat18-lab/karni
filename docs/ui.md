@@ -283,6 +283,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useResourceItem`: One row by id, optionally expanded.
 - `useResourceList`: A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.
 - `useResourceMutations`: `create`, `update` and `remove` for a resource. On success they invalidate the resource's queries.
+- `useResourceSchemaIfKnown`: Experimental. One resource's parsed schema when it is known, else `undefined`: never throws, and reads nothing outside a `KarniProvider`.
 - `useResourceTree`: Experimental. The nested nodes of a tree resource (`GET /<resource>/tree/?root=&depth=`): `{ results, truncated }`, each node with `has_children` and `children` (`null` until loaded).
 - `useSchema`: The parsed OpenAPI schema of one resource (fields, operations, access).
 - `useSocialLogin`: Experimental. `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).
