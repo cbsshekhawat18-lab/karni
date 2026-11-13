@@ -9,7 +9,8 @@ import {
   type ChangeHistoryParams,
 } from "../../../hooks/useChangeHistory";
 import { KarniApiError } from "../../../schema/client";
-import { ChangeHistory } from "./ChangeHistory";
+import type { FieldDef } from "../../../schema/types";
+import { ChangeHistory, defaultChangeHistorySlots, historyValueText } from "./ChangeHistory";
 
 vi.mock("../../../hooks/useChangeHistory", () => ({ useChangeHistory: vi.fn() }));
 
@@ -68,7 +69,7 @@ describe("ChangeHistory", () => {
     const [newest, oldest] = screen.getAllByRole("listitem");
     if (newest === undefined || oldest === undefined) throw new Error("expected two entries");
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
-    expect(within(newest).getByText("Updated")).toBeInTheDocument();
+    expect(within(newest).getByText("Changed")).toBeInTheDocument();
     expect(within(newest).getByText("ada@example.com")).toBeInTheDocument();
     expect(within(newest).getByText("12.50")).toBeInTheDocument();
     expect(within(newest).getAllByText("redacted")).toHaveLength(2);
@@ -105,5 +106,85 @@ describe("ChangeHistory", () => {
     render(<ChangeHistory resource="venues" id={1} />);
     expect(screen.getByRole("alert")).toHaveTextContent("Couldn't find the history of this venue");
     expect(screen.getByRole("alert")).toHaveTextContent("No history is kept");
+  });
+});
+
+function field(partial: Partial<FieldDef> & { name: string; label: string }): FieldDef {
+  return {
+    kind: "string",
+    required: false,
+    readOnly: true,
+    writeOnly: false,
+    nullable: false,
+    order: 0,
+    ...partial,
+  };
+}
+
+describe("ChangeHistory in words", () => {
+  const fields: FieldDef[] = [
+    field({
+      name: "status",
+      label: "Status",
+      kind: "enum",
+      enumValues: ["paid", "part_refunded"],
+      enumLabels: { paid: "Paid", part_refunded: "Part refunded" },
+      transitions: { paid: ["part_refunded"], part_refunded: [] },
+    }),
+    field({
+      name: "amount_refunded",
+      label: "Amount refunded",
+      kind: "string",
+      money: { currencyField: "currency" },
+    }),
+  ];
+  const Entry = defaultChangeHistorySlots.Entry;
+
+  it("says a move of a state in words, with the states' labels", () => {
+    render(
+      <Entry
+        entry={{
+          id: 3,
+          timestamp: "2026-10-19T10:00:00Z",
+          actor: null,
+          action: "transition",
+          diff: { status: ["paid", "part_refunded"] },
+          fields_changed: ["status"],
+        }}
+        fields={fields}
+      />,
+    );
+    expect(screen.getByText("Status changed from Paid to Part refunded")).toBeInTheDocument();
+    expect(screen.queryByText("Transitioned")).toBeNull();
+    expect(screen.queryByText("part_refunded")).toBeNull();
+  });
+
+  it("names each field by its label and shows money in the record's currency", () => {
+    render(
+      <Entry
+        entry={{
+          id: 4,
+          timestamp: "2026-10-19T10:00:00Z",
+          actor: { id: 1, email: "ada@example.com" },
+          action: "update",
+          diff: { amount_refunded: ["0.0000", "52.0000"] },
+          fields_changed: ["amount_refunded"],
+        }}
+        fields={fields}
+        record={{ currency: "USD" }}
+      />,
+    );
+    expect(screen.getByText("Changed")).toBeInTheDocument();
+    expect(screen.getByText("Amount refunded")).toBeInTheDocument();
+    expect(screen.queryByText("amount_refunded")).toBeNull();
+    expect(screen.getByText("$52.00", { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText("52.0000")).toBeNull();
+  });
+
+  it("humanizes a field the schema does not know, and money without a currency", () => {
+    expect(historyValueText(undefined, "x")).toBe("x");
+    expect(historyValueText(fields[1], "52.0000")).toBe("52.00");
+    expect(historyValueText(fields[0], "part_refunded")).toBe("Part refunded");
+    expect(historyValueText(field({ name: "on", label: "On", kind: "boolean" }), true)).toBe("Yes");
   });
 });

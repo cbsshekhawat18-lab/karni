@@ -238,6 +238,9 @@ export type { FacetNode, FacetsResponse, ResourceFacetsParams } from "./hooks/us
 export {
   ChangeHistory,
   defaultChangeHistorySlots,
+  historyFieldLabel,
+  historyHeadline,
+  historyValueText,
 } from "./components/resource/history/ChangeHistory";
 export type {
   ChangeHistoryProps,
@@ -356,7 +359,7 @@ export type {
 export { KarniProvider, useKarniClient } from "./schema/provider";
 export type { KarniProviderProps } from "./schema/provider";
 
-export { useSchema } from "./schema/useSchema";
+export { useResourceSchemaIfKnown, useSchema } from "./schema/useSchema";
 export type { UseSchemaResult } from "./schema/useSchema";
 
 export { zodFor } from "./schema/zod";
@@ -574,7 +577,12 @@ export type {
   DashboardLoadingProps,
 } from "./components/dashboard/dashboard";
 
-export { DataChart, aggregateSeries, defaultDataChartSlots } from "./components/chart/data-chart";
+export {
+  DataChart,
+  aggregateSeries,
+  defaultDataChartSlots,
+  xLabelStep,
+} from "./components/chart/data-chart";
 export type {
   DataChartProps,
   DataChartKind,

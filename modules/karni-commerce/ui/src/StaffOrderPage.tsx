@@ -493,7 +493,7 @@ export function StaffOrderPage({ number, siteName, statusWords }: StaffOrderPage
           </Section>
           <Notes order={data} onDone={refresh} />
           <div className="rounded-lg border border-border p-4">
-            <ChangeHistory resource="orders" id={data.id} />
+            <ChangeHistory resource="orders" id={data.id} record={{ currency: data.currency }} />
           </div>
         </div>
         <div className="space-y-6">

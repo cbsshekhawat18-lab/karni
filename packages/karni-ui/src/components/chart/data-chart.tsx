@@ -196,6 +196,20 @@ function niceTicks(min: number, max: number, count: number): number[] {
   return ticks;
 }
 
+/**
+ * Experimental. Every how many categories an x-axis label is drawn so the labels
+ * never run into each other: 1 draws every label, 2 every other one, and so on.
+ * `labels` are the texts as drawn, `bandWidth` the room of one category and
+ * `fontSize` the label size, both in viewBox units. A label is taken as about
+ * 0.6em a character wide, with 0.8em of space between two labels.
+ */
+export function xLabelStep(labels: readonly string[], bandWidth: number, fontSize: number): number {
+  if (labels.length === 0 || bandWidth <= 0) return 1;
+  const longest = Math.max(...labels.map((label) => label.length));
+  const needed = longest * fontSize * 0.6 + fontSize * 0.8;
+  return Math.max(1, Math.ceil(needed / bandWidth));
+}
+
 interface NormalizedChart {
   categories: readonly string[];
   seriesNames: readonly string[];
@@ -503,6 +517,12 @@ export function DataChart({
     margin.top + ((domainMax - value) / domainSpan) * plotHeight;
   const bandWidth = plotWidth / categories.length;
   const bandCenter = (index: number): number => margin.left + (index + 0.5) * bandWidth;
+  // The x labels as drawn, thinned to every `xStep`-th so they fit side by side at
+  // the width the chart is drawn (a phone draws fewer of them).
+  const xLabels = categories.map((category) =>
+    xTickFormatter ? xTickFormatter(category) : category,
+  );
+  const xStep = xLabelStep(xLabels, bandWidth, fontSize);
   const zeroY = yScale(Math.max(domainMin, Math.min(domainMax, 0)));
 
   // marks
@@ -685,18 +705,21 @@ export function DataChart({
           ))}
 
           {/* x tick labels */}
-          {categories.map((category, index) => (
-            <text
-              key={category}
-              x={bandCenter(index)}
-              y={height - margin.bottom + fontSize * 1.4}
-              textAnchor="middle"
-              fontSize={fontSize}
-              fill="currentColor"
-            >
-              {xTickFormatter ? xTickFormatter(category) : category}
-            </text>
-          ))}
+          {xLabels.map((text, index) =>
+            index % xStep === 0 ? (
+              <text
+                key={categories[index]}
+                x={bandCenter(index)}
+                y={height - margin.bottom + fontSize * 1.4}
+                textAnchor="middle"
+                fontSize={fontSize}
+                fill="currentColor"
+                data-testid="x-tick"
+              >
+                {text}
+              </text>
+            ) : null,
+          )}
 
           {marks}
         </svg>
