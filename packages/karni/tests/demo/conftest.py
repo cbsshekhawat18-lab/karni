@@ -41,8 +41,12 @@ def _fresh_cache() -> Iterator[None]:
 
 
 @pytest.fixture
-def demo(settings: Any, tmp_path: Path) -> Any:
+def demo(settings: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
     """Demo mode on, the stamp in tmp_path, a reset check on every request, the test URLs."""
+    from django.contrib import admin
+
+    # What startup does when demo mode is on (karni.demo.apps): the admin lists the accounts.
+    monkeypatch.setattr(admin.site, "login_template", "demo/admin_login.html")
     settings.ROOT_URLCONF = "tests.demo.urls"
     settings.KARNI_DEMO_MODE = True
     settings.KARNI_DEMO_ACCOUNTS = ACCOUNTS

@@ -105,3 +105,22 @@ def test_extra_reserved_segments_are_a_setting(settings: Any) -> None:
     found = urls.reserved()
     assert "payments" in found and "hooks" in found and "api" in found
     assert len(found) == len(set(found))
+
+
+def test_the_admin_keeps_a_login_template_the_project_chose() -> None:
+    from karni.admin.apps import LOGIN_TEMPLATE
+    from karni.demo.apps import LOGIN_TEMPLATE as DEMO_TEMPLATE
+    from karni.demo.apps import use_login_template
+
+    class Site:
+        login_template: str | None = None
+
+    for before, after in (
+        (None, DEMO_TEMPLATE),
+        (LOGIN_TEMPLATE, DEMO_TEMPLATE),
+        ("mine/login.html", "mine/login.html"),
+    ):
+        site = Site()
+        site.login_template = before
+        use_login_template(site)
+        assert site.login_template == after

@@ -225,8 +225,10 @@ otherwise):
 | `DemoSignInPrompt` | `AuthGuard`'s `Anonymous` slot: the notice above Karni's own prompt. |
 | `createDemoSignInPrompt(props)` | The same slot with your `DemoNotice` props. |
 
-The admin's sign-in page shows the same list (`karni.demo` extends its login
-template). Override `DemoInfoView.payload` to add fields.
+The admin's sign-in page shows the same list. While demo mode is on at startup,
+`karni.demo` points the admin site's login page at a template that extends
+Karni's own (`demo/admin_login.html`). A site that already names another login
+template keeps it. Override `DemoInfoView.payload` to add fields.
 
 ## Settings
 
