@@ -622,6 +622,15 @@ export { SignInPage, safeNext } from "./components/account/SignInPage";
 export type { SignInPageProps } from "./components/account/SignInPage";
 export type { PageMeta } from "./hooks/usePageMeta";
 
+/** Experimental. The one Settings page: details, settings sections and emails, from `/preferences/`. */
+export { SettingsPage } from "./components/settings/SettingsPage";
+/** Experimental. Props of `SettingsPage`. */
+export type { SettingsPageProps } from "./components/settings/SettingsPage";
+/** Experimental. Edits one email's subject and text through `/email-templates/<kind>/`. */
+export { EmailTemplateEditor } from "./components/settings/EmailTemplateEditor";
+/** Experimental. Props of `EmailTemplateEditor`. */
+export type { EmailTemplateEditorProps } from "./components/settings/EmailTemplateEditor";
+
 // page blocks beyond CRUD (experimental)
 export {
   DashboardGrid,

@@ -1172,6 +1172,22 @@ Other additions: `Layout` takes `mobileNavOpen`, `defaultMobileNavOpen` and
 `uploading`, `rejectionMessage`, `aria-invalid`, `aria-describedby` and
 `aria-labelledby`.
 
+## Settings page
+
+Experimental. `SettingsPage` is the one Settings page of a project. It reads
+`GET /preferences/` and shows a Details tab, one tab for each settings section
+a part declares (its form is built from the section's schema), and an Emails tab
+with a switch for each email and an editor for its subject and text. Only the
+changed fields are saved. `EmailTemplateEditor` is exported alone for a page of
+your own.
+
+```tsx
+import { SettingsPage, EmailTemplateEditor } from "@karni/ui";
+
+<SettingsPage title="Settings" siteName="Corner Shop" />;
+<EmailTemplateEditor kind="commerce.order_paid" onClose={() => navigate("/settings")} />;
+```
+
 ## Accessibility
 
 The app shell, the support components and the primitives target WCAG 2.2 AA.
