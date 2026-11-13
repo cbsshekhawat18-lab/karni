@@ -190,6 +190,15 @@ apply codemods and list the manual steps. This file is the human summary.
   `historyHeadline` and `historyValueText`. `DataChart` thins its x-axis labels to the
   width it is drawn (`xLabelStep`). A card on a phone gives long values room and wraps an
   email at its dots, never inside a word (`softBreaks`). `useResourceSchemaIfKnown`.
+- **Added: `ResourceBoard`, `ResourceCalendar` and tree counts in `@karni/ui`** (experimental).
+  `ResourceBoard` shows a resource as columns by a state field with a count and a money sum per
+  column, and moves a card by drag, keyboard or a menu only where `x-karni-transitions` and
+  `x-karni-actions` allow it, rolling back with the server's message on a refusal.
+  `ResourceCalendar` shows a resource with a start and an end as a day, week, month or list view
+  (a list at phone width) with free and full slots, a business time zone, a click to create, and
+  drag or keyboard moves and resizes when the caller may. `TreeView` and `TreeSelect` take
+  `countField` for a number per node and `searchKeepsAncestors` for search results shown under
+  their ancestors. No new dependency.
 
 ## 0.5.1 (2026-11-12)
 

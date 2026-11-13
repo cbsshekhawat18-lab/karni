@@ -21,6 +21,9 @@ is a few lines that compose them (see the [tutorial](tutorial.md)).
 - `ResourceSelect` (role `async-select`)
 - `ChangeHistory` (role `change-history`)
 - `ResourceImport` (role `resource-import`)
+- `ResourceGrid` (role `resource-grid`, experimental)
+- `ResourceBoard` (role `resource-board`, experimental)
+- `ResourceCalendar` (role `resource-calendar`, experimental)
 - `TreeView` (role `tree-view`, experimental)
 - `TreeSelect` (role `tree-select`, experimental)
 - `TreeBreadcrumb` (role `tree-breadcrumb`, experimental)
@@ -255,7 +258,7 @@ shows to roles that may update rows.
 
 Styled Radix parts and basics. Each one always merges `className` and forwards refs.
 
-`AccountPage`, `Button`, `Checkbox`, `Dashboard`, `DashboardTiles`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `EmptyValue`, `ErrorState`, `Input`, `KarniPrimitivesProvider`, `Label`, `PendingButton`, `PermissionDenied`, `RecordLink`, `ResourceGrid`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `SignInPage`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`, `ThemeProvider`, `ThemeToggle`
+`AccountPage`, `Button`, `Checkbox`, `Dashboard`, `DashboardTiles`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `EmptyValue`, `ErrorState`, `Input`, `KarniPrimitivesProvider`, `Label`, `PendingButton`, `PermissionDenied`, `RecordLink`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `SignInPage`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`, `ThemeProvider`, `ThemeToggle`
 
 ## Hooks
 
@@ -324,6 +327,8 @@ role that another component holds (compose it instead), and `karni context` list
 | `modal` | `Modal` |
 | `page-shell` | `Page` |
 | `permission-denied` | `PermissionDenied` |
+| `resource-board` | `ResourceBoard` |
+| `resource-calendar` | `ResourceCalendar` |
 | `resource-form` | `ResourceForm` |
 | `resource-grid` | `ResourceGrid` |
 | `resource-import` | `ResourceImport` |
