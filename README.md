@@ -5,6 +5,8 @@
   </picture>
 </p>
 
+<h3 align="center">The Django + React framework where your coding agent writes only your app</h3>
+
 <p align="center">
 Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.
 </p>
@@ -26,7 +28,7 @@ Karni is an open-source Django + React framework for building with AI coding age
 </p>
 
 <p align="center">
-  <!-- live-demo-link -->
+  <b><a href="https://karni-shop-demo.onrender.com/">Live demo</a></b> (sign in as <code>demo@example.com</code> / <code>karni-password</code>, the first page can take a minute to wake) &nbsp;·&nbsp;
   <a href="https://render.com/deploy?repo=https://github.com/cbsshekhawat18-lab/karni"><img alt="Deploy to Render" src="https://render.com/images/deploy-to-render-button.svg"></a>
   <br>
   The <a href="docs/demo.md">shop demo</a>: the shop recipe as one service, with a public demo login and a daily reset.

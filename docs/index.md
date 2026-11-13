@@ -11,6 +11,8 @@ hide:
 
 # Karni
 
+<div class="karni-tagline">The Django + React framework where your coding agent writes only your app</div>
+
 Karni is an open-source Django + React framework for building with AI coding
 agents. Your agent writes only your domain. The API, admin, permissions and
 React screens come from a package you upgrade, not code it rewrites in each

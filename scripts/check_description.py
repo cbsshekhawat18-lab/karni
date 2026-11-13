@@ -109,11 +109,19 @@ PREFIXES = {
     ),
 }
 
-README_OPENING = re.compile(r'(</picture>\n</p>\n\n<p align="center">\n)(.*?)(\n</p>)', re.S)
+# The tagline (mkdocs.yml extra.tagline) may sit between the logo and the description, as an h3
+# in the README and a karni-tagline div on the docs homepage.
+README_OPENING = re.compile(
+    r'(</picture>\n</p>\n\n(?:<h3 align="center">[^<\n]*</h3>\n\n)?<p align="center">\n)'
+    r"(.*?)(\n</p>)",
+    re.S,
+)
 # Quoted: an unquoted YAML value containing ": " is not a string, and MkDocs
 # drops the whole front matter without a word.
 INDEX_FRONT = re.compile(r'(\A---\n(?:.*\n)*?description: ")(.*)("\n(?:.*\n)*?---\n)')
-INDEX_FIRST = re.compile(r"(^# Karni\n\n)((?:.+\n)+?)(\n)", re.M)
+INDEX_FIRST = re.compile(
+    r'(^# Karni\n\n(?:<div class="karni-tagline">[^<\n]*</div>\n\n)?)((?:.+\n)+?)(\n)', re.M
+)
 LLMS_SUMMARY = re.compile(r"(^> )(.*)$", re.M)
 FAQ_WHAT = re.compile(r"(^## What is Karni\?\n\n)(.+)(\n)", re.M)
 MKDOCS_SITE = re.compile(r'(^site_description: ")(.*)(")$', re.M)

@@ -9,6 +9,10 @@ Demo" --recipe shop` builds it, plus the little code a public demo needs. It
 deploys with one button as one service on Render's free plan. Anyone can sign
 in with the demo login and try the API, the admin and the React app.
 
+**Live demo:** [karni-shop-demo.onrender.com](https://karni-shop-demo.onrender.com/). Sign in as
+`demo@example.com` with the password `karni-password`. The free plan stops the
+service after 15 idle minutes, so the first page can take a minute to wake.
+
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/cbsshekhawat18-lab/karni)
 
 ## Deploy it
@@ -146,19 +150,18 @@ What Render's documentation said on 12 November 2026
 - Free web services run one instance, with no shell access and no pre-deploy
   command.
 
-Not confirmed in the documentation, and not tried, since this repository has
-not deployed the demo:
+Shown by the first deploy of this Blueprint, on 12 November 2026:
 
-- The free plan page names no runtime limit, and the Blueprint reference lists
-  `plan: free` for any web service, but neither says that a
-  Docker service may use it.
-- Whether the free plan's build has enough memory for the React build (Karni's
-  [deploy guide](deploy.md#1-a-server) measured about 1.5 GB).
+- A Docker service runs on the free plan.
+- The free plan's build finished the React build.
+- A service can copy its own `RENDER_EXTERNAL_HOSTNAME` and
+  `RENDER_EXTERNAL_URL` into other variables: the site answers on its address,
+  and signing in to the admin passes the CSRF origin check.
+
+Still not confirmed:
+
 - Whether a `WEB_CONCURRENCY` set in the Blueprint wins over the value Render
   sets for new services. With one worker instead of two the demo works the same.
-- That a service can copy its own `RENDER_EXTERNAL_URL` into another variable.
-  The Blueprint reference shows it for `RENDER_EXTERNAL_HOSTNAME` and says most
-  default variables work.
 
 ## Production settings
 
@@ -210,5 +213,6 @@ python -m karni.deploy.entrypoint sh scripts/start.sh
 
 ## After the first deploy
 
-The repository README has a `<!-- live-demo-link -->` comment next to the
-button. Replace it with a link to the deployed service once it is live.
+The repository README links the deployed service as "Live demo", next to the
+button. A deployment of your own has its own address: change that link in your
+copy.

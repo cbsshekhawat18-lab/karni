@@ -156,3 +156,7 @@ nav:
       - "Roadmap: app builder": roadmap/app-builder.md
       - Findability research: seo-research.md
       - Security: security.md
+
+extra:
+  # The line after the name in the home page title, the hero and the README.
+  tagline: "The Django + React framework where your coding agent writes only your app"
