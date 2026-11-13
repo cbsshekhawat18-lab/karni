@@ -692,3 +692,17 @@ export type {
   ComparisonTableSlots,
   ComparisonTableEmptyProps,
 } from "./components/comparison-table/comparison-table";
+
+// board by state (experimental)
+export {
+  ResourceBoard,
+  defaultResourceBoardSlots,
+} from "./components/resource-board/ResourceBoard";
+export type {
+  ResourceBoardProps,
+  ResourceBoardSlots,
+  ResourceBoardCardContext,
+  ResourceBoardHeaderProps,
+  ResourceBoardEmptyProps,
+  ResourceBoardLoadingProps,
+} from "./components/resource-board/ResourceBoard";
