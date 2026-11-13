@@ -69,6 +69,7 @@ Override / escape hatch: put a template of the same name earlier in
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -185,11 +186,19 @@ def unregister_kind(name: str) -> None:
     _KINDS.pop(name, None)
 
 
+_DISCOVERING = threading.Lock()
+
+
 def _discover() -> None:
-    if not _DISCOVERED[0]:
-        _DISCOVERED[0] = True
-        autodiscover_modules("messages")
-        import karni.accounts.emails  # noqa: F401  (declares the account emails)
+    """Import each app's ``messages.py`` once (two first requests at once wait for it)."""
+    if _DISCOVERED[0]:
+        return
+    with _DISCOVERING:
+        if not _DISCOVERED[0]:
+            autodiscover_modules("messages")
+            import karni.accounts.emails  # noqa: F401  (declares the account emails)
+
+            _DISCOVERED[0] = True
 
 
 def kinds() -> list[MessageKind]:

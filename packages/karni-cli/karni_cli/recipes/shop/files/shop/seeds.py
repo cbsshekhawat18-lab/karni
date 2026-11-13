@@ -37,6 +37,8 @@ from karni.mail import silenced
 from karni.seeding import SeedContext, Seeder, cycled, placeholder_image
 from karni_commerce import services as commerce
 from karni_commerce.models import (
+    Cart,
+    CartLine,
     Coupon,
     CouponUse,
     Invoice,
@@ -723,8 +725,36 @@ class InvoiceSeeder(Seeder):
         after = ("karni_commerce.Order",)
 
 
+def left_behind(
+    buyers: list[Any], products: list[Product], now: datetime
+) -> list[Cart]:
+    """Three carts nobody checked out: a customer's and two visitors' who typed their
+    email at checkout, left an hour to three days ago (the abandoned carts)."""
+    found: list[Cart] = []
+    plain = [product for product in products if not product.variation_set.exists()]
+    people = [(buyers[0], ""), (None, "maya.visitor@example.com"), (None, "")]
+    for number, (person, email) in enumerate(people):
+        cart = Cart.objects.create(
+            user=person, token=f"seed-cart-{number}", email=email
+        )
+        for k in range(1 + number % 2):
+            product = plain[(number * 5 + k * 3) % len(plain)]
+            try:
+                commerce.set_line(cart, "product", str(product.pk), 1 + k)
+            except ValidationError:
+                continue  # sold out since
+        when = now - timedelta(hours=[3, 26, 70][number])
+        Cart.objects.filter(pk=cart.pk).update(touched_at=when, created_at=when)
+        found.append(cart)
+    return found
+
+
 def _forget_the_last_demo() -> None:
-    """karni seed --reset: the orders, payments and refunds of the last demo go."""
+    """karni seed --reset: the orders, payments and refunds of the last demo go, and the
+    carts it left behind."""
+    seeded_carts = Cart.objects.filter(token__startswith="seed-cart-")
+    CartLine.objects.filter(cart__in=seeded_carts).hard_delete()
+    seeded_carts.hard_delete()
     for model in (
         Download,
         Invoice,
@@ -813,6 +843,7 @@ class ShipmentSeeder(karni.ShipmentSeeder):
         with silenced():
             for number in range(context.count):
                 self.story(context, number, buyers, products, now)
+            left_behind(buyers, products, now)
         return list(Shipment.objects.order_by("created_at"))
 
     def story(
@@ -938,7 +969,7 @@ class ReviewSeeder(karni.ReviewSeeder):
         pairs = self.pairs()
         # Only a buyer whose parcel arrived reviews: when too few did for the count,
         # more parcels arrive (those on their way, then those being prepared), keeping
-        # one in each state.
+        # one on its way and three to prepare.
         with silenced():
             for state in ("shipped", "processing"):
                 waiting = list(
@@ -946,7 +977,8 @@ class ReviewSeeder(karni.ReviewSeeder):
                     .exclude(order__user__email="customer@example.com")
                     .order_by("created_at")
                 )
-                while len(pairs) < context.count and len(waiting) > 1:
+                keep = 1 if state == "shipped" else 3  # the home keeps orders to fulfil
+                while len(pairs) < context.count and len(waiting) > keep:
                     parcel = waiting.pop(0)
                     if parcel.status == "processing":
                         parcel.transition(

@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import csv
 import io
+import threading
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
@@ -157,12 +158,19 @@ def unregister_report(key: str) -> None:
     _REPORTS.pop(key, None)
 
 
-def _discover() -> None:
-    if not _DISCOVERED[0]:
-        _DISCOVERED[0] = True
-        from django.utils.module_loading import autodiscover_modules
+_DISCOVERING = threading.Lock()
 
-        autodiscover_modules("reports")
+
+def _discover() -> None:
+    """Import each app's ``reports.py`` once (two first requests at once wait for it)."""
+    if _DISCOVERED[0]:
+        return
+    with _DISCOVERING:
+        if not _DISCOVERED[0]:
+            from django.utils.module_loading import autodiscover_modules
+
+            autodiscover_modules("reports")
+            _DISCOVERED[0] = True
 
 
 def find_report(key: str) -> Report | None:
