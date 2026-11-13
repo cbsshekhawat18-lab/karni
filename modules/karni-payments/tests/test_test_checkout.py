@@ -113,3 +113,32 @@ def test_a_restarted_server_never_reuses_a_stored_session(api_client, user, make
     assert response.status_code == 201, response.data
     assert str(response.data["url"]).endswith("/payments/test-checkout/test_cs_3/")
     assert Payment.objects.filter(checkout_session_id="test_cs_3").count() == 1
+
+
+@PAGE_ON
+def test_on_a_local_try_a_refund_goes_through_once_it_is_saved(
+    api_client, client, user, django_capture_on_commit_callbacks
+) -> None:
+    from decimal import Decimal
+
+    from karni_payments.models import Refund
+    from karni_payments.services import create_refund
+
+    payment, url = _checkout(api_client, user)
+    client.post(url.removeprefix("http://testserver"), {"outcome": "pay"})
+    payment.refresh_from_db()
+    with django_capture_on_commit_callbacks(execute=True):
+        refund = create_refund(payment, Decimal("1.00"), reason="a test")
+    refund.refresh_from_db()
+    assert refund.status == Refund.Status.SUCCEEDED
+
+
+def test_without_the_page_a_refund_waits_for_its_webhook(user, make_payment) -> None:
+    from decimal import Decimal
+
+    from karni_payments.models import Refund
+    from karni_payments.services import create_refund
+
+    payment = make_payment(user=user, status=Payment.Status.SUCCEEDED)
+    refund = create_refund(payment, Decimal("1.00"))
+    assert refund.status == Refund.Status.PENDING

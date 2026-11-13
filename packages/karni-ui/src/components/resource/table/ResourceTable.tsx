@@ -1314,7 +1314,7 @@ export function ResourceTable<T = Record<string, unknown>>(
             onFilterChange={handleFilterChange}
             className="min-w-64 flex-1"
           />
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
             {presets.length > 0 && activeSet !== undefined && (
               <ColumnSetMenu sets={presets} value={activeSet.name} onChange={changeColumnSet} />
             )}

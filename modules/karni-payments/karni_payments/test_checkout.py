@@ -39,7 +39,7 @@ from karni.tracing import get_origin
 from karni_payments import conf
 from karni_payments.models import Payment, WebhookEvent
 
-__all__ = ["OUTCOMES", "enabled", "page_url", "settle", "view"]
+__all__ = ["OUTCOMES", "confirm_refund", "enabled", "page_url", "settle", "view"]
 
 #: What the page's buttons send: the test event each one stores.
 OUTCOMES: dict[str, tuple[str, str]] = {
@@ -108,6 +108,35 @@ def settle(payment: Payment, outcome: str) -> WebhookEvent:
         "checkout_session_id": payment.checkout_session_id,
     }
     parsed = TestProvider().map_event(str(payload["id"]), event_type, payload)
+    with transaction.atomic():
+        event = WebhookEvent.objects.create(
+            provider=TestProvider.name,
+            event_id=parsed.event_id,
+            event_type=parsed.event_type,
+            payload=parsed.raw,
+        )
+    process_webhook_event(str(event.pk))
+    event.refresh_from_db()
+    return event
+
+
+def confirm_refund(payment: Payment) -> WebhookEvent:
+    """Experimental. The test provider's word that a refund of ``payment`` went through.
+
+    While the test checkout page is served (:func:`enabled`), the test provider
+    confirms each refund this way once its transaction commits, so a refund
+    made on a local try settles as a real provider's webhook would settle it.
+    """
+    from karni_payments.providers.test import TestProvider
+    from karni_payments.tasks import process_webhook_event
+
+    payload = {
+        "id": f"evt_refund_{uuid.uuid4().hex}",
+        "type": "refund",
+        "status": "refund_succeeded",
+        "checkout_session_id": payment.checkout_session_id,
+    }
+    parsed = TestProvider().map_event(str(payload["id"]), "refund", payload)
     with transaction.atomic():
         event = WebhookEvent.objects.create(
             provider=TestProvider.name,

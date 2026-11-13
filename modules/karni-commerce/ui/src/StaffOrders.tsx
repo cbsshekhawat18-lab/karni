@@ -1,13 +1,14 @@
 /**
  * Experimental. The staff's orders list: every order their grants give, newest
- * first, with search (number, email, name), filters by money state, date and
- * the buyer's email, sorting, paging and a CSV export, each row opening the
+ * first, with search (number, email, name), filters by money state and by the
+ * day it was placed, sorting, paging and a CSV export, each row opening the
  * order's page. "New order" places one by hand for a buyer who called.
  *
  * It is @karni/ui's ResourceTable on `orders`, so the filters are the ones
  * the API declares and a project's extra filters show up too.
  */
-import { Button, Page, ResourceTable, useAuth, type ResourceColumn } from "@karni/ui";
+import { Button, Input, Label, Page, ResourceTable, useAuth, type ResourceColumn } from "@karni/ui";
+import { useMemo, useState } from "react";
 import { useCommerce } from "./routes";
 
 export interface StaffOrdersProps {
@@ -38,9 +39,24 @@ const COLUMNS: ReadonlyArray<ResourceColumn> = [
   { field: "cancelled_at", hidden: true },
 ];
 
+/** The start of a day (`from`) or of the next one (`to`) as the API's datetime filters take it. */
+function dayParams(from: string, to: string): Record<string, string> {
+  const found: Record<string, string> = {};
+  if (from) found["created_at__gte"] = new Date(`${from}T00:00:00`).toISOString();
+  if (to) {
+    const end = new Date(`${to}T00:00:00`);
+    end.setDate(end.getDate() + 1);
+    found["created_at__lte"] = end.toISOString();
+  }
+  return found;
+}
+
 export function StaffOrders({ title = "Orders", canCreate = true }: StaffOrdersProps) {
   const { paths, navigate } = useCommerce();
   const { status } = useAuth();
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const params = useMemo(() => dayParams(from, to), [from, to]);
   return (
     <Page
       title={title}
@@ -50,9 +66,34 @@ export function StaffOrders({ title = "Orders", canCreate = true }: StaffOrdersP
         ) : undefined
       }
     >
+      <div className="flex flex-wrap items-end gap-3" role="group" aria-label="Placed between">
+        <div className="space-y-1">
+          <Label htmlFor="orders-from">Placed from</Label>
+          <Input
+            id="orders-from"
+            type="date"
+            className="h-9"
+            value={from}
+            onChange={(event) => setFrom(event.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="orders-to">to</Label>
+          <Input
+            id="orders-to"
+            type="date"
+            className="h-9"
+            value={to}
+            onChange={(event) => setTo(event.target.value)}
+          />
+        </div>
+      </div>
       <ResourceTable
         resource="orders"
         columns={COLUMNS}
+        params={params}
+        filters={["status"]}
+        importable={false}
         initialSorting={[{ id: "created_at", desc: true }]}
         onRowClick={(row) => navigate(paths.order(String(row["number"])))}
         caption="Orders"

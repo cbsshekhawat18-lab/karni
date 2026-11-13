@@ -122,6 +122,15 @@ class TestProvider(PaymentProvider):
         """Issue a deterministic refund id and remember the refund."""
         provider_refund_id = f"test_re_{next(self._sequence)}"
         self.refunds[provider_refund_id] = str(refund.pk)
+        from karni_payments import test_checkout
+
+        if test_checkout.enabled():
+            # A local try (DEBUG): the refund goes through once it is saved, as the
+            # provider's webhook would say. Tests confirm their refunds themselves.
+            from django.db import transaction
+
+            payment_pk = refund.payment_id
+            transaction.on_commit(lambda: _confirm(payment_pk))
         return provider_refund_id
 
     def parse_webhook(self, body: bytes, headers: Mapping[str, str]) -> ParsedEvent:
@@ -149,3 +158,12 @@ class TestProvider(PaymentProvider):
             status=status,
             raw=payload,
         )
+
+
+def _confirm(payment_pk: Any) -> None:
+    from karni_payments import test_checkout
+    from karni_payments.models import Payment
+
+    payment = Payment.objects.filter(pk=payment_pk).first()
+    if payment is not None:
+        test_checkout.confirm_refund(payment)

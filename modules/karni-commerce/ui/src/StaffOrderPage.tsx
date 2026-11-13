@@ -492,9 +492,9 @@ export function StaffOrderPage({ number, siteName, statusWords }: StaffOrderPage
             ) : null}
           </Section>
           <Notes order={data} onDone={refresh} />
-          <Section title="History">
+          <div className="rounded-lg border border-border p-4">
             <ChangeHistory resource="orders" id={data.id} />
-          </Section>
+          </div>
         </div>
         <div className="space-y-6">
           <Section title="Customer">
