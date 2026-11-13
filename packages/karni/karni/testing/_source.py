@@ -29,8 +29,8 @@ DEFAULTS: dict[str, Any] = {
     "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]},
 }
 
-_ALLOW_RE = re.compile(r"#\s*karni:\s*allow\(([^)]+)\)\s*(?::\s*(.*))?$")
-_ALLOW_START = re.compile(r"#\s*karni:\s*allow\(")
+_ALLOW_RE = re.compile(r"(?:#|//)\s*karni:\s*allow\(([^)]+)\)\s*(?::\s*(.*))?$")
+_ALLOW_START = re.compile(r"(?:#|//)\s*karni:\s*allow\(")
 
 
 @dataclass(frozen=True)

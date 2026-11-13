@@ -1,0 +1,6 @@
+# A deliberately bad part for the family tests: it names the CRM part. `karni check` must refuse it.
+name = "leaky"
+title = "Leaky"
+version = "1.0.0"
+purpose = "A part that names another part, for the family tests."
+use_when = ["leaky"]

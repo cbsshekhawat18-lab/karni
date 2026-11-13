@@ -40,6 +40,9 @@ carries it, and `pytest
 | `redundant-serializer` | a Meta-only ModelSerializer identical to the generated one | delete it, since `BaseViewSet(model=X)` generates it |
 | `audited-bulk-write` | `<AuditedModel>.objects…update()` or `.bulk_update()` in project code. Signals do not fire, so no change-history entry is written | save the instances, or opt out with the reason |
 | `hand-written-tree` (experimental) | a project model has a `parent` (or `parent_*`) foreign key to itself and is not a `TreeModel` | inherit `karni.models.TreeModel` first and drop the field (see [tree models](models.md#tree-models)), or opt out with the reason |
+| `part-imports-part` (experimental, K315) | a file of one [family part](family.md) (its app folder or `frontend/src/<prefix>/`) imports another part's code or names its app label: `"crm.Deal"`, `"crm.deal:own"`, `"crm:deal-list"`, `"crm/x.html"`, `apps.get_model("crm", ...)`, a migration dependency, a template `include`, `extends` or `url`, a frontend import. The contracts (`karni.people`, `karni.events`, `karni.timeline`, `karni.preferences`, `karni_commerce`) are not parts and are always allowed | use a contract and a connection in `<prefix>/connections.py`, or opt out with the reason (`//` in TypeScript, `{# #}` in a template) |
+| `part-role-prefix` (experimental, K316) | in a project with two or more parts, a part after the first declares a role that is not `<prefix>-<role>` and not `admin` or `customer` | rename it in karni.yaml and rebuild |
+| `part-route` (experimental, K316) | a part's base route (`apps.<label>.route`) is a family page's route or another app's, or one of its generated pages in routes.tsx is outside its base | give the app its own route and rebuild |
 | `duplicate` | ≥ `min_statements` structurally identical statements in two places | reuse the named Karni API, or extract one implementation |
 | `opt-out-reason` | any opt-out marker without a reason | write the reason |
 

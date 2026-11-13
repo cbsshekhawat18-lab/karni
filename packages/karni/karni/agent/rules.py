@@ -567,6 +567,63 @@ RULES: tuple[Rule, ...] = (
             "aggregations lists every parameter."
         ),
     ),
+    Rule(
+        code="K315",
+        category="architecture",
+        severity="error",
+        summary="Parts: never name another part.",
+        rule=(
+            "A project may hold several recipes (`app.recipes`), each one a part with its app "
+            "label as its prefix. A part's files (its app folder and `frontend/src/<prefix>/`) "
+            "never import another part's code and never name its app label: no `import crm`, "
+            'no `"crm.Deal"` in a foreign key, no `"crm.deal:own"`, no `"crm:deal-list"`, no '
+            '`apps.get_model("crm", ...)`, no migration dependency on it, no `{% include '
+            '"crm/..." %}`, no frontend import of another part\'s folder. Parts meet through the '
+            "contracts: `karni.people`, `karni.events` (publish and subscribe by event name), "
+            "`karni.timeline`, `karni.preferences`, `karni_commerce` and the modules the recipe "
+            "requires. A connection to another part is code in `<prefix>/connections.py` that "
+            "needs contracts and modules, never a recipe."
+        ),
+        rationale=(
+            "Every part must work alone and stay removable (`karni recipes remove`). One import "
+            "or one foreign key to a sibling's model makes the pair inseparable and breaks the "
+            "third part that was never meant to know either."
+        ),
+        fix=(
+            "Replace the reference with a contract: a person through `karni.people`, an event "
+            "through `karni.events.publish` and a subscriber, a timeline entry through "
+            "`karni.timeline.record`. Opt out with `# karni: allow(part-imports-part): <reason>` "
+            "(`//` in TypeScript) only for a file that is meant to join two parts."
+        ),
+        enforced_by=("part-imports-part",),
+    ),
+    Rule(
+        code="K316",
+        category="architecture",
+        severity="error",
+        summary="Parts: <prefix>-<role> roles, pages under the part's route.",
+        rule=(
+            "Once a project holds a second part, every role a part adds is named "
+            "`<prefix>-<role>` (`bookings-staff`), except the family roles `admin` and "
+            "`customer`, and the part's pages live under its base route (`apps.<label>.route`, "
+            "`/<label>` by default), which is never a family page's route (`/`, `/signin`, "
+            "`/account`, `/search`, `/inbox`, `/settings`, `/people`, `/cart`, `/checkout`, "
+            "`/orders`) and never another app's. `karni check` reads karni.yaml and "
+            "`.karni/recipes/` and fails a role or a route that breaks this, even after the "
+            "merge accepted it."
+        ),
+        rationale=(
+            "A role name that carries its part cannot collide with another part's, and a route "
+            "that is the part's own cannot shadow a family page or another part's screens. The "
+            "merge refuses both once (C443, C444), and a later edit of karni.yaml or "
+            "routes.tsx must not undo it."
+        ),
+        fix=(
+            "Rename the role `<prefix>-<role>` in karni.yaml (and every `role:<name>` that names "
+            "it), or give the app its own `apps.<label>.route`, then run `karni build`."
+        ),
+        enforced_by=("part-role-prefix", "part-route"),
+    ),
     # backend
     Rule(
         code="K101",

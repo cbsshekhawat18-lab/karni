@@ -3048,6 +3048,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K311`](errors.md#k311) | rule | New app: /new-app. Never hand-write what karni.yaml expresses. |
 | [`K312`](errors.md#k312) | rule | Trees: TreeModel. |
 | [`K314`](errors.md#k314) | rule | GROUP BY: Karni.aggregate. |
+| [`K315`](errors.md#k315) | rule | Parts: never name another part. |
+| [`K316`](errors.md#k316) | rule | Parts: &lt;prefix&gt;-&lt;role&gt; roles, pages under the part's route. |
 
 ### ESLint plugin (`karni/…`)
 

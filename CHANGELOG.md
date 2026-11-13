@@ -225,6 +225,14 @@ apply codemods and list the manual steps. This file is the human summary.
   stale deal list and the `crm.deal_timeline` connection. New codes: E320 to E325. See
   [preferences](docs/preferences.md).
 - Test suite: a conftest fixture puts Celery's current app back after every test. A test that built an app with `create_celery_app` left it current and `/readyz` failed in later tests, which made four `test_health_probes.py` tests fail in every full run. `test_retries_are_queued_through_the_dispatcher_outside_eager_mode` also took its "previous" app after the new one was already current.
+- **Added (experimental): the family rules, `part-imports-part` (K315), `part-role-prefix` and `part-route` (K316).**
+  `karni check` fails a part that imports another part or names its app label (a model string, a
+  permission, a URL name, a template tag, a migration dependency, a frontend import), a part after the
+  first with a role that is not `<prefix>-<role>`, and a part whose base route is a family page's or
+  another app's or whose generated page is routed outside it. They read `.karni/recipes/` and
+  karni.yaml, so a project without parts is unaffected, and they check the built project, not only
+  the merge. The contracts are not parts and stay allowed. The allow marker also takes `//`.
+  See [the family](docs/family.md).
 
 ## 0.5.1 (2026-11-12)
 

@@ -28,6 +28,7 @@ from karni.agent.check import (
 )
 from karni.exceptions import KarniAssertionError
 from karni.testing import checkcache
+from karni.testing.parts import check_part_imports, check_part_roles, check_part_routes
 from karni.testing._source import (
     Violation,
     check_optout,
@@ -595,6 +596,9 @@ ALL_CHECKS = (
     check_redundant_serializer,
     check_audited_bulk_write,
     check_hand_written_tree,
+    check_part_imports,
+    check_part_roles,
+    check_part_routes,
 )
 
 
@@ -682,3 +686,15 @@ def test_audited_models_are_not_bulk_written() -> None:
 
 def test_trees_inherit_tree_model() -> None:
     _assert_clean(check_hand_written_tree())
+
+
+def test_parts_do_not_name_other_parts() -> None:
+    _assert_clean(check_part_imports())
+
+
+def test_parts_keep_their_roles_prefixed() -> None:
+    _assert_clean(check_part_roles())
+
+
+def test_parts_keep_their_routes() -> None:
+    _assert_clean(check_part_routes())
