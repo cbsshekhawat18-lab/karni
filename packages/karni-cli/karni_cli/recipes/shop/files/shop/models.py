@@ -35,7 +35,9 @@ class Product(karni.Product):
 
     ``stock`` is what is on the shelf. ``available`` is what no order holds of it:
     checkout holds a line (karni.capacity.reserve), the payment takes it off the
-    shelf, and a cancelled or unpaid order gives it back.
+    shelf, and a cancelled or unpaid order gives it back. ``low_stock`` is the level
+    at which staff are told it runs low (blank: ``SHOP_LOW_STOCK``), and with
+    ``backorders`` it may be ordered past what is left (shop/sellables.py).
     """
 
     class Meta(karni.Product.Meta):
@@ -46,19 +48,14 @@ class Product(karni.Product):
             ),
         ]
 
-    class Karni(karni.Product.Karni):
-        # The staff home's stock tile (docs/api.md, "The staff dashboard").
-        dashboard = {
-            "label": "Stock",
-            "order": 3,
-            "total": False,
-            "new_days": 0,
-            "counts": {
-                "Sold out": {"available__lte": 0, "active": True},
-                "Low (3 or fewer)": {"available__lte": 3, "active": True},
-            },
-            "recent": 0,
-        }
+    def low_stock_level(self) -> int:
+        """The level at which the product runs low: its own, else SHOP_LOW_STOCK."""
+        from shop.services import low_stock_level
+
+        return self.low_stock if self.low_stock is not None else low_stock_level()
+
+    def runs_low(self) -> bool:
+        return self.active and self.available <= self.low_stock_level()
 
     def more_description(self) -> str:
         """The description without what the short description already says.
@@ -98,17 +95,6 @@ class Shipment(karni.Shipment):
     The order (karni-commerce) holds the money. The shipment holds what happens to
     the goods. A paid order with products gets one (shop/listeners.py).
     """
-
-    class Karni(karni.Shipment.Karni):
-        # The staff home's tile: what waits to be sent, and what is on its way.
-        dashboard = {
-            "label": "Shipments",
-            "order": 2,
-            "by": "status",
-            "values": ["processing", "shipped"],
-            "recent": 6,
-            "columns": ["order", "status", "tracking_number", "created_at"],
-        }
 
     def __str__(self) -> str:
         return f"Parcel of order {self.order.number}" if self.order_id else "Parcel"

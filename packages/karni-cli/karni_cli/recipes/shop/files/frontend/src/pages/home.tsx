@@ -1,31 +1,17 @@
-// The home page: the staff's dashboard (orders, parcels and stock, each a tile the models
-// declare), and for everyone else the shop's front page.
-import { Dashboard, Page } from "@karni/ui";
+// The home page: for staff the tiles of their role (karni.yaml's dashboard: and the code
+// tiles of shop/dashboard.py and karni-commerce), for everyone else the shop's front page.
+import { DashboardTiles, EmptyState, Page } from "@karni/ui";
 import { useRouter } from "@tanstack/react-router";
 import { StoreHome } from "../shop/Home";
 import { usePerson } from "../shop/staff";
 
 function StaffHome() {
   const router = useRouter();
-  const open = (path: string, exists: string): void => {
-    if (exists in router.routesByPath) router.history.push(path);
-  };
   return (
-    <Page title="Dashboard" description="Orders, parcels to send and stock.">
-      <Dashboard
-        onOpen={(resource, row) =>
-          open(`/${resource}/${String(row.id)}`, `/${resource}/$id`)
-        }
-        onOpenList={(resource, filters) => {
-          const query = new URLSearchParams();
-          for (const [name, value] of Object.entries(filters)) {
-            if (value != null) query.set(`${resource}.${name}`, String(value));
-          }
-          open(
-            `/${resource}${query.size > 0 ? `?${query.toString()}` : ""}`,
-            `/${resource}`,
-          );
-        }}
+    <Page title="Dashboard" description="What to send, what came in and what runs low.">
+      <DashboardTiles
+        onOpen={(href) => router.history.push(href)}
+        empty={<EmptyState title="Nothing for your role here yet" />}
       />
     </Page>
   );

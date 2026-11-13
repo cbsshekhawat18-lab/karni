@@ -13,6 +13,10 @@ Stock goes through karni.capacity, so two buyers of the last item never both get
 * a failed, cancelled or expired order gives the hold back (``available + n``);
 * a paid order that is cancelled, or refunded with "back in stock", puts the items
   back (``stock + n`` and ``available + n``).
+
+A product with ``backorders`` may be ordered past what is left: checkout holds what
+is on the shelf and the rest waits for new stock. The line remembers how many it
+held (``options["_held"]``), so only those are taken, given back or put back.
 """
 
 from __future__ import annotations
@@ -29,7 +33,6 @@ from karni_commerce.sellables import Price, Sellable, refuse, register
 
 from shop import events
 from shop.models import Product, Shipment
-from shop.services import low_stock_level
 
 SHIPMENT_WORDS = {
     "processing": "Being prepared",
@@ -68,8 +71,15 @@ class ProductSellable(Sellable):
     def needs_shipping(self, item: Product, options: Mapping[str, Any]) -> bool:
         return True
 
-    def available(self, item: Product, options: Mapping[str, Any]) -> int:
-        return int(item.available) if item.active else 0
+    search_fields = ("name", "sku")
+
+    def queryset(self) -> Any:
+        return Product.objects.all()
+
+    def available(self, item: Product, options: Mapping[str, Any]) -> int | None:
+        if not item.active:
+            return 0
+        return None if item.backorders else int(item.available)
 
     def validate(
         self, item: Product, quantity: int, options: Mapping[str, Any], buyer: Any
@@ -80,8 +90,12 @@ class ProductSellable(Sellable):
 
     def hold(self, line: OrderLine) -> None:
         product = Product.objects.get(pk=line.item)
+        wanted = line.quantity
+        if product.backorders:
+            wanted = min(line.quantity, max(int(product.available), 0))
         try:
-            reserve(product, line.quantity, field="available")
+            if wanted:
+                reserve(product, wanted, field="available")
         except CapacityExceeded:
             product.refresh_from_db()
             left = product.available
@@ -90,26 +104,43 @@ class ProductSellable(Sellable):
                 if left
                 else f"{product.name} is sold out."
             ) from None
+        self._held(line, wanted)
 
     def release(self, line: OrderLine) -> None:
-        release(Product.objects.get(pk=line.item), line.quantity, field="available")
+        held = self.held(line)
+        if held:
+            release(Product.objects.get(pk=line.item), held, field="available")
 
     def on_paid(self, line: OrderLine) -> None:
-        Product.objects.filter(pk=line.item).update(
-            stock=F("stock") - line.quantity, updated_at=timezone.now()
-        )
+        held = self.held(line)
+        if held:
+            Product.objects.filter(pk=line.item).update(
+                stock=F("stock") - held, updated_at=timezone.now()
+            )
         product = Product.objects.get(pk=line.item)
-        if product.available <= low_stock_level():
+        if product.runs_low():
             events.product_low_stock.send(sender=Product, product=product)
 
     def on_cancelled(self, line: OrderLine) -> None:
-        self._back_on_the_shelf(line.item, line.quantity)
+        self._back_on_the_shelf(line.item, self.held(line))
 
     def on_refunded(self, line: OrderLine, quantity: int, restock: bool) -> None:
         if restock:
-            self._back_on_the_shelf(line.item, quantity)
+            self._back_on_the_shelf(line.item, min(quantity, self.held(line)))
+
+    def held(self, line: OrderLine) -> int:
+        """How many of the line came off the shelf (all of it, unless backordered)."""
+        return int((line.options or {}).get("_held", line.quantity))
+
+    def _held(self, line: OrderLine, count: int) -> None:
+        if count == line.quantity and "_held" not in (line.options or {}):
+            return
+        line.options = {**(line.options or {}), "_held": count}
+        OrderLine.objects.filter(pk=line.pk).update(options=line.options)
 
     def _back_on_the_shelf(self, key: str, quantity: int) -> None:
+        if quantity <= 0:
+            return
         Product.objects.filter(pk=key).update(
             stock=F("stock") + quantity, updated_at=timezone.now()
         )

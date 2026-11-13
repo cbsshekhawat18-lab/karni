@@ -31,6 +31,7 @@ roles:
       "shop.*": all
       "karni_commerce.order:view": all
       "karni_commerce.order:change": all
+      "karni_commerce.order:add": all
       "karni_commerce.orderline:view": all
       "karni_commerce.orderpayment:view": all
       "karni_commerce.orderrefund:view": all
@@ -71,6 +72,8 @@ apps:
           sale_ends: "datetime?"
           stock: int
           available: "capacity:stock"
+          low_stock: "int?"
+          backorders: bool
           active: bool
           featured: bool
           tags: "m2m:Tag?"
@@ -82,7 +85,7 @@ apps:
         groups:
           Product: [name, slug, sku, short_description, description, image, active, featured, tags]
           Price: [price, sale_price, sale_starts, sale_ends]
-          Inventory: [stock, available]
+          Inventory: [stock, available, low_stock, backorders]
         access: {read: public, write: granted}
       ProductImage:
         fields: {product: fk:Product, image: image, alt: "str:200?", position: int}
@@ -103,7 +106,7 @@ apps:
 pages:
   - home: dashboard
   - Shipment: [list, detail, form]
-  - Product: [list, detail, form]
+  - Product: [list, {detail: {related: [ProductImage]}}, form]
   - Category: [list, form]
   - Tag: [list, form]
   # The pages of the recipe's own files (recipe.toml [[routes]]): the storefront and the
@@ -112,11 +115,30 @@ pages:
   - cart: code
   - checkout: code
   - orders: code
+  - customers: code
   - account: code
   - signin: code
   - terms: code
 navigation:
-  - home: {label: Dashboard, icon: dashboard, requires: "shop.shipment:change"}
-  - Shipment: {label: Shipments, icon: list, requires: "shop.shipment:change"}
-  - Catalogue: {icon: box, requires: "shop.product:change", items: [Product, Category, Tag]}
+  - home: {label: Dashboard, icon: dashboard, requires: "karni_commerce.order:view"}
+  - orders: {label: Orders, icon: list, requires: "karni_commerce.order:view"}
+  - Shipment: {label: Shipments, icon: box, requires: "shop.shipment:change"}
+  - customers: {label: Customers, icon: users, requires: "karni_commerce.order:view"}
+  - Catalogue: {icon: tag, requires: "shop.product:change", items: [Product, Category, Tag]}
+# The staff home: each tile shows to the roles that may read what it counts. The shop's
+# own figures are code tiles in shop/dashboard.py (stock running low, best sellers), and
+# karni-commerce gives the revenue ones (commerce.revenue, commerce.revenue_chart,
+# commerce.latest_orders).
+dashboard:
+  - {key: shop.to_send, title: Orders to fulfil, kind: stat, entity: Shipment,
+     filters: {status: processing}, link: "/shipments?shipments.status=processing",
+     description: "Paid, waiting to be sent", order: 1}
+  - {key: shop.in_transit, title: On their way, kind: stat, entity: Shipment,
+     filters: {status: shipped}, link: "/shipments?shipments.status=shipped", order: 2}
+  - {key: shop.sold_out, title: Sold out, kind: stat, entity: Product,
+     filters: {available__lte: 0, active: true}, requires: "shop.product:change",
+     link: "/products?products.available__lte=0", order: 3}
+  - {key: commerce.revenue, order: 5}
+  - {key: commerce.revenue_chart, order: 6}
+  - {key: commerce.latest_orders, order: 7}
 seed: {Category: 15, Tag: 8, Product: 40, ProductImage: 60, Shipment: 20}

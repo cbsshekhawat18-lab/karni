@@ -1,6 +1,7 @@
 // The app shell of the shop. A storefront page (staticData area "store" in routes.tsx)
-// shows in the shop's own header and footer, to visitors too when it is public. The
-// home page is the staff's dashboard for staff and the storefront for everyone else.
+// shows in the shop's own header and footer, to visitors too when it is public. A
+// "family" page (/orders) and the home page show in the back office to staff and in the
+// storefront to everyone else.
 // Every other page is the back office: @karni/ui's Layout with the menu from the server
 // (navigation in karni.yaml), for staff only. The terms of sale are a customer's: only
 // checkout asks for them. The cart, checkout and order pages are
@@ -12,6 +13,7 @@ import {
   Layout,
   PermissionDenied,
   ThemeToggle,
+  setRecordNavigate,
   useAuth,
 } from "@karni/ui";
 import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
@@ -26,7 +28,7 @@ const PATHS = { browse: "/shop/products" };
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
-    /** "store": the page shows in the storefront's header and footer. */
+    /** "store": the storefront's header and footer. "family": that, but for staff. */
     area?: string;
   }
 }
@@ -103,6 +105,7 @@ export default function AppLayout() {
     (to: string) => router.history.push(to),
     [router],
   );
+  useEffect(() => setRecordNavigate(navigate), [navigate]);
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -110,7 +113,8 @@ export default function AppLayout() {
     select: (state) => state.matches.at(-1)?.staticData,
   });
   const home = pathname === "/";
-  const store = route?.area === "store" || (home && person !== "staff");
+  const shared = home || route?.area === "family";
+  const store = route?.area === "store" || (shared && person !== "staff");
   return (
     <CommerceProvider navigate={navigate} paths={PATHS}>
       {!store ? (

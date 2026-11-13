@@ -29,7 +29,6 @@ from django.utils import timezone
 from karni.accounts.permissions import assign_role
 from karni.mail import silenced
 from karni.seeding import SeedContext, Seeder, cycled, placeholder_image
-from karni.testing.factories import DEFAULT_PASSWORD
 from karni_commerce import services as commerce
 from karni_commerce.models import Order, OrderLine, OrderPayment, OrderRefund
 from karni_payments.models import Payment, Refund
@@ -332,31 +331,22 @@ def anchor(context: SeedContext) -> datetime:
     return found if isinstance(found, datetime) else timezone.now()
 
 
-def people() -> list[Any]:
-    """The demo's people with their roles (made once, found again on the next run)."""
-    model = get_user_model()
-    found = []
-    for email, first, last, *_rest, role in PEOPLE:
-        user = model.objects.filter(email=email).first()
-        if user is None:
-            user = model.objects.create_user(
-                email=email, password=DEFAULT_PASSWORD, first_name=first, last_name=last
-            )
-            if hasattr(user, "email_verified"):
-                user.email_verified = True
-                user.save(update_fields=["email_verified"])
-        assign_role(user, role)
-        found.append(user)
-    demo = model.objects.filter(email="demo@example.com").first()
+def people(context: SeedContext) -> list[Any]:
+    """The demo's people, one login per role of karni.yaml (karni seed lists them)."""
+    found = [
+        context.account(email, role, first_name=first, last_name=last)
+        for email, first, last, *_rest, role in PEOPLE
+    ]
+    demo = get_user_model().objects.filter(email="demo@example.com").first()
     if demo is not None:
         assign_role(demo, "admin")
     return found
 
 
-def customers() -> list[Any]:
+def customers(context: SeedContext) -> list[Any]:
     return [
         user
-        for user, entry in zip(people(), PEOPLE, strict=True)
+        for user, entry in zip(people(context), PEOPLE, strict=True)
         if entry[6] == "customer"
     ]
 
@@ -445,6 +435,9 @@ class ProductSeeder(karni.ProductSeeder):
                 "sale_starts": None,
                 "sale_ends": None,
                 "stock": [24, 12, 40, 3, 0, 18, 7, 30][number % 8],
+                # a few keep their own low-stock level, and two take backorders
+                "low_stock": 8 if number % 7 == 6 else None,
+                "backorders": number in (12, 28),
                 "active": number % 13 != 12,
                 "featured": number % 5 == 0,
                 "image": placeholder_image(name, key=top.name),
@@ -568,7 +561,7 @@ class ShipmentSeeder(karni.ShipmentSeeder):
 
     def seed(self, context: SeedContext) -> list[Any]:
         _forget_the_last_demo()
-        buyers = customers()
+        buyers = customers(context)
         products = list(
             Product.objects.filter(active=True, stock__gt=0).order_by("sku")
         )

@@ -21,7 +21,9 @@ usually_changed = [
 # frontend/src/routes.tsx. The storefront is under /shop. /cart, /checkout, /orders,
 # /account and /signin are the family pages: thin files that mount @karni/commerce-ui's
 # and @karni/ui's components. area = "store" puts a page in the storefront's own header
-# and footer (files/frontend/src/layout.tsx).
+# and footer (files/frontend/src/layout.tsx). area = "family" shows a page in the
+# storefront to a customer and in the back office to staff (/orders: a customer's own
+# orders, or every order for staff). The other pages are the back office's.
 
 [[routes]]
 path = "/shop"
@@ -56,13 +58,25 @@ data = { area = "store" }
 [[routes]]
 path = "/orders"
 page = "pages/orders"
-data = { area = "store" }
+data = { area = "family" }
+
+[[routes]]
+path = "/orders/new"
+page = "pages/order-new"
 
 [[routes]]
 path = "/orders/$number"
 page = "pages/order"
 public = true
-data = { area = "store" }
+data = { area = "family" }
+
+[[routes]]
+path = "/customers"
+page = "pages/customers"
+
+[[routes]]
+path = "/customers/$email"
+page = "pages/customer"
 
 [[routes]]
 path = "/account"

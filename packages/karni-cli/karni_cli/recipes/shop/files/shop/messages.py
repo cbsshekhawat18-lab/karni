@@ -38,7 +38,7 @@ def shipment_delivered(shipment: Shipment) -> int:
 
 
 def low_stock(product: Product) -> int:
-    context: dict[str, Any] = {"product": product, "level": services.low_stock_level()}
+    context: dict[str, Any] = {"product": product, "level": product.low_stock_level()}
     return send_templated(
         "shop/email/low_stock",
         to=services.staff_emails(),
