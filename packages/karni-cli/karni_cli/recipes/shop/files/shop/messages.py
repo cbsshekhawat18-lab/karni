@@ -38,7 +38,7 @@ def shipment_delivered(shipment: Shipment) -> int:
 
 
 def low_stock(product: Product, variation: Variation | None = None) -> int:
-    """A product (or one of its variations) runs low: ``variation`` is the one, or None."""
+    """A product, or its ``variation`` when one is given, runs low."""
     context: dict[str, Any] = {
         "product": product,
         "variation": variation,

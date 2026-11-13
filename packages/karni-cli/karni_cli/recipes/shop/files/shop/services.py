@@ -112,7 +112,7 @@ def related_count() -> int:
 
 
 def received(user: Any, product: Product) -> bool:
-    """Whether ``user`` paid for ``product`` (any of its variations) and its parcel arrived."""
+    """Whether ``user`` paid for ``product`` (any variation) and its parcel arrived."""
     if user is None or not getattr(user, "is_authenticated", False):
         return False
     orders = Order.objects.filter(
@@ -136,7 +136,7 @@ def review_problem(user: Any, product: Product) -> str:
 
 
 def related(product: Product, count: int | None = None) -> list[Product]:
-    """The products to show beside ``product``: the ones staff chose, then its category's.
+    """The products to show beside ``product``: staff's choice, then its category's.
 
     Active products only, never the product itself. Staff's choices come first in
     their order, and the rest are the same categories' best rated and featured.

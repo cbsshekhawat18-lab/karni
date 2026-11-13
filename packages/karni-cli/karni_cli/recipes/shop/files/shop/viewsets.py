@@ -285,21 +285,21 @@ class VariationViewSet(karni.VariationViewSet):
 
 
 @cache
-def _review_serializer(
-    base: type[serializers.ModelSerializer[Any]], writing: bool
-) -> type[Any]:
-    """``base`` with the writer's name as a shopper may read it ("Mira O."). For a new
-    review (``writing``) the writer, status and verified mark are the server's."""
+def _review_serializer(base: type[serializers.ModelSerializer[Any]]) -> type[Any]:
+    """``base`` with the writer's name as a shopper may read it ("Mira O."). The writer
+    is the server's: the one signed in when the review was written."""
 
     class Reviewed(base):  # type: ignore[valid-type,misc]
         author_name = serializers.SerializerMethodField()
-        if writing:
-            author = serializers.PrimaryKeyRelatedField(read_only=True)
-            status = serializers.CharField(read_only=True)
-            verified = serializers.BooleanField(read_only=True)
 
         class Meta(base.Meta):  # type: ignore[name-defined]
             fields = [*base.Meta.fields, "author_name"]
+
+        def get_fields(self) -> dict[str, Any]:
+            found: dict[str, Any] = super().get_fields()
+            found["author"].read_only = True
+            found["author"].required = False
+            return found
 
         def get_author_name(self, review: Review) -> str:
             author = review.author
@@ -309,8 +309,8 @@ def _review_serializer(
                 return f"{first} {last[:1]}." if last else first
             return "A customer"
 
-    Reviewed.__name__ = base.__name__ + ("Create" if writing else "")
-    Reviewed.__qualname__ = Reviewed.__name__
+    Reviewed.__name__ = base.__name__
+    Reviewed.__qualname__ = base.__qualname__
     return Reviewed
 
 
@@ -326,8 +326,7 @@ class ReviewViewSet(karni.ReviewViewSet):
     filterset_fields = ["product", "status"]
 
     def get_serializer_class(self) -> type[Any]:
-        writing = getattr(self, "action", None) == "create"
-        return _review_serializer(super().get_serializer_class(), writing)
+        return _review_serializer(super().get_serializer_class())
 
     def get_queryset(self) -> QuerySet[Review]:
         queryset: QuerySet[Review] = super().get_queryset()
@@ -361,7 +360,7 @@ class ReviewViewSet(karni.ReviewViewSet):
     )
     @action(detail=False, methods=["get"], url_path="eligibility", access=Public())
     def eligibility(self, request: Request) -> Response:
-        """Whether the reader may review the product, and their review when they wrote one."""
+        """Whether the reader may review the product, and where their review stands."""
         found = Product.objects.filter(
             pk=str(request.query_params.get("product", "") or "") or None
         ).first()

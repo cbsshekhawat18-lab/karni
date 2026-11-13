@@ -336,9 +336,9 @@ VARIABLE: dict[str, tuple[str, list[tuple[str, str | None]]]] = {
         [("Natural", None), ("Charcoal", None), ("Sage", None)],
     ),
     "Canvas Duffel, 40 L": ("Colour", [("Natural", None), ("Charcoal", "72.00")]),
-    "Terracotta Planter, Medium": (
+    "Insulated Lunch Bag": (
         "Size",
-        [("S", "15.00"), ("M", None), ("L", "26.00")],
+        [("S", "22.00"), ("M", None), ("L", "32.00")],
     ),
     "Crossbody Satchel": ("Colour", [("Charcoal", None), ("Sage", None)]),
     "A5 Dot Grid Notebook": (
