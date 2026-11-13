@@ -1,5 +1,6 @@
 /** An amount as people read it, in the cart's currency unless `currency` says otherwise. */
 import { cn, formatMoney } from "@karni/ui";
+import { useBusiness } from "./business";
 import { useCurrency } from "./cart";
 
 export interface MoneyProps {
@@ -11,8 +12,15 @@ export interface MoneyProps {
 
 export function Money({ value, currency, className }: MoneyProps) {
   const fallback = useCurrency();
+  const display = useBusiness().data?.currency_display;
   const code = currency || fallback;
-  return <span className={className}>{code ? formatMoney(value, code) : String(value)}</span>;
+  return (
+    <span className={className}>
+      {code
+        ? formatMoney(value, code, undefined, display ? { currencyDisplay: display } : undefined)
+        : String(value)}
+    </span>
+  );
 }
 
 export interface PriceTagProps {

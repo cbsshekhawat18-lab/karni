@@ -55,6 +55,13 @@ function fieldErrors(error: unknown, part: string): Record<string, string> {
   );
 }
 
+function fieldMessage(error: unknown, field: string): string {
+  if (!(error instanceof KarniApiError) || !error.data || typeof error.data !== "object") return "";
+  const found = (error.data as Record<string, unknown>)[field];
+  if (Array.isArray(found) && typeof found[0] === "string") return found[0];
+  return typeof found === "string" ? found : "";
+}
+
 const METHOD_HINT: Record<string, string> = {
   pickup: "Collect it from us",
   free: "No charge",
@@ -153,7 +160,9 @@ export function CheckoutPage({
   const [shipping, setShipping] = useState<Address>(EMPTY_ADDRESS);
   const [note, setNote] = useState("");
   const [method, setMethod] = useState<string | null>(null);
-  const ids = { email: useId(), note: useId(), elsewhere: useId() };
+  const [accepted, setAccepted] = useState(false);
+  const ids = { email: useId(), note: useId(), elsewhere: useId(), terms: useId() };
+  const needsTerms = cart.data?.checkout?.accept_terms === true;
   const destination = elsewhere ? shipping : billing;
   const quote = useQuote(
     { country: destination.country, region: destination.region, postcode: destination.postcode },
@@ -172,6 +181,7 @@ export function CheckoutPage({
           shipping: elsewhere ? shipping : null,
           note,
           shipping_method: method ?? quote.data?.method ?? "",
+          ...(needsTerms ? { accept_terms: accepted } : {}),
         },
       }),
     onSuccess: (placed) => {
@@ -191,9 +201,46 @@ export function CheckoutPage({
     );
   }
   const shipped = cart.data.needs_shipping;
-  const place = (
+  const options = cart.data.checkout;
+  const mustSignIn = options?.guest_checkout === false && !signedIn;
+  const termsError = fieldMessage(order.error, "accept_terms");
+  const place = mustSignIn ? (
+    <p>
+      <CommerceLink to={paths.signIn(paths.checkout)} className="font-medium underline">
+        Sign in to place an order
+      </CommerceLink>
+    </p>
+  ) : (
     <div className="space-y-3">
-      {order.isError ? (
+      {needsTerms ? (
+        <div className="space-y-1">
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id={ids.terms}
+              required
+              checked={accepted}
+              onCheckedChange={(on) => setAccepted(on === true)}
+            />
+            <Label htmlFor={ids.terms}>
+              I accept the{" "}
+              <a
+                href={options.terms_url || paths.terms}
+                className="underline"
+                target="_blank"
+                rel="noreferrer"
+              >
+                terms of sale
+              </a>
+            </Label>
+          </div>
+          {termsError ? (
+            <p role="alert" className="text-sm font-medium text-destructive">
+              {termsError}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      {order.isError && !termsError ? (
         <p role="alert" className="text-sm font-medium text-destructive">
           {problemOf(order.error)}
         </p>
@@ -206,13 +253,15 @@ export function CheckoutPage({
       >
         Place the order and pay
       </PendingButton>
-      <p className="text-sm text-muted-foreground">
-        By placing the order you accept the{" "}
-        <CommerceLink to={paths.terms} className="underline">
-          terms
-        </CommerceLink>
-        .
-      </p>
+      {needsTerms ? null : (
+        <p className="text-sm text-muted-foreground">
+          By placing the order you accept the{" "}
+          <CommerceLink to={paths.terms} className="underline">
+            terms
+          </CommerceLink>
+          .
+        </p>
+      )}
     </div>
   );
   return (

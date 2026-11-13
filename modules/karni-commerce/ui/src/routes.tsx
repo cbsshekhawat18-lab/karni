@@ -25,6 +25,10 @@ export interface CommercePaths {
   customer: (email: string) => string;
   /** Staff: an order placed by hand. */
   newOrder: string;
+  /** An order's printable invoice. A guest reads it with its key. */
+  invoice: (number: number | string, key?: string) => string;
+  /** Staff: an order's packing slip. */
+  packingSlip: (number: number | string) => string;
 }
 
 export const DEFAULT_COMMERCE_PATHS: CommercePaths = {
@@ -38,6 +42,9 @@ export const DEFAULT_COMMERCE_PATHS: CommercePaths = {
   customers: "/customers",
   customer: (email) => `/customers/${encodeURIComponent(email)}`,
   newOrder: "/orders/new",
+  invoice: (number, key) =>
+    `/orders/${number}/invoice${key ? `?key=${encodeURIComponent(key)}` : ""}`,
+  packingSlip: (number) => `/orders/${number}/packing-slip`,
 };
 
 export interface CommerceContextValue {

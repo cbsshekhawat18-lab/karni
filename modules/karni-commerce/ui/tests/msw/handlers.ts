@@ -10,7 +10,7 @@
  * 401: the reader is a visitor unless a test signs someone in.
  */
 import { HttpResponse, http } from "msw";
-import type { Cart, CartLine, Order, Placed, Quote } from "../../src/types";
+import type { BusinessDetails, Cart, CartLine, Order, Placed, Quote } from "../../src/types";
 
 export const API_BASE = "http://localhost/api";
 
@@ -39,6 +39,21 @@ export const cartState: {
 export const COUPON = "SAVE10";
 
 export const checkoutCalls: unknown[] = [];
+
+/** What the cart reports about checkout (a test changes it, the reset puts it back). */
+export const checkoutOptions = { guest_checkout: true, accept_terms: false, terms_url: "" };
+
+export const businessFixture: BusinessDetails = {
+  name: "Lindqvist Goods",
+  legal_name: "",
+  address: "",
+  phone: "",
+  email: "",
+  time_zone: "UTC",
+  language: "en",
+  currency: "EUR",
+  currency_display: "symbol",
+};
 
 export const placedFixture: Placed = {
   number: 1001,
@@ -116,14 +131,24 @@ export const orderFixture: Order = {
     },
   ],
   fulfilment: [
-    { title: "Parcel", status: "shipped", label: "Shipped", detail: "Tracking TR123", at: null },
+    {
+      title: "Parcel",
+      status: "shipped",
+      label: "Shipped",
+      detail: "Tracking TR123",
+      at: null,
+      link: "",
+      link_label: "",
+    },
   ],
+  invoice: null,
 };
 
 export function resetMswData(): void {
   cartState.lines = [];
   cartState.coupon = null;
   checkoutCalls.length = 0;
+  Object.assign(checkoutOptions, { guest_checkout: true, accept_terms: false, terms_url: "" });
   ITEMS.lamp.available = 3;
 }
 
@@ -168,6 +193,7 @@ export function currentCart(): Cart {
     currency: "EUR",
     needs_shipping: lines.some((row) => row.kind === "product"),
     ready: lines.length > 0 && lines.every((row) => !row.problem),
+    checkout: { ...checkoutOptions },
   };
 }
 
@@ -176,6 +202,7 @@ export const handlers = [
     HttpResponse.json({ detail: "Not signed in." }, { status: 401 }),
   ),
   http.get(`${API_BASE}/auth/csrf/`, () => new HttpResponse(null, { status: 204 })),
+  http.get(`${API_BASE}/preferences/public/`, () => HttpResponse.json(businessFixture)),
   http.get(`${API_BASE}/carts/current/`, () => HttpResponse.json(currentCart())),
   http.post(`${API_BASE}/carts/current/lines/`, async ({ request }) => {
     const body = (await request.json()) as {
@@ -246,6 +273,9 @@ export const handlers = [
   http.post(`${API_BASE}/carts/current/checkout/`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     checkoutCalls.push(body);
+    if (checkoutOptions.accept_terms && body.accept_terms !== true) {
+      return HttpResponse.json({ accept_terms: ["Accept the terms of sale."] }, { status: 400 });
+    }
     if (!body.email) {
       return HttpResponse.json(
         { email: ["An email address, for the confirmation."] },

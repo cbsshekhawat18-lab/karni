@@ -146,6 +146,13 @@ export function OrderPage({
           </PendingButton>
         </div>
       ) : null}
+      {data.invoice ? (
+        <p className="text-sm">
+          <CommerceLink to={paths.invoice(data.number, orderKey)} className="underline">
+            Print invoice {data.invoice}
+          </CommerceLink>
+        </p>
+      ) : null}
       {data.fulfilment.length > 0 ? (
         <section aria-label="Delivery" className="space-y-2 rounded-lg border border-border p-4">
           {data.fulfilment.map((entry, index) => (
@@ -154,6 +161,14 @@ export function OrderPage({
               {entry.label}
               {entry.detail ? (
                 <span className="text-muted-foreground">, {entry.detail}</span>
+              ) : null}
+              {entry.link ? (
+                <>
+                  {" "}
+                  <a href={entry.link} className="underline" target="_blank" rel="noreferrer">
+                    {entry.link_label || "Open"}
+                  </a>
+                </>
               ) : null}
               {entry.at ? (
                 <span className="text-muted-foreground">

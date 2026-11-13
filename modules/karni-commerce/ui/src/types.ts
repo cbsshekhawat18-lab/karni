@@ -50,6 +50,18 @@ export interface Cart {
   coupon_problem: string;
   /** What the coupon takes off the items. */
   discount: string;
+  /** How checkout works for this shop. */
+  checkout: CheckoutOptions;
+}
+
+/** The shop's checkout settings, as the cart reports them. */
+export interface CheckoutOptions {
+  /** Whether someone may order without signing in. */
+  guest_checkout: boolean;
+  /** Whether the buyer must accept the terms of sale. */
+  accept_terms: boolean;
+  /** Where the terms of sale are, or "". */
+  terms_url: string;
 }
 
 /** A way to send the order, priced for this cart. */
@@ -137,6 +149,10 @@ export interface Fulfilment {
   label: string;
   detail: string;
   at: string | null;
+  /** An absolute URL to a file the buyer may open (a download), or "". */
+  link: string;
+  /** What the link is called, or "". */
+  link_label: string;
 }
 
 /** The money states of an order. */
@@ -178,6 +194,8 @@ export interface Order {
   /** The notes the reader may see: the notes to the customer (staff see every note). */
   notes: OrderNote[];
   fulfilment: Fulfilment[];
+  /** The invoice's reference once the order is paid, or null. */
+  invoice: string | null;
 }
 
 /** An order as GET /api/orders/ lists it. */
@@ -273,4 +291,57 @@ export interface SellableItem {
   sku: string;
   price: string;
   available: number | null;
+}
+
+/** One report the signed-in person may run (GET /orders/reports/). */
+export interface ReportInfo {
+  key: string;
+  title: string;
+  describe: string;
+  dated: boolean;
+}
+
+export interface ReportColumn {
+  key: string;
+  label: string;
+  format: "text" | "number" | "money" | "date";
+}
+
+/** GET /orders/reports/<key>/: a report's columns, rows and totals. */
+export interface ReportResult extends ReportInfo {
+  start: string | null;
+  end: string | null;
+  by: string | null;
+  currency: string;
+  columns: ReportColumn[];
+  rows: Array<Record<string, string | number | null>>;
+  totals: Record<string, string | number | null>;
+}
+
+/** One cart nobody touched for a while (GET /carts/abandoned/). */
+export interface AbandonedCart {
+  id: string;
+  email: string;
+  name: string;
+  signed_in: boolean;
+  items: number;
+  lines: string[];
+  value: string;
+  currency: string;
+  coupon: string;
+  touched_at: string;
+  created_at: string;
+}
+
+/** GET /preferences/public/: what the business says about itself. */
+export interface BusinessDetails {
+  name: string;
+  legal_name: string;
+  address: string;
+  phone: string;
+  email: string;
+  time_zone: string;
+  language: string;
+  currency: string;
+  currency_display: "symbol" | "narrowSymbol" | "code" | "name";
 }

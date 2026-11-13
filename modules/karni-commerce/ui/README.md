@@ -24,6 +24,20 @@ seat, a booking): the server prices each line through its kind's adapter.
 - **`useCart`**, **`useSetLine`**, **`useMergeOnSignIn`**, **`useCurrency`**, **`Money`**,
   **`PriceTag`**.
 
+- **`ReportsPage`**: the reports a person may run. A dated report takes From, To and
+  By (day, week or month), shows its table with a totals row and downloads a CSV file. The
+  chosen report stays in the `report` search value.
+- **`AbandonedCartsPage`**: carts with items that nobody touched for a while, with a search
+  box and paging, so the shop can write to the people it has an email for.
+- **`OrderDocumentPage`**: an order's invoice or packing slip (`kind="invoice"` or
+  `"packing_slip"`) in a frame, with Print and a way back to the order. Mount it at
+  `paths.invoice(number, key)` and `paths.packingSlip(number)`.
+- **`useBusiness`**: what the business says about itself (`/preferences/public/`), read once.
+  `Money` follows its `currency_display` (a symbol, a code or a name).
+
+`CheckoutPage` follows the shop's checkout settings: when guest checkout is off, a visitor is
+asked to sign in, and when the terms of sale must be accepted, a checkbox is required.
+
 ## Install
 
 ```bash

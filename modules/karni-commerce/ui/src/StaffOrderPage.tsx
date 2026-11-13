@@ -271,7 +271,7 @@ function Notes({ order, onDone }: { order: StaffOrder; onDone: () => void }) {
 export function StaffOrderPage({ number, siteName, statusWords }: StaffOrderPageProps) {
   const client = useKarniClient();
   const queryClient = useQueryClient();
-  const { paths } = useCommerce();
+  const { paths, navigate } = useCommerce();
   const schema = useSchema("orders");
   const words: Partial<Record<string, string>> = { ...ORDER_STATUS_WORDS, ...statusWords };
   const [refunding, setRefunding] = useState(false);
@@ -336,6 +336,16 @@ export function StaffOrderPage({ number, siteName, statusWords }: StaffOrderPage
           {canRefund ? (
             <Button variant="outline" onClick={() => setRefunding(!refunding)}>
               {refunding ? "Close the refund" : "Refund"}
+            </Button>
+          ) : null}
+          {data.invoice ? (
+            <Button variant="outline" onClick={() => navigate(paths.invoice(data.number))}>
+              Invoice
+            </Button>
+          ) : null}
+          {data.needs_shipping ? (
+            <Button variant="outline" onClick={() => navigate(paths.packingSlip(data.number))}>
+              Packing slip
             </Button>
           ) : null}
           {canCancel ? (
