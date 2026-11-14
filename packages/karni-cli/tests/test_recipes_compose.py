@@ -248,6 +248,30 @@ def test_preferences_are_installed_with_the_project_name_and_its_fixed_currency(
     assert 'KARNI_PREFERENCES_LOCKED = {"details": {"currency": "USD"}}' in block
 
 
+def test_notify_is_installed_and_a_role_may_grant_its_models() -> None:
+    from karni_cli.builder.render import contract_apps
+    from karni_cli.spec import schema
+    from karni_cli.spec.validate import validate_text
+
+    recipe = _Recipe("club", "Club", requires=("notify>=1",))
+    club = _club()
+    club["roles"]["club-manager"] = {"name": "Manager", "grants": {"notify.emailtemplate:*": "all"}}
+    merged = compose.merge(_project(), recipe, club, modules=MODULES)
+    assert merged.data["features"] == {"notify": True}
+    assert "features.notify: switched on (club requires it)." in merged.notes
+    assert contract_apps(schema.Spec.model_validate(merged.data)) == ["karni.notify"]
+    # the email editor's grant is on a contract model: valid while notify is on
+    import yaml
+
+    assert validate_text(yaml.safe_dump(merged.data)).ok
+    merged.data["features"] = {}
+    off = validate_text(yaml.safe_dump(merged.data))
+    assert not off.ok
+    assert any("notify.emailtemplate" in issue.message for issue in off.issues)
+    error = _refused(_project(), _club(), recipe=_Recipe("club", requires=("notify>=2",)))
+    assert "notify" in error.message
+
+
 def test_conflicts_are_refused_both_ways() -> None:
     project = compose.merge(_project(), _Recipe("desk"), _desk(), modules=MODULES).data
     error = _refused(project, _club(), recipe=_Recipe("club", conflicts=("desk",)))

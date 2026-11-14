@@ -245,6 +245,14 @@ class Features(_Node):
             "people and events, which it switches on too."
         ),
     )
+    notify: bool = Field(
+        False,
+        description=(
+            "Experimental. The notifications contract: karni.notify in INSTALLED_APPS, the "
+            "emails a business edits in the app, the inbox, each person's switches and "
+            "unsubscribing from marketing emails."
+        ),
+    )
     user_grants: bool = Field(
         False, description="KARNI_USER_GRANTS: per-user grants next to the role grants."
     )

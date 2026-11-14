@@ -72,6 +72,7 @@ CONTRACT_APPS: Final[dict[str, str]] = {
     "events": "karni.outbox",
     "timeline": "karni.timeline",
     "preferences": "karni.preferences",
+    "notify": "karni.notify",
 }
 _KEY: Final = re.compile(r"^[a-z][a-z0-9_]*$")
 _DOTTED: Final = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")

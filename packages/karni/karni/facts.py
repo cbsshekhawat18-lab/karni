@@ -376,7 +376,8 @@ def project_facts() -> dict[str, Any]:
         ],
         "viewsets": _viewsets(),
         "settings": declared,
-        # the core contracts installed (features.people, .events, .timeline, .preferences)
+        # the core contracts installed (features.people, .events, .timeline, .preferences,
+        # .notify)
         "contracts": [
             name
             for name, app in (
@@ -384,6 +385,7 @@ def project_facts() -> dict[str, Any]:
                 ("events", "karni.outbox"),
                 ("timeline", "karni.timeline"),
                 ("preferences", "karni.preferences"),
+                ("notify", "karni.notify"),
             )
             if apps.is_installed(app)
         ],
