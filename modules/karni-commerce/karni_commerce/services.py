@@ -980,6 +980,9 @@ def _refund_amount(order: Order, lines: Mapping[str, int], now: datetime) -> Dec
         adapter = kinds().get(line.kind)
         limit = adapter.refund_limit(line, now) if adapter is not None else amount
         total += min(amount, money(limit))
+    if total <= 0:
+        # Each line's adapter says nothing may go back now (a booking that starts soon).
+        raise refuse("Nothing of these lines can be refunded now.", field="lines")
     return total
 
 

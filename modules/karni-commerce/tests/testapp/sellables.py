@@ -106,6 +106,16 @@ class SeatSellable(Sellable):
     def on_paid(self, line: OrderLine) -> None:
         Workshop.objects.filter(pk=line.item).update(enrolled=F("enrolled") + line.quantity)
 
+    def on_cancelled(self, line: OrderLine) -> None:
+        self._free(line.item, line.quantity - line.quantity_refunded)
+
+    def on_refunded(self, line: OrderLine, quantity: int, restock: bool) -> None:
+        self._free(line.item, quantity)  # a refunded seat is free again
+
+    def _free(self, key: str, quantity: int) -> None:
+        Workshop.objects.filter(pk=key).update(enrolled=F("enrolled") - quantity)
+        release(Workshop.objects.get(pk=key), quantity)
+
     def refund_limit(self, line: OrderLine, now: datetime) -> Decimal:
         workshop = Workshop.objects.get(pk=line.item)
         return Decimal("0") if workshop.starts_at <= now else super().refund_limit(line, now)

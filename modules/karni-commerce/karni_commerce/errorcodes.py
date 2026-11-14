@@ -45,7 +45,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         code="COM003",
         title="A sellable's hold is not a positive number of minutes",
         kind="exception",
-        source=f"{_SOURCE}.sellables.Sellable.hold_minutes",
+        source=f"{_SOURCE}.sellables.hold_of (Sellable.hold_minutes)",
         why="Checkout keeps an order's items for the shortest hold of its lines, and an "
         "order not paid by then is cancelled. Zero or a negative number would cancel it "
         "before the buyer could pay.",
