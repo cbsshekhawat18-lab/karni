@@ -1507,6 +1507,76 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Name resources from the response's resources list (the router prefixes, e.g. products), or declare class Karni: search on the model and route a BaseViewSet for it.
 
+<a id="e440"></a>
+
+#### E440: A message is sent as a kind nobody declared
+
+*exception* · from `karni.notify.send`
+
+**Why Karni objects.** A message kind is what Settings, Emails lists, what a person switches off and what a business edits. notify.send() sends declared kinds only, so every message the project sends can be found, switched and edited. karni.mail.send_templated() with an undeclared kind still sends its email, as it always did.
+
+**Fix.** Declare the kind in the part's messages.py with karni.mail.register_kind('&lt;prefix>.&lt;message>', title=..., template='&lt;app>/email/&lt;stem>', fields={...}), or correct the name to one GET /api/email-templates/ lists.
+
+<a id="w440"></a>
+
+#### W440: A message kind is declared on channels the project does not send on
+
+*system check (warning)* · from `karni.notify.checks.check_notify`
+
+**Why Karni objects.** KARNI_NOTIFY_CHANNELS lists the channels the project sends on. A kind whose channels are all left out of it goes nowhere, so its moment passes without a message.
+
+**Fix.** Add the channel to KARNI_NOTIFY_CHANNELS, or declare the kind with a channel the project sends on, or silence karni.W440 when that is what the project wants.
+
+<a id="e441"></a>
+
+#### E441: A person cannot switch or unsubscribe from this message kind
+
+*API 400 response* · from <code>karni.notify.choose; karni.notify.unsubscribe; PATCH /api/inbox/choices/&lt;kind&gt;/</code>
+
+**Why Karni objects.** A person's own switches cover the declared kinds that are switchable. A kind declared switchable=False (a sign-in code) always goes out. Unsubscribing is for marketing kinds (transactional=False): a receipt is switched off in the person's own switches, never by a link.
+
+**Fix.** Use a kind GET /api/inbox/choices/ lists, or switch a transactional kind off with notify.choose(user, kind, email=False) instead of notify.unsubscribe().
+
+<a id="e442"></a>
+
+#### E442: An unsubscribe link is not one this project signed
+
+*API 400 response* · from `karni.notify.read_token; /api/notify/unsubscribe/`
+
+**Why Karni objects.** The link in a marketing email carries a token signed with the project's SECRET_KEY, naming the address and the kind. A changed or cut token, or one signed under another secret, would let anyone unsubscribe anyone.
+
+**Fix.** Open the link from the email as it is. After a SECRET_KEY rotation, old links stop working: the person unsubscribes from a newer email or in their own switches.
+
+<a id="e443"></a>
+
+#### E443: A message is sent to something that is not a recipient
+
+*exception* · from `karni.notify.send; karni.notify.recipients`
+
+**Why Karni objects.** A message goes to a user (its email and its inbox), a person of karni.people (its email, and its account when it has one), an email address, or a list of them. Anything else has no address and no inbox.
+
+**Fix.** Pass to=[user], to=[person], to='someone@example.com' or a list of those.
+
+<a id="e444"></a>
+
+#### E444: An inbox request asks for a page that does not exist
+
+*API 400 response* · from `karni.notify.api.InboxView`
+
+**Why Karni objects.** GET /api/inbox/ pages the signed-in person's notifications from page 1. A page past the last one, or one that is not a number, has nothing to show.
+
+**Fix.** Ask for ?page= from 1 up to the page the previous answer's next named, or leave it out for the first page.
+
+<a id="e445"></a>
+
+#### E445: A message kind names a channel Karni does not send on
+
+*exception* · from `karni.mail.register_kind`
+
+**Why Karni objects.** A message kind goes to an email, the recipient's inbox in the app (karni.notify), or both. A misspelt channel would send the message nowhere.
+
+**Fix.** Pass channels=('email',), ('inbox',) or ('email', 'inbox').
+
 <a id="e450"></a>
 
 #### E450: An event is published that is not declared

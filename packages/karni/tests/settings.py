@@ -66,6 +66,8 @@ KARNI_PEOPLE_API = False
 KARNI_TIMELINE_API = False
 # And the preferences' route: tests/preferences mounts its own URLconf.
 KARNI_PREFERENCES_API = False
+# And the notifications' routes: tests/notify mounts its own URLconf.
+KARNI_NOTIFY_API = False
 
 karni_settings(globals(), env_name="dev")
 
@@ -118,6 +120,8 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # The preferences contract (tests/preferences): its API is mounted by
     # tests.preferences.urls.
     "karni.preferences",
+    # The notifications contract (tests/notify): its API is mounted by tests.notify.urls.
+    "karni.notify",
     # Demo mode (karni.demo): inert unless a test sets KARNI_DEMO_MODE.
     "karni.demo",
 ]

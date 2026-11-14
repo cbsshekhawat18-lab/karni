@@ -15,7 +15,7 @@ from __future__ import annotations
 import importlib.util
 import re
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
@@ -43,6 +43,14 @@ def _importable(module: str) -> bool:
         return importlib.util.find_spec(module) is not None
     except (ImportError, ValueError):
         return False
+
+
+#: A channel a message goes out on (karni.mail, karni.notify).
+_Channel = Literal["email", "inbox"]
+
+
+def _both_channels() -> list[_Channel]:
+    return ["email", "inbox"]
 
 
 class KarniSettingsModel(BaseModel):
@@ -126,6 +134,14 @@ class KarniSettingsModel(BaseModel):
     KARNI_PREFERENCES_DEFAULTS: dict[str, dict[str, Any]] = Field(default_factory=dict)
     KARNI_PREFERENCES_API: bool = True
     KARNI_PREFERENCES_AUTODISCOVER: bool = True
+    KARNI_MAIL_SOURCE: Any = "karni.notify.source.NotifySource"
+    KARNI_NOTIFY_API: bool = True
+    KARNI_NOTIFY_CHANNELS: list[_Channel] = Field(default_factory=_both_channels)
+    KARNI_NOTIFY_PAGE_SIZE: int = Field(default=25, ge=1, le=1000)
+    KARNI_NOTIFY_MAX_PAGE_SIZE: int = Field(default=100, ge=1, le=1000)
+    KARNI_NOTIFY_RETENTION_DAYS: int | None = Field(default=180, ge=1)
+    KARNI_NOTIFY_UNSUBSCRIBE_PATH: str = "/api/notify/unsubscribe/?token={token}"
+    KARNI_NOTIFY_MOVE_CHANNELS: list[_Channel] = Field(default_factory=_both_channels)
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)
     KARNI_ADMIN_GRANTS_OPEN_PAGES: bool = True
     KARNI_MATRIX_EXCLUDE: list[Any] = Field(default_factory=list)

@@ -1877,6 +1877,13 @@ class Lead(BaseModel):
 | `KARNI_PREFERENCES_DEFAULTS` |  | `{}` | Experimental. Values the deployment starts with, in the shape of `KARNI_PREFERENCES_LOCKED`. The business can change them in Settings. `karni build` writes the project's name here, and its currency (`app.currency`) in `KARNI_PREFERENCES_LOCKED`. |
 | `KARNI_PREFERENCES_API` |  | `True` | Experimental. Route `/api/preferences/`, the API behind the Settings page, when `karni.preferences` is installed. `False` leaves it out. |
 | `KARNI_PREFERENCES_AUTODISCOVER` |  | `True` | Experimental. Import every installed app's `preferences.py` and `connections.py` at startup, where parts declare their settings sections, connections and email kinds. |
+| `KARNI_NOTIFY_API` |  | `True` | Experimental. Route `/api/inbox/`, `/api/email-templates/` and `/api/notify/unsubscribe/` when `karni.notify` is installed. `False` leaves them out, for a project that mounts its own views. See [notifications](notify.md). |
+| `KARNI_NOTIFY_CHANNELS` |  | `["email", "inbox"]` | Experimental. The channels the project sends messages on: `"email"` and `"inbox"`. A kind declared on a channel left out here is not sent there. |
+| `KARNI_NOTIFY_PAGE_SIZE` |  | `25` | Experimental. Notifications per page of `GET /api/inbox/` when `?limit=` is not given. |
+| `KARNI_NOTIFY_MAX_PAGE_SIZE` |  | `100` | Experimental. The largest `?limit=` of `GET /api/inbox/`. |
+| `KARNI_NOTIFY_RETENTION_DAYS` |  | `180` | Experimental. Days a notification is kept in the inbox, read or not. A daily task deletes older ones. `None` keeps them all and schedules nothing. |
+| `KARNI_NOTIFY_UNSUBSCRIBE_PATH` |  | `"/api/notify/unsubscribe/?token={token}"` | Experimental. Where the unsubscribe link of a marketing email points, after `KARNI_FRONTEND_URL`: `{token}` is the signed token. The default is the API's own page, which asks before it unsubscribes. |
+| `KARNI_NOTIFY_MOVE_CHANNELS` |  | `["email", "inbox"]` | Experimental. Where the email of a move (`moves.<state>.notify` in karni.yaml) goes while `karni.notify` is installed: `["email", "inbox"]` (the default), or one of them. |
 | `KARNI_ACCOUNTS_TOKEN_TTL` |  | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
 | `KARNI_ACCOUNTS_LINKS` |  | `{ "verify_email": "{frontend}/auth/verify-email?token={token}", "reset_password": "{frontend}/auth/reset-password?token={token}", "change_email": "{frontend}/auth/confirm-email-change?token={token}"}` | Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders. |
 | `KARNI_AUTH_THROTTLE_RATES` |  | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object. `null` disables a scope. |
@@ -1892,6 +1899,7 @@ class Lead(BaseModel):
 | Setting | Env | Default | What it controls |
 |---|---|---|---|
 | `KARNI_MAIL_DISABLED_KINDS` | `KARNI_MAIL_DISABLED_KINDS` | `[]` | Experimental. The kinds of email karni.mail does not send, by name (commerce.new_order). A kind is the stable name a part gives each email. |
+| `KARNI_MAIL_SOURCE` | `KARNI_MAIL_SOURCE` | `"karni.notify.source.NotifySource"` | Experimental. Dotted path of the object (or class) karni.mail asks what a business changed: `template(kind)` (an email edited in the app), `enabled(kind)`, `sender()` and, optionally, `send(...)`, which takes over the delivery of every message with a kind. The default, `karni.notify.source.NotifySource`, keeps edited emails, each person's switches and unsubscribes and the inbox while `karni.notify` is installed, and reads the files and the preferences contract otherwise. Blank: `karni.mail.DefaultSource`. See [notifications](notify.md). |
 
 ### Files & storage
 
@@ -2105,7 +2113,6 @@ class Lead(BaseModel):
 | `KARNI_COMMERCE_TAX` | `KARNI_COMMERCE_TAX` | `"karni_commerce.pricing.RateTax"` | The dotted path of the class that gives the tax rate of a tax class at an address (karni_commerce.pricing.RateTax: the rates staff set up). |
 | `KARNI_COMMERCE_SELLABLES` |  | `{}` | Sellable adapters by kind, as dotted paths, over the ones the apps register in their sellables.py: {"product": "myapp.sellables.MyProduct"}. |
 | `KARNI_COMMERCE_FIRST_INVOICE` | `KARNI_COMMERCE_FIRST_INVOICE` | `1001` | The first invoice's number (karni_commerce.services.issue_invoice). |
-| `KARNI_MAIL_SOURCE` | `KARNI_MAIL_SOURCE` | `"karni_commerce.mail.MailSource"` | karni.mail's source of the emails a business edits (karni_commerce.EmailTemplate), with the switches and the sender of karni.preferences (until the family's notifications keep the edited emails). |
 
 ### Module: karni-impersonation
 
@@ -2637,6 +2644,13 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E411`](errors.md#e411) | exception | KARNI_API_CACHE_FLUSH is not a time of day |
 | [`E430`](errors.md#e430) | check | Karni.search is malformed or names a field the model does not have |
 | [`E431`](errors.md#e431) | api | ?models= names a resource cross-model search does not cover |
+| [`E440`](errors.md#e440) | exception | A message is sent as a kind nobody declared |
+| [`W440`](errors.md#w440) | warning | A message kind is declared on channels the project does not send on |
+| [`E441`](errors.md#e441) | api | A person cannot switch or unsubscribe from this message kind |
+| [`E442`](errors.md#e442) | api | An unsubscribe link is not one this project signed |
+| [`E443`](errors.md#e443) | exception | A message is sent to something that is not a recipient |
+| [`E444`](errors.md#e444) | api | An inbox request asks for a page that does not exist |
+| [`E445`](errors.md#e445) | exception | A message kind names a channel Karni does not send on |
 | [`E450`](errors.md#e450) | exception | An event is published that is not declared |
 | [`W450`](errors.md#w450) | warning | A subscriber reads a version its event does not have |
 | [`E451`](errors.md#e451) | check | Family events need the karni.outbox app |

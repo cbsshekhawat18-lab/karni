@@ -92,6 +92,13 @@ reads it on every request.
 | <a id="karni_preferences_defaults"></a>`KARNI_PREFERENCES_DEFAULTS` |  | `{}` | Experimental. Values the deployment starts with, in the shape of `KARNI_PREFERENCES_LOCKED`. The business can change them in Settings. `karni build` writes the project's name here, and its currency (`app.currency`) in `KARNI_PREFERENCES_LOCKED`. |
 | <a id="karni_preferences_api"></a>`KARNI_PREFERENCES_API` |  | `True` | Experimental. Route `/api/preferences/`, the API behind the Settings page, when `karni.preferences` is installed. `False` leaves it out. |
 | <a id="karni_preferences_autodiscover"></a>`KARNI_PREFERENCES_AUTODISCOVER` |  | `True` | Experimental. Import every installed app's `preferences.py` and `connections.py` at startup, where parts declare their settings sections, connections and email kinds. |
+| <a id="karni_notify_api"></a>`KARNI_NOTIFY_API` |  | `True` | Experimental. Route `/api/inbox/`, `/api/email-templates/` and `/api/notify/unsubscribe/` when `karni.notify` is installed. `False` leaves them out, for a project that mounts its own views. See [notifications](notify.md). |
+| <a id="karni_notify_channels"></a>`KARNI_NOTIFY_CHANNELS` |  | `["email", "inbox"]` | Experimental. The channels the project sends messages on: `"email"` and `"inbox"`. A kind declared on a channel left out here is not sent there. |
+| <a id="karni_notify_page_size"></a>`KARNI_NOTIFY_PAGE_SIZE` |  | `25` | Experimental. Notifications per page of `GET /api/inbox/` when `?limit=` is not given. |
+| <a id="karni_notify_max_page_size"></a>`KARNI_NOTIFY_MAX_PAGE_SIZE` |  | `100` | Experimental. The largest `?limit=` of `GET /api/inbox/`. |
+| <a id="karni_notify_retention_days"></a>`KARNI_NOTIFY_RETENTION_DAYS` |  | `180` | Experimental. Days a notification is kept in the inbox, read or not. A daily task deletes older ones. `None` keeps them all and schedules nothing. |
+| <a id="karni_notify_unsubscribe_path"></a>`KARNI_NOTIFY_UNSUBSCRIBE_PATH` |  | `"/api/notify/unsubscribe/?token={token}"` | Experimental. Where the unsubscribe link of a marketing email points, after `KARNI_FRONTEND_URL`: `{token}` is the signed token. The default is the API's own page, which asks before it unsubscribes. |
+| <a id="karni_notify_move_channels"></a>`KARNI_NOTIFY_MOVE_CHANNELS` |  | `["email", "inbox"]` | Experimental. Where the email of a move (`moves.<state>.notify` in karni.yaml) goes while `karni.notify` is installed: `["email", "inbox"]` (the default), or one of them. |
 | <a id="karni_accounts_token_ttl"></a>`KARNI_ACCOUNTS_TOKEN_TTL` |  | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
 | <a id="karni_accounts_links"></a>`KARNI_ACCOUNTS_LINKS` |  | `{ "verify_email": "{frontend}/auth/verify-email?token={token}", "reset_password": "{frontend}/auth/reset-password?token={token}", "change_email": "{frontend}/auth/confirm-email-change?token={token}"}` | Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders. |
 | <a id="karni_auth_throttle_rates"></a>`KARNI_AUTH_THROTTLE_RATES` |  | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object. `null` disables a scope. |
@@ -99,6 +106,7 @@ reads it on every request.
 | <a id="karni_cache"></a>`KARNI_CACHE` | `KARNI_CACHE` | `"redis"` | `redis` (the default cache at `REDIS_URL`) or `locmem`, an in-process cache for a host run without Redis (development only: throttle counters are then per process). |
 | **Email** | | | |
 | <a id="karni_mail_disabled_kinds"></a>`KARNI_MAIL_DISABLED_KINDS` | `KARNI_MAIL_DISABLED_KINDS` | `[]` | Experimental. The kinds of email karni.mail does not send, by name (commerce.new_order). A kind is the stable name a part gives each email. |
+| <a id="karni_mail_source"></a>`KARNI_MAIL_SOURCE` | `KARNI_MAIL_SOURCE` | `"karni.notify.source.NotifySource"` | Experimental. Dotted path of the object (or class) karni.mail asks what a business changed: `template(kind)` (an email edited in the app), `enabled(kind)`, `sender()` and, optionally, `send(...)`, which takes over the delivery of every message with a kind. The default, `karni.notify.source.NotifySource`, keeps edited emails, each person's switches and unsubscribes and the inbox while `karni.notify` is installed, and reads the files and the preferences contract otherwise. Blank: `karni.mail.DefaultSource`. See [notifications](notify.md). |
 | **Files & storage** | | | |
 | <a id="karni_storage"></a>`KARNI_STORAGE` | `KARNI_STORAGE` | `"local"` | `local` (filesystem) or `s3` (any S3-compatible service, needs `karni[s3]`). |
 | **API (karni.api)** | | | |
@@ -279,7 +287,6 @@ Assign them in `config/settings.py`. A module's README says more about each.
 | <a id="karni_commerce_tax"></a>`KARNI_COMMERCE_TAX` | `KARNI_COMMERCE_TAX` | `"karni_commerce.pricing.RateTax"` | The dotted path of the class that gives the tax rate of a tax class at an address (karni_commerce.pricing.RateTax: the rates staff set up). |
 | <a id="karni_commerce_sellables"></a>`KARNI_COMMERCE_SELLABLES` |  | `{}` | Sellable adapters by kind, as dotted paths, over the ones the apps register in their sellables.py: {"product": "myapp.sellables.MyProduct"}. |
 | <a id="karni_commerce_first_invoice"></a>`KARNI_COMMERCE_FIRST_INVOICE` | `KARNI_COMMERCE_FIRST_INVOICE` | `1001` | The first invoice's number (karni_commerce.services.issue_invoice). |
-| <a id="karni_mail_source"></a>`KARNI_MAIL_SOURCE` | `KARNI_MAIL_SOURCE` | `"karni_commerce.mail.MailSource"` | karni.mail's source of the emails a business edits (karni_commerce.EmailTemplate), with the switches and the sender of karni.preferences (until the family's notifications keep the edited emails). |
 
 ### karni-impersonation
 

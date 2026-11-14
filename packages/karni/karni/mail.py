@@ -57,10 +57,14 @@ template edited in the app (:class:`EditedTemplate`) wins over the files and
 renders with a restricted engine (:func:`render_edited`) that sees the
 declared merge fields only, as plain values, and has no tag that loads code
 or other templates. ``enabled(kind)`` switches an email off, and ``sender()``
-gives the ``From``. Without the setting, :class:`DefaultSource` answers: the
-files, and the switches and the sender of the preferences contract while
-``karni.preferences`` is installed, else every email on and
-``DEFAULT_FROM_EMAIL``.
+gives the ``From``. A source with ``send(template, to=..., context=..., kind=...,
+...)`` takes over the delivery of every message with a kind: the notifications
+contract's source (``karni.notify.source.NotifySource``, the default) honours
+each person's own switches and unsubscribes there, and puts a kind declared with
+``channels=("email", "inbox")`` in the recipient's inbox too. With
+``KARNI_MAIL_SOURCE`` blank, :class:`DefaultSource` answers: the files, and the
+switches and the sender of the preferences contract while ``karni.preferences``
+is installed, else every email on and ``DEFAULT_FROM_EMAIL``.
 
 Override / escape hatch: put a template of the same name earlier in
 ``TEMPLATES`` ``DIRS`` to change a message without code, pass
@@ -88,7 +92,10 @@ from django.template.loader import render_to_string
 from django.utils.html import escape, linebreaks, urlize
 from django.utils.module_loading import autodiscover_modules, import_string
 
+from karni.exceptions import KarniValueError
+
 __all__ = [
+    "CHANNELS",
     "KIND_HEADER",
     "SAFE_TAGS",
     "DefaultSource",
@@ -98,8 +105,10 @@ __all__ = [
     "base_context",
     "check_edited",
     "default_source",
+    "deliver",
     "edited_template",
     "find_kind",
+    "is_silenced",
     "kind_enabled",
     "kinds",
     "mail_source",
@@ -116,6 +125,8 @@ __all__ = [
 
 #: The header a message's kind goes out in.
 KIND_HEADER = "X-Karni-Kind"
+#: The channels a kind may be sent on: an email, and the recipient's inbox in the app.
+CHANNELS: tuple[str, ...] = ("email", "inbox")
 
 
 @dataclass(frozen=True)
@@ -140,6 +151,11 @@ class MessageKind:
     gives the context the sender would pass for the latest matching record
     (the last paid order), or ``None`` when there is none, and ``samples`` is a
     context of declared values for then (``{"order": {"number": 1001}}``).
+
+    ``channels`` says where it goes: ``("email",)`` (the default), ``("inbox",)``
+    (the recipient's inbox in the app, ``karni.notify``) or both. A kind that is
+    not ``transactional`` is marketing: it carries an unsubscribe link while
+    ``karni.notify`` is installed, and goes to nobody who unsubscribed.
     """
 
     name: str
@@ -152,6 +168,12 @@ class MessageKind:
     switchable: bool = True
     sample: Callable[[], Mapping[str, Any] | None] | None = field(default=None, compare=False)
     samples: Mapping[str, Any] = field(default_factory=dict, compare=False)
+    channels: tuple[str, ...] = ("email",)
+
+    @property
+    def marketing(self) -> bool:
+        """Experimental. A message a person may unsubscribe from (not ``transactional``)."""
+        return not self.transactional
 
 
 @dataclass(frozen=True)
@@ -178,11 +200,28 @@ def register_kind(
     switchable: bool = True,
     sample: Callable[[], Mapping[str, Any] | None] | None = None,
     samples: Mapping[str, Any] | None = None,
+    channels: Iterable[str] = ("email",),
+    replace: bool = True,
 ) -> MessageKind:
     """Experimental. Declare the email ``name`` (registering it again replaces it).
 
     ``sample`` and ``samples`` feed the editor's preview (:func:`sample_context`).
+    ``channels`` names where it goes: ``"email"``, ``"inbox"`` or both.
+    ``replace=False`` keeps a declaration of the same name that is already there
+    and returns it: a default that a part's own declaration wins over.
+
+    :raises KarniValueError: E445, a channel that is not one of :data:`CHANNELS`, or none.
     """
+    chosen = tuple(dict.fromkeys(str(channel) for channel in channels))
+    unknown = [channel for channel in chosen if channel not in CHANNELS]
+    if unknown or not chosen:
+        raise KarniValueError(
+            f"karni.mail: the kind {name!r} names the channels {list(chosen)!r}. "
+            f"Name one or more of {list(CHANNELS)!r}.",
+            code="E445",
+        )
+    if not replace and name in _KINDS:
+        return _KINDS[name]
     found = MessageKind(
         name=name,
         title=title,
@@ -194,6 +233,7 @@ def register_kind(
         switchable=switchable,
         sample=sample,
         samples=dict(samples or {}),
+        channels=chosen,
     )
     _KINDS[name] = found
     return found
@@ -247,6 +287,10 @@ class DefaultSource:
 
     def template(self, kind: str) -> EditedTemplate | None:
         return None
+
+    def keeps_edits(self) -> bool:
+        """Whether this source keeps emails a business rewrote (``template()`` answers)."""
+        return type(self).template is not DefaultSource.template
 
     def enabled(self, kind: str) -> bool:
         if not self._preferences():
@@ -510,6 +554,11 @@ def silenced() -> Iterator[None]:
         _speak()
 
 
+def is_silenced() -> bool:
+    """Experimental. Whether a :func:`silenced` block holds now: nothing is sent."""
+    return bool(_SILENCE[0])
+
+
 def kind_enabled(kind: str | None) -> bool:
     """Experimental. Whether ``kind`` goes out: not listed in ``KARNI_MAIL_DISABLED_KINDS``,
     and not switched off by ``KARNI_MAIL_SOURCE`` (an email declared not
@@ -576,21 +625,80 @@ def send_templated(
     Returns the number of messages sent: ``0`` when ``to`` holds no address,
     so a row without an email address never fails the code that saves it, and
     ``0`` when ``kind`` is switched off (``KARNI_MAIL_DISABLED_KINDS``).
+
+    With a ``kind``, a source that has ``send()`` (``KARNI_MAIL_SOURCE``: the
+    notifications contract's by default) delivers it: each person's own
+    switches, unsubscribes and the inbox apply there, and the number is the
+    emails it sent.
     """
     addresses = [str(address).strip() for address in to if str(address or "").strip()]
-    if not addresses or not kind_enabled(kind) or _SILENCE[0]:
+    if not addresses or _SILENCE[0]:
         return 0
-    rendered = render_templated(template, context, kind=kind)
+    take = getattr(mail_source(), "send", None) if kind else None
+    if callable(take):
+        return int(
+            take(
+                template,
+                to=addresses,
+                context=dict(context or {}),
+                kind=kind,
+                from_email=from_email,
+                reply_to=list(reply_to) if reply_to else None,
+                cc=list(cc) if cc else None,
+                bcc=list(bcc) if bcc else None,
+            )
+            or 0
+        )
+    if not kind_enabled(kind):
+        return 0
+    return deliver(
+        template,
+        to=addresses,
+        context=context,
+        from_email=from_email,
+        reply_to=reply_to,
+        cc=cc,
+        bcc=bcc,
+        kind=kind,
+    )
+
+
+def deliver(
+    template: str,
+    *,
+    to: Iterable[str],
+    context: Mapping[str, Any] | None = None,
+    from_email: str | None = None,
+    reply_to: Iterable[str] | None = None,
+    cc: Iterable[str] | None = None,
+    bcc: Iterable[str] | None = None,
+    kind: str | None = None,
+    headers: Mapping[str, str] | None = None,
+    rendered: Rendered | None = None,
+) -> int:
+    """Experimental. Render and send one message now, with no switch asked.
+
+    What :func:`send_templated` does once it decided the message goes out, for a
+    mail source's ``send()``: ``rendered`` skips the rendering, ``headers`` are
+    added to the kind's header. The ``From`` is ``from_email``, else the
+    source's sender, else ``DEFAULT_FROM_EMAIL``.
+    """
+    addresses = [str(address).strip() for address in to if str(address or "").strip()]
+    if not addresses or _SILENCE[0]:
+        return 0
+    found = rendered if rendered is not None else render_templated(template, context, kind=kind)
+    extra: dict[str, str] = {KIND_HEADER: kind} if kind else {}
+    extra.update(dict(headers or {}))
     message = EmailMultiAlternatives(
-        subject=rendered.subject,
-        body=rendered.text,
+        subject=found.subject,
+        body=found.text,
         from_email=from_email or sender() or None,
         to=addresses,
         cc=list(cc) if cc else None,
         bcc=list(bcc) if bcc else None,
         reply_to=list(reply_to) if reply_to else None,
-        headers={KIND_HEADER: kind} if kind else None,
+        headers=extra or None,
     )
-    if rendered.html is not None:
-        message.attach_alternative(rendered.html, "text/html")
+    if found.html is not None:
+        message.attach_alternative(found.html, "text/html")
     return int(message.send())

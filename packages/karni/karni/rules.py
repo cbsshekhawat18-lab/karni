@@ -1227,6 +1227,9 @@ def send_move_email(instance: models.Model, key: str) -> int:
     The email kind ``<app_label>.<model>_<key>`` switched off in Settings,
     Emails sends nothing (:func:`karni.preferences.email_on`), and the
     project's details give the sender (:func:`karni.preferences.sender`).
+    While ``karni.notify`` is installed it is a message kind sent through it
+    (:func:`karni.notify.moves.send_move`): an edited text wins, the recipient's
+    own switch holds, and it goes to their inbox too (``KARNI_NOTIFY_MOVE_CHANNELS``).
     """
     from django.core.mail import EmailMultiAlternatives
     from django.template import TemplateDoesNotExist
@@ -1240,6 +1243,10 @@ def send_move_email(instance: models.Model, key: str) -> int:
         return 0  # switched off in Settings, Emails
     recipient = _walk(instance, move.notify or "")
     address = getattr(recipient, "email", "") or ""
+    if django_apps.is_installed("karni.notify"):
+        from karni.notify.moves import send_move
+
+        return send_move(instance, key, recipient)  # the switches, the edits and the inbox
     if not address:
         return 0
     meta = instance._meta
