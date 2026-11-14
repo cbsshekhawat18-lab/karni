@@ -151,8 +151,8 @@ part was added with) and karni.yaml, so a project without parts is unaffected.
 | Rule | Code | What fails |
 |---|---|---|
 | `part-imports-part` | [K315](errors.md#k315) | a file of one part (its app folder or `frontend/src/<prefix>/`) imports another part or names its app label: `"crm.Deal"`, `"crm.deal:own"`, `"crm:deal-list"`, `"crm/x.html"`, `apps.get_model("crm", ...)`, a migration dependency, a template `include`, `extends` or `url`, a frontend import |
-| `part-role-prefix` | [K315](errors.md#k316) | with two or more parts, a part after the first has a role that is not `<prefix>-<role>` and not `admin` or `customer` |
-| `part-route` | [K315](errors.md#k316) | a part's base route is a family page's or another app's, or one of its generated pages in routes.tsx is outside its base |
+| `part-role-prefix` | [K315](errors.md#k315) | with two or more parts, a part after the first has a role that is not `<prefix>-<role>` and not `admin` or `customer` |
+| `part-route` | [K315](errors.md#k315) | a part's base route is a family page's or another app's, or one of its generated pages in routes.tsx is outside its base |
 
 The contracts are not parts, so `karni.people`, `karni.events`, `karni.timeline`,
 `karni.preferences` and `karni_commerce` are always allowed. The first part keeps
@@ -192,4 +192,4 @@ in a template).
 | [C448](errors.md#c448) | `karni recipes remove` of a recipe the project does not hold |
 | [C449](errors.md#c449) | `karni recipes upgrade` without the part's record |
 | [K315](errors.md#k315) | a part naming another part, a role without its prefix, or a route outside its base |
-| [K315](errors.md#k316) | a part's role without its prefix, or its route outside its base |
+| [K315](errors.md#k315) | a part's role without its prefix, or its route outside its base |
