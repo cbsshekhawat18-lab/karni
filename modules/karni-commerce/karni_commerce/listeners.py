@@ -43,8 +43,17 @@ def _mail(kind: str, order: Order, **context: Any) -> None:
 
 @receiver(events.order_paid)
 def confirm_the_order(sender: Any, order: Order, **kwargs: Any) -> None:
-    """The buyer's confirmation, and the staff's new-order email."""
+    """The buyer's confirmation, and the staff's new-order email (once: an order paid by a
+    deposit first told the staff when the deposit came in)."""
     _mail("commerce.order_paid", order)
+    if order.deposit <= 0:
+        _mail("commerce.new_order", order)
+
+
+@receiver(events.order_part_paid)
+def ask_for_the_balance(sender: Any, order: Order, **kwargs: Any) -> None:
+    """The deposit is in: the buyer gets what is left and the link, the staff the order."""
+    _mail("commerce.balance_due", order)
     _mail("commerce.new_order", order)
 
 

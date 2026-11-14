@@ -18,7 +18,7 @@ from rest_framework.test import APIClient
 
 from karni_commerce import services
 from karni_commerce.models import Cart, Order
-from tests.testapp.models import Gadget, Workshop
+from tests.testapp.models import Gadget, Slot, Workshop
 
 celery_app = create_celery_app("karni-commerce-tests")
 
@@ -88,6 +88,22 @@ def make_workshop() -> Callable[..., Workshop]:
     return make
 
 
+@pytest.fixture
+def make_slot() -> Callable[..., Slot]:
+    def make(**values: Any) -> Slot:
+        values = {
+            "title": "Consultation",
+            "price": Decimal("50.00"),
+            "deposit": Decimal("10.00"),
+            "seats": 1,
+            "starts_at": timezone.now() + timedelta(days=7),
+            **values,
+        }
+        return Slot.objects.create(**values)
+
+    return make
+
+
 def cart_with(*lines: tuple[str, Any, int]) -> Cart:
     """A visitor's cart holding ``(kind, item, quantity)`` lines."""
     cart = Cart.objects.create()
@@ -96,8 +112,12 @@ def cart_with(*lines: tuple[str, Any, int]) -> Cart:
     return cart
 
 
-def place(cart: Cart, email: str = "guest@example.com", user: Any = None) -> Order:
-    return services.checkout(cart, user=user, email=email, billing=ADDRESS, shipping=ADDRESS)
+def place(
+    cart: Cart, email: str = "guest@example.com", user: Any = None, *, deposit: bool = False
+) -> Order:
+    return services.checkout(
+        cart, user=user, email=email, billing=ADDRESS, shipping=ADDRESS, deposit=deposit
+    )
 
 
 def pay(order: Order, outcome: str = "pay") -> Order:

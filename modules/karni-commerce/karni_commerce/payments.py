@@ -7,8 +7,9 @@ any payment. Set it to :func:`checkout_validator`::
 
 (``modules: {payments: {checkout_validator: karni_commerce.payments.checkout_validator}}``
 in karni.yaml). A payment for an order (its metadata names
-``commerce_order``) must ask for exactly what the order still owes, in the
-order's currency. Every other payment goes to
+``commerce_order``) must ask for exactly what the order owes now, in the
+order's currency: its deposit while that is due, else its balance
+(``Order.due_now``). Every other payment goes to
 ``KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR``.
 
 Commerce links a payment to an order only when it opened the payment itself
@@ -43,7 +44,7 @@ def checkout_validator(
     order = Order.objects.filter(pk=key).first()
     if order is None:
         raise ValidationError({"amount": ["No such order."]})
-    if Decimal(amount) != order.balance or currency.upper() != order.currency.upper():
-        raise ValidationError(
-            {"amount": [f"Order {order.number} owes {order.balance:.2f} {order.currency}."]}
-        )
+    due = order.due_now
+    if Decimal(amount) != due or currency.upper() != order.currency.upper():
+        owed = f"Order {order.number} owes {due:.2f} {order.currency}."
+        raise ValidationError({"amount": [owed]})

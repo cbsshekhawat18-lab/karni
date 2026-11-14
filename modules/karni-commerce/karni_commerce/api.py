@@ -25,6 +25,7 @@ from karni_commerce.services import PricedLine
 
 __all__ = [
     "AddressSerializer",
+    "BalanceLinkSerializer",
     "CouponInputSerializer",
     "QuoteInputSerializer",
     "QuoteSerializer",
@@ -241,6 +242,10 @@ class QuoteSerializer(serializers.Serializer[Any]):
     method = serializers.CharField(allow_null=True)
     shipping_problem = serializers.CharField(allow_blank=True)
     tax_lines = TaxLineSerializer(many=True)
+    deposit = serializers.CharField(
+        allow_null=True,
+        help_text="What may be paid now and the rest later (every line allows a deposit), or null.",
+    )
 
     @staticmethod
     def of(found: Any) -> dict[str, Any]:
@@ -271,6 +276,7 @@ class QuoteSerializer(serializers.Serializer[Any]):
                         }
                         for t in found.tax_lines
                     ],
+                    "deposit": _amount(found.deposit) if found.deposit is not None else None,
                 }
             ).data
         )
@@ -311,6 +317,12 @@ class CheckoutSerializer(serializers.Serializer[Any]):
     accept_terms = serializers.BooleanField(
         required=False, default=False, help_text="The buyer accepts the terms of sale."
     )
+    pay = serializers.ChoiceField(
+        ["full", "deposit"],
+        required=False,
+        default="full",
+        help_text="full, or deposit: the deposit now and the rest later (the quote's deposit).",
+    )
 
 
 class CheckoutResultSerializer(serializers.Serializer[Any]):
@@ -328,6 +340,12 @@ class OrderKeySerializer(serializers.Serializer[Any]):
 
 class PayResultSerializer(serializers.Serializer[Any]):
     url = serializers.CharField(allow_null=True)
+
+
+class BalanceLinkSerializer(serializers.Serializer[Any]):
+    """The link the buyer pays the rest of a part-paid order at (emailed to them)."""
+
+    link = serializers.CharField()
 
 
 class RefundInputSerializer(serializers.Serializer[Any]):
@@ -457,6 +475,9 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
     total = serializers.SerializerMethodField()
     amount_paid = serializers.SerializerMethodField()
     amount_refunded = serializers.SerializerMethodField()
+    deposit = serializers.SerializerMethodField()
+    balance = serializers.SerializerMethodField()
+    due_now = serializers.SerializerMethodField()
     fulfilment = serializers.SerializerMethodField()
     invoice = serializers.SerializerMethodField()
 
@@ -480,6 +501,9 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
             "shipping_method",
             "amount_paid",
             "amount_refunded",
+            "deposit",
+            "balance",
+            "due_now",
             "billing",
             "shipping",
             "needs_shipping",
@@ -527,8 +551,9 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
         return list(OrderLineViewSerializer(rows, many=True, context=context).data)
 
     def get_payable(self, order: Order) -> bool:
-        """Waiting for its payment (or failed, so it can be tried again) and still held."""
-        if order.status == "failed":
+        """Waiting for its payment (or failed, so it can be tried again) and still held, or
+        part paid by its deposit with the balance to pay."""
+        if order.status in ("failed", "part_paid"):
             return True
         return order.status == "pending" and (
             order.hold_until is None or order.hold_until > timezone.now()
@@ -554,6 +579,18 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
 
     def get_amount_refunded(self, order: Order) -> str:
         return _amount(order.amount_refunded)
+
+    def get_deposit(self, order: Order) -> str:
+        """The deposit asked first ("0.00": the whole total at once)."""
+        return _amount(order.deposit)
+
+    def get_balance(self, order: Order) -> str:
+        """What is still to pay: the total less what was paid."""
+        return _amount(order.balance)
+
+    def get_due_now(self, order: Order) -> str:
+        """What the next payment asks: the deposit while it is due, else the balance."""
+        return _amount(order.due_now)
 
     @extend_schema_field(FulfilmentSerializer(many=True))
     def get_fulfilment(self, order: Order) -> list[dict[str, Any]]:
@@ -615,6 +652,7 @@ class OrderStaffSerializer(OrderViewSerializer):
     refundable = serializers.SerializerMethodField()
     can_cancel = serializers.SerializerMethodField()
     can_refund = serializers.SerializerMethodField()
+    can_request_balance = serializers.SerializerMethodField()
 
     class Meta(OrderViewSerializer.Meta):
         fields = [
@@ -625,6 +663,7 @@ class OrderStaffSerializer(OrderViewSerializer):
             "refundable",
             "can_cancel",
             "can_refund",
+            "can_request_balance",
         ]
 
     note_kinds: tuple[str, ...] = ("internal", "customer")
@@ -687,7 +726,11 @@ class OrderStaffSerializer(OrderViewSerializer):
         return _amount(order.refundable)
 
     def get_can_cancel(self, order: Order) -> bool:
-        return order.status in ("pending", "failed", "paid")
+        return order.status in ("pending", "failed", "paid", "part_paid")
+
+    def get_can_request_balance(self, order: Order) -> bool:
+        """Part paid by its deposit, with a balance left: staff may send the link to pay it."""
+        return order.status == "part_paid" and order.balance > 0
 
     def get_can_refund(self, order: Order) -> bool:
         return order.status in services.PAID_STATES and order.refundable > 0
@@ -713,6 +756,12 @@ class ManualOrderSerializer(serializers.Serializer[Any]):
     shipping_method = serializers.CharField(required=False, allow_blank=True, default="")
     send_link = serializers.BooleanField(
         required=False, default=True, help_text="Email the buyer the link to pay."
+    )
+    pay = serializers.ChoiceField(
+        ["full", "deposit"],
+        required=False,
+        default="full",
+        help_text="full, or deposit: the buyer pays the deposit first and the rest later.",
     )
 
 

@@ -198,7 +198,7 @@ def test_every_commerce_email_file_is_an_editable_template_on_its_merge_fields(
     from django.template.loader import render_to_string
 
     declared = [kind for kind in kinds() if kind.name.startswith("commerce.")]
-    assert len(declared) == 6
+    assert len(declared) == 7
     for kind in declared:
         values = merge_values(kind.fields, context)
         for part in ("subject", "body"):
