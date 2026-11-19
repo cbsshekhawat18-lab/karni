@@ -55,7 +55,7 @@ export interface Input {
    */
   onFirstGesture(callback: () => void): () => void;
   /** Called when a pointer goes down, before it counts as "Pointer": return true to own it. */
-  onPointerDown(listener: (pointer: PointerState) => boolean | void): () => void;
+  onPointerDown(listener: (pointer: PointerState) => unknown): () => void;
   onPointerMove(listener: (pointer: PointerState) => void): () => void;
   onPointerUp(listener: (pointer: PointerState) => void): () => void;
   /** Press and release a code by hand: on-screen buttons, the virtual stick, tests. */
@@ -98,7 +98,7 @@ export function createInput(options: InputOptions = {}): Input {
   );
   const ignoreTyping = options.ignoreTyping ?? true;
   const pointerEvents = createEmitter<PointerEvents>();
-  const downListeners = new Set<(pointer: PointerState) => boolean | void>();
+  const downListeners = new Set<(pointer: PointerState) => unknown>();
 
   const down = new Set<string>();
   const pressedNow = new Set<string>();
