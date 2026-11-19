@@ -289,7 +289,8 @@ for that share of players, the same players every time.
 `POST events/` sends analytics events. Each must be one the game's
 `analytics` settings declare, with its props and their types, at most 10
 props and text up to 100 characters, at most 20 a request (`GAME025` for the
-rest), and the endpoint is limited per player. Each accepted event is
+rest), and the endpoint is limited per player. A batch's `intent` makes a
+retry publish nothing twice. Each accepted event is
 published as the [family event](family-events.md) `game.analytics.tracked`, so
 the project's own analytics subscribe to it and store or forward it:
 

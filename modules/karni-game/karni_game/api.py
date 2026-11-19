@@ -802,6 +802,7 @@ class MissionsView(GameView):
 
 class EventsSerializer(serializers.Serializer):
     events = serializers.ListField(child=serializers.JSONField(), allow_empty=False, max_length=20)
+    intent = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
 
 
 class EventsView(GameView):
@@ -814,7 +815,19 @@ class EventsView(GameView):
         player = self.player_or_none()
         body = EventsSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        return Response(remote.track(self.game, player, body.validated_data["events"]), status=202)
+        events = list(body.validated_data["events"])
+        target = self.game
+
+        def work() -> tuple[int, dict[str, Any]]:
+            return 202, remote.track(target, player, events)
+
+        # Keyed by the player, or among the calls without one: a retry publishes nothing twice.
+        status, answer, replayed = intents.once(
+            player, f"events:{target.pk}", body.validated_data["intent"], {"events": events}, work
+        )
+        if replayed:
+            return Response({**answer, "replayed": True}, status=200)
+        return Response(answer, status=status)
 
 
 # -- multiplayer -----------------------------------------------------------------------

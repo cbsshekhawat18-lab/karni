@@ -119,3 +119,18 @@ def test_the_game_refuses_an_analytics_schema_it_cannot_read(game: Game) -> None
     game.settings = {"analytics": {"bad name!": {}}}
     with pytest.raises(ValidationError, match="GAME026"):
         game.save()
+
+
+def test_an_analytics_retry_with_its_intent_counts_once(
+    guest: Guest, api: Any, analytics: Game
+) -> None:
+    body = {"intent": "batch-0001-x", "events": [{"name": "level_started", "props": {"level": 1}}]}
+    for caller in (guest.client, api):
+        with capture_events() as published:
+            first = caller.post(f"{GAME}events/", body, format="json")
+            again = caller.post(f"{GAME}events/", body, format="json")
+        assert (first.status_code, again.status_code) == (202, 200)
+        assert again.data == {"accepted": 1, "rejected": [], "replayed": True}
+        published.assert_published("game.analytics.tracked", count=1)
+    other = {**body, "events": [{"name": "level_started", "props": {"level": 2}}]}
+    assert guest.post(f"{GAME}events/", other).data["code"] == "GAME033"

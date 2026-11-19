@@ -518,8 +518,12 @@ A hidden achievement shows its title and description only once unlocked.
 Request:
 
 ```json
-{"events": [{"name": "level_started", "props": {"level": 3}}]}
+{"intent": "batch-2c9a...", "events": [{"name": "level_started", "props": {"level": 3}}]}
 ```
+
+`intent` (optional) makes a retried batch publish nothing twice: the retry
+answers the first answer with `"replayed": true` (with a player, keyed by the
+player, without one, among the calls without one).
 
 At most 20 events, each a name the game's `analytics` settings declare with
 its props and their types (`int`, `float`, `str`, `bool`), at most 10 props,
