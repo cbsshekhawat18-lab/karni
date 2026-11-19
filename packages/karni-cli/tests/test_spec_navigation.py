@@ -124,7 +124,7 @@ def test_requires_replaces_the_default() -> None:
             """
         )
     )
-    assert menu is not None
+    assert isinstance(menu, list)  # a list is the app menu alone
     assert menu[0]["requires"] == "shop.product:change"
     assert menu[1]["requires"] == "shop.*:change"
 
@@ -219,7 +219,8 @@ navigation:
     report = validate_text(text)
     assert report.ok and report.spec is not None, [issue.as_dict() for issue in report.issues]
     menu = nav.menu(report.spec)
-    assert [(item["label"], item["route"]) for item in menu or []] == [
+    assert isinstance(menu, list)
+    assert [(item["label"], item["route"]) for item in menu] == [
         ("Home", "/"),
         ("Orders", "/orders"),
         ("Reports", "/shop/reports"),
@@ -233,3 +234,36 @@ navigation:
         text.replace("  - shop.reports: code", "  - shop.reports: blank\n  - crm.deals: code")
     )
     assert sorted(issue.code for issue in wrong.issues) == ["C220", "C235"]
+
+
+def test_named_menus_write_one_list_per_menu_and_validate_each() -> None:
+    text = """version: 1
+app: {name: Shop, kind: app}
+modules: {commerce: {}, payments: {}}
+features: {notify: true}
+apps:
+  shop:
+    route: /shop
+    entities:
+      Product: {fields: {name: "str:20"}, access: {read: public, write: granted}}
+pages:
+  - Product: [list, detail]
+navigation:
+  app: [orders, Product]
+  public: [{Product: {label: Products, requires: public}}]
+  account: [orders, inbox]
+"""
+    report = validate_text(text)
+    assert report.ok and report.spec is not None, [issue.as_dict() for issue in report.issues]
+    menu = navigation.menu(report.spec)
+    assert isinstance(menu, dict) and list(menu) == ["app", "public", "account"]
+    assert [item["route"] for item in menu["app"]] == ["/orders", "/shop/products"]
+    assert menu["public"] == [
+        {"label": "Products", "route": "/shop/products", "requires": "public"}
+    ]
+    assert [item["route"] for item in menu["account"]] == ["/orders", "/inbox"]
+    assert navigation.summary(menu).startswith("app: Orders /orders, Products /shop/products; ")
+    twice = validate_text(text.replace("account: [orders, inbox]", "account: [orders, orders]"))
+    assert [issue.code for issue in twice.issues] == ["C641"]
+    bad = validate_text(text.replace("  account:", "  Account Menu:"))
+    assert not bad.ok
