@@ -29,7 +29,8 @@ import { CouponBox } from "./CouponBox";
 import { Money } from "./Money";
 import { PayChoice, payWayFor } from "./PayChoice";
 import { CommerceLink, useCommerce } from "./routes";
-import { LineDetails, Totals } from "./Totals";
+import { LineDescription } from "./lines";
+import { Totals } from "./Totals";
 import type { Address, PayWay, Placed, Quote } from "./types";
 
 export interface CheckoutPageProps {
@@ -361,8 +362,7 @@ export function CheckoutPage({
             {cart.data.lines.map((line) => (
               <li key={line.id} className="flex justify-between gap-2">
                 <span>
-                  {line.quantity} x {line.name}
-                  <LineDetails details={line.details} />
+                  {line.quantity} x <LineDescription line={line} place="checkout" />
                   {line.problem ? (
                     <span className="block text-destructive">{line.problem}</span>
                   ) : null}
