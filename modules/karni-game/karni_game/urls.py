@@ -24,4 +24,7 @@ urlpatterns = [
     path("<slug:game>/", api.GameDetailView.as_view(), name="game"),
     path("<slug:game>/saves/", api.SavesView.as_view(), name="saves"),
     path("<slug:game>/saves/<str:slot>/", api.SaveView.as_view(), name="save"),
+    path("<slug:game>/boards/<slug:board>/", api.BoardView.as_view(), name="board"),
+    path("<slug:game>/boards/<slug:board>/me/", api.BoardMeView.as_view(), name="board-me"),
+    path("<slug:game>/boards/<slug:board>/scores/", api.ScoresView.as_view(), name="scores"),
 ]

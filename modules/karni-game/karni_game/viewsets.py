@@ -19,17 +19,23 @@ from typing import Any
 
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
-from karni.api import Access, BaseViewSet, Can, Granted
+from karni.api import Access, BaseViewSet, Budget, Can, Granted
 from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from karni_game import players
-from karni_game.models import Game, Player, Save
+from karni_game import players, scores
+from karni_game.models import Board, Game, Player, Save, Score
 
-__all__ = ["GameViewSet", "PlayerViewSet", "SaveViewSet"]
+__all__ = [
+    "BoardViewSet",
+    "GameViewSet",
+    "PlayerViewSet",
+    "SaveViewSet",
+    "ScoreViewSet",
+]
 
 
 class ReadOnly:
@@ -113,3 +119,46 @@ class SaveViewSet(ReadOnly, BaseViewSet):
     route = "game-saves"
     access = Access(read=Granted(), write=Granted())
     filterset_fields = ["game", "player", "slot"]
+
+
+class BoardViewSet(BaseViewSet):
+    """``/api/game-boards/``: the boards of the games."""
+
+    model = Board
+    route = "game-boards"
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["game", "key", "is_active"]
+
+
+class ReviewSerializer(serializers.Serializer):
+    note = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
+
+
+class ScoreViewSet(ReadOnly, BaseViewSet):
+    """``/api/game-scores/?status=flagged``: every score and its run; accept or reject one."""
+
+    model = Score
+    route = "game-scores"
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["board", "player", "status", "source", "day"]
+    ordering = ["-created_at"]
+    query_budget = Budget(
+        accept=None,
+        reject=None,
+        reason="accepting or rejecting a score rebuilds the player's bests on its board: a "
+        "row per period for each of their accepted scores",
+    )
+
+    @action(detail=True, methods=["post"], access=Can("karni_game.score:accept"))
+    def accept(self, request: Request, pk: str | None = None) -> Response:
+        """Let the score count: it may be the player's new best."""
+        return Response(self.get_serializer(scores.accept(self.get_object())).data)
+
+    @extend_schema(request=ReviewSerializer)
+    @action(detail=True, methods=["post"], access=Can("karni_game.score:reject"))
+    def reject(self, request: Request, pk: str | None = None) -> Response:
+        """Take the score off the boards; the player's bests are rebuilt without it."""
+        body = ReviewSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        done = scores.reject(self.get_object(), body.validated_data["note"])
+        return Response(self.get_serializer(done).data)

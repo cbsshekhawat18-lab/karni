@@ -184,4 +184,55 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "_ or -), and each game keeps at most max_slots slots per player.",
         fix="Use a slot name such as main or slot-2, or write to a slot the player has.",
     ),
+    ErrorCode(
+        code="GAME012",
+        title="No active board has this key in the game",
+        kind="exception",
+        source=f"{_SOURCE}.scores.find_board (HTTP 404)",
+        why="A score goes to one board of one game, named by its key in the path. A board "
+        "that is not active answers as if it did not exist.",
+        fix="Use the key of one of the game's boards (GET /api/game/<game>/ lists them), or "
+        "turn the board active in the admin.",
+    ),
+    ErrorCode(
+        code="GAME013",
+        title="The score is outside the board's plausible range",
+        kind="exception",
+        source=f"{_SOURCE}.scores.submit (HTTP 400)",
+        why="A client can send any number, so each board names the lowest and the highest "
+        "score a real run can make (min_value, max_value), and refuses the rest.",
+        fix="Send the score the run made. When real runs go beyond the range, widen the "
+        "board's min_value or max_value.",
+    ),
+    ErrorCode(
+        code="GAME014",
+        title="The run is missing, too large, or does not check out",
+        kind="exception",
+        source=f"{_SOURCE}.scores.submit (HTTP 400)",
+        why="A board may ask every score for its run (the seed and the input log a "
+        "deterministic game replays), a daily board for a run on the day's seed, and the "
+        "project's run check may refuse a run.",
+        fix="Send run: {seed, inputs, duration_ms} with the score, use today's seed (GET "
+        "/api/game/<game>/daily/) on a daily board, and keep the run under "
+        "KARNI_GAME_MAX_RUN_BYTES.",
+    ),
+    ErrorCode(
+        code="GAME029",
+        title="The player is banned from the boards",
+        kind="exception",
+        source=f"{_SOURCE}.scores.submit, karni_game.multiplayer (HTTP 403)",
+        why="Staff banned the player (Game moderator, ban): their scores no longer count, they "
+        "are on no board and get no realtime token. Their saves and wallet stay theirs.",
+        fix="Staff unban the player in the admin or with POST /api/game-players/<id>/unban/.",
+    ),
+    ErrorCode(
+        code="GAME033",
+        title="The intent was used already with another request",
+        kind="exception",
+        source=f"{_SOURCE}.intents.once (HTTP 409)",
+        why="An intent names one action, so a retry of a score, a claim or a purchase never "
+        "counts twice. A second action under the same intent would be lost.",
+        fix="Make a new intent (a UUID) for each new action, and send the same body when you "
+        "retry one.",
+    ),
 )

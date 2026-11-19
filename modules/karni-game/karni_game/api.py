@@ -26,9 +26,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from karni_game import clock, conf, players, saves
+from karni_game import clock, conf, intents, players, saves, scores
 from karni_game.errors import GameError, game_error
-from karni_game.models import Game, Player, Save
+from karni_game.models import Board, Game, Player, Save, Score
 from karni_game.throttling import PlayerRateThrottle
 
 __all__ = [
@@ -37,8 +37,11 @@ __all__ = [
     "GuestView",
     "MeView",
     "PlayerSerializer",
+    "BoardMeView",
+    "BoardView",
     "SaveView",
     "SavesView",
+    "ScoresView",
     "UpgradeView",
 ]
 
@@ -250,6 +253,10 @@ class GameDetailView(GameView):
                 "max_bytes": options.max_save_bytes,
                 "max_slots": options.max_slots,
             },
+            "boards": [
+                scores.board_data(board)
+                for board in Board.objects.filter(game=game, is_active=True)
+            ],
             "analytics": options.analytics,
         }
 
@@ -327,3 +334,137 @@ class SaveView(GameView):
 
             raise NotFound(f"No save in slot {slot!r}.")
         return Response(status=204)
+
+
+# -- scores and boards -------------------------------------------------------------
+
+
+class RunSerializer(serializers.Serializer):
+    seed = serializers.CharField(max_length=64, required=False, allow_blank=True)
+    inputs = serializers.JSONField(required=False)
+    duration_ms = serializers.IntegerField(min_value=0, required=False)
+    build = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    meta = serializers.JSONField(required=False)
+
+
+class ScoreSerializer(serializers.Serializer):
+    value = serializers.IntegerField(min_value=-(2**62), max_value=2**62)
+    intent = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
+    run = RunSerializer(required=False, allow_null=True, default=None)
+
+
+def _period(request: Request, board: Board) -> str:
+    period = str(request.query_params.get("period", "") or board.periods[0])
+    if period not in board.periods:
+        from rest_framework.exceptions import ValidationError
+
+        raise ValidationError({"period": [f"One of {', '.join(board.periods)}."]})
+    return period
+
+
+def _number(request: Request, name: str, default: int, low: int, high: int) -> int:
+    try:
+        value = int(str(request.query_params.get(name, default)))
+    except ValueError:
+        value = default
+    return max(low, min(high, value))
+
+
+class BoardsMixin(GameView):
+    def board(self) -> Board:
+        return scores.find_board(self.game, str(self.kwargs.get("board", "")))
+
+    def reader(self) -> Player | None:
+        """The player reading the board, or ``None``. Off ``public_boards``: a player only."""
+        found = self.player_or_none()
+        if found is None and not preferences.value("game.public_boards", True):
+            return self.player
+        return found
+
+
+class ScoresView(BoardsMixin):
+    """``POST <game>/boards/<board>/scores/``: a score, checked, maybe a new best."""
+
+    throttle_scopes: ClassVar[dict[str, str]] = {"POST": "score"}
+
+    @extend_schema(request=ScoreSerializer)
+    def post(self, request: Request, game: str, board: str) -> Response:
+        player = self.player
+        target = self.board()
+        self.guard("create", Score, "karni_game.score:add")
+        body = ScoreSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        run = dict(data["run"]) if data["run"] else None
+
+        def work() -> tuple[int, dict[str, Any]]:
+            return 201, scores.submit(player, target, data["value"], run).as_dict()
+
+        status, answer, replayed = intents.once(
+            player,
+            f"score:{target.pk}",
+            data["intent"],
+            {"value": data["value"], "run": run},
+            work,
+        )
+        if replayed:
+            return Response({**answer, "replayed": True}, status=200)
+        return Response(answer, status=status)
+
+
+class BoardView(BoardsMixin):
+    """``GET <game>/boards/<board>/?period=&limit=``: the top of a board."""
+
+    def get(self, request: Request, game: str, board: str) -> Response:
+        target = self.board()
+        player = self.reader()
+        period = _period(request, target)
+        start = clock.period_start(target.game, period)
+        limit = _number(request, "limit", 10, 1, 100)
+        rows = list(scores.ranked(target, period, start)[:limit])
+        mine = None
+        if player is not None:
+            own = scores.ranked(target, period, start).filter(player=player).first()
+            if own is not None:
+                mine = {"rank": scores.rank_of(target, own), "value": own.value}
+        return Response(
+            {
+                "board": scores.board_data(target),
+                "period": period,
+                "period_start": None if period == "all" else start.isoformat(),
+                "entries": [scores.entry(index + 1, row, player) for index, row in enumerate(rows)],
+                "me": mine,
+            }
+        )
+
+
+class BoardMeView(BoardsMixin):
+    """``GET <game>/boards/<board>/me/?period=&around=``: the player's rank and neighbours."""
+
+    def get(self, request: Request, game: str, board: str) -> Response:
+        player = self.player
+        target = self.board()
+        period = _period(request, target)
+        start = clock.period_start(target.game, period)
+        around = _number(request, "around", 3, 0, 25)
+        rows = scores.ranked(target, period, start)
+        own = rows.filter(player=player).first()
+        body: dict[str, Any] = {
+            "period": period,
+            "period_start": None if period == "all" else start.isoformat(),
+            "rank": None,
+            "value": None,
+            "entries": [],
+        }
+        if own is not None:
+            rank = scores.rank_of(target, own)
+            first = max(1, rank - around)
+            near = list(rows[first - 1 : rank + around])
+            body.update(
+                rank=rank,
+                value=own.value,
+                entries=[
+                    scores.entry(first + index, row, player) for index, row in enumerate(near)
+                ],
+            )
+        return Response(body)

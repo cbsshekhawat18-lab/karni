@@ -20,7 +20,7 @@ from typing import Any
 from django.utils.module_loading import import_string
 
 from karni_game import conf
-from karni_game.models import Player, Save
+from karni_game.models import Player, Save, Score
 
 __all__ = ["Merger", "get_merger"]
 
@@ -72,6 +72,17 @@ class Merger:
             Save.objects.filter(pk=newer.pk).update(player=keep, slot=theirs.slot)
             kept_both.append(theirs.slot)
         return {"moved": moved, "kept_both": kept_both}
+
+    def merge_scores(self, keep: Player, drop: Player) -> int:
+        """Every score moves, and each board keeps the better best of the two."""
+        from karni_game import scores
+        from karni_game.models import Best, Board
+
+        boards = list(Board.objects.filter(scores__player__in=[keep, drop]).distinct())
+        moved = Score.objects.filter(player=drop).update(player=keep)
+        Best.objects.filter(player=drop).delete()
+        scores.rebuild(keep, boards)
+        return int(moved)
 
     @staticmethod
     def free_slot(slot: str, taken: set[str]) -> str:

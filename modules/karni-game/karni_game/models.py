@@ -24,7 +24,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from karni.fields import LiveUniqueConstraint
-from karni.models import BaseModel
+from karni.models import BaseModel, TimestampedModel, UUIDModel
 from pydantic import ValidationError as PydanticError
 
 from karni_game import conf
@@ -33,7 +33,17 @@ from karni_game.gamesettings import GameSettings
 #: A game's settings, or its slug, that the server cannot use.
 SETTINGS_CODE = "GAME026"
 
-__all__ = ["RESERVED_SLUGS", "Game", "Player", "Save"]
+__all__ = [
+    "ORDERS",
+    "RESERVED_SLUGS",
+    "Best",
+    "Board",
+    "Game",
+    "Intent",
+    "Player",
+    "Save",
+    "Score",
+]
 
 #: Game slugs the API's own paths take (``/api/game/guest/`` is not a game).
 RESERVED_SLUGS: frozenset[str] = frozenset({"guest", "me", "upgrade", "callbacks"})
@@ -203,3 +213,197 @@ class Save(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.slot} ({self.version})"
+
+
+#: How a board ranks: ``desc``, higher is better (points), ``asc``, lower is better (a time).
+ORDERS = (("desc", "Higher is better"), ("asc", "Lower is better"))
+
+
+def _periods_default() -> list[str]:
+    return ["all"]
+
+
+class Board(BaseModel):
+    """A leaderboard of a game: its order, the periods it keeps, its plausible range.
+
+    A score outside ``min_value`` to ``max_value`` is refused. A score better
+    than ``review_beyond`` is held for staff (``flagged``). ``requires_run``
+    asks every score for its run (a seed and an input log), ``keep_runs``
+    stores the runs for review, and ``daily_seed`` makes it a daily board:
+    a run must use the day's seed.
+    """
+
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="boards")
+    key = models.SlugField(max_length=50)
+    title = models.CharField(max_length=120)
+    order = models.CharField(max_length=4, choices=ORDERS, default="desc")
+    periods = models.JSONField(
+        default=_periods_default, blank=True, help_text='Any of "all", "daily" and "weekly".'
+    )
+    min_value = models.BigIntegerField(null=True, blank=True)
+    max_value = models.BigIntegerField(null=True, blank=True)
+    review_beyond = models.BigIntegerField(
+        null=True, blank=True, help_text="A score better than this waits for staff."
+    )
+    requires_run = models.BooleanField(default=False)
+    keep_runs = models.BooleanField(default=True)
+    daily_seed = models.BooleanField(
+        default=False, help_text="A daily board: a run must use the day's seed."
+    )
+    is_active = models.BooleanField(default=True)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("position", "key")
+        constraints: ClassVar[list[Any]] = [
+            LiveUniqueConstraint(fields=["game", "key"], name="karni_game_board_key")
+        ]
+
+    class Karni:
+        cascade: ClassVar[dict[str, str]] = {"game": "a board is part of its game"}
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["title", "key", "game", "order", "is_active"]
+        list_filter: ClassVar[list[str]] = ["game"]
+        inline_on = "game"
+
+    def __str__(self) -> str:
+        return f"{self.game_id and self.game.slug}/{self.key}"
+
+    def better(self, value: int, than: int) -> bool:
+        """Whether ``value`` ranks above ``than`` on this board."""
+        return value < than if self.order == "asc" else value > than
+
+    def clean(self) -> None:
+        super().clean()
+        from karni_game.clock import PERIODS
+
+        periods = self.periods or []
+        if (
+            not isinstance(periods, list)
+            or not periods
+            or any(period not in PERIODS for period in periods)
+        ):
+            raise ValidationError(
+                {"periods": f'{SETTINGS_CODE}: a list of "all", "daily" and "weekly".'}
+            )
+        if self.min_value is not None and self.max_value is not None:
+            if self.min_value > self.max_value:
+                raise ValidationError(
+                    {"max_value": f"{SETTINGS_CODE}: max_value is below min_value."}
+                )
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.periods = list(dict.fromkeys(self.periods or ["all"]))
+        self.clean()
+        super().save(*args, **kwargs)
+
+
+#: What became of a score: it counts, it waits for staff, or staff took it off.
+SCORE_STATUSES = (
+    ("accepted", "Counts on the boards"),
+    ("flagged", "Waits for staff"),
+    ("rejected", "Taken off by staff"),
+)
+
+
+class Score(BaseModel):
+    """One score a player sent (or a realtime server reported), with its run when kept."""
+
+    board = models.ForeignKey(Board, on_delete=models.CASCADE, related_name="scores")
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="scores")
+    value = models.BigIntegerField()
+    status = models.CharField(max_length=10, choices=SCORE_STATUSES, default="accepted")
+    day = models.DateField(help_text="The game's day the score was sent on.")
+    run = models.JSONField(null=True, blank=True, help_text="seed, inputs, duration_ms, meta")
+    source = models.CharField(max_length=10, default="client", help_text="client or match")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    note = models.CharField(max_length=200, blank=True, default="")
+
+    class Meta:
+        indexes: ClassVar[list[Any]] = [
+            models.Index(fields=["board", "status"], name="karni_game_score_status"),
+            models.Index(fields=["player", "board", "day"], name="karni_game_score_player"),
+        ]
+
+    class Karni:
+        owner_field = "player__person__user"
+        actions: ClassVar[list[str]] = ["accept", "reject"]
+        cascade: ClassVar[dict[str, str]] = {
+            "board": "a score is on its board",
+            "player": "a score is its player's",
+        }
+
+    class APIMeta:
+        read_only: ClassVar[list[str]] = [
+            "board",
+            "player",
+            "value",
+            "status",
+            "day",
+            "run",
+            "source",
+            "reviewed_at",
+        ]
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["value", "board", "player", "status", "created_at"]
+        list_filter: ClassVar[list[str]] = ["status", "board"]
+        search_fields: ClassVar[list[str]] = ["player__handle"]
+
+    def __str__(self) -> str:
+        return f"{self.value} on {self.board_id}"
+
+
+class Best(UUIDModel, TimestampedModel):
+    """A player's best on a board in one period (``period_start``: the day, the Monday, or
+    1970-01-01 for all time). Derived from the accepted scores, so it is rebuilt, never
+    edited."""
+
+    board = models.ForeignKey(Board, on_delete=models.CASCADE, related_name="bests")
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="bests")
+    period = models.CharField(max_length=6)
+    period_start = models.DateField()
+    value = models.BigIntegerField()
+    achieved_at = models.DateTimeField()
+    score = models.ForeignKey(Score, on_delete=models.CASCADE, related_name="+")
+
+    class Meta:
+        constraints: ClassVar[list[Any]] = [
+            models.UniqueConstraint(
+                fields=["board", "player", "period", "period_start"], name="karni_game_best_one"
+            )
+        ]
+        indexes: ClassVar[list[Any]] = [
+            models.Index(
+                fields=["board", "period", "period_start", "value"], name="karni_game_best_rank"
+            )
+        ]
+
+    class AdminMeta:
+        exclude = True
+
+    def __str__(self) -> str:
+        return f"{self.value} ({self.period})"
+
+
+class Intent(UUIDModel, TimestampedModel):
+    """A write's retry key (``intent``): the first answer, given again to a retry."""
+
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="+")
+    kind = models.CharField(max_length=20)
+    key = models.CharField(max_length=64)
+    digest = models.CharField(max_length=64)
+    status = models.PositiveSmallIntegerField(default=0)
+    response = models.JSONField(default=dict)
+
+    class Meta:
+        constraints: ClassVar[list[Any]] = [
+            models.UniqueConstraint(fields=["player", "kind", "key"], name="karni_game_intent")
+        ]
+
+    class AdminMeta:
+        exclude = True
+
+    def __str__(self) -> str:
+        return f"{self.kind}:{self.key}"
