@@ -521,3 +521,17 @@ def test_customer_gets_its_own_addresses_with_the_people_contract() -> None:
     desk = {**_desk(), "features": {"people": True}}
     data = compose.merge(_project(), _Recipe("desk", "Help desk"), desk, modules=MODULES).data
     assert data["roles"]["customer"]["grants"]["people.address"] == "own"
+
+
+def test_a_group_label_never_names_a_page() -> None:
+    """The booking part is titled Booking and has a Booking entity: its group is Bookings."""
+    first = compose.merge(_project(), _Recipe("desk", "Help desk"), _desk(), modules=MODULES)
+    second = compose.merge(
+        first.data,
+        _Recipe("club", "Visit"),
+        _club(),
+        bases={"desk": _desk()},
+        parts={"desk": _Recipe("desk", "Help desk")},
+        modules=MODULES,
+    )
+    assert second.data["navigation"][-1] == {"Visits": ["Visit"]}

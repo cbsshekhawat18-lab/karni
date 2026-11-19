@@ -1011,7 +1011,9 @@ of router glue around these components:
   switches) are built on karni.notify's `/inbox/`.
 - `SearchPage` (`/search`) shows every part's results part by part, keyboard
   first, and `GlobalSearch` groups its hits by part too (the server names
-  each group's `part`). `searchHitHref(hit, routes)` finds a hit's page.
+  each group's `part`). `searchHitHref(hit, routes)` finds a hit's page, and
+  `routeHref(resource, id, routes)` a record's: its record link, else the app's route
+  ending in `/<resource>/$id`.
 - `registerFamily({ people, notify })` adds "Your addresses" (`MyAddresses`)
   and "Emails and notifications" (`EmailChoices`) to `AccountPage`.
 - `useBusiness()` and `useSiteName()` read the business's public details.

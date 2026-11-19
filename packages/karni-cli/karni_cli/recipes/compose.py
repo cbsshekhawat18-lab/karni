@@ -757,7 +757,9 @@ def _merge_navigation(
     result = dict(mine)
     for name, entries in theirs.items():
         if name == APP_MENU:
-            result[name] = _merge_app_menu(list(mine.get(name, [])), part, entries, bases, titles)
+            result[name] = _merge_app_menu(
+                list(mine.get(name, [])), part, entries, bases, titles, _taken_labels(out)
+            )
             continue
         # the site's header and the account menu: the part's entries in line, each once
         found = list(mine.get(name, []))
@@ -769,12 +771,30 @@ def _merge_navigation(
     merged.changed.append(("navigation",))
 
 
+def _taken_labels(out: Mapping[str, Any]) -> set[str]:
+    """What a menu entry's key would name as a page: no part's group may be labelled so."""
+    taken = set(FAMILY_PAGES)
+    taken |= {name for entry in out.get("pages") or [] if (name := _page_name(entry))}
+    for label, app in (out.get("apps") or {}).items():
+        for entity in (app or {}).get("entities") or {}:
+            taken |= {str(entity), f"{label}.{entity}"}
+    return taken
+
+
+def _group_label(title: str, taken: set[str]) -> str:
+    """A part's group label: its title, unless that names a page (the booking part's Booking)."""
+    if title not in taken:
+        return title
+    return f"{title}s" if f"{title}s" not in taken else f"{title} part"
+
+
 def _merge_app_menu(
     entries: list[Any],
     part: _Part,
     theirs: list[Any],
     bases: Mapping[str, Mapping[str, Any]],
     titles: Mapping[str, str],
+    taken: set[str],
 ) -> list[Any]:
     """The ``app`` menu with ``theirs`` added: one group per part once a second part joins."""
     # a part installed alone shows its entries flat: group them now that a second one joins
@@ -784,7 +804,7 @@ def _merge_app_menu(
             continue
         found = [entry for entry in entries if entry in flat]
         if found and len(found) == len([e for e in flat if _page_name(e) != "home"]):
-            group = {titles.get(other, other): [e for e in flat if e in found]}
+            group = {_group_label(titles.get(other, other), taken): [e for e in flat if e in found]}
             first = entries.index(found[0])
             entries = [e for e in entries if e not in found]
             entries.insert(first, group)
@@ -795,7 +815,7 @@ def _merge_app_menu(
     if alone and not bases:
         entries += copy.deepcopy(own)
     elif own:
-        entries.append({part.title: copy.deepcopy(own)})
+        entries.append({_group_label(part.title, taken): copy.deepcopy(own)})
     return entries
 
 
