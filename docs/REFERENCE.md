@@ -43,6 +43,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | The people contract (`karni.people`, `KARNI_PEOPLE`): one person and one organisation record for every part of a project, `people.resolve` by account or email, the account linked once its email is verified, person facts in SQL, duplicates, merge with a preview and hooks, erase on request, `/api/people/`. Experimental tier | `experimental` | Karni's own tests |
 | The timeline contract (`karni.timeline`): one stream of moments per person and per record, `timeline.record` by hand, entries from family events that declare `timeline=`, `GET /api/timeline/` with each entry checked against the row scope of every record it is about, cursor paging, retention. Experimental tier | `experimental` | Karni's own tests |
 | The preferences contract (`karni.preferences`): the business's details, one settings section per part as a Pydantic model, `preferences.value(path, default)` with a typed default, locks a deployment fixes, connections and email switches, audited changes, `/api/preferences/` behind the Settings page. Experimental tier | `experimental` | Karni's own tests |
+| The notifications contract (`karni.notify`): message kinds on `karni.mail` sent to an email, the inbox or both, `notify.send` to users, people or addresses, emails a business edits (`/api/email-templates/`), the inbox API with retention, each person's switches, unsubscribing from marketing kinds by a signed link. Experimental tier | `experimental` | Karni's own tests |
 
 ### API
 

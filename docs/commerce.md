@@ -358,15 +358,25 @@ Every email declares what it is and what an edited one may use, in its app's
 with its switch and an editor: the subject and the text, the merge fields with
 what each means, a preview with sample values, and "Back to the default".
 
-`/api/email-templates/` is the editor's API: `GET` lists every email with its
-text now (edited, else the files), `GET`, `PUT` and `DELETE`
-`email-templates/<kind>/` read, change and put back one, and
-`POST email-templates/<kind>/preview/` renders a draft. An edit is kept in
-`EmailTemplate` and wins over the files. It renders with a restricted engine:
-the declared merge fields only, as plain values (`{{ order.total }}` shows
-`12.00`, `{{ order.password }}` shows nothing), and no tag that loads code or
-another template (`{% load %}`, `{% include %}` and `{% extends %}` are
-refused when it is saved). Editing needs `karni_commerce.emailtemplate:change`.
+The editor and its API belong to [notifications](notify.md#emails-a-business-edits)
+(`karni.notify`), so every part's emails are edited in one place: install it
+(`features: {notify: true}`, which the shop's `requires` does) for
+`/api/email-templates/`. `GET` lists every email with its text now (edited,
+else the files), `GET`, `PUT` and `DELETE` `email-templates/<kind>/` read,
+change and put back one, and `POST email-templates/<kind>/preview/` renders a
+draft. An edit is kept in `notify.EmailTemplate` and wins over the files. It
+renders with a restricted engine: the declared merge fields only, as plain
+values (`{{ order.total }}` shows `12.00`, `{{ order.password }}` shows
+nothing), and no tag that loads code or another template (`{% load %}`,
+`{% include %}` and `{% extends %}` are refused when it is saved). Editing
+needs `notify.emailtemplate:change`. Without `karni.notify`, commerce's
+emails go out from the files, with the switches of Settings, Emails.
+
+Commerce's own table of edited emails is gone: its migration 0006 copies each
+edit to `notify.EmailTemplate`, and stops (`E446`) when edits exist and
+`karni.notify` is not installed. `karni_commerce.mail.MailSource` is the
+notifications' source under its old name: remove `KARNI_MAIL_SOURCE` from a
+project's settings, the default is the same.
 
 The template files are where an edit starts: each is written on its merge
 fields only, so it reads the same in the editor as it sends.

@@ -220,3 +220,15 @@ def test_a_family_event_sends_a_kind_once(ana: Any) -> None:
     subscriber.func(event)  # redelivered: nothing twice
     [row] = Notification.objects.all()
     assert (row.title, row.body) == ("A note from the desk", "42")
+
+
+def test_people_get_the_email_and_their_account_the_inbox(ana: Any) -> None:
+    from karni.people.models import Person
+
+    Person.objects.create(email="ana@example.com", given_name="Ana", user=ana)
+    Person.objects.create(email="guest@example.com", given_name="Gus")
+    sent = notify.send("club.receipt", to=Person.objects.order_by("email"), context=RECEIPT)
+    assert sent == notify.Sent(email=1, inbox=1)
+    assert sorted(mail.outbox[0].to) == ["ana@example.com", "guest@example.com"]
+    assert Notification.objects.get().recipient == ana
+    assert notify.send("club.receipt", to=Person.objects.filter(pk=None)) == notify.Sent()

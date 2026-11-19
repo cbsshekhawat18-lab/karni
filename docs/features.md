@@ -47,6 +47,7 @@ Reference or Debugging sections.
 - **[Several recipes in one project](family.md)** (experimental): `karni recipes add`, `remove` and `upgrade`, parts under their own routes, roles named `<prefix>-<role>`, one currency, and what each part requires installed with it.
 - **[People](people.md)**: one person and one organisation record for every part of a project, found or created by email, merged with a preview, erased on request, with person facts in SQL (experimental).
 - **[Timeline](timeline.md)**: one stream of moments per person and per record, written from family events that declare a title or by hand, and shown only to callers who may read every record an entry is about (experimental).
+- **[Notifications](notify.md)**: message kinds sent to an email, the recipient's inbox in the app or both, emails a business edits, each person's own switches, unsubscribing from marketing emails by a signed link, and one sender (experimental).
 - **[Preferences](preferences.md)**: the business's details, one settings section per part, values a deployment locks, connections that switch on when what they need is installed, and email switches, behind one Settings API (experimental).
 - **[Import and export](import-export.md)**: CSV and XLSX from any list, and uploads with a mandatory dry run.
 - **[Large projects](large-projects.md)**: `karni context` one area at a time, a cached `karni check`, volume seeding and query plans for 100 models or more.
@@ -120,6 +121,7 @@ coming, not in the code. Each capability's evidence is in the
 - `experimental` The people contract (`karni.people`, `KARNI_PEOPLE`): one person and one organisation record for every part of a project, `people.resolve` by account or email, the account linked once its email is verified, person facts in SQL, duplicates, merge with a preview and hooks, erase on request, `/api/people/`. Experimental tier
 - `experimental` The timeline contract (`karni.timeline`): one stream of moments per person and per record, `timeline.record` by hand, entries from family events that declare `timeline=`, `GET /api/timeline/` with each entry checked against the row scope of every record it is about, cursor paging, retention. Experimental tier
 - `experimental` The preferences contract (`karni.preferences`): the business's details, one settings section per part as a Pydantic model, `preferences.value(path, default)` with a typed default, locks a deployment fixes, connections and email switches, audited changes, `/api/preferences/` behind the Settings page. Experimental tier
+- `experimental` The notifications contract (`karni.notify`): message kinds on `karni.mail` sent to an email, the inbox or both, `notify.send` to users, people or addresses, emails a business edits (`/api/email-templates/`), the inbox API with retention, each person's switches, unsubscribing from marketing kinds by a signed link. Experimental tier
 
 Base classes: `AuditedModel`, `BaseModel`, `BigIntBaseModel`, `GuardedModel`, `IntegerKeyModel`, `OrderedTreeModel`, `SoftDeleteModel`, `TimestampedModel`, `TreeModel`, `UUIDModel`.
 <!-- /generated:models -->

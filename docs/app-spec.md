@@ -183,6 +183,7 @@ takes (`karni modules show <name>` prints each one's questions).
 | `events` | `true` / `false`. Experimental | `karni.outbox` in the project's `INSTALLED_APPS`: [family events](family-events.md) |
 | `preferences` | `true` / `false`. Experimental | `karni.preferences` in the project's `INSTALLED_APPS`, and `KARNI_PREFERENCES_DEFAULTS` with `app.name`, and `KARNI_PREFERENCES_LOCKED` with `app.currency` (one currency for the project): [preferences](preferences.md) |
 | `timeline` | `true` / `false`. Experimental | `karni.timeline` in the project's `INSTALLED_APPS`: the [timeline](timeline.md). It needs `people` and `events`, so the build installs them too |
+| `notify` | `true` / `false`. Experimental | `karni.notify` in the project's `INSTALLED_APPS`: [notifications](notify.md), the emails a business edits, the inbox and each person's switches. A role's grants may name its models (`notify.emailtemplate:*`) |
 
 A feature that needs an extra of `karni` gets it named on the `karni` dependency
 when the build turns it on. If the project's interpreter cannot import it, the

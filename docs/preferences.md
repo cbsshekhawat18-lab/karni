@@ -179,12 +179,11 @@ Settings, Emails lists every email the project sends, each with a switch:
 
 `preferences.email_on(kind)` answers whether an email goes out. A move's
 email checks it, and comes from the details' sender. So does every message
-`karni.mail` sends: its default source (`karni.mail.DefaultSource`) reads the
-switches and the sender from here while `karni.preferences` is installed. A
-`karni.mail` message with merge fields shows an Edit button on the Settings
-page when the project's `KARNI_MAIL_SOURCE` keeps emails a business rewrote
-(karni-commerce's `karni_commerce.mail.MailSource`, over
-`/api/email-templates/`).
+`karni.mail` sends: its source reads the switches and the sender from here
+while `karni.preferences` is installed. A message with merge fields shows an
+Edit button on the Settings page while [notifications](notify.md)
+(`karni.notify`) are installed: they keep the emails a business rewrote, over
+`/api/email-templates/`, and each person's own switches.
 
 ## Locks and deployment defaults
 
@@ -263,7 +262,8 @@ saved values: `details`, a section key, `connections` or `emails`.
 
 - It does not hold secrets. API keys and passwords stay in the environment.
 - It does not hold per-user choices (a user's language, which emails a
-  person wants). Those belong to the person and to notifications.
+  person wants). Those belong to the person and to
+  [notifications](notify.md).
 - It does not render the Settings page. The page, with one tab per part and
   the Emails and Connections tabs, is built on this API in @karni/ui.
 - karni-site keeps its own settings row for now. Reading the name, address

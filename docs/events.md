@@ -195,7 +195,9 @@ switches a kind off without code. A template of the same name earlier in
 `TEMPLATES` `DIRS` replaces the default. `with karni.mail.silenced():`
 sends nothing inside the block, nor from what it queued for the commit (demo
 data, imports). `render_templated` gives the rendered parts to build a
-message yourself.
+message yourself. With [notifications](notify.md) installed, the same call
+honours each person's own switches and unsubscribes, uses the text a
+business edited, and puts a kind declared on the inbox there too.
 
 ## Escape hatches
 

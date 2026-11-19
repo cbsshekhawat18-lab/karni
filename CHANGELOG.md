@@ -459,6 +459,37 @@ apply codemods and list the manual steps. This file is the human summary.
   `/settings`) is not a page of karni.yaml, and a page of the project's own under an app's route
   is its code page. karni-commerce no longer offers itself for every karni.yaml that says
   "orders".
+- **Added (experimental): notifications, the `karni.notify` contract.** Each part declares its
+  message kinds in its `messages.py` with `karni.mail.register_kind`, now with `channels=`
+  (`"email"`, `"inbox"` or both, `E445` for another) and `replace=False` for a default a part's
+  own declaration wins over. `notify.send(kind, to=..., context=...)` sends a declared kind
+  (`E440` for one nobody declared) to users, people or addresses (`E443` for anything else):
+  one email to every address that wants it, and a `Notification` in the inbox of each recipient
+  with an account. The inbox API: `GET /api/inbox/` (filters, pages, `E444`), `inbox/unread/`,
+  `inbox/<id>/read/` and `unread/`, `inbox/read-all/`, with notifications kept
+  `KARNI_NOTIFY_RETENTION_DAYS` (180) and pruned daily. A person turns a switchable kind off for
+  themselves per channel (`GET` and `PATCH /api/inbox/choices/`, `E441`). A marketing kind
+  (`transactional=False`) carries a signed unsubscribe link and the `List-Unsubscribe` one-click
+  headers, and an address that left it gets no more of it from any part
+  (`/api/notify/unsubscribe/`, a GET never unsubscribes, `E442` for a token this project did not
+  sign). The sender and the reply-to come from the business's details. `notify.on_event` sends a
+  kind when a family event is published, once per event. `karni.notify.source.NotifySource` is
+  the default `KARNI_MAIL_SOURCE`: `send_templated(..., kind=...)` keeps its call and gains the
+  switches, the unsubscribes, the edited text and the inbox, and a kind nobody declared still goes
+  by email only. Each move's email (`moves.<state>.notify`) is a kind with merge fields, so a
+  business edits it and it goes to the inbox too (`KARNI_NOTIFY_MOVE_CHANNELS`). `features.notify`
+  in karni.yaml and `requires = ["notify>=1"]` in recipe.toml install it, and a role may grant
+  `notify.emailtemplate:*`. `karni.W440` warns about a kind on channels the project does not send
+  on. See docs/notify.md.
+- **Changed (experimental): the emails a business edits live in `karni.notify`.** karni-commerce's
+  `EmailTemplate`, its `/api/email-templates/` viewset and `karni_commerce.email_templates` moved
+  to `karni.notify` (`notify.EmailTemplate`, `karni.notify.editor`), with the same API shape, so
+  the `EmailTemplateEditor` works as before. Commerce's migration 0006 copies every edit with its
+  dates and authors (`karni.notify.adopt`), and stops with `E446` when edits exist and the contract
+  is not installed. Editing needs `notify.emailtemplate:change`. `karni_commerce.mail.MailSource`
+  is now an alias of `NotifySource`, and commerce's settings fragment no longer sets
+  `KARNI_MAIL_SOURCE`. The shop requires `notify>=1` and its `shop-manager` edits the emails. See
+  docs/migrations/0.5.md.
 
 ## 0.5.1 (2026-11-12)
 

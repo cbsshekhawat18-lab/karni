@@ -460,6 +460,13 @@ CAPABILITIES: tuple[Capability, ...] = (
         "default, locks a deployment fixes, connections and email switches, audited changes, "
         "`/api/preferences/` behind the Settings page. Experimental tier",
     ),
+    Capability(
+        "models",
+        "The notifications contract (`karni.notify`): message kinds on `karni.mail` sent to an "
+        "email, the inbox or both, `notify.send` to users, people or addresses, emails a "
+        "business edits (`/api/email-templates/`), the inbox API with retention, each person's "
+        "switches, unsubscribing from marketing kinds by a signed link. Experimental tier",
+    ),
     Capability("permissions", "Field visibility per role (`class Karni: field_roles`)"),
     Capability("permissions", "Row scope in the admin, from the same grants as the API"),
     Capability(
