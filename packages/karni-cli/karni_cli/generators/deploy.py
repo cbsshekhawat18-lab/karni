@@ -431,10 +431,14 @@ _PROXY_SNIPPET = """\
 """
 
 _FILES = """\
-	# Static files (collectstatic) and uploads, straight from the shared volume.
+	# Static files (collectstatic) and uploads, straight from the shared volume. A static
+	# file whose name carries its content's hash (KARNI_STATIC_STORAGE=manifest) never
+	# changes, so a browser keeps it for a year.
 	handle /static/* {
 		root * {volume}
 		import karni_headers
+		@hashed path_regexp \\.[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]\\.[A-Za-z0-9]+$
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
 		file_server
 	}
 	handle /media/* {
@@ -569,6 +573,18 @@ def email_lines(domain: str) -> list[str]:
     ]
 
 
+def static_lines(site: bool) -> list[str]:
+    """The static storage of a production environment file: fingerprinted names for a site."""
+    if not site:
+        return []
+    return [
+        "# Static files under names that carry their content's hash (site.3f2a91c0b4d7.css):",
+        "# {% static %} names them, and the web server lets browsers keep them for a year.",
+        "# plain keeps the names as written.",
+        "KARNI_STATIC_STORAGE=manifest",
+    ]
+
+
 def site_lines(domain: str) -> list[str]:
     """The public site's section of a production environment file (karni-site's settings)."""
     return [
@@ -677,6 +693,7 @@ def env_example(options: Options) -> str:
         "KARNI_STORAGE=local",
         "MEDIA_ROOT=/data/media",
         "STATIC_ROOT=/data/static",
+        *static_lines(options.site),
         "",
     ]
     if options.backups:
@@ -882,6 +899,7 @@ def _systemd_nginx(
             *email_lines(options.domain),
             *(["", *site_lines(options.domain)] if options.site else []),
         ],
+        static_lines(options.site),
     )
     unused = [
         f"{systemd_nginx.FOLDER}/{unit}.service"

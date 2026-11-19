@@ -155,6 +155,21 @@ apply codemods and list the manual steps. This file is the human summary.
   gunicorn worker with threads and no worker or beat unit
   ([docs](docs/deploy.md#a-small-server-one-process)).
 
+- **Added: `KARNI_STATIC_STORAGE`, fingerprinted static files.** Production used Django's
+  plain `StaticFilesStorage`, so a file's name never changed and long caching was unsafe.
+  `KARNI_STATIC_STORAGE=manifest` selects `karni.storage.static.ManifestStaticStorage`:
+  `collectstatic` writes each file under a name that carries its content's hash and
+  rewrites stylesheets' `url(...)` to them, and `{% static %}` names them in tags,
+  attributes and `data-*` attributes alike. Unlike Django's manifest storage, a name the
+  manifest does not hold gets its plain name and a warning instead of a failed page, and a
+  `url(...)` to a missing file is kept as written instead of stopping `collectstatic`. The
+  default stays `plain`. A new site project's production env examples (compose and
+  systemd-nginx) set `manifest`, and the generated Caddyfile and nginx vhost let browsers
+  keep fingerprinted names for a year and plain ones for an hour at most. An unknown value
+  fails with `E510`
+  ([docs](docs/deploy.md#14-static-and-media-files),
+  [migration note](docs/migrations/0.5.md#static-files-under-fingerprinted-names)).
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

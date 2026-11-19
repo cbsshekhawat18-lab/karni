@@ -156,10 +156,11 @@ def _fill(name: str, options: Options) -> str:
     return text
 
 
-def env_example(options: Options, email: list[str]) -> str:
+def env_example(options: Options, email: list[str], static: list[str] | None = None) -> str:
     """The text of ``deploy/env.example``. ``email`` holds the sections shared with compose:
     the email, and the public site's for a project with karni-site."""
     root = options.app_root
+    static = static or []
     out = [
         f"# Production environment for {options.slug} on one server with systemd and nginx.",
         "# `karni make deploy systemd-nginx` wrote it. The first run of deploy/deploy.sh copies",
@@ -218,6 +219,7 @@ def env_example(options: Options, email: list[str]) -> str:
         "KARNI_STORAGE=local",
         f"MEDIA_ROOT={root}/shared/media",
         f"STATIC_ROOT={root}/shared/static",
+        *static,
         "",
     ]
     if not options.single_process:
@@ -339,21 +341,23 @@ def readme(options: Options) -> str:
     )
 
 
-def files(options: Options, email: list[str]) -> dict[str, str]:
+def files(options: Options, email: list[str], static: list[str] | None = None) -> dict[str, str]:
     """Every file of ``deploy/`` by its path in the project."""
     found = {
         SCRIPT: _fill("deploy.sh", options),
         **{f"{FOLDER}/{unit}.service": _fill(f"{unit}.service", options) for unit in options.units},
         f"{FOLDER}/nginx.conf": _fill("nginx.conf", options),
-        f"{FOLDER}/env.example": env_example(options, email),
+        f"{FOLDER}/env.example": env_example(options, email, static),
         f"{FOLDER}/README.md": readme(options),
     }
     return found
 
 
-def plan(ws: Workspace, options: Options, email: list[str]) -> None:
-    """Plan the ``deploy/`` folder into ``ws``."""
-    for path, text in files(validate(options), email).items():
+def plan(
+    ws: Workspace, options: Options, email: list[str], static: list[str] | None = None
+) -> None:
+    """Plan the ``deploy/`` folder into ``ws``. ``email`` and ``static`` are shared sections."""
+    for path, text in files(validate(options), email, static).items():
         ws.create(path, text)
 
 

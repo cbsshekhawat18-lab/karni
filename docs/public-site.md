@@ -585,7 +585,10 @@ include by hand before `*welcome_urls()`.
 
 The scaffold's Caddyfile serves `/static/` and `/media/` from disk and sends
 every other path to Django, so the site at `/` works in production with no
-change. `collectstatic` copies `static/website/` into `STATIC_ROOT`.
+change. `collectstatic` copies `static/website/` into `STATIC_ROOT`. A new
+site project sets `KARNI_STATIC_STORAGE=manifest` in its production
+`.env`, so each file is served under a name that carries its content's hash
+and browsers keep it for a year ([static files](deploy.md#14-static-and-media-files)).
 
 ## SEO by default
 

@@ -202,8 +202,18 @@ def test_a_site_renders_its_pages_in_the_release_step(
         "collectstatic --noinput -v 0 && python manage.py karni_site_seed "
         "&& python manage.py karni_publish_web"
     ) in release
-    # karni-site's deployment settings, read from the environment, are in the example.
+    # karni-site's deployment settings, read from the environment, are in the example, and a
+    # new site's static files get names that carry their content's hash.
     assert "KARNI_SITE" not in (project / deploy.ENV_EXAMPLE).read_text()
+    assert "KARNI_STATIC_STORAGE" not in (project / deploy.ENV_EXAMPLE).read_text()
+    assert (
+        "\nKARNI_STATIC_STORAGE=manifest\n"
+        in (tmp_path / "harbour_notes" / deploy.ENV_EXAMPLE).read_text()
+    )
+    caddyfile = (tmp_path / "harbour_notes" / deploy.CADDYFILE).read_text()
+    hashed = "[0-9a-f]" * 12
+    assert f"@hashed path_regexp \\.{hashed}\\.[A-Za-z0-9]+$" in caddyfile
+    assert 'header @hashed Cache-Control "public, max-age=31536000, immutable"' in caddyfile
     env = (tmp_path / "harbour_notes" / deploy.ENV_EXAMPLE).read_text()
     assert "\nKARNI_SITE_URL=https://example.com\n" in env
     for name in ("ALLOW_INDEXING", "QUEUE_RENDITIONS", "SEED_ON_RENDER", "NOTIFY_FROM"):

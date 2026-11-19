@@ -32,6 +32,7 @@ A few settings are read while `karni_settings()` runs, to compute other settings
 - `KARNI_JSON_LOGS`: LOGGING and the structlog renderer
 - `KARNI_CACHE`: CACHES
 - `KARNI_STORAGE`: STORAGES
+- `KARNI_STATIC_STORAGE`: STORAGES['staticfiles']
 - `KARNI_SINGLE_PROCESS`: KARNI_CACHE, CELERY_TASK_ALWAYS_EAGER, CELERY_BROKER_URL, KARNI_READYZ_CHECKS and KARNI_HEALTH_CHECKS
 
 Set them in `.env`, define them above the call, or pass them to it:
@@ -81,6 +82,7 @@ reads it on every request.
 | <a id="karni_single_process"></a>`KARNI_SINGLE_PROCESS` | `KARNI_SINGLE_PROCESS` | `False` | A deployment of one process, without Redis or a Celery worker: the cache in memory (`KARNI_CACHE=locmem`), Celery tasks run in the process that sends them (`CELERY_TASK_ALWAYS_EAGER`, broker `memory://`), `/readyz` and `/health/ready/` leave the broker and the worker out, and `karni.W501` is quiet while `WEB_CONCURRENCY` is 1. Each only where the project sets no value of its own. Beat does not run: no scheduled task fires. See [a small server](deploy.md#a-small-server-one-process). |
 | **Files & storage** | | | |
 | <a id="karni_storage"></a>`KARNI_STORAGE` | `KARNI_STORAGE` | `"local"` | `local` (filesystem) or `s3` (any S3-compatible service, needs `karni[s3]`). |
+| <a id="karni_static_storage"></a>`KARNI_STATIC_STORAGE` | `KARNI_STATIC_STORAGE` | `"plain"` | The static files' storage (`STORAGES['staticfiles']`): `plain` (the default, the names as written), `manifest` (`karni.storage.static.ManifestStaticStorage`: `collectstatic` gives each file a name with a hash of its content, `{% static %}` names it, and a web server may let browsers keep it a year; a file missing from the manifest gets its plain name instead of a failed page) or a dotted path. New site projects set `manifest` in their production `.env`. See [static and media files](deploy.md#14-static-and-media-files). |
 | **API (karni.api)** | | | |
 | <a id="karni_search_provider"></a>`KARNI_SEARCH_PROVIDER` | `KARNI_SEARCH_PROVIDER` | `"karni.api.search.postgres.PostgresSearchProvider"` | Dotted path of the `SearchProvider` behind `?search=`. The PostgreSQL provider falls back to portable search on other databases. |
 | <a id="karni_api_max_expand_depth"></a>`KARNI_API_MAX_EXPAND_DEPTH` | `KARNI_API_MAX_EXPAND_DEPTH` | `2` | Deepest `?expand=` path allowed (levels of nesting). |

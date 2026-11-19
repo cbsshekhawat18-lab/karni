@@ -32,6 +32,7 @@ CHANGED: dict[str, Any] = {
     "KARNI_CACHE": "locmem",
     "KARNI_STORAGE": "s3",
     "KARNI_SINGLE_PROCESS": True,
+    "KARNI_STATIC_STORAGE": "manifest",
 }
 #: What the call must have used for the setting to feed anything.
 NEEDS: dict[str, dict[str, Any]] = {

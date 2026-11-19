@@ -1817,6 +1817,7 @@ class Lead(BaseModel):
 | Setting | Env | Default | What it controls |
 |---|---|---|---|
 | `KARNI_STORAGE` | `KARNI_STORAGE` | `"local"` | `local` (filesystem) or `s3` (any S3-compatible service, needs `karni[s3]`). |
+| `KARNI_STATIC_STORAGE` | `KARNI_STATIC_STORAGE` | `"plain"` | The static files' storage (`STORAGES['staticfiles']`): `plain` (the default, the names as written), `manifest` (`karni.storage.static.ManifestStaticStorage`: `collectstatic` gives each file a name with a hash of its content, `{% static %}` names it, and a web server may let browsers keep it a year; a file missing from the manifest gets its plain name instead of a failed page) or a dotted path. New site projects set `manifest` in their production `.env`. See [static and media files](deploy.md#14-static-and-media-files). |
 
 ### API (karni.api)
 
@@ -2475,6 +2476,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E507`](errors.md#e507) | exception | KARNI_CACHE names an unknown cache backend |
 | [`E508`](errors.md#e508) | check | A setting is assigned where it cannot take effect |
 | [`E509`](errors.md#e509) | exception | Sign-in with an ID token needs the cryptography package |
+| [`E510`](errors.md#e510) | exception | KARNI_STATIC_STORAGE names an unknown storage |
 | [`W510`](errors.md#w510) | warning | DEBUG is on in a deployment |
 | [`W511`](errors.md#w511) | warning | SECRET_KEY is weak or a development key |
 | [`W512`](errors.md#w512) | warning | ALLOWED_HOSTS is empty or allows every host |

@@ -1499,6 +1499,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Run pip install 'karni[social-token]', or empty KARNI_SOCIAL_TOKEN_PROVIDERS.
 
+<a id="e510"></a>
+
+#### E510: KARNI_STATIC_STORAGE names an unknown storage
+
+*exception* · from `karni.conf (KARNI_STATIC_STORAGE)`
+
+**Why Karni objects.** The static files' storage is chosen by name: `plain` keeps the names as written, `manifest` gives each file a name with a hash of its content, which a browser may keep for a year. Any other word names nothing.
+
+**Fix.** Set KARNI_STATIC_STORAGE to `plain` (the default), `manifest` or the dotted path of a storage class, or define STORAGES yourself in settings.py.
+
 <a id="w510"></a>
 
 #### W510: DEBUG is on in a deployment

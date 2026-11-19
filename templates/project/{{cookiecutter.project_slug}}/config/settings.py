@@ -11,8 +11,8 @@ added below can come from .env the same way.
 
 The exception: the call reads KARNI_AUTH_MODE, KARNI_2FA, KARNI_SOCIAL_AUTH,
 KARNI_SOCIAL_PROVIDERS, KARNI_FRONTEND_URL, KARNI_AUTH_THROTTLE_RATES,
-KARNI_JSON_LOGS, KARNI_CACHE, KARNI_STORAGE and KARNI_SINGLE_PROCESS to compute
-other settings.
+KARNI_JSON_LOGS, KARNI_CACHE, KARNI_STORAGE, KARNI_STATIC_STORAGE and
+KARNI_SINGLE_PROCESS to compute other settings.
 Set those in .env, above the call, or as karni_settings(globals(), NAME=...).
 Assigned below the call they change nothing, and startup fails with
 karni.E508. See docs/settings.md.

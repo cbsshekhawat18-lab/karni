@@ -523,6 +523,20 @@ and serves `/static/`, `/media/` and the staff app with long cache lifetimes
 on the hashed files, so Django never serves a file in production.
 
 - Static files are written on every release. Nothing to back up.
+- With `KARNI_STATIC_STORAGE=manifest`, which a new site project's
+  `.env.prod.example` sets, `collectstatic` also writes a copy of each file
+  whose name carries a hash of its content (`site.3f2a91c0b4d7.css`) and a
+  manifest, and `{% static %}` names the copy, in a tag, an attribute or a
+  `data-*` attribute alike. A stylesheet's `url(...)` is rewritten to the
+  copies too. The Caddyfile (and the nginx vhost of `systemd-nginx`) lets
+  browsers keep such a file for a year, and a file under its plain name for
+  a short while only, so a release reaches every browser at once. The plain
+  names stay in `STATIC_ROOT`, so an address a script builds by hand keeps
+  working. A file the manifest does not hold (a typo, one added without
+  `collectstatic`) gets its plain name and a warning in the log, not a
+  failed page, and a stylesheet's `url(...)` to a file that does not exist
+  is kept as written instead of stopping `collectstatic`.
+  `KARNI_STATIC_STORAGE=plain` (the default) keeps the names as written.
 - Uploads are written by Django to `MEDIA_ROOT` (`/data/media`) in the same
   volume, and Caddy serves them from there. The backup service archives that
   folder with the database ([backups](#10-backups)).

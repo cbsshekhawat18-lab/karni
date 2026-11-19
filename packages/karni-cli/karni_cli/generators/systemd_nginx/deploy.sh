@@ -122,7 +122,9 @@ current() {
 
 # render <template> <file>: the template with this server's values in place of @NAME@.
 render() {
-  sed -e "s|@APP@|$APP|g" -e "s|@DOMAIN@|$DOMAIN|g" -e "s|@ROOT@|$ROOT|g" \
+  local app_id
+  app_id="$(printf '%s' "$APP" | tr -c 'A-Za-z0-9_' '_')"
+  sed -e "s|@APP_ID@|$app_id|g" -e "s|@APP@|$APP|g" -e "s|@DOMAIN@|$DOMAIN|g" -e "s|@ROOT@|$ROOT|g" \
     -e "s|@RUN_AS@|$RUN_AS|g" -e "s|@CERT@|$CERT|g" -e "s|@CERT_KEY@|$CERT_KEY|g" \
     "$1" >"$2"
   if grep -q '@[A-Z_]*@' "$2"; then

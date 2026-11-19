@@ -121,6 +121,9 @@ def test_it_writes_the_deploy_folder(project: Path) -> None:
         assert f"\n{line}\n" in env, line
     assert "\nKARNI_SITE_URL=https://clinic.example.com\n" in env, "a site's address"
     assert "\n# KARNI_SITE_ALLOW_INDEXING=False\n" in env
+    assert "\nKARNI_STATIC_STORAGE=manifest\n" in env, "a site's static names carry a hash"
+    assert "map $uri $@APP_ID@_static_cache {" in vhost
+    assert "add_header Cache-Control $@APP_ID@_static_cache;" in vhost
     readme = (folder / "README.md").read_text()
     assert "sudo deploy/deploy.sh --rollback" in readme
     assert "createdb --owner clinic_hours clinic_hours" in readme
@@ -347,6 +350,7 @@ def test_a_deploy_installs_the_release_the_units_and_the_vhost(server: Server) -
         assert f"WorkingDirectory={server.root}/current" in text
     vhost = server.nginx / "sites-available" / "clinic_hours.conf"
     assert "@" not in vhost.read_text()
+    assert "map $uri $clinic_hours_static_cache {" in vhost.read_text()
     assert str(server.root / "shared" / "static") in vhost.read_text()
     enabled = server.nginx / "sites-enabled" / "clinic_hours.conf"
     assert enabled.is_symlink() and os.readlink(enabled) == str(vhost)

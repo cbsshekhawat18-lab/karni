@@ -1897,6 +1897,17 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Set KARNI_CACHE to `redis` (the default) or `locmem`. For anything else, define CACHES "
         "yourself in settings.py.",
     ),
+    _e(
+        "E510",
+        "KARNI_STATIC_STORAGE names an unknown storage",
+        "exception",
+        "karni.conf (KARNI_STATIC_STORAGE)",
+        "The static files' storage is chosen by name: `plain` keeps the names as written, "
+        "`manifest` gives each file a name with a hash of its content, which a browser may "
+        "keep for a year. Any other word names nothing.",
+        "Set KARNI_STATIC_STORAGE to `plain` (the default), `manifest` or the dotted path of "
+        "a storage class, or define STORAGES yourself in settings.py.",
+    ),
     # W51x and W520 deploy checks (manage.py check --deploy, karni check --deploy)
     _e(
         "E508",

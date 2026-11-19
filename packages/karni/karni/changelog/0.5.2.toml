@@ -53,3 +53,16 @@ sends neither, as before."""
 mechanical = false
 migration = "migrations/0.5.md#a-closed-site-says-noindex-on-every-page"
 
+[[change]]
+id = "static-manifest-storage"
+kind = "project-files"
+symbol = "KARNI_STATIC_STORAGE"
+summary = """\
+New: KARNI_STATIC_STORAGE (plain, the default, or manifest: fingerprinted names a browser \
+keeps for a year). A new site project's production .env example sets manifest, and the \
+generated Caddyfile caches fingerprinted names for a year. An earlier project is unchanged: \
+to opt in, set KARNI_STATIC_STORAGE=manifest in .env.prod and write the Caddyfile again \
+(karni make deploy compose --force)."""
+mechanical = false
+migration = "migrations/0.5.md#static-files-under-fingerprinted-names"
+

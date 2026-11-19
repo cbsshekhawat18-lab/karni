@@ -84,6 +84,7 @@ CALL_TIME_SETTINGS: dict[str, str] = {
     "KARNI_JSON_LOGS": "LOGGING and the structlog renderer",
     "KARNI_CACHE": "CACHES",
     "KARNI_STORAGE": "STORAGES",
+    "KARNI_STATIC_STORAGE": "STORAGES['staticfiles']",
     "KARNI_SINGLE_PROCESS": (
         "KARNI_CACHE, CELERY_TASK_ALWAYS_EAGER, CELERY_BROKER_URL, KARNI_READYZ_CHECKS and "
         "KARNI_HEALTH_CHECKS"
@@ -500,9 +501,10 @@ def karni_settings(
     * ``SILENCED_SYSTEM_CHECKS``: starts as an empty list, so a project
       extends it (``SILENCED_SYSTEM_CHECKS += ["karni.W967"]``) instead of
       hitting a NameError.
-    * ``KARNI_CACHE`` / ``KARNI_STORAGE``: ``CACHES`` / ``STORAGES`` follow
-      their final value (namespace, override or environment) unless the
-      project supplies ``CACHES`` / ``STORAGES`` itself.
+    * ``KARNI_CACHE`` / ``KARNI_STORAGE`` and ``KARNI_STATIC_STORAGE``:
+      ``CACHES`` / ``STORAGES`` follow their final value (namespace, override
+      or environment) unless the project supplies ``CACHES`` / ``STORAGES``
+      itself.
     * ``KARNI_SINGLE_PROCESS``: a deployment of one process, without Redis or
       a Celery worker. It sets the defaults :data:`SINGLE_PROCESS_SETTINGS`
       lists (the cache in memory, tasks in the process, the probes without the
@@ -567,13 +569,16 @@ def karni_settings(
     # CACHES and STORAGES follow KARNI_CACHE / KARNI_STORAGE defined before the
     # call too, not only the environment BASE read them from.
     used = ["KARNI_AUTH_MODE", "KARNI_2FA", "KARNI_SOCIAL_AUTH", "KARNI_SINGLE_PROCESS"]
-    for flag, derived, build in (
-        ("KARNI_CACHE", "CACHES", _caches),
-        ("KARNI_STORAGE", "STORAGES", _storages),
-    ):
-        if derived not in namespace and derived not in overrides:
-            merged[derived] = build(env, str(final(flag) or "") or None)
-            used.append(flag)
+    if "CACHES" not in namespace and "CACHES" not in overrides:
+        merged["CACHES"] = _caches(env, str(final("KARNI_CACHE") or "") or None)
+        used.append("KARNI_CACHE")
+    if "STORAGES" not in namespace and "STORAGES" not in overrides:
+        merged["STORAGES"] = _storages(
+            env,
+            str(final("KARNI_STORAGE") or "") or None,
+            str(final("KARNI_STATIC_STORAGE") or "") or None,
+        )
+        used += ["KARNI_STORAGE", "KARNI_STATIC_STORAGE"]
     if bool(final("KARNI_SOCIAL_AUTH")):
         used.append("KARNI_SOCIAL_PROVIDERS")
     if auth_mode == "session":
