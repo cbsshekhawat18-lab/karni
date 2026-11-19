@@ -27,9 +27,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from karni_game import players
-from karni_game.models import Game, Player
+from karni_game.models import Game, Player, Save
 
-__all__ = ["GameViewSet", "PlayerViewSet"]
+__all__ = ["GameViewSet", "PlayerViewSet", "SaveViewSet"]
 
 
 class ReadOnly:
@@ -104,3 +104,12 @@ class PlayerViewSet(BaseViewSet):
         player = self.get_object()
         players.revoke_token(player)
         return Response(self.get_serializer(player).data)
+
+
+class SaveViewSet(ReadOnly, BaseViewSet):
+    """``/api/game-saves/``: the saves, read only (support reads a player's progress)."""
+
+    model = Save
+    route = "game-saves"
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["game", "player", "slot"]

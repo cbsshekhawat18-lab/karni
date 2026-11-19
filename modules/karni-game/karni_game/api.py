@@ -26,9 +26,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from karni_game import clock, conf, players
+from karni_game import clock, conf, players, saves
 from karni_game.errors import GameError, game_error
-from karni_game.models import Game, Player
+from karni_game.models import Game, Player, Save
 from karni_game.throttling import PlayerRateThrottle
 
 __all__ = [
@@ -37,6 +37,8 @@ __all__ = [
     "GuestView",
     "MeView",
     "PlayerSerializer",
+    "SaveView",
+    "SavesView",
     "UpgradeView",
 ]
 
@@ -253,3 +255,75 @@ class GameDetailView(GameView):
 
     def get(self, request: Request, game: str) -> Response:
         return Response(self.describe(self.game, self.player_or_none()))
+
+
+# -- saves -----------------------------------------------------------------------------
+
+
+class SaveWriteSerializer(serializers.Serializer):
+    data = serializers.JSONField()
+    schema_version = serializers.IntegerField(min_value=0)
+    base_version = serializers.IntegerField(min_value=0)
+
+
+class SavesView(GameView):
+    """``GET <game>/saves/``: the player's slots in the game, without their data."""
+
+    def get(self, request: Request, game: str) -> Response:
+        options = self.game.options()
+        rows = saves.slots(self.player, self.game)
+        return Response(
+            {
+                "results": [saves.as_data(row, data=False) for row in rows],
+                "max_slots": options.max_slots,
+                "max_bytes": options.max_save_bytes,
+            }
+        )
+
+
+class SaveView(GameView):
+    """``GET``, ``PUT`` and ``DELETE <game>/saves/<slot>/``: one slot of the player."""
+
+    throttle_scopes: ClassVar[dict[str, str]] = {"PUT": "save", "DELETE": "save"}
+
+    def get(self, request: Request, game: str, slot: str) -> Response:
+        found = saves.read(self.player, self.game, slot)
+        if found is None:
+            from rest_framework.exceptions import NotFound
+
+            raise NotFound(f"No save in slot {slot!r}.")
+        return Response(saves.as_data(found))
+
+    @extend_schema(request=SaveWriteSerializer)
+    def put(self, request: Request, game: str, slot: str) -> Response:
+        player = self.player
+        self.guard("update", Save, "karni_game.save:change")
+        body = SaveWriteSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        stored = saves.write(
+            player,
+            self.game,
+            slot,
+            body.validated_data["data"],
+            schema_version=body.validated_data["schema_version"],
+            base_version=body.validated_data["base_version"],
+        )
+        return Response(saves.as_data(stored))
+
+    def delete(self, request: Request, game: str, slot: str) -> Response:
+        player = self.player
+        self.guard("destroy", Save, "karni_game.save:delete")
+        raw = request.query_params.get("base_version")
+        base = None
+        if raw not in (None, ""):
+            try:
+                base = int(str(raw))
+            except ValueError:
+                from rest_framework.exceptions import ValidationError
+
+                raise ValidationError({"base_version": ["A whole number."]}) from None
+        if not saves.delete(player, self.game, slot, base_version=base):
+            from rest_framework.exceptions import NotFound
+
+            raise NotFound(f"No save in slot {slot!r}.")
+        return Response(status=204)

@@ -20,7 +20,7 @@ from typing import Any
 from django.utils.module_loading import import_string
 
 from karni_game import conf
-from karni_game.models import Player
+from karni_game.models import Player, Save
 
 __all__ = ["Merger", "get_merger"]
 
@@ -50,6 +50,38 @@ class Merger:
         drop.token_hash = ""
         drop.delete()
         return summary
+
+    def merge_saves(self, keep: Player, drop: Player) -> dict[str, Any]:
+        """A slot only ``drop`` has moves. A slot both have: the copy written last keeps it,
+        the other moves to ``<slot>-merged`` (``-merged-2`` and on), so nothing is lost."""
+        moved = 0
+        kept_both: list[str] = []
+        for theirs in Save.objects.filter(player=drop).order_by("game_id", "slot"):
+            mine = Save.objects.filter(player=keep, game=theirs.game_id, slot=theirs.slot).first()
+            if mine is None:
+                Save.objects.filter(pk=theirs.pk).update(player=keep)
+                moved += 1
+                continue
+            older, newer = (mine, theirs) if mine.updated_at < theirs.updated_at else (theirs, mine)
+            taken = set(
+                Save.objects.filter(player=keep, game=theirs.game_id).values_list("slot", flat=True)
+            )
+            name = self.free_slot(theirs.slot, taken)
+            # The older copy steps aside first, so the newer one may take the slot.
+            Save.objects.filter(pk=older.pk).update(player=keep, slot=name)
+            Save.objects.filter(pk=newer.pk).update(player=keep, slot=theirs.slot)
+            kept_both.append(theirs.slot)
+        return {"moved": moved, "kept_both": kept_both}
+
+    @staticmethod
+    def free_slot(slot: str, taken: set[str]) -> str:
+        """``<slot>-merged``, or ``-merged-2`` and on, that ``taken`` does not hold."""
+        base = f"{slot[:33]}-merged"
+        name, number = base, 1
+        while name in taken:
+            number += 1
+            name = f"{base}-{number}"
+        return name
 
 
 def get_merger() -> Merger:

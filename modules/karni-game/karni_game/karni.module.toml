@@ -18,14 +18,17 @@ services = ["a Celery worker for the family events (analytics, the timeline)"]
 docs = "docs/game.md"
 
 [provides]
-models = ["Game", "Player"]
+models = ["Game", "Player", "Save"]
 endpoints = [
     "/api/game/guest/",
     "/api/game/me/",
     "/api/game/upgrade/",
     "/api/game/<game>/",
+    "/api/game/<game>/saves/",
+    "/api/game/<game>/saves/<slot>/",
     "/api/games/",
     "/api/game-players/",
+    "/api/game-saves/",
 ]
 pages = ["the game's admin screens: games, players, boards, flagged runs, wallets and ledgers"]
 

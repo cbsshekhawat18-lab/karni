@@ -22,6 +22,7 @@ from __future__ import annotations
 from typing import Any
 
 from django.apps import apps
+from django.utils import timezone
 from karni import people
 
 from karni_game.merge import get_merger
@@ -67,11 +68,17 @@ def erase_player(person: Any) -> None:
         if not apps.is_installed("karni_game"):  # pragma: no cover
             return
         model = apps.get_model("karni_game", label)
-        model._base_manager.filter(player__in=players).update(**fields)
+        rows = model._base_manager.filter(player__in=players)
+        rows.update(**fields)
+        if label == "Save":
+            rows.filter(deleted_at__isnull=True).update(deleted_at=timezone.now())
 
 
-#: Rows of a player's that an erase rewrites: (model, the values written).
-_ERASED_ROWS: list[tuple[str, dict[str, Any]]] = []
+#: Rows of a player's that an erase rewrites: (model, the values written). Saves lose
+#: their data and are deleted.
+_ERASED_ROWS: list[tuple[str, dict[str, Any]]] = [
+    ("Save", {"data": {}, "size": 0}),
+]
 
 
 people.register_fact(

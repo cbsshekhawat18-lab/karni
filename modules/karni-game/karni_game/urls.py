@@ -22,4 +22,6 @@ urlpatterns = [
     path("me/", api.MeView.as_view(), name="me"),
     path("upgrade/", api.UpgradeView.as_view(), name="upgrade"),
     path("<slug:game>/", api.GameDetailView.as_view(), name="game"),
+    path("<slug:game>/saves/", api.SavesView.as_view(), name="saves"),
+    path("<slug:game>/saves/<str:slot>/", api.SaveView.as_view(), name="save"),
 ]

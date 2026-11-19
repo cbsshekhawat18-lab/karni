@@ -132,4 +132,56 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         fix='Register one function per step (@hooks.save_migration("<game>", 1)) and per '
         'board (@hooks.run_check("<game>", "<board>")), or pass replace=True to swap one.',
     ),
+    ErrorCode(
+        code="GAME007",
+        title="The save is larger than the game allows",
+        kind="exception",
+        source=f"{_SOURCE}.saves.write (HTTP 413)",
+        why="A save is read and written whole on every sync, so each game caps its size "
+        "(max_save_bytes in its settings, at most KARNI_GAME_MAX_SAVE_BYTES).",
+        fix="Keep less in the save (derive what can be derived), or raise the game's "
+        "max_save_bytes in its settings.",
+    ),
+    ErrorCode(
+        code="GAME008",
+        title="The save changed on the server: a stale write",
+        kind="exception",
+        source=f"{_SOURCE}.saves (HTTP 409)",
+        why="Every write names the version it started from (base_version). Another device "
+        "wrote since, so this write would lose that one's progress. The server's version "
+        "counter decides, not a device's clock.",
+        fix="Read the server's copy in the answer's save, choose or combine, and write again "
+        "with base_version set to its version.",
+    ),
+    ErrorCode(
+        code="GAME009",
+        title="The save's schema version is not one the server knows",
+        kind="exception",
+        source=f"{_SOURCE}.saves.migrate (HTTP 400)",
+        why="schema_version is the shape of the save's data. The server migrates an older "
+        "save up to the game's save_schema_version, and cannot read a newer one: the "
+        "client is ahead of the server.",
+        fix="Raise the game's save_schema_version (and register the migration to it) before "
+        "shipping a client that writes the new shape.",
+    ),
+    ErrorCode(
+        code="GAME010",
+        title="A save migration is missing",
+        kind="exception",
+        source=f"{_SOURCE}.saves.migrate",
+        why="The game saves a newer schema than a stored save, and each step from one schema "
+        "version to the next is a function the project registers. A missing step would hand "
+        "the client data of a shape it does not read.",
+        fix='Register the step in <app>/game.py: @hooks.save_migration("<game>", n) on a '
+        "function that takes the data of version n and returns the data of n + 1.",
+    ),
+    ErrorCode(
+        code="GAME011",
+        title="Not a slot name, or no free slot",
+        kind="exception",
+        source=f"{_SOURCE}.saves (HTTP 400)",
+        why="A slot is named in the path (a lowercase letter or digit, then up to 39 more, "
+        "_ or -), and each game keeps at most max_slots slots per player.",
+        fix="Use a slot name such as main or slot-2, or write to a slot the player has.",
+    ),
 )

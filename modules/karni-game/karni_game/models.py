@@ -33,7 +33,7 @@ from karni_game.gamesettings import GameSettings
 #: A game's settings, or its slug, that the server cannot use.
 SETTINGS_CODE = "GAME026"
 
-__all__ = ["RESERVED_SLUGS", "Game", "Player"]
+__all__ = ["RESERVED_SLUGS", "Game", "Player", "Save"]
 
 #: Game slugs the API's own paths take (``/api/game/guest/`` is not a game).
 RESERVED_SLUGS: frozenset[str] = frozenset({"guest", "me", "upgrade", "callbacks"})
@@ -155,3 +155,51 @@ class Player(BaseModel):
     @property
     def is_banned(self) -> bool:
         return self.banned_at is not None
+
+
+class Save(BaseModel):
+    """One save slot of a player in a game: its JSON, the shape of it, the server's version.
+
+    ``version`` counts the writes: each write names the version it started from
+    (:func:`karni_game.saves.write`), so a stale write never wins.
+    ``schema_version`` is the game's own number for the shape of ``data``.
+    """
+
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="saves")
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="saves")
+    slot = models.CharField(max_length=40)
+    data = models.JSONField(default=dict, blank=True)
+    schema_version = models.PositiveIntegerField(default=1)
+    version = models.PositiveIntegerField(default=1)
+    size = models.PositiveIntegerField(default=0, help_text="Bytes of the data's JSON.")
+
+    class Meta:
+        constraints: ClassVar[list[Any]] = [
+            LiveUniqueConstraint(fields=["player", "game", "slot"], name="karni_game_save_slot")
+        ]
+
+    class Karni:
+        owner_field = "player__person__user"
+        cascade: ClassVar[dict[str, str]] = {
+            "player": "a save is its player's, and goes with it",
+            "game": "a save is of its game, and goes with it",
+        }
+
+    class APIMeta:
+        read_only: ClassVar[list[str]] = [
+            "player",
+            "game",
+            "slot",
+            "data",
+            "schema_version",
+            "version",
+            "size",
+        ]
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["slot", "player", "game", "version", "size"]
+        list_filter: ClassVar[list[str]] = ["game"]
+        search_fields: ClassVar[list[str]] = ["slot", "player__handle"]
+
+    def __str__(self) -> str:
+        return f"{self.slot} ({self.version})"
