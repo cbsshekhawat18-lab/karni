@@ -53,6 +53,8 @@ __all__ = [
     "ChoicesView",
     "InboxView",
     "MarkAllReadView",
+    "MarkReadView",
+    "MarkUnreadView",
     "MarkView",
     "NotificationSerializer",
     "UnreadView",
@@ -203,19 +205,16 @@ class UnreadView(APIView):
 
 
 class MarkView(APIView):
-    """Experimental. ``POST /api/inbox/<id>/read/`` and ``.../unread/``: one notification."""
+    """Experimental. ``POST /api/inbox/<id>/read/`` and ``.../unread/``: one notification.
+
+    :class:`MarkReadView` and :class:`MarkUnreadView` are the two routes.
+    """
 
     permission_classes: ClassVar[list[type]] = [IsAuthenticated]
     read: ClassVar[bool] = True
 
-    @extend_schema(
-        operation_id="inbox_mark",
-        tags=["inbox"],
-        request=None,
-        responses={200: NotificationSerializer},
-        description="Experimental. Mark one of the caller's notifications read or unread.",
-    )
-    def post(self, request: Request, pk: int) -> Response:
+    def mark(self, request: Request, pk: int) -> Response:
+        """Mark the caller's notification ``pk`` read (or unread): 404 for anyone else's."""
         row = Notification.objects.filter(recipient=request.user, pk=pk).first()
         if row is None:
             raise Http404("No such notification in your inbox.")
@@ -225,6 +224,38 @@ class MarkView(APIView):
             services.mark_unread(request.user, [row.pk])
         row.refresh_from_db()
         return Response(serialize(row))
+
+
+class MarkReadView(MarkView):
+    """Experimental. ``POST /api/inbox/<id>/read/``."""
+
+    read = True
+
+    @extend_schema(
+        operation_id="inbox_mark_read",
+        tags=["inbox"],
+        request=None,
+        responses={200: NotificationSerializer},
+        description="Experimental. Mark one of the caller's notifications read.",
+    )
+    def post(self, request: Request, pk: int) -> Response:
+        return self.mark(request, pk)
+
+
+class MarkUnreadView(MarkView):
+    """Experimental. ``POST /api/inbox/<id>/unread/``."""
+
+    read = False
+
+    @extend_schema(
+        operation_id="inbox_mark_unread",
+        tags=["inbox"],
+        request=None,
+        responses={200: NotificationSerializer},
+        description="Experimental. Mark one of the caller's notifications unread again.",
+    )
+    def post(self, request: Request, pk: int) -> Response:
+        return self.mark(request, pk)
 
 
 class MarkAllReadView(APIView):
@@ -365,7 +396,7 @@ def build_urlpatterns(*, force: bool = False) -> list[Any]:
         path("inbox/read-all/", MarkAllReadView.as_view(), name="karni-inbox-read-all"),
         path("inbox/choices/", ChoicesView.as_view(), name="karni-inbox-choices"),
         path("inbox/choices/<str:kind>/", ChoiceView.as_view(), name="karni-inbox-choice"),
-        path("inbox/<int:pk>/read/", MarkView.as_view(read=True), name="karni-inbox-read"),
-        path("inbox/<int:pk>/unread/", MarkView.as_view(read=False), name="karni-inbox-unread-one"),
+        path("inbox/<int:pk>/read/", MarkReadView.as_view(), name="karni-inbox-read"),
+        path("inbox/<int:pk>/unread/", MarkUnreadView.as_view(), name="karni-inbox-unread-one"),
         path("notify/unsubscribe/", UnsubscribeView.as_view(), name="karni-notify-unsubscribe"),
     ]

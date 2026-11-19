@@ -137,3 +137,43 @@ def test_the_email_editor_lists_edits_previews_and_puts_back(writer: Any, ana: A
     back = as_user(writer).delete("/api/email-templates/club.receipt/")
     assert back.data["edited"] is False and not EmailTemplate.objects.exists()
     assert as_user(writer).get("/api/email-templates/nope.kind/").status_code == 404
+
+
+def test_the_schema_documents_the_inbox_and_the_editor(capsys: pytest.CaptureFixture[str]) -> None:
+    from drf_spectacular.generators import SchemaGenerator
+
+    schema = SchemaGenerator(urlconf="tests.notify.urls").get_schema(request=None, public=True)
+    paths = schema["paths"]
+    assert paths["/api/inbox/"]["get"]["operationId"] == "inbox_list"
+    assert {"/api/inbox/unread/", "/api/inbox/read-all/", "/api/inbox/choices/"} <= set(paths)
+    assert "patch" in paths["/api/inbox/choices/{kind}/"]
+    assert "put" in paths["/api/email-templates/{kind}/"]
+    assert "/api/notify/unsubscribe/" not in paths  # a page for people, not the API
+    assert "Warning" not in capsys.readouterr().err
+
+
+def test_the_api_mounts_the_routes_by_the_switch() -> None:
+    from django.test import override_settings
+
+    from karni.api.urls import _notify_urlpatterns
+
+    with override_settings(KARNI_NOTIFY_API=True):
+        names = {pattern.name for pattern in _notify_urlpatterns()}
+    assert {"karni-inbox", "karni-inbox-unread", "karni-notify-unsubscribe"} <= names
+    with override_settings(KARNI_NOTIFY_API=False):
+        assert _notify_urlpatterns() == []
+
+
+def test_the_admin_checks_an_edit_and_keeps_the_inbox_read_only() -> None:
+    from django.contrib import admin as django_admin
+    from django.test import RequestFactory
+
+    from karni.notify.admin import EmailTemplateForm
+
+    bad = EmailTemplateForm(data={"kind": "club.receipt", "subject": "Hi", "text": "{% load x %}"})
+    assert not bad.is_valid() and "text" in bad.errors
+    good = EmailTemplateForm(data={"kind": "club.receipt", "subject": "Hi", "text": "{{ link }}"})
+    assert good.is_valid(), good.errors
+    request = RequestFactory().get("/")
+    inbox = django_admin.site._registry[Notification]
+    assert not inbox.has_add_permission(request) and not inbox.has_change_permission(request)
