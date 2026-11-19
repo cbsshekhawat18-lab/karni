@@ -111,9 +111,9 @@ KARNI_GAME_AUTODISCOVER = "boolean"
 KARNI_GAME_ROLES = "boolean"
 
 [[asks]]
-question = "How many scores may one player send a minute?"
-setting = "KARNI_GAME_RATES.score"
-default = "30/min"
+question = "How many times a day may a player claim an ad reward that no portal callback verifies?"
+setting = "KARNI_GAME_CLIENT_CLAIMS_PER_DAY"
+default = 5
 
 [wiring]
 apps = ["karni_game"]
