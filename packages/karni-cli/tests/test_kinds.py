@@ -190,6 +190,14 @@ def test_a_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert package["dependencies"]["@karni/game"] == "^0.5.0"
     page = (project / "frontend" / "src" / "pages" / "game.tsx").read_text()
     assert 'from "@karni/game"' in page and 'const GAME = "block-hopper";' in page
+    assert 'import { createPortalAdapter } from "virtual:karni-game/portal";' in page
+    assert "createPortal(createPortalAdapter())" in page
+    assert "transport: karniClient" in page and 'path: "/api/game/"' in page
+    vite = (project / "frontend" / "vite.config.ts").read_text()
+    assert 'import { karniGame } from "@karni/game/vite";' in vite
+    assert "karniTheme(), karniGame()]" in vite
+    env_types = (project / "frontend" / "src" / "vite-env.d.ts").read_text()
+    assert '/// <reference types="@karni/game/client" />' in env_types
     routes = (project / "frontend" / "src" / "routes.tsx").read_text()
     assert 'import GamePage from "./pages/game";' in routes and 'path: "/game"' in routes
     agents = _agents(project)
@@ -211,6 +219,7 @@ def test_a_project_without_the_game_kind_has_no_game_dependency(
             text = (project / rel).read_text()
             assert "karni-game" not in text and "karni_game" not in text, (kind, rel)
         assert "@karni/game" not in (project / "frontend" / "package.json").read_text()
+        assert "karniGame" not in (project / "frontend" / "vite.config.ts").read_text()
         assert not (project / "games").exists() and not (project / "content" / "game.yaml").exists()
 
 

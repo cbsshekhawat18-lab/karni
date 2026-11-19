@@ -12,7 +12,12 @@ What it adds to a new app project:
   currency, rewards, an item, an achievement, a mission and config), loaded
   with ``karni load content/game.yaml``;
 * a page at ``/game`` (``frontend/src/pages/game.tsx``) that hosts the game,
-  and ``frontend/src/game/`` where the game's own code goes.
+  and ``frontend/src/game/`` where the game's own code goes; the page passes
+  the project's own API client (``useKarniClient``) to ``createGameClient`` as
+  its transport, and the build's portal adapter (``virtual:karni-game/portal``)
+  to ``createPortal``;
+* ``karniGame()`` from ``@karni/game/vite`` in ``frontend/vite.config.ts`` (the
+  portal builds) and its types in ``frontend/src/vite-env.d.ts``.
 
 Only the project's own files are written: everything else is a dependency.
 
@@ -173,17 +178,24 @@ export function startGame(canvas: HTMLCanvasElement, title: string): Running {
 }
 """
 
-PAGE = """// The page that hosts the game: the canvas, the player, the data client. The game's
-// code is in ../game. Guests play without an account and keep their progress when
-// they sign in (docs/game.md).
-import {{ createGameClient, createStorage }} from "{package}";
+PAGE = """// The page that hosts the game: the canvas, the portal, the player, the data client.
+// The game's code is in ../game. Guests play without an account and keep their
+// progress when they sign in (docs/game.md). The calls go through the app's own API
+// client, so a signed-in player's carry their account.
+import {{ createGameClient, createPortal, createStorage }} from "{package}";
+import {{ useAuth, useKarniClient }} from "@karni/ui";
 import {{ useEffect, useRef, useState }} from "react";
+import {{ createPortalAdapter }} from "virtual:karni-game/portal";
 import {{ startGame }} from "../game";
 
 const GAME = "{slug}";
 
 export default function GamePage() {{
     const canvas = useRef<HTMLCanvasElement | null>(null);
+    const karniClient = useKarniClient();
+    const auth = useAuth();
+    const signedIn = useRef(false);
+    signedIn.current = auth.user !== null;
     const [ready, setReady] = useState(false);
 
     useEffect(() => {{
@@ -191,23 +203,35 @@ export default function GamePage() {{
         if (element === null) {{
             return undefined;
         }}
-        const storage = createStorage({{ namespace: GAME }});
-        const client = createGameClient({{ game: GAME, storage, server: {{}} }});
-        const running = startGame(element, "{title}");
+        const portal = createPortal(createPortalAdapter());
         let live = true;
-        void client
-            .boot()
-            .then(() => client.signInGuest())
-            .then(() => {{
-                if (live) {{
-                    setReady(true);
-                }}
+        let stop = (): void => undefined;
+        void portal.init().then(async () => {{
+            // The storage is made after the portal's init, so a portal's data module is read.
+            const storage = createStorage({{ namespace: GAME }});
+            const client = createGameClient({{
+                game: GAME,
+                storage,
+                server: {{
+                    transport: karniClient,
+                    signedIn: () => signedIn.current,
+                    path: "/api/game/",
+                }},
             }});
+            await client.boot();
+            await client.signInGuest();
+            if (!live) {{
+                return;
+            }}
+            portal.loadingFinished();
+            stop = startGame(element, "{title}").stop;
+            setReady(true);
+        }});
         return () => {{
             live = false;
-            running.stop();
+            stop();
         }};
-    }}, []);
+    }}, [karniClient]);
 
     return (
         <main className="mx-auto max-w-3xl p-4">
@@ -218,6 +242,13 @@ export default function GamePage() {{
     );
 }}
 """
+
+VITE = "frontend/vite.config.ts"
+VITE_IMPORT = 'import { karniGame } from "@karni/game/vite";\n'
+VITE_AFTER = 'import { karniTheme } from "@karni/ui/vite";\n'
+VITE_PLUGINS = "plugins: [react(), tailwindcss(), karniTheme()]"
+ENV_TYPES = "frontend/src/vite-env.d.ts"
+GAME_TYPES = '/// <reference types="@karni/game/client" />\n'
 
 ROUTE = (
     'createRoute({ getParentRoute: () => root, path: "/game", component: GamePage, '
@@ -266,6 +297,21 @@ def _route(ws: Workspace) -> str:
     return f"/game: the page that hosts the game, in {ROUTES}"
 
 
+def _vite(ws: Workspace) -> str:
+    text = ws.read(VITE)
+    if text is None or VITE_PLUGINS not in text or VITE_AFTER not in text:
+        return f"Add karniGame() from @karni/game/vite to the plugins in {VITE} yourself."
+    text = text.replace(VITE_AFTER, VITE_AFTER + VITE_IMPORT, 1)
+    text = text.replace(
+        VITE_PLUGINS, "plugins: [react(), tailwindcss(), karniTheme(), karniGame()]", 1
+    )
+    ws.write(VITE, text)
+    types = ws.read(ENV_TYPES)
+    if types is not None and GAME_TYPES not in types:
+        ws.write(ENV_TYPES, types + GAME_TYPES)
+    return f"karniGame(): in {VITE} (the portal builds), with its types in {ENV_TYPES}"
+
+
 def plan(ws: Workspace, *, title: str, slug: str) -> list[str]:
     """Plan the game kind's files into ``ws`` (a new app project); returns what it did."""
     from karni_cli.commands.add import plan_module
@@ -287,4 +333,5 @@ def plan(ws: Workspace, *, title: str, slug: str) -> list[str]:
             PAGE.format(slug=slug, title=title, package=CLIENT_PACKAGE),
         )
         lines.append(_route(ws))
+        lines.append(_vite(ws))
     return lines
