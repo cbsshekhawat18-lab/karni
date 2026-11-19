@@ -23,7 +23,6 @@ models = [
     "CartLine",
     "Coupon",
     "CouponUse",
-    "EmailTemplate",
     "Invoice",
     "Order",
     "OrderLine",
@@ -66,7 +65,6 @@ endpoints = [
     "/api/orders/reports/",
     "/api/orders/reports/<key>/",
     "/api/invoices/",
-    "/api/email-templates/",
 ]
 pages = ["the cart, checkout and order pages of @karni/commerce-ui"]
 ui = "@karni/commerce-ui"

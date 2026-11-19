@@ -68,7 +68,7 @@ from rest_framework.exceptions import (
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from karni_commerce import documents, email_templates, services
+from karni_commerce import documents, services
 from karni_commerce import reports as reports_registry
 from karni_commerce.api import (
     AbandonedCartSerializer,
@@ -79,8 +79,6 @@ from karni_commerce.api import (
     CouponInputSerializer,
     CustomerPageSerializer,
     CustomerRowSerializer,
-    EmailTemplateInputSerializer,
-    EmailTemplateSerializer,
     ItemSerializer,
     ManualOrderSerializer,
     ManualQuoteSerializer,
@@ -105,7 +103,6 @@ from karni_commerce.models import (
     CartLine,
     Coupon,
     CouponUse,
-    EmailTemplate,
     Invoice,
     Order,
     OrderLine,
@@ -123,7 +120,6 @@ __all__ = [
     "CartViewSet",
     "CouponUseViewSet",
     "CouponViewSet",
-    "EmailTemplateViewSet",
     "InvoiceViewSet",
     "OrderLineViewSet",
     "OrderPaymentViewSet",
@@ -800,87 +796,3 @@ class InvoiceViewSet(_ReadOnly, BaseViewSet):
     filterset_fields = ["order"]
     search_fields = ["reference", "order__email"]
     ordering_fields = ["number", "issued_at"]
-
-
-class EmailTemplateViewSet(BaseViewSet):
-    """Experimental. The emails a business edits: ``/api/email-templates/``.
-
-    ``GET`` lists every declared email (karni.mail kinds) with its merge fields, its
-    switch and its text now (edited, else the files). ``GET``, ``PUT`` and ``DELETE``
-    ``email-templates/<kind>/`` read, change and put back one. ``POST
-    email-templates/<kind>/preview/`` renders a draft with sample values. Until the
-    family's notifications contract keeps them.
-    """
-
-    model = EmailTemplate
-    route = "email-templates"
-    access = Access(read=Granted(), write=Granted())
-    serializer_class = EmailTemplateSerializer
-    lookup_field = "kind"
-    lookup_value_regex = r"[a-z0-9_.-]+"
-    unbudgeted_actions = BaseViewSet.unbudgeted_actions | {"list", "retrieve", "preview"}
-
-    def _kind(self, name: str) -> Any:
-        from karni.mail import find_kind
-
-        found = find_kind(name)
-        if found is None:
-            raise NotFound("No such email.")
-        return found
-
-    @extend_schema(responses=EmailTemplateSerializer(many=True))
-    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        from karni.mail import kinds as mail_kinds
-
-        edited = {row.kind: row for row in EmailTemplate.objects.all()}
-        # karni: allow(unpaginated-action): the declared emails, a few dozen at most
-        return Response(
-            [email_templates.describe(kind, edited.get(kind.name)) for kind in mail_kinds()]
-        )
-
-    @extend_schema(responses=EmailTemplateSerializer)
-    def retrieve(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        kind = self._kind(str(kwargs.get("kind", "")))
-        row = EmailTemplate.objects.filter(kind=kind.name).first()
-        return Response(email_templates.describe(kind, row))
-
-    @extend_schema(request=EmailTemplateInputSerializer, responses=EmailTemplateSerializer)
-    def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        kind = self._kind(str(kwargs.get("kind", "")))
-        body = EmailTemplateInputSerializer(data=request.data)
-        body.is_valid(raise_exception=True)
-        row = email_templates.save(
-            kind, body.validated_data["subject"], body.validated_data["text"]
-        )
-        return Response(email_templates.describe(kind, row))
-
-    def partial_update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        return self.update(request, *args, **kwargs)
-
-    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        raise MethodNotAllowed("POST", detail="PUT email-templates/<kind>/ changes one.")
-
-    @extend_schema(responses=EmailTemplateSerializer)
-    def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Put the email back to its files."""
-        kind = self._kind(str(kwargs.get("kind", "")))
-        EmailTemplate.objects.filter(kind=kind.name).delete()
-        return Response(email_templates.describe(kind, None))
-
-    @extend_schema(request=EmailTemplateInputSerializer, responses=OpenApiTypes.OBJECT)
-    @action(
-        detail=True,
-        methods=["post"],
-        url_path="preview",
-        access=Can("karni_commerce.emailtemplate:change"),
-    )
-    def preview(self, request: Request, kind: str = "") -> Response:
-        """A draft rendered with sample values: its subject, text and HTML."""
-        found = self._kind(kind)
-        body = EmailTemplateInputSerializer(data=request.data)
-        body.is_valid(raise_exception=True)
-        return Response(
-            email_templates.preview(
-                found, body.validated_data["subject"], body.validated_data["text"]
-            )
-        )

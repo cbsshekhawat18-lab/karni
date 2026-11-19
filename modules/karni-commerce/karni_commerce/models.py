@@ -35,7 +35,6 @@ __all__ = [
     "CartLine",
     "Coupon",
     "CouponUse",
-    "EmailTemplate",
     "Invoice",
     "Order",
     "OrderLine",
@@ -716,27 +715,3 @@ class Invoice(BaseModel):
 
     def __str__(self) -> str:
         return self.reference
-
-
-class EmailTemplate(BaseModel):
-    """An email a business rewrote in the app: its subject and text, by kind.
-
-    It wins over the template files (``karni.mail``'s ``KARNI_MAIL_SOURCE``), and
-    renders with the restricted engine: the kind's merge fields only. Deleting
-    the row puts the files back. Experimental, until the family's notifications
-    contract keeps them.
-    """
-
-    kind = models.CharField(max_length=120)
-    subject = models.CharField(max_length=300)
-    text = models.TextField()
-
-    class Meta:
-        ordering = ["kind"]
-        constraints = [LiveUniqueConstraint(fields=["kind"], name="karni_commerce_email_kind")]
-
-    class Karni:
-        audit = True
-
-    def __str__(self) -> str:
-        return self.kind

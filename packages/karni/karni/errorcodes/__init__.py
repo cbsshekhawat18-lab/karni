@@ -2157,6 +2157,17 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Pass channels=('email',), ('inbox',) or ('email', 'inbox').",
     ),
     _e(
+        "E446",
+        "Edited emails would be lost: karni.notify is not installed",
+        "exception",
+        "karni.notify.adopt.adopt_edited_emails (karni-commerce's migration 0006)",
+        "The emails a business edits moved to the notifications contract. A part that kept "
+        "them in its own table (karni-commerce did) copies each one to notify.EmailTemplate "
+        "before it drops its table, and without karni.notify there is no table to copy to.",
+        "Add 'karni.notify' to INSTALLED_APPS (features: {notify: true} in karni.yaml, or a "
+        "recipe that requires notify>=1) and run migrate again.",
+    ),
+    _e(
         "W440",
         "A message kind is declared on channels the project does not send on",
         "warning",

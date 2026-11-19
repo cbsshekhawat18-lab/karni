@@ -1577,6 +1577,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Pass channels=('email',), ('inbox',) or ('email', 'inbox').
 
+<a id="e446"></a>
+
+#### E446: Edited emails would be lost: karni.notify is not installed
+
+*exception* · from `karni.notify.adopt.adopt_edited_emails (karni-commerce's migration 0006)`
+
+**Why Karni objects.** The emails a business edits moved to the notifications contract. A part that kept them in its own table (karni-commerce did) copies each one to notify.EmailTemplate before it drops its table, and without karni.notify there is no table to copy to.
+
+**Fix.** Add 'karni.notify' to INSTALLED_APPS (features: {notify: true} in karni.yaml, or a recipe that requires notify>=1) and run migrate again.
+
 <a id="e450"></a>
 
 #### E450: An event is published that is not declared

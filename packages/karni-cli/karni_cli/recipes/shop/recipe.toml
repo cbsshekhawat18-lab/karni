@@ -4,7 +4,8 @@ version = "1.0.0"
 # commerce: the cart, checkout, orders, refunds, coupons, tax and invoices (it needs
 # payments). storage: the files of digital products. preferences: Settings (details,
 # Checkout, Shop, Emails). people, events and timeline: the payer of each payment is a
-# person and its moments go on the timeline (karni-payments publishes them).
+# person and its moments go on the timeline (karni-payments publishes them). notify: the
+# emails the business edits (Settings, Emails), the inbox and each person's switches.
 requires = [
     "payments",
     "commerce",
@@ -13,6 +14,7 @@ requires = [
     "events>=1",
     "timeline>=1",
     "preferences>=1",
+    "notify>=1",
 ]
 purpose = "Products in categories, a cart, orders and checkout with online payments."
 use_when = [

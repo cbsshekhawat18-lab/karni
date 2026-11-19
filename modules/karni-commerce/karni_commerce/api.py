@@ -856,31 +856,3 @@ class ReportQuerySerializer(serializers.Serializer[Any]):
     end = serializers.DateField(required=False)
     by = serializers.ChoiceField(["day", "week", "month"], required=False, default="day")
     export = serializers.ChoiceField(["json", "csv"], required=False, default="json")
-
-
-class EmailFieldSerializer(serializers.Serializer[Any]):
-    name = serializers.CharField()
-    meaning = serializers.CharField()
-
-
-class EmailTemplateSerializer(serializers.Serializer[Any]):
-    """An email as its editor shows it: its text now, its merge fields, its switch."""
-
-    kind = serializers.CharField()
-    title = serializers.CharField()
-    describe = serializers.CharField(allow_blank=True)
-    audience = serializers.CharField(allow_blank=True)
-    switchable = serializers.BooleanField()
-    on = serializers.BooleanField()
-    fields = EmailFieldSerializer(many=True)
-    edited = serializers.BooleanField()
-    subject = serializers.CharField(allow_blank=True)
-    text = serializers.CharField(allow_blank=True)
-    updated_at = serializers.DateTimeField(allow_null=True)
-
-
-class EmailTemplateInputSerializer(serializers.Serializer[Any]):
-    """An edited email: its subject and its text."""
-
-    subject = serializers.CharField(max_length=300, allow_blank=True)
-    text = serializers.CharField(max_length=20000, allow_blank=True)

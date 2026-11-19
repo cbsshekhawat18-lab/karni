@@ -2651,6 +2651,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E443`](errors.md#e443) | exception | A message is sent to something that is not a recipient |
 | [`E444`](errors.md#e444) | api | An inbox request asks for a page that does not exist |
 | [`E445`](errors.md#e445) | exception | A message kind names a channel Karni does not send on |
+| [`E446`](errors.md#e446) | exception | Edited emails would be lost: karni.notify is not installed |
 | [`E450`](errors.md#e450) | exception | An event is published that is not declared |
 | [`W450`](errors.md#w450) | warning | A subscriber reads a version its event does not have |
 | [`E451`](errors.md#e451) | check | Family events need the karni.outbox app |

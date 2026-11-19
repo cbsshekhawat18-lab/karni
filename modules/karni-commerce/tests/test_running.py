@@ -16,11 +16,12 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from karni import preferences
 from karni.mail import _engine, kinds, merge_values
+from karni.notify.models import EmailTemplate
 from karni.preferences.models import SectionValue
 from rest_framework.test import APIClient
 
 from karni_commerce import reports, services
-from karni_commerce.models import Cart, Coupon, EmailTemplate, Invoice
+from karni_commerce.models import Cart, Coupon, Invoice
 from tests.conftest import ADDRESS, cart_with, pay, place
 from tests.testapp.models import Gadget
 
@@ -202,7 +203,7 @@ def test_every_commerce_email_file_is_an_editable_template_on_its_merge_fields(
     for kind in declared:
         values = merge_values(kind.fields, context)
         for part in ("subject", "body"):
-            from karni_commerce.email_templates import file_source
+            from karni.notify.editor import file_source
 
             source = file_source(kind.template, part)
             assert source, kind.name
