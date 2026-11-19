@@ -440,7 +440,7 @@ class Intent(UUIDModel, TimestampedModel):
     player = models.ForeignKey(
         Player, null=True, blank=True, on_delete=models.CASCADE, related_name="+"
     )
-    kind = models.CharField(max_length=20)
+    kind = models.CharField(max_length=80, help_text="The write and its target: score:<board>.")
     key = models.CharField(max_length=64)
     digest = models.CharField(max_length=64)
     status = models.PositiveSmallIntegerField(default=0)
