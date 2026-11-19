@@ -20,11 +20,9 @@ __all__ = ["MODERATOR_ACTIONS", "declared", "manager_grants", "moderator_grants"
 
 
 def manager_grants() -> dict[str, str]:
-    return {
-        "karni_game.*:*": "all",
-        "people.person:view": "all",
-        "preferences.sectionvalue:view": "all",
-    }
+    # The Games section of Settings names this role (change="role:game-manager"), so it
+    # needs no grant on karni.preferences, which a project may not install.
+    return {"karni_game.*:*": "all", "people.person:view": "all"}
 
 
 #: What a moderator does, by model: read, and the actions that keep the boards fair.

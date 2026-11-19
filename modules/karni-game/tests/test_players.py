@@ -250,4 +250,6 @@ def test_game030_without_the_include() -> None:
     assert checks.run_checks() == []
     with override_settings(ROOT_URLCONF="karni.api.urls"):
         (failure,) = checks.run_checks()
+        with mock.patch("karni_game.checks.apps.is_installed", return_value=False):
+            assert checks.run_checks() == []  # installed in the interpreter, not in the project
     assert failure.startswith("GAME030")

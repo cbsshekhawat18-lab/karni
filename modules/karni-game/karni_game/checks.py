@@ -30,9 +30,12 @@ def people_installed(app_configs: Any = None, **kwargs: Any) -> list[checks.Chec
 
 
 def run_checks() -> list[str]:
-    """``karni check``: the game API is mounted (``GAME030``)."""
+    """``karni check``: the game API is mounted (``GAME030``). Nothing for a project that
+    has karni-game installed in its interpreter without the app in ``INSTALLED_APPS``."""
     from django.urls import NoReverseMatch, reverse
 
+    if not apps.is_installed("karni_game"):
+        return []
     try:
         reverse("karni_game:guest")
     except NoReverseMatch:
