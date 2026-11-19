@@ -38,7 +38,8 @@ Staff (``karni_commerce.order:view``, the rows their grants give):
   waiting for their payment, with the link emailed to them.
 * ``POST orders/{id}/balance-link/``: emails the buyer of a part-paid order
   the link to pay the rest (``order:change``).
-* ``GET orders/items/?kind=&search=``: what may go on such an order.
+* ``GET orders/items/?kind=&search=``: what may go on such an order, of any kind
+  the project sells, and ``GET orders/kinds/`` those kinds.
 * ``GET orders/customers/?search=&ordering=``: the people who bought, with
   commerce's person facts, and ``GET orders/customer/?email=`` (or
   ``?person=<id>``): one customer's page (:mod:`karni_commerce.people`).
@@ -87,6 +88,7 @@ from karni_commerce.api import (
     EmailTemplateInputSerializer,
     EmailTemplateSerializer,
     ItemSerializer,
+    KindSerializer,
     ManualOrderSerializer,
     ManualQuoteSerializer,
     ManualResultSerializer,
@@ -682,6 +684,7 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
                     found.append(
                         {
                             "kind": kind,
+                            "kind_label": adapter.kind_label(),
                             "item": adapter.key(item),
                             "options": options,
                             "name": adapter.name(item, options),
@@ -694,6 +697,23 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
                 found = found[:20]
                 break
         return Response(ItemSerializer(found, many=True).data)
+
+    @extend_schema(responses=KindSerializer(many=True))
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="kinds",
+        access=Can("karni_commerce.order:add"),
+    )
+    def kinds(self, request: Request) -> Response:
+        """The kinds the project sells (a product, a booking, a course), for staff placing an
+        order by hand to pick from."""
+        rows = [
+            {"kind": kind, "label": adapter.kind_label(), "searchable": bool(adapter.search_fields)}
+            for kind, adapter in sorted(kinds().items())
+        ]
+        # karni: allow(unpaginated-action): the kinds the installed parts sell, a handful
+        return Response(KindSerializer(rows, many=True).data)
 
     @extend_schema(
         parameters=[

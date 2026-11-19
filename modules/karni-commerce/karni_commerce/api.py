@@ -32,6 +32,7 @@ __all__ = [
     "CustomerPageSerializer",
     "CustomerRowSerializer",
     "ItemSerializer",
+    "KindSerializer",
     "ManualOrderSerializer",
     "ManualQuoteSerializer",
     "ManualResultSerializer",
@@ -788,12 +789,23 @@ class ItemSerializer(serializers.Serializer[Any]):
     """Something for sale, as staff pick it for an order placed by hand."""
 
     kind = serializers.CharField()
+    kind_label = serializers.CharField(help_text="The kind as staff read it (Sellable.label).")
     item = serializers.CharField()
     options = serializers.DictField()
     name = serializers.CharField()
     sku = serializers.CharField(allow_blank=True)
     price = serializers.CharField()
     available = serializers.IntegerField(allow_null=True)
+
+
+class KindSerializer(serializers.Serializer[Any]):
+    """A kind the project sells, as staff pick it when they place an order by hand."""
+
+    kind = serializers.CharField()
+    label = serializers.CharField()
+    searchable = serializers.BooleanField(
+        help_text="Whether its items can be found by text (Sellable.search_fields)."
+    )
 
 
 class CustomerRowSerializer(serializers.Serializer[Any]):

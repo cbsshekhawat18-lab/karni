@@ -106,6 +106,13 @@ class Sellable:
     addon: ClassVar[bool] = False
     #: The text fields staff find an item by when they place an order by hand.
     search_fields: ClassVar[tuple[str, ...]] = ()
+    #: What staff read for the kind (a filter, a badge on an item): "Booking". Blank: the
+    #: kind in words.
+    label: ClassVar[str] = ""
+
+    def kind_label(self) -> str:
+        """The kind as staff read it: :attr:`label`, else the kind in words (``"Product"``)."""
+        return self.label or str(self.kind).replace("_", " ").capitalize()
 
     # -- finding items ------------------------------------------------------------------
 
