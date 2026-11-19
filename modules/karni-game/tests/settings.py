@@ -6,6 +6,7 @@ modules' own ``karni.settings`` fragments arrive through the merge.
 
 from __future__ import annotations
 
+from corsheaders.defaults import default_headers
 from karni.conf import karni_settings
 
 SECRET_KEY = "karni-game-tests-secret-key-not-for-production"
@@ -22,6 +23,9 @@ KARNI_FRONTEND_URL = "http://localhost:5173"
 KARNI_PEOPLE = True
 KARNI_GAME_SERVER_SECRET = "karni-game-tests-realtime-server-shared-secret"
 KARNI_GAME_PORTALS = {"arcade": {"secret": "arcade-portal-test-secret"}}
+# A portal build calls the game API from the portal's domain, with a token.
+KARNI_GAME_CORS_ORIGINS = ["https://games.portal.example"]
+CORS_ALLOW_HEADERS = (*default_headers, "x-player-token")
 # karni-commerce sells the real-money items (the sellable kind game_item).
 KARNI_PAYMENTS_PROVIDER = "test"
 KARNI_PAYMENTS_CURRENCY = "eur"
@@ -34,6 +38,8 @@ KARNI_ROLES = {
 }
 
 karni_settings(globals(), env_name="dev")
+# The dev profile allows every origin: the tests check the game API's own list.
+CORS_ALLOW_ALL_ORIGINS = False
 
 # karni.outbox and karni.timeline: the family events and the entries they write.
 # karni.preferences: the Games section. karni.notify: the inbox of an unlocked achievement.

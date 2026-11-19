@@ -41,6 +41,13 @@ PEOPLE = (
     "KARNI_PEOPLE = True\n\n"
 )
 CALL = "karni_settings(globals())"
+IMPORT = "from karni.conf import karni_settings\n"
+CORS_IMPORT = "from corsheaders.defaults import default_headers\n"
+CORS = (
+    "\n\n# A portal build of the game calls /api/game/ from the portal's domain with a token\n"
+    "# (KARNI_GAME_CORS_ORIGINS lists those origins): the browser may send its header.\n"
+    'CORS_ALLOW_HEADERS = (*default_headers, "x-player-token")'
+)
 
 HOOKS = '''"""The game's server hooks: save migrations and run checks (karni_game.hooks).
 
@@ -222,8 +229,14 @@ def _settings(ws: Workspace) -> str:
         raise CliError(f"{SETTINGS.as_posix()} with {CALL} was not found.", code="C001")
     if "KARNI_PEOPLE" in text:
         return "KARNI_PEOPLE: already in config/settings.py"
-    ws.write(SETTINGS, text.replace(CALL, PEOPLE + CALL, 1))
-    return "KARNI_PEOPLE = True: in config/settings.py (a player is a person)"
+    text = text.replace(CALL, PEOPLE + CALL + CORS, 1)
+    if IMPORT in text and CORS_IMPORT not in text:
+        text = text.replace(IMPORT, CORS_IMPORT + IMPORT, 1)
+    ws.write(SETTINGS, text)
+    return (
+        "KARNI_PEOPLE = True (a player is a person) and the guest token's CORS header: in "
+        "config/settings.py"
+    )
 
 
 def _urls(ws: Workspace) -> str:

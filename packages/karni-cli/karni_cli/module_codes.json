@@ -536,6 +536,14 @@
   "source": "karni_game.saves.empty (HTTP 404)"
  },
  {
+  "code": "GAME038",
+  "title": "Other origins may call the game API, and the browser cannot send its token",
+  "kind": "check",
+  "why": "A portal build of a game runs on the portal's domain and calls the game API with a token (X-Player-Token, or an account's JWT), never cookies. The browser sends the token's header only when CORS_ALLOW_HEADERS names it. Cookies never sign in across origins: the game views drop the session for such a call.",
+  "fix": "Set CORS_ALLOW_HEADERS = (*default_headers, \"x-player-token\") (from corsheaders.defaults), or empty KARNI_GAME_CORS_ORIGINS.",
+  "source": "karni_game.checks.run_checks"
+ },
+ {
   "code": "IMP001",
   "title": "Impersonation needs the explicit impersonate permission",
   "kind": "api",

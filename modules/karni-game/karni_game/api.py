@@ -20,6 +20,7 @@ from drf_spectacular.utils import extend_schema
 from karni import preferences
 from karni.vetoes import VetoContext, check_vetoes
 from rest_framework import serializers
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -41,6 +42,7 @@ from karni_game import (
     wallet,
 )
 from karni_game import config as remote
+from karni_game.cors import cross_origin
 from karni_game.errors import GameError, game_error
 from karni_game.models import (
     Board,
@@ -123,6 +125,19 @@ class GameView(APIView):
     permission_classes: ClassVar[list[type]] = [AllowAny]
     throttle_scopes: ClassVar[dict[str, str]] = {}
     throttle_class: ClassVar[type[PlayerRateThrottle]] = PlayerRateThrottle
+
+    # -- authentication -----------------------------------------------------------------
+
+    def initialize_request(self, request: Any, *args: Any, **kwargs: Any) -> Request:
+        self._cross_origin = cross_origin(request)
+        return super().initialize_request(request, *args, **kwargs)
+
+    def get_authenticators(self) -> list[Any]:
+        """The project's authenticators. From another origin, no session: only tokens."""
+        found = list(super().get_authenticators())
+        if getattr(self, "_cross_origin", False):
+            found = [one for one in found if not isinstance(one, SessionAuthentication)]
+        return found
 
     # -- the player ---------------------------------------------------------------------
 

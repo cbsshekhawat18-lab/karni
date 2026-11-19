@@ -45,6 +45,19 @@ A guest token is a secret. Keep it where the game keeps its local save, send
 it only in the header, and drop it once the guest is upgraded: the server
 revokes it then.
 
+### From another origin (a portal build)
+
+A game built for a portal runs on the portal's domain and calls the API
+across origins. The project lists those origins in `KARNI_GAME_CORS_ORIGINS`
+(or `"*"`), and only `/api/game/` answers them, with
+`Access-Control-Allow-Origin` and the allowed headers `X-Player-Token`,
+`Authorization` and `Content-Type` (the project sets `CORS_ALLOW_HEADERS =
+(*default_headers, "x-player-token")`, which `karni new --kind game` writes).
+Such a call signs in with a token only: the guest's `X-Player-Token`, or an
+account's `Authorization: Bearer <JWT>`. A session cookie never signs in
+across origins, so a request from another origin with only a cookie has no
+account.
+
 ## Errors
 
 An error the server decides answers this body, with the status in the tables

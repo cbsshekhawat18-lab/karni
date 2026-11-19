@@ -135,6 +135,13 @@ knows about the person.
 Staff merging two people (a duplicate found later) merge their players the
 same way: the merge hook of `Player` is the people contract's.
 
+**From another origin.** A portal build runs on the portal's domain. List the
+origins in `KARNI_GAME_CORS_ORIGINS` and let the browser send the token's
+header (`CORS_ALLOW_HEADERS = (*default_headers, "x-player-token")`, from
+`corsheaders.defaults`, `GAME038` while it is missing). Only `/api/game/`
+answers those origins, and only with a token: the guest's, or an account's
+JWT. A session cookie never signs in across origins.
+
 **No endpoint takes a player's id from the client.** Every call finds its
 player from the request alone, so one player can never read or change
 another player's saves, scores, wallet or items. The module's tests call
@@ -394,6 +401,7 @@ neither karni-game nor `@karni/game`.
 |---|---|---|
 | `KARNI_GAME_RATES` | see [the game API](game-api.md#rate-limits) | The rate of each limited write, by scope, over the defaults. `None` turns one off. |
 | `KARNI_GAME_TOKEN_HEADER` | `X-Player-Token` | The header a guest sends its token in. |
+| `KARNI_GAME_CORS_ORIGINS` | `[]` | The origins a portal build calls the game API from, or `"*"`. Tokens only, never cookies. |
 | `KARNI_GAME_SERVER_SECRET` | blank | The secret a realtime server shares: it signs the player tokens and the results reports. Blank: no multiplayer. |
 | `KARNI_GAME_TOKEN_ISSUER` | `karni-game` | The `iss` of the player token. |
 | `KARNI_GAME_TOKEN_SECONDS` | `300` | How long a player token lives. |
@@ -450,3 +458,4 @@ neither karni-game nor `@karni/game`.
 | [GAME026](errors.md#game026) | a game's settings, or a declared row, the server cannot use |
 | [GAME030](errors.md#game030) | `karni_game.urls` is not included |
 | [GAME032](errors.md#game032) | a save migration or a run check registered wrongly |
+| [GAME038](errors.md#game038) | other origins may call the game API, and `CORS_ALLOW_HEADERS` leaves out the token's header |

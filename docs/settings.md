@@ -293,6 +293,7 @@ Assign them in `config/settings.py`. A module's README says more about each.
 |---|---|---|---|
 | <a id="karni_game_rates"></a>`KARNI_GAME_RATES` |  |  | The rates of the limited writes, by scope (docs/game-api.md, Rate limits). A project's dict is laid over these: {"score": "10/min"} changes one, None turns one off. |
 | <a id="karni_game_token_header"></a>`KARNI_GAME_TOKEN_HEADER` | `KARNI_GAME_TOKEN_HEADER` | `"X-Player-Token"` | The header a guest sends its token in. |
+| <a id="karni_game_cors_origins"></a>`KARNI_GAME_CORS_ORIGINS` | `KARNI_GAME_CORS_ORIGINS` | `[]` | The origins a portal build calls the game API from (https://games.example), or "*". Only /api/game/, only with a token (X-Player-Token or a JWT), never with cookies. |
 | <a id="karni_game_server_secret"></a>`KARNI_GAME_SERVER_SECRET` | `KARNI_GAME_SERVER_SECRET` | `""` | The secret a realtime server of the project's own shares: it signs the player tokens Karni issues (HS256) and the results the server reports. Blank: no multiplayer (karni.GAME027 when a client asks for a token). |
 | <a id="karni_game_token_issuer"></a>`KARNI_GAME_TOKEN_ISSUER` | `KARNI_GAME_TOKEN_ISSUER` | `"karni-game"` | The iss claim of the player token. |
 | <a id="karni_game_token_seconds"></a>`KARNI_GAME_TOKEN_SECONDS` | `KARNI_GAME_TOKEN_SECONDS` | `300` | How long a player token for the realtime server lives, in seconds. |

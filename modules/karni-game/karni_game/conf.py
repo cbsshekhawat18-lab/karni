@@ -39,6 +39,9 @@ DEFAULTS: dict[str, Any] = {
     "KARNI_GAME_RATES": dict(DEFAULT_RATES),
     # The header a guest sends its token in.
     "KARNI_GAME_TOKEN_HEADER": env("KARNI_GAME_TOKEN_HEADER", default="X-Player-Token"),
+    # The origins a portal build calls the game API from (https://games.example), or "*".
+    # Only /api/game/, only with a token (X-Player-Token or a JWT), never with cookies.
+    "KARNI_GAME_CORS_ORIGINS": env.list("KARNI_GAME_CORS_ORIGINS", default=[]),
     # The secret a realtime server of the project's own shares: it signs the player
     # tokens Karni issues (HS256) and the results the server reports. Blank: no
     # multiplayer (karni.GAME027 when a client asks for a token).

@@ -93,6 +93,7 @@ ui = "@karni/game"
 [provides.settings]
 KARNI_GAME_RATES = "object"
 KARNI_GAME_TOKEN_HEADER = "string"
+KARNI_GAME_CORS_ORIGINS = "array"
 KARNI_GAME_SERVER_SECRET = "string"
 KARNI_GAME_TOKEN_ISSUER = "string"
 KARNI_GAME_TOKEN_SECONDS = "integer"

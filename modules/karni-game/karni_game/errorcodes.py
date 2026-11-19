@@ -389,4 +389,16 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "a path that does not exist, so a client knows to start the slot (base_version 0).",
         fix="Write the slot with base_version 0, or read GET saves/ for the slots the player has.",
     ),
+    ErrorCode(
+        code="GAME038",
+        title="Other origins may call the game API, and the browser cannot send its token",
+        kind="check",
+        source=f"{_SOURCE}.checks.run_checks",
+        why="A portal build of a game runs on the portal's domain and calls the game API with "
+        "a token (X-Player-Token, or an account's JWT), never cookies. The browser sends the "
+        "token's header only when CORS_ALLOW_HEADERS names it. Cookies never sign in "
+        "across origins: the game views drop the session for such a call.",
+        fix='Set CORS_ALLOW_HEADERS = (*default_headers, "x-player-token") (from '
+        "corsheaders.defaults), or empty KARNI_GAME_CORS_ORIGINS.",
+    ),
 )

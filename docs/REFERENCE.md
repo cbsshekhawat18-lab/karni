@@ -2120,6 +2120,7 @@ class Lead(BaseModel):
 |---|---|---|---|
 | `KARNI_GAME_RATES` |  | `` | The rates of the limited writes, by scope (docs/game-api.md, Rate limits). A project's dict is laid over these: {"score": "10/min"} changes one, None turns one off. |
 | `KARNI_GAME_TOKEN_HEADER` | `KARNI_GAME_TOKEN_HEADER` | `"X-Player-Token"` | The header a guest sends its token in. |
+| `KARNI_GAME_CORS_ORIGINS` | `KARNI_GAME_CORS_ORIGINS` | `[]` | The origins a portal build calls the game API from (https://games.example), or "*". Only /api/game/, only with a token (X-Player-Token or a JWT), never with cookies. |
 | `KARNI_GAME_SERVER_SECRET` | `KARNI_GAME_SERVER_SECRET` | `""` | The secret a realtime server of the project's own shares: it signs the player tokens Karni issues (HS256) and the results the server reports. Blank: no multiplayer (karni.GAME027 when a client asks for a token). |
 | `KARNI_GAME_TOKEN_ISSUER` | `KARNI_GAME_TOKEN_ISSUER` | `"karni-game"` | The iss claim of the player token. |
 | `KARNI_GAME_TOKEN_SECONDS` | `KARNI_GAME_TOKEN_SECONDS` | `300` | How long a player token for the realtime server lives, in seconds. |
@@ -2911,6 +2912,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`GAME035`](errors.md#game035) | exception | A match report names what the game does not have |
 | [`GAME036`](errors.md#game036) | exception | A score's played_at is outside the window the server trusts |
 | [`GAME037`](errors.md#game037) | exception | The player has no save in this slot |
+| [`GAME038`](errors.md#game038) | check | Other origins may call the game API, and the browser cannot send its token |
 | [`IMP001`](errors.md#imp001) | api | Impersonation needs the explicit impersonate permission |
 | [`IMP002`](errors.md#imp002) | api | The target holds something the impersonator does not |
 | [`IMP003`](errors.md#imp003) | api | A reason is required to impersonate |

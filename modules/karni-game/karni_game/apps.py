@@ -16,7 +16,9 @@ class KarniGameConfig(AppConfig):
     Override / escape hatch: subclass this config and point ``INSTALLED_APPS``
     at it to change startup. The app label must stay ``karni_game`` so the
     shipped migrations keep applying. ``KARNI_GAME_AUTODISCOVER = False``
-    stops the import of ``<app>/game.py``.
+    stops the import of ``<app>/game.py``. With django-cors-headers installed
+    (Karni's stack), ``ready()`` also lets ``KARNI_GAME_CORS_ORIGINS`` reach the
+    game API (:mod:`karni_game.cors`).
     """
 
     name = "karni_game"
@@ -25,6 +27,7 @@ class KarniGameConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self) -> None:
+        from django.apps import apps
         from django.core import checks
 
         from karni_game import hooks
@@ -32,3 +35,9 @@ class KarniGameConfig(AppConfig):
 
         checks.register(people_installed)
         hooks.autodiscover()
+        if apps.is_installed("corsheaders"):
+            from corsheaders.signals import check_request_enabled
+
+            from karni_game.cors import allow_game_origin
+
+            check_request_enabled.connect(allow_game_origin, dispatch_uid="karni_game.cors")

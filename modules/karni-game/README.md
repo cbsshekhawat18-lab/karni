@@ -49,6 +49,7 @@ The admin ships explicit classes (`karni_game/admin.py`) for players, scores, wa
 |---|---|---|---|
 | `KARNI_GAME_RATES` | | the defaults of docs/game-api.md | rates of the limited writes, by scope (`None` turns one off) |
 | `KARNI_GAME_TOKEN_HEADER` | `KARNI_GAME_TOKEN_HEADER` | `X-Player-Token` | the guest token's header |
+| `KARNI_GAME_CORS_ORIGINS` | `KARNI_GAME_CORS_ORIGINS` | `[]` | origins a portal build calls `/api/game/` from (tokens only) |
 | `KARNI_GAME_SERVER_SECRET` | `KARNI_GAME_SERVER_SECRET` | blank | the realtime server's shared secret (at least 32 bytes). Blank: no multiplayer |
 | `KARNI_GAME_TOKEN_ISSUER` | `KARNI_GAME_TOKEN_ISSUER` | `karni-game` | the player token's `iss` |
 | `KARNI_GAME_TOKEN_SECONDS` | `KARNI_GAME_TOKEN_SECONDS` | `300` | the player token's life |

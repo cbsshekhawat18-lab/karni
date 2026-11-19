@@ -180,6 +180,7 @@ def test_a_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     settings = (project / "config" / "settings.py").read_text()
     assert '"karni_game"' in settings and '"games"' in settings
     assert settings.index("KARNI_PEOPLE = True") < settings.index("karni_settings(globals())")
+    assert 'CORS_ALLOW_HEADERS = (*default_headers, "x-player-token")' in settings
     urls = (project / "config" / "urls.py").read_text()
     assert 'path("api/game/", include("karni_game.urls")),' in urls
     for rel in ("games/game.py", "games/tests/test_game.py", "content/game.yaml"):
