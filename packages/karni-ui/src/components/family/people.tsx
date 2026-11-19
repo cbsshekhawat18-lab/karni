@@ -612,7 +612,7 @@ export function PersonPage({
       }
     >
       {known.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Facts" role="group">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Facts" role="group">
           {known.map((fact) => (
             <Stat
               key={fact.name}

@@ -635,7 +635,8 @@ export function ResourceCalendar<T extends object>(
             Next
           </Button>
         </div>
-        <h2 className="min-w-0 flex-1 text-base font-semibold" aria-live="polite">
+        {/* A narrow screen gives the period its own line instead of a squeezed column. */}
+        <h2 className="min-w-60 flex-1 text-base font-semibold" aria-live="polite">
           {period}
         </h2>
         {allowed.length > 1 ? (
