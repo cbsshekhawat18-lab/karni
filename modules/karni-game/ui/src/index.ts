@@ -4,3 +4,4 @@
  */
 export * from "./portal";
 export * from "./runtime";
+export * from "./input";
