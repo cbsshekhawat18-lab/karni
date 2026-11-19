@@ -22,6 +22,9 @@ Besides the CRUD of a :class:`~karni.api.viewsets.BaseViewSet`:
 * ``GET /api/people/duplicates/`` lists the groups of possible duplicates
   (``people.person:merge``).
 * ``POST /api/people/{id}/erase/`` erases a person (``people.person:erase``).
+* ``GET /api/people/{id}/`` answers ``can``: ``{"merge": bool, "erase":
+  bool}``, whether the caller holds those explicit permissions, so a person
+  page shows the buttons only to who may use them.
 
 ``merge`` and ``erase`` are explicit actions (``Karni.explicit_actions``):
 only a grant that names them reaches them, so ``"*"`` does not.
@@ -39,7 +42,7 @@ from typing import Any, ClassVar
 
 from django.conf import settings
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_field
 from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
@@ -101,6 +104,13 @@ class MergePlanSerializer(serializers.Serializer):  # type: ignore[type-arg]
     fills = serializers.DictField(child=serializers.JSONField())
 
 
+class PersonCanSerializer(serializers.Serializer):  # type: ignore[type-arg]
+    """Experimental. What the caller may do with one person beyond reading and changing it."""
+
+    merge = serializers.BooleanField(help_text="The caller holds people.person:merge.")
+    erase = serializers.BooleanField(help_text="The caller holds people.person:erase.")
+
+
 class FactSerializer(serializers.Serializer):  # type: ignore[type-arg]
     """Experimental. One registered person fact."""
 
@@ -158,6 +168,27 @@ def _plain(value: Any) -> Any:
     return value
 
 
+def _with_can(base: Any, erase: Can) -> Any:
+    """``base`` with ``can``: whether the request's user may merge and erase the person."""
+    merge = Can("people.person:merge")
+
+    class WithCan(base):  # type: ignore[valid-type,misc]
+        can = serializers.SerializerMethodField()
+
+        class Meta(base.Meta):  # type: ignore[name-defined,misc]
+            fields: ClassVar[list[str]] = [*base.Meta.fields, "can"]
+
+        @extend_schema_field(PersonCanSerializer)
+        def get_can(self, obj: Any) -> dict[str, bool]:
+            request = self.context.get("request")
+            if request is None:
+                return {"merge": False, "erase": False}
+            return {"merge": merge.allows(request), "erase": erase.allows(request)}
+
+    WithCan.__name__ = base.__name__
+    return WithCan
+
+
 class _MergeActions:
     """What ``merge-plan`` and ``merge`` do on a viewset of people or organisations.
 
@@ -203,6 +234,7 @@ class PersonViewSet(_MergeActions, BaseViewSet):
     search_fields = ["display_name", "email", "phone"]
 
     _MERGE = Can("people.person:merge")
+    _ERASE = Can("people.person:erase")
 
     def get_owner_fields(self) -> tuple[str, ...]:
         """Nothing is stamped: ``user`` is linked only through a verified email."""
@@ -278,9 +310,12 @@ class PersonViewSet(_MergeActions, BaseViewSet):
 
     def get_serializer_class(self) -> Any:
         base = super().get_serializer_class()
-        if getattr(self, "action", None) not in ("list", "retrieve"):
+        current = getattr(self, "action", None)
+        if current not in ("list", "retrieve"):
             return base
         shown, _used = self._fact_names()
+        if current == "retrieve":
+            base = _with_can(base, self._ERASE)
         if not shown:
             return base
         names = tuple(shown)
@@ -365,7 +400,7 @@ class PersonViewSet(_MergeActions, BaseViewSet):
         )
 
     @extend_schema(request=None, responses={204: None})
-    @action(detail=True, methods=["post"], access=Can("people.person:erase"))
+    @action(detail=True, methods=["post"], access=_ERASE)
     def erase(self, request: Request, pk: str | None = None) -> Response:
         """Erase this person's data, in every part that registered an erase hook."""
         services.erase(self.get_object())

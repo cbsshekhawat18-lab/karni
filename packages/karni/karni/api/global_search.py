@@ -7,6 +7,7 @@ The endpoint is mounted by ``karni.api.urls``, next to the routed resources::
 
     {"query": "lamp",
      "groups": [{"resource": "products", "label": "Products",
+                 "part": "shop", "part_label": "Shop",
                  "hits": [{"resource": "products", "id": 7, "title": "Desk lamp",
                            "subtitle": "LMP-01", "score": 1.4}]}]}
 
@@ -33,7 +34,9 @@ The endpoint is mounted by ``karni.api.urls``, next to the routed resources::
 
 Each hit carries its ``resource`` (the router prefix) and ``id``, so a client
 links it to the resource's detail page (``/<resource>/<id>`` in a Karni
-frontend). The OpenAPI operation carries ``x-karni-search``: the resources
+frontend). Each group names its ``part``, the app label of its model, and
+``part_label``, the app's name, so a project of several parts shows the
+results part by part. The OpenAPI operation carries ``x-karni-search``: the resources
 it covers.
 
 Override / escape hatch: override a viewset's ``global_search_queryset`` to
@@ -112,6 +115,10 @@ class SearchTarget:
     viewset: type[Any]
     declaration: SearchDeclaration
     label: str
+    #: The app label of the model: the part (or contract) its hits belong to.
+    part: str = ""
+    #: The app's name (its ``AppConfig.verbose_name``), for a heading.
+    part_label: str = ""
 
 
 def search_targets(router: Any | None = None) -> list[SearchTarget]:
@@ -147,7 +154,19 @@ def search_targets(router: Any | None = None) -> list[SearchTarget]:
         if declaration is None:
             continue
         label = str(capfirst(model._meta.verbose_name_plural))
-        targets.append(SearchTarget(str(prefix), model, viewset, declaration, label))
+        config = model._meta.app_config
+        part_label = str(capfirst(config.verbose_name)) if config is not None else ""
+        targets.append(
+            SearchTarget(
+                str(prefix),
+                model,
+                viewset,
+                declaration,
+                label,
+                model._meta.app_label,
+                part_label or model._meta.app_label,
+            )
+        )
     return targets
 
 
@@ -259,6 +278,8 @@ class GlobalSearchGroupSerializer(serializers.Serializer):  # type: ignore[type-
 
     resource = serializers.CharField()
     label = serializers.CharField(help_text="The model's plural name, for a heading.")
+    part = serializers.CharField(help_text="The app label of the model: the part it belongs to.")
+    part_label = serializers.CharField(help_text="The app's name, for a heading.")
     hits = GlobalSearchHitSerializer(many=True)
 
 
@@ -460,4 +481,10 @@ class GlobalSearchView(APIView):
             }
             for pk, title, subtitle, score in rows
         ]
-        return {"resource": target.resource, "label": target.label, "hits": hits}
+        return {
+            "resource": target.resource,
+            "label": target.label,
+            "part": target.part,
+            "part_label": target.part_label,
+            "hits": hits,
+        }

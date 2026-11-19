@@ -357,7 +357,8 @@ BASE: dict[str, Any] = {
     # role grants (one more query per request). Off, they grant nothing and cost nothing.
     "KARNI_USER_GRANTS": env.bool("KARNI_USER_GRANTS", default=False),
     # Navigation from data (experimental): a list of menu items and groups, "db" (the
-    # NavItem table of the karni.navigation app) or None (no menu, no navigation/ route).
+    # NavItem table of the karni.navigation app), named menus ({"app": [...], "public":
+    # [...]}, read with ?menu=) or None (no menu, no navigation/ route).
     "KARNI_NAVIGATION": None,
     # The frontend files whose `path:` entries are the app's pages: karni check reports
     # a menu item whose route none of them serves. [] turns that comparison off.

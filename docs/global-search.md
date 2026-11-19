@@ -67,6 +67,8 @@ GET /api/search/?q=lamp&models=products,suppliers&limit=5
     {
       "resource": "products",
       "label": "Products",
+      "part": "catalog",
+      "part_label": "Catalog",
       "hits": [
         {"resource": "products", "id": 7, "title": "Desk lamp",
          "subtitle": "Lamp Works", "score": 1.0}
@@ -109,6 +111,10 @@ GET /api/search/?q=lamp&models=products,suppliers&limit=5
   [`E431`](errors.md#e431) with the list it covers.
 - **Short queries.** A query shorter than `KARNI_GLOBAL_SEARCH_MIN_LENGTH`
   (2) answers `{"groups": []}`, never an error, and runs no query.
+
+Each group names its `part`, the app label of its model, and `part_label`,
+the app's name (its `AppConfig.verbose_name`), so a project of several parts
+shows the results part by part ([the family](family.md)).
 
 Each hit carries its `resource` (the router prefix) and its `id`, so a client
 links it to `/<resource>/<id>`, the route `karni make page --kind detail`

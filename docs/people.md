@@ -327,6 +327,7 @@ installed each one writes an entry.
 | `POST /api/people/{id}/merge/ {"drop": "<id>"}` | the merge (409 with the plan when refused) |
 | `GET /api/people/duplicates/?rule=` | the groups of possible duplicates |
 | `POST /api/people/{id}/erase/` | erase (204) |
+| `GET /api/people/{id}/` | one person, with `can`: `{"merge": bool, "erase": bool}`, whether the caller holds those explicit permissions |
 | `GET /api/organisations/{id}/merge-plan/`, `POST .../merge/` | the same for organisations |
 
 Every endpoint answers the roles granted on it (`Granted()`). A grant with

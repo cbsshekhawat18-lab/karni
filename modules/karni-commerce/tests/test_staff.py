@@ -254,3 +254,15 @@ def test_the_revenue_tiles_count_paid_money_less_refunds_for_staff_only(
     latest = tiles["commerce.latest_orders"]["data"]["rows"]
     assert len(latest) == 3 and latest[0]["link"].startswith("/orders/")
     assert as_user(buyer).get("/api/dashboard/").data["tiles"] == []
+
+
+def test_staff_list_one_persons_orders(clerk: Any, buyer: Any, make_gadget: MakeGadget) -> None:
+    lamp = make_gadget(price=Decimal("10.00"), stock=20)
+    first = place(cart_with(("gadget", lamp, 1)), email="ines@example.com")
+    place(cart_with(("gadget", lamp, 1)), email="ines@example.com")
+    place(cart_with(("gadget", lamp, 1)), email="noor@example.com")
+    staff = as_user(clerk)
+    answer = staff.get("/api/orders/", {"person": str(first.person_id)})
+    assert answer.status_code == 200, answer.data
+    rows = answer.data["results"]
+    assert len(rows) == 2 and {row["email"] for row in rows} == {"ines@example.com"}

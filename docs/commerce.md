@@ -617,8 +617,9 @@ orders without giving money back.
 
 Staff read the orders their grants give (`karni_commerce.order:view`):
 
-- `GET /api/orders/?status=&created_at__gte=&email__iexact=&search=`: the
-  list, by money state, date and buyer.
+- `GET /api/orders/?status=&created_at__gte=&email__iexact=&person=&search=`:
+  the list, by money state, date and buyer (`person` is a person's id, for
+  the person page's Orders tab).
 - `GET /api/orders/{id}/staff/`: one order with every note, its payments
   and refunds, the buyer (with how many orders and what they spent) and what
   may be done with it now (`can_cancel`, `can_refund`, `refundable`).

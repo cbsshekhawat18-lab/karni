@@ -231,3 +231,13 @@ def test_duplicates_and_erase(family: dict[str, Any]) -> None:
     assert _client("staff").post(url).status_code == 403  # "*" never reaches erase
     assert _client("admin").post(url).status_code == 204
     assert Person._base_manager.get(pk=family["drop"].pk).erased_at is not None
+
+
+def test_a_person_says_whether_the_caller_may_merge_and_erase(family: dict[str, Any]) -> None:
+    url = f"/api/people/{family['keep'].pk}/"
+    assert _client("viewer").get(url).data["can"] == {"merge": False, "erase": False}
+    assert _client("staff").get(url).data["can"] == {"merge": False, "erase": False}  # not "*"
+    assert _client("desk").get(url).data["can"] == {"merge": True, "erase": False}
+    assert _client("admin").get(url).data["can"] == {"merge": True, "erase": True}
+    listed = _client("admin").get("/api/people/").data["results"][0]
+    assert "can" not in listed  # the detail only: a list costs no permission check per row
