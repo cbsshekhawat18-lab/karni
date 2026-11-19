@@ -1025,7 +1025,12 @@ class WishlistItemSeeder(karni.WishlistItemSeeder):
         WishlistItem.objects.without(
             "soft_delete", reason="a new demo"
         ).all().hard_delete()
-        customer = get_user_model().objects.filter(email="customer@example.com").first()
+        # The demo logins, made here when no seeder before this one made them: the
+        # order the seeders run in follows the models (an order points at a person).
+        customer = next(
+            (user for user in people(context) if user.email == "customer@example.com"),
+            None,
+        )
         if customer is None:
             return []
         products = list(
