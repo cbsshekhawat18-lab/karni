@@ -156,8 +156,8 @@ def recipients(to: Any) -> list[Recipient]:
 
     A user gives its account and its email. A person (``karni.people``) gives
     its email and its account when it has one. An address gives itself, and the
-    active account with that email when there is one, so the inbox and the
-    person's own switches reach it. Each one is listed once.
+    active account with that email when there is one and its email is verified,
+    so the inbox and the person's own switches reach it. Each one is listed once.
 
     :raises KarniTypeError: E443, something that is none of those.
     """
@@ -222,7 +222,12 @@ def holders(*roles: str) -> Any:
 
 
 def _with_accounts(addresses: list[str]) -> list[Recipient]:
-    """Each address with the active account of that email, in one query."""
+    """Each address with the active account of that email, in one query.
+
+    Only an account that verified its email (``email_verified``, on a user model
+    that has it): anyone may sign up with an address they do not hold, and the
+    inbox must not show them what was sent to it.
+    """
     lowered = {address.lower() for address in addresses}
     accounts: dict[str, Any] = {}
     if installed():
@@ -231,6 +236,8 @@ def _with_accounts(addresses: list[str]) -> list[Recipient]:
         rows = model._default_manager.annotate(_notify_email=Lower(field)).filter(
             _notify_email__in=lowered, is_active=True
         )
+        if any(found.name == "email_verified" for found in model._meta.get_fields()):
+            rows = rows.filter(email_verified=True)
         for user in rows:
             accounts.setdefault(str(user._notify_email), user)
     return [Recipient(address, accounts.get(address.lower())) for address in addresses]

@@ -248,3 +248,24 @@ def test_a_role_is_an_audience(ana: Any, ben: Any, writer: Any) -> None:
     sent = notify.send("club.note", to=notify.holders("writer", "customer"), context={"who": "Lee"})
     assert sent == notify.Sent(inbox=2)
     assert {row.recipient for row in Notification.objects.all()} == {ana, ben}
+
+
+def test_an_address_reaches_no_account_that_did_not_verify_it() -> None:
+    """Anyone may sign up with an address they do not hold: the inbox shows them nothing
+    sent to it until they verify it. The email still goes to the address."""
+    from tests.people.conftest import make_user
+
+    claimed = make_user("ana@example.com", verified=False)
+    sent = notify.send("club.receipt", to="ana@example.com", context=RECEIPT)
+    assert sent == notify.Sent(email=1, inbox=0)
+    assert (
+        send_templated(
+            "club/email/receipt", to=[claimed.email], context=RECEIPT, kind="club.receipt"
+        )
+        == 1
+    )
+    assert not Notification.objects.exists()
+    claimed.email_verified = True
+    claimed.save(update_fields=["email_verified"])
+    assert notify.send("club.receipt", to="ana@example.com", context=RECEIPT).inbox == 1
+    assert Notification.objects.get().recipient == claimed

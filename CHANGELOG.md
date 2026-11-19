@@ -495,7 +495,8 @@ apply codemods and list the manual steps. This file is the human summary.
   (`E440` for one nobody declared) to users, people, addresses or the holders of a role
   (`notify.holders`, `E443` for anything else):
   one email to each address that wants it, and a `Notification` in the inbox of each recipient
-  with an account. The inbox API: `GET /api/inbox/` (filters, pages, `E444`), `inbox/unread/`,
+  with an account (an address reaches an account once that account verified the email). The
+  inbox API: `GET /api/inbox/` (filters, pages, `E444`), `inbox/unread/`,
   `inbox/<id>/read/` and `unread/`, `inbox/read-all/`, with notifications kept
   `KARNI_NOTIFY_RETENTION_DAYS` (180) and pruned daily. A person turns a switchable kind off for
   themselves per channel (`GET` and `PATCH /api/inbox/choices/`, `E441`). A marketing kind

@@ -100,8 +100,10 @@ notify.send(
 `to` takes users, people of [karni.people](people.md), email addresses, or a
 list of them. A user gives its email and its inbox. A person gives its email,
 and its inbox when it has an account. An address reaches the inbox of the
-active account with that email. Anything else is refused (`E443`), and so is
-a kind nobody declared (`E440`). `notify.holders("shop-manager")` gives the
+active account with that email once the account verified it, so nobody reads
+in the app what went to an address they did not prove is theirs (a user model
+without `email_verified`: any active account with it). Anything else is
+refused (`E443`), and so is a kind nobody declared (`E440`). `notify.holders("shop-manager")` gives the
 active users who hold a role, for a message to the staff:
 `to=notify.holders("shop-manager", "shop-staff")`.
 
