@@ -158,6 +158,7 @@ music asked for before unlock starts on unlock.
 ## Saves on the device
 
 ```ts
+// After `await portal.init()`, so the portal's data module is there.
 const storage = createStorage({ namespace: "block-hopper", portal: portal.storage() });
 const save = createSave({
   storage,
