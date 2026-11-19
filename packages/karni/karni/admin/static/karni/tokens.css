@@ -237,6 +237,8 @@
   /* GlobalSearch, the command palette: its widest, and the tallest its results
      list grows before it scrolls. */
   --karni-search-width: 40rem;
+  /* FamilyLayout's storefront: how wide its header, page and footer grow. */
+  --karni-storefront-width: 72rem;
   --karni-search-max-height: 60vh;
   /* Page blocks (experimental). DashboardGrid's space between cards, and the
      box DataTable and ComparisonTable scroll inside. DataTable renders only
