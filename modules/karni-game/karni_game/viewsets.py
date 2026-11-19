@@ -30,6 +30,7 @@ from karni_game import players, scores, wallet
 from karni_game.models import (
     Achievement,
     Board,
+    ConfigValue,
     Currency,
     Game,
     Item,
@@ -47,6 +48,7 @@ from karni_game.models import (
 __all__ = [
     "AchievementViewSet",
     "BoardViewSet",
+    "ConfigValueViewSet",
     "CurrencyViewSet",
     "ItemViewSet",
     "LedgerViewSet",
@@ -290,3 +292,12 @@ class UnlockViewSet(ReadOnly, BaseViewSet):
     route = "game-unlocks"
     access = Access(read=Granted(), write=Granted())
     filterset_fields = ["achievement", "player"]
+
+
+class ConfigValueViewSet(BaseViewSet):
+    """``/api/game-config/``: the remote config values and feature flags of the games."""
+
+    model = ConfigValue
+    route = "game-config"
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["game", "flag"]

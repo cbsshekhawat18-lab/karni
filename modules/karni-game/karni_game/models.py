@@ -45,6 +45,7 @@ __all__ = [
     "Board",
     "Claim",
     "Completion",
+    "ConfigValue",
     "Currency",
     "Game",
     "Intent",
@@ -892,3 +893,42 @@ class Completion(UUIDModel, TimestampedModel):
 
     def __str__(self) -> str:
         return f"{self.mission_id} on {self.period_start}"
+
+
+class ConfigValue(BaseModel):
+    """A remote config value or a feature flag of a game, read by the client in one call.
+
+    A config value is any JSON. A flag (``flag``) is on or off: ``value`` true
+    with ``rollout`` the percent of players it is on for (the same players every
+    time: a hash of the player and the key).
+    """
+
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="config")
+    key = models.SlugField(max_length=64)
+    value = models.JSONField(default=None, null=True, blank=True)
+    flag = models.BooleanField(default=False, help_text="A feature flag: on or off.")
+    rollout = models.PositiveSmallIntegerField(
+        default=100, help_text="A flag's share of players, in percent."
+    )
+    description = models.CharField(max_length=300, blank=True, default="")
+
+    class Meta:
+        verbose_name = "config value"
+        ordering = ("key",)
+        constraints: ClassVar[list[Any]] = [
+            LiveUniqueConstraint(fields=["game", "key"], name="karni_game_config_key"),
+            models.CheckConstraint(
+                condition=Q(rollout__lte=100), name="karni_game_config_rollout_lte_100"
+            ),
+        ]
+
+    class Karni:
+        cascade: ClassVar[dict[str, str]] = {"game": "a config value is part of its game"}
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["key", "game", "flag", "rollout", "value"]
+        list_filter: ClassVar[list[str]] = ["game", "flag"]
+        inline_on = "game"
+
+    def __str__(self) -> str:
+        return self.key

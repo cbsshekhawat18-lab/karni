@@ -335,4 +335,16 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "achievements/ and missions/ list them), in amounts from 1 to max_progress_step. "
         "The answer's index names the event.",
     ),
+    ErrorCode(
+        code="GAME025",
+        title="An analytics event the game does not declare",
+        kind="exception",
+        source=f"{_SOURCE}.config.track (HTTP 400, or 202 with rejected)",
+        why="Analytics events go through the family events to the project's own analytics, "
+        "so each game declares the events it sends and their props (analytics in its "
+        "settings). An undeclared event or prop, a wrong type or a long text is refused, so "
+        "a client cannot fill the analytics with anything.",
+        fix='Declare the event in the game\'s settings: analytics: {"level_done": '
+        '{"level": "int"}}, and send at most 10 props of those types.',
+    ),
 )

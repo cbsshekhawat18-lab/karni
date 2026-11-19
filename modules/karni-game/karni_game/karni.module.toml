@@ -24,6 +24,7 @@ models = [
     "Board",
     "Claim",
     "Completion",
+    "ConfigValue",
     "Currency",
     "Game",
     "Intent",
@@ -65,6 +66,7 @@ endpoints = [
     "/api/game/<game>/progress/",
     "/api/game/<game>/achievements/",
     "/api/game/<game>/missions/",
+    "/api/game/<game>/events/",
     "/api/games/",
     "/api/game-players/",
     "/api/game-saves/",
@@ -79,6 +81,7 @@ endpoints = [
     "/api/game-achievements/",
     "/api/game-missions/",
     "/api/game-unlocks/",
+    "/api/game-config/",
 ]
 pages = ["the game's admin screens: games, players, boards, flagged runs, wallets and ledgers"]
 

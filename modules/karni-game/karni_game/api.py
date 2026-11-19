@@ -39,6 +39,7 @@ from karni_game import (
     shop,
     wallet,
 )
+from karni_game import config as remote
 from karni_game.errors import GameError, game_error
 from karni_game.models import (
     Board,
@@ -68,6 +69,7 @@ __all__ = [
     "CheckInView",
     "ClaimView",
     "DailyView",
+    "EventsView",
     "EquipView",
     "IntentView",
     "LedgerView",
@@ -281,11 +283,14 @@ class GameDetailView(GameView):
     """``GET <game>/``: the one call at boot: the game, the server's clock, its config."""
 
     def describe(self, game: Game, player: Player | None) -> dict[str, Any]:
-        """The body. Each part of the game adds its own key (boards, currencies, config)."""
+        """The body: the game, the server's clock, its config and flags, saves, boards."""
         options = game.options()
+        values, flags = remote.values(game, player)
         return {
             "game": {"slug": game.slug, "title": game.title},
             "server": server_data(game),
+            "config": values,
+            "flags": flags,
             "save": {
                 "schema_version": options.save_schema_version,
                 "max_bytes": options.max_save_bytes,
@@ -775,3 +780,23 @@ class MissionsView(GameView):
 
     def get(self, request: Request, game: str) -> Response:
         return Response({"results": progress.missions(self.player_or_none(), self.game)})
+
+
+# -- analytics -------------------------------------------------------------------------
+
+
+class EventsSerializer(serializers.Serializer):
+    events = serializers.ListField(child=serializers.JSONField(), allow_empty=False, max_length=20)
+
+
+class EventsView(GameView):
+    """``POST <game>/events/``: analytics events the game declares, published as family events."""
+
+    throttle_scopes: ClassVar[dict[str, str]] = {"POST": "events"}
+
+    @extend_schema(request=EventsSerializer)
+    def post(self, request: Request, game: str) -> Response:
+        player = self.player_or_none()
+        body = EventsSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        return Response(remote.track(self.game, player, body.validated_data["events"]), status=202)
