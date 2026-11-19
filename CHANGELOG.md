@@ -459,6 +459,35 @@ apply codemods and list the manual steps. This file is the human summary.
   `/settings`) is not a page of karni.yaml, and a page of the project's own under an app's route
   is its code page. karni-commerce no longer offers itself for every karni.yaml that says
   "orders".
+- **Added (experimental): commerce sells for every part of the family.** Every order names its
+  person (`Order.person`, `karni.people.resolve` at checkout and for an order placed by hand or by
+  an app, migration `0006_order_person` gives earlier orders theirs from their email, `karni.COM001`
+  while people is not installed, and listing `commerce` in karni.yaml turns people on). Commerce
+  gives the person facts `orders`, `total_spent`, `last_order` and `first_order`, and erases a
+  person's name, email, addresses and note from their orders on request. An order may be paid by
+  a deposit first (`Sellable.allows_deposit` and `deposit`, `Order.deposit`, migration
+  `0007_order_deposit`, `pay: "deposit"` at checkout and on an order placed by hand): the deposit
+  makes it `part_paid` and takes its lines, the buyer gets the balance link
+  (`commerce.balance_due`, `POST /api/orders/{id}/balance-link/`) and pays the rest from the
+  order's page, and a part-paid order may be cancelled. A sellable may hold for less than the
+  project's hold (`Sellable.hold_minutes`, the shortest hold of an order's lines wins, `COM003` below
+  one minute). An order whose total is zero is paid when it is placed, whatever it sells.
+  `karni_commerce.testing.assert_sellable` checks a part's adapter on the order path (`COM002`),
+  and the shop's products run it. The order moves are family events (`commerce.order.placed`,
+  `paid`, `part_paid`, `cancelled`, `refunded` and `commerce.invoice.issued`) and entries on the
+  buyer's timeline, the shop's parcel entries too. `GET /api/orders/kinds/` lists the kinds sold
+  (`Sellable.label`). A refund the policy allows nothing of says so.
+- **Changed (experimental): the staff's customers are the project's people.**
+  `GET /api/orders/customers/` lists the people who bought, with commerce's facts, and
+  `GET /api/orders/customer/` takes `?person=<id>` beside `?email=`. `KARNI_COMMERCE_CUSTOMERS`
+  and `karni_commerce.customers`, added earlier in this release, are gone: a project that keeps its
+  customers elsewhere overrides the two viewset actions.
+- **Added (experimental): @karni/commerce-ui's order panels serve any part.** A panel names the
+  kinds of line it is about (`kinds`) and gets those lines, `registerBuyerOrderPanel` adds one to
+  the buyer's order page, and `panelRegistry()` makes one for a page of your own. `PayChoice`
+  offers the deposit at checkout and on `NewOrderPage`, which takes every kind the project sells
+  with a kind filter (the shop's page no longer limits it to products). The buyer's order page
+  asks for the deposit or the balance, and the staff's shows them and sends the balance link.
 
 ## 0.5.1 (2026-11-12)
 

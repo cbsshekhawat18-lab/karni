@@ -14,7 +14,16 @@
   confirmed) in your own model that points at `karni_commerce.Order`, and
   report it with `karni_commerce.fulfilment.register_reporter`.
 - React to orders with the signals in `karni_commerce.events` in your
-  `listeners.py`. Never import another app's code from yours.
+  `listeners.py`, or from another part with `@subscribe("commerce.order.paid",
+  version=1)` (the family events). Never import another app's code from yours.
+- The buyer is `Order.person` (karni.people). Read what they bought through
+  the person facts (`orders`, `total_spent`, `last_order`), never by grouping
+  orders by email.
+- A deposit is the adapter's (`allows_deposit`, `deposit`): the order is
+  `part_paid` and the balance is paid by its link. A short hold (a booking
+  slot) is `hold_minutes`. A free order is paid when placed: never skip
+  checkout for it.
+- Test your adapter with `karni_commerce.testing.assert_sellable(kind, item)`.
 - Set `KARNI_PAYMENTS_CHECKOUT_VALIDATOR =
   "karni_commerce.payments.checkout_validator"` (karni.yaml:
   `modules: {payments: {checkout_validator: ...}}`).

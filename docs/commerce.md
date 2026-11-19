@@ -1,5 +1,5 @@
 ---
-description: "karni-commerce (experimental): one cart, checkout and order path for anything a project sells, through a sellable adapter per kind, with options per line, coupons, shipping zones and methods, tax rates, orders in money states, several payments per order, refunds by line or amount, invoices and packing slips, abandoned carts, sales reports with CSV, settings and emails a business edits, and @karni/commerce-ui."
+description: "karni-commerce (experimental): one cart, checkout and order path for anything a project sells, through a sellable adapter per kind, with options per line, coupons, shipping zones and methods, tax rates, orders in money states for a person of karni.people, deposits with a balance link, holds that end, free orders, several payments per order, refunds by line or amount, invoices and packing slips, abandoned carts, family events on the timeline, sales reports with CSV, settings and emails a business edits, a conformance check for adapters, and @karni/commerce-ui."
 ---
 
 # Commerce (karni-commerce)
@@ -34,6 +34,12 @@ modules:
   commerce: {}
 ```
 
+Commerce needs the [people contract](people.md): every order names the
+person who bought it. Listing the module in karni.yaml turns people on, and
+`karni build` writes `KARNI_PEOPLE = True` in the settings. A project that
+installs commerce by hand sets it above `karni_settings(globals())`
+(`karni.COM001` until it does).
+
 The currency is the project's: `KARNI_COMMERCE_CURRENCY`, or else the
 payments currency. Every order and line stores the currency it was placed in.
 
@@ -44,20 +50,25 @@ payments currency. Every order and line stores the currency it was placed in.
    prices it (`price`). A visitor's cart is found by a token the browser
    keeps (`X-Cart-Token`), and joins the person's cart when they sign in
    (`POST /api/carts/current/merge/`).
-2. Checkout, `POST /api/carts/current/checkout/`, in one transaction: each
-   line's name, SKU, options in words and price are copied to an order line,
-   each line is held (`hold`), the totals are worked out once (the coupon,
-   the shipping method chosen and the tax, [below](#what-an-order-costs)),
-   and the order waits for its payment for `KARNI_COMMERCE_HOLD_MINUTES`
-   (30). The answer says where to pay. A total of zero is paid at once, with
-   no payment.
+2. Checkout, `POST /api/carts/current/checkout/`, in one transaction: the
+   buyer is found or made as a person (`karni.people.resolve`, by the
+   account or the email), each line's name, SKU, options in words and price
+   are copied to an order line, each line is held (`hold`), the totals are
+   worked out once (the coupon, the shipping method chosen and the tax,
+   [below](#what-an-order-costs)), and the order waits for its payment for
+   `KARNI_COMMERCE_HOLD_MINUTES` (30), or a line's shorter hold
+   ([below](#holds-that-end)). `pay: "deposit"` asks for the deposit first
+   ([below](#deposits-and-the-balance-link)). The answer says where to pay.
+   An order whose total is zero is paid at once, with no payment
+   ([below](#free-orders)).
 3. karni-payments reports the payment. Commerce counts the money, and once
    it covers the total the order is `paid` and each line is taken
-   (`on_paid`). A declined payment makes the order `failed` and lets its
-   lines go (`release`). The buyer can try again (`POST /api/orders/pay/`):
-   the lines are held again first. A second Pay while a payment is still
-   open at the provider answers that payment's address (kept in its
-   `metadata["url"]`) instead of starting another.
+   (`on_paid`). A deposit makes it `part_paid` and takes the lines then. A
+   declined payment makes the order `failed` and lets its lines go
+   (`release`). The buyer can try again (`POST /api/orders/pay/`): the lines
+   are held again first, for as long as they were held at first. A second
+   Pay while a payment is still open at the provider answers that payment's
+   address (kept in its `metadata["url"]`) instead of starting another.
 4. An order not paid in time is cancelled by `release_expired` (checkout runs
    it, and so can a beat task, `karni_commerce.tasks.release_expired`).
    Money that arrives for an order that is no longer waiting goes back at
@@ -75,6 +86,87 @@ An order's `status` holds the money only: `pending`, `paid`, `part_paid`,
 (a parcel shipped, a seat confirmed) is the selling app's own record, which
 points at `karni_commerce.Order`. The app tells the order's page about it
 with a reporter (below).
+
+## Who bought
+
+`Order.person` is the buyer as the [people contract](people.md) knows them:
+the same `Person` as the CRM's contact or the booking's guest when those
+parts are installed. Checkout resolves it, an order placed by hand or by an
+app (`services.place_order`) too, and the order keeps its own copy of the
+email and the name. The migration that added the column gave every earlier
+order its person from its email. A person who asks for their data to be
+erased keeps their orders' amounts, lines and numbers, and loses the name,
+the email, the addresses and the note on them (`people.erase`).
+
+Commerce gives the people contract four [person facts](people.md#person-facts),
+SQL expressions over the orders, so a CRM segment or the person page filters
+and sorts on them without knowing commerce:
+
+| Fact | Kind | What |
+|---|---|---|
+| `orders` | count | how many orders the person placed |
+| `total_spent` | money | what they paid, less what went back to them |
+| `last_order` | datetime | when they placed their latest order |
+| `first_order` | datetime | when they placed their first order |
+
+```python
+from karni.people.models import Person
+
+Person.objects.with_facts("orders", "total_spent").filter(total_spent__gte=100)
+```
+
+## Deposits and the balance link
+
+An item may be paid in part first: a booking takes a deposit and the rest
+before the day. Its adapter says so (`allows_deposit` and `deposit`, per
+item). When every line of an order allows one, the quote offers it
+(`deposit` in `POST /api/carts/current/quote/` and
+`POST /api/orders/manual/quote/`): the lines' deposits times their
+quantities, never as much as the total. Shipping and tax are in the balance.
+
+1. The buyer chooses it at checkout (`pay: "deposit"`, `PayChoice` on the
+   page), or staff do for an order placed by hand. The order stores it
+   (`Order.deposit`) and its first payment asks for that much.
+2. The deposit is paid: the order is `part_paid`, each line is taken
+   (`on_paid`, with `line.order.status` `part_paid`: a booking is
+   confirmed), `commerce.order.part_paid` is published, the buyer gets
+   `commerce.balance_due` (what is left and the link to pay it) and the
+   staff the new-order email. The hold no longer applies: the order is the
+   buyer's.
+3. The balance is paid from the order's page: its Pay button asks for what
+   is due now (`due_now`), and `POST /api/orders/pay/` opens a payment of the
+   balance (`balance` purpose). Staff send the link again with
+   `POST /api/orders/{id}/balance-link/` (`order:change`, the order page's
+   "Send the balance link"). Once paid, the order is `paid`, its invoice is
+   numbered and `commerce.order.paid` is published. The lines are not taken
+   twice.
+
+A declined deposit fails the order and lets its lines go, as a declined
+payment does. A declined balance leaves the order part paid. Cancelling a
+part-paid order undoes its lines (`on_cancelled`) and gives the deposit back.
+The checkout validator asks each payment for exactly what is due now: the
+deposit while it is due, else the balance.
+
+## Holds that end
+
+An adapter may hold its items for less than the project's hold
+(`hold_minutes(item, options)`, a booking slot's 15). An order holds for the
+shortest hold of its lines, so a product and a slot in one cart are held for
+15 minutes. An order staff place by hand holds for
+`KARNI_COMMERCE_MANUAL_HOLD_MINUTES`, or a line's shorter hold. An order not
+paid by then is cancelled by `release_expired` and every line is let go
+(`release`). Schedule the beat task every minute when a kind holds for
+minutes ([below](#the-path)). A hold below one minute is `COM003`.
+
+## Free orders
+
+An order whose total is zero (a free course, a free booking, a coupon that
+takes everything off) is paid when it is placed, whatever it sells: each
+line is taken (`on_paid`), the invoice is numbered, `commerce.order.paid` is
+published and the buyer gets the confirmation. Checkout then answers no
+payment address (`url` is `null`) and the order's page opens. An order
+placed by hand that is free sends the confirmation, not a payment link. An
+app that places an order itself (`services.place_order`) gets it back paid.
 
 ## Selling something
 
@@ -124,11 +216,14 @@ class SeatSellable(Sellable):
 | `kind`, `model` | required | the kind's name and its rows |
 | `name`, `sku`, `url`, `image` | `str(item)`, blank, blank, none | what a cart and an order line show (name and SKU are copied to the line) |
 | `price(item, options, buyer)` | required | a `Price(unit, compare_at, tax_class)` |
+| `label` | the kind in words | what staff read for the kind (a filter on an order placed by hand) |
 | `needs_shipping` | `False` | checkout asks for a shipping address when a line needs one |
+| `allows_deposit`, `deposit` | `False`, 0 | the item may be paid by a deposit first, and how much one item's is ([deposits](#deposits-and-the-balance-link)) |
+| `hold_minutes(item, options)` | `None` (the project's hold) | how long checkout may hold it ([holds that end](#holds-that-end)) |
 | `available` | `None` (no limit) | the default `validate` refuses more |
 | `validate(item, quantity, options, buyer)` | refuses past `available` | adding a line and checkout |
 | `hold`, `release` | nothing | checkout, and a failed, cancelled or expired order |
-| `on_paid`, `on_cancelled` | nothing | the order is paid, a paid order is cancelled |
+| `on_paid`, `on_cancelled` | nothing | the order is paid or its deposit is (once per line), a paid or part-paid order is cancelled |
 | `on_refunded(line, quantity, restock)` | nothing | a refund of the line went through |
 | `refund_limit(line, now)` | what is left of the line (what the buyer paid for it, discount off and tax in) | how much may still go back |
 | `clean_options(item, options)` | keeps the options not starting with `_` | a line goes in the cart and at checkout: refuse options that do not fit (a size it does not come in) |
@@ -145,6 +240,29 @@ never both get it.
 
 `KARNI_COMMERCE_SELLABLES = {"seat": "myapp.sellables.MySeats"}` replaces the
 adapter of a kind without touching the app that registered it.
+
+### Checking an adapter
+
+`karni_commerce.testing.assert_sellable` is the check a selling part runs on
+its own adapter, in its own tests:
+
+```python
+from karni_commerce.testing import assert_sellable
+
+
+def test_the_seat_adapter_keeps_the_commerce_contract(workshop):
+    assert_sellable("seat", workshop, quantity=2)
+```
+
+In a transaction it rolls back, it finds the item by its key, reads it twice
+(name, SKU, price, options, availability, deposit and hold, which must write
+nothing and agree), and drives it through the order path, checking what is
+left of the item (`available`) after each step: checkout holds it and an
+unpaid order lets it go, a paid line stays taken and a cancelled paid order
+puts it back, a full refund with the items back puts it back. A failure is
+`COM002` and names the hook. `check_reads`, `check_hold_and_release`,
+`check_paid_and_cancelled` and `check_paid_and_refunded` are the steps, for
+a kind that fits only some. The shop recipe runs it on its products.
 
 ## What an order costs
 

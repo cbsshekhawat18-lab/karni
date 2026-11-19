@@ -19,8 +19,10 @@ seat, a booking): the server prices each line through its kind's adapter.
 - **`MyOrders`** and **`OrdersPage`**: the signed-in person's orders.
 - **`StaffOrders`**, **`StaffOrderPage`**, **`NewOrderPage`**, **`CustomersPage`** and
   **`CustomerPage`**: the staff's orders, one order with refunds, notes and history, an
-  order placed by hand, and the customers. `registerOrderPanel` adds a selling app's panel
-  (a parcel to ship) to the order page.
+  order placed by hand of any kind, and the customers. `registerOrderPanel` adds a
+  selling part's panel (a parcel to ship) to the staff's order page and
+  `registerBuyerOrderPanel` to the buyer's, each for the kinds of line it names.
+- **`PayChoice`**: pay in full, or a deposit now and the balance later.
 - **`useCart`**, **`useSetLine`**, **`useMergeOnSignIn`**, **`useCurrency`**, **`Money`**,
   **`PriceTag`**.
 

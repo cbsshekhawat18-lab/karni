@@ -54,6 +54,8 @@ endpoints = [
     "/api/orders/{id}/notes/",
     "/api/orders/manual/",
     "/api/orders/items/",
+    "/api/orders/kinds/",
+    "/api/orders/{id}/balance-link/",
     "/api/orders/customers/",
     "/api/orders/customer/",
     "/api/order-lines/",

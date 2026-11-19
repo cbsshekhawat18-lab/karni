@@ -216,6 +216,30 @@
   "source": "karni_charts.models.Chart.clean"
  },
  {
+  "code": "COM001",
+  "title": "karni-commerce is installed without the people contract",
+  "kind": "check",
+  "why": "Every order names the person who bought it (Order.person, found or made by karni.people.resolve at checkout), so the customers list, the person facts and the timeline are the same person in every part. Without karni.people the order table cannot be created.",
+  "fix": "Set KARNI_PEOPLE = True above karni_settings(globals()) in config/settings.py (karni build writes it when karni.yaml lists the commerce module, or features: {people: true}), then run migrate.",
+  "source": "karni_commerce.checks.people_installed (karni.COM001)"
+ },
+ {
+  "code": "COM002",
+  "title": "A sellable adapter does not keep the commerce contract",
+  "kind": "test",
+  "why": "Commerce calls the adapter of every kind the same way: it holds a line at checkout, lets it go when the order is not paid, takes it when paid and gives it back on a refund. An adapter that prices, holds or releases wrongly sells the same seat twice or loses stock.",
+  "fix": "Read the message: it names the hook and what it saw. Fix that hook of the adapter (docs/commerce.md, Selling something), then run the test again.",
+  "source": "karni_commerce.testing.assert_sellable"
+ },
+ {
+  "code": "COM003",
+  "title": "A sellable's hold is not a positive number of minutes",
+  "kind": "exception",
+  "why": "Checkout keeps an order's items for the shortest hold of its lines, and an order not paid by then is cancelled. Zero or a negative number would cancel it before the buyer could pay.",
+  "fix": "Return None (the project's KARNI_COMMERCE_HOLD_MINUTES) or a whole number of minutes from 1 from the adapter's hold_minutes(item, options).",
+  "source": "karni_commerce.sellables.hold_of (Sellable.hold_minutes)"
+ },
+ {
   "code": "IMP001",
   "title": "Impersonation needs the explicit impersonate permission",
   "kind": "api",
