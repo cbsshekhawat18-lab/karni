@@ -678,7 +678,7 @@ export type {
 } from "./components/family/inbox";
 export { PeoplePage, PersonPage, factText, usePersonFacts } from "./components/family/people";
 export type { PeoplePageProps, PersonFact, PersonPageProps } from "./components/family/people";
-export { SearchPage, searchHitHref } from "./components/family/search";
+export { SearchPage, routeHref, searchHitHref } from "./components/family/search";
 export type { SearchPageProps } from "./components/family/search";
 export { MyAddresses } from "./components/family/addresses";
 export { BackOffice, FamilyLayout, Storefront, useMenu } from "./components/family/family-layout";

@@ -2,7 +2,7 @@
 import { EmptyState, Skeleton, useResourceList, usePageMeta } from "@karni/ui";
 import { Link } from "@tanstack/react-router";
 import { ProductCard } from "../shop/ProductCard";
-import { useShopName } from "../shop/StoreLayout";
+import { useShopName } from "../shop/name";
 import type { Product } from "../shop/types";
 import { WishlistButton } from "../shop/WishlistButton";
 import { useWishlist } from "../shop/wishlist";

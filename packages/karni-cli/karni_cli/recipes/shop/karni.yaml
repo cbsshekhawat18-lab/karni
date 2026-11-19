@@ -18,6 +18,9 @@ modules:
   storage: {provider: aws}
 features:
   email_code_login: true
+  # The customers as people (karni.people): /people, each person's page and their saved
+  # addresses. recipe.toml's requires switches it on too.
+  people: true
   # The business's details, the shop's and checkout's settings and the email switches
   # (Settings). recipe.toml's requires switches it on too.
   preferences: true
@@ -38,6 +41,8 @@ roles:
       "preferences.*:change": all
       # Settings, Emails: the text of each email.
       "notify.emailtemplate": all
+      # The customers: /people and each person's page (orders, addresses, timeline).
+      "people.*:view": all
   shop-staff:
     name: Shop staff
     description: Orders, shipments and the catalogue.
@@ -53,6 +58,7 @@ roles:
       "karni_commerce.cartline:view": all
       "karni_commerce.invoice:view": all
       "karni_payments.payment:view": all
+      "people.*:view": all
   customer:
     name: Customer
     default: true
@@ -219,39 +225,47 @@ pages:
   - shop.wishlist: code
   - shop.terms: code
   - shop.products: code
-  - shop.customers: code
   - shop.coupons: code
   - shop.shipping: code
   - shop.tax-rates: code
   - shop.reports: code
   - shop.abandoned-carts: code
+# The menus (docs/navigation.md, named menus): app is the back office's sidebar, public
+# the storefront's header and account a signed-in person's own links. The family pages
+# (orders, people, settings) come from karni-commerce and the contracts.
 navigation:
-  - orders: {label: Orders, icon: list, requires: "karni_commerce.order:view"}
-  - Shipment: {label: Shipments, icon: box, requires: "shop.shipment:change"}
-  - shop.customers: {label: Customers, icon: users, requires: "karni_commerce.order:view"}
-  - shop.abandoned-carts:
-      label: Abandoned carts
-      icon: box
-      requires: "karni_commerce.cart:view"
-  - Catalogue:
-      icon: tag
-      requires: "shop.product:change"
-      items:
-        - {shop.products: {label: Products, requires: "shop.product:change"}}
-        - Category
-        - Tag
-        - Attribute
-        - Review
-        - Download
-  - Selling:
-      icon: settings
-      requires: "karni_commerce.coupon:change"
-      items:
-        - {shop.coupons: {label: Coupons, requires: "karni_commerce.coupon:change"}}
-        - {shop.shipping: {label: Shipping, requires: "karni_commerce.shippingzone:change"}}
-        - {shop.tax-rates: {label: Tax rates, requires: "karni_commerce.taxrate:change"}}
-  - shop.reports: {label: Reports, icon: chart, requires: "karni_commerce.order:report"}
-  - settings: {label: Settings, icon: sliders, requires: "preferences.details:change"}
+  app:
+    - orders: {label: Orders, icon: list, requires: "karni_commerce.order:view"}
+    - Shipment: {label: Shipments, icon: box, requires: "shop.shipment:change"}
+    - people: {icon: users, requires: "people.person:view"}
+    - shop.abandoned-carts:
+        label: Abandoned carts
+        icon: box
+        requires: "karni_commerce.cart:view"
+    - Catalogue:
+        icon: tag
+        requires: "shop.product:change"
+        items:
+          - {shop.products: {label: Products, requires: "shop.product:change"}}
+          - Category
+          - Tag
+          - Attribute
+          - Review
+          - Download
+    - Selling:
+        icon: settings
+        requires: "karni_commerce.coupon:change"
+        items:
+          - {shop.coupons: {label: Coupons, requires: "karni_commerce.coupon:change"}}
+          - {shop.shipping: {label: Shipping, requires: "karni_commerce.shippingzone:change"}}
+          - {shop.tax-rates: {label: Tax rates, requires: "karni_commerce.taxrate:change"}}
+    - shop.reports: {label: Reports, icon: chart, requires: "karni_commerce.order:report"}
+    - settings: {label: Settings, icon: sliders, requires: "preferences.details:change"}
+  public:
+    - shop.catalogue: {label: Products, requires: public}
+  account:
+    - orders: {label: Your orders}
+    - shop.wishlist: {label: Wishlist}
 # The staff home: each tile shows to the roles that may read what it counts. The shop's
 # own figures are code tiles in shop/dashboard.py (stock running low, best sellers), and
 # karni-commerce gives the revenue ones (commerce.revenue, commerce.revenue_chart,

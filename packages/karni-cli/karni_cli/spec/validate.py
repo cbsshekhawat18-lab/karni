@@ -2179,6 +2179,11 @@ class _Meaning:
                 else:
                     entries(inner, value)
 
+        if isinstance(self.spec.navigation, dict):
+            for name, items in self.spec.navigation.items():
+                seen.clear()  # a page may show in several menus, once in each
+                entries(("navigation", name), items)
+            return
         entries(("navigation",), self.spec.navigation)
 
     def dashboard(self) -> None:

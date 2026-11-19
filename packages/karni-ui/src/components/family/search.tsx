@@ -22,14 +22,29 @@ import { Button } from "../primitives/button";
 import { Input } from "../primitives/input";
 import { recordHref } from "../resource/record-links";
 
+/**
+ * Experimental. Where a record of `resource` opens: its record link (`registerRecordLink`,
+ * which gets `row`), else the app's route that ends with `/<resource>/$id`, else `null`.
+ */
+export function routeHref(
+  resource: string,
+  id: string | number,
+  routes: readonly string[] = [],
+  row: Readonly<Record<string, unknown>> = { id },
+): string | null {
+  const own = recordHref(resource, row);
+  if (own !== null) return own;
+  const tail = `/${resource}/$id`;
+  const route = routes.find((path) => path === tail || path.endsWith(tail));
+  return route !== undefined ? route.replace("$id", encodeURIComponent(String(id))) : null;
+}
+
 /** Experimental. Where a search hit opens: its record link, a route of the app, or `/<resource>/<id>`. */
 export function searchHitHref(hit: GlobalSearchHit, routes: readonly string[] = []): string {
-  const own = recordHref(hit.resource, hit);
-  if (own !== null) return own;
-  const tail = `/${hit.resource}/$id`;
-  const route = routes.find((path) => path === tail || path.endsWith(tail));
-  const id = encodeURIComponent(String(hit.id));
-  return route !== undefined ? route.replace("$id", id) : `/${hit.resource}/${id}`;
+  return (
+    routeHref(hit.resource, hit.id, routes, { ...hit }) ??
+    `/${hit.resource}/${encodeURIComponent(String(hit.id))}`
+  );
 }
 
 export interface SearchPageProps {

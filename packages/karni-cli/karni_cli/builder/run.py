@@ -409,6 +409,7 @@ def _inputs(
         entities=managed,
         pages=pages,
         adopted=set(rec.adopted),
+        scaffold=dict(rec.scaffold),
         renames=renames,
         removed=removed,
     )

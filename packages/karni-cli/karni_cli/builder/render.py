@@ -40,7 +40,7 @@ import textwrap
 from dataclasses import dataclass, field
 from typing import Any, Final
 
-from karni_cli.builder import layout
+from karni_cli.builder import family, layout
 from karni_cli.generators import apitest as test_gen
 from karni_cli.generators import page as page_gen
 from karni_cli.generators.app import plan as plan_app
@@ -127,6 +127,8 @@ class Inputs:
     renames: dict[str, str] = field(default_factory=dict)
     #: labels of the entities this build removes (their project classes go too).
     removed: set[str] = field(default_factory=set)
+    #: the sha256 of each file ``karni new`` wrote that a build may replace (the record's).
+    scaffold: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -1101,29 +1103,82 @@ def parts_text(ws: Workspace, spec: schema.Spec) -> str:
 
     A part with a frontend has ``frontend/src/<app label>/index.ts`` exporting
     ``register()``. The file imports and calls each one, so a part adds its
-    screens, sections and routes without a list anyone edits by hand.
+    screens, sections and routes without a list anyone edits by hand. Before
+    them it registers what the family's contracts and modules add
+    (:func:`karni_cli.builder.family.parts_lines`): the account sections of
+    people and notify, and karni-commerce's.
     """
     labels = [label for label in spec.apps if ws.read(f"frontend/src/{label}/index.ts") is not None]
     names = {label: f"register{pascal(label)}" for label in labels}
+    family_imports, family_calls = family.parts_lines(spec)
     lines = [
         f"// {HEADER}",
         "// The parts this project holds (app.recipes). Each part with a frontend has",
-        "// frontend/src/<app label>/index.ts, whose register() runs here at startup.",
+        "// frontend/src/<app label>/index.ts, whose register() runs here at startup, after",
+        "// what the family's contracts and modules register.",
+        *family_imports,
         *(f'import {{ register as {names[label]} }} from "../{label}";' for label in labels),
         "",
         "export const PARTS: readonly string[] = ["
         + ", ".join(pystr(name) for name in spec.app.recipes)
         + "];",
+        "",
+        *family_calls,
     ]
     if labels:
-        lines += ["", *(f"{names[label]}();" for label in labels)]
+        lines += [*(f"{names[label]}();" for label in labels)]
     return "\n".join(lines) + "\n"
 
 
 def render_parts(ws: Workspace, out: Output, inputs: Inputs) -> None:
-    """Experimental. Write ``parts.ts`` once the parts' own files are in ``ws``."""
+    """Experimental. Write ``parts.ts`` once the parts' own files are in ``ws``, and point the
+    scaffold's layout and home at the family's."""
     if inputs.spec.app.recipes and ws.read(page_gen.ROUTES) is not None:
         _owned(out, inputs, PARTS_FILE, parts_text(ws, inputs.spec))
+        _family_scaffold(ws, out, inputs)
+
+
+def _render_family(
+    ws: Workspace, out: Output, inputs: Inputs, own_routes: set[str]
+) -> tuple[list[str], list[str]]:
+    """The family's files of a project of parts, and their imports and routes in the block.
+
+    A family path the project routes itself (outside the Karni block) keeps its page.
+    """
+    spec = inputs.spec
+    _owned(out, inputs, family.ROUTER_FILE, family.router_text())
+    _owned(out, inputs, family.LAYOUT_FILE, family.layout_text(spec))
+    _owned(out, inputs, family.HOME_FILE, family.home_text())
+    imports: list[str] = []
+    entries: list[str] = []
+    for page in family.family_pages(spec):
+        paths = [path for path in page.paths if path not in own_routes]
+        if not paths:
+            continue
+        _owned(out, inputs, page.file, page.text)
+        imports.append(f'import {page.component} from "./karni/pages/{page.name}";')
+        entries += [page.route_line(path) for path in paths]
+    return imports, entries
+
+
+def _family_scaffold(ws: Workspace, out: Output, inputs: Inputs) -> None:
+    """The scaffold's layout and home as re-exports of the family's, while they are still what
+    ``karni new`` wrote. A file the project changed stays, and the build says so."""
+    for rel in (family.SCAFFOLD_LAYOUT, family.SCAFFOLD_HOME):
+        current = ws.read(rel)
+        wanted = family.reexport_text(rel)
+        if current is None or current == wanted:
+            continue
+        recorded = inputs.scaffold.get(rel)
+        scaffold = family.scaffold_text(rel, inputs.spec.app.name)
+        if (recorded is not None and recorded == family.digest(current)) or current == scaffold:
+            ws.write(rel, wanted)
+            out.project.setdefault(rel, []).append("re-exports the family's")
+            continue
+        target = family.LAYOUT_FILE if rel == family.SCAFFOLD_LAYOUT else family.HOME_FILE
+        out.project.setdefault(rel, []).append(
+            f"is the project's own: the family's is {target} (re-export it to use it)"
+        )
 
 
 def _owned(out: Output, inputs: Inputs, rel: str, text: str) -> None:
@@ -1337,11 +1392,14 @@ def _render_pages(ws: Workspace, out: Output, inputs: Inputs) -> None:
         entries += [page_gen.route_line(page.spec, path).strip() for path in page.spec.paths]
     if inputs.spec.app.recipes:
         imports.append(PARTS_IMPORT)
+        family_imports, family_entries = _render_family(ws, out, inputs, own_routes)
+        imports += family_imports
+        entries += family_entries
     blocks = {
         layout.ROUTES_BLOCKS[0]: "\n".join(imports),
         layout.ROUTES_BLOCKS[1]: "\n".join(entries),
     }
-    if not pages and all(read_block(text, name) is None for name in layout.ROUTES_BLOCKS):
+    if not entries and all(read_block(text, name) is None for name in layout.ROUTES_BLOCKS):
         return  # no page of Karni's, and no block yet: leave routes.tsx alone
     for name, (marker, before) in _ROUTE_BLOCKS.items():
         if before not in text and read_block(text, name) is None:

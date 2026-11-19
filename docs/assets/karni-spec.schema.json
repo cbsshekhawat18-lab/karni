@@ -1561,7 +1561,7 @@
     },
     "navigation": {
       "default": false,
-      "description": "Experimental. The menu karni build writes to KARNI_NAVIGATION: true for every page of pages in their order, or a list of pages (by their key) and groups ({label: [entries]}), each page with optional {label, icon, requires}.",
+      "description": "Experimental. The menu karni build writes to KARNI_NAVIGATION: true for every page of pages in their order, or a list of pages (by their key) and groups ({label: [entries]}), each page with optional {label, icon, requires}, or named menus ({app: [...], public: [...], account: [...]}), each such a list.",
       "oneOf": [
         {
           "type": "boolean"
@@ -1571,6 +1571,17 @@
             "$ref": "#/$defs/NavigationEntry"
           },
           "type": "array"
+        },
+        {
+          "patternProperties": {
+            "^[a-z][a-z0-9_-]{0,39}$": {
+              "items": {
+                "$ref": "#/$defs/NavigationEntry"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
         }
       ]
     },

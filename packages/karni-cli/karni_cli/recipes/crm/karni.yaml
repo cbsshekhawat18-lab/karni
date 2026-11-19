@@ -94,4 +94,10 @@ pages:
   - Contact: [list, detail, form]
   - Deal: [list, detail, form]
   - Activity: [list, form]
+# The back office's menu (the app menu): in a project of several parts it is the CRM's group.
+navigation:
+  - Deal: {label: Deals, icon: chart}
+  - Company: {label: Companies, icon: box}
+  - Contact: {label: Contacts, icon: users}
+  - Activity: {label: Activities, icon: list}
 seed: {Company: 20, Contact: 60, Deal: 40, Activity: 120}

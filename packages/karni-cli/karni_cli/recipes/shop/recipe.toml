@@ -40,15 +40,12 @@ usually_changed = [
 # The shop's pages (files/frontend/src/pages/): the first karni build registers each in
 # frontend/src/routes.tsx. Every page of the shop is under its route, /shop: the
 # storefront (/shop, /shop/catalogue, a product, the wishlist and the terms) and the back
-# office's own screens (products, customers, coupons, shipping, tax rates, reports and
-# abandoned carts). area = "store" puts a page in the storefront's own header and footer
-# (files/frontend/src/layout.tsx).
+# office's own screens (products, coupons, shipping, tax rates, reports and abandoned
+# carts). area = "store" shows a page in the storefront's frame of the family layout.
 #
-# The family pages come last: the cart, checkout and orders are karni-commerce's
-# (@karni/commerce-ui), the account, sign-in and Settings pages are Karni's (@karni/ui).
-# The shop mounts them from thin page files until the build writes them itself.
-# area = "family" shows a page in the storefront to a customer and in the back office
-# to staff (/orders: a customer's own orders, or every order for staff).
+# The shop ships no family page: karni build writes the cart, checkout, orders, account,
+# sign-in, settings, inbox, people and search pages itself (frontend/src/karni/), from
+# karni-commerce and @karni/ui, and the one layout and home of the project.
 
 [[routes]]
 path = "/shop"
@@ -84,14 +81,6 @@ path = "/shop/products"
 page = "pages/products"
 
 [[routes]]
-path = "/shop/customers"
-page = "pages/customers"
-
-[[routes]]
-path = "/shop/customers/$email"
-page = "pages/customer"
-
-[[routes]]
 path = "/shop/coupons"
 page = "pages/coupons"
 
@@ -110,55 +99,3 @@ page = "pages/reports"
 [[routes]]
 path = "/shop/abandoned-carts"
 page = "pages/abandoned-carts"
-
-[[routes]]
-path = "/cart"
-page = "pages/cart"
-public = true
-data = { area = "store" }
-
-[[routes]]
-path = "/checkout"
-page = "pages/checkout"
-public = true
-data = { area = "store" }
-
-[[routes]]
-path = "/orders"
-page = "pages/orders"
-data = { area = "family" }
-
-[[routes]]
-path = "/orders/new"
-page = "pages/order-new"
-
-[[routes]]
-path = "/orders/$number"
-page = "pages/order"
-public = true
-data = { area = "family" }
-
-[[routes]]
-path = "/orders/$number/invoice"
-page = "pages/order-invoice"
-public = true
-data = { area = "family" }
-
-[[routes]]
-path = "/orders/$number/packing-slip"
-page = "pages/order-packing-slip"
-
-[[routes]]
-path = "/account"
-page = "pages/account"
-data = { area = "store" }
-
-[[routes]]
-path = "/signin"
-page = "pages/signin"
-public = true
-data = { area = "store" }
-
-[[routes]]
-path = "/settings"
-page = "pages/settings"

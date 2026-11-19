@@ -75,4 +75,10 @@ pages:
   - Resource: [list, detail, form]
   - Slot: [list, form]
   - Booking: [list, detail]
+# The back office's menu (the app menu): in a project of several parts it is the booking's
+# group. A member sees the entries their grants open (their own bookings).
+navigation:
+  - Booking: {label: Bookings, icon: list}
+  - Slot: {label: Slots, icon: calendar}
+  - Resource: {label: Resources, icon: box}
 seed: {Resource: 4, Slot: 30, Booking: 60}

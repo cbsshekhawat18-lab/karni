@@ -11,7 +11,7 @@ import {
 import { useId } from "react";
 import { ProductCard } from "./ProductCard";
 import { useSearchValues, useSetSearch } from "./search";
-import { useShopName } from "./StoreLayout";
+import { useShopName } from "./name";
 import type { Category, Product } from "./types";
 
 const SORTS = [
