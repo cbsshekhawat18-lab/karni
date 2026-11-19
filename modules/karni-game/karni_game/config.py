@@ -68,7 +68,7 @@ def values(game: Game, player: Player | None) -> tuple[dict[str, Any], dict[str,
 def _problem(schema: Mapping[str, Mapping[str, str]], event: Any) -> str | None:
     if not isinstance(event, dict):
         return "An event is an object with a name and props."
-    name = event.get("name")
+    name = str(event.get("name") or "")
     props = event.get("props", {}) or {}
     if name not in schema:
         return f"The game declares no analytics event {name!r}."
