@@ -22,9 +22,8 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any
-
 from datetime import datetime, timedelta
+from typing import Any
 
 from django.db import IntegrityError, router, transaction
 from django.db.models import Q, QuerySet
