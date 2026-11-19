@@ -59,8 +59,10 @@ from django.db import DatabaseError, IntegrityError, transaction
 from django.urls import NoReverseMatch, Resolver404, resolve, reverse
 from django.utils.module_loading import import_string
 from django.utils.translation import gettext as _
+from karni.audit.capture import unrecorded
 
 from karni_site import caching, conf
+from karni_site.blocks import SEEDING
 from karni_site.navigation import any_active
 
 __all__ = [
@@ -475,7 +477,7 @@ def seed_menu(name: str, markup: str, *, source: str = "", title: str = "") -> b
 
     links = parse_links(markup)
     try:
-        with transaction.atomic():
+        with transaction.atomic(), unrecorded(SEEDING):
             if Menu.objects.filter(name=name).exists():
                 return False
             menu = Menu.objects.create(
@@ -509,7 +511,7 @@ def sync_menu(name: str, markup: str, *, source: str = "") -> bool:
 
     links = parse_links(markup)
     fingerprint = _digest(links)
-    with transaction.atomic():
+    with transaction.atomic(), unrecorded(SEEDING):
         menu = Menu.objects.select_for_update().filter(name=name).first()
         if menu is None or not menu.seed or (source and menu.seed != source):
             return False

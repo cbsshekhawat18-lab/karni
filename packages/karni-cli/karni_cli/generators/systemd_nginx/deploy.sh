@@ -248,7 +248,7 @@ build() {
   manage "$rel" karni_check --deploy --no-cache
   manage "$rel" migrate --noinput
   manage "$rel" collectstatic --noinput -v 0
-  touch "$rel/.built"
+{{seed_step}}  touch "$rel/.built"
   RELEASE="$id"
 }
 

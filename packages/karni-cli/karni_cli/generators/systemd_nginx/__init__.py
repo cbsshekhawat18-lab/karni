@@ -63,6 +63,8 @@ class Options:
     auth_mode: str = "jwt"
     #: What deploy.sh asks gunicorn for before nginx sends it traffic.
     ready_path: str = "/readyz"
+    #: A public site (karni_site): each release renders every page once (karni_site_seed).
+    site: bool = False
 
     @property
     def app_root(self) -> str:
@@ -120,6 +122,13 @@ def _fill(name: str, options: Options) -> str:
         "cert_key": options.certificate_key,
         "units": " ".join(options.units),
         "ready_path": options.ready_path,
+        "seed_step": (
+            "  # Every page rendered once: the defaults its templates give are stored now,\n"
+            "  # not on a visitor's request.\n"
+            '  manage "$rel" karni_site_seed\n'
+            if options.site
+            else ""
+        ),
     }
     for key, value in values.items():
         text = text.replace("{{" + key + "}}", value)

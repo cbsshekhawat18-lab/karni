@@ -533,7 +533,12 @@ class SeoCrawl:
         self.made = list(dict.fromkeys(made))
         return failures
 
-    def _run(self) -> list[str]:
+    def crawl(self) -> set[str] | None:
+        """Request every page: ``/``, the sitemap's, the named ones and those they link to.
+
+        Fills :attr:`pages` and returns the sitemap's paths (``None`` without a sitemap).
+        ``manage.py karni_site_seed`` calls it alone, to render each page once.
+        """
         from karni_site.routes import site_pages
 
         self._pending: deque[str] = deque(["/"])
@@ -549,6 +554,10 @@ class SeoCrawl:
                 hop = self.local(page.location, f"https://testserver{path}")
                 if hop is not None:
                     self._pending.append(hop)
+        return listed
+
+    def _run(self) -> list[str]:
+        listed = self.crawl()
         pages = [page for page in self.pages.values() if page.html]
         self.check_texts(pages)
         for page in pages:

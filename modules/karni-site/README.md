@@ -94,7 +94,38 @@ time a template renders, they are stored. A block nobody changed follows
 the template: a new version of the design changes it. A block someone
 changed keeps their version. Deleting a block hands it back to the
 template, and so does the admin action *Reset to the template's text or
-image*. Every change is in the History tab (`karni.audit`).
+image*. Every change someone makes is in the History tab (`karni.audit`).
+Storing a template's default, or following a new one, is nobody's edit and
+leaves no entry there.
+
+### `manage.py karni_site_seed`: the defaults stored in a deploy
+
+Without it, the first render of a page is a visitor's request, and that
+request stores each new block, the menu its seed gives and the site's
+details. Run the command in a deploy, after `migrate`, and no visitor's
+request writes:
+
+```sh
+python manage.py karni_site_seed
+```
+
+It requests every page the way `karni check --seo` finds them (`/`,
+sitemap.xml, the named URLs without arguments and every page they link to,
+up to `KARNI_SITE_SEO_MAX_PAGES`), through Django's test client in its own
+process, and stores what the templates give that the database does not
+hold yet. A block or menu item nobody edited takes the template's new
+default. It prints what it stored, and fails with `SITE024` when a page
+answers a server error (`--keep-going` reports those and exits 0). The
+release step of `karni make deploy compose` and `deploy.sh` of `karni make
+deploy systemd-nginx` run it in a project with this module.
+
+It seeds whatever `KARNI_SITE_SEED_ON_RENDER` says. With the command in
+the deploy, `KARNI_SITE_SEED_ON_RENDER = False` makes a visitor's request
+write nothing at all. A page the command does not reach (one only a form or
+a signed-in user opens, a page behind a capture that no link or sitemap
+entry names) then shows its template's defaults without storing them, so
+the client cannot edit them until a run reaches it. Leave the setting on to
+have such pages store their defaults on their first visit.
 
 ### `site`: the site's own details
 
@@ -645,7 +676,7 @@ Every setting arrives through the module's settings fragment
 | `KARNI_SITE_IMAGE_TYPES` | `["jpg", "jpeg", "png", "gif", "webp", "avif", "ico"]` | The image types an upload may be, checked by extension and content. |
 | `KARNI_SITE_CACHE` | `"default"` | The cache alias blocks, menus, redirects, page SEO entries and the settings are kept in. |
 | `KARNI_SITE_CACHE_TIMEOUT` | `3600` | Seconds a cached entry lives. Every save clears what it changed, so this is a backstop. |
-| `KARNI_SITE_SEED_ON_RENDER` | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). |
+| `KARNI_SITE_SEED_ON_RENDER` | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). `manage.py karni_site_seed` stores them whatever this says. |
 | `KARNI_SITE_MENU_ROWS` | `"karni_site.menus.menu_rows"` | The `(model, item) -> rows` function a *children from* item lists. The default is the model's default manager, so its scopes apply. |
 | `KARNI_SITE_MENU_ROWS_LIMIT` | `100` | At most this many rows per *children from* item. |
 | `KARNI_SITE_MENU_SECTIONS` | `True` | Whether a menu item is active on every page under its own path too (`/services/` on `/services/web/`). The home page never is. |
@@ -710,7 +741,9 @@ wrong `class Karni: sitemap` or `seo`). A redirect in a circle is refused
 with `SITE006`, a menu item that points nowhere with `SITE007`, and a
 `KARNI_SITE_SETTINGS_MODEL` that names no installed model fails with
 `SITE009`. A form whose view is not routed raises `SITE022`, and a
-notification naming a setting the project lacks `SITE023`.
+notification naming a setting the project lacks `SITE023`. A page that
+fails while `manage.py karni_site_seed` renders it stops that command with
+`SITE024`.
 
 ## Escape hatches
 
@@ -718,7 +751,8 @@ notification naming a setting the project lacks `SITE023`.
 - `KARNI_SITE_SANITIZER`, `KARNI_SITE_INLINE_TAGS`, `KARNI_SITE_LINK_SCHEMES`
   and `KARNI_SITE_HIGHLIGHT`: what an edited block keeps.
 - `KARNI_SITE_SEED_ON_RENDER = False`: nothing is written while a page
-  renders. Load blocks, menus and settings with `karni load` instead.
+  renders. Store the defaults with `manage.py karni_site_seed` in the
+  deploy, or load blocks, menus and settings with `karni load`.
 - `KARNI_SITE_MENU_ROWS`: which rows a *children from* item lists.
 - `KARNI_SITE_MENU_FOLLOW_SEED = False`: a seeded menu never follows its seed,
   and `karni_site.menus.sync_menu()` follows one when you choose.

@@ -37,7 +37,7 @@ a deploy script ([without Docker](#without-docker-systemd-and-nginx)).
 
 | Service | What it does | Health check |
 |---|---|---|
-| `release` | Runs once per start, before the others: the deploy checks, `migrate`, `collectstatic`, then `karni_publish_web`, which copies the Caddyfile, the built staff app and the security headers into the shared volume. If it fails, nothing else starts. | none: the others wait for it to exit with 0 |
+| `release` | Runs once per start, before the others: the deploy checks, `migrate`, `collectstatic`, in a project with a public site `karni_site_seed` (every page rendered once, so a visitor's request never stores a template's defaults), then `karni_publish_web`, which copies the Caddyfile, the built staff app and the security headers into the shared volume. If it fails, nothing else starts. | none: the others wait for it to exit with 0 |
 | `django` | gunicorn with uvicorn workers (`WEB_CONCURRENCY`, default 2). It serves the API, the admin, `/healthz`, `/readyz`, `/health/` and a public site app. | `/readyz`, asked as Caddy asks it ([health checks](#12-health-checks)) |
 | `worker` | The Celery worker (`KARNI_WORKER_CONCURRENCY`, default 2). | `celery inspect ping` |
 | `beat` | Celery beat. Run exactly one. | its process has passed the deploy checks |
@@ -646,7 +646,9 @@ Each run, in order, and each step stops the run with a message when it fails:
    `.git`, virtual environments, `data/` and the `.env` files, and installs
    its dependencies into the release's own `.venv`.
 4. Runs `karni_check --deploy`, `migrate` and `collectstatic` with the
-   server's `.env`, as the units' user.
+   server's `.env`, as the units' user, and in a project with a public site
+   `karni_site_seed`, which renders every page once so a visitor's request
+   never stores a template's defaults.
 5. Points `<root>/current` at the release (an atomic switch), installs the
    units, restarts them and asks `/readyz` on gunicorn's socket until it
    answers 200. When it does not, the run stops before nginx and says which

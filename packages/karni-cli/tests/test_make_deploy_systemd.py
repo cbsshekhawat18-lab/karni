@@ -95,6 +95,7 @@ def test_it_writes_the_deploy_folder(project: Path) -> None:
     assert 'DOMAIN="${DEPLOY_DOMAIN:-clinic.example.com}"' in text
     assert 'ROOT="${DEPLOY_ROOT:-/srv/clinic_hours}"' in text
     assert 'UNITS="${DEPLOY_UNITS:-web worker beat}"' in text
+    assert '  manage "$rel" karni_site_seed\n' in text, "a site renders its pages once"
     assert "/etc/letsencrypt/live/clinic.example.com/fullchain.pem" in text
     for path in folder.iterdir():
         assert "{{" not in path.read_text(), f"{path.name} keeps a generator token"
@@ -329,10 +330,11 @@ def test_a_deploy_installs_the_release_the_units_and_the_vhost(server: Server) -
     assert enabled.is_symlink() and os.readlink(enabled) == str(vhost)
     calls = server.calls()
     managed = [call for call in calls if call.startswith("manage ")]
-    assert managed[-3:] == [
+    assert managed == [
         f"manage karni_check in {release}",
         f"manage migrate in {release}",
         f"manage collectstatic in {release}",
+        f"manage karni_site_seed in {release}",
     ]
     assert "systemctl daemon-reload" in calls
     assert "systemctl restart clinic_hours-web.service" in calls

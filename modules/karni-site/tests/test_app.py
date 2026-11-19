@@ -103,5 +103,5 @@ def test_entry_points_register_codes_and_checks() -> None:
     assert codes == (
         {f"SITE00{n}" for n in range(1, 10)}
         | {f"SITE01{n}" for n in range(10)}
-        | {f"SITE02{n}" for n in range(4)}
+        | {f"SITE02{n}" for n in range(5)}
     )

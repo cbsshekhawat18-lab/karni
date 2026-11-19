@@ -287,6 +287,17 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Write `class Karni: audit = True` (or a list of field names) and "
         "`sensitive = [...]` with field names of the model.",
     ),
+    _e(
+        "E008",
+        "unrecorded() has no reason",
+        "exception",
+        "karni.audit.capture.unrecorded",
+        "A block of saves that leaves no change-history entry hides writes from the history, "
+        "so it says why: what it writes that no person makes, as a lifted scope says why it "
+        "lifts.",
+        "Pass the reason: `with unrecorded(\"the template's default, stored on its first "
+        'render"):`.',
+    ),
     # E1xx API: access
     _e(
         "E101",

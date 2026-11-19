@@ -188,6 +188,22 @@ def test_the_domain_comes_from_karni_new(tmp_path: Path, monkeypatch: pytest.Mon
     assert "\nKARNI_FRONTEND_URL=https://shop.example.net/app\n" in env
 
 
+def test_a_site_renders_its_pages_in_the_release_step(
+    project: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    release = " ".join(load(project)["services"]["release"]["command"])
+    assert "karni_site_seed" not in release, "an app has no site to seed"
+    result = CliRunner().invoke(
+        app, ["new", "Harbour Notes", "--kind", "site", "--no-staff-app", "-o", str(tmp_path)]
+    )
+    assert result.exit_code == 0, result.output
+    release = " ".join(load(tmp_path / "harbour_notes")["services"]["release"]["command"])
+    assert (
+        "collectstatic --noinput -v 0 && python manage.py karni_site_seed "
+        "&& python manage.py karni_publish_web"
+    ) in release
+
+
 # the flags
 
 

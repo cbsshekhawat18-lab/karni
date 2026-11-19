@@ -86,6 +86,9 @@ class Options:
     #: The path django's health check asks: ``/readyz`` when the project mounts
     #: ``karni.health.probe_urls`` (every new project does), else ``/health/``.
     ready_path: str = "/health/"
+    #: Whether the project has a public site (karni_site): the release step then renders
+    #: every page once (``manage.py karni_site_seed``), so no visit has to store a default.
+    site: bool = False
 
     @property
     def app(self) -> bool:
@@ -157,6 +160,7 @@ def compose(options: Options) -> str:
     publish = "python manage.py karni_publish_web --root /data/web"
     if not options.app:
         publish += ' --app ""'
+    seed = ["        && python manage.py karni_site_seed"] if options.site else []
     out = [
         f"# Production stack for {slug}. `karni make deploy compose` wrote this file, and it",
         "# is yours to edit. docs/deploy.md walks through a server, DNS, updates, rollback",
@@ -197,6 +201,14 @@ def compose(options: Options) -> str:
         "  # Runs to completion before the others start: the deploy checks, the",
         "  # migrations, collectstatic, then the Caddyfile, the security headers and",
         "  # the staff app into /data/web for caddy. If it fails, nothing starts.",
+        *(
+            [
+                "  # karni_site_seed renders every page of the site once, so the defaults its",
+                "  # templates give are stored here, not on a visitor's request.",
+            ]
+            if options.site
+            else []
+        ),
         "  release:",
         "    <<: *app",
         '    restart: "no"',
@@ -206,6 +218,7 @@ def compose(options: Options) -> str:
         "      - >-",
         "        python manage.py migrate --noinput",
         "        && python manage.py collectstatic --noinput -v 0",
+        *seed,
         f"        && {publish}",
         *_depends(options, release=False),
         *_limits("KARNI_DJANGO_MEMORY", "768M"),
@@ -765,11 +778,17 @@ def plan(ws: Workspace, options: Options) -> None:
         )
 
 
+def has_site(ws: Workspace) -> bool:
+    """Whether the project runs karni-site: ``"karni_site"`` in config/settings.py."""
+    return '"karni_site"' in (ws.read("config/settings.py") or "")
+
+
 def defaults(ws: Workspace, *, domain: str | None = None) -> Options:
     example = ws.read(".env.example")
     urls = ws.read("config/urls.py") or ""
     return Options(
         ready_path="/readyz" if "karni.health.probe_urls" in urls else "/health/",
+        site=has_site(ws),
         slug=project_slug(ws),
         domain=domain or _env_value(example, "DOMAIN") or DEFAULT_DOMAIN,
         auth_mode=_env_value(example, "KARNI_AUTH_MODE") or "jwt",
@@ -829,6 +848,7 @@ def _systemd_nginx(
         celery=celery,
         auth_mode=base.auth_mode,
         ready_path=base.ready_path,
+        site=base.site,
     )
     systemd_nginx.plan(ws, options, email_lines(options.domain))
     if (ws.root / "frontend" / "package.json").is_file():
@@ -1013,6 +1033,7 @@ def command(
         redis=redis,
         auth_mode=base.auth_mode,
         ready_path=base.ready_path,
+        site=base.site,
     )
     plan(ws, options)
     if dry_run and not force:

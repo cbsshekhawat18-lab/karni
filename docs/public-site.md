@@ -320,7 +320,12 @@ tags work in a template written by hand:
   text or image, the menu's links (from its `seed` template, the design's
   own navigation) and the site's details (`{% site_defaults %}`). Until the
   client changes one, it follows the template: a new version of the design
-  changes it. Once they change it, their version stays.
+  changes it. Once they change it, their version stays. `manage.py
+  karni_site_seed` renders every page once in a deploy, so that first
+  render is not a visitor's request (the deploy files Karni writes run it),
+  and storing a default leaves no entry in the change history: it is
+  nobody's edit. The [module's README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site#managepy-karni_site_seed-the-defaults-stored-in-a-deploy)
+  says how it relates to `KARNI_SITE_SEED_ON_RENDER`.
 - **Text** is edited as plain text: a new line is a line break, and words
   between the highlight markers (`==fresh every morning==`) render in the design's
   highlight (a backslash before the marker keeps it as typed). A template's

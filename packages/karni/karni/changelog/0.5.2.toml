@@ -28,3 +28,16 @@ Before, the seed made the menu once. KARNI_SITE_MENU_FOLLOW_SEED = False keeps \
 that. The module's migration 0002 adds Menu.seeded and MenuItem.seed_key."""
 mechanical = false
 migration = "migrations/0.5.md#seeded-menus-follow-their-seed"
+
+[[change]]
+id = "site-seeding-unrecorded"
+kind = "behaviour"
+symbol = "karni_site.blocks"
+summary = """\
+karni-site stores a template's defaults (blocks, a menu's seed, the site's details) \
+without a change-history entry: it is nobody's edit. A person's edit is recorded \
+as before. manage.py karni_site_seed stores the defaults in a deploy; the release \
+step of karni make deploy compose runs it once the file is written again (--force)."""
+mechanical = false
+migration = "migrations/0.5.md#a-sites-defaults-are-stored-in-the-deploy-and-leave-no-history"
+

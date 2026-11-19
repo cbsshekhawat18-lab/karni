@@ -2336,6 +2336,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E005`](errors.md#e005) | exception | without() was called on a queryset |
 | [`E006`](errors.md#e006) | exception | A scope's context is not bound |
 | [`E007`](errors.md#e007) | exception | Karni.audit or Karni.sensitive is malformed |
+| [`E008`](errors.md#e008) | exception | unrecorded() has no reason |
 | [`E101`](errors.md#e101) | check | A viewset declares no access |
 | [`W101`](errors.md#w101) | warning | A hand-written serializer duplicates the one Karni generates |
 | [`E102`](errors.md#e102) | exception | access is not an Access(...) or Unscoped(...) declaration |
@@ -2675,6 +2676,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`SITE021`](errors.md#site021) | exception | {% karni_form %} is written wrongly |
 | [`SITE022`](errors.md#site022) | exception | The form view is not routed |
 | [`SITE023`](errors.md#site023) | exception | A notification does not say who to email |
+| [`SITE024`](errors.md#site024) | exception | A page fails while karni_site_seed renders it |
 | [`STORE001`](errors.md#store001) | check | KARNI_STORAGE_PROVIDER names no preset |
 | [`STORE002`](errors.md#store002) | check | The storage provider has no credentials |
 | [`STORE003`](errors.md#store003) | check | The storage preset needs a value it does not have |

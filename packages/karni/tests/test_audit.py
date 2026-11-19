@@ -92,6 +92,25 @@ def test_create_update_delete_restore_and_hard_delete(django_user_model: Any) ->
     ]
 
 
+def test_unrecorded_writes_no_entry_and_only_inside_the_block() -> None:
+    from karni.audit.capture import unrecorded
+
+    with unrecorded("a default no person wrote"):
+        price = Price.objects.create(amount=decimal.Decimal("3.00"))
+        price.amount = decimal.Decimal("4.00")
+        price.save()
+        price.delete()
+        price.restore()
+    assert _entries(price) == []
+    price.amount = decimal.Decimal("5.00")
+    price.save()  # a person's edit, outside the block
+    (entry,) = _entries(price)
+    assert entry.action == "update" and entry.diff == {"amount": ["4.00", "5.00"]}
+    with pytest.raises(ValueError, match="E008.*needs a reason|needs a reason"):
+        with unrecorded(" "):
+            pass
+
+
 def test_update_fields_saves_still_diff_the_whole_row() -> None:
     price = Price.objects.create(amount=decimal.Decimal("1.00"))
     price.currency = "USD"

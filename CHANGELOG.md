@@ -107,6 +107,20 @@ apply codemods and list the manual steps. This file is the human summary.
   `Menu.seeded` and `MenuItem.seed_key`
   ([migration note](docs/migrations/0.5.md#seeded-menus-follow-their-seed)).
 
+- **Added: `manage.py karni_site_seed`, a site's defaults stored in a deploy, not on a
+  visit.** A page's first render was a visitor's request, which stored each new
+  `{% editable %}` block, the menu its seed gives and the site's details, with a
+  change-history entry for each (33 blocks on a page were 66 inserts). The command renders
+  every page once, as `karni check --seo` finds them, stores what the templates give and
+  follows what changed, and fails with `SITE024` when a page answers a server error
+  (`--keep-going` reports them). It seeds whatever `KARNI_SITE_SEED_ON_RENDER` says, so a
+  site that turns that off writes nothing on a visit. The release step of `karni make deploy
+  compose` and `deploy.sh` of `karni make deploy systemd-nginx` run it in a project with
+  karni-site. Storing a template's default now leaves no change-history entry, on a visit
+  as in a deploy, through the new `karni.audit.capture.unrecorded(reason)`: an edit by a
+  person is recorded as before. A new block's place no longer costs a count query
+  ([migration note](docs/migrations/0.5.md#a-sites-defaults-are-stored-in-the-deploy-and-leave-no-history)).
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

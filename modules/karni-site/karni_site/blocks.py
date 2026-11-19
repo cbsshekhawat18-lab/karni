@@ -10,6 +10,10 @@ stored default changes with it. A block someone changed keeps their text.
 Rendering never fails because of the database: when it cannot be read, the
 template's default is shown and the error logged (logger ``karni_site``).
 
+Storing a default, and following a new one, is not anyone's edit, so it
+leaves no change-history entry (:func:`karni.audit.capture.unrecorded`). A
+person's edit in the admin is recorded as every other save.
+
 Override / escape hatch: ``KARNI_SITE_SEED_ON_RENDER = False`` stores
 nothing while a page renders (load blocks with ``karni load`` instead), and
 ``KARNI_SITE_CACHE`` / ``KARNI_SITE_CACHE_TIMEOUT`` choose the cache.
@@ -23,14 +27,17 @@ from html import escape
 from typing import Any
 
 from django.db import DatabaseError, IntegrityError, transaction
+from karni.audit.capture import unrecorded
 
 from karni_site import caching, conf
 from karni_site.images import img_attributes, replace_image
 
-__all__ = ["Stored", "forget", "image", "load_page", "text"]
+__all__ = ["SEEDING", "Stored", "forget", "image", "load_page", "text"]
 
 logger = logging.getLogger("karni_site")
 _MEMO = "_karni_site_blocks"
+#: Why storing a template's defaults leaves no change-history entry (karni_site's seeding).
+SEEDING = "a template's default stored or followed: nobody's edit"
 
 
 @dataclass(frozen=True)
@@ -113,13 +120,15 @@ def _seeding() -> bool:
     return bool(conf.get("KARNI_SITE_SEED_ON_RENDER"))
 
 
-def _create(key: str, page: str, **values: Any) -> Any:
-    """Store a new block from the template's default. ``None`` when another request won."""
+def _create(key: str, page: str, position: int, **values: Any) -> Any:
+    """Store a new block from the template's default. ``None`` when another request won.
+
+    ``position`` is its place among the page's blocks: how many the page has already.
+    """
     from karni_site.models import Block
 
     try:
-        with transaction.atomic():
-            position = Block.objects.filter(page=page).count()
+        with transaction.atomic(), unrecorded(SEEDING):
             return Block.objects.create(key=key, position=position, **values)
     except IntegrityError:
         return None
@@ -134,7 +143,8 @@ def _follow(key: str, **values: Any) -> Any:
         return None
     for name, value in values.items():
         setattr(block, name, value)
-    block.save(update_fields=[*values, "updated_at"])
+    with unrecorded(SEEDING):
+        block.save(update_fields=[*values, "updated_at"])
     return block
 
 
@@ -149,7 +159,7 @@ def text(key: str, default: str, request: Any = None) -> str:
         if stored is None:
             if _seeding():
                 created = _create(
-                    key, page, kind=Block.Kind.TEXT, html=default, default_html=default
+                    key, page, len(blocks), kind=Block.Kind.TEXT, html=default, default_html=default
                 )
                 if created is not None:
                     blocks[key] = _stored(created)
@@ -187,6 +197,7 @@ def image(key: str, default: str, request: Any = None, *, url: bool = False) -> 
                 created = _create(
                     key,
                     page,
+                    len(blocks),
                     kind=Block.Kind.IMAGE,
                     alt=alt,
                     default_alt=alt,

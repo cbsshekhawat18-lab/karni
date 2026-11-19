@@ -325,4 +325,26 @@ SEO_CODES: Final[tuple[ErrorCode, ...]] = (
     ),
 )
 
-CODES = (*CODES, *SEO_CODES)  # type: ignore[misc]  # CODES is Final: extended once, here
+#: Deploys: manage.py karni_site_seed.
+DEPLOY_CODES: Final[tuple[ErrorCode, ...]] = (
+    ErrorCode(
+        code="SITE024",
+        title="A page fails while karni_site_seed renders it",
+        kind="exception",
+        source=f"{_SOURCE}.management.commands.karni_site_seed",
+        why=(
+            "manage.py karni_site_seed renders every page of the site once, in a deploy, so "
+            "the blocks, menus and site details its templates give are stored before the first "
+            "visitor. A page that answers a server error (500) with the new code and the "
+            "migrated database would fail for every visitor too, and its defaults are not "
+            "stored."
+        ),
+        fix=(
+            "Open the page the message names with `karni serve` (or read the error the command "
+            "printed) and fix the view or the template. --keep-going reports the failing pages "
+            "without failing the run."
+        ),
+    ),
+)
+
+CODES = (*CODES, *SEO_CODES, *DEPLOY_CODES)  # type: ignore[misc]  # CODES is Final: extended once, here

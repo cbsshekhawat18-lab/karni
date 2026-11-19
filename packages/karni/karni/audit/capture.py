@@ -24,7 +24,7 @@ from django.db.models.signals import post_delete, post_save, pre_save
 
 from karni.audit import REDACTED
 from karni.db import is_read_only
-from karni.exceptions import KarniImproperlyConfigured
+from karni.exceptions import KarniImproperlyConfigured, KarniValueError
 from karni.meta import karni_option
 from karni.middleware import get_current_user
 from karni.tracing import get_request_id
@@ -41,6 +41,7 @@ __all__ = [
     "record",
     "redact_patterns",
     "sensitive_fields",
+    "unrecorded",
     "within_batch",
 ]
 
@@ -60,6 +61,34 @@ _SENSITIVE: dict[type[models.Model], frozenset[str]] = {}
 
 #: The batch (``ChangeBatch`` pk) every entry written in this context joins.
 _BATCH: ContextVar[int | None] = ContextVar("karni_audit_batch", default=None)
+
+#: Why the saves in this context are not recorded (:func:`unrecorded`), or ``None``.
+_UNRECORDED: ContextVar[str | None] = ContextVar("karni_audit_unrecorded", default=None)
+
+
+@contextmanager
+def unrecorded(reason: str) -> Iterator[None]:
+    """Record no change-history entry for the saves and deletes inside the block.
+
+    For writes that no person makes, such as karni-site storing a template's
+    default text the first time a page renders: the history is who changed
+    what, and nobody changed anything. Every save outside the block is recorded
+    as before, so an edit in the admin, the API or a shell always is.
+
+    ``reason`` says why the block is not recorded. It is required, like the
+    reason of a lifted scope, and kept for the reader of the code.
+    """
+    if not reason.strip():
+        raise KarniValueError(
+            "unrecorded() needs a reason: what the block writes that no person makes, such as "
+            'unrecorded("the template\'s default, stored on its first render").',
+            code="E008",
+        )
+    token = _UNRECORDED.set(reason)
+    try:
+        yield
+    finally:
+        _UNRECORDED.reset(token)
 
 
 def current_batch_id() -> int | None:
@@ -266,8 +295,11 @@ def _action(before: dict[str, Any] | None, diff: dict[str, Any], deleted: bool) 
 
 
 def record(instance: models.Model, action: str, diff: dict[str, Any]) -> None:
-    """Write (or enqueue) one entry for ``instance``; a no-op when ``diff`` is empty."""
-    if not diff:
+    """Write (or enqueue) one entry for ``instance``; a no-op when ``diff`` is empty.
+
+    Also a no-op inside :func:`unrecorded`.
+    """
+    if not diff or _UNRECORDED.get() is not None:
         return
     model = type(instance)
     user = get_current_user()
@@ -312,7 +344,7 @@ def write(payload: dict[str, Any]) -> None:
 
 def _pre_save(sender: type[models.Model], instance: models.Model, raw: bool, **kwargs: Any) -> None:
     names = audited_fields(sender)
-    if names is None or raw:
+    if names is None or raw or _UNRECORDED.get() is not None:
         return
     before = None
     if not instance._state.adding and instance.pk is not None:

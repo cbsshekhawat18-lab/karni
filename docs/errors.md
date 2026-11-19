@@ -129,6 +129,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write `class Karni: audit = True` (or a list of field names) and `sensitive = [...]` with field names of the model.
 
+<a id="e008"></a>
+
+#### E008: unrecorded() has no reason
+
+*exception* · from `karni.audit.capture.unrecorded`
+
+**Why Karni objects.** A block of saves that leaves no change-history entry hides writes from the history, so it says why: what it writes that no person makes, as a lifted scope says why it lifts.
+
+**Fix.** Pass the reason: `with unrecorded("the template's default, stored on its first render"):`.
+
 ### 1xx · API: access, viewsets, serializers, pagination, budgets, expand
 
 <a id="e101"></a>
@@ -3504,6 +3514,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** karni_site.notify.notify_recipients(row, setting="NAME", ...) emails the addresses in settings.NAME, and to=[...] emails fixed addresses. It needs exactly one of the two. A setting that does not exist is a typo or a missing line, and the email would never go out. An empty list only logs a warning.
 
 **Fix.** Pass setting= or to=. For a setting, add NAME = env.list("NAME", default=[]) to config/settings.py and NAME=team@example.com to .env (karni make form --notify NAME writes both).
+
+<a id="site024"></a>
+
+### SITE024: A page fails while karni_site_seed renders it
+
+*exception* · from `karni_site.management.commands.karni_site_seed`
+
+**Why Karni objects.** manage.py karni_site_seed renders every page of the site once, in a deploy, so the blocks, menus and site details its templates give are stored before the first visitor. A page that answers a server error (500) with the new code and the migrated database would fail for every visitor too, and its defaults are not stored.
+
+**Fix.** Open the page the message names with `karni serve` (or read the error the command printed) and fix the view or the template. --keep-going reports the failing pages without failing the run.
 
 ## STORE (`STORE`)
 

@@ -25,6 +25,10 @@ the settings model) takes a static path as its default:
 stays empty, and :func:`image_url` gives the uploaded file's address, else
 that static file's, until the client uploads one.
 
+Storing the template's values leaves no change-history entry: nobody changed
+anything (:func:`karni.audit.capture.unrecorded`). A change in the admin is
+recorded as every other save.
+
 Override / escape hatch: ``KARNI_SITE_SETTINGS_MODEL`` swaps the model,
 ``KARNI_SITE_SEED_ON_RENDER = False`` stores nothing while a page renders.
 """
@@ -37,6 +41,7 @@ from typing import Any
 
 from django.apps import apps
 from django.db import DatabaseError, IntegrityError, models, transaction
+from karni.audit.capture import unrecorded
 from karni.exceptions import KarniImproperlyConfigured
 
 from karni_site import caching, conf
@@ -227,8 +232,10 @@ def seed(defaults: Mapping[str, Any]) -> Any | None:
     if not changes and seeded == (current.seeded or {}) and current.pk is not None:
         return None
     model = settings_model()
+    from karni_site.blocks import SEEDING
+
     try:
-        with transaction.atomic():
+        with transaction.atomic(), unrecorded(SEEDING):
             row = model._default_manager.select_for_update().first()
             if row is None:
                 row = model()
