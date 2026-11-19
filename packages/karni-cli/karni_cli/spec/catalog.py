@@ -63,7 +63,7 @@ CONTRACT_MODELS: Final[dict[str, tuple[str, ...]]] = {
 CONTRACT_GRANT_MODELS: Final[dict[str, tuple[str, ...]]] = {
     **CONTRACT_MODELS,
     "preferences": ("Details", "SectionValue", "Switch"),
-    # notify.emailtemplate:* for whoever edits the emails (Settings, Emails)
+    # notify.emailtemplate for whoever edits the emails (Settings, Emails)
     "notify": ("EmailTemplate", "Notification", "Choice", "Unsubscribe"),
 }
 #: Experimental. The setting that installs each contract (``karni.conf`` reads it).

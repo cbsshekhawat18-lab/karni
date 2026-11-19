@@ -480,7 +480,7 @@ apply codemods and list the manual steps. This file is the human summary.
   by email only. Each move's email (`moves.<state>.notify`) is a kind with merge fields, so a
   business edits it and it goes to the inbox too (`KARNI_NOTIFY_MOVE_CHANNELS`). `features.notify`
   in karni.yaml and `requires = ["notify>=1"]` in recipe.toml install it, and a role may grant
-  `notify.emailtemplate:*`. `karni.W440` warns about a kind on channels the project does not send
+  `notify.emailtemplate`. `karni.W440` warns about a kind on channels the project does not send
   on. See docs/notify.md.
 - **Changed (experimental): the emails a business edits live in `karni.notify`.** karni-commerce's
   `EmailTemplate`, its `/api/email-templates/` viewset and `karni_commerce.email_templates` moved

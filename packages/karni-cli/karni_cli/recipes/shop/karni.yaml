@@ -37,7 +37,7 @@ roles:
       # Settings: the business's details, every section and the email switches.
       "preferences.*:change": all
       # Settings, Emails: the text of each email.
-      "notify.emailtemplate:*": all
+      "notify.emailtemplate": all
   shop-staff:
     name: Shop staff
     description: Orders, shipments and the catalogue.

@@ -176,7 +176,7 @@ is its API, the same shape the `EmailTemplateEditor` of @karni/ui reads:
 | `POST /api/email-templates/<kind>/preview/` | A draft rendered with real values: the business's details and the latest matching record, else the kind's samples. |
 
 Reading needs `notify.emailtemplate:view`, changing `notify.emailtemplate:change`
-(the shop's `shop-manager` holds `notify.emailtemplate:*`).
+(the shop's `shop-manager` holds `notify.emailtemplate`).
 
 An edit is kept in `EmailTemplate` and wins over the files, for the email and
 for the inbox. It renders with a restricted engine: the declared merge fields

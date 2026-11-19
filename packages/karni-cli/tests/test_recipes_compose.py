@@ -255,7 +255,7 @@ def test_notify_is_installed_and_a_role_may_grant_its_models() -> None:
 
     recipe = _Recipe("club", "Club", requires=("notify>=1",))
     club = _club()
-    club["roles"]["club-manager"] = {"name": "Manager", "grants": {"notify.emailtemplate:*": "all"}}
+    club["roles"]["club-manager"] = {"name": "Manager", "grants": {"notify.emailtemplate": "all"}}
     merged = compose.merge(_project(), recipe, club, modules=MODULES)
     assert merged.data["features"] == {"notify": True}
     assert "features.notify: switched on (club requires it)." in merged.notes
