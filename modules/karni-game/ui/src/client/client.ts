@@ -60,6 +60,8 @@ export interface ServerOptions {
   /** For the built-in transport: extra headers (`csrfHeader()` for a session). */
   getHeaders?: () => Record<string, string>;
   credentials?: RequestCredentials;
+  /** The header the guest token travels in, as the server's `KARNI_GAME_TOKEN_HEADER`. Default "X-Player-Token". */
+  tokenHeader?: string;
   /**
    * Whether an account is signed in. Default: `getAccessToken` returns a
    * token. With an account the server finds the player from it, and a guest
@@ -297,6 +299,7 @@ export function createGameClient(options: GameClientOptions): GameClient {
       }))
     : null;
   const signedIn = server?.signedIn ?? (() => Boolean(server?.getAccessToken?.()));
+  const tokenHeader = server?.tokenHeader ?? "X-Player-Token";
   const deviceOnline =
     options.online ??
     (() => (typeof navigator === "undefined" ? true : navigator.onLine !== false));
@@ -357,7 +360,7 @@ export function createGameClient(options: GameClientOptions): GameClient {
       throw offline();
     }
     const headers = { ...init.headers };
-    if (token) headers["X-Player-Token"] = token;
+    if (token) headers[tokenHeader] = token;
     try {
       const answer = await transport.request<T>(`${prefix}${path}`, { ...init, method, headers });
       setReachable(true);

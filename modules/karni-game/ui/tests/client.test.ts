@@ -116,6 +116,29 @@ describe("a game with a server", () => {
     expect(again.client.config("jump", 1)).toBe(9);
   });
 
+  it("sends the guest token in the header the server names", async () => {
+    const seen: string[] = [];
+    const storage = createStorage({ namespace: "hdr", backend: memoryStorage() });
+    storage.set("token", "gt_9");
+    const client = createGameClient({
+      game: "block-hopper",
+      storage,
+      online: () => true,
+      server: {
+        tokenHeader: "X-Game-Token",
+        transport: {
+          request: async <T>(_path: string, request?: { headers?: Record<string, string> }) => {
+            seen.push(Object.keys(request?.headers ?? {}).join(","));
+            return { balances: [], items: [] } as T;
+          },
+        },
+      },
+    });
+    clients.push(client);
+    await client.wallet();
+    expect(seen).toEqual(["X-Game-Token"]);
+  });
+
   it("signs in a guest with a server token and keeps it", async () => {
     const { client, server, storage } = make();
     const player = await client.signInGuest("Swift Fox");
