@@ -11,6 +11,12 @@ development or staging copy never shows up in search results. While
 indexing is allowed it names the sitemap and the paths of
 ``KARNI_SITE_ROBOTS_DISALLOW``. It renders ``karni_site/robots.txt``.
 
+robots.txt is a request, and a proxy may rewrite it (a CDN can put its own
+``Allow: /`` in front). So while indexing is not allowed every page also
+says ``KARNI_SITE_ROBOTS_TAG`` (``noindex, nofollow``) itself: in the
+``X-Robots-Tag`` header of every response (:func:`robots_tag`, sent by the
+redirect middleware) and in the robots meta tag ``{% karni_seo %}`` writes.
+
 sitemap.xml lists the sections ``KARNI_SITE_SITEMAPS`` returns
 (:mod:`karni_site.sitemaps`). When one has more addresses than a sitemap
 may hold (50,000), sitemap.xml becomes an index of
@@ -36,7 +42,18 @@ from django.utils.module_loading import import_string
 from karni_site import conf
 from karni_site.metadata import absolute
 
-__all__ = ["indexing_allowed", "robots", "sections", "sitemap", "sitemap_section"]
+__all__ = [
+    "ROBOTS_HEADER",
+    "indexing_allowed",
+    "robots",
+    "robots_tag",
+    "sections",
+    "sitemap",
+    "sitemap_section",
+]
+
+#: The header a closed site sends on every response.
+ROBOTS_HEADER = "X-Robots-Tag"
 
 
 def indexing_allowed() -> bool:
@@ -45,6 +62,14 @@ def indexing_allowed() -> bool:
     if value is None:
         return os.environ.get("DJANGO_ENV", "dev").strip().lower() == "prod"
     return bool(value)
+
+
+def robots_tag() -> str:
+    """What a page tells search engines itself: ``KARNI_SITE_ROBOTS_TAG`` while indexing is
+    not allowed, ``""`` while it is (or when the setting is empty)."""
+    if indexing_allowed():
+        return ""
+    return str(conf.get("KARNI_SITE_ROBOTS_TAG") or "").strip()
 
 
 def robots(request: HttpRequest) -> HttpResponse:

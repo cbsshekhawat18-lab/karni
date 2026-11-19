@@ -392,6 +392,18 @@ decides for every environment. While indexing is allowed it names the
 sitemap and asks crawlers to stay out of `KARNI_SITE_ROBOTS_DISALLOW`.
 A `karni_site/robots.txt` template of the project's own replaces it.
 
+robots.txt is a request a proxy can rewrite: a CDN may put its own
+`Allow: /` in front of the file. So while indexing is not allowed, every
+page says it too. The redirect middleware adds `X-Robots-Tag: noindex,
+nofollow` to every response Django sends (a view that sets the header
+keeps its own), and `{% karni_seo %}` writes `<meta name="robots"
+content="noindex, nofollow">`. `KARNI_SITE_ROBOTS_TAG` holds the
+directives, and `""` sends neither. Static and media files are served by
+the web server, not Django: add the header in its configuration when they
+must stay out of search results too. `karni check --seo` checks the pages
+as an open site serves them, so a development copy is judged as production
+will be.
+
 ### `{% image %}`: uploads at the size the page shows them
 
 ```django
@@ -697,6 +709,7 @@ Every setting arrives through the module's settings fragment
 | `KARNI_SITE_URL` | `None` | The site's address, `"https://www.example.com"`, for canonical links, share tags, the sitemap and robots.txt. `None`: the address each request came to. |
 | `KARNI_SITE_ALLOW_INDEXING` | `None` | Whether search engines may index the site. `None`: only where `DJANGO_ENV` is `prod`. |
 | `KARNI_SITE_ROBOTS_DISALLOW` | `[]` | Paths robots.txt asks crawlers to stay out of while indexing is allowed. |
+| `KARNI_SITE_ROBOTS_TAG` | `"noindex, nofollow"` | What every page says while indexing is not allowed: the `X-Robots-Tag` header and the robots meta tag of `{% karni_seo %}`. `""` sends neither. |
 | `KARNI_SITE_SITEMAP_EXCLUDE` | `[]` | URL names and paths the sitemap leaves out, wildcards allowed. |
 | `KARNI_SITE_TECHNICAL_ROUTES` | `[]` | URL names and paths added to Karni's own technical routes, which neither the sitemap nor the menu's "goes to" choices list. |
 | `KARNI_SITE_SITEMAPS` | `"karni_site.sitemaps.sitemaps"` | The `() -> {name: Sitemap}` function that lists the sitemap's sections. |
@@ -787,7 +800,8 @@ fails while `manage.py karni_site_seed` renders it stops that command with
 - The sitemap: `class Karni: sitemap`, `KARNI_SITE_SITEMAP_EXCLUDE`,
   `KARNI_SITE_PUBLISHED_FIELDS`, or `KARNI_SITE_SITEMAPS`. robots.txt:
   `KARNI_SITE_ALLOW_INDEXING`, `KARNI_SITE_ROBOTS_DISALLOW` or a
-  `karni_site/robots.txt` template. Or a route of your own for either path
+  `karni_site/robots.txt` template. A closed site's header and meta tag:
+  `KARNI_SITE_ROBOTS_TAG`, or `RedirectMiddleware.robots()` in a subclass. Or a route of your own for either path
   before the include.
 - Images: `KARNI_SITE_IMAGE_WIDTHS`, `KARNI_SITE_IMAGE_QUALITY`,
   `KARNI_SITE_IMAGE_MAX_SIZE`, `KARNI_SITE_RENDITIONER`, and

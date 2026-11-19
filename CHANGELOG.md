@@ -121,6 +121,17 @@ apply codemods and list the manual steps. This file is the human summary.
   person is recorded as before. A new block's place no longer costs a count query
   ([migration note](docs/migrations/0.5.md#a-sites-defaults-are-stored-in-the-deploy-and-leave-no-history)).
 
+- **Fixed: a site closed to search engines says so on every page, not in robots.txt alone.**
+  With `KARNI_SITE_ALLOW_INDEXING` off (or outside `DJANGO_ENV=prod` by default), only
+  robots.txt changed, and a proxy such as a CDN can put its own `Allow: /` in front of that
+  file. Every response Django sends now carries `X-Robots-Tag: noindex, nofollow`, added by
+  karni-site's redirect middleware (already in every site's `MIDDLEWARE`, and a view's own
+  header is kept), and `{% karni_seo %}` writes `<meta name="robots" content="noindex,
+  nofollow">`. The new `KARNI_SITE_ROBOTS_TAG` holds the directives, `""` sends neither.
+  `karni check --seo` checks the pages as an open site serves them, so a development copy
+  is judged as production will be
+  ([migration note](docs/migrations/0.5.md#a-closed-site-says-noindex-on-every-page)).
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

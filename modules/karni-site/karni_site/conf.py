@@ -129,6 +129,11 @@ DEFAULTS |= {
     # Whether search engines may index the site. None: only when DJANGO_ENV is "prod", so a
     # development or staging copy is never indexed. True or False decides for every environment.
     "KARNI_SITE_ALLOW_INDEXING": None,
+    # What a closed site tells search engines on every page, while indexing is not allowed: the
+    # X-Robots-Tag header of every response (karni_site.middleware.RedirectMiddleware) and the
+    # robots meta tag of {% karni_seo %}. robots.txt alone is not enough: a proxy or CDN may
+    # rewrite it. "" sends neither, and robots.txt is then the only signal.
+    "KARNI_SITE_ROBOTS_TAG": "noindex, nofollow",
     # Paths robots.txt asks crawlers to stay out of while indexing is allowed: ["/search/"].
     "KARNI_SITE_ROBOTS_DISALLOW": [],
     # URL names and paths the sitemap leaves out, shell wildcards allowed:

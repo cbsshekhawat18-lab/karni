@@ -37,7 +37,10 @@ Findings, one line each:
   without a word.
 
 Duplicates are counted among the pages search engines may index (no
-``noindex``, a canonical link to themselves).
+``noindex``, a canonical link to themselves). The run requests the pages as an
+open site serves them (``KARNI_SITE_ALLOW_INDEXING = True`` while it runs), so
+a development copy, closed to search engines on every page, is checked as
+production will be.
 
 An upload the pages show without its smaller copies gets them first, made
 in this process (:func:`karni_site.renditions.made_inline`), and the run
@@ -528,7 +531,11 @@ class SeoCrawl:
     # the run
 
     def run(self) -> list[str]:
-        with renditions.made_inline() as made:
+        from django.test.utils import override_settings
+
+        # The pages as an open site serves them: a development copy is closed to search
+        # engines (noindex on every page), and the check judges what production will say.
+        with override_settings(KARNI_SITE_ALLOW_INDEXING=True), renditions.made_inline() as made:
             failures = self._run()
         self.made = list(dict.fromkeys(made))
         return failures

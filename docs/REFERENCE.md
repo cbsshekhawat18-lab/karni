@@ -2059,6 +2059,7 @@ class Lead(BaseModel):
 | `KARNI_SITE_NOTIFY_FROM` |  | `""` | The sender of karni_site.notify emails. Empty: Django's DEFAULT_FROM_EMAIL. |
 | `KARNI_SITE_URL` |  | `None` | The site's own address, "https://www.example.com". Canonical links, share tags, the sitemap and robots.txt use it. None: the address each request came to. |
 | `KARNI_SITE_ALLOW_INDEXING` |  | `None` | Whether search engines may index the site. None: only when DJANGO_ENV is "prod", so a development or staging copy is never indexed. True or False decides for every environment. |
+| `KARNI_SITE_ROBOTS_TAG` |  | `"noindex, nofollow"` | What a closed site tells search engines on every page, while indexing is not allowed: the X-Robots-Tag header of every response (karni_site.middleware.RedirectMiddleware) and the robots meta tag of {% karni_seo %}. robots.txt alone is not enough: a proxy or CDN may rewrite it. "" sends neither, and robots.txt is then the only signal. |
 | `KARNI_SITE_ROBOTS_DISALLOW` |  | `[]` | Paths robots.txt asks crawlers to stay out of while indexing is allowed: ["/search/"]. |
 | `KARNI_SITE_SITEMAP_EXCLUDE` |  | `[]` | URL names and paths the sitemap leaves out, shell wildcards allowed: ["website:thanks", "/drafts/*"]. The admin, the API and redirects are never in it. |
 | `KARNI_SITE_TECHNICAL_ROUTES` |  | `[]` | URL names and paths added to Karni's own technical routes (the health and readiness probes, the welcome page), which no sitemap or menu choice lists: ["status", "/ping"]. |

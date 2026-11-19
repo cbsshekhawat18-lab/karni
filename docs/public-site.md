@@ -425,7 +425,7 @@ same source as this table.
 <!-- generated:site-tags -->
 | Tag | Write | What it does |
 | --- | --- | --- |
-| `{% karni_seo %}` | `{% karni_seo %}<title>...</title><meta name="description" content="...">{% endkarni_seo %}` | In base.html's &lt;head&gt;, around the design's own title and description. It writes the page's title, description, canonical link, robots for a hidden page, the Open Graph and Twitter tags and the site's JSON-LD. Each value is the first of: the admin's entry for the page (Page titles and descriptions), `seo` in the view's context (a dict), the page's row, the tags written inside, the site's settings. The page's row is `seo` or `object` in the context when it is a row, else the row in the context whose get_absolute_url() is the page's path. Its fields are the ones `class Karni: seo` names, else seo_title, seo_description and seo_image, else a title, description or image field by a usual name. A detail page that has its row in the context needs no title of its own. |
+| `{% karni_seo %}` | `{% karni_seo %}<title>...</title><meta name="description" content="...">{% endkarni_seo %}` | In base.html's &lt;head&gt;, around the design's own title and description. It writes the page's title, description, canonical link, robots for a hidden page (and noindex, nofollow on every page of a site closed to search engines), the Open Graph and Twitter tags and the site's JSON-LD. Each value is the first of: the admin's entry for the page (Page titles and descriptions), `seo` in the view's context (a dict), the page's row, the tags written inside, the site's settings. The page's row is `seo` or `object` in the context when it is a row, else the row in the context whose get_absolute_url() is the page's path. Its fields are the ones `class Karni: seo` names, else seo_title, seo_description and seo_image, else a title, description or image field by a usual name. A detail page that has its row in the context needs no title of its own. |
 | `{% image %}` | `{% image obj.photo alt=obj.title width=800 %}` | An &lt;img&gt; of an uploaded image: src, srcset and sizes from its WebP copies, width and height in its proportions, lazy loading. alt is required (alt="" for an image that only decorates). eager=True, or eager=forloop.first in a loop, for the image at the top of a page. sizes="..." replaces the one worked out from width. Any other name=value becomes an attribute, an underscore a hyphen (data_index=1 is data-index="1"). An empty field renders nothing, and the original is shown until its copies exist. |
 | `{% editable %}` | `{% editable "home.intro" %}<default HTML>{% endeditable %}` | Text the client edits in the admin. The content is the default: the first render stores it under the key, and the block follows the template until someone edits it. An edited block shows the edited HTML, cleaned to the inline markup KARNI_SITE_INLINE_TAGS allows. The key's first part is the page the admin groups it under. |
 | `{% editable_image %}` | `{% editable_image "home.hero" %}<img src="..." alt="...">{% endeditable_image %}` | An image the client replaces. The design's markup stays: an upload changes the &lt;img&gt;'s src (its srcset and &lt;source&gt; elements go), an edited alternative text its alt. With url after the key, it holds a bare address instead, for a style="background-image: url(...)". |
@@ -630,7 +630,10 @@ search engines without project code:
   sitemap = {"filter": {...}}` to choose).
 - **robots.txt** closes the site outside production (`DJANGO_ENV` other
   than `prod`) and names the sitemap in production.
-  `KARNI_SITE_ALLOW_INDEXING` decides otherwise.
+  `KARNI_SITE_ALLOW_INDEXING` decides otherwise. A closed site also says
+  so on every page, because a proxy can rewrite robots.txt: the
+  `X-Robots-Tag: noindex, nofollow` header on every response and the
+  robots meta tag of `{% karni_seo %}` (`KARNI_SITE_ROBOTS_TAG`).
 - **Images.** `{% image project.photo width=400 alt=project.title %}`
   writes `srcset`, `sizes`, `width`, `height` and lazy loading from WebP
   copies made in the background when the image is uploaded (Celery,

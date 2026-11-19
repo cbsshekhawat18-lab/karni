@@ -41,3 +41,15 @@ step of karni make deploy compose runs it once the file is written again (--forc
 mechanical = false
 migration = "migrations/0.5.md#a-sites-defaults-are-stored-in-the-deploy-and-leave-no-history"
 
+[[change]]
+id = "site-closed-robots-tag"
+kind = "behaviour"
+symbol = "KARNI_SITE_ROBOTS_TAG"
+summary = """\
+While karni-site's indexing is not allowed (KARNI_SITE_ALLOW_INDEXING False, or None \
+outside DJANGO_ENV=prod), every response gets X-Robots-Tag: noindex, nofollow and \
+{% karni_seo %} writes the robots meta tag, besides robots.txt. KARNI_SITE_ROBOTS_TAG = "" \
+sends neither, as before."""
+mechanical = false
+migration = "migrations/0.5.md#a-closed-site-says-noindex-on-every-page"
+
