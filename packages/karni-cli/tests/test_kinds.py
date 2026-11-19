@@ -172,6 +172,47 @@ def test_a_site_and_an_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
     )
 
 
+def test_a_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    project = _made(tmp_path, monkeypatch, "Block Hopper", "--kind", "game")
+    assert _kind(project) == "game"
+    pyproject = tomllib.loads((project / "pyproject.toml").read_text())
+    assert "karni-game" in pyproject["project"]["dependencies"]
+    settings = (project / "config" / "settings.py").read_text()
+    assert '"karni_game"' in settings and '"games"' in settings
+    assert settings.index("KARNI_PEOPLE = True") < settings.index("karni_settings(globals())")
+    urls = (project / "config" / "urls.py").read_text()
+    assert 'path("api/game/", include("karni_game.urls")),' in urls
+    for rel in ("games/game.py", "games/tests/test_game.py", "content/game.yaml"):
+        assert (project / rel).is_file(), rel
+    assert "slug: block-hopper" in (project / "content" / "game.yaml").read_text()
+    package = json.loads((project / "frontend" / "package.json").read_text())
+    assert package["dependencies"]["@karni/game"] == "^0.5.0"
+    page = (project / "frontend" / "src" / "pages" / "game.tsx").read_text()
+    assert 'from "@karni/game"' in page and 'const GAME = "block-hopper";' in page
+    routes = (project / "frontend" / "src" / "routes.tsx").read_text()
+    assert 'import GamePage from "./pages/game";' in routes and 'path: "/game"' in routes
+    agents = _agents(project)
+    assert "A game (kind `game` in pyproject.toml). The stack is set" in agents
+    assert "karni-game module" in agents and "`content/game.yaml`" in agents
+    assert _context(project, monkeypatch).splitlines()[0] == (
+        "KIND: game (a game on karni-game: games app, content/game.yaml; "
+        "API + React app in frontend/)"
+    )
+
+
+def test_a_project_without_the_game_kind_has_no_game_dependency(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The add-on is opt-in: a plain project names neither karni-game nor @karni/game."""
+    for kind in ("app", "site+app"):
+        project = _made(tmp_path / kind.replace("+", "-"), monkeypatch, "Plain One", "--kind", kind)
+        for rel in ("pyproject.toml", "config/settings.py", "config/urls.py"):
+            text = (project / rel).read_text()
+            assert "karni-game" not in text and "karni_game" not in text, (kind, rel)
+        assert "@karni/game" not in (project / "frontend" / "package.json").read_text()
+        assert not (project / "games").exists() and not (project / "content" / "game.yaml").exists()
+
+
 @pytest.mark.parametrize(
     ("args", "message"),
     [
@@ -180,6 +221,8 @@ def test_a_site_and_an_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
         (["--kind", "app", "--design", str(DESIGNS / "bakery")], "--design builds a public"),
         (["--design", str(DESIGNS / "bakery" / "css")], "has no .html page"),
         (["--site-app", "Web-Site"], "Site app name 'Web-Site' must be snake_case"),
+        (["--kind", "game", "--recipe", "shop"], "--kind game makes a game on karni-game"),
+        (["--kind", "game", "--no-staff-app"], "--no-staff-app leaves frontend/ out"),
     ],
 )
 def test_choices_that_do_not_fit_are_refused(
@@ -194,7 +237,9 @@ def test_choices_that_do_not_fit_are_refused(
 def test_an_unknown_kind_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     result = _new(tmp_path, monkeypatch, "Odd One", "--kind", "blog")
     assert isinstance(result.exception, CliError) and result.exception.code == "C106"
-    assert "--kind 'blog' is not a kind. Use one of site, app, site+app" in str(result.exception)
+    assert "--kind 'blog' is not a kind. Use one of site, app, site+app, game" in str(
+        result.exception
+    )
     assert not (tmp_path / "odd_one").exists()
 
 
@@ -438,13 +483,14 @@ def _run(project: Path, python: Path, *args: str) -> subprocess.CompletedProcess
         ["--kind", "site+app"],
         ["--kind", "site", "--design", str(DESIGNS / "school")],
         ["--kind", "site+app", "--design", str(DESIGNS / "bakery")],
+        ["--kind", "game"],
     ],
-    ids=["app", "site", "site-no-staff-app", "site+app", "site-design", "site+app-design"],
+    ids=["app", "site", "site-no-staff-app", "site+app", "site-design", "site+app-design", "game"],
 )
 def test_each_kind_passes_its_own_tests_lint_and_checks(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, args: list[str]
 ) -> None:
-    require_modules("karni-site")
+    require_modules("karni-site", *(("karni-game",) if "game" in args else ()))
     project = _made(tmp_path, monkeypatch, "Kind Check", *args)
     monkeypatch.chdir(project)
     python = _project_interpreter(project, tmp_path, monkeypatch)
@@ -457,7 +503,7 @@ def test_each_kind_passes_its_own_tests_lint_and_checks(
         pytest.skip("ruff is not installed in this interpreter")
     # The whole project for what breaks code (an undefined name), and what the kind wrote
     # (the site app, the settings and urls it edits) under a strict selection and the format.
-    written = [str(p) for p in ("website", "config/settings.py", "config/urls.py")]
+    written = [str(p) for p in ("website", "games", "config/settings.py", "config/urls.py")]
     written = [rel for rel in written if (project / rel).exists()]
     for ruff_args in (
         ["check", "--isolated", "--target-version", "py312", "--select", "E4,E7,E9,F", "."],

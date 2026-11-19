@@ -227,7 +227,8 @@ def choose_kind(kind: str | None, design: Path | None, *, ask: bool) -> str:
     if kind not in kinds.KINDS:
         raise CliError(
             f"--kind {kind!r} is not a kind. Use one of {', '.join(kinds.KINDS)}: site for a "
-            "public website, app for an API and a React app, site+app for both.",
+            "public website, app for an API and a React app, site+app for both, game for a "
+            "game.",
             code="C106",
         )
     if design is not None and not kinds.has_site(kind):
@@ -288,6 +289,19 @@ def _make_site(project: Path, site_app: str) -> None:
     site_gen.plan(ws, site_app, next_step=False)
     ws.commit(dry_run=False)
     record_site_guidance(project)
+
+
+def _make_game(project: Path, name: str) -> list[str]:
+    """The game kind's files (karni-game, the games app, the content file, the game page)."""
+    from karni_cli.commands.add import record_guidance
+    from karni_cli.generators import game as game_gen
+    from karni_cli.generators.core import Workspace
+
+    ws = Workspace(project)
+    lines = game_gen.plan(ws, title=name, slug=project.name.replace("_", "-"))
+    ws.commit(dry_run=False)
+    record_guidance(project, "game", "karni_game")
+    return lines
 
 
 def _site_from_design(project: Path, design: Path, site_app: str) -> None:
@@ -389,6 +403,8 @@ def choose_recipe(
         if design is not None
         else "--kind site has no React app for the recipe's pages"
         if kind == "site"
+        else "--kind game makes a game on karni-game, without a karni.yaml"
+        if kind == "game"
         else "--no-staff-app leaves out the React app the recipe's pages live in"
         if staff_app is False
         else None
@@ -693,6 +709,7 @@ def new(
         _site_from_design(project, source, site_app)
     elif site:
         _make_site(project, site_app)
+    game_lines = _make_game(project, name) if chosen == "game" else []
     # The production stack: the same files `karni make deploy compose` writes.
     deploy.write_new_project(project, domain=domain, staff_app=with_staff_app)
     write_agent_adapters(project)
@@ -704,6 +721,8 @@ def new(
     )
     if git:
         typer.echo(init_repository(project))
+    for line in game_lines:
+        typer.echo(line)
     if not with_staff_app:
         typer.echo("No staff app (frontend/): staff work in the admin.")
     elif ui_source is not None:
@@ -752,6 +771,13 @@ def new(
             f"  # pages: karni import design <design folder> --app {site_app} --editable for a "
             f"designer's pages (karni rules --procedure {PROCEDURE}), or karni make view <name> "
             f"--app {site_app}"
+        )
+    if chosen == "game":
+        typer.echo("  karni migrate && karni load content/game.yaml  # the game on the server")
+        typer.echo(
+            "  # the game's code: frontend/src/game/, on @karni/game (the client of karni-game, "
+            "modules/karni-game/ui). Until that package is published, npm install needs it "
+            "from a Karni checkout."
         )
     typer.echo("  karni check")
     for line in _new_app_lines():
