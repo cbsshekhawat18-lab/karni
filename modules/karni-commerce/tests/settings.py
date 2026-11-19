@@ -43,7 +43,11 @@ KARNI_ROLES = {
     },
     "manager": {
         "name": "Manager",
-        "grants": {"karni_commerce.*:*": "all", "preferences.*:change": "all"},
+        "grants": {
+            "karni_commerce.*:*": "all",
+            "preferences.*:change": "all",
+            "notify.emailtemplate:*": "all",
+        },
     },
     "customer": {"name": "Customer", "default": True, "grants": {}},
 }
@@ -52,11 +56,13 @@ karni_settings(globals(), env_name="dev")
 
 # karni.outbox and karni.timeline: commerce's family events and the entries they write
 # on the buyer's timeline. karni.preferences: the Settings page (/api/preferences/),
-# commerce's Checkout section and the email switches.
+# commerce's Checkout section and the email switches. karni.notify: the emails a business
+# edits (/api/email-templates/).
 INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     "karni.outbox",
     "karni.timeline",
     "karni.preferences",
+    "karni.notify",
     "karni_payments",
     "karni_commerce",
     "tests.testapp",

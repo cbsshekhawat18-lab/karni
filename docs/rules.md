@@ -220,6 +220,10 @@ none). The templates are ordinary Django templates a project edits:
 `recipient` and `frontend` (`KARNI_FRONTEND_URL`) in their context. Without
 them Karni's `karni/email/move_*` says "Your booking is now confirmed". Mail
 goes through the project's `EMAIL_BACKEND`, the console in development.
+While [notifications](notify.md#the-emails-of-moves) are installed, the
+email is a message kind (`bookings.booking_confirmed`): a business may
+rewrite it in Settings, Emails, the recipient may switch it off for
+themselves, and it goes to their inbox in the app too.
 Override `notify_move(key)` on the model to send it elsewhere, or
 `with karni.rules.silent(reason="..."):` to send none. Uses: a booking
 confirmed or cancelled, an order paid, shipped or delivered.

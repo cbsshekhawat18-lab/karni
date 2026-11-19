@@ -170,7 +170,7 @@ def test_the_spec_reads_modules_and_features_from_the_catalog() -> None:
     assert {name: f.switch for name, f in spec_catalog.FEATURES.items()} == features
     # the schema's features: and karni plan's settings follow the catalog
     # ... and the core contracts a recipe's requires switches on
-    contracts = {"people", "events", "timeline", "preferences"}
+    contracts = {"people", "events", "timeline", "preferences", "notify"}
     assert set(schema.Features.model_fields) == set(features) | contracts
     assert plan_mod._FEATURE_SETTINGS == features
 

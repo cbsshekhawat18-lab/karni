@@ -21,6 +21,9 @@ features:
   # The business's details, the shop's and checkout's settings and the email switches
   # (Settings). recipe.toml's requires switches it on too.
   preferences: true
+  # The emails the business edits (Settings, Emails), the inbox and each person's own
+  # switches. recipe.toml's requires switches it on too.
+  notify: true
   terms: {version: "2026-01", url: /shop/terms, required: true, paths: [/api/carts/current/checkout/]}
 roles:
   admin: {name: Admin, system: true, grants: {"*": all}}
@@ -33,6 +36,8 @@ roles:
       "karni_payments.*": all
       # Settings: the business's details, every section and the email switches.
       "preferences.*:change": all
+      # Settings, Emails: the text of each email.
+      "notify.emailtemplate": all
   shop-staff:
     name: Shop staff
     description: Orders, shipments and the catalogue.

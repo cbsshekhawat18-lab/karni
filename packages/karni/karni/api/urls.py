@@ -15,7 +15,8 @@ It also mounts ``search/``, cross-model search
 (:class:`karni.api.global_search.GlobalSearchView`, experimental), before the
 routes, so it answers ``GET /api/search/`` whatever the router registers, and
 ``timeline/`` (:class:`karni.timeline.api.TimelineView`, experimental) while
-``karni.timeline`` is installed and ``KARNI_TIMELINE_API`` is on.
+``karni.timeline`` is installed and ``KARNI_TIMELINE_API`` is on, and ``inbox/``
+and ``notify/unsubscribe/`` (:mod:`karni.notify.api`) while ``karni.notify`` is.
 
 Override / escape hatch: point ``KARNI_API_ROUTER`` at your own zero-argument
 factory to pre-register explicit routes before autodiscovery (see
@@ -58,6 +59,15 @@ def _timeline_urlpatterns() -> list[Any]:
     return build_urlpatterns()
 
 
+def _notify_urlpatterns() -> list[Any]:
+    """``inbox/`` and ``notify/`` while ``karni.notify`` is installed and its API is on."""
+    if not apps.is_installed("karni.notify"):
+        return []
+    from karni.notify.api import build_urlpatterns
+
+    return build_urlpatterns()
+
+
 def _preferences_urlpatterns() -> list[Any]:
     """``preferences/`` while ``karni.preferences`` is installed and its API is on."""
     if not apps.is_installed("karni.preferences"):
@@ -69,7 +79,8 @@ def _preferences_urlpatterns() -> list[Any]:
 
 #: What Karni mounts before the router's routes: ``navigation/`` while ``KARNI_NAVIGATION``
 #: is set, ``search/``, ``dashboard/`` (the home tiles, experimental), ``timeline/``
-#: with ``karni.timeline`` and ``preferences/`` with ``karni.preferences``.
+#: with ``karni.timeline``, ``preferences/`` with ``karni.preferences``, and ``inbox/``
+#: and ``notify/`` with ``karni.notify``.
 #: :func:`karni.api.versions.api_urls` mounts them in each version.
 extra_urlpatterns = [
     *navigation_urlpatterns(),
@@ -77,6 +88,7 @@ extra_urlpatterns = [
     path("dashboard/", DashboardView.as_view(), name="karni-dashboard-tiles"),
     *_timeline_urlpatterns(),
     *_preferences_urlpatterns(),
+    *_notify_urlpatterns(),
 ]
 
 urlpatterns = [*extra_urlpatterns, *router.urls]

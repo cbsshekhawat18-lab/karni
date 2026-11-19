@@ -1067,6 +1067,11 @@
           "description": "Experimental. The timeline contract: karni.timeline in INSTALLED_APPS. It needs people and events, which it switches on too.",
           "type": "boolean"
         },
+        "notify": {
+          "default": false,
+          "description": "Experimental. The notifications contract: karni.notify in INSTALLED_APPS, the emails a business edits in the app, the inbox, each person's switches and unsubscribing from marketing emails.",
+          "type": "boolean"
+        },
         "user_grants": {
           "default": false,
           "description": "KARNI_USER_GRANTS: per-user grants next to the role grants.",

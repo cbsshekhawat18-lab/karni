@@ -81,6 +81,7 @@ CONTRACTS: Final[dict[str, int]] = {
     "events": 1,
     "timeline": 1,
     "preferences": 1,
+    "notify": 1,
 }
 #: Experimental. The roles every part shares. Every other role is ``<prefix>-<role>``.
 FAMILY_ROLES: Final = ("admin", "customer")

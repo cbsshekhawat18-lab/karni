@@ -285,6 +285,17 @@ Experimental now:
   `GET /api/timeline/`, the `KARNI_TIMELINE_*` settings, the timeline titles
   of the people events and of `payments.payment.succeeded`, and the person
   karni-payments' events carry.
+- [Notifications](notify.md): the `karni.notify` app (its models
+  `EmailTemplate`, `Notification`, `Choice` and `Unsubscribe`, admin, task
+  and beat entry, `karni.notify.api`, `viewsets`, `editor`, `moves`,
+  `source`, `adopt`, `checks` and `services`), `send`, `Sent`, `Recipient`,
+  `recipients`, `holders`, `on_event`, `choices`, `choose`, `unsubscribe`,
+  `resubscribe`, `unsubscribed`, `unsubscribe_url`, `unread_count`,
+  `mark_read`, `mark_unread`, `prune`, `installed` and `CONTRACT` in
+  `karni.notify`, the `channels=` and `replace=` arguments and `CHANNELS`,
+  `deliver` and `is_silenced` of `karni.mail`, `/api/inbox/`,
+  `/api/email-templates/`, `/api/notify/unsubscribe/`, `features.notify`,
+  and the `KARNI_NOTIFY_*` and `KARNI_MAIL_SOURCE` settings.
 - [The family rules](family.md#how-the-rules-are-kept): the architecture rules
   `part-imports-part`, `part-role-prefix` and `part-route` (K315),
   `karni.testing.parts` (`installed_parts`, `references_in`,

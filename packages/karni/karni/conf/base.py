@@ -392,6 +392,18 @@ BASE: dict[str, Any] = {
     "KARNI_PREFERENCES_DEFAULTS": {},
     "KARNI_PREFERENCES_API": True,
     "KARNI_PREFERENCES_AUTODISCOVER": True,
+    # The notifications contract (experimental, the karni.notify app): route /api/inbox/,
+    # /api/email-templates/ and /api/notify/unsubscribe/, the channels the project sends
+    # on, the inbox's page sizes, the days a notification is kept (None keeps them all),
+    # where an unsubscribe link points (after KARNI_FRONTEND_URL) and the channels of a
+    # move's email (moves.<state>.notify).
+    "KARNI_NOTIFY_API": True,
+    "KARNI_NOTIFY_CHANNELS": ["email", "inbox"],
+    "KARNI_NOTIFY_PAGE_SIZE": 25,
+    "KARNI_NOTIFY_MAX_PAGE_SIZE": 100,
+    "KARNI_NOTIFY_RETENTION_DAYS": 180,
+    "KARNI_NOTIFY_UNSUBSCRIBE_PATH": "/api/notify/unsubscribe/?token={token}",
+    "KARNI_NOTIFY_MOVE_CHANNELS": ["email", "inbox"],
     "KARNI_ACCOUNTS_TOKEN_TTL": {
         "verify_email": 86400,
         "reset_password": 3600,
@@ -427,6 +439,10 @@ BASE: dict[str, Any] = {
     # Experimental. The kinds of email karni.mail does not send (a list of
     # names such as "commerce.new_order"): a project switches one off here.
     "KARNI_MAIL_DISABLED_KINDS": env.list("KARNI_MAIL_DISABLED_KINDS", default=[]),
+    # Experimental. Where karni.mail finds what a business changed: the notifications
+    # contract's source (edited emails, each person's switches and unsubscribes, the
+    # inbox) while karni.notify is installed, else the files and karni.preferences.
+    "KARNI_MAIL_SOURCE": env("KARNI_MAIL_SOURCE", default="karni.notify.source.NotifySource"),
     # Django's default sends a direct /admin/login/ to /accounts/profile/ (a 404).
     "LOGIN_REDIRECT_URL": f"/{_ADMIN_PATH}",
     # --- DRF & API schema -------------------------------------------------

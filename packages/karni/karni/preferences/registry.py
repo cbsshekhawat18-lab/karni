@@ -72,6 +72,7 @@ CONTRACT_APPS: Final[dict[str, str]] = {
     "events": "karni.outbox",
     "timeline": "karni.timeline",
     "preferences": "karni.preferences",
+    "notify": "karni.notify",
 }
 _KEY: Final = re.compile(r"^[a-z][a-z0-9_]*$")
 _DOTTED: Final = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
@@ -420,7 +421,13 @@ def _mail_emails() -> Iterable[EmailKind]:
     from karni.mail import DefaultSource, kinds, mail_source
 
     # Editable when the project's mail source keeps edited emails (KARNI_MAIL_SOURCE).
-    keeps = getattr(type(mail_source()), "template", None) not in (None, DefaultSource.template)
+    source = mail_source()
+    asks = getattr(source, "keeps_edits", None)
+    keeps = (
+        bool(asks())
+        if callable(asks)
+        else getattr(type(source), "template", None) not in (None, DefaultSource.template)
+    )
     for kind in kinds():
         yield EmailKind(
             name=kind.name,
@@ -437,7 +444,12 @@ def _mail_emails() -> Iterable[EmailKind]:
 def _move_emails() -> Iterable[EmailKind]:
     from django.apps import apps
 
+    from karni.mail import find_kind, mail_source
     from karni.rules import rules_of
+
+    # karni.notify declares each move's email as a kind with merge fields: editable then.
+    asks = getattr(mail_source(), "keeps_edits", None)
+    keeps = bool(asks()) if callable(asks) else False
 
     for model in apps.get_models():
         try:
@@ -449,12 +461,14 @@ def _move_emails() -> Iterable[EmailKind]:
                 continue
             meta = model._meta
             state = "true" if move.to is True else str(move.to)
+            name = move_email_name(model, move.key)
             yield EmailKind(
-                name=move_email_name(model, move.key),
+                name=name,
                 title=f"{str(meta.verbose_name).capitalize()}: {state.replace('_', ' ')}",
                 describe=f"Sent to the row's {move.notify.replace('__', ' ')} when the "
                 f"{meta.verbose_name} moves to {state}.",
                 source="rules",
+                editable=keeps and bool(getattr(find_kind(name), "fields", None)),
             )
 
 

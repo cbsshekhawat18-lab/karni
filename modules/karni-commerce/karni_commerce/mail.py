@@ -1,37 +1,25 @@
-"""Experimental. ``karni.mail``'s source for a project with commerce (``KARNI_MAIL_SOURCE``).
+"""Experimental. ``karni.mail``'s source that commerce once named (``KARNI_MAIL_SOURCE``).
 
-An email the business rewrote in the app (:class:`~karni_commerce.models.EmailTemplate`,
-``/api/email-templates/``) wins over the template files. The switches and the sender
-are :class:`karni.mail.DefaultSource`'s: the preferences contract's (Settings, Emails
-and Details) while ``karni.preferences`` is installed.
-
-Import-light: the package's settings fragment names this class in projects that have
-the package without the app, so the models are imported only when asked.
+The emails a business edits moved to the notifications contract: the table is
+:class:`karni.notify.models.EmailTemplate`, the API ``/api/email-templates/`` of
+``karni.notify``, and ``karni.notify.source.NotifySource`` is the default
+``KARNI_MAIL_SOURCE`` of every project. :class:`MailSource` is that source under
+its old name, so a deployment whose settings still name it keeps working.
 
 Override / escape hatch: ``KARNI_MAIL_SOURCE`` pointing at a source of your own (a
-subclass of this one, or of :class:`karni.mail.DefaultSource`).
+subclass of :class:`karni.notify.source.NotifySource`, or of
+:class:`karni.mail.DefaultSource`).
 """
 
 from __future__ import annotations
 
-from karni.mail import DefaultSource, EditedTemplate
+from karni.notify.source import NotifySource
 
 __all__ = ["MailSource"]
 
 
-class MailSource(DefaultSource):
-    """Experimental. An email the business edited, else the files; the switches and the
-    sender of the preferences contract.
+class MailSource(NotifySource):
+    """Experimental. :class:`karni.notify.source.NotifySource` under the name commerce gave it.
 
-    It finds no edited email while ``karni_commerce`` is not in ``INSTALLED_APPS``.
+    Remove ``KARNI_MAIL_SOURCE`` from the settings (the default is the same source).
     """
-
-    def template(self, kind: str) -> EditedTemplate | None:
-        from django.apps import apps
-
-        if not apps.is_installed("karni_commerce"):
-            return None
-        from karni_commerce.models import EmailTemplate
-
-        row = EmailTemplate.objects.filter(kind=kind).first()
-        return EditedTemplate(row.subject, row.text) if row is not None else None

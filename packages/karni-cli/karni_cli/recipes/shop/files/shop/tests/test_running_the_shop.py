@@ -14,10 +14,11 @@ from django.template import Context
 from django.template.loader import render_to_string
 from karni import preferences
 from karni.mail import _engine, kinds, merge_values
+from karni.notify.editor import file_source
+from karni.notify.models import EmailTemplate
 from karni.testing.api import user_with_roles
 from karni_commerce import services as commerce
-from karni_commerce.email_templates import file_source
-from karni_commerce.models import Cart, EmailTemplate, Order
+from karni_commerce.models import Cart, Order
 from rest_framework.test import APIClient
 
 from shop import services

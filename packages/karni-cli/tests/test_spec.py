@@ -81,6 +81,7 @@ def test_a_minimal_spec_and_its_defaults() -> None:
         "events": False,
         "preferences": False,
         "timeline": False,
+        "notify": False,
     }
 
 

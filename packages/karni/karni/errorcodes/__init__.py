@@ -36,7 +36,8 @@ aggregations (``karni.aggregation``) · ``E43x``/``W59x`` cross-model search
 (``karni.events``, ``karni.outbox``) · ``E25x`` the people contract
 (``karni.people``) · ``E46x``/``W46x`` the timeline contract
 (``karni.timeline``) · ``E32x`` the preferences contract
-(``karni.preferences``).
+(``karni.preferences``) · ``E44x``/``W44x`` the notifications contract
+(``karni.notify``, and ``karni.mail``'s message kinds).
 ``SUG001`` to ``SUG099`` suggestions from code (``karni.suggestions``): what
 ``karni check`` and ``karni doctor`` print after the errors and warnings, never a
 failure. The prefix has three letters because the registry's code pattern reads
@@ -2087,6 +2088,94 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "delivered through karni.outbox. Without it, no entry is written from events.",
         "Add 'karni.outbox' to INSTALLED_APPS and run migrate, or set "
         "KARNI_TIMELINE_FROM_EVENTS = False and write entries with timeline.record().",
+    ),
+    # E440-E449 / W440-W449 the notifications contract (experimental, karni.notify, and
+    # the message kinds of karni.mail)
+    _e(
+        "E440",
+        "A message is sent as a kind nobody declared",
+        "exception",
+        "karni.notify.send",
+        "A message kind is what Settings, Emails lists, what a person switches off and what "
+        "a business edits. notify.send() sends declared kinds only, so every message the "
+        "project sends can be found, switched and edited. karni.mail.send_templated() with "
+        "an undeclared kind still sends its email, as it always did.",
+        "Declare the kind in the part's messages.py with karni.mail.register_kind('<prefix>."
+        "<message>', title=..., template='<app>/email/<stem>', fields={...}), or correct the "
+        "name to one GET /api/email-templates/ lists.",
+    ),
+    _e(
+        "E441",
+        "A person cannot switch or unsubscribe from this message kind",
+        "api",
+        "karni.notify.choose; karni.notify.unsubscribe; PATCH /api/inbox/choices/<kind>/",
+        "A person's own switches cover the declared kinds that are switchable. A kind "
+        "declared switchable=False (a sign-in code) always goes out. Unsubscribing is for "
+        "marketing kinds (transactional=False): a receipt is switched off in the person's "
+        "own switches, never by a link.",
+        "Use a kind GET /api/inbox/choices/ lists, or switch a transactional kind off with "
+        "notify.choose(user, kind, email=False) instead of notify.unsubscribe().",
+    ),
+    _e(
+        "E442",
+        "An unsubscribe link is not one this project signed",
+        "api",
+        "karni.notify.read_token; /api/notify/unsubscribe/",
+        "The link in a marketing email carries a token signed with the project's SECRET_KEY, "
+        "naming the address and the kind. A changed or cut token, or one signed under another "
+        "secret, would let anyone unsubscribe anyone.",
+        "Open the link from the email as it is. After a SECRET_KEY rotation, old links stop "
+        "working: the person unsubscribes from a newer email or in their own switches.",
+    ),
+    _e(
+        "E443",
+        "A message is sent to something that is not a recipient",
+        "exception",
+        "karni.notify.send; karni.notify.recipients",
+        "A message goes to a user (its email and its inbox), a person of karni.people (its "
+        "email, and its account when it has one), an email address, or a list of them. "
+        "Anything else has no address and no inbox.",
+        "Pass to=[user], to=[person], to='someone@example.com' or a list of those.",
+    ),
+    _e(
+        "E444",
+        "An inbox request asks for a page that does not exist",
+        "api",
+        "karni.notify.api.InboxView",
+        "GET /api/inbox/ pages the signed-in person's notifications from page 1. A page past "
+        "the last one, or one that is not a number, has nothing to show.",
+        "Ask for ?page= from 1 up to the page the previous answer's next named, or leave it "
+        "out for the first page.",
+    ),
+    _e(
+        "E445",
+        "A message kind names a channel Karni does not send on",
+        "exception",
+        "karni.mail.register_kind",
+        "A message kind goes to an email, the recipient's inbox in the app (karni.notify), or "
+        "both. A misspelt channel would send the message nowhere.",
+        "Pass channels=('email',), ('inbox',) or ('email', 'inbox').",
+    ),
+    _e(
+        "E446",
+        "Edited emails would be lost: karni.notify is not installed",
+        "exception",
+        "karni.notify.adopt.adopt_edited_emails (karni-commerce's migration 0008)",
+        "The emails a business edits moved to the notifications contract. A part that kept "
+        "them in its own table (karni-commerce did) copies each one to notify.EmailTemplate "
+        "before it drops its table, and without karni.notify there is no table to copy to.",
+        "Add 'karni.notify' to INSTALLED_APPS (features: {notify: true} in karni.yaml, or a "
+        "recipe that requires notify>=1) and run migrate again.",
+    ),
+    _e(
+        "W440",
+        "A message kind is declared on channels the project does not send on",
+        "warning",
+        "karni.notify.checks.check_notify",
+        "KARNI_NOTIFY_CHANNELS lists the channels the project sends on. A kind whose channels "
+        "are all left out of it goes nowhere, so its moment passes without a message.",
+        "Add the channel to KARNI_NOTIFY_CHANNELS, or declare the kind with a channel the "
+        "project sends on, or silence karni.W440 when that is what the project wants.",
     ),
     # E47x/E48x/W61x tooling for large projects (experimental): context slices, the
     # check cache, volume seeding, the scaling budgets and query plans

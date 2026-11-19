@@ -1266,11 +1266,13 @@ def _render_settings(ws: Workspace, out: Output, inputs: Inputs) -> None:
 
 #: Experimental. The app each core contract switched on by a feature adds to INSTALLED_APPS,
 #: when no setting installs it (``features.events``: the family events outbox,
-#: ``features.timeline``: the timeline, ``features.preferences``: the Settings page's store).
+#: ``features.timeline``: the timeline, ``features.preferences``: the Settings page's store,
+#: ``features.notify``: notifications, the inbox and the emails a business edits).
 CONTRACT_APPS: Final[dict[str, str]] = {
     "events": "karni.outbox",
     "timeline": "karni.timeline",
     "preferences": "karni.preferences",
+    "notify": "karni.notify",
 }
 
 

@@ -90,6 +90,7 @@ requires is installed with it:
 | `events` | `features.events: true`: `karni build` adds `karni.outbox` to `INSTALLED_APPS` ([family events](family-events.md)) |
 | `timeline` | `features.timeline: true`, with `features.people` and `features.events`, which it needs: `karni build` adds `karni.timeline` after `karni.outbox` ([timeline](timeline.md)) |
 | `preferences` | `features.preferences: true`: `karni build` adds `karni.preferences` to `INSTALLED_APPS` and writes `KARNI_PREFERENCES_DEFAULTS` with the project's name, and `KARNI_PREFERENCES_LOCKED` with its currency (every money field is in it, so Settings does not change it). The part declares its settings section and its connections ([preferences](preferences.md)) |
+| `notify` | `features.notify: true`: `karni build` adds `karni.notify` to `INSTALLED_APPS`. The part declares its message kinds in its `messages.py`, and a role may grant `notify.emailtemplate` to whoever edits the emails ([notifications](notify.md)) |
 | a module (`storage`, `payments`, `commerce`) | lists it under `modules`, so the build adds it, with the modules its manifest requires (`commerce` brings `payments`) |
 
 A contract version the installed Karni does not have, or a name that is
