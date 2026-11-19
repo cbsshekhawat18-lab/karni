@@ -200,5 +200,11 @@ def test_a_seeder_count_follows_meta_inheritance(monkeypatch) -> None:
 
 
 def test_the_facts_name_the_core_contracts_installed() -> None:
-    """The test project installs people, the outbox, the timeline and preferences."""
-    assert project_facts()["contracts"] == ["people", "events", "timeline", "preferences"]
+    """The test project installs people, the outbox, the timeline, preferences and notify."""
+    assert project_facts()["contracts"] == [
+        "people",
+        "events",
+        "timeline",
+        "preferences",
+        "notify",
+    ]
