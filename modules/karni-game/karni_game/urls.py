@@ -37,4 +37,6 @@ urlpatterns = [
     path("<slug:game>/shop/<slug:item>/buy/", api.BuyView.as_view(), name="buy"),
     path("<slug:game>/items/<slug:item>/equip/", api.EquipView.as_view(), name="equip"),
     path("<slug:game>/items/<slug:item>/unequip/", api.UnequipView.as_view(), name="unequip"),
+    path("<slug:game>/daily/", api.DailyView.as_view(), name="daily"),
+    path("<slug:game>/daily/check-in/", api.CheckInView.as_view(), name="check-in"),
 ]

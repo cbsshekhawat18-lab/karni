@@ -52,6 +52,7 @@ __all__ = [
     "Reward",
     "Save",
     "Score",
+    "Streak",
     "Wallet",
 ]
 
@@ -709,3 +710,34 @@ class Ownership(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.item_id} of {self.player_id}"
+
+
+class Streak(BaseModel):
+    """A player's daily streak in a game: days in a row they checked in, on the game's clock."""
+
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="streaks")
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="streaks")
+    current = models.PositiveIntegerField(default=0)
+    best = models.PositiveIntegerField(default=0)
+    last_day = models.DateField(null=True, blank=True)
+
+    class Meta:
+        constraints: ClassVar[list[Any]] = [
+            LiveUniqueConstraint(fields=["player", "game"], name="karni_game_streak_one")
+        ]
+
+    class Karni:
+        owner_field = "player__person__user"
+        cascade: ClassVar[dict[str, str]] = {
+            "player": "a streak is its player's",
+            "game": "a streak is of its game",
+        }
+
+    class APIMeta:
+        read_only: ClassVar[list[str]] = ["player", "game", "current", "best", "last_day"]
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["player", "game", "current", "best", "last_day"]
+
+    def __str__(self) -> str:
+        return f"{self.current} days"

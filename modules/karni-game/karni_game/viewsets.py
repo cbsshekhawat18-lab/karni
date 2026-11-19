@@ -37,6 +37,7 @@ from karni_game.models import (
     Reward,
     Save,
     Score,
+    Streak,
     Wallet,
 )
 
@@ -50,6 +51,7 @@ __all__ = [
     "GameViewSet",
     "PlayerViewSet",
     "SaveViewSet",
+    "StreakViewSet",
     "ScoreViewSet",
 ]
 
@@ -246,3 +248,12 @@ class LedgerViewSet(ReadOnly, BaseViewSet):
     route = "game-ledger"
     access = Access(read=Granted(), write=Granted())
     filterset_fields = ["wallet", "reason"]
+
+
+class StreakViewSet(ReadOnly, BaseViewSet):
+    """``/api/game-streaks/``: the players' daily streaks, read only."""
+
+    model = Streak
+    route = "game-streaks"
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["game", "player"]

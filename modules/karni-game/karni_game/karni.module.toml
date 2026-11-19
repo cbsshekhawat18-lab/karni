@@ -32,6 +32,7 @@ models = [
     "Reward",
     "Save",
     "Score",
+    "Streak",
     "Wallet",
 ]
 endpoints = [
@@ -54,6 +55,8 @@ endpoints = [
     "/api/game/<game>/shop/<item>/buy/",
     "/api/game/<game>/items/<item>/equip/",
     "/api/game/<game>/items/<item>/unequip/",
+    "/api/game/<game>/daily/",
+    "/api/game/<game>/daily/check-in/",
     "/api/games/",
     "/api/game-players/",
     "/api/game-saves/",
@@ -64,6 +67,7 @@ endpoints = [
     "/api/game-items/",
     "/api/game-wallets/",
     "/api/game-ledger/",
+    "/api/game-streaks/",
 ]
 pages = ["the game's admin screens: games, players, boards, flagged runs, wallets and ledgers"]
 

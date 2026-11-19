@@ -26,7 +26,18 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from karni_game import clock, conf, intents, players, rewards, saves, scores, shop, wallet
+from karni_game import (
+    clock,
+    conf,
+    daily,
+    intents,
+    players,
+    rewards,
+    saves,
+    scores,
+    shop,
+    wallet,
+)
 from karni_game.errors import GameError, game_error
 from karni_game.models import (
     Board,
@@ -52,7 +63,9 @@ __all__ = [
     "BoardView",
     "BuyView",
     "CallbackView",
+    "CheckInView",
     "ClaimView",
+    "DailyView",
     "EquipView",
     "IntentView",
     "LedgerView",
@@ -689,3 +702,24 @@ class UnequipView(EquipView):
     """``POST <game>/items/<item>/unequip/``."""
 
     wear = False
+
+
+# -- daily -----------------------------------------------------------------------------
+
+
+class DailyView(GameView):
+    """``GET <game>/daily/``: the server's day, its seed, the daily board, the streak."""
+
+    def get(self, request: Request, game: str) -> Response:
+        return Response(daily.daily_data(self.game, self.player_or_none()))
+
+
+class CheckInView(GameView):
+    """``POST <game>/daily/check-in/``: once a day, the streak and the daily rewards."""
+
+    throttle_scopes: ClassVar[dict[str, str]] = {"POST": "claim"}
+
+    def post(self, request: Request, game: str) -> Response:
+        player = self.player
+        self.guard("create", Wallet, "karni_game.wallet:change")
+        return Response(daily.check_in(player, self.game))

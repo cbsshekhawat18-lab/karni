@@ -20,7 +20,7 @@ from typing import Any
 from django.utils.module_loading import import_string
 
 from karni_game import conf
-from karni_game.models import Claim, Ownership, Player, Save, Score, Wallet
+from karni_game.models import Claim, Ownership, Player, Save, Score, Streak, Wallet
 
 __all__ = ["Merger", "get_merger"]
 
@@ -125,6 +125,22 @@ class Merger:
                 worn.add(theirs.slot)
             moved += 1
         return moved
+
+    def merge_streaks(self, keep: Player, drop: Player) -> int:
+        """The longer streak stays, and the best of the two."""
+        merged = 0
+        for theirs in Streak.objects.filter(player=drop):
+            mine = Streak.objects.filter(player=keep, game=theirs.game_id).first()
+            if mine is None:
+                Streak.objects.filter(pk=theirs.pk).update(player=keep)
+            else:
+                if theirs.current > mine.current:
+                    mine.current, mine.last_day = theirs.current, theirs.last_day
+                mine.best = max(mine.best, theirs.best, mine.current)
+                mine.save(update_fields=["current", "best", "last_day", "updated_at"])
+                theirs.delete()
+            merged += 1
+        return merged
 
     def merge_claims(self, keep: Player, drop: Player) -> int:
         """Both histories stay, so a daily reward is not claimed twice on one day."""
