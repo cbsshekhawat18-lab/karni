@@ -179,3 +179,71 @@ describe("Layout search", () => {
     expect(screen.queryByRole("button", { name: /search/i })).toBeNull();
   });
 });
+
+describe("GlobalSearch in a project of parts", () => {
+  it("keeps each part's results together, named by the part, and links to every result", async () => {
+    const { http, HttpResponse } = await import("msw");
+    const { server } = await import("../../../tests/msw/server");
+    const hit = (resource: string, id: string, title: string) => ({
+      resource,
+      id,
+      title,
+      subtitle: null,
+      score: 1,
+    });
+    server.use(
+      http.get("http://localhost/api/search/", () =>
+        HttpResponse.json({
+          query: "mira",
+          groups: [
+            {
+              resource: "people",
+              label: "People",
+              part: "people",
+              part_label: "People",
+              hits: [hit("people", "p1", "Mira Okafor")],
+            },
+            {
+              resource: "orders",
+              label: "Orders",
+              part: "karni_commerce",
+              part_label: "Commerce",
+              hits: [hit("orders", "o1", "1027")],
+            },
+            {
+              resource: "contacts",
+              label: "Contacts",
+              part: "crm",
+              part_label: "CRM",
+              hits: [hit("contacts", "c1", "Mira O.")],
+            },
+            {
+              resource: "invoices",
+              label: "Invoices",
+              part: "karni_commerce",
+              part_label: "Commerce",
+              hits: [hit("invoices", "i1", "INV-1")],
+            },
+          ],
+        }),
+      ),
+    );
+    const navigate = vi.fn();
+    render(
+      <GlobalSearch debounceMs={0} allResultsHref={(q) => `/search?q=${q}`} navigate={navigate} />,
+    );
+    const { user } = await openAndType("mira");
+    const headings = [...document.querySelectorAll('[role="listbox"] [role="presentation"]')].map(
+      (node) => node.textContent,
+    );
+    // one part's groups together; a part named like its only group is not said twice
+    expect(headings).toEqual([
+      "People",
+      "Commerce · Orders",
+      "Commerce · Invoices",
+      "CRM · Contacts",
+    ]);
+    await user.click(screen.getByRole("link", { name: /See every result/ }));
+    expect(navigate).toHaveBeenCalledWith("/search?q=mira");
+  });
+});

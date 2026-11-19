@@ -436,7 +436,9 @@ function Palette<R extends string>({
                 role="presentation"
                 className="px-3 py-1 text-xs font-medium text-muted-foreground"
               >
-                {named && group.part_label ? `${group.part_label} · ${group.label}` : group.label}
+                {named && group.part_label && group.part_label !== group.label
+                  ? `${group.part_label} · ${group.label}`
+                  : group.label}
               </div>
               {group.hits.map((hit) => {
                 const option = options.find((item) => item.hit === hit);
