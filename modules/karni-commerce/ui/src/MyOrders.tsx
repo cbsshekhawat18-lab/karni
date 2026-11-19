@@ -40,14 +40,14 @@ export function MyOrders({ pageSize = 50, headingLevel = 3, statusWords }: MyOrd
         <li key={row.id}>
           <CommerceLink
             to={paths.order(row.number)}
-            className="flex flex-wrap items-center justify-between gap-2 p-3 hover:bg-muted"
+            className="grid grid-cols-2 items-center gap-2 p-3 hover:bg-muted sm:grid-cols-4"
           >
             <span className="font-medium">Order {row.number}</span>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-right text-sm text-muted-foreground sm:text-left">
               {new Date(row.created_at).toLocaleDateString()}
             </span>
             <span className="text-sm">{words[row.status] ?? row.status}</span>
-            <Money value={row.total} currency={row.currency} className="font-medium" />
+            <Money value={row.total} currency={row.currency} className="text-right font-medium" />
           </CommerceLink>
         </li>
       ))}
