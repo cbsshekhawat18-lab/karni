@@ -404,7 +404,7 @@ export function TimeGrid<T extends object>(props: ViewShared<T>): React.ReactEle
   };
 
   return (
-    <div className="flex max-h-[var(--karni-calendar-max-height)] min-w-0 overflow-auto rounded-md border border-border bg-background">
+    <div className="relative flex max-h-[var(--karni-calendar-max-height)] min-w-0 overflow-auto rounded-md border border-border bg-background">
       <div
         aria-hidden="true"
         className="sticky left-0 z-raised w-16 shrink-0 bg-background pt-9 text-right text-xs text-muted-foreground"
@@ -718,7 +718,7 @@ export function MonthGrid<T extends object>(props: ViewShared<T>): React.ReactEl
 
   const headings = range.days.slice(0, 7);
   return (
-    <div className="min-w-0 overflow-x-auto rounded-md border border-border bg-background">
+    <div className="relative min-w-0 overflow-x-auto rounded-md border border-border bg-background">
       <div role="grid" aria-label="Month" className="min-w-[var(--karni-calendar-month-min-width)]">
         <div role="row" className="grid grid-cols-7 border-b border-border">
           {headings.map((day) => (

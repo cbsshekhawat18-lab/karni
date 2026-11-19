@@ -305,7 +305,9 @@ function AccountMenu({ navigate }: { navigate: (to: string) => void }): React.Re
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" aria-label={`Account: ${who}`}>
-          <span className="max-w-40 truncate">{who}</span>
+          {/* A phone's top bar has no room for an address: it says Account. */}
+          <span className="hidden max-w-40 truncate sm:inline">{who}</span>
+          <span className="sm:hidden">Account</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

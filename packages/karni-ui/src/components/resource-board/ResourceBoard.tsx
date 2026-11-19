@@ -655,7 +655,8 @@ export function ResourceBoard<T extends object>(props: ResourceBoardProps<T>): R
         ref={root}
         role="group"
         aria-label={label}
-        className="flex max-w-full snap-x gap-3 overflow-x-auto overscroll-x-contain pb-2"
+        // relative: the cards' hidden labels (sr-only, absolute) are clipped here, never widen the page
+        className="relative flex max-w-full snap-x gap-3 overflow-x-auto overscroll-x-contain pb-2"
       >
         {columnDefs.map((column) => (
           <BoardColumn<T>
