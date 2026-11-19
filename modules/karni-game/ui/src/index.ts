@@ -7,3 +7,4 @@ export * from "./runtime";
 export * from "./input";
 export * from "./audio";
 export * from "./save";
+export * from "./rng";
