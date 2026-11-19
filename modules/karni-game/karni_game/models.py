@@ -36,23 +36,29 @@ SETTINGS_CODE = "GAME026"
 
 __all__ = [
     "LEDGER_REASONS",
+    "MISSION_PERIODS",
     "ORDERS",
     "RESERVED_SLUGS",
     "REWARD_KINDS",
+    "Achievement",
     "Best",
     "Board",
     "Claim",
+    "Completion",
     "Currency",
     "Game",
     "Intent",
     "Item",
     "LedgerEntry",
+    "Mission",
     "Ownership",
     "Player",
+    "Progress",
     "Reward",
     "Save",
     "Score",
     "Streak",
+    "Unlock",
     "Wallet",
 ]
 
@@ -741,3 +747,148 @@ class Streak(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.current} days"
+
+
+class Achievement(BaseModel):
+    """An achievement: unlocked by the server once its counter reaches its goal, over all time.
+
+    ``reward`` (a reward of kind ``achievement``) is granted when it unlocks. A
+    ``hidden`` one shows its title and description only once unlocked.
+    """
+
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="achievements")
+    key = models.SlugField(max_length=50)
+    title = models.CharField(max_length=120)
+    description = models.CharField(max_length=300, blank=True, default="")
+    counter = models.SlugField(max_length=50, help_text="The counter the game reports.")
+    goal = models.PositiveBigIntegerField(default=1)
+    hidden = models.BooleanField(default=False)
+    reward = models.ForeignKey(
+        Reward, null=True, blank=True, on_delete=models.SET_NULL, related_name="achievements"
+    )
+    is_active = models.BooleanField(default=True)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("position", "key")
+        constraints: ClassVar[list[Any]] = [
+            LiveUniqueConstraint(fields=["game", "key"], name="karni_game_achievement_key")
+        ]
+
+    class Karni:
+        cascade: ClassVar[dict[str, str]] = {"game": "an achievement is part of its game"}
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["title", "key", "counter", "goal", "game"]
+        list_filter: ClassVar[list[str]] = ["game"]
+
+    def __str__(self) -> str:
+        return self.title
+
+
+#: How often a mission may be completed.
+MISSION_PERIODS = (("once", "Once"), ("daily", "Each day"), ("weekly", "Each week"))
+
+
+class Mission(BaseModel):
+    """A mission: its counter reaches its goal within its period; ``reward`` each time."""
+
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="missions")
+    key = models.SlugField(max_length=50)
+    title = models.CharField(max_length=120)
+    description = models.CharField(max_length=300, blank=True, default="")
+    counter = models.SlugField(max_length=50)
+    goal = models.PositiveBigIntegerField(default=1)
+    period = models.CharField(max_length=6, choices=MISSION_PERIODS, default="daily")
+    reward = models.ForeignKey(
+        Reward, null=True, blank=True, on_delete=models.SET_NULL, related_name="missions"
+    )
+    is_active = models.BooleanField(default=True)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("position", "key")
+        constraints: ClassVar[list[Any]] = [
+            LiveUniqueConstraint(fields=["game", "key"], name="karni_game_mission_key")
+        ]
+
+    class Karni:
+        cascade: ClassVar[dict[str, str]] = {"game": "a mission is part of its game"}
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["title", "key", "counter", "goal", "period"]
+        list_filter: ClassVar[list[str]] = ["game", "period"]
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class Progress(UUIDModel, TimestampedModel):
+    """A player's count of one counter in a game, over all time or in one day or week."""
+
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="progress")
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="+")
+    counter = models.SlugField(max_length=50)
+    period = models.CharField(max_length=6, default="all")
+    period_start = models.DateField()
+    value = models.BigIntegerField(default=0)
+
+    class Meta:
+        verbose_name_plural = "progress"
+        constraints: ClassVar[list[Any]] = [
+            models.UniqueConstraint(
+                fields=["player", "game", "counter", "period", "period_start"],
+                name="karni_game_progress_one",
+            )
+        ]
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["player", "counter", "period", "value"]
+
+    def __str__(self) -> str:
+        return f"{self.counter}: {self.value}"
+
+
+class Unlock(UUIDModel, TimestampedModel):
+    """An achievement the server unlocked for a player (``created_at`` is when)."""
+
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="unlocks")
+    achievement = models.ForeignKey(Achievement, on_delete=models.CASCADE, related_name="unlocks")
+
+    class Meta:
+        constraints: ClassVar[list[Any]] = [
+            models.UniqueConstraint(fields=["player", "achievement"], name="karni_game_unlock_one")
+        ]
+
+    class Karni:
+        owner_field = "player__person__user"
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["achievement", "player", "created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.achievement_id} by {self.player_id}"
+
+
+class Completion(UUIDModel, TimestampedModel):
+    """A mission a player completed in one period (``period_start``: the day or the Monday)."""
+
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="completions")
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name="completions")
+    period_start = models.DateField()
+
+    class Meta:
+        constraints: ClassVar[list[Any]] = [
+            models.UniqueConstraint(
+                fields=["player", "mission", "period_start"], name="karni_game_completion_one"
+            )
+        ]
+
+    class Karni:
+        owner_field = "player__person__user"
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["mission", "player", "period_start"]
+
+    def __str__(self) -> str:
+        return f"{self.mission_id} on {self.period_start}"

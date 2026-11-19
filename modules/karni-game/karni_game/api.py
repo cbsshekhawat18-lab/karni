@@ -32,6 +32,7 @@ from karni_game import (
     daily,
     intents,
     players,
+    progress,
     rewards,
     saves,
     scores,
@@ -59,6 +60,7 @@ __all__ = [
     "GuestView",
     "MeView",
     "PlayerSerializer",
+    "AchievementsView",
     "BoardMeView",
     "BoardView",
     "BuyView",
@@ -69,6 +71,8 @@ __all__ = [
     "EquipView",
     "IntentView",
     "LedgerView",
+    "MissionsView",
+    "ProgressView",
     "RewardsView",
     "ShopView",
     "UnequipView",
@@ -723,3 +727,51 @@ class CheckInView(GameView):
         player = self.player
         self.guard("create", Wallet, "karni_game.wallet:change")
         return Response(daily.check_in(player, self.game))
+
+
+# -- achievements and missions ---------------------------------------------------------
+
+
+class ProgressEventSerializer(serializers.Serializer):
+    counter = serializers.SlugField(max_length=50)
+    amount = serializers.IntegerField()
+
+
+class ProgressSerializer(serializers.Serializer):
+    intent = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
+    events = ProgressEventSerializer(many=True, allow_empty=False, max_length=20)
+
+
+class ProgressView(GameView):
+    """``POST <game>/progress/``: counters the game reports; the server unlocks and grants."""
+
+    throttle_scopes: ClassVar[dict[str, str]] = {"POST": "progress"}
+
+    @extend_schema(request=ProgressSerializer)
+    def post(self, request: Request, game: str) -> Response:
+        player = self.player
+        self.guard("create", Wallet, "karni_game.wallet:change")
+        body = ProgressSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        events = [dict(event) for event in body.validated_data["events"]]
+        target = self.game
+        return _once(
+            self,
+            "progress",
+            {"intent": body.validated_data["intent"], "events": events},
+            lambda: progress.report(player, target, events),
+        )
+
+
+class AchievementsView(GameView):
+    """``GET <game>/achievements/``: the achievements, the player's progress and unlocks."""
+
+    def get(self, request: Request, game: str) -> Response:
+        return Response({"results": progress.achievements(self.player_or_none(), self.game)})
+
+
+class MissionsView(GameView):
+    """``GET <game>/missions/``: the missions, the player's progress in each one's period."""
+
+    def get(self, request: Request, game: str) -> Response:
+        return Response({"results": progress.missions(self.player_or_none(), self.game)})

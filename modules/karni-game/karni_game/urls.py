@@ -39,4 +39,7 @@ urlpatterns = [
     path("<slug:game>/items/<slug:item>/unequip/", api.UnequipView.as_view(), name="unequip"),
     path("<slug:game>/daily/", api.DailyView.as_view(), name="daily"),
     path("<slug:game>/daily/check-in/", api.CheckInView.as_view(), name="check-in"),
+    path("<slug:game>/progress/", api.ProgressView.as_view(), name="progress"),
+    path("<slug:game>/achievements/", api.AchievementsView.as_view(), name="achievements"),
+    path("<slug:game>/missions/", api.MissionsView.as_view(), name="missions"),
 ]

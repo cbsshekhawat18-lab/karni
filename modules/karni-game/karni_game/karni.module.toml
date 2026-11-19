@@ -19,20 +19,25 @@ docs = "docs/game.md"
 
 [provides]
 models = [
+    "Achievement",
     "Best",
     "Board",
     "Claim",
+    "Completion",
     "Currency",
     "Game",
     "Intent",
     "Item",
     "LedgerEntry",
+    "Mission",
     "Ownership",
     "Player",
+    "Progress",
     "Reward",
     "Save",
     "Score",
     "Streak",
+    "Unlock",
     "Wallet",
 ]
 endpoints = [
@@ -57,6 +62,9 @@ endpoints = [
     "/api/game/<game>/items/<item>/unequip/",
     "/api/game/<game>/daily/",
     "/api/game/<game>/daily/check-in/",
+    "/api/game/<game>/progress/",
+    "/api/game/<game>/achievements/",
+    "/api/game/<game>/missions/",
     "/api/games/",
     "/api/game-players/",
     "/api/game-saves/",
@@ -68,6 +76,9 @@ endpoints = [
     "/api/game-wallets/",
     "/api/game-ledger/",
     "/api/game-streaks/",
+    "/api/game-achievements/",
+    "/api/game-missions/",
+    "/api/game-unlocks/",
 ]
 pages = ["the game's admin screens: games, players, boards, flagged runs, wallets and ledgers"]
 

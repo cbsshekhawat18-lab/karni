@@ -323,4 +323,16 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         fix="Add it to the cart: POST /api/carts/current/lines/ with kind game_item and the "
         "item's id, signed in. The item is the player's once the order is paid.",
     ),
+    ErrorCode(
+        code="GAME024",
+        title="A progress event the game does not count",
+        kind="exception",
+        source=f"{_SOURCE}.progress.report (HTTP 400)",
+        why="Progress is counters the game reports, and the server unlocks from them. A "
+        "counter no active achievement or mission counts, or an amount past the game's "
+        "max_progress_step, would let a client invent progress or jump to a goal.",
+        fix="Report the counters the game's achievements and missions name (GET "
+        "achievements/ and missions/ list them), in amounts from 1 to max_progress_step. "
+        "The answer's index names the event.",
+    ),
 )

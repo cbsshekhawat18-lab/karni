@@ -17,10 +17,22 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.db.models import F
 from django.utils.module_loading import import_string
 
 from karni_game import conf
-from karni_game.models import Claim, Ownership, Player, Save, Score, Streak, Wallet
+from karni_game.models import (
+    Claim,
+    Completion,
+    Ownership,
+    Player,
+    Progress,
+    Save,
+    Score,
+    Streak,
+    Unlock,
+    Wallet,
+)
 
 __all__ = ["Merger", "get_merger"]
 
@@ -124,6 +136,43 @@ class Merger:
             if equipped:
                 worn.add(theirs.slot)
             moved += 1
+        return moved
+
+    def merge_unlocks(self, keep: Player, drop: Player) -> int:
+        """The progress of each counter adds up. An unlock or a completed mission of either
+        stays, with the earlier time."""
+        for theirs in Progress.objects.filter(player=drop):
+            mine = Progress.objects.filter(
+                player=keep,
+                game=theirs.game_id,
+                counter=theirs.counter,
+                period=theirs.period,
+                period_start=theirs.period_start,
+            ).first()
+            if mine is None:
+                Progress.objects.filter(pk=theirs.pk).update(player=keep)
+            else:
+                Progress.objects.filter(pk=mine.pk).update(value=F("value") + theirs.value)
+                theirs.delete()
+        moved = 0
+        for unlock in Unlock.objects.filter(player=drop):
+            mine_unlock = Unlock.objects.filter(player=keep, achievement=unlock.achievement_id)
+            kept = mine_unlock.first()
+            if kept is None:
+                Unlock.objects.filter(pk=unlock.pk).update(player=keep)
+                moved += 1
+            else:
+                if unlock.created_at < kept.created_at:
+                    mine_unlock.update(created_at=unlock.created_at)
+                unlock.delete()
+        for done in Completion.objects.filter(player=drop):
+            twin = Completion.objects.filter(
+                player=keep, mission=done.mission_id, period_start=done.period_start
+            )
+            if twin.exists():
+                done.delete()
+            else:
+                Completion.objects.filter(pk=done.pk).update(player=keep)
         return moved
 
     def merge_streaks(self, keep: Player, drop: Player) -> int:

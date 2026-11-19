@@ -28,30 +28,36 @@ from rest_framework.response import Response
 
 from karni_game import players, scores, wallet
 from karni_game.models import (
+    Achievement,
     Board,
     Currency,
     Game,
     Item,
     LedgerEntry,
+    Mission,
     Player,
     Reward,
     Save,
     Score,
     Streak,
+    Unlock,
     Wallet,
 )
 
 __all__ = [
+    "AchievementViewSet",
     "BoardViewSet",
     "CurrencyViewSet",
     "ItemViewSet",
     "LedgerViewSet",
+    "MissionViewSet",
     "RewardViewSet",
     "WalletViewSet",
     "GameViewSet",
     "PlayerViewSet",
     "SaveViewSet",
     "StreakViewSet",
+    "UnlockViewSet",
     "ScoreViewSet",
 ]
 
@@ -257,3 +263,30 @@ class StreakViewSet(ReadOnly, BaseViewSet):
     route = "game-streaks"
     access = Access(read=Granted(), write=Granted())
     filterset_fields = ["game", "player"]
+
+
+class AchievementViewSet(BaseViewSet):
+    """``/api/game-achievements/``: the achievements the server unlocks."""
+
+    model = Achievement
+    route = "game-achievements"
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["game"]
+
+
+class MissionViewSet(BaseViewSet):
+    """``/api/game-missions/``: the missions, their periods and rewards."""
+
+    model = Mission
+    route = "game-missions"
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["game"]
+
+
+class UnlockViewSet(ReadOnly, BaseViewSet):
+    """``/api/game-unlocks/``: who unlocked what, read only."""
+
+    model = Unlock
+    route = "game-unlocks"
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["achievement", "player"]
