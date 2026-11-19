@@ -78,6 +78,22 @@ apply codemods and list the manual steps. This file is the human summary.
   PATH" when git is missing, and the PostgreSQL backup round trip skips when `DATABASE_URL`
   points at a server that is not listening. Before, they failed.
 
+- **Added: `karni make deploy systemd-nginx`, a deploy without Docker.** It writes
+  `deploy/`: `deploy.sh`, systemd units for gunicorn (and the Celery worker and beat,
+  `--no-celery` leaves them out), an nginx vhost, the server's `env.example` and a README.
+  Run on the server, `deploy.sh` copies the project into a new release under
+  `<root>/releases/`, installs its dependencies into the release's own virtual
+  environment, runs `karni_check --deploy`, `migrate` and `collectstatic`, switches
+  `<root>/current` atomically, restarts the units and waits for `/readyz` on gunicorn's
+  socket, then installs the vhost and reloads nginx only after `nginx -t` passes. When the
+  test fails it puts the previous vhost back, or unhooks its own when there was none, and
+  the other sites on the server keep working. It touches only its own paths, writes
+  `<root>/shared/.env` once from `env.example` and never writes over it, keeps the newest
+  `--keep` releases, and `--rollback` switches back to the newest earlier release that
+  answered its health check (`--list` shows them). A run that fails stops with a message,
+  and two runs at once are refused. New target, nothing changes for `compose`
+  ([docs](docs/deploy.md#without-docker-systemd-and-nginx)).
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

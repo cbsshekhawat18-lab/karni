@@ -787,7 +787,7 @@ page        Add a frontend page (<= 50 lines) composing @karni/ui, with its rout
 component   Add a React component that claims a role (registerComponentRole).
 site        Create a public site app (Django views, urls, templates, static) mounted at "/".
 view        Add a page to a site app: a function view, its template and its URL.
-deploy      Write the production stack: docker-compose.prod.yml, the Caddyfile, .env.prod.example.
+deploy      Write the production setup: the Docker Compose stack (compose), or systemd units, an nginx vhost and a deploy script (systemd-nginx).
 form        Add a public form: model, viewset, notification, tests, staff pages ({% karni_form %}).
 module      Create a reusable module skeleton: modules/karni-<name>/ (docs/modules.md).
 ```
@@ -1184,9 +1184,13 @@ karni make view [OPTIONS] NAME
 
 #### `karni make deploy`
 
-Write the production stack: docker-compose.prod.yml, the Caddyfile and .env.prod.example.
+Write the production setup: the Docker Compose stack, or one server with systemd and nginx.
 
-One command then starts it on a server: `docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build`. Every file is the project's to edit. docs/deploy.md is the walk-through.
+`compose` writes docker-compose.prod.yml, the Caddyfile and .env.prod.example, and one command starts it on a server: `docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build`.
+
+`systemd-nginx` writes deploy/: a deploy script (releases, migrations, a health check, `nginx -t` before every reload, --rollback), the systemd units, the nginx vhost and the server's .env example. On the server: `sudo deploy/deploy.sh`.
+
+Every file is the project's to edit. docs/deploy.md is the walk-through.
 
 ```
 karni make deploy [OPTIONS] TARGET
@@ -1194,7 +1198,7 @@ karni make deploy [OPTIONS] TARGET
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `TARGET` (required) |  | What to write. `compose`: the Docker Compose stack. |
+| `TARGET` (required) |  | What to write. `compose`: the Docker Compose stack. `systemd-nginx`: one server without Docker, in deploy/. |
 | `--domain` TEXT |  | The site's host for .env.prod.example (default: DOMAIN in .env.example). |
 | `--app-path` TEXT | `/app/` | Path the staff app (frontend/) is served under, e.g. /app/ or /, on the site's host. |
 | `--app-domain` TEXT |  | Serve the staff app on its own host instead, e.g. app.example.com. |
@@ -1203,6 +1207,11 @@ karni make deploy [OPTIONS] TARGET
 | `--backups/--no-backups` | on | The backup service. |
 | `--db/--no-db` | on | A PostgreSQL service (--no-db: a managed one). |
 | `--redis/--no-redis` | on | A Redis service (--no-redis: a managed one). |
+| `--root` TEXT |  | systemd-nginx: the folder the releases, the uploads and the .env live in (default /srv/&lt;project&gt;). |
+| `--user` TEXT |  | systemd-nginx: the user the units run as (default www-data, nginx's user). |
+| `--keep` INTEGER |  | systemd-nginx: the releases kept for a rollback (default 5). |
+| `--cert` TEXT |  | systemd-nginx: the TLS certificate (default Let's Encrypt's for the domain). |
+| `--cert-key` TEXT |  | systemd-nginx: the certificate's key (default Let's Encrypt's for the domain). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
 

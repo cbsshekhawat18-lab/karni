@@ -1,6 +1,10 @@
-"""``karni make deploy compose``: the production stack, as files the project owns.
+"""``karni make deploy <target>``: the production setup, as files the project owns.
 
-It writes three files and edits two ignore files:
+``compose`` is the Docker Compose stack (below). ``systemd-nginx`` is one Linux server
+without Docker, gunicorn and Celery under systemd behind nginx, written into
+``deploy/`` (:mod:`karni_cli.generators.systemd_nginx`).
+
+``karni make deploy compose`` writes three files and edits two ignore files:
 
 * ``docker-compose.prod.yml``: a one-shot ``release`` service (the deploy
   checks, ``migrate``, ``collectstatic``, the web server's files), ``django``
@@ -38,13 +42,17 @@ from pathlib import Path
 
 import typer
 
+from karni_cli.generators import systemd_nginx
 from karni_cli.generators.core import DRY_RUN_OPTION, FORCE_OPTION, Workspace, project_workspace
 from karni_cli.project import CliError
 
 NAME = "deploy"
-SUMMARY = "Write the production stack: docker-compose.prod.yml, the Caddyfile, .env.prod.example."
+SUMMARY = (
+    "Write the production setup: the Docker Compose stack (compose), or systemd units, an "
+    "nginx vhost and a deploy script (systemd-nginx)."
+)
 
-TARGETS = ("compose",)
+TARGETS = ("compose", "systemd-nginx")
 COMPOSE_FILE = "docker-compose.prod.yml"
 CADDYFILE = "Caddyfile"
 ENV_EXAMPLE = ".env.prod.example"
@@ -530,6 +538,24 @@ def caddyfile(options: Options) -> str:
     return "\n".join(out) + "\n"
 
 
+def email_lines(domain: str) -> list[str]:
+    """The email section of a production environment file (compose and systemd-nginx)."""
+    return [
+        "# --- Email ----------------------------------------------------------------------",
+        "# Password resets, account emails and the site's form notifications. The deploy",
+        "# check refuses to start without a mail server and a sender of the site's domain",
+        "# (karni.W520). A project that sends no email silences it in config/settings.py:",
+        '#   SILENCED_SYSTEM_CHECKS += ["karni.W520"]',
+        "# The mail server, host, port, user and password in one URL (smtps:// for SSL on",
+        "# port 465). Write an @ in the user or password as %40.",
+        "# EMAIL_URL=smtp+tls://user:password@smtp.example.com:587",
+        "# The sender of every email, an address of the site's domain:",
+        f"# DEFAULT_FROM_EMAIL=noreply@{domain}",
+        "# The sender of the error reports Django mails to ADMINS:",
+        f"# SERVER_EMAIL=server@{domain}",
+    ]
+
+
 def env_example(options: Options) -> str:
     """The text of ``.env.prod.example``."""
     hosts = [options.domain]
@@ -580,18 +606,7 @@ def env_example(options: Options) -> str:
         "# Copy here any other setting this project changed in .env (registration, roles,",
         "# KARNI_CSP for a font or analytics host, Sentry).",
         "",
-        "# --- Email ----------------------------------------------------------------------",
-        "# Password resets, account emails and the site's form notifications. The deploy",
-        "# check refuses to start without a mail server and a sender of the site's domain",
-        "# (karni.W520). A project that sends no email silences it in config/settings.py:",
-        '#   SILENCED_SYSTEM_CHECKS += ["karni.W520"]',
-        "# The mail server, host, port, user and password in one URL (smtps:// for SSL on",
-        "# port 465). Write an @ in the user or password as %40.",
-        "# EMAIL_URL=smtp+tls://user:password@smtp.example.com:587",
-        "# The sender of every email, an address of the site's domain:",
-        f"# DEFAULT_FROM_EMAIL=noreply@{options.domain}",
-        "# The sender of the error reports Django mails to ADMINS:",
-        f"# SERVER_EMAIL=server@{options.domain}",
+        *email_lines(options.domain),
         "",
         "# --- Database and Redis ---------------------------------------------------------",
     ]
@@ -788,8 +803,57 @@ def _host(value: str, option: str) -> str:
     return host
 
 
+def _systemd_nginx(
+    *,
+    domain: str | None,
+    root: str | None,
+    user: str | None,
+    keep: int | None,
+    cert: str | None,
+    cert_key: str | None,
+    celery: bool,
+    force: bool,
+    dry_run: bool,
+) -> None:
+    """``karni make deploy systemd-nginx``: the ``deploy/`` folder."""
+    ws = project_workspace(force or dry_run)
+    base = defaults(ws, domain=_host(domain, "--domain") if domain else None)
+    options = systemd_nginx.Options(
+        slug=base.slug,
+        domain=base.domain,
+        root=(root or "").rstrip("/") or (root or ""),
+        user=user or systemd_nginx.DEFAULT_USER,
+        keep=systemd_nginx.DEFAULT_KEEP if keep is None else keep,
+        cert=cert or "",
+        cert_key=cert_key or "",
+        celery=celery,
+        auth_mode=base.auth_mode,
+        ready_path=base.ready_path,
+    )
+    systemd_nginx.plan(ws, options, email_lines(options.domain))
+    if (ws.root / "frontend" / "package.json").is_file():
+        ws.note(
+            "note: this target serves no staff app (frontend/). Serve its build with a "
+            "location of your own in deploy/nginx.conf, or use the compose target."
+        )
+    ws.note(
+        f"next: on the server, sudo {systemd_nginx.SCRIPT} (it writes "
+        f"{options.app_root}/shared/.env from deploy/env.example the first time and stops), "
+        "fill that file in, then run it again. deploy/README.md and docs/deploy.md say more."
+    )
+    ws.commit(dry_run=dry_run)
+    if not dry_run:
+        systemd_nginx.make_executable(ws)
+
+
 def command(
-    target: str = typer.Argument(..., help="What to write. `compose`: the Docker Compose stack."),
+    target: str = typer.Argument(
+        ...,
+        help=(
+            "What to write. `compose`: the Docker Compose stack. `systemd-nginx`: one server "
+            "without Docker, in deploy/."
+        ),
+    ),
     domain: str | None = typer.Option(
         None,
         "--domain",
@@ -816,21 +880,107 @@ def command(
     redis: bool = typer.Option(
         True, "--redis/--no-redis", help="A Redis service (--no-redis: a managed one)."
     ),
+    root: str | None = typer.Option(
+        None,
+        "--root",
+        help="systemd-nginx: the folder the releases, the uploads and the .env live in "
+        "(default /srv/<project>).",
+        show_default=False,
+    ),
+    user: str | None = typer.Option(
+        None,
+        "--user",
+        help="systemd-nginx: the user the units run as (default www-data, nginx's user).",
+        show_default=False,
+    ),
+    keep: int | None = typer.Option(
+        None,
+        "--keep",
+        help="systemd-nginx: the releases kept for a rollback (default 5).",
+        show_default=False,
+    ),
+    cert: str | None = typer.Option(
+        None,
+        "--cert",
+        help="systemd-nginx: the TLS certificate (default Let's Encrypt's for the domain).",
+        show_default=False,
+    ),
+    cert_key: str | None = typer.Option(
+        None,
+        "--cert-key",
+        help="systemd-nginx: the certificate's key (default Let's Encrypt's for the domain).",
+        show_default=False,
+    ),
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
 ) -> None:
-    """Write the production stack: docker-compose.prod.yml, the Caddyfile and .env.prod.example.
+    """Write the production setup: the Docker Compose stack, or one server with systemd and nginx.
 
-    One command then starts it on a server:
+    `compose` writes docker-compose.prod.yml, the Caddyfile and .env.prod.example, and
+    one command starts it on a server:
     `docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build`.
+
+    `systemd-nginx` writes deploy/: a deploy script (releases, migrations, a health
+    check, `nginx -t` before every reload, --rollback), the systemd units, the nginx
+    vhost and the server's .env example. On the server: `sudo deploy/deploy.sh`.
+
     Every file is the project's to edit. docs/deploy.md is the walk-through.
     """
     if target not in TARGETS:
         raise CliError(
             f"Unknown deploy target {target!r}. Known: {', '.join(TARGETS)} "
-            "(karni make deploy compose).",
+            "(karni make deploy compose, karni make deploy systemd-nginx).",
             code="C106",
         )
+    server_only = [
+        flag
+        for flag, given in (
+            ("--root", root is not None),
+            ("--user", user is not None),
+            ("--keep", keep is not None),
+            ("--cert", cert is not None),
+            ("--cert-key", cert_key is not None),
+        )
+        if given
+    ]
+    if target == "compose" and server_only:
+        raise CliError(
+            f"{', '.join(server_only)} belong{'s' if len(server_only) == 1 else ''} to the "
+            "systemd-nginx target: karni make deploy systemd-nginx " + " ".join(server_only),
+            code="C106",
+        )
+    if target == "systemd-nginx":
+        compose_only = [
+            flag
+            for flag, given in (
+                ("--app-path", app_path != DEFAULT_APP_PATH),
+                ("--app-domain", app_domain is not None),
+                ("--no-app", not app),
+                ("--no-backups", not backups),
+                ("--no-db", not db),
+                ("--no-redis", not redis),
+            )
+            if given
+        ]
+        if compose_only:
+            raise CliError(
+                f"{', '.join(compose_only)} belong{'s' if len(compose_only) == 1 else ''} to "
+                "the compose target. systemd-nginx serves no staff app, and the database and "
+                "Redis are the server's (DATABASE_URL and REDIS_URL in its .env).",
+                code="C106",
+            )
+        _systemd_nginx(
+            domain=domain,
+            root=root,
+            user=user,
+            keep=keep,
+            cert=cert,
+            cert_key=cert_key,
+            celery=celery,
+            force=force,
+            dry_run=dry_run,
+        )
+        return
     if app_domain and app_path != DEFAULT_APP_PATH:
         raise CliError(
             "--app-path and --app-domain exclude each other: on its own host the staff app "

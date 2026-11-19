@@ -1,0 +1,29 @@
+# The Celery worker of {{slug}}: the queued tasks and listeners.
+# `karni make deploy systemd-nginx` wrote this file, and it is yours to edit. deploy.sh fills
+# in the names between at signs from the values at its top and installs the result as
+# /etc/systemd/system/<app>-worker.service.
+[Unit]
+Description=@APP@ worker (Celery)
+After=network-online.target postgresql.service redis-server.service
+Wants=network-online.target
+
+[Service]
+User=@RUN_AS@
+Group=@RUN_AS@
+WorkingDirectory=@ROOT@/current
+# Task processes. KARNI_WORKER_CONCURRENCY in the .env replaces it.
+Environment=KARNI_WORKER_CONCURRENCY=2
+EnvironmentFile=@ROOT@/shared/.env
+ExecStart=@ROOT@/current/.venv/bin/celery -A config worker -l info \
+    --concurrency ${KARNI_WORKER_CONCURRENCY}
+Restart=on-failure
+# A running task gets this long to finish when the worker stops.
+TimeoutStopSec=70
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=@ROOT@/shared/media
+
+[Install]
+WantedBy=multi-user.target
