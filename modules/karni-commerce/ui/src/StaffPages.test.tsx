@@ -270,7 +270,7 @@ describe("OrderPage panels and the balance", () => {
     renderWithCommerce(<OrderPage number="1001" orderKey="k1" />);
     expect(await screen.findByText(/Your deposit is paid/)).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /^Pay the balance \(€60\.00\)$/ }),
+      screen.getByRole("button", { name: /^Pay the balance \(\s*€60\.00\s*\)$/ }),
     ).toBeInTheDocument();
     expect(screen.getByText("1 booking to come")).toBeInTheDocument();
     expect(screen.getByText("Still to pay")).toBeInTheDocument();
@@ -290,7 +290,7 @@ describe("OrderPage panels and the balance", () => {
     );
     renderWithCommerce(<OrderPage number="1001" orderKey="k1" />);
     expect(
-      await screen.findByRole("button", { name: /^Pay the deposit \(€20\.00\)$/ }),
+      await screen.findByRole("button", { name: /^Pay the deposit \(\s*€20\.00\s*\)$/ }),
     ).toBeInTheDocument();
   });
 });
