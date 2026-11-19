@@ -471,8 +471,10 @@ export {
   GlobalSearch,
   defaultGlobalSearchSlots,
   defaultHitHref,
+  groupByPart,
 } from "./components/global-search/global-search";
 export type {
+  GlobalSearchPart,
   GlobalSearchProps,
   GlobalSearchSlots,
   GlobalSearchTriggerProps,
@@ -499,7 +501,7 @@ export { activeRoute, navigationEntries } from "./components/layout/navigation";
 export type { NavigationEntriesOptions } from "./components/layout/navigation";
 export { defaultNavIcons, navIcon } from "./components/layout/nav-icons";
 export { NAVIGATION_PATH, useNavigation } from "./hooks/useNavigation";
-export type { NavigationItem, NavigationMenu } from "./hooks/useNavigation";
+export type { NavigationItem, NavigationMenu, UseNavigationOptions } from "./hooks/useNavigation";
 
 export { KarniMark } from "./components/brand/karni-mark";
 export type { KarniMarkProps } from "./components/brand/karni-mark";
@@ -631,7 +633,64 @@ export {
 export type { AccountSection } from "./components/account/sections";
 export { SignInPage, safeNext } from "./components/account/SignInPage";
 export type { SignInPageProps } from "./components/account/SignInPage";
+export { SignUpForm } from "./components/account/SignUpForm";
+export type { SignUpFormProps } from "./components/account/SignUpForm";
 export type { PageMeta } from "./hooks/usePageMeta";
+
+// the family screens: one layout, home, people, inbox, search for every part (experimental)
+export {
+  BUSINESS_QUERY_KEY,
+  CUSTOMER_ROLES,
+  audienceOf,
+  useAudience,
+  useBusiness,
+  useSiteName,
+} from "./components/family/audience";
+export type { Audience, BusinessDetails } from "./components/family/audience";
+export {
+  personTabs,
+  publicHome,
+  registerPersonTab,
+  registerPublicHome,
+  registerTimelineKind,
+  timelineKind,
+  timelineKindLabel,
+  unregisterPersonTab,
+  unregisterPublicHome,
+  unregisterTimelineKind,
+} from "./components/family/registry";
+export type {
+  PersonTab,
+  PersonTabProps,
+  PublicHome,
+  TimelineEntry,
+  TimelineKind,
+} from "./components/family/registry";
+export { Timeline, timelineKey, useTimeline } from "./components/family/timeline";
+export type { TimelineParams, TimelineProps } from "./components/family/timeline";
+export { EmailChoices, InboxBell, InboxPage, useInboxUnread } from "./components/family/inbox";
+export type {
+  InboxBellProps,
+  InboxChoice,
+  InboxNotification,
+  InboxPageBody,
+  InboxPageProps,
+} from "./components/family/inbox";
+export { PeoplePage, PersonPage, factText, usePersonFacts } from "./components/family/people";
+export type { PeoplePageProps, PersonFact, PersonPageProps } from "./components/family/people";
+export { SearchPage, searchHitHref } from "./components/family/search";
+export type { SearchPageProps } from "./components/family/search";
+export { MyAddresses } from "./components/family/addresses";
+export { BackOffice, FamilyLayout, Storefront, useMenu } from "./components/family/family-layout";
+export type {
+  FamilyFrameProps,
+  FamilyLayoutProps,
+  FamilyLayoutSlots,
+} from "./components/family/family-layout";
+export { FamilyEmptyHome, FamilyHome } from "./components/family/family-home";
+export type { FamilyHomeProps } from "./components/family/family-home";
+export { registerFamily } from "./components/family/register";
+export type { FamilyContracts } from "./components/family/register";
 
 /** Experimental. The one Settings page: details, settings sections and emails, from `/preferences/`. */
 export { SettingsPage } from "./components/settings/SettingsPage";

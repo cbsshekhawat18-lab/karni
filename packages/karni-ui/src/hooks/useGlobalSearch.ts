@@ -51,6 +51,10 @@ export interface GlobalSearchGroup<R extends string = string> {
   resource: R;
   /** The model's plural name, for a heading. */
   label: string;
+  /** The app label of the model: the part the hits belong to (newer servers). */
+  part?: string;
+  /** The app's name, for a heading (newer servers). */
+  part_label?: string;
   hits: Array<GlobalSearchHit<R>>;
 }
 

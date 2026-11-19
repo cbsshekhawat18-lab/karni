@@ -94,8 +94,43 @@ export interface GlobalSearchProps<R extends string = string> {
   onSelect?: (hit: GlobalSearchHit<R>) => void;
   /** Replaces the Trigger or the ResultLink. See GlobalSearchSlots. */
   slots?: Partial<GlobalSearchSlots<R>>;
+  /**
+   * Experimental. The page of every result for a query (`(q) => "/search?q=" + q`):
+   * the palette then ends with a "See every result" link.
+   */
+  allResultsHref?: (query: string) => string;
+  /** Experimental. Follows the "See every result" link with your router (default: a page load). */
+  navigate?: (to: string) => void;
   /** Extra classes for the trigger's wrapper. */
   className?: string;
+}
+
+/** Experimental. The groups of one part (a part's app label, its name, its resources' groups). */
+export interface GlobalSearchPart<R extends string = string> {
+  part: string;
+  label: string;
+  groups: Array<GlobalSearchGroup<R>>;
+}
+
+/**
+ * Experimental. The groups of a search, part by part: each part where its
+ * best group came, its groups in the server's order (best hit first). A
+ * server that does not name parts gives one part with every group.
+ */
+export function groupByPart<R extends string>(
+  groups: ReadonlyArray<GlobalSearchGroup<R>>,
+): Array<GlobalSearchPart<R>> {
+  const parts: Array<GlobalSearchPart<R>> = [];
+  for (const group of groups) {
+    const key = group.part ?? "";
+    let found = parts.find((part) => part.part === key);
+    if (found === undefined) {
+      found = { part: key, label: group.part_label ?? group.part ?? "", groups: [] };
+      parts.push(found);
+    }
+    found.groups.push(group);
+  }
+  return parts;
 }
 
 const ICON_BUTTON_CLASS =
@@ -191,6 +226,8 @@ export function GlobalSearch<R extends string = string>({
   hrefFor = defaultHitHref,
   onSelect,
   slots,
+  allResultsHref,
+  navigate,
   className,
 }: GlobalSearchProps<R>): React.ReactElement {
   const { Trigger, ResultLink } = {
@@ -245,6 +282,8 @@ export function GlobalSearch<R extends string = string>({
                 onSelect={onSelect}
                 onClose={() => setOpen(false)}
                 ResultLink={ResultLink}
+                allResultsHref={allResultsHref}
+                navigate={navigate}
               />
             )}
           </DialogPrimitive.Content>
@@ -264,6 +303,8 @@ interface PaletteProps<R extends string> {
   onSelect: ((hit: GlobalSearchHit<R>) => void) | undefined;
   onClose: () => void;
   ResultLink: React.ComponentType<GlobalSearchResultLinkProps<R>>;
+  allResultsHref: ((query: string) => string) | undefined;
+  navigate: ((to: string) => void) | undefined;
 }
 
 function Palette<R extends string>({
@@ -276,6 +317,8 @@ function Palette<R extends string>({
   onSelect,
   onClose,
   ResultLink,
+  allResultsHref,
+  navigate,
 }: PaletteProps<R>): React.ReactElement {
   const baseId = React.useId();
   const listboxId = `${baseId}-listbox`;
@@ -290,8 +333,13 @@ function Palette<R extends string>({
     },
     { minLength },
   );
-  const groups: Array<GlobalSearchGroup<R>> =
+  const found: Array<GlobalSearchGroup<R>> =
     long && search.data !== undefined ? search.data.groups : NO_GROUPS;
+  // Part by part, so one part's results stay together; a heading names the part once
+  // the results come from more than one.
+  const parts = React.useMemo(() => groupByPart(found), [found]);
+  const groups = React.useMemo(() => parts.flatMap((part) => part.groups), [parts]);
+  const named = parts.length > 1;
   const options = React.useMemo<Array<Option<R>>>(
     () =>
       groups.flatMap((group) =>
@@ -388,7 +436,7 @@ function Palette<R extends string>({
                 role="presentation"
                 className="px-3 py-1 text-xs font-medium text-muted-foreground"
               >
-                {group.label}
+                {named && group.part_label ? `${group.part_label} · ${group.label}` : group.label}
               </div>
               {group.hits.map((hit) => {
                 const option = options.find((item) => item.hit === hit);
@@ -429,6 +477,20 @@ function Palette<R extends string>({
       >
         {status}
       </p>
+      {allResultsHref !== undefined && long ? (
+        <a
+          href={allResultsHref(query)}
+          onClick={(event) => {
+            onClose();
+            if (navigate === undefined) return;
+            event.preventDefault();
+            navigate(allResultsHref(query));
+          }}
+          className="border-t border-border px-3 py-2 text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          See every result for “{query}”
+        </a>
+      ) : null}
     </div>
   );
 }

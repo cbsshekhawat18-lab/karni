@@ -965,10 +965,58 @@ registerAccountSection({ key: "orders", title: "Your orders", order: 10, compone
 `unregisterAccountSection(key)` takes one out.
 
 `SignInPage` is `/signin`: a code sent by email (which opens an account for a
-new address when the project allows it, `KARNI_EMAIL_OTP_SIGNUP = "open"`)
-or a password, then `next` (a path of this app only: `safeNext` refuses
-another site). Pass the router's push as `navigate`, and `notice` for a
-line above the forms (the demo logins).
+new address when the project allows it, `KARNI_EMAIL_OTP_SIGNUP = "open"`),
+a password, or a new account with a password (`SignUpForm`, `POST
+<authBasePath>/register/`; `signUp={false}` hides it), then `next` (a path of
+this app only: `safeNext` refuses another site). Pass the router's push as
+`navigate`, and `notice` for a line above the forms (the demo logins).
+
+### The family screens: one layout for every part (experimental)
+
+A project of several parts (a shop, a CRM, a booking app) has one layout,
+one home, one person page, one inbox and one search. `karni build` writes
+the family pages and the layout when a project holds parts, each a few lines
+of router glue around these components:
+
+```tsx
+<FamilyLayout pathname={pathname} navigate={navigate} area={route.area}
+              isPublic={route.public} inbox storeActions={<MiniCart />}>
+  <Outlet />
+</FamilyLayout>
+```
+
+- `FamilyLayout` picks a frame per page. `Storefront` is the site's header
+  (the `public` named menu, `GET /navigation/?menu=public`, and the `account`
+  menu once signed in) and footer, for a route with `staticData: { area:
+  "store" }`. `BackOffice` is `Layout` with the `app` menu, the search box,
+  the inbox bell and the account menu. The home and an `area: "family"`
+  route (`/orders`) show in the back office to staff and in the storefront to
+  everyone else. Staff is anyone with a role beyond the family's `customer`
+  (`useAudience()`).
+- `FamilyHome` is `/`: the home tiles of staff's roles (`DashboardTiles`),
+  the public home a part registers for visitors and customers
+  (`registerPublicHome({ key: "shop", component: StoreHome, path: "/shop" })`),
+  and an empty state that says what to install when the project holds no
+  part.
+- `PeoplePage` (`/people`) lists the people with a column per person fact the
+  parts contribute, and `PersonPage` (`/people/<id>`) shows one person: the
+  facts, a tab per part (`registerPersonTab({ key: "orders", title: "Orders",
+  component })`), the details (addresses, organisations), the `Timeline` with
+  the change history beside it, and Merge and Erase for who holds
+  `people.person:merge` and `people.person:erase`.
+- `Timeline` reads `GET /timeline/` a page at a time, with a filter by kind
+  (`registerTimelineKind(kind, { label, render })`).
+- `InboxBell` (the unread count), `InboxPage` (`/inbox`: the unread filter,
+  mark read and unread, mark all read) and `EmailChoices` (a person's own
+  switches) are built on karni.notify's `/inbox/`.
+- `SearchPage` (`/search`) shows every part's results part by part, keyboard
+  first, and `GlobalSearch` groups its hits by part too (the server names
+  each group's `part`). `searchHitHref(hit, routes)` finds a hit's page.
+- `registerFamily({ people, notify })` adds "Your addresses" (`MyAddresses`)
+  and "Emails and notifications" (`EmailChoices`) to `AccountPage`.
+- `useBusiness()` and `useSiteName()` read the business's public details.
+
+`--karni-storefront-width` (72rem) sets how wide the storefront grows.
 
 ## Hooks
 

@@ -53,6 +53,28 @@ const GROUPS = [
     ],
   ],
   [
+    "The family screens (one layout, home, people, inbox and search for every part)",
+    [
+      "FamilyLayout",
+      "Storefront",
+      "BackOffice",
+      "FamilyHome",
+      "FamilyEmptyHome",
+      "PeoplePage",
+      "PersonPage",
+      "Timeline",
+      "InboxBell",
+      "InboxPage",
+      "EmailChoices",
+      "MyAddresses",
+      "SearchPage",
+      "AccountPage",
+      "SignInPage",
+      "SignUpForm",
+      "SettingsPage",
+    ],
+  ],
+  [
     "Auth",
     [
       "AuthProvider",
@@ -81,6 +103,23 @@ const EXPERIMENTAL = new Set([
   "TreeBreadcrumb",
   "FacetPanel",
   "GlobalSearch",
+  "FamilyLayout",
+  "Storefront",
+  "BackOffice",
+  "FamilyHome",
+  "FamilyEmptyHome",
+  "PeoplePage",
+  "PersonPage",
+  "Timeline",
+  "InboxBell",
+  "InboxPage",
+  "EmailChoices",
+  "MyAddresses",
+  "SearchPage",
+  "AccountPage",
+  "SignInPage",
+  "SignUpForm",
+  "SettingsPage",
 ]);
 
 /** The page blocks (experimental), each with when to use it. */
@@ -347,10 +386,24 @@ const HOOKS = {
   useSocialLogin:
     "Experimental. `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).",
   useNavigation:
-    'Experimental. The menu the signed-in user gets (`GET /navigation/`, Django\'s `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `<Layout navSource="server">` renders it.',
+    'Experimental. The menu the signed-in user gets (`GET /navigation/`, Django\'s `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `{ menu: "public" }` reads a named menu. `<Layout navSource="server">` renders it.',
   useGlobalSearch:
     "Experimental. `{ q, models, limit }` → `{ query, groups: [{ resource, label, hits: [{ resource, id, title, subtitle, score }] }] }`: cross-model search (`GET /search/`), each model under its own list access. A query under `minLength` (2) sends nothing.",
   useToast: "Show a toast through the mounted `Toaster`.",
+  useAudience:
+    "Experimental. Who is looking: `loading`, `visitor`, `customer` (only the family's `customer` role) or `staff` (any other role).",
+  useBusiness:
+    "Experimental. The business's public details (`GET /preferences/public/`): name, address, phone, email, currency, logo.",
+  useSiteName:
+    "Experimental. The business's name from Settings, Details, else the page title the app started with.",
+  useInboxUnread:
+    "Experimental. The signed-in person's unread count (`GET /inbox/unread/`), read again every minute; `null` while the inbox is off.",
+  usePersonFacts:
+    "Experimental. The person facts the installed parts contribute (`GET /people/facts/`): `[{ name, label, kind, source }]`.",
+  useTimeline:
+    "Experimental. One timeline a page at a time (`GET /timeline/?person=` or `?subject=`, cursor paging, `kinds`).",
+  useMenu:
+    "Experimental. The entries of one named menu (`GET /navigation/?menu=public`) the signed-in person sees.",
   useResourceCounts:
     "Experimental. `{ data, loading, error, refetch }`: the rows of each resource the user can read, as chart points (one list request each with `page_size=1`).",
   useUnsavedChangesGuard:
