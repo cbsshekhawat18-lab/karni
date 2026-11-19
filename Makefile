@@ -35,7 +35,8 @@ PY_PACKAGES := \
 	modules/karni-reports:karni_reports \
 	modules/karni-ai:karni_ai \
 	modules/karni-storage:karni_storage \
-	modules/karni-commerce:karni_commerce
+	modules/karni-commerce:karni_commerce \
+	modules/karni-game:karni_game
 
 # Order matters: modules/karni-payments/ui resolves @karni/ui from source,
 # which needs packages/karni-ui/node_modules installed first.

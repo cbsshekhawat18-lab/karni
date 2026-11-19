@@ -59,6 +59,7 @@ MODULES = [
     Module("ai", "AI", REPO / "modules" / "karni-ai" / "karni_ai"),
     Module("storage", "STORE", REPO / "modules" / "karni-storage" / "karni_storage"),
     Module("commerce", "COM", REPO / "modules" / "karni-commerce" / "karni_commerce"),
+    Module("game", "GAME", REPO / "modules" / "karni-game" / "karni_game"),
 ]
 SOURCES = [PACKAGE, *(module.source for module in MODULES)]
 #: Set where every module is installed (CI's Python jobs): a missing module

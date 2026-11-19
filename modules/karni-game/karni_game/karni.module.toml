@@ -1,0 +1,60 @@
+# The catalog entry of karni-game: what `karni modules show game` prints,
+# what `karni add game` wires and `karni remove game` takes out.
+name = "game"
+kind = "module"
+title = "Games"
+purpose = "Guest players, cloud saves, leaderboards and a wallet for a game."
+status = "experimental"
+use_when = [
+    "browser game",
+    "game backend",
+    "leaderboard",
+    "cloud save",
+    "achievements",
+    "in-game currency",
+    "guest play",
+]
+services = ["a Celery worker for the family events (analytics, the timeline)"]
+docs = "docs/game.md"
+
+[provides]
+models = ["Game", "Player"]
+endpoints = [
+    "/api/game/guest/",
+    "/api/game/me/",
+    "/api/game/upgrade/",
+    "/api/game/<game>/",
+    "/api/games/",
+    "/api/game-players/",
+]
+pages = ["the game's admin screens: games, players, boards, flagged runs, wallets and ledgers"]
+
+[provides.settings]
+KARNI_GAME_RATES = "object"
+KARNI_GAME_TOKEN_HEADER = "string"
+KARNI_GAME_SERVER_SECRET = "string"
+KARNI_GAME_TOKEN_ISSUER = "string"
+KARNI_GAME_TOKEN_SECONDS = "integer"
+KARNI_GAME_PORTALS = "object"
+KARNI_GAME_SIGNATURE_TOLERANCE = "integer"
+KARNI_GAME_AD_INTENT_SECONDS = "integer"
+KARNI_GAME_INTENT_DAYS = "integer"
+KARNI_GAME_MAX_SAVE_BYTES = "integer"
+KARNI_GAME_MAX_RUN_BYTES = "integer"
+KARNI_GAME_MERGER = "string"
+KARNI_GAME_DAILY_SEED = "string"
+KARNI_GAME_AUTODISCOVER = "boolean"
+KARNI_GAME_ROLES = "boolean"
+
+[[asks]]
+question = "How many scores may one player send a minute?"
+setting = "KARNI_GAME_RATES.score"
+default = "30/min"
+
+[wiring]
+apps = ["karni_game"]
+settings = "karni_game.conf:DEFAULTS"
+urls = 'path("api/game/", include("karni_game.urls"))'
+
+[wiring.extras]
+commerce = "real-money items through the cart of karni-commerce"

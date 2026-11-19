@@ -1,0 +1,10 @@
+"""URLconf for the karni-game test suite: exactly a project's wiring."""
+
+from __future__ import annotations
+
+from django.urls import include, path
+
+urlpatterns = [
+    path("api/game/", include("karni_game.urls")),
+    path("api/", include("karni.api.urls")),
+]

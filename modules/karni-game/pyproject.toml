@@ -1,0 +1,102 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "karni-game"
+version = "0.5.2"
+description = "Games for Karni: guest players, cloud saves, leaderboards, a soft-currency wallet, daily content and achievements, with a realtime server contract. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
+readme = "README.md"
+requires-python = ">=3.12"
+# PEP 639 licence expression; no "License ::" classifier (deprecated alongside it).
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Chandrabhan Shekhawat", email = "cbsshekhawat18@gmail.com" }]
+keywords = ["django", "karni", "game", "leaderboard", "cloud save", "achievements", "react"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Games/Entertainment",
+    "Typing :: Typed",
+]
+# Range-pinned per the module contract (docs/modules.md): karni 0.x minors
+# may break, so a module pins the minor it was built against. PyJWT signs the
+# realtime server's player token (Karni has it through djangorestframework-simplejwt).
+dependencies = ["karni>=0.5,<0.6", "PyJWT>=2.8"]
+
+[project.optional-dependencies]
+# Real-money items through the cart (the sellable kind game_item). Optional.
+commerce = ["karni-commerce>=0.5,<0.6"]
+
+[project.urls]
+Homepage = "https://github.com/cbsshekhawat18-lab/karni"
+Documentation = "https://cbsshekhawat18-lab.github.io/karni/"
+Repository = "https://github.com/cbsshekhawat18-lab/karni"
+Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
+Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"
+
+# The catalog entry, karni_game/karni.module.toml: `karni modules`, `karni add`
+# and `karni remove` read it.
+[project.entry-points."karni.modules"]
+game = "karni_game"
+
+# The module's settings fragment: karni_settings() merges these defaults for
+# every project that installs karni-game (new top-level names only).
+[project.entry-points."karni.settings"]
+game = "karni_game.conf:DEFAULTS"
+
+[project.entry-points."karni.errorcodes"]
+game = "karni_game.errorcodes:CODES"
+
+[project.entry-points."karni.checks"]
+game = "karni_game.checks:run_checks"
+
+[project.entry-points."karni.roles"]
+game = "karni_game.roles:declared"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2",
+    "pytest-django>=4.8",
+    "ruff>=0.5",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["karni_game"]
+# Pin the agent-guidance fragment into the wheel explicitly: `karni add`
+# reads it through importlib.resources after install.
+artifacts = ["karni_game/AGENTS.fragment.md", "karni_game/karni.module.toml"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["tests/"]
+artifacts = ["karni_game/AGENTS.fragment.md", "karni_game/karni.module.toml"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["karni_game/migrations", "tests/testapp/migrations", "*.md"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "UP", # pyupgrade
+    "B",  # flake8-bugbear
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
