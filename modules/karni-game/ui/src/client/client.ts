@@ -259,6 +259,14 @@ function randomIntent(): string {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * Codes that say who is calling is not settled yet (no player, a forgotten
+ * guest, an unverified email, guests off until the player signs in): the
+ * write waits for a player instead of being dropped.
+ */
+const waitsForPlayer = (code: string | null): boolean =>
+  code === "GAME002" || code === "GAME003" || code === "GAME004" || code === "GAME005";
+
 const retryAfterMs = (data: unknown): number | undefined => {
   const seconds =
     typeof data === "object" && data !== null
@@ -479,7 +487,7 @@ export function createGameClient(options: GameClientOptions): GameClient {
       const http = httpError(error);
       if (!http) return {};
       if (http.status === 429) return { retryInMs: retryAfterMs(http.data) };
-      if (http.status >= 500 || http.code === "GAME002" || http.code === "GAME003") return {};
+      if (http.status >= 500 || waitsForPlayer(http.code)) return {};
       events.emit("rejected", { write, status: http.status, code: http.code, data: http.data });
       return "drop";
     }
@@ -511,13 +519,7 @@ export function createGameClient(options: GameClientOptions): GameClient {
         return { queued: false, server: answer };
       } catch (error) {
         const http = httpError(error);
-        if (
-          http &&
-          http.status < 500 &&
-          http.status !== 429 &&
-          http.code !== "GAME002" &&
-          http.code !== "GAME003"
-        ) {
+        if (http && http.status < 500 && http.status !== 429 && !waitsForPlayer(http.code)) {
           throw error;
         }
       }

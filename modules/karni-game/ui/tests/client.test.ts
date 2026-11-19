@@ -304,6 +304,18 @@ describe("offline first", () => {
     expect(client.queue.size).toBe(0);
   });
 
+  it("keeps a write while the server waits for a player (guests off until sign-in)", async () => {
+    const { client, server } = make();
+    await client.signInGuest();
+    if (!server) throw new Error("no server");
+    server.failNext = { status: 403, data: { code: "GAME005" } };
+    const result = await client.progress([{ counter: "jumps", amount: 1 }]);
+    expect(result.queued).toBe(true);
+    for (const write of client.queue.list()) write.notBefore = 0;
+    await client.sync();
+    expect(client.queue.size).toBe(0);
+  });
+
   it("waits as long as a rate limit asks", async () => {
     const { client, server } = make();
     await client.signInGuest();
