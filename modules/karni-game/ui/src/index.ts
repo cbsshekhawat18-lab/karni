@@ -3,3 +3,4 @@
  * tree-shaken: a game bundles only what it imports.
  */
 export * from "./portal";
+export * from "./runtime";
