@@ -926,7 +926,8 @@ def test_site_creates_the_app_and_replaces_the_welcome_route(project: Path) -> N
     # It loads the site's real content first, read from the project root (BASE_DIR).
     assert '    load_content("content/site.json", missing_ok=True)\n' in test
     assert 'PAGES = [\n    "/",\n    # karni:pages\n]\n' in test
-    assert "    assert_pages(client, PAGES)\n" in test
+    assert "    assert_pages(client, [*PAGES, *declared_pages()])\n" in test
+    assert "from karni_site.sitemaps import declared_pages\n" in test
     assert '{% extends "website/base.html" %}' in (site / "templates" / "404.html").read_text()
     assert "Something went wrong" in (site / "templates" / "500.html").read_text()
     assert config.endswith(

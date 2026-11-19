@@ -319,7 +319,7 @@ SEO_CODES: Final[tuple[ErrorCode, ...]] = (
             "the image, then name=value pairs, alt among them. class Karni: sitemap is True, "
             "False or a dict of filter, exclude, lastmod, changefreq and priority, on a model "
             "with get_absolute_url(). class Karni: seo maps title, description, image and type "
-            "to fields."
+            "to fields. @pages on a view gives the captures of each of its addresses."
         ),
         fix="Write it as the message shows. The karni-site README has an example of each.",
     ),

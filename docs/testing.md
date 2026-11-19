@@ -344,6 +344,7 @@ from pathlib import Path
 import pytest
 from django.test import Client
 from karni.testing import assert_pages, load_content
+from karni_site.sitemaps import declared_pages
 from pytest_django import Settings
 
 PAGES = [
@@ -362,13 +363,16 @@ def site_content(db: None, settings: Settings, tmp_path: Path) -> None:
 
 @pytest.mark.django_db
 def test_every_page_passes_the_page_checks(client: Client) -> None:
-    assert_pages(client, PAGES)
+    assert_pages(client, [*PAGES, *declared_pages()])
 ```
 
 `karni make site` writes this test with `"/"` in `PAGES`, and `karni make
 view` adds each new page's URL above the marker. A path with a capture, such
 as `/services/<slug:slug>/`, needs a real URL, so the command leaves it to
-you. The rows such a page shows come from the site's real content:
+you. A view with a known set of addresses and no model declares them with
+[`@pages`](public-site.md#pages-behind-a-capture-without-a-model-experimental),
+and `declared_pages()` adds them (a page test written before 0.5.2 passes
+`PAGES` alone: add `*declared_pages()` to it). The rows such a page shows come from the site's real content:
 `load_content` loads `content/site.json` (what `karni design extract`
 writes) the way `karni load` does, before each test. It reads a relative
 path from the project root (`BASE_DIR`, else the folder above the settings

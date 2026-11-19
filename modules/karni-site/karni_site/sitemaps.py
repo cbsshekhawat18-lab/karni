@@ -22,28 +22,34 @@ which needs nothing in ``INSTALLED_APPS`` here):
 ``filter`` and ``exclude`` (lookups), ``lastmod`` (a field, default
 ``updated_at`` when the model has it), ``changefreq`` and ``priority``.
 
+A view behind a capture with a known, small set of addresses and no model
+(``/topics/<slug:slug>/`` for three topics) declares them with
+:func:`pages` (experimental), and they join the ``pages`` section:
+``@pages({"slug": "tides"}, {"slug": "harbours"})``, or a function that
+returns them. :func:`declared_pages` lists their paths, for the page test.
+
 Addresses are absolute: on ``KARNI_SITE_URL`` when it is set, else on the
 request's host. One request reads each section's rows once (a section keeps
 its paginator) and the admin's hidden pages once for every section.
 
 Override / escape hatch: ``KARNI_SITE_SITEMAP_EXCLUDE``,
-``KARNI_SITE_PUBLISHED_FIELDS``, ``class Karni: sitemap``, or
+``KARNI_SITE_PUBLISHED_FIELDS``, ``class Karni: sitemap``, :func:`pages`, or
 ``KARNI_SITE_SITEMAPS`` naming your own ``() -> {name: Sitemap}`` function
 (which can call this one and add to it).
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from fnmatch import fnmatchcase
-from typing import Any
+from typing import Any, TypeVar
 from urllib.parse import urlsplit
 
 from django.contrib.sitemaps import Sitemap
 from django.core.exceptions import FieldDoesNotExist
 from django.core.paginator import Paginator
 from django.db import models
-from django.urls import Resolver404, resolve
+from django.urls import NoReverseMatch, Resolver404, resolve, reverse
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.views.generic.base import RedirectView
@@ -57,8 +63,10 @@ __all__ = [
     "ModelSitemap",
     "PagesSitemap",
     "SiteSitemap",
+    "declared_pages",
     "excluded",
     "model_spec",
+    "pages",
     "public_rows",
     "sitemaps",
 ]
@@ -137,8 +145,99 @@ def _hidden() -> tuple[set[str], set[str]]:
     return routes, paths
 
 
+#: Where :func:`pages` keeps a view's declared addresses.
+PAGES_ATTRIBUTE = "karni_site_pages"
+_View = TypeVar("_View", bound=Callable[..., Any])
+Captures = Mapping[str, Any]
+
+
+def pages(*declared: Captures | Callable[[], Iterable[Captures]]) -> Callable[[_View], _View]:
+    """Experimental. Declare the pages of a view behind a capture: they join the sitemap.
+
+    For a view with a known, small set of addresses and no model of its own::
+
+        @pages({"slug": "tides"}, {"slug": "harbours"})
+        def topic(request, slug): ...
+
+        @pages(lambda: [{"slug": slug} for slug in TOPICS])  # from the data it reads
+        def topic(request, slug): ...
+
+    Each mapping is the captures of one address, as ``reverse(kwargs=...)`` takes
+    them. A function is called each time the sitemap is built. The addresses join
+    sitemap.xml's ``pages`` section (``KARNI_SITE_SITEMAP_EXCLUDE`` and the admin's
+    *hide from search engines* still apply), so ``karni check --seo`` finds them,
+    and :func:`declared_pages` gives them to the page test.
+
+    Override / escape hatch: rows of a model with ``get_absolute_url()`` need no
+    declaration (``class Karni: sitemap``), and ``KARNI_SITE_SITEMAPS`` replaces
+    the sections altogether.
+    """
+
+    def decorate(view: _View) -> _View:
+        setattr(view, PAGES_ATTRIBUTE, declared)
+        return view
+
+    return decorate
+
+
+def _views(patterns: list[Any] | None = None, prefix: str = "") -> Iterator[tuple[str, Any]]:
+    """``(namespace:name, view)`` of every named URL pattern of the root URLconf."""
+    from django.urls import URLResolver, get_resolver
+
+    if patterns is None:
+        patterns = list(get_resolver().url_patterns)
+    for pattern in patterns:
+        if isinstance(pattern, URLResolver):
+            namespace = pattern.namespace
+            yield from _views(
+                list(pattern.url_patterns), f"{prefix}{namespace}:" if namespace else prefix
+            )
+        elif getattr(pattern, "name", None):
+            yield f"{prefix}{pattern.name}", pattern.callback
+
+
+def _declared(view: Any) -> Any:
+    found = getattr(view, PAGES_ATTRIBUTE, None)
+    if found is None:
+        found = getattr(getattr(view, "view_class", None), PAGES_ATTRIBUTE, None)
+    return found
+
+
+def declared_items() -> list[tuple[str, str]]:
+    """``(URL name, path)`` of every page a view declares with :func:`pages`, in URL order."""
+    found: list[tuple[str, str]] = []
+    for name, view in _views():
+        declared = _declared(view)
+        if not declared:
+            continue
+        captures: list[Captures] = []
+        for entry in declared:
+            captures.extend(entry() if callable(entry) else [entry])
+        for kwargs in captures:
+            try:
+                path = reverse(name, kwargs=dict(kwargs))
+            except NoReverseMatch as exc:
+                raise KarniImproperlyConfigured(
+                    f"@pages on {name} declares {dict(kwargs)!r}, which is not an address of "
+                    f"that view: give each page the captures its path takes, such as "
+                    '@pages({"slug": "tides"}).',
+                    code=DECLARATION_CODE,
+                ) from exc
+            if (name, path) not in found:
+                found.append((name, path))
+    return found
+
+
+def declared_pages() -> list[str]:
+    """Experimental. The paths views declare with :func:`pages`, for the page test::
+
+    assert_pages(client, [*PAGES, *declared_pages()])
+    """
+    return [path for _name, path in declared_items()]
+
+
 class PagesSitemap(SiteSitemap):
-    """The site's own pages: named URLs without arguments."""
+    """The site's own pages: named URLs without arguments, and those :func:`pages` declares."""
 
     def __init__(self, hidden: HiddenPages | None = None) -> None:
         self.hidden = hidden or HiddenPages()
@@ -148,7 +247,7 @@ class PagesSitemap(SiteSitemap):
 
         hidden_routes, hidden_paths = self.hidden.get()
         found: list[str] = []
-        for name, path in site_pages():
+        for name, path in [*site_pages(), *declared_items()]:
             if name.startswith(_OWN_NAMESPACES) or path in found:
                 continue
             if name in hidden_routes or path in hidden_paths or excluded(name, path):

@@ -493,10 +493,12 @@ image, its links reach pages that exist, and an unknown URL is a 404.
 import pytest
 from django.test import Client
 from karni.testing import assert_pages
+from karni_site.sitemaps import declared_pages
 
 # Every page of the site. `karni make view` adds each new URL above the marker. A path
 # with a capture, such as /services/<slug:slug>/, needs a real URL here, and the test
-# must create the content that page shows first.
+# must create the content that page shows first. A view's declared pages (@pages) come
+# from declared_pages().
 PAGES = [
     "/",
     "/about/",
@@ -506,7 +508,7 @@ PAGES = [
 
 @pytest.mark.django_db
 def test_every_page_passes_the_page_checks(client: Client) -> None:
-    assert_pages(client, PAGES)
+    assert_pages(client, [*PAGES, *declared_pages()])
 ```
 
 For each page it checks a 200, a non-empty `<title>` and `<meta
@@ -521,7 +523,39 @@ that does not exist.
 `karni make view` adds each new URL above the `# karni:pages` marker. It
 leaves out a path with a capture, such as `/services/<slug:slug>/`, and says
 so, because only you know a URL that has content behind it. Add one by hand,
-and create that content in the test first.
+and create that content in the test first, or declare the view's pages
+([below](#pages-behind-a-capture-without-a-model-experimental)).
+
+### Pages behind a capture without a model (experimental)
+
+*Experimental: `karni_site.sitemaps.pages` and `declared_pages` may change
+in a minor release ([stability](stability.md#experimental-names)).*
+
+A view behind a capture with a known, small set of addresses and no model,
+such as `/topics/<slug:slug>/` for three topics a dict holds, has no rows
+for the sitemap to list, so `karni check --seo` reports each linked page as
+left out (`SITE018`). The view declares its pages:
+
+```python
+from karni_site.sitemaps import pages
+
+TOPICS = {"tides": "Tides and what they bring in", "harbours": "Harbours along the coast"}
+
+
+@pages(lambda: [{"slug": slug} for slug in TOPICS])
+def topic(request: HttpRequest, slug: str) -> HttpResponse:
+    ...
+```
+
+Each mapping is the captures of one address (`@pages({"slug": "tides"},
+{"slug": "harbours"})` lists them directly), and a function is called each
+time the sitemap is built. The pages join sitemap.xml's `pages` section
+(`KARNI_SITE_SITEMAP_EXCLUDE` and the admin's *hide from search engines*
+still apply), `karni check --seo` requests them, and the page test takes
+them from `declared_pages()`. A class-based view takes the decorator on its
+class. A mapping that is not an address of the view fails with `SITE019`.
+Rows of a model with `get_absolute_url()` need no declaration: they are in
+the sitemap already.
 
 The test lists URLs instead of reading them from `urls.py`. A site's
 `urls.py` also routes `robots.txt`, a sitemap, redirects and pages behind a

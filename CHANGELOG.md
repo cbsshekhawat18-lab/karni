@@ -170,6 +170,18 @@ apply codemods and list the manual steps. This file is the human summary.
   ([docs](docs/deploy.md#14-static-and-media-files),
   [migration note](docs/migrations/0.5.md#static-files-under-fingerprinted-names)).
 
+- **Added (experimental): `@pages`, the known pages of a view behind a capture.** A view
+  such as `/topics/<slug:slug>/` with a small, fixed set of addresses and no model had no
+  rows for sitemap.xml, so `karni check --seo` reported each linked page as left out
+  (`SITE018`), and the page test needed each URL by hand. `@pages({"slug": "tides"}, ...)`
+  from `karni_site.sitemaps`, or `@pages(lambda: [...])` built from the data the view reads,
+  declares them: they join sitemap.xml's `pages` section (exclusions and the admin's hidden
+  pages still apply), `karni check --seo` requests them, and `declared_pages()` gives them to
+  the page test. A new site's `tests/test_pages.py` passes
+  `[*PAGES, *declared_pages()]` to `assert_pages`, and `karni make view --path` with a
+  capture says so. A declaration that is not an address of the view fails with `SITE019`
+  ([docs](docs/public-site.md#pages-behind-a-capture-without-a-model-experimental)).
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

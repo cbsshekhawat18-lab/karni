@@ -3481,7 +3481,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni_site.seo_tags`
 
-**Why Karni objects.** {% karni_seo %} takes nothing and ends with {% endkarni_seo %}. {% image %} takes the image, then name=value pairs, alt among them. class Karni: sitemap is True, False or a dict of filter, exclude, lastmod, changefreq and priority, on a model with get_absolute_url(). class Karni: seo maps title, description, image and type to fields.
+**Why Karni objects.** {% karni_seo %} takes nothing and ends with {% endkarni_seo %}. {% image %} takes the image, then name=value pairs, alt among them. class Karni: sitemap is True, False or a dict of filter, exclude, lastmod, changefreq and priority, on a model with get_absolute_url(). class Karni: seo maps title, description, image and type to fields. @pages on a view gives the captures of each of its addresses.
 
 **Fix.** Write it as the message shows. The karni-site README has an example of each.
 

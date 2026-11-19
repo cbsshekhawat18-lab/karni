@@ -587,7 +587,7 @@
   "code": "SITE019",
   "title": "An SEO tag or declaration is written wrongly",
   "kind": "exception",
-  "why": "{% karni_seo %} takes nothing and ends with {% endkarni_seo %}. {% image %} takes the image, then name=value pairs, alt among them. class Karni: sitemap is True, False or a dict of filter, exclude, lastmod, changefreq and priority, on a model with get_absolute_url(). class Karni: seo maps title, description, image and type to fields.",
+  "why": "{% karni_seo %} takes nothing and ends with {% endkarni_seo %}. {% image %} takes the image, then name=value pairs, alt among them. class Karni: sitemap is True, False or a dict of filter, exclude, lastmod, changefreq and priority, on a model with get_absolute_url(). class Karni: seo maps title, description, image and type to fields. @pages on a view gives the captures of each of its addresses.",
   "fix": "Write it as the message shows. The karni-site README has an example of each.",
   "source": "karni_site.seo_tags"
  },

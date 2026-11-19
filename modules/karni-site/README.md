@@ -376,7 +376,22 @@ Without a filter, the first boolean field `KARNI_SITE_PUBLISHED_FIELDS`
 names (`published`, `is_published`, `is_public`, `public`, `visible`,
 `is_visible`) must be true, a `status` with a `published` choice must be
 `published`, and a `published_at` must have passed. `sitemap = False`
-leaves a model out. A page or row hidden from search engines in the admin
+leaves a model out.
+
+A view behind a capture with a known set of addresses and no model
+(`/topics/<slug:slug>/` for a few topics) declares them, and they join the
+`pages` section and the page test (experimental):
+
+```python
+from karni_site.sitemaps import pages
+
+
+@pages({"slug": "tides"}, {"slug": "harbours"})  # or a function that returns them
+def topic(request, slug): ...
+```
+
+`karni_site.sitemaps.declared_pages()` lists their paths:
+`assert_pages(client, [*PAGES, *declared_pages()])`. A page or row hidden from search engines in the admin
 is left out, and so is what `KARNI_SITE_SITEMAP_EXCLUDE` names (URL names
 or paths, wildcards allowed). Karni's own routes (the health and readiness
 probes and the welcome page) are never listed, here or in the menu item's
