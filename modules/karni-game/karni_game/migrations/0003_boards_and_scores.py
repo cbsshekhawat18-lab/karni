@@ -98,7 +98,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='intent',
-            constraint=models.UniqueConstraint(fields=('player', 'kind', 'key'), name='karni_game_intent'),
+            constraint=models.UniqueConstraint(fields=('player', 'kind', 'key'), name='karni_game_intent_one'),
         ),
         migrations.AddIndex(
             model_name='score',

@@ -26,11 +26,27 @@ from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from karni_game import players, scores
-from karni_game.models import Board, Game, Player, Save, Score
+from karni_game import players, scores, wallet
+from karni_game.models import (
+    Board,
+    Currency,
+    Game,
+    Item,
+    LedgerEntry,
+    Player,
+    Reward,
+    Save,
+    Score,
+    Wallet,
+)
 
 __all__ = [
     "BoardViewSet",
+    "CurrencyViewSet",
+    "ItemViewSet",
+    "LedgerViewSet",
+    "RewardViewSet",
+    "WalletViewSet",
     "GameViewSet",
     "PlayerViewSet",
     "SaveViewSet",
@@ -162,3 +178,71 @@ class ScoreViewSet(ReadOnly, BaseViewSet):
         body.is_valid(raise_exception=True)
         done = scores.reject(self.get_object(), body.validated_data["note"])
         return Response(self.get_serializer(done).data)
+
+
+class CurrencyViewSet(BaseViewSet):
+    """``/api/game-currencies/``: the soft currencies of the games."""
+
+    model = Currency
+    route = "game-currencies"
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["game"]
+
+
+class RewardViewSet(BaseViewSet):
+    """``/api/game-rewards/``: the rewards the server grants."""
+
+    model = Reward
+    route = "game-rewards"
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["game", "kind"]
+
+
+class ItemViewSet(BaseViewSet):
+    """``/api/game-items/``: the cosmetics, their prices."""
+
+    model = Item
+    route = "game-items"
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["game", "slot"]
+
+
+class GrantSerializer(serializers.Serializer):
+    amount = serializers.IntegerField()
+    note = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
+
+
+class WalletViewSet(ReadOnly, BaseViewSet):
+    """``/api/game-wallets/``: the balances. ``POST {id}/grant/`` gives or takes some."""
+
+    model = Wallet
+    route = "game-wallets"
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["player", "currency"]
+
+    @extend_schema(request=GrantSerializer)
+    @action(detail=True, methods=["post"], access=Can("karni_game.wallet:grant"))
+    def grant(self, request: Request, pk: str | None = None) -> Response:
+        """Staff give (or take, with a negative amount) currency, with a note."""
+        row = self.get_object()
+        body = GrantSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        wallet.change(
+            row.player,
+            row.currency,
+            body.validated_data["amount"],
+            reason="grant",
+            actor=request.user,
+            note=body.validated_data["note"],
+        )
+        row.refresh_from_db()
+        return Response(self.get_serializer(row).data)
+
+
+class LedgerViewSet(ReadOnly, BaseViewSet):
+    """``/api/game-ledger/``: every ledger entry."""
+
+    model = LedgerEntry
+    route = "game-ledger"
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["wallet", "reason"]

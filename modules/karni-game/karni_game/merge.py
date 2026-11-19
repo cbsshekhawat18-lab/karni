@@ -20,7 +20,7 @@ from typing import Any
 from django.utils.module_loading import import_string
 
 from karni_game import conf
-from karni_game.models import Player, Save, Score
+from karni_game.models import Claim, Ownership, Player, Save, Score, Wallet
 
 __all__ = ["Merger", "get_merger"]
 
@@ -83,6 +83,52 @@ class Merger:
         Best.objects.filter(player=drop).delete()
         scores.rebuild(keep, boards)
         return int(moved)
+
+    def merge_currencies(self, keep: Player, drop: Player) -> dict[str, int]:
+        """Each currency's balances add up, capped. The ledger records both moves."""
+        from karni_game import wallet
+
+        moved: dict[str, int] = {}
+        for theirs in Wallet.objects.filter(player=drop).select_related("currency"):
+            if theirs.balance:
+                wallet.change(
+                    drop,
+                    theirs.currency,
+                    -theirs.balance,
+                    reason="merge",
+                    reference=str(keep.pk),
+                )
+                done = wallet.change(
+                    keep,
+                    theirs.currency,
+                    theirs.balance,
+                    reason="merge",
+                    reference=str(drop.pk),
+                )
+                moved[theirs.currency.key] = done.amount
+        return moved
+
+    def merge_items(self, keep: Player, drop: Player) -> int:
+        """The kept player owns every item either owned. What it equipped stays equipped,
+        and the dropped player's choice fills a slot it left empty."""
+        mine = {row.item_id: row for row in Ownership.objects.filter(player=keep)}
+        worn = set(
+            Ownership.objects.filter(player=keep, equipped=True).values_list("slot", flat=True)
+        )
+        moved = 0
+        for theirs in Ownership.objects.filter(player=drop):
+            if theirs.item_id in mine:
+                continue
+            equipped = theirs.equipped and theirs.slot not in worn
+            Ownership.objects.filter(pk=theirs.pk).update(player=keep, equipped=equipped)
+            if equipped:
+                worn.add(theirs.slot)
+            moved += 1
+        return moved
+
+    def merge_claims(self, keep: Player, drop: Player) -> int:
+        """Both histories stay, so a daily reward is not claimed twice on one day."""
+        return int(Claim.objects.filter(player=drop).update(player=keep))
 
     @staticmethod
     def free_slot(slot: str, taken: set[str]) -> str:

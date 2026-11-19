@@ -7,4 +7,5 @@ from django.urls import include, path
 urlpatterns = [
     path("api/game/", include("karni_game.urls")),
     path("api/", include("karni.api.urls")),
+    path("payments/", include("karni_payments.urls")),
 ]

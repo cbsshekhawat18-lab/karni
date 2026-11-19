@@ -18,7 +18,22 @@ services = ["a Celery worker for the family events (analytics, the timeline)"]
 docs = "docs/game.md"
 
 [provides]
-models = ["Best", "Board", "Game", "Intent", "Player", "Save", "Score"]
+models = [
+    "Best",
+    "Board",
+    "Claim",
+    "Currency",
+    "Game",
+    "Intent",
+    "Item",
+    "LedgerEntry",
+    "Ownership",
+    "Player",
+    "Reward",
+    "Save",
+    "Score",
+    "Wallet",
+]
 endpoints = [
     "/api/game/guest/",
     "/api/game/me/",
@@ -29,11 +44,26 @@ endpoints = [
     "/api/game/<game>/boards/<board>/",
     "/api/game/<game>/boards/<board>/me/",
     "/api/game/<game>/boards/<board>/scores/",
+    "/api/game/<game>/wallet/",
+    "/api/game/<game>/wallet/ledger/",
+    "/api/game/<game>/rewards/",
+    "/api/game/<game>/rewards/<reward>/claim/",
+    "/api/game/<game>/rewards/<reward>/intent/",
+    "/api/game/callbacks/<portal>/",
+    "/api/game/<game>/shop/",
+    "/api/game/<game>/shop/<item>/buy/",
+    "/api/game/<game>/items/<item>/equip/",
+    "/api/game/<game>/items/<item>/unequip/",
     "/api/games/",
     "/api/game-players/",
     "/api/game-saves/",
     "/api/game-boards/",
     "/api/game-scores/",
+    "/api/game-currencies/",
+    "/api/game-rewards/",
+    "/api/game-items/",
+    "/api/game-wallets/",
+    "/api/game-ledger/",
 ]
 pages = ["the game's admin screens: games, players, boards, flagged runs, wallets and ledgers"]
 

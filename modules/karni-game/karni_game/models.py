@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
@@ -34,15 +35,24 @@ from karni_game.gamesettings import GameSettings
 SETTINGS_CODE = "GAME026"
 
 __all__ = [
+    "LEDGER_REASONS",
     "ORDERS",
     "RESERVED_SLUGS",
+    "REWARD_KINDS",
     "Best",
     "Board",
+    "Claim",
+    "Currency",
     "Game",
     "Intent",
+    "Item",
+    "LedgerEntry",
+    "Ownership",
     "Player",
+    "Reward",
     "Save",
     "Score",
+    "Wallet",
 ]
 
 #: Game slugs the API's own paths take (``/api/game/guest/`` is not a game).
@@ -399,7 +409,7 @@ class Intent(UUIDModel, TimestampedModel):
 
     class Meta:
         constraints: ClassVar[list[Any]] = [
-            models.UniqueConstraint(fields=["player", "kind", "key"], name="karni_game_intent")
+            models.UniqueConstraint(fields=["player", "kind", "key"], name="karni_game_intent_one")
         ]
 
     class AdminMeta:
@@ -407,3 +417,295 @@ class Intent(UUIDModel, TimestampedModel):
 
     def __str__(self) -> str:
         return f"{self.kind}:{self.key}"
+
+
+class Currency(BaseModel):
+    """A soft currency of a game (coins, gems): earned by play, spent in the shop.
+
+    ``cap`` is the most a wallet holds: a reward past it credits up to it.
+    """
+
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="currencies")
+    key = models.SlugField(max_length=50)
+    title = models.CharField(max_length=120)
+    cap = models.BigIntegerField(null=True, blank=True, help_text="Blank: no cap.")
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("position", "key")
+        constraints: ClassVar[list[Any]] = [
+            LiveUniqueConstraint(fields=["game", "key"], name="karni_game_currency_key"),
+            models.CheckConstraint(
+                condition=Q(cap__isnull=True) | Q(cap__gte=0), name="karni_game_currency_cap"
+            ),
+        ]
+
+    class Karni:
+        cascade: ClassVar[dict[str, str]] = {"game": "a currency is part of its game"}
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["title", "key", "game", "cap"]
+        inline_on = "game"
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class Wallet(BaseModel):
+    """A player's balance in one currency. Only :mod:`karni_game.wallet` changes it."""
+
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="wallets")
+    currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name="wallets")
+    balance = models.BigIntegerField(default=0)
+
+    class Meta:
+        constraints: ClassVar[list[Any]] = [
+            LiveUniqueConstraint(fields=["player", "currency"], name="karni_game_wallet_one"),
+            models.CheckConstraint(
+                condition=Q(balance__gte=0), name="karni_game_wallet_balance_gte_0"
+            ),
+        ]
+
+    class Karni:
+        owner_field = "player__person__user"
+        actions: ClassVar[list[str]] = ["grant"]
+        cascade: ClassVar[dict[str, str]] = {"player": "a wallet is its player's"}
+
+    class APIMeta:
+        read_only: ClassVar[list[str]] = ["player", "currency", "balance"]
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["player", "currency", "balance", "updated_at"]
+        list_filter: ClassVar[list[str]] = ["currency"]
+        search_fields: ClassVar[list[str]] = ["player__handle"]
+        read_only: ClassVar[list[str]] = ["player", "currency", "balance"]
+
+    def __str__(self) -> str:
+        return f"{self.balance} {self.currency_id and self.currency.key}"
+
+
+#: Why a balance moved.
+LEDGER_REASONS = (
+    ("reward", "A reward"),
+    ("purchase", "A purchase"),
+    ("mission", "A mission"),
+    ("achievement", "An achievement"),
+    ("match", "A match result"),
+    ("grant", "Staff"),
+    ("merge", "Two players merged"),
+    ("refund", "A refund"),
+)
+
+
+class LedgerEntry(UUIDModel, TimestampedModel):
+    """One change of a balance: how much, the balance after it, and why. Never edited."""
+
+    wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name="entries")
+    amount = models.BigIntegerField()
+    balance_after = models.BigIntegerField()
+    reason = models.CharField(max_length=12, choices=LEDGER_REASONS)
+    reference = models.CharField(max_length=64, blank=True, default="")
+    intent = models.CharField(max_length=64, blank=True, default="")
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    note = models.CharField(max_length=200, blank=True, default="")
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name_plural = "ledger entries"
+        indexes: ClassVar[list[Any]] = [
+            models.Index(fields=["wallet", "created_at"], name="karni_game_ledger_wallet")
+        ]
+
+    class Karni:
+        owner_field = "wallet__player__person__user"
+        append_only = True
+
+    class APIMeta:
+        read_only: ClassVar[list[str]] = [
+            "wallet",
+            "amount",
+            "balance_after",
+            "reason",
+            "reference",
+            "intent",
+            "actor",
+            "note",
+        ]
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["wallet", "amount", "balance_after", "reason"]
+        list_filter: ClassVar[list[str]] = ["reason"]
+
+    def __str__(self) -> str:
+        return f"{self.amount:+d} ({self.reason})"
+
+
+#: How a reward is granted (docs/game-api.md, Rewards).
+REWARD_KINDS = (
+    ("daily", "The daily check-in"),
+    ("ad", "After an ad"),
+    ("mission", "A completed mission"),
+    ("achievement", "An unlocked achievement"),
+    ("match", "A realtime match result"),
+    ("grant", "Staff only"),
+)
+
+
+class Reward(BaseModel):
+    """A reward the server grants: its kind, its currency and amount, how often.
+
+    ``per_day`` caps the claims of a player in one of the game's days (blank:
+    no cap, a daily reward is once a day whatever it says). ``cooldown`` is the
+    seconds between two claims. An ``ad`` reward with ``callback`` is granted
+    only by the portal's signed callback.
+    """
+
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="rewards")
+    key = models.SlugField(max_length=50)
+    title = models.CharField(max_length=120)
+    kind = models.CharField(max_length=12, choices=REWARD_KINDS)
+    currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name="rewards")
+    amount = models.PositiveBigIntegerField()
+    per_day = models.PositiveIntegerField(null=True, blank=True)
+    cooldown = models.PositiveIntegerField(default=0, help_text="Seconds between two claims.")
+    callback = models.BooleanField(
+        default=False, help_text="An ad reward granted only by the portal's signed callback."
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("kind", "key")
+        constraints: ClassVar[list[Any]] = [
+            LiveUniqueConstraint(fields=["game", "key"], name="karni_game_reward_key")
+        ]
+
+    class Karni:
+        cascade: ClassVar[dict[str, str]] = {"game": "a reward is part of its game"}
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["title", "key", "kind", "currency", "amount"]
+        list_filter: ClassVar[list[str]] = ["game", "kind"]
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class Claim(UUIDModel, TimestampedModel):
+    """A reward granted to a player: on which of the game's days, and from where."""
+
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="claims")
+    reward = models.ForeignKey(Reward, on_delete=models.CASCADE, related_name="claims")
+    day = models.DateField()
+    amount = models.BigIntegerField(default=0)
+    source = models.CharField(max_length=12, default="client")
+    external_id = models.CharField(
+        max_length=128, blank=True, default="", help_text="The portal's id of a callback."
+    )
+
+    class Meta:
+        constraints: ClassVar[list[Any]] = [
+            models.UniqueConstraint(
+                fields=["reward", "external_id"],
+                condition=~Q(external_id=""),
+                name="karni_game_claim_external",
+            )
+        ]
+        indexes: ClassVar[list[Any]] = [
+            models.Index(fields=["player", "reward", "day"], name="karni_game_claim_day")
+        ]
+
+    class Karni:
+        owner_field = "player__person__user"
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["reward", "player", "day", "amount", "source"]
+
+    def __str__(self) -> str:
+        return f"{self.reward_id} on {self.day}"
+
+
+class Item(BaseModel):
+    """A cosmetic of a game (a skin, a hat, a theme): sold for a currency, or for real money.
+
+    ``slot`` is where it is worn: one equipped item per slot. ``price`` in
+    ``currency`` sells it in the shop. ``real_money`` sells it through the cart
+    of karni-commerce instead, at ``money_price`` (the sellable kind ``game_item``).
+    """
+
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="items")
+    key = models.SlugField(max_length=50)
+    title = models.CharField(max_length=120)
+    slot = models.SlugField(max_length=30, help_text="Where it is worn: hat, skin, trail.")
+    currency = models.ForeignKey(
+        Currency, null=True, blank=True, on_delete=models.PROTECT, related_name="items"
+    )
+    price = models.PositiveBigIntegerField(null=True, blank=True)
+    real_money = models.BooleanField(default=False)
+    money_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("position", "key")
+        constraints: ClassVar[list[Any]] = [
+            LiveUniqueConstraint(fields=["game", "key"], name="karni_game_item_key")
+        ]
+
+    class Karni:
+        cascade: ClassVar[dict[str, str]] = {"game": "an item is part of its game"}
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["title", "key", "slot", "price", "real_money"]
+        list_filter: ClassVar[list[str]] = ["game", "slot"]
+
+    def __str__(self) -> str:
+        return self.title
+
+    @property
+    def for_sale(self) -> bool:
+        """Sold in the shop for a currency."""
+        return (
+            self.is_active
+            and not self.real_money
+            and self.currency_id is not None
+            and self.price is not None
+        )
+
+
+class Ownership(BaseModel):
+    """An item a player owns, and whether it is equipped in its slot."""
+
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="items")
+    item = models.ForeignKey(Item, on_delete=models.PROTECT, related_name="owners")
+    slot = models.SlugField(max_length=30)
+    equipped = models.BooleanField(default=False)
+    source = models.CharField(max_length=12, default="purchase")
+
+    class Meta:
+        constraints: ClassVar[list[Any]] = [
+            LiveUniqueConstraint(fields=["player", "item"], name="karni_game_owned_once"),
+            LiveUniqueConstraint(
+                fields=["player", "slot"],
+                condition=Q(equipped=True),
+                name="karni_game_equipped_once",
+            ),
+        ]
+
+    class Karni:
+        owner_field = "player__person__user"
+        cascade: ClassVar[dict[str, str]] = {"player": "an item owned is its player's"}
+
+    class APIMeta:
+        read_only: ClassVar[list[str]] = ["player", "item", "slot", "equipped", "source"]
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["item", "player", "equipped", "source"]
+
+    def __str__(self) -> str:
+        return f"{self.item_id} of {self.player_id}"

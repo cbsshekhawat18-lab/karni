@@ -235,4 +235,92 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         fix="Make a new intent (a UUID) for each new action, and send the same body when you "
         "retry one.",
     ),
+    ErrorCode(
+        code="GAME016",
+        title="Not enough of the currency",
+        kind="exception",
+        source=f"{_SOURCE}.wallet.change (HTTP 409)",
+        why="A balance never goes below 0. The wallet row is locked and written with a "
+        "conditional update, so two purchases at once never spend the same coins.",
+        fix="Earn more first: the answer has balance and needed.",
+    ),
+    ErrorCode(
+        code="GAME017",
+        title="The reward is not available now",
+        kind="exception",
+        source=f"{_SOURCE}.rewards (HTTP 409)",
+        why="Each reward says how often a player may have it: once a day for a daily reward, "
+        "per_day claims in one of the game's days, and cooldown seconds between two.",
+        fix="Ask again at next_at (the answer has it), or raise the reward's per_day or "
+        "lower its cooldown.",
+    ),
+    ErrorCode(
+        code="GAME018",
+        title="The client does not claim this reward",
+        kind="exception",
+        source=f"{_SOURCE}.rewards (HTTP 403)",
+        why="Only an ad reward without callback is claimed by the client. A daily reward "
+        "comes with the check-in, a mission's and an achievement's with their progress, a "
+        "match's with the realtime server's report, and an ad reward with callback only "
+        "when the portal's server calls back, signed.",
+        fix="Use the path the reward's kind has (docs/game-api.md, Rewards). For an ad reward "
+        "with callback: POST rewards/<key>/intent/ and hand the intent to the portal.",
+    ),
+    ErrorCode(
+        code="GAME019",
+        title="A server-to-server request does not verify",
+        kind="exception",
+        source=f"{_SOURCE}.signatures.HmacVerifier (HTTP 403)",
+        why="A portal's callback and a realtime server's report change balances and boards, "
+        "so each is signed with a shared secret over its exact body, with a timestamp that "
+        "stops a replay.",
+        fix="Sign the raw body: X-Karni-Timestamp and X-Karni-Signature: sha256=<HMAC-SHA256 "
+        "of '<timestamp>.' + body> with the secret in KARNI_GAME_PORTALS or "
+        "KARNI_GAME_SERVER_SECRET, and keep the clocks within "
+        "KARNI_GAME_SIGNATURE_TOLERANCE seconds.",
+    ),
+    ErrorCode(
+        code="GAME020",
+        title="The intent token is not valid",
+        kind="exception",
+        source=f"{_SOURCE}.rewards.from_callback (HTTP 400)",
+        why="An ad reward's callback names the player and the reward by the intent this "
+        "server signed (POST rewards/<key>/intent/), valid for KARNI_GAME_AD_INTENT_SECONDS.",
+        fix="Hand the portal a fresh intent before each ad, and send it back unchanged.",
+    ),
+    ErrorCode(
+        code="GAME021",
+        title="No such item for sale",
+        kind="exception",
+        source=f"{_SOURCE}.shop (HTTP 404)",
+        why="The shop sells the game's active items that have a currency and a price.",
+        fix="Use the key of an item GET shop/ lists with a price, or give the item a currency "
+        "and a price in the admin.",
+    ),
+    ErrorCode(
+        code="GAME022",
+        title="The player owns the item already",
+        kind="exception",
+        source=f"{_SOURCE}.shop (HTTP 409)",
+        why="A cosmetic is owned once, so a second purchase would take currency for nothing.",
+        fix="Equip it instead (POST items/<item>/equip/).",
+    ),
+    ErrorCode(
+        code="GAME023",
+        title="The player does not own the item",
+        kind="exception",
+        source=f"{_SOURCE}.shop (HTTP 409)",
+        why="Only an item the player owns is worn.",
+        fix="Buy it first (POST shop/<item>/buy/), or earn it.",
+    ),
+    ErrorCode(
+        code="GAME031",
+        title="A real-money item is sold through the cart",
+        kind="exception",
+        source=f"{_SOURCE}.shop.buy (HTTP 400)",
+        why="Real money goes through karni-commerce (the sellable kind game_item), with its "
+        "checkout, payments and refunds. A soft currency never buys it.",
+        fix="Add it to the cart: POST /api/carts/current/lines/ with kind game_item and the "
+        "item's id, signed in. The item is the player's once the order is paid.",
+    ),
 )

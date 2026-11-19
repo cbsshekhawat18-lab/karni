@@ -6,10 +6,10 @@
   people) keep one player. When only the dropped person has one, it moves to
   the kept person. When both have one, :class:`karni_game.merge.Merger` folds
   the dropped player's progress into the kept one's.
-* **Erase.** A person who asks for their data to be erased keeps their scores
-  on the boards under the name "Erased player", and loses the handle, the
-  guest token, their saves, their run records and their ledger notes. The
-  balances and the amounts in the ledger stay, so the books still add up.
+* **Erase.** A person who asks for their data to be erased is on no board
+  any more, and loses the handle (it reads "Erased player"), the guest
+  token, their saves, their run records and their ledger notes. The scores,
+  the balances and the amounts in the ledger stay, so the books still add up.
 * **A fact.** ``game_last_seen``: when the person last played.
 
 Override / escape hatch: ``people.merge_hook(Player, replace=True)`` and
@@ -72,12 +72,15 @@ def erase_player(person: Any) -> None:
         rows.update(**fields)
         if label == "Save":
             rows.filter(deleted_at__isnull=True).update(deleted_at=timezone.now())
+    ledger = apps.get_model("karni_game", "LedgerEntry")
+    ledger.objects.filter(wallet__player__in=players).update(note="")
 
 
 #: Rows of a player's that an erase rewrites: (model, the values written). Saves lose
 #: their data and are deleted.
 _ERASED_ROWS: list[tuple[str, dict[str, Any]]] = [
     ("Save", {"data": {}, "size": 0}),
+    ("Score", {"run": None, "note": ""}),
 ]
 
 

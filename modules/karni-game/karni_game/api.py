@@ -26,9 +26,20 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from karni_game import clock, conf, intents, players, saves, scores
+from karni_game import clock, conf, intents, players, rewards, saves, scores, shop, wallet
 from karni_game.errors import GameError, game_error
-from karni_game.models import Board, Game, Player, Save, Score
+from karni_game.models import (
+    Board,
+    Currency,
+    Game,
+    Item,
+    LedgerEntry,
+    Player,
+    Reward,
+    Save,
+    Score,
+    Wallet,
+)
 from karni_game.throttling import PlayerRateThrottle
 
 __all__ = [
@@ -39,6 +50,16 @@ __all__ = [
     "PlayerSerializer",
     "BoardMeView",
     "BoardView",
+    "BuyView",
+    "CallbackView",
+    "ClaimView",
+    "EquipView",
+    "IntentView",
+    "LedgerView",
+    "RewardsView",
+    "ShopView",
+    "UnequipView",
+    "WalletView",
     "SaveView",
     "SavesView",
     "ScoresView",
@@ -257,6 +278,10 @@ class GameDetailView(GameView):
                 scores.board_data(board)
                 for board in Board.objects.filter(game=game, is_active=True)
             ],
+            "currencies": [
+                {"key": row.key, "title": row.title, "cap": row.cap}
+                for row in Currency.objects.filter(game=game)
+            ],
             "analytics": options.analytics,
         }
 
@@ -468,3 +493,199 @@ class BoardMeView(BoardsMixin):
                 ],
             )
         return Response(body)
+
+
+# -- wallet, rewards and the shop ------------------------------------------------------
+
+
+class IntentOnlySerializer(serializers.Serializer):
+    intent = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
+
+
+class CallbackSerializer(serializers.Serializer):
+    intent = serializers.CharField(max_length=2000)
+    event_id = serializers.CharField(max_length=100)
+
+
+def _once(
+    view: GameView, kind: str, body: dict[str, Any], work: Any, *, status: int = 200
+) -> Response:
+    """Run ``work`` once per ``intent`` of the body: a retry answers the first answer."""
+    intent = str(body.get("intent", "") or "")
+
+    def run() -> tuple[int, dict[str, Any]]:
+        return status, work()
+
+    code, answer, replayed = intents.once(view.player, kind, intent, body, run)
+    if replayed:
+        return Response({**answer, "replayed": True}, status=200)
+    return Response(answer, status=code)
+
+
+class WalletView(GameView):
+    """``GET <game>/wallet/``: the player's balances and items in the game."""
+
+    def get(self, request: Request, game: str) -> Response:
+        player = self.player
+        items = [
+            {
+                "item": row.item.key,
+                "title": row.item.title,
+                "slot": row.slot,
+                "equipped": row.equipped,
+                "acquired_at": row.created_at,
+            }
+            for row in shop.owned(player, self.game).values()
+        ]
+        return Response({"balances": wallet.balances(player, self.game), "items": items})
+
+
+class LedgerView(GameView):
+    """``GET <game>/wallet/ledger/?currency=&page=``: the player's own entries, newest first."""
+
+    page_size = 50
+
+    def get(self, request: Request, game: str) -> Response:
+        rows = LedgerEntry.objects.filter(
+            wallet__player=self.player, wallet__currency__game=self.game
+        ).select_related("wallet__currency")
+        currency = str(request.query_params.get("currency", "") or "")
+        if currency:
+            rows = rows.filter(wallet__currency__key=currency)
+        rows = rows.order_by("-created_at", "-id")
+        page = _number(request, "page", 1, 1, 10_000)
+        count = rows.count()
+        start = (page - 1) * self.page_size
+        found = rows[start : start + self.page_size]
+        return Response(
+            {
+                "count": count,
+                "next": page + 1 if start + self.page_size < count else None,
+                "results": [
+                    {
+                        "id": str(row.pk),
+                        "currency": row.wallet.currency.key,
+                        "amount": row.amount,
+                        "balance_after": row.balance_after,
+                        "reason": row.reason,
+                        "reference": row.reference,
+                        "created_at": row.created_at,
+                    }
+                    for row in found
+                ],
+            }
+        )
+
+
+class RewardsView(GameView):
+    """``GET <game>/rewards/``: the rewards, and when the player may have each."""
+
+    def get(self, request: Request, game: str) -> Response:
+        player = self.player_or_none()
+        rows = Reward.objects.filter(game=self.game, is_active=True).select_related("currency")
+        for row in rows:
+            row.game = self.game
+        return Response({"results": [rewards.reward_data(row, player) for row in rows]})
+
+
+class ClaimView(GameView):
+    """``POST <game>/rewards/<reward>/claim/``: an ad reward the client claims."""
+
+    throttle_scopes: ClassVar[dict[str, str]] = {"POST": "claim"}
+
+    @extend_schema(request=IntentOnlySerializer)
+    def post(self, request: Request, game: str, reward: str) -> Response:
+        player = self.player
+        found = rewards.find_reward(self.game, reward)
+        found.game = self.game
+        self.guard("create", Wallet, "karni_game.wallet:change")
+        body = IntentOnlySerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+
+        def work() -> dict[str, Any]:
+            done = rewards.claim(player, found)
+            return {**done.as_dict(), "next_at": rewards.availability(player, found)["next_at"]}
+
+        return _once(self, f"claim:{found.pk}", dict(body.validated_data), work)
+
+
+class IntentView(GameView):
+    """``POST <game>/rewards/<reward>/intent/``: the intent a portal sends back when it calls."""
+
+    throttle_scopes: ClassVar[dict[str, str]] = {"POST": "claim"}
+
+    def post(self, request: Request, game: str, reward: str) -> Response:
+        player = self.player
+        found = rewards.find_reward(self.game, reward)
+        return Response(rewards.intent_for(player, found), status=201)
+
+
+class CallbackView(GameView):
+    """``POST callbacks/<portal>/``: a portal's server, signed, after an ad was watched."""
+
+    throttle_scopes: ClassVar[dict[str, str]] = {"POST": "callback"}
+    authentication_classes: ClassVar[list[type]] = []
+
+    def throttle_ident(self, request: Request, scope: str) -> str | None:
+        return f"portal:{self.kwargs.get('portal', '')}"
+
+    @extend_schema(request=CallbackSerializer)
+    def post(self, request: Request, portal: str) -> Response:
+        # The signature covers the raw body: verify it before the body is parsed.
+        rewards.verifier_for(portal).verify(request)
+        body = CallbackSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        return Response(rewards.from_callback(portal, data["intent"], data["event_id"]))
+
+
+class ShopView(GameView):
+    """``GET <game>/shop/``: the items, their prices, which the player owns and wears."""
+
+    def get(self, request: Request, game: str) -> Response:
+        player = self.player_or_none()
+        mine = shop.owned(player, self.game) if player is not None else {}
+        rows = Item.objects.filter(game=self.game, is_active=True).select_related("currency")
+        return Response({"results": [shop.item_data(row, mine.get(row.key)) for row in rows]})
+
+
+class BuyView(GameView):
+    """``POST <game>/shop/<item>/buy/``: spend the price, own the item."""
+
+    throttle_scopes: ClassVar[dict[str, str]] = {"POST": "buy"}
+
+    @extend_schema(request=IntentOnlySerializer)
+    def post(self, request: Request, game: str, item: str) -> Response:
+        player = self.player
+        found = shop.find_item(self.game, item)
+        found.game = self.game
+        self.guard("create", Wallet, "karni_game.wallet:change")
+        body = IntentOnlySerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        return _once(
+            self,
+            f"buy:{found.pk}",
+            dict(body.validated_data),
+            lambda: shop.buy(player, found),
+            status=201,
+        )
+
+
+class EquipView(GameView):
+    """``POST <game>/items/<item>/equip/``: wear an item the player owns."""
+
+    throttle_scopes: ClassVar[dict[str, str]] = {"POST": "buy"}
+    wear = True
+
+    def post(self, request: Request, game: str, item: str) -> Response:
+        player = self.player
+        found = shop.find_item(self.game, item)
+        if self.wear:
+            return Response(shop.equip(player, found))
+        return Response(shop.unequip(player, found))
+
+
+class UnequipView(EquipView):
+    """``POST <game>/items/<item>/unequip/``."""
+
+    wear = False
