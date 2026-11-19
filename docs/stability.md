@@ -426,6 +426,11 @@ Stable since 0.4.1:
   cart and order endpoints and their answers, and everything in
   `@karni/commerce-ui`. `karni.mail` (`send_templated`, its `kind` and
   `KARNI_MAIL_DISABLED_KINDS`) is experimental too.
+- [The game client](game-client.md): everything in `@karni/game` (the
+  portal, its adapters and the portal table, the loop, view, input, audio,
+  save and random helpers, the data client and its queue, the Vite preset,
+  the package checks, the `karni-game` command, the engine adapters and the
+  smoke harness).
 - [API versions](api.md#api-versions): the `KARNI_API_VERSION`,
   `KARNI_API_VERSIONS` and `KARNI_API_UNVERSIONED` settings, `karni.api.versions`
   (with `api_urls`, `ApiVersionHeadersMiddleware` and `VersionedSchemaGenerator`),

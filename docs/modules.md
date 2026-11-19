@@ -18,7 +18,7 @@ precise enough to build a module without reading Karni's source.
 | PyPI distribution | `karni-<x>` | `karni-payments` |
 | Django app module | `karni_<x>` (top-level, dot-free) | `karni_payments` |
 | App label | `karni_<x>` (must equal the module name) | `karni_payments` |
-| npm UI package | `@karni/<x>-ui` | `@karni/payments-ui` |
+| npm UI package | `@karni/<x>-ui` (the game add-on's is `@karni/game`) | `@karni/payments-ui` |
 
 `karni add <x>` derives all of these from `<x>`, so the convention is what
 makes the CLI work. A note for third parties: the `@karni` npm scope and the
@@ -291,6 +291,12 @@ A module's UI package (`@karni/<x>-ui` or your own scope):
   (`useKarniClient().request(...)` against resource-relative paths like
   `/payments/checkout/`) and invalidates `karniKeys`-based query keys so
   resource views refresh.
+
+The game add-on's npm package, [`@karni/game`](game-client.md), is the one
+exception: a game is not a set of screens, so it is plain TypeScript for any
+engine, with no `@karni/ui` peer and no runtime dependency, and it works
+without the server. It reaches the server through a transport that
+`@karni/ui`'s client fits.
 
 ## Wiring lifecycle (what `karni add <x>` does)
 
@@ -619,6 +625,7 @@ in the catalog is reported by `karni modules list` as `C314` and left out.
 | `karni-reports` (`modules/karni-reports/`), experimental | PDF reports of a row. A report is declared in `<app>/reports.py` (`@register` on a `Report` naming the model, the template and `get_context(obj)`). A Celery task renders the template with WeasyPrint and stores the file through Django's storage, cached by the template and a hash of the context, so a changed row or template gives a new file and an unchanged one is served again. `POST /api/reports/<report>/<id>/`, its `status/` and its `download/` retrieve the row through its model's own viewset first, so another user's row is a 404. It comes with a base print template, `manage.py karni_pregenerate`, the Generated reports admin with Regenerate, and `karni check` for a report without a viewset or a template. It needs Pango, a system library. UI package: `@karni/reports-ui`. See [Reports (PDF)](reports.md) | `pip install karni-reports && karni add reports` |
 | `karni-storage` (`modules/karni-storage/`), experimental | files a row owns, kept in a private S3-compatible bucket (or a private directory in development) and downloaded only through the row's own viewset. `ProtectedFileField` and `ProtectedImageField` give the file as `<resource>/<id>/files/<field>/`, which redirects to a short-lived signed URL or streams the file. One setting picks the service (`aws`, `r2`, `minio`, `spaces`, `b2`, `gcs-interop`) and configures core's S3 backend. Direct uploads answer a presigned POST or PUT, and a confirm step checks the object before a row points at it. Thumbnails are made by a Celery task with core's thumbnailer. `karni check` runs STORE001 to STORE006. UI package: `@karni/storage-ui`. See [Protected files](storage.md) | `pip install "karni-storage[images]" && karni add storage` |
 | `karni-commerce` (`modules/karni-commerce/`), experimental | one cart, checkout and order path for anything a project sells. An app makes a model sellable with an adapter in its `sellables.py` (price, validate, hold, release, on paid, on cancelled, on refunded), and commerce calls it without importing the app. Carts for visitors and signed-in people, orders with readable numbers and money states only, several payments per order through karni-payments, refunds by line or by amount, emails by kind and signals for every move. Needs karni-payments. UI package: `@karni/commerce-ui`. See [Commerce](commerce.md) | `pip install karni-commerce && karni add commerce` |
+| game add-on, browser side (`modules/karni-game/ui/`), experimental | `@karni/game`: the portal and ad adapters with a no-op default, a canvas loop with a fixed step, input, audio, local saves with migrations, a seeded random generator, an offline-first client of the karni-game API that runs on the device with no server, per-portal builds with checks, Phaser, PixiJS and React Three Fiber adapters and a browser smoke harness. No runtime dependency. See [Games in the browser](game-client.md) | `npm install @karni/game` |
 
 Each module's README is its reference (settings table, wiring, escape
 hatches). `karni-approvals` is built on one core hook: every `BaseModel`
