@@ -22,7 +22,14 @@ export default tseslint.config(
     },
   },
   {
-    files: ["src/tooling/**", "src/smoke/**", "bin/**", "**/*.config.ts", "eslint.config.js", "tests/**"],
+    files: [
+      "src/tooling/**",
+      "src/smoke/**",
+      "bin/**",
+      "**/*.config.ts",
+      "eslint.config.js",
+      "tests/**",
+    ],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   prettier,
