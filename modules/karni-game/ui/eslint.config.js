@@ -37,6 +37,7 @@ export default tseslint.config(
       "**/*.config.ts",
       "eslint.config.js",
       "tests/**",
+      "tests-browser/**",
     ],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },

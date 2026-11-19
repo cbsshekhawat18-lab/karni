@@ -23,6 +23,7 @@ const ENTRIES: Record<string, string> = {
   phaser: "src/engines/phaser.ts",
   pixi: "src/engines/pixi.ts",
   r3f: "src/engines/r3f.tsx",
+  smoke: "src/smoke/index.ts",
 };
 
 export default defineConfig({

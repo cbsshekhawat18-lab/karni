@@ -69,6 +69,10 @@
       "types": "./dist/src/engines/r3f.d.ts",
       "import": "./dist/r3f.js"
     },
+    "./smoke": {
+      "types": "./dist/src/smoke/index.d.ts",
+      "import": "./dist/smoke.js"
+    },
     "./portals/*": {
       "types": "./dist/src/portal/adapters/*.d.ts",
       "import": "./dist/portals/*.js"
@@ -85,7 +89,10 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:smoke": "vitest run --config vitest.smoke.config.ts",
+    "example:dev": "vite --config example/block-hopper/vite.config.ts",
+    "example:build": "vite build --config example/block-hopper/vite.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -100,6 +107,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "globals": "^15.15.0",
     "jsdom": "^25.0.0",
+    "playwright": "^1.64.1",
     "prettier": "^3.9.10",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -119,11 +127,15 @@
   },
   "peerDependencies": {
     "@react-three/fiber": ">=8.0.0",
+    "playwright": ">=1.40.0",
     "react": ">=18.0.0",
     "vite": ">=5.0.0"
   },
   "peerDependenciesMeta": {
     "@react-three/fiber": {
+      "optional": true
+    },
+    "playwright": {
       "optional": true
     },
     "react": {
