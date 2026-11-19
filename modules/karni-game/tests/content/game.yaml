@@ -1,0 +1,41 @@
+# A game declared on the server, as karni new --kind game writes it: karni load content/game.yaml
+karni_game.Game:
+  - slug: block-hopper
+    title: Block Hopper
+    settings:
+      timezone: UTC
+      save_schema_version: 1
+      analytics:
+        level_started: {level: int}
+        level_done: {level: int, ms: int}
+    boards:
+      - {key: high, title: High score, order: desc, periods: [all, daily, weekly], min_value: 0, max_value: 1000000}
+      - {key: daily, title: Daily run, order: desc, periods: [daily], daily_seed: true, min_value: 0, max_value: 1000000}
+    currencies:
+      - key: coins
+        title: Coins
+        cap: 99999
+        rewards:
+          - {game: block-hopper, key: daily-coins, title: Daily coins, kind: daily, amount: 10}
+          - {game: block-hopper, key: ad-coins, title: Watch for coins, kind: ad, amount: 25, per_day: 5, cooldown: 60}
+          - game: block-hopper
+            key: collector
+            title: Collector's prize
+            kind: achievement
+            amount: 50
+            achievements:
+              - {game: block-hopper, key: collector, title: Collector, counter: coins_collected, goal: 300}
+          - game: block-hopper
+            key: three-levels
+            title: Three levels today
+            kind: mission
+            amount: 30
+            missions:
+              - {game: block-hopper, key: three-levels, title: Three levels today, counter: levels_done, goal: 3, period: daily}
+        items:
+          - {game: block-hopper, key: red-cap, title: Red cap, slot: hat, price: 50}
+    achievements:
+      - {key: first-jump, title: First jump, counter: jumps, goal: 1}
+    config:
+      - {key: jump_height, value: 3.5}
+      - {key: night_mode, flag: true, value: false}

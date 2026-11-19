@@ -93,7 +93,9 @@ def world(game: Game, guest: Guest) -> dict[str, Any]:
     Mission.objects.create(game=game, key="daily-coins", title="Coins", counter="coins", goal=1)
     player = Player.objects.get(pk=guest.player_id)
     wallet.change(player, coins, 500, reason="grant")
-    guest.put(f"{G}saves/main/", {"data": {"secret": "mine"}, "schema_version": 1, "base_version": 0})
+    guest.put(
+        f"{G}saves/main/", {"data": {"secret": "mine"}, "schema_version": 1, "base_version": 0}
+    )
     guest.post(f"{G}boards/high/scores/", {"value": 900})
     guest.post(f"{G}shop/red-cap/buy/")
     guest.post(f"{G}items/red-cap/equip/")

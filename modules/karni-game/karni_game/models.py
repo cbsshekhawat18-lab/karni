@@ -34,6 +34,24 @@ from karni_game.gamesettings import GameSettings
 #: A game's settings, or its slug, that the server cannot use.
 SETTINGS_CODE = "GAME026"
 
+
+def _same_game(row: Any, through: str) -> None:
+    """Fill a blank ``game`` from the row's currency or reward, and refuse one of another game.
+
+    A content file nests a reward under its currency and an achievement under its
+    reward (``karni load``), so the game comes from there.
+    """
+    other = getattr(row, through, None)
+    if row.game_id is None and other is not None:
+        row.game_id = other.game_id
+    if row.game_id is None:
+        raise ValidationError({"game": f"{SETTINGS_CODE}: name the game (or its {through})."})
+    if other is not None and other.game_id != row.game_id:
+        raise ValidationError(
+            {through: f"{SETTINGS_CODE}: the {through} is of another game than this row."}
+        )
+
+
 __all__ = [
     "LEDGER_REASONS",
     "MISSION_PERIODS",
@@ -576,7 +594,13 @@ class Reward(BaseModel):
     only by the portal's signed callback.
     """
 
-    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="rewards")
+    game = models.ForeignKey(
+        Game,
+        on_delete=models.CASCADE,
+        related_name="rewards",
+        blank=True,
+        help_text="Blank: the currency's game.",
+    )
     key = models.SlugField(max_length=50)
     title = models.CharField(max_length=120)
     kind = models.CharField(max_length=12, choices=REWARD_KINDS)
@@ -596,6 +620,7 @@ class Reward(BaseModel):
         ]
 
     class Karni:
+        natural_key = "key"
         cascade: ClassVar[dict[str, str]] = {"game": "a reward is part of its game"}
 
     class AdminMeta:
@@ -604,6 +629,10 @@ class Reward(BaseModel):
 
     def __str__(self) -> str:
         return self.title
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        _same_game(self, "currency")
+        super().save(*args, **kwargs)
 
 
 class Claim(UUIDModel, TimestampedModel):
@@ -648,7 +677,13 @@ class Item(BaseModel):
     of karni-commerce instead, at ``money_price`` (the sellable kind ``game_item``).
     """
 
-    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="items")
+    game = models.ForeignKey(
+        Game,
+        on_delete=models.CASCADE,
+        related_name="items",
+        blank=True,
+        help_text="Blank: the currency's game.",
+    )
     key = models.SlugField(max_length=50)
     title = models.CharField(max_length=120)
     slot = models.SlugField(max_length=30, help_text="Where it is worn: hat, skin, trail.")
@@ -668,6 +703,7 @@ class Item(BaseModel):
         ]
 
     class Karni:
+        natural_key = "key"
         cascade: ClassVar[dict[str, str]] = {"game": "an item is part of its game"}
 
     class AdminMeta:
@@ -676,6 +712,10 @@ class Item(BaseModel):
 
     def __str__(self) -> str:
         return self.title
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        _same_game(self, "currency")
+        super().save(*args, **kwargs)
 
     @property
     def for_sale(self) -> bool:
@@ -759,7 +799,13 @@ class Achievement(BaseModel):
     ``hidden`` one shows its title and description only once unlocked.
     """
 
-    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="achievements")
+    game = models.ForeignKey(
+        Game,
+        on_delete=models.CASCADE,
+        related_name="achievements",
+        blank=True,
+        help_text="Blank: the reward's game.",
+    )
     key = models.SlugField(max_length=50)
     title = models.CharField(max_length=120)
     description = models.CharField(max_length=300, blank=True, default="")
@@ -779,6 +825,7 @@ class Achievement(BaseModel):
         ]
 
     class Karni:
+        natural_key = "key"
         cascade: ClassVar[dict[str, str]] = {"game": "an achievement is part of its game"}
 
     class AdminMeta:
@@ -788,6 +835,10 @@ class Achievement(BaseModel):
     def __str__(self) -> str:
         return self.title
 
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        _same_game(self, "reward")
+        super().save(*args, **kwargs)
+
 
 #: How often a mission may be completed.
 MISSION_PERIODS = (("once", "Once"), ("daily", "Each day"), ("weekly", "Each week"))
@@ -796,7 +847,13 @@ MISSION_PERIODS = (("once", "Once"), ("daily", "Each day"), ("weekly", "Each wee
 class Mission(BaseModel):
     """A mission: its counter reaches its goal within its period; ``reward`` each time."""
 
-    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="missions")
+    game = models.ForeignKey(
+        Game,
+        on_delete=models.CASCADE,
+        related_name="missions",
+        blank=True,
+        help_text="Blank: the reward's game.",
+    )
     key = models.SlugField(max_length=50)
     title = models.CharField(max_length=120)
     description = models.CharField(max_length=300, blank=True, default="")
@@ -816,6 +873,7 @@ class Mission(BaseModel):
         ]
 
     class Karni:
+        natural_key = "key"
         cascade: ClassVar[dict[str, str]] = {"game": "a mission is part of its game"}
 
     class AdminMeta:
@@ -824,6 +882,10 @@ class Mission(BaseModel):
 
     def __str__(self) -> str:
         return self.title
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        _same_game(self, "reward")
+        super().save(*args, **kwargs)
 
 
 class Progress(UUIDModel, TimestampedModel):
