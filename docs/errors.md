@@ -3479,6 +3479,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Return None (the project's KARNI_COMMERCE_HOLD_MINUTES) or a whole number of minutes from 1 from the adapter's hold_minutes(item, options).
 
+<a id="com004"></a>
+
+### COM004: A sellable adapter is registered wrongly
+
+*exception* · from `karni_commerce.sellables.register`
+
+**Why Karni objects.** Commerce finds an adapter by its kind, and a cart line and an order line store that kind as a short name. register() takes a Sellable subclass whose kind is letters, digits and _.
+
+**Fix.** Decorate a subclass of karni_commerce.sellables.Sellable with @register and set kind = "booking" (a short name, unique in the project).
+
 ## IMP (`IMP`)
 
 <a id="imp001"></a>

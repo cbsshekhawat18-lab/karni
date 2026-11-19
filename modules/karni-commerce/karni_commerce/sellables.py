@@ -336,13 +336,21 @@ def register[S: type[Sellable]](adapter: S) -> S:
     """Experimental. Register ``adapter`` (a :class:`Sellable` subclass) under its ``kind``.
 
     Usable as a class decorator. Registering a kind again replaces it.
+
+    :raises KarniTypeError: ``COM004`` for anything but a Sellable subclass.
+    :raises KarniValueError: ``COM004`` for a kind that is not a short name.
     """
+    from karni.exceptions import KarniTypeError, KarniValueError
+
     if not isinstance(adapter, type) or not issubclass(adapter, Sellable):
-        raise TypeError(f"register() takes a Sellable subclass, got {adapter!r}.")
+        raise KarniTypeError(
+            f"register() takes a Sellable subclass, got {adapter!r}.", code="COM004"
+        )
     if not adapter.kind or not str(adapter.kind).replace("_", "").isalnum():
-        raise ValueError(
+        raise KarniValueError(
             f"{adapter.__name__}.kind must be a short name of letters, digits and _, "
-            f"got {adapter.kind!r}."
+            f"got {adapter.kind!r}.",
+            code="COM004",
         )
     _REGISTRY[str(adapter.kind)] = adapter()
     return adapter

@@ -52,4 +52,15 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         fix="Return None (the project's KARNI_COMMERCE_HOLD_MINUTES) or a whole number of "
         "minutes from 1 from the adapter's hold_minutes(item, options).",
     ),
+    ErrorCode(
+        code="COM004",
+        title="A sellable adapter is registered wrongly",
+        kind="exception",
+        source=f"{_SOURCE}.sellables.register",
+        why="Commerce finds an adapter by its kind, and a cart line and an order line store "
+        "that kind as a short name. register() takes a Sellable subclass whose kind is letters, "
+        "digits and _.",
+        fix="Decorate a subclass of karni_commerce.sellables.Sellable with @register and set "
+        'kind = "booking" (a short name, unique in the project).',
+    ),
 )

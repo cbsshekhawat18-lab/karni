@@ -2836,6 +2836,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`COM001`](errors.md#com001) | check | karni-commerce is installed without the people contract |
 | [`COM002`](errors.md#com002) | test | A sellable adapter does not keep the commerce contract |
 | [`COM003`](errors.md#com003) | exception | A sellable's hold is not a positive number of minutes |
+| [`COM004`](errors.md#com004) | exception | A sellable adapter is registered wrongly |
 | [`IMP001`](errors.md#imp001) | api | Impersonation needs the explicit impersonate permission |
 | [`IMP002`](errors.md#imp002) | api | The target holds something the impersonator does not |
 | [`IMP003`](errors.md#imp003) | api | A reason is required to impersonate |

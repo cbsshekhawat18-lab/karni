@@ -200,8 +200,7 @@ class CartViewSet(_ReadOnly, BaseViewSet):
         body = SetLineSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        cart = self._current(request, create=True)
-        assert cart is not None
+        cart = services.cart_of(request.user, request.headers.get(TOKEN_HEADER))
         services.set_line(
             cart,
             data["kind"],
@@ -227,8 +226,7 @@ class CartViewSet(_ReadOnly, BaseViewSet):
         """Put a coupon on the cart, or take it off with a blank code."""
         body = CouponInputSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        cart = self._current(request, create=True)
-        assert cart is not None
+        cart = services.cart_of(request.user, request.headers.get(TOKEN_HEADER))
         user = _buyer(request)
         services.apply_coupon(
             cart,

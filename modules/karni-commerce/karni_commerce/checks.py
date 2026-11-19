@@ -6,6 +6,7 @@ from typing import Any
 
 from django.apps import apps
 from django.core import checks
+from karni.exceptions import check_error
 
 __all__ = ["people_installed"]
 
@@ -15,11 +16,11 @@ def people_installed(app_configs: Any = None, **kwargs: Any) -> list[checks.Chec
     if apps.is_installed("karni.people"):
         return []
     return [
-        checks.Error(
+        check_error(
+            "COM001",
             "karni-commerce is installed without the people contract: every order names the "
             "person who bought it (karni.people).",
             hint="Set KARNI_PEOPLE = True above karni_settings(globals()) in your settings, "
-            "then run migrate. See karni explain COM001.",
-            id="karni.COM001",
+            "then run migrate.",
         )
     ]

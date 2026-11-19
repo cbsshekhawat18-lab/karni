@@ -75,6 +75,7 @@ __all__ = [
     "buyer_person",
     "apply_coupon",
     "cancel",
+    "cart_of",
     "cart_lines",
     "checkout",
     "claim_orders",
@@ -154,6 +155,13 @@ def find_cart(user: Any, token: str | None, *, create: bool = False) -> Cart | N
         if found is not None:
             return found
     return Cart.objects.create() if create else None
+
+
+def cart_of(user: Any, token: str | None) -> Cart:
+    """The signed-in person's cart, or the visitor's cart ``token`` names: made when there is
+    none yet (:func:`find_cart` with ``create``)."""
+    found = find_cart(user, token, create=True)
+    return found if found is not None else Cart.objects.create(user=_user(user))
 
 
 def _problem(adapter: Sellable, item: Any, quantity: int, options: Any, buyer: Any) -> str:
@@ -366,8 +374,7 @@ def merge(user: Any, token: str | None) -> Cart:
     longer fits is kept at the most it can hold, or dropped. Guest orders
     placed with the person's verified email become theirs too.
     """
-    cart = find_cart(user, None, create=True)
-    assert cart is not None
+    cart = cart_of(user, None)
     visitor = Cart.objects.filter(user__isnull=True, token=token).first() if token else None
     if visitor is not None and visitor.pk != cart.pk:
         for line in visitor.lines.all():
