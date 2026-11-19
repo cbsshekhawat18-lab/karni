@@ -4,7 +4,9 @@ One line per fact: the project, how project commands would run (``.venv`` or
 a running compose service), the database and Redis the project's settings
 name and whether they answer (:mod:`karni_cli.services`), Node/npm (flagged
 below the floors in :mod:`karni_cli.toolchain`), the ``@karni/ui`` manifest
-behind ``karni context``'s COMPONENTS/HOOKS, whether the agent adapters are
+behind ``karni context``'s COMPONENTS/HOOKS (both skipped, and said so, in a
+project without ``frontend/package.json``, such as a site made with
+``--no-staff-app``), whether the agent adapters are
 fresh, and which history providers are installed / detect a store. It
 reports and never changes anything; the exit status is 0 unless the CLI
 itself fails.
@@ -36,6 +38,10 @@ from karni_cli.commands.context import find_manifest
 from karni_cli.project import CliError, find_project
 
 _WIDTH = 12
+
+
+#: What doctor says of Node, npm and @karni/ui in a project without a staff app.
+NO_FRONTEND = "not checked: no frontend/package.json (no staff app, so no Node or @karni/ui needed)"
 
 
 def _line(label: str, text: str) -> str:
@@ -274,8 +280,12 @@ def doctor(
     database, redis = _services(project, service)
     _echo_lines("database", database)
     _echo_lines("redis", redis)
-    _echo_lines("node", _node())
-    typer.echo(_line("ui", _manifest(project)))
+    if (project / "frontend" / "package.json").is_file():
+        _echo_lines("node", _node())
+        typer.echo(_line("ui", _manifest(project)))
+    else:
+        typer.echo(_line("node", NO_FRONTEND))
+        typer.echo(_line("ui", NO_FRONTEND))
     _echo_lines("adapters", _adapters(project))
     _echo_lines("history", _history(project))
     for line in _suggestions(project, service):

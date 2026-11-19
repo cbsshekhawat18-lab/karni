@@ -30,7 +30,9 @@ printf 'DATABASE_URL=postgres://karni:karni@localhost:5432/karni\nKARNI_CACHE=lo
 (`karni_settings(globals())`), a Vite + React frontend on `@karni/ui`, a
 docker-compose stack with a Makefile, and the guidance files AI coding
 agents read, and made the folder a git repository with a first commit
-(`--no-git` skips it). Run in a terminal, `karni new` first asks what kind of project
+(`--no-git` skips it). It makes the folder `ticket_shop/` under the current
+one. In a folder you made for the project already (empty, or holding only
+`.git`), `karni new "Ticket Shop" --here` writes into it instead. Run in a terminal, `karni new` first asks what kind of project
 it is: Enter takes `app`, this page's kind, and `--kind app` skips the
 question (`--kind site` makes a public website, see
 [start a site project](public-site.md#start-a-site-project)). `docker compose up -d --wait db` starts the project's
@@ -132,7 +134,9 @@ karni check
 22 bundle, and npm 11, which Node 24 bundles. It installs the versions
 `frontend/package-lock.json` pins. The lock leaves out `@karni/ui`, which npm
 resolves and adds, so commit the lock it writes. `karni doctor` shows your
-Node and npm and flags either one when it is too old.
+Node and npm and flags either one when it is too old. In a project without
+`frontend/` (a site made with `--no-staff-app`) it checks neither, nor
+`@karni/ui`, and says so.
 
 The project's `frontend/package.json` declares the Node and npm it needs in
 `engines`, and `frontend/.npmrc` sets `engine-strict`, so an older Node or npm

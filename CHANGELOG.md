@@ -182,6 +182,16 @@ apply codemods and list the manual steps. This file is the human summary.
   capture says so. A declaration that is not an address of the view fails with `SITE019`
   ([docs](docs/public-site.md#pages-behind-a-capture-without-a-model-experimental)).
 
+- **Added: `karni new --here`, and `karni doctor` without a staff app.** `karni new`
+  always made a `<slug>/` folder. `--here` writes the project into the current folder,
+  which must be empty but for version control and editor files (`.git`, `.DS_Store`,
+  `.idea`, `.vscode`): a folder made for the project, or one cloned from an empty
+  repository. A folder that holds anything else is refused with `C850`, and `--here` with
+  `--output-dir` with `C106`. The next steps leave out the `cd`. `karni doctor` checked
+  Node, npm and the `@karni/ui` manifest for `frontend/` in every project, so a site made
+  with `--no-staff-app` was told to run `npm install`. Without `frontend/package.json` it
+  now says those checks do not apply.
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

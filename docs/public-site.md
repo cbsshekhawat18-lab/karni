@@ -55,7 +55,9 @@ Every kind has the same security defaults (the
 public-create throttle, `karni check --deploy`) and the production stack. Run
 in a terminal, `karni new` asks for the kind. Run by a script or an agent, it
 makes an app, or a site with `--design`. `--site-app` names the site app
-something other than `website`.
+something other than `website`, and `--here` writes the project into the
+current folder (empty but for version control and editor files) instead of
+a new one.
 
 The kind is recorded in pyproject.toml, next to the release the project was
 made for:

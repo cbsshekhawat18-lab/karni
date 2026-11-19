@@ -57,6 +57,12 @@ Example:
 karni new "Corner Shop" --recipe shop
 ```
 
+Example:
+
+```sh
+mkdir crumb && cd crumb && karni new "Crumb Bakery" --kind site --here
+```
+
 ```
 karni new [OPTIONS] NAME
 ```
@@ -70,6 +76,7 @@ karni new [OPTIONS] NAME
 | `--design` PATH |  | A designer's folder of static pages (index.html, css/, img/): the site is built from it (karni design analyze, karni import design --editable), and the next steps are the rest of the site-from-design procedure. Implies a kind with a site. |
 | `--staff-app/--no-staff-app` |  | The React staff app in frontend/. An app always has it. A site has it unless --no-staff-app, and then staff work in the admin. |
 | `--site-app` TEXT | `website` | The label of the site app a kind with a site gets. |
+| `--here` |  | Write the project into the current folder, which must be empty (version control and editor files may be there), instead of a new folder under it. |
 | `--git/--no-git` | on | Make the project a git repository with a first commit of what karni new wrote. Skipped inside an existing repository and when git is not installed. |
 | `--recipe` TEXT |  | Experimental. Start the app from a recipe (karni recipes list, or blank): its karni.yaml with this name, then karni build, which also writes the recipe's own domain code, seeds and tests and runs the tests and karni check. Without the project's interpreter or database it stops after karni.yaml: run karni build next. |
 

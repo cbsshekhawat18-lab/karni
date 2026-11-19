@@ -78,6 +78,35 @@ def test_new_into_an_existing_folder_is_a_coded_error(runner, tmp_path: Path, mo
     assert (tmp_path / "my_app" / "keep.txt").read_text() == "mine"
 
 
+def test_new_here_writes_into_the_current_empty_folder(runner, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    folder = tmp_path / "crumb"
+    (folder / ".git").mkdir(parents=True)  # a folder cloned from an empty repository
+    (folder / ".DS_Store").write_bytes(b"")
+    monkeypatch.chdir(folder)
+    result = runner.invoke(
+        app, ["new", "Crumb Bakery", "--kind", "site", "--no-staff-app", "--no-git", "--here"]
+    )
+    assert result.exit_code == 0, result.output
+    for expected in ("manage.py", "config/settings.py", "website/views.py", "AGENTS.md"):
+        assert (folder / expected).exists(), expected
+    assert not (folder / "crumb_bakery").exists(), "no folder of its own"
+    assert 'name = "crumb_bakery"' in (folder / "pyproject.toml").read_text()
+    assert "cd crumb_bakery" not in result.output and "cp .env.example .env" in result.output
+
+
+def test_new_here_refuses_a_folder_that_holds_files(runner, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    (tmp_path / "notes.txt").write_text("mine")
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["new", "Crumb Bakery", "--here"])
+    assert isinstance(result.exception, CliError) and "C850" in str(result.exception)
+    assert "notes.txt" in str(result.exception)
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["notes.txt"]
+    both = runner.invoke(app, ["new", "Crumb Bakery", "--here", "-o", str(tmp_path)])
+    assert isinstance(both.exception, CliError) and "C106" in str(both.exception)
+
+
 def test_new_project_installs_with_pip_install_e(runner, tmp_path: Path, monkeypatch) -> None:
     """The README's `pip install -e .` installs the dependencies, not a package.
 
