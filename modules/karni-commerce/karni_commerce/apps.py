@@ -19,7 +19,7 @@ class KarniCommerceConfig(AppConfig):
 
     name = "karni_commerce"
     label = "karni_commerce"
-    verbose_name = "Karni commerce"
+    verbose_name = "Commerce"
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self) -> None:

@@ -654,3 +654,26 @@ describe("ResourceCalendar accessibility", () => {
     }
   });
 });
+
+describe("ResourceCalendar event names", () => {
+  it("never names an event by its key: a relation's name, else the resource", async () => {
+    const schema = schemaWith();
+    mockSchema.mockReturnValue({
+      ...schema,
+      fields: [
+        ...schema.fields,
+        field("room", { kind: "relation", relation: { resource: "rooms", many: false } }),
+      ],
+    } as ResourceSchema);
+    const [morning, late] = seed() as [SlotRow, SlotRow];
+    rows = [
+      { ...morning, name: "", room: { id: 9, name: "Garden Courtyard" } },
+      { ...late, name: "" },
+    ];
+    render();
+    const monday = await screen.findByRole("region", { name: MONDAY });
+    expect(await within(monday).findByRole("button", { name: /Garden Courtyard/ })).toBeVisible();
+    expect(within(monday).getByRole("button", { name: /AM Slot Open/ })).toBeVisible();
+    expect(within(monday).queryByRole("button", { name: /^2\b/ })).toBeNull();
+  });
+});

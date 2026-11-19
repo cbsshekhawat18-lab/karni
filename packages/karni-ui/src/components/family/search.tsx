@@ -183,7 +183,9 @@ export function SearchPage({
             ) : null}
             {part.groups.map((group) => (
               <div key={group.resource} className="space-y-1">
-                <h3 className="px-3 text-sm font-medium text-muted-foreground">{group.label}</h3>
+                {part.groups.length > 1 || group.label !== part.label ? (
+                  <h3 className="px-3 text-sm font-medium text-muted-foreground">{group.label}</h3>
+                ) : null}
                 <ul>
                   {group.hits.map((hit) => {
                     const target = href(hit);

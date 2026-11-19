@@ -407,10 +407,10 @@ export function TimeGrid<T extends object>(props: ViewShared<T>): React.ReactEle
     <div className="flex max-h-[var(--karni-calendar-max-height)] min-w-0 overflow-auto rounded-md border border-border bg-background">
       <div
         aria-hidden="true"
-        className="sticky left-0 z-raised w-14 shrink-0 bg-background pt-9 text-right text-xs text-muted-foreground"
+        className="sticky left-0 z-raised w-16 shrink-0 bg-background pt-9 text-right text-xs text-muted-foreground"
       >
         {Array.from({ length: hours.end - hours.start }, (_unused, index) => (
-          <div key={index} className="h-[var(--karni-calendar-hour-height)] pr-2">
+          <div key={index} className="h-[var(--karni-calendar-hour-height)] whitespace-nowrap pr-2">
             {formatTime(
               atMinutes(range.days[0] as number, (hours.start + index) * 60, timeZone),
               timeZone,

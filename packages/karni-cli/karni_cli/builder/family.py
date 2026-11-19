@@ -271,7 +271,7 @@ def _people_pages(spec: schema.Spec) -> list[FamilyPage]:
                 '      id={useParam("id")}',
                 "      navigate={useGo()}",
                 f'      listLabel="{label}"',
-                "      hrefFor={(resource, id) => routeHref(resource, id, routes)}",
+                "      hrefFor={(resource, id, row) => routeHref(resource, id, routes, row)}",
                 "      siteName={useSiteName()}",
                 "    />",
                 "  );",

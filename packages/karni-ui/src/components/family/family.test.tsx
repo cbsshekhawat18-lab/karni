@@ -37,6 +37,7 @@ import {
   unregisterPublicHome,
   unregisterTimelineKind,
 } from "./registry";
+import { registerRecordLink, unregisterRecordLink } from "../resource/record-links";
 import { SearchPage, searchHitHref } from "./search";
 import { Timeline } from "./timeline";
 
@@ -288,6 +289,34 @@ describe("Timeline", () => {
     expect(screen.getByRole("tab", { name: "Changes" })).toBeInTheDocument();
     expect(timelineKindLabel("bookings.booking.cancelled")).toBe("Booking cancelled");
     expect(await axeViolations(container)).toEqual([]);
+  });
+
+  it("links an entry's first record with the entry's data (an order by its number)", async () => {
+    server.use(
+      http.get(`${API}/timeline/`, () =>
+        HttpResponse.json({
+          results: [
+            {
+              ...ENTRY,
+              id: "e9",
+              kind: "commerce.order.paid",
+              title: "Order 1001 paid",
+              data: { number: 1001 },
+            },
+          ],
+          next: null,
+        }),
+      ),
+    );
+    registerRecordLink("orders", (row) =>
+      row["number"] ? `/orders/${String(row["number"])}` : null,
+    );
+    mount(<Timeline person="p1" />);
+    expect(await screen.findByRole("link", { name: "Open order" })).toHaveAttribute(
+      "href",
+      "/orders/1001",
+    );
+    unregisterRecordLink("orders");
   });
 
   it("hides the changes tab from who may not read the history", async () => {

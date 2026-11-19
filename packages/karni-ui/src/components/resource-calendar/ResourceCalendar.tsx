@@ -63,7 +63,8 @@ import { Button } from "../primitives/button";
 import { Skeleton } from "../primitives/skeleton";
 import { EmptyState } from "../empty-state/empty-state";
 import { TransitionFailure } from "../resource/detail/transitions";
-import { displayLabel } from "../resource/displayLabel";
+import { displayLabel, relationLabel } from "../resource/displayLabel";
+import { singularNoun } from "../resource/nouns";
 import { evaluateAccess } from "../resource/table/access";
 import { useContainerWidth } from "../resource/table/use-container-width";
 import {
@@ -186,7 +187,10 @@ export interface ResourceCalendarProps<T extends object> {
   limit?: number;
   /** The event body. */
   renderEvent?: (row: T, context: CalendarEventContext<T>) => React.ReactNode;
-  /** An event's name. Default: its name, title or id. */
+  /**
+   * An event's name. Default: its name or title, an expanded relation's (a slot's
+   * resource), else the resource in words (never its key).
+   */
   getEventLabel?: (row: T) => string;
   /** A row's key. Default: its `id`. */
   getRowKey?: (row: T) => string;
@@ -398,8 +402,23 @@ export function ResourceCalendar<T extends object>(
     [authStatus, authUser],
   );
 
-  const getLabel =
-    props.getEventLabel ?? ((row: T): string => displayLabel(row as Row) || getRowKey(row));
+  // A row's own name, else an expanded relation's (a slot's resource), else the resource in
+  // words: never a raw key, which says nothing to a person (the state shows beside it).
+  const defaultLabel = (row: T): string => {
+    const record = row as Row;
+    const own = displayLabel({ ...record, id: undefined });
+    if (own !== "") return own;
+    for (const field of schema?.fields ?? []) {
+      const value = record[field.name];
+      if (field.relation !== undefined && value !== null && typeof value === "object") {
+        const named = relationLabel(field, value as Row);
+        if (named !== "") return named;
+      }
+    }
+    const noun = singularNoun(resource);
+    return noun.charAt(0).toUpperCase() + noun.slice(1);
+  };
+  const getLabel = props.getEventLabel ?? defaultLabel;
   const itemConfig = {
     startField,
     endField,

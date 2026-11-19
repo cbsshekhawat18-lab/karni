@@ -180,6 +180,7 @@ export function PeoplePage({
         resourceLabel={label.toLowerCase()}
         itemLabel={label === "Customers" ? "customer" : "person"}
         importable={false}
+        filters={["organisation"]}
         onRowClick={(row) => navigate(personHref(String(row["id"])))}
       />
     </Page>
@@ -521,7 +522,7 @@ export interface PersonPageProps {
   /** The tabs instead of the registered ones. */
   tabs?: readonly PersonTab[];
   /** Where a timeline entry's record opens. */
-  hrefFor?: (resource: string, id: string) => string | null;
+  hrefFor?: (resource: string, id: string, row: Readonly<Record<string, unknown>>) => string | null;
   siteName?: string;
 }
 

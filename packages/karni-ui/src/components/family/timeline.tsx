@@ -105,7 +105,7 @@ export interface TimelineProps {
   /** Entries per page. Default 25. */
   pageSize?: number;
   /** Where a linked record opens (default: its registered record link, else nothing). */
-  hrefFor?: (resource: string, id: string) => string | null;
+  hrefFor?: (resource: string, id: string, row: Readonly<Record<string, unknown>>) => string | null;
   /** Opens an app path (a link's click). Default: the browser follows the link. */
   navigate?: (to: string) => void;
   /** The heading (default "Timeline"). `null` shows none. */
@@ -129,11 +129,21 @@ function EntryLinks({
   navigate,
 }: {
   entry: TimelineEntry;
-  hrefFor: (resource: string, id: string) => string | null;
+  hrefFor: (resource: string, id: string, row: Readonly<Record<string, unknown>>) => string | null;
   navigate: ((to: string) => void) | undefined;
 }): React.ReactElement | null {
   const links = entry.links
-    .map((link) => ({ link, href: link.resource ? hrefFor(link.resource, link.id) : null }))
+    // The entry's data describes its first record (an order's number), so that link's row has it.
+    .map((link, index) => ({
+      link,
+      href: link.resource
+        ? hrefFor(
+            link.resource,
+            link.id,
+            index === 0 ? { ...entry.data, id: link.id } : { id: link.id },
+          )
+        : null,
+    }))
     .filter((found): found is { link: TimelineEntry["links"][number]; href: string } =>
       Boolean(found.href),
     );
@@ -165,7 +175,7 @@ function Entries({
   onKinds,
 }: {
   params: TimelineParams;
-  hrefFor: (resource: string, id: string) => string | null;
+  hrefFor: (resource: string, id: string, row: Readonly<Record<string, unknown>>) => string | null;
   navigate: ((to: string) => void) | undefined;
   onKinds: (kinds: string[]) => void;
 }): React.ReactElement {
@@ -247,8 +257,12 @@ function Entries({
   );
 }
 
-function defaultHref(resource: string, id: string): string | null {
-  return recordHref(resource, { id });
+function defaultHref(
+  resource: string,
+  _id: string,
+  row: Readonly<Record<string, unknown>>,
+): string | null {
+  return recordHref(resource, row);
 }
 
 /** Experimental. The timeline of a person or a record, with a kind filter and paging. */
