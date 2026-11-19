@@ -562,6 +562,16 @@ apply codemods and list the manual steps. This file is the human summary.
 - **Added (experimental): what the family screens need from the API.** `GET /api/search/` names
   each group's `part` and `part_label`, `GET /api/people/<id>/` answers `can` (`merge`, `erase`),
   and `GET /api/orders/?person=<id>` lists one person's orders.
+- **Fixed (experimental): what the first look in a browser found in the shared screens.**
+  `ResourceBoard` and `ResourceCalendar` keep their cards' hidden labels inside their scroll
+  boxes, so the page never scrolls sideways, at any width. A
+  calendar event without a name of its own is named by an expanded relation (a slot's resource),
+  else by the resource in words, never by its key, its time gutter keeps "12:00 AM" on one line,
+  and its period takes its own line on a narrow toolbar. The commerce pages: the checkout keeps
+  the quantity beside a line a kind draws its own way, "Pay the balance (US$49.20)" has no
+  stray spaces, and "Your orders" lines up in columns. The person detail with `can` is its own
+  schema component (`PeoplePersonDetail`), karni-commerce's app reads "Commerce", and a merged
+  menu never labels a part's group with a page's name (the booking part groups as "Bookings").
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind
