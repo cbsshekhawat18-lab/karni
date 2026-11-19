@@ -127,6 +127,7 @@ describe("package self-registrations", () => {
       "empty-state": "EmptyState",
       "error-state": "ErrorState",
       "facet-panel": "FacetPanel",
+      "family-layout": "FamilyLayout",
       "file-upload": "FileUpload",
       "global-search": "GlobalSearch",
       "layout-shell": "Layout",
