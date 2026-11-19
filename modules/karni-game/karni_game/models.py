@@ -341,6 +341,7 @@ class Score(BaseModel):
     class Meta:
         indexes: ClassVar[list[Any]] = [
             models.Index(fields=["board", "status"], name="karni_game_score_status"),
+            models.Index(fields=["status", "created_at"], name="karni_game_score_review"),
             models.Index(fields=["player", "board", "day"], name="karni_game_score_player"),
         ]
 

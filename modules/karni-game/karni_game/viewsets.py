@@ -90,7 +90,6 @@ class GameViewSet(BaseViewSet):
     model = Game
     route = "games"
     access = Access(read=Granted(), write=Granted())
-    search_fields = ["title", "slug"]
 
 
 class PlayerViewSet(BaseViewSet):
@@ -99,7 +98,6 @@ class PlayerViewSet(BaseViewSet):
     model = Player
     route = "game-players"
     access = Access(read=Granted(), write=Granted())
-    search_fields = ["handle", "person__display_name", "person__email"]
     filterset_fields = ["person"]
 
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -144,7 +142,7 @@ class SaveViewSet(ReadOnly, BaseViewSet):
     model = Save
     route = "game-saves"
     access = Access(read=Granted(), write=Granted())
-    filterset_fields = ["game", "player", "slot"]
+    filterset_fields = ["game", "player"]
 
 
 class BoardViewSet(BaseViewSet):
@@ -153,7 +151,7 @@ class BoardViewSet(BaseViewSet):
     model = Board
     route = "game-boards"
     access = Access(read=Granted(), write=Granted())
-    filterset_fields = ["game", "key", "is_active"]
+    filterset_fields = ["game"]
 
 
 class ReviewSerializer(serializers.Serializer):
@@ -166,7 +164,7 @@ class ScoreViewSet(ReadOnly, BaseViewSet):
     model = Score
     route = "game-scores"
     access = Access(read=Granted(), write=Granted())
-    filterset_fields = ["board", "player", "status", "source", "day"]
+    filterset_fields = ["board", "player", "status"]
     ordering = ["-created_at"]
     query_budget = Budget(
         accept=None,
@@ -205,7 +203,7 @@ class RewardViewSet(BaseViewSet):
     model = Reward
     route = "game-rewards"
     access = Access(read=Granted(), write=Granted())
-    filterset_fields = ["game", "kind"]
+    filterset_fields = ["game"]
 
 
 class ItemViewSet(BaseViewSet):
@@ -214,7 +212,7 @@ class ItemViewSet(BaseViewSet):
     model = Item
     route = "game-items"
     access = Access(read=Granted(), write=Granted())
-    filterset_fields = ["game", "slot"]
+    filterset_fields = ["game"]
 
 
 class GrantSerializer(serializers.Serializer):
@@ -255,7 +253,7 @@ class LedgerViewSet(ReadOnly, BaseViewSet):
     model = LedgerEntry
     route = "game-ledger"
     access = Access(read=Granted(), write=Granted())
-    filterset_fields = ["wallet", "reason"]
+    filterset_fields = ["wallet"]
 
 
 class StreakViewSet(ReadOnly, BaseViewSet):
@@ -300,4 +298,4 @@ class ConfigValueViewSet(BaseViewSet):
     model = ConfigValue
     route = "game-config"
     access = Access(read=Granted(), write=Granted())
-    filterset_fields = ["game", "flag"]
+    filterset_fields = ["game"]
