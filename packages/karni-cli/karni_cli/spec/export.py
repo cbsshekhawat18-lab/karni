@@ -180,6 +180,10 @@ KARNI_KEYS: Final = {
 _IMPORT: Final = re.compile(
     r"""^import\s+(\w+)\s+from\s+["']\./pages/([\w./-]+)["'];?""", re.MULTILINE
 )
+#: The family's pages karni build writes in a project of parts (karni_cli.builder.family).
+_FAMILY_IMPORT: Final = re.compile(
+    r"""^import\s+(\w+)\s+from\s+["']\./karni/pages/[\w./-]+["'];?""", re.MULTILINE
+)
 _ROUTE: Final = re.compile(r"""path:\s*["']([^"']+)["']\s*,\s*component:\s*(\w+)""")
 _RESOURCE: Final = re.compile(
     r"""<(ResourceTable|ResourceDetail|ResourceForm)\b[^>]*?resource=["']([\w-]+)["']"""
@@ -1086,8 +1090,10 @@ def _pages(
         from karni_cli.recipes.compose import FAMILY_ROUTES
 
         family = FAMILY_ROUTES - {"/"}
+    # The pages the build writes for the family (frontend/src/karni/pages/) are not karni.yaml's.
+    familys = set(_FAMILY_IMPORT.findall(text))
     for path, component in _ROUTE.findall(text):
-        if path in family:
+        if path in family or component in familys:
             continue
         file = files.get(component)
         source = ""
@@ -1144,7 +1150,8 @@ def _page_entry(
     prefixes: dict[str, str] | None = None,
     file: str | None = None,
 ) -> tuple[str, Any] | None:
-    if path == "/" and "<Dashboard" in source:
+    # The scaffold's dashboard, or the family's home it re-exports in a project of parts.
+    if path == "/" and ("<Dashboard" in source or 'from "../karni/home"' in source):
         return "home", "dashboard"
     found = _RESOURCE.search(source)
     # In a project of parts (``file`` given), the build writes entity pages under an app's
