@@ -205,3 +205,16 @@ def test_the_shop_reports_its_events_by_family_name() -> None:
         "shop.shipment.delivered",
         "shop.product.low_stock",
     }
+
+
+def test_the_product_adapter_keeps_the_commerce_contract(
+    make_product: MakeProduct,
+) -> None:
+    """Commerce's conformance check (karni_commerce.testing): hold, release, paid,
+    cancelled and refunded each leave the stock where they should."""
+    from karni_commerce.testing import assert_sellable
+
+    lamp = make_product(stock=5, digital=False, backorders=False)
+    report = assert_sellable("product", lamp, quantity=2)
+    assert report.available == 5 and len(report.checked) == 4
+    assert (fresh(lamp).stock, lamp.available) == (5, 5)  # rolled back

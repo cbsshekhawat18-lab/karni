@@ -1,7 +1,9 @@
 /**
  * Experimental. An order staff place by hand, for a buyer who called: find
- * the items, set how many, type who it is for and where it goes, a coupon
- * and the way to send it. The server prices it (`orders/manual/quote/`, shown
+ * the items of any kind the project sells (a product, a booking, a course: a
+ * kind filter shows when there are several), set how many, type who it is for
+ * and where it goes, a coupon, the way to send it and, when every line allows
+ * one, a deposit first. The server prices it (`orders/manual/quote/`, shown
  * before placing: the discount, the shipping, the tax and the total) and
  * holds the items as checkout does, and (unless unticked) emails the buyer
  * the link to pay. The order's page opens once it is placed.
@@ -22,9 +24,10 @@ import { AddressFields, EMPTY_ADDRESS } from "./AddressFields";
 import { problemOf } from "./cart";
 import { ShippingChoice } from "./CheckoutPage";
 import { Money } from "./Money";
+import { PayChoice, payWayFor } from "./PayChoice";
 import { useCommerce } from "./routes";
 import { Totals } from "./Totals";
-import type { Address, Quote, SellableItem } from "./types";
+import type { Address, PayWay, Quote, SellableItem, SellableKind } from "./types";
 
 interface Chosen extends SellableItem {
   quantity: number;
@@ -33,7 +36,7 @@ interface Chosen extends SellableItem {
 export interface NewOrderPageProps {
   title?: string;
   siteName?: string;
-  /** Only items of this kind (default: every kind the project sells). */
+  /** Only items of this kind (default: every kind the project sells, with a filter). */
   kind?: string;
 }
 
@@ -49,17 +52,26 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
   const [sendLink, setSendLink] = useState(true);
   const [coupon, setCoupon] = useState("");
   const [method, setMethod] = useState<string | null>(null);
+  const [payWay, setPayWay] = useState<PayWay>("full");
+  const [picked, setPicked] = useState("");
   usePageMeta({ title, siteName });
+  const sold = useQuery<SellableKind[]>({
+    queryKey: ["karni-commerce", "kinds"],
+    enabled: kind === undefined,
+    queryFn: ({ signal }) => client.request<SellableKind[]>("/orders/kinds/", { signal }),
+  });
+  const kindsSold = sold.data ?? [];
+  const wanted = kind ?? picked;
   useEffect(() => {
     const wait = setTimeout(() => setSearch(typed.trim()), 300);
     return () => clearTimeout(wait);
   }, [typed]);
   const items = useQuery<SellableItem[]>({
-    queryKey: ["karni-commerce", "items", kind ?? "", search],
+    queryKey: ["karni-commerce", "items", wanted, search],
     placeholderData: keepPreviousData,
     queryFn: ({ signal }) =>
       client.request<SellableItem[]>("/orders/items/", {
-        query: { search, ...(kind ? { kind } : {}) },
+        query: { search, ...(wanted ? { kind: wanted } : {}) },
         signal,
       }),
   });
@@ -112,6 +124,7 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
           send_link: sendLink,
           coupon: coupon.trim(),
           shipping_method: method ?? quote.data?.method ?? "",
+          pay: payWayFor(quote.data, payWay),
           lines,
         },
       }),
@@ -141,6 +154,24 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
       <form onSubmit={submit} className="grid gap-6 lg:grid-cols-2">
         <section aria-label="Items" className="space-y-3">
           <h2 className="font-semibold">Items</h2>
+          {kindsSold.length > 1 ? (
+            <div className="space-y-1">
+              <Label htmlFor="item-kind">Kind</Label>
+              <select
+                id="item-kind"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={picked}
+                onChange={(event) => setPicked(event.target.value)}
+              >
+                <option value="">Every kind</option>
+                {kindsSold.map((row) => (
+                  <option key={row.kind} value={row.kind}>
+                    {row.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <Label htmlFor="item-search">Find an item</Label>
           <Input
             id="item-search"
@@ -161,8 +192,13 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
                 <span className="min-w-0">
                   {item.name}
                   <span className="block text-xs text-muted-foreground">
-                    {item.sku}
-                    {item.available !== null ? `, ${item.available} available` : ""}
+                    {[
+                      kindsSold.length > 1 ? (item.kind_label ?? item.kind) : "",
+                      item.sku,
+                      item.available !== null ? `${item.available} available` : "",
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
                   </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
@@ -273,6 +309,7 @@ export function NewOrderPage({ title = "New order", siteName, kind }: NewOrderPa
             onChoose={setMethod}
             waiting={quote.isFetching}
           />
+          <PayChoice quote={quote.data} chosen={payWay} onChoose={setPayWay} payer="the customer" />
           <div className="space-y-1">
             <Label htmlFor="order-coupon">Coupon (optional)</Label>
             <Input

@@ -54,6 +54,8 @@ endpoints = [
     "/api/orders/{id}/notes/",
     "/api/orders/manual/",
     "/api/orders/items/",
+    "/api/orders/kinds/",
+    "/api/orders/{id}/balance-link/",
     "/api/orders/customers/",
     "/api/orders/customer/",
     "/api/order-lines/",
@@ -82,7 +84,6 @@ KARNI_COMMERCE_ORDER_PATH = "string"
 KARNI_COMMERCE_STAFF_EMAILS = "array"
 KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR = "string"
 KARNI_COMMERCE_SELLABLES = "object"
-KARNI_COMMERCE_CUSTOMERS = "string"
 KARNI_COMMERCE_PRICES_INCLUDE_TAX = "boolean"
 KARNI_COMMERCE_SHIPPING = "string"
 KARNI_COMMERCE_TAX = "string"

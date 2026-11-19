@@ -59,6 +59,7 @@ __all__ = [
     "Sellable",
     "adapter_for",
     "autodiscover",
+    "hold_of",
     "kinds",
     "refuse",
     "register",
@@ -105,6 +106,13 @@ class Sellable:
     addon: ClassVar[bool] = False
     #: The text fields staff find an item by when they place an order by hand.
     search_fields: ClassVar[tuple[str, ...]] = ()
+    #: What staff read for the kind (a filter, a badge on an item): "Booking". Blank: the
+    #: kind in words.
+    label: ClassVar[str] = ""
+
+    def kind_label(self) -> str:
+        """The kind as staff read it: :attr:`label`, else the kind in words (``"Product"``)."""
+        return self.label or str(self.kind).replace("_", " ").capitalize()
 
     # -- finding items ------------------------------------------------------------------
 
@@ -226,12 +234,32 @@ class Sellable:
         return None
 
     def allows_deposit(self, item: Any, options: Mapping[str, Any]) -> bool:
-        """Whether the item may be paid in part first (a booking's deposit)."""
+        """Whether the item may be paid in part first (a booking's deposit).
+
+        Checkout offers the buyer a deposit only when every line of the order allows
+        one. The order is then ``part_paid`` once the deposit is in, and the rest (the
+        balance) is paid later through the order's link.
+        """
         return False
 
     def deposit(self, item: Any, options: Mapping[str, Any]) -> Decimal:
-        """The deposit for one item, when :meth:`allows_deposit` says so."""
+        """The deposit for one item, when :meth:`allows_deposit` says so.
+
+        The order's deposit is the lines' deposits times their quantities, never more
+        than the total. Shipping and tax are in the balance.
+        """
         return Decimal("0")
+
+    def hold_minutes(self, item: Any, options: Mapping[str, Any]) -> int | None:
+        """How long checkout may hold the item for its payment, in minutes, or ``None``.
+
+        ``None`` (the default) keeps the project's hold (``KARNI_COMMERCE_HOLD_MINUTES``,
+        or ``KARNI_COMMERCE_MANUAL_HOLD_MINUTES`` for an order staff place). A booking
+        slot may say 15: an order holds for the shortest hold of its lines, and one not
+        paid by then is cancelled and lets every line go (:meth:`release`). ``COM003``
+        for a number below 1.
+        """
+        return None
 
     def coupon_keys(self, item: Any) -> dict[str, Any]:
         """What a coupon may be limited to for this item: ``{"categories": ["3", "7"]}``.
@@ -262,7 +290,12 @@ class Sellable:
         """The order was not paid (failed, cancelled, expired): let the hold go."""
 
     def on_paid(self, line: OrderLine) -> None:
-        """The order is paid: take what the line held (stock off the shelf, a confirmed slot)."""
+        """The order is paid: take what the line held (stock off the shelf, a confirmed slot).
+
+        It runs once per line: when the order is paid in full, or when its deposit is
+        paid (``line.order.status`` is then ``part_paid``). The balance paid later
+        calls nothing more.
+        """
 
     def on_cancelled(self, line: OrderLine) -> None:
         """A paid order was cancelled: undo :meth:`on_paid` (its money goes back separately)."""
@@ -280,17 +313,44 @@ class Sellable:
         return max(line.paid_total - refunded, Decimal("0"))
 
 
+def hold_of(adapter: Sellable, item: Any, options: Mapping[str, Any]) -> int | None:
+    """Experimental. ``adapter.hold_minutes(item, options)``, checked: ``None`` or 1 and up.
+
+    :raises KarniImproperlyConfigured: ``COM003`` for anything else.
+    """
+    found = adapter.hold_minutes(item, options)
+    if found is None:
+        return None
+    if isinstance(found, bool) or not isinstance(found, int) or found < 1:
+        from karni.exceptions import KarniImproperlyConfigured
+
+        raise KarniImproperlyConfigured(
+            f"{type(adapter).__name__}.hold_minutes() gave {found!r} for {adapter.kind!r}: "
+            "return None (the project's hold) or a whole number of minutes from 1.",
+            code="COM003",
+        )
+    return found
+
+
 def register[S: type[Sellable]](adapter: S) -> S:
     """Experimental. Register ``adapter`` (a :class:`Sellable` subclass) under its ``kind``.
 
     Usable as a class decorator. Registering a kind again replaces it.
+
+    :raises KarniTypeError: ``COM004`` for anything but a Sellable subclass.
+    :raises KarniValueError: ``COM004`` for a kind that is not a short name.
     """
+    from karni.exceptions import KarniTypeError, KarniValueError
+
     if not isinstance(adapter, type) or not issubclass(adapter, Sellable):
-        raise TypeError(f"register() takes a Sellable subclass, got {adapter!r}.")
+        raise KarniTypeError(
+            f"register() takes a Sellable subclass, got {adapter!r}.", code="COM004"
+        )
     if not adapter.kind or not str(adapter.kind).replace("_", "").isalnum():
-        raise ValueError(
+        raise KarniValueError(
             f"{adapter.__name__}.kind must be a short name of letters, digits and _, "
-            f"got {adapter.kind!r}."
+            f"got {adapter.kind!r}.",
+            code="COM004",
         )
     _REGISTRY[str(adapter.kind)] = adapter()
     return adapter

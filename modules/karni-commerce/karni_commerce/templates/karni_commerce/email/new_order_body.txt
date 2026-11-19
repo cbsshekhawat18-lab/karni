@@ -1,4 +1,4 @@
-Order {{ order.number }} is paid and waits to be fulfilled.
+{% if order.status == "part_paid" %}Order {{ order.number }} has its deposit paid ({{ order.amount_paid|floatformat:2 }} {{ order.currency }}) and waits to be fulfilled. {{ order.balance|floatformat:2 }} {{ order.currency }} is still to pay.{% else %}Order {{ order.number }} is paid and waits to be fulfilled.{% endif %}
 
 Buyer: {% if order.buyer_name %}{{ order.buyer_name }}, {% endif %}{{ order.email }}
 

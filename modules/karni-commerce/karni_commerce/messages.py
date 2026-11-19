@@ -2,12 +2,14 @@
 
 * ``commerce.order_paid``, to the buyer: the order is paid (the confirmation).
 * ``commerce.new_order``, to the addresses in ``KARNI_COMMERCE_STAFF_EMAILS``:
-  an order is paid and waits to be fulfilled.
+  an order is paid (or its deposit is) and waits to be fulfilled.
 * ``commerce.order_cancelled``, to the buyer: the order was cancelled.
 * ``commerce.order_refunded``, to the buyer: a refund went through.
 * ``commerce.order_note``, to the buyer: staff wrote a note to the customer.
 * ``commerce.payment_request``, to the buyer: staff placed an order for them
   (a phone order) and ask for its payment, with the link to pay.
+* ``commerce.balance_due``, to the buyer: the deposit is paid, with what is
+  left and the link to pay it (again when staff send the balance link).
 
 An order waiting for its payment sends nothing: most never-paid orders are
 a person who changed their mind.
@@ -44,6 +46,7 @@ KINDS: dict[str, tuple[str, str]] = {
     "commerce.order_refunded": ("karni_commerce/email/order_refunded", "buyer"),
     "commerce.order_note": ("karni_commerce/email/order_note", "buyer"),
     "commerce.payment_request": ("karni_commerce/email/payment_request", "buyer"),
+    "commerce.balance_due": ("karni_commerce/email/balance_due", "buyer"),
 }
 
 
@@ -66,6 +69,8 @@ ORDER_FIELDS: dict[str, str] = {
     "order.prices_include_tax": "Whether the prices include the tax",
     "order.total": "What the order comes to",
     "order.amount_paid": "What the buyer paid so far",
+    "order.balance": "What is still to pay (0 once it is paid)",
+    "order.status": "The order's money state: pending, paid, part_paid (its deposit paid), ...",
     "order.note": "The buyer's note (may be blank)",
     "order.hold_until": "Until when the items are kept for the payment",
     "lines.quantity": "Each line's quantity",
@@ -112,6 +117,13 @@ _DECLARED: dict[str, tuple[str, str, str, dict[str, str]]] = {
         "Staff placed an order for the buyer: the link to pay it.",
         {},
     ),
+    "commerce.balance_due": (
+        "Balance to pay",
+        "the buyer",
+        "The deposit is paid: what is left and the link to pay it. Sent when the deposit "
+        "comes in, and when staff send the balance link.",
+        {"order.deposit": "The deposit asked first"},
+    ),
 }
 
 #: What a preview shows before the first order exists: an order of two lines.
@@ -130,6 +142,9 @@ ORDER_SAMPLES: dict[str, Any] = {
         "prices_include_tax": False,
         "total": "49.50",
         "amount_paid": "49.50",
+        "balance": "0.00",
+        "deposit": "0.00",
+        "status": "paid",
         "note": "",
         "hold_until": "",
     },
@@ -183,6 +198,9 @@ _LATEST: dict[str, Callable[[], tuple[Order, dict[str, Any]] | None]] = {
     "commerce.order_note": _noted,
     "commerce.payment_request": _order(
         lambda: Order.objects.filter(status="pending").order_by("-created_at")
+    ),
+    "commerce.balance_due": _order(
+        lambda: Order.objects.filter(status="part_paid").order_by("-updated_at")
     ),
 }
 

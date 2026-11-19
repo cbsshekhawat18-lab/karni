@@ -97,6 +97,11 @@ export interface Quote {
   /** Why the order cannot be sent to the address, or "". */
   shipping_problem: string;
   tax_lines: TaxLine[];
+  /**
+   * What may be paid now and the rest later, when every line allows a deposit (a
+   * booking's), or null. Checkout sends `pay: "deposit"` to choose it.
+   */
+  deposit: string | null;
 }
 
 /** An address as checkout takes it and the order keeps it. */
@@ -180,6 +185,12 @@ export interface Order {
   shipping_method: string;
   amount_paid: string;
   amount_refunded: string;
+  /** The deposit asked first ("0.00": the whole total at once). */
+  deposit: string;
+  /** What is still to pay: the total less what was paid. */
+  balance: string;
+  /** What the next payment asks: the deposit while it is due, else the balance. */
+  due_now: string;
   billing: Address;
   shipping: Address | Record<string, never>;
   needs_shipping: boolean;
@@ -188,7 +199,10 @@ export interface Order {
   paid_at: string | null;
   cancelled_at: string | null;
   hold_until: string | null;
-  /** Waiting for its payment (or failed), so "Pay now" may start it again. */
+  /**
+   * Waiting for its payment (or failed), so "Pay now" may start it again, or part paid
+   * by its deposit, with the balance to pay.
+   */
   payable: boolean;
   lines: OrderLine[];
   /** The notes the reader may see: the notes to the customer (staff see every note). */
@@ -243,14 +257,27 @@ export interface OrderRefundRow {
 export interface StaffOrder extends Order {
   payments: OrderPaymentRow[];
   refunds: OrderRefundRow[];
-  buyer: { user: string | null; name: string; email: string; orders: number; spent: string };
+  /** Who bought: their person (karni.people), account, and commerce's facts about them. */
+  buyer: {
+    person: string | null;
+    user: string | null;
+    name: string;
+    email: string;
+    orders: number;
+    spent: string;
+  };
   refundable: string;
   can_cancel: boolean;
   can_refund: boolean;
+  /** Part paid by its deposit, with a balance left: staff may send the link to pay it. */
+  can_request_balance: boolean;
 }
 
-/** A buyer in the staff's customers list (GET /api/orders/customers/). */
+/** A customer in the staff's customers list (GET /api/orders/customers/): a person
+ * (karni.people) with commerce's facts. */
 export interface CustomerRow {
+  /** The person's id. */
+  id: string;
   email: string;
   name: string;
   has_account: boolean;
@@ -261,8 +288,10 @@ export interface CustomerRow {
   last_order: string;
 }
 
-/** One buyer's page (GET /api/orders/customer/?email=). */
+/** One customer's page (GET /api/orders/customer/?email= or ?person=). */
 export interface CustomerPageData {
+  /** The person's id. */
+  id: string;
   email: string;
   name: string;
   account: { id: string; name: string; email: string; joined: string | null } | null;
@@ -284,6 +313,8 @@ export interface CustomerPageData {
 /** Something staff may put on an order placed by hand (GET /api/orders/items/). */
 export interface SellableItem {
   kind: string;
+  /** The kind as staff read it ("Booking"). */
+  kind_label?: string;
   item: string;
   /** The options of this choice (a size), sent with the line. */
   options: Record<string, unknown>;
@@ -292,6 +323,17 @@ export interface SellableItem {
   price: string;
   available: number | null;
 }
+
+/** A kind the project sells (GET /api/orders/kinds/): a product, a booking, a course. */
+export interface SellableKind {
+  kind: string;
+  label: string;
+  /** Whether its items can be found by text. */
+  searchable: boolean;
+}
+
+/** How the buyer pays: the whole total now, or the deposit now and the rest later. */
+export type PayWay = "full" | "deposit";
 
 /** One report the signed-in person may run (GET /orders/reports/). */
 export interface ReportInfo {

@@ -180,6 +180,9 @@ count right and a list costs one query whatever the number of facts:
 | `people.latest_of(Model, "starts_at", path="person", filter=...)` | the latest value, or `None` |
 | `people.exists_of(Model, path="person", filter=...)` | whether there is a row |
 
+karni-commerce contributes `orders`, `total_spent`, `last_order` and
+`first_order` ([commerce](commerce.md#who-bought)).
+
 `register_fact(name, expression, label=, kind=, description=)` takes any
 expression (or a function that returns one) and `@people.fact(name)`
 decorates such a function. `kind` is one of `count`, `number`, `money`,

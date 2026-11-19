@@ -25,12 +25,14 @@ from karni_commerce.services import PricedLine
 
 __all__ = [
     "AddressSerializer",
+    "BalanceLinkSerializer",
     "CouponInputSerializer",
     "QuoteInputSerializer",
     "QuoteSerializer",
     "CustomerPageSerializer",
     "CustomerRowSerializer",
     "ItemSerializer",
+    "KindSerializer",
     "ManualOrderSerializer",
     "ManualQuoteSerializer",
     "ManualResultSerializer",
@@ -241,6 +243,10 @@ class QuoteSerializer(serializers.Serializer[Any]):
     method = serializers.CharField(allow_null=True)
     shipping_problem = serializers.CharField(allow_blank=True)
     tax_lines = TaxLineSerializer(many=True)
+    deposit = serializers.CharField(
+        allow_null=True,
+        help_text="What may be paid now and the rest later (every line allows a deposit), or null.",
+    )
 
     @staticmethod
     def of(found: Any) -> dict[str, Any]:
@@ -271,6 +277,7 @@ class QuoteSerializer(serializers.Serializer[Any]):
                         }
                         for t in found.tax_lines
                     ],
+                    "deposit": _amount(found.deposit) if found.deposit is not None else None,
                 }
             ).data
         )
@@ -311,6 +318,12 @@ class CheckoutSerializer(serializers.Serializer[Any]):
     accept_terms = serializers.BooleanField(
         required=False, default=False, help_text="The buyer accepts the terms of sale."
     )
+    pay = serializers.ChoiceField(
+        ["full", "deposit"],
+        required=False,
+        default="full",
+        help_text="full, or deposit: the deposit now and the rest later (the quote's deposit).",
+    )
 
 
 class CheckoutResultSerializer(serializers.Serializer[Any]):
@@ -328,6 +341,12 @@ class OrderKeySerializer(serializers.Serializer[Any]):
 
 class PayResultSerializer(serializers.Serializer[Any]):
     url = serializers.CharField(allow_null=True)
+
+
+class BalanceLinkSerializer(serializers.Serializer[Any]):
+    """The link the buyer pays the rest of a part-paid order at (emailed to them)."""
+
+    link = serializers.CharField()
 
 
 class RefundInputSerializer(serializers.Serializer[Any]):
@@ -457,6 +476,9 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
     total = serializers.SerializerMethodField()
     amount_paid = serializers.SerializerMethodField()
     amount_refunded = serializers.SerializerMethodField()
+    deposit = serializers.SerializerMethodField()
+    balance = serializers.SerializerMethodField()
+    due_now = serializers.SerializerMethodField()
     fulfilment = serializers.SerializerMethodField()
     invoice = serializers.SerializerMethodField()
 
@@ -480,6 +502,9 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
             "shipping_method",
             "amount_paid",
             "amount_refunded",
+            "deposit",
+            "balance",
+            "due_now",
             "billing",
             "shipping",
             "needs_shipping",
@@ -527,8 +552,9 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
         return list(OrderLineViewSerializer(rows, many=True, context=context).data)
 
     def get_payable(self, order: Order) -> bool:
-        """Waiting for its payment (or failed, so it can be tried again) and still held."""
-        if order.status == "failed":
+        """Waiting for its payment (or failed, so it can be tried again) and still held, or
+        part paid by its deposit with the balance to pay."""
+        if order.status in ("failed", "part_paid"):
             return True
         return order.status == "pending" and (
             order.hold_until is None or order.hold_until > timezone.now()
@@ -554,6 +580,18 @@ class OrderViewSerializer(serializers.ModelSerializer[Order]):
 
     def get_amount_refunded(self, order: Order) -> str:
         return _amount(order.amount_refunded)
+
+    def get_deposit(self, order: Order) -> str:
+        """The deposit asked first ("0.00": the whole total at once)."""
+        return _amount(order.deposit)
+
+    def get_balance(self, order: Order) -> str:
+        """What is still to pay: the total less what was paid."""
+        return _amount(order.balance)
+
+    def get_due_now(self, order: Order) -> str:
+        """What the next payment asks: the deposit while it is due, else the balance."""
+        return _amount(order.due_now)
 
     @extend_schema_field(FulfilmentSerializer(many=True))
     def get_fulfilment(self, order: Order) -> list[dict[str, Any]]:
@@ -595,8 +633,9 @@ class RefundRowSerializer(serializers.Serializer[Any]):
 
 
 class BuyerSerializer(serializers.Serializer[Any]):
-    """Who bought: the account (when there is one) and what they bought so far."""
+    """Who bought: the person, the account (when there is one) and what they bought so far."""
 
+    person = serializers.CharField(allow_null=True)
     user = serializers.CharField(allow_null=True)
     name = serializers.CharField(allow_blank=True)
     email = serializers.CharField()
@@ -614,6 +653,7 @@ class OrderStaffSerializer(OrderViewSerializer):
     refundable = serializers.SerializerMethodField()
     can_cancel = serializers.SerializerMethodField()
     can_refund = serializers.SerializerMethodField()
+    can_request_balance = serializers.SerializerMethodField()
 
     class Meta(OrderViewSerializer.Meta):
         fields = [
@@ -624,6 +664,7 @@ class OrderStaffSerializer(OrderViewSerializer):
             "refundable",
             "can_cancel",
             "can_refund",
+            "can_request_balance",
         ]
 
     note_kinds: tuple[str, ...] = ("internal", "customer")
@@ -662,26 +703,35 @@ class OrderStaffSerializer(OrderViewSerializer):
 
     @extend_schema_field(BuyerSerializer)
     def get_buyer(self, order: Order) -> dict[str, Any]:
-        from karni_commerce.customers import customers_backend
+        """The person who bought, with commerce's facts about them (karni.people)."""
+        from karni.people.models import Person
 
-        readable = self.context.get("orders")
-        rows = readable if readable is not None else Order.objects.all()
-        summary = (
-            customers_backend().customers(rows.filter(email__iexact=order.email)).first() or {}
-        )
+        facts = (
+            Person.objects.with_facts("orders", "total_spent")
+            .filter(pk=order.person_id)
+            .values("orders", "total_spent")
+            .first()
+            if order.person_id
+            else None
+        ) or {}
         return {
+            "person": str(order.person_id) if order.person_id else None,
             "user": str(order.user_id) if order.user_id else None,
             "name": person_name(order.user) or order.buyer_name,
             "email": order.email,
-            "orders": int(summary.get("order_count") or 0),
-            "spent": _amount(summary.get("spent") or 0),
+            "orders": int(facts.get("orders") or 0),
+            "spent": _amount(facts.get("total_spent") or 0),
         }
 
     def get_refundable(self, order: Order) -> str:
         return _amount(order.refundable)
 
     def get_can_cancel(self, order: Order) -> bool:
-        return order.status in ("pending", "failed", "paid")
+        return order.status in ("pending", "failed", "paid", "part_paid")
+
+    def get_can_request_balance(self, order: Order) -> bool:
+        """Part paid by its deposit, with a balance left: staff may send the link to pay it."""
+        return order.status == "part_paid" and order.balance > 0
 
     def get_can_refund(self, order: Order) -> bool:
         return order.status in services.PAID_STATES and order.refundable > 0
@@ -708,6 +758,12 @@ class ManualOrderSerializer(serializers.Serializer[Any]):
     send_link = serializers.BooleanField(
         required=False, default=True, help_text="Email the buyer the link to pay."
     )
+    pay = serializers.ChoiceField(
+        ["full", "deposit"],
+        required=False,
+        default="full",
+        help_text="full, or deposit: the buyer pays the deposit first and the rest later.",
+    )
 
 
 class ManualQuoteSerializer(serializers.Serializer[Any]):
@@ -733,6 +789,7 @@ class ItemSerializer(serializers.Serializer[Any]):
     """Something for sale, as staff pick it for an order placed by hand."""
 
     kind = serializers.CharField()
+    kind_label = serializers.CharField(help_text="The kind as staff read it (Sellable.label).")
     item = serializers.CharField()
     options = serializers.DictField()
     name = serializers.CharField()
@@ -741,10 +798,21 @@ class ItemSerializer(serializers.Serializer[Any]):
     available = serializers.IntegerField(allow_null=True)
 
 
-class CustomerRowSerializer(serializers.Serializer[Any]):
-    """A buyer in the staff's customers list."""
+class KindSerializer(serializers.Serializer[Any]):
+    """A kind the project sells, as staff pick it when they place an order by hand."""
 
-    email = serializers.CharField()
+    kind = serializers.CharField()
+    label = serializers.CharField()
+    searchable = serializers.BooleanField(
+        help_text="Whether its items can be found by text (Sellable.search_fields)."
+    )
+
+
+class CustomerRowSerializer(serializers.Serializer[Any]):
+    """A customer in the staff's customers list: a person, with commerce's facts."""
+
+    id = serializers.CharField(help_text="The person's id (karni.people).")
+    email = serializers.CharField(allow_blank=True)
     name = serializers.CharField(allow_blank=True)
     has_account = serializers.BooleanField()
     order_count = serializers.IntegerField()
@@ -754,16 +822,17 @@ class CustomerRowSerializer(serializers.Serializer[Any]):
     last_order = serializers.DateTimeField()
 
     def to_representation(self, instance: Any) -> dict[str, Any]:
-        row = dict(instance)
+        stamp = serializers.DateTimeField()
         return {
-            "email": row["email"],
-            "name": row.get("name") or "",
-            "has_account": bool(row.get("has_account")),
-            "order_count": int(row.get("order_count") or 0),
-            "spent": _amount(row.get("spent") or 0),
+            "id": str(instance.pk),
+            "email": instance.email,
+            "name": instance.display_name,
+            "has_account": bool(getattr(instance, "has_account", False)),
+            "order_count": int(getattr(instance, "orders", 0) or 0),
+            "spent": _amount(getattr(instance, "total_spent", 0) or 0),
             "currency": conf.currency(),
-            "first_order": serializers.DateTimeField().to_representation(row["first_order"]),
-            "last_order": serializers.DateTimeField().to_representation(row["last_order"]),
+            "first_order": stamp.to_representation(instance.first_order),
+            "last_order": stamp.to_representation(instance.last_order),
         }
 
 
@@ -776,9 +845,10 @@ class CustomerOrderSerializer(serializers.Serializer[Any]):
 
 
 class CustomerPageSerializer(serializers.Serializer[Any]):
-    """One buyer: their orders, what they spent, their addresses and their account."""
+    """One customer: the person, their orders, what they spent, their addresses and account."""
 
-    email = serializers.CharField()
+    id = serializers.CharField(help_text="The person's id (karni.people).")
+    email = serializers.CharField(allow_blank=True)
     name = serializers.CharField(allow_blank=True)
     account = serializers.DictField(allow_null=True)
     order_count = serializers.IntegerField()
@@ -792,9 +862,11 @@ class CustomerPageSerializer(serializers.Serializer[Any]):
     def to_representation(self, instance: Any) -> dict[str, Any]:
         stamp = serializers.DateTimeField()
         account = instance.account
+        person = instance.person
         return {
-            "email": instance.email,
-            "name": person_name(account) or instance.name,
+            "id": str(person.pk),
+            "email": person.email,
+            "name": person.display_name or person_name(account),
             "account": None
             if account is None
             else {

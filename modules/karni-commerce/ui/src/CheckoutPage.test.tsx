@@ -85,6 +85,40 @@ describe("CheckoutPage", () => {
     expect(body.shipping_method).toBe("m2");
   });
 
+  it("offers a deposit when every line allows one, and sends the choice", async () => {
+    cartState.lines = [{ kind: "booking", item: "visit", quantity: 1 }];
+    renderWithCommerce(<CheckoutPage defaultCountry="FR" />);
+    await userEvent.type(
+      await screen.findByLabelText("Email, for the confirmation"),
+      "g@example.com",
+    );
+    await userEvent.type(screen.getByLabelText("Full name"), "Ines Moreau");
+    await userEvent.type(screen.getByLabelText("Address"), "4 Rue des Lilas");
+    await userEvent.type(screen.getByLabelText("City"), "Lyon");
+    await userEvent.type(screen.getByLabelText("Postcode"), "69001");
+    const deposit = await screen.findByLabelText(/Pay a deposit/);
+    expect(screen.getByLabelText(/Pay in full/)).toBeChecked();
+    expect(screen.getByText(/later by the link we email you/)).toBeInTheDocument();
+    await userEvent.click(deposit);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Place the order and pay the deposit" }),
+    );
+    await vi.waitFor(() => expect(checkoutCalls).toHaveLength(1));
+    const [body] = checkoutCalls as Record<string, unknown>[];
+    expect(body.pay).toBe("deposit");
+  });
+
+  it("offers no deposit when a line allows none", async () => {
+    cartState.lines = [
+      { kind: "booking", item: "visit", quantity: 1 },
+      { kind: "seat", item: "seat", quantity: 1 },
+    ];
+    renderWithCommerce(<CheckoutPage defaultCountry="FR" />);
+    expect(await screen.findByText("Billing address")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("TVA 20%")).toBeInTheDocument());
+    expect(screen.queryByLabelText(/Pay a deposit/)).not.toBeInTheDocument();
+  });
+
   it("says when the order cannot be sent to the country", async () => {
     cartState.lines = [{ kind: "product", item: "lamp", quantity: 1 }];
     renderWithCommerce(<CheckoutPage defaultCountry="US" />);

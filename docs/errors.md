@@ -3447,6 +3447,48 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Choose a group, metric and value the source declares, or add them to the source model's class Karni: aggregate.
 
+## COM (`COM`)
+
+<a id="com001"></a>
+
+### COM001: karni-commerce is installed without the people contract
+
+*system check (error)* · from `karni_commerce.checks.people_installed (karni.COM001)`
+
+**Why Karni objects.** Every order names the person who bought it (Order.person, found or made by karni.people.resolve at checkout), so the customers list, the person facts and the timeline are the same person in every part. Without karni.people the order table cannot be created.
+
+**Fix.** Set KARNI_PEOPLE = True above karni_settings(globals()) in config/settings.py (karni build writes it when karni.yaml lists the commerce module, or features: {people: true}), then run migrate.
+
+<a id="com002"></a>
+
+### COM002: A sellable adapter does not keep the commerce contract
+
+*test failure* · from `karni_commerce.testing.assert_sellable`
+
+**Why Karni objects.** Commerce calls the adapter of every kind the same way: it holds a line at checkout, lets it go when the order is not paid, takes it when paid and gives it back on a refund. An adapter that prices, holds or releases wrongly sells the same seat twice or loses stock.
+
+**Fix.** Read the message: it names the hook and what it saw. Fix that hook of the adapter (docs/commerce.md, Selling something), then run the test again.
+
+<a id="com003"></a>
+
+### COM003: A sellable's hold is not a positive number of minutes
+
+*exception* · from `karni_commerce.sellables.hold_of (Sellable.hold_minutes)`
+
+**Why Karni objects.** Checkout keeps an order's items for the shortest hold of its lines, and an order not paid by then is cancelled. Zero or a negative number would cancel it before the buyer could pay.
+
+**Fix.** Return None (the project's KARNI_COMMERCE_HOLD_MINUTES) or a whole number of minutes from 1 from the adapter's hold_minutes(item, options).
+
+<a id="com004"></a>
+
+### COM004: A sellable adapter is registered wrongly
+
+*exception* · from `karni_commerce.sellables.register`
+
+**Why Karni objects.** Commerce finds an adapter by its kind, and a cart line and an order line store that kind as a short name. register() takes a Sellable subclass whose kind is letters, digits and _.
+
+**Fix.** Decorate a subclass of karni_commerce.sellables.Sellable with @register and set kind = "booking" (a short name, unique in the project).
+
 ## IMP (`IMP`)
 
 <a id="imp001"></a>

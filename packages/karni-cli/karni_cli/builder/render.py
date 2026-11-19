@@ -1278,7 +1278,8 @@ def features_on(spec: schema.Spec) -> list[str]:
     """Experimental. The contracts ``features`` switches on, with the ones they need.
 
     ``features.timeline`` needs people and events (``catalog.CONTRACT_NEEDS``), so
-    it switches them on too.
+    it switches them on too. A listed module switches on the contracts it needs
+    (``catalog.MODULE_CONTRACTS``): ``modules: {commerce: {}}`` turns people on.
     """
     named = [name for name in catalog.CONTRACT_NEEDS if getattr(spec.features, name, False)]
     named += [
@@ -1286,6 +1287,7 @@ def features_on(spec: schema.Spec) -> list[str]:
         for name in (*catalog.CONTRACT_SETTINGS, *CONTRACT_APPS)
         if getattr(spec.features, name, False)
     ]
+    named += [name for module in spec.modules for name in catalog.MODULE_CONTRACTS.get(module, ())]
     return catalog.contracts_with_needs(named)
 
 

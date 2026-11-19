@@ -8,13 +8,18 @@ every price and total is computed here from the sellable adapters
 * :func:`checkout` turns a cart into a pending :class:`Order`: each line's
   name, SKU and price are copied, every line is held (``Sellable.hold``) or
   none is, and the order holds them for ``KARNI_COMMERCE_HOLD_MINUTES``.
-* :func:`open_payment` starts the payment at the provider for what is due,
-  or answers the one still open (its address is kept in the payment's
-  ``metadata["url"]``). A total of zero settles at once, with no payment.
+* :func:`open_payment` starts the payment at the provider for what is due
+  now (the deposit, the balance or the whole total), or answers the one still
+  open (its address is kept in the payment's ``metadata["url"]``). An order
+  whose total is zero is paid when it is placed, with no payment, whatever it
+  sells.
 * :func:`settle` moves the order when karni-payments reports its payment
-  (:mod:`karni_commerce.listeners`): paid (``Sellable.on_paid``), or failed
+  (:mod:`karni_commerce.listeners`): paid (``Sellable.on_paid``), part paid by
+  its deposit (``on_paid`` too: the deposit secures the lines), or failed
   (``Sellable.release``). Money that arrives for an order that stopped
   waiting goes back at once.
+* :func:`request_balance` sends the buyer of a part-paid order the link to pay
+  the rest.
 * :func:`cancel`, :func:`refund` and :func:`release_expired` are the other
   moves. :func:`place_manual_order` is staff placing an order for a buyer (a
   phone order), and :func:`add_note` a note on an order. A refund by lines or
@@ -42,6 +47,7 @@ from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 from django.utils.module_loading import import_string
 from karni import preferences
+from karni.events import publish
 from karni_payments.models import Payment, Refund
 from karni_payments.services import create_checkout, create_refund, refunded_amount
 from rest_framework.exceptions import ValidationError
@@ -61,13 +67,15 @@ from karni_commerce.models import (
     OrderRefund,
     new_key,
 )
-from karni_commerce.sellables import Price, Sellable, adapter_for, kinds, refuse
+from karni_commerce.sellables import Price, Sellable, adapter_for, hold_of, kinds, refuse
 
 __all__ = [
     "PricedLine",
     "add_note",
+    "buyer_person",
     "apply_coupon",
     "cancel",
+    "cart_of",
     "cart_lines",
     "checkout",
     "claim_orders",
@@ -79,6 +87,7 @@ __all__ = [
     "place_manual_order",
     "place_order",
     "quote_cart",
+    "request_balance",
     "quote_line",
     "refund",
     "release_expired",
@@ -146,6 +155,13 @@ def find_cart(user: Any, token: str | None, *, create: bool = False) -> Cart | N
         if found is not None:
             return found
     return Cart.objects.create() if create else None
+
+
+def cart_of(user: Any, token: str | None) -> Cart:
+    """The signed-in person's cart, or the visitor's cart ``token`` names: made when there is
+    none yet (:func:`find_cart` with ``create``)."""
+    found = find_cart(user, token, create=True)
+    return found if found is not None else Cart.objects.create(user=_user(user))
 
 
 def _problem(adapter: Sellable, item: Any, quantity: int, options: Any, buyer: Any) -> str:
@@ -300,6 +316,9 @@ def quote_line(
 ) -> pricing.QuoteLine:
     """One line priced by its adapter, as :func:`karni_commerce.pricing.quote` takes it."""
     price = adapter.price(item, options, _user(buyer))
+    deposit = (
+        money(adapter.deposit(item, options)) if adapter.allows_deposit(item, options) else None
+    )
     return pricing.QuoteLine(
         kind=adapter.kind,
         item=adapter.key(item),
@@ -313,6 +332,8 @@ def quote_line(
         name=adapter.name(item, options)[:200],
         sku=adapter.sku(item, options)[:64],
         details=adapter.details(item, options),
+        deposit=deposit,
+        hold_minutes=hold_of(adapter, item, options),
     )
 
 
@@ -353,8 +374,7 @@ def merge(user: Any, token: str | None) -> Cart:
     longer fits is kept at the most it can hold, or dropped. Guest orders
     placed with the person's verified email become theirs too.
     """
-    cart = find_cart(user, None, create=True)
-    assert cart is not None
+    cart = cart_of(user, None)
     visitor = Cart.objects.filter(user__isnull=True, token=token).first() if token else None
     if visitor is not None and visitor.pk != cart.pk:
         for line in visitor.lines.all():
@@ -420,8 +440,34 @@ def _save_new(order: Order) -> Order:
     raise ValidationError({"number": ["Too many orders at once. Try again."]})
 
 
+def buyer_person(*, user: Any = None, email: str = "", name: str = "", phone: str = "") -> Any:
+    """The :class:`karni.people.models.Person` who buys: found or made by ``karni.people.resolve``.
+
+    A signed-in buyer is the person linked to their account (or the person with
+    their email). A guest is the person with the email they typed. Blank names and
+    phone on the person are filled from what checkout knows, never overwritten.
+    """
+    from karni import people
+
+    return people.resolve(
+        user=_user(user),
+        email=str(email or "").strip() or None,
+        name=str(name or "").strip() or None,
+        phone=str(phone or "").strip() or None,
+        source="karni_commerce",
+    )
+
+
 def hold_minutes() -> int:
+    """How long checkout holds an order's items for payment (``KARNI_COMMERCE_HOLD_MINUTES``)."""
     return int(conf.get("KARNI_COMMERCE_HOLD_MINUTES"))
+
+
+def shortest_hold(lines: Iterable[pricing.QuoteLine], minutes: int | None = None) -> int:
+    """How long an order of ``lines`` is held: ``minutes`` (the project's hold), or a line's
+    shorter hold (``Sellable.hold_minutes``, a booking slot's 15)."""
+    found = [line.hold_minutes for line in lines if line.hold_minutes is not None]
+    return min([int(minutes if minutes is not None else hold_minutes()), *found])
 
 
 @transaction.atomic
@@ -483,6 +529,7 @@ def quote_lines(
     return result
 
 
+@transaction.atomic
 def place_order(
     lines: Sequence[tuple[str, str, int, Mapping[str, Any]]],
     *,
@@ -494,6 +541,8 @@ def place_order(
     note: str = "",
     coupon: Coupon | str | None = None,
     method: str | None = None,
+    deposit: bool = False,
+    hold: int | None = None,
 ) -> Order:
     """A pending order of ``lines`` (``(kind, key, quantity, options)``), every line held.
 
@@ -504,9 +553,16 @@ def place_order(
     coupon (a code or a :class:`Coupon`), the shipping ``method`` (an id of
     the methods offered for the address) and the tax.
 
+    ``deposit``: the buyer pays the lines' deposits first (``Order.deposit``) and
+    the rest later. ``hold`` is how many minutes the order waits for its payment
+    (default ``KARNI_COMMERCE_HOLD_MINUTES``), cut short by a line's own hold
+    (``Sellable.hold_minutes``). An order whose total is zero is paid at once,
+    with no payment: each line is taken (``on_paid``), whatever it sells.
+
     :raises ValidationError: for no lines, an item that is gone, a line an
-        adapter refuses or cannot hold, a coupon that cannot be used, or no
-        way to send the order to its address. Nothing is held then.
+        adapter refuses or cannot hold, a coupon that cannot be used, no
+        way to send the order to its address, or a deposit asked of lines that
+        allow none. Nothing is held then.
     """
     if not lines:
         raise ValidationError({"cart": ["The cart is empty."]})
@@ -515,6 +571,12 @@ def place_order(
     person = _user(user)
     currency = conf.currency()
     priced = priced_lines(lines, person)
+    buyer = buyer_person(
+        user=person,
+        email=str(email),
+        name=str(name),
+        phone=str((billing or {}).get("phone", "") or ""),
+    )
     found = pricing.find_coupon(coupon) if isinstance(coupon, str) else coupon
     if isinstance(coupon, str) and coupon.strip() and found is None:
         raise refuse("No coupon has that code.", field="coupon")
@@ -538,6 +600,8 @@ def place_order(
         raise refuse(result.shipping_problem, field="shipping_method")
     if result.methods and result.method is None:
         raise refuse("Choose a way to send it.", field="shipping_method")
+    if deposit and result.deposit is None:
+        raise refuse("This order cannot be paid by a deposit: pay it in full.", field="pay")
     built: list[OrderLine] = []
     for position, line in enumerate(priced):
         built.append(
@@ -566,6 +630,7 @@ def place_order(
             user=person,
             email=str(email).strip(),
             buyer_name=str(name).strip(),
+            person=buyer,
             status="pending",
             currency=currency,
             subtotal=result.subtotal,
@@ -585,7 +650,8 @@ def place_order(
             needs_shipping=shipped,
             note=note,
             key=new_key(),
-            hold_until=timezone.now() + timedelta(minutes=hold_minutes()),
+            deposit=result.deposit if deposit and result.deposit is not None else ZERO,
+            hold_until=timezone.now() + timedelta(minutes=shortest_hold(priced, hold)),
         )
     )
     for line in built:
@@ -603,6 +669,10 @@ def place_order(
             amount=money(result.discount),
         )
     events.order_placed.send(sender=Order, order=order)
+    if order.total <= 0:
+        # Nothing to pay (a free course, a free booking, a coupon that takes it all):
+        # the order is paid now, and each line is taken as a paid one is.
+        _mark_paid(order)
     return order
 
 
@@ -617,11 +687,13 @@ def checkout(
     shipping: Mapping[str, Any] | None = None,
     note: str = "",
     method: str | None = None,
+    deposit: bool = False,
 ) -> Order:
     """Turn ``cart`` into a pending order (:func:`place_order`), and empty the cart.
 
-    The cart's coupon goes on the order, and ``method`` is the shipping method
-    the buyer chose.
+    The cart's coupon goes on the order, ``method`` is the shipping method
+    the buyer chose, and ``deposit`` that they pay the deposit now and the rest
+    later (when every line allows one). A free order comes back paid.
 
     :raises ValidationError: for an empty cart, or a line that cannot be bought.
     """
@@ -638,6 +710,7 @@ def checkout(
         note=note,
         coupon=cart.coupon,
         method=method,
+        deposit=deposit,
     )
     cart.lines.all().delete()
     if cart.coupon_id is not None:
@@ -658,33 +731,55 @@ def _with(url: str, **params: str) -> str:
     return url + joiner + "&".join(f"{key}={value}" for key, value in params.items())
 
 
-def open_payment(order: Order) -> str | None:
-    """Start the payment of what ``order`` still owes. Returns where the buyer pays.
+def _held_for(order: Order) -> int:
+    """How many minutes ``order`` was held for when it was placed (a retry holds it as long)."""
+    if order.hold_until is None or order.created_at is None:
+        return hold_minutes()
+    seconds = (order.hold_until - order.created_at).total_seconds()
+    return max(1, round(seconds / 60))
 
-    An order whose payment failed is held again first (its items may have
-    sold since). A total of zero settles the order at once and returns
-    ``None``: nothing to pay.
+
+def amount_due(order: Order) -> Decimal:
+    """What the next payment of ``order`` asks: its deposit while that is due, else the
+    balance (``Order.due_now``)."""
+    return money(order.due_now)
+
+
+def open_payment(order: Order) -> str | None:
+    """Start the payment of what ``order`` owes now. Returns where the buyer pays.
+
+    What it owes now is the deposit, while the buyer chose one and has paid
+    nothing, else the balance: the whole total, or what is left of a part-paid
+    order (its balance link). An order whose payment failed is held again first
+    (its items may have sold since), for as long as it was held at first. An
+    order with nothing to pay settles at once and returns ``None`` (a free
+    order is paid when it is placed, so it answers ``None`` too).
 
     :raises ValidationError: when the order is not waiting for a payment, or
         its items cannot be held again.
     """
     with transaction.atomic():
         locked = Order.objects.select_for_update().get(pk=order.pk)
+        if locked.status == "paid":
+            return None  # a free order, paid when it was placed: nothing to pay
         if locked.status == "failed":
             for line in locked.lines.order_by("kind", "item"):
                 adapter_for(line.kind).hold(line)
             locked.transition(
                 "status",
                 "pending",
-                hold_until=timezone.now() + timedelta(minutes=hold_minutes()),
+                hold_until=timezone.now() + timedelta(minutes=_held_for(locked)),
             )
-        if locked.status != "pending" or (
-            locked.hold_until is not None and locked.hold_until <= timezone.now()
+        balance = locked.status == "part_paid"
+        if not balance and (
+            locked.status != "pending"
+            or (locked.hold_until is not None and locked.hold_until <= timezone.now())
         ):
             raise ValidationError({"order": ["This order is not waiting for a payment."]})
-        due = locked.balance
+        due = amount_due(locked)
         if due <= 0:
-            _mark_paid(locked)
+            if locked.status == "pending":
+                _mark_paid(locked)
             order.refresh_from_db()
             return None
         # A payment of this order still open at the provider: send the buyer back to it
@@ -697,9 +792,14 @@ def open_payment(order: Order) -> str | None:
         )
         if waiting is not None and (waiting.payment.metadata or {}).get("url"):
             return str(waiting.payment.metadata["url"])
-        purpose = (
-            OrderPayment.Purpose.RETRY if locked.payments.exists() else OrderPayment.Purpose.FULL
-        )
+        if locked.deposit_due:
+            purpose = OrderPayment.Purpose.DEPOSIT
+        elif balance:
+            purpose = OrderPayment.Purpose.BALANCE
+        elif locked.payments.exists():
+            purpose = OrderPayment.Purpose.RETRY
+        else:
+            purpose = OrderPayment.Purpose.FULL
     back = order_link(locked)
     payment, session = create_checkout(
         locked.user,
@@ -736,10 +836,12 @@ def _each(order: Order, hook: str) -> None:
         getattr(adapter, hook)(line)
 
 
-def _mark_paid(order: Order) -> None:
+def _mark_paid(order: Order, *, take: bool = True) -> None:
+    """``order`` is paid in full: its invoice, each line taken (unless its deposit took them)."""
     order.transition("status", "paid", paid_at=timezone.now())
     issue_invoice(order)
-    _each(order, "on_paid")
+    if take:
+        _each(order, "on_paid")
     events.order_paid.send(sender=Order, order=order)
 
 
@@ -748,10 +850,12 @@ def settle(payment: Payment) -> Order | None:
     """Move the order ``payment`` belongs to, now that the provider settled it.
 
     Succeeded: the money is counted, and once it covers the total the order
-    is paid and each line is taken (``on_paid``). Failed or cancelled: an
-    order waiting for this payment fails and lets its lines go (``release``).
-    Money for an order that is no longer waiting (it expired, or was
-    cancelled) is refunded at once.
+    is paid and each line is taken (``on_paid``). A deposit makes the order
+    ``part_paid`` and takes the lines then, so the balance paid later takes
+    nothing twice. Failed or cancelled: an order waiting for this payment
+    fails and lets its lines go (``release``). A failed balance payment leaves
+    the order part paid. Money for an order that is no longer waiting (it
+    expired, or was cancelled) is refunded at once.
     """
     link = OrderPayment.objects.filter(payment=payment).first()
     if link is None:
@@ -765,9 +869,10 @@ def settle(payment: Payment) -> Order | None:
             _refund_on_commit(order, payment, reason)
             return order
         if order.amount_paid >= order.total:
-            _mark_paid(order)
+            _mark_paid(order, take=order.status == "pending")
         elif order.status == "pending":
             order.transition("status", "part_paid")
+            _each(order, "on_paid")  # the deposit secures the lines: the slot is the buyer's
             events.order_part_paid.send(sender=Order, order=order, amount=payment.amount)
     elif payment.status in (Payment.Status.FAILED, Payment.Status.CANCELED):
         others = order.payments.exclude(pk=link.pk).filter(payment__status=Payment.Status.PENDING)
@@ -804,8 +909,8 @@ def cancel(order: Order, reason: str = "") -> Order:
     """Cancel ``order``.
 
     Waiting for its payment (or failed): its lines are let go (``release``).
-    Paid: each line is undone (``on_cancelled``) and everything paid goes
-    back to the buyer through the payment provider.
+    Paid, or part paid by its deposit: each line is undone (``on_cancelled``)
+    and everything paid goes back to the buyer through the payment provider.
 
     :raises ValidationError: for an order that is refunded or cancelled already.
     """
@@ -813,7 +918,7 @@ def cancel(order: Order, reason: str = "") -> Order:
     if locked.status in ("pending", "failed"):
         if locked.status == "pending":
             _each(locked, "release")
-    elif locked.status in ("paid",):
+    elif locked.status in ("paid", "part_paid"):
         _each(locked, "on_cancelled")
         succeeded = locked.payments.filter(payment__status=Payment.Status.SUCCEEDED)
         for link in succeeded.select_related("payment"):
@@ -838,6 +943,31 @@ def release_expired(now: datetime | None = None) -> int:
     return count
 
 
+def request_balance(order: Order) -> str:
+    """Email the buyer of a part-paid order the link to pay the rest (``commerce.balance_due``).
+
+    The same email goes out when the deposit comes in. Returns the link.
+
+    :raises ValidationError: for an order that has no deposit paid and balance left.
+    """
+    found = Order.objects.get(pk=order.pk)
+    if found.status != "part_paid" or found.balance <= 0:
+        raise ValidationError(
+            {"status": ["Only an order with its deposit paid has a balance to ask for."]}
+        )
+    pk = found.pk
+
+    def ask() -> None:
+        from karni_commerce import messages
+
+        again = Order.objects.filter(pk=pk).first()
+        if again is not None and again.status == "part_paid":
+            messages.send("commerce.balance_due", again)
+
+    transaction.on_commit(ask)
+    return order_link(found)
+
+
 # -- refunds -------------------------------------------------------------------------------
 
 
@@ -857,6 +987,9 @@ def _refund_amount(order: Order, lines: Mapping[str, int], now: datetime) -> Dec
         adapter = kinds().get(line.kind)
         limit = adapter.refund_limit(line, now) if adapter is not None else amount
         total += min(amount, money(limit))
+    if total <= 0:
+        # Each line's adapter says nothing may go back now (a booking that starts soon).
+        raise refuse("Nothing of these lines can be refunded now.", field="lines")
     return total
 
 
@@ -1014,14 +1147,17 @@ def place_manual_order(
     send_link: bool = True,
     coupon: str = "",
     method: str | None = None,
+    deposit: bool = False,
 ) -> Order:
     """An order staff place for a buyer (a phone order), waiting for the buyer's payment.
 
     The lines are priced and held as at checkout (:func:`place_order`), for
-    ``KARNI_COMMERCE_MANUAL_HOLD_MINUTES``. The order belongs to the account
+    ``KARNI_COMMERCE_MANUAL_HOLD_MINUTES`` (or a line's shorter hold), and
+    ``deposit`` asks for the deposit first. The order belongs to the account
     whose verified email is ``email``, when there is one. An internal note says
     who placed it, and with ``send_link`` the buyer gets the link to pay
-    (``commerce.payment_request``).
+    (``commerce.payment_request``). A free order is paid at once, and the buyer
+    gets the confirmation instead.
 
     :raises ValidationError: as :func:`place_order` does.
     """
@@ -1035,13 +1171,12 @@ def place_manual_order(
         note=note,
         coupon=coupon or None,
         method=method,
+        deposit=deposit,
+        hold=int(conf.get("KARNI_COMMERCE_MANUAL_HOLD_MINUTES")),
     )
-    minutes = int(conf.get("KARNI_COMMERCE_MANUAL_HOLD_MINUTES"))
-    order.hold_until = timezone.now() + timedelta(minutes=minutes)
-    order.save(update_fields=["hold_until", "updated_at"])
     who = getattr(staff, "get_full_name", lambda: "")() or getattr(staff, "email", "") or "staff"
     add_note(order, f"Placed by hand by {who}.", author=staff)
-    if send_link:
+    if send_link and order.status == "pending":
         pk = order.pk
 
         def ask_for_payment() -> None:
@@ -1093,7 +1228,7 @@ def issue_invoice(order: Order) -> Invoice:
         number = next_invoice_number()
         try:
             with transaction.atomic():
-                return Invoice.objects.create(
+                made = Invoice.objects.create(
                     order=order,
                     number=number,
                     reference=f"{prefix}{number}",
@@ -1102,6 +1237,15 @@ def issue_invoice(order: Order) -> Invoice:
                 )
         except IntegrityError:
             continue  # another order took the number at the same moment
+        publish(
+            "commerce.invoice.issued",
+            subject=made,
+            person=order.person_id,
+            invoice=str(made.pk),
+            order=str(order.pk),
+            number=made.reference,
+        )
+        return made
     raise ValidationError({"invoice": ["Too many invoices at once. Try again."]})
 
 

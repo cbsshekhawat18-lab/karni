@@ -1,9 +1,10 @@
 /**
  * Experimental. One order as staff run it: where the money stands, the buyer,
- * the lines, the payments and refunds, the panels the selling apps add (the
- * shop's parcel), the notes and the history, with the moves the order allows
- * now: cancel, and refund all or part of it (by lines with the items back on
- * the shelf, or by an amount).
+ * the lines, the payments and refunds, the panels the selling parts add (the
+ * shop's parcel, `registerOrderPanel`, each with its kinds' lines), the notes
+ * and the history, with the moves the order allows now: cancel, refund all or
+ * part of it (by lines with the items back on the shelf, or by an amount), and
+ * send the balance link of an order whose deposit is paid.
  *
  * The buttons follow the server: the order's declared row actions
  * (`x-karni-actions`) when the schema has them, else what the staff view
@@ -29,7 +30,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { problemOf } from "./cart";
 import { Money } from "./Money";
 import { LineDetails, OrderTotals } from "./Totals";
-import { orderPanels } from "./panels";
+import { appliedOrderPanels } from "./panels";
 import { CommerceLink, useCommerce } from "./routes";
 import { ORDER_STATUS_WORDS } from "./status";
 import type { Address, StaffOrder } from "./types";
@@ -39,6 +40,14 @@ export interface StaffOrderPageProps {
   siteName?: string;
   statusWords?: Partial<Record<string, string>>;
 }
+
+/** What each payment of an order was for, in words. */
+const PURPOSE_WORDS: Record<string, string> = {
+  full: "Payment",
+  deposit: "Deposit",
+  balance: "Balance",
+  retry: "Payment, tried again",
+};
 
 /** The query key of a staff order (invalidate it after a change made elsewhere). */
 export const staffOrderKey = (number: string | number) =>
@@ -295,6 +304,15 @@ export function StaffOrderPage({ number, siteName, statusWords }: StaffOrderPage
       refresh();
     },
   });
+  const { toast } = useToast();
+  const balanceLink = useMutation({
+    mutationFn: (id: string) =>
+      client.request<{ link: string }>(`/orders/${id}/balance-link/`, {
+        method: "POST",
+        body: {},
+      }),
+    onSuccess: () => toast({ title: "The link to pay the balance is on its way" }),
+  });
   usePageMeta({ title: `Order ${number}`, siteName });
   if (order.isPending) return <Skeleton className="h-96 w-full" />;
   if (order.isError) {
@@ -311,7 +329,7 @@ export function StaffOrderPage({ number, siteName, statusWords }: StaffOrderPage
   const row = data as unknown as Record<string, unknown>;
   const canCancel = rowActionOpen(schema.data, "cancel", row) ?? data.can_cancel;
   const canRefund = rowActionOpen(schema.data, "refund", row) ?? data.can_refund;
-  const panels = orderPanels(data);
+  const panels = appliedOrderPanels(data);
   return (
     <article className="space-y-6">
       <header className="space-y-2">
@@ -348,12 +366,26 @@ export function StaffOrderPage({ number, siteName, statusWords }: StaffOrderPage
               Packing slip
             </Button>
           ) : null}
+          {data.can_request_balance ? (
+            <PendingButton
+              variant="outline"
+              pending={balanceLink.isPending}
+              onClick={() => balanceLink.mutate(data.id)}
+            >
+              Send the balance link
+            </PendingButton>
+          ) : null}
           {canCancel ? (
             <Button variant="outline" onClick={() => setCancelling(true)}>
               Cancel order
             </Button>
           ) : null}
         </div>
+        {balanceLink.isError ? (
+          <p role="alert" className="text-sm text-destructive">
+            {problemOf(balanceLink.error)}
+          </p>
+        ) : null}
         {cancelling ? (
           <div
             role="alertdialog"
@@ -450,7 +482,9 @@ export function StaffOrderPage({ number, siteName, statusWords }: StaffOrderPage
             <OrderTotals order={data} className="ml-auto max-w-xs text-sm" />
             <dl className="ml-auto max-w-xs space-y-1 text-sm">
               {[
+                ...(Number(data.deposit) > 0 ? [["Deposit", data.deposit]] : []),
                 ["Paid", data.amount_paid],
+                ...(data.status === "part_paid" ? [["Still to pay", data.balance]] : []),
                 ["Refunded", data.amount_refunded],
                 ["Can still be refunded", data.refundable],
               ].map(([label, value]) => (
@@ -463,9 +497,9 @@ export function StaffOrderPage({ number, siteName, statusWords }: StaffOrderPage
               ))}
             </dl>
           </Section>
-          {panels.map((panel) => (
+          {panels.map(({ panel, lines }) => (
             <Section key={panel.key} title={panel.title}>
-              <panel.component order={data} refresh={refresh} />
+              <panel.component order={data} lines={lines} refresh={refresh} />
             </Section>
           ))}
           <Section title="Payments">
@@ -476,6 +510,7 @@ export function StaffOrderPage({ number, siteName, statusWords }: StaffOrderPage
                 {data.payments.map((payment) => (
                   <li key={payment.id} className="flex flex-wrap justify-between gap-2">
                     <span>
+                      {PURPOSE_WORDS[payment.purpose] ?? payment.purpose},{" "}
                       {new Date(payment.created_at).toLocaleString()}, {payment.provider},{" "}
                       {payment.status.replace(/_/g, " ")}
                     </span>

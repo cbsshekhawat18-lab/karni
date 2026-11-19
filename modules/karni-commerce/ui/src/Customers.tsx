@@ -1,11 +1,12 @@
 /**
- * Experimental. The staff's customers: one row per buyer (by email), with
- * their orders, what they spent and their last order, and one customer's
- * page with their orders, addresses and account.
+ * Experimental. The staff's customers: the people who bought (karni.people),
+ * one row per person with commerce's facts (their orders, what they spent,
+ * their last order), and one customer's page with their orders, addresses
+ * and account.
  *
  * They read `GET /api/orders/customers/` and `GET /api/orders/customer/`
- * (karni_commerce.customers), a seam the family's people contract replaces:
- * the screens stay.
+ * (karni_commerce.people). One person is the same record in every part, so a
+ * name changed in the CRM shows here too.
  */
 import {
   EmptyState,
@@ -137,7 +138,7 @@ export function CustomersPage({ title = "Customers", pageSize = 25 }: CustomersP
               </thead>
               <tbody>
                 {rows.data.results.map((row) => (
-                  <tr key={row.email} className="border-t border-border">
+                  <tr key={row.id} className="border-t border-border">
                     <td className="p-3">
                       <CommerceLink
                         to={paths.customer(row.email)}

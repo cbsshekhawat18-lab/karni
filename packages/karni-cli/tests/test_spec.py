@@ -486,6 +486,26 @@ def test_a_relation_reaches_the_people_contract_and_turns_it_on() -> None:
     assert plain.spec is not None and "KARNI_PEOPLE" not in render.settings_block(plain.spec, 100)
 
 
+def test_listing_commerce_turns_the_people_contract_on() -> None:
+    from karni_cli.builder import render
+
+    text = """\
+version: 1
+app: {name: Stall}
+modules:
+  payments: {provider: test}
+  commerce: {}
+apps:
+  stall:
+    entities:
+      Jar: {fields: {name: str}}
+"""
+    report = check(text)
+    assert report.ok and report.spec is not None, report.issues
+    assert "people" in render.features_on(report.spec)
+    assert render.settings_block(report.spec, 100).count("KARNI_PEOPLE = True") == 1
+
+
 def test_a_contract_target_must_be_one_of_its_models() -> None:
     found = codes(PEOPLE_SPEC.replace("fk:people.Person", "fk:people.Contact"))
     assert [code for code, _line in found] == ["C230"]

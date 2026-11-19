@@ -3,8 +3,9 @@
  * packages/karni-ui/tests/msw/).
  *
  * One visitor cart holds `cartState.lines`. `POST /carts/current/lines/`
- * sets or adds a line of the two known items (`lamp`, sold out when
- * `available` is 0, and `seat`), checkout answers `placedFixture` (and
+ * sets or adds a line of the known items (`lamp`, sold out when `available`
+ * is 0, `seat`, and `visit`, a booking with a deposit of 20.00: a cart of
+ * bookings only is offered the deposit), checkout answers `placedFixture` (and
  * records its body in `checkoutCalls`), and `/orders/lookup/` answers
  * `orderFixture` for number 1001 with the key `k1`. `GET /auth/me/` answers
  * 401: the reader is a visitor unless a test signs someone in.
@@ -20,11 +21,20 @@ interface Known {
   compare: string | null;
   available: number | null;
   url: string;
+  deposit?: string;
 }
 
 export const ITEMS: Record<string, Known> = {
   lamp: { name: "Brass Lamp", price: "16.00", compare: "20.00", available: 3, url: "/shop/lamp" },
   seat: { name: "Seat at Pottery", price: "45.00", compare: null, available: null, url: "" },
+  visit: {
+    name: "Booking: Tuning",
+    price: "80.00",
+    compare: null,
+    available: 1,
+    url: "",
+    deposit: "20.00",
+  },
 };
 
 export const cartState: {
@@ -79,6 +89,9 @@ export const orderFixture: Order = {
   shipping_method: "Standard",
   amount_paid: "32.00",
   amount_refunded: "0.00",
+  deposit: "0.00",
+  balance: "0.00",
+  due_now: "0.00",
   billing: {
     name: "Ines Moreau",
     line1: "4 Rue des Lilas",
@@ -251,6 +264,13 @@ export const handlers = [
     const goods = Number(cart.subtotal) - Number(cart.discount);
     const shipping = method ? Number(method.cost) : 0;
     const tax = country === "FR" ? (goods + shipping) * 0.2 : 0;
+    const deposits = cartState.lines.map((row) =>
+      ITEMS[row.item].deposit ? Number(ITEMS[row.item].deposit) * row.quantity : null,
+    );
+    const deposit =
+      deposits.length > 0 && deposits.every((value) => value !== null)
+        ? deposits.reduce<number>((sum, value) => sum + (value ?? 0), 0).toFixed(2)
+        : null;
     const quote: Quote = {
       currency: "EUR",
       subtotal: cart.subtotal,
@@ -267,6 +287,7 @@ export const handlers = [
       shipping_problem:
         country && country !== "FR" ? `We do not send orders to ${country} yet.` : "",
       tax_lines: tax ? [{ name: "TVA", rate: "20.0000", amount: tax.toFixed(2) }] : [],
+      deposit,
     };
     return HttpResponse.json(quote);
   }),
@@ -292,6 +313,9 @@ export const handlers = [
     return HttpResponse.json({ detail: "No such order." }, { status: 404 });
   }),
   http.post(`${API_BASE}/orders/pay/`, () => HttpResponse.json({ url: null })),
+  http.get(`${API_BASE}/orders/kinds/`, () =>
+    HttpResponse.json([{ kind: "product", label: "Product", searchable: true }]),
+  ),
   http.get(`${API_BASE}/orders/`, () =>
     HttpResponse.json({
       count: 1,

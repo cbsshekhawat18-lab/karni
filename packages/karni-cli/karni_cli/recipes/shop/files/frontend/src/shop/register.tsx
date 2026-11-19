@@ -25,6 +25,7 @@ export function registerShop(): void {
     title: "Parcel",
     order: 10,
     component: ParcelPanel,
+    kinds: ["product"],
     when: (order) => order.needs_shipping,
   });
   registerCouponLimit({

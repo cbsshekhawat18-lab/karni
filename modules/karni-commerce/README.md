@@ -34,9 +34,10 @@ modules:
 - `Cart` and `CartLine`: a signed-in person's cart, or a visitor's, found by
   a token and merged at sign-in.
 - `Order`, `OrderLine`, `OrderPayment` and `OrderRefund`: an order with a
-  readable number, the buyer's user (or none), email and name, the addresses,
-  lines with the name, SKU and price copied at checkout, several payments
-  (a retry, a deposit) and refunds by line or by amount.
+  readable number, the buyer's person (karni.people), user (or none), email
+  and name, the addresses, lines with the name, SKU and price copied at
+  checkout, several payments (a deposit and its balance, a retry) and refunds
+  by line or by amount.
 - `karni_commerce.services`: `set_line`, `merge`, `checkout`, `place_order`,
   `open_payment`, `settle`, `cancel`, `refund`, `settle_refund` and
   `release_expired`, each in one transaction.
@@ -45,7 +46,10 @@ modules:
   `/api/order-lines/`, `/api/order-payments/`, `/api/order-refunds/`.
 - Signals in `karni_commerce.events`: `order_placed`, `order_paid`,
   `order_part_paid`, `order_failed`, `order_cancelled`, `order_refunded`,
-  `cart_merged` and `orders_claimed`.
+  `cart_merged` and `orders_claimed`, and the family events
+  `commerce.order.*` on the buyer's timeline.
+- The person facts `orders`, `total_spent`, `last_order` and `first_order`,
+  and `karni_commerce.testing.assert_sellable` for a selling part's tests.
 - Emails through `karni.mail`, each with a kind: `commerce.order_paid`,
   `commerce.new_order`, `commerce.order_cancelled` and
   `commerce.order_refunded`.

@@ -48,6 +48,7 @@ def test_staff_read_an_order_with_its_payments_refunds_notes_and_buyer(
     assert [(r["amount"], r["status"]) for r in data["refunds"]] == [("10.00", "succeeded")]
     assert (data["refundable"], data["can_refund"], data["can_cancel"]) == ("50.00", True, False)
     assert data["buyer"] == {
+        "person": str(order.person_id),
         "user": None,
         "name": "",
         "email": "guest@example.com",
@@ -142,6 +143,27 @@ def test_staff_find_items_to_put_on_an_order(manager: Any, make_gadget: MakeGadg
     found = as_user(manager).get("/api/orders/items/", {"kind": "gadget", "search": "lamp"})
     assert found.status_code == 200
     assert [(row["name"], row["price"]) for row in found.data] == [("Desk Lamp", "20.00")]
+    assert found.data[0]["kind_label"] == "Gadget"
+
+
+def test_staff_find_items_of_every_kind_the_project_sells(
+    manager: Any, clerk: Any, make_gadget: MakeGadget, make_slot: Any
+) -> None:
+    make_gadget(name="Desk Lamp")
+    make_slot(title="Lamp repair, 1 hour")
+    kinds = as_user(manager).get("/api/orders/kinds/")
+    assert kinds.status_code == 200
+    assert {row["kind"]: (row["label"], row["searchable"]) for row in kinds.data} == {
+        "booking": ("Booking", True),
+        "gadget": ("Gadget", True),
+        "seat": ("Seat", False),
+    }
+    found = as_user(manager).get("/api/orders/items/", {"search": "lamp"}).data
+    assert sorted((row["kind"], row["name"]) for row in found) == [
+        ("booking", "Booking: Lamp repair, 1 hour"),
+        ("gadget", "Desk Lamp"),
+    ]
+    assert as_user(clerk).get("/api/orders/kinds/").status_code == 403  # no order:add
 
 
 def test_customers_are_the_buyers_by_email_with_what_they_spent(

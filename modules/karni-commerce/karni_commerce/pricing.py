@@ -94,6 +94,10 @@ class QuoteLine:
     tax_rate: Decimal = ZERO
     tax: Decimal = ZERO
     tax_name: str = ""
+    #: The deposit of one item (``Sellable.deposit``), or ``None`` when the line allows none.
+    deposit: Decimal | None = None
+    #: How long checkout may hold the line, in minutes (``Sellable.hold_minutes``), or ``None``.
+    hold_minutes: int | None = None
 
     @property
     def line_total(self) -> Decimal:
@@ -167,6 +171,22 @@ class Quote:
     @property
     def free_shipping(self) -> bool:
         return self.coupon is not None and self.coupon.kind == Coupon.Kind.FREE_SHIPPING
+
+    @property
+    def deposit(self) -> Decimal | None:
+        """What the buyer may pay now and the rest later, or ``None`` when that is not offered.
+
+        Offered when every line allows a deposit (a booking's): the lines' deposits
+        times their quantities, never more than the total. ``None`` too when that comes
+        to nothing, or to the whole total.
+        """
+        if not self.lines or any(line.deposit is None for line in self.lines):
+            return None
+        each = (money(line.deposit or ZERO) * line.quantity for line in self.lines)
+        found = money(sum(each, ZERO))
+        if found <= 0 or found >= self.total:
+            return None
+        return found
 
 
 # -- coupons -------------------------------------------------------------------------------

@@ -162,11 +162,21 @@ class Order(BaseModel):
     )
     email = models.EmailField()
     buyer_name = models.CharField(max_length=200, blank=True, default="")
+    # Who bought, as the people contract knows them (karni.people.resolve at checkout):
+    # the same Person as the CRM's contact or the booking's guest. The email and the
+    # name stay copied on the order.
+    person = models.ForeignKey(
+        "people.Person",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="commerce_orders",
+    )
     status = StateField(
         states=list(STATES),
         transitions={
             "pending": ["paid", "part_paid", "failed", "cancelled"],
-            "part_paid": ["paid", "part_refunded", "refunded"],
+            "part_paid": ["paid", "part_refunded", "refunded", "cancelled"],
             "failed": ["pending", "cancelled"],
             "paid": ["part_refunded", "refunded", "cancelled"],
             "part_refunded": ["refunded"],
@@ -186,6 +196,10 @@ class Order(BaseModel):
     tax_lines = models.JSONField(default=list, blank=True)
     amount_paid = MoneyField(currency_field="currency", default=ZERO)
     amount_refunded = MoneyField(currency_field="currency", default=ZERO)
+    # What the first payment asks when the buyer chose to pay a deposit (every line allows
+    # one, Sellable.allows_deposit): the rest is the balance, paid later by the order's link.
+    # 0: the whole total at once.
+    deposit = MoneyField(currency_field="currency", default=ZERO)
     billing = models.JSONField(default=dict, blank=True)
     shipping = models.JSONField(default=dict, blank=True)
     needs_shipping = models.BooleanField(default=False)
@@ -215,6 +229,7 @@ class Order(BaseModel):
             "user",
             "email",
             "buyer_name",
+            "person",
             "status",
             "currency",
             "subtotal",
@@ -228,6 +243,7 @@ class Order(BaseModel):
             "tax_lines",
             "amount_paid",
             "amount_refunded",
+            "deposit",
             "billing",
             "shipping",
             "needs_shipping",
@@ -281,6 +297,16 @@ class Order(BaseModel):
     def balance(self) -> Decimal:
         """What is still to pay: the total less what was paid."""
         return max(Decimal(self.total) - Decimal(self.amount_paid), ZERO)
+
+    @property
+    def deposit_due(self) -> bool:
+        """Whether the next payment is the deposit: one was chosen and nothing is paid yet."""
+        return Decimal(self.deposit) > 0 and Decimal(self.amount_paid) <= 0
+
+    @property
+    def due_now(self) -> Decimal:
+        """What the next payment asks: the deposit while it is due, else the balance."""
+        return min(Decimal(self.deposit), self.balance) if self.deposit_due else self.balance
 
     @property
     def refundable(self) -> Decimal:

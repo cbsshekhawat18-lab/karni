@@ -2097,7 +2097,6 @@ class Lead(BaseModel):
 | `KARNI_COMMERCE_NUMBER` | `KARNI_COMMERCE_NUMBER` | `""` | The dotted path of the function that gives a new order its number: number(order) -&gt; int. Blank (the default) counts up from KARNI_COMMERCE_FIRST_NUMBER (karni_commerce.services.next_number). |
 | `KARNI_COMMERCE_ORDER_PATH` | `KARNI_COMMERCE_ORDER_PATH` | `"/orders/{number}?key={key}"` | Where a person reads an order in the app, after KARNI_FRONTEND_URL: {number} and {key} (the guest's secret) are filled in. The payment's return address and the emails' links point here. |
 | `KARNI_COMMERCE_MANUAL_HOLD_MINUTES` | `KARNI_COMMERCE_MANUAL_HOLD_MINUTES` | `2880` | How long an order staff place by hand (a phone order) holds its items for the buyer's payment, in minutes. Two days by default. |
-| `KARNI_COMMERCE_CUSTOMERS` | `KARNI_COMMERCE_CUSTOMERS` | `"karni_commerce.customers.OrderCustomers"` | The dotted path of the class behind the staff's customers list and customer page: customers(orders, search, ordering) and customer(orders, email). The default groups the orders by the buyer's email; karni.people replaces it with the people of the project. |
 | `KARNI_COMMERCE_STAFF_EMAILS` | `KARNI_COMMERCE_STAFF_EMAILS` | `[]` | Who gets the new-order email (commerce.new_order): a list of addresses. Empty (the default) sends none. |
 | `KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR` | `KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR` | `"karni_payments.services.default_checkout_validator"` | The checkout validator for payments that are not an order's (the dotted path karni_commerce.payments.checkout_validator hands them to). |
 | `KARNI_COMMERCE_PRICES_INCLUDE_TAX` | `KARNI_COMMERCE_PRICES_INCLUDE_TAX` | `False` | Whether the prices the sellables give include their tax. Off (the default): tax is added on top at checkout. On: the tax is the part of each price that is tax, and the total is the prices (with the discount and shipping). |
@@ -2834,6 +2833,10 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`CHART002`](errors.md#chart002) | api | A filter the chart does not allow |
 | [`CHART003`](errors.md#chart003) | exception | The chart's filters are not valid |
 | [`CHART004`](errors.md#chart004) | exception | The chart's axes do not fit the source's aggregation |
+| [`COM001`](errors.md#com001) | check | karni-commerce is installed without the people contract |
+| [`COM002`](errors.md#com002) | test | A sellable adapter does not keep the commerce contract |
+| [`COM003`](errors.md#com003) | exception | A sellable's hold is not a positive number of minutes |
+| [`COM004`](errors.md#com004) | exception | A sellable adapter is registered wrongly |
 | [`IMP001`](errors.md#imp001) | api | Impersonation needs the explicit impersonate permission |
 | [`IMP002`](errors.md#imp002) | api | The target holds something the impersonator does not |
 | [`IMP003`](errors.md#imp003) | api | A reason is required to impersonate |
