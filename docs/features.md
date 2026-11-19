@@ -66,7 +66,7 @@ Reference or Debugging sections.
 ## Modules
 
 - **[The module contract](modules.md)**: one command to add a module, one to remove it, and the catalog every module describes itself in.
-- **[PDF reports](reports.md)**, **[AI extraction](ai-extraction.md)**, **[protected files](storage.md)**, **[commerce](commerce.md)**, **[games](game.md)** (with [the game API](game-api.md) a game client codes against) and the [other modules](#every-module): each a separate package for anything with its own service or a real memory cost.
+- **[PDF reports](reports.md)**, **[AI extraction](ai-extraction.md)**, **[protected files](storage.md)**, **[commerce](commerce.md)**, **[games](game.md)** (with [the game API](game-api.md) a game client codes against, and [the browser side](game-client.md)) and the [other modules](#every-module): each a separate package for anything with its own service or a real memory cost.
 
 ## Coding agents
 

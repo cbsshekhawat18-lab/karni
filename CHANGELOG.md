@@ -555,6 +555,27 @@ apply codemods and list the manual steps. This file is the human summary.
   the build's portal adapter), and `karniGame()` in the Vite config. The kind is recorded in
   pyproject.toml and stated by `karni context` and the agent files. A project made without it
   names neither karni-game nor `@karni/game`.
+- **Added (experimental): `@karni/game`, the browser side of the game add-on**
+  (`modules/karni-game/ui`). An ESM package with no runtime dependency, tree-shaken export by
+  export. `createPortal` wraps a portal adapter (Poki, CrazyGames, GameDistribution, Y8, a no-op
+  `noPortal` and a `fakePortal` for development) with an init time limit, paired gameplay
+  events, an interstitial cooldown, a reward only on the SDK's completed event and mute and
+  pause events around each ad (`linkPortal`). `createLoop` (a dt clamp, a fixed step with a step
+  cap, named pauses), `pauseOnHidden`, `createView` (a pixel-ratio cap lower on touch, a
+  letterboxed virtual resolution), `createInput` (held, pressed and released per action, a
+  first-gesture hook) with `createVirtualStick`, `createAudio` (master, music and effects, the
+  player's, ad's and portal's mutes apart), `createStorage` and `createSave` (a probe with a
+  memory fallback, versioned saves with migrations, a corrupt save kept aside), `createRng` and
+  the date seeds. `createGameClient` speaks the karni-game API: a guest that works offline and
+  upgrades to an account, save slots with a conflict rule, scores, boards, wallet, shop,
+  rewards, daily content, achievements, config and analytics, through a queue with intents,
+  and the same calls on the device with no server. `@karni/game/vite` (`karniGame()`: a
+  relative base, the build's one adapter behind `virtual:karni-game/portal`, a dev flag, a
+  single-file build), `@karni/game/build` and the `karni-game` command (per-portal packages from
+  one portal table, checked for hosts, other portals' SDKs, debug hooks, secret-shaped tokens,
+  size and ids in source, and zipped), Phaser, PixiJS and React Three Fiber adapters, and
+  `@karni/game/smoke`, a browser smoke harness with a corrupt-storage boot. Block Hopper, an
+  example game, is played in headless Chromium by CI. See docs/game-client.md.
 
 ## 0.5.1 (2026-11-12)
 

@@ -119,6 +119,11 @@ PREFIXES = {
         "React components for the Karni commerce module: the cart, the mini cart, add to cart, "
         "checkout, an order's page and a person's orders."
     ),
+    "modules/karni-game/ui/package.json": (
+        "The browser side of the Karni game add-on: portal and ad adapters, a canvas loop, "
+        "input, audio, local saves, a seeded random generator, an offline-first data client "
+        "and per-portal builds."
+    ),
 }
 
 README_OPENING = re.compile(r'(</picture>\n</p>\n\n<p align="center">\n)(.*?)(\n</p>)', re.S)

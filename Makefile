@@ -47,7 +47,7 @@ PY_PACKAGES := $(filter packages/%,$(PY_PACKAGES))
 endif
 
 UI_PACKAGES := packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui modules/karni-reports/ui
-UI_PACKAGES += modules/karni-ai/ui modules/karni-storage/ui modules/karni-commerce/ui
+UI_PACKAGES += modules/karni-ai/ui modules/karni-storage/ui modules/karni-commerce/ui modules/karni-game/ui
 
 KARNI_EXTRAS := s3,images,sentry,social,social-token,2fa
 # karni-ai's provider tests run the real SDKs against mocked HTTP: install-py adds its extras.

@@ -431,6 +431,11 @@ Stable since 0.4.1:
   `karni_game.merge.Merger`, the signatures, the roles), the `KARNI_GAME_*`
   settings, [the game API](game-api.md) and its answers, and the `game` kind of
   `karni new`.
+- [The game client](game-client.md): everything in `@karni/game` (the
+  portal, its adapters and the portal table, the loop, view, input, audio,
+  save and random helpers, the data client and its queue, the Vite preset,
+  the package checks, the `karni-game` command, the engine adapters and the
+  smoke harness).
 - [API versions](api.md#api-versions): the `KARNI_API_VERSION`,
   `KARNI_API_VERSIONS` and `KARNI_API_UNVERSIONED` settings, `karni.api.versions`
   (with `api_urls`, `ApiVersionHeadersMiddleware` and `VersionedSchemaGenerator`),
