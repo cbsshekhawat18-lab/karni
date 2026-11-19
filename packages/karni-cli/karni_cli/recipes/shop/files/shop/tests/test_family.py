@@ -44,7 +44,9 @@ def test_a_sent_parcel_goes_on_its_order_timeline_while_the_connection_is_on(
     assert TimelineEntry.objects.filter(kind="shop.shipment.shipped").count() == 1
 
 
-def test_the_buyers_timeline_has_the_order_and_its_parcel(make_product: MakeProduct) -> None:
+def test_the_buyers_timeline_has_the_order_and_its_parcel(
+    make_product: MakeProduct,
+) -> None:
     if not apps.is_installed("karni.timeline"):
         return
     from karni.testing import deliver_now
@@ -54,6 +56,12 @@ def test_the_buyers_timeline_has_the_order_and_its_parcel(make_product: MakeProd
     services.ship(parcel, "PP789", "Parcel Post")
     deliver_now()
     kinds = set(
-        TimelineEntry.objects.filter(person=parcel.order.person_id).values_list("kind", flat=True)
+        TimelineEntry.objects.filter(person=parcel.order.person_id).values_list(
+            "kind", flat=True
+        )
     )
-    assert {"commerce.order.placed", "commerce.order.paid", "shop.shipment.shipped"} <= kinds
+    assert {
+        "commerce.order.placed",
+        "commerce.order.paid",
+        "shop.shipment.shipped",
+    } <= kinds
