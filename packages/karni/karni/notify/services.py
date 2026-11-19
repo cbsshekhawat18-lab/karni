@@ -10,7 +10,7 @@ It sends the kind on each channel it declares (``karni.mail.register_kind(...,
 channels=("email", "inbox"))``) that the project uses (``KARNI_NOTIFY_CHANNELS``):
 
 * **email**: through ``karni.mail`` (an edited template wins over the files, the
-  sender and the reply-to come from the details), to every recipient with an
+  sender and the reply-to come from the details), one to each recipient with an
   address. A marketing kind (``transactional=False``) goes to one address at a
   time, with its own unsubscribe link (``unsubscribe_url`` in the context) and
   the ``List-Unsubscribe`` headers.
@@ -341,6 +341,7 @@ def send_mail(
         reply=list(reply_to) if reply_to else None,
         cc=list(cc) if cc else None,
         bcc=list(bcc) if bcc else None,
+        together=True,
     )
     return found.email
 
@@ -358,6 +359,7 @@ def deliver_kind(
     reply: list[str] | None = None,
     cc: list[str] | None = None,
     bcc: list[str] | None = None,
+    together: bool = False,
 ) -> Sent:
     """Experimental. Send the kind ``name`` to recipients already resolved (:func:`recipients`).
 
@@ -366,7 +368,9 @@ def deliver_kind(
     unsubscribe, the inbox rows and the emails. ``declared`` is the kind's
     declaration (``None`` for a kind nobody declared: email only). ``rendered``
     replaces the rendering of ``template`` for a transactional kind (a move's
-    email renders its files part by part). A marketing email is rendered per
+    email renders its files part by part). Each address gets its own email, so
+    nobody sees who else got it: ``together=True`` sends one email to all of
+    them, as ``send_templated`` always did. A marketing email is rendered per
     address, with its own unsubscribe link.
     """
     if not people or is_silenced() or not kind_enabled(name):
@@ -391,18 +395,21 @@ def deliver_kind(
         if marketing:
             for person in targets:
                 mailed += _marketing_email(name, template, context, person, from_email, reply)
-        elif targets:
-            mailed = deliver(
-                template,
-                to=[p.email for p in targets],
-                context=context,
-                from_email=from_email,
-                reply_to=reply,
-                cc=cc,
-                bcc=bcc,
-                kind=name,
-                rendered=rendered,
-            )
+        else:
+            batches = [[p.email for p in targets]] if together else [[p.email] for p in targets]
+            for addresses in batches:
+                if addresses:
+                    mailed += deliver(
+                        template,
+                        to=addresses,
+                        context=context,
+                        from_email=from_email,
+                        reply_to=reply,
+                        cc=cc,
+                        bcc=bcc,
+                        kind=name,
+                        rendered=rendered,
+                    )
     return Sent(email=mailed, inbox=inboxed)
 
 

@@ -24,9 +24,9 @@ RECEIPT = {"order": {"number": 1001, "total": "12.00"}, "link": "/orders/1001"}
 
 def test_a_kind_goes_to_the_email_and_the_inbox_it_declares(ana: Any, ben: Any) -> None:
     sent = notify.send("club.receipt", to=[ana, "guest@example.com"], context=RECEIPT)
-    assert sent == notify.Sent(email=1, inbox=1)  # one message to both addresses
-    [message] = mail.outbox
-    assert sorted(message.to) == ["ana@example.com", "guest@example.com"]
+    assert sent == notify.Sent(email=2, inbox=1)  # one email each: nobody sees the other
+    message, other = mail.outbox
+    assert (message.to, other.to) == (["ana@example.com"], ["guest@example.com"])
     assert message.subject == "Receipt 1001"
     assert message.extra_headers["X-Karni-Kind"] == "club.receipt"
     [row] = Notification.objects.all()
@@ -93,6 +93,10 @@ def test_send_templated_goes_through_notify_unchanged_for_the_caller(ana: Any) -
         == 1
     )
     assert Notification.objects.get().recipient == ana
+    # the caller's list stays one email to all of them, as before
+    to = [ana.email, "guest@example.com"]
+    assert send_templated("club/email/receipt", to=to, context=RECEIPT, kind="club.receipt") == 1
+    assert sorted(mail.outbox[-1].to) == sorted(to)
     notify.choose(ana, "club.receipt", email=False)
     assert (
         send_templated("club/email/receipt", to=[ana.email], context=RECEIPT, kind="club.receipt")
@@ -228,8 +232,8 @@ def test_people_get_the_email_and_their_account_the_inbox(ana: Any) -> None:
     Person.objects.create(email="ana@example.com", given_name="Ana", user=ana)
     Person.objects.create(email="guest@example.com", given_name="Gus")
     sent = notify.send("club.receipt", to=Person.objects.order_by("email"), context=RECEIPT)
-    assert sent == notify.Sent(email=1, inbox=1)
-    assert sorted(mail.outbox[0].to) == ["ana@example.com", "guest@example.com"]
+    assert sent == notify.Sent(email=2, inbox=1)
+    assert [message.to for message in mail.outbox] == [["ana@example.com"], ["guest@example.com"]]
     assert Notification.objects.get().recipient == ana
     assert notify.send("club.receipt", to=Person.objects.filter(pk=None)) == notify.Sent()
 

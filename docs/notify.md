@@ -109,8 +109,8 @@ active users who hold a role, for a message to the staff:
 rows written. On each channel the kind declares and the project sends on
 (`KARNI_NOTIFY_CHANNELS`):
 
-- **email**: one message to every address that wants it, rendered from the
-  files or from the edited text. A marketing kind goes to one address at a
+- **email**: one message to each address that wants it, so nobody sees who
+  else got it, rendered from the files or from the edited text. A marketing kind goes to one address at a
   time, with `unsubscribe_url` in its context and the `List-Unsubscribe` and
   `List-Unsubscribe-Post` headers, so a mail program offers one-click
   unsubscribe.
@@ -126,7 +126,8 @@ is sent and no notification is written.
 `send_templated(template, to=[...], context=..., kind="commerce.order_paid")`
 goes through the same path while `karni.notify` is installed: the switches,
 the unsubscribes and the edited text hold, and a kind declared on the inbox
-lands there too. A kind nobody declared still goes by email only, as before.
+lands there too. Its `to` stays one email to all of the addresses that want
+it, as before. A kind nobody declared still goes by email only, as before.
 
 **From a family event.** In the part's `listeners.py`:
 

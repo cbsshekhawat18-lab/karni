@@ -465,7 +465,7 @@ apply codemods and list the manual steps. This file is the human summary.
   own declaration wins over. `notify.send(kind, to=..., context=...)` sends a declared kind
   (`E440` for one nobody declared) to users, people, addresses or the holders of a role
   (`notify.holders`, `E443` for anything else):
-  one email to every address that wants it, and a `Notification` in the inbox of each recipient
+  one email to each address that wants it, and a `Notification` in the inbox of each recipient
   with an account. The inbox API: `GET /api/inbox/` (filters, pages, `E444`), `inbox/unread/`,
   `inbox/<id>/read/` and `unread/`, `inbox/read-all/`, with notifications kept
   `KARNI_NOTIFY_RETENTION_DAYS` (180) and pruned daily. A person turns a switchable kind off for
