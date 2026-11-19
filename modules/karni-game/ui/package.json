@@ -34,6 +34,8 @@
   "sideEffects": false,
   "files": [
     "dist",
+    "bin",
+    "client.d.ts",
     "README.md"
   ],
   "engines": {
@@ -47,6 +49,13 @@
     "./build": {
       "types": "./dist/src/tooling/index.d.ts",
       "import": "./dist/build.js"
+    },
+    "./vite": {
+      "types": "./dist/src/tooling/vite.d.ts",
+      "import": "./dist/vite.js"
+    },
+    "./client": {
+      "types": "./client.d.ts"
     },
     "./portals/*": {
       "types": "./dist/src/portal/adapters/*.d.ts",
@@ -83,5 +92,16 @@
   "publishConfig": {
     "access": "public",
     "provenance": true
+  },
+  "bin": {
+    "karni-game": "./bin/karni-game.js"
+  },
+  "peerDependencies": {
+    "vite": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   }
 }

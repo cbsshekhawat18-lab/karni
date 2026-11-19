@@ -18,6 +18,8 @@ const ENTRIES: Record<string, string> = {
   "portals/gamedistribution": "src/portal/adapters/gamedistribution.ts",
   "portals/y8": "src/portal/adapters/y8.ts",
   build: "src/tooling/index.ts",
+  vite: "src/tooling/vite.ts",
+  cli: "src/tooling/cli.ts",
 };
 
 export default defineConfig({

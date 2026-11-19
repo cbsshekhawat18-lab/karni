@@ -4,3 +4,10 @@
  */
 export { DEFAULT_SIZE_BUDGET, PORTALS, definePortals, portalRow } from "./portals";
 export type { PortalConfigValue, PortalRow } from "./portals";
+export { PortalConfigError, envName, resolvePortal } from "./config";
+export type { PortalConfig, ResolveOptions } from "./config";
+export { checkPackage, checkSource, formatProblems, hostsIn } from "./checks";
+export type { BuildProblem, CheckOptions, SourceCheckOptions } from "./checks";
+export { packagePortals, viteBuild } from "./package";
+export type { PackageOptions, PackageReport } from "./package";
+export { crc32, zipFolder } from "./zip";
