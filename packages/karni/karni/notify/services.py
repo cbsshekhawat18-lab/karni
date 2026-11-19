@@ -65,6 +65,7 @@ __all__ = [
     "choices",
     "choose",
     "deliver_kind",
+    "holders",
     "installed",
     "mark_read",
     "mark_unread",
@@ -203,6 +204,21 @@ def recipients(to: Any) -> list[Recipient]:
         seen.add(key)
         unique.append(recipient)
     return unique
+
+
+def holders(*roles: str) -> Any:
+    """Experimental. The active users who hold any of ``roles``: a role as an audience.
+
+    ``notify.send("commerce.new_order", to=notify.holders("shop-manager"), ...)``
+    tells everyone who holds the role, each on their own switches. A role is
+    the group of its slug (:func:`karni.accounts.permissions.assign_role`).
+    """
+    model = get_user_model()
+    return (
+        model._default_manager.filter(groups__name__in=list(roles), is_active=True)
+        .distinct()
+        .order_by("pk")
+    )
 
 
 def _with_accounts(addresses: list[str]) -> list[Recipient]:

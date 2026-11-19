@@ -232,3 +232,15 @@ def test_people_get_the_email_and_their_account_the_inbox(ana: Any) -> None:
     assert sorted(mail.outbox[0].to) == ["ana@example.com", "guest@example.com"]
     assert Notification.objects.get().recipient == ana
     assert notify.send("club.receipt", to=Person.objects.filter(pk=None)) == notify.Sent()
+
+
+def test_a_role_is_an_audience(ana: Any, ben: Any, writer: Any) -> None:
+    from karni.accounts.permissions import assign_role
+
+    assign_role(ben, "writer")
+    writer.is_active = False
+    writer.save(update_fields=["is_active"])
+    assert list(notify.holders("writer")) == [ben]
+    sent = notify.send("club.note", to=notify.holders("writer", "customer"), context={"who": "Lee"})
+    assert sent == notify.Sent(inbox=2)
+    assert {row.recipient for row in Notification.objects.all()} == {ana, ben}

@@ -463,7 +463,8 @@ apply codemods and list the manual steps. This file is the human summary.
   message kinds in its `messages.py` with `karni.mail.register_kind`, now with `channels=`
   (`"email"`, `"inbox"` or both, `E445` for another) and `replace=False` for a default a part's
   own declaration wins over. `notify.send(kind, to=..., context=...)` sends a declared kind
-  (`E440` for one nobody declared) to users, people or addresses (`E443` for anything else):
+  (`E440` for one nobody declared) to users, people, addresses or the holders of a role
+  (`notify.holders`, `E443` for anything else):
   one email to every address that wants it, and a `Notification` in the inbox of each recipient
   with an account. The inbox API: `GET /api/inbox/` (filters, pages, `E444`), `inbox/unread/`,
   `inbox/<id>/read/` and `unread/`, `inbox/read-all/`, with notifications kept

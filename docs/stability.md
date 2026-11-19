@@ -289,7 +289,7 @@ Experimental now:
   `EmailTemplate`, `Notification`, `Choice` and `Unsubscribe`, admin, task
   and beat entry, `karni.notify.api`, `viewsets`, `editor`, `moves`,
   `source`, `adopt`, `checks` and `services`), `send`, `Sent`, `Recipient`,
-  `recipients`, `on_event`, `choices`, `choose`, `unsubscribe`,
+  `recipients`, `holders`, `on_event`, `choices`, `choose`, `unsubscribe`,
   `resubscribe`, `unsubscribed`, `unsubscribe_url`, `unread_count`,
   `mark_read`, `mark_unread`, `prune`, `installed` and `CONTRACT` in
   `karni.notify`, the `channels=` and `replace=` arguments and `CHANNELS`,
