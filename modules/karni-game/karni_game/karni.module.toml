@@ -30,6 +30,7 @@ models = [
     "Intent",
     "Item",
     "LedgerEntry",
+    "Match",
     "Mission",
     "Ownership",
     "Player",
@@ -67,6 +68,8 @@ endpoints = [
     "/api/game/<game>/achievements/",
     "/api/game/<game>/missions/",
     "/api/game/<game>/events/",
+    "/api/game/<game>/multiplayer/token/",
+    "/api/game/<game>/multiplayer/results/",
     "/api/games/",
     "/api/game-players/",
     "/api/game-saves/",
@@ -82,6 +85,7 @@ endpoints = [
     "/api/game-missions/",
     "/api/game-unlocks/",
     "/api/game-config/",
+    "/api/game-matches/",
 ]
 pages = ["the game's admin screens: games, players, boards, flagged runs, wallets and ledgers"]
 

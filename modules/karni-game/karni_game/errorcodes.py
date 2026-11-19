@@ -347,4 +347,25 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         fix='Declare the event in the game\'s settings: analytics: {"level_done": '
         '{"level": "int"}}, and send at most 10 props of those types.',
     ),
+    ErrorCode(
+        code="GAME027",
+        title="Multiplayer is not set up",
+        kind="exception",
+        source=f"{_SOURCE}.multiplayer.secret (HTTP 503)",
+        why="A realtime server verifies the player token and signs its reports with the "
+        "secret it shares with the project. Without one, no token could be trusted.",
+        fix="Set KARNI_GAME_SERVER_SECRET in the environment (a long random string) and give "
+        "the same value to the realtime server.",
+    ),
+    ErrorCode(
+        code="GAME035",
+        title="A match report names what the game does not have",
+        kind="exception",
+        source=f"{_SOURCE}.multiplayer.report (HTTP 400)",
+        why="A report is recorded whole or not at all, so each row must name a player the "
+        "server knows (the token's sub), an active board of the game with a whole-number "
+        "value, and active rewards of kind match.",
+        fix="Read index in the answer: it is the row. Send the player's id from the token, "
+        "and the keys of the game's boards and match rewards.",
+    ),
 )

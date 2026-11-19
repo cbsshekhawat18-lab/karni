@@ -51,6 +51,7 @@ __all__ = [
     "Intent",
     "Item",
     "LedgerEntry",
+    "Match",
     "Mission",
     "Ownership",
     "Player",
@@ -933,3 +934,25 @@ class ConfigValue(BaseModel):
 
     def __str__(self) -> str:
         return self.key
+
+
+class Match(UUIDModel, TimestampedModel):
+    """A match a realtime server reported (``match_id`` its own id): recorded once."""
+
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="matches")
+    match_id = models.CharField(max_length=100)
+    players = models.JSONField(default=list)
+    results = models.JSONField(default=list)
+
+    class Meta:
+        verbose_name_plural = "matches"
+        constraints: ClassVar[list[Any]] = [
+            models.UniqueConstraint(fields=["game", "match_id"], name="karni_game_match_once")
+        ]
+
+    class AdminMeta:
+        list_display: ClassVar[list[str]] = ["match_id", "game", "created_at"]
+        list_filter: ClassVar[list[str]] = ["game"]
+
+    def __str__(self) -> str:
+        return self.match_id

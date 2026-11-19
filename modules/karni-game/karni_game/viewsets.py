@@ -35,6 +35,7 @@ from karni_game.models import (
     Game,
     Item,
     LedgerEntry,
+    Match,
     Mission,
     Player,
     Reward,
@@ -52,6 +53,7 @@ __all__ = [
     "CurrencyViewSet",
     "ItemViewSet",
     "LedgerViewSet",
+    "MatchViewSet",
     "MissionViewSet",
     "RewardViewSet",
     "WalletViewSet",
@@ -297,5 +299,14 @@ class ConfigValueViewSet(BaseViewSet):
 
     model = ConfigValue
     route = "game-config"
+    access = Access(read=Granted(), write=Granted())
+    filterset_fields = ["game"]
+
+
+class MatchViewSet(ReadOnly, BaseViewSet):
+    """``/api/game-matches/``: the matches realtime servers reported, read only."""
+
+    model = Match
+    route = "game-matches"
     access = Access(read=Granted(), write=Granted())
     filterset_fields = ["game"]

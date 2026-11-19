@@ -20,7 +20,7 @@ EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 KARNI_FRONTEND_URL = "http://localhost:5173"
 # A player is the game profile of a person (karni.GAME001).
 KARNI_PEOPLE = True
-KARNI_GAME_SERVER_SECRET = "karni-game-tests-server-secret"
+KARNI_GAME_SERVER_SECRET = "karni-game-tests-realtime-server-shared-secret"
 KARNI_GAME_PORTALS = {"arcade": {"secret": "arcade-portal-test-secret"}}
 # karni-commerce sells the real-money items (the sellable kind game_item).
 KARNI_PAYMENTS_PROVIDER = "test"

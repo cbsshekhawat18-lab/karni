@@ -31,6 +31,7 @@ from karni_game import (
     conf,
     daily,
     intents,
+    multiplayer,
     players,
     progress,
     rewards,
@@ -75,10 +76,12 @@ __all__ = [
     "LedgerView",
     "MissionsView",
     "ProgressView",
+    "ResultsView",
     "RewardsView",
     "ShopView",
     "UnequipView",
     "WalletView",
+    "PlayerTokenView",
     "SaveView",
     "SavesView",
     "ScoresView",
@@ -800,3 +803,49 @@ class EventsView(GameView):
         body = EventsSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         return Response(remote.track(self.game, player, body.validated_data["events"]), status=202)
+
+
+# -- multiplayer -----------------------------------------------------------------------
+
+
+class ResultRowSerializer(serializers.Serializer):
+    player = serializers.CharField(max_length=64)
+    board = serializers.SlugField(max_length=50, required=False, allow_blank=True, default="")
+    value = serializers.IntegerField(required=False, allow_null=True, default=None)
+    rewards = serializers.ListField(
+        child=serializers.SlugField(max_length=50), required=False, default=list, max_length=10
+    )
+
+
+class ResultsSerializer(serializers.Serializer):
+    match = serializers.CharField(max_length=100)
+    results = ResultRowSerializer(many=True, allow_empty=False, max_length=100)
+
+
+class PlayerTokenView(GameView):
+    """``POST <game>/multiplayer/token/``: a short-lived token for the realtime server."""
+
+    throttle_scopes: ClassVar[dict[str, str]] = {"POST": "token"}
+
+    def post(self, request: Request, game: str) -> Response:
+        return Response(multiplayer.issue_token(self.player, self.game), status=201)
+
+
+class ResultsView(GameView):
+    """``POST <game>/multiplayer/results/``: the realtime server's signed report of a match."""
+
+    throttle_scopes: ClassVar[dict[str, str]] = {"POST": "results"}
+    authentication_classes: ClassVar[list[type]] = []
+
+    def throttle_ident(self, request: Request, scope: str) -> str | None:
+        return f"server:{self.kwargs.get('game', '')}"
+
+    @extend_schema(request=ResultsSerializer)
+    def post(self, request: Request, game: str) -> Response:
+        target = self.game
+        # The signature covers the raw body: verify it before the body is parsed.
+        multiplayer.verifier().verify(request)
+        body = ResultsSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        rows = [dict(row) for row in body.validated_data["results"]]
+        return Response(multiplayer.report(target, body.validated_data["match"], rows))

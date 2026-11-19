@@ -43,4 +43,6 @@ urlpatterns = [
     path("<slug:game>/achievements/", api.AchievementsView.as_view(), name="achievements"),
     path("<slug:game>/missions/", api.MissionsView.as_view(), name="missions"),
     path("<slug:game>/events/", api.EventsView.as_view(), name="events"),
+    path("<slug:game>/multiplayer/token/", api.PlayerTokenView.as_view(), name="multiplayer-token"),
+    path("<slug:game>/multiplayer/results/", api.ResultsView.as_view(), name="multiplayer-results"),
 ]
