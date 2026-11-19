@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
+from datetime import timedelta
 from typing import Any
 from unittest import mock
 
 import pytest
 from django.core.exceptions import ValidationError
 from django.test import override_settings
+from django.utils import timezone
 from karni import people, preferences
 from karni.people.models import Person
 from karni.testing import capture_events
 from karni.vetoes import register_veto, unregister_veto
+from rest_framework.test import APIClient
 
 from karni_game import checks, players
 from karni_game.models import Game, Player
@@ -253,3 +257,38 @@ def test_game030_without_the_include() -> None:
         with mock.patch("karni_game.checks.apps.is_installed", return_value=False):
             assert checks.run_checks() == []  # installed in the interpreter, not in the project
     assert failure.startswith("GAME030")
+
+
+def test_a_guest_issue_with_an_intent_never_makes_a_second_guest(api: Any) -> None:
+    from karni_game.models import Intent
+
+    first = api.post("/api/game/guest/", {"intent": "boot-0001-device"}, format="json")
+    again = api.post("/api/game/guest/", {"intent": "boot-0001-device"}, format="json")
+    assert (first.status_code, again.status_code) == (201, 200)
+    assert again.data["replayed"] is True
+    assert again.data["player"]["id"] == first.data["player"]["id"]
+    assert Player.objects.count() == 1
+    # The server never kept the first token: the retry has a new one, and the lost one is gone.
+    assert again.data["token"] != first.data["token"]
+    assert first.data["token"] not in json.dumps(list(Intent.objects.values()), default=str)
+    client = APIClient()
+    client.credentials(HTTP_X_PLAYER_TOKEN=again.data["token"])
+    assert client.get("/api/game/me/").data["id"] == first.data["player"]["id"]
+    client.credentials(HTTP_X_PLAYER_TOKEN=first.data["token"])
+    assert client.get("/api/game/me/").data["code"] == "GAME003"
+
+
+def test_a_guest_intent_with_another_body_or_too_old_is_game033(api: Any) -> None:
+    from karni_game.models import Intent
+
+    api.post("/api/game/guest/", {"intent": "boot-0002-device", "handle": "Ana"}, format="json")
+    other = api.post(
+        "/api/game/guest/", {"intent": "boot-0002-device", "handle": "Ben"}, format="json"
+    )
+    assert (other.status_code, other.data["code"]) == (409, "GAME033")
+    Intent.objects.update(created_at=timezone.now() - timedelta(hours=2))
+    old = api.post(
+        "/api/game/guest/", {"intent": "boot-0002-device", "handle": "Ana"}, format="json"
+    )
+    assert old.data["code"] == "GAME033"
+    assert Player.objects.count() == 1

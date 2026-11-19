@@ -113,8 +113,10 @@ knows about the person.
 
 - **A guest.** `POST /api/game/guest/` makes a person with no account, its
   player and a token. The server keeps the token's SHA-256 only. The client
-  sends it as `X-Player-Token` (`KARNI_GAME_TOKEN_HEADER`). Settings, Games
-  (`allow_guests`) switches guest play off (`GAME005`).
+  sends it as `X-Player-Token` (`KARNI_GAME_TOKEN_HEADER`). With an `intent`,
+  a retry of a lost answer gives the same guest, with a new token, never a
+  second guest. Settings, Games (`allow_guests`) switches guest play off
+  (`GAME005`).
 - **An account.** A signed-in account plays as the player of the person
   linked to it, made on its first call. An account is linked to a person once
   its email is verified ([people](people.md#the-account-link)), so an

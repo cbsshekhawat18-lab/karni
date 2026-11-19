@@ -87,14 +87,67 @@ def clean_handle(value: str) -> str:
 
 @dataclass(frozen=True)
 class GuestIssued:
-    """A new guest: its token (shown once) and its player."""
+    """A new guest: its token (shown once) and its player. ``replayed`` for a retry."""
 
     token: str
     player: Player
+    replayed: bool = False
 
 
-def issue_guest(handle: str = "") -> GuestIssued:
-    """Make a guest: a person with no account, its player and a token."""
+#: How long a guest's intent gives the same guest again, in seconds (then GAME033).
+GUEST_INTENT_SECONDS = 3600
+
+
+def _new_token(player: Player) -> str:
+    token = TOKEN_PREFIX + secrets.token_urlsafe(32)
+    Player.objects.filter(pk=player.pk).update(
+        token_hash=token_hash(token), token_issued_at=timezone.now()
+    )
+    player.token_hash = token_hash(token)
+    return token
+
+
+def issue_guest(handle: str = "", *, intent: str = "") -> GuestIssued:
+    """Make a guest: a person with no account, its player and a token.
+
+    With ``intent``, a retry within an hour gives the same guest, with a new
+    token (the server never keeps a token, and the first answer was lost): a
+    lost answer never makes a second guest.
+    """
+    if intent:
+        return _issue_once(handle, intent)
+    return _issue(handle)
+
+
+def _issue_once(handle: str, key: str) -> GuestIssued:
+    from karni_game import intents
+    from karni_game.models import Intent
+
+    intents.check_key(key)
+    digest = intents.digest_of({"handle": handle})
+    with transaction.atomic(using=router.db_for_write(Intent)):
+        try:
+            with transaction.atomic(using=router.db_for_write(Intent)):
+                row = Intent.objects.create(player=None, kind="guest", key=key, digest=digest)
+        except IntegrityError:
+            row = Intent.objects.select_for_update().get(player=None, kind="guest", key=key)
+            fresh = timezone.now() - row.created_at < timedelta(seconds=GUEST_INTENT_SECONDS)
+            found = (
+                Player.objects.select_related("person")
+                .filter(pk=row.response.get("player"), person__user__isnull=True)
+                .first()
+            )
+            if row.digest != digest or not fresh or found is None:
+                raise intents.used(key) from None
+            return GuestIssued(token=_new_token(found), player=found, replayed=True)
+        issued = _issue(handle)
+        row.status = 201
+        row.response = {"player": str(issued.player.pk)}  # never the token
+        row.save(update_fields=["status", "response", "updated_at"])
+    return issued
+
+
+def _issue(handle: str) -> GuestIssued:
     token = TOKEN_PREFIX + secrets.token_urlsafe(32)
     name = clean_handle(handle) if handle else default_handle()
     with transaction.atomic(using=router.db_for_write(Player)):

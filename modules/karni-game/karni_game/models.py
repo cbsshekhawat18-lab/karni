@@ -430,9 +430,15 @@ class Best(UUIDModel, TimestampedModel):
 
 
 class Intent(UUIDModel, TimestampedModel):
-    """A write's retry key (``intent``): the first answer, given again to a retry."""
+    """A write's retry key (``intent``): the first answer, given again to a retry.
 
-    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="+")
+    ``player`` is empty for a call that has none yet (a guest's issue, an
+    anonymous analytics batch): the key is then unique among those calls.
+    """
+
+    player = models.ForeignKey(
+        Player, null=True, blank=True, on_delete=models.CASCADE, related_name="+"
+    )
     kind = models.CharField(max_length=20)
     key = models.CharField(max_length=64)
     digest = models.CharField(max_length=64)
@@ -441,7 +447,16 @@ class Intent(UUIDModel, TimestampedModel):
 
     class Meta:
         constraints: ClassVar[list[Any]] = [
-            models.UniqueConstraint(fields=["player", "kind", "key"], name="karni_game_intent_one")
+            models.UniqueConstraint(
+                fields=["player", "kind", "key"],
+                condition=Q(player__isnull=False),
+                name="karni_game_intent_one",
+            ),
+            models.UniqueConstraint(
+                fields=["kind", "key"],
+                condition=Q(player__isnull=True),
+                name="karni_game_intent_anonymous",
+            ),
         ]
 
     class AdminMeta:

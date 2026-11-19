@@ -102,6 +102,10 @@ class HandleSerializer(serializers.Serializer):
     handle = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
 
 
+class GuestSerializer(HandleSerializer):
+    intent = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
+
+
 class UpgradeSerializer(serializers.Serializer):
     guest_token = serializers.CharField(max_length=200, required=False, default="")
 
@@ -224,16 +228,20 @@ class GuestView(GameView):
     def throttle_ident(self, request: Request, scope: str) -> str | None:
         return None  # per client address: a guest has no player yet
 
-    @extend_schema(request=HandleSerializer, responses={201: PlayerSerializer})
+    @extend_schema(request=GuestSerializer, responses={201: PlayerSerializer})
     def post(self, request: Request) -> Response:
         if not preferences.value("game.allow_guests", True):
             raise game_error(
                 "GAME005", "Guest play is off for this project: sign in to play.", status=403
             )
-        body = HandleSerializer(data=request.data)
+        body = GuestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        issued = players.issue_guest(body.validated_data["handle"])
-        return Response({"token": issued.token, "player": player_data(issued.player)}, status=201)
+        data = body.validated_data
+        issued = players.issue_guest(data["handle"], intent=data["intent"])
+        answer = {"token": issued.token, "player": player_data(issued.player)}
+        if issued.replayed:
+            return Response({**answer, "replayed": True}, status=200)
+        return Response(answer, status=201)
 
 
 class MeView(GameView):

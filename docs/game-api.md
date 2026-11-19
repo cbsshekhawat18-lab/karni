@@ -117,8 +117,8 @@ have the project's own limits only (`anon` and `user`).
 
 ## Retries: `intent`
 
-A write that changes a score, a wallet or progress takes an optional
-`intent`: a string of 8 to 64 letters, digits, `_` or `-` that the client
+A write that makes a guest, changes a score, a wallet or progress, or sends
+analytics takes an optional `intent`: a string of 8 to 64 letters, digits, `_` or `-` that the client
 makes once per action (a UUID is fine) and sends again on every retry of that
 action. The first request does the work. A retry with the same `intent` and
 the same body does nothing again and answers the first answer, with
@@ -133,8 +133,14 @@ for `KARNI_GAME_INTENT_DAYS` (7).
 Issues a guest: a person with no account, its player and a token. No
 sign-in. Limited by `guest`. Refused with `GAME005` when guest play is off.
 
-Request (optional): `{"handle": "Swift Fox"}`. Without one the server names
-the guest (`Player 4821`).
+Request (optional): `{"handle": "Swift Fox", "intent": "boot-6f1c..."}`.
+Without a handle the server names the guest (`Player 4821`).
+
+`intent` makes a lost answer safe to retry: a retry within an hour with the
+same `intent` and handle answers `200` with the same player, `"replayed":
+true` and a new token (the server never keeps a token, so the lost one stops
+working). The same `intent` with another handle, or after an hour, is
+`409 GAME033`.
 
 `201`:
 
