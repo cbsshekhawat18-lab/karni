@@ -512,7 +512,7 @@ navigation:
 | Entry | Means |
 |---|---|
 | `- <page>` | the page whose key in `pages` is `<page>` (`Product`, `shop.Product`, `home`, `shop.reports`) |
-| `- <family page>` | a page of Karni and its contracts, not listed in `pages`: `home`, `account` and `search` always, `orders`, `cart` and `checkout` with the commerce module, `settings` with `features.preferences`, `people` with `features.people` (experimental) |
+| `- <family page>` | a page of Karni and its contracts, not listed in `pages`: `home`, `signin`, `account` and `search` always, `orders`, `cart` and `checkout` with the commerce module, `settings` with `features.preferences`, `people` with `features.people` (labelled Customers in a project whose only part sells), `inbox` with `features.notify` (experimental) |
 | `- <page>: {label, icon, requires}` | the page, with its label, icon or requirement replaced |
 | `- <label>: [entries]` | a group: a label that names no page, and its entries |
 | `- <label>: {items, icon, requires}` | a group with an icon or a requirement |
@@ -536,6 +536,22 @@ entries does, else `authenticated`. Labels come from the page: `Products` for
 | [C640](errors.md#c640) | an entry names a page `pages` does not have, or an entity without a list page |
 | [C641](errors.md#c641) | an entry that is not valid: a page listed twice, a group without entries, an icon that is not a name |
 | [C642](errors.md#c642) | a `requires` that is not valid, or names an entity the spec does not have |
+
+**Named menus** (experimental). A project with a public side has more than
+one menu: the back office's sidebar, the site's header and a signed-in
+person's own links. A mapping of a menu's name to a list writes each one
+([named menus](navigation.md#named-menus-experimental)):
+
+```yaml
+navigation:
+  app: [orders, Product, {Catalog: [Category, Tag]}]       # the sidebar
+  public: [{shop.catalogue: {label: Products, requires: public}}]   # the site's header
+  account: [{orders: {label: Your orders}}]                  # the person's own menu
+```
+
+A list is the `app` menu alone. Each menu's entries are written as above, and
+a page may show once in each menu. In a project of several parts the menus
+merge menu by menu ([the family](family.md)).
 
 `karni plan` shows the menu in the pages area as the setting it writes,
 `+ KARNI_NAVIGATION: Home /, Catalog (Products /products, Categories /categories)`,

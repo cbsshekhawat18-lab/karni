@@ -528,7 +528,40 @@ apply codemods and list the manual steps. This file is the human summary.
   (`karni_commerce.messages.CHANNELS`): the buyer's confirmation and balance to pay, and the
   staff's new order. A person turns either off for themselves, and `KARNI_NOTIFY_CHANNELS =
   ["email"]` keeps the inbox out.
-
+- **Added (experimental): the family screens.** @karni/ui gains the screens a project of parts
+  shares: `FamilyLayout` (the storefront's frame for `area: "store"` routes, the back office with
+  the app menu, the search box, the inbox bell and the account menu for the rest, the home and
+  `area: "family"` routes per audience), `FamilyHome` (each staff role's tiles from every part,
+  the public home a part registers with `registerPublicHome`, and an empty state that says what
+  to install), `PeoplePage` and `PersonPage` (`/people`, `/people/<id>`: a column and a figure
+  per person fact, a tab per part with `registerPersonTab`, addresses and organisations, Merge
+  and Erase for who holds the explicit grants), `Timeline` (paging, a filter by kind,
+  `registerTimelineKind`, the change history beside it), `InboxBell`, `InboxPage` and
+  `EmailChoices`, `SearchPage` (results part by part, keyboard first), `MyAddresses`,
+  `SignUpForm` (a "New account" tab on `SignInPage`), `registerFamily`, `useAudience`,
+  `useBusiness` and `useSiteName`. `GlobalSearch` groups its hits by part and links to every
+  result (`allResultsHref`). @karni/commerce-ui gains `registerLineRenderer` (a kind's lines on
+  the cart, checkout and both order pages), `FamilyOrdersPage`, `FamilyOrderPage`,
+  `PersonOrders` (the person page's Orders tab), `register()` and `registerCommercePaths`, and
+  the staff's order page links the buyer to their person page.
+- **Added (experimental): `karni build` writes the family pages, the layout and the home.** In a
+  project of parts, `frontend/src/karni/` holds the sign-in, account, search, inbox, settings,
+  people, cart, checkout and order pages whose provider the project holds, registered in
+  `routes.tsx`'s Karni block, and one layout and one home. The scaffold's `layout.tsx` and
+  `pages/home.tsx` become re-exports of them while they are what `karni new` wrote. `parts.ts`
+  registers the family's sections and karni-commerce's before each part. The people list is
+  "Customers" in a project whose only part sells. A part ships none of these: the shop recipe's
+  thin page files, layout and home are gone, its storefront is the public home and its
+  customers are `/people`. `customer` gets `people.address: own` with the people contract.
+- **Added (experimental): named menus.** `KARNI_NAVIGATION` may be a mapping of named menus
+  (`{"app": [...], "public": [...], "account": [...]}`), `GET /api/navigation/?menu=` answers one
+  (a name the project does not declare answers no entries), `useNavigation({ menu })` reads one,
+  and `karni check` compares every menu. `navigation:` in karni.yaml takes the same mapping, and
+  `karni recipes add` merges menus menu by menu. The shop's storefront header is its `public`
+  menu, and the CRM and booking recipes list their pages in the app menu.
+- **Added (experimental): what the family screens need from the API.** `GET /api/search/` names
+  each group's `part` and `part_label`, `GET /api/people/<id>/` answers `can` (`merge`, `erase`),
+  and `GET /api/orders/?person=<id>` lists one person's orders.
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

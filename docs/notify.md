@@ -277,9 +277,10 @@ before the part drops it. karni-commerce's migration 0008 does this.
 
 ## What it does not do
 
-- It renders no page. The bell in the layout, the `/inbox` page and a
-  person's email switches on their account page are built on this API in
-  @karni/ui.
+- It renders no page. The bell in the layout (`InboxBell`), the `/inbox`
+  page (`InboxPage`) and a person's own switches on their account page
+  (`EmailChoices`) are built on this API in @karni/ui, and `karni build`
+  writes them into a project of parts ([the family](family.md)).
 - It sends no text messages and no push notifications: the channels are an
   email and the inbox.
 - It does not group messages into a digest.

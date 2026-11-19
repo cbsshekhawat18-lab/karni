@@ -262,6 +262,8 @@ not edited by hand. A wrong one can be deleted.
 
 ## What it does not do
 
-- It draws nothing. A frontend reads `GET /api/timeline/`.
-- It does not show a record's change history next to its entries.
+- The API draws nothing. @karni/ui's `<Timeline>` reads it (a page at a
+  time, a filter by kind) and shows a record's change history in a tab
+  beside it, for a viewer who may read that history. The person page uses it.
+- The API does not mix the change history into the entries.
 - It does not edit an entry after it is written.

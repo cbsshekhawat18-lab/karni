@@ -28,11 +28,15 @@ The shop is a part of the [family](../family.md): it can share a project with
 the CRM, booking and the other recipes (`karni new "Studio" --recipe shop
 --recipe crm`, or `karni recipes add shop` in a built project). Its pages
 live under `/shop`: the storefront at `/shop` and `/shop/catalogue`, and the
-back office's own screens at `/shop/products`, `/shop/customers` and the
+back office's own screens at `/shop/products`, `/shop/reports` and the
 others below. The cart, checkout and orders (`/cart`, `/checkout`,
-`/orders`) are karni-commerce's pages, and the account, sign-in and Settings
-pages (`/account`, `/signin`, `/settings`) are Karni's: every part in the
-project shares them. Its roles are `admin` and `customer` (the family's) and
+`/orders`) are karni-commerce's pages, and the account, sign-in, Settings,
+inbox, search and customers pages (`/account`, `/signin`, `/settings`,
+`/inbox`, `/search`, `/people`) are Karni's: `karni build` writes them, with
+the one layout and home of the project, and every part in the project shares
+them ([the family](../family.md#the-pages-layout-and-home-the-build-writes)).
+The shop's storefront is the public home: what `/` shows to visitors and
+customers. Its roles are `admin` and `customer` (the family's) and
 `shop-manager` and `shop-staff`. Its settings are a section of the
 [preferences contract](../preferences.md), and the connection
 `shop.parcel_timeline` (on by default, switched in Settings, Connections)
@@ -121,8 +125,11 @@ writes each parcel sent or delivered on its order's timeline.
   and the way to send it. The totals (the discount, the shipping, the tax)
   show before the order is placed. The server prices it and holds the stock
   for two days, and the customer gets the link to pay.
-- `/shop/customers` lists who bought, how often and for how much, and each
-  customer's page their orders and addresses.
+- `/people` lists the customers (labelled Customers while the shop is the
+  only part, People with others): who bought, how often and for how much,
+  sorted and filtered on those figures. A customer's page has their orders,
+  addresses and organisations, their timeline (orders paid, parcels sent)
+  with the change history beside it, and Merge and Erase for who may.
 - `/reviews` lists the reviews, newest first, with the ones waiting for
   approval counted on the home page. A review's page approves or rejects
   it.
