@@ -24,6 +24,8 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+from datetime import datetime, timedelta
+
 from django.db import IntegrityError, router, transaction
 from django.db.models import Q, QuerySet
 from django.utils import timezone
@@ -108,7 +110,28 @@ def entry(rank: int, best: Best, player: Player | None) -> dict[str, Any]:
     }
 
 
-def _check_run(board: Board, run: dict[str, Any] | None) -> None:
+#: How far ahead of the server's clock a played_at may be (two clocks never agree).
+AHEAD = timedelta(seconds=60)
+
+
+def played_time(played_at: datetime | None) -> datetime:
+    """When the score was played: ``played_at`` inside ``KARNI_GAME_PLAYED_AT_WINDOW``, else
+    ``GAME036``. Without one, now."""
+    now = timezone.now()
+    if played_at is None:
+        return now
+    window = int(conf.get("KARNI_GAME_PLAYED_AT_WINDOW"))
+    if played_at > now + AHEAD or played_at < now - timedelta(seconds=window):
+        raise game_error(
+            "GAME036",
+            f"played_at {played_at.isoformat()} is outside the {window} seconds the server "
+            "trusts. Send the score without it, or sooner.",
+            window=window,
+        )
+    return played_at
+
+
+def _check_run(board: Board, run: dict[str, Any] | None, day: Any) -> None:
     if run is None:
         if board.requires_run:
             raise game_error(
@@ -120,11 +143,12 @@ def _check_run(board: Board, run: dict[str, Any] | None) -> None:
     if size > limit:
         raise game_error("GAME014", f"The run is {size} bytes, and a run may be {limit}.")
     if board.daily_seed:
-        today = seed_of(board.game, clock.today(board.game))
-        if str(run.get("seed", "")) != str(today):
+        seed = seed_of(board.game, day)
+        if str(run.get("seed", "")) != str(seed):
             raise game_error(
                 "GAME014",
-                f"Board {board.key} is a daily board: a run uses today's seed (GET daily/).",
+                f"Board {board.key} is a daily board: a run uses the seed of the day it was "
+                "played (GET daily/).",
             )
 
 
@@ -163,12 +187,16 @@ def _offer_period(score: Score, period: str) -> bool:
             period=period,
             period_start=start,
             value=score.value,
-            achieved_at=score.created_at,
+            achieved_at=score.played_at or score.created_at,
             score=score,
         )
         return True
     if board.better(score.value, row.value):
-        row.value, row.achieved_at, row.score = score.value, score.created_at, score
+        row.value, row.achieved_at, row.score = (
+            score.value,
+            score.played_at or score.created_at,
+            score,
+        )
         row.save(update_fields=["value", "achieved_at", "score", "updated_at"])
         return True
     return False
@@ -230,8 +258,13 @@ def submit(
     run: dict[str, Any] | None = None,
     *,
     source: str = "client",
+    played_at: datetime | None = None,
 ) -> Submitted:
-    """Check and store a score. Accepted, it may be the player's new best."""
+    """Check and store a score. Accepted, it may be the player's new best.
+
+    ``played_at`` (the client's, for a score played offline) is trusted inside
+    ``KARNI_GAME_PLAYED_AT_WINDOW``: the score is on the boards of that day and week.
+    """
     if player.is_banned:
         raise game_error(
             "GAME029", "This player is banned from the boards: no score counts.", status=403
@@ -246,8 +279,10 @@ def submit(
             "GAME013",
             f"{value} is above the highest score board {board.key} takes ({board.max_value}).",
         )
+    when = played_time(played_at)
+    day = clock.today(board.game, when)
     if source == "client":
-        _check_run(board, run)
+        _check_run(board, run, day)
     verdict = _verdict(board, value, run) if source == "client" else "accept"
     if verdict == "reject":
         raise game_error("GAME014", f"The run does not check out on board {board.key}.")
@@ -257,7 +292,8 @@ def submit(
             player=player,
             value=value,
             status="flagged" if verdict == "flag" else "accepted",
-            day=clock.today(board.game),
+            day=day,
+            played_at=when,
             run=run if board.keep_runs else None,
             source=source,
         )

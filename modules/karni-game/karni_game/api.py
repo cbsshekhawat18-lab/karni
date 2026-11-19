@@ -401,6 +401,7 @@ class ScoreSerializer(serializers.Serializer):
     value = serializers.IntegerField(min_value=-(2**62), max_value=2**62)
     intent = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
     run = RunSerializer(required=False, allow_null=True, default=None)
+    played_at = serializers.DateTimeField(required=False, allow_null=True, default=None)
 
 
 def _period(request: Request, board: Board) -> str:
@@ -447,14 +448,17 @@ class ScoresView(BoardsMixin):
         data = body.validated_data
         run = dict(data["run"]) if data["run"] else None
 
+        played_at = data["played_at"]
+
         def work() -> tuple[int, dict[str, Any]]:
-            return 201, scores.submit(player, target, data["value"], run).as_dict()
+            found = scores.submit(player, target, data["value"], run, played_at=played_at)
+            return 201, found.as_dict()
 
         status, answer, replayed = intents.once(
             player,
             f"score:{target.pk}",
             data["intent"],
-            {"value": data["value"], "run": run},
+            {"value": data["value"], "run": run, "played_at": played_at},
             work,
         )
         if replayed:

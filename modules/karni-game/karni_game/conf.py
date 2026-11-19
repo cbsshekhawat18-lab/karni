@@ -59,6 +59,10 @@ DEFAULTS: dict[str, Any] = {
     "KARNI_GAME_INTENT_DAYS": env.int("KARNI_GAME_INTENT_DAYS", default=7),
     # The largest save any game may allow, in bytes (a game's max_save_bytes stays below it).
     "KARNI_GAME_MAX_SAVE_BYTES": env.int("KARNI_GAME_MAX_SAVE_BYTES", default=1024 * 1024),
+    # How far back a score's played_at (when it was played, offline) is trusted, in seconds.
+    # A score played before midnight and sent after lands on the board of the day it was
+    # played. Older is GAME036. A played_at more than a minute ahead of the server is too.
+    "KARNI_GAME_PLAYED_AT_WINDOW": env.int("KARNI_GAME_PLAYED_AT_WINDOW", default=86400),
     # The largest run record (seed, input log, meta) a score may carry, in bytes.
     "KARNI_GAME_MAX_RUN_BYTES": env.int("KARNI_GAME_MAX_RUN_BYTES", default=256 * 1024),
     # The class that merges two players (an upgrade, or two people merged):

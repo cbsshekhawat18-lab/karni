@@ -3911,6 +3911,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Read index in the answer: it is the row. Send the player's id from the token, and the keys of the game's boards and match rewards.
 
+<a id="game036"></a>
+
+### GAME036: A score's played_at is outside the window the server trusts
+
+*exception* · from `karni_game.scores.played_time (HTTP 400)`
+
+**Why Karni objects.** A score played offline names when it was played, so it lands on that day's and week's boards and a daily board takes that day's seed. The device's clock is trusted only that far back (KARNI_GAME_PLAYED_AT_WINDOW) and a minute ahead, so a changed clock cannot reach an old or a future board.
+
+**Fix.** Send queued scores sooner, send this one without played_at (it counts now), or widen KARNI_GAME_PLAYED_AT_WINDOW.
+
 ## IMP (`IMP`)
 
 <a id="imp001"></a>

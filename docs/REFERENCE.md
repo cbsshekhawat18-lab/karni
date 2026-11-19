@@ -2128,6 +2128,7 @@ class Lead(BaseModel):
 | `KARNI_GAME_AD_INTENT_SECONDS` | `KARNI_GAME_AD_INTENT_SECONDS` | `3600` | How long an ad reward's intent token (POST rewards/&lt;key&gt;/intent/) is valid, in seconds. |
 | `KARNI_GAME_INTENT_DAYS` | `KARNI_GAME_INTENT_DAYS` | `7` | How many days a write's intent (the retry key) is kept. |
 | `KARNI_GAME_MAX_SAVE_BYTES` | `KARNI_GAME_MAX_SAVE_BYTES` | `1024 * 1024` | The largest save any game may allow, in bytes (a game's max_save_bytes stays below it). |
+| `KARNI_GAME_PLAYED_AT_WINDOW` | `KARNI_GAME_PLAYED_AT_WINDOW` | `86400` | How far back a score's played_at (when it was played, offline) is trusted, in seconds. A score played before midnight and sent after lands on the board of the day it was played. Older is GAME036. A played_at more than a minute ahead of the server is too. |
 | `KARNI_GAME_MAX_RUN_BYTES` | `KARNI_GAME_MAX_RUN_BYTES` | `256 * 1024` | The largest run record (seed, input log, meta) a score may carry, in bytes. |
 | `KARNI_GAME_MERGER` | `KARNI_GAME_MERGER` | `"karni_game.merge.Merger"` | The class that merges two players (an upgrade, or two people merged): a subclass of karni_game.merge.Merger. |
 | `KARNI_GAME_DAILY_SEED` | `KARNI_GAME_DAILY_SEED` | `"karni_game.daily.daily_seed"` | The function that gives a game's seed of a day: seed(game, day) -&gt; int. |
@@ -2908,6 +2909,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`GAME032`](errors.md#game032) | exception | A game hook is registered wrongly |
 | [`GAME033`](errors.md#game033) | exception | The intent was used already with another request |
 | [`GAME035`](errors.md#game035) | exception | A match report names what the game does not have |
+| [`GAME036`](errors.md#game036) | exception | A score's played_at is outside the window the server trusts |
 | [`IMP001`](errors.md#imp001) | api | Impersonation needs the explicit impersonate permission |
 | [`IMP002`](errors.md#imp002) | api | The target holds something the impersonator does not |
 | [`IMP003`](errors.md#imp003) | api | A reason is required to impersonate |

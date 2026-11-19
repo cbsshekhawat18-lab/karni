@@ -176,7 +176,10 @@ counts, the server checks:
 3. the run is there when the board has `requires_run`, it is smaller than
    `KARNI_GAME_MAX_RUN_BYTES`, and on a daily board its seed is the day's
    (`GAME014`).
-4. the project's run check for the board, when it has one, accepts it.
+4. a `played_at` (a score played offline, sent later) is inside
+   `KARNI_GAME_PLAYED_AT_WINDOW` (`GAME036`): the score is then on the boards
+   of the day and week it was played, and a daily board takes that day's seed.
+5. the project's run check for the board, when it has one, accepts it.
 
 A score better than `review_beyond`, or one a run check flags, is stored as
 `flagged`: it counts on no board until a moderator accepts it. A run (the seed
@@ -397,6 +400,7 @@ neither karni-game nor `@karni/game`.
 | `KARNI_GAME_INTENT_DAYS` | `7` | How long a write's retry key is kept (the task `karni_game.tasks.prune_intents`). |
 | `KARNI_GAME_MAX_SAVE_BYTES` | `1048576` | The largest save any game may allow. |
 | `KARNI_GAME_MAX_RUN_BYTES` | `262144` | The largest run record a score may carry. |
+| `KARNI_GAME_PLAYED_AT_WINDOW` | `86400` | How far back a score's `played_at` is trusted, in seconds. |
 | `KARNI_GAME_MERGER` | `karni_game.merge.Merger` | The class with the merge rules of two players. |
 | `KARNI_GAME_DAILY_SEED` | `karni_game.daily.daily_seed` | The function that gives a game's seed of a day. |
 | `KARNI_GAME_AUTODISCOVER` | `True` | Import each app's `game.py` at startup. |

@@ -368,4 +368,16 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         fix="Read index in the answer: it is the row. Send the player's id from the token, "
         "and the keys of the game's boards and match rewards.",
     ),
+    ErrorCode(
+        code="GAME036",
+        title="A score's played_at is outside the window the server trusts",
+        kind="exception",
+        source=f"{_SOURCE}.scores.played_time (HTTP 400)",
+        why="A score played offline names when it was played, so it lands on that day's and "
+        "week's boards and a daily board takes that day's seed. The device's clock is trusted "
+        "only that far back (KARNI_GAME_PLAYED_AT_WINDOW) and a minute ahead, so a changed "
+        "clock cannot reach an old or a future board.",
+        fix="Send queued scores sooner, send this one without played_at (it counts now), or "
+        "widen KARNI_GAME_PLAYED_AT_WINDOW.",
+    ),
 )

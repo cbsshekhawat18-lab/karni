@@ -351,7 +351,10 @@ class Score(BaseModel):
     player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="scores")
     value = models.BigIntegerField()
     status = models.CharField(max_length=10, choices=SCORE_STATUSES, default="accepted")
-    day = models.DateField(help_text="The game's day the score was sent on.")
+    day = models.DateField(help_text="The game's day the score was played on.")
+    played_at = models.DateTimeField(
+        null=True, blank=True, help_text="When it was played: the client's, inside the window."
+    )
     run = models.JSONField(null=True, blank=True, help_text="seed, inputs, duration_ms, meta")
     source = models.CharField(max_length=10, default="client", help_text="client or match")
     reviewed_at = models.DateTimeField(null=True, blank=True)
@@ -379,6 +382,7 @@ class Score(BaseModel):
             "value",
             "status",
             "day",
+            "played_at",
             "run",
             "source",
             "reviewed_at",

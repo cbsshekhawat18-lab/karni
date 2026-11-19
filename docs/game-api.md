@@ -93,6 +93,7 @@ A `404` without `code` is a path that does not exist.
 | `GAME031` | 400 | The item is sold for real money, through the cart of karni-commerce, not for currency. |
 | `GAME033` | 409 | The `intent` was used already with another body. |
 | `GAME035` | 400 | A results report names a player, a board or a reward the game does not have. The body has `index`, the row. |
+| `GAME036` | 400 | A score's `played_at` is older than `KARNI_GAME_PLAYED_AT_WINDOW` or more than a minute ahead of the server. The body has `window` (seconds). |
 
 ## Rate limits
 
@@ -282,14 +283,21 @@ Request:
 {
   "value": 1200,
   "intent": "3f8c2a90-run-17",
+  "played_at": "2026-11-18T23:58:10Z",
   "run": {"seed": "20261119", "inputs": [[0, "jump"], [412, "left"]], "duration_ms": 52000, "build": "1.4.0", "meta": {"level": "cave"}}
 }
 ```
 
 `run` is optional unless the board has `requires_run`. It is kept for staff
 to review when the board keeps runs: the seed and the input log let a
-deterministic game replay the run. On a board with `daily_seed`, a run's
-`seed` must be today's (`GET daily/`). Limited by `score`.
+deterministic game replay the run. Limited by `score`.
+
+`played_at` is optional: when the score was played, for a score played offline
+and sent later. The server trusts it inside `KARNI_GAME_PLAYED_AT_WINDOW`
+(86400 seconds by default) and up to a minute ahead of its clock (`GAME036`
+outside). The score is then on the daily and weekly boards of that day, ties
+go by it, and on a board with `daily_seed` the run's `seed` must be that day's
+(`GET daily/` on that day). Without it the score is played now.
 
 `201` (`200` and `"replayed": true` for a retried `intent`):
 
@@ -305,7 +313,7 @@ deterministic game replay the run. On a board with `daily_seed`, a run's
 board's `review_above`, or the project's run check said so), counts on no
 board until staff accept it, and `best` does not include it.
 
-Errors: `GAME012`, `GAME013`, `GAME014`, `GAME029`, `GAME033`, `GAME015`.
+Errors: `GAME012`, `GAME013`, `GAME014`, `GAME029`, `GAME033`, `GAME036`, `GAME015`.
 
 ### `GET <game>/boards/<board>/?period=all&limit=10`
 

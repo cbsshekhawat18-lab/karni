@@ -283,3 +283,40 @@ def test_old_intents_are_pruned(guest: Guest, board: Board) -> None:
     send(guest, 2, intent="run-0004-abc")
     assert prune_intents() == 1
     assert list(Intent.objects.values_list("key", flat=True)) == ["run-0004-abc"]
+
+
+def test_a_score_played_before_midnight_lands_on_that_days_board(guest: Guest, game: Game) -> None:
+    Board.objects.create(
+        game=game, key="today", title="Today", periods=["daily", "weekly"], daily_seed=True
+    )
+    path = "/api/game/block-hopper/boards/today/"
+    yesterday = clock.today(game) - timedelta(days=1)
+    played = timezone.now() - timedelta(hours=20)
+    played_day = clock.today(game, played)
+    seed = daily_seed(game, played_day)
+    answer = guest.post(
+        f"{path}scores/",
+        {"value": 70, "played_at": played.isoformat(), "run": {"seed": str(seed)}},
+    )
+    assert answer.status_code == 201, answer.content
+    score = Score.objects.get()
+    assert (score.day, score.played_at) == (played_day, played)
+    best = Best.objects.get(player_id=guest.player_id, period="daily")
+    assert (best.period_start, best.achieved_at) == (played_day, played)
+    if played_day == yesterday:  # the run's seed is the day it was played, not today's
+        assert guest.get(path, period="daily").data["entries"] == []
+
+
+def test_a_played_at_outside_the_window_is_game036(guest: Guest, board: Board) -> None:
+    old = timezone.now() - timedelta(days=2)
+    answer = send(guest, 10, played_at=old.isoformat())
+    assert (answer.status_code, answer.data["code"], answer.data["window"]) == (
+        400,
+        "GAME036",
+        86400,
+    )
+    ahead = timezone.now() + timedelta(minutes=5)
+    assert send(guest, 10, played_at=ahead.isoformat()).data["code"] == "GAME036"
+    with override_settings(KARNI_GAME_PLAYED_AT_WINDOW=3 * 86400):
+        assert send(guest, 10, played_at=old.isoformat()).status_code == 201
+    assert not Score.objects.filter(day__gt=clock.today(board.game)).exists()
