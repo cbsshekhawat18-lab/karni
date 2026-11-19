@@ -1,8 +1,10 @@
 /**
  * Checkout: who orders (signed in, or a guest with an email), the billing
- * address, a shipping address when a line is sent somewhere, a note, then the
- * payment at the provider. The server works out the totals and holds the
- * items: nothing here is a price the server trusts.
+ * address, a shipping address when a line is sent somewhere, how to pay when
+ * the order allows a deposit (`PayChoice`), a note, then the payment at the
+ * provider. A free order is placed with no payment and opens its page. The
+ * server works out the totals and holds the items: nothing here is a price the
+ * server trusts.
  */
 import {
   Button,
@@ -25,9 +27,10 @@ import { AddressFields, EMPTY_ADDRESS } from "./AddressFields";
 import { CART_QUERY_KEY, cartHeaders, problemOf, useCart, useQuote } from "./cart";
 import { CouponBox } from "./CouponBox";
 import { Money } from "./Money";
+import { PayChoice, payWayFor } from "./PayChoice";
 import { CommerceLink, useCommerce } from "./routes";
 import { LineDetails, Totals } from "./Totals";
-import type { Address, Placed, Quote } from "./types";
+import type { Address, PayWay, Placed, Quote } from "./types";
 
 export interface CheckoutPageProps {
   title?: string;
@@ -160,6 +163,7 @@ export function CheckoutPage({
   const [shipping, setShipping] = useState<Address>(EMPTY_ADDRESS);
   const [note, setNote] = useState("");
   const [method, setMethod] = useState<string | null>(null);
+  const [payWay, setPayWay] = useState<PayWay>("full");
   const [accepted, setAccepted] = useState(false);
   const ids = { email: useId(), note: useId(), elsewhere: useId(), terms: useId() };
   const needsTerms = cart.data?.checkout?.accept_terms === true;
@@ -181,6 +185,7 @@ export function CheckoutPage({
           shipping: elsewhere ? shipping : null,
           note,
           shipping_method: method ?? quote.data?.method ?? "",
+          pay: payWayFor(quote.data, payWay),
           ...(needsTerms ? { accept_terms: accepted } : {}),
         },
       }),
@@ -204,6 +209,12 @@ export function CheckoutPage({
   const options = cart.data.checkout;
   const mustSignIn = options?.guest_checkout === false && !signedIn;
   const termsError = fieldMessage(order.error, "accept_terms");
+  const free = quote.data !== undefined && Number(quote.data.total) === 0;
+  const placeLabel = free
+    ? "Place the order"
+    : payWayFor(quote.data, payWay) === "deposit"
+      ? "Place the order and pay the deposit"
+      : "Place the order and pay";
   const place = mustSignIn ? (
     <p>
       <CommerceLink to={paths.signIn(paths.checkout)} className="font-medium underline">
@@ -251,7 +262,7 @@ export function CheckoutPage({
         className="w-full"
         onClick={() => order.mutate()}
       >
-        Place the order and pay
+        {placeLabel}
       </PendingButton>
       {needsTerms ? null : (
         <p className="text-sm text-muted-foreground">
@@ -331,6 +342,7 @@ export function CheckoutPage({
             onChoose={setMethod}
             waiting={quote.isFetching}
           />
+          <PayChoice quote={quote.data} chosen={payWay} onChoose={setPayWay} />
           <div className="flex flex-col gap-1">
             <Label htmlFor={ids.note}>A note for the order (optional)</Label>
             <Textarea

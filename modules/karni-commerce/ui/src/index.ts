@@ -40,8 +40,19 @@ export { CustomerPage, CustomersPage } from "./Customers";
 export type { CustomerPageProps, CustomersPageProps } from "./Customers";
 export { NewOrderPage } from "./NewOrderPage";
 export type { NewOrderPageProps } from "./NewOrderPage";
-export { orderPanels, registerOrderPanel, unregisterOrderPanel } from "./panels";
-export type { OrderPanel, OrderPanelProps } from "./panels";
+export {
+  appliedOrderPanels,
+  buyerOrderPanels,
+  orderPanels,
+  panelRegistry,
+  registerBuyerOrderPanel,
+  registerOrderPanel,
+  unregisterBuyerOrderPanel,
+  unregisterOrderPanel,
+} from "./panels";
+export type { AppliedPanel, OrderPanel, OrderPanelProps, PanelRegistry } from "./panels";
+export { PayChoice, payWayFor } from "./PayChoice";
+export type { PayChoiceProps } from "./PayChoice";
 export { StaffOrderPage, staffOrderKey } from "./StaffOrderPage";
 export type { StaffOrderPageProps } from "./StaffOrderPage";
 export { StaffOrders } from "./StaffOrders";
@@ -92,9 +103,11 @@ export type {
   OrderRefundRow,
   OrderRow,
   OrderStatus,
+  PayWay,
   Placed,
   Quote,
   SellableItem,
+  SellableKind,
   ShippingOption,
   StaffOrder,
   TaxLine,

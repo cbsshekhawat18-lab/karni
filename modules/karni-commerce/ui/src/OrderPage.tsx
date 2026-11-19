@@ -1,9 +1,12 @@
 /**
  * One order as its buyer reads it: where the money stands, what the seller
- * reports about the goods, the lines and totals and the addresses. A guest
+ * reports about the goods, the panels the selling parts add
+ * (`registerBuyerOrderPanel`), the lines and totals and the addresses. A guest
  * reads it with the key from checkout (the link in the confirmation email).
- * Right after paying (`justPaid`) it checks every 2 seconds until the
- * payment is confirmed.
+ * Its Pay button asks for what is due now: the deposit, the balance of an
+ * order whose deposit is paid (the balance link), or the whole total. Right
+ * after paying (`justPaid`) it checks every 2 seconds until the payment is
+ * confirmed.
  */
 import {
   Button,
@@ -18,6 +21,7 @@ import { problemOf } from "./cart";
 import { ItemImage } from "./ItemImage";
 import { Money } from "./Money";
 import { LineDetails, OrderTotals } from "./Totals";
+import { buyerOrderPanels } from "./panels";
 import { CommerceLink, useCommerce } from "./routes";
 import { ORDER_STATUS_WORDS } from "./status";
 import type { Address, Order } from "./types";
@@ -81,7 +85,34 @@ function Banner({ order, justPaid }: { order: Order; justPaid: boolean }) {
       </p>
     );
   }
+  if (order.status === "part_paid") {
+    return (
+      <p role="status" className="rounded-md bg-muted p-4">
+        Thank you. Your deposit is paid and the order is yours.{" "}
+        <Money value={order.balance} currency={order.currency} /> is still to pay.
+      </p>
+    );
+  }
   return null;
+}
+
+function payLabel(order: Order) {
+  if (order.status === "failed") return "Try the payment again";
+  if (order.status === "part_paid") {
+    return (
+      <>
+        Pay the balance (<Money value={order.balance} currency={order.currency} />)
+      </>
+    );
+  }
+  if (Number(order.deposit) > 0 && Number(order.amount_paid) === 0) {
+    return (
+      <>
+        Pay the deposit (<Money value={order.due_now} currency={order.currency} />)
+      </>
+    );
+  }
+  return "Pay now";
 }
 
 export function OrderPage({
@@ -142,7 +173,7 @@ export function OrderPage({
             </p>
           ) : null}
           <PendingButton pending={pay.isPending} onClick={() => pay.mutate()}>
-            {data.status === "failed" ? "Try the payment again" : "Pay now"}
+            {payLabel(data)}
           </PendingButton>
         </div>
       ) : null}
@@ -180,6 +211,16 @@ export function OrderPage({
           ))}
         </section>
       ) : null}
+      {buyerOrderPanels(data).map(({ panel, lines: theirs }) => (
+        <section
+          key={panel.key}
+          aria-label={panel.title}
+          className="space-y-2 rounded-lg border border-border p-4"
+        >
+          <h2 className="font-semibold">{panel.title}</h2>
+          <panel.component order={data} lines={theirs} refresh={() => void order.refetch()} />
+        </section>
+      ))}
       <ul className="divide-y divide-border rounded-lg border border-border">
         {data.lines.map((line) => (
           <li key={line.id} className="flex items-center gap-4 p-3">
@@ -206,6 +247,22 @@ export function OrderPage({
       </ul>
       <OrderTotals order={data} className="ml-auto max-w-xs" />
       <dl className="ml-auto max-w-xs space-y-1">
+        {Number(data.amount_paid) > 0 && Number(data.balance) > 0 ? (
+          <>
+            <div className="flex justify-between text-sm">
+              <dt>Paid</dt>
+              <dd>
+                <Money value={data.amount_paid} currency={data.currency} />
+              </dd>
+            </div>
+            <div className="flex justify-between text-sm font-medium">
+              <dt>Still to pay</dt>
+              <dd>
+                <Money value={data.balance} currency={data.currency} />
+              </dd>
+            </div>
+          </>
+        ) : null}
         {Number(data.amount_refunded) > 0 ? (
           <div className="flex justify-between text-sm">
             <dt>Refunded</dt>
