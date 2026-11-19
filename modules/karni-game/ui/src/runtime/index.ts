@@ -6,3 +6,5 @@ export { pauseOnHidden } from "./pause";
 export type { Pausable, PauseOnHiddenOptions } from "./pause";
 export { createView } from "./view";
 export type { Fit, View, ViewOptions, ViewState } from "./view";
+export { createPauseReasons } from "./reasons";
+export type { PauseReasons } from "./reasons";

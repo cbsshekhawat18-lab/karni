@@ -1,5 +1,6 @@
 import { createEmitter } from "../internal/emitter";
 import { createFixedStep, type FixedStep } from "./fixed-step";
+import { createPauseReasons } from "./reasons";
 
 export interface LoopOptions {
   /**
@@ -67,7 +68,6 @@ export function createLoop(options: LoopOptions): Loop {
     options.requestFrame ?? ((callback: (time: number) => void) => requestAnimationFrame(callback));
   const cancelFrame = options.cancelFrame ?? ((handle: number) => cancelAnimationFrame(handle));
   const events = createEmitter<LoopEvents>();
-  const reasons = new Set<string>();
   let reported = 0;
   const onError =
     options.onError ??
@@ -77,6 +77,15 @@ export function createLoop(options: LoopOptions): Loop {
       console.error(`[karni-game] the ${phase} of a frame threw`, error);
     });
 
+  const pauses = createPauseReasons(
+    (reason) => events.emit("pause", reason),
+    () => {
+      // The time spent paused is not game time.
+      last = null;
+      fixed?.reset();
+      events.emit("resume", undefined);
+    },
+  );
   let handle: number | null = null;
   let last: number | null = null;
   let frame = 0;
@@ -92,7 +101,7 @@ export function createLoop(options: LoopOptions): Loop {
   const tick = (dt: number): void => {
     frame += 1;
     const clamped = Math.min(Math.max(0, Number.isFinite(dt) ? dt : 0), maxDt);
-    const paused = reasons.size > 0;
+    const paused = pauses.paused;
     let alpha = 0;
     if (!paused) {
       safely("update", () => {
@@ -129,20 +138,14 @@ export function createLoop(options: LoopOptions): Loop {
       return handle !== null;
     },
     get paused() {
-      return reasons.size > 0;
+      return pauses.paused;
     },
-    pauseReasons: reasons,
+    pauseReasons: pauses.reasons,
     pause(reason = "game") {
-      const was = reasons.size > 0;
-      reasons.add(reason);
-      if (!was) events.emit("pause", reason);
+      pauses.pause(reason);
     },
     resume(reason = "game") {
-      if (!reasons.delete(reason) || reasons.size > 0) return;
-      // The time spent paused is not game time.
-      last = null;
-      fixed?.reset();
-      events.emit("resume", undefined);
+      pauses.resume(reason);
     },
     get frame() {
       return frame;
