@@ -101,16 +101,18 @@ function payLabel(order: Order) {
   if (order.status === "failed") return "Try the payment again";
   if (order.status === "part_paid") {
     return (
-      <>
+      // One text node: the button spaces its children apart.
+      <span>
         Pay the balance (<Money value={order.balance} currency={order.currency} />)
-      </>
+      </span>
     );
   }
   if (Number(order.deposit) > 0 && Number(order.amount_paid) === 0) {
     return (
-      <>
+      // One text node: the button spaces its children apart.
+      <span>
         Pay the deposit (<Money value={order.due_now} currency={order.currency} />)
-      </>
+      </span>
     );
   }
   return "Pay now";
