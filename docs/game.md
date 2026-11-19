@@ -400,9 +400,9 @@ writes an app project (the API, the admin, the React app) with:
   (`createPortal(createPortalAdapter())` from `virtual:karni-game/portal`) and
   passes the app's own API client to `createGameClient` as its transport
   (`server: {transport: karniClient, signedIn, path: "/api/game/"}`), so a
-  signed-in player's calls carry the account;
+  signed-in player's calls carry the account.
 - `karniGame()` from `@karni/game/vite` in `frontend/vite.config.ts`, for the
-  per-portal builds, and its types in `frontend/src/vite-env.d.ts`;
+  per-portal builds, and its types in `frontend/src/vite-env.d.ts`.
 - `CORS_ALLOW_HEADERS` with `x-player-token`, for a portal build on another
   origin (`KARNI_GAME_CORS_ORIGINS`).
 
