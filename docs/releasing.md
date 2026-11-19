@@ -33,6 +33,7 @@ One tag publishes every package at the same version:
 | `@karni/ai-ui` | npm | `modules/karni-ai/ui` |
 | `@karni/storage-ui` | npm | `modules/karni-storage/ui` |
 | `@karni/commerce-ui` | npm | `modules/karni-commerce/ui` |
+| `@karni/game` | npm | `modules/karni-game/ui` |
 
 The table is `PYTHON_PACKAGES` and `NPM_PACKAGES` in
 `.github/ci/check_release.py`, the one list of what a tag publishes. A test

@@ -1083,7 +1083,7 @@ jobs:
         run: $COMPOSE down -v --remove-orphans
 
   # ---------------------------------------------------------------------------
-  # UI: packages/karni-ui (@karni/ui), modules/karni-payments/ui, modules/karni-approvals/ui, modules/karni-impersonation/ui, modules/karni-charts/ui, modules/karni-reports/ui, modules/karni-ai/ui, modules/karni-storage/ui and modules/karni-commerce/ui.
+  # UI: packages/karni-ui (@karni/ui), modules/karni-payments/ui, modules/karni-approvals/ui, modules/karni-impersonation/ui, modules/karni-charts/ui, modules/karni-reports/ui, modules/karni-ai/ui, modules/karni-storage/ui, modules/karni-commerce/ui and modules/karni-game/ui (@karni/game).
   # ---------------------------------------------------------------------------
   ui:
     name: UI (Node 24)
@@ -1105,6 +1105,7 @@ jobs:
             modules/karni-ai/ui/package-lock.json
             modules/karni-storage/ui/package-lock.json
             modules/karni-commerce/ui/package-lock.json
+            modules/karni-game/ui/package-lock.json
 
       # karni-ui first: payments-ui resolves @karni/ui from its source, which
       # imports packages/karni-ui/node_modules.
@@ -1134,6 +1135,15 @@ jobs:
       - name: Accessibility (axe over every story, both themes)
         working-directory: packages/karni-ui
         run: node scripts/a11y-stories.mjs storybook-static
+
+      # Block Hopper, the example game, built and played in headless Chromium:
+      # scripted keys and a tap, no console error, a boot with corrupt storage,
+      # and the single-file build from file://.
+      - name: Games in a browser (@karni/game smoke harness)
+        working-directory: modules/karni-game/ui
+        run: |
+          npx playwright install chromium
+          npm run test:smoke
 
       - name: Smoke-test package entry points (require + import)
         run: |
@@ -1168,3 +1178,8 @@ jobs:
           cd ../../karni-commerce/ui
           node -e "const m = require('@karni/commerce-ui'); if (!m.CartPage) throw new Error('CJS commerce-ui missing exports')"
           node --input-type=module -e "const m = await import('@karni/commerce-ui'); if (!m.CartPage) throw new Error('ESM commerce-ui missing exports')"
+          # @karni/game is ESM only: every entry point imports, and the command runs.
+          cd ../../karni-game/ui
+          node --input-type=module -e "const m = await import('@karni/game'); if (!m.createPortal || !m.createGameClient) throw new Error('ESM @karni/game missing exports')"
+          node --input-type=module -e "for (const p of ['build', 'vite', 'phaser', 'pixi', 'smoke', 'portals/poki', 'portals/none']) await import('@karni/game/' + p)"
+          node bin/karni-game.js portals

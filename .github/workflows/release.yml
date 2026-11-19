@@ -188,7 +188,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p npm-dist
-          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui modules/karni-reports/ui modules/karni-ai/ui modules/karni-storage/ui modules/karni-commerce/ui; do
+          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui modules/karni-reports/ui modules/karni-ai/ui modules/karni-storage/ui modules/karni-commerce/ui modules/karni-game/ui; do
             (cd "$d" && npm ci && npm run build && npm publish --dry-run --access public)
             npm pack --pack-destination npm-dist "./$d"
           done
@@ -350,7 +350,7 @@ jobs:
           else
             echo "No NPM_TOKEN secret: npm trusted publishing."
           fi
-          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui modules/karni-reports/ui modules/karni-ai/ui modules/karni-storage/ui modules/karni-commerce/ui; do
+          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui modules/karni-reports/ui modules/karni-ai/ui modules/karni-storage/ui modules/karni-commerce/ui modules/karni-game/ui; do
             (cd "$d" && npm ci && npm run build && npm publish --provenance --access public)
           done
 
