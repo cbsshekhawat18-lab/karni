@@ -76,8 +76,12 @@ CONTRACT_ACTIONS: Final[dict[str, tuple[str, ...]]] = {"people": ("merge", "eras
 #: at people and writes its entries from family events.
 CONTRACT_NEEDS: Final[dict[str, tuple[str, ...]]] = {"timeline": ("people", "events")}
 #: Experimental. The contracts a module needs, switched on when karni.yaml lists it:
-#: every order of karni-commerce names its person (karni.COM001 without it).
-MODULE_CONTRACTS: Final[dict[str, tuple[str, ...]]] = {"commerce": ("people",)}
+#: every order of karni-commerce names its person (karni.COM001 without it), and every player
+#: of karni-game is a person (karni.GAME001 without it).
+MODULE_CONTRACTS: Final[dict[str, tuple[str, ...]]] = {
+    "commerce": ("people",),
+    "game": ("people",),
+}
 
 
 def contracts_with_needs(names: Iterable[str]) -> list[str]:

@@ -507,6 +507,25 @@ apps:
     assert render.settings_block(report.spec, 100).count("KARNI_PEOPLE = True") == 1
 
 
+def test_listing_the_game_module_turns_the_people_contract_on() -> None:
+    from karni_cli.builder import render
+
+    text = """\
+version: 1
+app: {name: Arcade}
+modules:
+  game: {}
+apps:
+  arcade:
+    entities:
+      Note: {fields: {name: str}}
+"""
+    report = check(text)
+    assert report.ok and report.spec is not None, report.issues
+    assert "people" in render.features_on(report.spec)
+    assert render.settings_block(report.spec, 100).count("KARNI_PEOPLE = True") == 1
+
+
 def test_a_contract_target_must_be_one_of_its_models() -> None:
     found = codes(PEOPLE_SPEC.replace("fk:people.Person", "fk:people.Contact"))
     assert [code for code, _line in found] == ["C230"]
