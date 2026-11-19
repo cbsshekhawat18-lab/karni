@@ -272,3 +272,14 @@ def test_a_guest_who_signs_in_keeps_the_better_best(
     entries = account.get(BOARD).data["entries"]
     assert [(row["value"], row["me"]) for row in entries] == [(700, True)]
     assert Score.objects.filter(player__person__user__isnull=False).count() == 2
+
+
+def test_old_intents_are_pruned(guest: Guest, board: Board) -> None:
+    from karni_game.models import Intent
+    from karni_game.tasks import prune_intents
+
+    send(guest, 1, intent="run-0003-abc")
+    Intent.objects.update(created_at=timezone.now() - timedelta(days=8))
+    send(guest, 2, intent="run-0004-abc")
+    assert prune_intents() == 1
+    assert list(Intent.objects.values_list("key", flat=True)) == ["run-0004-abc"]

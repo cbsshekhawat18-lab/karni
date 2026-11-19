@@ -528,6 +528,29 @@ apply codemods and list the manual steps. This file is the human summary.
   (`karni_commerce.messages.CHANNELS`): the buyer's confirmation and balance to pay, and the
   staff's new order. A person turns either off for themselves, and `KARNI_NOTIFY_CHANNELS =
   ["email"]` keeps the inbox out.
+- **Added (experimental): karni-game, the server side of a game.** A new module
+  (`pip install karni-game && karni add game`, `path("api/game/", include("karni_game.urls"))`)
+  for any game a project hosts: a player on the people contract (a guest with a token the server
+  issues, upgraded to an account with `POST upgrade/`, which merges the guest's person and keeps
+  their saves, scores, balances, items, progress and streak), versioned cloud saves with a server
+  version counter (409 with the server's copy on a stale write), a size limit and save migrations
+  per game, leaderboards per game with all-time, daily and weekly periods on the game's clock,
+  plausible ranges, runs kept for review, run checks and flagged runs staff accept or reject, a
+  soft-currency wallet with a ledger (a row lock and a conditional update, never below 0, capped),
+  rewards declared on the server (daily, ad with a signed portal callback, mission, achievement,
+  match, staff), cosmetics and a shop, real-money items as the karni-commerce kind `game_item`
+  when it is installed, daily content (a daily seed per game, streaks with a grace rule, a daily
+  board), achievements and missions from the counters a game reports, remote config and feature
+  flags in one boot call, analytics checked against the game's schema and published as
+  `game.analytics.tracked`, rate limits and retry keys (`intent`) on every write, the admin and
+  the roles `game-manager` and `game-moderator`, and a contract for a realtime server of the
+  project's own (an HS256 player token, a signed results report). The HTTP contract is
+  docs/game-api.md, the guide docs/game.md. Codes `GAME001` to `GAME035`.
+- **Added (experimental): `karni new --kind game`.** A project with karni-game wired, a `games`
+  app for the game's server hooks, the game declared in `content/game.yaml` (`karni load`), and a
+  public `/game` page that hosts the game on `@karni/game`. The kind is recorded in
+  pyproject.toml and stated by `karni context` and the agent files. A project made without it
+  names neither karni-game nor `@karni/game`.
 
 ## 0.5.1 (2026-11-12)
 

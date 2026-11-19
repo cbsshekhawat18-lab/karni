@@ -24,6 +24,7 @@ One tag publishes every package at the same version:
 | `karni-ai` | PyPI | `modules/karni-ai` |
 | `karni-storage` | PyPI | `modules/karni-storage` |
 | `karni-commerce` | PyPI | `modules/karni-commerce` |
+| `karni-game` | PyPI | `modules/karni-game` |
 | `@karni/ui` | npm | `packages/karni-ui` |
 | `@karni/payments-ui` | npm | `modules/karni-payments/ui` |
 | `@karni/approvals-ui` | npm | `modules/karni-approvals/ui` |
@@ -143,7 +144,7 @@ accepts the same version twice.
 
   | Field | Value |
   |---|---|
-  | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site`, `karni-charts`, `karni-reports`, `karni-ai`, `karni-storage`, `karni-commerce` (one publisher each) |
+  | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site`, `karni-charts`, `karni-reports`, `karni-ai`, `karni-storage`, `karni-commerce`, `karni-game` (one publisher each) |
   | Owner | `cbsshekhawat18-lab` |
   | Repository name | `karni` |
   | Workflow name | `release.yml` |

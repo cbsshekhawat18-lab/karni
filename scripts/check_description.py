@@ -85,6 +85,10 @@ PREFIXES = {
         "Commerce for Karni: one cart, checkout, orders, order numbers, payment settlement and "
         "refunds for anything a project sells, through a sellable adapter per kind."
     ),
+    "modules/karni-game/pyproject.toml": (
+        "Games for Karni: guest players, cloud saves, leaderboards, a soft-currency wallet, "
+        "daily content and achievements, with a realtime server contract."
+    ),
     "packages/karni-ui/package.json": (
         "React components for Karni: schema-driven tables, forms, detail views and auth."
     ),

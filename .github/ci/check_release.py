@@ -50,6 +50,7 @@ PYTHON_PACKAGES = (
     "modules/karni-ai",
     "modules/karni-storage",
     "modules/karni-commerce",
+    "modules/karni-game",
 )
 MODULES = (
     "modules/karni-payments",
@@ -61,6 +62,7 @@ MODULES = (
     "modules/karni-ai",
     "modules/karni-storage",
     "modules/karni-commerce",
+    "modules/karni-game",
 )
 #: The modules that ship a React package in ui/.
 UI_MODULES = (

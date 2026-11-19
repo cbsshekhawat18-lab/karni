@@ -69,7 +69,7 @@ A `404` without `code` is a path that does not exist.
 | `GAME004` | 403 | The account's email is not verified, so no person is linked to it yet. |
 | `GAME005` | 403 | Guest play is off for the project (Settings, Games: `allow_guests`). |
 | `GAME006` | 404 | No active game has this slug. |
-| `GAME007` | 413 | The save is larger than the game allows (`max_save_bytes`). |
+| `GAME007` | 413 | The save is larger than the game allows (`max_save_bytes`). The body has `size` and `max_bytes`. |
 | `GAME008` | 409 | A stale save: `base_version` is not the server's version. The body has `save`, the server's copy. |
 | `GAME009` | 400 | The save's `schema_version` is newer than the game's, or below 1. |
 | `GAME011` | 400 | The slot name is not one (`[a-z0-9][a-z0-9_-]{0,39}`), or the player has `max_slots` slots already. |
@@ -85,8 +85,9 @@ A `404` without `code` is a path that does not exist.
 | `GAME021` | 404 | No item has this key in the game's shop, or it is not for sale. |
 | `GAME022` | 409 | The player owns the item already. |
 | `GAME023` | 409 | The player does not own the item. |
-| `GAME024` | 400 | A progress event names a counter no achievement or mission of the game counts, or its amount is not 1 to `max_progress_step`. |
-| `GAME025` | 400 | Every analytics event of the request was refused (some refused: 202, each named in `rejected`). |
+| `GAME024` | 400 | A progress event names a counter no achievement or mission of the game counts, or its amount is not 1 to `max_progress_step`. The body has `index`, the event. |
+| `GAME025` | 400 | Every analytics event of the request was refused (some refused: 202, each named in `rejected`). The body has `rejected`. |
+| `GAME027` | 503 | Multiplayer is not set up: the project has no `KARNI_GAME_SERVER_SECRET`. |
 | `GAME028` | 409 | The upgrade cannot happen: no guest token, the token is not a guest's, or the two people cannot be merged. |
 | `GAME029` | 403 | The player is banned from the boards: no score, no realtime token. |
 | `GAME031` | 400 | The item is sold for real money, through the cart of karni-commerce, not for currency. |
@@ -182,7 +183,9 @@ account's, with everything on it. When it has one, the two are merged:
     "scores": 14,
     "currencies": {"coins": 120},
     "items": 2,
-    "unlocks": 3
+    "unlocks": 3,
+    "streaks": 1,
+    "claims": 4
   }
 }
 ```
@@ -260,7 +263,8 @@ client read, or `0` for a slot it believes is empty. Limited by `save`.
 
 ### `DELETE <game>/saves/<slot>/?base_version=4`
 
-`204`. `409 GAME008` when `base_version` is given and is not the server's.
+`204`, or `404` (no code) when the slot is empty. `409 GAME008` when
+`base_version` is given and is not the server's.
 
 ## Scores and boards
 
@@ -481,11 +485,12 @@ At most 20 events. Limited by `progress`.
 }
 ```
 
-Errors: `GAME024`, `GAME033`.
+An unlocked achievement and a completed mission carry `granted` when they
+have a reward. Errors: `GAME024`, `GAME033`.
 
 ### `GET <game>/achievements/`
 
-`200`: `{"results": [{"key": "collector", "title": "Collector", "description": "...", "counter": "coins_collected", "goal": 300, "progress": 312, "unlocked_at": "..."}]}`.
+`200`: `{"results": [{"key": "collector", "title": "Collector", "description": "...", "hidden": false, "counter": "coins_collected", "goal": 300, "progress": 312, "unlocked_at": "..."}]}`.
 A hidden achievement shows its title and description only once unlocked.
 
 ### `GET <game>/missions/`
@@ -559,7 +564,8 @@ Request:
 
 Each row may name a board and a value (a score, checked against the board's
 range, never held back by the per-player limit) and rewards of kind
-`match`. The report is recorded whole or not at all.
+`match`. The report is recorded whole or not at all. A banned player's score
+is left out, and the rest of their row is recorded.
 
 `200`: `{"match": "arena-2026-11-19-0042", "recorded": 2, "duplicate": false}`.
 The same `match` again records nothing and answers `"duplicate": true`.
@@ -597,3 +603,4 @@ flagged runs) are declared by the module.
 | `/api/game-wallets/` | the balances. `POST {id}/grant/` with `{"amount": 50, "note": "..."}` (negative takes away) |
 | `/api/game-ledger/` | every ledger entry |
 | `/api/game-saves/` | the saves, read only |
+| `/api/game-streaks/`, `/api/game-unlocks/`, `/api/game-matches/` | the daily streaks, who unlocked what, the matches reported, read only |

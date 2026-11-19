@@ -2114,6 +2114,26 @@ class Lead(BaseModel):
 | `KARNI_COMMERCE_SELLABLES` |  | `{}` | Sellable adapters by kind, as dotted paths, over the ones the apps register in their sellables.py: {"product": "myapp.sellables.MyProduct"}. |
 | `KARNI_COMMERCE_FIRST_INVOICE` | `KARNI_COMMERCE_FIRST_INVOICE` | `1001` | The first invoice's number (karni_commerce.services.issue_invoice). |
 
+### Module: karni-game
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_GAME_RATES` |  | `` | The rates of the limited writes, by scope (docs/game-api.md, Rate limits). A project's dict is laid over these: {"score": "10/min"} changes one, None turns one off. |
+| `KARNI_GAME_TOKEN_HEADER` | `KARNI_GAME_TOKEN_HEADER` | `"X-Player-Token"` | The header a guest sends its token in. |
+| `KARNI_GAME_SERVER_SECRET` | `KARNI_GAME_SERVER_SECRET` | `""` | The secret a realtime server of the project's own shares: it signs the player tokens Karni issues (HS256) and the results the server reports. Blank: no multiplayer (karni.GAME027 when a client asks for a token). |
+| `KARNI_GAME_TOKEN_ISSUER` | `KARNI_GAME_TOKEN_ISSUER` | `"karni-game"` | The iss claim of the player token. |
+| `KARNI_GAME_TOKEN_SECONDS` | `KARNI_GAME_TOKEN_SECONDS` | `300` | How long a player token for the realtime server lives, in seconds. |
+| `KARNI_GAME_PORTALS` |  | `{}` | Portals that call back when an ad was watched: {name: {"secret": "...", "verifier": "dotted.path.Verifier"}}. The verifier defaults to karni_game.signatures.HmacVerifier (X-Karni-Timestamp and X-Karni-Signature). |
+| `KARNI_GAME_SIGNATURE_TOLERANCE` | `KARNI_GAME_SIGNATURE_TOLERANCE` | `300` | How far a signed request's timestamp may be from the server's clock, in seconds. |
+| `KARNI_GAME_AD_INTENT_SECONDS` | `KARNI_GAME_AD_INTENT_SECONDS` | `3600` | How long an ad reward's intent token (POST rewards/&lt;key&gt;/intent/) is valid, in seconds. |
+| `KARNI_GAME_INTENT_DAYS` | `KARNI_GAME_INTENT_DAYS` | `7` | How many days a write's intent (the retry key) is kept. |
+| `KARNI_GAME_MAX_SAVE_BYTES` | `KARNI_GAME_MAX_SAVE_BYTES` | `1024 * 1024` | The largest save any game may allow, in bytes (a game's max_save_bytes stays below it). |
+| `KARNI_GAME_MAX_RUN_BYTES` | `KARNI_GAME_MAX_RUN_BYTES` | `256 * 1024` | The largest run record (seed, input log, meta) a score may carry, in bytes. |
+| `KARNI_GAME_MERGER` | `KARNI_GAME_MERGER` | `"karni_game.merge.Merger"` | The class that merges two players (an upgrade, or two people merged): a subclass of karni_game.merge.Merger. |
+| `KARNI_GAME_DAILY_SEED` | `KARNI_GAME_DAILY_SEED` | `"karni_game.daily.daily_seed"` | The function that gives a game's seed of a day: seed(game, day) -&gt; int. |
+| `KARNI_GAME_AUTODISCOVER` | `KARNI_GAME_AUTODISCOVER` | `True` | Import &lt;app&gt;/game.py of every installed app at startup (save migrations, run checks). |
+| `KARNI_GAME_ROLES` | `KARNI_GAME_ROLES` | `True` | Declare the roles game-manager and game-moderator (the karni.roles entry point). |
+
 ### Module: karni-impersonation
 
 | Setting | Env | Default | What it controls |
@@ -2484,6 +2504,7 @@ Optional apps for anything with a RAM cost or a separate service. `karni add <na
 | [`karni-approvals`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-approvals) | experimental | `karni add approvals` | `@karni/approvals-ui` | A second person approves high-value changes before they are written, with a queue, an API and an audit trail. |
 | [`karni-charts`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-charts) | experimental | `karni add charts` | `@karni/charts-ui` | Charts defined and previewed in the admin, served through each resource's aggregate action under its access. |
 | [`karni-commerce`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-commerce) | experimental | `karni add commerce` | `@karni/commerce-ui` | One cart, checkout, orders, order numbers, payment settlement and refunds for anything a project sells, through a sellable adapter per kind. |
+| [`karni-game`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-game) | experimental | `karni add game` | — | Guest players, cloud saves, leaderboards, a soft-currency wallet, daily content and achievements, with a realtime server contract. |
 | [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail. |
 | [`karni-payments`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-payments) | stable | `karni add payments` | `@karni/payments-ui` | Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI. |
 | [`karni-reports`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-reports) | experimental | `karni add reports` | `@karni/reports-ui` | A row printed to PDF from an HTML template in the background, cached by template and data, served only to users who may see the row. |
@@ -2853,6 +2874,40 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`COM002`](errors.md#com002) | test | A sellable adapter does not keep the commerce contract |
 | [`COM003`](errors.md#com003) | exception | A sellable's hold is not a positive number of minutes |
 | [`COM004`](errors.md#com004) | exception | A sellable adapter is registered wrongly |
+| [`GAME001`](errors.md#game001) | check | karni-game is installed without the people contract |
+| [`GAME002`](errors.md#game002) | exception | The request names no player |
+| [`GAME003`](errors.md#game003) | exception | The guest token is unknown or revoked |
+| [`GAME004`](errors.md#game004) | exception | The account has no person yet: its email is not verified |
+| [`GAME005`](errors.md#game005) | exception | Guest play is off |
+| [`GAME006`](errors.md#game006) | exception | No active game has this slug |
+| [`GAME007`](errors.md#game007) | exception | The save is larger than the game allows |
+| [`GAME008`](errors.md#game008) | exception | The save changed on the server: a stale write |
+| [`GAME009`](errors.md#game009) | exception | The save's schema version is not one the server knows |
+| [`GAME010`](errors.md#game010) | exception | A save migration is missing |
+| [`GAME011`](errors.md#game011) | exception | Not a slot name, or no free slot |
+| [`GAME012`](errors.md#game012) | exception | No active board has this key in the game |
+| [`GAME013`](errors.md#game013) | exception | The score is outside the board's plausible range |
+| [`GAME014`](errors.md#game014) | exception | The run is missing, too large, or does not check out |
+| [`GAME015`](errors.md#game015) | exception | Too many requests of this kind |
+| [`GAME016`](errors.md#game016) | exception | Not enough of the currency |
+| [`GAME017`](errors.md#game017) | exception | The reward is not available now |
+| [`GAME018`](errors.md#game018) | exception | The client does not claim this reward |
+| [`GAME019`](errors.md#game019) | exception | A server-to-server request does not verify |
+| [`GAME020`](errors.md#game020) | exception | The intent token is not valid |
+| [`GAME021`](errors.md#game021) | exception | No such item for sale |
+| [`GAME022`](errors.md#game022) | exception | The player owns the item already |
+| [`GAME023`](errors.md#game023) | exception | The player does not own the item |
+| [`GAME024`](errors.md#game024) | exception | A progress event the game does not count |
+| [`GAME025`](errors.md#game025) | exception | An analytics event the game does not declare |
+| [`GAME026`](errors.md#game026) | exception | A game's settings do not validate |
+| [`GAME027`](errors.md#game027) | exception | Multiplayer is not set up |
+| [`GAME028`](errors.md#game028) | exception | The guest cannot be upgraded to this account |
+| [`GAME029`](errors.md#game029) | exception | The player is banned from the boards |
+| [`GAME030`](errors.md#game030) | check | karni_game.urls is not included |
+| [`GAME031`](errors.md#game031) | exception | A real-money item is sold through the cart |
+| [`GAME032`](errors.md#game032) | exception | A game hook is registered wrongly |
+| [`GAME033`](errors.md#game033) | exception | The intent was used already with another request |
+| [`GAME035`](errors.md#game035) | exception | A match report names what the game does not have |
 | [`IMP001`](errors.md#imp001) | api | Impersonation needs the explicit impersonate permission |
 | [`IMP002`](errors.md#imp002) | api | The target holds something the impersonator does not |
 | [`IMP003`](errors.md#imp003) | api | A reason is required to impersonate |

@@ -223,6 +223,7 @@ The [benchmark report](benchmarks/tokens.md) has every figure with its range, th
 | [`karni-ai`](ai-extraction.md) | Rows for any resource read from text, a web page or a PDF by a language model, always through the import preview | `pip install "karni-ai[<provider>]" && karni add ai` |
 | [`karni-storage`](storage.md) | Files a row owns, in S3 or an S3-compatible service, served only to whoever may read the row | `pip install "karni-storage[images]" && karni add storage` |
 | [`karni-commerce`](commerce.md) | One cart, checkout and order path for anything a project sells: products, seats, bookings | `pip install karni-commerce && karni add commerce` |
+| [`karni-game`](game.md) | The server side of a game: guest players, cloud saves, leaderboards, a soft-currency wallet, daily content, achievements | `pip install karni-game && karni add game` |
 
 ## Quickstart
 

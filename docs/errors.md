@@ -3569,6 +3569,348 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Decorate a subclass of karni_commerce.sellables.Sellable with @register and set kind = "booking" (a short name, unique in the project).
 
+## GAME (`GAME`)
+
+<a id="game001"></a>
+
+### GAME001: karni-game is installed without the people contract
+
+*system check (error)* · from `karni_game.checks.people_installed (karni.GAME001)`
+
+**Why Karni objects.** A player is the game profile of a person (karni.people), so a guest who signs in keeps their progress and the person page, the merge and the erase see the player. Without karni.people the player table cannot be created.
+
+**Fix.** Set KARNI_PEOPLE = True above karni_settings(globals()) in config/settings.py (karni build writes it when karni.yaml lists the game module), then run migrate.
+
+<a id="game002"></a>
+
+### GAME002: The request names no player
+
+*exception* · from `karni_game.api (HTTP 401)`
+
+**Why Karni objects.** Every save, score, wallet and progress call belongs to one player, found from the request alone: a signed-in account, or a guest's token. No endpoint takes a player's id from the client, so another player's progress is never reachable.
+
+**Fix.** Sign in, or call POST /api/game/guest/ once and send its token in the X-Player-Token header (KARNI_GAME_TOKEN_HEADER).
+
+<a id="game003"></a>
+
+### GAME003: The guest token is unknown or revoked
+
+*exception* · from `karni_game.players.player_for_token (HTTP 401)`
+
+**Why Karni objects.** A guest token is issued once and kept as a hash. It is revoked when the guest is upgraded to an account (its progress is the account's then) and when staff revoke it.
+
+**Fix.** Drop the stored token. Sign in to the account it was upgraded to, or issue a new guest with POST /api/game/guest/.
+
+<a id="game004"></a>
+
+### GAME004: The account has no person yet: its email is not verified
+
+*exception* · from `karni_game.players.player_for_user (HTTP 403)`
+
+**Why Karni objects.** An account is linked to a person only once its email is verified (the people contract), so nobody takes over another person's progress by signing up with their address. A player belongs to a person.
+
+**Fix.** Verify the account's email (the verification link or a sign-in with an email code), then call again. Until then the game can keep playing as a guest.
+
+<a id="game005"></a>
+
+### GAME005: Guest play is off
+
+*exception* · from `karni_game.api.GuestView (HTTP 403)`
+
+**Why Karni objects.** The project's Settings, Games section has allow_guests off, so only signed-in accounts play.
+
+**Fix.** Sign in first, or turn allow_guests on (preferences game.allow_guests).
+
+<a id="game006"></a>
+
+### GAME006: No active game has this slug
+
+*exception* · from `karni_game.api (HTTP 404)`
+
+**Why Karni objects.** Each path under /api/game/&lt;game>/ names a Game row by its slug. A game that is not active answers as if it did not exist.
+
+**Fix.** Use the slug of a game in the admin (Karni games, Games), or turn it active. karni load puts a game declared in a content file in the database.
+
+<a id="game007"></a>
+
+### GAME007: The save is larger than the game allows
+
+*exception* · from `karni_game.saves.write (HTTP 413)`
+
+**Why Karni objects.** A save is read and written whole on every sync, so each game caps its size (max_save_bytes in its settings, at most KARNI_GAME_MAX_SAVE_BYTES).
+
+**Fix.** Keep less in the save (derive what can be derived), or raise the game's max_save_bytes in its settings.
+
+<a id="game008"></a>
+
+### GAME008: The save changed on the server: a stale write
+
+*exception* · from `karni_game.saves (HTTP 409)`
+
+**Why Karni objects.** Every write names the version it started from (base_version). Another device wrote since, so this write would lose that one's progress. The server's version counter decides, not a device's clock.
+
+**Fix.** Read the server's copy in the answer's save, choose or combine, and write again with base_version set to its version.
+
+<a id="game009"></a>
+
+### GAME009: The save's schema version is not one the server knows
+
+*exception* · from `karni_game.saves.migrate (HTTP 400)`
+
+**Why Karni objects.** schema_version is the shape of the save's data. The server migrates an older save up to the game's save_schema_version, and cannot read a newer one: the client is ahead of the server.
+
+**Fix.** Raise the game's save_schema_version (and register the migration to it) before shipping a client that writes the new shape.
+
+<a id="game010"></a>
+
+### GAME010: A save migration is missing
+
+*exception* · from `karni_game.saves.migrate`
+
+**Why Karni objects.** The game saves a newer schema than a stored save, and each step from one schema version to the next is a function the project registers. A missing step would hand the client data of a shape it does not read.
+
+**Fix.** Register the step in &lt;app>/game.py: @hooks.save_migration("&lt;game>", n) on a function that takes the data of version n and returns the data of n + 1.
+
+<a id="game011"></a>
+
+### GAME011: Not a slot name, or no free slot
+
+*exception* · from `karni_game.saves (HTTP 400)`
+
+**Why Karni objects.** A slot is named in the path (a lowercase letter or digit, then up to 39 more, _ or -), and each game keeps at most max_slots slots per player.
+
+**Fix.** Use a slot name such as main or slot-2, or write to a slot the player has.
+
+<a id="game012"></a>
+
+### GAME012: No active board has this key in the game
+
+*exception* · from `karni_game.scores.find_board (HTTP 404)`
+
+**Why Karni objects.** A score goes to one board of one game, named by its key in the path. A board that is not active answers as if it did not exist.
+
+**Fix.** Use the key of one of the game's boards (GET /api/game/&lt;game>/ lists them), or turn the board active in the admin.
+
+<a id="game013"></a>
+
+### GAME013: The score is outside the board's plausible range
+
+*exception* · from `karni_game.scores.submit (HTTP 400)`
+
+**Why Karni objects.** A client can send any number, so each board names the lowest and the highest score a real run can make (min_value, max_value), and refuses the rest.
+
+**Fix.** Send the score the run made. When real runs go beyond the range, widen the board's min_value or max_value.
+
+<a id="game014"></a>
+
+### GAME014: The run is missing, too large, or does not check out
+
+*exception* · from `karni_game.scores.submit (HTTP 400)`
+
+**Why Karni objects.** A board may ask every score for its run (the seed and the input log a deterministic game replays), a daily board for a run on the day's seed, and the project's run check may refuse a run.
+
+**Fix.** Send run: {seed, inputs, duration_ms} with the score, use today's seed (GET /api/game/&lt;game>/daily/) on a daily board, and keep the run under KARNI_GAME_MAX_RUN_BYTES.
+
+<a id="game015"></a>
+
+### GAME015: Too many requests of this kind
+
+*exception* · from `karni_game.throttling.PlayerRateThrottle (HTTP 429)`
+
+**Why Karni objects.** Writes are limited per player (KARNI_GAME_RATES), so a script cannot flood the boards, the wallet or the events.
+
+**Fix.** Wait retry_after seconds (the Retry-After header) and send it again, or raise the scope's rate in KARNI_GAME_RATES.
+
+<a id="game016"></a>
+
+### GAME016: Not enough of the currency
+
+*exception* · from `karni_game.wallet.change (HTTP 409)`
+
+**Why Karni objects.** A balance never goes below 0. The wallet row is locked and written with a conditional update, so two purchases at once never spend the same coins.
+
+**Fix.** Earn more first: the answer has balance and needed.
+
+<a id="game017"></a>
+
+### GAME017: The reward is not available now
+
+*exception* · from `karni_game.rewards (HTTP 409)`
+
+**Why Karni objects.** Each reward says how often a player may have it: once a day for a daily reward, per_day claims in one of the game's days, and cooldown seconds between two.
+
+**Fix.** Ask again at next_at (the answer has it), or raise the reward's per_day or lower its cooldown.
+
+<a id="game018"></a>
+
+### GAME018: The client does not claim this reward
+
+*exception* · from `karni_game.rewards (HTTP 403)`
+
+**Why Karni objects.** Only an ad reward without callback is claimed by the client. A daily reward comes with the check-in, a mission's and an achievement's with their progress, a match's with the realtime server's report, and an ad reward with callback only when the portal's server calls back, signed.
+
+**Fix.** Use the path the reward's kind has (docs/game-api.md, Rewards). For an ad reward with callback: POST rewards/&lt;key>/intent/ and hand the intent to the portal.
+
+<a id="game019"></a>
+
+### GAME019: A server-to-server request does not verify
+
+*exception* · from `karni_game.signatures.HmacVerifier (HTTP 403)`
+
+**Why Karni objects.** A portal's callback and a realtime server's report change balances and boards, so each is signed with a shared secret over its exact body, with a timestamp that stops a replay.
+
+**Fix.** Sign the raw body: X-Karni-Timestamp and X-Karni-Signature: sha256=&lt;HMAC-SHA256 of '&lt;timestamp>.' + body> with the secret in KARNI_GAME_PORTALS or KARNI_GAME_SERVER_SECRET, and keep the clocks within KARNI_GAME_SIGNATURE_TOLERANCE seconds.
+
+<a id="game020"></a>
+
+### GAME020: The intent token is not valid
+
+*exception* · from `karni_game.rewards.from_callback (HTTP 400)`
+
+**Why Karni objects.** An ad reward's callback names the player and the reward by the intent this server signed (POST rewards/&lt;key>/intent/), valid for KARNI_GAME_AD_INTENT_SECONDS.
+
+**Fix.** Hand the portal a fresh intent before each ad, and send it back unchanged.
+
+<a id="game021"></a>
+
+### GAME021: No such item for sale
+
+*exception* · from `karni_game.shop (HTTP 404)`
+
+**Why Karni objects.** The shop sells the game's active items that have a currency and a price.
+
+**Fix.** Use the key of an item GET shop/ lists with a price, or give the item a currency and a price in the admin.
+
+<a id="game022"></a>
+
+### GAME022: The player owns the item already
+
+*exception* · from `karni_game.shop (HTTP 409)`
+
+**Why Karni objects.** A cosmetic is owned once, so a second purchase would take currency for nothing.
+
+**Fix.** Equip it instead (POST items/&lt;item>/equip/).
+
+<a id="game023"></a>
+
+### GAME023: The player does not own the item
+
+*exception* · from `karni_game.shop (HTTP 409)`
+
+**Why Karni objects.** Only an item the player owns is worn.
+
+**Fix.** Buy it first (POST shop/&lt;item>/buy/), or earn it.
+
+<a id="game024"></a>
+
+### GAME024: A progress event the game does not count
+
+*exception* · from `karni_game.progress.report (HTTP 400)`
+
+**Why Karni objects.** Progress is counters the game reports, and the server unlocks from them. A counter no active achievement or mission counts, or an amount past the game's max_progress_step, would let a client invent progress or jump to a goal.
+
+**Fix.** Report the counters the game's achievements and missions name (GET achievements/ and missions/ list them), in amounts from 1 to max_progress_step. The answer's index names the event.
+
+<a id="game025"></a>
+
+### GAME025: An analytics event the game does not declare
+
+*exception* · from `karni_game.config.track (HTTP 400, or 202 with rejected)`
+
+**Why Karni objects.** Analytics events go through the family events to the project's own analytics, so each game declares the events it sends and their props (analytics in its settings). An undeclared event or prop, a wrong type or a long text is refused, so a client cannot fill the analytics with anything.
+
+**Fix.** Declare the event in the game's settings: analytics: {"level_done": {"level": "int"}}, and send at most 10 props of those types.
+
+<a id="game026"></a>
+
+### GAME026: A game's settings do not validate
+
+*exception* · from `karni_game.models.Game.clean (karni_game.settings.GameSettings)`
+
+**Why Karni objects.** A game's settings (its time zone, save limits, streak grace, analytics schema) are read on every call. A value the server cannot use is refused when it is saved, not when a player meets it.
+
+**Fix.** Read the message: it names each field and what it takes (docs/game.md, Game settings).
+
+<a id="game027"></a>
+
+### GAME027: Multiplayer is not set up
+
+*exception* · from `karni_game.multiplayer.secret (HTTP 503)`
+
+**Why Karni objects.** A realtime server verifies the player token and signs its reports with the secret it shares with the project. Without one, no token could be trusted.
+
+**Fix.** Set KARNI_GAME_SERVER_SECRET in the environment (a long random string) and give the same value to the realtime server.
+
+<a id="game028"></a>
+
+### GAME028: The guest cannot be upgraded to this account
+
+*exception* · from `karni_game.players.upgrade (HTTP 409)`
+
+**Why Karni objects.** An upgrade merges a guest's person into the account's person, and the guest's progress into the account's player. It needs a guest token, a guest (not an account already), and two people the people contract can merge.
+
+**Fix.** Send the guest's token in X-Player-Token (or guest_token) with a signed-in, verified account. The message names the reason a merge was refused.
+
+<a id="game029"></a>
+
+### GAME029: The player is banned from the boards
+
+*exception* · from `karni_game.scores.submit, karni_game.multiplayer (HTTP 403)`
+
+**Why Karni objects.** Staff banned the player (Game moderator, ban): their scores no longer count, they are on no board and get no realtime token. Their saves and wallet stay theirs.
+
+**Fix.** Staff unban the player in the admin or with POST /api/game-players/&lt;id>/unban/.
+
+<a id="game030"></a>
+
+### GAME030: karni_game.urls is not included
+
+*system check (error)* · from `karni_game.checks.run_checks`
+
+**Why Karni objects.** The game API (guest tokens, saves, scores, the wallet) is mounted by one include line. Without it the client's calls answer 404.
+
+**Fix.** Add path("api/game/", include("karni_game.urls")) to config/urls.py, before path("api/", include("karni.api.urls")).
+
+<a id="game031"></a>
+
+### GAME031: A real-money item is sold through the cart
+
+*exception* · from `karni_game.shop.buy (HTTP 400)`
+
+**Why Karni objects.** Real money goes through karni-commerce (the sellable kind game_item), with its checkout, payments and refunds. A soft currency never buys it.
+
+**Fix.** Add it to the cart: POST /api/carts/current/lines/ with kind game_item and the item's id, signed in. The item is the player's once the order is paid.
+
+<a id="game032"></a>
+
+### GAME032: A game hook is registered wrongly
+
+*exception* · from `karni_game.hooks (save_migration, run_check)`
+
+**Why Karni objects.** A save migration is one step from a schema version (a whole number from 1) to the next, and each game has one step per version and one run check per board, so the server knows which code runs.
+
+**Fix.** Register one function per step (@hooks.save_migration("&lt;game>", 1)) and per board (@hooks.run_check("&lt;game>", "&lt;board>")), or pass replace=True to swap one.
+
+<a id="game033"></a>
+
+### GAME033: The intent was used already with another request
+
+*exception* · from `karni_game.intents.once (HTTP 409)`
+
+**Why Karni objects.** An intent names one action, so a retry of a score, a claim or a purchase never counts twice. A second action under the same intent would be lost.
+
+**Fix.** Make a new intent (a UUID) for each new action, and send the same body when you retry one.
+
+<a id="game035"></a>
+
+### GAME035: A match report names what the game does not have
+
+*exception* · from `karni_game.multiplayer.report (HTTP 400)`
+
+**Why Karni objects.** A report is recorded whole or not at all, so each row must name a player the server knows (the token's sub), an active board of the game with a whole-number value, and active rewards of kind match.
+
+**Fix.** Read index in the answer: it is the row. Send the player's id from the token, and the keys of the game's boards and match rewards.
+
 ## IMP (`IMP`)
 
 <a id="imp001"></a>
@@ -4507,9 +4849,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni context, karni rules sync, karni add site (pyproject.toml [tool.karni] kind)`
 
-**Why Karni objects.** `karni new` records the project's kind in pyproject.toml: site, app or site+app. The agent files and `karni context` state it with its stack, so a value Karni cannot read stops them instead of guessing.
+**Why Karni objects.** `karni new` records the project's kind in pyproject.toml: site, app, site+app or game. The agent files and `karni context` state it with its stack, so a value Karni cannot read stops them instead of guessing.
 
-**Fix.** Set kind = "site", "app" or "site+app" under [tool.karni] in pyproject.toml (or remove the line, and Karni infers the kind from the project), then run `karni rules sync`.
+**Fix.** Set kind = "site", "app", "site+app" or "game" under [tool.karni] in pyproject.toml (or remove the line, and Karni infers the kind from the project), then run `karni rules sync`.
 
 <a id="c121"></a>
 

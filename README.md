@@ -260,6 +260,7 @@ A recipe is a ready `karni.yaml` plus the little domain code a spec cannot expre
 | [`karni-ai`](modules/karni-ai/README.md) | Rows for any resource read from text, a web page or a PDF by a language model, always through the import preview | `pip install "karni-ai[<provider>]" && karni add ai` |
 | [`karni-storage`](modules/karni-storage/README.md) | Files a row owns, in S3 or an S3-compatible service, served only to whoever may read the row | `pip install "karni-storage[images]" && karni add storage` |
 | [`karni-commerce`](modules/karni-commerce/README.md) | One cart, checkout and order path for anything a project sells: products, seats, bookings | `pip install karni-commerce && karni add commerce` |
+| [`karni-game`](modules/karni-game/README.md) | The server side of a game: guest players, cloud saves, leaderboards, a soft-currency wallet, daily content, achievements | `pip install karni-game && karni add game` |
 
 ## Quickstart
 

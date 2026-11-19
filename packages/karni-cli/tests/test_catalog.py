@@ -20,10 +20,10 @@ from karni_cli.spec.validate import validate_text
 
 from .conftest import REPO_ROOT
 
-#: Tokens the CATALOG block of karni context may take with Karni's 9 modules and 6 features
-#: (measured 385 by the four-characters rule, with karni-charts, karni-reports, karni-ai,
-#: karni-storage, karni-commerce and the user_grants line).
-CATALOG_TOKEN_BUDGET = 390
+#: Tokens the CATALOG block of karni context may take with Karni's 10 modules and 6 features
+#: (measured 408 by the four-characters rule, with karni-charts, karni-reports, karni-ai,
+#: karni-storage, karni-commerce, karni-game and the user_grants line).
+CATALOG_TOKEN_BUDGET = 412
 
 CHAT = """
 name = "chat"
@@ -111,6 +111,7 @@ def test_every_manifest_in_the_repo_is_valid() -> None:
         "approvals",
         "charts",
         "commerce",
+        "game",
         "impersonation",
         "payments",
         "reports",
@@ -474,7 +475,8 @@ def test_add_refuses_a_name_that_is_not_a_module(
     before = _snapshot(generated_project)
     refused = runner.invoke(app, ["add", "paymnets"])
     assert refused.exit_code == 1 and _code(refused) == "C840"
-    assert "Did you mean payments?" in str(refused.exception)
+    # The closest name first (karni-game's "games" is close too).
+    assert "Did you mean payments" in str(refused.exception)
     assert _snapshot(generated_project) == before  # nothing wired
     far = runner.invoke(app, ["add", "bogus"])
     assert _code(far) == "C840" and "karni modules list" in str(far.exception)

@@ -287,6 +287,26 @@ Assign them in `config/settings.py`. A module's README says more about each.
 | <a id="karni_commerce_sellables"></a>`KARNI_COMMERCE_SELLABLES` |  | `{}` | Sellable adapters by kind, as dotted paths, over the ones the apps register in their sellables.py: {"product": "myapp.sellables.MyProduct"}. |
 | <a id="karni_commerce_first_invoice"></a>`KARNI_COMMERCE_FIRST_INVOICE` | `KARNI_COMMERCE_FIRST_INVOICE` | `1001` | The first invoice's number (karni_commerce.services.issue_invoice). |
 
+### karni-game
+
+| Setting | Env | Default | What it does |
+|---|---|---|---|
+| <a id="karni_game_rates"></a>`KARNI_GAME_RATES` |  |  | The rates of the limited writes, by scope (docs/game-api.md, Rate limits). A project's dict is laid over these: {"score": "10/min"} changes one, None turns one off. |
+| <a id="karni_game_token_header"></a>`KARNI_GAME_TOKEN_HEADER` | `KARNI_GAME_TOKEN_HEADER` | `"X-Player-Token"` | The header a guest sends its token in. |
+| <a id="karni_game_server_secret"></a>`KARNI_GAME_SERVER_SECRET` | `KARNI_GAME_SERVER_SECRET` | `""` | The secret a realtime server of the project's own shares: it signs the player tokens Karni issues (HS256) and the results the server reports. Blank: no multiplayer (karni.GAME027 when a client asks for a token). |
+| <a id="karni_game_token_issuer"></a>`KARNI_GAME_TOKEN_ISSUER` | `KARNI_GAME_TOKEN_ISSUER` | `"karni-game"` | The iss claim of the player token. |
+| <a id="karni_game_token_seconds"></a>`KARNI_GAME_TOKEN_SECONDS` | `KARNI_GAME_TOKEN_SECONDS` | `300` | How long a player token for the realtime server lives, in seconds. |
+| <a id="karni_game_portals"></a>`KARNI_GAME_PORTALS` |  | `{}` | Portals that call back when an ad was watched: {name: {"secret": "...", "verifier": "dotted.path.Verifier"}}. The verifier defaults to karni_game.signatures.HmacVerifier (X-Karni-Timestamp and X-Karni-Signature). |
+| <a id="karni_game_signature_tolerance"></a>`KARNI_GAME_SIGNATURE_TOLERANCE` | `KARNI_GAME_SIGNATURE_TOLERANCE` | `300` | How far a signed request's timestamp may be from the server's clock, in seconds. |
+| <a id="karni_game_ad_intent_seconds"></a>`KARNI_GAME_AD_INTENT_SECONDS` | `KARNI_GAME_AD_INTENT_SECONDS` | `3600` | How long an ad reward's intent token (POST rewards/<key>/intent/) is valid, in seconds. |
+| <a id="karni_game_intent_days"></a>`KARNI_GAME_INTENT_DAYS` | `KARNI_GAME_INTENT_DAYS` | `7` | How many days a write's intent (the retry key) is kept. |
+| <a id="karni_game_max_save_bytes"></a>`KARNI_GAME_MAX_SAVE_BYTES` | `KARNI_GAME_MAX_SAVE_BYTES` | `1024 * 1024` | The largest save any game may allow, in bytes (a game's max_save_bytes stays below it). |
+| <a id="karni_game_max_run_bytes"></a>`KARNI_GAME_MAX_RUN_BYTES` | `KARNI_GAME_MAX_RUN_BYTES` | `256 * 1024` | The largest run record (seed, input log, meta) a score may carry, in bytes. |
+| <a id="karni_game_merger"></a>`KARNI_GAME_MERGER` | `KARNI_GAME_MERGER` | `"karni_game.merge.Merger"` | The class that merges two players (an upgrade, or two people merged): a subclass of karni_game.merge.Merger. |
+| <a id="karni_game_daily_seed"></a>`KARNI_GAME_DAILY_SEED` | `KARNI_GAME_DAILY_SEED` | `"karni_game.daily.daily_seed"` | The function that gives a game's seed of a day: seed(game, day) -> int. |
+| <a id="karni_game_autodiscover"></a>`KARNI_GAME_AUTODISCOVER` | `KARNI_GAME_AUTODISCOVER` | `True` | Import <app>/game.py of every installed app at startup (save migrations, run checks). |
+| <a id="karni_game_roles"></a>`KARNI_GAME_ROLES` | `KARNI_GAME_ROLES` | `True` | Declare the roles game-manager and game-moderator (the karni.roles entry point). |
+
 ### karni-impersonation
 
 | Setting | Env | Default | What it does |

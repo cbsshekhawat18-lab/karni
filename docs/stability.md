@@ -426,6 +426,11 @@ Stable since 0.4.1:
   cart and order endpoints and their answers, and everything in
   `@karni/commerce-ui`. `karni.mail` (`send_templated`, its `kind` and
   `KARNI_MAIL_DISABLED_KINDS`) is experimental too.
+- [The `karni-game` module](game.md): the whole of `karni_game` (the models,
+  the services, the hooks of `karni_game.hooks`, the family events `game.*`,
+  `karni_game.merge.Merger`, the signatures, the roles), the `KARNI_GAME_*`
+  settings, [the game API](game-api.md) and its answers, and the `game` kind of
+  `karni new`.
 - [API versions](api.md#api-versions): the `KARNI_API_VERSION`,
   `KARNI_API_VERSIONS` and `KARNI_API_UNVERSIONED` settings, `karni.api.versions`
   (with `api_urls`, `ApiVersionHeadersMiddleware` and `VersionedSchemaGenerator`),

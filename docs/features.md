@@ -66,7 +66,7 @@ Reference or Debugging sections.
 ## Modules
 
 - **[The module contract](modules.md)**: one command to add a module, one to remove it, and the catalog every module describes itself in.
-- **[PDF reports](reports.md)**, **[AI extraction](ai-extraction.md)**, **[protected files](storage.md)**, **[commerce](commerce.md)** and the [other modules](#every-module): each a separate package for anything with its own service or a real memory cost.
+- **[PDF reports](reports.md)**, **[AI extraction](ai-extraction.md)**, **[protected files](storage.md)**, **[commerce](commerce.md)**, **[games](game.md)** (with [the game API](game-api.md) a game client codes against) and the [other modules](#every-module): each a separate package for anything with its own service or a real memory cost.
 
 ## Coding agents
 
@@ -252,6 +252,7 @@ the agent files ([the module contract](modules.md)).
 - `experimental` `karni add approvals`: A second person approves high-value changes before they are written, with a queue, an API and an audit trail
 - `experimental` `karni add charts`: Charts defined and previewed in the admin, served through each resource's aggregate action under its access
 - `experimental` `karni add commerce`: One cart, checkout, orders, order numbers, payment settlement and refunds for anything a project sells, through a sellable adapter per kind
+- `experimental` `karni add game`: Guest players, cloud saves, leaderboards, a soft-currency wallet, daily content and achievements, with a realtime server contract
 - `experimental` `karni add impersonation`: Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail
 - `stable` `karni add payments`: Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI
 - `experimental` `karni add reports`: A row printed to PDF from an HTML template in the background, cached by template and data, served only to users who may see the row
