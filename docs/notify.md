@@ -286,8 +286,9 @@ before the part drops it. karni-commerce's migration 0008 does this.
 - karni-approvals, karni-site and karni-impersonation still send their own
   emails their own way. Moving them onto message kinds is planned, with a
   deprecation cycle.
-- The kinds karni-commerce and the shop declare go to the email only. A part
-  that wants one in the inbox declares it with `channels=("email", "inbox")`.
+- The kinds the shop declares go to the email only. A part that wants one in
+  the inbox declares it with `channels=("email", "inbox")`, as karni-commerce
+  does for each of its kinds ([commerce](commerce.md#signals-and-emails)).
 
 ## Errors
 

@@ -521,6 +521,13 @@ apply codemods and list the manual steps. This file is the human summary.
   is now an alias of `NotifySource`, and commerce's settings fragment no longer sets
   `KARNI_MAIL_SOURCE`. The shop requires `notify>=1` and its `shop-manager` edits the emails. See
   docs/migrations/0.5.md.
+- **Changed (experimental): commerce's emails land in the inbox too.** With `karni.notify`
+  installed, each kind karni-commerce declares (`commerce.order_paid`, `new_order`,
+  `order_cancelled`, `order_refunded`, `order_note`, `payment_request` and `balance_due`) goes to
+  the email and to the inbox of the account that verified the address
+  (`karni_commerce.messages.CHANNELS`): the buyer's confirmation and balance to pay, and the
+  staff's new order. A person turns either off for themselves, and `KARNI_NOTIFY_CHANNELS =
+  ["email"]` keeps the inbox out.
 
 ## 0.5.1 (2026-11-12)
 

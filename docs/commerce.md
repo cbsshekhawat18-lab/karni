@@ -533,6 +533,19 @@ Emails go through [`karni.mail`](#karnimail), each under a kind:
 | `commerce.order_refunded` | the buyer | a refund went through |
 | `commerce.order_note` | the buyer | staff wrote them a note on the order |
 | `commerce.payment_request` | the buyer | staff placed an order for them: the link to pay |
+| `commerce.balance_due` | the buyer | the deposit is paid, and again when staff send the balance link: what is left and the link to pay it |
+
+With [notifications](notify.md) installed, each of these also lands in the
+recipient's inbox in the app (`channels=("email", "inbox")`,
+`karni_commerce.messages.CHANNELS`): the buyer finds the confirmation, the
+balance to pay, a cancel, a refund, a note or a payment asked where the order
+is, and the staff find the new order. The inbox entry goes to the account
+that verified the address the email went to, so a guest, or an account that
+only typed the buyer's address, gets the email alone. Each person turns the
+inbox or the email of a kind off for themselves (`/api/inbox/choices/`).
+`KARNI_NOTIFY_CHANNELS = ["email"]` keeps the inbox out for the whole
+project, and a kind declared again in a project's own `messages.py` with
+other `channels=` wins.
 
 An order that waits for its payment sends no email: most orders that are
 never paid are a person who changed their mind, and a "we got your order"

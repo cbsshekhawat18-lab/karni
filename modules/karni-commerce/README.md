@@ -51,8 +51,9 @@ modules:
 - The person facts `orders`, `total_spent`, `last_order` and `first_order`,
   and `karni_commerce.testing.assert_sellable` for a selling part's tests.
 - Emails through `karni.mail`, each with a kind: `commerce.order_paid`,
-  `commerce.new_order`, `commerce.order_cancelled` and
-  `commerce.order_refunded`.
+  `commerce.new_order`, `commerce.order_cancelled`, `commerce.order_refunded`,
+  `commerce.order_note`, `commerce.payment_request` and `commerce.balance_due`.
+  With `karni.notify` installed each lands in the recipient's inbox too.
 - [`@karni/commerce-ui`](https://www.npmjs.com/package/@karni/commerce-ui):
   the cart page, the mini cart, checkout, an order's page and the person's
   orders.

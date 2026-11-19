@@ -14,6 +14,12 @@
 An order waiting for its payment sends nothing: most never-paid orders are
 a person who changed their mind.
 
+Each kind goes to the email and, while ``karni.notify`` is installed, to the
+recipient's inbox in the app (:data:`CHANNELS`): every one is about an order
+of the recipient's own or one the staff fulfil, so an account holder finds it
+where the order is. The inbox entry reaches the account that verified the
+buyer's (or the staff's) address, never an account that only typed it.
+
 Each renders ``karni_commerce/email/<name>_subject.txt``, ``_body.txt`` and
 ``_body.html`` (:func:`karni.mail.send_templated`) with ``order``,
 ``lines`` and ``link`` (the order's page). Listeners send them after the
@@ -21,8 +27,10 @@ order's change commits (:mod:`karni_commerce.listeners`).
 
 Override / escape hatch: put a template of the same name earlier in
 ``TEMPLATES`` ``DIRS`` to change a message, switch a kind off with
-``KARNI_MAIL_DISABLED_KINDS = ["commerce.new_order"]``, or call
-:func:`send` with your own context.
+``KARNI_MAIL_DISABLED_KINDS = ["commerce.new_order"]``, call
+:func:`send` with your own context, keep the inbox out project-wide
+(``KARNI_NOTIFY_CHANNELS = ["email"]``), or declare a kind again in your own
+``messages.py`` with other ``channels=``.
 """
 
 from __future__ import annotations
@@ -36,7 +44,16 @@ from karni.mail import register_kind, send_templated
 from karni_commerce import conf
 from karni_commerce.models import Order, OrderNote, OrderRefund
 
-__all__ = ["KINDS", "ORDER_FIELDS", "ORDER_SAMPLES", "business", "context", "latest", "send"]
+__all__ = [
+    "CHANNELS",
+    "KINDS",
+    "ORDER_FIELDS",
+    "ORDER_SAMPLES",
+    "business",
+    "context",
+    "latest",
+    "send",
+]
 
 #: Each kind's template stem and who receives it: ``buyer`` or ``staff``.
 KINDS: dict[str, tuple[str, str]] = {
@@ -47,6 +64,22 @@ KINDS: dict[str, tuple[str, str]] = {
     "commerce.order_note": ("karni_commerce/email/order_note", "buyer"),
     "commerce.payment_request": ("karni_commerce/email/payment_request", "buyer"),
     "commerce.balance_due": ("karni_commerce/email/balance_due", "buyer"),
+}
+
+_BOTH: tuple[str, ...] = ("email", "inbox")
+
+#: Where each kind goes (``karni.mail.register_kind(channels=...)``): the email, and the
+#: inbox of the recipient's account (``karni.notify``). The buyer's confirmation and the
+#: balance to pay are what they look for in the app, the staff's new order is their work,
+#: and a cancel, a refund, a note or a payment asked is about the buyer's own order.
+CHANNELS: dict[str, tuple[str, ...]] = {
+    "commerce.order_paid": _BOTH,
+    "commerce.new_order": _BOTH,
+    "commerce.order_cancelled": _BOTH,
+    "commerce.order_refunded": _BOTH,
+    "commerce.order_note": _BOTH,
+    "commerce.payment_request": _BOTH,
+    "commerce.balance_due": _BOTH,
 }
 
 
@@ -226,6 +259,7 @@ for _name, (_title, _audience, _describe, _more) in _DECLARED.items():
         fields={**ORDER_FIELDS, **_more},
         sample=latest(_name),
         samples=ORDER_SAMPLES,
+        channels=CHANNELS[_name],
     )
 
 
