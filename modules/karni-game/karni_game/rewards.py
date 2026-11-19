@@ -1,11 +1,12 @@
 """Experimental. Rewards the server declares and grants: daily, ad, mission, match, staff.
 
 A client never names an amount: it asks for a reward by its key, and
-:func:`claim` checks what the reward allows. A client claims only an ``ad``
-reward without ``callback`` (``GAME018`` for the rest), within its
-``per_day`` cap and ``cooldown`` (``409 GAME017`` with ``next_at``). An ``ad``
-reward with ``callback`` is granted when the portal's server calls back,
-signed (:func:`from_callback`), once per portal event. Missions,
+:func:`claim` checks what the reward allows. An ``ad`` reward says who vouches
+for the ad (``trust``): ``callback`` (the default) is granted only when the
+portal's server calls back, signed (:func:`from_callback`), once per portal
+event. ``client`` is claimed by the client within its ``per_day`` cap (at most
+``KARNI_GAME_CLIENT_CLAIMS_PER_DAY``) and ``cooldown`` (``409 GAME017`` with
+``next_at``). Every other reward is the server's (``GAME018``). Missions,
 achievements, matches and the daily check-in call :func:`grant`.
 
 Every grant is a :class:`~karni_game.models.Claim` (on the game's day) and a
@@ -86,6 +87,7 @@ def reward_data(reward: Reward, player: Player | None) -> dict[str, Any]:
         "kind": reward.kind,
         "currency": reward.currency.key,
         "amount": reward.amount,
+        "trust": reward.trust if reward.kind == "ad" else "server",
         "callback": reward.callback,
         "per_day": 1 if reward.kind == "daily" else reward.per_day,
     }
@@ -149,7 +151,7 @@ def _wait(reward: Reward, next_at: Any) -> Exception:
 
 
 def claim(player: Player, reward: Reward) -> Granted:
-    """A client's claim of an ``ad`` reward without ``callback``."""
+    """A client's claim of an ``ad`` reward the client claims (``trust`` ``client``)."""
     if reward.kind != "ad" or reward.callback:
         how = (
             "the portal's signed callback grants it"
@@ -171,7 +173,7 @@ def claim(player: Player, reward: Reward) -> Granted:
 
 
 def intent_for(player: Player, reward: Reward) -> dict[str, Any]:
-    """A signed intent the portal sends back in its callback (``ad`` rewards with ``callback``)."""
+    """A signed intent the portal sends back in its callback (``ad``, ``trust`` ``callback``)."""
     if reward.kind != "ad" or not reward.callback:
         raise game_error(
             "GAME018",

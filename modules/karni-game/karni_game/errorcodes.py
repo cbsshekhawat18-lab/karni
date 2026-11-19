@@ -259,12 +259,12 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         title="The client does not claim this reward",
         kind="exception",
         source=f"{_SOURCE}.rewards (HTTP 403)",
-        why="Only an ad reward without callback is claimed by the client. A daily reward "
+        why="Only an ad reward of trust client is claimed by the client. A daily reward "
         "comes with the check-in, a mission's and an achievement's with their progress, a "
-        "match's with the realtime server's report, and an ad reward with callback only "
+        "match's with the realtime server's report, and an ad reward of trust callback only "
         "when the portal's server calls back, signed.",
         fix="Use the path the reward's kind has (docs/game-api.md, Rewards). For an ad reward "
-        "with callback: POST rewards/<key>/intent/ and hand the intent to the portal.",
+        "of trust callback: POST rewards/<key>/intent/ and hand the intent to the portal.",
     ),
     ErrorCode(
         code="GAME019",

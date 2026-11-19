@@ -3747,9 +3747,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni_game.rewards (HTTP 403)`
 
-**Why Karni objects.** Only an ad reward without callback is claimed by the client. A daily reward comes with the check-in, a mission's and an achievement's with their progress, a match's with the realtime server's report, and an ad reward with callback only when the portal's server calls back, signed.
+**Why Karni objects.** Only an ad reward of trust client is claimed by the client. A daily reward comes with the check-in, a mission's and an achievement's with their progress, a match's with the realtime server's report, and an ad reward of trust callback only when the portal's server calls back, signed.
 
-**Fix.** Use the path the reward's kind has (docs/game-api.md, Rewards). For an ad reward with callback: POST rewards/&lt;key>/intent/ and hand the intent to the portal.
+**Fix.** Use the path the reward's kind has (docs/game-api.md, Rewards). For an ad reward of trust callback: POST rewards/&lt;key>/intent/ and hand the intent to the portal.
 
 <a id="game019"></a>
 

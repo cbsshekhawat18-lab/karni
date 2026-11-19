@@ -120,8 +120,10 @@ karni_game.Game:
         cap: 99999
         rewards:
           - {{game: {slug}, key: daily-coins, title: Daily coins, kind: daily, amount: 10}}
+          # trust: client lets any client claim it, so it stays low (per_day). With a portal
+          # that confirms ads server to server, trust: callback (the default) is safer.
           - {{game: {slug}, key: ad-coins, title: Coins for an ad, kind: ad, amount: 25,
-              per_day: 5, cooldown: 60}}
+              trust: client, per_day: 3, cooldown: 60}}
           - game: {slug}
             key: collector
             title: Collector's prize

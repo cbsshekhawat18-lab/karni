@@ -17,7 +17,7 @@ karni_game.Game:
         cap: 99999
         rewards:
           - {game: block-hopper, key: daily-coins, title: Daily coins, kind: daily, amount: 10}
-          - {game: block-hopper, key: ad-coins, title: Watch for coins, kind: ad, amount: 25, per_day: 5, cooldown: 60}
+          - {game: block-hopper, key: ad-coins, title: Watch for coins, kind: ad, trust: client, amount: 25, per_day: 3, cooldown: 60}
           - game: block-hopper
             key: collector
             title: Collector's prize

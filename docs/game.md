@@ -48,7 +48,7 @@ settings. What it declares are rows too, found by the game and a `key`:
 | `Game` | `slug`, `title`, `is_active`, `settings` (below) |
 | `Board` | a leaderboard: `order` (`desc` higher is better, `asc` lower, for a time), `periods` (`all`, `daily`, `weekly`), `min_value` and `max_value` (the plausible range), `review_beyond`, `requires_run`, `keep_runs`, `daily_seed` |
 | `Currency` | a soft currency: `key`, `title`, `cap` (the most a wallet holds) |
-| `Reward` | `kind` (`daily`, `ad`, `mission`, `achievement`, `match`, `grant`), `currency`, `amount`, `per_day`, `cooldown` (seconds), `callback` (an ad reward granted only by the portal's signed callback) |
+| `Reward` | `kind` (`daily`, `ad`, `mission`, `achievement`, `match`, `grant`), `currency`, `amount`, `per_day`, `cooldown` (seconds), `trust` (an ad reward: `callback`, the default, or `client`) |
 | `Item` | a cosmetic: `slot` (hat, skin), `currency` and `price` for the shop, or `real_money` and `money_price` for the cart |
 | `Achievement` | a `counter`, a `goal`, `hidden`, an optional `reward` |
 | `Mission` | a `counter`, a `goal`, a `period` (`once`, `daily`, `weekly`), an optional `reward` |
@@ -225,10 +225,17 @@ moment never spend the same coins: a test runs them at once on PostgreSQL.
 | Kind | Granted |
 |---|---|
 | `daily` | with the daily check-in, once a day |
-| `ad` | after an ad: the client claims it (`POST rewards/<key>/claim/`) within `per_day` and `cooldown`, or, with `callback`, only when the portal's server calls back signed |
+| `ad` | after an ad, by its `trust`: `callback` (the default) only when the portal's server calls back signed, `client` when the client claims it (`POST rewards/<key>/claim/`) within `per_day` and `cooldown` |
 | `mission`, `achievement` | when the server completes the mission or unlocks the achievement |
 | `match` | when a realtime server's report names it |
 | `grant` | by staff |
+
+An ad reward's `trust` is the honest answer to who vouches that the ad was
+watched. With `callback` (the default) only the portal's server does, signed.
+With `client` the client says so, and any client can, so such a reward is
+capped at `KARNI_GAME_CLIENT_CLAIMS_PER_DAY` (5) a day: a blank `per_day`
+takes that cap, and a higher one is refused (`GAME026`). Declare `client` only
+for a portal without a server callback, and keep the amount small.
 
 ### Portal callbacks
 
@@ -408,6 +415,7 @@ neither karni-game nor `@karni/game`.
 | `KARNI_GAME_PORTALS` | `{}` | The portals that call back after an ad: `{name: {"secret", "verifier"}}`. |
 | `KARNI_GAME_SIGNATURE_TOLERANCE` | `300` | How far a signed request's timestamp may be from the server's clock, in seconds. |
 | `KARNI_GAME_AD_INTENT_SECONDS` | `3600` | How long an ad reward's intent is valid. |
+| `KARNI_GAME_CLIENT_CLAIMS_PER_DAY` | `5` | The most claims a day of an ad reward the client claims (`trust: client`). |
 | `KARNI_GAME_INTENT_DAYS` | `7` | How long a write's retry key is kept (the task `karni_game.tasks.prune_intents`). |
 | `KARNI_GAME_MAX_SAVE_BYTES` | `1048576` | The largest save any game may allow. |
 | `KARNI_GAME_MAX_RUN_BYTES` | `262144` | The largest run record a score may carry. |

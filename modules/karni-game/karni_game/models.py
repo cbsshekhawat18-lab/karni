@@ -58,6 +58,7 @@ __all__ = [
     "ORDERS",
     "RESERVED_SLUGS",
     "REWARD_KINDS",
+    "REWARD_TRUST",
     "Achievement",
     "Best",
     "Board",
@@ -604,13 +605,25 @@ REWARD_KINDS = (
 )
 
 
+#: Who vouches that an ad was watched (``Reward.trust``).
+REWARD_TRUST = (
+    ("callback", "Verified: the portal's signed callback grants it"),
+    ("client", "Claimed by the client, capped low per day"),
+)
+
+
 class Reward(BaseModel):
     """A reward the server grants: its kind, its currency and amount, how often.
 
     ``per_day`` caps the claims of a player in one of the game's days (blank:
     no cap, a daily reward is once a day whatever it says). ``cooldown`` is the
-    seconds between two claims. An ``ad`` reward with ``callback`` is granted
-    only by the portal's signed callback.
+    seconds between two claims.
+
+    ``trust`` says who vouches for an ``ad`` reward. ``callback`` (the default,
+    the safer one): only the portal's signed callback grants it. ``client``: the
+    client claims it, which any client can do, so it is capped at
+    ``KARNI_GAME_CLIENT_CLAIMS_PER_DAY`` a day (``per_day`` blank takes that cap).
+    The other kinds are granted by the server and ignore it.
     """
 
     game = models.ForeignKey(
@@ -627,8 +640,11 @@ class Reward(BaseModel):
     amount = models.PositiveBigIntegerField()
     per_day = models.PositiveIntegerField(null=True, blank=True)
     cooldown = models.PositiveIntegerField(default=0, help_text="Seconds between two claims.")
-    callback = models.BooleanField(
-        default=False, help_text="An ad reward granted only by the portal's signed callback."
+    trust = models.CharField(
+        max_length=8,
+        choices=REWARD_TRUST,
+        default="callback",
+        help_text="An ad reward: verified by the portal's signed callback, or client-claimed.",
     )
     is_active = models.BooleanField(default=True)
 
@@ -649,8 +665,30 @@ class Reward(BaseModel):
     def __str__(self) -> str:
         return self.title
 
+    @property
+    def callback(self) -> bool:
+        """An ad reward only the portal's signed callback grants."""
+        return self.kind == "ad" and self.trust == "callback"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.kind != "ad" or self.trust != "client":
+            return
+        ceiling = int(conf.get("KARNI_GAME_CLIENT_CLAIMS_PER_DAY"))
+        if self.per_day is None:
+            self.per_day = ceiling
+        if self.per_day > ceiling:
+            raise ValidationError(
+                {
+                    "per_day": f"{SETTINGS_CODE}: a client-claimed ad reward is capped at "
+                    f"{ceiling} a day (KARNI_GAME_CLIENT_CLAIMS_PER_DAY), since any client "
+                    "can claim it. Use trust callback for more."
+                }
+            )
+
     def save(self, *args: Any, **kwargs: Any) -> None:
         _same_game(self, "currency")
+        self.clean()
         super().save(*args, **kwargs)
 
 

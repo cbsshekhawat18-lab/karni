@@ -419,19 +419,21 @@ often it may be claimed. The client never names an amount.
 | Kind | How it is granted |
 |---|---|
 | `daily` | `POST daily/check-in/`, once per day. |
-| `ad` | After an ad: `POST rewards/<key>/claim/`, or only through the portal's signed callback when the reward has `callback`. |
+| `ad` | After an ad. The reward's `trust` says who vouches for the ad: `callback` (the default) is granted only through the portal's signed callback, `client` is claimed with `POST rewards/<key>/claim/`, by any client, so its `per_day` is at most `KARNI_GAME_CLIENT_CLAIMS_PER_DAY` (5). |
 | `mission`, `achievement` | When the mission is completed or the achievement unlocked. |
 | `match` | When a realtime server reports a result that names it. |
 | `grant` | By staff only. |
 
 ### `GET <game>/rewards/`
 
-`200`: `{"results": [{"key": "ad-coins", "title": "Watch for coins", "kind": "ad", "currency": "coins", "amount": 25, "callback": false, "per_day": 5, "claimed_today": 2, "available": false, "next_at": "2026-11-19T08:35:00Z"}]}`.
+`200`: `{"results": [{"key": "ad-coins", "title": "Watch for coins", "kind": "ad", "currency": "coins", "amount": 25, "trust": "client", "callback": false, "per_day": 3, "claimed_today": 2, "available": false, "next_at": "2026-11-19T08:35:00Z"}]}`.
+`trust` is `callback` or `client` for an ad reward and `server` for the other
+kinds. `callback` is true when only the portal's callback grants it.
 
 ### `POST <game>/rewards/<key>/claim/`
 
 Request (optional): `{"intent": "..."}`. Limited by `claim`. For an `ad`
-reward without `callback` (`daily` rewards come with the check-in).
+reward of `trust` `client` (`daily` rewards come with the check-in).
 
 `200`: `{"granted": {"currency": "coins", "amount": 25, "balance": 145}, "capped": false, "next_at": "..."}`.
 `capped` is true when the cap took some of the amount.
@@ -440,7 +442,7 @@ Errors: `GAME017` (with `next_at`), `GAME018`, `GAME033`.
 
 ### `POST <game>/rewards/<key>/intent/`
 
-For an `ad` reward with `callback`. `201`: `{"intent": "Ijg...:1tX...", "expires_at": "..."}`.
+For an `ad` reward of `trust` `callback`. `201`: `{"intent": "Ijg...:1tX...", "expires_at": "..."}`.
 The client hands `intent` to the portal's ad call as its custom data, and the
 portal's server sends it back in the callback below. It is valid for an hour.
 

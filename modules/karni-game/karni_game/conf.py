@@ -56,6 +56,9 @@ DEFAULTS: dict[str, Any] = {
     "KARNI_GAME_PORTALS": {},
     # How far a signed request's timestamp may be from the server's clock, in seconds.
     "KARNI_GAME_SIGNATURE_TOLERANCE": env.int("KARNI_GAME_SIGNATURE_TOLERANCE", default=300),
+    # The most claims a day of an ad reward the client claims (trust "client"): any client
+    # can claim it, so it stays low. A reward's per_day may be lower, never higher.
+    "KARNI_GAME_CLIENT_CLAIMS_PER_DAY": env.int("KARNI_GAME_CLIENT_CLAIMS_PER_DAY", default=5),
     # How long an ad reward's intent token (POST rewards/<key>/intent/) is valid, in seconds.
     "KARNI_GAME_AD_INTENT_SECONDS": env.int("KARNI_GAME_AD_INTENT_SECONDS", default=3600),
     # How many days a write's intent (the retry key) is kept.

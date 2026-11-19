@@ -56,6 +56,7 @@ The admin ships explicit classes (`karni_game/admin.py`) for players, scores, wa
 | `KARNI_GAME_PORTALS` | | `{}` | portals that call back after an ad: `{name: {"secret", "verifier"}}` |
 | `KARNI_GAME_SIGNATURE_TOLERANCE` | `KARNI_GAME_SIGNATURE_TOLERANCE` | `300` | seconds a signed request's timestamp may be off |
 | `KARNI_GAME_AD_INTENT_SECONDS` | `KARNI_GAME_AD_INTENT_SECONDS` | `3600` | an ad reward intent's life |
+| `KARNI_GAME_CLIENT_CLAIMS_PER_DAY` | `KARNI_GAME_CLIENT_CLAIMS_PER_DAY` | `5` | the cap of a client-claimed ad reward |
 | `KARNI_GAME_INTENT_DAYS` | `KARNI_GAME_INTENT_DAYS` | `7` | days a retry key is kept |
 | `KARNI_GAME_MAX_SAVE_BYTES` | `KARNI_GAME_MAX_SAVE_BYTES` | `1048576` | the largest save any game allows |
 | `KARNI_GAME_MAX_RUN_BYTES` | `KARNI_GAME_MAX_RUN_BYTES` | `262144` | the largest run record |

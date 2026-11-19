@@ -84,7 +84,14 @@ def world(game: Game, guest: Guest) -> dict[str, Any]:
         game=game, key="red-cap", title="Red cap", slot="hat", currency=coins, price=50
     )
     Reward.objects.create(
-        game=game, key="ad-coins", title="Ad", kind="ad", currency=coins, amount=5, per_day=9
+        game=game,
+        key="ad-coins",
+        title="Ad",
+        kind="ad",
+        trust="client",
+        currency=coins,
+        amount=5,
+        per_day=5,
     )
     Reward.objects.create(
         game=game, key="daily", title="Daily", kind="daily", currency=coins, amount=5

@@ -121,7 +121,14 @@ def test_staff_grant_with_a_note(
 @pytest.fixture
 def ad(game: Game, coins: Currency) -> Reward:
     return Reward.objects.create(
-        game=game, key="ad-coins", title="Watch", kind="ad", currency=coins, amount=25, per_day=2
+        game=game,
+        key="ad-coins",
+        title="Watch",
+        kind="ad",
+        trust="client",
+        currency=coins,
+        amount=25,
+        per_day=2,
     )
 
 
@@ -139,7 +146,7 @@ def test_an_ad_reward_is_claimed_within_its_cap(guest: Guest, ad: Reward) -> Non
 
 def test_a_cooldown_spaces_the_claims(guest: Guest, ad: Reward) -> None:
     ad.cooldown = 300
-    ad.per_day = None
+    ad.per_day = 5
     ad.save()
     assert guest.post(f"{GAME}rewards/ad-coins/claim/").status_code == 200
     assert guest.post(f"{GAME}rewards/ad-coins/claim/").data["code"] == "GAME017"
@@ -169,7 +176,7 @@ def test_a_claim_counts_once_per_intent(guest: Guest, ad: Reward) -> None:
 
 @pytest.fixture
 def callback_ad(ad: Reward) -> Reward:
-    ad.callback = True
+    ad.trust = "callback"
     ad.save()
     return ad
 
@@ -409,3 +416,38 @@ def test_rewards_module_checks_portals(callback_ad: Reward) -> None:
 
     with pytest.raises(GameError, match="GAME019"):
         rewards.verifier_for("nowhere")
+
+
+def test_an_ad_reward_is_verified_by_its_portal_unless_it_says_otherwise(
+    guest: Guest, game: Game, coins: Currency
+) -> None:
+    from django.core.exceptions import ValidationError
+
+    safe = Reward.objects.create(
+        game=game, key="ad-safe", title="Ad", kind="ad", currency=coins, amount=5
+    )
+    assert (safe.trust, safe.callback) == ("callback", True)
+    assert guest.post(f"{GAME}rewards/ad-safe/claim/").data["code"] == "GAME018"
+    listed = {row["key"]: row for row in guest.get(f"{GAME}rewards/").data["results"]}
+    assert (listed["ad-safe"]["trust"], listed["ad-safe"]["callback"]) == ("callback", True)
+    # Client-claimed: capped low, whatever the declaration says.
+    capped = Reward.objects.create(
+        game=game, key="ad-open", title="Ad", kind="ad", trust="client", currency=coins, amount=5
+    )
+    assert capped.per_day == 5
+    with pytest.raises(ValidationError, match="KARNI_GAME_CLIENT_CLAIMS_PER_DAY"):
+        Reward.objects.create(
+            game=game,
+            key="ad-wide",
+            title="Ad",
+            kind="ad",
+            trust="client",
+            per_day=50,
+            currency=coins,
+            amount=5,
+        )
+    with override_settings(KARNI_GAME_CLIENT_CLAIMS_PER_DAY=2):
+        low = Reward.objects.create(
+            game=game, key="ad-low", title="Ad", kind="ad", trust="client", currency=coins, amount=1
+        )
+    assert low.per_day == 2

@@ -2126,6 +2126,7 @@ class Lead(BaseModel):
 | `KARNI_GAME_TOKEN_SECONDS` | `KARNI_GAME_TOKEN_SECONDS` | `300` | How long a player token for the realtime server lives, in seconds. |
 | `KARNI_GAME_PORTALS` |  | `{}` | Portals that call back when an ad was watched: {name: {"secret": "...", "verifier": "dotted.path.Verifier"}}. The verifier defaults to karni_game.signatures.HmacVerifier (X-Karni-Timestamp and X-Karni-Signature). |
 | `KARNI_GAME_SIGNATURE_TOLERANCE` | `KARNI_GAME_SIGNATURE_TOLERANCE` | `300` | How far a signed request's timestamp may be from the server's clock, in seconds. |
+| `KARNI_GAME_CLIENT_CLAIMS_PER_DAY` | `KARNI_GAME_CLIENT_CLAIMS_PER_DAY` | `5` | The most claims a day of an ad reward the client claims (trust "client"): any client can claim it, so it stays low. A reward's per_day may be lower, never higher. |
 | `KARNI_GAME_AD_INTENT_SECONDS` | `KARNI_GAME_AD_INTENT_SECONDS` | `3600` | How long an ad reward's intent token (POST rewards/&lt;key&gt;/intent/) is valid, in seconds. |
 | `KARNI_GAME_INTENT_DAYS` | `KARNI_GAME_INTENT_DAYS` | `7` | How many days a write's intent (the retry key) is kept. |
 | `KARNI_GAME_MAX_SAVE_BYTES` | `KARNI_GAME_MAX_SAVE_BYTES` | `1024 * 1024` | The largest save any game may allow, in bytes (a game's max_save_bytes stays below it). |
