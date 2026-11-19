@@ -185,7 +185,8 @@ def _with_can(base: Any, erase: Can) -> Any:
                 return {"merge": False, "erase": False}
             return {"merge": merge.allows(request), "erase": erase.allows(request)}
 
-    WithCan.__name__ = base.__name__
+    # Its own name, so the schema has one component for the list's rows and one for a detail.
+    WithCan.__name__ = base.__name__.removesuffix("Serializer") + "DetailSerializer"
     return WithCan
 
 
