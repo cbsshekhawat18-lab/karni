@@ -3921,6 +3921,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Send queued scores sooner, send this one without played_at (it counts now), or widen KARNI_GAME_PLAYED_AT_WINDOW.
 
+<a id="game037"></a>
+
+### GAME037: The player has no save in this slot
+
+*exception* · from `karni_game.saves.empty (HTTP 404)`
+
+**Why Karni objects.** A slot the player never wrote, or deleted, has no save. The code tells it from a path that does not exist, so a client knows to start the slot (base_version 0).
+
+**Fix.** Write the slot with base_version 0, or read GET saves/ for the slots the player has.
+
 ## IMP (`IMP`)
 
 <a id="imp001"></a>

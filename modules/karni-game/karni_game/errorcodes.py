@@ -380,4 +380,13 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         fix="Send queued scores sooner, send this one without played_at (it counts now), or "
         "widen KARNI_GAME_PLAYED_AT_WINDOW.",
     ),
+    ErrorCode(
+        code="GAME037",
+        title="The player has no save in this slot",
+        kind="exception",
+        source=f"{_SOURCE}.saves.empty (HTTP 404)",
+        why="A slot the player never wrote, or deleted, has no save. The code tells it from "
+        "a path that does not exist, so a client knows to start the slot (base_version 0).",
+        fix="Write the slot with base_version 0, or read GET saves/ for the slots the player has.",
+    ),
 )

@@ -2910,6 +2910,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`GAME033`](errors.md#game033) | exception | The intent was used already with another request |
 | [`GAME035`](errors.md#game035) | exception | A match report names what the game does not have |
 | [`GAME036`](errors.md#game036) | exception | A score's played_at is outside the window the server trusts |
+| [`GAME037`](errors.md#game037) | exception | The player has no save in this slot |
 | [`IMP001`](errors.md#imp001) | api | Impersonation needs the explicit impersonate permission |
 | [`IMP002`](errors.md#imp002) | api | The target holds something the impersonator does not |
 | [`IMP003`](errors.md#imp003) | api | A reason is required to impersonate |

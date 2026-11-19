@@ -354,9 +354,7 @@ class SaveView(GameView):
     def get(self, request: Request, game: str, slot: str) -> Response:
         found = saves.read(self.player, self.game, slot)
         if found is None:
-            from rest_framework.exceptions import NotFound
-
-            raise NotFound(f"No save in slot {slot!r}.")
+            raise saves.empty(slot)
         return Response(saves.as_data(found))
 
     @extend_schema(request=SaveWriteSerializer)
@@ -388,9 +386,7 @@ class SaveView(GameView):
 
                 raise ValidationError({"base_version": ["A whole number."]}) from None
         if not saves.delete(player, self.game, slot, base_version=base):
-            from rest_framework.exceptions import NotFound
-
-            raise NotFound(f"No save in slot {slot!r}.")
+            raise saves.empty(slot)
         return Response(status=204)
 
 

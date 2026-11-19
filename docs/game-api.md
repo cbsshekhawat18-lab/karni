@@ -60,7 +60,8 @@ below:
 Some errors add fields (the server's copy of a save, the time a reward is
 available again). A `400` without `code` is a body that does not validate:
 each field names its messages, `{"value": ["A valid integer is required."]}`.
-A `404` without `code` is a path that does not exist.
+A `404` without `code` is a path that does not exist (a missing save is
+`GAME037`).
 
 | Code | Status | When |
 |---|---|---|
@@ -94,6 +95,7 @@ A `404` without `code` is a path that does not exist.
 | `GAME033` | 409 | The `intent` was used already with another body. |
 | `GAME035` | 400 | A results report names a player, a board or a reward the game does not have. The body has `index`, the row. |
 | `GAME036` | 400 | A score's `played_at` is older than `KARNI_GAME_PLAYED_AT_WINDOW` or more than a minute ahead of the server. The body has `window` (seconds). |
+| `GAME037` | 404 | The player has no save in this slot (a path that does not exist is a 404 without `code`). |
 
 ## Rate limits
 
@@ -250,7 +252,7 @@ is older, when it is read and when it is written, and stores the result.
 
 ### `GET <game>/saves/<slot>/`
 
-`200`: the save. `404` (no code) when the player has no save in the slot.
+`200`: the save. `404 GAME037` when the player has no save in the slot.
 
 ### `PUT <game>/saves/<slot>/`
 
@@ -270,7 +272,7 @@ client read, or `0` for a slot it believes is empty. Limited by `save`.
 
 ### `DELETE <game>/saves/<slot>/?base_version=4`
 
-`204`, or `404` (no code) when the slot is empty. `409 GAME008` when
+`204`, or `404 GAME037` when the slot is empty. `409 GAME008` when
 `base_version` is given and is not the server's.
 
 ## Scores and boards

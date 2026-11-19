@@ -85,8 +85,11 @@ def test_a_save_is_deleted_at_its_version(guest: Guest, game: Game) -> None:
     stale = guest.delete(f"{PATH}main/?base_version=7")
     assert stale.data["code"] == "GAME008"
     assert guest.delete(f"{PATH}main/?base_version=1").status_code == 204
-    assert guest.get(f"{PATH}main/").status_code == 404
-    assert guest.delete(f"{PATH}main/").status_code == 404
+    missing = guest.get(f"{PATH}main/")
+    assert (missing.status_code, missing.data["code"]) == (404, "GAME037")
+    assert guest.delete(f"{PATH}main/").data["code"] == "GAME037"
+    # An unknown path is a 404 without a code: the client tells the two apart.
+    assert "code" not in (guest.get(f"{PATH}main/nothing/").content.decode())
     # The slot is free again and starts at version 1.
     assert put(guest, "main", {"level": 3}, 0).data["version"] == 1
 

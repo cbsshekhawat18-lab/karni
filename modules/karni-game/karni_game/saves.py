@@ -34,7 +34,7 @@ from karni_game import hooks
 from karni_game.errors import game_error
 from karni_game.models import Game, Player, Save
 
-__all__ = ["SLOT_RE", "as_data", "delete", "migrate", "read", "slots", "write"]
+__all__ = ["SLOT_RE", "as_data", "delete", "empty", "migrate", "read", "slots", "write"]
 
 #: What a slot is called: a lowercase letter or digit, then up to 39 more (and _ -).
 SLOT_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,39}$")
@@ -54,6 +54,11 @@ def as_data(save: Save | None, *, data: bool = True) -> dict[str, Any] | None:
     if data:
         found["data"] = save.data
     return found
+
+
+def empty(slot: str) -> Exception:
+    """``404 GAME037``: the player has no save in ``slot`` (not an unknown path)."""
+    return game_error("GAME037", f"The player has no save in slot {slot!r}.", status=404)
 
 
 def _slot(slot: str) -> str:
