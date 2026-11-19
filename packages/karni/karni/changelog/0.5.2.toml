@@ -15,3 +15,16 @@ or later and commits the lock."""
 mechanical = true
 codemod = "v0_5.frontend_npm_floor"
 migration = "migrations/0.5.md#the-frontend-installs-with-plain-npm-install"
+
+[[change]]
+id = "site-menus-follow-seed"
+kind = "behaviour"
+symbol = "KARNI_SITE_MENU_FOLLOW_SEED"
+summary = """\
+A karni-site menu seeded from a template ({% get_menu ... seed="..." %}) follows \
+that template, as the docs said: the items nobody changed take the seed's new \
+links on the next render, and the items someone changed, added or deleted stay. \
+Before, the seed made the menu once. KARNI_SITE_MENU_FOLLOW_SEED = False keeps \
+that. The module's migration 0002 adds Menu.seeded and MenuItem.seed_key."""
+mechanical = false
+migration = "migrations/0.5.md#seeded-menus-follow-their-seed"

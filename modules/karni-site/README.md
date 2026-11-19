@@ -225,8 +225,22 @@ footer-services.
 `seed` names a template holding the design's own navigation. The first
 time the menu is asked for and the database has none of that name, the
 links in it (nested lists becoming children) become the menu, so the
-client starts with the designer's menu. A deleted menu is seeded again. A
-list in the seed marked `data-karni-children-from="website.Service"` becomes
+client starts with the designer's menu. A deleted menu is seeded again.
+
+The menu then follows its seed, the way a block follows its template's
+text. When the seed's links change (a new link, a new text, a link to
+another page, such as a view that was renamed), each item the seed made and
+nobody changed takes its link's new text, target and place, an item whose
+link left the seed goes, and a new link becomes an item. An item someone
+changed in the admin (its title, where it goes, its place, shown or not),
+an item someone added and an item someone deleted stay as they are. A menu
+someone made in the admin, without a seed, never follows one.
+`KARNI_SITE_MENU_FOLLOW_SEED = False` seeds a menu once and leaves it, and
+`karni_site.menus.sync_menu(name, markup, source=...)` follows a seed from
+code of your own. A menu seeded before Karni 0.5.2 follows too: the items
+nobody saved since the seed made them follow, and the others are kept.
+
+A list in the seed marked `data-karni-children-from="website.Service"` becomes
 an item with children from that model instead of its links (in its parent's
 place when it is the whole menu), and keeps its links when the project has no
 such model. `karni import design --editable --map` marks a list whose links
@@ -635,6 +649,7 @@ Every setting arrives through the module's settings fragment
 | `KARNI_SITE_MENU_ROWS` | `"karni_site.menus.menu_rows"` | The `(model, item) -> rows` function a *children from* item lists. The default is the model's default manager, so its scopes apply. |
 | `KARNI_SITE_MENU_ROWS_LIMIT` | `100` | At most this many rows per *children from* item. |
 | `KARNI_SITE_MENU_SECTIONS` | `True` | Whether a menu item is active on every page under its own path too (`/services/` on `/services/web/`). The home page never is. |
+| `KARNI_SITE_MENU_FOLLOW_SEED` | `True` | Whether a menu seeded from a template follows it: the items nobody changed take the seed's new links. `False` seeds it once. |
 | `KARNI_SITE_REDIRECTS_BEFORE_VIEWS` | `False` | `True` looks every request up before its view, so a redirect also replaces a page that exists. |
 | `KARNI_SITE_EDITOR_ROLE` | `"editor"` | The slug of the role this module declares, or `None` for none. |
 | `KARNI_SITE_FORMS` | `{}` | Form name to a viewset's dotted path or a model label, for a name that is not a model's. |
@@ -705,6 +720,8 @@ notification naming a setting the project lacks `SITE023`.
 - `KARNI_SITE_SEED_ON_RENDER = False`: nothing is written while a page
   renders. Load blocks, menus and settings with `karni load` instead.
 - `KARNI_SITE_MENU_ROWS`: which rows a *children from* item lists.
+- `KARNI_SITE_MENU_FOLLOW_SEED = False`: a seeded menu never follows its seed,
+  and `karni_site.menus.sync_menu()` follows one when you choose.
 - `KARNI_SITE_EDITOR_ROLE`, a role of that slug in `KARNI_ROLES`, or the
   permission matrix: the editor's grants.
 - Unregister any of this module's admins and register your own subclass.

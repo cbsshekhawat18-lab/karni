@@ -16,6 +16,15 @@ A list in the seed marked ``data-karni-children-from="<app>.<Model>"`` (as
 ``karni import design`` marks one whose links are that model's detail pages)
 becomes an item with children from that model instead of its links.
 
+A seeded menu follows its seed template, the way an editable block follows
+its template's text (:func:`sync_menu`): when the seed's links change (a new
+link, a new text, a renamed route), the items nobody changed in the admin
+change with it, an item whose link left the seed goes, and a new link is
+added. An item someone changed (its title, its target, its place, shown or
+not), an item someone added, and an item someone deleted stay as they are.
+``Menu.seeded`` records what the seed gave each item, and
+``MenuItem.seed_key`` which link an item came from.
+
 An item with children from a model and neither a title nor an address of its
 own lists the rows in its place: a footer's list of every service is one
 such item, and a service the client adds appears in it.
@@ -28,11 +37,16 @@ Override / escape hatch: ``KARNI_SITE_MENU_ROWS`` decides which rows a
 ``children_from`` item lists (default: the model's default manager, so its
 scopes apply), ``KARNI_SITE_MENU_ROWS_LIMIT`` how many, and
 ``KARNI_SITE_IS_ACTIVE`` what counts as the current page.
+``KARNI_SITE_MENU_FOLLOW_SEED = False`` seeds a menu once and never changes it
+afterwards, and :func:`sync_menu` follows a seed from code of your own.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
+import uuid
 from collections import defaultdict
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
@@ -61,6 +75,7 @@ __all__ = [
     "model_changed",
     "parse_links",
     "seed_menu",
+    "sync_menu",
     "validate_item",
 ]
 
@@ -211,27 +226,36 @@ def _rows(item: Any) -> list[dict[str, Any]]:
     return found
 
 
-def _build(name: str) -> list[dict[str, Any]] | None:
+def _build(name: str) -> dict[str, Any]:
+    """What the cache keeps of menu ``name``: its tree, its seed template and the seed's digest."""
     from karni_site.models import Menu
 
     menu = Menu.objects.filter(name=name).first()
     if menu is None:
-        return None
+        return {"items": None, "seed": "", "digest": ""}
     children: dict[Any, list[Any]] = defaultdict(list)
     for item in menu.items.filter(enabled=True).select_related("content_type", "children_from"):
         children[item.parent_id].append(item)
-    return _nodes(children.get(None, []), children)
+    return {
+        "items": _nodes(children.get(None, []), children),
+        "seed": menu.seed,
+        "digest": str((menu.seeded or {}).get("digest") or ""),
+    }
+
+
+def _cached(name: str) -> dict[str, Any]:
+    store = caching.cache()
+    key = caching.key("menu", str(caching.version("menus")), name)
+    found: dict[str, Any] | None = store.get(key)
+    if found is None or "seed" not in found:
+        found = _build(name)
+        store.set(key, found, caching.timeout())
+    return found
 
 
 def tree(name: str) -> list[dict[str, Any]] | None:
     """The cached tree of menu ``name``, or ``None`` when there is no such menu."""
-    store = caching.cache()
-    key = caching.key("menu", str(caching.version("menus")), name)
-    found = store.get(key)
-    if found is None:
-        found = {"items": _build(name)}
-        store.set(key, found, caching.timeout())
-    items: list[dict[str, Any]] | None = found["items"]
+    items: list[dict[str, Any]] | None = _cached(name)["items"]
     return items
 
 
@@ -255,16 +279,44 @@ def _entry(node: dict[str, Any], request: Any) -> MenuEntry:
 def entries(
     name: str, request: Any = None, seed: Callable[[], str] | None = None, source: str = ""
 ) -> list[MenuEntry]:
-    """The items of menu ``name`` for ``request``: seeded from ``seed()`` when it is new."""
+    """The items of menu ``name`` for ``request``: seeded from ``seed()`` when it is new.
+
+    A menu seeded from ``source`` follows it: when the links ``seed()`` gives change,
+    :func:`sync_menu` brings the items nobody changed in line with them.
+    """
     try:
-        found = tree(name)
-        if found is None and seed is not None and conf.get("KARNI_SITE_SEED_ON_RENDER"):
-            seed_menu(name, seed(), source=source)
-            found = tree(name)
+        cached = _cached(name)
+        found = cached["items"]
+        if seed is not None and conf.get("KARNI_SITE_SEED_ON_RENDER"):
+            if found is None:
+                seed_menu(name, seed(), source=source)
+                found = tree(name)
+            elif _follows(cached, source) and (markup := _rendered(seed, name)) is not None:
+                if _digest(parse_links(markup)) != cached["digest"]:
+                    sync_menu(name, markup, source=source)
+                    found = tree(name)
     except DatabaseError:
         logger.exception("karni_site: menu %s could not be read", name)
         return []
     return [_entry(node, request) for node in found or []]
+
+
+def _rendered(seed: Callable[[], str], name: str) -> str | None:
+    """The seed's markup, or ``None`` when it fails to render: the stored menu is shown."""
+    try:
+        return seed()
+    except Exception:  # noqa: BLE001 - a broken seed never breaks a page that has its menu
+        logger.exception(
+            "karni_site: the seed of menu %s does not render, it is not followed", name
+        )
+        return None
+
+
+def _follows(cached: dict[str, Any], source: str) -> bool:
+    """Whether a menu follows ``source``: it was seeded from it, and following is on."""
+    return (
+        bool(source) and cached["seed"] == source and bool(conf.get("KARNI_SITE_MENU_FOLLOW_SEED"))
+    )
 
 
 # seeding from markup
@@ -407,9 +459,19 @@ def item_fields(href: str) -> dict[str, Any]:
     return {"route": match.view_name, "route_kwargs": kwargs, "suffix": suffix}
 
 
+def _digest(links: list[Link]) -> str:
+    """A fingerprint of a seed's links: what a menu compares to know its seed changed."""
+
+    def plain(found: list[Link]) -> list[Any]:
+        return [[link.title, link.href, link.children_from, plain(link.children)] for link in found]
+
+    text = json.dumps(plain(links), ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def seed_menu(name: str, markup: str, *, source: str = "", title: str = "") -> bool:
     """Create menu ``name`` from the links in ``markup``. ``False`` when it exists already."""
-    from karni_site.models import Menu, MenuItem
+    from karni_site.models import Menu
 
     links = parse_links(markup)
     try:
@@ -421,40 +483,303 @@ def seed_menu(name: str, markup: str, *, source: str = "", title: str = "") -> b
                 title=title or name.replace("-", " ").replace("_", " ").title(),
                 seed=source,
             )
-
-            def add(found: list[Link], parent: Any, order: int = 0) -> int:
-                """Create ``found`` under ``parent`` from ``order`` on: the next order."""
-                for link in found:
-                    rows = _content_type(link.children_from)
-                    if link.children_from and rows is None:
-                        logger.warning(
-                            "karni_site: menu %r lists %s, which is not a model here: "
-                            "seeded with the design's links instead",
-                            name,
-                            link.children_from,
-                        )
-                    if rows is None and not link.href:  # a marked list without its model
-                        order = add(link.children, parent, order)
-                        continue
-                    fields = item_fields(link.href) if link.href else {}
-                    item = MenuItem.objects.create(
-                        menu=menu,
-                        parent=parent,
-                        title=link.title,
-                        order=order,
-                        children_from=rows,
-                        **fields,
-                    )
-                    order += 1
-                    if rows is None:
-                        add(link.children, item)
-                return order
-
-            add(links, None)
+            entries = _Follow(menu, {}).level(_planned(links, name), [], None, None, create=True)
+            menu.seeded = {"digest": _digest(links), "entries": entries}
+            menu.save(update_fields=["seeded"])
     except IntegrityError:
         return False
     caching.bump("menus")
     return True
+
+
+#: Why following a seed reads the items someone deleted: they stay deleted.
+_EVERY_ITEM = "a menu following its seed keeps the items someone deleted deleted"
+
+
+def sync_menu(name: str, markup: str, *, source: str = "") -> bool:
+    """Bring menu ``name`` in line with the links in ``markup``, its seed. ``True`` when it changed.
+
+    Each item the seed made and nobody changed takes its link's new text, target and
+    place. An item whose link left the seed is deleted (kept when someone changed it
+    or one of its children), and a new link becomes an item. An item someone changed,
+    added or deleted stays as it is. A menu seeded from another template than
+    ``source``, or not seeded at all, is left alone.
+    """
+    from karni_site.models import Menu, MenuItem
+
+    links = parse_links(markup)
+    fingerprint = _digest(links)
+    with transaction.atomic():
+        menu = Menu.objects.select_for_update().filter(name=name).first()
+        if menu is None or not menu.seed or (source and menu.seed != source):
+            return False
+        recorded = dict(menu.seeded or {})
+        if recorded.get("digest") == fingerprint:
+            return False
+        rows = list(
+            MenuItem.objects.without("soft_delete", reason=_EVERY_ITEM)
+            .filter(menu=menu)
+            .select_related("children_from")
+        )
+        old = recorded.get("entries")
+        if not isinstance(old, list):
+            old = _adopt(menu, rows)
+        follow = _Follow(menu, {row.seed_key: row for row in rows if row.seed_key}, rows)
+        menu.seeded = {
+            "digest": fingerprint,
+            "entries": follow.level(_planned(links, name), old, None, None, create=True),
+        }
+        menu.save(update_fields=["seeded"])
+    caching.bump("menus")
+    return True
+
+
+# following a seed: one level of the menu at a time
+
+
+@dataclass
+class _Node:
+    """A link of the seed as the menu item it becomes."""
+
+    link: Link
+    rows: Any | None
+    children: list[_Node] = field(default_factory=list)
+
+
+def _planned(links: list[Link], name: str) -> list[_Node]:
+    """The seed's links as items: a marked list without its model gives its links in its place."""
+    found: list[_Node] = []
+    for link in links:
+        rows = _content_type(link.children_from)
+        if link.children_from and rows is None:
+            logger.warning(
+                "karni_site: menu %r lists %s, which is not a model here: "
+                "seeded with the design's links instead",
+                name,
+                link.children_from,
+            )
+        if rows is None and not link.href:
+            found.extend(_planned(link.children, name))
+            continue
+        found.append(_Node(link, rows, [] if rows is not None else _planned(link.children, name)))
+    return found
+
+
+def _label(content_type: Any | None) -> str:
+    return f"{content_type.app_label}.{content_type.model}" if content_type is not None else ""
+
+
+def _given(node: _Node, order: int, parent: str) -> dict[str, Any]:
+    """The item fields the seed gives ``node`` at ``order`` under the item keyed ``parent``."""
+    fields = item_fields(node.link.href) if node.link.href else {}
+    return {
+        "title": node.link.title,
+        "route": str(fields.get("route", "")),
+        "route_kwargs": dict(fields.get("route_kwargs") or {}),
+        "url": str(fields.get("url", "")),
+        "suffix": str(fields.get("suffix", "")),
+        "children_from": _label(node.rows),
+        "row": "",
+        "new_tab": False,
+        "enabled": True,
+        "order": order,
+        "parent": parent,
+    }
+
+
+def _target(values: dict[str, Any]) -> str:
+    keys = ("route", "route_kwargs", "url", "suffix", "children_from")
+    return json.dumps([values.get(key) for key in keys], sort_keys=True, default=str)
+
+
+class _Follow:
+    """Matches one level of the seed's links with the items the seed made before, and acts."""
+
+    def __init__(self, menu: Any, keyed: dict[str, Any], rows: list[Any] | None = None) -> None:
+        self.menu = menu
+        self.keyed = keyed
+        self.by_pk = {row.pk: row for row in rows or ()}
+
+    def values(self, item: Any) -> dict[str, Any]:
+        """An item's fields as :func:`_given` writes them, to tell whether someone changed it."""
+        parent = self.by_pk.get(item.parent_id) if item.parent_id else None
+        return {
+            "title": item.title,
+            "route": item.route,
+            "route_kwargs": dict(item.route_kwargs or {}),
+            "url": item.url,
+            "suffix": item.suffix,
+            "children_from": _label(item.children_from),
+            "row": f"{item.content_type_id}:{item.object_id}" if item.content_type_id else "",
+            "new_tab": item.new_tab,
+            "enabled": item.enabled,
+            "order": item.order,
+            "parent": getattr(parent, "seed_key", "") if parent is not None else "",
+        }
+
+    def edited(self, item: Any, entry: dict[str, Any]) -> bool:
+        given = entry.get("given")
+        return not isinstance(given, dict) or self.values(item) != given
+
+    def _probe(self, entry: dict[str, Any]) -> dict[str, Any]:
+        given = entry.get("given")
+        if isinstance(given, dict):
+            return given
+        item = self.keyed.get(str(entry.get("key")))
+        return self.values(item) if item is not None else {}
+
+    def _match(
+        self, old: list[dict[str, Any]], nodes: list[_Node], parent: str
+    ) -> tuple[list[dict[str, Any] | None], list[dict[str, Any]]]:
+        """For each node, the entry it continues (or ``None``), and the entries left over."""
+        matched: list[dict[str, Any] | None] = [None] * len(nodes)
+        left = list(old)
+        wanted = [_given(node, index, parent) for index, node in enumerate(nodes)]
+        tests = (
+            lambda probe, given: (
+                _target(probe) == _target(given) and probe.get("title") == given["title"]
+            ),
+            lambda probe, given: _target(probe) == _target(given),
+            lambda probe, given: bool(given["title"]) and probe.get("title") == given["title"],
+        )
+        for test in tests:
+            for index, given in enumerate(wanted):
+                if matched[index] is not None:
+                    continue
+                for entry in left:
+                    if test(self._probe(entry), given):
+                        matched[index] = entry
+                        left.remove(entry)
+                        break
+        # What is left pairs by position, but only an item nobody touched: a changed or
+        # deleted one keeps standing for its own link.
+        for index in range(len(nodes)):
+            if matched[index] is not None:
+                continue
+            for entry in left:
+                item = self.keyed.get(str(entry.get("key")))
+                if item is not None and not item.is_deleted and not self.edited(item, entry):
+                    matched[index] = entry
+                    left.remove(entry)
+                    break
+        return matched, left
+
+    def level(
+        self,
+        nodes: list[_Node],
+        old: list[dict[str, Any]],
+        parent: Any | None,
+        parent_key: str | None,
+        *,
+        create: bool,
+    ) -> list[dict[str, Any]]:
+        """Follow one level: the entries it records, its children's included.
+
+        ``create`` is false under an item someone deleted: its links make no items.
+        """
+        key_of_parent = parent_key or ""
+        mine = [entry for entry in old if (entry.get("parent") or "") == key_of_parent]
+        matched, left = self._match(mine, nodes, key_of_parent)
+        recorded: list[dict[str, Any]] = []
+        for index, node in enumerate(nodes):
+            given = _given(node, index, key_of_parent)
+            entry = matched[index]
+            item = self.keyed.get(str(entry.get("key"))) if entry is not None else None
+            if entry is None and not create:
+                continue
+            if entry is None:
+                item = self._create(node, given, parent)
+                key = item.seed_key
+            else:
+                key = str(entry["key"])
+                if item is not None and not item.is_deleted and not self.edited(item, entry):
+                    self._update(item, node, given, parent)
+            recorded.append({"key": key, "parent": key_of_parent, "given": given})
+            live = item is not None and not item.is_deleted
+            recorded.extend(
+                self.level(node.children, old, item if live else None, key, create=live)
+            )
+        for entry in left:
+            recorded.extend(self._drop(entry, old))
+        return recorded
+
+    def _create(self, node: _Node, given: dict[str, Any], parent: Any | None) -> Any:
+        from karni_site.models import MenuItem
+
+        fields = {name: given[name] for name in ("title", "route", "route_kwargs", "url", "suffix")}
+        item = MenuItem.objects.create(
+            menu=self.menu,
+            parent=parent,
+            order=given["order"],
+            children_from=node.rows,
+            seed_key=uuid.uuid4().hex[:16],
+            **fields,
+        )
+        self.keyed[item.seed_key] = item
+        self.by_pk[item.pk] = item
+        return item
+
+    def _update(self, item: Any, node: _Node, given: dict[str, Any], parent: Any | None) -> None:
+        before = self.values(item)
+        for name in ("title", "route", "route_kwargs", "url", "suffix", "order"):
+            setattr(item, name, given[name])
+        item.children_from = node.rows
+        item.parent = parent
+        if self.values(item) != before:
+            item.save()
+
+    def _drop(self, entry: dict[str, Any], old: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """An entry whose link left the seed: its item goes unless someone kept it or a child."""
+        item = self.keyed.get(str(entry.get("key")))
+        children = [child for child in old if child.get("parent") == entry.get("key")]
+        kept: list[dict[str, Any]] = []
+        for child in children:
+            kept.extend(self._drop(child, old))
+        if item is None or item.is_deleted:
+            return kept
+        others = (
+            type(item)
+            .objects.filter(parent=item)
+            .exclude(seed_key__in=[str(child.get("key")) for child in children])
+        )
+        if kept or self.edited(item, entry) or others.exists():
+            return [{**entry, "given": None}, *kept]
+        item.delete()
+        return []
+
+
+def _adopt(menu: Any, rows: list[Any]) -> list[dict[str, Any]]:
+    """The entries of a menu seeded before seeds were followed, read from its items.
+
+    The seed made its items in the same moment as the menu, so an item created
+    within a second of it came from the seed. One never saved since is as the seed
+    gave it, one saved since was changed by someone, and one deleted was deleted
+    by someone: those two stay as they are.
+    """
+    from datetime import timedelta
+
+    moment = timedelta(seconds=1)
+    by_pk = {row.pk: row for row in rows}
+    entries: list[dict[str, Any]] = []
+    follow = _Follow(menu, {}, rows)
+    seeded = [row for row in rows if abs(row.created_at - menu.created_at) <= moment]
+    for row in seeded:
+        if not row.seed_key:
+            row.seed_key = uuid.uuid4().hex[:16]
+            type(row).objects.without("soft_delete", reason=_EVERY_ITEM).filter(pk=row.pk).update(
+                seed_key=row.seed_key
+            )
+    for row in seeded:
+        parent = by_pk.get(row.parent_id) if row.parent_id else None
+        untouched = not row.is_deleted and row.updated_at - row.created_at <= moment
+        entries.append(
+            {
+                "key": row.seed_key,
+                "parent": getattr(parent, "seed_key", "") if parent is not None else "",
+                "given": follow.values(row) if untouched else None,
+            }
+        )
+    return entries
 
 
 def _content_type(label: str) -> Any | None:

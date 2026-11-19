@@ -2043,6 +2043,7 @@ class Lead(BaseModel):
 | `KARNI_SITE_MENU_ROWS` |  | `"karni_site.menus.menu_rows"` | The rows a menu item's "children from" model contributes: (model, item) -&gt; iterable of rows with get_absolute_url(). A dotted path. |
 | `KARNI_SITE_MENU_ROWS_LIMIT` |  | `100` | At most this many rows per "children from" item. |
 | `KARNI_SITE_MENU_SECTIONS` |  | `True` | True: a menu item is active (item.active) on every page under its own path too, so "Services" at /services/ stays marked on /services/web/. The home page (/) never is. False: an item is active on its own page and when one of its children is. |
+| `KARNI_SITE_MENU_FOLLOW_SEED` |  | `True` | True: a menu seeded from a template ({% get_menu ... seed="..." %}) follows it, as an editable block follows its text: the items nobody changed take the seed's new links. False: the seed makes the menu once and never changes it afterwards. |
 | `KARNI_SITE_REDIRECTS_BEFORE_VIEWS` |  | `False` | False: an admin redirect answers only where the site has no page (a 404), and a request for a page that exists costs nothing. True: every request is looked up before the view runs, one cache read each. |
 | `KARNI_SITE_EDITOR_ROLE` |  | `"editor"` | The slug of the content editor role this module declares (karni.roles), or None to declare none. A role of the same slug in KARNI_ROLES replaces it. |
 | `KARNI_SITE_FORMS` |  | `{}` | Form name -&gt; the dotted path of the BaseViewSet that saves it, or a model label ("shop.Enquiry"). Without an entry, {% karni_form "enquiry" %} finds the model by name. |

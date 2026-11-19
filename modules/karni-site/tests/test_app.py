@@ -61,6 +61,7 @@ def test_settings_fragment_is_import_light_and_read_through_get() -> None:
         "KARNI_SITE_MENU_ROWS",
         "KARNI_SITE_MENU_ROWS_LIMIT",
         "KARNI_SITE_MENU_SECTIONS",
+        "KARNI_SITE_MENU_FOLLOW_SEED",
         "KARNI_SITE_REDIRECTS_BEFORE_VIEWS",
         "KARNI_SITE_EDITOR_ROLE",
         # public forms

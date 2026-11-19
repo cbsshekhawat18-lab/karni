@@ -94,6 +94,19 @@ apply codemods and list the manual steps. This file is the human summary.
   and two runs at once are refused. New target, nothing changes for `compose`
   ([docs](docs/deploy.md#without-docker-systemd-and-nginx)).
 
+- **Fixed: a karni-site menu follows its seed template, as the docs said.** A menu that
+  `{% get_menu "header" seed="..." %}` made followed nothing after its first render, so a
+  new link in the seed never appeared and a renamed view left an item that pointed nowhere
+  (`SITE007`). Now, as an editable block follows its template's text, each item the seed
+  made and nobody changed takes the seed's new text, target and place, an item whose link
+  left the seed goes, and a new link becomes an item. An item someone changed in the admin,
+  added or deleted stays as it is, and so does a menu made in the admin. Unchanged, a seed
+  costs no query. A seed that stops rendering keeps the menu as stored.
+  `KARNI_SITE_MENU_FOLLOW_SEED = False` seeds once as before, and
+  `karni_site.menus.sync_menu()` follows a seed from code. karni-site's migration 0002 adds
+  `Menu.seeded` and `MenuItem.seed_key`
+  ([migration note](docs/migrations/0.5.md#seeded-menus-follow-their-seed)).
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

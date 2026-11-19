@@ -65,6 +65,10 @@ DEFAULTS: dict[str, Any] = {
     # "Services" at /services/ stays marked on /services/web/. The home page (/) never is.
     # False: an item is active on its own page and when one of its children is.
     "KARNI_SITE_MENU_SECTIONS": True,
+    # True: a menu seeded from a template ({% get_menu ... seed="..." %}) follows it, as an
+    # editable block follows its text: the items nobody changed take the seed's new links.
+    # False: the seed makes the menu once and never changes it afterwards.
+    "KARNI_SITE_MENU_FOLLOW_SEED": True,
     # False: an admin redirect answers only where the site has no page (a 404), and a
     # request for a page that exists costs nothing. True: every request is looked up
     # before the view runs, one cache read each.
