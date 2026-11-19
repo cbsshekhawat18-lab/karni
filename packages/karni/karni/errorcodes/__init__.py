@@ -1872,7 +1872,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "dummy backend gives every worker its own counters, so the login, registration and "
         "password-reset limits are multiplied by the worker count.",
         "Point CACHES['default'] at a backend every worker shares (Redis, which Karni uses by "
-        "default, or the database cache), or silence karni.W501 for a single-process deployment.",
+        "default, or the database cache). A deployment of one process declares it with "
+        "KARNI_SINGLE_PROCESS=True and WEB_CONCURRENCY=1, which quiets the check.",
     ),
     _e(
         "E506",
@@ -1906,7 +1907,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "KARNI_AUTH_MODE, KARNI_2FA, KARNI_SOCIAL_AUTH and KARNI_SOCIAL_PROVIDERS decide "
         "INSTALLED_APPS and MIDDLEWARE, KARNI_FRONTEND_URL feeds CSRF_TRUSTED_ORIGINS, "
         "KARNI_AUTH_THROTTLE_RATES the throttle rates, KARNI_JSON_LOGS builds LOGGING, "
-        "KARNI_CACHE builds CACHES and KARNI_STORAGE builds STORAGES. Assigned after the "
+        "KARNI_CACHE builds CACHES, KARNI_STORAGE builds STORAGES and KARNI_SINGLE_PROCESS sets "
+        "the cache, Celery's eager mode and the probes. Assigned after the "
         "call, such a setting changes none of them, and the project would run with the "
         "settings computed from the old value. A KARNI_ADMIN_LOGO with no SITE_LOGO entry "
         "in UNFOLD (UNFOLD replaced after the call) shows no logo either.",

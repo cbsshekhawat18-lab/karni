@@ -92,6 +92,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_AUTH_THROTTLE_RATES": "Per-scope auth throttle overrides as a JSON object. `null` disables a scope.",
     "KARNI_STORAGE": "`local` (filesystem) or `s3` (any S3-compatible service, needs `karni[s3]`).",
     "KARNI_CACHE": "`redis` (the default cache at `REDIS_URL`) or `locmem`, an in-process cache for a host run without Redis (development only: throttle counters are then per process).",
+    "KARNI_SINGLE_PROCESS": "A deployment of one process, without Redis or a Celery worker: the cache in memory (`KARNI_CACHE=locmem`), Celery tasks run in the process that sends them (`CELERY_TASK_ALWAYS_EAGER`, broker `memory://`), `/readyz` and `/health/ready/` leave the broker and the worker out, and `karni.W501` is quiet while `WEB_CONCURRENCY` is 1. Each only where the project sets no value of its own. Beat does not run: no scheduled task fires. See [a small server](deploy.md#a-small-server-one-process).",
     "KARNI_SEARCH_PROVIDER": "Dotted path of the `SearchProvider` behind `?search=`. The PostgreSQL provider falls back to portable search on other databases.",
     "KARNI_API_MAX_EXPAND_DEPTH": "Deepest `?expand=` path allowed (levels of nesting).",
     "KARNI_GLOBAL_SEARCH_MIN_LENGTH": "Experimental. The shortest query `GET /api/search/` searches for. A shorter one answers no groups. See [search across models](global-search.md).",

@@ -618,6 +618,7 @@ karni make deploy systemd-nginx --domain example.com
 | `--keep` | `5` | The releases kept for a rollback, at least 2. |
 | `--cert`, `--cert-key` | Let's Encrypt's for the domain | The certificate and its key, for example a CDN's origin certificate. |
 | `--no-celery` | Celery on | No worker and no beat. |
+| `--single-process` | off | One process for a small server, without Redis or Celery ([below](#a-small-server-one-process)). |
 
 The values live at the top of `deploy.sh`. The units and the vhost hold
 `@APP@`, `@ROOT@` and the like, which the script fills in when it installs
@@ -665,6 +666,39 @@ installed again, and nginx is not reloaded. Two runs at once are refused.
 
 The script touches only its own paths: `<root>/`, the units named
 `<project>-*.service` and the vhost `<project>.conf` with its link.
+
+### A small server: one process
+
+A server with 1 GB of memory, shared with other sites, has no room for
+Redis and a Celery worker. One switch runs the project as one process:
+
+```sh
+KARNI_SINGLE_PROCESS=True    # in the server's .env
+WEB_CONCURRENCY=1
+```
+
+`karni make deploy systemd-nginx --single-process` writes the files for
+it: the two lines in `env.example`, one web unit and no worker or beat,
+and gunicorn as one WSGI worker with four threads, which share the
+process's cache. The switch sets these defaults, each only where the
+project, an override or the environment has no value of its own:
+
+| Setting | With the switch | Why |
+|---|---|---|
+| `KARNI_CACHE` | `locmem` | The cache lives in the process, so no Redis. |
+| `CELERY_TASK_ALWAYS_EAGER` | `True` | A task runs in the process that sends it: a queued listener (a form's notification email) runs after the request's commit, and an upload's smaller image copies are made as it is saved. |
+| `CELERY_BROKER_URL` | `memory://` | Nothing opens a connection to a broker. |
+| `KARNI_READYZ_CHECKS`, `KARNI_HEALTH_CHECKS` | the database and the cache | `/readyz` and `/health/ready/` ask for no broker and no worker. |
+
+`karni.W501`, which `karni check --deploy` fails on, warns that a cache
+private to each process multiplies the rate limits by the worker count.
+With the switch it is quiet, unless `WEB_CONCURRENCY` asks gunicorn for
+more than one worker. Two things a worker would do do not happen: beat
+does not run, so no scheduled task fires (run `manage.py
+flushexpiredtokens` from a systemd timer for the one Karni schedules), and
+a task that takes long makes its request wait. `KARNI_SITE_QUEUE_RENDITIONS`
+can stay on: the copies are made in the process, on upload and in the
+deploy's `karni_site_seed`.
 
 ### Rollback
 

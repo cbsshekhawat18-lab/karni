@@ -1329,6 +1329,7 @@ karni make deploy [OPTIONS] TARGET
 | `--keep` INTEGER |  | systemd-nginx: the releases kept for a rollback (default 5). |
 | `--cert` TEXT |  | systemd-nginx: the TLS certificate (default Let's Encrypt's for the domain). |
 | `--cert-key` TEXT |  | systemd-nginx: the certificate's key (default Let's Encrypt's for the domain). |
+| `--single-process` |  | systemd-nginx: one process for a small server, without Redis or Celery (KARNI_SINGLE_PROCESS, one gunicorn worker with threads, no worker or beat). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
 
@@ -1809,6 +1810,7 @@ class Lead(BaseModel):
 | Setting | Env | Default | What it controls |
 |---|---|---|---|
 | `KARNI_CACHE` | `KARNI_CACHE` | `"redis"` | `redis` (the default cache at `REDIS_URL`) or `locmem`, an in-process cache for a host run without Redis (development only: throttle counters are then per process). |
+| `KARNI_SINGLE_PROCESS` | `KARNI_SINGLE_PROCESS` | `False` | A deployment of one process, without Redis or a Celery worker: the cache in memory (`KARNI_CACHE=locmem`), Celery tasks run in the process that sends them (`CELERY_TASK_ALWAYS_EAGER`, broker `memory://`), `/readyz` and `/health/ready/` leave the broker and the worker out, and `karni.W501` is quiet while `WEB_CONCURRENCY` is 1. Each only where the project sets no value of its own. Beat does not run: no scheduled task fires. See [a small server](deploy.md#a-small-server-one-process). |
 
 ### Files & storage
 

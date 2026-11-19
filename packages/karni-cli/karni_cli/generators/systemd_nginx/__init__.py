@@ -65,6 +65,9 @@ class Options:
     ready_path: str = "/readyz"
     #: A public site (karni_site): each release renders every page once (karni_site_seed).
     site: bool = False
+    #: One process without Redis or Celery (KARNI_SINGLE_PROCESS): one gunicorn worker with
+    #: threads, no worker or beat unit.
+    single_process: bool = False
 
     @property
     def app_root(self) -> str:
@@ -80,7 +83,7 @@ class Options:
 
     @property
     def units(self) -> list[str]:
-        return ["web", "worker", "beat"] if self.celery else ["web"]
+        return ["web", "worker", "beat"] if self.celery and not self.single_process else ["web"]
 
 
 def validate(options: Options) -> Options:
@@ -122,6 +125,24 @@ def _fill(name: str, options: Options) -> str:
         "cert_key": options.certificate_key,
         "units": " ".join(options.units),
         "ready_path": options.ready_path,
+        "server_kind": (
+            "one process, its threads share the cache"
+            if options.single_process
+            else "uvicorn workers"
+        ),
+        "server": (
+            "config.wsgi:application \\\n    --workers 1 --worker-class gthread --threads 4"
+            if options.single_process
+            else "config.asgi:application -k uvicorn_worker.UvicornWorker"
+        ),
+        "concurrency": (
+            "# One process (KARNI_SINGLE_PROCESS): the cache and the throttles live in it, so\n"
+            "# --workers 1 below stays 1. Its threads serve requests side by side.\n"
+            "Environment=WEB_CONCURRENCY=1"
+            if options.single_process
+            else "# Worker processes, about two per CPU core. WEB_CONCURRENCY in the .env replaces it.\n"
+            "Environment=WEB_CONCURRENCY=2"
+        ),
         "seed_step": (
             "  # Every page rendered once: the defaults its templates give are stored now,\n"
             "  # not on a visitor's request.\n"
@@ -170,11 +191,22 @@ def env_example(options: Options, email: list[str]) -> str:
         "# PostgreSQL on this server: the role and database deploy/README.md creates. Letters",
         '# and digits need no escaping in the URL: python3 -c "import secrets; print(secrets.token_hex(24))"',
         f"DATABASE_URL=postgres://{options.slug}:<password>@127.0.0.1:5432/{options.slug}",
-        "# Redis on this server: the cache"
-        + (" and the Celery broker." if options.celery else "."),
-        "REDIS_URL=redis://127.0.0.1:6379/0",
     ]
-    if not options.celery:
+    if options.single_process:
+        out += [
+            "# One process, no Redis and no Celery worker: the cache in memory, tasks run in the",
+            "# process, the probes leave the broker and the worker out, and karni.W501 is quiet",
+            "# while WEB_CONCURRENCY is 1. No scheduled task runs (there is no beat).",
+            "KARNI_SINGLE_PROCESS=True",
+            "WEB_CONCURRENCY=1",
+        ]
+    else:
+        out += [
+            "# Redis on this server: the cache"
+            + (" and the Celery broker." if options.celery else "."),
+            "REDIS_URL=redis://127.0.0.1:6379/0",
+        ]
+    if not options.celery and not options.single_process:
         out += [
             "# No Celery worker runs, so /health/ready/ checks the database and the cache only.",
             "KARNI_HEALTH_CHECKS=karni.health.checks.check_database,karni.health.checks.check_cache",
@@ -187,21 +219,29 @@ def env_example(options: Options, email: list[str]) -> str:
         f"MEDIA_ROOT={root}/shared/media",
         f"STATIC_ROOT={root}/shared/static",
         "",
-        "# --- Sizing -----------------------------------------------------------------------",
-        "# gunicorn worker processes, about two per CPU core:",
-        "# WEB_CONCURRENCY=2",
     ]
-    if options.celery:
+    if not options.single_process:
+        out += [
+            "# --- Sizing -----------------------------------------------------------------------",
+            "# gunicorn worker processes, about two per CPU core:",
+            "# WEB_CONCURRENCY=2",
+        ]
+    if options.celery and not options.single_process:
         out.append("# KARNI_WORKER_CONCURRENCY=2")
-    return "\n".join(out) + "\n"
+    return "\n".join(out).rstrip("\n") + "\n"
 
 
 def readme(options: Options) -> str:
     """The text of ``deploy/README.md``."""
     slug, root, domain = options.slug, options.app_root, options.domain
     units = ", ".join(f"`{slug}-{unit}`" for unit in options.units)
-    packages = (
-        "python3 python3-venv nginx postgresql redis-server curl certbot python3-certbot-nginx"
+    redis = "" if options.single_process else " redis-server"
+    packages = f"python3 python3-venv nginx postgresql{redis} curl certbot python3-certbot-nginx"
+    services = (
+        "PostgreSQL on the same server. It is one process (`KARNI_SINGLE_PROCESS`): no Redis,"
+        " no Celery worker, tasks run in the web process."
+        if options.single_process
+        else "PostgreSQL and Redis on the same server."
     )
     unit_rows = [f"| `web.service` | gunicorn, the web process, as `{slug}-web.service`. |"]
     if options.celery:
@@ -215,8 +255,8 @@ def readme(options: Options) -> str:
             "",
             "`karni make deploy systemd-nginx` wrote this folder, and every file in it is",
             "yours to edit. It runs the project on one Linux server without Docker: the",
-            f"processes under systemd ({units}), nginx in front with TLS, and PostgreSQL",
-            "and Redis on the same server. Karni's docs/deploy.md has the whole walk-through.",
+            f"processes under systemd ({units}), nginx in front with TLS, and {services}",
+            "Karni's docs/deploy.md has the whole walk-through.",
             "",
             "| File | What it is |",
             "|---|---|",

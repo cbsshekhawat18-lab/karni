@@ -854,6 +854,7 @@ def _systemd_nginx(
     cert: str | None,
     cert_key: str | None,
     celery: bool,
+    single_process: bool,
     force: bool,
     dry_run: bool,
 ) -> None:
@@ -868,10 +869,11 @@ def _systemd_nginx(
         keep=systemd_nginx.DEFAULT_KEEP if keep is None else keep,
         cert=cert or "",
         cert_key=cert_key or "",
-        celery=celery,
+        celery=celery and not single_process,
         auth_mode=base.auth_mode,
         ready_path=base.ready_path,
         site=base.site,
+        single_process=single_process,
     )
     systemd_nginx.plan(
         ws,
@@ -881,6 +883,16 @@ def _systemd_nginx(
             *(["", *site_lines(options.domain)] if options.site else []),
         ],
     )
+    unused = [
+        f"{systemd_nginx.FOLDER}/{unit}.service"
+        for unit in ("worker", "beat")
+        if unit not in options.units and ws.exists(f"{systemd_nginx.FOLDER}/{unit}.service")
+    ]
+    if unused:
+        ws.note(
+            f"note: {' and '.join(unused)} are not used any more (deploy.sh installs "
+            f"{', '.join(options.units)}): delete them."
+        )
     if (ws.root / "frontend" / "package.json").is_file():
         ws.note(
             "note: this target serves no staff app (frontend/). Serve its build with a "
@@ -961,6 +973,12 @@ def command(
         help="systemd-nginx: the certificate's key (default Let's Encrypt's for the domain).",
         show_default=False,
     ),
+    single_process: bool = typer.Option(
+        False,
+        "--single-process",
+        help="systemd-nginx: one process for a small server, without Redis or Celery "
+        "(KARNI_SINGLE_PROCESS, one gunicorn worker with threads, no worker or beat).",
+    ),
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
 ) -> None:
@@ -990,6 +1008,7 @@ def command(
             ("--keep", keep is not None),
             ("--cert", cert is not None),
             ("--cert-key", cert_key is not None),
+            ("--single-process", single_process),
         )
         if given
     ]
@@ -1027,6 +1046,7 @@ def command(
             cert=cert,
             cert_key=cert_key,
             celery=celery,
+            single_process=single_process,
             force=force,
             dry_run=dry_run,
         )

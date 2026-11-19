@@ -1212,6 +1212,7 @@ karni make deploy [OPTIONS] TARGET
 | `--keep` INTEGER |  | systemd-nginx: the releases kept for a rollback (default 5). |
 | `--cert` TEXT |  | systemd-nginx: the TLS certificate (default Let's Encrypt's for the domain). |
 | `--cert-key` TEXT |  | systemd-nginx: the certificate's key (default Let's Encrypt's for the domain). |
+| `--single-process` |  | systemd-nginx: one process for a small server, without Redis or Celery (KARNI_SINGLE_PROCESS, one gunicorn worker with threads, no worker or beat). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
 

@@ -730,7 +730,7 @@ environment.
 | `KARNI_SITE_IMAGE_WIDTHS` | `[320, 480, 640, 800, 960, 1280, 1600, 1920]` | The widths of an upload's WebP copies (and its own width). `[]` makes none. |
 | `KARNI_SITE_IMAGE_QUALITY` | `80` | Their WebP quality. |
 | `KARNI_SITE_IMAGE_MAX_SIZE` | `2560` | An upload wider or taller is scaled down to fit. `None` keeps it. |
-| `KARNI_SITE_QUEUE_RENDITIONS` | `True` | Whether an upload, and a page that shows an image without copies, queue them. |
+| `KARNI_SITE_QUEUE_RENDITIONS` | `True` | Whether an upload, and a page that shows an image without copies, queue them. With `KARNI_SINGLE_PROCESS` the queue runs in the process, so the copies are made without a worker. |
 | `KARNI_SITE_RENDITIONER` | `"karni_site.renditions.generate"` | The `(name, storage) -> Manifest` function that makes the copies. |
 | `KARNI_SITE_IMAGE_STYLE` | `height: auto` for `img[data-karni-image]` | The CSS `{% karni_seo %}` writes for the images Karni sized. `""` leaves it out. |
 | `KARNI_SITE_SEO_MAX_PAGES` | `500` | `karni check --seo` requests at most this many pages. |

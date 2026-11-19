@@ -390,6 +390,10 @@ BASE: dict[str, Any] = {
     "DATABASE_ROUTERS": ["karni.db.DatabaseRouter"],
     # "redis" (the default cache at REDIS_URL) or "locmem" (a host run without Redis).
     "KARNI_CACHE": env("KARNI_CACHE", default="redis"),
+    # A deployment of one process, without Redis or a Celery worker: the cache in memory,
+    # Celery tasks run in the process, the probes leave the broker and the worker out, and
+    # karni.W501 is quiet while WEB_CONCURRENCY is 1 (karni.conf.single_process).
+    "KARNI_SINGLE_PROCESS": env.bool("KARNI_SINGLE_PROCESS", default=False),
     "CACHES": _caches(env),
     # --- Email ----------------------------------------------------------------
     # EMAIL_URL (smtp+tls://user:password@host:587), DEFAULT_FROM_EMAIL, SERVER_EMAIL.

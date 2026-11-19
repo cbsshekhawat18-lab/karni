@@ -32,6 +32,7 @@ A few settings are read while `karni_settings()` runs, to compute other settings
 - `KARNI_JSON_LOGS`: LOGGING and the structlog renderer
 - `KARNI_CACHE`: CACHES
 - `KARNI_STORAGE`: STORAGES
+- `KARNI_SINGLE_PROCESS`: KARNI_CACHE, CELERY_TASK_ALWAYS_EAGER, CELERY_BROKER_URL, KARNI_READYZ_CHECKS and KARNI_HEALTH_CHECKS
 
 Set them in `.env`, define them above the call, or pass them to it:
 `karni_settings(globals(), KARNI_AUTH_MODE="session")`. Assigned below the
@@ -77,6 +78,7 @@ reads it on every request.
 | <a id="karni_auth_throttle_rates"></a>`KARNI_AUTH_THROTTLE_RATES` |  | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object. `null` disables a scope. |
 | **Database & cache** | | | |
 | <a id="karni_cache"></a>`KARNI_CACHE` | `KARNI_CACHE` | `"redis"` | `redis` (the default cache at `REDIS_URL`) or `locmem`, an in-process cache for a host run without Redis (development only: throttle counters are then per process). |
+| <a id="karni_single_process"></a>`KARNI_SINGLE_PROCESS` | `KARNI_SINGLE_PROCESS` | `False` | A deployment of one process, without Redis or a Celery worker: the cache in memory (`KARNI_CACHE=locmem`), Celery tasks run in the process that sends them (`CELERY_TASK_ALWAYS_EAGER`, broker `memory://`), `/readyz` and `/health/ready/` leave the broker and the worker out, and `karni.W501` is quiet while `WEB_CONCURRENCY` is 1. Each only where the project sets no value of its own. Beat does not run: no scheduled task fires. See [a small server](deploy.md#a-small-server-one-process). |
 | **Files & storage** | | | |
 | <a id="karni_storage"></a>`KARNI_STORAGE` | `KARNI_STORAGE` | `"local"` | `local` (filesystem) or `s3` (any S3-compatible service, needs `karni[s3]`). |
 | **API (karni.api)** | | | |

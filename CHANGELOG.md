@@ -141,6 +141,20 @@ apply codemods and list the manual steps. This file is the human summary.
   production examples both `karni make deploy` targets write list them for a project with
   karni-site, with `KARNI_SITE_URL` set to the domain.
 
+- **Added: `KARNI_SINGLE_PROCESS`, one switch for a small server without Redis or Celery.**
+  Running without them took `KARNI_CACHE=locmem`, `KARNI_SITE_QUEUE_RENDITIONS=False` and a
+  single worker, and `karni check --deploy` still failed on `karni.W501`, while `/readyz`
+  failed on the broker and a queued task tried to reach one. With
+  `KARNI_SINGLE_PROCESS=True` (in the environment, or in settings.py above
+  `karni_settings()`: it is read during the call), the cache defaults to `locmem`, Celery
+  tasks run in the process (`CELERY_TASK_ALWAYS_EAGER`, broker `memory://`), `/readyz` and
+  `/health/ready/` leave the broker and the worker out, and `karni.W501` is quiet while
+  `WEB_CONCURRENCY` is 1 (it names the variable when it is more). Each default applies only
+  where the project has no value of its own. Image copies keep working, made in the
+  process. `karni make deploy systemd-nginx --single-process` writes the switch, one
+  gunicorn worker with threads and no worker or beat unit
+  ([docs](docs/deploy.md#a-small-server-one-process)).
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

@@ -144,6 +144,24 @@ def test_no_celery_writes_the_web_unit_only(project: Path) -> None:
     )
 
 
+def test_single_process_runs_one_gunicorn_worker_without_redis(project: Path) -> None:
+    assert make().exit_code == 0
+    result = make("--single-process", "--force")
+    assert result.exit_code == 0, result.output
+    assert "worker.service and deploy/beat.service are not used any more" in result.output
+    folder = project / "deploy"
+    assert 'UNITS="${DEPLOY_UNITS:-web}"' in (folder / "deploy.sh").read_text()
+    web = (folder / "web.service").read_text()
+    assert "gunicorn config.wsgi:application" in web
+    assert "--workers 1 --worker-class gthread --threads 4" in web
+    assert "Environment=WEB_CONCURRENCY=1" in web
+    env = (folder / "env.example").read_text()
+    assert "\nKARNI_SINGLE_PROCESS=True\nWEB_CONCURRENCY=1\n" in env
+    assert "REDIS_URL" not in env and "KARNI_HEALTH_CHECKS" not in env
+    readme = (folder / "README.md").read_text()
+    assert "redis-server" not in readme and "no Redis" in readme
+
+
 def test_a_dry_run_writes_nothing(project: Path) -> None:
     result = make("--dry-run")
     assert result.exit_code == 0, result.output
@@ -187,6 +205,8 @@ def test_compose_refuses_the_server_flags(project: Path) -> None:
     assert result.exit_code != 0
     assert "C106" in said(result)
     assert "systemd-nginx" in said(result)
+    single = CliRunner().invoke(app, ["make", "deploy", "compose", "--single-process"])
+    assert single.exit_code != 0 and "--single-process" in said(single)
 
 
 # the script, against a stand-in server
