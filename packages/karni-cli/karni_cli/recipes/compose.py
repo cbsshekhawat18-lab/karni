@@ -796,15 +796,25 @@ def _merge_app_menu(
     titles: Mapping[str, str],
     taken: set[str],
 ) -> list[Any]:
-    """The ``app`` menu with ``theirs`` added: one group per part once a second part joins."""
+    """The ``app`` menu with ``theirs`` added: one group per part once a second part joins.
+
+    A family page a part lists (``orders``, ``people``, ``settings``) is the family's, not
+    the part's: once the parts are grouped it stays outside every group, once.
+    """
+
+    def family(entry: Any) -> bool:
+        key = entry if isinstance(entry, str) else _page_name(entry)
+        return key in FAMILY_PAGES
+
     # a part installed alone shows its entries flat: group them now that a second one joins
     for other, base in bases.items():
         flat = (_menus(base.get("navigation")) or {}).get(APP_MENU)
         if not isinstance(flat, list) or not flat:
             continue
-        found = [entry for entry in entries if entry in flat]
-        if found and len(found) == len([e for e in flat if _page_name(e) != "home"]):
-            group = {_group_label(titles.get(other, other), taken): [e for e in flat if e in found]}
+        own_flat = [e for e in flat if not family(e)]
+        found = [entry for entry in entries if entry in own_flat]
+        if found and len(found) == len(own_flat):
+            group = {_group_label(titles.get(other, other), taken): found}
             first = entries.index(found[0])
             entries = [e for e in entries if e not in found]
             entries.insert(first, group)
@@ -814,8 +824,16 @@ def _merge_app_menu(
         entries.insert(0, "home")
     if alone and not bases:
         entries += copy.deepcopy(own)
-    elif own:
-        entries.append({_group_label(part.title, taken): copy.deepcopy(own)})
+        return entries
+    keys = {entry if isinstance(entry, str) else _page_name(entry) for entry in entries}
+    for entry in own:
+        key = entry if isinstance(entry, str) else _page_name(entry)
+        if family(entry) and key not in keys:
+            entries.append(copy.deepcopy(entry))  # the family's page, once, at the top level
+            keys.add(key)
+    part_entries = [copy.deepcopy(entry) for entry in own if not family(entry)]
+    if part_entries:
+        entries.append({_group_label(part.title, taken): part_entries})
     return entries
 
 

@@ -535,3 +535,23 @@ def test_a_group_label_never_names_a_page() -> None:
         modules=MODULES,
     )
     assert second.data["navigation"][-1] == {"Visits": ["Visit"]}
+
+
+def test_a_family_page_stays_outside_the_parts_groups() -> None:
+    desk = {**_desk(), "navigation": ["orders", "Ticket", "Order"]}
+    first = compose.merge(_project(), _Recipe("desk", "Help desk"), desk, modules=MODULES)
+    assert first.data["navigation"] == ["orders", "Ticket", "Order"]  # alone: flat
+    club = {**_club(), "navigation": ["Visit", "orders"]}
+    second = compose.merge(
+        first.data,
+        _Recipe("club", "Club"),
+        club,
+        bases={"desk": desk},
+        parts={"desk": _Recipe("desk", "Help desk")},
+        modules=MODULES,
+    )
+    assert second.data["navigation"] == [
+        "orders",
+        {"Help desk": ["Ticket", "desk.Order"]},
+        {"Club": ["Visit"]},
+    ]
