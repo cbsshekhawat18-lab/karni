@@ -202,6 +202,12 @@ def test_a_site_renders_its_pages_in_the_release_step(
         "collectstatic --noinput -v 0 && python manage.py karni_site_seed "
         "&& python manage.py karni_publish_web"
     ) in release
+    # karni-site's deployment settings, read from the environment, are in the example.
+    assert "KARNI_SITE" not in (project / deploy.ENV_EXAMPLE).read_text()
+    env = (tmp_path / "harbour_notes" / deploy.ENV_EXAMPLE).read_text()
+    assert "\nKARNI_SITE_URL=https://example.com\n" in env
+    for name in ("ALLOW_INDEXING", "QUEUE_RENDITIONS", "SEED_ON_RENDER", "NOTIFY_FROM"):
+        assert f"\n# KARNI_SITE_{name}=" in env, name
 
 
 # the flags

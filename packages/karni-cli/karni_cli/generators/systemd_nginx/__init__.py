@@ -136,7 +136,8 @@ def _fill(name: str, options: Options) -> str:
 
 
 def env_example(options: Options, email: list[str]) -> str:
-    """The text of ``deploy/env.example``. ``email`` is the email section, shared with compose."""
+    """The text of ``deploy/env.example``. ``email`` holds the sections shared with compose:
+    the email, and the public site's for a project with karni-site."""
     root = options.app_root
     out = [
         f"# Production environment for {options.slug} on one server with systemd and nginx.",

@@ -119,6 +119,8 @@ def test_it_writes_the_deploy_folder(project: Path) -> None:
         "REDIS_URL=redis://127.0.0.1:6379/0",
     ):
         assert f"\n{line}\n" in env, line
+    assert "\nKARNI_SITE_URL=https://clinic.example.com\n" in env, "a site's address"
+    assert "\n# KARNI_SITE_ALLOW_INDEXING=False\n" in env
     readme = (folder / "README.md").read_text()
     assert "sudo deploy/deploy.sh --rollback" in readme
     assert "createdb --owner clinic_hours clinic_hours" in readme

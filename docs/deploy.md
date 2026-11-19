@@ -208,6 +208,7 @@ site behaves, grouped by what they do:
 | `KARNI_STORAGE`, `MEDIA_ROOT`, `STATIC_ROOT` | local, `/data/...` | Where uploads and static files live ([files](#14-static-and-media-files)). |
 | `KARNI_BACKUP_*`, `POSTGRES_VERSION` | see [backups](#10-backups) | Backup retention, interval and the bucket. |
 | `SENTRY_DSN` | empty | Error reports. |
+| `KARNI_SITE_URL`, `KARNI_SITE_ALLOW_INDEXING`, `KARNI_SITE_QUEUE_RENDITIONS`, `KARNI_SITE_SEED_ON_RENDER` | the domain, open in prod, on, on | A public site's address, whether search engines may index it (`False` for a staging copy), whether image copies wait for a Celery worker, and whether a visit stores a template's defaults ([public site](public-site.md#seo-by-default)). In a project with karni-site. |
 
 A variable in `.env.prod` reaches the containers through Compose's `env_file`.
 A JSON value is written in single quotes, such as

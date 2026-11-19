@@ -4,15 +4,26 @@ Import-light by contract: plain data plus django-environ reads, never
 ``django.conf.settings`` at import time. Module code reads settings through
 :func:`get`, so it also works without ``karni_settings()``.
 
+The settings that differ between deployments of one project (the site's
+address, whether search engines may index it, the image copies' queue,
+seeding on render, the closed site's robots tag, the notifications' sender)
+are read from the environment the way Karni's own are: ``KARNI_SITE_URL`` in
+``.env`` or ``.env.prod`` sets ``KARNI_SITE_URL``. Leave a variable unset for
+its default: an empty one is a value (``""``, or ``False`` for a yes-or-no).
+
 Override / escape hatch: define any of these names in the project's
-settings.py.
+settings.py, which wins over the environment.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+import environ
 from django.conf import settings
+
+#: The reader the environment-backed defaults below use: django-environ, as karni.conf's.
+env = environ.Env()
 
 DEFAULTS: dict[str, Any] = {
     # The function {% ifactive %} asks whether a pattern names the current page:
@@ -55,7 +66,7 @@ DEFAULTS: dict[str, Any] = {
     "KARNI_SITE_CACHE_TIMEOUT": 3600,
     # Whether the first render of a template stores its defaults (blocks, a menu's
     # seed, the site's details). False: nothing is written while a page renders.
-    "KARNI_SITE_SEED_ON_RENDER": True,
+    "KARNI_SITE_SEED_ON_RENDER": env.bool("KARNI_SITE_SEED_ON_RENDER", default=True),
     # The rows a menu item's "children from" model contributes: (model, item) ->
     # iterable of rows with get_absolute_url(). A dotted path.
     "KARNI_SITE_MENU_ROWS": "karni_site.menus.menu_rows",
@@ -117,7 +128,7 @@ DEFAULTS |= {
     # rendered again (no page, a page that needs a POST, a page that fails).
     "KARNI_SITE_FORM_PAGE_TEMPLATE": "karni_site/forms/page.html",
     # The sender of karni_site.notify emails. Empty: Django's DEFAULT_FROM_EMAIL.
-    "KARNI_SITE_NOTIFY_FROM": "",
+    "KARNI_SITE_NOTIFY_FROM": env("KARNI_SITE_NOTIFY_FROM", default=""),
 }
 
 
@@ -125,15 +136,15 @@ DEFAULTS |= {
 DEFAULTS |= {
     # The site's own address, "https://www.example.com". Canonical links, share tags, the
     # sitemap and robots.txt use it. None: the address each request came to.
-    "KARNI_SITE_URL": None,
+    "KARNI_SITE_URL": env("KARNI_SITE_URL", default=None),
     # Whether search engines may index the site. None: only when DJANGO_ENV is "prod", so a
     # development or staging copy is never indexed. True or False decides for every environment.
-    "KARNI_SITE_ALLOW_INDEXING": None,
+    "KARNI_SITE_ALLOW_INDEXING": env.bool("KARNI_SITE_ALLOW_INDEXING", default=None),
     # What a closed site tells search engines on every page, while indexing is not allowed: the
     # X-Robots-Tag header of every response (karni_site.middleware.RedirectMiddleware) and the
     # robots meta tag of {% karni_seo %}. robots.txt alone is not enough: a proxy or CDN may
     # rewrite it. "" sends neither, and robots.txt is then the only signal.
-    "KARNI_SITE_ROBOTS_TAG": "noindex, nofollow",
+    "KARNI_SITE_ROBOTS_TAG": env("KARNI_SITE_ROBOTS_TAG", default="noindex, nofollow"),
     # Paths robots.txt asks crawlers to stay out of while indexing is allowed: ["/search/"].
     "KARNI_SITE_ROBOTS_DISALLOW": [],
     # URL names and paths the sitemap leaves out, shell wildcards allowed:
@@ -174,7 +185,7 @@ DEFAULTS |= {
     "KARNI_SITE_IMAGE_MAX_SIZE": 2560,
     # Whether an upload, and the first page that shows an image without copies, queue the
     # copies (a Celery task). False: make them yourself (karni_site.renditions.make).
-    "KARNI_SITE_QUEUE_RENDITIONS": True,
+    "KARNI_SITE_QUEUE_RENDITIONS": env.bool("KARNI_SITE_QUEUE_RENDITIONS", default=True),
     # The function that makes an image's copies: (name, storage) -> manifest. A dotted path.
     "KARNI_SITE_RENDITIONER": "karni_site.renditions.generate",
     # The CSS {% karni_seo %} puts in the head so an image Karni sized keeps its shape when the

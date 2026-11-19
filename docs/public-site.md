@@ -647,9 +647,14 @@ search engines without project code:
   site's layout, `karni_site`'s handlers render them with the request while
   `DEBUG` is off, and they are never indexed. With `DEBUG` on you see
   Django's debug page.
-- **Set the address in production.** `KARNI_SITE_URL =
-  "https://www.example.com"` puts canonical links, share tags and the
-  sitemap on the real domain whatever host a request came to.
+- **Set the address in production.** `KARNI_SITE_URL=https://www.example.com`
+  in `.env.prod` (or `KARNI_SITE_URL = "https://www.example.com"` in
+  settings.py) puts canonical links, share tags and the sitemap on the real
+  domain whatever host a request came to. karni-site's settings that differ
+  between deployments (`KARNI_SITE_URL`, `KARNI_SITE_ALLOW_INDEXING`,
+  `KARNI_SITE_QUEUE_RENDITIONS`, `KARNI_SITE_SEED_ON_RENDER`,
+  `KARNI_SITE_ROBOTS_TAG`, `KARNI_SITE_NOTIFY_FROM`) are read from the
+  environment, as Karni's own are.
 
 `karni check --seo` renders every page through Django's test client and
 reports titles and descriptions missing or shared between pages, images

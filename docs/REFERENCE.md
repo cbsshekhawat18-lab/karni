@@ -2039,7 +2039,7 @@ class Lead(BaseModel):
 | `KARNI_SITE_IMAGE_TYPES` |  | `["jpg", "jpeg", "png", "gif", "webp", "avif", "ico"]` | The file types an image upload may be (by extension, checked against the file's own bytes). SVG is left out on purpose: an SVG file can carry script. |
 | `KARNI_SITE_CACHE` |  | `"default"` | The cache alias blocks, menus, redirects, page SEO entries and the settings live in. |
 | `KARNI_SITE_CACHE_TIMEOUT` |  | `3600` | Seconds a cached entry lives. Every save clears what it changed, so this is a backstop. |
-| `KARNI_SITE_SEED_ON_RENDER` |  | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). False: nothing is written while a page renders. |
+| `KARNI_SITE_SEED_ON_RENDER` | `KARNI_SITE_SEED_ON_RENDER` | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). False: nothing is written while a page renders. |
 | `KARNI_SITE_MENU_ROWS` |  | `"karni_site.menus.menu_rows"` | The rows a menu item's "children from" model contributes: (model, item) -&gt; iterable of rows with get_absolute_url(). A dotted path. |
 | `KARNI_SITE_MENU_ROWS_LIMIT` |  | `100` | At most this many rows per "children from" item. |
 | `KARNI_SITE_MENU_SECTIONS` |  | `True` | True: a menu item is active (item.active) on every page under its own path too, so "Services" at /services/ stays marked on /services/web/. The home page (/) never is. False: an item is active on its own page and when one of its children is. |
@@ -2056,10 +2056,10 @@ class Lead(BaseModel):
 | `KARNI_SITE_FORM_SCRIPT` |  | `True` | Whether {% karni_form %} adds karni_site/forms.js (submit in place, inline errors). False leaves the form working without JavaScript, and a site may load its own script. |
 | `KARNI_SITE_FORM_SENT_PARAM` |  | `"sent"` | The query parameter the page gets after a form was sent without JavaScript: ?sent=&lt;form&gt;. |
 | `KARNI_SITE_FORM_PAGE_TEMPLATE` |  | `"karni_site/forms/page.html"` | The page that shows a form with its errors when the page it was sent from cannot be rendered again (no page, a page that needs a POST, a page that fails). |
-| `KARNI_SITE_NOTIFY_FROM` |  | `""` | The sender of karni_site.notify emails. Empty: Django's DEFAULT_FROM_EMAIL. |
-| `KARNI_SITE_URL` |  | `None` | The site's own address, "https://www.example.com". Canonical links, share tags, the sitemap and robots.txt use it. None: the address each request came to. |
-| `KARNI_SITE_ALLOW_INDEXING` |  | `None` | Whether search engines may index the site. None: only when DJANGO_ENV is "prod", so a development or staging copy is never indexed. True or False decides for every environment. |
-| `KARNI_SITE_ROBOTS_TAG` |  | `"noindex, nofollow"` | What a closed site tells search engines on every page, while indexing is not allowed: the X-Robots-Tag header of every response (karni_site.middleware.RedirectMiddleware) and the robots meta tag of {% karni_seo %}. robots.txt alone is not enough: a proxy or CDN may rewrite it. "" sends neither, and robots.txt is then the only signal. |
+| `KARNI_SITE_NOTIFY_FROM` | `KARNI_SITE_NOTIFY_FROM` | `""` | The sender of karni_site.notify emails. Empty: Django's DEFAULT_FROM_EMAIL. |
+| `KARNI_SITE_URL` | `KARNI_SITE_URL` | `None` | The site's own address, "https://www.example.com". Canonical links, share tags, the sitemap and robots.txt use it. None: the address each request came to. |
+| `KARNI_SITE_ALLOW_INDEXING` | `KARNI_SITE_ALLOW_INDEXING` | `None` | Whether search engines may index the site. None: only when DJANGO_ENV is "prod", so a development or staging copy is never indexed. True or False decides for every environment. |
+| `KARNI_SITE_ROBOTS_TAG` | `KARNI_SITE_ROBOTS_TAG` | `"noindex, nofollow"` | What a closed site tells search engines on every page, while indexing is not allowed: the X-Robots-Tag header of every response (karni_site.middleware.RedirectMiddleware) and the robots meta tag of {% karni_seo %}. robots.txt alone is not enough: a proxy or CDN may rewrite it. "" sends neither, and robots.txt is then the only signal. |
 | `KARNI_SITE_ROBOTS_DISALLOW` |  | `[]` | Paths robots.txt asks crawlers to stay out of while indexing is allowed: ["/search/"]. |
 | `KARNI_SITE_SITEMAP_EXCLUDE` |  | `[]` | URL names and paths the sitemap leaves out, shell wildcards allowed: ["website:thanks", "/drafts/*"]. The admin, the API and redirects are never in it. |
 | `KARNI_SITE_TECHNICAL_ROUTES` |  | `[]` | URL names and paths added to Karni's own technical routes (the health and readiness probes, the welcome page), which no sitemap or menu choice lists: ["status", "/ping"]. |
@@ -2073,7 +2073,7 @@ class Lead(BaseModel):
 | `KARNI_SITE_IMAGE_WIDTHS` |  | `[320, 480, 640, 800, 960, 1280, 1600, 1920]` | The widths, in pixels, of the WebP copies made of each uploaded image (those below its own width, and its own width when it is not a WebP). [] makes none. |
 | `KARNI_SITE_IMAGE_QUALITY` |  | `80` | The WebP quality of those copies, 1 to 100. |
 | `KARNI_SITE_IMAGE_MAX_SIZE` |  | `2560` | An uploaded image wider or taller than this many pixels is scaled down to fit. None keeps it. |
-| `KARNI_SITE_QUEUE_RENDITIONS` |  | `True` | Whether an upload, and the first page that shows an image without copies, queue the copies (a Celery task). False: make them yourself (karni_site.renditions.make). |
+| `KARNI_SITE_QUEUE_RENDITIONS` | `KARNI_SITE_QUEUE_RENDITIONS` | `True` | Whether an upload, and the first page that shows an image without copies, queue the copies (a Celery task). False: make them yourself (karni_site.renditions.make). |
 | `KARNI_SITE_RENDITIONER` |  | `"karni_site.renditions.generate"` | The function that makes an image's copies: (name, storage) -&gt; manifest. A dotted path. |
 | `KARNI_SITE_IMAGE_STYLE` |  | `":where(img[data-karni-image]){height:auto}" ":where(img[data-karni-image=natural]){width:auto}"` | The CSS {% karni_seo %} puts in the head so an image Karni sized keeps its shape when the design's CSS sets only its width or only its height. "" leaves it out. |
 | `KARNI_SITE_SEO_MAX_PAGES` |  | `500` | karni check --seo: at most this many pages are requested. |

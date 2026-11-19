@@ -569,6 +569,28 @@ def email_lines(domain: str) -> list[str]:
     ]
 
 
+def site_lines(domain: str) -> list[str]:
+    """The public site's section of a production environment file (karni-site's settings)."""
+    return [
+        "# --- The public site (karni-site) -----------------------------------------------",
+        "# The site's address: canonical links, share tags, the sitemap and the admin links",
+        "# in notification emails use it, whatever host a request came to.",
+        f"KARNI_SITE_URL=https://{domain}",
+        "# Whether search engines may index the site. Unset: yes, because DJANGO_ENV is prod.",
+        "# A staging or test copy sets False: robots.txt, the X-Robots-Tag header and the",
+        "# robots meta tag of every page then keep search engines out.",
+        "# KARNI_SITE_ALLOW_INDEXING=False",
+        "# Whether an upload, and a page that shows an image without copies, queue its smaller",
+        "# copies for a Celery worker. False where no worker runs.",
+        "# KARNI_SITE_QUEUE_RENDITIONS=True",
+        "# Whether a visit stores the defaults its templates give. The deploy renders every page",
+        "# once (karni_site_seed), so False makes a visitor's request write nothing.",
+        "# KARNI_SITE_SEED_ON_RENDER=True",
+        "# The sender of the site's form notifications. Unset: DEFAULT_FROM_EMAIL.",
+        f"# KARNI_SITE_NOTIFY_FROM=forms@{domain}",
+    ]
+
+
 def env_example(options: Options) -> str:
     """The text of ``.env.prod.example``."""
     hosts = [options.domain]
@@ -621,6 +643,7 @@ def env_example(options: Options) -> str:
         "",
         *email_lines(options.domain),
         "",
+        *([*site_lines(options.domain), ""] if options.site else []),
         "# --- Database and Redis ---------------------------------------------------------",
     ]
     if options.db:
@@ -850,7 +873,14 @@ def _systemd_nginx(
         ready_path=base.ready_path,
         site=base.site,
     )
-    systemd_nginx.plan(ws, options, email_lines(options.domain))
+    systemd_nginx.plan(
+        ws,
+        options,
+        [
+            *email_lines(options.domain),
+            *(["", *site_lines(options.domain)] if options.site else []),
+        ],
+    )
     if (ws.root / "frontend" / "package.json").is_file():
         ws.note(
             "note: this target serves no staff app (frontend/). Serve its build with a "

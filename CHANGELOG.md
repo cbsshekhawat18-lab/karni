@@ -132,6 +132,15 @@ apply codemods and list the manual steps. This file is the human summary.
   is judged as production will be
   ([migration note](docs/migrations/0.5.md#a-closed-site-says-noindex-on-every-page)).
 
+- **Fixed: karni-site's deployment settings are read from the environment.**
+  `KARNI_SITE_URL`, `KARNI_SITE_ALLOW_INDEXING`, `KARNI_SITE_QUEUE_RENDITIONS`,
+  `KARNI_SITE_SEED_ON_RENDER`, `KARNI_SITE_ROBOTS_TAG` and `KARNI_SITE_NOTIFY_FROM` were
+  plain defaults, so a value in `.env` or `.env.prod` changed nothing. They are now read
+  with django-environ, as Karni's own settings and the other modules' are, with the same
+  defaults, and settings.py still wins. docs/settings.md names each variable. The
+  production examples both `karni make deploy` targets write list them for a project with
+  karni-site, with `KARNI_SITE_URL` set to the domain.
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

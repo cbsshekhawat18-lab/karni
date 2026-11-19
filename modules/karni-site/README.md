@@ -674,6 +674,14 @@ module's plain `karni_site/500.html` (or `404.html`), which needs nothing.
 
 Every setting arrives through the module's settings fragment
 (`karni_site.conf.DEFAULTS`) and is overridable in the project's settings.py.
+The ones that differ between deployments of a project are read from the
+environment too, the way Karni's own are: `KARNI_SITE_URL`,
+`KARNI_SITE_ALLOW_INDEXING`, `KARNI_SITE_QUEUE_RENDITIONS`,
+`KARNI_SITE_SEED_ON_RENDER`, `KARNI_SITE_ROBOTS_TAG` and
+`KARNI_SITE_NOTIFY_FROM`, set in `.env` or `.env.prod` (the production
+examples `karni make deploy` writes list them). Leave a variable unset for
+its default: an empty one is a value. settings.py wins over the
+environment.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
