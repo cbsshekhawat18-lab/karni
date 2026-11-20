@@ -218,6 +218,9 @@ def test_subscribers_follow_a_late_declaration_and_the_switch(settings: Any) -> 
         {"title": "x", "subjects": {"nothere": "people.person"}},
         {"title": "x", "subjects": ["amount"]},
         {"title": "x", "kind": "Bad Kind"},
+        {"title": "x", "money": ["amount"]},
+        {"title": "x", "money": {"nothere": "payment"}},
+        {"title": "x", "money": {"amount": "not a code"}},
         ["x"],
     ],
 )
@@ -302,3 +305,66 @@ def test_prune_keeps_entries_inside_the_window(cast: dict[str, Any], settings: A
     settings.KARNI_TIMELINE_RETENTION_DAYS = 365
     assert timeline.prune() == 1
     assert list(TimelineEntry.objects.values_list("title", flat=True)) == ["New"]
+
+
+def test_an_amount_is_plain_money_in_the_title_and_kept_for_a_screen(cast: dict[str, Any]) -> None:
+    registry = Registry()
+    declaration = declare(
+        "helpdeskapp.fee.paid",
+        fields={"fee": "an amount", "currency": "a code, lower case", "yen": "an amount"},
+        person="person",
+        timeline={
+            "title": "Fee of {fee} paid",
+            "body": "{yen} in yen",
+            "money": {"fee": "currency", "yen": "JPY"},
+        },
+        registry=registry,
+    )
+    event, _ = build(
+        "helpdeskapp.fee.paid",
+        person=cast["ines"],
+        fee="9.6000",
+        currency="eur",
+        yen="1200.00",
+        registry=registry,
+    )
+    entry = timeline.write_from_event(event, declaration)
+    assert entry is not None
+    assert entry.title == "Fee of 9.60 EUR paid" and entry.body == "1200 JPY in yen"
+    assert entry.data["$money"] == [
+        {"text": "9.60 EUR", "amount": "9.60", "currency": "EUR"},
+        {"text": "1200 JPY", "amount": "1200", "currency": "JPY"},
+    ]
+    assert entry.data["fee"] == "9.6000"  # the payload stays as it was published
+    assert timeline.money_text("x", "EUR") is None and timeline.money_text("1", "euro") is None
+
+
+def test_an_app_leaves_out_the_entry_of_a_moment_it_covers(cast: dict[str, Any]) -> None:
+    registry = Registry()
+    declaration = declare(
+        "helpdeskapp.fee.charged",
+        fields={"fee": "an amount", "covered": "whether another entry says it"},
+        person="person",
+        timeline="Fee {fee} charged",
+        registry=registry,
+    )
+
+    def covered(event: Any) -> bool:
+        return bool(event["covered"])
+
+    def broken(event: Any) -> bool:
+        raise RuntimeError("a broken check never hides a moment")
+
+    timeline.skip_when("helpdeskapp.fee.charged", covered)
+    timeline.skip_when("helpdeskapp.fee.charged", broken)
+    try:
+        ines = cast["ines"]
+        name = "helpdeskapp.fee.charged"
+        hidden, _ = build(name, person=ines, fee="1", covered=True, registry=registry)
+        shown, _ = build(name, person=ines, fee="2", covered=False, registry=registry)
+        assert timeline.write_from_event(hidden, declaration) is None
+        written = timeline.write_from_event(shown, declaration)
+        assert written is not None and written.title == "Fee 2 charged"
+    finally:
+        timeline.unskip("helpdeskapp.fee.charged")
+    assert not timeline.skipped(hidden)

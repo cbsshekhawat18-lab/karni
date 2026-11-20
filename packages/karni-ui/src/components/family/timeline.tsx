@@ -33,6 +33,8 @@ import { Skeleton } from "../primitives/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../primitives/tabs";
 import { ChangeHistory } from "../resource/history/ChangeHistory";
 import { recordHref } from "../resource/record-links";
+import { formatMoney } from "../../lib/money";
+import { useBusiness } from "./audience";
 import { timelineKind, timelineKindLabel, type TimelineEntry } from "./registry";
 
 export type { TimelineEntry } from "./registry";
@@ -116,6 +118,37 @@ export interface TimelineProps {
 const CONTROL =
   "h-9 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+interface EntryMoney {
+  text: string;
+  amount: string;
+  currency: string;
+}
+
+/**
+ * Experimental. `text` with each amount the server wrote as plain money ("127.54 USD", kept
+ * in the entry's `data["$money"]`) shown as the project's money ("$127.54").
+ */
+export function timelineMoneyText(
+  text: string,
+  data: Readonly<Record<string, unknown>>,
+  display?: Intl.NumberFormatOptions["currencyDisplay"],
+): string {
+  const found = data["$money"];
+  if (!Array.isArray(found)) return text;
+  let out = text;
+  for (const item of found as EntryMoney[]) {
+    if (typeof item?.text !== "string" || item.text === "") continue;
+    const shown = formatMoney(
+      item.amount,
+      item.currency,
+      undefined,
+      display !== undefined ? { currencyDisplay: display } : undefined,
+    );
+    out = out.split(item.text).join(shown);
+  }
+  return out;
+}
+
 function when(value: string): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
@@ -180,6 +213,7 @@ function Entries({
   onKinds: (kinds: string[]) => void;
 }): React.ReactElement {
   const query = useTimeline(params);
+  const display = useBusiness().data?.currency_display;
   const entries = React.useMemo(
     () => query.data?.pages.flatMap((page) => page.results) ?? [],
     [query.data],
@@ -226,7 +260,7 @@ function Entries({
                 className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-primary"
               />
               <div className="min-w-0 flex-1 space-y-1">
-                <p className="font-medium">{entry.title}</p>
+                <p className="font-medium">{timelineMoneyText(entry.title, entry.data, display)}</p>
                 <p className="text-sm text-muted-foreground">
                   <time dateTime={entry.occurred_at}>{when(entry.occurred_at)}</time>
                   {" · "}
@@ -236,7 +270,9 @@ function Entries({
                 {own !== undefined ? (
                   own(entry)
                 ) : entry.body !== "" ? (
-                  <p className="whitespace-pre-line text-sm">{entry.body}</p>
+                  <p className="whitespace-pre-line text-sm">
+                    {timelineMoneyText(entry.body, entry.data, display)}
+                  </p>
                 ) : null}
                 <EntryLinks entry={entry} hrefFor={hrefFor} navigate={navigate} />
               </div>

@@ -114,7 +114,11 @@ declare(
         "currency": "the ISO 4217 code",
         "lines": _LINES,
     },
-    timeline={"title": "Order {number} placed", "body": "{total} {currency}"},
+    timeline={
+        "title": "Order {number} placed",
+        "body": "{total}",
+        "money": {"total": "currency"},
+    },
     describe="Checkout or staff placed an order. It waits for its payment.",
 )
 declare(
@@ -128,7 +132,7 @@ declare(
         "paid_at": "when it was paid in full",
         "lines": _LINES,
     },
-    timeline={"title": "Order {number} paid", "body": "{total} {currency}"},
+    timeline={"title": "Order {number} paid", "body": "{total}", "money": {"total": "currency"}},
     describe="An order is paid in full.",
 )
 declare(
@@ -143,7 +147,8 @@ declare(
     },
     timeline={
         "title": "Deposit paid on order {number}",
-        "body": "{amount_paid} {currency} paid, {balance} {currency} to pay",
+        "body": "{amount_paid} paid, {balance} to pay",
+        "money": {"amount_paid": "currency", "balance": "currency"},
     },
     describe="Part of an order is paid (a deposit). The balance is paid later.",
 )
@@ -166,7 +171,11 @@ declare(
         "lines": "the lines refunded: [{line, kind, item, quantity}]",
         "full": "whether everything paid went back",
     },
-    timeline={"title": "Refund on order {number}", "body": "{amount} {currency}"},
+    timeline={
+        "title": "Refund on order {number}",
+        "body": "{amount}",
+        "money": {"amount": "currency"},
+    },
     describe="A refund of some or all of an order went through.",
 )
 declare(

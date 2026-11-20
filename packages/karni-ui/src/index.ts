@@ -666,7 +666,12 @@ export type {
   TimelineEntry,
   TimelineKind,
 } from "./components/family/registry";
-export { Timeline, timelineKey, useTimeline } from "./components/family/timeline";
+export {
+  Timeline,
+  timelineKey,
+  timelineMoneyText,
+  useTimeline,
+} from "./components/family/timeline";
 export type { TimelineParams, TimelineProps } from "./components/family/timeline";
 export { EmailChoices, InboxBell, InboxPage, useInboxUnread } from "./components/family/inbox";
 export type {

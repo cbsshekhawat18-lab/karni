@@ -59,7 +59,7 @@ declare(
         "amount": "the amount paid, a decimal string",
         "currency": "the ISO 4217 code, lower case",
     },
-    timeline="Payment of {amount} {currency} succeeded",
+    timeline={"title": "Payment of {amount} succeeded", "money": {"amount": "currency"}},
     describe="The provider confirmed a payment.",
 )
 declare(

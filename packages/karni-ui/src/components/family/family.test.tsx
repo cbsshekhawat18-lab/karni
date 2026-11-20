@@ -39,7 +39,7 @@ import {
 } from "./registry";
 import { registerRecordLink, unregisterRecordLink } from "../resource/record-links";
 import { SearchPage, searchHitHref } from "./search";
-import { Timeline } from "./timeline";
+import { Timeline, timelineMoneyText } from "./timeline";
 
 const API = "http://localhost/api";
 
@@ -317,6 +317,51 @@ describe("Timeline", () => {
       "/orders/1001",
     );
     unregisterRecordLink("orders");
+  });
+
+  it("shows every amount as the project's money, in the title and the body", async () => {
+    server.use(
+      http.get(`${API}/preferences/public/`, () =>
+        HttpResponse.json({ name: "Shop", currency: "USD", currency_display: "symbol" }),
+      ),
+      http.get(`${API}/timeline/`, () =>
+        HttpResponse.json({
+          results: [
+            {
+              ...ENTRY,
+              id: "m1",
+              kind: "commerce.order.part_paid",
+              title: "Deposit paid on order 1028",
+              body: "15.00 USD paid, 49.20 USD to pay",
+              data: {
+                $money: [
+                  { text: "15.00 USD", amount: "15.00", currency: "USD" },
+                  { text: "49.20 USD", amount: "49.20", currency: "USD" },
+                ],
+              },
+            },
+            {
+              ...ENTRY,
+              id: "m2",
+              kind: "payments.payment.succeeded",
+              title: "Payment of 127.54 USD succeeded",
+              data: { $money: [{ text: "127.54 USD", amount: "127.54", currency: "USD" }] },
+            },
+          ],
+          next: null,
+        }),
+      ),
+    );
+    mount(<Timeline person="p1" />);
+    expect(await screen.findByText("Payment of $127.54 succeeded")).toBeInTheDocument();
+    expect(screen.getByText("$15.00 paid, $49.20 to pay")).toBeInTheDocument();
+    expect(
+      timelineMoneyText(
+        "Refund of 5.00 EUR",
+        { $money: [{ text: "5.00 EUR", amount: "5", currency: "EUR" }] },
+        "code",
+      ),
+    ).toMatch(/EUR\s?5\.00/);
   });
 
   it("hides the changes tab from who may not read the history", async () => {

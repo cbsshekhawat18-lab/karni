@@ -20,6 +20,17 @@ The ``timeline=`` option of a declaration is a title template, or a mapping:
     another record the entry shows on (the event's subject always is one).
 ``kind``
     The entry's kind (default: the event's name).
+``money``
+    ``{field: currency}``: declared fields that hold an amount, each with the
+    declared field that holds its currency (or a fixed ISO 4217 code). The
+    title and body write the amount as plain money, ``127.54 USD`` (the
+    currency's places, the code in capitals), and the entry keeps each one in
+    ``data["$money"]`` (``[{"text", "amount", "currency"}]``), so a screen
+    shows it as the project's money (@karni/ui's ``<Timeline>``: ``$127.54``).
+
+:func:`skip_when` lets an app leave out the entries of an event it covers
+itself: karni-commerce leaves out a payment's entry when the payment belongs
+to an order, whose own entry says it was paid.
 
 A template names declared fields only, with no attribute, index, conversion
 or format spec (``karni.E460`` at startup otherwise), so a title never reads
@@ -52,14 +63,19 @@ if TYPE_CHECKING:
 
 __all__ = [
     "APP",
+    "MONEY_KEY",
     "TimelineOption",
     "erase_person",
     "installed",
+    "money_text",
     "parse_option",
     "prune",
     "record",
     "render",
     "retention_days",
+    "skip_when",
+    "skipped",
+    "unskip",
     "write_from_event",
 ]
 
@@ -68,7 +84,10 @@ APP: Final = "karni.timeline"
 #: A kind: two or more lower-case words joined by dots (``crm.note``, ``shop.order.paid``).
 KIND_PATTERN: Final = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
 #: The keys a ``timeline=`` mapping takes.
-OPTION_KEYS: Final = frozenset({"title", "body", "subjects", "kind"})
+OPTION_KEYS: Final = frozenset({"title", "body", "subjects", "kind", "money"})
+#: Where an entry keeps its amounts (``data["$money"]``): ``[{"text", "amount", "currency"}]``.
+MONEY_KEY: Final = "$money"
+_CURRENCY_CODE: Final = re.compile(r"^[A-Za-z]{3}$")
 #: How many ``merged_into`` steps a person id is followed to the live person.
 _MERGE_HOPS: Final = 10
 _ELLIPSIS: Final = "..."
@@ -90,6 +109,7 @@ class TimelineOption:
     body: str = ""
     subjects: Mapping[str, str] = field(default_factory=dict)
     kind: str = ""
+    money: Mapping[str, str] = field(default_factory=dict)
 
 
 def _placeholders(template: str, where: str) -> list[str]:
@@ -146,11 +166,20 @@ def parse_option(declaration: Declaration) -> TimelineOption | None:
                 "the entry also shows on.",
                 code="E460",
             )
+        money = raw.get("money") or {}
+        if not isinstance(money, Mapping):
+            raise KarniValueError(
+                f"karni.timeline: {name} has timeline money {money!r}. Pass "
+                '{"amount": "currency"}: a declared field with an amount, and the declared '
+                "field (or the ISO 4217 code) of its currency.",
+                code="E460",
+            )
         option = TimelineOption(
             title=raw.get("title", ""),
             body=raw.get("body", "") or "",
             subjects=dict(subjects),
             kind=raw.get("kind", "") or "",
+            money={str(key): str(value) for key, value in money.items()},
         )
     else:
         raise KarniTypeError(
@@ -193,6 +222,16 @@ def parse_option(declaration: Declaration) -> TimelineOption | None:
                 f"{label!r}, which is not installed. Name it as 'app_label.model'.",
                 code="E460",
             ) from exc
+    for field_name, currency in option.money.items():
+        if field_name not in declaration.fields or not (
+            currency in declaration.fields or _CURRENCY_CODE.match(currency)
+        ):
+            raise KarniValueError(
+                f"karni.timeline: {name}'s timeline money {field_name!r}: {currency!r} names "
+                "an amount the event does not declare, or a currency that is neither a declared "
+                f"field nor an ISO 4217 code. Its fields: {', '.join(declaration.fields)}.",
+                code="E460",
+            )
     if option.kind and not KIND_PATTERN.match(option.kind):
         raise KarniValueError(
             f"karni.timeline: {name}'s timeline kind {option.kind!r} is not a kind. A kind is "
@@ -226,6 +265,80 @@ def render(template: str, values: Mapping[str, Any]) -> str:
         if name is not None:
             out.append(found.get(name, ""))
     return "".join(out).strip()
+
+
+def money_text(amount: Any, currency: Any) -> tuple[str, str, str] | None:
+    """Experimental. ``(text, amount, CODE)``: ``("127.54 USD", "127.54", "USD")``.
+
+    The amount at the currency's places (ISO 4217), the code in capitals.
+    ``None`` when the amount is not a number or the currency not a code.
+    """
+    from decimal import Decimal, InvalidOperation
+
+    from karni.fields.iso_data import MINOR_UNITS
+
+    code = str(currency or "").upper()
+    if not _CURRENCY_CODE.match(code):
+        return None
+    try:
+        value = Decimal(str(amount))
+    except (InvalidOperation, ValueError):
+        return None
+    if not value.is_finite():
+        return None
+    places = MINOR_UNITS.get(code, 2)
+    shown = value.quantize(Decimal(1).scaleb(-(2 if places is None else places)))
+    return f"{shown} {code}", str(shown), code
+
+
+def _money_values(
+    option: TimelineOption, values: Mapping[str, Any]
+) -> tuple[dict[str, Any], list[dict[str, str]]]:
+    """The values the templates read, each money field as plain money, and the amounts."""
+    shown = dict(values)
+    amounts: list[dict[str, str]] = []
+    for field_name, currency in option.money.items():
+        code = values.get(currency) if currency in values else currency
+        found = money_text(values.get(field_name), code)
+        if found is None:
+            continue
+        text, amount, upper = found
+        shown[field_name] = text
+        amounts.append({"text": text, "amount": amount, "currency": upper})
+    return shown, amounts
+
+
+#: Event name -> the checks an app registered: an event a check answers True for writes no entry.
+_SKIPS: dict[str, list[Any]] = {}
+
+
+def skip_when(name: str, check: Any) -> None:
+    """Experimental. Leave out the timeline entry of ``name`` for an event ``check(event)`` is
+    true for: an app that covers that moment with an entry of its own.
+
+    karni-commerce leaves out ``payments.payment.succeeded`` for a payment of
+    an order. A check that raises leaves the entry in.
+    """
+    _SKIPS.setdefault(name, []).append(check)
+
+
+def unskip(name: str, check: Any = None) -> None:
+    """Experimental. Take back a :func:`skip_when` check (every check of ``name`` without one)."""
+    if check is None:
+        _SKIPS.pop(name, None)
+    elif check in _SKIPS.get(name, []):
+        _SKIPS[name].remove(check)
+
+
+def skipped(event: Event) -> bool:
+    """Experimental. Whether an app's :func:`skip_when` check leaves ``event``'s entry out."""
+    for check in _SKIPS.get(event.name, []):
+        try:
+            if check(event):
+                return True
+        except Exception:  # noqa: BLE001 - a broken check never hides a moment
+            continue
+    return False
 
 
 def _title(text: str) -> str:
@@ -511,9 +624,10 @@ def write_from_event(event: Event, declaration: Declaration) -> TimelineEntry | 
     returns the entry it wrote the first time.
     """
     option = parse_option(declaration)
-    if option is None:
+    if option is None or skipped(event):
         return None
     values = dict(event.data)
+    shown, amounts = _money_values(option, values)
     subjects: list[Any] = []
     if event.subject and event.subject.get("model") and event.subject.get("id"):
         subjects.append((str(event.subject["model"]), event.subject["id"]))
@@ -532,14 +646,14 @@ def write_from_event(event: Event, declaration: Declaration) -> TimelineEntry | 
         return None
     return record(
         kind=option.kind or event.name,
-        title=render(option.title, values),
-        body=render(option.body, values) if option.body else "",
+        title=render(option.title, shown),
+        body=render(option.body, shown) if option.body else "",
         person=person,
         subjects=[(model._meta.label_lower, key) for model, key in refs],
         occurred_at=event.occurred_at,
         actor=_existing_user(event.actor),
         source=declaration.prefix,
-        data=values,
+        data={**values, MONEY_KEY: amounts} if amounts else values,
         event_id=event.id,
     )
 
