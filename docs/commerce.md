@@ -554,6 +554,12 @@ confirmation and the staff's new-order email go out once the order is paid.
 `order_placed` is still sent for every order, so a project that wants a
 placed email sends one from its own receiver.
 
+On the [timeline](timeline.md), a purchase is two entries: the order placed
+and the order paid (or its deposit paid), each with its amount. The payment's
+own entry (`payments.payment.succeeded`) is left out for a payment of an
+order (`karni_commerce.events.payment_of_an_order`, through
+`timeline.skip_when`), and a payment of anything else keeps it.
+
 The templates are `karni_commerce/email/<name>_subject.txt`, `_body.txt` and
 `_body.html`. A business rewrites one in the app ([above](#emails-a-business-edits)),
 a project puts a file at the same path in its templates, and Settings, Emails

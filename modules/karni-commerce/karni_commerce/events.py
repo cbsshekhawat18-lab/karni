@@ -51,6 +51,8 @@ family events follow.
 
 from __future__ import annotations
 
+from typing import Any
+
 from django.dispatch import Signal
 from karni.events import declare
 
@@ -66,6 +68,7 @@ __all__ = [
     "order_placed",
     "order_refunded",
     "orders_claimed",
+    "payment_of_an_order",
 ]
 
 #: Checkout created the order, which waits for its payment: ``order``.
@@ -194,3 +197,16 @@ FAMILY_EVENTS: tuple[str, ...] = (
     "commerce.order.refunded",
     "commerce.invoice.issued",
 )
+
+
+def payment_of_an_order(event: Any) -> bool:
+    """Whether a ``payments.payment.succeeded`` event is about a payment of an order.
+
+    The order's timeline entries (placed, paid, deposit paid) say so already,
+    so karni-commerce leaves the payment's own entry out
+    (:func:`karni.timeline.skip_when`). A payment of something else keeps it.
+    """
+    from karni_commerce.models import OrderPayment
+
+    payment = event["payment"]
+    return bool(payment) and OrderPayment.objects.filter(payment_id=payment).exists()

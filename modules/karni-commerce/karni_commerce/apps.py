@@ -31,6 +31,12 @@ class KarniCommerceConfig(AppConfig):
 
         checks.register(people_installed)
         sellables.autodiscover()
+        # The order's own entries say it was paid: a payment of an order writes none of its own.
+        from karni import timeline
+
+        from karni_commerce.events import payment_of_an_order
+
+        timeline.skip_when("payments.payment.succeeded", payment_of_an_order)
         if apps.is_installed("karni_reports"):
             from karni_commerce.documents import register_pdf_reports
 
