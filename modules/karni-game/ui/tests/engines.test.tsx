@@ -127,8 +127,14 @@ describe("connectPixi", () => {
     app.tick(25);
     expect(steps).toEqual([0.01, 0.01]);
     expect(after).toBe(1);
+    app.tick(4); // 0.009 s left over: no step, so the input's edges wait for the next one
+    expect(steps).toHaveLength(2);
+    expect(after).toBe(1);
+    app.tick(2);
+    expect(steps).toHaveLength(3);
+    expect(after).toBe(2);
     app.tick(1000); // clamped to 0.05: five steps, no spiral
-    expect(steps).toHaveLength(7);
+    expect(steps).toHaveLength(8);
     link.pause("menu");
     link.pause("ad");
     link.resume("menu");
@@ -136,7 +142,7 @@ describe("connectPixi", () => {
     expect(log).toEqual(["stop", "start"]);
     link.disconnect();
     app.tick(25);
-    expect(steps).toHaveLength(7);
+    expect(steps).toHaveLength(8);
   });
 });
 
@@ -146,6 +152,24 @@ describe("the React Three Fiber hooks", () => {
     renderHook(() => useFixedStep((dt) => steps.push(dt), { step: 0.02 }));
     act(() => r3f.frames[0]?.({}, 0.05));
     expect(steps).toEqual([0.02, 0.02]);
+  });
+
+  it("keeps input edges through a frame that ran no fixed step", () => {
+    const input = createInput();
+    const seen: boolean[] = [];
+    renderHook(() => {
+      const fixed = useFixedStep(() => seen.push(input.pressed("Space")), { step: 0.02 });
+      useEndInputFrame(input, fixed);
+    });
+    input.press("Space");
+    act(() => r3f.frames.at(-1)?.({}, 0.01));
+    for (const effect of r3f.after) effect();
+    expect(input.pressed("Space")).toBe(true);
+    act(() => r3f.frames.at(-1)?.({}, 0.01));
+    for (const effect of r3f.after) effect();
+    expect(seen).toEqual([true]);
+    expect(input.pressed("Space")).toBe(false);
+    input.destroy();
   });
 
   it("clears input edges after every frame and shares the services", () => {

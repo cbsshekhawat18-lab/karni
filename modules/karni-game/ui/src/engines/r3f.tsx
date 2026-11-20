@@ -66,14 +66,20 @@ export function useFixedStep(
   return fixed;
 }
 
-/** Clear the input's edge flags after every rendered frame. */
-export function useEndInputFrame(input?: Input): void {
+/**
+ * Clear the input's edge flags after every rendered frame. With
+ * `useFixedStep`, pass its accumulator: a frame that ran no step keeps the
+ * edges for the next step, so a press is never lost on a fast screen.
+ */
+export function useEndInputFrame(input?: Input, fixed?: FixedStep): void {
   const fromContext = useKarniGame().input;
   const target = input ?? fromContext;
   useEffect(() => {
     if (!target) return undefined;
-    return addAfterEffect(() => target.endFrame());
-  }, [target]);
+    return addAfterEffect(() => {
+      if (!fixed || fixed.lastSteps > 0) target.endFrame();
+    });
+  }, [target, fixed]);
 }
 
 export interface GamePause {

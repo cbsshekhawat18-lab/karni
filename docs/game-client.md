@@ -133,7 +133,10 @@ if (input.pressed("jump")) jump();
 `held`, `pressed` and `released` take an action or a key code
 (`KeyboardEvent.code`, or `POINTER` for the primary mouse button, finger or
 pen). Pressed and released last one frame, and a tap shorter than a frame
-still reads as pressed. Space and the arrow keys do not scroll the page,
+still reads as pressed. With a fixed step, the loop calls `afterFrame` only
+after a frame that ran a step (or while paused), so a press made in a frame
+with no step reaches the next one: on a 120 Hz screen with a step of 1/60,
+every other frame has none. Space and the arrow keys do not scroll the page,
 keys typed into a text field are ignored, and everything is let go on blur.
 `onFirstGesture(callback)` runs inside the player's first tap or key, which
 is where browsers let audio start. `press` and `release` drive codes by hand
@@ -365,7 +368,8 @@ with the version the game uses.
   hidden tab, blur, ads and portal pauses.
 - **React Three Fiber** (`@karni/game/r3f`): `KarniGameProvider` and
   `useKarniGame` share the services, `useFixedStep(update)` steps inside
-  `useFrame`, `useEndInputFrame` clears input edges after each frame,
+  `useFrame`, `useEndInputFrame(input, fixed)` clears input edges after each
+  frame that ran a step,
   `useGamePause` stops the Canvas's frame loop for ads and hidden tabs, and
   `usePortalState` gives the portal's state to React. It needs React and
   `@react-three/fiber`.

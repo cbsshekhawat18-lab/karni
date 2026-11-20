@@ -28,7 +28,11 @@ export interface PixiOptions {
   update?(dt: number): void;
   /** Called every tick after the steps, with the leftover fraction of a step. */
   render?(alpha: number): void;
-  /** Called at the end of every tick: the input's `endFrame`. */
+  /**
+   * Called at the end of every tick that ran a step (every tick without
+   * `update`): the input's `endFrame`. A press in a tick with no step reaches
+   * the next step.
+   */
   afterTick?(): void;
   portal?: Portal;
   /** Muted during ads and by the portal's setting (the audio from `createAudio`). */
@@ -67,7 +71,7 @@ export function connectPixi(app: PixiAppLike, options: PixiOptions = {}): PixiLi
     let alpha = 0;
     if (fixed && options.update) alpha = fixed.advance(dt, options.update);
     options.render?.(alpha);
-    options.afterTick?.();
+    if (!fixed || fixed.lastSteps > 0) options.afterTick?.();
   };
   app.ticker.add(tick);
   const link: PixiLink = {

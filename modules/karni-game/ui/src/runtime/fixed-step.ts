@@ -12,6 +12,12 @@ export interface FixedStep {
   /** Simulated seconds thrown away because a frame needed more than `maxSteps` steps. */
   readonly dropped: number;
   /**
+   * The steps the last `advance` ran. 0 on a frame shorter than a step (every
+   * other frame on a 120 Hz screen with a step of 1/60): input edges made in
+   * that frame must wait for the next step, not be cleared.
+   */
+  readonly lastSteps: number;
+  /**
    * Add `dt` seconds and run `update(step)` as many whole steps as fit, at
    * most `maxSteps`. A longer backlog is dropped, so a slow device slows the
    * game down instead of falling further behind each frame. Returns the
@@ -29,11 +35,15 @@ export function createFixedStep(options: FixedStepOptions = {}): FixedStep {
   if (!(step > 0)) throw new Error("createFixedStep: step must be above 0");
   let accumulator = 0;
   let dropped = 0;
+  let lastSteps = 0;
   return {
     step,
     maxSteps,
     get dropped() {
       return dropped;
+    },
+    get lastSteps() {
+      return lastSteps;
     },
     advance(dt, update) {
       if (dt > 0 && Number.isFinite(dt)) accumulator += dt;
@@ -48,6 +58,7 @@ export function createFixedStep(options: FixedStepOptions = {}): FixedStep {
         dropped += accumulator;
         accumulator = 0;
       }
+      lastSteps = steps;
       return Math.max(0, accumulator) / step;
     },
     reset() {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createFixedStep, createLoop, createView, pauseOnHidden } from "../src";
+import { createFixedStep, createInput, createLoop, createView, pauseOnHidden } from "../src";
 
 describe("createFixedStep", () => {
   it("runs whole steps and returns the leftover fraction", () => {
@@ -104,6 +104,32 @@ describe("createLoop", () => {
     loop.tick(0.025);
     expect(steps).toEqual([0.01, 0.01]);
     expect(alphas[0]).toBeCloseTo(0.5);
+  });
+
+  it("keeps a press made in a frame that ran no fixed step for the next step (a 120 Hz screen)", () => {
+    const input = createInput();
+    const seen: boolean[] = [];
+    const loop = createLoop({
+      step: 1 / 60,
+      update: () => seen.push(input.pressed("Space")),
+      afterFrame: () => input.endFrame(),
+      requestFrame: () => 0,
+      cancelFrame: () => undefined,
+    });
+    input.press("Space");
+    input.release("Space");
+    loop.tick(1 / 120); // no step: the press waits
+    expect(seen).toEqual([]);
+    expect(loop.fixed?.lastSteps).toBe(0);
+    loop.tick(1 / 120); // one step sees it, then the edge is cleared
+    loop.tick(1 / 120);
+    loop.tick(1 / 120);
+    expect(seen).toEqual([true, false]);
+    loop.pause("menu");
+    input.press("KeyA");
+    loop.tick(1 / 120); // paused: the frame clears what was pressed meanwhile
+    expect(input.pressed("KeyA")).toBe(false);
+    input.destroy();
   });
 
   it("pauses for named reasons and resumes when every reason is lifted", () => {

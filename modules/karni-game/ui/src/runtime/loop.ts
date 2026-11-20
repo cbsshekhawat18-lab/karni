@@ -17,7 +17,11 @@ export interface LoopOptions {
   maxSteps?: number;
   /** The longest frame time, in seconds, after a stall or a slow frame. Default 0.05. */
   maxDt?: number;
-  /** Called at the end of every frame, also while paused: clear input edge flags here. */
+  /**
+   * Called at the end of every frame that ran `update`, and of every frame
+   * while paused: clear input edge flags here. With `step`, a frame that ran
+   * no step does not call it, so a press in that frame reaches the next step.
+   */
   afterFrame?(): void;
   /** Keep calling `render` while paused, so a pause screen is drawn. Default true. */
   renderWhilePaused?: boolean;
@@ -113,7 +117,8 @@ export function createLoop(options: LoopOptions): Loop {
       const render = options.render;
       safely("render", () => render(alpha, paused ? 0 : clamped));
     }
-    if (options.afterFrame) safely("afterFrame", options.afterFrame);
+    const stepped = paused || !fixed || fixed.lastSteps > 0;
+    if (options.afterFrame && stepped) safely("afterFrame", options.afterFrame);
   };
 
   const onFrame = (time: number): void => {
