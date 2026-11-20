@@ -576,6 +576,15 @@ apply codemods and list the manual steps. This file is the human summary.
   size and ids in source, and zipped), Phaser, PixiJS and React Three Fiber adapters, and
   `@karni/game/smoke`, a browser smoke harness with a corrupt-storage boot. Block Hopper, an
   example game, is played in headless Chromium by CI. See docs/game-client.md.
+- **Changed (experimental): `@karni/game` speaks karni-game's final contract.** A score carries
+  `played_at` (sent again without it on `GAME036`), a guest is asked for with an intent kept
+  until its answer (a lost answer never makes a second guest), an analytics batch carries its
+  intent, `404 GAME037` is an empty slot (a 404 without a code keeps the device's copy), and
+  `adReward(key, show)` plays an ad reward by its `trust` (claimed after the ad, or its intent
+  handed to the portal's callback). A portal build names the game API with
+  `KARNI_GAME_API_URL` (or `karniGame({ apiUrl })`, `karni-game package --api-url`), reads it
+  as `gameApiUrl` of `virtual:karni-game/portal` and calls it with tokens, and the package
+  checks allow its host (`--allow-host` for another).
 
 ## 0.5.1 (2026-11-12)
 
