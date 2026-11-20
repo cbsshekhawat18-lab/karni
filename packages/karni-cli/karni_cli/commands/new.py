@@ -43,6 +43,11 @@ git-ignored paths (``npm ci`` never rewrites package-lock.json), so scaffolding
 from a checkout leaves its working tree clean. A project without a staff app
 needs none of it.
 
+``--here`` writes the project into the current folder instead of a new
+``<slug>/`` under it. The folder must be empty, but for version control and
+editor files (:data:`HERE_ALLOWED`): a folder made for the project, or one
+just cloned from an empty repository.
+
 Last, the project becomes a git repository with one commit of everything
 ``karni new`` wrote (:func:`init_repository`), so the procedures' "commit
 content/" and ``karni upgrade``'s clean-tree rule work from the start.
@@ -91,6 +96,30 @@ DONE_STEPS = (2, 3)
 
 #: The message of the commit ``karni new`` makes.
 FIRST_COMMIT = "Create the project with karni new"
+
+#: What the current folder may already hold for ``karni new --here``: version control and
+#: an editor's or the system's own files, nothing the scaffold would write.
+HERE_ALLOWED = frozenset({".git", ".hg", ".svn", ".DS_Store", ".idea", ".vscode"})
+
+
+def check_here(folder: Path) -> None:
+    """Refuse ``--here`` in a folder that holds anything but :data:`HERE_ALLOWED`."""
+    found = sorted(entry.name for entry in folder.iterdir() if entry.name not in HERE_ALLOWED)
+    if found:
+        shown = ", ".join(found[:5]) + (" ..." if len(found) > 5 else "")
+        raise CliError(
+            f"--here writes the project into {folder}, which is not empty: {shown}. Run it in "
+            "an empty folder (version control and editor files may be there), or leave out "
+            "--here to create a new folder for the project.",
+            code="C850",
+        )
+
+
+def move_up(rendered: Path, folder: Path) -> None:
+    """Move what cookiecutter rendered into ``rendered`` up into ``folder``, then remove it."""
+    for entry in sorted(rendered.iterdir()):
+        shutil.move(str(entry), str(folder / entry.name))
+    rendered.rmdir()
 
 
 def _git(project: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -319,12 +348,19 @@ def _site_from_design(project: Path, design: Path, site_app: str) -> None:
     typer.echo(f"wrote the draft map {CONTENT_MAP.as_posix()}.")
 
 
-def _setup_lines(slug: str, project: Path, staff_app: bool, site: bool) -> list[str]:
+def _setup_lines(
+    slug: str, project: Path, staff_app: bool, site: bool, *, here: bool = False
+) -> list[str]:
     without_docker = (
         '  # Without Docker: README.md, "Using a local Karni checkout" (a virtualenv with '
         "`pip install -e . pytest pytest-django`, and `karni doctor` for the database)"
     )
-    lines = [f"  cd {slug}", "  cp .env.example .env", "  docker compose up -d", without_docker]
+    lines = [
+        *([] if here else [f"  cd {slug}"]),
+        "  cp .env.example .env",
+        "  docker compose up -d",
+        without_docker,
+    ]
     if staff_app:
         lines.append(
             "  (cd frontend && npm install)  # editor, lint, type-check and `karni check` on "
@@ -551,6 +587,12 @@ def new(
     site_app: str = typer.Option(
         SITE_APP, "--site-app", help="The label of the site app a kind with a site gets."
     ),
+    here: bool = typer.Option(
+        False,
+        "--here",
+        help="Write the project into the current folder, which must be empty (version "
+        "control and editor files may be there), instead of a new folder under it.",
+    ),
     git: bool = typer.Option(
         True,
         "--git/--no-git",
@@ -590,11 +632,22 @@ def new(
     Example: karni new "Crumb Bakery" --kind site --design ../design
 
     Example: karni new "Corner Shop" --recipe shop
+
+    Example: mkdir crumb && cd crumb && karni new "Crumb Bakery" --kind site --here
     """
     from cookiecutter.main import cookiecutter  # lazy: heavy import
 
     slug = validate_name(name)
-    if (output_dir / slug).exists():
+    if here:
+        if output_dir != Path("."):
+            raise CliError(
+                "--here and --output-dir exclude each other: --here writes into the current "
+                "folder. cd into the folder instead.",
+                code="C106",
+            )
+        output_dir = Path.cwd()
+        check_here(output_dir)
+    elif (output_dir / slug).exists():
         raise CliError(
             f"{output_dir / slug} already exists, and karni new does not write into an existing "
             "folder. Pick another name or --output-dir, or remove the folder if it is a "
@@ -610,7 +663,7 @@ def new(
     site = kinds.has_site(chosen)
     print_mark()
     template = resolve_template()
-    project = output_dir / slug
+    project = output_dir if here else output_dir / slug
     ui_source = scaffold.resolve_ui_source_for(project) if with_staff_app else None
     if ui_source is not None:
         prepare_ui_source(ui_source)
@@ -628,6 +681,8 @@ def new(
         },
         output_dir=str(output_dir),
     )
+    if here:
+        move_up(output_dir / slug, project)
     scaffold.remove_bytecode(project)  # pip compiles the installed template: do not copy that
     if not with_staff_app:
         shutil.rmtree(project / "frontend")
@@ -669,10 +724,10 @@ def new(
             except typer.Exit:
                 typer.echo(f"The project is in {project}: run karni build there again.")
                 raise
-        _recipe_next(picked, blocker, _setup_lines(slug, project, with_staff_app, site))
+        _recipe_next(picked, blocker, _setup_lines(slug, project, with_staff_app, site, here=here))
         return
     typer.echo("Next steps:")
-    for line in _setup_lines(slug, project, with_staff_app, site):
+    for line in _setup_lines(slug, project, with_staff_app, site, here=here):
         typer.echo(line)
     if source is not None:
         typer.echo("  karni migrate && karni test  # the page test covers every page")

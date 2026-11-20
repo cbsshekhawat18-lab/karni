@@ -174,6 +174,12 @@ Example:
 karni new "Corner Shop" --recipe shop
 ```
 
+Example:
+
+```sh
+mkdir crumb && cd crumb && karni new "Crumb Bakery" --kind site --here
+```
+
 ```
 karni new [OPTIONS] NAME
 ```
@@ -187,6 +193,7 @@ karni new [OPTIONS] NAME
 | `--design` PATH |  | A designer's folder of static pages (index.html, css/, img/): the site is built from it (karni design analyze, karni import design --editable), and the next steps are the rest of the site-from-design procedure. Implies a kind with a site. |
 | `--staff-app/--no-staff-app` |  | The React staff app in frontend/. An app always has it. A site has it unless --no-staff-app, and then staff work in the admin. |
 | `--site-app` TEXT | `website` | The label of the site app a kind with a site gets. |
+| `--here` |  | Write the project into the current folder, which must be empty (version control and editor files may be there), instead of a new folder under it. |
 | `--git/--no-git` | on | Make the project a git repository with a first commit of what karni new wrote. Skipped inside an existing repository and when git is not installed. |
 | `--recipe` TEXT |  | Experimental. Start the app from a recipe (karni recipes list, or blank): its karni.yaml with this name, then karni build, which also writes the recipe's own domain code, seeds and tests and runs the tests and karni check. Without the project's interpreter or database it stops after karni.yaml: run karni build next. |
 
@@ -904,7 +911,7 @@ page        Add a frontend page (<= 50 lines) composing @karni/ui, with its rout
 component   Add a React component that claims a role (registerComponentRole).
 site        Create a public site app (Django views, urls, templates, static) mounted at "/".
 view        Add a page to a site app: a function view, its template and its URL.
-deploy      Write the production stack: docker-compose.prod.yml, the Caddyfile, .env.prod.example.
+deploy      Write the production setup: the Docker Compose stack (compose), or systemd units, an nginx vhost and a deploy script (systemd-nginx).
 form        Add a public form: model, viewset, notification, tests, staff pages ({% karni_form %}).
 module      Create a reusable module skeleton: modules/karni-<name>/ (docs/modules.md).
 ```
@@ -1301,9 +1308,13 @@ karni make view [OPTIONS] NAME
 
 ##### `karni make deploy`
 
-Write the production stack: docker-compose.prod.yml, the Caddyfile and .env.prod.example.
+Write the production setup: the Docker Compose stack, or one server with systemd and nginx.
 
-One command then starts it on a server: `docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build`. Every file is the project's to edit. docs/deploy.md is the walk-through.
+`compose` writes docker-compose.prod.yml, the Caddyfile and .env.prod.example, and one command starts it on a server: `docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build`.
+
+`systemd-nginx` writes deploy/: a deploy script (releases, migrations, a health check, `nginx -t` before every reload, --rollback), the systemd units, the nginx vhost and the server's .env example. On the server: `sudo deploy/deploy.sh`.
+
+Every file is the project's to edit. docs/deploy.md is the walk-through.
 
 ```
 karni make deploy [OPTIONS] TARGET
@@ -1311,7 +1322,7 @@ karni make deploy [OPTIONS] TARGET
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `TARGET` (required) |  | What to write. `compose`: the Docker Compose stack. |
+| `TARGET` (required) |  | What to write. `compose`: the Docker Compose stack. `systemd-nginx`: one server without Docker, in deploy/. |
 | `--domain` TEXT |  | The site's host for .env.prod.example (default: DOMAIN in .env.example). |
 | `--app-path` TEXT | `/app/` | Path the staff app (frontend/) is served under, e.g. /app/ or /, on the site's host. |
 | `--app-domain` TEXT |  | Serve the staff app on its own host instead, e.g. app.example.com. |
@@ -1320,6 +1331,12 @@ karni make deploy [OPTIONS] TARGET
 | `--backups/--no-backups` | on | The backup service. |
 | `--db/--no-db` | on | A PostgreSQL service (--no-db: a managed one). |
 | `--redis/--no-redis` | on | A Redis service (--no-redis: a managed one). |
+| `--root` TEXT |  | systemd-nginx: the folder the releases, the uploads and the .env live in (default /srv/&lt;project&gt;). |
+| `--user` TEXT |  | systemd-nginx: the user the units run as (default www-data, nginx's user). |
+| `--keep` INTEGER |  | systemd-nginx: the releases kept for a rollback (default 5). |
+| `--cert` TEXT |  | systemd-nginx: the TLS certificate (default Let's Encrypt's for the domain). |
+| `--cert-key` TEXT |  | systemd-nginx: the certificate's key (default Let's Encrypt's for the domain). |
+| `--single-process` |  | systemd-nginx: one process for a small server, without Redis or Celery (KARNI_SINGLE_PROCESS, one gunicorn worker with threads, no worker or beat). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
 
@@ -1800,12 +1817,14 @@ class Lead(BaseModel):
 | Setting | Env | Default | What it controls |
 |---|---|---|---|
 | `KARNI_CACHE` | `KARNI_CACHE` | `"redis"` | `redis` (the default cache at `REDIS_URL`) or `locmem`, an in-process cache for a host run without Redis (development only: throttle counters are then per process). |
+| `KARNI_SINGLE_PROCESS` | `KARNI_SINGLE_PROCESS` | `False` | A deployment of one process, without Redis or a Celery worker: the cache in memory (`KARNI_CACHE=locmem`), Celery tasks run in the process that sends them (`CELERY_TASK_ALWAYS_EAGER`, broker `memory://`), `/readyz` and `/health/ready/` leave the broker and the worker out, and `karni.W501` is quiet while `WEB_CONCURRENCY` is 1. Each only where the project sets no value of its own. Beat does not run: no scheduled task fires. See [a small server](deploy.md#a-small-server-one-process). |
 
 ### Files & storage
 
 | Setting | Env | Default | What it controls |
 |---|---|---|---|
 | `KARNI_STORAGE` | `KARNI_STORAGE` | `"local"` | `local` (filesystem) or `s3` (any S3-compatible service, needs `karni[s3]`). |
+| `KARNI_STATIC_STORAGE` | `KARNI_STATIC_STORAGE` | `"plain"` | The static files' storage (`STORAGES['staticfiles']`): `plain` (the default, the names as written), `manifest` (`karni.storage.static.ManifestStaticStorage`: `collectstatic` gives each file a name with a hash of its content, `{% static %}` names it, and a web server may let browsers keep it a year, while a file missing from the manifest gets its plain name instead of a failed page) or a dotted path. New site projects set `manifest` in their production `.env`. See [static and media files](deploy.md#14-static-and-media-files). |
 
 ### API (karni.api)
 
@@ -2030,10 +2049,11 @@ class Lead(BaseModel):
 | `KARNI_SITE_IMAGE_TYPES` |  | `["jpg", "jpeg", "png", "gif", "webp", "avif", "ico"]` | The file types an image upload may be (by extension, checked against the file's own bytes). SVG is left out on purpose: an SVG file can carry script. |
 | `KARNI_SITE_CACHE` |  | `"default"` | The cache alias blocks, menus, redirects, page SEO entries and the settings live in. |
 | `KARNI_SITE_CACHE_TIMEOUT` |  | `3600` | Seconds a cached entry lives. Every save clears what it changed, so this is a backstop. |
-| `KARNI_SITE_SEED_ON_RENDER` |  | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). False: nothing is written while a page renders. |
+| `KARNI_SITE_SEED_ON_RENDER` | `KARNI_SITE_SEED_ON_RENDER` | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). False: nothing is written while a page renders. |
 | `KARNI_SITE_MENU_ROWS` |  | `"karni_site.menus.menu_rows"` | The rows a menu item's "children from" model contributes: (model, item) -&gt; iterable of rows with get_absolute_url(). A dotted path. |
 | `KARNI_SITE_MENU_ROWS_LIMIT` |  | `100` | At most this many rows per "children from" item. |
 | `KARNI_SITE_MENU_SECTIONS` |  | `True` | True: a menu item is active (item.active) on every page under its own path too, so "Services" at /services/ stays marked on /services/web/. The home page (/) never is. False: an item is active on its own page and when one of its children is. |
+| `KARNI_SITE_MENU_FOLLOW_SEED` |  | `True` | True: a menu seeded from a template ({% get_menu ... seed="..." %}) follows it, as an editable block follows its text: the items nobody changed take the seed's new links. False: the seed makes the menu once and never changes it afterwards. |
 | `KARNI_SITE_REDIRECTS_BEFORE_VIEWS` |  | `False` | False: an admin redirect answers only where the site has no page (a 404), and a request for a page that exists costs nothing. True: every request is looked up before the view runs, one cache read each. |
 | `KARNI_SITE_EDITOR_ROLE` |  | `"editor"` | The slug of the content editor role this module declares (karni.roles), or None to declare none. A role of the same slug in KARNI_ROLES replaces it. |
 | `KARNI_SITE_FORMS` |  | `{}` | Form name -&gt; the dotted path of the BaseViewSet that saves it, or a model label ("shop.Enquiry"). Without an entry, {% karni_form "enquiry" %} finds the model by name. |
@@ -2046,9 +2066,10 @@ class Lead(BaseModel):
 | `KARNI_SITE_FORM_SCRIPT` |  | `True` | Whether {% karni_form %} adds karni_site/forms.js (submit in place, inline errors). False leaves the form working without JavaScript, and a site may load its own script. |
 | `KARNI_SITE_FORM_SENT_PARAM` |  | `"sent"` | The query parameter the page gets after a form was sent without JavaScript: ?sent=&lt;form&gt;. |
 | `KARNI_SITE_FORM_PAGE_TEMPLATE` |  | `"karni_site/forms/page.html"` | The page that shows a form with its errors when the page it was sent from cannot be rendered again (no page, a page that needs a POST, a page that fails). |
-| `KARNI_SITE_NOTIFY_FROM` |  | `""` | The sender of karni_site.notify emails. Empty: Django's DEFAULT_FROM_EMAIL. |
-| `KARNI_SITE_URL` |  | `None` | The site's own address, "https://www.example.com". Canonical links, share tags, the sitemap and robots.txt use it. None: the address each request came to. |
-| `KARNI_SITE_ALLOW_INDEXING` |  | `None` | Whether search engines may index the site. None: only when DJANGO_ENV is "prod", so a development or staging copy is never indexed. True or False decides for every environment. |
+| `KARNI_SITE_NOTIFY_FROM` | `KARNI_SITE_NOTIFY_FROM` | `""` | The sender of karni_site.notify emails. Empty: Django's DEFAULT_FROM_EMAIL. |
+| `KARNI_SITE_URL` | `KARNI_SITE_URL` | `None` | The site's own address, "https://www.example.com". Canonical links, share tags, the sitemap and robots.txt use it. None: the address each request came to. |
+| `KARNI_SITE_ALLOW_INDEXING` | `KARNI_SITE_ALLOW_INDEXING` | `None` | Whether search engines may index the site. None: only when DJANGO_ENV is "prod", so a development or staging copy is never indexed. True or False decides for every environment. |
+| `KARNI_SITE_ROBOTS_TAG` | `KARNI_SITE_ROBOTS_TAG` | `"noindex, nofollow"` | What a closed site tells search engines on every page, while indexing is not allowed: the X-Robots-Tag header of every response (karni_site.middleware.RedirectMiddleware) and the robots meta tag of {% karni_seo %}. robots.txt alone is not enough: a proxy or CDN may rewrite it. "" sends neither, and robots.txt is then the only signal. |
 | `KARNI_SITE_ROBOTS_DISALLOW` |  | `[]` | Paths robots.txt asks crawlers to stay out of while indexing is allowed: ["/search/"]. |
 | `KARNI_SITE_SITEMAP_EXCLUDE` |  | `[]` | URL names and paths the sitemap leaves out, shell wildcards allowed: ["website:thanks", "/drafts/*"]. The admin, the API and redirects are never in it. |
 | `KARNI_SITE_TECHNICAL_ROUTES` |  | `[]` | URL names and paths added to Karni's own technical routes (the health and readiness probes, the welcome page), which no sitemap or menu choice lists: ["status", "/ping"]. |
@@ -2062,7 +2083,7 @@ class Lead(BaseModel):
 | `KARNI_SITE_IMAGE_WIDTHS` |  | `[320, 480, 640, 800, 960, 1280, 1600, 1920]` | The widths, in pixels, of the WebP copies made of each uploaded image (those below its own width, and its own width when it is not a WebP). [] makes none. |
 | `KARNI_SITE_IMAGE_QUALITY` |  | `80` | The WebP quality of those copies, 1 to 100. |
 | `KARNI_SITE_IMAGE_MAX_SIZE` |  | `2560` | An uploaded image wider or taller than this many pixels is scaled down to fit. None keeps it. |
-| `KARNI_SITE_QUEUE_RENDITIONS` |  | `True` | Whether an upload, and the first page that shows an image without copies, queue the copies (a Celery task). False: make them yourself (karni_site.renditions.make). |
+| `KARNI_SITE_QUEUE_RENDITIONS` | `KARNI_SITE_QUEUE_RENDITIONS` | `True` | Whether an upload, and the first page that shows an image without copies, queue the copies (a Celery task). False: make them yourself (karni_site.renditions.make). |
 | `KARNI_SITE_RENDITIONER` |  | `"karni_site.renditions.generate"` | The function that makes an image's copies: (name, storage) -&gt; manifest. A dotted path. |
 | `KARNI_SITE_IMAGE_STYLE` |  | `":where(img[data-karni-image]){height:auto}" ":where(img[data-karni-image=natural]){width:auto}"` | The CSS {% karni_seo %} puts in the head so an image Karni sized keeps its shape when the design's CSS sets only its width or only its height. "" leaves it out. |
 | `KARNI_SITE_SEO_MAX_PAGES` |  | `500` | karni check --seo: at most this many pages are requested. |
@@ -2326,6 +2347,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E005`](errors.md#e005) | exception | without() was called on a queryset |
 | [`E006`](errors.md#e006) | exception | A scope's context is not bound |
 | [`E007`](errors.md#e007) | exception | Karni.audit or Karni.sensitive is malformed |
+| [`E008`](errors.md#e008) | exception | unrecorded() has no reason |
 | [`E101`](errors.md#e101) | check | A viewset declares no access |
 | [`W101`](errors.md#w101) | warning | A hand-written serializer duplicates the one Karni generates |
 | [`E102`](errors.md#e102) | exception | access is not an Access(...) or Unscoped(...) declaration |
@@ -2461,6 +2483,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E507`](errors.md#e507) | exception | KARNI_CACHE names an unknown cache backend |
 | [`E508`](errors.md#e508) | check | A setting is assigned where it cannot take effect |
 | [`E509`](errors.md#e509) | exception | Sign-in with an ID token needs the cryptography package |
+| [`E510`](errors.md#e510) | exception | KARNI_STATIC_STORAGE names an unknown storage |
 | [`W510`](errors.md#w510) | warning | DEBUG is on in a deployment |
 | [`W511`](errors.md#w511) | warning | SECRET_KEY is weak or a development key |
 | [`W512`](errors.md#w512) | warning | ALLOWED_HOSTS is empty or allows every host |
@@ -2665,6 +2688,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`SITE021`](errors.md#site021) | exception | {% karni_form %} is written wrongly |
 | [`SITE022`](errors.md#site022) | exception | The form view is not routed |
 | [`SITE023`](errors.md#site023) | exception | A notification does not say who to email |
+| [`SITE024`](errors.md#site024) | exception | A page fails while karni_site_seed renders it |
 | [`STORE001`](errors.md#store001) | check | KARNI_STORAGE_PROVIDER names no preset |
 | [`STORE002`](errors.md#store002) | check | The storage provider has no credentials |
 | [`STORE003`](errors.md#store003) | check | The storage preset needs a value it does not have |

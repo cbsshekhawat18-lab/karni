@@ -317,6 +317,9 @@ class Menu(BaseModel):
     )
     title = models.CharField(_("title"), max_length=200, blank=True)
     seed = models.CharField(max_length=300, blank=True, editable=False)
+    #: What the seed gave each item, the last time the menu followed it
+    #: (:func:`karni_site.menus.sync_menu`): ``{"digest": ..., "entries": [...]}``.
+    seeded = models.JSONField(default=dict, blank=True, editable=False)
 
     class Meta(BaseModel.Meta):
         ordering: ClassVar[list[str]] = ["name"]
@@ -332,6 +335,9 @@ class Menu(BaseModel):
 
 class MenuItem(BaseModel):
     """One link of a menu, maybe with children.
+
+    An item the menu's seed made (``seed_key``) follows the seed while nobody
+    changes it (:func:`karni_site.menus.sync_menu`).
 
     It points at exactly one of: a page by URL name (``route``, with
     ``route_kwargs`` for a page with a capture), a row's own page
@@ -378,6 +384,8 @@ class MenuItem(BaseModel):
     new_tab = models.BooleanField(_("opens in a new tab"), default=False)
     enabled = models.BooleanField(_("shown"), default=True)
     order = models.PositiveIntegerField(_("order"), default=0)
+    #: The seed link this item came from, ``""`` for an item someone added.
+    seed_key = models.CharField(max_length=32, blank=True, editable=False)
 
     class Meta(BaseModel.Meta):
         ordering: ClassVar[list[str]] = ["order", "created_at"]

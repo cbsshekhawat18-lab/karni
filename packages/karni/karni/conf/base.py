@@ -100,26 +100,46 @@ def _auth_throttle_rates(env: environ.Env) -> dict[str, str | None]:
     return {**AUTH_THROTTLE_DEFAULTS, **overrides}
 
 
-def _storages(env: environ.Env, choice: str | None = None) -> dict[str, dict[str, Any]]:
-    """Build the ``STORAGES`` setting from ``KARNI_STORAGE`` (``choice``, else the environment).
+#: ``KARNI_STATIC_STORAGE``'s names, and the backend each selects. A dotted path is taken as is.
+STATIC_STORAGES: dict[str, str] = {
+    "plain": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    "manifest": "karni.storage.static.ManifestStaticStorage",
+}
+
+
+def _storages(
+    env: environ.Env, choice: str | None = None, static: str | None = None
+) -> dict[str, dict[str, Any]]:
+    """Build the ``STORAGES`` setting from ``KARNI_STORAGE`` and ``KARNI_STATIC_STORAGE``.
 
     ``KARNI_STORAGE="s3"`` selects :class:`karni.storage.S3Storage` (an
     S3-compatible backend that also works with MinIO/R2 via
     ``AWS_S3_ENDPOINT_URL``); any other value selects Django's local
-    ``FileSystemStorage``. The ``staticfiles`` backend is Django's default.
+    ``FileSystemStorage``. ``KARNI_STATIC_STORAGE`` selects the ``staticfiles``
+    backend: ``plain`` (Django's default, the names as written), ``manifest``
+    (:class:`karni.storage.static.ManifestStaticStorage`, fingerprinted names a
+    browser may keep for a year) or a dotted path.
 
     Override / escape hatch: define ``STORAGES`` yourself in ``settings.py``
     before calling ``karni_settings()`` to replace the whole mapping.
-    ``karni_settings()`` passes a ``KARNI_STORAGE`` defined before the call as ``choice``.
+    ``karni_settings()`` passes the settings defined before the call as
+    ``choice`` and ``static``.
     """
     if (choice or env("KARNI_STORAGE", default="local")) == "s3":
         default = {"BACKEND": "karni.storage.S3Storage"}
     else:
         default = {"BACKEND": "django.core.files.storage.FileSystemStorage"}
-    return {
-        "default": default,
-        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
-    }
+    named = str(static or env("KARNI_STATIC_STORAGE", default="plain")).strip()
+    backend = STATIC_STORAGES.get(named, named)
+    if "." not in backend:
+        from karni.exceptions import KarniImproperlyConfigured
+
+        raise KarniImproperlyConfigured(
+            f"KARNI_STATIC_STORAGE={named!r}: use 'plain' (the default), 'manifest' "
+            "(fingerprinted names) or the dotted path of a storage class.",
+            code="E510",
+        )
+    return {"default": default, "staticfiles": {"BACKEND": backend}}
 
 
 def _caches(env: environ.Env, choice: str | None = None) -> dict[str, dict[str, Any]]:
@@ -390,6 +410,10 @@ BASE: dict[str, Any] = {
     "DATABASE_ROUTERS": ["karni.db.DatabaseRouter"],
     # "redis" (the default cache at REDIS_URL) or "locmem" (a host run without Redis).
     "KARNI_CACHE": env("KARNI_CACHE", default="redis"),
+    # A deployment of one process, without Redis or a Celery worker: the cache in memory,
+    # Celery tasks run in the process, the probes leave the broker and the worker out, and
+    # karni.W501 is quiet while WEB_CONCURRENCY is 1 (karni.conf.single_process).
+    "KARNI_SINGLE_PROCESS": env.bool("KARNI_SINGLE_PROCESS", default=False),
     "CACHES": _caches(env),
     # --- Email ----------------------------------------------------------------
     # EMAIL_URL (smtp+tls://user:password@host:587), DEFAULT_FROM_EMAIL, SERVER_EMAIL.
@@ -472,6 +496,9 @@ BASE: dict[str, Any] = {
     # --- Files & storage --------------------------------------------------
     "STORAGES": _storages(env),
     "KARNI_STORAGE": env("KARNI_STORAGE", default="local"),
+    # The static files' storage: "plain" (the names as written), "manifest" (fingerprinted
+    # names, karni.storage.static.ManifestStaticStorage) or a dotted path.
+    "KARNI_STATIC_STORAGE": env("KARNI_STATIC_STORAGE", default="plain"),
     "AWS_ACCESS_KEY_ID": env("AWS_ACCESS_KEY_ID", default=""),
     "AWS_SECRET_ACCESS_KEY": env("AWS_SECRET_ACCESS_KEY", default=""),
     "AWS_STORAGE_BUCKET_NAME": env("AWS_STORAGE_BUCKET_NAME", default=""),

@@ -282,11 +282,14 @@ def tests_source(app: App, line_length: int) -> str:
         "import pytest\n"
         "from django.test import Client\n"
         "from karni.testing import assert_pages, load_content\n"
+        "from karni_site.sitemaps import declared_pages\n"
         "from pytest_django import Settings\n\n"
         + comment(
             "Every page of the site. `karni make view` adds each new URL above the marker. "
             "A path with a capture, such as /services/<slug:slug>/, needs a real URL here: "
-            "one whose row content/site.json holds.",
+            "one whose row content/site.json holds. A view with a fixed set of addresses and "
+            "no model declares them with @pages (karni_site.sitemaps): the test takes them "
+            "from declared_pages().",
             "",
             line_length,
         )
@@ -308,7 +311,7 @@ def tests_source(app: App, line_length: int) -> str:
         f'    load_content("{SITE_CONTENT}", missing_ok=True)\n\n\n'
         "@pytest.mark.django_db\n"
         "def test_every_page_passes_the_page_checks(client: Client) -> None:\n"
-        "    assert_pages(client, PAGES)\n"
+        "    assert_pages(client, [*PAGES, *declared_pages()])\n"
     )
 
 
@@ -393,7 +396,9 @@ def add_page_to_test(ws: Workspace, app: App, url: str) -> None:
     if "<" in url:
         ws.note(
             f"page test: {url} has a capture, so it is not in {rel}. Add a real URL to PAGES "
-            "there, and create the content that page shows in the test."
+            "there, and create the content that page shows in the test. A fixed set of "
+            'addresses without a model: declare them on the view, @pages({"slug": "..."}) '
+            "from karni_site.sitemaps, and they join sitemap.xml and the page test."
         )
         return
     manual = f"Add {pystr(url)} to the URLs that {rel} passes to assert_pages yourself."

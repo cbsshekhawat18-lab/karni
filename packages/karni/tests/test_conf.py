@@ -496,6 +496,50 @@ def test_karni_cache_picks_redis_or_locmem(monkeypatch: pytest.MonkeyPatch) -> N
         _caches(environ.Env())
 
 
+def test_single_process_needs_no_redis_and_no_worker(
+    make_settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name in ("KARNI_CACHE", "KARNI_READYZ_CHECKS", "KARNI_HEALTH_CHECKS"):
+        monkeypatch.delenv(name, raising=False)
+    plain = make_settings("prod")
+    assert plain["CACHES"]["default"]["BACKEND"].endswith("RedisCache")
+    assert "CELERY_TASK_ALWAYS_EAGER" not in plain
+    ns = make_settings("prod", preset={"KARNI_SINGLE_PROCESS": True})
+    assert ns["KARNI_CACHE"] == "locmem"
+    assert ns["CACHES"]["default"]["BACKEND"].endswith("LocMemCache")
+    assert ns["CELERY_TASK_ALWAYS_EAGER"] is True
+    assert ns["CELERY_BROKER_URL"] == "memory://"
+    assert ns["KARNI_READYZ_CHECKS"] == [
+        "karni.health.checks.check_database",
+        "karni.health.checks.check_cache",
+    ]
+    assert ns["KARNI_HEALTH_CHECKS"] == [
+        "karni.health.checks.check_database",
+        "karni.health.checks.check_cache",
+    ]
+    # The environment turns it on as well, and a value of the project's own wins.
+    monkeypatch.setenv("KARNI_SINGLE_PROCESS", "True")
+    from importlib import reload
+
+    from karni.conf import base
+
+    try:
+        reload(base)
+        assert base.BASE["KARNI_SINGLE_PROCESS"] is True
+    finally:
+        monkeypatch.delenv("KARNI_SINGLE_PROCESS")
+        reload(base)
+    mine = make_settings(
+        "prod",
+        preset={"KARNI_SINGLE_PROCESS": True, "CELERY_TASK_ALWAYS_EAGER": False},
+        KARNI_READYZ_CHECKS=["myapp.checks.ready"],
+    )
+    assert mine["CELERY_TASK_ALWAYS_EAGER"] is False
+    assert mine["KARNI_READYZ_CHECKS"] == ["myapp.checks.ready"]
+    monkeypatch.setenv("KARNI_CACHE", "redis")
+    assert make_settings("prod", preset={"KARNI_SINGLE_PROCESS": True})["KARNI_CACHE"] == "redis"
+
+
 def test_login_lands_on_the_admin(make_settings) -> None:
     assert make_settings("dev")["LOGIN_REDIRECT_URL"] == "/admin/"
 

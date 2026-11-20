@@ -7,12 +7,12 @@ from datetime import timedelta
 from typing import Any
 
 import pytest
-from django.test import Client
+from django.test import Client, RequestFactory
 from django.utils import timezone
 from pytest_django import Settings
 
 from karni_site import seo_views, sitemaps
-from karni_site.models import PageSeo
+from karni_site.models import PageSeo, Redirect
 from tests.seo_helpers import seo_site  # noqa: F401
 from tests.testapp.models import Article, Note, Project, Service
 
@@ -122,7 +122,15 @@ def robots() -> str:
     return response.content.decode()
 
 
-def test_robots_closes_the_site_outside_production(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.fixture
+def by_environment(settings: Settings) -> None:
+    """The default: indexing follows DJANGO_ENV (the suite's settings open the site)."""
+    settings.KARNI_SITE_ALLOW_INDEXING = None
+
+
+def test_robots_closes_the_site_outside_production(
+    monkeypatch: pytest.MonkeyPatch, by_environment: None
+) -> None:
     monkeypatch.delenv("DJANGO_ENV", raising=False)
     assert robots() == "User-agent: *\nDisallow: /\n"
     monkeypatch.setenv("DJANGO_ENV", "dev")
@@ -130,7 +138,7 @@ def test_robots_closes_the_site_outside_production(monkeypatch: pytest.MonkeyPat
 
 
 def test_robots_opens_the_site_in_production_and_names_the_sitemap(
-    monkeypatch: pytest.MonkeyPatch, settings: Settings
+    monkeypatch: pytest.MonkeyPatch, settings: Settings, by_environment: None
 ) -> None:
     monkeypatch.setenv("DJANGO_ENV", "prod")
     assert robots() == "User-agent: *\nAllow: /\n\nSitemap: http://testserver/sitemap.xml\n"
@@ -193,3 +201,61 @@ def test_karni_technical_routes_are_not_pages(settings: Settings) -> None:
     # A project extends the one list.
     settings.KARNI_SITE_TECHNICAL_ROUTES = ["status"]
     assert "status" not in [name for name, _ in routes.site_pages()]
+
+
+# A closed site says so on every page, not in robots.txt alone: a proxy may rewrite that file.
+
+
+def test_a_closed_site_sends_x_robots_tag_on_every_response(
+    monkeypatch: pytest.MonkeyPatch, settings: Settings, by_environment: None
+) -> None:
+    monkeypatch.setenv("DJANGO_ENV", "dev")
+    for path in ("/", "/about/", "/robots.txt", "/nowhere/"):
+        response = Client().get(path)
+        assert response["X-Robots-Tag"] == "noindex, nofollow", path
+    # Django's sitemap view sends its own (noindex, noodp, noarchive), which is kept.
+    assert Client().get("/sitemap.xml")["X-Robots-Tag"].startswith("noindex")
+    page = Client().get("/about/").content.decode()
+    assert '<meta name="robots" content="noindex, nofollow">' in page
+    settings.KARNI_SITE_ROBOTS_TAG = "noindex"
+    assert Client().get("/")["X-Robots-Tag"] == "noindex"
+
+
+def test_an_open_site_sends_neither(monkeypatch: pytest.MonkeyPatch, by_environment: None) -> None:
+    monkeypatch.setenv("DJANGO_ENV", "prod")
+    response = Client().get("/about/")
+    assert "X-Robots-Tag" not in response
+    assert 'name="robots"' not in response.content.decode()
+
+
+def test_a_closed_site_closes_a_redirect_too(settings: Settings) -> None:
+    settings.KARNI_SITE_ALLOW_INDEXING = False
+    Redirect.objects.create(old_path="/old/", new_url="/about/")
+    response = Client().get("/old/")
+    assert response.status_code == 301
+    assert response["X-Robots-Tag"] == "noindex, nofollow"
+
+
+def test_an_empty_robots_tag_leaves_robots_txt_alone(settings: Settings) -> None:
+    settings.KARNI_SITE_ALLOW_INDEXING = False
+    settings.KARNI_SITE_ROBOTS_TAG = ""
+    response = Client().get("/about/")
+    assert "X-Robots-Tag" not in response
+    assert 'name="robots"' not in response.content.decode()
+    assert robots() == "User-agent: *\nDisallow: /\n"
+
+
+def test_a_view_keeps_its_own_x_robots_tag(settings: Settings) -> None:
+    from django.http import HttpResponse
+
+    from karni_site.middleware import RedirectMiddleware
+
+    settings.KARNI_SITE_ALLOW_INDEXING = False
+
+    def view(request: object) -> HttpResponse:
+        response = HttpResponse("x")
+        response["X-Robots-Tag"] = "none"
+        return response
+
+    response = RedirectMiddleware(view)(RequestFactory().get("/"))
+    assert response["X-Robots-Tag"] == "none"

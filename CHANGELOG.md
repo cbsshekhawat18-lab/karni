@@ -78,6 +78,120 @@ apply codemods and list the manual steps. This file is the human summary.
   PATH" when git is missing, and the PostgreSQL backup round trip skips when `DATABASE_URL`
   points at a server that is not listening. Before, they failed.
 
+- **Added: `karni make deploy systemd-nginx`, a deploy without Docker.** It writes
+  `deploy/`: `deploy.sh`, systemd units for gunicorn (and the Celery worker and beat,
+  `--no-celery` leaves them out), an nginx vhost, the server's `env.example` and a README.
+  Run on the server, `deploy.sh` copies the project into a new release under
+  `<root>/releases/`, installs its dependencies into the release's own virtual
+  environment, runs `karni_check --deploy`, `migrate` and `collectstatic`, switches
+  `<root>/current` atomically, restarts the units and waits for `/readyz` on gunicorn's
+  socket, then installs the vhost and reloads nginx only after `nginx -t` passes. When the
+  test fails it puts the previous vhost back, or unhooks its own when there was none, and
+  the other sites on the server keep working. It touches only its own paths, writes
+  `<root>/shared/.env` once from `env.example` and never writes over it, keeps the newest
+  `--keep` releases, and `--rollback` switches back to the newest earlier release that
+  answered its health check (`--list` shows them). A run that fails stops with a message,
+  and two runs at once are refused. New target, nothing changes for `compose`
+  ([docs](docs/deploy.md#without-docker-systemd-and-nginx)).
+
+- **Fixed: a karni-site menu follows its seed template, as the docs said.** A menu that
+  `{% get_menu "header" seed="..." %}` made followed nothing after its first render, so a
+  new link in the seed never appeared and a renamed view left an item that pointed nowhere
+  (`SITE007`). Now, as an editable block follows its template's text, each item the seed
+  made and nobody changed takes the seed's new text, target and place, an item whose link
+  left the seed goes, and a new link becomes an item. An item someone changed in the admin,
+  added or deleted stays as it is, and so does a menu made in the admin. Unchanged, a seed
+  costs no query. A seed that stops rendering keeps the menu as stored.
+  `KARNI_SITE_MENU_FOLLOW_SEED = False` seeds once as before, and
+  `karni_site.menus.sync_menu()` follows a seed from code. karni-site's migration 0002 adds
+  `Menu.seeded` and `MenuItem.seed_key`
+  ([migration note](docs/migrations/0.5.md#seeded-menus-follow-their-seed)).
+
+- **Added: `manage.py karni_site_seed`, a site's defaults stored in a deploy, not on a
+  visit.** A page's first render was a visitor's request, which stored each new
+  `{% editable %}` block, the menu its seed gives and the site's details, with a
+  change-history entry for each (33 blocks on a page were 66 inserts). The command renders
+  every page once, as `karni check --seo` finds them, stores what the templates give and
+  follows what changed, and fails with `SITE024` when a page answers a server error
+  (`--keep-going` reports them). It seeds whatever `KARNI_SITE_SEED_ON_RENDER` says, so a
+  site that turns that off writes nothing on a visit. The release step of `karni make deploy
+  compose` and `deploy.sh` of `karni make deploy systemd-nginx` run it in a project with
+  karni-site. Storing a template's default now leaves no change-history entry, on a visit
+  as in a deploy, through the new `karni.audit.capture.unrecorded(reason)`: an edit by a
+  person is recorded as before. A new block's place no longer costs a count query
+  ([migration note](docs/migrations/0.5.md#a-sites-defaults-are-stored-in-the-deploy-and-leave-no-history)).
+
+- **Fixed: a site closed to search engines says so on every page, not in robots.txt alone.**
+  With `KARNI_SITE_ALLOW_INDEXING` off (or outside `DJANGO_ENV=prod` by default), only
+  robots.txt changed, and a proxy such as a CDN can put its own `Allow: /` in front of that
+  file. Every response Django sends now carries `X-Robots-Tag: noindex, nofollow`, added by
+  karni-site's redirect middleware (already in every site's `MIDDLEWARE`, and a view's own
+  header is kept), and `{% karni_seo %}` writes `<meta name="robots" content="noindex,
+  nofollow">`. The new `KARNI_SITE_ROBOTS_TAG` holds the directives, `""` sends neither.
+  `karni check --seo` checks the pages as an open site serves them, so a development copy
+  is judged as production will be
+  ([migration note](docs/migrations/0.5.md#a-closed-site-says-noindex-on-every-page)).
+
+- **Fixed: karni-site's deployment settings are read from the environment.**
+  `KARNI_SITE_URL`, `KARNI_SITE_ALLOW_INDEXING`, `KARNI_SITE_QUEUE_RENDITIONS`,
+  `KARNI_SITE_SEED_ON_RENDER`, `KARNI_SITE_ROBOTS_TAG` and `KARNI_SITE_NOTIFY_FROM` were
+  plain defaults, so a value in `.env` or `.env.prod` changed nothing. They are now read
+  with django-environ, as Karni's own settings and the other modules' are, with the same
+  defaults, and settings.py still wins. docs/settings.md names each variable. The
+  production examples both `karni make deploy` targets write list them for a project with
+  karni-site, with `KARNI_SITE_URL` set to the domain.
+
+- **Added: `KARNI_SINGLE_PROCESS`, one switch for a small server without Redis or Celery.**
+  Running without them took `KARNI_CACHE=locmem`, `KARNI_SITE_QUEUE_RENDITIONS=False` and a
+  single worker, and `karni check --deploy` still failed on `karni.W501`, while `/readyz`
+  failed on the broker and a queued task tried to reach one. With
+  `KARNI_SINGLE_PROCESS=True` (in the environment, or in settings.py above
+  `karni_settings()`: it is read during the call), the cache defaults to `locmem`, Celery
+  tasks run in the process (`CELERY_TASK_ALWAYS_EAGER`, broker `memory://`), `/readyz` and
+  `/health/ready/` leave the broker and the worker out, and `karni.W501` is quiet while
+  `WEB_CONCURRENCY` is 1 (it names the variable when it is more). Each default applies only
+  where the project has no value of its own. Image copies keep working, made in the
+  process. `karni make deploy systemd-nginx --single-process` writes the switch, one
+  gunicorn worker with threads and no worker or beat unit
+  ([docs](docs/deploy.md#a-small-server-one-process)).
+
+- **Added: `KARNI_STATIC_STORAGE`, fingerprinted static files.** Production used Django's
+  plain `StaticFilesStorage`, so a file's name never changed and long caching was unsafe.
+  `KARNI_STATIC_STORAGE=manifest` selects `karni.storage.static.ManifestStaticStorage`:
+  `collectstatic` writes each file under a name that carries its content's hash and
+  rewrites stylesheets' `url(...)` to them, and `{% static %}` names them in tags,
+  attributes and `data-*` attributes alike. Unlike Django's manifest storage, a name the
+  manifest does not hold gets its plain name and a warning instead of a failed page, and a
+  `url(...)` to a missing file is kept as written instead of stopping `collectstatic`. The
+  default stays `plain`. A new site project's production env examples (compose and
+  systemd-nginx) set `manifest`, and the generated Caddyfile and nginx vhost let browsers
+  keep fingerprinted names for a year and plain ones for an hour at most. An unknown value
+  fails with `E510`
+  ([docs](docs/deploy.md#14-static-and-media-files),
+  [migration note](docs/migrations/0.5.md#static-files-under-fingerprinted-names)).
+
+- **Added (experimental): `@pages`, the known pages of a view behind a capture.** A view
+  such as `/topics/<slug:slug>/` with a small, fixed set of addresses and no model had no
+  rows for sitemap.xml, so `karni check --seo` reported each linked page as left out
+  (`SITE018`), and the page test needed each URL by hand. `@pages({"slug": "tides"}, ...)`
+  from `karni_site.sitemaps`, or `@pages(lambda: [...])` built from the data the view reads,
+  declares them: they join sitemap.xml's `pages` section (exclusions and the admin's hidden
+  pages still apply), `karni check --seo` requests them, and `declared_pages()` gives them to
+  the page test. A new site's `tests/test_pages.py` passes
+  `[*PAGES, *declared_pages()]` to `assert_pages`, and `karni make view --path` with a
+  capture says so. A declaration that is not an address of the view fails with `SITE019`
+  ([docs](docs/public-site.md#pages-behind-a-capture-without-a-model-experimental)).
+
+- **Added: `karni new --here`, and `karni doctor` without a staff app.** `karni new`
+  always made a `<slug>/` folder. `--here` writes the project into the current folder,
+  which must be empty but for version control and editor files (`.git`, `.DS_Store`,
+  `.idea`, `.vscode`): a folder made for the project, or one cloned from an empty
+  repository. A folder that holds anything else is refused with `C850`, and `--here` with
+  `--output-dir` with `C106`. The next steps leave out the `cd`. `karni doctor` checked
+  Node, npm and the `@karni/ui` manifest for `frontend/` in every project, so a site made
+  with `--no-staff-app` was told to run `npm install`. Without `frontend/package.json` it
+  now says those checks do not apply.
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

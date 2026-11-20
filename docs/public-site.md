@@ -55,7 +55,9 @@ Every kind has the same security defaults (the
 public-create throttle, `karni check --deploy`) and the production stack. Run
 in a terminal, `karni new` asks for the kind. Run by a script or an agent, it
 makes an app, or a site with `--design`. `--site-app` names the site app
-something other than `website`.
+something other than `website`, and `--here` writes the project into the
+current folder (empty but for version control and editor files) instead of
+a new one.
 
 The kind is recorded in pyproject.toml, next to the release the project was
 made for:
@@ -320,7 +322,12 @@ tags work in a template written by hand:
   text or image, the menu's links (from its `seed` template, the design's
   own navigation) and the site's details (`{% site_defaults %}`). Until the
   client changes one, it follows the template: a new version of the design
-  changes it. Once they change it, their version stays.
+  changes it. Once they change it, their version stays. `manage.py
+  karni_site_seed` renders every page once in a deploy, so that first
+  render is not a visitor's request (the deploy files Karni writes run it),
+  and storing a default leaves no entry in the change history: it is
+  nobody's edit. The [module's README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site#managepy-karni_site_seed-the-defaults-stored-in-a-deploy)
+  says how it relates to `KARNI_SITE_SEED_ON_RENDER`.
 - **Text** is edited as plain text: a new line is a line break, and words
   between the highlight markers (`==fresh every morning==`) render in the design's
   highlight (a backslash before the marker keeps it as typed). A template's
@@ -334,7 +341,10 @@ tags work in a template written by hand:
 - **Menus** loop over the items in the design's own markup. An item goes to
   one of the site's pages (by URL name), a row's page, or an address, and
   can list the rows of a model as its children, so a submenu of services
-  follows the services the client adds.
+  follows the services the client adds. A menu seeded from the design's
+  navigation follows that template: a new link, a new text or a renamed
+  page reaches every item nobody changed, and an item the client changed,
+  added or deleted stays theirs.
 - **The site's details** (`site`): name, tagline, logo, favicon, the default
   share image, address, phone, email, map link, opening hours and social
   links. `{% site_defaults %}` gives the logo, the favicon and the share
@@ -417,13 +427,13 @@ same source as this table.
 <!-- generated:site-tags -->
 | Tag | Write | What it does |
 | --- | --- | --- |
-| `{% karni_seo %}` | `{% karni_seo %}<title>...</title><meta name="description" content="...">{% endkarni_seo %}` | In base.html's &lt;head&gt;, around the design's own title and description. It writes the page's title, description, canonical link, robots for a hidden page, the Open Graph and Twitter tags and the site's JSON-LD. Each value is the first of: the admin's entry for the page (Page titles and descriptions), `seo` in the view's context (a dict), the page's row, the tags written inside, the site's settings. The page's row is `seo` or `object` in the context when it is a row, else the row in the context whose get_absolute_url() is the page's path. Its fields are the ones `class Karni: seo` names, else seo_title, seo_description and seo_image, else a title, description or image field by a usual name. A detail page that has its row in the context needs no title of its own. |
+| `{% karni_seo %}` | `{% karni_seo %}<title>...</title><meta name="description" content="...">{% endkarni_seo %}` | In base.html's &lt;head&gt;, around the design's own title and description. It writes the page's title, description, canonical link, robots for a hidden page (and noindex, nofollow on every page of a site closed to search engines), the Open Graph and Twitter tags and the site's JSON-LD. Each value is the first of: the admin's entry for the page (Page titles and descriptions), `seo` in the view's context (a dict), the page's row, the tags written inside, the site's settings. The page's row is `seo` or `object` in the context when it is a row, else the row in the context whose get_absolute_url() is the page's path. Its fields are the ones `class Karni: seo` names, else seo_title, seo_description and seo_image, else a title, description or image field by a usual name. A detail page that has its row in the context needs no title of its own. |
 | `{% image %}` | `{% image obj.photo alt=obj.title width=800 %}` | An &lt;img&gt; of an uploaded image: src, srcset and sizes from its WebP copies, width and height in its proportions, lazy loading. alt is required (alt="" for an image that only decorates). eager=True, or eager=forloop.first in a loop, for the image at the top of a page. sizes="..." replaces the one worked out from width. Any other name=value becomes an attribute, an underscore a hyphen (data_index=1 is data-index="1"). An empty field renders nothing, and the original is shown until its copies exist. |
 | `{% editable %}` | `{% editable "home.intro" %}<default HTML>{% endeditable %}` | Text the client edits in the admin. The content is the default: the first render stores it under the key, and the block follows the template until someone edits it. An edited block shows the edited HTML, cleaned to the inline markup KARNI_SITE_INLINE_TAGS allows. The key's first part is the page the admin groups it under. |
 | `{% editable_image %}` | `{% editable_image "home.hero" %}<img src="..." alt="...">{% endeditable_image %}` | An image the client replaces. The design's markup stays: an upload changes the &lt;img&gt;'s src (its srcset and &lt;source&gt; elements go), an edited alternative text its alt. With url after the key, it holds a bare address instead, for a style="background-image: url(...)". |
 | `{% site_image %}` | `{% site_image "logo" %}<img src="..." alt="...">{% endsite_image %}` | An image from a file field of the site's settings (logo, favicon, share_image): the design's image until one is uploaded in the admin. |
 | `{% site_defaults %}` | `{% site_defaults name="Crumb & Co" phone="01234 567890" %}` | The design's values for the site's details (`site` in every template), stored the first time and followed until someone changes them in the admin. It renders nothing. Put it at the top of the layout, before anything reads `site`. |
-| `{% get_menu %}` | `{% get_menu "header" seed="website/menus/header.html" as items %}` | A menu's items for a {% for %} loop in the design's markup: item.title, item.url, item.new_tab, item.current (this page), item.active (this page or one under it) and item.children. With seed, a menu the database does not have yet is created from the links in that template. An item with children from a model lists that model's rows, so a new row appears in the menu by itself, and with no title or address of its own it lists them in its place. karni import design --editable --map seeds a list of a model's detail pages that way. |
+| `{% get_menu %}` | `{% get_menu "header" seed="website/menus/header.html" as items %}` | A menu's items for a {% for %} loop in the design's markup: item.title, item.url, item.new_tab, item.current (this page), item.active (this page or one under it) and item.children. With seed, a menu the database does not have yet is created from the links in that template, and it follows that template afterwards: the items nobody changed in the admin take the seed's new links, and those someone changed, added or deleted stay theirs. An item with children from a model lists that model's rows, so a new row appears in the menu by itself, and with no title or address of its own it lists them in its place. karni import design --editable --map seeds a list of a model's detail pages that way. |
 | `{% ifactive %}` | `{% ifactive "website:about" %} class="active"{% else %}...{% endifactive %}` | Renders its content when one of its patterns names the current page, else the {% else %} part. A pattern is a URL name, wildcards allowed ("website:service_*"), or a path ("/about/", "/blog/*"). Put it where the design marks the current page: a class, a token inside a class, or a whole attribute. It needs the request in the context. karni check reports a name no URL has (SITE002). |
 | `{% karni_form %}` | `{% karni_form "contact" button="Send" classes="bootstrap" %}` | A public form that works with and without JavaScript: the fields a visitor fills (the writable fields of the form viewset's create serializer) with labels, limits and errors, the CSRF token and the honeypot. It posts through the viewset's own create, so the access declaration, rate limit and validation are the API's. Options such as fields, rows, labels, widgets, classes, button and editable fit it to the design. Also {% load karni_forms %}. |
 | `{% csp_hash %}` | `<script>{% csp_hash %}...{% endcsp_hash %}</script>` | Renders its content unchanged and adds its SHA-256 hash to the script-src of this response's Content-Security-Policy, so the design's inline script runs under Karni's policy. {% csp_hash attribute %} is for an event handler attribute (onclick="..."). |
@@ -485,10 +495,12 @@ image, its links reach pages that exist, and an unknown URL is a 404.
 import pytest
 from django.test import Client
 from karni.testing import assert_pages
+from karni_site.sitemaps import declared_pages
 
 # Every page of the site. `karni make view` adds each new URL above the marker. A path
 # with a capture, such as /services/<slug:slug>/, needs a real URL here, and the test
-# must create the content that page shows first.
+# must create the content that page shows first. A view's declared pages (@pages) come
+# from declared_pages().
 PAGES = [
     "/",
     "/about/",
@@ -498,7 +510,7 @@ PAGES = [
 
 @pytest.mark.django_db
 def test_every_page_passes_the_page_checks(client: Client) -> None:
-    assert_pages(client, PAGES)
+    assert_pages(client, [*PAGES, *declared_pages()])
 ```
 
 For each page it checks a 200, a non-empty `<title>` and `<meta
@@ -513,7 +525,39 @@ that does not exist.
 `karni make view` adds each new URL above the `# karni:pages` marker. It
 leaves out a path with a capture, such as `/services/<slug:slug>/`, and says
 so, because only you know a URL that has content behind it. Add one by hand,
-and create that content in the test first.
+and create that content in the test first, or declare the view's pages
+([below](#pages-behind-a-capture-without-a-model-experimental)).
+
+### Pages behind a capture without a model (experimental)
+
+*Experimental: `karni_site.sitemaps.pages` and `declared_pages` may change
+in a minor release ([stability](stability.md#experimental-names)).*
+
+A view behind a capture with a known, small set of addresses and no model,
+such as `/topics/<slug:slug>/` for three topics a dict holds, has no rows
+for the sitemap to list, so `karni check --seo` reports each linked page as
+left out (`SITE018`). The view declares its pages:
+
+```python
+from karni_site.sitemaps import pages
+
+TOPICS = {"tides": "Tides and what they bring in", "harbours": "Harbours along the coast"}
+
+
+@pages(lambda: [{"slug": slug} for slug in TOPICS])
+def topic(request: HttpRequest, slug: str) -> HttpResponse:
+    ...
+```
+
+Each mapping is the captures of one address (`@pages({"slug": "tides"},
+{"slug": "harbours"})` lists them directly), and a function is called each
+time the sitemap is built. The pages join sitemap.xml's `pages` section
+(`KARNI_SITE_SITEMAP_EXCLUDE` and the admin's *hide from search engines*
+still apply), `karni check --seo` requests them, and the page test takes
+them from `declared_pages()`. A class-based view takes the decorator on its
+class. A mapping that is not an address of the view fails with `SITE019`.
+Rows of a model with `get_absolute_url()` need no declaration: they are in
+the sitemap already.
 
 The test lists URLs instead of reading them from `urls.py`. A site's
 `urls.py` also routes `robots.txt`, a sitemap, redirects and pages behind a
@@ -577,7 +621,10 @@ include by hand before `*welcome_urls()`.
 
 The scaffold's Caddyfile serves `/static/` and `/media/` from disk and sends
 every other path to Django, so the site at `/` works in production with no
-change. `collectstatic` copies `static/website/` into `STATIC_ROOT`.
+change. `collectstatic` copies `static/website/` into `STATIC_ROOT`. A new
+site project sets `KARNI_STATIC_STORAGE=manifest` in its production
+`.env`, so each file is served under a name that carries its content's hash
+and browsers keep it for a year ([static files](deploy.md#14-static-and-media-files)).
 
 ## SEO by default
 
@@ -622,7 +669,10 @@ search engines without project code:
   sitemap = {"filter": {...}}` to choose).
 - **robots.txt** closes the site outside production (`DJANGO_ENV` other
   than `prod`) and names the sitemap in production.
-  `KARNI_SITE_ALLOW_INDEXING` decides otherwise.
+  `KARNI_SITE_ALLOW_INDEXING` decides otherwise. A closed site also says
+  so on every page, because a proxy can rewrite robots.txt: the
+  `X-Robots-Tag: noindex, nofollow` header on every response and the
+  robots meta tag of `{% karni_seo %}` (`KARNI_SITE_ROBOTS_TAG`).
 - **Images.** `{% image project.photo width=400 alt=project.title %}`
   writes `srcset`, `sizes`, `width`, `height` and lazy loading from WebP
   copies made in the background when the image is uploaded (Celery,
@@ -636,9 +686,14 @@ search engines without project code:
   site's layout, `karni_site`'s handlers render them with the request while
   `DEBUG` is off, and they are never indexed. With `DEBUG` on you see
   Django's debug page.
-- **Set the address in production.** `KARNI_SITE_URL =
-  "https://www.example.com"` puts canonical links, share tags and the
-  sitemap on the real domain whatever host a request came to.
+- **Set the address in production.** `KARNI_SITE_URL=https://www.example.com`
+  in `.env.prod` (or `KARNI_SITE_URL = "https://www.example.com"` in
+  settings.py) puts canonical links, share tags and the sitemap on the real
+  domain whatever host a request came to. karni-site's settings that differ
+  between deployments (`KARNI_SITE_URL`, `KARNI_SITE_ALLOW_INDEXING`,
+  `KARNI_SITE_QUEUE_RENDITIONS`, `KARNI_SITE_SEED_ON_RENDER`,
+  `KARNI_SITE_ROBOTS_TAG`, `KARNI_SITE_NOTIFY_FROM`) are read from the
+  environment, as Karni's own are.
 
 `karni check --seo` renders every page through Django's test client and
 reports titles and descriptions missing or shared between pages, images

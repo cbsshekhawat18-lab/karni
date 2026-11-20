@@ -1,0 +1,33 @@
+# The web process of {{slug}}: gunicorn, behind nginx ({{server_kind}}).
+# `karni make deploy systemd-nginx` wrote this file, and it is yours to edit. deploy.sh fills
+# in the names between at signs from the values at its top and installs the result as
+# /etc/systemd/system/<app>-web.service.
+[Unit]
+Description=@APP@ web (gunicorn)
+After=network-online.target postgresql.service redis-server.service
+Wants=network-online.target
+
+[Service]
+User=@RUN_AS@
+Group=@RUN_AS@
+WorkingDirectory=@ROOT@/current
+{{concurrency}}
+EnvironmentFile=@ROOT@/shared/.env
+# /run/@APP@/, where the socket nginx proxies to lives.
+RuntimeDirectory=@APP@
+ExecStart=@ROOT@/current/.venv/bin/gunicorn {{server}} \
+    --bind unix:/run/@APP@/gunicorn.sock --umask 007 \
+    --graceful-timeout 30 --timeout 60 --access-logfile - --error-logfile -
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+KillMode=mixed
+TimeoutStopSec=35
+# Read-only everywhere but the uploads.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=@ROOT@/shared/media
+
+[Install]
+WantedBy=multi-user.target

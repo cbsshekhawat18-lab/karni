@@ -1,0 +1,4 @@
+{% extends "seed/base.html" %}{% load karni_site %}
+{% block title %}Home{% endblock %}
+{% block content %}<h1>{% editable "home.title" %}Notes from the harbour{% endeditable %}</h1>
+<p>{% editable "home.intro" %}What the tide brings in.{% endeditable %}</p>{% endblock %}

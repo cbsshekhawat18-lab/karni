@@ -129,6 +129,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write `class Karni: audit = True` (or a list of field names) and `sensitive = [...]` with field names of the model.
 
+<a id="e008"></a>
+
+#### E008: unrecorded() has no reason
+
+*exception* · from `karni.audit.capture.unrecorded`
+
+**Why Karni objects.** A block of saves that leaves no change-history entry hides writes from the history, so it says why: what it writes that no person makes, as a lifted scope says why it lifts.
+
+**Fix.** Pass the reason: `with unrecorded("the template's default, stored on its first render"):`.
+
 ### 1xx · API: access, viewsets, serializers, pagination, budgets, expand
 
 <a id="e101"></a>
@@ -1407,7 +1417,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** DRF keeps rate-limit counters in CACHES['default']. With DEBUG off, a locmem or dummy backend gives every worker its own counters, so the login, registration and password-reset limits are multiplied by the worker count.
 
-**Fix.** Point CACHES['default'] at a backend every worker shares (Redis, which Karni uses by default, or the database cache), or silence karni.W501 for a single-process deployment.
+**Fix.** Point CACHES['default'] at a backend every worker shares (Redis, which Karni uses by default, or the database cache). A deployment of one process declares it with KARNI_SINGLE_PROCESS=True and WEB_CONCURRENCY=1, which quiets the check.
 
 <a id="e502"></a>
 
@@ -1475,7 +1485,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni.checks.check_call_time_settings`
 
-**Why Karni objects.** karni_settings() reads a few settings during the call to compute others: KARNI_AUTH_MODE, KARNI_2FA, KARNI_SOCIAL_AUTH and KARNI_SOCIAL_PROVIDERS decide INSTALLED_APPS and MIDDLEWARE, KARNI_FRONTEND_URL feeds CSRF_TRUSTED_ORIGINS, KARNI_AUTH_THROTTLE_RATES the throttle rates, KARNI_JSON_LOGS builds LOGGING, KARNI_CACHE builds CACHES and KARNI_STORAGE builds STORAGES. Assigned after the call, such a setting changes none of them, and the project would run with the settings computed from the old value. A KARNI_ADMIN_LOGO with no SITE_LOGO entry in UNFOLD (UNFOLD replaced after the call) shows no logo either.
+**Why Karni objects.** karni_settings() reads a few settings during the call to compute others: KARNI_AUTH_MODE, KARNI_2FA, KARNI_SOCIAL_AUTH and KARNI_SOCIAL_PROVIDERS decide INSTALLED_APPS and MIDDLEWARE, KARNI_FRONTEND_URL feeds CSRF_TRUSTED_ORIGINS, KARNI_AUTH_THROTTLE_RATES the throttle rates, KARNI_JSON_LOGS builds LOGGING, KARNI_CACHE builds CACHES, KARNI_STORAGE builds STORAGES and KARNI_SINGLE_PROCESS sets the cache, Celery's eager mode and the probes. Assigned after the call, such a setting changes none of them, and the project would run with the settings computed from the old value. A KARNI_ADMIN_LOGO with no SITE_LOGO entry in UNFOLD (UNFOLD replaced after the call) shows no logo either.
 
 **Fix.** Move the assignment above the `karni_settings(globals())` line, pass it as a keyword (`karni_settings(globals(), KARNI_AUTH_MODE='session')`) or set its environment variable in .env. For the logo, change UNFOLD in place instead of replacing it.
 
@@ -1488,6 +1498,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** Google, Microsoft and Apple sign their ID tokens with RS256 (an EC key uses ES256). PyJWT verifies those only with the cryptography package, which a plain install of Karni leaves out.
 
 **Fix.** Run pip install 'karni[social-token]', or empty KARNI_SOCIAL_TOKEN_PROVIDERS.
+
+<a id="e510"></a>
+
+#### E510: KARNI_STATIC_STORAGE names an unknown storage
+
+*exception* · from `karni.conf (KARNI_STATIC_STORAGE)`
+
+**Why Karni objects.** The static files' storage is chosen by name: `plain` keeps the names as written, `manifest` gives each file a name with a hash of its content, which a browser may keep for a year. Any other word names nothing.
+
+**Fix.** Set KARNI_STATIC_STORAGE to `plain` (the default), `manifest` or the dotted path of a storage class, or define STORAGES yourself in settings.py.
 
 <a id="w510"></a>
 
@@ -3461,7 +3481,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni_site.seo_tags`
 
-**Why Karni objects.** {% karni_seo %} takes nothing and ends with {% endkarni_seo %}. {% image %} takes the image, then name=value pairs, alt among them. class Karni: sitemap is True, False or a dict of filter, exclude, lastmod, changefreq and priority, on a model with get_absolute_url(). class Karni: seo maps title, description, image and type to fields.
+**Why Karni objects.** {% karni_seo %} takes nothing and ends with {% endkarni_seo %}. {% image %} takes the image, then name=value pairs, alt among them. class Karni: sitemap is True, False or a dict of filter, exclude, lastmod, changefreq and priority, on a model with get_absolute_url(). class Karni: seo maps title, description, image and type to fields. @pages on a view gives the captures of each of its addresses.
 
 **Fix.** Write it as the message shows. The karni-site README has an example of each.
 
@@ -3504,6 +3524,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** karni_site.notify.notify_recipients(row, setting="NAME", ...) emails the addresses in settings.NAME, and to=[...] emails fixed addresses. It needs exactly one of the two. A setting that does not exist is a typo or a missing line, and the email would never go out. An empty list only logs a warning.
 
 **Fix.** Pass setting= or to=. For a setting, add NAME = env.list("NAME", default=[]) to config/settings.py and NAME=team@example.com to .env (karni make form --notify NAME writes both).
+
+<a id="site024"></a>
+
+### SITE024: A page fails while karni_site_seed renders it
+
+*exception* · from `karni_site.management.commands.karni_site_seed`
+
+**Why Karni objects.** manage.py karni_site_seed renders every page of the site once, in a deploy, so the blocks, menus and site details its templates give are stored before the first visitor. A page that answers a server error (500) with the new code and the migrated database would fail for every visitor too, and its defaults are not stored.
+
+**Fix.** Open the page the message names with `karni serve` (or read the error the command printed) and fix the view or the template. --keep-going reports the failing pages without failing the run.
 
 ## STORE (`STORE`)
 

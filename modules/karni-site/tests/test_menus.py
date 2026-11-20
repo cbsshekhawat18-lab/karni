@@ -258,3 +258,173 @@ def test_an_item_with_a_title_keeps_its_own_entry(services: list[Service]) -> No
         menu=menu, title="Our services", children_from=ContentType.objects.get_for_model(Service)
     )
     assert render(name="footer").startswith("[Our services|(Websites|")
+
+
+# A seeded menu follows its seed template while nobody changes it.
+
+FOLLOW = (
+    '{% load karni_site %}{% get_menu "main" seed="menus/seed.html" as items %}'
+    "{% for item in items %}[{{ item.title }}|{{ item.url }}"
+    "{% for child in item.children %}({{ child.title }}|{{ child.url }}){% endfor %}]{% endfor %}"
+)
+V1 = (
+    '<ul><li><a href="/">Home</a></li><li><a href="/about/">About</a>'
+    '<ul><li><a href="/about/#team">Team</a></li></ul></li>'
+    '<li><a href="/services/web/">Web</a></li></ul>'
+)
+
+
+@pytest.fixture
+def seed_dir(settings: Any, tmp_path: Any) -> Any:
+    """A template folder holding menus/seed.html, which a test rewrites."""
+    folder = tmp_path / "seeds"
+    (folder / "menus").mkdir(parents=True)
+    engine = dict(settings.TEMPLATES[0])
+    engine["DIRS"] = [folder, *engine["DIRS"]]
+    settings.TEMPLATES = [engine, *settings.TEMPLATES[1:]]
+    return folder
+
+
+def write_seed(folder: Any, markup: str) -> None:
+    """A new version of the seed, as a deploy brings one (the cached templates are read again)."""
+    from django.template import engines
+
+    (folder / "menus" / "seed.html").write_text(markup)
+    for engine in engines.all():
+        for loader in getattr(engine, "engine", engine).template_loaders:
+            if hasattr(loader, "reset"):
+                loader.reset()
+
+
+def shown(path: str = "/") -> str:
+    return render(path, source=FOLLOW)
+
+
+def test_a_menu_follows_its_seed_while_nobody_changes_it(seed_dir: Any) -> None:
+    write_seed(seed_dir, V1)
+    assert shown() == "[Home|/][About|/about/(Team|/about/#team)][Web|/services/web/]"
+    # The designer renames a link, drops one, adds one and points one elsewhere (the
+    # view it named was renamed): the menu follows.
+    write_seed(
+        seed_dir,
+        '<ul><li><a href="/">Home</a></li><li><a href="/about/">About us</a></li>'
+        '<li><a href="/contact/">Web</a></li><li><a href="/book/">Book</a></li></ul>',
+    )
+    assert shown() == "[Home|/][About us|/about/][Web|/contact/][Book|/book/]"
+    web = MenuItem.objects.get(title="Web")
+    assert (web.route, web.url) == ("website:contact", "")
+    assert not MenuItem.objects.filter(title="Team").exists()
+    assert MenuItem.objects.filter(menu__name="main").count() == 4
+
+
+def test_an_item_changed_in_the_admin_keeps_its_change(seed_dir: Any) -> None:
+    write_seed(seed_dir, V1)
+    shown()
+    about = MenuItem.objects.get(title="About")
+    about.title = "Who we are"
+    about.save()
+    web = MenuItem.objects.get(title="Web")
+    web.enabled = False
+    web.save()
+    added = MenuItem.objects.create(menu=about.menu, title="Jobs", url="/jobs/", order=9)
+    write_seed(
+        seed_dir,
+        '<ul><li><a href="/">Start</a></li><li><a href="/about/">About</a>'
+        '<ul><li><a href="/about/#team">Our team</a></li></ul></li>'
+        '<li><a href="/services/web/">Websites</a></li><li><a href="/book/">Book</a></li></ul>',
+    )
+    assert shown() == (
+        "[Start|/][Who we are|/about/(Our team|/about/#team)][Book|/book/][Jobs|/jobs/]"
+    )
+    assert MenuItem.objects.filter(title="Who we are").count() == 1
+    assert not MenuItem.objects.filter(title="About").exists()
+    web.refresh_from_db()
+    assert (web.title, web.enabled) == ("Web", False), "hidden in the admin: kept as it was"
+    added.refresh_from_db()
+    assert added.title == "Jobs" and not added.is_deleted
+
+
+def test_an_item_deleted_in_the_admin_stays_deleted(seed_dir: Any) -> None:
+    write_seed(seed_dir, V1)
+    shown()
+    MenuItem.objects.get(title="Team").delete()
+    MenuItem.objects.get(title="Web").delete()
+    write_seed(
+        seed_dir, V1.replace("</ul></li>", '<li><a href="/contact/">Write</a></li></ul></li>')
+    )
+    assert shown() == "[Home|/][About|/about/(Write|/contact/)]"
+
+
+def test_a_changed_item_is_kept_when_its_link_leaves_the_seed(seed_dir: Any) -> None:
+    write_seed(seed_dir, V1)
+    shown()
+    team = MenuItem.objects.get(title="Team")
+    team.suffix = "#people"
+    team.save()
+    write_seed(seed_dir, '<ul><li><a href="/">Home</a></li></ul>')
+    assert shown() == "[Home|/][About|/about/(Team|/about/#people)]", (
+        "About stays for the changed child under it, Web goes"
+    )
+
+
+def test_an_unchanged_seed_costs_no_query(seed_dir: Any) -> None:
+    write_seed(seed_dir, V1)
+    shown()
+    with CaptureQueriesContext(connection) as queries:
+        assert shown().startswith("[Home|/]")
+    assert len(queries) == 0
+
+
+def test_following_off_seeds_the_menu_once(seed_dir: Any, settings: Any) -> None:
+    settings.KARNI_SITE_MENU_FOLLOW_SEED = False
+    write_seed(seed_dir, V1)
+    first = shown()
+    write_seed(seed_dir, '<ul><li><a href="/book/">Book</a></li></ul>')
+    assert shown() == first
+
+
+def test_a_menu_made_in_the_admin_never_follows_a_seed(seed_dir: Any) -> None:
+    menu = Menu.objects.create(name="main")
+    MenuItem.objects.create(menu=menu, title="Mine", url="/mine/")
+    write_seed(seed_dir, V1)
+    assert shown() == "[Mine|/mine/]"
+    assert not menus.sync_menu("main", V1, source="menus/seed.html")
+
+
+def test_a_menu_seeded_before_seeds_were_followed_is_adopted(seed_dir: Any) -> None:
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    # As 0.5.1 left it: items from the seed in the menu's moment, no record of the seed.
+    write_seed(seed_dir, V1)
+    shown()
+    menu = Menu.objects.get(name="main")
+    Menu.objects.filter(pk=menu.pk).update(seeded={})
+    MenuItem.objects.without("soft_delete", reason="the test").filter(menu=menu).update(seed_key="")
+    later = timezone.now() + timedelta(minutes=5)
+    MenuItem.objects.filter(title="About").update(title="Who we are", updated_at=later)
+    team = MenuItem.objects.get(title="Team")
+    team.delete()
+    MenuItem.objects.create(menu=menu, title="Jobs", url="/jobs/", order=9)
+    MenuItem.objects.filter(title="Jobs").update(created_at=later, updated_at=later)
+    from karni_site import caching
+
+    caching.bump("menus")
+    write_seed(
+        seed_dir,
+        V1.replace(">Home<", ">Start<").replace(
+            "</ul></li>", '<li><a href="/book/">Book</a></li></ul></li>'
+        ),
+    )
+    assert shown() == (
+        "[Start|/][Who we are|/about/(Book|/book/)][Web|/services/web/][Jobs|/jobs/]"
+    )
+    assert MenuItem.objects.filter(menu=menu).count() == 5
+
+
+def test_a_seed_that_stops_rendering_keeps_the_menu(seed_dir: Any) -> None:
+    write_seed(seed_dir, V1)
+    first = shown()
+    write_seed(seed_dir, "{% url 'website:gone' %}")
+    assert shown() == first

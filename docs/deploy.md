@@ -1,5 +1,5 @@
 ---
-description: "Put a Karni project in production on one server with Docker Compose: the production stack every new project gets, DNS, automatic TLS through Caddy, the .env.prod checklist that karni check --deploy enforces when each container starts, the first start, updates without failed requests, rollback, logs, and backups with a tested restore."
+description: "Put a Karni project in production on one server with Docker Compose: the production stack every new project gets, DNS, automatic TLS through Caddy, the .env.prod checklist that karni check --deploy enforces when each container starts, the first start, updates without failed requests, rollback, logs, and backups with a tested restore. Or without Docker: systemd units, an nginx vhost and a deploy script with releases and rollback."
 ---
 
 # Deploying to a server
@@ -29,11 +29,15 @@ updates, rollback, logs, backups and restore, and then health checks, Celery
 and beat, static and media files, API versions for mobile clients and
 scaling.
 
+A server without Docker, where nginx already serves other sites, takes
+`karni make deploy systemd-nginx` instead: systemd units, an nginx vhost and
+a deploy script ([without Docker](#without-docker-systemd-and-nginx)).
+
 ## What runs
 
 | Service | What it does | Health check |
 |---|---|---|
-| `release` | Runs once per start, before the others: the deploy checks, `migrate`, `collectstatic`, then `karni_publish_web`, which copies the Caddyfile, the built staff app and the security headers into the shared volume. If it fails, nothing else starts. | none: the others wait for it to exit with 0 |
+| `release` | Runs once per start, before the others: the deploy checks, `migrate`, `collectstatic`, in a project with a public site `karni_site_seed` (every page rendered once, so a visitor's request never stores a template's defaults), then `karni_publish_web`, which copies the Caddyfile, the built staff app and the security headers into the shared volume. If it fails, nothing else starts. | none: the others wait for it to exit with 0 |
 | `django` | gunicorn with uvicorn workers (`WEB_CONCURRENCY`, default 2). It serves the API, the admin, `/healthz`, `/readyz`, `/health/` and a public site app. | `/readyz`, asked as Caddy asks it ([health checks](#12-health-checks)) |
 | `worker` | The Celery worker (`KARNI_WORKER_CONCURRENCY`, default 2). | `celery inspect ping` |
 | `beat` | Celery beat. Run exactly one. | its process has passed the deploy checks |
@@ -204,6 +208,7 @@ site behaves, grouped by what they do:
 | `KARNI_STORAGE`, `MEDIA_ROOT`, `STATIC_ROOT` | local, `/data/...` | Where uploads and static files live ([files](#14-static-and-media-files)). |
 | `KARNI_BACKUP_*`, `POSTGRES_VERSION` | see [backups](#10-backups) | Backup retention, interval and the bucket. |
 | `SENTRY_DSN` | empty | Error reports. |
+| `KARNI_SITE_URL`, `KARNI_SITE_ALLOW_INDEXING`, `KARNI_SITE_QUEUE_RENDITIONS`, `KARNI_SITE_SEED_ON_RENDER` | the domain, open in prod, on, on | A public site's address, whether search engines may index it (`False` for a staging copy), whether image copies wait for a Celery worker, and whether a visit stores a template's defaults ([public site](public-site.md#seo-by-default)). In a project with karni-site. |
 
 A variable in `.env.prod` reaches the containers through Compose's `env_file`.
 A JSON value is written in single quotes, such as
@@ -518,6 +523,20 @@ and serves `/static/`, `/media/` and the staff app with long cache lifetimes
 on the hashed files, so Django never serves a file in production.
 
 - Static files are written on every release. Nothing to back up.
+- With `KARNI_STATIC_STORAGE=manifest`, which a new site project's
+  `.env.prod.example` sets, `collectstatic` also writes a copy of each file
+  whose name carries a hash of its content (`site.3f2a91c0b4d7.css`) and a
+  manifest, and `{% static %}` names the copy, in a tag, an attribute or a
+  `data-*` attribute alike. A stylesheet's `url(...)` is rewritten to the
+  copies too. The Caddyfile (and the nginx vhost of `systemd-nginx`) lets
+  browsers keep such a file for a year, and a file under its plain name for
+  a short while only, so a release reaches every browser at once. The plain
+  names stay in `STATIC_ROOT`, so an address a script builds by hand keeps
+  working. A file the manifest does not hold (a typo, one added without
+  `collectstatic`) gets its plain name and a warning in the log, not a
+  failed page, and a stylesheet's `url(...)` to a file that does not exist
+  is kept as written instead of stopping `collectstatic`.
+  `KARNI_STATIC_STORAGE=plain` (the default) keeps the names as written.
 - Uploads are written by Django to `MEDIA_ROOT` (`/data/media`) in the same
   volume, and Caddy serves them from there. The backup service archives that
   folder with the database ([backups](#10-backups)).
@@ -585,6 +604,144 @@ has a limit in `.env.prod` (`KARNI_DJANGO_MEMORY` and the others).
 - **Where to look first:** `karni queries` and the
   [performance](api.md#performance) section name the slow query, and
   `docker stats` shows which service is at its memory limit.
+
+## Without Docker: systemd and nginx
+
+On a server that runs nginx and systemd, often next to other sites, a
+project runs without Docker. One command writes the files for it into
+`deploy/`:
+
+```sh
+karni make deploy systemd-nginx --domain example.com
+```
+
+| File | What it is |
+|---|---|
+| `deploy/deploy.sh` | The deploy, run on the server from the project's folder. |
+| `deploy/web.service` | gunicorn with uvicorn workers on a Unix socket, installed as `<project>-web.service`. |
+| `deploy/worker.service`, `deploy/beat.service` | The Celery worker and beat (`--no-celery` leaves them out). |
+| `deploy/nginx.conf` | The vhost: TLS for the domain, `/static/` and `/media/` from disk, everything else proxied to the socket. |
+| `deploy/env.example` | Every production value for this server. |
+| `deploy/README.md` | Preparing the server, the first deploy, updates, rollback, logs. |
+
+| Flag | Default | Effect |
+|---|---|---|
+| `--domain` | `DOMAIN` in `.env.example` | The site's host, in the vhost and the `.env`. |
+| `--root` | `/srv/<project>` | The folder for the releases, the uploads and the `.env`. |
+| `--user` | `www-data` | The user the units run as. nginx runs as `www-data` on Debian and Ubuntu, so it can open the socket. |
+| `--keep` | `5` | The releases kept for a rollback, at least 2. |
+| `--cert`, `--cert-key` | Let's Encrypt's for the domain | The certificate and its key, for example a CDN's origin certificate. |
+| `--no-celery` | Celery on | No worker and no beat. |
+| `--single-process` | off | One process for a small server, without Redis or Celery ([below](#a-small-server-one-process)). |
+
+The values live at the top of `deploy.sh`. The units and the vhost hold
+`@APP@`, `@ROOT@` and the like, which the script fills in when it installs
+them, so a value changes in one place. `DEPLOY_<NAME>` in the environment
+replaces one for a single run (`sudo DEPLOY_KEEP=10 deploy/deploy.sh`).
+
+### What a deploy does
+
+Prepare the server once (the packages, a PostgreSQL role and database, a
+certificate: `deploy/README.md` lists the commands), put the project on it,
+for example with `git clone`, and run the script from the project's folder:
+
+```sh
+sudo deploy/deploy.sh                   # the first run writes <root>/shared/.env and stops
+sudo editor /srv/your_project/shared/.env
+sudo deploy/deploy.sh                   # every later deploy: git pull, then this
+```
+
+Each run, in order, and each step stops the run with a message when it fails:
+
+1. Checks that Python, nginx, systemd, curl and the certificate are there,
+   and that `nginx -t` passes before anything changes.
+2. Writes `<root>/shared/.env` from `deploy/env.example` when it does not
+   exist, and stops so you fill it in. Once it exists, the script never
+   writes over it or deletes it.
+3. Copies the project into `<root>/releases/<time>-<commit>/`, without
+   `.git`, virtual environments, `data/` and the `.env` files, and installs
+   its dependencies into the release's own `.venv`.
+4. Runs `karni_check --deploy`, `migrate` and `collectstatic` with the
+   server's `.env`, as the units' user, and in a project with a public site
+   `karni_site_seed`, which renders every page once so a visitor's request
+   never stores a template's defaults.
+5. Points `<root>/current` at the release (an atomic switch), installs the
+   units, restarts them and asks `/readyz` on gunicorn's socket until it
+   answers 200. When it does not, the run stops before nginx and says which
+   release `--rollback` goes back to.
+6. Installs the vhost, links it from `sites-enabled` and runs `nginx -t`.
+   nginx reloads only when the test passes. When it fails, the previous
+   vhost goes back in place, or the link is removed when there was none, so
+   the other sites on the server keep working.
+7. Keeps the newest `--keep` releases and removes the older ones.
+
+Running it again is safe: a unit or a vhost that did not change is not
+installed again, and nginx is not reloaded. Two runs at once are refused.
+
+The script touches only its own paths: `<root>/`, the units named
+`<project>-*.service` and the vhost `<project>.conf` with its link.
+
+### A small server: one process
+
+A server with 1 GB of memory, shared with other sites, has no room for
+Redis and a Celery worker. One switch runs the project as one process:
+
+```sh
+KARNI_SINGLE_PROCESS=True    # in the server's .env
+WEB_CONCURRENCY=1
+```
+
+`karni make deploy systemd-nginx --single-process` writes the files for
+it: the two lines in `env.example`, one web unit and no worker or beat,
+and gunicorn as one WSGI worker with four threads, which share the
+process's cache. The switch sets these defaults, each only where the
+project, an override or the environment has no value of its own:
+
+| Setting | With the switch | Why |
+|---|---|---|
+| `KARNI_CACHE` | `locmem` | The cache lives in the process, so no Redis. |
+| `CELERY_TASK_ALWAYS_EAGER` | `True` | A task runs in the process that sends it: a queued listener (a form's notification email) runs after the request's commit, and an upload's smaller image copies are made as it is saved. |
+| `CELERY_BROKER_URL` | `memory://` | Nothing opens a connection to a broker. |
+| `KARNI_READYZ_CHECKS`, `KARNI_HEALTH_CHECKS` | the database and the cache | `/readyz` and `/health/ready/` ask for no broker and no worker. |
+
+`karni.W501`, which `karni check --deploy` fails on, warns that a cache
+private to each process multiplies the rate limits by the worker count.
+With the switch it is quiet, unless `WEB_CONCURRENCY` asks gunicorn for
+more than one worker. Two things a worker would do do not happen: beat
+does not run, so no scheduled task fires (run `manage.py
+flushexpiredtokens` from a systemd timer for the one Karni schedules), and
+a task that takes long makes its request wait. `KARNI_SITE_QUEUE_RENDITIONS`
+can stay on: the copies are made in the process, on upload and in the
+deploy's `karni_site_seed`.
+
+### Rollback
+
+```sh
+deploy/deploy.sh --list                 # the releases, the current one marked
+sudo deploy/deploy.sh --rollback        # the newest earlier release that answered its health check
+sudo deploy/deploy.sh --rollback <id>   # a release --list shows
+```
+
+A rollback runs `collectstatic` from that release (so its static files'
+names are the ones served), switches, restarts and asks `/readyz` again. It
+runs no migration: when the earlier code cannot run with the newer
+migrations, reverse them first with the newer code, as in
+[rollback](#8-rollback).
+
+### Differences from the compose stack
+
+- The database and Redis are the server's: `DATABASE_URL` and `REDIS_URL`
+  in its `.env` point at `127.0.0.1`.
+- nginx serves `/static/` and `/media/` from `<root>/shared/`. Uploads get
+  `X-Content-Type-Options: nosniff` and `Content-Security-Policy:
+  script-src 'none'`, as in the Caddyfile.
+- Backups are not included: back up the database with the server's own
+  tools (`pg_dump` on a timer), or run `python -m karni.deploy.backup run`
+  from a release's `.venv` ([backups](#10-backups)).
+- The staff app in `frontend/` is not served. Serve its build with a
+  `location` of your own in `deploy/nginx.conf`, or use the compose stack.
+- `KARNI_NUM_PROXIES=1` counts nginx. Behind a CDN or a load balancer as
+  well, set it to 2, so rate limits see the visitor's address.
 
 ## An existing project
 

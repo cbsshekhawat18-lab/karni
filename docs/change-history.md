@@ -112,6 +112,17 @@ each. In code, `with karni.audit.capture.change_batch("import", label) as
 batch:` groups whatever the block records. The history endpoint and
 `<ChangeHistory/>` carry the batch id on each entry.
 
+## Writes no person makes
+
+A write that no person makes is not a change anyone could look up. karni-site
+stores a template's default text, a menu's links and the site's details the
+first time a page shows them (or when `manage.py karni_site_seed` renders the
+pages in a deploy), and those writes leave no entry: the History tab of a
+block starts with the first edit someone made. In code, `with
+karni.audit.capture.unrecorded("why"):` records nothing for the saves and
+deletes inside the block. The reason is required. Every save outside such a
+block is recorded as before, in the admin, the API and a shell.
+
 ## Request ids
 
 Every entry and batch records the id of the request (or Celery task) that

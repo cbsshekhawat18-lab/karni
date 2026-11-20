@@ -1,0 +1,12 @@
+{% load karni_site %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  {% karni_seo %}<title>{% block title %}{% endblock %}</title>
+  <meta name="description" content="{% block description %}{% endblock %}">{% endkarni_seo %}
+</head>
+<body>
+  <nav><a href="{% url 'topics:home' %}">Home</a> <a href="{% url 'topics:topic' slug='tides' %}">Tides</a> <a href="{% url 'topics:topic' slug='harbours' %}">Harbours</a></nav>
+  {% block content %}{% endblock %}
+</body>
+</html>

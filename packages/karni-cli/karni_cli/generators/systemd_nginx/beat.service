@@ -1,0 +1,24 @@
+# Celery beat of {{slug}}: it sends the scheduled tasks to the worker. Run exactly one:
+# two would send every scheduled task twice.
+# `karni make deploy systemd-nginx` wrote this file, and it is yours to edit. deploy.sh fills
+# in the names between at signs from the values at its top and installs the result as
+# /etc/systemd/system/<app>-beat.service.
+[Unit]
+Description=@APP@ beat (Celery)
+After=network-online.target postgresql.service redis-server.service
+Wants=network-online.target
+
+[Service]
+User=@RUN_AS@
+Group=@RUN_AS@
+WorkingDirectory=@ROOT@/current
+EnvironmentFile=@ROOT@/shared/.env
+ExecStart=@ROOT@/current/.venv/bin/celery -A config beat -l info --pidfile=
+Restart=on-failure
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

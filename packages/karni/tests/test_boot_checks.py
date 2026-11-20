@@ -112,6 +112,19 @@ def test_a_per_process_throttle_cache_warns_only_with_debug_off() -> None:
         assert check_throttle_cache() == []
 
 
+def test_one_declared_process_quiets_the_throttle_cache_warning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("WEB_CONCURRENCY", raising=False)
+    with override_settings(DEBUG=False, CACHES=_LOCMEM, KARNI_SINGLE_PROCESS=True):
+        assert check_throttle_cache() == []
+        monkeypatch.setenv("WEB_CONCURRENCY", "1")
+        assert check_throttle_cache() == []
+        monkeypatch.setenv("WEB_CONCURRENCY", "3")
+        (message,) = check_throttle_cache()
+        assert message.id == "karni.W501" and "WEB_CONCURRENCY=3" in message.msg
+
+
 def test_the_project_router_is_clean() -> None:
     assert check_viewsets() == []
 
