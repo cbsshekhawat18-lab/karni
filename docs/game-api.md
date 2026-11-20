@@ -10,7 +10,7 @@ description: "The HTTP contract of karni-game (experimental): every endpoint a g
     The error codes keep their meaning.
 
 This page is the contract between the server side of the game add-on
-([karni-game](game.md)) and the code that calls it: the `@karni/game` client
+([karni-game](game.md)) and the code that calls it: [the `@karni/game` client](game-client.md)
 in the browser, a realtime game server, and an ad portal's server. Every path
 below is under the prefix the project mounts:
 

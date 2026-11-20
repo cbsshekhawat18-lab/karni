@@ -16,7 +16,7 @@ only.
 
 It runs with no server. Saves, boards, a wallet, achievements and a daily
 seed then live on the device, by the same rules the server keeps. With the
-karni-game module on the project's server, the same calls go to the server,
+[karni-game module](game.md) on the project's server, the same calls go to the server,
 and writes made offline wait in a queue. The server is an upgrade, not a
 requirement.
 
@@ -196,7 +196,7 @@ clock can be changed, so that seed suits practice, not the shared board.
 ## The data client
 
 `createGameClient({ game, storage, server })` speaks the karni-game HTTP
-contract. Without `server` the same calls run on the device.
+contract ([the game API](game-api.md)). Without `server` the same calls run on the device.
 
 | Call | With a server | Without one |
 |---|---|---|
@@ -348,7 +348,7 @@ by touch, and as a single file from `file://`.
 
 ## What it does not do
 
-- It runs no realtime server: the karni-game module issues the token a
+- It runs no realtime server: [the karni-game module](game.md#multiplayer-a-realtime-server-of-your-own) issues the token a
   realtime server of the project's own verifies.
 - It has no scene system, physics, asset loader, procedural music, service
   worker or quality tiers. Engines bring their own, and most of these are

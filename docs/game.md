@@ -14,7 +14,7 @@ A browser game keeps its progress in the browser until it needs more: a save
 on every device, a board shared by every player, coins nobody can edit, a
 daily level that is the same for everyone. karni-game is that server side,
 once, for any game a project hosts. The game's own code stays in the browser
-(the `@karni/game` client helps there). The server decides every reward, every
+([the `@karni/game` client](game-client.md) helps there). The server decides every reward, every
 price and every balance: a client only reports what happened and asks.
 
 ```bash
@@ -395,7 +395,7 @@ writes an app project (the API, the admin, the React app) with:
   migrate`, and again after each change.
 - `frontend/src/pages/game.tsx`, a public page at `/game` that hosts the
   game, and `frontend/src/game/`, where the game's own code goes, on
-  `@karni/game` (the client of the add-on, `modules/karni-game/ui`), which
+  [`@karni/game`](game-client.md) (the client of the add-on, `modules/karni-game/ui`), which
   `frontend/package.json` names. The page makes the build's portal adapter
   (`createPortal(createPortalAdapter())` from `virtual:karni-game/portal`) and
   passes the app's own API client to `createGameClient` as its transport
