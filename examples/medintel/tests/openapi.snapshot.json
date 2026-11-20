@@ -578,6 +578,14 @@
             "description": "The model's plural name, for a heading.",
             "type": "string"
           },
+          "part": {
+            "description": "The app label of the model: the part it belongs to.",
+            "type": "string"
+          },
+          "part_label": {
+            "description": "The app's name, for a heading.",
+            "type": "string"
+          },
           "resource": {
             "type": "string"
           }
@@ -585,6 +593,8 @@
         "required": [
           "hits",
           "label",
+          "part",
+          "part_label",
           "resource"
         ],
         "type": "object"
@@ -14335,6 +14345,16 @@
       "get": {
         "description": "Experimental. ``GET navigation/``: the menu for the requesting user, signed in or not.\n\nOverride / escape hatch: override :meth:`get_menu`.",
         "operationId": "navigation",
+        "parameters": [
+          {
+            "description": "The named menu: app (the default), public, account, or any name KARNI_NAVIGATION declares. A name it does not declare answers no entries.",
+            "in": "query",
+            "name": "menu",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {

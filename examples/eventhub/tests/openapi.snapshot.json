@@ -635,6 +635,14 @@
             "description": "The model's plural name, for a heading.",
             "type": "string"
           },
+          "part": {
+            "description": "The app label of the model: the part it belongs to.",
+            "type": "string"
+          },
+          "part_label": {
+            "description": "The app's name, for a heading.",
+            "type": "string"
+          },
           "resource": {
             "type": "string"
           }
@@ -642,6 +650,8 @@
         "required": [
           "hits",
           "label",
+          "part",
+          "part_label",
           "resource"
         ],
         "type": "object"
