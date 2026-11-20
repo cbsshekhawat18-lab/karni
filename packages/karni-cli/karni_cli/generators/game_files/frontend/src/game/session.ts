@@ -85,6 +85,12 @@ const settle = async <T>(work: Promise<T>, fallback: T): Promise<T> => {
     }
 };
 
+/** Offline the client answers this device's own scores: the last shared board stays instead. */
+const shared = async (work: Promise<BoardResponse>, last: BoardResponse | null): Promise<BoardResponse | null> => {
+    const board = await settle<BoardResponse | null>(work, last);
+    return board?.local && last ? last : board;
+};
+
 /**
  * Start the portal, make the game's storage after it (so a portal's data
  * module is read) and the data client. A portal build calls the game API on
@@ -133,7 +139,7 @@ export async function openSession(app?: AppServer): Promise<Session> {
                 progress,
                 wallet,
                 shop: await settle(client.shop(), previous.shop),
-                board: await settle(client.leaderboard("high", { limit: 10 }), previous.board),
+                board: await shared(client.leaderboard("high", { limit: 10 }), previous.board),
                 achievements: await settle(client.achievements(), previous.achievements),
                 daily: await settle(client.daily(), previous.daily),
             };
