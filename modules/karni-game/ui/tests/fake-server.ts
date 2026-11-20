@@ -141,6 +141,9 @@ export class FakeGameServer implements Transport {
       this.tokens.set(token, id);
       return { token, player };
     }
+    if (route === "me/" && method === "GET") {
+      return this.players.get(this.need(headers));
+    }
     if (route === "me/" && method === "PATCH") {
       const id = this.need(headers);
       const player = { ...(this.players.get(id) as Player), handle: body?.handle as string };

@@ -387,6 +387,25 @@ describe("guest to account", () => {
     expect(server.calls).toContain("POST upgrade/");
   });
 
+  it("plays a signed-in account as its own player, and makes no guest", async () => {
+    const server = new FakeGameServer();
+    server.account = "owl@example.test";
+    const { client, storage } = make({ server });
+    const player = await client.signInGuest();
+    expect(player).toMatchObject({ id: "acct-owl@example.test", guest: false });
+    expect(server.calls).not.toContain("POST guest/");
+    expect(storage.get("token")).toBeNull();
+  });
+
+  it("keeps a guest on the device as the player after sign-in, until the upgrade", async () => {
+    const { client, server } = make();
+    await client.signInGuest("Swift Fox");
+    if (!server) throw new Error("no server");
+    server.account = "fox@example.test";
+    expect(await client.signInGuest()).toMatchObject({ id: "p1", guest: true });
+    expect((await client.upgrade()).player).toMatchObject({ guest: false });
+  });
+
   it("forgets a guest the server no longer knows, and makes a new one on the next call", async () => {
     const { client, server, storage } = make();
     await client.signInGuest();

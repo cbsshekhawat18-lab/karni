@@ -203,7 +203,11 @@ export interface GameClient {
   /** Today on the game's clock, `YYYY-MM-DD`. */
   today(): string;
 
-  /** The player, made a guest when there is none. Works offline: a device guest joins the server later. */
+  /**
+   * The player, made a guest when there is none. Works offline: a device guest
+   * joins the server later. Signed in with no guest on the device, it is the
+   * account's own player, and no guest is made.
+   */
   signInGuest(handle?: string): Promise<Player>;
   /** Keep the guest's progress on the account the player just signed in to (Karni's sign-in). */
   upgrade(): Promise<UpgradeResponse>;
@@ -682,6 +686,17 @@ export function createGameClient(options: GameClientOptions): GameClient {
     today,
 
     async signInGuest(handle) {
+      // An account plays as its own player. A guest kept on the device stays the
+      // player until upgrade() moves its progress to the account.
+      if (transport && signedIn() && !token && deviceOnline()) {
+        try {
+          const mine = await request<Player>("GET", "me/");
+          setPlayer(mine);
+          return mine;
+        } catch (error) {
+          if (httpError(error)) throw error;
+        }
+      }
       if (player) return player;
       if (transport && deviceOnline()) {
         try {
