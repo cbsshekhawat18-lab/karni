@@ -71,7 +71,7 @@ Built: the project matches karni.yaml.
 ```
 
 On a developer laptop, `karni new --recipe shop` builds the shop from
-scratch on SQLite in 14.1 seconds, its tests and `karni check` included and
+scratch on SQLite in 53.8 seconds, its tests and `karni check` included and
 the frontend install left out ([how fast is it](recipes/index.md#how-fast-is-it)).
 [The /new-app flow](agents.md#agents-the-new-app-flow) has every step.
 Every step is also a command you can run without an agent

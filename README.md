@@ -85,7 +85,7 @@ check       ok
 Built: the project matches karni.yaml.
 ```
 
-On a developer laptop, `karni new --recipe shop` builds the shop from scratch on SQLite in 14.1 seconds, its tests and `karni check` included and the frontend install left out ([how fast is it](docs/recipes/index.md#how-fast-is-it)). The flow works without an agent too: every step is a command you can run yourself. The recording below builds a project command by command, then shows its welcome page, its admin and its React screens.
+On a developer laptop, `karni new --recipe shop` builds the shop from scratch on SQLite in 53.8 seconds, its tests and `karni check` included and the frontend install left out ([how fast is it](docs/recipes/index.md#how-fast-is-it)). The flow works without an agent too: every step is a command you can run yourself. The recording below builds a project command by command, then shows its welcome page, its admin and its React screens.
 
 <p align="center">
   <img alt="A terminal runs karni new, karni make model, migrate, seed and serve. Then the browser shows the welcome page, the admin listing the seeded events, and the React app's events table and detail view." src="https://raw.githubusercontent.com/cbsshekhawat18-lab/karni/main/docs/assets/karni-demo.gif" width="880">
