@@ -8,7 +8,8 @@ description: "The timeline contract in Karni (experimental): one stream of momen
     Everything on this page is [experimental](stability.md#experimental-names):
     the `karni.timeline` app and its models (`TimelineEntry`,
     `TimelineLink`), the functions of `karni.timeline` (`record`, `prune`,
-    `render`, `parse_option`, `write_from_event`, `live_person`, `connect`,
+    `render`, `parse_option`, `write_from_event`, `live_person`, `connect`, `money_text`,
+    `skip_when`, `unskip`, `skipped`,
     `disconnect`, `installed`), the `timeline=` option of `declare()`,
     `GET /api/timeline/` and its `karni.timeline.api` and
     `karni.timeline.access` classes, the admin, the beat entry and the
@@ -111,6 +112,14 @@ timeline={
 | `body` | A body template. |
 | `subjects` | `{field: "app_label.model"}`: declared fields that hold the id of another record the entry shows on. |
 | `kind` | The entry's kind, when it is not the event's name. |
+| `money` | `{field: currency}`: declared fields that hold an amount, each with the declared field that holds its currency, or a fixed ISO 4217 code (`{"total": "currency"}`, `{"fee": "EUR"}`). |
+
+An amount named in `money` is written as plain money in the title and the
+body, `127.54 USD`: the currency's places (`9.6000` is `9.60`, yen has none)
+and its code in capitals. The entry keeps each amount in `data["$money"]`
+(`[{"text": "127.54 USD", "amount": "127.54", "currency": "USD"}]`), so a
+screen shows it as the project's money: @karni/ui's `<Timeline>` reads
+`$127.54`, the way the business's details say (`currency_display`).
 
 A template takes declared fields by their plain name, `{topic}`, as text (a
 null value is empty, `{{` and `}}` are braces). Attributes, indexes,
@@ -127,8 +136,10 @@ The people contract's own events write these entries:
 | `people.organisation.merged` | Merged with a duplicate record (on the organisation) |
 
 karni-payments' `payments.payment.succeeded` writes "Payment of {amount}
-{currency} succeeded" on the payer's timeline when the payment's user is
-linked to a person.
+succeeded" (the amount as money) on the payer's timeline when the payment's
+user is linked to a person. With karni-commerce installed, a payment of an
+order writes no entry of its own: the order's entries say it was paid
+(`timeline.skip_when`, below).
 
 ## Entries by hand: `timeline.record`
 
@@ -250,6 +261,11 @@ not edited by hand. A wrong one can be deleted.
 ## Escape hatches
 
 - **`timeline=` per event**, or none: an event without it writes no entry.
+- **`timeline.skip_when(name, check)`**: an app leaves out the entry of an
+  event `check(event)` is true for, when it covers that moment itself.
+  karni-commerce leaves out `payments.payment.succeeded` for a payment of an
+  order. A check that raises leaves the entry in. `timeline.unskip(name)`
+  takes the checks back.
 - **`record()` by hand**, for anything the option cannot say. With
   `KARNI_TIMELINE_FROM_EVENTS = False`, write every entry from a subscriber
   of your own.
@@ -262,6 +278,8 @@ not edited by hand. A wrong one can be deleted.
 
 ## What it does not do
 
-- It draws nothing. A frontend reads `GET /api/timeline/`.
-- It does not show a record's change history next to its entries.
+- The API draws nothing. @karni/ui's `<Timeline>` reads it (a page at a
+  time, a filter by kind) and shows a record's change history in a tab
+  beside it, for a viewer who may read that history. The person page uses it.
+- The API does not mix the change history into the entries.
 - It does not edit an entry after it is written.

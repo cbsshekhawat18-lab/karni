@@ -9,7 +9,7 @@ import {
 } from "@karni/ui";
 import { Link, useRouter } from "@tanstack/react-router";
 import { ProductCard } from "./ProductCard";
-import { useShopName } from "./StoreLayout";
+import { useShopName } from "./name";
 import type { Category, Product } from "./types";
 
 function Shelf({

@@ -1,5 +1,5 @@
 /**
- * <ResourceBoard> over an in-memory deals API: columns in the schema's order,
+ * <ResourceBoard> over an in-memory deals API: columns in the flow's order,
  * totals, legal moves by menu, keyboard and drag, rollback on a refusal, the
  * declared row action path, and the unhappy states.
  */
@@ -110,6 +110,20 @@ describe("ResourceBoard", () => {
     expect(within(won).getByText(/\$5,000\.00/)).toBeInTheDocument();
     const lost = await column("Lost");
     expect(await within(lost).findByText("Nothing here")).toBeInTheDocument();
+  });
+
+  it("orders the columns by the state machine's flow, not by how the choices are declared", async () => {
+    const field = { ...stageField, enumValues: ["won", "lost", "qualified", "lead"] };
+    const fields = dealsSchema().fields.map((each) => (each.name === "stage" ? field : each));
+    useSchemaOf(dealsSchema({ fields }));
+    render();
+    await column("Lead");
+    expect(screen.getAllByRole("region").map((node) => node.getAttribute("aria-label"))).toEqual([
+      "Lead",
+      "Qualified",
+      "Won",
+      "Lost",
+    ]);
   });
 
   it("shows only the columns asked for, in that order", async () => {

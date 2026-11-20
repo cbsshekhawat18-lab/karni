@@ -74,6 +74,31 @@ Call `useMergeOnSignIn()` once in the layout, so a visitor's cart joins the
 person's cart when they sign in. A visitor's cart is found by a token this
 browser keeps in `localStorage` (`karni.cart-token`).
 
+## In a project of parts
+
+A project built from recipes gets these pages without a file of its own:
+`karni build` writes `/cart`, `/checkout`, `/orders`, `/orders/<number>` and
+the invoice and packing slip pages, and calls `register()` at startup. Each
+is one component here:
+
+- `FamilyOrdersPage` (`/orders`): every order for staff (`StaffOrders`), a
+  customer's own (`OrdersPage`). `FamilyOrderPage` (`/orders/<number>`): the
+  order to run for staff, the order for its buyer or a guest with the key.
+- `register()` adds "Your orders" to the account page, the Orders tab of the
+  person page (`PersonOrders`, `GET /orders/?person=<id>`) and the link from
+  any row or search hit of an order to its page.
+- `registerLineRenderer(kind, Component)` draws one kind's lines on the cart,
+  the checkout, the buyer's order page and the staff's order page. Component
+  gets `{ line, place }`, `place` being `cart`, `checkout`, `order` or
+  `staff`. Without one, a line shows its name (linked to the item's page where
+  the buyer may follow it), its options in words and, for staff, its SKU.
+  `LineDescription` draws a line the same way on a page of your own.
+- `registerCommercePaths({ browse: "/shop/catalogue" })` sets a path once at
+  startup, under the provider's `paths`. The staff's order page links the
+  buyer to their person page (`paths.person(id)`, `/people/<id>`).
+- `useBusiness` is @karni/ui's, so both packages read the business's details
+  once.
+
 ## License
 
 Apache-2.0.

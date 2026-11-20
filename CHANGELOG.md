@@ -728,6 +728,76 @@ apply codemods and list the manual steps. This file is the human summary.
   Node, npm and the `@karni/ui` manifest for `frontend/` in every project, so a site made
   with `--no-staff-app` was told to run `npm install`. Without `frontend/package.json` it
   now says those checks do not apply.
+- **Added (experimental): the family screens.** @karni/ui gains the screens a project of parts
+  shares: `FamilyLayout` (the storefront's frame for `area: "store"` routes, the back office with
+  the app menu, the search box, the inbox bell and the account menu for the rest, the home and
+  `area: "family"` routes per audience), `FamilyHome` (each staff role's tiles from every part,
+  the public home a part registers with `registerPublicHome`, and an empty state that says what
+  to install), `PeoplePage` and `PersonPage` (`/people`, `/people/<id>`: a column and a figure
+  per person fact, a tab per part with `registerPersonTab`, addresses and organisations, Merge
+  and Erase for who holds the explicit grants), `Timeline` (paging, a filter by kind,
+  `registerTimelineKind`, the change history beside it), `InboxBell`, `InboxPage` and
+  `EmailChoices`, `SearchPage` (results part by part, keyboard first), `MyAddresses`,
+  `SignUpForm` (a "New account" tab on `SignInPage`), `registerFamily`, `useAudience`,
+  `useBusiness` and `useSiteName`. `GlobalSearch` groups its hits by part and links to every
+  result (`allResultsHref`). @karni/commerce-ui gains `registerLineRenderer` (a kind's lines on
+  the cart, checkout and both order pages), `FamilyOrdersPage`, `FamilyOrderPage`,
+  `PersonOrders` (the person page's Orders tab), `register()` and `registerCommercePaths`, and
+  the staff's order page links the buyer to their person page.
+- **Added (experimental): `karni build` writes the family pages, the layout and the home.** In a
+  project of parts, `frontend/src/karni/` holds the sign-in, account, search, inbox, settings,
+  people, cart, checkout and order pages whose provider the project holds, registered in
+  `routes.tsx`'s Karni block, and one layout and one home. The scaffold's `layout.tsx` and
+  `pages/home.tsx` become re-exports of them while they are what `karni new` wrote. `parts.ts`
+  registers the family's sections and karni-commerce's before each part. The people list is
+  "Customers" in a project whose only part sells. A part ships none of these: the shop recipe's
+  thin page files, layout and home are gone, its storefront is the public home and its
+  customers are `/people`. `customer` gets `people.address: own` with the people contract.
+- **Added (experimental): named menus.** `KARNI_NAVIGATION` may be a mapping of named menus
+  (`{"app": [...], "public": [...], "account": [...]}`), `GET /api/navigation/?menu=` answers one
+  (a name the project does not declare answers no entries), `useNavigation({ menu })` reads one,
+  and `karni check` compares every menu. `navigation:` in karni.yaml takes the same mapping, and
+  `karni recipes add` merges menus menu by menu. The shop's storefront header is its `public`
+  menu, and the CRM and booking recipes list their pages in the app menu.
+- **Added (experimental): what the family screens need from the API.** `GET /api/search/` names
+  each group's `part` and `part_label`, `GET /api/people/<id>/` answers `can` (`merge`, `erase`),
+  and `GET /api/orders/?person=<id>` lists one person's orders.
+- **Fixed (experimental): what the first look in a browser found in the shared screens.**
+  `ResourceBoard` and `ResourceCalendar` keep their cards' hidden labels inside their scroll
+  boxes, so the page never scrolls sideways, at any width. A
+  calendar event without a name of its own is named by an expanded relation (a slot's resource),
+  else by the resource in words, never by its key, its time gutter keeps "12:00 AM" on one line,
+  and its period takes its own line on a narrow toolbar. The commerce pages: the checkout keeps
+  the quantity beside a line a kind draws its own way, "Pay the balance (US$49.20)" has no
+  stray spaces, and "Your orders" lines up in columns. The person detail with `can` is its own
+  schema component (`PeoplePersonDetail`), karni-commerce's app reads "Commerce", and a merged
+  menu never labels a part's group with a page's name (the booking part groups as "Bookings").
+- **Fixed (experimental): a timeline entry shows money the project's way.** A `timeline=`
+  option names its money fields (`"money": {"amount": "currency"}`), the entry's title and body
+  read "$127.54", not "127.5400 usd", and `<Timeline>` draws it with the business's currency
+  display. karni-payments, karni-commerce and the recipes declare their amounts.
+  `timeline.skip_when(name, check)` leaves an event off the timeline: with karni-commerce, a
+  payment for an order writes no entry of its own (the order's entry says it), and a payment
+  with no order keeps its entry.
+- **Added: family events without a worker in development.** With `DEBUG` on, or
+  `KARNI_EVENTS_INLINE=true`, a published event is delivered right after the commit, in the
+  process, so a timeline entry or an inbox message shows up with no Celery worker. Production
+  keeps the outbox and the worker.
+- **Fixed (experimental): a person's inbox switches list only what they can receive.**
+  `karni.mail.register_kind(..., requires=)` says who can receive a kind (read like a menu
+  entry's `requires`), `karni.notify.receives(user, kind)` answers it, and
+  `GET /api/inbox/choices/` lists a customer no staff kinds. Commerce's new order and the shop's
+  low stock are the staff's.
+- **Fixed (experimental): `ResourceBoard` orders its columns the way the state machine flows.**
+  From the initial state along the transitions, each state as far along as its longest way in,
+  closed states last, the declared order of the choices only breaking ties.
+- **Fixed (experimental): `ResourceCalendar` opens where the events are.** The day and week
+  views open scrolled to the hour of the period's earliest event, else to `workdayStart` (new,
+  default 8:00), once per period. An event that ends at midnight ends at the bottom of its day
+  instead of drawing upside down, and one that crosses midnight shows on both days.
+- **Fixed (experimental): what a staff check of the person page found.** The merge preview names
+  the other record by its email too (a duplicate often has the same name), and a timeline entry
+  gives no link to the page already shown (the person's own page after a merge).
 
 ## 0.5.1 (2026-11-12)
 

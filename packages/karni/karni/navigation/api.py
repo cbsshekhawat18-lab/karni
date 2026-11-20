@@ -2,7 +2,9 @@
 
 ``{"items": [{"label", "icon", "route", "children"}, ...]}``, siblings in
 order, built by :func:`karni.navigation.payload` from the active source
-(``KARNI_NAVIGATION``): the settings list or the ``NavItem`` rows. Entries
+(``KARNI_NAVIGATION``): the settings list or the ``NavItem`` rows.
+``?menu=public`` names one of the named menus (default ``app``), and a
+menu the project does not name answers no entries. Entries
 the user's grants do not open are left out, and so is a group whose
 entries are all hidden. Anyone may call it: a visitor who is not signed in
 gets the ``public`` entries. A group has ``route: null``, an item
@@ -23,7 +25,7 @@ from typing import Any, ClassVar
 
 from django.urls import URLPattern, path
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, extend_schema_field
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_field
 from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -82,6 +84,14 @@ class NavigationView(APIView):
     # On the method: drf-spectacular refuses an operation_id on a view class.
     @extend_schema(
         operation_id="navigation",
+        parameters=[
+            OpenApiParameter(
+                "menu",
+                OpenApiTypes.STR,
+                description="The named menu: app (the default), public, account, or any name "
+                "KARNI_NAVIGATION declares. A name it does not declare answers no entries.",
+            )
+        ],
         responses={200: NavigationSerializer, 404: OpenApiTypes.OBJECT},
         tags=["navigation"],
     )
@@ -90,9 +100,14 @@ class NavigationView(APIView):
             return turned_off()
         return Response(self.get_menu(request))
 
+    def get_menu_name(self, request: Request) -> str:
+        """The menu ``?menu=`` names (default ``app``)."""
+        value = str(request.query_params.get("menu", "") or "").strip()
+        return value or navigation.DEFAULT_MENU
+
     def get_menu(self, request: Request) -> dict[str, Any]:
-        """The body: :func:`karni.navigation.payload` for ``request.user``."""
-        return navigation.payload(request.user)
+        """The body: :func:`karni.navigation.payload` for ``request.user`` and the menu asked."""
+        return navigation.payload(request.user, menu=self.get_menu_name(request))
 
 
 def build_urlpatterns() -> list[URLPattern]:

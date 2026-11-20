@@ -376,14 +376,4 @@ export interface AbandonedCart {
 }
 
 /** GET /preferences/public/: what the business says about itself. */
-export interface BusinessDetails {
-  name: string;
-  legal_name: string;
-  address: string;
-  phone: string;
-  email: string;
-  time_zone: string;
-  language: string;
-  currency: string;
-  currency_display: "symbol" | "narrowSymbol" | "code" | "name";
-}
+export type { BusinessDetails } from "@karni/ui";

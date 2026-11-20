@@ -108,6 +108,21 @@ describe("day segments and lanes", () => {
     expect(second?.endMinute).toBe(3 * 60);
   });
 
+  it("ends an item that stops at midnight (Berlin) at the end of its day, and puts nothing on the next", () => {
+    const late = toItems(
+      [{ id: 9, starts_at: "2026-03-02T22:00:00Z", ends_at: "2026-03-02T23:00:00Z" }],
+      config,
+    );
+    const monday = startOfDay(at("2026-03-02T12:00:00Z"), TZ);
+    const [only] = segmentsForDay(late, monday, TZ);
+    expect([only?.startMinute, only?.endMinute, only?.continuesAfter]).toEqual([
+      23 * 60,
+      1440,
+      false,
+    ]);
+    expect(segmentsForDay(late, addDays(monday, 1, TZ), TZ)).toEqual([]);
+  });
+
   it("puts overlapping items side by side and a lone item alone", () => {
     const monday = startOfDay(at("2026-03-02T12:00:00Z"), TZ);
     const laid = layoutLanes(segmentsForDay(items, monday, TZ));

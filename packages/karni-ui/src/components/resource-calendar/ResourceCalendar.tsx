@@ -24,6 +24,10 @@
  * `availability` a second resource's slots (a capacity and what is taken)
  * show behind the events: open ones can be clicked to create.
  *
+ * The day and week views open scrolled to the hour of the period's earliest
+ * event, else to `workdayStart` (default 8:00). An event that crosses
+ * midnight shows on each day it covers.
+ *
  * Time zones: `timeZone` is the business zone the times are shown in
  * (default: the viewer's). When the viewer's zone differs a switch changes
  * between the two and a tooltip gives both times.
@@ -63,7 +67,8 @@ import { Button } from "../primitives/button";
 import { Skeleton } from "../primitives/skeleton";
 import { EmptyState } from "../empty-state/empty-state";
 import { TransitionFailure } from "../resource/detail/transitions";
-import { displayLabel } from "../resource/displayLabel";
+import { displayLabel, relationLabel } from "../resource/displayLabel";
+import { singularNoun } from "../resource/nouns";
 import { evaluateAccess } from "../resource/table/access";
 import { useContainerWidth } from "../resource/table/use-container-width";
 import {
@@ -182,11 +187,20 @@ export interface ResourceCalendarProps<T extends object> {
   slotMinutes?: 15 | 30 | 60;
   /** The hours the time grid shows. Default 0 to 24. */
   hours?: { start: number; end: number };
+  /**
+   * The start of the working day, the hour the day and week views open at
+   * when the period shown has no event (with events they open at the hour of
+   * the earliest one). Default 8.
+   */
+  workdayStart?: number;
   /** Most rows loaded for one range. Default 200. */
   limit?: number;
   /** The event body. */
   renderEvent?: (row: T, context: CalendarEventContext<T>) => React.ReactNode;
-  /** An event's name. Default: its name, title or id. */
+  /**
+   * An event's name. Default: its name or title, an expanded relation's (a slot's
+   * resource), else the resource in words (never its key).
+   */
   getEventLabel?: (row: T) => string;
   /** A row's key. Default: its `id`. */
   getRowKey?: (row: T) => string;
@@ -398,8 +412,23 @@ export function ResourceCalendar<T extends object>(
     [authStatus, authUser],
   );
 
-  const getLabel =
-    props.getEventLabel ?? ((row: T): string => displayLabel(row as Row) || getRowKey(row));
+  // A row's own name, else an expanded relation's (a slot's resource), else the resource in
+  // words: never a raw key, which says nothing to a person (the state shows beside it).
+  const defaultLabel = (row: T): string => {
+    const record = row as Row;
+    const own = displayLabel({ ...record, id: undefined });
+    if (own !== "") return own;
+    for (const field of schema?.fields ?? []) {
+      const value = record[field.name];
+      if (field.relation !== undefined && value !== null && typeof value === "object") {
+        const named = relationLabel(field, value as Row);
+        if (named !== "") return named;
+      }
+    }
+    const noun = singularNoun(resource);
+    return noun.charAt(0).toUpperCase() + noun.slice(1);
+  };
+  const getLabel = props.getEventLabel ?? defaultLabel;
   const itemConfig = {
     startField,
     endField,
@@ -544,6 +573,8 @@ export function ResourceCalendar<T extends object>(
     locale,
     slotMinutes,
     hours,
+    workdayStart: props.workdayStart ?? 8,
+    settled: !list.isPlaceholderData,
     now,
     toneOf,
     stateLabelOf,
@@ -616,7 +647,8 @@ export function ResourceCalendar<T extends object>(
             Next
           </Button>
         </div>
-        <h2 className="min-w-0 flex-1 text-base font-semibold" aria-live="polite">
+        {/* A narrow screen gives the period its own line instead of a squeezed column. */}
+        <h2 className="min-w-60 flex-1 text-base font-semibold" aria-live="polite">
           {period}
         </h2>
         {allowed.length > 1 ? (

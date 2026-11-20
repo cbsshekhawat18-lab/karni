@@ -887,7 +887,9 @@ def _navigation_value(value: Any) -> str:
 
 
 def _navigation_switch(value: Any) -> str:
-    return "=bool" if isinstance(value, bool) else "=list"
+    if isinstance(value, bool):
+        return "=bool"
+    return "=menus" if isinstance(value, dict) else "=list"
 
 
 #: Experimental. One ``navigation:`` entry: a page's key, or a one-key mapping to a page's
@@ -908,9 +910,18 @@ type NavigationEntry = Annotated[
     Discriminator(_navigation_member),
 ]
 
-#: Experimental. ``navigation:``: ``true`` (every page, in order) or a list of entries.
+#: Experimental. A menu's name in ``navigation:``: ``app``, ``public``, ``account``.
+MENU_NAME: Final = r"^[a-z][a-z0-9_-]{0,39}$"
+
+#: Experimental. ``navigation:``: ``true`` (every page, in order), a list of entries (the
+#: ``app`` menu), or named menus (``{app: [...], public: [...], account: [...]}``).
 NavigationValue = Annotated[
-    Annotated[bool, Tag("=bool")] | Annotated[list[NavigationEntry], Tag("=list")],
+    Annotated[bool, Tag("=bool")]
+    | Annotated[list[NavigationEntry], Tag("=list")]
+    | Annotated[
+        dict[Annotated[str, Field(pattern=MENU_NAME)], list[NavigationEntry]],
+        Tag("=menus"),
+    ],
     Discriminator(_navigation_switch),
 ]
 
@@ -955,7 +966,8 @@ class Spec(_Node):
         description=(
             "Experimental. The menu karni build writes to KARNI_NAVIGATION: true for every page "
             "of pages in their order, or a list of pages (by their key) and groups "
-            "({label: [entries]}), each page with optional {label, icon, requires}."
+            "({label: [entries]}), each page with optional {label, icon, requires}, or named "
+            "menus ({app: [...], public: [...], account: [...]}), each such a list."
         ),
     )
     dashboard: list[DashboardTile] = Field(

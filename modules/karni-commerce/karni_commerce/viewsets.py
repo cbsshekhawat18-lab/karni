@@ -54,6 +54,7 @@ this one, and register yours. ``TOKEN_HEADER`` names the cart header.
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from django.db.models import Q, QuerySet
@@ -358,17 +359,25 @@ class OrderViewSet(_ReadOnly, BaseViewSet):
     ordering_fields = ["number", "created_at", "total", "status", "paid_at"]
 
     def get_queryset(self) -> QuerySet[Order]:
-        """``?mine=true`` narrows the list to the signed-in person's own orders."""
+        """``?mine=true`` narrows the list to the signed-in person's own orders, and
+        ``?person=<id>`` to one buyer's (a person page), within what the caller reads."""
         queryset: QuerySet[Order] = super().get_queryset()
         mine = str(self.request.query_params.get("mine", "")).lower() in ("1", "true")
         if mine:
             user = self.request.user
             queryset = queryset.filter(user=user) if user.is_authenticated else queryset.none()
+        person = str(self.request.query_params.get("person", "") or "").strip()
+        if person and getattr(self, "action", None) == "list":
+            try:
+                queryset = queryset.filter(person_id=uuid.UUID(person))
+            except ValueError:
+                queryset = queryset.none()
         return queryset
 
     @extend_schema(
         parameters=[
-            OpenApiParameter("mine", bool, description="Only the signed-in person's orders.")
+            OpenApiParameter("mine", bool, description="Only the signed-in person's orders."),
+            OpenApiParameter("person", str, description="Only the orders of this person (id)."),
         ]
     )
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:

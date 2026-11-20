@@ -63,6 +63,7 @@ __all__ = [
     "Recipient",
     "Sent",
     "choices",
+    "receives",
     "choose",
     "deliver_kind",
     "holders",
@@ -567,16 +568,25 @@ def _switchable() -> list[MessageKind]:
     ]
 
 
+def receives(user: Any, kind: MessageKind) -> bool:
+    """Experimental. Whether ``user`` can be in ``kind``'s audience (its ``requires``)."""
+    from karni.navigation import opens
+
+    return opens(kind.requires or "authenticated", user)
+
+
 def choices(user: Any) -> list[dict[str, Any]]:
     """Experimental. Each kind ``user`` may switch, with where it goes for them now.
 
     The kinds the project sends (switched on in Settings, Emails) that a person
-    may turn off, with ``email`` and ``inbox`` as they are for ``user``: on,
-    unless they switched it off, or unsubscribed from a marketing kind.
+    may turn off and can receive (each kind's ``requires``: a customer never
+    sees the staff's new-order email), with ``email`` and ``inbox`` as they are
+    for ``user``: on, unless they switched it off, or unsubscribed from a
+    marketing kind.
     """
     from karni.notify.models import Choice, Unsubscribe
 
-    found = _switchable()
+    found = [kind for kind in _switchable() if receives(user, kind)]
     rows = {row.kind: row for row in Choice.objects.filter(user=user)}
     address = str(getattr(user, "email", "") or "").lower()
     gone = (
@@ -620,7 +630,7 @@ def choose(
     from karni.notify.models import Choice, Unsubscribe
 
     declared = find_kind(kind)
-    if declared is None or not declared.switchable:
+    if declared is None or not declared.switchable or not receives(user, declared):
         raise KarniValueError(
             f"karni.notify: {kind!r} is not a message kind a person may switch. Their own "
             "switches cover the declared kinds that are switchable (GET /api/inbox/choices/).",

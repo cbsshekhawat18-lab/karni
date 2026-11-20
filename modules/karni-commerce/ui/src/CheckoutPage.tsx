@@ -29,7 +29,8 @@ import { CouponBox } from "./CouponBox";
 import { Money } from "./Money";
 import { PayChoice, payWayFor } from "./PayChoice";
 import { CommerceLink, useCommerce } from "./routes";
-import { LineDetails, Totals } from "./Totals";
+import { LineDescription } from "./lines";
+import { Totals } from "./Totals";
 import type { Address, PayWay, Placed, Quote } from "./types";
 
 export interface CheckoutPageProps {
@@ -360,12 +361,15 @@ export function CheckoutPage({
           <ul className="space-y-2 text-sm">
             {cart.data.lines.map((line) => (
               <li key={line.id} className="flex justify-between gap-2">
-                <span>
-                  {line.quantity} x {line.name}
-                  <LineDetails details={line.details} />
-                  {line.problem ? (
-                    <span className="block text-destructive">{line.problem}</span>
-                  ) : null}
+                {/* The quantity beside the line, so a kind's own renderer may take lines. */}
+                <span className="flex min-w-0 gap-1">
+                  <span className="shrink-0">{line.quantity} x</span>
+                  <span className="min-w-0">
+                    <LineDescription line={line} place="checkout" />
+                    {line.problem ? (
+                      <span className="block text-destructive">{line.problem}</span>
+                    ) : null}
+                  </span>
                 </span>
                 <Money value={line.line_total} />
               </li>

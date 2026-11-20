@@ -30,9 +30,12 @@ Key by key:
 - ``pages``: appended. The home page is the family's: a part that lists
   ``home`` when the project has one, or a page at another family route, is
   refused (``C444``). The project always gets ``home: dashboard``.
-- ``navigation``: a part's list becomes one group, labelled with the
-  recipe's title, in the project's menu. With one part installed its entries
-  stay flat.
+- ``navigation``: a part's list (its ``app`` menu) becomes one group,
+  labelled with the recipe's title, in the project's menu. With one part
+  installed its entries stay flat. Named menus (``{app: [...], public: [...],
+  account: [...]}``) merge menu by menu: the ``app`` menu as above, and a
+  part's entries of the other menus (the site's header, the account menu)
+  in line, each once.
 - ``seed``: counts are added per entity.
 
 A recipe's ``requires`` (``people>=1``, ``events>=1``, a module) must be
@@ -63,6 +66,7 @@ __all__ = [
     "ADMIN_CONTRACT_GRANTS",
     "CONTRACTS",
     "CURRENCY_OPTIONS",
+    "CUSTOMER_CONTRACT_GRANTS",
     "FAMILY_PAGES",
     "FAMILY_ROLES",
     "FAMILY_ROUTES",
@@ -104,6 +108,11 @@ FAMILY_ROUTES: Final = frozenset(FAMILY_PAGES.values())
 #: does not reach.
 ADMIN_CONTRACT_GRANTS: Final[dict[str, dict[str, str]]] = {
     "people": {"people.*:merge": "all", "people.person:erase": "all"},
+}
+#: Experimental. The grants ``customer`` gets when a contract is on: what the family's own
+#: account sections need (``people``: "Your addresses" lists and edits the person's own).
+CUSTOMER_CONTRACT_GRANTS: Final[dict[str, dict[str, str]]] = {
+    "people": {"people.address": "own"},
 }
 #: Experimental. The module options that follow ``app.currency`` (a project has one).
 CURRENCY_OPTIONS: Final[dict[str, str]] = {"payments": "currency"}
@@ -439,15 +448,30 @@ def _merge_roles(
 
 
 def _contract_grants(out: dict[str, Any], merged: Merged) -> None:
-    """The explicit grants admin needs on every contract the project has on."""
+    """The explicit grants admin needs on every contract the project has on, and what the
+    family role customer needs for the contract's own account sections."""
+    for slug, table, why in (
+        ("admin", ADMIN_CONTRACT_GRANTS, "explicit actions"),
+        ("customer", CUSTOMER_CONTRACT_GRANTS, "the account page"),
+    ):
+        _add_grants(out, merged, slug, table, why)
+
+
+def _add_grants(
+    out: dict[str, Any],
+    merged: Merged,
+    slug: str,
+    table: Mapping[str, Mapping[str, str]],
+    why: str,
+) -> None:
     features = out.get("features") or {}
     roles = out.get("roles") or {}
-    admin = roles.get("admin")
-    if not isinstance(admin, dict):
+    role = roles.get(slug)
+    if not isinstance(role, dict):
         return
-    grants = dict(admin.get("grants") or {})
+    grants = dict(role.get("grants") or {})
     added = []
-    for contract, extra in ADMIN_CONTRACT_GRANTS.items():
+    for contract, extra in table.items():
         if not features.get(contract):
             continue
         for pattern, scope in extra.items():
@@ -455,10 +479,10 @@ def _contract_grants(out: dict[str, Any], merged: Merged) -> None:
                 grants[pattern] = scope
                 added.append(pattern)
     if added:
-        roles["admin"] = {**admin, "grants": grants}
+        roles[slug] = {**role, "grants": grants}
         out["roles"] = roles
-        merged.changed.append(("roles", "admin"))
-        merged.notes.append(f"roles.admin: added {', '.join(added)} (explicit actions).")
+        merged.changed.append(("roles", slug))
+        merged.notes.append(f"roles.{slug}: added {', '.join(added)} ({why}).")
 
 
 def _routes(apps: Mapping[str, Any]) -> dict[str, str]:
@@ -645,7 +669,7 @@ def _requalify(out: dict[str, Any], merged: Merged) -> None:
         out["seed"] = {(f"{first[k]}.{k}" if k in twice else k): n for k, n in seed.items()}
         merged.changed.append(("seed",))
     navigation = out.get("navigation")
-    if isinstance(navigation, list):
+    if isinstance(navigation, list | Mapping):
 
         def qualify(entry: Any) -> Any:
             if isinstance(entry, str) and entry in twice:
@@ -658,7 +682,16 @@ def _requalify(out: dict[str, Any], merged: Merged) -> None:
                     return {f"{first[key]}.{key}": value}
             return entry
 
-        qualified = [qualify(entry) for entry in navigation]
+        qualified: Any = (
+            [qualify(entry) for entry in navigation]
+            if isinstance(navigation, list)
+            else {
+                name: [qualify(entry) for entry in entries]
+                if isinstance(entries, list)
+                else entries
+                for name, entries in navigation.items()
+            }
+        )
         if qualified != navigation:
             out["navigation"] = qualified
             merged.changed.append(("navigation",))
@@ -692,6 +725,19 @@ def _merge_dashboard(out: dict[str, Any], fragment: Mapping[str, Any], merged: M
         merged.changed.append(("dashboard",))
 
 
+#: The menu a ``navigation:`` list is: the back office's sidebar.
+APP_MENU: Final = "app"
+
+
+def _menus(value: Any) -> dict[str, list[Any]] | None:
+    """``navigation:`` as named menus: a list is ``app``; ``None`` for ``true``, ``false``, none."""
+    if isinstance(value, list):
+        return {APP_MENU: list(value)}
+    if isinstance(value, Mapping):
+        return {str(name): list(items) for name, items in value.items() if isinstance(items, list)}
+    return None
+
+
 def _merge_navigation(
     out: dict[str, Any],
     part: _Part,
@@ -700,21 +746,75 @@ def _merge_navigation(
     titles: Mapping[str, str],
     merged: Merged,
 ) -> None:
-    theirs = fragment.get("navigation")
-    if not isinstance(theirs, list) or not theirs:
+    theirs = _menus(fragment.get("navigation"))
+    if not theirs or not any(theirs.values()):
         return
-    mine = out.get("navigation")
-    if mine is True:
+    current = out.get("navigation")
+    if current is True:
         return  # every page, in order: the part's pages are in pages already
-    entries = list(mine) if isinstance(mine, list) else []
+    mine = _menus(current) or {}
+    named = isinstance(current, Mapping) or isinstance(fragment.get("navigation"), Mapping)
+    result = dict(mine)
+    for name, entries in theirs.items():
+        if name == APP_MENU:
+            result[name] = _merge_app_menu(
+                list(mine.get(name, [])), part, entries, bases, titles, _taken_labels(out)
+            )
+            continue
+        # the site's header and the account menu: the part's entries in line, each once
+        found = list(mine.get(name, []))
+        for entry in entries:
+            if entry not in found:
+                found.append(copy.deepcopy(entry))
+        result[name] = found
+    out["navigation"] = result if named else result.get(APP_MENU, [])
+    merged.changed.append(("navigation",))
+
+
+def _taken_labels(out: Mapping[str, Any]) -> set[str]:
+    """What a menu entry's key would name as a page: no part's group may be labelled so."""
+    taken = set(FAMILY_PAGES)
+    taken |= {name for entry in out.get("pages") or [] if (name := _page_name(entry))}
+    for label, app in (out.get("apps") or {}).items():
+        for entity in (app or {}).get("entities") or {}:
+            taken |= {str(entity), f"{label}.{entity}"}
+    return taken
+
+
+def _group_label(title: str, taken: set[str]) -> str:
+    """A part's group label: its title, unless that names a page (the booking part's Booking)."""
+    if title not in taken:
+        return title
+    return f"{title}s" if f"{title}s" not in taken else f"{title} part"
+
+
+def _merge_app_menu(
+    entries: list[Any],
+    part: _Part,
+    theirs: list[Any],
+    bases: Mapping[str, Mapping[str, Any]],
+    titles: Mapping[str, str],
+    taken: set[str],
+) -> list[Any]:
+    """The ``app`` menu with ``theirs`` added: one group per part once a second part joins.
+
+    A family page a part lists (``orders``, ``people``, ``settings``) is the family's, not
+    the part's: once the parts are grouped it stays outside every group, once.
+    """
+
+    def family(entry: Any) -> bool:
+        key = entry if isinstance(entry, str) else _page_name(entry)
+        return key in FAMILY_PAGES
+
     # a part installed alone shows its entries flat: group them now that a second one joins
     for other, base in bases.items():
-        flat = base.get("navigation")
+        flat = (_menus(base.get("navigation")) or {}).get(APP_MENU)
         if not isinstance(flat, list) or not flat:
             continue
-        found = [entry for entry in entries if entry in flat]
-        if found and len(found) == len([e for e in flat if _page_name(e) != "home"]):
-            group = {titles.get(other, other): [e for e in flat if e in found]}
+        own_flat = [e for e in flat if not family(e)]
+        found = [entry for entry in entries if entry in own_flat]
+        if found and len(found) == len(own_flat):
+            group = {_group_label(titles.get(other, other), taken): found}
             first = entries.index(found[0])
             entries = [e for e in entries if e not in found]
             entries.insert(first, group)
@@ -724,10 +824,17 @@ def _merge_navigation(
         entries.insert(0, "home")
     if alone and not bases:
         entries += copy.deepcopy(own)
-    else:
-        entries.append({part.title: copy.deepcopy(own)})
-    out["navigation"] = entries
-    merged.changed.append(("navigation",))
+        return entries
+    keys = {entry if isinstance(entry, str) else _page_name(entry) for entry in entries}
+    for entry in own:
+        key = entry if isinstance(entry, str) else _page_name(entry)
+        if family(entry) and key not in keys:
+            entries.append(copy.deepcopy(entry))  # the family's page, once, at the top level
+            keys.add(key)
+    part_entries = [copy.deepcopy(entry) for entry in own if not family(entry)]
+    if part_entries:
+        entries.append({_group_label(part.title, taken): part_entries})
+    return entries
 
 
 def _merge_seed(out: dict[str, Any], fragment: Mapping[str, Any], merged: Merged) -> None:
@@ -975,10 +1082,10 @@ def unmerge(project: Mapping[str, Any], name: str, base: Mapping[str, Any]) -> M
         return "." in key or key not in still
 
     out["pages"] = [entry for entry in out.get("pages") or [] if not gone(_page_name(entry))]
-    navigation = out.get("navigation")
-    if isinstance(navigation, list):
+
+    def kept_of(entries: list[Any]) -> list[Any]:
         kept: list[Any] = []
-        for entry in navigation:
+        for entry in entries:
             if gone(entry) or gone(_page_name(entry)):
                 continue
             values = next(iter(entry.values())) if isinstance(entry, Mapping) else None
@@ -988,7 +1095,16 @@ def unmerge(project: Mapping[str, Any], name: str, base: Mapping[str, Any]) -> M
                     continue
                 entry = {next(iter(entry)): left}
             kept.append(entry)
-        out["navigation"] = kept
+        return kept
+
+    navigation = out.get("navigation")
+    if isinstance(navigation, list):
+        out["navigation"] = kept_of(navigation)
+    elif isinstance(navigation, Mapping):
+        out["navigation"] = {
+            name: kept_of(entries) if isinstance(entries, list) else entries
+            for name, entries in navigation.items()
+        }
     out["seed"] = {key: n for key, n in (out.get("seed") or {}).items() if not gone(key)}
     # the part's own tiles (shop.to_send) go; a contract's (commerce.revenue) stay for the others
     their_tiles = {

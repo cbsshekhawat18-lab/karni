@@ -84,6 +84,7 @@ register_kind(
 | `switchable` | `False` for a message nobody may switch off (a sign-in code). |
 | `sample`, `samples` | What the editor's preview renders with: the latest matching record, else these values. |
 | `replace` | `False` keeps a declaration of the same name that is already there. |
+| `requires` | Who can be in its audience, read like a menu entry's: `authenticated` (the default: the person, a buyer, a member) or a permission pattern for a message to the business's people (`karni_commerce.order:view` for a new order). A person's own switches list only the kinds they can receive. |
 
 ## Send it
 
@@ -277,9 +278,10 @@ before the part drops it. karni-commerce's migration 0008 does this.
 
 ## What it does not do
 
-- It renders no page. The bell in the layout, the `/inbox` page and a
-  person's email switches on their account page are built on this API in
-  @karni/ui.
+- It renders no page. The bell in the layout (`InboxBell`), the `/inbox`
+  page (`InboxPage`) and a person's own switches on their account page
+  (`EmailChoices`) are built on this API in @karni/ui, and `karni build`
+  writes them into a project of parts ([the family](family.md)).
 - It sends no text messages and no push notifications: the channels are an
   email and the inbox.
 - It does not group messages into a digest.

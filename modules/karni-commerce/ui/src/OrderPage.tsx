@@ -20,7 +20,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { problemOf } from "./cart";
 import { ItemImage } from "./ItemImage";
 import { Money } from "./Money";
-import { LineDetails, OrderTotals } from "./Totals";
+import { LineDescription } from "./lines";
+import { OrderTotals } from "./Totals";
 import { buyerOrderPanels } from "./panels";
 import { CommerceLink, useCommerce } from "./routes";
 import { ORDER_STATUS_WORDS } from "./status";
@@ -100,16 +101,18 @@ function payLabel(order: Order) {
   if (order.status === "failed") return "Try the payment again";
   if (order.status === "part_paid") {
     return (
-      <>
+      // One text node: the button spaces its children apart.
+      <span>
         Pay the balance (<Money value={order.balance} currency={order.currency} />)
-      </>
+      </span>
     );
   }
   if (Number(order.deposit) > 0 && Number(order.amount_paid) === 0) {
     return (
-      <>
+      // One text node: the button spaces its children apart.
+      <span>
         Pay the deposit (<Money value={order.due_now} currency={order.currency} />)
-      </>
+      </span>
     );
   }
   return "Pay now";
@@ -228,14 +231,7 @@ export function OrderPage({
               <ItemImage src={line.image} />
             </div>
             <span className="min-w-0 flex-1">
-              {line.url ? (
-                <CommerceLink to={line.url} className="hover:underline">
-                  {line.name}
-                </CommerceLink>
-              ) : (
-                line.name
-              )}
-              <LineDetails details={line.details} />
+              <LineDescription line={line} place="order" />
               <span className="block text-sm text-muted-foreground">
                 {line.quantity} x <Money value={line.unit_price} currency={data.currency} />
                 {line.quantity_refunded > 0 ? `, ${line.quantity_refunded} refunded` : ""}

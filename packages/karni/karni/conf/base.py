@@ -377,7 +377,8 @@ BASE: dict[str, Any] = {
     # role grants (one more query per request). Off, they grant nothing and cost nothing.
     "KARNI_USER_GRANTS": env.bool("KARNI_USER_GRANTS", default=False),
     # Navigation from data (experimental): a list of menu items and groups, "db" (the
-    # NavItem table of the karni.navigation app) or None (no menu, no navigation/ route).
+    # NavItem table of the karni.navigation app), named menus ({"app": [...], "public":
+    # [...]}, read with ?menu=) or None (no menu, no navigation/ route).
     "KARNI_NAVIGATION": None,
     # The frontend files whose `path:` entries are the app's pages: karni check reports
     # a menu item whose route none of them serves. [] turns that comparison off.
@@ -862,6 +863,9 @@ BASE: dict[str, Any] = {
     # event reaches a worker, the runs of one delivery before it is failed, and the days a
     # delivered event is kept (None keeps them all).
     "KARNI_EVENTS_DISPATCHER": "karni.outbox.dispatch.celery",
+    # Deliver family events in the process that committed, with no worker: None follows
+    # DEBUG (development), True for a small deployment with no broker, False never.
+    "KARNI_EVENTS_INLINE": env.bool("KARNI_EVENTS_INLINE", default=None),
     "KARNI_EVENTS_MAX_ATTEMPTS": env.int("KARNI_EVENTS_MAX_ATTEMPTS", default=8),
     "KARNI_EVENTS_RETENTION_DAYS": env.int("KARNI_EVENTS_RETENTION_DAYS", default=30),
     # The key type `karni make model` writes (experimental): "uuid" (BaseModel) or

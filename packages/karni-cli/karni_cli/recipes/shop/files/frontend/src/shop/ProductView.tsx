@@ -17,7 +17,7 @@ import { RecentlyViewed, RelatedProducts } from "./MoreProducts";
 import { ProductStock } from "./ProductCard";
 import { Rating } from "./Rating";
 import { Reviews } from "./Reviews";
-import { useShopName } from "./StoreLayout";
+import { useShopName } from "./name";
 import type { Product } from "./types";
 import { VariationPicker } from "./VariationPicker";
 import { WishlistButton } from "./WishlistButton";

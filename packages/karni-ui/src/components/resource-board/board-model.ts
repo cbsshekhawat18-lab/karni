@@ -38,14 +38,76 @@ function humanize(value: string): string {
 }
 
 /**
- * The columns, in the order of the field's choices (else the order of its
- * transitions). `only` keeps some of them, in the order given.
+ * The states in the order the machine flows: from the initial states along
+ * the transitions, each state as far along as its longest way in (a way back,
+ * such as a reopen, does not count), states the flow never reaches after
+ * those, and the closed states (no way out) last. The declared order of the
+ * choices only breaks ties.
+ */
+export function flowOrder(
+  known: readonly string[],
+  transitions: Readonly<Record<string, readonly string[]>>,
+  initial: readonly string[] | undefined,
+): string[] {
+  const declared = new Map(known.map((value, index) => [value, index]));
+  const byDeclared = (a: string, b: string): number =>
+    (declared.get(a) ?? 0) - (declared.get(b) ?? 0);
+  const targets = (value: string): string[] =>
+    (transitions[value] ?? []).filter((target) => declared.has(target)).sort(byDeclared);
+  const entered = new Set(known.flatMap(targets));
+  let starts = (initial ?? []).filter((value) => declared.has(value));
+  if (starts.length === 0) starts = known.filter((value) => !entered.has(value));
+  if (starts.length === 0) starts = known.slice(0, 1);
+
+  // A walk from the starts: an edge back to a state still on the walk is a
+  // way back and is left out, so what remains has no loop.
+  const seen = new Map<string, "walking" | "done">();
+  const forward = new Map<string, string[]>();
+  const finished: string[] = [];
+  const walk = (value: string): void => {
+    seen.set(value, "walking");
+    const ahead: string[] = [];
+    for (const target of targets(value)) {
+      const state = seen.get(target);
+      if (state === "walking") continue;
+      ahead.push(target);
+      if (state === undefined) walk(target);
+    }
+    forward.set(value, ahead);
+    seen.set(value, "done");
+    finished.push(value);
+  };
+  for (const start of [...starts].sort(byDeclared)) if (!seen.has(start)) walk(start);
+
+  const step = new Map<string, number>(finished.map((value) => [value, 0]));
+  for (const value of [...finished].reverse()) {
+    for (const target of forward.get(value) ?? []) {
+      step.set(target, Math.max(step.get(target) ?? 0, (step.get(value) ?? 0) + 1));
+    }
+  }
+  const closed = (value: string): number => ((transitions[value] ?? []).length === 0 ? 1 : 0);
+  return [...known].sort(
+    (a, b) =>
+      closed(a) - closed(b) ||
+      (step.get(a) ?? Infinity) - (step.get(b) ?? Infinity) ||
+      byDeclared(a, b),
+  );
+}
+
+/**
+ * The columns, in the order the state machine flows (see `flowOrder`), or in
+ * the order of the field's choices when it has no transitions. `only` keeps
+ * some of them, in the order given.
  */
 export function boardColumns(field: FieldDef, only?: readonly string[]): BoardColumnDef[] {
-  const known: string[] =
+  const choices: string[] =
     field.enumValues !== undefined
       ? field.enumValues.map(String)
       : Object.keys(field.transitions ?? {});
+  const known =
+    field.transitions !== undefined
+      ? flowOrder(choices, field.transitions, field.initial)
+      : choices;
   const values = only !== undefined ? only.filter((value) => known.includes(value)) : known;
   return values.map((value) => ({
     value,

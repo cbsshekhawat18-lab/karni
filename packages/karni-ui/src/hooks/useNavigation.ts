@@ -11,6 +11,9 @@
  * A 4xx answer is final (a server without a menu answers 404 `E535`), so it
  * is not retried and Layout shows its `navItems` at once.
  *
+ * `menu` names one of the named menus (`public`, `account`): its own cache
+ * entry and `?menu=` on the request.
+ *
  * Escape hatch: `options` forwards every TanStack Query option except
  * `queryKey`/`queryFn` (e.g. `enabled`, `staleTime`, `retry`).
  */
@@ -45,10 +48,20 @@ export interface NavigationMenu {
 /** Experimental. Where the menu comes from, relative to the client's `baseUrl`. */
 export const NAVIGATION_PATH = "/navigation/";
 
+/** Experimental. The options of `useNavigation`: TanStack Query's, and the menu's name. */
+export type UseNavigationOptions = Omit<UseQueryOptions<NavigationMenu>, "queryKey" | "queryFn"> & {
+  /**
+   * The named menu (`GET /navigation/?menu=`): `app` (the default, the staff
+   * sidebar), `public` (the site's header), `account` (the signed-in
+   * person's menu), or any name `KARNI_NAVIGATION` declares. A name the
+   * server does not declare answers an empty menu.
+   */
+  menu?: string;
+};
+
 /** Experimental. The menu for the signed-in user (`GET /navigation/`), cached per user. */
-export function useNavigation(
-  options?: Omit<UseQueryOptions<NavigationMenu>, "queryKey" | "queryFn">,
-): UseQueryResult<NavigationMenu> {
+export function useNavigation(options?: UseNavigationOptions): UseQueryResult<NavigationMenu> {
+  const { menu, ...queryOptions } = options ?? {};
   const client = useKarniClient();
   const auth = useContext(AuthContext);
   const fallback = useQueryClient().getDefaultOptions().queries?.retry ?? 3;
@@ -63,9 +76,13 @@ export function useNavigation(
       if (typeof fallback === "boolean") return fallback;
       return failures < fallback;
     },
-    ...options,
-    enabled: auth?.status === "loading" ? false : (options?.enabled ?? true),
-    queryKey: karniKeys.navigation(user),
-    queryFn: ({ signal }) => client.request<NavigationMenu>(NAVIGATION_PATH, { signal }),
+    ...queryOptions,
+    enabled: auth?.status === "loading" ? false : (queryOptions.enabled ?? true),
+    queryKey: karniKeys.navigation(user, menu),
+    queryFn: ({ signal }) =>
+      client.request<NavigationMenu>(NAVIGATION_PATH, {
+        signal,
+        ...(menu !== undefined && menu !== "app" ? { query: { menu } } : {}),
+      }),
   });
 }

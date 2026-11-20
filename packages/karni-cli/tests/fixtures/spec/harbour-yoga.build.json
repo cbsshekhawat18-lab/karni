@@ -395,6 +395,36 @@
       "owner": "karni"
     },
     {
+      "path": "frontend/src/karni/router.ts",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "frontend/src/karni/layout.tsx",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "frontend/src/karni/home.tsx",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "frontend/src/karni/pages/signin.tsx",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "frontend/src/karni/pages/account.tsx",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
+      "path": "frontend/src/karni/pages/search.tsx",
+      "action": "create",
+      "owner": "karni"
+    },
+    {
       "path": "frontend/src/routes.tsx",
       "action": "modify",
       "owner": "karni"
@@ -403,6 +433,16 @@
       "path": "frontend/src/karni/parts.ts",
       "action": "create",
       "owner": "karni"
+    },
+    {
+      "path": "frontend/src/layout.tsx",
+      "action": "modify",
+      "owner": "project"
+    },
+    {
+      "path": "frontend/src/pages/home.tsx",
+      "action": "modify",
+      "owner": "project"
     }
   ],
   "hand_edits": [],

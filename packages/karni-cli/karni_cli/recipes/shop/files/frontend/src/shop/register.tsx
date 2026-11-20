@@ -1,25 +1,21 @@
-// What the shop adds to the family pages, once at startup: the orders section of
-// /account, the parcel panel on the staff's order page, links from any table or page
-// that shows an order (its number) to that order, and categories as a coupon limit.
+// What the shop adds to the family pages, once at startup: its storefront as the public
+// home (what / shows to visitors and customers, the "Storefront" button of the back office
+// goes to /shop), where an empty cart sends the buyer and where the terms are, the parcel
+// panel on the staff's order page, and categories as a coupon limit. The cart, checkout,
+// orders, the "Your orders" section of /account and the Orders tab of a person's page are
+// karni-commerce's (frontend/src/karni/parts.ts registers them).
 import {
-  MyOrders,
+  registerCommercePaths,
   registerCouponLimit,
   registerOrderPanel,
 } from "@karni/commerce-ui";
-import { registerAccountSection, registerRecordLink } from "@karni/ui";
+import { registerPublicHome } from "@karni/ui";
+import { StoreHome } from "./Home";
 import { ParcelPanel } from "./ParcelPanel";
 
-function Orders() {
-  return <MyOrders pageSize={5} />;
-}
-
 export function registerShop(): void {
-  registerAccountSection({
-    key: "orders",
-    title: "Your orders",
-    order: 10,
-    component: Orders,
-  });
+  registerPublicHome({ key: "shop", component: StoreHome, path: "/shop", order: 10 });
+  registerCommercePaths({ browse: "/shop/catalogue", terms: "/shop/terms" });
   registerOrderPanel({
     key: "parcel",
     title: "Parcel",
@@ -34,7 +30,4 @@ export function registerShop(): void {
     resource: "categories",
     labelField: "name",
   });
-  registerRecordLink("orders", (row) =>
-    row["number"] != null ? `/orders/${String(row["number"])}` : null,
-  );
 }

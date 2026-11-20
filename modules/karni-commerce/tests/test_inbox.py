@@ -95,3 +95,12 @@ def test_a_buyer_who_turned_the_inbox_off_still_gets_the_email(
         pay(place(cart_with(("gadget", make_gadget(), 1)), "ines@example.com", buyer))
     assert _inbox(buyer) == []
     assert any(m.to == ["ines@example.com"] for m in mail.outbox)
+
+
+def test_the_new_order_email_is_a_staff_switch_never_a_buyers(buyer: Any, clerk: Any) -> None:
+    from karni import notify
+
+    assert find_kind("commerce.new_order").requires == "karni_commerce.order:view"
+    assert "commerce.new_order" not in {row["kind"] for row in notify.choices(buyer)}
+    assert "commerce.order_paid" in {row["kind"] for row in notify.choices(buyer)}
+    assert "commerce.new_order" in {row["kind"] for row in notify.choices(clerk)}

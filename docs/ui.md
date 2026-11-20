@@ -45,6 +45,26 @@ is a few lines that compose them (see the [tutorial](tutorial.md)).
 - `FileUpload` (role `file-upload`)
 - `KarniMark`
 
+## The family screens (one layout, home, people, inbox and search for every part)
+
+- `FamilyLayout` (role `family-layout`, experimental)
+- `Storefront` (experimental)
+- `BackOffice` (experimental)
+- `FamilyHome` (experimental)
+- `FamilyEmptyHome` (experimental)
+- `PeoplePage` (experimental)
+- `PersonPage` (experimental)
+- `Timeline` (experimental)
+- `InboxBell` (experimental)
+- `InboxPage` (experimental)
+- `EmailChoices` (experimental)
+- `MyAddresses` (experimental)
+- `SearchPage` (experimental)
+- `AccountPage` (experimental)
+- `SignInPage` (experimental)
+- `SignUpForm` (experimental)
+- `SettingsPage` (experimental)
+
 ## Auth
 
 - `AuthProvider`
@@ -259,12 +279,14 @@ shows to roles that may update rows.
 
 Styled Radix parts and basics. Each one always merges `className` and forwards refs.
 
-`AccountPage`, `Button`, `Checkbox`, `Dashboard`, `DashboardTiles`, `DemoNoticeBody`, `DemoSignInPrompt`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `EmailTemplateEditor`, `EmptyValue`, `ErrorState`, `Input`, `KarniPrimitivesProvider`, `Label`, `PendingButton`, `PermissionDenied`, `RecordLink`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `SettingsPage`, `SignInPage`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`, `ThemeProvider`, `ThemeToggle`
+`Button`, `Checkbox`, `Dashboard`, `DashboardTiles`, `DemoNoticeBody`, `DemoSignInPrompt`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `EmailTemplateEditor`, `EmptyValue`, `ErrorState`, `Input`, `KarniPrimitivesProvider`, `Label`, `PendingButton`, `PermissionDenied`, `RecordLink`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`, `ThemeProvider`, `ThemeToggle`
 
 ## Hooks
 
 - `useAggregate`: Experimental. Grouped counts and sums of a resource (`GET /<resource>/aggregate/`): `{ groupBy, metric, value, top, stack, series, filters, search }` → `{ categories, series }`, which `<DataChart aggregate>` reads directly.
+- `useAudience`: Experimental. Who is looking: `loading`, `visitor`, `customer` (only the family's `customer` role) or `staff` (any other role).
 - `useAuth`: `{ user, status, login(email, password), logout, refresh }` from `AuthProvider`, and (experimental) `{ terms, termsRequired, acceptTerms(client) }` for terms acceptance.
+- `useBusiness`: Experimental. The business's public details (`GET /preferences/public/`): name, address, phone, email, currency, logo.
 - `useChangeHistory`: One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).
 - `useDashboardTiles`: See the package README.
 - `useDelayedFlag`: See the package README.
@@ -273,13 +295,16 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useImportActions`: `upload`, `preview` (the dry run) and `commit` mutations of an import.
 - `useImportDescribe`: The importable fields of a resource and the user's remembered column mapping.
 - `useImportJob`: One import job's state. It polls while the backend previews or commits it.
+- `useInboxUnread`: Experimental. The signed-in person's unread count (`GET /inbox/unread/`), read again every minute; `null` while the inbox is off.
 - `useKarniClient`: The `KarniClient` behind every hook, with `client.request(path, { method, body, query })` for custom actions.
 - `useKarniPrimitives`: See the package README.
-- `useNavigation`: Experimental. The menu the signed-in user gets (`GET /navigation/`, Django's `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `<Layout navSource="server">` renders it.
+- `useMenu`: Experimental. The entries of one named menu (`GET /navigation/?menu=public`) the signed-in person sees.
+- `useNavigation`: Experimental. The menu the signed-in user gets (`GET /navigation/`, Django's `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `{ menu: "public" }` reads a named menu. `<Layout navSource="server">` renders it.
 - `useOnlineStatus`: See the package README.
 - `useOtpLogin`: Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).
 - `usePageMeta`: See the package README.
 - `usePermission`: `{ hasRole(...names), isAuthenticated }` for gating UI on roles.
+- `usePersonFacts`: Experimental. The person facts the installed parts contribute (`GET /people/facts/`): `[{ name, label, kind, source }]`.
 - `useResourceAccessForest`: Experimental. The requester's access forest of a tree resource (`GET /<resource>/access/?permission=`): `{ results, all, truncated }`, the granted nodes with their ancestors and every other root, each with `granted`. `TreeView`'s `access` shows it.
 - `useResourceAncestors`: Experimental. The nodes above a tree node, root first (`GET /<resource>/<id>/ancestors/`).
 - `useResourceChildren`: Experimental. One page of a tree node's children (`GET /<resource>/<id>/children/`).
@@ -291,8 +316,10 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useResourceSchemaIfKnown`: Experimental. One resource's parsed schema when it is known, else `undefined`: never throws, and reads nothing outside a `KarniProvider`.
 - `useResourceTree`: Experimental. The nested nodes of a tree resource (`GET /<resource>/tree/?root=&depth=`): `{ results, truncated }`, each node with `has_children` and `children` (`null` until loaded).
 - `useSchema`: The parsed OpenAPI schema of one resource (fields, operations, access).
+- `useSiteName`: Experimental. The business's name from Settings, Details, else the page title the app started with.
 - `useSocialLogin`: Experimental. `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).
 - `useTheme`: See the package README.
+- `useTimeline`: Experimental. One timeline a page at a time (`GET /timeline/?person=` or `?subject=`, cursor paging, `kinds`).
 - `useToast`: Show a toast through the mounted `Toaster`.
 - `useTreeMutations`: Experimental. `move({ id, parent, position })` (`POST /<resource>/<id>/move/`) and `removeBranch(id)` (`DELETE ?branch=true`) for a tree resource.
 - `useUnsavedChangesGuard`: `{ dirty, setDirty, isDirty, shouldBlock }` for warning before leaving a dirty form. Give `shouldBlock` to your router's blocker and `setDirty` to ResourceForm's `onDirtyChange`.
@@ -322,6 +349,7 @@ role that another component holds (compose it instead), and `karni context` list
 | `empty-state` | `EmptyState` |
 | `error-state` | `ErrorState` |
 | `facet-panel` | `FacetPanel` |
+| `family-layout` | `FamilyLayout` |
 | `file-upload` | `FileUpload` |
 | `global-search` | `GlobalSearch` |
 | `layout-shell` | `Layout` |

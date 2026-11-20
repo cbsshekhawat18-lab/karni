@@ -96,3 +96,26 @@ def test_a_failed_payment_publishes_no_order_event_but_its_cancel_does(
     with capture_events() as later:
         services.cancel(order)
     later.assert_published("commerce.order.cancelled", subject=order, reason="")
+
+
+def test_a_payment_of_an_order_leaves_its_entry_to_the_order(make_gadget: MakeGadget) -> None:
+    """One purchase is two entries (placed, paid), never a third for its payment."""
+    import uuid
+
+    from karni.outbox.bus import build
+    from karni.timeline import skipped
+
+    from karni_commerce.models import OrderPayment
+
+    lamp = make_gadget(price=Decimal("10.00"), stock=9)
+    paid = pay(place(cart_with(("gadget", lamp, 1)), email="lea@example.com"))
+    deliver_now()
+    assert not TimelineEntry.objects.filter(kind="payments.payment.succeeded").exists()
+    payment = OrderPayment.objects.get(order=paid).payment
+    of_order, _ = build(
+        "payments.payment.succeeded", payment=str(payment.pk), amount="10.00", currency="usd"
+    )
+    other, _ = build(
+        "payments.payment.succeeded", payment=str(uuid.uuid4()), amount="5.00", currency="usd"
+    )
+    assert skipped(of_order) and not skipped(other)  # a payment of something else keeps it

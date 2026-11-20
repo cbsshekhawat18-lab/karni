@@ -59,17 +59,62 @@ delete. Adding the recipe again writes the deleted ones again.
 | `app.currency` | One currency for the project: its own, else the first part's. A part's `money:XYZ` fields are written as `money`, which reads `app.currency`, and the payments module's `currency` follows it. | none |
 | `modules` | Union. An option the project wrote itself keeps its value. Two parts asking for different values of an option are refused. | `C445` |
 | `features` | Union. `terms` keeps the project's version and unions `paths`. | none |
-| `roles` | `admin` and `customer` are the family roles: their grants add up and the project's name stays. Every other role is `<prefix>-<role>`, is new to the project, holds no `"*"` and is not a default role. | `C443` |
+| `roles` | `admin` and `customer` are the family roles: their grants add up and the project's name stays. Every other role is `<prefix>-<role>`, is new to the project, holds no `"*"` and is not a default role. With the people contract on, `admin` gets `people.*:merge` and `people.person:erase`, and `customer` gets `people.address: own` (their saved addresses on the account page). | `C443` |
 | `apps` | The part's app label must be new. | `C442` |
 | `apps.<label>.route` | Where the part's pages live: `/<label>` unless the recipe names another. It must be the part's own and not a family page's. | `C444` |
 | `pages` | Appended. `home` belongs to the family: the build writes `home: dashboard`, and a part that lists it when the project has one is refused, as is a page at another family route. An entity name two apps define is written `app.Name`. A part's own code pages live under its route: `shop.reports: code` is the page at `/shop/reports`. | `C444` |
-| `navigation` | A part's menu becomes one group, labelled with the recipe's title. A part installed alone keeps its entries flat. A menu may name a family page the project's modules and contracts provide without listing it in `pages`: `orders`, `cart` and `checkout` with commerce, `settings` with preferences, `people` with people, and `home`, `account` and `search` always. | none |
+| `navigation` | Menu by menu. A list is the `app` menu (the back office's sidebar). A part's `app` menu becomes one group, labelled with the recipe's title, and a part installed alone keeps its entries flat. A part's entries of the other named menus (`public`, the site's header, and `account`, the signed-in person's links) join the project's in line, each once. A menu may name a family page the project's modules and contracts provide without listing it in `pages`: `orders`, `cart` and `checkout` with commerce, `settings` with preferences, `people` with people, `inbox` with notify, and `home`, `signin`, `account` and `search` always. | none |
 | `dashboard` | The part's home tiles are appended. A tile whose key the project has already (two parts that both show `commerce.revenue`) is kept once. `karni recipes remove` takes the part's own tiles out and keeps a contract's. | none |
 | `seed` | Counts add up per entity. | none |
 
 The family pages are `home` (`/`), `signin`, `account`, `search`, `inbox`,
 `settings`, `people`, `cart`, `checkout` and `orders`. They come from Karni
 and its contracts, never from a part.
+
+## The pages, layout and home the build writes
+
+A part ships no family page and no layout. For a project of parts, `karni
+build` writes them in `frontend/src/karni/` (Karni-owned, rewritten on every
+build), each a few lines around a component of @karni/ui or
+@karni/commerce-ui:
+
+| Page | Route | When | Component |
+|---|---|---|---|
+| sign-in | `/signin` | always | `SignInPage`: a code by email, a password, a new account |
+| account | `/account` | always | `AccountPage` with the sections the parts register |
+| search | `/search` | always | `SearchPage`: every part's results, part by part |
+| inbox | `/inbox` | `features.notify` | `InboxPage` |
+| settings | `/settings` | `features.preferences` | `SettingsPage`: details, a tab per part, Emails, Connections |
+| people | `/people`, `/people/$id` | `features.people` | `PeoplePage` and `PersonPage` (a tab per part, the timeline, merge, erase) |
+| cart, checkout | `/cart`, `/checkout` | the commerce module | `CartPage`, `CheckoutPage` |
+| orders | `/orders`, `/orders/new`, `/orders/$number`, its invoice and packing slip | the commerce module | `FamilyOrdersPage`, `NewOrderPage`, `FamilyOrderPage`, `OrderDocumentPage` |
+
+Each is registered in `routes.tsx`'s Karni block. A route the project wrote
+itself at the same path (outside the block) keeps the project's page.
+
+`frontend/src/karni/layout.tsx` is the one layout (`FamilyLayout`): a route
+with `staticData: { area: "store" }` shows in the storefront's frame (the
+`public` and `account` menus, the mini cart with commerce), the others in
+the back office (the `app` menu, the search box, the inbox bell with notify,
+the account menu), and the home and an `area: "family"` route (`/orders`) in
+the frame of who is looking: the back office for staff, the storefront for
+everyone else. `frontend/src/karni/home.tsx` is the one home (`FamilyHome`):
+each staff role's tiles from every part, the public home a part registers
+(the shop's storefront) for visitors and customers, and what to do when no
+part is installed.
+
+`karni new` writes `frontend/src/layout.tsx` and `frontend/src/pages/home.tsx`.
+While they are still what it wrote, the build turns them into one-line
+re-exports of the family's. A project that changed one keeps it, and the
+build says so: re-export the family's file to use it, or keep your own.
+
+`parts.ts` registers the family's own sections first (`registerFamily`: your
+addresses with people, your emails and notifications with notify, and
+karni-commerce's orders section, person tab and order links), then each
+part's `register()`, so a part may replace any of them.
+
+The people list is called Customers, and lists the people who bought, in a
+project whose only part sells (a shop alone), and People otherwise.
 
 ## `recipe.toml`: `requires`, `conflicts` and `version`
 

@@ -23,6 +23,19 @@ sources, in one shape:
   app, which a project adds to ``INSTALLED_APPS`` only for this source, so a
   project that keeps its menu in the settings gains no table.
 
+* Named menus, as a mapping from a menu's name to its list::
+
+      KARNI_NAVIGATION = {
+          "app": [...],       # the staff sidebar
+          "public": [...],    # the site's header, for visitors too
+          "account": [...],   # the signed-in person's own menu
+      }
+
+  ``GET /api/navigation/?menu=public`` answers one of them. A list (or
+  ``"db"``) is the ``app`` menu alone. A name is lower case letters, digits,
+  ``-`` and ``_``. Asking for a menu the project does not name answers an
+  empty menu, so a frontend may ask for ``account`` in any project.
+
 An item has a ``label``, an ``icon`` name, a ``route`` (an app path such as
 ``/products``), an ``order`` among its siblings (default 0, then the list
 order) and what it ``requires``:
@@ -69,12 +82,15 @@ __all__ = [
     "APP",
     "AUTHENTICATED",
     "DATABASE",
+    "DEFAULT_MENU",
+    "MENU_NAME",
     "PUBLIC",
     "SETTING",
     "NavNode",
     "icon_problem",
     "load_nodes",
     "menu_for",
+    "menus",
     "nodes_from_db",
     "nodes_from_setting",
     "opens",
@@ -103,6 +119,10 @@ ICON_MAX: Final = 50
 REQUIRES_MAX: Final = 200
 #: An icon is a name the frontend maps to a picture: ``home``, ``bar-chart``.
 ICON_NAME: Final = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+#: The menu a list (or ``"db"``) is, and the one ``GET /api/navigation/`` answers by default.
+DEFAULT_MENU: Final = "app"
+#: A named menu's name: ``app``, ``public``, ``account``.
+MENU_NAME: Final = re.compile(r"^[a-z][a-z0-9_-]{0,39}$")
 #: The code of ``"db"`` without the app (the other problems are ``E530`` and ``E532``).
 _NO_APP: Final = "E531"
 _KEYS: Final = frozenset({"label", "route", "icon", "order", "requires", "children"})
@@ -262,12 +282,29 @@ def settings_problems(value: Any, installed_apps: Iterable[Any] | None = None) -
                 f"'{APP}' app: add it to INSTALLED_APPS and run migrate ({_NO_APP})"
             ]
         return []
+    if isinstance(value, dict):
+        problems: list[str] = []
+        for name, items in value.items():
+            if not isinstance(name, str) or not MENU_NAME.match(name):
+                problems.append(
+                    f"{SETTING} names the menu {name!r}: a menu's name is lower case letters, "
+                    "digits, - and _, starting with a letter, e.g. 'app' or 'public' (E530)"
+                )
+                continue
+            if not isinstance(items, list):
+                problems.append(
+                    f"{SETTING}[{name!r}] = {items!r} must be a list of items and groups (E530)"
+                )
+                continue
+            for index, item in enumerate(items):
+                problems.extend(_item_problems(item, f"{SETTING}[{name!r}][{index}]"))
+        return problems
     if not isinstance(value, list):
         return [
-            f"{SETTING} = {value!r} must be a list of items and groups, 'db' (the NavItem "
-            "table) or None (no menu) (E530)"
+            f"{SETTING} = {value!r} must be a list of items and groups, a mapping of named "
+            "menus to such lists, 'db' (the NavItem table) or None (no menu) (E530)"
         ]
-    problems: list[str] = []
+    problems = []
     for index, item in enumerate(value):
         problems.extend(_item_problems(item, f"{SETTING}[{index}]"))
     return problems
@@ -292,17 +329,36 @@ def _ordered(items: Sequence[dict[str, Any]]) -> tuple[NavNode, ...]:
     return tuple(_node(item) for _index, item in ranked)
 
 
-def nodes_from_setting(value: Any = None) -> tuple[NavNode, ...]:
-    """Experimental. The menu a ``KARNI_NAVIGATION`` list declares (default: the setting's).
+def menus(value: Any = None) -> list[str]:
+    """Experimental. The names of the menus ``KARNI_NAVIGATION`` declares (default: the setting's).
 
-    Siblings sort by ``order`` (default 0), then by their place in the list.
-    A value with a problem raises ``E530`` (startup validation reports it
-    first, unless ``KARNI_VALIDATE`` is off).
+    A list or ``"db"`` is the one menu ``app``. ``None`` declares none.
     """
     value = getattr(settings, SETTING, None) if value is None else value
-    if not isinstance(value, list):
+    if isinstance(value, dict):
+        return [str(name) for name in value]
+    return [DEFAULT_MENU] if value is not None else []
+
+
+def nodes_from_setting(value: Any = None, menu: str = DEFAULT_MENU) -> tuple[NavNode, ...]:
+    """Experimental. The menu ``menu`` of a ``KARNI_NAVIGATION`` value (default: the setting's).
+
+    A list is the ``app`` menu, a mapping holds named menus. Siblings sort by
+    ``order`` (default 0), then by their place in the list. A value with a
+    problem raises ``E530`` (startup validation reports it first, unless
+    ``KARNI_VALIDATE`` is off). A menu the value does not name is empty.
+    """
+    value = getattr(settings, SETTING, None) if value is None else value
+    if isinstance(value, dict):
+        whole = value
+        value = value.get(menu)
+        if not isinstance(value, list):
+            return ()
+        problems = settings_problems(whole)
+    elif not isinstance(value, list) or menu != DEFAULT_MENU:
         return ()
-    problems = settings_problems(value)
+    else:
+        problems = settings_problems(value)
     if problems:
         raise KarniImproperlyConfigured(
             f"{SETTING} is not valid: {problems[0]}. Fix the setting (the startup check lists "
@@ -348,13 +404,16 @@ def nodes_from_db(using: str | None = None) -> tuple[NavNode, ...]:
     return build(None, frozenset())
 
 
-def load_nodes() -> tuple[NavNode, ...]:
-    """Experimental. The whole menu of the active source, before any user's requirements."""
+def load_nodes(menu: str = DEFAULT_MENU) -> tuple[NavNode, ...]:
+    """Experimental. The whole menu ``menu`` of the active source, before any user's requirements.
+
+    The database source holds the ``app`` menu only.
+    """
     found = source()
     if found == DATABASE:
-        return nodes_from_db()
+        return nodes_from_db() if menu == DEFAULT_MENU else ()
     if found == "settings":
-        return nodes_from_setting()
+        return nodes_from_setting(menu=menu)
     return ()
 
 
@@ -408,16 +467,20 @@ def _visible(node: NavNode, user: Any) -> NavNode | None:
     return NavNode(node.label, None, node.icon, node.requires, children)
 
 
-def menu_for(user: Any, nodes: Iterable[NavNode] | None = None) -> list[NavNode]:
+def menu_for(
+    user: Any, nodes: Iterable[NavNode] | None = None, *, menu: str = DEFAULT_MENU
+) -> list[NavNode]:
     """Experimental. The entries ``user`` sees, in order: hidden ones and empty groups left out.
 
-    ``nodes`` is the menu to filter (default: the active source's,
-    :func:`load_nodes`). ``user`` may be anonymous.
+    ``nodes`` is the menu to filter (default: the active source's menu
+    ``menu``, :func:`load_nodes`). ``user`` may be anonymous.
     """
-    found = load_nodes() if nodes is None else nodes
+    found = load_nodes(menu) if nodes is None else nodes
     return [shown for shown in (_visible(node, user) for node in found) if shown is not None]
 
 
-def payload(user: Any, nodes: Iterable[NavNode] | None = None) -> dict[str, Any]:
+def payload(
+    user: Any, nodes: Iterable[NavNode] | None = None, *, menu: str = DEFAULT_MENU
+) -> dict[str, Any]:
     """Experimental. ``{"items": [...]}``: the body of ``GET /api/navigation/`` for ``user``."""
-    return {"items": [node.as_dict() for node in menu_for(user, nodes)]}
+    return {"items": [node.as_dict() for node in menu_for(user, nodes, menu=menu)]}

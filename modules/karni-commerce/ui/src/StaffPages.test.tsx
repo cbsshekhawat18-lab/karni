@@ -144,7 +144,7 @@ describe("StaffOrderPage", () => {
     expect(screen.getByText("Parcel of order 1001")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ines Moreau" })).toHaveAttribute(
       "href",
-      "/customers/ines%40example.com",
+      "/people/p-1",
     );
     expect(screen.getByText(/test, succeeded/)).toBeInTheDocument();
   });

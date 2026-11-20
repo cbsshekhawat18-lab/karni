@@ -177,3 +177,28 @@ def test_the_admin_checks_an_edit_and_keeps_the_inbox_read_only() -> None:
     request = RequestFactory().get("/")
     inbox = django_admin.site._registry[Notification]
     assert not inbox.has_add_permission(request) and not inbox.has_change_permission(request)
+
+
+def test_a_person_sees_only_the_kinds_they_can_receive(ana: Any, writer: Any) -> None:
+    """A kind for the business's people (requires a permission) is not a customer's switch."""
+    from karni.mail import register_kind, unregister_kind
+
+    register_kind(
+        "club.new_member",
+        title="New member",
+        template="club/email/note",
+        audience="the staff who edit the emails",
+        requires="notify.emailtemplate:change",
+        channels=("email", "inbox"),
+    )
+    try:
+        mine = {row["kind"] for row in as_user(ana).get("/api/inbox/choices/").data}
+        theirs = {row["kind"] for row in as_user(writer).get("/api/inbox/choices/").data}
+        assert "club.new_member" not in mine and "club.receipt" in mine
+        assert "club.new_member" in theirs
+        refused = as_user(ana).patch(
+            "/api/inbox/choices/club.new_member/", {"email": False}, format="json"
+        )
+        assert refused.status_code == 400 and refused.data["code"] == "E441"
+    finally:
+        unregister_kind("club.new_member")

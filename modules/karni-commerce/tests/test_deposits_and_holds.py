@@ -204,6 +204,7 @@ def test_the_deposit_is_published_and_on_the_buyers_timeline(make_slot: MakeSlot
     entry = TimelineEntry.objects.get(person=order.person_id, kind="commerce.order.part_paid")
     assert entry.title == f"Deposit paid on order {order.number}"
     assert entry.body == "10.00 EUR paid, 40.00 EUR to pay"
+    assert [money["text"] for money in entry.data["$money"]] == ["10.00 EUR", "40.00 EUR"]
 
 
 # -- holds with an expiry ---------------------------------------------------------------------

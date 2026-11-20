@@ -8,8 +8,9 @@ import { useCart, useSetLine } from "./cart";
 import { CouponBox } from "./CouponBox";
 import { ItemImage } from "./ItemImage";
 import { Money, PriceTag } from "./Money";
-import { CommerceLink, useCommerce } from "./routes";
-import { LineDetails, Totals } from "./Totals";
+import { LineDescription } from "./lines";
+import { useCommerce } from "./routes";
+import { Totals } from "./Totals";
 import type { CartLine } from "./types";
 
 export interface CartPageProps {
@@ -32,14 +33,7 @@ function Line({ line }: { line: CartLine }) {
         <ItemImage src={line.image} />
       </div>
       <div className="min-w-0 flex-1 space-y-1">
-        {line.url ? (
-          <CommerceLink to={line.url} className="font-medium hover:underline">
-            {line.name}
-          </CommerceLink>
-        ) : (
-          <span className="font-medium">{line.name}</span>
-        )}
-        <LineDetails details={line.details} />
+        <LineDescription line={line} place="cart" />
         <p className="text-sm text-muted-foreground">
           <PriceTag price={line.unit_price} compareAt={line.compare_at_price} /> each
         </p>

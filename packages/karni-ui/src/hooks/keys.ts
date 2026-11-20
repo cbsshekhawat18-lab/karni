@@ -5,7 +5,8 @@
  * - `["karni", "$schema"]`: the parsed OpenAPI schema (staleTime Infinity).
  * - `["karni", resource]`: the invalidation root for one resource.
  * - `["karni", resource, "list", normalizedParams]`: one list page.
- * - `["karni", "$navigation", user]`: the menu one user gets (experimental).
+ * - `["karni", "$navigation", user]`: the menu one user gets (experimental), and
+ *   `["karni", "$navigation", user, menu]` a named menu of theirs (`public`).
  * - `["karni", "$demo"]`: the demo accounts of a demo-mode server (experimental).
  * - `["karni", "$search", normalizedParams]`: one cross-model search
  *   (experimental, `useGlobalSearch`).
@@ -114,12 +115,12 @@ export const karniKeys = {
    * user (`null`: nobody signed in). Each user has their own entry, so a
    * sign-in or sign-out reads the menu again.
    */
-  navigation(user?: string | number | null): readonly unknown[] {
-    return [
-      "karni",
-      "$navigation",
-      user === undefined || user === null ? null : String(user),
-    ] as const;
+  navigation(user?: string | number | null, menu?: string): readonly unknown[] {
+    const who = user === undefined || user === null ? null : String(user);
+    // The app menu keeps the three-part key; a named menu adds its name.
+    return menu === undefined || menu === "app"
+      ? (["karni", "$navigation", who] as const)
+      : (["karni", "$navigation", who, menu] as const);
   },
 
   /** Experimental. Key of the demo accounts (`GET /demo/`, `useDemo`). */

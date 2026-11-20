@@ -796,3 +796,30 @@ def test_karni_check_lists_the_events_and_passes(db: None) -> None:
     assert f"events: desk.ticket.closed v1 (tests.deskapp.events): {TALLY}, {WRITE_NOTE}" in text
     assert "events: absent.thing.happened v1 is not declared here" in text
     assert "backend checks: ok" in text
+
+
+@pytest.mark.django_db(transaction=True)
+def test_development_delivers_in_the_process_that_committed() -> None:
+    """DEBUG with no worker: the deliveries run right after the commit, without Celery."""
+    from karni.outbox import dispatch
+
+    ticket = Ticket.objects.create(title="No worker", requester="person-3")
+    with override_settings(DEBUG=True, KARNI_EVENTS_INLINE=None):
+        assert dispatch.dispatcher() is dispatch.inline
+        close(ticket, minutes=2)
+    assert Note.objects.filter(ticket=str(ticket.pk)).exists()
+    assert set(Delivery.objects.values_list("status", flat=True)) == {"delivered"}
+
+
+def test_the_switch_and_production_keep_their_dispatcher() -> None:
+    from karni.outbox import dispatch
+
+    with override_settings(DEBUG=False, KARNI_EVENTS_INLINE=None):
+        assert dispatch.dispatcher() is dispatch.celery  # production: unchanged
+    with override_settings(DEBUG=False, KARNI_EVENTS_INLINE=True):
+        assert dispatch.dispatcher() is dispatch.inline  # a small deployment with no broker
+    with override_settings(DEBUG=True, KARNI_EVENTS_INLINE=False):
+        assert dispatch.dispatcher() is dispatch.celery
+    with override_settings(DEBUG=True, KARNI_EVENTS_DISPATCHER=_broken_dispatcher):
+        assert dispatch.dispatcher() is _broken_dispatcher  # a project's own is kept
+    dispatch.inline("00000000-0000-0000-0000-000000000000", countdown=30)  # a retry: the sweep's

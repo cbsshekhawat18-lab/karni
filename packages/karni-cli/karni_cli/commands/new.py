@@ -501,17 +501,23 @@ def write_recipe_spec(project: Path, name: str, kind: str, recipe: Recipe | None
 
 
 def record_scaffold(project: Path, recipe: Recipe) -> None:
-    """Record the sha256 of each file ``karni new`` wrote where ``recipe`` has its own.
+    """Record the sha256 of each file ``karni new`` wrote where ``recipe`` has its own, and
+    of the layout and home the family's replace (:mod:`karni_cli.builder.family`).
 
-    The first build then writes the recipe's file over it only while it is
-    still exactly what ``karni new`` wrote (:func:`karni_cli.recipes.apply.scaffold_digests`).
+    The first build then writes over such a file only while it is still
+    exactly what ``karni new`` wrote (:func:`karni_cli.recipes.apply.scaffold_digests`).
     A file an earlier recipe of the same ``karni new`` recorded keeps its digest.
     """
-    from karni_cli.builder import layout, record
+    from karni_cli.builder import family, layout, record
     from karni_cli.recipes import apply
 
     rec = record.load(project)
-    rec.scaffold = {**apply.scaffold_digests(project, recipe), **rec.scaffold}
+    found = apply.scaffold_digests(project, recipe)
+    for rel in (family.SCAFFOLD_LAYOUT, family.SCAFFOLD_HOME):
+        path = project.joinpath(*rel.split("/"))
+        if path.is_file():
+            found.setdefault(rel, record.digest(path.read_text(encoding="utf-8")))
+    rec.scaffold = {**found, **rec.scaffold}
     path = project / layout.RECORD
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(rec.text(), encoding="utf-8")

@@ -21,8 +21,10 @@ export interface CommercePaths {
   signIn: (next: string) => string;
   /** Staff: the customers list. */
   customers: string;
-  /** Staff: one customer's page. */
+  /** Staff: one customer's page, by email (a project without the person page). */
   customer: (email: string) => string;
+  /** Staff: one person's page (karni.people's `/people/<id>`), where a buyer links first. */
+  person: (id: string) => string;
   /** Staff: an order placed by hand. */
   newOrder: string;
   /** An order's printable invoice. A guest reads it with its key. */
@@ -41,6 +43,7 @@ export const DEFAULT_COMMERCE_PATHS: CommercePaths = {
   signIn: (next) => `/signin?next=${encodeURIComponent(next)}`,
   customers: "/customers",
   customer: (email) => `/customers/${encodeURIComponent(email)}`,
+  person: (id) => `/people/${encodeURIComponent(id)}`,
   newOrder: "/orders/new",
   invoice: (number, key) =>
     `/orders/${number}/invoice${key ? `?key=${encodeURIComponent(key)}` : ""}`,
@@ -69,10 +72,26 @@ export interface CommerceProviderProps {
   children?: ReactNode;
 }
 
+let registered: Partial<CommercePaths> = {};
+
+/**
+ * Experimental. Paths a selling part sets once at startup, under the
+ * provider's `paths`: the shop's catalogue is where an empty cart sends the
+ * buyer (`registerCommercePaths({ browse: "/shop/catalogue" })`).
+ */
+export function registerCommercePaths(paths: Partial<CommercePaths>): void {
+  registered = { ...registered, ...paths };
+}
+
+/** Experimental. The paths parts registered (tests, a project's own provider). */
+export function registeredCommercePaths(): Partial<CommercePaths> {
+  return registered;
+}
+
 export function CommerceProvider({ navigate, paths, children }: CommerceProviderProps) {
   const value = useMemo<CommerceContextValue>(
     () => ({
-      paths: { ...DEFAULT_COMMERCE_PATHS, ...paths },
+      paths: { ...DEFAULT_COMMERCE_PATHS, ...registered, ...paths },
       navigate: navigate ?? pageLoad,
     }),
     [navigate, paths],

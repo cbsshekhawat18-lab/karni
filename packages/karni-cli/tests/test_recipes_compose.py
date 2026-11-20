@@ -469,3 +469,89 @@ def test_a_required_module_brings_the_modules_its_manifest_requires() -> None:
     fragment = {**_club(), "modules": {}}
     data = compose.merge(_project(), recipe, fragment).data
     assert list(data["modules"]) == ["payments", "commerce"]
+
+
+def test_named_menus_merge_menu_by_menu() -> None:
+    """The app menu groups each part once a second joins; the header and account menus
+    take each part's entries in line, each once."""
+    desk = {
+        **_desk(),
+        "navigation": {
+            "app": ["Ticket", "Order"],
+            "public": [{"Ticket": {"label": "Help", "requires": "public"}}],
+            "account": ["Ticket"],
+        },
+    }
+    first = compose.merge(_project(), _Recipe("desk", "Help desk"), desk, modules=MODULES)
+    assert first.data["navigation"]["app"] == ["Ticket", "Order"]
+    second = compose.merge(
+        first.data,
+        _Recipe("club", "Club"),
+        {**_club(), "navigation": {"app": ["Visit"], "account": ["Visit", "Ticket"]}},
+        bases={"desk": desk},
+        parts={"desk": _Recipe("desk", "Help desk")},
+        modules=MODULES,
+    )
+    menus = second.data["navigation"]
+    assert menus["app"] == [{"Help desk": ["Ticket", "desk.Order"]}, {"Club": ["Visit"]}]
+    assert menus["public"] == [{"Ticket": {"label": "Help", "requires": "public"}}]
+    assert menus["account"] == ["Ticket", "Visit"]
+    out = compose.unmerge(second.data, "club", _club()).data
+    assert out["navigation"]["account"] == ["Ticket"]
+
+
+def test_a_list_joins_named_menus_as_the_app_menu() -> None:
+    desk = {**_desk(), "navigation": {"app": ["Ticket"], "public": ["Ticket"]}}
+    first = compose.merge(_project(), _Recipe("desk", "Help desk"), desk, modules=MODULES)
+    second = compose.merge(
+        first.data,
+        _Recipe("club", "Club"),
+        _club(),
+        bases={"desk": desk},
+        parts={"desk": _Recipe("desk", "Help desk")},
+        modules=MODULES,
+    )
+    assert second.data["navigation"] == {
+        "app": [{"Help desk": ["Ticket"]}, {"Club": ["Visit"]}],
+        "public": ["Ticket"],
+    }
+
+
+def test_customer_gets_its_own_addresses_with_the_people_contract() -> None:
+    desk = {**_desk(), "features": {"people": True}}
+    data = compose.merge(_project(), _Recipe("desk", "Help desk"), desk, modules=MODULES).data
+    assert data["roles"]["customer"]["grants"]["people.address"] == "own"
+
+
+def test_a_group_label_never_names_a_page() -> None:
+    """The booking part is titled Booking and has a Booking entity: its group is Bookings."""
+    first = compose.merge(_project(), _Recipe("desk", "Help desk"), _desk(), modules=MODULES)
+    second = compose.merge(
+        first.data,
+        _Recipe("club", "Visit"),
+        _club(),
+        bases={"desk": _desk()},
+        parts={"desk": _Recipe("desk", "Help desk")},
+        modules=MODULES,
+    )
+    assert second.data["navigation"][-1] == {"Visits": ["Visit"]}
+
+
+def test_a_family_page_stays_outside_the_parts_groups() -> None:
+    desk = {**_desk(), "navigation": ["orders", "Ticket", "Order"]}
+    first = compose.merge(_project(), _Recipe("desk", "Help desk"), desk, modules=MODULES)
+    assert first.data["navigation"] == ["orders", "Ticket", "Order"]  # alone: flat
+    club = {**_club(), "navigation": ["Visit", "orders"]}
+    second = compose.merge(
+        first.data,
+        _Recipe("club", "Club"),
+        club,
+        bases={"desk": desk},
+        parts={"desk": _Recipe("desk", "Help desk")},
+        modules=MODULES,
+    )
+    assert second.data["navigation"] == [
+        "orders",
+        {"Help desk": ["Ticket", "desk.Order"]},
+        {"Club": ["Visit"]},
+    ]

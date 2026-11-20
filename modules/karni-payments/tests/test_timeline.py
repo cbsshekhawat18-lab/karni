@@ -53,14 +53,17 @@ def test_a_succeeded_payment_lands_on_the_payers_timeline(
     deliver_now()
     entry = TimelineEntry.objects.get(kind="payments.payment.succeeded")
     assert entry.person == person and entry.source == "payments"
-    assert entry.title == "Payment of 42.50 usd succeeded"
+    # plain money in the title (the code in capitals, the currency's places), and the amount
+    # kept for a screen that shows it the project's way
+    assert entry.title == "Payment of 42.50 USD succeeded"
+    assert entry.data["$money"] == [{"text": "42.50 USD", "amount": "42.50", "currency": "USD"}]
     link = TimelineLink.objects.get(entry=entry)
     assert (link.content_type.app_label, link.object_id) == ("karni_payments", str(payment.pk))
 
     assign_role(user, "customer")
     response = client_as(user=user).get("/api/timeline/", {"person": str(person.pk)})
     assert response.status_code == 200
-    assert [row["title"] for row in response.data["results"]] == ["Payment of 42.50 usd succeeded"]
+    assert [row["title"] for row in response.data["results"]] == ["Payment of 42.50 USD succeeded"]
 
 
 def test_a_payment_without_a_known_person_is_on_the_payments_timeline_only(

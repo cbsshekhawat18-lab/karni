@@ -51,6 +51,8 @@ family events follow.
 
 from __future__ import annotations
 
+from typing import Any
+
 from django.dispatch import Signal
 from karni.events import declare
 
@@ -66,6 +68,7 @@ __all__ = [
     "order_placed",
     "order_refunded",
     "orders_claimed",
+    "payment_of_an_order",
 ]
 
 #: Checkout created the order, which waits for its payment: ``order``.
@@ -114,7 +117,11 @@ declare(
         "currency": "the ISO 4217 code",
         "lines": _LINES,
     },
-    timeline={"title": "Order {number} placed", "body": "{total} {currency}"},
+    timeline={
+        "title": "Order {number} placed",
+        "body": "{total}",
+        "money": {"total": "currency"},
+    },
     describe="Checkout or staff placed an order. It waits for its payment.",
 )
 declare(
@@ -128,7 +135,7 @@ declare(
         "paid_at": "when it was paid in full",
         "lines": _LINES,
     },
-    timeline={"title": "Order {number} paid", "body": "{total} {currency}"},
+    timeline={"title": "Order {number} paid", "body": "{total}", "money": {"total": "currency"}},
     describe="An order is paid in full.",
 )
 declare(
@@ -143,7 +150,8 @@ declare(
     },
     timeline={
         "title": "Deposit paid on order {number}",
-        "body": "{amount_paid} {currency} paid, {balance} {currency} to pay",
+        "body": "{amount_paid} paid, {balance} to pay",
+        "money": {"amount_paid": "currency", "balance": "currency"},
     },
     describe="Part of an order is paid (a deposit). The balance is paid later.",
 )
@@ -166,7 +174,11 @@ declare(
         "lines": "the lines refunded: [{line, kind, item, quantity}]",
         "full": "whether everything paid went back",
     },
-    timeline={"title": "Refund on order {number}", "body": "{amount} {currency}"},
+    timeline={
+        "title": "Refund on order {number}",
+        "body": "{amount}",
+        "money": {"amount": "currency"},
+    },
     describe="A refund of some or all of an order went through.",
 )
 declare(
@@ -185,3 +197,16 @@ FAMILY_EVENTS: tuple[str, ...] = (
     "commerce.order.refunded",
     "commerce.invoice.issued",
 )
+
+
+def payment_of_an_order(event: Any) -> bool:
+    """Whether a ``payments.payment.succeeded`` event is about a payment of an order.
+
+    The order's timeline entries (placed, paid, deposit paid) say so already,
+    so karni-commerce leaves the payment's own entry out
+    (:func:`karni.timeline.skip_when`). A payment of something else keeps it.
+    """
+    from karni_commerce.models import OrderPayment
+
+    payment = event["payment"]
+    return bool(payment) and OrderPayment.objects.filter(payment_id=payment).exists()

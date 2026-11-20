@@ -115,6 +115,29 @@ whose role holds `catalog.product:*` and `catalog.category:view` gets:
 A visitor who is not signed in gets the `public` entries. Both sources give
 the same response for the same menu. The requirement is not in the response.
 
+### Named menus (experimental)
+
+A project with a public side has more than one menu: the staff sidebar, the
+site's header and the signed-in person's own menu. `KARNI_NAVIGATION` may
+name them:
+
+```python
+# config/settings.py
+KARNI_NAVIGATION = {
+    "app": [{"label": "Orders", "route": "/orders", "requires": "karni_commerce.order:view"}],
+    "public": [{"label": "Products", "route": "/shop/catalogue", "requires": "public"}],
+    "account": [{"label": "Your orders", "route": "/orders"}],
+}
+```
+
+`GET /api/navigation/?menu=public` answers one of them, filtered for the
+caller as above. Without `?menu=` it answers `app`. A list (or `"db"`) is
+the `app` menu alone. A name is lower case letters, digits, `-` and `_`,
+starting with a letter (`E530` otherwise). A menu the project does not name
+answers no entries, so a frontend may ask for `account` in any project.
+`karni check` compares the routes and requirements of every menu, and names
+a menu other than `app` in its message (`'public menu > Products'`).
+
 It is one response per user and cheap: no query for `public` and
 `authenticated` entries, one query for the role grants once an entry names a
 permission, one more for the user grants while `KARNI_USER_GRANTS` is on, and
@@ -234,7 +257,9 @@ navigation:
 ```
 
 `navigation: true` is every page with a route in `pages` order. Each page's
-requirement comes from its access.
+requirement comes from its access. A mapping of named menus writes the named
+menus: `navigation: {app: [...], public: [...], account: [...]}`, each list
+written as above.
 
 ## Escape hatches
 

@@ -9,8 +9,18 @@ export { OrderDocumentPage } from "./OrderDocumentPage";
 export type { OrderDocumentPageProps } from "./OrderDocumentPage";
 export { ReportsPage } from "./ReportsPage";
 export type { ReportsPageProps } from "./ReportsPage";
-export { useBusiness } from "./business";
+export { BUSINESS_QUERY_KEY, useBusiness } from "./business";
 export type { BusinessDetails } from "./business";
+export { FamilyOrderPage, FamilyOrdersPage, PersonOrders, register } from "./family";
+export type { FamilyOrderPageProps, FamilyOrdersPageProps } from "./family";
+export {
+  DefaultLine,
+  LineDescription,
+  lineRenderer,
+  registerLineRenderer,
+  unregisterLineRenderer,
+} from "./lines";
+export type { LinePlace, LineRendererProps, LineView } from "./lines";
 export { AddToCart } from "./AddToCart";
 export type { AddToCartProps } from "./AddToCart";
 export { AddressFields, EMPTY_ADDRESS } from "./AddressFields";
@@ -75,7 +85,14 @@ export {
 export type { QuotePlace, SetLineInput } from "./cart";
 export { COUNTRY_CODES, countryOptions } from "./countries";
 export type { CountryOption } from "./countries";
-export { CommerceLink, CommerceProvider, DEFAULT_COMMERCE_PATHS, useCommerce } from "./routes";
+export {
+  CommerceLink,
+  CommerceProvider,
+  DEFAULT_COMMERCE_PATHS,
+  registerCommercePaths,
+  registeredCommercePaths,
+  useCommerce,
+} from "./routes";
 export type {
   CommerceContextValue,
   CommerceLinkProps,

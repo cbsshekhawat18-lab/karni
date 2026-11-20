@@ -67,14 +67,14 @@ the schema root (`x-karni-auth-mode`). Override it with `mode="jwt" | "session"`
 Every visual value in every component resolves from a `--karni-*` CSS custom
 property defined in `@karni/ui/styles.css`:
 
-| Family             | What it holds                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--karni-color-*`  | colours: background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, overlay, chart-1 … chart-5, and the derived `-foreground`, `-hover`, `-subtle` and `-border` shades                                                                                                                                                                                       |
-| `--karni-space-*`  | the spacing scale: `--karni-space-unit` (0.25rem), or any step `--karni-space-<n>` (`--karni-space-4` is 1rem)                                                                                                                                                                                                                                                                                                 |
-| `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                                                                                                                                                                                                                 |
-| `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                                                                                                                                                                                                              |
-| `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                                                                                                                                                                                                                   |
-| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box), `--karni-tree-indent` and `--karni-tree-max-height` (TreeView), `--karni-board-max-height` (ResourceBoard), `--karni-calendar-*` (ResourceCalendar), and `--karni-search-*` (GlobalSearch) |
+| Family             | What it holds                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--karni-color-*`  | colours: background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, overlay, chart-1 … chart-5, and the derived `-foreground`, `-hover`, `-subtle` and `-border` shades                                                                                                                                                                                                                                 |
+| `--karni-space-*`  | the spacing scale: `--karni-space-unit` (0.25rem), or any step `--karni-space-<n>` (`--karni-space-4` is 1rem)                                                                                                                                                                                                                                                                                                                                           |
+| `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                                                                                                                                                                                                                                                           |
+| `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                                                                                                                                                                                                                                                        |
+| `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                                                                                                                                                                                                                                                             |
+| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box), `--karni-tree-indent` and `--karni-tree-max-height` (TreeView), `--karni-board-max-height` (ResourceBoard), `--karni-calendar-*` (ResourceCalendar), `--karni-search-*` (GlobalSearch) and `--karni-storefront-width` (FamilyLayout) |
 
 The Tailwind preset maps its scales onto these properties, so `bg-primary`,
 `p-4` or `rounded-md`, in a component or in your own code, reads them. Import
@@ -828,8 +828,11 @@ regions, topics or categories:
 ### ResourceBoard: a board by state (experimental)
 
 A pipeline is a board, not a table. `ResourceBoard` makes a column for each
-choice of a state field, in the order the schema lists them, with a card per
-row and the count and the sum of a money field in each header:
+choice of a state field, in the order the state machine flows (from the
+initial state along the transitions, each state as far along as its longest
+way in, closed states last, the declared order of the choices only breaking
+ties), with a card per row and the count and the sum of a money field in each
+header:
 
 ```tsx
 <ResourceBoard<Deal>
@@ -889,6 +892,12 @@ resource's rows in a day, week or month view, and as a list at phone width:
   widened by a day, when there is no end field). A row has an end, or a
   `durationField` in minutes, or lasts `defaultDurationMinutes`. `limit` caps
   the rows of a range (200) and the calendar says when more exist.
+- The day and week views open scrolled to the hour of the period's earliest
+  event (by time of day, so no event of the period sits above it), else to
+  `workdayStart` (the start of the working day, 8 by default). They scroll
+  once per period, so a move or a refetch never jumps. An event that crosses
+  midnight shows on each day it covers, and one that ends at midnight ends at
+  the bottom of its day.
 - `stateField` gives each event its label from the schema's choices and a
   colour on its left edge (`stateTones` picks them). The state is also said
   in words, never by colour alone.
@@ -965,10 +974,66 @@ registerAccountSection({ key: "orders", title: "Your orders", order: 10, compone
 `unregisterAccountSection(key)` takes one out.
 
 `SignInPage` is `/signin`: a code sent by email (which opens an account for a
-new address when the project allows it, `KARNI_EMAIL_OTP_SIGNUP = "open"`)
-or a password, then `next` (a path of this app only: `safeNext` refuses
-another site). Pass the router's push as `navigate`, and `notice` for a
-line above the forms (the demo logins).
+new address when the project allows it, `KARNI_EMAIL_OTP_SIGNUP = "open"`),
+a password, or a new account with a password (`SignUpForm`, `POST
+<authBasePath>/register/`; `signUp={false}` hides it), then `next` (a path of
+this app only: `safeNext` refuses another site). Pass the router's push as
+`navigate`, and `notice` for a line above the forms (the demo logins).
+
+### The family screens: one layout for every part (experimental)
+
+A project of several parts (a shop, a CRM, a booking app) has one layout,
+one home, one person page, one inbox and one search. `karni build` writes
+the family pages and the layout when a project holds parts, each a few lines
+of router glue around these components:
+
+```tsx
+<FamilyLayout
+  pathname={pathname}
+  navigate={navigate}
+  area={route.area}
+  isPublic={route.public}
+  inbox
+  storeActions={<MiniCart />}
+>
+  <Outlet />
+</FamilyLayout>
+```
+
+- `FamilyLayout` picks a frame per page. `Storefront` is the site's header
+  (the `public` named menu, `GET /navigation/?menu=public`, and the `account`
+  menu once signed in) and footer, for a route with `staticData: { area:
+"store" }`. `BackOffice` is `Layout` with the `app` menu, the search box,
+  the inbox bell and the account menu. The home and an `area: "family"`
+  route (`/orders`) show in the back office to staff and in the storefront to
+  everyone else. Staff is anyone with a role beyond the family's `customer`
+  (`useAudience()`).
+- `FamilyHome` is `/`: the home tiles of staff's roles (`DashboardTiles`),
+  the public home a part registers for visitors and customers
+  (`registerPublicHome({ key: "shop", component: StoreHome, path: "/shop" })`),
+  and an empty state that says what to install when the project holds no
+  part.
+- `PeoplePage` (`/people`) lists the people with a column per person fact the
+  parts contribute, and `PersonPage` (`/people/<id>`) shows one person: the
+  facts, a tab per part (`registerPersonTab({ key: "orders", title: "Orders",
+component })`), the details (addresses, organisations), the `Timeline` with
+  the change history beside it, and Merge and Erase for who holds
+  `people.person:merge` and `people.person:erase`.
+- `Timeline` reads `GET /timeline/` a page at a time, with a filter by kind
+  (`registerTimelineKind(kind, { label, render })`).
+- `InboxBell` (the unread count), `InboxPage` (`/inbox`: the unread filter,
+  mark read and unread, mark all read) and `EmailChoices` (a person's own
+  switches) are built on karni.notify's `/inbox/`.
+- `SearchPage` (`/search`) shows every part's results part by part, keyboard
+  first, and `GlobalSearch` groups its hits by part too (the server names
+  each group's `part`). `searchHitHref(hit, routes)` finds a hit's page, and
+  `routeHref(resource, id, routes)` a record's: its record link, else the app's route
+  ending in `/<resource>/$id`.
+- `registerFamily({ people, notify })` adds "Your addresses" (`MyAddresses`)
+  and "Emails and notifications" (`EmailChoices`) to `AccountPage`.
+- `useBusiness()` and `useSiteName()` read the business's public details.
+
+`--karni-storefront-width` (72rem) sets how wide the storefront grows.
 
 ## Hooks
 

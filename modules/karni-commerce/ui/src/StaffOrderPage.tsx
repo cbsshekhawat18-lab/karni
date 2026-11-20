@@ -29,7 +29,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { problemOf } from "./cart";
 import { Money } from "./Money";
-import { LineDetails, OrderTotals } from "./Totals";
+import { LineDescription } from "./lines";
+import { OrderTotals } from "./Totals";
 import { appliedOrderPanels } from "./panels";
 import { CommerceLink, useCommerce } from "./routes";
 import { ORDER_STATUS_WORDS } from "./status";
@@ -454,11 +455,7 @@ export function StaffOrderPage({ number, siteName, statusWords }: StaffOrderPage
                   {data.lines.map((line) => (
                     <tr key={line.id} className="border-b border-border last:border-0">
                       <td className="py-2 pr-3">
-                        {line.name}
-                        <LineDetails details={line.details} className="text-xs" />
-                        {line.sku ? (
-                          <span className="block text-xs text-muted-foreground">{line.sku}</span>
-                        ) : null}
+                        <LineDescription line={line} place="staff" />
                       </td>
                       <td className="py-2 pr-3">
                         {line.quantity}
@@ -546,7 +543,12 @@ export function StaffOrderPage({ number, siteName, statusWords }: StaffOrderPage
         <div className="space-y-6">
           <Section title="Customer">
             <p className="text-sm">
-              <CommerceLink to={paths.customer(data.email)} className="font-medium hover:underline">
+              <CommerceLink
+                to={
+                  data.buyer.person ? paths.person(data.buyer.person) : paths.customer(data.email)
+                }
+                className="font-medium hover:underline"
+              >
                 {data.buyer.name || data.email}
               </CommerceLink>
               <span className="block text-muted-foreground">{data.email}</span>
