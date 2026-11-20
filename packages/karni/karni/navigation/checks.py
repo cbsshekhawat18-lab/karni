@@ -126,7 +126,14 @@ def _matches_permission(requirement: str, keys: Iterable[str]) -> bool:
 
 def _nodes() -> tuple[tuple[navigation.NavNode, ...] | None, list[checks.CheckMessage]]:
     if navigation.source() != navigation.DATABASE:
-        return navigation.nodes_from_setting(), []
+        found: list[navigation.NavNode] = []
+        for menu in navigation.menus():
+            nodes = navigation.nodes_from_setting(menu=menu)
+            if menu == navigation.DEFAULT_MENU:
+                found.extend(nodes)
+            elif nodes:  # named so a message says which menu: "public menu > Shop"
+                found.append(navigation.NavNode(f"{menu} menu", children=nodes))
+        return tuple(found), []
     try:
         return navigation.nodes_from_db(), []
     except DatabaseError as exc:

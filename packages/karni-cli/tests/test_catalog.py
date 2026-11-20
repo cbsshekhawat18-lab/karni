@@ -20,10 +20,10 @@ from karni_cli.spec.validate import validate_text
 
 from .conftest import REPO_ROOT
 
-#: Tokens the CATALOG block of karni context may take with Karni's 8 modules and 6 features
-#: (measured 361 by the four-characters rule, 340 cl100k tokens, with karni-charts, karni-reports,
-#: karni-ai, karni-storage and the user_grants line).
-CATALOG_TOKEN_BUDGET = 365
+#: Tokens the CATALOG block of karni context may take with Karni's 10 modules and 6 features
+#: (measured 408 by the four-characters rule, with karni-charts, karni-reports, karni-ai,
+#: karni-storage, karni-commerce, karni-game and the user_grants line).
+CATALOG_TOKEN_BUDGET = 412
 
 CHAT = """
 name = "chat"
@@ -110,6 +110,8 @@ def test_every_manifest_in_the_repo_is_valid() -> None:
         "ai",
         "approvals",
         "charts",
+        "commerce",
+        "game",
         "impersonation",
         "payments",
         "reports",
@@ -168,7 +170,9 @@ def test_the_spec_reads_modules_and_features_from_the_catalog() -> None:
     features = {m.name: m.switch for m in loaded.features if m.in_spec}
     assert {name: f.switch for name, f in spec_catalog.FEATURES.items()} == features
     # the schema's features: and karni plan's settings follow the catalog
-    assert set(schema.Features.model_fields) == set(features)
+    # ... and the core contracts a recipe's requires switches on
+    contracts = {"people", "events", "timeline", "preferences", "notify"}
+    assert set(schema.Features.model_fields) == set(features) | contracts
     assert plan_mod._FEATURE_SETTINGS == features
 
 
@@ -427,7 +431,7 @@ def test_a_module_ui_package_follows_add_and_remove(
     added = runner.invoke(app, ["add", "charts"])
     assert added.exit_code == 0, added.output
     deps = json.loads(package.read_text())["dependencies"]
-    assert deps["@karni/charts-ui"] == "^0.5.0"
+    assert deps["@karni/charts-ui"] == "^0.6.0"
     assert "@karni/charts-ui: added to frontend/package.json" in added.output
     assert list(deps) == sorted(deps)
     again = runner.invoke(app, ["add", "charts"])
@@ -471,7 +475,8 @@ def test_add_refuses_a_name_that_is_not_a_module(
     before = _snapshot(generated_project)
     refused = runner.invoke(app, ["add", "paymnets"])
     assert refused.exit_code == 1 and _code(refused) == "C840"
-    assert "Did you mean payments?" in str(refused.exception)
+    # The closest name first (karni-game's "games" is close too).
+    assert "Did you mean payments" in str(refused.exception)
     assert _snapshot(generated_project) == before  # nothing wired
     far = runner.invoke(app, ["add", "bogus"])
     assert _code(far) == "C840" and "karni modules list" in str(far.exception)

@@ -51,7 +51,20 @@ class _RecipeOut(_Out):
     usually_changed: list[str] = Field(description="What people usually change after starting.")
     source: str = Field(description="built in, or the entry point (karni.recipes) it comes from.")
     files: list[str] = Field(
-        description="Its own domain code, seeds and tests, at the paths they take in the project."
+        description="Its own domain code, seeds, tests and React files, at the paths they take "
+        "in the project."
+    )
+    routes: list[str] = Field(
+        description="The React routes the first karni build registers for its own pages."
+    )
+    version: str | None = Field(
+        description="Experimental. Its recipe.toml version. null when it has none."
+    )
+    requires: list[str] = Field(
+        description="Experimental. The core contracts and modules it needs, with version ranges."
+    )
+    conflicts: list[str] = Field(
+        description="Experimental. The recipes and modules it cannot share a project with."
     )
     spec: str | None = Field(description="Its karni.yaml (karni recipes show). null in a list.")
     score: int | None = Field(

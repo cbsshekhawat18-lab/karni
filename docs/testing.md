@@ -371,7 +371,7 @@ view` adds each new page's URL above the marker. A path with a capture, such
 as `/services/<slug:slug>/`, needs a real URL, so the command leaves it to
 you. A view with a known set of addresses and no model declares them with
 [`@pages`](public-site.md#pages-behind-a-capture-without-a-model-experimental),
-and `declared_pages()` adds them (a page test written before 0.5.2 passes
+and `declared_pages()` adds them (a page test written before 0.6.0 passes
 `PAGES` alone: add `*declared_pages()` to it). The rows such a page shows come from the site's real content:
 `load_content` loads `content/site.json` (what `karni design extract`
 writes) the way `karni load` does, before each test. It reads a relative

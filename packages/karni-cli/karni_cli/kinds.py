@@ -1,6 +1,6 @@
-"""The project's kind: a public site, an app, or both (``[tool.karni] kind``).
+"""The project's kind: a public site, an app, both, or a game (``[tool.karni] kind``).
 
-``karni new --kind site|app|site+app`` records the kind in pyproject.toml,
+``karni new --kind site|app|site+app|game`` records the kind in pyproject.toml,
 next to the ``baseline`` ``karni upgrade`` reads:
 
 * ``site``: a public website. A site app on the karni-site module, edited in
@@ -8,6 +8,10 @@ next to the ``baseline`` ``karni upgrade`` reads:
   (``frontend/``) is optional (``karni new --no-staff-app``).
 * ``app``: an API and a React staff app, what ``karni new`` always made.
 * ``site+app``: both.
+* ``game``: an app with a game in it: the karni-game module (players, saves,
+  scores, a wallet), a ``games`` app for the game's server hooks, the game
+  declared in ``content/game.yaml``, and a page in ``frontend/`` that hosts
+  the game (experimental).
 
 ``karni context`` prints it (``KIND:``) and the agent files state it with
 the stack it implies (``karni rules sync``), so an agent never chooses the
@@ -47,17 +51,19 @@ __all__ = [
     "summary",
 ]
 
-KINDS: Final = ("site", "app", "site+app")
+KINDS: Final = ("site", "app", "site+app", "game")
 #: What ``karni new`` makes when nobody says, and nobody can be asked.
 DEFAULT: Final = "app"
 PYPROJECT: Final = "pyproject.toml"
 SETTINGS: Final = Path("config") / "settings.py"
 SITE_APP: Final = "karni_site"
+GAME_APP: Final = "karni_game"
 
 _SUMMARIES: Final = {
     "site": "a public website the client edits in the admin (a designer's pages, forms)",
     "app": "an API and a React app for signed-in users (screens, roles, workflows)",
     "site+app": "both: a public website and an app for signed-in users",
+    "game": "a game: players, saves, scores and a wallet, and a page that hosts the game",
 }
 
 
@@ -115,15 +121,18 @@ def set_kind_text(text: str, kind: str) -> str:
 
 def _inferred(root: Path) -> str:
     settings = root / SETTINGS
-    site = False
+    site = game = False
     if settings.is_file():
         try:
-            site = SITE_APP in block_entries(settings.read_text(encoding="utf-8"))
+            entries = block_entries(settings.read_text(encoding="utf-8"))
         except (OSError, CliError):
-            site = False
+            entries = []
+        site, game = SITE_APP in entries, GAME_APP in entries
     staff_app = (root / "frontend" / "package.json").is_file()
     if site:
         return "site+app" if staff_app else "site"
+    if game:
+        return "game"
     return "app"
 
 
@@ -172,11 +181,13 @@ class ProjectKind:
 
     @property
     def app(self) -> bool:
-        return self.kind in ("app", "site+app")
+        return self.kind in ("app", "site+app", "game")
 
     def context_line(self) -> str:
         """The ``KIND:`` line of ``karni context``."""
         parts = []
+        if self.kind == "game":
+            parts.append("a game on karni-game: games app, content/game.yaml")
         if self.site:
             parts.append("public site (Django templates on karni-site, edited in the admin)")
         if self.app:
@@ -210,6 +221,18 @@ class ProjectKind:
                 "18 + TypeScript app in `frontend/` on @karni/ui. Screens go in "
                 "`frontend/src/pages/` (`karni make page`). A public website joins with `karni "
                 "add site` (rule K309)."
+            )
+        elif self.kind == "game":
+            text = (
+                f"A game ({recorded}). {stack}, a REST API on Django REST framework, and a React "
+                "18 + TypeScript app in `frontend/` on @karni/ui, whose page `/game` hosts the "
+                "game. The server side is the karni-game module: players (guests first), saves, "
+                "scores, the wallet, daily content, achievements and remote config, mounted at "
+                "`/api/game/`. The game is declared in `content/game.yaml` (`karni load`), its "
+                "server hooks (save migrations, run checks) go in `games/game.py`, and its code "
+                "in `frontend/src/game/` on the @karni/game client, which `frontend/portal/` also "
+                "builds alone for the game portals (`npm run game:package`). Never let the client "
+                "decide coins, scores or unlocks: the server does."
             )
         elif self.kind == "site":
             staff = (

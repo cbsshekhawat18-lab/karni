@@ -176,6 +176,10 @@ Experimental now:
   (with `TermsGateMiddleware`), the `TermsAcceptance` model, the `terms` field
   of `me/`, the client's `onError` hook, and `TermsGate` and `useAuth()`'s
   `terms`, `termsRequired` and `acceptTerms` in `@karni/ui`.
+- [Demo mode](demo-mode.md): `karni.demo` (its accounts, write rule, reset,
+  middlewares, `manage.py karni_demo_boot`, `GET /api/demo/` and `app_urls()`),
+  the `KARNI_DEMO_*` settings, `karni.E950` to `E954`, and `DemoNotice`,
+  `DemoSignInPrompt`, `useDemo` and `karniKeys.demo` in `@karni/ui`.
 - [Integer primary keys](models.md#choosing-the-key-type):
   `karni.models.BigIntBaseModel` and `IntegerKeyModel`, the `KARNI_PK`
   setting, `karni make model --pk`, `karni.api.filters.IntegerFilter`, the
@@ -263,6 +267,40 @@ Experimental now:
   `karni_ai.extraction`, `karni_ai.schema`, `karni_ai.sources`,
   `karni_ai.services.fetch`, `karni_ai.usage`) and `@karni/ai-ui`
   (`ExtractButton`, `ExtractPreview`, `useExtract`).
+- [Family events](family-events.md): `declare`, `publish`, `subscribe`, `once`,
+  `Event`, `Declaration`, `Subscriber`, `Registry` and `CONTRACT` in
+  `karni.events`, the `karni.outbox` app (its models, admin, tasks, beat
+  entries, `karni.outbox.delivery`, `dispatch`, `checks` and `health`), the
+  `KARNI_EVENTS_DISPATCHER`, `KARNI_EVENTS_MAX_ATTEMPTS` and
+  `KARNI_EVENTS_RETENTION_DAYS` settings, the `events:` lines of `karni
+  check`, the outbox rows in `karni trace`, karni-payments' `payments.*`
+  events, and `capture_events`, `deliver_now` and `assert_events_declared`
+  in `karni.testing`.
+- [Timeline](timeline.md): the `karni.timeline` app (its models
+  `TimelineEntry` and `TimelineLink`, admin, task and beat entry,
+  `karni.timeline.api`, `access`, `checks`, `services` and `subscribers`),
+  `record`, `prune`, `render`, `parse_option`, `write_from_event`,
+  `live_person`, `connect`, `disconnect`, `installed` and `CONTRACT` in
+  `karni.timeline`, the `timeline=` option of `declare()`,
+  `GET /api/timeline/`, the `KARNI_TIMELINE_*` settings, the timeline titles
+  of the people events and of `payments.payment.succeeded`, and the person
+  karni-payments' events carry.
+- [Notifications](notify.md): the `karni.notify` app (its models
+  `EmailTemplate`, `Notification`, `Choice` and `Unsubscribe`, admin, task
+  and beat entry, `karni.notify.api`, `viewsets`, `editor`, `moves`,
+  `source`, `adopt`, `checks` and `services`), `send`, `Sent`, `Recipient`,
+  `recipients`, `holders`, `on_event`, `choices`, `choose`, `unsubscribe`,
+  `resubscribe`, `unsubscribed`, `unsubscribe_url`, `unread_count`,
+  `mark_read`, `mark_unread`, `prune`, `installed` and `CONTRACT` in
+  `karni.notify`, the `channels=` and `replace=` arguments and `CHANNELS`,
+  `deliver` and `is_silenced` of `karni.mail`, `/api/inbox/`,
+  `/api/email-templates/`, `/api/notify/unsubscribe/`, `features.notify`,
+  and the `KARNI_NOTIFY_*` and `KARNI_MAIL_SOURCE` settings.
+- [The family rules](family.md#how-the-rules-are-kept): the architecture rules
+  `part-imports-part`, `part-role-prefix` and `part-route` (K315),
+  `karni.testing.parts` (`installed_parts`, `references_in`,
+  `check_part_imports`, `check_part_roles`, `check_part_routes`), and the
+  `//` form of the `karni: allow(...)` marker.
 - [The module catalog](modules.md#the-module-catalog): the `karni.module.toml`
   manifest format and the feature manifests, the `karni.modules` entry point
   group, `karni.catalog` (with `python -m karni.catalog`),
@@ -384,6 +422,23 @@ Stable since 0.4.1:
   `application/vnd.karni.upload` reference part, `manage.py
   karni_thumbnails`, the `file:protected` and `image:protected` field types,
   and everything in `@karni/storage-ui`.
+- [The `karni-commerce` module](commerce.md): the whole of `karni_commerce`
+  (the models, the `Sellable` adapter and its registry, `karni_commerce.services`,
+  the signals of `karni_commerce.events`, `karni_commerce.fulfilment`, the
+  checkout validator, the email kinds), the `KARNI_COMMERCE_*` settings, the
+  cart and order endpoints and their answers, and everything in
+  `@karni/commerce-ui`. `karni.mail` (`send_templated`, its `kind` and
+  `KARNI_MAIL_DISABLED_KINDS`) is experimental too.
+- [The `karni-game` module](game.md): the whole of `karni_game` (the models,
+  the services, the hooks of `karni_game.hooks`, the family events `game.*`,
+  `karni_game.merge.Merger`, the signatures, the roles), the `KARNI_GAME_*`
+  settings, [the game API](game-api.md) and its answers, and the `game` kind of
+  `karni new`.
+- [The game client](game-client.md): everything in `@karni/game` (the
+  portal, its adapters and the portal table, the loop, view, input, audio,
+  save and random helpers, the data client and its queue, the Vite preset,
+  the package checks, the `karni-game` command, the engine adapters and the
+  smoke harness).
 - [API versions](api.md#api-versions): the `KARNI_API_VERSION`,
   `KARNI_API_VERSIONS` and `KARNI_API_UNVERSIONED` settings, `karni.api.versions`
   (with `api_urls`, `ApiVersionHeadersMiddleware` and `VersionedSchemaGenerator`),

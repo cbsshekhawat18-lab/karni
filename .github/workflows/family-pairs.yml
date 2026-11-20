@@ -1,0 +1,49 @@
+name: Family pairs
+
+# Every pair of the family's parts built together (docs/family.md): `karni new --recipe a --recipe b`,
+# the migrations, the seed, both parts' tests and `karni check` (tests/test_family_pairs.py). It
+# catches a connection that leans on a third part by accident, a role or a route two parts share,
+# and one part naming another. Each pair is a full build, so this runs nightly and on demand, not
+# on every push. The matrix lists the pairs of PARTS in that file (a test keeps the two equal): add a
+# pair here when a recipe joins the family.
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: family-pairs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pairs:
+    name: Pair ${{ matrix.pair }} (built together)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pair: [booking+crm, booking+shop, booking+visits, crm+shop, crm+visits, shop+visits]
+    env:
+      PYTHON: python
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      KARNI_REQUIRE_MODULES: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/karni/pyproject.toml
+            packages/karni-cli/pyproject.toml
+            modules/karni-payments/pyproject.toml
+      - name: Install Karni and its modules from this checkout (editable)
+        run: make install-py
+      - name: The pair, built together, its tests and karni check
+        working-directory: packages/karni-cli
+        run: |
+          python -m pytest -q -p no:cacheprovider -m recipes \
+            "tests/test_family_pairs.py::test_a_pair_builds_and_checks_green[${{ matrix.pair }}]"

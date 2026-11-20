@@ -2,8 +2,9 @@
 
 :func:`story` reads ``.karni/trace/*.jsonl`` (every event carrying the id —
 the request, the tasks it enqueued and their retries minutes later, email,
-webhooks), the request record, and the change log (``ChangeLog`` and
-``ChangeBatch`` rows with that ``request_id``; the database is optional —
+webhooks), the request record, the family events it published with each
+delivery's state (``karni.outbox``, experimental), and the change log
+(``ChangeLog`` and ``ChangeBatch`` rows with that ``request_id``; the database is optional —
 when it cannot be read, the story says so and goes on). Requests whose
 events share a ref (``karni_payments.Payment:<pk>``) with this one are
 listed as linked: the checkout and the webhook that settled it.
@@ -97,6 +98,46 @@ def _audit(request_id: str) -> tuple[list[dict[str, Any]], str | None]:
         return [], f"change log not read ({type(exc).__name__}: {str(exc)[:200]})"
 
 
+def _outbox(request_id: str) -> tuple[list[dict[str, Any]], str | None]:
+    """Family events this request published, and each delivery's state (karni.outbox)."""
+    from django.apps import apps
+
+    if not apps.is_installed("karni.outbox"):
+        return [], None
+    try:
+        from karni.outbox.models import OutboxEvent
+
+        found: list[dict[str, Any]] = []
+        rows = OutboxEvent.objects.filter(request_id=request_id).prefetch_related("deliveries")
+        for row in rows.order_by("occurred_at"):
+            found.append(
+                {
+                    "at": row.occurred_at.isoformat(),
+                    "event": "event.published",
+                    "source": "database",
+                    "name": row.name,
+                    "version": row.version,
+                    "event_id": str(row.pk),
+                    "subject": row.subject_ref or None,
+                }
+            )
+            for delivery in row.deliveries.all():
+                found.append(
+                    {
+                        "at": (delivery.delivered_at or delivery.updated_at).isoformat(),
+                        "event": "event.delivery",
+                        "source": "database",
+                        "name": row.name,
+                        "subscriber": delivery.subscriber,
+                        "status": delivery.status,
+                        "attempts": delivery.attempts,
+                    }
+                )
+        return found, None
+    except Exception as exc:  # noqa: BLE001 - the rest of the story does not need the outbox
+        return [], f"outbox not read ({type(exc).__name__}: {str(exc)[:200]})"
+
+
 def _linked(request_id: str, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     from karni.debug import store
 
@@ -141,15 +182,16 @@ def story(request_id: str, *, with_audit: bool = True) -> dict[str, Any] | None:
     events = [dict(event, source="trace") for event in store.iter_events({request_id})]
     record = store.read_request(request_id)
     audit, audit_note = _audit(request_id) if with_audit else ([], None)
-    if not events and record is None and not audit:
+    outbox, outbox_note = _outbox(request_id) if with_audit else ([], None)
+    if not events and record is None and not audit and not outbox:
         return None
-    timeline = sorted(events + audit, key=lambda event: _parse_at(event.get("at")))
+    timeline = sorted(events + audit + outbox, key=lambda event: _parse_at(event.get("at")))
     return {
         "request_id": request_id,
         "request": _summary(record),
         "events": timeline,
         "linked": _linked(request_id, events),
-        "notes": [audit_note] if audit_note else [],
+        "notes": [note for note in (audit_note, outbox_note) if note],
     }
 
 
@@ -207,6 +249,12 @@ def describe(event: dict[str, Any]) -> str:
     if name == "audit.change":
         fields = ", ".join(get("fields") or [])
         return f"{get('action')} {get('object')} ({fields})"
+    if name == "event.published":
+        subject = f" about {get('subject')}" if get("subject") else ""
+        return f"{get('name')} v{get('version')}{subject} ({get('event_id')})"
+    if name == "event.delivery":
+        attempts = f"after {get('attempts')} attempt(s)"
+        return f"{get('name')} -> {get('subscriber')} {get('status')} {attempts}"
     if name == "audit.batch":
         return f"{get('kind')} {get('label') or ''} (batch {get('batch_id')})".replace("  ", " ")
     parts = [f"{key}={event[key]}" for key in event if key not in _SKIP]

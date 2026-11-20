@@ -152,17 +152,39 @@ class Isolation:
         return False
 
 
+def _forward(model: Any, path: str) -> bool:
+    """Whether every step of ``path`` is a field of its model (no reverse relation)."""
+    current = model
+    for part in path.split("__"):
+        try:
+            found = current._meta.get_field(part)
+        except Exception:  # noqa: BLE001 - not a field: not settable either
+            return False
+        if getattr(found, "auto_created", False) and not getattr(found, "concrete", True):
+            return False
+        current = getattr(found, "related_model", None) or current
+    return True
+
+
 class OwnerIsolation(Isolation):
     """Rows owned through the ``read`` predicate's ``Owned(...)`` paths (or ``owner=``)."""
 
     name = "owner"
 
     def paths(self, case: IsolationCase) -> list[str]:
+        """The read predicate's ``Owned(...)`` paths a factory can set on a new row.
+
+        A path through a reverse relation (``enrolment__student``: the
+        students of a course) is left out: a new row has none.
+        """
         if case.owner:
             return [case.owner]
         declaration = getattr(case.resource.viewset, "access", None)
         read = getattr(declaration, "read", None)
-        return [owned.path for owned in read.owned()] if read is not None else []
+        if read is None:
+            return []
+        model = case.resource.model
+        return [owned.path for owned in read.owned() if _forward(model, owned.path)]
 
     def applies(self, case: IsolationCase) -> bool:
         return bool(self.paths(case))

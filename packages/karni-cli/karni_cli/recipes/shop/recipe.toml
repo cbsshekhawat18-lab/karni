@@ -1,5 +1,21 @@
 name = "shop"
 title = "Online shop"
+version = "1.0.0"
+# commerce: the cart, checkout, orders, refunds, coupons, tax and invoices (it needs
+# payments). storage: the files of digital products. preferences: Settings (details,
+# Checkout, Shop, Emails). people, events and timeline: the payer of each payment is a
+# person and its moments go on the timeline (karni-payments publishes them). notify: the
+# emails the business edits (Settings, Emails), the inbox and each person's switches.
+requires = [
+    "payments",
+    "commerce",
+    "storage",
+    "people>=1",
+    "events>=1",
+    "timeline>=1",
+    "preferences>=1",
+    "notify>=1",
+]
 purpose = "Products in categories, a cart, orders and checkout with online payments."
 use_when = [
     "online shop",
@@ -13,6 +29,73 @@ use_when = [
 usually_changed = [
     "the product fields",
     "the payment provider and the currency",
-    "the order states",
+    "the parcel states",
     "the terms version and url",
+    "the product options (attributes) and variations",
+    "shipping zones, tax rates and coupons",
+    "the shop's name, sender, checkout and stock options (Settings)",
+    "the text of each email (Settings, Emails)",
 ]
+
+# The shop's pages (files/frontend/src/pages/): the first karni build registers each in
+# frontend/src/routes.tsx. Every page of the shop is under its route, /shop: the
+# storefront (/shop, /shop/catalogue, a product, the wishlist and the terms) and the back
+# office's own screens (products, coupons, shipping, tax rates, reports and abandoned
+# carts). area = "store" shows a page in the storefront's frame of the family layout.
+#
+# The shop ships no family page: karni build writes the cart, checkout, orders, account,
+# sign-in, settings, inbox, people and search pages itself (frontend/src/karni/), from
+# karni-commerce and @karni/ui, and the one layout and home of the project.
+
+[[routes]]
+path = "/shop"
+page = "pages/shop/index"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/shop/catalogue"
+page = "pages/shop/products"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/shop/catalogue/$slug"
+page = "pages/shop/product"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/shop/wishlist"
+page = "pages/wishlist"
+data = { area = "store" }
+
+[[routes]]
+path = "/shop/terms"
+page = "pages/terms"
+public = true
+data = { area = "store" }
+
+[[routes]]
+path = "/shop/products"
+page = "pages/products"
+
+[[routes]]
+path = "/shop/coupons"
+page = "pages/coupons"
+
+[[routes]]
+path = "/shop/shipping"
+page = "pages/shipping"
+
+[[routes]]
+path = "/shop/tax-rates"
+page = "pages/tax-rates"
+
+[[routes]]
+path = "/shop/reports"
+page = "pages/reports"
+
+[[routes]]
+path = "/shop/abandoned-carts"
+page = "pages/abandoned-carts"

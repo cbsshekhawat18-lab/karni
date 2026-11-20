@@ -24,6 +24,23 @@ def _isolate_karni_env(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(var, raising=False)
 
 
+@pytest.fixture(autouse=True)
+def _celery_current_app_is_restored() -> Iterator[None]:
+    """Put the Celery current app back after every test.
+
+    ``create_celery_app`` makes the new app current, so a test that builds one leaves a
+    broker-less app behind and ``/readyz`` (which asks ``current_app``) fails in whatever
+    test runs later.
+    """
+    from celery import _state as celery_state
+
+    before = celery_state.get_current_app()
+    yield
+    after = celery_state.get_current_app()
+    if after is not before:
+        before.set_current()
+
+
 @pytest.fixture
 def make_settings() -> SettingsFactory:
     """Build a fresh settings namespace through ``karni_settings()``.

@@ -113,6 +113,24 @@ path with a signed `?sig=`, valid for the same time, and only while the file
 is the same one: replacing the file invalidates the link (`STORE019`).
 `@karni/storage-ui` does this for you.
 
+### A file your own code hands out
+
+A file someone paid for, or a ticket behind a link, is not handed out by its
+row's viewset: your code decides, then calls `serve`:
+
+```python
+from karni_storage.views import serve
+
+def download(request, token):
+    grant = check_the_token(token)  # your rule: the order is paid, the limit not reached
+    return serve(grant.file.name, filename="Planner pages.pdf")
+```
+
+It answers as the row endpoint does: a short-lived signed URL in the bucket
+(a redirect) with S3, else the file streamed, never cached by the browser,
+as an attachment unless `attachment=False`. A missing file is a 404
+(`STORE018`). The shop recipe's digital products use it.
+
 ## Where the files live
 
 Where protected files go follows core's `KARNI_STORAGE`:

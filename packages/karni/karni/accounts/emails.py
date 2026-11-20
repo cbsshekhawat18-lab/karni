@@ -28,11 +28,10 @@ from typing import Any, ClassVar
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-from django.template import TemplateDoesNotExist
-from django.template.loader import render_to_string
 
 from karni.exceptions import KarniImproperlyConfigured
 from karni.imports import import_setting
+from karni.mail import register_kind
 
 __all__ = [
     "DEFAULT_EMAIL_BACKEND",
@@ -126,19 +125,27 @@ class DjangoEmailBackend(AccountsEmailBackend):
     """Directory (inside template loaders) holding the message templates."""
 
     def send(self, email: AccountsEmail) -> None:
-        """Render the three templates for ``email.template`` and send the mail."""
+        """Render the three templates for ``email.template`` and send the mail.
+
+        Through :mod:`karni.mail` under the kind ``accounts.<template>``: a message a
+        business edited in the app (``KARNI_MAIL_SOURCE``) wins over the files, and
+        the source's sender is the ``From``. These emails cannot be switched off.
+        """
+        from karni.mail import KIND_HEADER, render_templated, sender
+
         stem = f"{self.template_prefix}{email.template}"
-        raw_subject = render_to_string(f"{stem}_subject.txt", email.context)
-        # Header-injection guard: a subject must be exactly one header line.
-        subject = " ".join(raw_subject.split())
-        body = render_to_string(f"{stem}_body.txt", email.context)
-        message = EmailMultiAlternatives(subject=subject, body=body, to=[email.to])
-        try:
-            html = render_to_string(f"{stem}_body.html", email.context)
-        except TemplateDoesNotExist:
-            html = None
-        if html is not None:
-            message.attach_alternative(html, "text/html")
+        kind = f"accounts.{email.template}"
+        # The subject comes back as one header line (a header-injection guard).
+        rendered = render_templated(stem, email.context, kind=kind)
+        message = EmailMultiAlternatives(
+            subject=rendered.subject,
+            body=rendered.text,
+            from_email=sender() or None,
+            to=[email.to],
+            headers={KIND_HEADER: kind},
+        )
+        if rendered.html is not None:
+            message.attach_alternative(rendered.html, "text/html")
         message.send()
 
 
@@ -218,3 +225,52 @@ def build_link(purpose: str, token: str) -> str:
             code="E202",
         ) from exc
     return template.format(frontend=frontend.rstrip("/"), token=token)
+
+
+#: Who an account email goes to, and what an edited one may use.
+_PERSON = {"user.first_name": "The person's first name", "user.email": "Their email address"}
+
+register_kind(
+    "accounts.login_code",
+    title="Sign-in code",
+    template="karni_accounts/email/login_code",
+    audience="the person signing in",
+    describe="The code a person types to sign in.",
+    fields={
+        **_PERSON,
+        "code": "The sign-in code",
+        "ttl_minutes": "How many minutes the code works",
+    },
+    switchable=False,
+)
+register_kind(
+    "accounts.reset_password",
+    title="Password reset",
+    template="karni_accounts/email/reset_password",
+    audience="the person who asked",
+    describe="The link to choose a new password.",
+    fields={**_PERSON, "link": "The link to choose a new password"},
+    switchable=False,
+)
+register_kind(
+    "accounts.verify_email",
+    title="Confirm the email address",
+    template="karni_accounts/email/verify_email",
+    audience="a new account",
+    describe="The link that confirms a new account's email address.",
+    fields={**_PERSON, "link": "The link that confirms the address"},
+    switchable=False,
+)
+register_kind(
+    "accounts.change_email",
+    title="Confirm a new email address",
+    template="karni_accounts/email/change_email",
+    audience="the person changing it",
+    describe="The link that confirms a change of email address.",
+    fields={
+        **_PERSON,
+        "new_email": "The new address",
+        "link": "The link that confirms the change",
+    },
+    switchable=False,
+)

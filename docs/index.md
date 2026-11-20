@@ -71,7 +71,7 @@ Built: the project matches karni.yaml.
 ```
 
 On a developer laptop, `karni new --recipe shop` builds the shop from
-scratch on SQLite in 14.1 seconds, its tests and `karni check` included and
+scratch on SQLite in 53.8 seconds, its tests and `karni check` included and
 the frontend install left out ([how fast is it](recipes/index.md#how-fast-is-it)).
 [The /new-app flow](agents.md#agents-the-new-app-flow) has every step.
 Every step is also a command you can run without an agent
@@ -191,6 +191,17 @@ The [benchmark report](benchmarks/tokens.md) has every figure with its range, th
     [MCP server](agents.md#mcp), [`karni check`](enforcement.md) and the
     [debugging commands](debugging/why.md).
 
+-   **Build games** (experimental)
+
+    ---
+
+    [`karni new --kind game`](game.md#a-new-game-project) makes a small game
+    you can play, with its server and a package per game portal.
+    [karni-game](game.md) keeps guest players, saves, leaderboards, a wallet
+    and achievements on the server, and [@karni/game](game-client.md) is the
+    browser side, with adapters for game portals and engines
+    ([the game API](game-api.md)).
+
 -   **Production**
 
     ---
@@ -224,6 +235,8 @@ The [benchmark report](benchmarks/tokens.md) has every figure with its range, th
 | [`karni-reports`](reports.md) | A row printed to PDF from an HTML template in the background, served only to users who may see the row | `pip install karni-reports && karni add reports` |
 | [`karni-ai`](ai-extraction.md) | Rows for any resource read from text, a web page or a PDF by a language model, always through the import preview | `pip install "karni-ai[<provider>]" && karni add ai` |
 | [`karni-storage`](storage.md) | Files a row owns, in S3 or an S3-compatible service, served only to whoever may read the row | `pip install "karni-storage[images]" && karni add storage` |
+| [`karni-commerce`](commerce.md) | One cart, checkout and order path for anything a project sells: products, seats, bookings | `pip install karni-commerce && karni add commerce` |
+| [`karni-game`](game.md) | The server side of a game: guest players, cloud saves, leaderboards, a soft-currency wallet, daily content, achievements | `pip install karni-game && karni add game` |
 
 ## Quickstart
 

@@ -3,7 +3,7 @@
  * record, against the simulated tree backend (msw).
  */
 import { QueryClient } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -85,12 +85,14 @@ describe("TreeBreadcrumb", () => {
 describe("ResourceDetail of a tree resource", () => {
   it("shows the path above the record", async () => {
     mount(<ResourceDetail resource="regions" id={4} title={(item) => String(item["name"])} />);
-    const nav = await screen.findByRole("navigation", { name: "Region path" });
-    expect(
-      within(nav)
-        .getAllByRole("listitem")
-        .map((entry) => entry.textContent),
-    ).toEqual(["Europe/", "Nordics/", "Sweden"]);
+    // The record itself joins the path once it has loaded.
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole("navigation", { name: "Region path" }))
+          .getAllByRole("listitem")
+          .map((entry) => entry.textContent),
+      ).toEqual(["Europe/", "Nordics/", "Sweden"]),
+    );
     expect(await screen.findByRole("heading", { name: "Sweden" })).toBeInTheDocument();
   });
 

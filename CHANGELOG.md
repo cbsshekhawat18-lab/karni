@@ -9,7 +9,7 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
-## 0.5.2 (unreleased)
+## 0.6.0 (unreleased)
 
 - **Changed: `karni seed` in a project built from a recipe writes realistic demo data.** The
   shop, booking, CRM, LMS, marketplace and data-portal recipes now ship their own
@@ -54,7 +54,7 @@ apply codemods and list the manual steps. This file is the human summary.
   say plain `npm install`. CI runs the quickstart page on Node 22 (npm 10.9)
   as well as Node 20 (npm 10.8) and Node 24. `karni upgrade` changes an
   earlier project's `"npm": ">=11"` to `"npm": ">=10.8"`
-  ([migration note](docs/migrations/0.5.md#the-frontend-installs-with-plain-npm-install)).
+  ([migration note](docs/migrations/0.6.md#the-frontend-installs-with-plain-npm-install)).
 
 - **A one-click shop demo.** `examples/shop-demo` is the shop recipe as `karni new
   "Shop Demo" --recipe shop` builds it, deployed by `render.yaml` at the repository root
@@ -78,6 +78,543 @@ apply codemods and list the manual steps. This file is the human summary.
   PATH" when git is missing, and the PostgreSQL backup round trip skips when `DATABASE_URL`
   points at a server that is not listening. Before, they failed.
 
+- **Added: rules a karni.yaml can say (experimental).** An entity takes `bounds` (the
+  lowest and highest value of a number or a date, with `$now` and `$today`), `unique`
+  (fields unique among the live rows, with a `where` filter: a partial unique index
+  SQLite and PostgreSQL enforce), `targets` (the rows a relation may point at, with `$me`
+  and `$<field>` so two relations agree), `frozen` (fields that never change, or not in a
+  state), `delete` (`when` and `blocked_by`), `moves` (what a move into a state
+  `requires`, `needs` and `stamps`) and `actions` (row actions). `access` takes `delete`,
+  `assign` (who may set the owner to another user) and the read word `where:<field>`,
+  and `owned:` paths may follow a reverse relation. Each key is the `class Karni` option
+  of the same name (`karni.rules`), checked in `save()`, `clean()` and `delete()`, and
+  the API answers 400 naming the field (`E990`, `E991`, `E993` to `E996`, a delete 409).
+  `karni spec validate` checks the keys (`C760` to `C767`) and `karni check` the options
+  (`E998`). A move's `notify` emails the user it names once the move commits, from
+  templates the project edits (`<app>/email/<entity>_<state>_subject.txt`), and the
+  booking and marketplace recipes use it for a booking confirmed or cancelled and an order
+  paid, shipped or delivered. See [docs/rules.md](docs/rules.md).
+- **Added: row actions (experimental).** `row_actions = {"ship": RowAction(from_="paid",
+  to="shipped", by=Owned("listing__seller__user"))}` on a viewset declares a named
+  `POST <resource>/<id>/<name>/` with the states and roles where it is legal. It is
+  refused elsewhere with a 409 (`E997`), safe to call twice, routed by Karni when it only
+  moves the state, and published as `x-karni-actions` and `x-karni-action` so a UI shows
+  the right buttons. `karni check` warns about one whose method is not written yet
+  (`W136`).
+- **Added: `Access(delete=..., assign=...)` and `Where(Matching(...))` (experimental).**
+  `delete` governs `destroy` (default: `write`). `assign` names who may set an owner
+  field to another user: anyone else who sends one gets a 403 (`E135`). `Matching`
+  reads rows on a flag without a new predicate.
+- **Changed: a written row must stay inside the caller's write scope.** This is a
+  security fix. A create or an update is checked against its own predicate's rows in the
+  save's transaction, so a listing posted into someone else's shop under
+  `write=Owned("seller__user")` is now a 403 (`E134`) and nothing is saved. See the
+  [migration note](docs/migrations/0.6.md#a-written-row-must-stay-inside-the-callers-write-scope).
+- **Fixed: the booking, CRM, LMS, marketplace and data-portal recipes keep their business
+  rules.** Each declares them in its `karni.yaml`, with a `tests/test_rules.py` that sends
+  the request an audit of the recipe sent and gets the refusal: one booking per member
+  and slot, no booking of a started slot, a booking's slot fixed (a changed slot used to
+  end in a 500), pay once and only while pending, a refund on a cancelled paid booking; a
+  deal's contact of its company, no negative value, a lost reason, managers delete and
+  reassign; drafts hidden, enrolments once and only in a published course, lessons only in
+  your own course and read by its students; one shop per person, listings only in your
+  own shop, no order of a paused or your own listing, quantity at least 1 and fixed, ship,
+  deliver and refund as actions, the refund voiding the payout; one indicator per
+  dataset, place, topic and year. Their seeds keep the rules (a payout for every paid
+  order, demo students enrolled once). A project built from one before 0.6.0 takes the
+  rules by hand: see the [migration note](docs/migrations/0.6.md#rules-a-karniyaml-can-say-and-the-recipes-that-use-them).
+- **Changed: test factories and `assert_crud` follow the rules.** Generated values stay
+  inside `bounds`, a required relation with a `targets` rule gets a row that fits it, a
+  flag whose move needs a related row gets one, `assert_crud` leaves owner fields to the
+  server and keeps frozen fields, and `karni seed` reads `$now` as its anchor, draws again
+  on a duplicate, and takes `Seeder.Meta.after` for an order no foreign key gives.
+- **Added (experimental): the people contract, `karni.people`.** One `Person` per human and
+  one `Organisation` per company for every part of a project, with `Membership` and
+  `Address`. `KARNI_PEOPLE = True` installs it, and `karni build` writes that when
+  karni.yaml points at `people.Person` (`fk:people.Person`, `o2o:people.Person`,
+  `people.Organisation`, `people.Membership`, `people.Address`). `people.resolve()` finds
+  or creates a person by account or email (one email is one person), and an account is
+  linked to its person only once its email is verified. Parts contribute person facts
+  (SQL expressions from `count_of`, `sum_of`, `latest_of`, `exists_of`), merge hooks and
+  erase hooks in their own `people.py`. `people.duplicates()`, `people.merge_plan()` and
+  `people.merge()` (every foreign key, one-to-one and generic reference moved in one
+  transaction and one audit batch, refused with `E250` to `E252`), and `people.erase()`
+  for a person's request to delete their data. Family events `people.person.created`,
+  `linked`, `merged`, `erased` and `people.organisation.created`, `merged`, declared on
+  the bus by `karni.people.events` and also sent as signals with the same payload and
+  event id. `/api/people/` (with `me/`, `?facts=`, `merge-plan/`, `merge/`,
+  `duplicates/`, `erase/`), `/api/organisations/`, `/api/people-memberships/` and
+  `/api/people-addresses/` answer the roles granted on them, and `merge` and `erase` are
+  explicit actions. Admin pages with merge and erase actions, cross-model search, and a
+  shared seed pool (`people.pool()`). The contract is versioned (`karni.people.CONTRACT =
+  1`). Error codes `E250` to `E259`. See [people](docs/people.md).
+- **Added: family events with an outbox (experimental).** One app reacts to another
+  without importing it. `karni.events` gains `declare` (an event named
+  `<prefix>.<record>.<moment>`, versioned, with its payload fields), `publish` (inside the
+  writer's transaction: the event and one delivery per subscriber are written to the new
+  core app `karni.outbox`) and `subscribe` (by name, so a subscriber whose publisher is not
+  installed is never called). After the commit, `KARNI_EVENTS_DISPATCHER` (a Celery task)
+  runs each subscriber in its own transaction. A failure is retried with backoff up to
+  `KARNI_EVENTS_MAX_ATTEMPTS`, then marked failed. A beat entry every minute sends what a
+  down broker refused, and delivered events are pruned after
+  `KARNI_EVENTS_RETENTION_DAYS`. Delivery is at least once, and `once()` keeps a subscriber
+  idempotent. The admin lists events and deliveries with a Retry action,
+  `karni.outbox.health.check_outbox` counts failed and stuck deliveries, `karni check`
+  lists the events and their subscribers, `karni trace` shows each delivery, and
+  `karni.testing` gains `capture_events`, `deliver_now` and `assert_events_declared`.
+  karni-payments publishes `payments.payment.succeeded`, `payments.payment.failed` and
+  `payments.refund.succeeded`. Add `"karni.outbox"` to `INSTALLED_APPS` to use it: a
+  project without it gains no tables. Every earlier name of `karni.events` is unchanged.
+  New codes: E450 to E456 and W450. See [docs/family-events.md](docs/family-events.md).
+- **Added (experimental): the timeline contract, `karni.timeline`.** One stream of moments
+  per person and per record for every part of a project. `TimelineEntry` (kind, title
+  written at the time, body, actor, person, source, the family event's id, data) and
+  `TimelineLink` (any record, by content type and id). An event whose declaration names a
+  title (`declare(..., timeline="Ticket closed: {topic}")`, or a mapping with `title`,
+  `body`, `subjects` and `kind`) writes an entry after the commit through a core
+  subscriber, once per event and person. `timeline.record()` writes one by hand and does
+  nothing when the app is not installed. `GET /api/timeline/?person=`, `?organisation=`
+  or `?subject=<app_label.model>:<id>` lists entries newest first with a cursor, and an
+  entry shows only to a caller who may read its person and every linked record, through
+  each model's list endpoint (one query per model on the page). A person merge moves
+  entries and links, an erase deletes them, `KARNI_TIMELINE_RETENTION_DAYS` prunes them.
+  Admin page, `KARNI_TIMELINE_*` settings. Add `"karni.timeline"` to `INSTALLED_APPS` with
+  `karni.people` and `karni.outbox`. The people events `people.person.linked`, `merged`
+  and `people.organisation.merged` name timeline titles. karni-payments' events carry the payer's person when the payment's user is
+  linked to one, and `payments.payment.succeeded` names a timeline title. New codes: E460
+  to E463 and W460. karni.yaml's `features: {timeline: true}`, or a recipe whose
+  `requires` names `timeline`, installs it with the people and events contracts it needs.
+  See [timeline](docs/timeline.md).
+- **Added (experimental): several recipes in one project.** karni.yaml lists the parts in
+  `app.recipes`. `karni recipes add <name>` merges a recipe's karni.yaml into the project's
+  and runs `karni build`, which writes the recipe's own files by the stub rule, migrates and
+  seeds only its new tables; `karni recipes remove <name>` takes a part out (and deletes
+  its files the project never changed), and `karni new
+  --recipe a --recipe b` starts with several. The merge keeps one currency
+  (`app.currency`, which a bare `money` field reads), mounts each part's pages under
+  `apps.<label>.route` (`/<label>`), adds up the family roles `admin` and `customer`, and
+  refuses before writing anything: an app label or recipe taken (`C442`), a role without
+  its `<prefix>-` or taken (`C443`), a route two apps share or a family page's (`C444`), a
+  module option two parts set differently (`C445`), a requirement the project cannot meet
+  (`C446`), a recipe's `conflicts` (`C447`). recipe.toml takes `version`, `requires`
+  (`people>=1`, `events>=1`, a module: each is installed with the part, and `admin` gets
+  the explicit people grants) and `conflicts`. Each part's fragment and the sha256 of each
+  file it wrote are kept in `.karni/recipes/<name>/`, and `karni recipes upgrade` replaces
+  the part's files the project did not change and reports the others. The build writes
+  `frontend/src/karni/parts.ts`, which calls each part's `register()`. The booking and CRM
+  recipes follow the family rules (`bookings-staff`, `crm-manager`, `crm-rep`, routes
+  `/bookings` and `/crm`). See [several recipes in one project](docs/family.md).
+- **Deprecated: `app.recipe` in karni.yaml.** Write `app.recipes: [<name>]`. The old key is
+  read as a list of one, with a `KarniDeprecationWarning`, until 1.0, and `karni upgrade`
+  rewrites it. See the [migration note](docs/migrations/0.6.md#a-project-lists-its-recipes-in-apprecipes).
+- **Added (experimental): the preferences contract, `karni.preferences`.** What a business
+  changes without code, behind one Settings API. `Details` holds the business's name, legal
+  name, address, phone, contact email, the sender of its emails, logo, time zone, language,
+  currency and how money shows it. Each part declares a settings section as a Pydantic model
+  in its own `preferences.py` (`@preferences.section("bookings")`), its connections in
+  `connections.py` (`preferences.connection(name, needs=[...], default=..., describe=...)`,
+  active when what it needs is installed and its switch is on) and its email kinds. A move's
+  email from `moves.<state>.notify` is listed without one, follows its switch and comes from
+  the details' sender. A part reads with one call and a typed default
+  (`preferences.value("bookings.refund_notice_hours", 0)`), installed or not.
+  `KARNI_PREFERENCES_LOCKED` fixes a value for the deployment (read only on the page, a
+  change is a 409) and `KARNI_PREFERENCES_DEFAULTS` gives where one starts. Every change is
+  audited. `/api/preferences/` answers the Settings page (details, a section per part, the
+  Connections and Emails tabs, each with `can_change`), takes changes per part, lists the
+  history, and `/api/preferences/public/` gives the public details. Admin pages,
+  `preferences.override()` for tests, `karni.preferences.CONTRACT = 1`. karni.yaml's
+  `features: {preferences: true}`, or a recipe whose `requires` names `preferences`, installs
+  it, and the build writes the project's name and currency as the details' defaults. The
+  booking recipe has a refund notice and the `bookings.family_events` connection, the CRM a
+  stale deal list and the `crm.deal_timeline` connection. New codes: E320 to E325. See
+  [preferences](docs/preferences.md).
+- Test suite: a conftest fixture puts Celery's current app back after every test. A test that built an app with `create_celery_app` left it current and `/readyz` failed in later tests, which made four `test_health_probes.py` tests fail in every full run. `test_retries_are_queued_through_the_dispatcher_outside_eager_mode` also took its "previous" app after the new one was already current.
+- **The shop recipe, milestone 1 (experimental).** A storefront open to visitors under
+  `/shop` (home, catalogue with search, category and price filters, sort and pages,
+  product page), a cart for visitors and customers that joins at sign-in, guest or
+  signed-in checkout, the order page and the person's orders, and a staff home with
+  orders, parcels and stock. The cart, checkout and orders are karni-commerce's: the shop
+  sells its products through an adapter (`shop/sellables.py`) and keeps its own parcels
+  (Shipment: processing, shipped with a tracking number, delivered). Stock is held at
+  checkout through `karni.capacity`, taken on payment and given back on a failed,
+  cancelled or late order. Roles `admin`, `shop-manager`, `shop-staff` and `customer`.
+  Emails by kind, and signals under their family names. docs/recipes/shop.md is a guide.
+
+- **Recipe pages and routes (experimental).** A recipe lists its React pages as
+  `[[routes]]` in recipe.toml, and the first `karni build` registers them in
+  `frontend/src/routes.tsx`. A file `karni new` wrote counts as a stub while it is
+  unchanged (`scaffold` in `.karni/build.json`).
+
+- **Public pages (experimental).** The scaffold's layout shows a route with
+  `staticData: { public: true }` to visitors, and puts `TermsGate` behind the sign-in guard.
+
+- **@karni/ui (experimental):** `ResourceGrid` (a resource's rows as cards, with search,
+  sort, filters and pages), `formatMoney` and `usePageMeta`.
+
+- **karni (experimental):** `karni.mail.send_templated` (karni-site's notify now uses it)
+  and `karni.placeholder.placeholder_image`, also in `karni.seeding`.
+
+- **karni-payments (experimental):** the test provider's checkout page
+  (`KARNI_PAYMENTS_TEST_CHECKOUT_PAGE`, on while `DEBUG`), and the signals
+  `payment_status_changed`, `refund_created` and `refund_status_changed`. The test
+  provider never reuses a checkout session a stored payment has.
+
+- **karni-commerce, a new module (experimental).** One cart, checkout and order path for
+  anything a project sells (`karni add commerce`, needs karni-payments). An app registers
+  a `Sellable` adapter per kind in its `sellables.py`, and commerce calls it without
+  importing the app. Orders hold money states only, with readable numbers
+  (`KARNI_COMMERCE_NUMBER`), the buyer's user, email and name, several payments
+  (`OrderPayment`), refunds by line or amount (`OrderRefund`), a free order settled at
+  once and a late payment given back. The checkout validator checks an order's payment
+  against the order. Signals in `karni_commerce.events`, emails by kind, what the selling
+  app reports about the goods (`karni_commerce.fulfilment`), and `@karni/commerce-ui`:
+  `CartPage`, `MiniCart`, `AddToCart`, `CheckoutPage`, `OrderPage`, `MyOrders`. See
+  docs/commerce.md.
+
+- **@karni/ui (experimental):** `AccountPage` with sections the installed parts
+  register (`registerAccountSection`) and `SignInPage` (a code or a password, then a safe
+  `next`). Tables and details show money in its currency: a `MoneyField` publishes
+  `x-karni-money` in the schema (left out of schema snapshots). An id, a year or a number
+  people quote reads without a thousands separator. `FileUpload` shows a picture of an
+  image file, stored or chosen, so a form shows the record's photo.
+
+- **karni (experimental):** `send_templated(kind=...)` with `KARNI_MAIL_DISABLED_KINDS`,
+  and `karni.mail.silenced()` for demo data and imports. `Seeder.Meta.after` names the
+  models a seeder reads with no foreign key to them, and `karni spec export` reads a
+  seeder's count through `Meta` inheritance.
+
+- **karni-cli (experimental):** a recipe's own pages at `/<name>` count as managed on the
+  build that writes them, so `karni new --recipe` ends with `karni plan` empty.
+
+- **Shop recipe, back office:** a staff home of tiles per role (orders to fulfil, revenue
+  today, in 7 and 30 days with a chart, stock running low, latest orders, best sellers),
+  Orders first in the menu, the staff's order page (refund all or part, by items back into
+  stock or by an amount, cancel, notes to staff or to the customer, the parcel shipped with
+  its tracking number, the history), orders placed by hand, customers, products changed in
+  bulk and imported from a CSV, a low-stock level per product and backorders. The shipments
+  table names each order by its number and links to it. A product page says its short
+  description once.
+
+- **karni-commerce (experimental):** the staff's view of an order
+  (`GET /api/orders/{id}/staff/`), notes (`OrderNote`, migration `0002`), orders placed by
+  hand (`POST /api/orders/manual/`, `KARNI_COMMERCE_MANUAL_HOLD_MINUTES`, the
+  `commerce.payment_request` email), items to put on them (`Sellable.search_fields`),
+  customers by email behind a seam (`KARNI_COMMERCE_CUSTOMERS`), the order's money history,
+  and the home tiles `commerce.revenue`, `commerce.revenue_chart` and
+  `commerce.latest_orders`. `@karni/commerce-ui` adds `StaffOrders`, `StaffOrderPage`
+  (with `registerOrderPanel`), `NewOrderPage`, `CustomersPage` and `CustomerPage`.
+
+- **karni (experimental):** home tiles per role (`karni.tiles`, `GET /api/dashboard/`, code
+  tiles in `<app>/dashboard.py`, karni.yaml's `dashboard:` written to
+  `KARNI_DASHBOARD_TILES`, `C643`). `class Karni: label` names a related row, and a relation
+  to the user model is marked `x-karni-user`. `/me/` lists the permission keys the user
+  holds. `SeedContext.account()` makes a demo login per role. A module's
+  `FROM_ENVIRONMENT` settings take their environment variable over a value written before
+  `karni_settings()`, so `KARNI_PAYMENTS_PROVIDER=test` in `.env` switches karni.yaml's
+  provider. karni-payments' test provider confirms a refund on a local try.
+
+- **@karni/ui (experimental):** `DashboardTiles` (with `registerTile` and
+  `registerTileKind`), names instead of ids for related rows and people (`relationLabel`,
+  `personName`) with links a project registers (`registerRecordLink`), New, Edit, Delete and
+  Import shown only to roles that may (the `can` rule read from `/me/`), an Import button on
+  every list, `bulkEdit` on ResourceTable, and `rowActions` read from `x-karni-actions`
+  (`rowActionOpen`). ResourceDetail asks for its record once the schema is in. A new
+  project's Tailwind scans every `@karni/*` package. A list's toolbar wraps on a phone.
+
+- **karni-commerce (experimental):** options on a cart line (`Sellable.clean_options`,
+  `option_key`, `details`, `choices`), so two sizes of one item are two lines and an order
+  line keeps its options in words. Coupons (percent, amount, free shipping, minimum spend,
+  dates, uses in all and per person, limits by kind, item and the adapters' coupon keys),
+  shipping zones and methods (flat rate, free above an amount, local pickup) and tax rates
+  by country and region, priced once by `karni_commerce.pricing.quote` for the cart, the
+  checkout page (`POST carts/current/quote/`) and the order. Prices with or without tax
+  (`KARNI_COMMERCE_PRICES_INCLUDE_TAX`), `KARNI_COMMERCE_SHIPPING` and `KARNI_COMMERCE_TAX`
+  as escape hatches. The order stores its discount, shipping, tax and tax lines, and a
+  refund by lines gives back what the lines cost. `@karni/commerce-ui` adds the coupon box,
+  shipping methods and tax at checkout (`defaultCountry`), order totals, and
+  `CouponsPage`, `ShippingPage` and `TaxRatesPage` (`registerCouponLimit`). Each Add to
+  cart button names its item for screen readers.
+
+- **Shop recipe:** attributes and variations with their own SKU, price, stock and picture,
+  picked on the product page; reviews by customers whose parcel arrived, approved by staff,
+  with the average on cards and pages; a wishlist; related and recently viewed products;
+  coupons, shipping and tax pages for the manager; demo data for each.
+
+- **@karni/ui:** `ChangeHistory` says each change in words (field labels, money in its
+  currency, state labels, "Status changed from Paid to Part refunded"), with `record`,
+  `historyHeadline` and `historyValueText`. `DataChart` thins its x-axis labels to the
+  width it is drawn (`xLabelStep`). A card on a phone gives long values room and wraps an
+  email at its dots, never inside a word (`softBreaks`). `useResourceSchemaIfKnown`.
+- **Added: `ResourceBoard`, `ResourceCalendar` and tree counts in `@karni/ui`** (experimental).
+  `ResourceBoard` shows a resource as columns by a state field with a count and a money sum per
+  column, and moves a card by drag, keyboard or a menu only where `x-karni-transitions` and
+  `x-karni-actions` allow it, rolling back with the server's message on a refusal.
+  `ResourceCalendar` shows a resource with a start and an end as a day, week, month or list view
+  (a list at phone width) with free and full slots, a business time zone, a click to create, and
+  drag or keyboard moves and resizes when the caller may. `TreeView` and `TreeSelect` take
+  `countField` for a number per node and `searchKeepsAncestors` for search results shown under
+  their ancestors. No new dependency.
+
+- **karni.mail:** a part declares each email with `register_kind` (title, audience, merge
+  fields, whether it can be switched off) in its `messages.py`, and `kinds()` lists them.
+  `KARNI_MAIL_SOURCE` names where a business's changes are kept (`template`, `enabled`,
+  `sender`): an edited email wins over the files and renders with a restricted engine, the
+  declared merge fields only, as plain values, and no tag that loads code or another
+  template. The account emails (sign-in code, password reset, email checks) go through it
+  as `accounts.*` kinds that are never switched off.
+
+- **karni-commerce:** invoices numbered when an order is paid (`KARNI_COMMERCE_FIRST_INVOICE`),
+  with a printable invoice and packing slip (`GET /api/orders/document/`), as PDF through
+  karni-reports when it is installed; abandoned carts (`GET /api/carts/abandoned/`, a cart's
+  `touched_at` and `email`); sales reports by date, item and coupon with CSV
+  (`GET /api/orders/reports/`, a registry a selling app adds to, `karni_commerce.order:report`);
+  a quote for an order placed by hand (`POST /api/orders/manual/quote/`); the Checkout
+  settings (guest checkout, the terms, invoices, staff emails, when a cart is abandoned);
+  settings and emails a business edits behind `karni_commerce.preferences_seam`
+  (`/api/preferences/`, the family preferences contract's names and shape) and
+  `/api/email-templates/`. A fulfilment entry may carry a link. Every order email is
+  declared with its merge fields and comes from the sender in the details.
+
+- **karni-storage:** `serve(name)` hands out a protected file to code that checked access
+  itself.
+
+- **@karni/ui:** `SettingsPage` (the details, a tab per settings section, every email with
+  its switch) and `EmailTemplateEditor` (subject, text, merge fields, preview, back to the
+  default).
+
+- **@karni/commerce-ui:** `ReportsPage`, `AbandonedCartsPage`, `OrderDocumentPage`, invoice
+  and download links on the order pages, a coupon and a shipping method with the totals on
+  `NewOrderPage`, checkout's guest and terms options, `useBusiness`, and `Money` in the
+  business's currency display. `CommercePaths` gains `invoice` and `packingSlip`.
+
+- **Shop recipe:** settings without code (details, checkout, stock and catalogue, every
+  email's text), digital products delivered by a signed link with a download limit, reports
+  by date, item, category, coupon and stock with CSV, invoices and packing slips, abandoned
+  carts, and the shop's name and address from Settings. A product with variations reads its
+  stock from them everywhere, and a different figure for it is refused. The demo seeds 26
+  orders, its reviews meet karni.yaml's count, two printable files and three carts left
+  behind.
+- **Demo mode.** `karni.demo` (experimental, in core because it has no service and no
+  memory cost) is the rules of a public demo as settings. `KARNI_DEMO_ACCOUNTS` lists one
+  demo account per role, each with a label and a sentence about what it can do. Only those
+  accounts write, and none can change its own password, email or roles or delete itself,
+  while sign-in, refresh, sign-out and accepting the terms stay open. The data goes back to
+  `karni seed` with a fixed seed at boot when old and every `KARNI_DEMO_RESET_HOURS` hours,
+  by one worker under a lock, safe on SQLite. `manage.py karni_demo_boot` migrates, then
+  seeds or resets, and `GET /api/demo/` lists the accounts for `DemoNotice`,
+  `DemoSignInPrompt` and `useDemo` in `@karni/ui`. Escape hatches: `KARNI_DEMO_OPEN_PATHS`,
+  `KARNI_DEMO_LOCKED_PATHS`, `KARNI_DEMO_WRITE_RULE`, `KARNI_DEMO_SEEDER`,
+  `KARNI_DEMO_KEEP_APPS`. New codes `karni.E950` to `E954`. `examples/shop-demo` lost its
+  own `demo/` app and uses this (two demo accounts now, a staff and a customer), with the
+  same `render.yaml` variables. It needs `karni>=0.6.0` and `@karni/ui` 0.6.0, so the live
+  demo stays as it is until the release and a redeploy.
+  [docs/demo-mode.md](docs/demo-mode.md) lists every setting and how to move from a copied
+  `demo/` app. No public name was renamed.
+- **Added (experimental): the family rules, `part-imports-part`, `part-role-prefix` and `part-route` (K315).**
+  `karni check` fails a part that imports another part or names its app label (a model string, a
+  permission, a URL name, a template tag, a migration dependency, a frontend import), a part after the
+  first with a role that is not `<prefix>-<role>`, and a part whose base route is a family page's or
+  another app's or whose generated page is routed outside it. They read `.karni/recipes/` and
+  karni.yaml, so a project without parts is unaffected, and they check the built project, not only
+  the merge. The contracts are not parts and stay allowed. The allow marker also takes `//`.
+  See [the family](docs/family.md).
+- **Changed (experimental): the shop is a part of the family.** Its karni.yaml has
+  `app.currency` and money fields without a code (payments' currency follows), no family page in
+  `pages`, its storefront at `/shop` and `/shop/catalogue` and its back office's own screens under
+  `/shop` (`/shop/products`, `/shop/customers`, `/shop/reports` and the others). The cart, checkout
+  and orders stay at `/cart`, `/checkout` and `/orders` (karni-commerce's), the account, sign-in and
+  Settings at `/account`, `/signin` and `/settings` (Karni's). recipe.toml has `version` and
+  `requires` (payments, commerce, storage, people, events, timeline, preferences), and the shop
+  declares the connection `shop.parcel_timeline`. `frontend/src/shop/index.ts` is registered from
+  `parts.ts`. The shop joins the family pairs. See [the shop recipe](docs/recipes/shop.md).
+- **Changed (experimental): karni-commerce's settings are the preferences contract's.** The seam
+  `karni_commerce.preferences_seam`, the `Setting` model (migration `0005_drop_setting`) and
+  commerce's `/api/preferences/` are gone: commerce and the shop read `karni.preferences`, whose
+  API serves the Settings page. `KARNI_MAIL_SOURCE` defaults to `karni_commerce.mail.MailSource`.
+  `karni.preferences` lists every `karni.mail.register_kind` message on Settings, Emails (with who
+  gets it, and refusing to switch off one that is not switchable, `E323`), and its details have a
+  tax number (migration `0002_details_tax_number`). `karni.mail.DefaultSource` reads the switches
+  and the sender from `karni.preferences` while it is installed. The build locks the details'
+  currency to `app.currency` (`KARNI_PREFERENCES_LOCKED`). @karni/ui's `SettingsPage` reads the
+  contract: one Emails tab with the switches and the editor, a Connections tab and the logo.
+- **Added (experimental): a code page under an app's route, and family pages in a menu.**
+  `pages` takes `shop.reports: code` for the page at `/shop/reports`, and `navigation` may name a
+  family page the project's modules and contracts provide (`orders` with commerce, `settings` with
+  preferences) without listing it in `pages`. The merge carries `dashboard` tiles, a required module
+  brings the modules its manifest requires, and `app.currency` answers the payments currency.
+- **Fixed: the email editor's preview shows real values.** It renders with the business's details
+  and the latest record the email would be about (the last paid order, the last parcel sent), or
+  the values the email declares while there is none, never `[business.name]`
+  (`karni.mail.sample_context`, `register_kind(sample=..., samples=...)`).
+- **Fixed: the shop's sales by category count a sale once.** A product in a category and in one
+  inside it counted twice in the parent's row, and a product in two trees twice in the totals. Each
+  row now counts a sale once, the totals count each sale once, and the report says that a
+  category's row includes the categories in it (the Includes column names them).
+- **Fixed: seeding gives the same rows whatever other parts a project holds.** Each model now
+  draws from its own random stream (the seed and its label), a nullable relation to a model the run
+  does not seed stays empty (a demo booking no longer points at a payment the shop's checkout
+  made), and `SeedContext.pool(model)` gives the rows a run seeded, so a seeder reads the users it
+  seeded and not the demo logins another part adds during the run. A seed gives other rows than
+  before this change, and the same rows on every run.
+- **Fixed (experimental): `karni plan` reads a project of parts as it was built.** `manage.py
+  karni_facts` names the core contracts installed (`contracts`), so the export has
+  `features.people` and the others and keeps a role's grants on their models
+  (`people.*:merge`, `preferences.*:change`). In a project of parts, a family page (`/cart`,
+  `/settings`) is not a page of karni.yaml, and a page of the project's own under an app's route
+  is its code page. karni-commerce no longer offers itself for every karni.yaml that says
+  "orders".
+- **Added (experimental): commerce sells for every part of the family.** Every order names its
+  person (`Order.person`, `karni.people.resolve` at checkout and for an order placed by hand or by
+  an app, migration `0006_order_person` gives earlier orders theirs from their email, `karni.COM001`
+  while people is not installed, and listing `commerce` in karni.yaml turns people on). Commerce
+  gives the person facts `orders`, `total_spent`, `last_order` and `first_order`, and erases a
+  person's name, email, addresses and note from their orders on request. An order may be paid by
+  a deposit first (`Sellable.allows_deposit` and `deposit`, `Order.deposit`, migration
+  `0007_order_deposit`, `pay: "deposit"` at checkout and on an order placed by hand): the deposit
+  makes it `part_paid` and takes its lines, the buyer gets the balance link
+  (`commerce.balance_due`, `POST /api/orders/{id}/balance-link/`) and pays the rest from the
+  order's page, and a part-paid order may be cancelled. A sellable may hold for less than the
+  project's hold (`Sellable.hold_minutes`, the shortest hold of an order's lines wins, `COM003` below
+  one minute). An order whose total is zero is paid when it is placed, whatever it sells.
+  `karni_commerce.testing.assert_sellable` checks a part's adapter on the order path (`COM002`),
+  and the shop's products run it. The order moves are family events (`commerce.order.placed`,
+  `paid`, `part_paid`, `cancelled`, `refunded` and `commerce.invoice.issued`) and entries on the
+  buyer's timeline, the shop's parcel entries too. `GET /api/orders/kinds/` lists the kinds sold
+  (`Sellable.label`). A refund the policy allows nothing of says so.
+- **Changed (experimental): the staff's customers are the project's people.**
+  `GET /api/orders/customers/` lists the people who bought, with commerce's facts, and
+  `GET /api/orders/customer/` takes `?person=<id>` beside `?email=`. `KARNI_COMMERCE_CUSTOMERS`
+  and `karni_commerce.customers`, added earlier in this release, are gone: a project that keeps its
+  customers elsewhere overrides the two viewset actions.
+- **Added (experimental): @karni/commerce-ui's order panels serve any part.** A panel names the
+  kinds of line it is about (`kinds`) and gets those lines, `registerBuyerOrderPanel` adds one to
+  the buyer's order page, and `panelRegistry()` makes one for a page of your own. `PayChoice`
+  offers the deposit at checkout and on `NewOrderPage`, which takes every kind the project sells
+  with a kind filter (the shop's page no longer limits it to products). The buyer's order page
+  asks for the deposit or the balance, and the staff's shows them and sends the balance link.
+- **Added (experimental): notifications, the `karni.notify` contract.** Each part declares its
+  message kinds in its `messages.py` with `karni.mail.register_kind`, now with `channels=`
+  (`"email"`, `"inbox"` or both, `E445` for another) and `replace=False` for a default a part's
+  own declaration wins over. `notify.send(kind, to=..., context=...)` sends a declared kind
+  (`E440` for one nobody declared) to users, people, addresses or the holders of a role
+  (`notify.holders`, `E443` for anything else):
+  one email to each address that wants it, and a `Notification` in the inbox of each recipient
+  with an account (an address reaches an account once that account verified the email). The
+  inbox API: `GET /api/inbox/` (filters, pages, `E444`), `inbox/unread/`,
+  `inbox/<id>/read/` and `unread/`, `inbox/read-all/`, with notifications kept
+  `KARNI_NOTIFY_RETENTION_DAYS` (180) and pruned daily. A person turns a switchable kind off for
+  themselves per channel (`GET` and `PATCH /api/inbox/choices/`, `E441`). A marketing kind
+  (`transactional=False`) carries a signed unsubscribe link and the `List-Unsubscribe` one-click
+  headers, and an address that left it gets no more of it from any part
+  (`/api/notify/unsubscribe/`, a GET never unsubscribes, `E442` for a token this project did not
+  sign). The sender and the reply-to come from the business's details. `notify.on_event` sends a
+  kind when a family event is published, once per event. `karni.notify.source.NotifySource` is
+  the default `KARNI_MAIL_SOURCE`: `send_templated(..., kind=...)` keeps its call and gains the
+  switches, the unsubscribes, the edited text and the inbox, and a kind nobody declared still goes
+  by email only. Each move's email (`moves.<state>.notify`) is a kind with merge fields, so a
+  business edits it and it goes to the inbox too (`KARNI_NOTIFY_MOVE_CHANNELS`). `features.notify`
+  in karni.yaml and `requires = ["notify>=1"]` in recipe.toml install it, and a role may grant
+  `notify.emailtemplate`. `karni.W440` warns about a kind on channels the project does not send
+  on. See docs/notify.md.
+- **Changed (experimental): the emails a business edits live in `karni.notify`.** karni-commerce's
+  `EmailTemplate`, its `/api/email-templates/` viewset and `karni_commerce.email_templates` moved
+  to `karni.notify` (`notify.EmailTemplate`, `karni.notify.editor`), with the same API shape, so
+  the `EmailTemplateEditor` works as before. Commerce's migration 0008 copies every edit with its
+  dates and authors (`karni.notify.adopt`), and stops with `E446` when edits exist and the contract
+  is not installed. Editing needs `notify.emailtemplate:change`. `karni_commerce.mail.MailSource`
+  is now an alias of `NotifySource`, and commerce's settings fragment no longer sets
+  `KARNI_MAIL_SOURCE`. The shop requires `notify>=1` and its `shop-manager` edits the emails. See
+  docs/migrations/0.5.md.
+- **Changed (experimental): commerce's emails land in the inbox too.** With `karni.notify`
+  installed, each kind karni-commerce declares (`commerce.order_paid`, `new_order`,
+  `order_cancelled`, `order_refunded`, `order_note`, `payment_request` and `balance_due`) goes to
+  the email and to the inbox of the account that verified the address
+  (`karni_commerce.messages.CHANNELS`): the buyer's confirmation and balance to pay, and the
+  staff's new order. A person turns either off for themselves, and `KARNI_NOTIFY_CHANNELS =
+  ["email"]` keeps the inbox out.
+- **Added (experimental): karni-game, the server side of a game.** A new module (`pip install
+  karni-game && karni add game`, `path("api/game/", include("karni_game.urls"))`) for any game a
+  project hosts: a player on the people contract (a guest with a token the server issues, upgraded
+  to an account with `POST upgrade/`, which merges the guest's person and keeps their saves,
+  scores, balances, items, progress and streak), versioned cloud saves with a server version
+  counter (409 with the server's copy on a stale write), a size limit and save migrations per
+  game, leaderboards per game with all-time, daily and weekly periods on the game's clock,
+  plausible ranges, runs kept for review, run checks and flagged runs staff accept or reject, a
+  `played_at` trusted inside `KARNI_GAME_PLAYED_AT_WINDOW` for a score played offline, a
+  soft-currency wallet with a ledger (a row lock and a conditional update, never below 0, capped),
+  rewards declared on the server (daily, mission, achievement, match, staff, and ad, verified by
+  the portal's signed callback by default or client-claimed with a low cap), cosmetics and a shop,
+  real-money items as the karni-commerce kind `game_item` when it is installed, daily content (a
+  daily seed per game, streaks with a grace rule, a daily board), achievements and missions from
+  the counters a game reports, remote config and feature flags in one boot call, analytics checked
+  against the game's schema and published as `game.analytics.tracked`, rate limits and retry keys
+  (`intent`) on every write (a guest's issue and an analytics batch included), portal builds on
+  other origins with tokens only (`KARNI_GAME_CORS_ORIGINS`, never cookies), the admin and the
+  roles `game-manager` and `game-moderator`, and a contract for a realtime server of the project's
+  own (an HS256 player token, a signed results report). The HTTP contract is docs/game-api.md, the
+  guide docs/game.md. Codes `GAME001` to `GAME038`.
+- **Added (experimental): `karni new --kind game`.** A project with karni-game wired, a `games`
+  app for the game's server hooks, the game declared in `content/game.yaml` (`karni load`), a
+  public `/game` page that hosts the game on `@karni/game` (the app's API client as its transport,
+  the build's portal adapter), and `karniGame()` in the Vite config. The kind is recorded in
+  pyproject.toml and stated by `karni context` and the agent files. A project made without it
+  names neither karni-game nor `@karni/game`.
+- **Added (experimental): `@karni/game`, the browser side of the game add-on**
+  (`modules/karni-game/ui`). An ESM package with no runtime dependency, tree-shaken export by
+  export. `createPortal` wraps a portal adapter (Poki, CrazyGames, GameDistribution, Y8, a no-op
+  `noPortal` and a `fakePortal` for development) with an init time limit, paired gameplay
+  events, an interstitial cooldown, a reward only on the SDK's completed event and mute and
+  pause events around each ad (`linkPortal`). `createLoop` (a dt clamp, a fixed step with a step
+  cap, named pauses), `pauseOnHidden`, `createView` (a pixel-ratio cap lower on touch, a
+  letterboxed virtual resolution), `createInput` (held, pressed and released per action, a
+  first-gesture hook) with `createVirtualStick`, `createAudio` (master, music and effects, the
+  player's, ad's and portal's mutes apart), `createStorage` and `createSave` (a probe with a
+  memory fallback, versioned saves with migrations, a corrupt save kept aside), `createRng` and
+  the date seeds. `createGameClient` speaks the karni-game API: a guest that works offline and
+  upgrades to an account, save slots with a conflict rule, scores, boards, wallet, shop,
+  rewards, daily content, achievements, config and analytics, through a queue with intents,
+  and the same calls on the device with no server. `@karni/game/vite` (`karniGame()`: a
+  relative base, the build's one adapter behind `virtual:karni-game/portal`, a dev flag, a
+  single-file build), `@karni/game/build` and the `karni-game` command (per-portal packages from
+  one portal table, checked for hosts, other portals' SDKs, debug hooks, secret-shaped tokens,
+  size and ids in source, and zipped), Phaser, PixiJS and React Three Fiber adapters, and
+  `@karni/game/smoke`, a browser smoke harness with a corrupt-storage boot. Block Hopper, an
+  example game, is played in headless Chromium by CI. See docs/game-client.md.
+- **Changed (experimental): `@karni/game` speaks karni-game's final contract.** A score carries
+  `played_at` (sent again without it on `GAME036`), a guest is asked for with an intent kept
+  until its answer (a lost answer never makes a second guest), an analytics batch carries its
+  intent, `404 GAME037` is an empty slot (a 404 without a code keeps the device's copy), and
+  `adReward(key, show)` plays an ad reward by its `trust` (claimed after the ad, or its intent
+  handed to the portal's callback). A portal build names the game API with
+  `KARNI_GAME_API_URL` (or `karniGame({ apiUrl })`, `karni-game package --api-url`), reads it
+  as `gameApiUrl` of `virtual:karni-game/portal` and calls it with tokens, and the package
+  checks allow its host (`--allow-host` for another).
+- **Changed (experimental): `karni new --kind game` writes a game you can play.** A small
+  platformer as the project's own code in `frontend/src/game/` (its rules as plain functions
+  replayed from a seed and an input log, the canvas on @karni/game's loop and input, the session
+  that reports a finished run as a score, progress, a save and analytics, and the page's panels:
+  the wallet and the shop, the daily check-in, the board and the achievements), a guest who keeps
+  their progress by signing in with a code sent by email (`KARNI_EMAIL_OTP = True`, then
+  `POST upgrade/`), and `frontend/portal/`, the same game alone for the game portals (`npm run
+  game:package`, the game API from `KARNI_GAME_API_URL`, the portals' origins in
+  `KARNI_GAME_CORS_ORIGINS`). The app keeps its own base (`karniGame({ relativeBase: false })`),
+  where the relative base had broken its routes under `/app/`, and the page fits
+  `karni/max-page-lines`, which `karni check` had failed on a new game project. Found by playing a
+  new project end to end in a browser.
+- **Docs: build games is a main feature.** README.md and the docs home list it next to the
+  others (`karni new --kind game`, karni-game, @karni/game and the game API), the features
+  page has a section for it, the kinds table in docs/public-site.md and `karni new --kind`'s
+  help name the `game` kind, and `examples/hybrid-demo` is an app with a game inside it, with
+  a CI job.
+- **Fixed (experimental): @karni/game, found by playing a new game project end to end.** A
+  press made in a frame that ran no fixed step reaches the next step (on a 120 Hz screen with a
+  step of 1/60 every other tap was lost): the loop's `afterFrame`, Pixi's `afterTick` and
+  `useEndInputFrame(input, fixed)` clear input edges only after a frame that ran a step
+  (`FixedStep.lastSteps`). A device with no copy of a slot asks the save list first, so a new
+  player's empty slot is never a 404 in the console. `signInGuest()` signed in, with no guest on
+  the device, is the account's own player, where it made a stray guest for every member of an
+  app. `karni-game package` reports a missing portal id in one line with exit code 1, and a fresh
+  checkout type-checks before a build.
 - **Added: `karni make deploy systemd-nginx`, a deploy without Docker.** It writes
   `deploy/`: `deploy.sh`, systemd units for gunicorn (and the Celery worker and beat,
   `--no-celery` leaves them out), an nginx vhost, the server's `env.example` and a README.
@@ -105,7 +642,7 @@ apply codemods and list the manual steps. This file is the human summary.
   `KARNI_SITE_MENU_FOLLOW_SEED = False` seeds once as before, and
   `karni_site.menus.sync_menu()` follows a seed from code. karni-site's migration 0002 adds
   `Menu.seeded` and `MenuItem.seed_key`
-  ([migration note](docs/migrations/0.5.md#seeded-menus-follow-their-seed)).
+  ([migration note](docs/migrations/0.6.md#seeded-menus-follow-their-seed)).
 
 - **Added: `manage.py karni_site_seed`, a site's defaults stored in a deploy, not on a
   visit.** A page's first render was a visitor's request, which stored each new
@@ -119,7 +656,7 @@ apply codemods and list the manual steps. This file is the human summary.
   karni-site. Storing a template's default now leaves no change-history entry, on a visit
   as in a deploy, through the new `karni.audit.capture.unrecorded(reason)`: an edit by a
   person is recorded as before. A new block's place no longer costs a count query
-  ([migration note](docs/migrations/0.5.md#a-sites-defaults-are-stored-in-the-deploy-and-leave-no-history)).
+  ([migration note](docs/migrations/0.6.md#a-sites-defaults-are-stored-in-the-deploy-and-leave-no-history)).
 
 - **Fixed: a site closed to search engines says so on every page, not in robots.txt alone.**
   With `KARNI_SITE_ALLOW_INDEXING` off (or outside `DJANGO_ENV=prod` by default), only
@@ -130,7 +667,7 @@ apply codemods and list the manual steps. This file is the human summary.
   nofollow">`. The new `KARNI_SITE_ROBOTS_TAG` holds the directives, `""` sends neither.
   `karni check --seo` checks the pages as an open site serves them, so a development copy
   is judged as production will be
-  ([migration note](docs/migrations/0.5.md#a-closed-site-says-noindex-on-every-page)).
+  ([migration note](docs/migrations/0.6.md#a-closed-site-says-noindex-on-every-page)).
 
 - **Fixed: karni-site's deployment settings are read from the environment.**
   `KARNI_SITE_URL`, `KARNI_SITE_ALLOW_INDEXING`, `KARNI_SITE_QUEUE_RENDITIONS`,
@@ -168,7 +705,7 @@ apply codemods and list the manual steps. This file is the human summary.
   keep fingerprinted names for a year and plain ones for an hour at most. An unknown value
   fails with `E510`
   ([docs](docs/deploy.md#14-static-and-media-files),
-  [migration note](docs/migrations/0.5.md#static-files-under-fingerprinted-names)).
+  [migration note](docs/migrations/0.6.md#static-files-under-fingerprinted-names)).
 
 - **Added (experimental): `@pages`, the known pages of a view behind a capture.** A view
   such as `/topics/<slug:slug>/` with a small, fixed set of addresses and no model had no
@@ -191,6 +728,81 @@ apply codemods and list the manual steps. This file is the human summary.
   Node, npm and the `@karni/ui` manifest for `frontend/` in every project, so a site made
   with `--no-staff-app` was told to run `npm install`. Without `frontend/package.json` it
   now says those checks do not apply.
+- **Added (experimental): the family screens.** @karni/ui gains the screens a project of parts
+  shares: `FamilyLayout` (the storefront's frame for `area: "store"` routes, the back office with
+  the app menu, the search box, the inbox bell and the account menu for the rest, the home and
+  `area: "family"` routes per audience), `FamilyHome` (each staff role's tiles from every part,
+  the public home a part registers with `registerPublicHome`, and an empty state that says what
+  to install), `PeoplePage` and `PersonPage` (`/people`, `/people/<id>`: a column and a figure
+  per person fact, a tab per part with `registerPersonTab`, addresses and organisations, Merge
+  and Erase for who holds the explicit grants), `Timeline` (paging, a filter by kind,
+  `registerTimelineKind`, the change history beside it), `InboxBell`, `InboxPage` and
+  `EmailChoices`, `SearchPage` (results part by part, keyboard first), `MyAddresses`,
+  `SignUpForm` (a "New account" tab on `SignInPage`), `registerFamily`, `useAudience`,
+  `useBusiness` and `useSiteName`. `GlobalSearch` groups its hits by part and links to every
+  result (`allResultsHref`). @karni/commerce-ui gains `registerLineRenderer` (a kind's lines on
+  the cart, checkout and both order pages), `FamilyOrdersPage`, `FamilyOrderPage`,
+  `PersonOrders` (the person page's Orders tab), `register()` and `registerCommercePaths`, and
+  the staff's order page links the buyer to their person page.
+- **Added (experimental): `karni build` writes the family pages, the layout and the home.** In a
+  project of parts, `frontend/src/karni/` holds the sign-in, account, search, inbox, settings,
+  people, cart, checkout and order pages whose provider the project holds, registered in
+  `routes.tsx`'s Karni block, and one layout and one home. The scaffold's `layout.tsx` and
+  `pages/home.tsx` become re-exports of them while they are what `karni new` wrote. `parts.ts`
+  registers the family's sections and karni-commerce's before each part. The people list is
+  "Customers" in a project whose only part sells. A part ships none of these: the shop recipe's
+  thin page files, layout and home are gone, its storefront is the public home and its
+  customers are `/people`. `customer` gets `people.address: own` with the people contract.
+- **Added (experimental): named menus.** `KARNI_NAVIGATION` may be a mapping of named menus
+  (`{"app": [...], "public": [...], "account": [...]}`), `GET /api/navigation/?menu=` answers one
+  (a name the project does not declare answers no entries), `useNavigation({ menu })` reads one,
+  and `karni check` compares every menu. `navigation:` in karni.yaml takes the same mapping, and
+  `karni recipes add` merges menus menu by menu. The shop's storefront header is its `public`
+  menu, and the CRM and booking recipes list their pages in the app menu.
+- **Added (experimental): what the family screens need from the API.** `GET /api/search/` names
+  each group's `part` and `part_label`, `GET /api/people/<id>/` answers `can` (`merge`, `erase`),
+  and `GET /api/orders/?person=<id>` lists one person's orders.
+- **Fixed (experimental): what the first look in a browser found in the shared screens.**
+  `ResourceBoard` and `ResourceCalendar` keep their cards' hidden labels inside their scroll
+  boxes, so the page never scrolls sideways, at any width. A
+  calendar event without a name of its own is named by an expanded relation (a slot's resource),
+  else by the resource in words, never by its key, its time gutter keeps "12:00 AM" on one line,
+  and its period takes its own line on a narrow toolbar. The commerce pages: the checkout keeps
+  the quantity beside a line a kind draws its own way, "Pay the balance (US$49.20)" has no
+  stray spaces, and "Your orders" lines up in columns. The person detail with `can` is its own
+  schema component (`PeoplePersonDetail`), karni-commerce's app reads "Commerce", and a merged
+  menu never labels a part's group with a page's name (the booking part groups as "Bookings").
+- **Fixed (experimental): a timeline entry shows money the project's way.** A `timeline=`
+  option names its money fields (`"money": {"amount": "currency"}`), the entry's title and body
+  read "$127.54", not "127.5400 usd", and `<Timeline>` draws it with the business's currency
+  display. karni-payments, karni-commerce and the recipes declare their amounts.
+  `timeline.skip_when(name, check)` leaves an event off the timeline: with karni-commerce, a
+  payment for an order writes no entry of its own (the order's entry says it), and a payment
+  with no order keeps its entry.
+- **Added: family events without a worker in development.** With `DEBUG` on, or
+  `KARNI_EVENTS_INLINE=true`, a published event is delivered right after the commit, in the
+  process, so a timeline entry or an inbox message shows up with no Celery worker. Production
+  keeps the outbox and the worker.
+- **Fixed (experimental): a person's inbox switches list only what they can receive.**
+  `karni.mail.register_kind(..., requires=)` says who can receive a kind (read like a menu
+  entry's `requires`), `karni.notify.receives(user, kind)` answers it, and
+  `GET /api/inbox/choices/` lists a customer no staff kinds. Commerce's new order and the shop's
+  low stock are the staff's.
+- **Fixed (experimental): `ResourceBoard` orders its columns the way the state machine flows.**
+  From the initial state along the transitions, each state as far along as its longest way in,
+  closed states last, the declared order of the choices only breaking ties.
+- **Fixed (experimental): `ResourceCalendar` opens where the events are.** The day and week
+  views open scrolled to the hour of the period's earliest event, else to `workdayStart` (new,
+  default 8:00), once per period. An event that ends at midnight ends at the bottom of its day
+  instead of drawing upside down, and one that crosses midnight shows on both days.
+- **Fixed (experimental): what a staff check of the person page found.** The merge preview names
+  the other record by its email too (a duplicate often has the same name), and a timeline entry
+  gives no link to the page already shown (the person's own page after a merge).
+- **Changed: one release, 0.6.0.** What was to be 0.5.2 ships with the family, commerce,
+  notifications, the shared screens and the game add-on as 0.6.0: every Python and npm package
+  is 0.6.0, the modules ask for `karni>=0.6,<0.7` and `@karni/ui` `^0.6.0`, a new project's
+  `@karni/ui` range is `^0.6.0`, the changelog data is `karni/changelog/0.6.0.toml` with its
+  two codemods under `upgrades/v0_6`, and the upgrade notes are docs/migrations/0.6.md.
 
 ## 0.5.1 (2026-11-12)
 

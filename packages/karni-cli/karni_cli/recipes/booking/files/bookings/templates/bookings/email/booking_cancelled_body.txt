@@ -1,0 +1,8 @@
+Hello,
+
+Your booking of {{ row.slot.resource }} is cancelled:
+{{ row.slot.starts_at|date:"l j F Y" }} at {{ row.slot.starts_at|date:"H:i" }}.
+If you paid for it, the payment is refunded in full.
+{% if frontend %}
+Book another time: {{ frontend }}/bookings/resources/{{ row.slot.resource.pk }}
+{% endif %}

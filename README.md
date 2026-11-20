@@ -85,7 +85,7 @@ check       ok
 Built: the project matches karni.yaml.
 ```
 
-On a developer laptop, `karni new --recipe shop` builds the shop from scratch on SQLite in 14.1 seconds, its tests and `karni check` included and the frontend install left out ([how fast is it](docs/recipes/index.md#how-fast-is-it)). The flow works without an agent too: every step is a command you can run yourself. The recording below builds a project command by command, then shows its welcome page, its admin and its React screens.
+On a developer laptop, `karni new --recipe shop` builds the shop from scratch on SQLite in 53.8 seconds, its tests and `karni check` included and the frontend install left out ([how fast is it](docs/recipes/index.md#how-fast-is-it)). The flow works without an agent too: every step is a command you can run yourself. The recording below builds a project command by command, then shows its welcome page, its admin and its React screens.
 
 <p align="center">
   <img alt="A terminal runs karni new, karni make model, migrate, seed and serve. Then the browser shows the welcome page, the admin listing the seeded events, and the React app's events table and detail view." src="https://raw.githubusercontent.com/cbsshekhawat18-lab/karni/main/docs/assets/karni-demo.gif" width="880">
@@ -223,7 +223,17 @@ Every feature, grouped by what you need. The [features page](docs/features.md) l
 </td>
 </tr>
 <tr>
-<td colspan="2" valign="top">
+<td valign="top">
+
+**Build games** (experimental)
+
+- [`karni new --kind game`](docs/game.md#a-new-game-project): a small game you can play, its server, a page in the app and a package per game portal
+- [karni-game](docs/game.md): guest players who keep their progress when they sign in, cloud saves, leaderboards, a soft-currency wallet, daily content and achievements, all decided on the server
+- [@karni/game](docs/game-client.md): a canvas loop, input, audio, saves on the device, an offline queue, adapters for Poki, CrazyGames, GameDistribution and Y8, and adapters for Phaser, PixiJS and React Three Fiber
+- [The game API](docs/game-api.md): the HTTP contract, for a client or a realtime server of your own
+
+</td>
+<td valign="top">
 
 **Production**
 
@@ -261,6 +271,8 @@ A recipe is a ready `karni.yaml` plus the little domain code a spec cannot expre
 | [`karni-reports`](modules/karni-reports/README.md) | A row printed to PDF from an HTML template in the background, served only to users who may see the row | `pip install karni-reports && karni add reports` |
 | [`karni-ai`](modules/karni-ai/README.md) | Rows for any resource read from text, a web page or a PDF by a language model, always through the import preview | `pip install "karni-ai[<provider>]" && karni add ai` |
 | [`karni-storage`](modules/karni-storage/README.md) | Files a row owns, in S3 or an S3-compatible service, served only to whoever may read the row | `pip install "karni-storage[images]" && karni add storage` |
+| [`karni-commerce`](modules/karni-commerce/README.md) | One cart, checkout and order path for anything a project sells: products, seats, bookings | `pip install karni-commerce && karni add commerce` |
+| [`karni-game`](modules/karni-game/README.md) | The server side of a game: guest players, cloud saves, leaderboards, a soft-currency wallet, daily content, achievements | `pip install karni-game && karni add game` |
 
 ## Quickstart
 

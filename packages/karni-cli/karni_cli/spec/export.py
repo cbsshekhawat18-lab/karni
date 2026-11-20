@@ -51,8 +51,11 @@ from karni_cli import project as project_mod
 from karni_cli.generators.naming import default_route, snake
 from karni_cli.kinds import project_kind
 from karni_cli.project import CliError
-from karni_cli.spec import emit, navigation, schema
+from karni_cli.spec import dashboard, emit, navigation, schema
 from karni_cli.spec.catalog import (
+    CONTRACT_ACTIONS,
+    CONTRACT_GRANT_MODELS,
+    CONTRACT_MODELS,
     DEFAULT_CACHE_TTL,
     MODULES,
     OTHER_MODELS,
@@ -166,9 +169,20 @@ KARNI_KEYS: Final = {
     "scope_paths": "scope_paths",
     "field_groups": "groups",
     "column_sets": "column_sets",
+    # rules every write keeps (karni.rules): the spec's data, unchanged
+    "bounds": "bounds",
+    "unique": "unique",
+    "targets": "targets",
+    "frozen": "frozen",
+    "delete": "delete",
+    "moves": "moves",
 }
 _IMPORT: Final = re.compile(
     r"""^import\s+(\w+)\s+from\s+["']\./pages/([\w./-]+)["'];?""", re.MULTILINE
+)
+#: The family's pages karni build writes in a project of parts (karni_cli.builder.family).
+_FAMILY_IMPORT: Final = re.compile(
+    r"""^import\s+(\w+)\s+from\s+["']\./karni/pages/[\w./-]+["'];?""", re.MULTILINE
 )
 _ROUTE: Final = re.compile(r"""path:\s*["']([^"']+)["']\s*,\s*component:\s*(\w+)""")
 _RESOURCE: Final = re.compile(
@@ -480,6 +494,17 @@ def _access_items(described: dict[str, Any]) -> list[str] | None:
         return [f"role:{name}" for name in described["role"]]
     if set(described) == {"owned"}:
         return [f"owned:{described['owned']}"]
+    matching = described.get("matching")
+    if (
+        set(described) == {"where", "matching"}
+        and isinstance(matching, dict)
+        and len(matching) == 1
+    ):
+        ((name, value),) = matching.items()
+        if value is True:
+            return [f"where:{name}"]
+        shown = ("true" if value else "false") if isinstance(value, bool) else str(value)
+        return [f"where:{name}={shown}"]
     return None
 
 
@@ -497,7 +522,7 @@ def _access(viewset: dict[str, Any] | None, label: str, left_out: list[str]) -> 
         return "code"
     declared = viewset["access"]
     slots: dict[str, list[str]] = {}
-    for slot in ("read", "write", "create"):
+    for slot in ("read", "write", "create", "delete", "assign"):
         items = _access_items(declared[slot]) if slot in declared else []
         if items is None:
             break
@@ -519,6 +544,13 @@ def _grant_ok(pattern: str, apps: dict[str, Any], modules: set[str]) -> bool:
         return True
     target, _, action = pattern.partition(":")
     app, _, model = target.partition(".")
+    standard = ("", "*", "view", "add", "change", "delete")
+    for contract, contract_models in CONTRACT_GRANT_MODELS.items():
+        # a grant on a core contract's models (people.*:merge, preferences.*:change)
+        allowed = (*standard, *CONTRACT_ACTIONS.get(contract, ()))
+        named = any(fnmatch.fnmatchcase(name.lower(), model.lower()) for name in contract_models)
+        if fnmatch.fnmatchcase(contract, app) and action in allowed and named:
+            return True
     if action not in ("", "*", "view", "add", "change", "delete"):
         return False
     candidates = [
@@ -565,6 +597,9 @@ def build(facts: dict[str, Any], root: Path) -> Exported:
             names[f"{known.app}.{model}"] = f"{known.app}.{model}"  # type: ignore[union-attr]
     for other in OTHER_MODELS:
         names[other] = other
+    for contract, contract_models in CONTRACT_MODELS.items():
+        for name in contract_models:
+            names[f"{contract}.{name}"] = f"{contract}.{name}"
     ctx = _Ctx(facts, names, left_out, str(facts["settings"].get("KARNI_PK") or "uuid"))
     viewsets: dict[str, dict[str, Any]] = {}
     routes: dict[str, str] = {}
@@ -600,6 +635,8 @@ def build(facts: dict[str, Any], root: Path) -> Exported:
         data["modules"] = modules
     settings = facts["settings"]
     features = _features(settings, left_out)
+    for contract in facts.get("contracts") or ():  # karni.people, karni.preferences...
+        features[str(contract)] = True
     if features:
         data["features"] = features
     roles = _roles(facts, apps, set(modules) | ({"site"} if app_info["kind"] != "app" else set()))
@@ -608,16 +645,25 @@ def build(facts: dict[str, Any], root: Path) -> Exported:
         left_out += roles[1]
     if apps:
         data["apps"] = apps
-    pages = _pages(root, routes, entities, names_count, left_out)
+    prefixes: dict[str, str] = {}
+    pages = _pages(root, routes, entities, names_count, left_out, prefixes)
     if pages:
         data["pages"] = pages
+    for label, prefix in prefixes.items():
+        if label in apps and prefix:
+            apps[label] = {"route": prefix, **apps[label]}
     menu = navigation.entries_from_setting(
         settings.get("KARNI_NAVIGATION"),
-        navigation.pages(schema.Spec.model_validate(data)),
+        navigation.known_pages(schema.Spec.model_validate(data)),
         left_out,
     )
     if menu:
         data["navigation"] = menu
+    tiles = dashboard.entries_from_setting(
+        settings.get(dashboard.SETTING), schema.Spec.model_validate(data), left_out
+    )
+    if tiles:
+        data["dashboard"] = tiles
     seed = {
         _entity_ref(label, names_count): count
         for label, count in facts["seeders"].items()
@@ -724,6 +770,9 @@ def _entity(
     cache = _cache(viewset, label, ctx.left_out)
     if cache is not None:
         entity["cache"] = cache
+    actions = _actions(viewset, label, ctx.left_out)
+    if actions:
+        entity["actions"] = actions
     _drop_unknown(entity, label, ctx.left_out)
     return entity
 
@@ -779,6 +828,29 @@ def aggregate_of(declared: Any) -> dict[str, Any] | None:
         found["values"] = list(lists["values"])
     if lists["metrics"] and set(lists["metrics"]) != set(AGGREGATE_METRICS):
         found["metrics"] = list(lists["metrics"])
+    return found
+
+
+def _actions(viewset: dict[str, Any] | None, label: str, left_out: list[str]) -> dict[str, Any]:
+    """The viewset's row actions as the spec's ``actions`` (a ``by`` it cannot write: left out)."""
+    found: dict[str, Any] = {}
+    for name, rule in ((viewset or {}).get("row_actions") or {}).items():
+        action: dict[str, Any] = {}
+        if rule.get("from"):
+            action["from"] = _one(list(rule["from"]))
+        if rule.get("to") is not None:
+            action["to"] = rule["to"]
+        if rule.get("by") is not None:
+            items = _access_items(rule["by"])
+            if items is None:
+                left_out.append(
+                    f"{label}: the row action {name}'s by (a shape the spec cannot write)"
+                )
+                continue
+            action["by"] = _one(sorted(dict.fromkeys(items)))
+        if rule.get("field") is not None:
+            action["field"] = rule["field"]
+        found[str(name)] = action
     return found
 
 
@@ -1001,6 +1073,7 @@ def _pages(
     entities: dict[str, Any],
     names_count: dict[str, int],
     left_out: list[str],
+    prefixes: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     frontend = root / "frontend" / "src"
     text = (
@@ -1010,14 +1083,27 @@ def _pages(
     )
     files = {component: file for component, file in _IMPORT.findall(text)}
     pages: dict[str, list[Any]] = {}
+    # In a project of parts, a family page (/cart, /settings) is the family's, never a page
+    # of karni.yaml: the parts mount it, the spec does not list it.
+    family: frozenset[str] = frozenset()
+    if (root / ".karni" / "recipes").is_dir():
+        from karni_cli.recipes.compose import FAMILY_ROUTES
+
+        family = FAMILY_ROUTES - {"/"}
+    # The pages the build writes for the family (frontend/src/karni/pages/) are not karni.yaml's.
+    familys = set(_FAMILY_IMPORT.findall(text))
     for path, component in _ROUTE.findall(text):
+        if path in family or component in familys:
+            continue
         file = files.get(component)
         source = ""
         if file is not None:
             candidates = [frontend / "pages" / f"{file}{ext}" for ext in ("", ".tsx", ".ts")]
             found = next((c for c in candidates if c.is_file()), None)
             source = found.read_text(encoding="utf-8") if found else ""
-        named = _page_entry(path, source, routes, entities, names_count)
+        named = _page_entry(
+            path, source, routes, entities, names_count, prefixes, file if family else None
+        )
         if named is None:
             if component != "AppLayout":
                 left_out.append(f"pages: {path} ({component}), a page of the project's own")
@@ -1061,11 +1147,18 @@ def _page_entry(
     routes: dict[str, str],
     entities: dict[str, Any],
     names_count: dict[str, int],
+    prefixes: dict[str, str] | None = None,
+    file: str | None = None,
 ) -> tuple[str, Any] | None:
-    if path == "/" and "<Dashboard" in source:
+    # The scaffold's dashboard, or the family's home it re-exports in a project of parts.
+    if path == "/" and ("<Dashboard" in source or 'from "../karni/home"' in source):
         return "home", "dashboard"
     found = _RESOURCE.search(source)
-    if found is not None:
+    # In a project of parts (``file`` given), the build writes entity pages under an app's
+    # route in pages/karni/ only: a page of the project's own there (/shop/products with a
+    # ResourceTable) is a code page.
+    own = file is not None and not file.startswith("karni/") and path.count("/") > 1
+    if found is not None and not own:
         kind = _PAGE_KINDS[found.group(1)]
         resource = found.group(2)
         label = routes.get(resource)
@@ -1077,13 +1170,36 @@ def _page_entry(
             "detail": [f"{base}/$id"],
             "form": [f"{base}/new", f"{base}/$id/edit"],
         }
-        if path not in expected[kind] or resource != base[1:]:
+        if resource != base[1:]:
             return None
+        # under the app's route (apps.<label>.route): /crm/deals is the deals list of crm
+        prefix = next(
+            (
+                path[: -len(written)]
+                for written in expected[kind]
+                if path.endswith(written)
+                and (path == written or re.fullmatch(schema.ROUTE, path[: -len(written)]))
+            ),
+            None,
+        )
+        if prefix is None:
+            return None
+        if prefixes is not None and prefix:
+            prefixes.setdefault(label.split(".", 1)[0], prefix)
         related = _related(source, routes, names_count) if kind == "detail" else []
         if related:
             return _entity_ref(label, names_count), {"detail": {"related": related}}
         return _entity_ref(label, names_count), kind
     name = path.lstrip("/")
+    parent, _slash, last = path.rpartition("/")
+    if parent and re.fullmatch(schema.PAGE_NAME, last):
+        # a code page under an app's route (/shop/reports): <app>.<name>
+        owners = {label.split(".", 1)[0] for label in routes.values()}
+        app = next(
+            (label for label, prefix in (prefixes or {}).items() if prefix == parent),
+            parent[1:] if parent[1:] in owners else None,
+        )
+        return (f"{app}.{last}", "code") if app is not None else None
     if not re.fullmatch(schema.PAGE_NAME, name):
         return None
     if "<LoginForm" in source:

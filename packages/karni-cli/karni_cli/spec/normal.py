@@ -38,7 +38,7 @@ from karni_cli.generators.fields import ALIASES, parse_field
 from karni_cli.generators.lifecycle_fields import _states
 from karni_cli.generators.naming import default_route
 from karni_cli.project import CliError
-from karni_cli.spec import navigation
+from karni_cli.spec import dashboard, navigation
 from karni_cli.spec.catalog import DEFAULT_CACHE_TTL
 from karni_cli.spec.schema import AGGREGATE_METRICS, Spec
 
@@ -104,7 +104,20 @@ def _access(rule: Any) -> Any:
     create = rule.get("create")
     if create is not None and sorted(set(create)) != write:
         out["create"] = sorted(set(create))
+    delete = rule.get("delete")
+    if delete is not None and sorted(set(delete)) != write:
+        out["delete"] = sorted(set(delete))
+    if rule.get("assign"):
+        out["assign"] = sorted(set(rule["assign"]))
     return out
+
+
+def _actions(actions: dict[str, Any]) -> dict[str, Any]:
+    """Row actions with ``by`` sorted (any of them admits) and ``from`` in its order."""
+    return {
+        name: {**rule, "by": sorted(set(rule["by"])) if rule.get("by") is not None else None}
+        for name, rule in sorted(actions.items())
+    }
 
 
 def _entity_label(name: str, app: str, apps: dict[str, Any]) -> str:
@@ -257,6 +270,7 @@ def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
             if entity["aggregate"] is not None:
                 entity["aggregate"] = _aggregate(entity["aggregate"])
             entity["global_search"] = global_search(entity["global_search"], entity["search"])
+            entity["actions"] = _actions(entity["actions"])
         app["entities"] = dict(sorted(app["entities"].items()))
     data["apps"] = dict(sorted(data["apps"].items()))
     pages = []
@@ -270,6 +284,8 @@ def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
     data["seed"] = dict(sorted(data["seed"].items()))
     # The menu as KARNI_NAVIGATION gets it: `true` and the list it means compare equal.
     data["navigation"] = navigation.menu(spec)
+    # The home tiles as KARNI_DASHBOARD_TILES gets them (an entity as its resource).
+    data["dashboard"] = dashboard.tiles(spec)
     social = data["features"]["social_login"]
     data["features"]["social_login"] = sorted(set(social))
     if data["features"]["api_cache"] is True:

@@ -9,7 +9,11 @@ vendor extensions the ``@karni/ui`` frontend consumes:
   ``BaseViewSet`` registered with the default router;
 * ``x-karni-relation: {"resource": "<router prefix>", "many": bool}`` on
   every relation field of a generated serializer whose target model has a
-  registered route (omitted silently otherwise);
+  registered route (omitted silently otherwise), with ``"label"`` (the
+  field that names a row, ``class Karni: label``) when the target declares
+  it (experimental);
+* ``x-karni-user: true`` on a relation to the user model (experimental):
+  @karni/ui expands it and shows the person's name, never the id;
 * ``x-karni-access`` on every ``BaseViewSet`` operation: the access
   predicate governing that operation (ADR 0001 Decision 2), e.g.
   ``{"any": [{"owned": "organizer"}, {"role": ["staff"]}]}``. Keys:
@@ -35,6 +39,10 @@ vendor extensions the ``@karni/ui`` frontend consumes:
   on the ``aggregate`` operation of a resource that declares an aggregation
   (:mod:`karni.aggregation`, experimental). Without a declaration the
   operation is left out.
+* ``x-karni-actions`` (experimental) on the list and retrieve operations of a
+  viewset that declares ``row_actions``: each action's ``from``, ``to``,
+  ``field``, ``by`` and ``requires`` (:mod:`karni.api.actions`); each
+  action's own operation carries its entry as ``x-karni-action``.
 * ``x-karni-related`` (experimental) on the list operation: the model's
   reverse relations whose model has a route, each
   ``{"name", "resource", "field", "param", "key", "label"}``: the relation's
@@ -155,6 +163,7 @@ class KarniAutoSchema(AutoSchema):
         if view is not None:
             declaration, predicate = self._karni_access(view)
             operation["x-karni-access"] = describe_access(declaration, predicate)
+            self._karni_row_actions(view, operation)
             rate = throttle_rate(view, self._karni_action())
             if rate is not None:
                 operation["x-karni-throttle"] = rate
@@ -166,6 +175,28 @@ class KarniAutoSchema(AutoSchema):
             if self._karni_action() == "aggregate" and aggregation is not None:
                 operation["x-karni-aggregate"] = aggregation.describe(view.get_model())
         return operation
+
+    def _karni_row_actions(self, view: Any, operation: dict[str, Any]) -> None:
+        """``x-karni-actions`` on the list and detail operations, ``x-karni-action`` on each one.
+
+        Each is :meth:`karni.api.actions.RowAction.describe`: the states it runs
+        from, the state it moves to, its StateField, who may (as
+        ``x-karni-access`` writes it) and the fields the move requires.
+        """
+        from karni.api.actions import described
+
+        try:
+            model = view.get_model()
+        except ImproperlyConfigured:
+            return
+        actions = described(type(view), model)
+        if not actions:
+            return
+        action = self._karni_action()
+        if action in ("list", "retrieve"):
+            operation["x-karni-actions"] = actions
+        elif action in actions:
+            operation["x-karni-action"] = actions[action]
 
     def _karni_aggregation(self) -> Any:
         """The view's aggregation declaration (``None`` when it has none or it is malformed)."""
@@ -732,11 +763,35 @@ def _annotate_relation(schema: Any, field: Any, *, many: bool) -> Any:
         key = _taxonomy_key(field)
         if key is not None:
             schema["x-karni-taxonomy"] = key
+    if _is_user_target(model):
+        # A person: @karni/ui expands it and shows their name, never the id.
+        schema["x-karni-user"] = True
     resource = _route_for_model(model)
     if resource is None:
         return schema
-    schema["x-karni-relation"] = {"resource": resource, "many": many}
+    relation: dict[str, Any] = {"resource": resource, "many": many}
+    label = _row_label(model)
+    if label is not None:
+        relation["label"] = label
+    schema["x-karni-relation"] = relation
     return schema
+
+
+def _is_user_target(model: type[Model]) -> bool:
+    from django.contrib.auth import get_user_model
+
+    return model is get_user_model()
+
+
+def _row_label(model: type[Model]) -> str | None:
+    """``class Karni: label`` of ``model``: the field that names a row (``number``)."""
+    from karni.meta import karni_option
+
+    label = karni_option(model, "label")
+    if not isinstance(label, str) or not label:
+        return None
+    names = {field.name for field in model._meta.get_fields()}
+    return label if label in names else None  # not a field: the client's own guess
 
 
 def _taxonomy_key(field: Any) -> str | None:

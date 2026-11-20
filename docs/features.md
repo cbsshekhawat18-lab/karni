@@ -19,6 +19,7 @@ Reference or Debugging sections.
 - **[The `karni` command](cli.md)**: every command and option, from `karni new` to `karni upgrade`.
 - **[Settings](settings.md)**: one `karni_settings(globals())` call, driven by the environment and validated at startup.
 - **[Demo data](seeding.md)**: `karni seed` fills every table with realistic, connected rows and prints a demo login.
+- **[Demo mode](demo-mode.md)** (experimental): put a project online for anyone to try. One demo login per role, a write rule that lets only those accounts write, a reset every N hours, one boot command and the sign-in notice, from settings.
 - **[Real content](content-loading.md)**: `karni load` reads a JSON or YAML file by natural key, in one transaction.
 - **[A public website](public-site.md)**: server-rendered pages at `/`, every text and image editable in the admin.
 - **[From a design to content](design-content.md)**: a designer's static pages become models and real rows.
@@ -29,11 +30,13 @@ Reference or Debugging sections.
 - **[Models](models.md)**: `BaseModel` with a UUID key, timestamps, soft delete and audit fields, integer keys, external tables and SQL views, [tree models](models.md#tree-models) and [taxonomies](models.md#taxonomies).
 - **[Typed fields](fields.md)**: money, percent, quantity, phone, country, currency, markdown and more, with rules the database enforces.
 - **[Lifecycle and capacity](lifecycle-and-capacity.md)**: declared states and transitions, capacity that never oversells, no-overlap constraints.
+- **[Rules](rules.md)** (experimental): bounds, unique among live rows, which rows a relation may point at, frozen fields, delete rules, what a state change needs and stamps, and row actions with the states and roles where each is legal, declared in karni.yaml.
 - **[The API](api.md)**: `BaseViewSet` with a required `access` rule, generated serializers, filters, search, `?expand=`, query budgets and the OpenAPI schema.
 - **[Permissions at the queryset](concepts/queryset-permissions.md)**: one row filter for list, detail, relations and expansion, so a row outside your scope is a 404.
 - **[Accounts](accounts.md)**: email sign-in, the auth endpoints, roles as data, per-user grants, two-factor and social login.
 - **[Change history](change-history.md)**: who changed which field from what to what, in the admin, the API and the UI.
 - **[Events and listeners](events.md)**: react to model changes from `listeners.py`, inline or queued to Celery.
+- **[Family events](family-events.md)** (experimental): one app reacts to another by an event's name, through an outbox written in the writer's transaction and delivered after the commit, with retries.
 - **[Scheduling](scheduling.md)**: periodic and background work in `schedules.py`, run by Celery beat and workers.
 
 ## Large apps
@@ -41,6 +44,11 @@ Reference or Debugging sections.
 - **[Aggregations](aggregations.md)**: counts, sums and averages at `<resource>/aggregate/` by category, relation or date.
 - **[Search across models](global-search.md)**: `GET /api/search/` with access applied per model, and a command palette.
 - **[Navigation from data](navigation.md)**: each user's menu, opened by the same roles and grants as the API.
+- **[Several recipes in one project](family.md)** (experimental): `karni recipes add`, `remove` and `upgrade`, parts under their own routes, roles named `<prefix>-<role>`, one currency, and what each part requires installed with it.
+- **[People](people.md)**: one person and one organisation record for every part of a project, found or created by email, merged with a preview, erased on request, with person facts in SQL (experimental).
+- **[Timeline](timeline.md)**: one stream of moments per person and per record, written from family events that declare a title or by hand, and shown only to callers who may read every record an entry is about (experimental).
+- **[Notifications](notify.md)**: message kinds sent to an email, the recipient's inbox in the app or both, emails a business edits, each person's own switches, unsubscribing from marketing emails by a signed link, and one sender (experimental).
+- **[Preferences](preferences.md)**: the business's details, one settings section per part, values a deployment locks, connections that switch on when what they need is installed, and email switches, behind one Settings API (experimental).
 - **[Import and export](import-export.md)**: CSV and XLSX from any list, and uploads with a mandatory dry run.
 - **[Large projects](large-projects.md)**: `karni context` one area at a time, a cached `karni check`, volume seeding and query plans for 100 models or more.
 
@@ -58,7 +66,15 @@ Reference or Debugging sections.
 ## Modules
 
 - **[The module contract](modules.md)**: one command to add a module, one to remove it, and the catalog every module describes itself in.
-- **[PDF reports](reports.md)**, **[AI extraction](ai-extraction.md)**, **[protected files](storage.md)** and the [other modules](#every-module): each a separate package for anything with its own service or a real memory cost.
+- **[PDF reports](reports.md)**, **[AI extraction](ai-extraction.md)**, **[protected files](storage.md)**, **[commerce](commerce.md)**, **[games](game.md)** (with [the game API](game-api.md) a game client codes against, and [the browser side](game-client.md)) and the [other modules](#every-module): each a separate package for anything with its own service or a real memory cost.
+
+## Build games
+
+- **[A game project](game.md#a-new-game-project)** (experimental): `karni new "Block Hopper" --kind game` makes a small game you can play, its server declared in `content/game.yaml`, a page in the app where a guest keeps their progress by signing in, and a package per game portal with `npm run game:package`.
+- **[The server side, karni-game](game.md)** (experimental): guest players with a token the server issues, cloud saves with a version counter, leaderboards with plausible ranges, a soft-currency wallet with a ledger, rewards and a shop, daily content on the server's date, achievements and missions, remote config and analytics, decided on the server.
+- **[The browser side, @karni/game](game-client.md)** (experimental): a canvas loop with a fixed step, input, audio, saves on the device, a seeded random generator, an offline-first data client, per-portal builds with checks, adapters for Poki, CrazyGames, GameDistribution and Y8, adapters for Phaser, PixiJS and React Three Fiber, and a browser smoke harness.
+- **[The game API](game-api.md)** (experimental): the HTTP contract a game client, a realtime server of your own and a portal's server call.
+- **[A game inside an app](https://github.com/cbsshekhawat18-lab/karni/tree/main/examples/hybrid-demo)**: `examples/hybrid-demo`, an app whose members play a game as their accounts, with a leaderboard page and the game in the admin.
 
 ## Coding agents
 
@@ -103,12 +119,17 @@ coming, not in the code. Each capability's evidence is in the
 - `experimental` Real content from a JSON or YAML file, created or updated by natural key (`karni load`)
 - `experimental` Models and real rows from a designer's pages: the repeated content, its fields and relations (`karni design analyze`, `karni design extract`)
 - `stable` Model events and listeners, optionally queued to Celery (`@on_updated`)
+- `experimental` Family events with an outbox: `declare`, `publish` in the writer's transaction, `subscribe` by name, delivered after the commit with retries and a sweep (`karni.outbox`). Experimental tier
 - `stable` Field-level change history (`class Karni: audit = True`)
 - `experimental` Scheduled tasks (`<app>/schedules.py`, `karni schedule`)
 - `experimental` External tables, SQL views and a second database as models Karni reads (`class Karni: external`, `writable`, `database`, `karni make model --external`). Experimental tier
 - `experimental` Tree models: `TreeModel` and `OrderedTreeModel` with cycle-safe walks (`roots`, `children`, `ancestors`, `descendants`, `subtree_ids`), `move_to()` and `delete_branch()`, and the tree changelist in the admin. Experimental tier
 - `experimental` Taxonomy tagging: one declaration tags a model to tree models (`class Karni: taxonomies`), a generated or adopted many-to-many per key, import and export columns by natural key, and the `tree:<key>` scope. Experimental tier
 - `planned` A tenant scope on every model (the `karni-tenancy` module)
+- `experimental` The people contract (`karni.people`, `KARNI_PEOPLE`): one person and one organisation record for every part of a project, `people.resolve` by account or email, the account linked once its email is verified, person facts in SQL, duplicates, merge with a preview and hooks, erase on request, `/api/people/`. Experimental tier
+- `experimental` The timeline contract (`karni.timeline`): one stream of moments per person and per record, `timeline.record` by hand, entries from family events that declare `timeline=`, `GET /api/timeline/` with each entry checked against the row scope of every record it is about, cursor paging, retention. Experimental tier
+- `experimental` The preferences contract (`karni.preferences`): the business's details, one settings section per part as a Pydantic model, `preferences.value(path, default)` with a typed default, locks a deployment fixes, connections and email switches, audited changes, `/api/preferences/` behind the Settings page. Experimental tier
+- `experimental` The notifications contract (`karni.notify`): message kinds on `karni.mail` sent to an email, the inbox or both, `notify.send` to users, people or addresses, emails a business edits (`/api/email-templates/`), the inbox API with retention, each person's switches, unsubscribing from marketing kinds by a signed link. Experimental tier
 
 Base classes: `AuditedModel`, `BaseModel`, `BigIntBaseModel`, `GuardedModel`, `IntegerKeyModel`, `OrderedTreeModel`, `SoftDeleteModel`, `TimestampedModel`, `TreeModel`, `UUIDModel`.
 <!-- /generated:models -->
@@ -126,6 +147,7 @@ Base classes: `AuditedModel`, `BaseModel`, `BigIntBaseModel`, `GuardedModel`, `I
 - `experimental` Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier
 - `experimental` Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier
 - `experimental` A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier
+- `experimental` Demo mode (`karni.demo`): demo accounts with one login per role, a write rule that lets only those accounts write, a reset to a fixed seed every N hours under a lock, `manage.py karni_demo_boot` and `GET /api/demo/` (`KARNI_DEMO_MODE`, `KARNI_DEMO_ACCOUNTS`, `karni.E950` to `E954`). Experimental tier
 - `experimental` Tree endpoints on a tree model's viewset (`tree/`, `children/`, `ancestors/`, `move/`, `?parent=`, `?descendants_of=`, `DELETE ?branch=true`) and `x-karni-tree` in the OpenAPI document. Experimental tier
 - `experimental` Taxonomy filters and counts: `?<key>=` and `?<key>_descendants=` on the list, `facets/` (rows per node under the list's filters and access, rolled up on request) and a tree node's `tagged/` per tagging model. Experimental tier
 - `experimental` Search across models: one ranked `GET /api/search/` over every model that declares `class Karni: search`, each under its own list access, one query per model, with the trigram indexes in its migrations (`karni.W590`). Experimental tier
@@ -134,7 +156,7 @@ Base classes: `AuditedModel`, `BaseModel`, `BigIntBaseModel`, `GuardedModel`, `I
 - `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
 - `experimental` Grouped counts and sums under the list's filters and access: `GET <resource>/aggregate/` from `class Karni: aggregate`, with date buckets, top N and Other, a second dimension and numbers stored as text (`TextNumber`). Experimental tier
 
-Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Scaling`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
+Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Matching`, `Owned`, `Public`, `RowAction`, `Scaling`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
 <!-- /generated:api -->
 
 ### Admin
@@ -160,6 +182,7 @@ Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `H
 - `experimental` `OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as `LoginForm`'s `codeSignIn` switch. Experimental tier
 - `experimental` `GlobalSearch` and `useGlobalSearch`: a Cmd or Ctrl+K command palette over search across models, grouped per resource, each hit linking to its ResourceDetail page (`<Layout search>`). Experimental tier
 - `experimental` `TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once the user accepts the current terms. Experimental tier
+- `experimental` `DemoNotice`, `DemoSignInPrompt` and `useDemo`: the demo accounts of a demo-mode server above the sign-in form (`GET /api/demo/`). Experimental tier
 - `experimental` `TreeView`, `TreeSelect` (used by `ResourceForm` for a relation to a tree) and `TreeBreadcrumb` (on `ResourceDetail` of a tree), with `useResourceTree`. Experimental tier
 - `experimental` `Layout`'s server menu (`navSource="server"`, `useNavigation`): collapsible groups, icons by name and the current page marked. Experimental tier
 - `experimental` `FacetPanel` and `ResourceTable`'s `facets`: rows per node of a taxonomy, and choosing nodes filters the table, with `useResourceFacets`. Experimental tier
@@ -169,7 +192,7 @@ Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `H
 - `experimental` `ResourceDetail`'s related tabs (`related`): a table per reverse relation, from the `x-karni-related` extension of the OpenAPI schema. Experimental tier
 - `experimental` Wide models: `MarkdownField` (edited with a preview, shown sanitized), `class Karni: field_groups` (form and detail sections or tabs, admin fieldsets) and `column_sets` (table presets kept per user), with `karni.E550` to `E553`. Experimental tier
 
-74 components and 29 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`. The hooks are `useDelayedFlag`, `useOnlineStatus`, `useTheme`, `useKarniPrimitives`, `useUnsavedChangesGuard`, `useResourceTree`, `useResourceChildren`, `useResourceAncestors`, `useResourceAccessForest`, `useTreeMutations`, `useResourceFacets`, `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useResourceCounts`, `useAggregate`, `useGlobalSearch`, `useKarniClient`, `useSchema`, `useAuth`, `usePermission`, `useSocialLogin`, `useOtpLogin`, `useNavigation`, `useToast`.
+99 components and 40 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`, `ResourceGrid`, `ResourceBoard`, `ResourceCalendar`. The hooks are `useDelayedFlag`, `useOnlineStatus`, `useTheme`, `useKarniPrimitives`, `useUnsavedChangesGuard`, `useResourceTree`, `useResourceChildren`, `useResourceAncestors`, `useResourceAccessForest`, `useTreeMutations`, `useResourceFacets`, `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useResourceCounts`, `useAggregate`, `useGlobalSearch`, `useKarniClient`, `useResourceSchemaIfKnown`, `useSchema`, `useAuth`, `useDemo`, `usePermission`, `useSocialLogin`, `useOtpLogin`, `useNavigation`, `useToast`, `useDashboardTiles`, `usePageMeta`, `useAudience`, `useBusiness`, `useSiteName`, `useTimeline`, `useInboxUnread`, `usePersonFacts`, `useMenu`.
 <!-- /generated:ui -->
 
 ### Permissions
@@ -224,7 +247,7 @@ Procedures: `/new-model`, `/new-page`, `/add-module`, `/new-module`, `/site-from
 - `experimental` `assert_pages`: a public site's pages, their title, description, alt text and links, in one call
 - `stable` Architecture rules that fail the build (`karni check`, the ESLint preset)
 
-Helpers: `APITestCase`, `assert_admin_row_hidden`, `assert_crud`, `assert_isolated`, `assert_module_manifest`, `assert_pages`, `assert_row_hidden`, `assert_schema_snapshot`, `client_as`, `create_external_tables`, `load_content`, `query_budget`, `user_with_roles`.
+Helpers: `APITestCase`, `assert_admin_row_hidden`, `assert_crud`, `assert_events_declared`, `assert_isolated`, `assert_module_manifest`, `assert_pages`, `assert_row_hidden`, `assert_schema_snapshot`, `capture_events`, `client_as`, `create_external_tables`, `deliver_now`, `load_content`, `query_budget`, `user_with_roles`.
 <!-- /generated:testing -->
 
 ## Every module
@@ -236,6 +259,8 @@ the agent files ([the module contract](modules.md)).
 - `experimental` `karni add ai`: Rows for any resource read from text, a web page or a PDF by a language model, always through the import preview
 - `experimental` `karni add approvals`: A second person approves high-value changes before they are written, with a queue, an API and an audit trail
 - `experimental` `karni add charts`: Charts defined and previewed in the admin, served through each resource's aggregate action under its access
+- `experimental` `karni add commerce`: One cart, checkout, orders, order numbers, payment settlement and refunds for anything a project sells, through a sellable adapter per kind
+- `experimental` `karni add game`: Guest players, cloud saves, leaderboards, a soft-currency wallet, daily content and achievements, with a realtime server contract
 - `experimental` `karni add impersonation`: Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail
 - `stable` `karni add payments`: Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI
 - `experimental` `karni add reports`: A row printed to PDF from an HTML template in the background, cached by template and data, served only to users who may see the row
@@ -291,7 +316,7 @@ Each command links to its entry in the [reference](REFERENCE.md#commands).
 | [`karni build`](REFERENCE.md#karni-build) | Make the project match karni.yaml, without touching hand-written code |
 | [`karni trace`](REFERENCE.md#karni-trace) | Follow a captured request: its tasks, retries, email, webhooks, audit |
 | [`karni replay`](REFERENCE.md#karni-replay) | Re-run a captured request against the current code, as any user |
-| [`karni recipes`](REFERENCE.md#karni-recipes) | Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show): [list](REFERENCE.md#karni-recipes-list), [show](REFERENCE.md#karni-recipes-show) |
+| [`karni recipes`](REFERENCE.md#karni-recipes) | Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show), and the parts of a project (add, remove, upgrade): [list](REFERENCE.md#karni-recipes-list), [show](REFERENCE.md#karni-recipes-show), [add](REFERENCE.md#karni-recipes-add), [remove](REFERENCE.md#karni-recipes-remove), [upgrade](REFERENCE.md#karni-recipes-upgrade) |
 <!-- /generated:commands -->
 
 ## Make targets

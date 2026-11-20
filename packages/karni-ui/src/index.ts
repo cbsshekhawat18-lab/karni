@@ -141,7 +141,8 @@ export type {
   ResourceTableSlots,
   ResourceTableStateStore,
 } from "./components/resource/ResourceTable";
-export type { KarniAccessRule } from "./schema/types";
+export type { KarniAccessRule, RowActionDef } from "./schema/types";
+export { parseRowActions, rowActionOpen } from "./schema/parse";
 
 export { ResourceForm, defaultResourceFormSlots } from "./components/resource/ResourceForm";
 export type {
@@ -237,6 +238,9 @@ export type { FacetNode, FacetsResponse, ResourceFacetsParams } from "./hooks/us
 export {
   ChangeHistory,
   defaultChangeHistorySlots,
+  historyFieldLabel,
+  historyHeadline,
+  historyValueText,
 } from "./components/resource/history/ChangeHistory";
 export type {
   ChangeHistoryProps,
@@ -291,7 +295,16 @@ export type {
   UseImportJobOptions,
 } from "./hooks/useResourceImport";
 
-export { displayLabel } from "./components/resource/displayLabel";
+export { displayLabel, personName, relationLabel } from "./components/resource/displayLabel";
+export type { LabelledField } from "./components/resource/displayLabel";
+export {
+  RecordLink,
+  recordHref,
+  registerRecordLink,
+  setRecordNavigate,
+  unregisterRecordLink,
+} from "./components/resource/record-links";
+export type { RecordHref, RecordLinkProps } from "./components/resource/record-links";
 export { EmptyValue, EMPTY_VALUE_LABEL } from "./components/resource/empty-value";
 export type { EmptyValueProps } from "./components/resource/empty-value";
 export { AUDIT_FIELDS } from "./components/resource/audit-fields";
@@ -346,7 +359,7 @@ export type {
 export { KarniProvider, useKarniClient } from "./schema/provider";
 export type { KarniProviderProps } from "./schema/provider";
 
-export { useSchema } from "./schema/useSchema";
+export { useResourceSchemaIfKnown, useSchema } from "./schema/useSchema";
 export type { UseSchemaResult } from "./schema/useSchema";
 
 export { zodFor } from "./schema/zod";
@@ -370,6 +383,17 @@ export type {
 // auth
 export { AuthProvider, useAuth } from "./auth/provider";
 export type { AuthProviderProps, AuthContextValue } from "./auth/provider";
+
+// demo mode (experimental): the demo accounts on a sign-in page
+export { DEMO_PATH, useDemo } from "./demo/useDemo";
+export type { DemoAccount, DemoInfo } from "./demo/useDemo";
+export {
+  DemoNotice,
+  DemoNoticeBody,
+  DemoSignInPrompt,
+  createDemoSignInPrompt,
+} from "./demo/DemoNotice";
+export type { DemoNoticeBodyProps, DemoNoticeProps } from "./demo/DemoNotice";
 
 export { AuthGuard, defaultAuthGuardSlots } from "./auth/AuthGuard";
 export type {
@@ -447,8 +471,10 @@ export {
   GlobalSearch,
   defaultGlobalSearchSlots,
   defaultHitHref,
+  groupByPart,
 } from "./components/global-search/global-search";
 export type {
+  GlobalSearchPart,
   GlobalSearchProps,
   GlobalSearchSlots,
   GlobalSearchTriggerProps,
@@ -475,7 +501,7 @@ export { activeRoute, navigationEntries } from "./components/layout/navigation";
 export type { NavigationEntriesOptions } from "./components/layout/navigation";
 export { defaultNavIcons, navIcon } from "./components/layout/nav-icons";
 export { NAVIGATION_PATH, useNavigation } from "./hooks/useNavigation";
-export type { NavigationItem, NavigationMenu } from "./hooks/useNavigation";
+export type { NavigationItem, NavigationMenu, UseNavigationOptions } from "./hooks/useNavigation";
 
 export { KarniMark } from "./components/brand/karni-mark";
 export type { KarniMarkProps } from "./components/brand/karni-mark";
@@ -536,6 +562,21 @@ export {
   resolveRelativeDate,
   resolveSection,
 } from "./components/dashboard/dashboard";
+export {
+  DASHBOARD_PATH,
+  DashboardTiles,
+  registerTile,
+  registerTileKind,
+  unregisterTile,
+  useDashboardTiles,
+} from "./components/dashboard/dashboard-tiles";
+export type {
+  DashboardTileDef,
+  DashboardTilesBody,
+  DashboardTilesProps,
+  TileProps,
+  TileValue,
+} from "./components/dashboard/dashboard-tiles";
 export type {
   DashboardProps,
   DashboardSlots,
@@ -549,7 +590,12 @@ export type {
   DashboardLoadingProps,
 } from "./components/dashboard/dashboard";
 
-export { DataChart, aggregateSeries, defaultDataChartSlots } from "./components/chart/data-chart";
+export {
+  DataChart,
+  aggregateSeries,
+  defaultDataChartSlots,
+  xLabelStep,
+} from "./components/chart/data-chart";
 export type {
   DataChartProps,
   DataChartKind,
@@ -562,6 +608,103 @@ export type {
   DataChartEmptyProps,
   DataChartLoadingProps,
 } from "./components/chart/data-chart";
+
+// a resource's rows as cards: catalogues (experimental)
+export { ResourceGrid, defaultResourceGridSlots } from "./components/resource-grid/ResourceGrid";
+export type {
+  ResourceGridProps,
+  ResourceGridSlots,
+  ResourceGridSortOption,
+  ResourceGridPaginationProps,
+  ResourceGridEmptyProps,
+  ResourceGridLoadingProps,
+} from "./components/resource-grid/ResourceGrid";
+
+// money and page metadata for public pages (experimental)
+export { formatMoney } from "./lib/money";
+export { usePageMeta } from "./hooks/usePageMeta";
+export { AccountPage } from "./components/account/AccountPage";
+export type { AccountPageProps } from "./components/account/AccountPage";
+export {
+  accountSections,
+  registerAccountSection,
+  unregisterAccountSection,
+} from "./components/account/sections";
+export type { AccountSection } from "./components/account/sections";
+export { SignInPage, safeNext } from "./components/account/SignInPage";
+export type { SignInPageProps } from "./components/account/SignInPage";
+export { SignUpForm } from "./components/account/SignUpForm";
+export type { SignUpFormProps } from "./components/account/SignUpForm";
+export type { PageMeta } from "./hooks/usePageMeta";
+
+// the family screens: one layout, home, people, inbox, search for every part (experimental)
+export {
+  BUSINESS_QUERY_KEY,
+  CUSTOMER_ROLES,
+  audienceOf,
+  useAudience,
+  useBusiness,
+  useSiteName,
+} from "./components/family/audience";
+export type { Audience, BusinessDetails } from "./components/family/audience";
+export {
+  personTabs,
+  publicHome,
+  registerPersonTab,
+  registerPublicHome,
+  registerTimelineKind,
+  timelineKind,
+  timelineKindLabel,
+  unregisterPersonTab,
+  unregisterPublicHome,
+  unregisterTimelineKind,
+} from "./components/family/registry";
+export type {
+  PersonTab,
+  PersonTabProps,
+  PublicHome,
+  TimelineEntry,
+  TimelineKind,
+} from "./components/family/registry";
+export {
+  Timeline,
+  timelineKey,
+  timelineMoneyText,
+  useTimeline,
+} from "./components/family/timeline";
+export type { TimelineParams, TimelineProps } from "./components/family/timeline";
+export { EmailChoices, InboxBell, InboxPage, useInboxUnread } from "./components/family/inbox";
+export type {
+  InboxBellProps,
+  InboxChoice,
+  InboxNotification,
+  InboxPageBody,
+  InboxPageProps,
+} from "./components/family/inbox";
+export { PeoplePage, PersonPage, factText, usePersonFacts } from "./components/family/people";
+export type { PeoplePageProps, PersonFact, PersonPageProps } from "./components/family/people";
+export { SearchPage, routeHref, searchHitHref } from "./components/family/search";
+export type { SearchPageProps } from "./components/family/search";
+export { MyAddresses } from "./components/family/addresses";
+export { BackOffice, FamilyLayout, Storefront, useMenu } from "./components/family/family-layout";
+export type {
+  FamilyFrameProps,
+  FamilyLayoutProps,
+  FamilyLayoutSlots,
+} from "./components/family/family-layout";
+export { FamilyEmptyHome, FamilyHome } from "./components/family/family-home";
+export type { FamilyHomeProps } from "./components/family/family-home";
+export { registerFamily } from "./components/family/register";
+export type { FamilyContracts } from "./components/family/register";
+
+/** Experimental. The one Settings page: details, settings sections and emails, from `/preferences/`. */
+export { SettingsPage } from "./components/settings/SettingsPage";
+/** Experimental. Props of `SettingsPage`. */
+export type { SettingsPageProps } from "./components/settings/SettingsPage";
+/** Experimental. Edits one email's subject and text through `/email-templates/<kind>/`. */
+export { EmailTemplateEditor } from "./components/settings/EmailTemplateEditor";
+/** Experimental. Props of `EmailTemplateEditor`. */
+export type { EmailTemplateEditorProps } from "./components/settings/EmailTemplateEditor";
 
 // page blocks beyond CRUD (experimental)
 export {
@@ -633,3 +776,35 @@ export type {
   ComparisonTableSlots,
   ComparisonTableEmptyProps,
 } from "./components/comparison-table/comparison-table";
+
+// board by state (experimental)
+export {
+  ResourceBoard,
+  defaultResourceBoardSlots,
+} from "./components/resource-board/ResourceBoard";
+export type {
+  ResourceBoardProps,
+  ResourceBoardSlots,
+  ResourceBoardCardContext,
+  ResourceBoardHeaderProps,
+  ResourceBoardEmptyProps,
+  ResourceBoardLoadingProps,
+} from "./components/resource-board/ResourceBoard";
+
+// calendar (experimental)
+export {
+  ResourceCalendar,
+  defaultResourceCalendarSlots,
+} from "./components/resource-calendar/ResourceCalendar";
+export type {
+  ResourceCalendarProps,
+  ResourceCalendarSlots,
+  CalendarAvailability,
+  CalendarCapacity,
+  CalendarCreateRequest,
+  CalendarEmptyProps,
+  CalendarEventContext,
+  CalendarLoadingProps,
+  CalendarTone,
+  CalendarView,
+} from "./components/resource-calendar/ResourceCalendar";

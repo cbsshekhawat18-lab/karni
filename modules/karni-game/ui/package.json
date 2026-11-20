@@ -1,0 +1,151 @@
+{
+  "name": "@karni/game",
+  "version": "0.6.0",
+  "description": "The browser side of the Karni game add-on: portal and ad adapters, a canvas loop, input, audio, local saves, a seeded random generator, an offline-first data client and per-portal builds. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.",
+  "keywords": [
+    "game",
+    "html5",
+    "canvas",
+    "web-games",
+    "portal",
+    "ads",
+    "leaderboard",
+    "save",
+    "phaser",
+    "pixijs",
+    "react-three-fiber",
+    "karni"
+  ],
+  "license": "Apache-2.0",
+  "author": {
+    "name": "Chandrabhan Shekhawat, Gigai Kripa Services",
+    "url": "https://gigaikripaservices.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cbsshekhawat18-lab/karni.git",
+    "directory": "modules/karni-game/ui"
+  },
+  "homepage": "https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-game/ui#readme",
+  "bugs": {
+    "url": "https://github.com/cbsshekhawat18-lab/karni/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "bin",
+    "client.d.ts",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./build": {
+      "types": "./dist/src/tooling/index.d.ts",
+      "import": "./dist/build.js"
+    },
+    "./vite": {
+      "types": "./dist/src/tooling/vite.d.ts",
+      "import": "./dist/vite.js"
+    },
+    "./client": {
+      "types": "./client.d.ts"
+    },
+    "./phaser": {
+      "types": "./dist/src/engines/phaser.d.ts",
+      "import": "./dist/phaser.js"
+    },
+    "./pixi": {
+      "types": "./dist/src/engines/pixi.d.ts",
+      "import": "./dist/pixi.js"
+    },
+    "./r3f": {
+      "types": "./dist/src/engines/r3f.d.ts",
+      "import": "./dist/r3f.js"
+    },
+    "./smoke": {
+      "types": "./dist/src/smoke/index.d.ts",
+      "import": "./dist/smoke.js"
+    },
+    "./portals/*": {
+      "types": "./dist/src/portal/adapters/*.d.ts",
+      "import": "./dist/portals/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "module": "./dist/index.js",
+  "types": "./dist/src/index.d.ts",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:smoke": "vitest run --config vitest.smoke.config.ts",
+    "example:dev": "vite --config example/block-hopper/vite.config.ts",
+    "example:build": "vite build --config example/block-hopper/vite.config.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@react-three/fiber": "^8.18.0",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^24.0.0",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@types/three": "^0.186.0",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.15.0",
+    "jsdom": "^25.0.0",
+    "playwright": "^1.64.1",
+    "prettier": "^3.9.10",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "three": "^0.186.1",
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.71.2",
+    "vite": "^8.3.4",
+    "vite-plugin-dts": "^5.1.2",
+    "vitest": "^5.0.5"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "bin": {
+    "karni-game": "./bin/karni-game.js"
+  },
+  "peerDependencies": {
+    "@react-three/fiber": ">=8.0.0",
+    "playwright": ">=1.40.0",
+    "react": ">=18.0.0",
+    "vite": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@react-three/fiber": {
+      "optional": true
+    },
+    "playwright": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
+  },
+  "overrides": {
+    "minimatch@>=7.0.0 <11.0.1": "^11.0.5"
+  }
+}

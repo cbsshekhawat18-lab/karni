@@ -99,10 +99,10 @@ the laptop, so read them as a slightly busy desktop, not a clean lab:
 | --- | --- |
 | `karni new --recipe marketplace`, from scratch to a built project | 13.2 |
 | `karni new --recipe booking` | 13.8 |
-| `karni new --recipe shop` | 14.1 |
 | `karni new --recipe lms` | 15.2 |
 | `karni new --recipe data-portal` | 16.9 |
 | `karni new --recipe crm` | 21.9 |
+| `karni new --recipe shop` (0.6.0, see below) | 53.8 |
 | the `/new-app` flow with a scripted agent, request to green `karni check` | 15.4 |
 | `karni build` again, no spec change | 1.08 |
 | `karni check`, cold (no cache) | 2.88 |
@@ -112,10 +112,18 @@ the laptop, so read them as a slightly busy desktop, not a clean lab:
 | `karni plan --questions` | 0.29 |
 
 Inside a recipe build the time goes to the project's own tests (3.5 to 6.6
-seconds), the migrations (1.8 to 2.8 seconds), the demo data (1.6 to 2.5
-seconds), the types (1.5 to 2.0 seconds) and `karni check` (2.2 to 3.6
+seconds), the migrations (1.9 to 2.8 seconds), the demo data (1.6 to 2.5
+seconds), the types (1.5 to 2.0 seconds) and `karni check` (2.3 to 3.6
 seconds). `karni plan` and `karni check` take as long as they do because each
 starts the project's Django once.
+
+The shop row is from 0.6.0, where the shop recipe became a store on
+karni-commerce. Its build took 71.1 seconds on the same laptop under more load
+(the median of 3 builds), stored as 53.8 at the baseline's calibration, the way
+the comparison scales a run. It spends 28.5 seconds in its tests (77 of them,
+three of which seed the whole demo shop), 6.9 in its 99 migrations (commerce,
+payments, storage and the family parts), 5.3 in the demo data, 5.6 in the types
+and 4.1 in `karni check`.
 
 Each time has a budget: the baseline (`scripts/benchmark/speed-baseline.json`)
 times how much slower or faster the machine is than the one that recorded it
@@ -125,6 +133,14 @@ on any machine. The `speed` job fails when a step goes over, and keeps the times
 as an artifact. Run it yourself with `python scripts/benchmark/speed.py`, and
 record a new baseline on a quiet machine with `--record` when a growth is
 expected.
+
+The calibration is pure Python, and the builds are not: relative to it, the
+builds and the `karni` commands ran 1.1 to 2.1 times slower on GitHub's Linux
+runner than on that laptop. So the CI job compares with
+`scripts/benchmark/speed-baseline-ci.json`, the times of one CI run (the job's
+`speed` artifact), and the laptop's baseline stays for runs on a laptop. A
+change that slows a step on purpose records both: `--record` on the laptop, and
+the CI job's `speed` artifact copied to `speed-baseline-ci.json`.
 
 ## The stub rule
 

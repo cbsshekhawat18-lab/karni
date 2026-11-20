@@ -1,0 +1,108 @@
+# Karni 0.6.0: what changed since 0.5.1 that a project may notice.
+# Schema and rules: karni/changelog/__init__.py. Migration notes: docs/migrations/0.5.md.
+version = "0.6.0"
+
+[[change]]
+id = "frontend-npm-floor"
+kind = "project-files"
+symbol = "frontend/package.json engines"
+summary = """\
+A new project's frontend ships a package-lock.json and asks for npm 10.8, \
+not npm 11, in `engines`, so plain `npm install` works on the npm that Node 20 \
+and 22 bundle. The codemod changes `"npm": ">=11"` to `"npm": ">=10.8"`. A \
+project without a package-lock.json runs its first install once with npm 11.6 \
+or later and commits the lock."""
+mechanical = true
+codemod = "v0_6.frontend_npm_floor"
+migration = "migrations/0.6.md#the-frontend-installs-with-plain-npm-install"
+
+[[change]]
+id = "written-row-scope"
+kind = "behaviour"
+symbol = "BaseViewSet.perform_create / perform_update"
+summary = """\
+A create or an update must leave the row inside its own access predicate's \
+rows, checked in the save's transaction: a listing posted into someone else's \
+shop under write=Owned("seller__user") is refused with a 403 (E134) and nothing \
+is saved. Override BaseViewSet.check_written_row() where a project needs \
+another rule."""
+mechanical = false
+migration = "migrations/0.6.md#a-written-row-must-stay-inside-the-callers-write-scope"
+
+[[change]]
+id = "recipe-rules"
+kind = "project-files"
+symbol = "karni.yaml rule keys of the booking, crm, lms, marketplace and data-portal recipes"
+summary = """\
+The five recipes declare their business rules in karni.yaml (bounds, unique, \
+targets, frozen, delete, moves, actions, access delete and assign). A project \
+built from one before 0.6.0 copies the keys it wants from the new recipe, \
+clears rows that a new unique rule would refuse, and runs karni build \
+--allow-destructive."""
+mechanical = false
+migration = "migrations/0.6.md#rules-a-karniyaml-can-say-and-the-recipes-that-use-them"
+
+[[change]]
+id = "app-recipes"
+kind = "project-files"
+symbol = "karni.yaml app.recipe"
+replacement = "app.recipes: [<name>]"
+summary = """\
+A project may hold several recipes, so karni.yaml lists them in \
+app.recipes. karni-cli still reads app.recipe, as a list of one, with a \
+KarniDeprecationWarning, and stops reading it in 1.0. The codemod rewrites \
+the key in place and keeps the rest of the file."""
+mechanical = true
+codemod = "v0_6.recipe_list"
+migration = "migrations/0.6.md#a-project-lists-its-recipes-in-apprecipes"
+
+[[change]]
+id = "site-menus-follow-seed"
+kind = "behaviour"
+symbol = "KARNI_SITE_MENU_FOLLOW_SEED"
+summary = """\
+A karni-site menu seeded from a template ({% get_menu ... seed="..." %}) follows \
+that template, as the docs said: the items nobody changed take the seed's new \
+links on the next render, and the items someone changed, added or deleted stay. \
+Before, the seed made the menu once. KARNI_SITE_MENU_FOLLOW_SEED = False keeps \
+that. The module's migration 0002 adds Menu.seeded and MenuItem.seed_key."""
+mechanical = false
+migration = "migrations/0.6.md#seeded-menus-follow-their-seed"
+
+[[change]]
+id = "site-seeding-unrecorded"
+kind = "behaviour"
+symbol = "karni_site.blocks"
+summary = """\
+karni-site stores a template's defaults (blocks, a menu's seed, the site's details) \
+without a change-history entry: it is nobody's edit. A person's edit is recorded \
+as before. manage.py karni_site_seed stores the defaults in a deploy, and the release \
+step of karni make deploy compose runs it once the file is written again (--force)."""
+mechanical = false
+migration = "migrations/0.6.md#a-sites-defaults-are-stored-in-the-deploy-and-leave-no-history"
+
+[[change]]
+id = "site-closed-robots-tag"
+kind = "behaviour"
+symbol = "KARNI_SITE_ROBOTS_TAG"
+summary = """\
+While karni-site's indexing is not allowed (KARNI_SITE_ALLOW_INDEXING False, or None \
+outside DJANGO_ENV=prod), every response gets X-Robots-Tag: noindex, nofollow and \
+{% karni_seo %} writes the robots meta tag, besides robots.txt. KARNI_SITE_ROBOTS_TAG = "" \
+sends neither, as before."""
+mechanical = false
+migration = "migrations/0.6.md#a-closed-site-says-noindex-on-every-page"
+
+[[change]]
+id = "static-manifest-storage"
+kind = "project-files"
+symbol = "KARNI_STATIC_STORAGE"
+summary = """\
+New: KARNI_STATIC_STORAGE (plain, the default, or manifest: fingerprinted names a browser \
+keeps for a year). A new site project's production .env example sets manifest, and the \
+generated Caddyfile caches fingerprinted names for a year. An earlier project is unchanged: \
+to opt in, set KARNI_STATIC_STORAGE=manifest in .env.prod and write the Caddyfile again \
+(karni make deploy compose --force)."""
+mechanical = false
+migration = "migrations/0.6.md#static-files-under-fingerprinted-names"
+

@@ -47,12 +47,10 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
 from django.db import models
-from django.template import TemplateDoesNotExist
-from django.template.loader import render_to_string
 from django.urls import NoReverseMatch, reverse
 from karni.exceptions import KarniImproperlyConfigured
+from karni.mail import send_templated
 
 from karni_site import conf
 
@@ -169,20 +167,11 @@ def notify_recipients(
         )
         return 0
     values = {**notification_context(instance), **dict(context or {})}
-    subject = " ".join(render_to_string(f"{template}_subject.txt", values).split())
-    body = render_to_string(f"{template}_body.txt", values)
     sender = from_email or conf.get("KARNI_SITE_NOTIFY_FROM") or None
-    message = EmailMultiAlternatives(
-        subject=subject,
-        body=body,
-        from_email=sender,
+    return send_templated(
+        template,
         to=addresses,
+        context=values,
+        from_email=sender,
         reply_to=[reply_to] if reply_to else None,
     )
-    try:
-        html = render_to_string(f"{template}_body.html", values)
-    except TemplateDoesNotExist:
-        html = None
-    if html is not None:
-        message.attach_alternative(html, "text/html")
-    return int(message.send())

@@ -6,8 +6,8 @@
  * The rule is the backend's own predicate, published per operation:
  * `{"public": true}`, `{"authenticated": true}`, `{"role": [...]}`,
  * `{"owned": "organizer"}`, `{"any": [...]}`, `{"all": [...]}`, `{"deny": ...}`
- * and predicates only the server can answer (`can`, `granted`, `where`,
- * `unscoped`). The answer is three-valued. It is `false` only when the rule
+ * and predicates only the server can answer (`granted`, `where`, `unscoped`).
+ * `can` is answered from `/me/`'s `permissions` when the server sends them. The answer is three-valued. It is `false` only when the rule
  * certainly refuses, and `undefined` when the client cannot tell (no
  * AuthProvider, a grant, a custom function). `undefined` keeps the action:
  * the server still enforces, and a refusal is then reported in plain words.
@@ -89,5 +89,22 @@ export function evaluateAccess(
   }
   const owned = rule["owned"];
   if (typeof owned === "string") return ownedBy(owned, identity, row);
+  const can = rule["can"];
+  if (typeof can === "string" || Array.isArray(can)) return holds(can, identity);
   return undefined;
+}
+
+/**
+ * `{"can": ["shop.product:add"]}`: whether the user holds every key, from
+ * `/me/`'s `permissions` (experimental). A server that does not send them
+ * leaves it to the server (`undefined`).
+ */
+function holds(can: unknown, identity: AccessIdentity): boolean | undefined {
+  if (identity.status !== "authenticated" || identity.user === null) return false;
+  const held = identity.user["permissions"];
+  if (!Array.isArray(held)) return undefined;
+  const keys = (Array.isArray(can) ? can : [can]).filter(
+    (key): key is string => typeof key === "string",
+  );
+  return keys.every((key) => held.includes(key));
 }

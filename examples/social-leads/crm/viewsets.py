@@ -11,10 +11,10 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from django.contrib.auth import get_user_model
-from django.db import connection
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import connection, transaction
 from karni.api import BaseViewSet, Budget, Can, Granted
 from rest_framework.decorators import action
-from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -29,6 +29,18 @@ READ = Can("crm.lead:view")
 class WorkspaceViewSet(BaseViewSet):
     model = Workspace
     access = Granted()
+
+    def perform_create(self, serializer: Any) -> None:
+        """The member who makes a workspace is one of its members.
+
+        A workspace is its members' (``owner_field = "members"``), and Karni stamps
+        no to-many owner field, so the new row is put in the creator's scope here
+        before the written-row check (E134) runs in the same transaction.
+        """
+        with transaction.atomic():
+            workspace = serializer.save()
+            workspace.members.add(self.request.user)
+            self.check_written_row(workspace)
 
 
 class ContactViewSet(BaseViewSet):

@@ -3,70 +3,298 @@ version: 1
 app:
   name: Shop
   kind: app
-  recipe: shop
+  # One currency for the project: every money field and the payments follow it.
+  currency: USD
 modules:
-  payments: {provider: stripe, currency: usd}
+  # KARNI_PAYMENTS_PROVIDER in the environment wins over `provider`, so .env switches a
+  # local try or a demo to `test` with no code edit.
+  payments:
+    provider: stripe
+    checkout_validator: karni_commerce.payments.checkout_validator
+  commerce: {hold_minutes: 30}
+  # Protected files: what a digital product delivers, by a signed link after payment.
+  # On disk in development (KARNI_STORAGE=local), in this S3-compatible service in
+  # production (KARNI_STORAGE=s3 and its keys in .env).
+  storage: {provider: aws}
 features:
   email_code_login: true
-  terms: {version: "2026-01", url: /terms/, required: true}
+  # The customers as people (karni.people): /people, each person's page and their saved
+  # addresses. recipe.toml's requires switches it on too.
+  people: true
+  # The business's details, the shop's and checkout's settings and the email switches
+  # (Settings). recipe.toml's requires switches it on too.
+  preferences: true
+  # The emails the business edits (Settings, Emails), the inbox and each person's own
+  # switches. recipe.toml's requires switches it on too.
+  notify: true
+  terms: {version: "2026-01", url: /shop/terms, required: true, paths: [/api/carts/current/checkout/]}
 roles:
-  staff: {name: Staff, system: true, grants: {"*": all}}
+  admin: {name: Admin, system: true, grants: {"*": all}}
+  shop-manager:
+    name: Shop manager
+    description: The whole shop, refunds included, and its settings.
+    grants:
+      "shop.*": all
+      "karni_commerce.*": all
+      "karni_payments.*": all
+      # Settings: the business's details, every section and the email switches.
+      "preferences.*:change": all
+      # Settings, Emails: the text of each email.
+      "notify.emailtemplate": all
+      # The customers: /people and each person's page (orders, addresses, timeline).
+      "people.*:view": all
+  shop-staff:
+    name: Shop staff
+    description: Orders, shipments and the catalogue.
+    grants:
+      "shop.*": all
+      "karni_commerce.order:view": all
+      "karni_commerce.order:change": all
+      "karni_commerce.order:add": all
+      "karni_commerce.orderline:view": all
+      "karni_commerce.orderpayment:view": all
+      "karni_commerce.orderrefund:view": all
+      "karni_commerce.cart:view": all
+      "karni_commerce.cartline:view": all
+      "karni_commerce.invoice:view": all
+      "karni_payments.payment:view": all
+      "people.*:view": all
   customer:
     name: Customer
     default: true
-    grants:
-      shop.cart: own
-      shop.cartitem: own
-      shop.order: own
-      shop.orderitem: own
+    grants: {}
 apps:
   shop:
     entities:
       Category:
-        fields: {name: "str:120", slug: "slug:name"}
+        fields: {name: "str:120", slug: "slug:name", description: "text?", image: "image?"}
+        tree: true
         key: slug
         search: [name]
         order: name
-        access: {read: public, write: "role:staff"}
+        access: {read: public, write: granted}
+      Tag:
+        fields: {name: "str:60", slug: "slug:name"}
+        key: slug
+        search: [name]
+        order: name
+        access: {read: public, write: granted}
       Product:
         fields:
-          category: fk:Category
           name: "str:200"
           slug: "slug:name"
+          sku: "str:64"
+          short_description: "str:300?"
           description: "text?"
-          price: "money:USD"
+          image: "image?"
+          price: money
+          sale_price: "money?"
+          sale_starts: "datetime?"
+          sale_ends: "datetime?"
           stock: int
+          available: "capacity:stock"
+          low_stock: "int?"
+          backorders: bool
           active: bool
+          featured: bool
+          tags: "m2m:Tag?"
+          related: "m2m:self?"
+          rating_average: "decimal:3:2?"
+          rating_count: int
+          # A digital product: its files (ProductFile) go to the buyer by a signed link
+          # once paid, each at most download_limit times (blank: the shop's setting).
+          digital: bool
+          download_limit: "int?"
+          download_days: "int?"
+        taxonomies: {categories: Category}
         key: slug
-        search: [name, description]
+        search: [name, sku, short_description, description]
+        global_search: {fields: [name, sku], title: name, subtitle: sku}
         order: name
-        access: {read: public, write: "role:staff"}
-      Cart:
-        fields: {customer: fk:User}
-        owner: customer
-        access: {read: "owned:customer", write: "owned:customer"}
-      CartItem:
-        fields: {cart: fk:Cart, product: fk:Product, quantity: int}
-        owner: cart__customer
-        access: {read: "owned:cart__customer", write: "owned:cart__customer"}
-      Order:
+        groups:
+          Product: [name, slug, sku, short_description, description, image, active, featured, tags]
+          Price: [price, sale_price, sale_starts, sale_ends]
+          Inventory: [stock, available, low_stock, backorders]
+          Downloads: [digital, download_limit, download_days]
+          More: [related, rating_average, rating_count]
+        access: {read: public, write: granted}
+      ProductImage:
+        fields: {product: fk:Product, image: image, alt: "str:200?", position: int}
+        order: [product, position]
+        access: {read: public, write: granted}
+      # Options a product comes in (Size, Colour), each with its values (S, M, L).
+      Attribute:
+        fields: {name: "str:60", slug: "slug:name", position: int}
+        key: slug
+        search: [name]
+        order: [position, name]
+        access: {read: public, write: granted}
+      AttributeValue:
+        fields: {attribute: fk:Attribute, value: "str:60", position: int}
+        search: [value]
+        order: [attribute, position, value]
+        access: {read: public, write: granted}
+      # One way a product is sold (a size and a colour), with its own SKU, price, stock
+      # and picture. A blank price is the product's.
+      Variation:
         fields:
-          customer: fk:User
-          status: "state:pending>paid|pending>cancelled|paid>shipped|paid>refunded|shipped>delivered|delivered>refunded"
-          total: "money:USD"
-          payment: "fk:karni_payments.Payment?"
-        owner: customer
+          product: fk:Product
+          values: "m2m:AttributeValue"
+          sku: "str:64"
+          price: "money?"
+          sale_price: "money?"
+          stock: int
+          available: "capacity:stock"
+          image: "image?"
+          active: bool
+          position: int
+        search: [sku]
+        order: [product, position]
+        access: {read: public, write: granted}
+      # A buyer's word on a product they received: staff approve it before it shows.
+      Review:
+        fields:
+          product: fk:Product
+          author: fk:User
+          rating: int
+          title: "str:120?"
+          body: text
+          status: "state:pending>approved|pending>rejected|approved>rejected|rejected>approved"
+          verified: bool
+        owner: author
         audit: [status]
+        search: [title, body]
         order: -created_at
-        access: {read: ["owned:customer", "role:staff"], write: "role:staff"}
-      OrderItem:
-        fields: {order: fk:Order, product: fk:Product, quantity: int, unit_price: "money:USD"}
-        owner: order__customer
-        access: {read: ["owned:order__customer", "role:staff"], write: "role:staff"}
+        access: {read: public, create: authenticated, write: granted}
+      # What a customer keeps for later.
+      WishlistItem:
+        fields: {user: fk:User, product: fk:Product}
+        owner: user
+        order: -created_at
+        access: {read: "owned:user", write: "owned:user"}
+      # A file a digital product delivers: protected, never public.
+      ProductFile:
+        fields: {product: fk:Product, name: "str:200", file: "file:protected"}
+        search: [name]
+        order: [product, name]
+        access: {read: granted, write: granted}
+      # A buyer's right to download a file they paid for: a signed link, counted.
+      Download:
+        fields:
+          order: fk:karni_commerce.Order
+          product: fk:Product
+          file: fk:ProductFile
+          email: email
+          downloads: int
+          limit: "int?"
+          expires_at: "datetime?"
+          last_at: "datetime?"
+        search: [email]
+        order: -created_at
+        access: {read: granted, write: granted}
+      Shipment:
+        fields:
+          order: fk:karni_commerce.Order
+          status: "state:processing>shipped|processing>cancelled|shipped>delivered"
+          carrier: "str:80?"
+          tracking_number: "str:80?"
+          shipped_at: "datetime?"
+          delivered_at: "datetime?"
+        audit: [status]
+        search: [tracking_number]
+        order: -created_at
+        access: {read: granted, write: granted}
+# The shop's pages live under its route, /shop (apps.shop.route, set when the recipe is
+# added). The family pages (/, /cart, /checkout, /orders, /account, /signin, /settings)
+# are not listed here: they belong to Karni and karni-commerce.
 pages:
-  - home: dashboard
-  - Product: [list, detail, form]
+  - Shipment: [list, detail, form]
+  - Product: [{detail: {related: [ProductImage, Variation, ProductFile]}}, form]
+  - ProductFile: [form]
+  - Download: [list, detail]
+  - Variation: [form]
+  - Attribute: [list, {detail: {related: [AttributeValue]}}, form]
+  - AttributeValue: [form]
+  - Review: [list, detail]
   - Category: [list, form]
-  - Order: [list, detail]
-  - Cart: [detail]
-seed: {Category: 5, Product: 40, Cart: 10, CartItem: 30, Order: 30, OrderItem: 80}
+  - Tag: [list, form]
+  # The pages of the recipe's own files (recipe.toml [[routes]]): the storefront (/shop,
+  # /shop/catalogue, the wishlist and the terms) and the back office's own screens.
+  - shop: code
+  - shop.catalogue: code
+  - shop.wishlist: code
+  - shop.terms: code
+  - shop.products: code
+  - shop.coupons: code
+  - shop.shipping: code
+  - shop.tax-rates: code
+  - shop.reports: code
+  - shop.abandoned-carts: code
+# The menus (docs/navigation.md, named menus): app is the back office's sidebar, public
+# the storefront's header and account a signed-in person's own links. The family pages
+# (orders, people, settings) come from karni-commerce and the contracts.
+navigation:
+  app:
+    - orders: {label: Orders, icon: list, requires: "karni_commerce.order:view"}
+    - Shipment: {label: Shipments, icon: box, requires: "shop.shipment:change"}
+    - people: {icon: users, requires: "people.person:view"}
+    - shop.abandoned-carts:
+        label: Abandoned carts
+        icon: box
+        requires: "karni_commerce.cart:view"
+    - Catalogue:
+        icon: tag
+        requires: "shop.product:change"
+        items:
+          - {shop.products: {label: Products, requires: "shop.product:change"}}
+          - Category
+          - Tag
+          - Attribute
+          - Review
+          - Download
+    - Selling:
+        icon: settings
+        requires: "karni_commerce.coupon:change"
+        items:
+          - {shop.coupons: {label: Coupons, requires: "karni_commerce.coupon:change"}}
+          - {shop.shipping: {label: Shipping, requires: "karni_commerce.shippingzone:change"}}
+          - {shop.tax-rates: {label: Tax rates, requires: "karni_commerce.taxrate:change"}}
+    - shop.reports: {label: Reports, icon: chart, requires: "karni_commerce.order:report"}
+    - settings: {label: Settings, icon: sliders, requires: "preferences.details:change"}
+  public:
+    - shop.catalogue: {label: Products, requires: public}
+  account:
+    - orders: {label: Your orders}
+    - shop.wishlist: {label: Wishlist}
+# The staff home: each tile shows to the roles that may read what it counts. The shop's
+# own figures are code tiles in shop/dashboard.py (stock running low, best sellers), and
+# karni-commerce gives the revenue ones (commerce.revenue, commerce.revenue_chart,
+# commerce.latest_orders).
+dashboard:
+  - {key: shop.to_send, title: Orders to fulfil, kind: stat, entity: Shipment,
+     filters: {status: processing}, link: "/shop/shipments?shipments.status=processing",
+     description: "Paid, waiting to be sent", order: 1}
+  - {key: shop.in_transit, title: On their way, kind: stat, entity: Shipment,
+     filters: {status: shipped}, link: "/shop/shipments?shipments.status=shipped", order: 2}
+  - {key: shop.sold_out, title: Sold out, kind: stat, entity: Product,
+     filters: {available__lte: 0, active: true}, requires: "shop.product:change",
+     link: "/shop/products?products.available__lte=0", order: 3}
+  - {key: shop.reviews_waiting, title: Reviews to approve, kind: stat, entity: Review,
+     filters: {status: pending}, requires: "shop.review:change",
+     link: "/shop/reviews?reviews.status=pending", order: 4}
+  - {key: commerce.revenue, order: 5}
+  - {key: commerce.revenue_chart, order: 6}
+  - {key: commerce.latest_orders, order: 7}
+seed:
+  Category: 15
+  Tag: 8
+  Product: 40
+  ProductImage: 60
+  Attribute: 2
+  AttributeValue: 7
+  Variation: 18
+  Shipment: 26
+  Review: 10
+  WishlistItem: 4
+  ProductFile: 3
+  Download: 4

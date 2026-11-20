@@ -31,7 +31,9 @@ login field, so re-running never duplicates them and ``--reset`` never
 deletes them.
 
 **Determinism.** ``--seed`` (default 0) seeds every random choice, UUID
-primary keys are drawn from it, integer sequences are reset by ``--reset``,
+primary keys are drawn from it (each model from its own stream, seeded by the
+seed and the model's label, so one app's rows never depend on what another
+app seeded before it), integer sequences are reset by ``--reset``,
 ``created_at``/``updated_at``-style timestamps are backdated from it, and
 relative dates are anchored at the start of the current day — so the same
 seed gives the same rows, byte for byte, on the same day. (Generated files
@@ -115,6 +117,8 @@ from factory.random import reseed_random
 
 from karni.errorcodes import KarniError
 from karni.exceptions import KarniValueError
+from karni.placeholder import placeholder_image
+from karni.rules import RuleViolation
 from karni.testing.factories import DEFAULT_PASSWORD, FactoryBuilder, auto_factory, factory_for
 from karni.testing.values import ValueInference
 
@@ -130,6 +134,7 @@ __all__ = [
     "clear_cache",
     "cycled",
     "occupied",
+    "placeholder_image",
     "planned_rows",
     "seed",
     "seed_plan",
@@ -169,13 +174,17 @@ class Seeder:
     """Per-model seed settings and field overrides, discovered from ``<app>/seeds.py``.
 
     ``Meta.model`` names the model; ``Meta.count`` pins its rows per run
-    (``None`` = ``--count``, ``0`` = skip it). Any other class attribute is a
-    field override. Override :meth:`seed` for full control.
+    (``None`` = ``--count``, ``0`` = skip it); ``Meta.after`` names models
+    (``"app.Model"`` or classes) whose rows :meth:`seed` reads, so they are
+    seeded first when the run seeds them too, though no foreign key says so.
+    Any other class attribute is a field override. Override :meth:`seed` for
+    full control.
     """
 
     class Meta:
         model: Any = None
         count: int | None = None
+        after: tuple[Any, ...] = ()
 
     @classmethod
     def target(cls) -> type[models.Model] | None:
@@ -361,8 +370,15 @@ def _wipe(model: type[models.Model]) -> None:
     rows.all().delete()
 
 
+def _after(model: type[models.Model]) -> set[Any]:
+    """The models ``model``'s seeder says to seed first (``Meta.after``)."""
+    seeder = seeders().get(model)
+    declared = getattr(getattr(seeder, "Meta", None), "after", ()) or ()
+    return {_resolve(item) for item in declared}
+
+
 def _edges(model: type[models.Model], members: set[Any], *, hard_only: bool) -> set[Any]:
-    found: set[Any] = set()
+    found: set[Any] = _after(model) & (members - {model})
     for relation in model._meta.concrete_fields:
         target = relation.related_model
         if relation.is_relation and target in members and target is not model:
@@ -589,6 +605,44 @@ class SeedContext:
         pool = self.run.pool(model)
         return self.random.choice(pool) if pool else None
 
+    def pool(self, model: type[models.Model]) -> list[Any]:
+        """Experimental. The rows of ``model`` this run picks from: the ones it seeded (or
+        found again), else the table's first rows by key.
+
+        Read users from here, not from the table: another app's demo logins
+        (:meth:`account`) join the table during a run, so a seeder that reads every
+        user would give other rows on the next run.
+        """
+        return list(self.run.pool(model))
+
+    def account(self, login: str, *roles: str, first_name: str = "", last_name: str = "") -> Any:
+        """Experimental. A demo login holding ``roles``, made once and found again.
+
+        For the demo accounts a recipe's rules need (a shop manager, a member
+        with bookings): the password is ``karni-password``, the email counts as
+        verified, the roles are assigned, and ``karni seed`` lists the login
+        with its roles at the end. Give it rows of its own, so each role signs
+        in to a screen that shows what that role works on.
+        """
+        from django.contrib.auth import get_user_model
+
+        from karni.accounts.permissions import assign_role
+
+        model = get_user_model()
+        login_field = model.USERNAME_FIELD
+        user = model._default_manager.filter(**{login_field: login}).first()
+        if user is None:
+            user = model._default_manager.create_user(
+                login, password=DEFAULT_PASSWORD, first_name=first_name, last_name=last_name
+            )
+        if hasattr(user, "email_verified") and not user.email_verified:
+            user.email_verified = True
+            user.save(update_fields=["email_verified"])
+        for role in roles:
+            assign_role(user, role)
+        self.run.report.logins[login] = sorted({*self.run.report.logins.get(login, []), *roles})
+        return user
+
 
 class _Run:
     def __init__(
@@ -629,6 +683,10 @@ class _Run:
 
     def pick(self, target: type[models.Model], relation: Any) -> Any:
         if relation.null and self.random.random() >= FILL_RATE:
+            return None
+        if relation.null and self.plan and target not in self.plan:
+            # A row this run does not seed (a payment another app's checkout made) is not
+            # this row's to point at: a demo booking stays without a payment.
             return None
         pool = self.pool(target)
         if relation.one_to_one:
@@ -683,6 +741,11 @@ class _Run:
                 with transaction.atomic():
                     row = context.factory.create(**values)
             except IntegrityError as exc:
+                problem = exc
+                continue
+            except RuleViolation as exc:
+                if exc.code not in ("E991", "E993"):  # a duplicate, or a target the rule refuses
+                    raise unseedable(context.model, exc) from exc
                 problem = exc
                 continue
             except ImproperlyConfigured as exc:
@@ -834,6 +897,10 @@ class _Run:
                 continue
             started = time.perf_counter()
             label = model._meta.label
+            # Each model draws from its own stream, seeded by the run's seed and its label:
+            # a part's rows stay the same whatever other parts the project holds and seeds.
+            self.random.seed(f"{self.seed_value}:{label}")
+            reseed_random(f"{self.seed_value}:{label}")
             if self.bulk_for(model, seeder_class, count):
                 self.report.rows[label] = self.bulk().seed_model(model, count, seeder_class)
                 self.report.bulk.append(label)
@@ -933,7 +1000,11 @@ def seed(
         bulk=bulk,
         batch_size=batch_size,
     )
-    with transaction.atomic():
+    from karni.rules import clock, silent
+
+    # The rules of class Karni read $now as the anchor, so the rows pass them the same way,
+    # and demo rows email nobody.
+    with transaction.atomic(), clock(run.anchor), silent("karni seed: demo data"):
         report = run.run(plan, reset=reset)
     report.seconds = time.perf_counter() - started
     return report

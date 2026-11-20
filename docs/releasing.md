@@ -23,6 +23,8 @@ One tag publishes every package at the same version:
 | `karni-reports` | PyPI | `modules/karni-reports` |
 | `karni-ai` | PyPI | `modules/karni-ai` |
 | `karni-storage` | PyPI | `modules/karni-storage` |
+| `karni-commerce` | PyPI | `modules/karni-commerce` |
+| `karni-game` | PyPI | `modules/karni-game` |
 | `@karni/ui` | npm | `packages/karni-ui` |
 | `@karni/payments-ui` | npm | `modules/karni-payments/ui` |
 | `@karni/approvals-ui` | npm | `modules/karni-approvals/ui` |
@@ -31,6 +33,8 @@ One tag publishes every package at the same version:
 | `@karni/reports-ui` | npm | `modules/karni-reports/ui` |
 | `@karni/ai-ui` | npm | `modules/karni-ai/ui` |
 | `@karni/storage-ui` | npm | `modules/karni-storage/ui` |
+| `@karni/commerce-ui` | npm | `modules/karni-commerce/ui` |
+| `@karni/game` | npm | `modules/karni-game/ui` |
 
 The table is `PYTHON_PACKAGES` and `NPM_PACKAGES` in
 `.github/ci/check_release.py`, the one list of what a tag publishes. A test
@@ -38,9 +42,9 @@ The table is `PYTHON_PACKAGES` and `NPM_PACKAGES` in
 workflows and the release check to it. A new package goes into that list
 first.
 
-Lockstep keeps "which @karni/ui goes with karni 0.5?" from ever being a
-question. A module's range on core (`karni>=0.5,<0.6` and `"@karni/ui":
-"^0.5.0"` in 0.5) moves with every minor release.
+Lockstep keeps "which @karni/ui goes with karni 0.6?" from ever being a
+question. A module's range on core (`karni>=0.6,<0.7` and `"@karni/ui":
+"^0.6.0"` in 0.6) moves with every minor release.
 
 ## Cutting a release
 
@@ -141,7 +145,7 @@ accepts the same version twice.
 
   | Field | Value |
   |---|---|
-  | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site`, `karni-charts`, `karni-reports`, `karni-ai`, `karni-storage` (one publisher each) |
+  | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site`, `karni-charts`, `karni-reports`, `karni-ai`, `karni-storage`, `karni-commerce`, `karni-game` (one publisher each) |
   | Owner | `cbsshekhawat18-lab` |
   | Repository name | `karni` |
   | Workflow name | `release.yml` |

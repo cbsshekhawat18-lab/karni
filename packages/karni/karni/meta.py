@@ -187,6 +187,15 @@ OPTIONS: Final[tuple[Option, ...]] = (
         'after_import = "shop.imports.reindex"',
     ),
     Option(
+        "label",
+        "`None`",
+        "Experimental. The field that names a row for people, where another model's "
+        "relation shows it: a table cell, a detail page, a select. Published as `label` in "
+        "`x-karni-relation`. Unset, @karni/ui takes the first of name, title, label and "
+        "email.",
+        'label = "number"',
+    ),
+    Option(
         "dashboard",
         "`None`",
         "Put the model on the staff app's dashboard: counts (all rows, new ones, one per "
@@ -273,6 +282,52 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "resource field(s) then the range, or a list of them. PostgreSQL enforces it with an "
         "`EXCLUDE` constraint the model's migration creates. Soft-deleted rows never block.",
         'no_overlap = NoOverlap("room", "during", ignore={"status": ["cancelled"]})',
+    ),
+    # rules every write keeps (karni.rules, experimental)
+    Option(
+        "bounds",
+        "`{}`",
+        "Experimental. The lowest and highest value of a number, date or datetime field, "
+        "checked when the value is written new or changed: `{field: {min, max}}`, with `$now` "
+        "and `$today` for dates (`E990`). The API schema publishes a number's limits.",
+        'bounds = {"quantity": {"min": 1}, "expected_close": {"min": "$today"}}',
+    ),
+    Option(
+        "unique",
+        "`None`",
+        "Experimental. Fields whose values are unique among the live rows: a list of field "
+        "lists, or `{fields, where}` with a row filter of fixed values. Each one is a partial "
+        "unique index PostgreSQL and SQLite enforce (`E991`).",
+        'unique = [["slot", "member"], {"fields": ["user"], "where": {"active": True}}]',
+    ),
+    Option(
+        "targets",
+        "`{}`",
+        "Experimental. The rows a foreign key may point at: `{field: <row filter>}`, with "
+        "`$me`, `$now`, `$today` and `$<field of the row>` as values (`E993`).",
+        'targets = {"listing": {"active": True, "seller__user": {"not": "$me"}}}',
+    ),
+    Option(
+        "frozen",
+        "`{}`",
+        "Experimental. Fields that never change after create (`True`), or not while the stored "
+        "row matches a row filter (`E994`).",
+        'frozen = {"slot": True, "value": {"stage": "won"}}',
+    ),
+    Option(
+        "delete",
+        "`None`",
+        "Experimental. When a row may be deleted: `when` (a row filter it must match) and "
+        "`blocked_by` (related entities whose live rows keep it). A refusal is `E995` (409).",
+        'delete = {"when": {"status": "pending"}, "blocked_by": ["Deal"]}',
+    ),
+    Option(
+        "moves",
+        "`{}`",
+        "Experimental. What a move into a state (or a boolean becoming true) requires, needs, "
+        "stamps and who is emailed: `{state: {requires: [fields], needs: [entities], stamps: "
+        "[fields], notify: <path to a user>}}` (`E996`).",
+        'moves = {"lost": {"requires": ["lost_reason"], "stamps": ["closed_at"]}}',
     ),
     # external tables, SQL views and a second database (karni.db, experimental)
     Option(

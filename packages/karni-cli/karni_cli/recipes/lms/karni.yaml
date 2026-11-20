@@ -32,10 +32,13 @@ apps:
         key: slug
         search: [title, summary]
         order: title
+        moves: {published: {needs: [Lesson]}}
+        delete: {blocked_by: [Enrolment]}
         access:
-          read: public
+          read: ["where:published", "owned:instructor", "owned:enrolment__student", "role:staff"]
           write: ["owned:instructor", "role:staff"]
           create: ["role:instructor", "role:staff"]
+          assign: "role:staff"
       Lesson:
         fields:
           course: fk:Course
@@ -44,8 +47,10 @@ apps:
           position: int
         owner: course__instructor
         order: [course, position]
+        bounds: {position: {min: 1}}
+        unique: [[course, position]]
         access:
-          read: authenticated
+          read: ["owned:course__enrolment__student", "owned:course__instructor", "role:staff"]
           write: ["owned:course__instructor", "role:staff"]
       Enrolment:
         fields:
@@ -53,6 +58,9 @@ apps:
           student: fk:User
         owner: student
         audit: true
+        unique: [[course, student]]
+        targets: {course: {published: true, instructor: {not: $me}}}
+        frozen: {course: true}
         access:
           read: ["owned:student", "owned:course__instructor", "role:staff"]
           write: ["owned:student", "role:staff"]
@@ -62,6 +70,10 @@ apps:
           lesson: fk:Lesson
           completed_at: "datetime?"
         owner: enrolment__student
+        bounds: {completed_at: {max: $now}}
+        unique: [[enrolment, lesson]]
+        targets: {lesson: {course: $enrolment__course}}
+        frozen: {enrolment: true, lesson: true}
         access:
           read: ["owned:enrolment__student", "owned:enrolment__course__instructor", "role:staff"]
           write: ["owned:enrolment__student", "role:staff"]

@@ -38,7 +38,7 @@ def test_new_generates_project(runner, tmp_path: Path, monkeypatch) -> None:
     # next steps must print the SLUG, not the input name
     assert "cd my_app" in result.output
     # the release the scaffold is written for: `karni upgrade` starts there
-    assert 'baseline = "0.5.2"' in (project / "pyproject.toml").read_text()
+    assert 'baseline = "0.6.0"' in (project / "pyproject.toml").read_text()
     # generators insert project routes at this marker (karni make site)
     assert (
         "    # karni:urls\n    # Only while DEBUG" in (project / "config" / "urls.py").read_text()
@@ -241,7 +241,9 @@ def test_every_frontend_overrides_only_the_affected_minimatch(
     assert wrong == {}
 
 
-@pytest.mark.parametrize("example", ["eventhub", "social-leads", "medintel", "shop-demo"])
+@pytest.mark.parametrize(
+    "example", ["eventhub", "social-leads", "medintel", "shop-demo", "hybrid-demo"]
+)
 def test_the_examples_pin_the_scaffolds_zod_and_resolvers(example: str) -> None:
     """@karni/ui's forms call zodResolver: Zod 4 needs @hookform/resolvers 5."""
     package = REPO_ROOT / "examples" / example / "frontend" / "package.json"
@@ -310,7 +312,7 @@ def test_ui_source_repo_walk_is_verified(tmp_path: Path) -> None:
 
 
 def test_ui_spec(tmp_path: Path) -> None:
-    assert ui_spec(None) == "^0.5.0"
+    assert ui_spec(None) == "^0.6.0"
     assert ui_spec(Path("/opt/Karni/packages/karni-ui")) == "file:/opt/Karni/packages/karni-ui"
     # A project elsewhere keeps the absolute path; one inside the checkout gets a
     # relative one (from frontend/), so examples/ install on any machine.
@@ -373,7 +375,7 @@ def test_a_checkout_found_by_walking_is_used_only_inside_it(
     result = runner.invoke(app, ["new", "Elsewhere", "-o", str(tmp_path)])
     assert result.exit_code == 0, result.output
     package = json.loads((tmp_path / "elsewhere" / "frontend" / "package.json").read_text())
-    assert package["dependencies"]["@karni/ui"] == "^0.5.0"
+    assert package["dependencies"]["@karni/ui"] == "^0.6.0"
     assert "/" not in package["dependencies"]["@karni/ui"]
 
 
@@ -384,7 +386,7 @@ def test_new_falls_back_to_the_registry(runner, tmp_path: Path, monkeypatch) -> 
     assert result.exit_code == 0, result.output
     project = tmp_path / "registry_ui"
     package = json.loads((project / "frontend" / "package.json").read_text())
-    assert package["dependencies"]["@karni/ui"] == "^0.5.0"
+    assert package["dependencies"]["@karni/ui"] == "^0.6.0"
     assert all(isinstance(volume, str) for volume in _frontend_volumes(project))
     assert "KARNI_UI_SRC=" in result.output
 

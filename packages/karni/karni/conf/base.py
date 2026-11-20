@@ -377,11 +377,54 @@ BASE: dict[str, Any] = {
     # role grants (one more query per request). Off, they grant nothing and cost nothing.
     "KARNI_USER_GRANTS": env.bool("KARNI_USER_GRANTS", default=False),
     # Navigation from data (experimental): a list of menu items and groups, "db" (the
-    # NavItem table of the karni.navigation app) or None (no menu, no navigation/ route).
+    # NavItem table of the karni.navigation app), named menus ({"app": [...], "public":
+    # [...]}, read with ?menu=) or None (no menu, no navigation/ route).
     "KARNI_NAVIGATION": None,
     # The frontend files whose `path:` entries are the app's pages: karni check reports
     # a menu item whose route none of them serves. [] turns that comparison off.
     "KARNI_NAVIGATION_PAGES": ["frontend/src/routes.tsx"],
+    # The people contract (experimental): True installs karni.people (Person, Organisation,
+    # Membership, Address). karni build writes it when karni.yaml points at people.Person.
+    "KARNI_PEOPLE": env.bool("KARNI_PEOPLE", default=False),
+    # Dotted path of the Resolver class people.resolve() uses.
+    "KARNI_PEOPLE_RESOLVER": "karni.people.services.Resolver",
+    # Link an account to the person with its email once the email is verified.
+    "KARNI_PEOPLE_LINK_ON_VERIFY": True,
+    # Route /api/people/, /api/organisations/, /api/people-memberships/ and /api/people-addresses/.
+    "KARNI_PEOPLE_API": True,
+    # Models ("app_label.Model") a merge leaves alone: their rows keep the merged record.
+    "KARNI_PEOPLE_MERGE_SKIP": [],
+    # Import every installed app's people.py (its person facts, merge and erase hooks).
+    "KARNI_PEOPLE_AUTODISCOVER": True,
+    # The timeline contract (experimental, the karni.timeline app): route GET /api/timeline/,
+    # write entries from events that declare timeline=, the page sizes, the days an entry
+    # is kept (None keeps them all) and the class that says which records a caller may read.
+    "KARNI_TIMELINE_API": True,
+    "KARNI_TIMELINE_FROM_EVENTS": True,
+    "KARNI_TIMELINE_PAGE_SIZE": 25,
+    "KARNI_TIMELINE_MAX_PAGE_SIZE": 100,
+    "KARNI_TIMELINE_RETENTION_DAYS": None,
+    "KARNI_TIMELINE_VISIBILITY": "karni.timeline.access.Visibility",
+    # The preferences contract (experimental, the karni.preferences app): values the
+    # deployment fixes and values it starts with ({"details": {...}, "<section>": {...},
+    # "connections": {...}, "emails": {...}}), route /api/preferences/, and import every
+    # app's preferences.py and connections.py.
+    "KARNI_PREFERENCES_LOCKED": {},
+    "KARNI_PREFERENCES_DEFAULTS": {},
+    "KARNI_PREFERENCES_API": True,
+    "KARNI_PREFERENCES_AUTODISCOVER": True,
+    # The notifications contract (experimental, the karni.notify app): route /api/inbox/,
+    # /api/email-templates/ and /api/notify/unsubscribe/, the channels the project sends
+    # on, the inbox's page sizes, the days a notification is kept (None keeps them all),
+    # where an unsubscribe link points (after KARNI_FRONTEND_URL) and the channels of a
+    # move's email (moves.<state>.notify).
+    "KARNI_NOTIFY_API": True,
+    "KARNI_NOTIFY_CHANNELS": ["email", "inbox"],
+    "KARNI_NOTIFY_PAGE_SIZE": 25,
+    "KARNI_NOTIFY_MAX_PAGE_SIZE": 100,
+    "KARNI_NOTIFY_RETENTION_DAYS": 180,
+    "KARNI_NOTIFY_UNSUBSCRIBE_PATH": "/api/notify/unsubscribe/?token={token}",
+    "KARNI_NOTIFY_MOVE_CHANNELS": ["email", "inbox"],
     "KARNI_ACCOUNTS_TOKEN_TTL": {
         "verify_email": 86400,
         "reset_password": 3600,
@@ -418,6 +461,13 @@ BASE: dict[str, Any] = {
     # --- Email ----------------------------------------------------------------
     # EMAIL_URL (smtp+tls://user:password@host:587), DEFAULT_FROM_EMAIL, SERVER_EMAIL.
     **_email(env),
+    # Experimental. The kinds of email karni.mail does not send (a list of
+    # names such as "commerce.new_order"): a project switches one off here.
+    "KARNI_MAIL_DISABLED_KINDS": env.list("KARNI_MAIL_DISABLED_KINDS", default=[]),
+    # Experimental. Where karni.mail finds what a business changed: the notifications
+    # contract's source (edited emails, each person's switches and unsubscribes, the
+    # inbox) while karni.notify is installed, else the files and karni.preferences.
+    "KARNI_MAIL_SOURCE": env("KARNI_MAIL_SOURCE", default="karni.notify.source.NotifySource"),
     # Django's default sends a direct /admin/login/ to /accounts/profile/ (a 404).
     "LOGIN_REDIRECT_URL": f"/{_ADMIN_PATH}",
     # --- DRF & API schema -------------------------------------------------
@@ -562,6 +612,26 @@ BASE: dict[str, Any] = {
     "KARNI_QUERY_BUDGET_MODE": env("KARNI_QUERY_BUDGET_MODE", default="off"),
     # Per-request query count / duplicates / time log (QueryLogMiddleware).
     "KARNI_QUERY_LOG": env.bool("KARNI_QUERY_LOG", default=False),
+    # Demo mode (karni.demo): a public demo with demo accounts, a write rule and a reset.
+    # The short names DEMO_MODE, DEMO_SEED, DEMO_RESET_HOURS, DEMO_RESET_STAMP and
+    # DEMO_APP_INDEX also work (a Blueprint reads them best). The KARNI_ name wins.
+    "KARNI_DEMO_MODE": env.bool("KARNI_DEMO_MODE", default=env.bool("DEMO_MODE", default=False)),
+    "KARNI_DEMO_ACCOUNTS": env.json("KARNI_DEMO_ACCOUNTS", default=[]),
+    "KARNI_DEMO_SEED": env.int("KARNI_DEMO_SEED", default=env.int("DEMO_SEED", default=42)),
+    "KARNI_DEMO_RESET_HOURS": env.int(
+        "KARNI_DEMO_RESET_HOURS", default=env.int("DEMO_RESET_HOURS", default=24)
+    ),
+    "KARNI_DEMO_RESET_CHECK_SECONDS": env.int("KARNI_DEMO_RESET_CHECK_SECONDS", default=60),
+    "KARNI_DEMO_RESET_STAMP": env(
+        "KARNI_DEMO_RESET_STAMP", default=env("DEMO_RESET_STAMP", default="")
+    ),
+    "KARNI_DEMO_APP_INDEX": env("KARNI_DEMO_APP_INDEX", default=env("DEMO_APP_INDEX", default="")),
+    "KARNI_DEMO_KEEP_APPS": None,
+    "KARNI_DEMO_OPEN_PATHS": [],
+    "KARNI_DEMO_LOCKED_PATHS": [],
+    "KARNI_DEMO_APP_RESERVED": [],
+    "KARNI_DEMO_WRITE_RULE": "",
+    "KARNI_DEMO_SEEDER": "",
     # Extra `karni seed` logins with their roles, e.g. {"organizer@example.com": ["organizer"]}.
     "KARNI_SEED_LOGINS": env.json("KARNI_SEED_LOGINS", default={}),
     # Response caching for BaseViewSet list/retrieve (karni.api.caching).
@@ -703,6 +773,7 @@ BASE: dict[str, Any] = {
             "karni_admin",
             "karni_audit",
             "karni_transfer",
+            "karni_outbox",
             "karni_accounts.OneTimeToken",
             "karni_accounts.Permission",
             "karni_accounts.SocialIdentity",
@@ -788,6 +859,15 @@ BASE: dict[str, Any] = {
     # autodiscovered at startup; set False to wire them yourself.
     "KARNI_EVENTS_AUTODISCOVER": env.bool("KARNI_EVENTS_AUTODISCOVER", default=True),
     "KARNI_SCHEDULES_AUTODISCOVER": env.bool("KARNI_SCHEDULES_AUTODISCOVER", default=True),
+    # Family events with an outbox (experimental, the karni.outbox app): how a committed
+    # event reaches a worker, the runs of one delivery before it is failed, and the days a
+    # delivered event is kept (None keeps them all).
+    "KARNI_EVENTS_DISPATCHER": "karni.outbox.dispatch.celery",
+    # Deliver family events in the process that committed, with no worker: None follows
+    # DEBUG (development), True for a small deployment with no broker, False never.
+    "KARNI_EVENTS_INLINE": env.bool("KARNI_EVENTS_INLINE", default=None),
+    "KARNI_EVENTS_MAX_ATTEMPTS": env.int("KARNI_EVENTS_MAX_ATTEMPTS", default=8),
+    "KARNI_EVENTS_RETENTION_DAYS": env.int("KARNI_EVENTS_RETENTION_DAYS", default=30),
     # The key type `karni make model` writes (experimental): "uuid" (BaseModel) or
     # "bigint" (BigIntBaseModel). Read by the CLI from config/settings.py, nothing
     # else: each model's class line decides its key.
@@ -814,6 +894,8 @@ BASE: dict[str, Any] = {
     "KARNI_SEED_LEDGER": True,
     # karni queries --explain flags sequential scans on tables of this many rows or more.
     "KARNI_EXPLAIN_SEQ_SCAN_ROWS": 1000,
+    # Seconds a $now bound of class Karni: bounds forgives (a browser clock a little off).
+    "KARNI_RULES_CLOCK_SKEW": 300,
 }
 """Profile-independent defaults merged first by ``karni_settings()``.
 

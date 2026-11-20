@@ -268,7 +268,7 @@ an item someone added and an item someone deleted stay as they are. A menu
 someone made in the admin, without a seed, never follows one.
 `KARNI_SITE_MENU_FOLLOW_SEED = False` seeds a menu once and leaves it, and
 `karni_site.menus.sync_menu(name, markup, source=...)` follows a seed from
-code of your own. A menu seeded before Karni 0.5.2 follows too: the items
+code of your own. A menu seeded before Karni 0.6.0 follows too: the items
 nobody saved since the seed made them follow, and the others are kept.
 
 A list in the seed marked `data-karni-children-from="website.Service"` becomes

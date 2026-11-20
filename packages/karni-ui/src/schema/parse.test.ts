@@ -10,7 +10,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { openApiFixture, openApiFixtureWithAuthMode } from "../../tests/msw/openapi";
-import { parseColumnSets, parseFieldGroups, parseOpenApi } from "./parse";
+import {
+  parseColumnSets,
+  parseFieldGroups,
+  parseOpenApi,
+  parseRowActions,
+  rowActionOpen,
+} from "./parse";
 import type { FieldDef, ResourceSchema } from "./types";
 
 function fieldOf(schema: ResourceSchema, name: string): FieldDef {
@@ -648,5 +654,37 @@ describe("parseOpenApi — wide models (experimental)", () => {
     });
     expect(parseColumnSets({ sets: [{ name: "", columns: ["a"] }] })).toBeUndefined();
     expect(parseColumnSets(null)).toBeUndefined();
+  });
+});
+
+describe("x-karni-actions (row actions declared in karni.yaml)", () => {
+  const actions = parseRowActions({
+    ship: {
+      from: ["paid"],
+      to: "shipped",
+      field: "status",
+      by: { role: ["staff"] },
+      requires: ["tracking"],
+    },
+    note: { from: [], to: null, field: null, by: null, requires: [] },
+  });
+
+  it("reads each action's states, field, rule and required fields", () => {
+    expect(actions?.["ship"]).toEqual({
+      from: ["paid"],
+      to: "shipped",
+      field: "status",
+      by: { role: ["staff"] },
+      requires: ["tracking"],
+    });
+    expect(parseRowActions(undefined)).toBeUndefined();
+  });
+
+  it("says whether an action runs on a row now, and nothing for one it does not declare", () => {
+    const schema = { rowActions: actions };
+    expect(rowActionOpen(schema, "ship", { status: "paid" })).toBe(true);
+    expect(rowActionOpen(schema, "ship", { status: "pending" })).toBe(false);
+    expect(rowActionOpen(schema, "note", { status: "pending" })).toBe(true);
+    expect(rowActionOpen(schema, "refund", { status: "paid" })).toBeUndefined();
   });
 });

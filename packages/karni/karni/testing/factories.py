@@ -178,6 +178,37 @@ class AutoFactory(DjangoModelFactory):
         finally:
             _CHAIN.reset(token)
 
+    @classmethod
+    def _create(cls, model_class: Any, *args: Any, **kwargs: Any) -> Any:
+        """Create the row; a flag whose move needs related rows (``class Karni: moves``) gets them.
+
+        ``published=True`` on a course that may be published only with a lesson
+        creates the course unpublished, one lesson, then publishes it.
+        """
+        moves = _needing_moves(model_class)
+        wanted = {
+            move.field: kwargs.pop(move.field)
+            for move in moves
+            if kwargs.get(move.field) and move.field in kwargs
+        }
+        for name in wanted:
+            kwargs[name] = False
+        row = super()._create(model_class, *args, **kwargs)
+        if not wanted:
+            return row
+        from karni.rules import related_rows
+
+        for move in moves:
+            if move.field not in wanted:
+                continue
+            for ref in move.needs:
+                if not related_rows(row, ref, None).exists():
+                    related, key = _needed(model_class, ref)
+                    factory_for(related).create(**{key: row})
+            setattr(row, move.field, wanted[move.field])
+        row.save()
+        return row
+
 
 class AutoSubFactory(factory.SubFactory):
     """A ``SubFactory`` resolved lazily through :func:`factory_for`, with cycle/depth guards.
@@ -188,8 +219,10 @@ class AutoSubFactory(factory.SubFactory):
     Explicit nested overrides (``venue__name="x"``) always create.
     """
 
-    def __init__(self, model: type[models.Model], *, nullable: bool, max_depth: int) -> None:
-        super().__init__(AutoFactory)
+    def __init__(
+        self, model: type[models.Model], *, nullable: bool, max_depth: int, **values: Any
+    ) -> None:
+        super().__init__(AutoFactory, **values)
         self.model = model
         self.nullable = nullable
         self.max_depth = max_depth
@@ -257,6 +290,74 @@ def _missing_value(model: type[models.Model], field: models.Field[Any, Any]) -> 
         )
 
     return factory.LazyFunction(fail)
+
+
+def _needing_moves(model: type[models.Model]) -> list[Any]:
+    """The moves of ``model`` into a boolean ``true`` that need related rows (karni.rules)."""
+    from karni.errorcodes import KarniError
+    from karni.rules import rules_of
+
+    try:
+        moves = rules_of(model).moves
+    except KarniError:
+        return []
+    return [move for move in moves if move.to is True and move.needs]
+
+
+def _needed(model: type[models.Model], ref: str) -> tuple[type[models.Model], str]:
+    from karni.rules import _relation
+
+    return _relation(model, "moves", ref)
+
+
+def _target_rule(model: type[models.Model], name: str) -> Any:
+    """The ``class Karni: targets`` filter of ``model.<name>``, or ``None`` (karni.rules)."""
+    from karni.errorcodes import KarniError
+    from karni.rules import rules_of
+
+    if model._meta.abstract:
+        return None
+    try:
+        return rules_of(model).targets.get(name)
+    except KarniError:
+        return None
+
+
+def _same_row(target: type[models.Model], rule: Any) -> Any:
+    """``{pk: $purchase__item_id}``: the row the path names, not a new one."""
+    for key in ("pk", "id", target._meta.pk.name):
+        value = rule.get(key)
+        if isinstance(value, str) and value.startswith("$") and value not in ("$me", "$now"):
+            path = value[1:].split("__")
+
+            def same(row: Any, path: list[str] = path) -> Any:
+                found: Any = row
+                for part in path:
+                    found = getattr(found, part)
+                return target._default_manager.get(pk=found)
+
+            return factory.LazyAttribute(same)
+    return None
+
+
+def _fitting(rule: Any) -> dict[str, Any]:
+    """Factory values that make a related row match a targets filter, where they can be set.
+
+    A literal (``active: true``) is set as it is and ``$<field>`` follows the
+    row being built (``company: $company``); a path, a lookup, ``{not: ...}``
+    and ``$me`` / ``$now`` / ``$today`` are left to the factory.
+    """
+    values: dict[str, Any] = {}
+    for key, value in rule.items():
+        if "__" in key or isinstance(value, dict | list):
+            continue
+        if isinstance(value, str) and value.startswith("$"):
+            if value in ("$me", "$now", "$today"):
+                continue
+            values[key] = factory.SelfAttribute(".." + value[1:].replace("__", "."))
+        else:
+            values[key] = value
+    return values
 
 
 def _bounds(field: models.Field[Any, Any], low: float, high: float) -> tuple[float, float]:
@@ -348,6 +449,8 @@ class FactoryBuilder:
             return factory.django.Password(DEFAULT_PASSWORD, transform=hashed_password)
         if field.is_relation:
             return self.relation_value(model, field)
+        if any(move.field == field.name for move in _needing_moves(model)):
+            return False  # a row starts before the move that needs related rows (karni.rules)
         if field.has_default():
             return SKIP
         if field.null and field.blank:
@@ -370,6 +473,17 @@ class FactoryBuilder:
             from django.contrib.contenttypes.models import ContentType
 
             return factory.LazyFunction(lambda: ContentType.objects.get_for_model(model))
+        ruled = _target_rule(model, field.name)
+        if ruled is not None:
+            # class Karni: targets: an optional one stays empty, a required one is made to fit.
+            if field.null:
+                return None
+            same = _same_row(target, ruled)
+            if same is not None:
+                return same
+            return AutoSubFactory(
+                target, nullable=False, max_depth=self.max_depth, **_fitting(ruled)
+            )
         return AutoSubFactory(target, nullable=field.null, max_depth=self.max_depth)
 
     def choice_value(self, field: models.Field[Any, Any]) -> Any:

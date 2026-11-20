@@ -179,3 +179,32 @@ def test_count_rows_reports_a_database_that_does_not_answer(
     assert found["rows"] == [None]
     assert expected in found["unreachable"]["second"]
     assert not (tmp_path / "missing.sqlite3").exists()  # counting never creates the file
+
+
+def test_a_seeder_count_follows_meta_inheritance(monkeypatch) -> None:
+    from karni import facts, seeding
+    from karni.seeding import Seeder
+    from tests.testapp.models import Venue
+
+    class Generated(Seeder):
+        class Meta:
+            model = Venue
+            count = 20
+
+    class Project(Generated):
+        class Meta(Generated.Meta):
+            after = ("testapp.Tag",)
+
+    monkeypatch.setattr(seeding, "seeders", lambda: {Venue: Project})
+    assert facts._seeders() == {"testapp.Venue": 20}
+
+
+def test_the_facts_name_the_core_contracts_installed() -> None:
+    """The test project installs people, the outbox, the timeline, preferences and notify."""
+    assert project_facts()["contracts"] == [
+        "people",
+        "events",
+        "timeline",
+        "preferences",
+        "notify",
+    ]

@@ -1,5 +1,7 @@
 name = "crm"
 title = "CRM"
+version = "1.0.0"
+requires = ["preferences>=1"]
 purpose = "Companies, contacts and deals through a sales pipeline, with activities."
 use_when = [
     "crm",

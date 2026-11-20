@@ -143,13 +143,21 @@ def _truthy(value: str | None) -> bool:
 _BACKEND_BOUNDS = frozenset({-(2**31), 2**31 - 1, -(2**63), 2**63 - 1})
 
 
+#: Display hints that follow a field's own type, left out of a snapshot: a snapshot
+#: written before Karni published one still matches (the served document has them).
+_DISPLAY_HINTS = ("x-karni-money",)
+
+
 def normalise_schema(schema: Any) -> Any:
     """``schema`` without the backend-derived integer bounds (in place, and returned).
 
     A snapshot generated on SQLite must match CI's PostgreSQL and the other
-    way round; the served document still carries the real bounds.
+    way round; the served document still carries the real bounds. Display
+    hints that follow a field's type (``x-karni-money``) are left out too.
     """
     if isinstance(schema, dict):
+        for hint in _DISPLAY_HINTS:
+            schema.pop(hint, None)
         if schema.get("type") == "integer":
             for key in ("minimum", "maximum"):
                 if schema.get(key) in _BACKEND_BOUNDS:

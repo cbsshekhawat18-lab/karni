@@ -49,13 +49,13 @@ test("an attendee books, pays, and is confirmed by the provider webhook", async 
     await expect(page).toHaveURL(/\/bookings\/[0-9a-f-]{36}$/);
     const bookingId = page.url().split("/").pop() as string;
 
-    // The hosted checkout is the test provider's imaginary page.
-    await page.route("https://checkout.test/**", (route) =>
-        route.fulfill({ contentType: "text/html", body: "<h1>Test checkout</h1>" }),
-    );
+    // The hosted checkout: with DEBUG on, the test provider's own page
+    // (/payments/test-checkout/<session>/, karni-payments). The journey leaves it
+    // unpaid and lets the provider's webhook confirm the payment instead.
     await page.getByRole("button", { name: "Pay now" }).click();
-    await expect(page.getByText("Test checkout")).toBeVisible();
-    const sessionId = new URL(page.url()).pathname.split("/").pop() as string;
+    await expect(page.getByRole("heading", { name: "Test payment" })).toBeVisible();
+    await expect(page).toHaveURL(/\/payments\/test-checkout\/[^/]+\/$/);
+    const sessionId = new URL(page.url()).pathname.split("/").filter(Boolean).pop() as string;
 
     // The provider calls back: a signed webhook, processed by the Celery worker.
     const body = JSON.stringify({

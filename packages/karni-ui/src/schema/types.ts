@@ -26,6 +26,11 @@ export type FieldKind =
 export interface RelationRef {
   resource: string;
   many: boolean;
+  /**
+   * Experimental. The field that names a row of the target (`class Karni: label`
+   * on the server): a table cell and a detail show it instead of guessing.
+   */
+  label?: string;
 }
 
 /**
@@ -38,6 +43,12 @@ export interface TreeRef {
   parent: string;
   /** True for an ordered tree: `position` orders siblings and only the move action sets it. */
   ordered: boolean;
+}
+
+/** Experimental. Which currency a money field is in: fixed, or another field of the row. */
+export interface MoneyRef {
+  currency?: string;
+  currencyField?: string;
 }
 
 export interface FieldDef {
@@ -68,6 +79,11 @@ export interface FieldDef {
   /** Present only when x-karni-relation was emitted (degrades gracefully). */
   relation?: RelationRef;
   /**
+   * Experimental. A relation to a person (the user model, `x-karni-user`): tables
+   * and details expand it and show the person's name, never the id.
+   */
+  person?: true;
+  /**
    * Underlying pk value type of a relation field, derived from the property's
    * own emitted type/format, never assumed (D3). Drives zodFor's relation
    * value schema (uuid string vs integer).
@@ -81,6 +97,12 @@ export interface FieldDef {
   transitions?: Readonly<Record<string, readonly string[]>>;
   /** The states a new row may start in (`x-karni-initial`), with `transitions`. */
   initial?: readonly string[];
+  /**
+   * Experimental. An amount of money (`x-karni-money`, a MoneyField on the
+   * server): tables and details show it in its currency, which is fixed
+   * (`currency`) or read from another field of the row (`currencyField`).
+   */
+  money?: MoneyRef;
   /**
    * Experimental. Set on a relation whose target is a tree model
    * (`x-karni-tree`): ResourceForm edits it with TreeSelect.
@@ -268,6 +290,24 @@ export interface ResourceSchema {
   fieldGroups?: FieldGroupsDef;
   /** Experimental. Its column presets (`x-karni-column-sets`), when the model declares them. */
   columnSets?: ColumnSetsDef;
+  /**
+   * Experimental. Its declared row actions (`x-karni-actions`, karni.yaml's
+   * `actions:`): `POST <resource>/<id>/<name>/`, by name.
+   */
+  rowActions?: Readonly<Record<string, RowActionDef>>;
+}
+
+/**
+ * Experimental. One declared row action: the states it runs from, the state
+ * it moves to (`null`: the viewset's own method), the state field, who may
+ * (an `x-karni-access` rule) and the fields the move requires.
+ */
+export interface RowActionDef {
+  from: readonly string[];
+  to: string | null;
+  field: string | null;
+  by: KarniAccessRule | null;
+  requires: readonly string[];
 }
 
 /** The whole parsed registry, produced once per schema fetch by parseOpenApi. */

@@ -20,6 +20,7 @@ plain Pydantic, so a tool can build a :class:`Spec` in code and validate it.
 
 from __future__ import annotations
 
+import re
 from typing import Annotated, Any, Final, Literal
 
 from pydantic import (
@@ -30,6 +31,7 @@ from pydantic import (
     Field,
     Tag,
     WithJsonSchema,
+    model_validator,
 )
 
 from karni_cli.generators.fields import TYPES
@@ -42,22 +44,28 @@ __all__ = [
     "UNCACHED_REASON",
     "VERSION",
     "Access",
+    "ActionRule",
     "Aggregate",
     "ApiCache",
     "App",
     "AppInfo",
+    "Bound",
+    "DashboardTile",
+    "DeleteRule",
     "DetailOptions",
     "DetailPage",
     "Entity",
     "Features",
     "FieldEntry",
     "GlobalSearch",
+    "MoveRule",
     "NavigationEntry",
     "NavigationOptions",
     "NavigationValue",
     "Role",
     "Spec",
     "Terms",
+    "UniqueEntry",
     "json_schema",
     "page_kind_names",
     "page_related",
@@ -78,6 +86,8 @@ API_VERSION: Final = r"[a-z0-9][a-z0-9-]{0,15}"
 FIELD_NAME: Final = r"[a-z][a-z0-9_]*"
 ROLE_SLUG: Final = r"[A-Za-z0-9][A-Za-z0-9_.-]*"
 PAGE_NAME: Final = r"[a-z][a-z0-9-]*"
+#: Experimental. An app's ``route``: a base path of kebab-case segments.
+ROUTE: Final = r"^/[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)*$"
 #: Experimental. The metrics ``aggregate.metrics`` takes: ``karni.aggregation.METRICS``.
 AGGREGATE_METRICS: Final = ("count", "sum", "avg", "min", "max", "distinct_count")
 #: Experimental. The date buckets a group takes after a colon: ``karni.aggregation.BUCKETS``.
@@ -123,7 +133,26 @@ class AppInfo(_Node):
         "app", description="The project's kind, as karni new --kind: site, app or site+app."
     )
     recipe: str | None = Field(
-        None, description="The recipe the spec started from. For the record only."
+        None,
+        description=(
+            "Deprecated: write recipes: [<name>]. Read as a list of one until Karni 1.0, with a "
+            "deprecation warning."
+        ),
+    )
+    recipes: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Experimental. The recipes this project holds, in the order they were added. "
+            "karni recipes add and remove keep it, and karni build writes a new one's files."
+        ),
+    )
+    currency: str | None = Field(
+        default=None,
+        description=(
+            "Experimental. The project's currency, an ISO 4217 code (EUR). A money field without "
+            "a currency of its own is in it, and the payments module's currency follows it."
+        ),
+        pattern="^[A-Z]{3}$",
     )
     api_version: str | None = Field(
         None,
@@ -190,6 +219,40 @@ class Features(_Node):
         ),
     )
     terms: Terms | None = Field(None, description="KARNI_TERMS: the terms acceptance gate.")
+    people: bool = Field(
+        False,
+        description=(
+            "Experimental. KARNI_PEOPLE: the people contract (karni.people). A relation to "
+            "people.Person switches it on too."
+        ),
+    )
+    events: bool = Field(
+        False,
+        description="Experimental. Family events: karni.outbox in INSTALLED_APPS.",
+    )
+    preferences: bool = Field(
+        False,
+        description=(
+            "Experimental. The preferences contract: karni.preferences in INSTALLED_APPS, the "
+            "business's details, one settings section per part, connections and email "
+            "switches behind the Settings page."
+        ),
+    )
+    timeline: bool = Field(
+        False,
+        description=(
+            "Experimental. The timeline contract: karni.timeline in INSTALLED_APPS. It needs "
+            "people and events, which it switches on too."
+        ),
+    )
+    notify: bool = Field(
+        False,
+        description=(
+            "Experimental. The notifications contract: karni.notify in INSTALLED_APPS, the "
+            "emails a business edits in the app, the inbox, each person's switches and "
+            "unsubscribing from marketing emails."
+        ),
+    )
     user_grants: bool = Field(
         False, description="KARNI_USER_GRANTS: per-user grants next to the role grants."
     )
@@ -229,9 +292,10 @@ class Access(_Node):
     """Experimental. ``access:`` of an entity: the viewset's ``Access(...)``.
 
     Each slot takes ``public``, ``authenticated``, ``granted``,
-    ``role:<slug>``, ``owned:<field>``, or a list of them (any of them
-    admits). ``read`` and ``write`` default to ``granted``, ``create`` to
-    ``write``.
+    ``role:<slug>``, ``owned:<field>``, ``where:<field>[=<value>]``, or a
+    list of them (any of them admits). ``read`` and ``write`` default to
+    ``granted``, ``create`` and ``delete`` to ``write``; ``assign`` (who may
+    set the owner to another user) to nobody.
     """
 
     read: Names = Field(
@@ -242,6 +306,16 @@ class Access(_Node):
         description="Who changes and deletes which rows.",
     )
     create: Names | None = Field(None, description="Who creates rows (default: write).")
+    delete: Names | None = Field(
+        None, description="Experimental. Who deletes which rows (default: write)."
+    )
+    assign: Names | None = Field(
+        None,
+        description=(
+            "Experimental. Who may set the owner field (owned:<field> in write or create) to "
+            "another user. Default: nobody, the owner is the signed-in user."
+        ),
+    )
 
 
 AccessValue = Annotated[
@@ -349,6 +423,122 @@ class Aggregate(_Node):
             + ", ".join(AGGREGATE_METRICS)
             + " (default: all of them)."
         ),
+    )
+
+
+#: Experimental. A row filter: path (``seller__user``, optionally ``__gt``, ``__in``, ...) to a
+#: value: a literal, ``$me``, ``$now``, ``$today``, ``$<field of the row>`` or ``{not: value}``.
+RowFilter = dict[str, Any]
+
+
+class Bound(_Node):
+    """Experimental. One field's ``bounds``: its lowest and highest value."""
+
+    min: int | float | str | None = Field(
+        None, description="The lowest value: a number, a date, $now or $today."
+    )
+    max: int | float | str | None = Field(
+        None, description="The highest value: a number, a date, $now or $today."
+    )
+
+
+class UniqueEntry(_Node):
+    """Experimental. One ``unique`` entry written as a mapping: its fields and a row filter."""
+
+    fields: list[str] = Field(description="The fields whose values are unique together.")
+    where: RowFilter | None = Field(
+        None,
+        description="Only the live rows matching this filter count (fixed values only).",
+    )
+
+
+def _unique_member(value: Any) -> str:
+    return "=list" if isinstance(value, list) else "=entry"
+
+
+UniqueValue = Annotated[
+    Annotated[list[str], Tag("=list")] | Annotated[UniqueEntry, Tag("=entry")],
+    Discriminator(_unique_member),
+]
+
+
+def _frozen_member(value: Any) -> str:
+    return "=bool" if isinstance(value, bool) else "=filter"
+
+
+FrozenValue = Annotated[
+    Annotated[bool, Tag("=bool")] | Annotated[RowFilter, Tag("=filter")],
+    Discriminator(_frozen_member),
+]
+
+
+def _blocked_member(value: Any) -> str:
+    return "=list" if isinstance(value, list) else "=map"
+
+
+BlockedBy = Annotated[
+    Annotated[list[str], Tag("=list")] | Annotated[dict[str, RowFilter | None], Tag("=map")],
+    Discriminator(_blocked_member),
+]
+
+
+class DeleteRule(_Node):
+    """Experimental. ``delete:`` of an entity: when a row may be deleted (class Karni: delete)."""
+
+    when: RowFilter | None = Field(
+        None, description="A row filter the row must match to be deleted (its state)."
+    )
+    blocked_by: BlockedBy = Field(
+        default_factory=list,
+        description=(
+            "Entities whose live rows pointing here keep the row (Deal, Deal.company), or a "
+            "mapping of them to a row filter of the rows that count."
+        ),
+    )
+
+
+class MoveRule(_Node):
+    """Experimental. One ``moves:`` entry: what a move into a state needs (class Karni: moves)."""
+
+    requires: Names = Field(
+        default_factory=list, description="Fields that must hold a value after the move."
+    )
+    needs: Names = Field(
+        default_factory=list,
+        description="Entities that must have a live row pointing here (Lesson, Lesson.course).",
+    )
+    stamps: Names = Field(
+        default_factory=list, description="Date or datetime fields set to now by the move."
+    )
+    notify: str | None = Field(
+        None,
+        description=(
+            "A path to the user an email about the move goes to (member), from the "
+            "templates <app>/email/<entity>_<state>_subject.txt and _body.txt."
+        ),
+    )
+
+
+class ActionRule(_Node):
+    """Experimental. One ``actions:`` entry: a row action (the viewset's row_actions)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    from_: Names = Field(
+        default_factory=list,
+        alias="from",
+        description="The states the action runs from (default: any).",
+    )
+    to: str | None = Field(
+        None,
+        description=(
+            "The state it moves the row to. Without it the viewset's own method of the "
+            "action's name does the work."
+        ),
+    )
+    by: Names | None = Field(None, description="Who may run it, in access words (default: write).")
+    field: str | None = Field(
+        None, description="The state field (default: the entity's only state field)."
     )
 
 
@@ -476,6 +666,56 @@ class Entity(_Node):
             '(Uncached(reason="spec")). Default: KARNI_API_CACHE and KARNI_API_CACHE_TTL.'
         ),
     )
+    bounds: dict[str, Bound] = Field(
+        default_factory=dict,
+        description=(
+            "Experimental. Field -> {min, max}: the lowest and highest value of a number, date "
+            "or datetime ($now and $today for dates). class Karni: bounds."
+        ),
+    )
+    unique: list[UniqueValue] = Field(
+        default_factory=list,
+        description=(
+            "Experimental. Fields unique together among the live rows: a list of fields, or "
+            "{fields, where} with a row filter. A partial unique index (class Karni: unique)."
+        ),
+    )
+    targets: dict[str, RowFilter] = Field(
+        default_factory=dict,
+        description=(
+            "Experimental. Foreign key -> a row filter the row it points at must match "
+            "($me, $now, $today, $<field>). class Karni: targets."
+        ),
+    )
+    frozen: dict[str, FrozenValue] = Field(
+        default_factory=dict,
+        description=(
+            "Experimental. Field -> true (never changes after create) or a row filter (cannot "
+            "change while the row matches it). class Karni: frozen."
+        ),
+    )
+    delete: DeleteRule | None = Field(
+        None,
+        description=(
+            "Experimental. When a row may be deleted: {when, blocked_by} (class Karni: delete). "
+            "Who may delete is access.delete."
+        ),
+    )
+    moves: dict[str, MoveRule] = Field(
+        default_factory=dict,
+        description=(
+            "Experimental. State (or boolean field becoming true) -> {requires, needs, stamps} "
+            "(class Karni: moves)."
+        ),
+    )
+    actions: dict[str, ActionRule] = Field(
+        default_factory=dict,
+        description=(
+            "Experimental. Row actions: name -> {from, to, by, field}, POST "
+            "<resource>/<id>/<name>/ (the viewset's row_actions, x-karni-actions)."
+        ),
+        json_schema_extra=_names(FIELD_NAME),
+    )
 
     def tokens(self) -> dict[str, str]:
         """Experimental. Field name -> type, for both forms of a field."""
@@ -496,6 +736,15 @@ class Entity(_Node):
 class App(_Node):
     """Experimental. One Django app of ``apps:`` and its entities."""
 
+    route: str | None = Field(
+        default=None,
+        description=(
+            "Experimental. The base path its entity pages are mounted under (/bookings: the "
+            "resources list is /bookings/resources). Default: none, each page at /<route>. "
+            "karni recipes add sets /<label> for a recipe's app."
+        ),
+        pattern=ROUTE,
+    )
     entities: dict[str, Entity] = Field(
         default_factory=dict,
         description="Entity name (PascalCase) -> entity.",
@@ -588,6 +837,47 @@ class NavigationOptions(_Node):
     items: list[NavigationEntry] | None = Field(None, description="A group's entries.")
 
 
+class DashboardTile(_Node):
+    """Experimental. One ``dashboard:`` tile: a box on the home page of the roles it names.
+
+    A tile with ``entity`` counts (``stat``) or lists (``list``) that entity's
+    rows matching ``filters``, through its list endpoint. A tile whose
+    ``key`` names a tile an app declares in code (``<app>/dashboard.py``:
+    ``commerce.revenue``) places it: its title, order, size and who sees it,
+    or ``hidden: true``.
+    """
+
+    key: str = Field(
+        description="A unique name, prefixed by its part: shop.to_send.",
+        pattern=r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$",
+    )
+    title: str | None = Field(None, description="What the tile says at the top.")
+    kind: Literal["stat", "list", "chart", "custom"] | None = Field(
+        None, description="stat (a number), list (the first rows), chart or custom."
+    )
+    entity: str | None = Field(None, description="The entity whose rows it counts or lists.")
+    filters: dict[str, str | int | bool | list[str]] | None = Field(
+        None,
+        description=(
+            "API filters of the entity's list: {status: processing}, {stock__lte: 3}. A date "
+            "may be today, today-7 or today+1."
+        ),
+    )
+    columns: list[str] | None = Field(None, description="A list tile's columns (fields).")
+    limit: int | None = Field(None, ge=1, le=25, description="How many rows a list tile shows.")
+    link: str | None = Field(None, description="Where a click on the tile goes (an app path).")
+    requires: str | None = Field(
+        None,
+        description="authenticated, * or a permission pattern (app.entity:action). Default: "
+        "the entity's view permission, else authenticated.",
+    )
+    roles: list[str] | None = Field(None, description="Only these roles see it.")
+    order: int | None = Field(None, description="Its place among the tiles, smallest first.")
+    size: Literal["third", "half", "full"] | None = Field(None, description="Its width.")
+    description: str | None = Field(None, description="A line under the title.")
+    hidden: bool | None = Field(None, description="true takes a code tile off the home.")
+
+
 def _navigation_member(value: Any) -> str:
     return "=page" if isinstance(value, str) else "=entry"
 
@@ -597,7 +887,9 @@ def _navigation_value(value: Any) -> str:
 
 
 def _navigation_switch(value: Any) -> str:
-    return "=bool" if isinstance(value, bool) else "=list"
+    if isinstance(value, bool):
+        return "=bool"
+    return "=menus" if isinstance(value, dict) else "=list"
 
 
 #: Experimental. One ``navigation:`` entry: a page's key, or a one-key mapping to a page's
@@ -618,9 +910,18 @@ type NavigationEntry = Annotated[
     Discriminator(_navigation_member),
 ]
 
-#: Experimental. ``navigation:``: ``true`` (every page, in order) or a list of entries.
+#: Experimental. A menu's name in ``navigation:``: ``app``, ``public``, ``account``.
+MENU_NAME: Final = r"^[a-z][a-z0-9_-]{0,39}$"
+
+#: Experimental. ``navigation:``: ``true`` (every page, in order), a list of entries (the
+#: ``app`` menu), or named menus (``{app: [...], public: [...], account: [...]}``).
 NavigationValue = Annotated[
-    Annotated[bool, Tag("=bool")] | Annotated[list[NavigationEntry], Tag("=list")],
+    Annotated[bool, Tag("=bool")]
+    | Annotated[list[NavigationEntry], Tag("=list")]
+    | Annotated[
+        dict[Annotated[str, Field(pattern=MENU_NAME)], list[NavigationEntry]],
+        Tag("=menus"),
+    ],
     Discriminator(_navigation_switch),
 ]
 
@@ -665,7 +966,16 @@ class Spec(_Node):
         description=(
             "Experimental. The menu karni build writes to KARNI_NAVIGATION: true for every page "
             "of pages in their order, or a list of pages (by their key) and groups "
-            "({label: [entries]}), each page with optional {label, icon, requires}."
+            "({label: [entries]}), each page with optional {label, icon, requires}, or named "
+            "menus ({app: [...], public: [...], account: [...]}), each such a list."
+        ),
+    )
+    dashboard: list[DashboardTile] = Field(
+        default_factory=list,
+        description=(
+            "Experimental. The home tiles karni build writes to KARNI_DASHBOARD_TILES: each "
+            "counts or lists an entity's rows for the roles it names, or places a tile an "
+            "app declares in code."
         ),
     )
     seed: dict[str, int] = Field(
@@ -673,6 +983,39 @@ class Spec(_Node):
         description="Entity -> demo rows per karni seed run (a Seeder's Meta.count).",
         json_schema_extra=_names(ENTITY_NAME),
     )
+
+    @model_validator(mode="after")
+    def _currency(self) -> Spec:
+        return _project_currency(self)
+
+
+_BARE_MONEY: Final = re.compile(r"^money(\??)$")
+
+
+def _in_currency(token: str, currency: str) -> str:
+    """``money`` (and ``money?``) as ``money:<currency>``; any other token as written."""
+    found = _BARE_MONEY.match(token)
+    return f"money:{currency}{found.group(1)}" if found else token
+
+
+def _project_currency(spec: Spec) -> Spec:
+    """Experimental. A money field without a currency reads ``app.currency`` when it is set.
+
+    The old ``app.recipe`` is read as ``app.recipes`` of one.
+    """
+    if spec.app.recipe and not spec.app.recipes:
+        spec.app.recipes = [spec.app.recipe]
+    currency = spec.app.currency
+    if not currency:
+        return spec
+    for app in spec.apps.values():
+        for entity in app.entities.values():
+            for name, value in list(entity.fields.items()):
+                if isinstance(value, str):
+                    entity.fields[name] = _in_currency(value, currency)
+                else:
+                    value.type = _in_currency(value.type, currency)
+    return spec
 
 
 def _tidy(node: Any, *, names: bool = False) -> Any:

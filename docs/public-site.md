@@ -42,6 +42,7 @@ karni new "Crumb Bakery" --kind site                    # a public website
 karni new "Crumb Bakery" --kind site --design ../design # built from a designer's pages
 karni new "Field Notes" --kind app                      # an API and a React app
 karni new "Bake Club" --kind site+app                   # both
+karni new "Block Hopper" --kind game                    # an app with a game in it
 ```
 
 | Kind | What `karni new` sets up |
@@ -49,6 +50,7 @@ karni new "Bake Club" --kind site+app                   # both
 | `site` | the site app `website` at `/` on the [`karni-site` module](#the-karni-site-module), the admin as the place the client edits every text, image, menu and page title, registration off (`KARNI_ACCOUNTS_REGISTRATION = False`, staff create the accounts), the roles `staff` and `editor`, and the staff app in `frontend/` for staff (`--no-staff-app` leaves it out, and staff work in the admin) |
 | `app` | the API and the React app in `frontend/` for signed-in users, as `karni new` always made |
 | `site+app` | both: the site app and karni-site, and the app with its registration and roles |
+| `game` (experimental) | an app with a game in it: [karni-game](game.md) wired, the game declared in `content/game.yaml`, a small game you can play at `/game` on [`@karni/game`](game-client.md), and its portal build in `frontend/portal/` ([a new game project](game.md#a-new-game-project)) |
 
 Every kind has the same security defaults (the
 [Content-Security-Policy and headers](security.md#security-headers), the

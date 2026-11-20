@@ -112,7 +112,8 @@
             "format": "uuid",
             "nullable": true,
             "readOnly": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "email": {
             "oneOf": [
@@ -149,7 +150,8 @@
             "format": "uuid",
             "nullable": true,
             "readOnly": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "workspace": {
             "format": "uuid",
@@ -217,7 +219,8 @@
           "assigned_to": {
             "format": "uuid",
             "nullable": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "budget": {
             "maxLength": 100,
@@ -256,7 +259,8 @@
             "format": "uuid",
             "nullable": true,
             "readOnly": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "custom_fields": {},
           "email": {
@@ -346,7 +350,8 @@
             "format": "uuid",
             "nullable": true,
             "readOnly": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "workspace": {
             "format": "uuid",
@@ -383,7 +388,8 @@
           "actor": {
             "format": "uuid",
             "nullable": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "content": {
             "type": "string"
@@ -397,7 +403,8 @@
             "format": "uuid",
             "nullable": true,
             "readOnly": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "id": {
             "format": "uuid",
@@ -422,7 +429,8 @@
             "format": "uuid",
             "nullable": true,
             "readOnly": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           }
         },
         "required": [
@@ -449,7 +457,8 @@
           "actor": {
             "format": "uuid",
             "nullable": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "content": {
             "type": "string"
@@ -475,7 +484,8 @@
           "assigned_to": {
             "format": "uuid",
             "nullable": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "budget": {
             "maxLength": 100,
@@ -609,7 +619,8 @@
             "format": "uuid",
             "nullable": true,
             "readOnly": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "id": {
             "format": "uuid",
@@ -619,9 +630,11 @@
           "members": {
             "items": {
               "format": "uuid",
-              "type": "string"
+              "type": "string",
+              "x-karni-user": true
             },
-            "type": "array"
+            "type": "array",
+            "x-karni-user": true
           },
           "name": {
             "maxLength": 200,
@@ -636,7 +649,8 @@
             "format": "uuid",
             "nullable": true,
             "readOnly": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           }
         },
         "required": [
@@ -656,9 +670,11 @@
           "members": {
             "items": {
               "format": "uuid",
-              "type": "string"
+              "type": "string",
+              "x-karni-user": true
             },
-            "type": "array"
+            "type": "array",
+            "x-karni-user": true
           },
           "name": {
             "maxLength": 200,
@@ -669,6 +685,20 @@
         "required": [
           "members",
           "name"
+        ],
+        "type": "object"
+      },
+      "Dashboard": {
+        "properties": {
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/Tile"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "tiles"
         ],
         "type": "object"
       },
@@ -741,6 +771,14 @@
             "description": "The model's plural name, for a heading.",
             "type": "string"
           },
+          "part": {
+            "description": "The app label of the model: the part it belongs to.",
+            "type": "string"
+          },
+          "part_label": {
+            "description": "The app's name, for a heading.",
+            "type": "string"
+          },
           "resource": {
             "type": "string"
           }
@@ -748,6 +786,8 @@
         "required": [
           "hits",
           "label",
+          "part",
+          "part_label",
           "resource"
         ],
         "type": "object"
@@ -1030,6 +1070,16 @@
         ],
         "type": "object"
       },
+      "KindEnum": {
+        "description": "* `stat` - stat\n* `list` - list\n* `chart` - chart\n* `custom` - custom",
+        "enum": [
+          "stat",
+          "list",
+          "chart",
+          "custom"
+        ],
+        "type": "string"
+      },
       "LoginRequest": {
         "description": "Credential check shared by both auth modes (amendment A3).\n\nInherits SimpleJWT's ``TokenObtainSerializer``: the fields are the user\nmodel's ``USERNAME_FIELD`` (``email``) plus ``password``, credentials run\nthrough ``django.contrib.auth.authenticate`` and a failure \u2014 wrong\npassword, unknown address or inactive account, indistinguishably \u2014 raises\n``AuthenticationFailed`` (HTTP 401). ``validate`` issues no tokens; it\nleaves the authenticated user on ``self.user`` and\n:class:`karni.accounts.api.views.LoginView` decides per request whether to\nmint a JWT pair or open a Django session.",
         "properties": {
@@ -1145,7 +1195,7 @@
         "type": "object"
       },
       "Me": {
-        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
+        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` (experimental) lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -1179,6 +1229,14 @@
             "maxLength": 150,
             "type": "string"
           },
+          "permissions": {
+            "description": "Experimental. The permission keys the user holds (``app.model:action``), sorted.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
           "roles": {
             "description": "The user's role (Django group) names, read-only (amendment A15).",
             "items": {
@@ -1199,6 +1257,7 @@
           "email",
           "email_verified",
           "id",
+          "permissions",
           "roles",
           "updated_at"
         ],
@@ -1490,7 +1549,8 @@
           "actor": {
             "format": "uuid",
             "nullable": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "content": {
             "type": "string"
@@ -1513,7 +1573,8 @@
           "assigned_to": {
             "format": "uuid",
             "nullable": true,
-            "type": "string"
+            "type": "string",
+            "x-karni-user": true
           },
           "budget": {
             "maxLength": 100,
@@ -1636,9 +1697,11 @@
           "members": {
             "items": {
               "format": "uuid",
-              "type": "string"
+              "type": "string",
+              "x-karni-user": true
             },
-            "type": "array"
+            "type": "array",
+            "x-karni-user": true
           },
           "name": {
             "maxLength": 200,
@@ -1649,7 +1712,7 @@
         "type": "object"
       },
       "PatchedMeRequest": {
-        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
+        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` (experimental) lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
         "properties": {
           "first_name": {
             "maxLength": 150,
@@ -1715,6 +1778,15 @@
         ],
         "type": "object"
       },
+      "SizeEnum": {
+        "description": "* `third` - third\n* `half` - half\n* `full` - full",
+        "enum": [
+          "third",
+          "half",
+          "full"
+        ],
+        "type": "string"
+      },
       "StatusEnum": {
         "description": "* `new` - New\n* `contacted` - Contacted\n* `qualified` - Qualified\n* `converted` - Converted\n* `lost` - Lost\n* `spam` - Spam",
         "enum": [
@@ -1726,6 +1798,70 @@
           "spam"
         ],
         "type": "string"
+      },
+      "Tile": {
+        "description": "Experimental. One home tile.",
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "data": {
+            "additionalProperties": {},
+            "nullable": true,
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "filters": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/KindEnum"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "link": {
+            "nullable": true,
+            "type": "string"
+          },
+          "order": {
+            "type": "integer"
+          },
+          "resource": {
+            "nullable": true,
+            "type": "string"
+          },
+          "size": {
+            "$ref": "#/components/schemas/SizeEnum"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "columns",
+          "data",
+          "description",
+          "filters",
+          "key",
+          "kind",
+          "limit",
+          "link",
+          "order",
+          "resource",
+          "size",
+          "title"
+        ],
+        "type": "object"
       },
       "TokenRefresh": {
         "properties": {
@@ -3366,6 +3502,36 @@
             "crm.contact:change"
           ]
         }
+      }
+    },
+    "/api/dashboard/": {
+      "get": {
+        "description": "Experimental. The home tiles of the requesting person.",
+        "operationId": "dashboard_tiles",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "dashboard"
+        ]
       }
     },
     "/api/lead-activities/": {

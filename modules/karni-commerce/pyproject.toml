@@ -1,0 +1,91 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "karni-commerce"
+version = "0.6.0"
+description = "Commerce for Karni: one cart, checkout, orders, order numbers, payment settlement and refunds for anything a project sells, through a sellable adapter per kind. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
+readme = "README.md"
+requires-python = ">=3.12"
+# PEP 639 licence expression; no "License ::" classifier (deprecated alongside it).
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Chandrabhan Shekhawat", email = "cbsshekhawat18@gmail.com" }]
+keywords = ["django", "karni", "commerce", "cart", "checkout", "orders", "ecommerce", "react"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Office/Business :: Financial",
+    "Typing :: Typed",
+]
+# Range-pinned per the module contract (docs/modules.md): karni 0.x minors
+# may break, so a module pins the minor it was built against.
+dependencies = ["karni>=0.6,<0.7", "karni-payments>=0.6,<0.7"]
+
+[project.urls]
+Homepage = "https://github.com/cbsshekhawat18-lab/karni"
+Documentation = "https://cbsshekhawat18-lab.github.io/karni/"
+Repository = "https://github.com/cbsshekhawat18-lab/karni"
+Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
+Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"
+
+# The catalog entry, karni_commerce/karni.module.toml: `karni modules`, `karni add`
+# and `karni remove` read it.
+[project.entry-points."karni.modules"]
+commerce = "karni_commerce"
+
+# The module's settings fragment: karni_settings() merges these defaults for
+# every project that installs karni-commerce (new top-level names only).
+[project.entry-points."karni.settings"]
+commerce = "karni_commerce.conf:DEFAULTS"
+
+[project.entry-points."karni.errorcodes"]
+commerce = "karni_commerce.errorcodes:CODES"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2",
+    "pytest-django>=4.8",
+    "ruff>=0.5",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["karni_commerce"]
+# Pin the agent-guidance fragment into the wheel explicitly — `karni add`
+# reads it through importlib.resources after install.
+artifacts = ["karni_commerce/AGENTS.fragment.md", "karni_commerce/karni.module.toml"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["ui/", "tests/"]
+artifacts = ["karni_commerce/AGENTS.fragment.md", "karni_commerce/karni.module.toml"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["karni_commerce/migrations", "tests/testapp/migrations", "*.md"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "UP", # pyupgrade
+    "B",  # flake8-bugbear
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"

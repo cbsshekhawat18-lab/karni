@@ -86,19 +86,26 @@ nav:
       - Models: models.md
       - Typed fields: fields.md
       - Lifecycle and capacity: lifecycle-and-capacity.md
+      - Rules: rules.md
       - API: api.md
       - Aggregations: aggregations.md
       - Search across models: global-search.md
       - Accounts: accounts.md
       - Admin: admin.md
       - Navigation from data: navigation.md
+      - People: people.md
+      - Timeline: timeline.md
+      - Preferences: preferences.md
+      - Notifications: notify.md
       - Change history: change-history.md
       - Import and export: import-export.md
       - Loading content: content-loading.md
       - Events and listeners: events.md
+      - Family events: family-events.md
       - Scheduling: scheduling.md
       - Testing: testing.md
       - Seeding: seeding.md
+      - "Demo mode (public demos)": demo-mode.md
       - Large projects: large-projects.md
       - Settings: settings.md
       - "@karni/ui": ui.md
@@ -113,9 +120,14 @@ nav:
       - Reports (PDF): reports.md
       - "AI extraction (karni-ai)": ai-extraction.md
       - Protected files (S3): storage.md
+      - "Commerce (karni-commerce)": commerce.md
+      - "Games (karni-game)": game.md
+      - The game API: game-api.md
+      - "Games in the browser (@karni/game)": game-client.md
       - "App spec (karni.yaml)": app-spec.md
       - Recipes:
           - All recipes: recipes/index.md
+          - Several recipes in one project: family.md
           - Online shop: recipes/shop.md
           - Booking: recipes/booking.md
           - CRM: recipes/crm.md
@@ -141,6 +153,7 @@ nav:
   - Karni for AI agents: agents.md
   - Upgrading:
       - Stability promise: stability.md
+      - Migrating to 0.6: migrations/0.6.md
       - Migrating to 0.5: migrations/0.5.md
       - Migrating to 0.4: migrations/0.4.md
       - Migrating to 0.3: migrations/0.3.md

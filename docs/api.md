@@ -133,6 +133,7 @@ row-level answer:
 | `Owned("organizer")` | authenticated users | `organizer = request.user`. Traversals (`"event__organizer"`) and to-many paths (`"members"`, automatic `distinct()`) work. On the user model, use `Owned("pk")` |
 | `Owned("user", bypass=HasRole("x"))` | same as `Owned("user") \| HasRole("x")` | |
 | `Where(lambda request: Q(...))` | passes (or the function returns a `bool` for both) | the returned `Q` |
+| `Where(Matching(published=True))` (experimental) | passes, anonymous included | the rows whose fields hold the values. With `\|` it shows rows on a flag to everyone and every row to the others: `Where(Matching(published=True)) \| Owned("author") \| HasRole("staff")` (karni.yaml: `where:published`) |
 | `a \| b`, `a & b` | any / all | OR / AND of the row filters |
 | `Can("events.event:approve")` | holds a grant for any of the permissions (`app_label.model:action`, roles as data, one query per request) | the union of the grants' scopes: `all`, `own` (`Karni.owner_field = user`), `related:<key>`, `custom:<name>` (see [roles as data](accounts.md#roles-as-data)). The permission must name the viewset's model |
 
@@ -148,12 +149,38 @@ Which predicate governs which action:
 | `list` | `read` | row not listed |
 | `retrieve`, safe custom `@action` | `read` | **404** (the message names the read scope, and there is no existence oracle) |
 | `create` | `create` (default: `write`) | 401/403 at the gate |
-| `update` / `partial_update` / `destroy`, unsafe custom `@action` | `write`, row looked up through `read` | unreadable → **404**, readable but not writable → **403** |
-| `@action(detail=True, methods=["post"], access=HasRole("x"))` | that predicate, and the lookup still goes through `read` | as above |
+| `update` / `partial_update`, unsafe custom `@action` | `write`, row looked up through `read` | unreadable → **404**, readable but not writable → **403** |
+| `destroy` | `delete` (default: `write`, experimental), row looked up through `read` | as above |
+| `@action(detail=True, methods=["post"], access=HasRole("x"))`, or a [row action](#row-actions-experimental)'s `by` | that predicate, and the lookup still goes through `read` | as above |
 
 Owner fields: a direct FK to the user model named by `Owned` in `write` or
 `create` is stamped from `request.user` on create (`perform_create`) and is
-read-only in the generated serializer. The body never chooses the owner.
+read-only in the generated serializer. The body never chooses the owner,
+unless `assign` says who may (experimental):
+
+```python
+access = Access(
+    read=Owned("member") | HasRole("staff"),
+    write=Owned("member") | HasRole("staff"),
+    delete=HasRole("staff"),     # members cancel, staff delete
+    assign=HasRole("staff"),     # staff book for a member
+)
+```
+
+With `assign`, the owner field is writable and optional: left out, it is the
+caller; set to someone else by a caller `assign` does not admit, the request
+is refused with a **403** (`E135`), on create and on update (a manager
+reassigning a deal passes, a salesperson handing it on does not).
+
+**The written row stays in scope** (experimental). A create or an update is
+saved and then checked against its own predicate's rows in one transaction:
+a row the caller could not change afterwards is refused with a **403**
+(`E134`) and nothing is saved. With `write=Owned("seller__user")`, a listing
+posted into someone else's shop, or moved there by a `PATCH`, is refused,
+and so is a lesson in another instructor's course under
+`Owned("course__instructor")`. A predicate that admits every row (a
+`HasRole` holder) costs no query. Override `check_written_row()` on the
+viewset to change it.
 
 **Posture and DRF permissions.** `REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]`
 (Karni default: `IsAuthenticated`) is **not** consulted for a viewset with an
@@ -229,6 +256,45 @@ after the access object check. Express the rule in `access` instead
 lists every viewset that sets it. `IsOwner`,
 `RolePermission` and `ObjectPermissionsMixin` remain for plain DRF views
 (see [accounts](accounts.md#role-helpers-and-object-permissions)).
+
+## Row actions (experimental)
+
+A lifecycle moves by named actions, not by a free `PATCH` of its state. A
+viewset declares them with the states and roles where each is legal
+(`karni.api.actions`, karni.yaml: [`actions`](rules.md#actions)):
+
+```python
+from karni.api import Access, BaseViewSet, HasRole, Owned, RowAction
+
+class OrderViewSet(BaseViewSet):
+    model = Order
+    access = Access(read=..., write=Owned("buyer") | HasRole("staff"))
+    row_actions = {
+        "pay": RowAction(from_="pending", by=Owned("buyer")),
+        "ship": RowAction(from_="paid", to="shipped", by=Owned("listing__seller__user")),
+        "refund": RowAction(from_="paid", to="refunded", by=HasRole("staff")),
+    }
+
+    @action(detail=True, methods=["post"])
+    def pay(self, request, pk=None):
+        ...  # open the payment: Karni has checked the state and `by` first
+```
+
+Each one is `POST <resource>/<id>/<name>/`:
+
+| | |
+|---|---|
+| who may | `by`, like `@action(access=...)`: the gate and the row (default: `write`) |
+| where it is legal | the row's state is one of `from_` (empty: any). Elsewhere: **409**, `E997`, naming the state and the legal ones |
+| an action with `to` | Karni routes it when the class has no method of that name: it moves the row with `transition()`, reading the fields `class Karni: moves` requires for that state from the body, and answers the row |
+| twice | an action with `to` whose row is there already answers **200** and changes nothing |
+| an action without `to` | the viewset's own `@action` method of that name runs after the checks. `karni check` warns about one that has none yet (`W136`) |
+
+The list and retrieve operations carry `x-karni-actions` (each action's
+`from`, `to`, `field`, `by` as `x-karni-access` writes it, and `requires`),
+and each action's own operation carries its entry as `x-karni-action`, so a
+client offers only the buttons the row's state allows. The server still
+decides.
 
 ## Rate limits
 
@@ -1141,6 +1207,41 @@ filters), and `slots` for every part (`Section`, `Counts`, `Count`, `Recent`,
 `Empty`, `Loading`, `Error`). A home page can also compose `Stat` and
 `ResourceTable` by hand.
 
+### Home tiles per role (experimental)
+
+`<Dashboard>` shows one section per model, the same for everyone.
+`GET /api/dashboard/` (`karni.tiles`) answers the tiles the signed-in person
+may see, so each role gets its own home, and every installed part adds to it.
+`@karni/ui`'s `<DashboardTiles>` draws them.
+
+A tile is a number (`stat`), a short list (`list`), a chart (`chart`) or a
+component of the app's own (`custom`). It comes from karni.yaml's
+`dashboard:` (an entity's rows, counted or listed through its list endpoint,
+so the row scope applies) or from code, in `<app>/dashboard.py`, for figures
+the server works out:
+
+```python
+from karni.tiles import Tile, register
+
+
+@register(key="shop.revenue", title="Revenue", requires="shop.order:view", size="full")
+def revenue(request):
+    total = ...  # read the rows the request's user may read
+    return Tile.stat_values([("Today", total, "money")], currency="EUR")
+```
+
+A code tile returns its data: `stat` takes `values` (`label`, `value`,
+`format` of `money` or `number`, `link`), `list` takes `columns` and `rows`
+(each row's `link` opens it), `chart` takes `kind` (`bar` or `line`), `format`
+and `points` (`label`, `value`). Returning `None` leaves the tile out.
+
+Who sees a tile: `requires` (`authenticated`, `*` or a permission pattern as
+in the roles' grants) and, when set, `roles`. A tile a role does not see is
+never computed for it. `dashboard:` places a code tile by its key (its
+title, order, size and who sees it) or hides it (`hidden: true`).
+`registerTile(key, Component)` draws one tile your way and
+`registerTileKind(kind, Component)` a whole kind.
+
 ## Schema
 
 `KarniAutoSchema` (the conf default `DEFAULT_SCHEMA_CLASS`) keeps
@@ -1158,9 +1259,13 @@ nullable, required from blank/default) and adds:
   route), `x-karni-access` on every `BaseViewSet` operation, and
   `x-karni-auth-mode` at the schema root. `x-karni-access` holds the predicate
   governing the operation: `{"public": true}`, `{"authenticated": true}`,
-  `{"role": [...]}`, `{"owned": "<path>"}`, `{"where": "<fn>"}`,
+  `{"role": [...]}`, `{"owned": "<path>"}`, `{"where": "<fn>"}` (with
+  `"matching": {...}` for `Where(Matching(...))`),
   `{"any": [...]}`/`{"all": [...]}`, `{"unscoped": "<reason>"}`,
   `{"deny": ...}`. These are display hints only, and the server enforces.
+  `x-karni-actions` (experimental) is on the list and retrieve operations of
+  a viewset with [row actions](#row-actions-experimental), and
+  `x-karni-action` on each action's operation.
   `x-karni-throttle` (`"10/hour"`) is on an operation whose action the
   viewset's `throttle` declaration limits, or on a public `create`, with the
   rate in force. `x-karni-honeypot` (`"homepage"`) is on a public `create`

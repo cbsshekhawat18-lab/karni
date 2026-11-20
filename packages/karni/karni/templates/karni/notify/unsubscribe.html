@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{% if unsubscribed %}Unsubscribed{% else %}Unsubscribe{% endif %}</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #ffffff; --fg: #1f2933; --muted: #52606d; --line: #d9dee3; --accent: #1f6feb; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #111418; --fg: #e4e7eb; --muted: #9aa5b1; --line: #323a44; --accent: #58a6ff; } }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+    main { max-width: 32rem; margin: 4rem auto; padding: 0 1rem; }
+    p { color: var(--muted); }
+    button { font: inherit; padding: .5rem 1rem; border-radius: .375rem; border: 1px solid var(--line); background: var(--accent); color: #fff; cursor: pointer; }
+    button.plain { background: transparent; color: var(--fg); }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+<main>
+  {% if code %}
+    <h1>This link does not work</h1>
+    <p>{{ detail }}</p>
+  {% elif unsubscribed %}
+    <h1>You are unsubscribed</h1>
+    <p>{{ address }} gets no more "{{ title }}" emails.</p>
+    <form method="post" action="?token={{ token|urlencode }}&amp;undo=1">
+      <button type="submit" class="plain">Subscribe again</button>
+    </form>
+  {% else %}
+    <h1>Unsubscribe</h1>
+    <p>Stop sending "{{ title }}" emails to {{ address }}?</p>
+    <form method="post" action="?token={{ token|urlencode }}">
+      <button type="submit">Unsubscribe</button>
+    </form>
+  {% endif %}
+</main>
+</body>
+</html>

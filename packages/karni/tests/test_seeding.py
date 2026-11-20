@@ -117,6 +117,26 @@ def test_the_same_seed_reproduces_the_same_rows() -> None:
     assert _dump(*plan)["testapp.Event"] != first["testapp.Event"]
 
 
+def test_a_model_s_rows_do_not_depend_on_what_else_the_run_seeds() -> None:
+    """Each model draws from its own stream (the seed and its label): seeding another
+    model too, or more of it, leaves its rows as they were (two parts in one project)."""
+    seed(models=["testapp.Tag"], count=5, seed=11, now=NOW, reset=True)
+    alone = _dump(Tag)
+    seed(models=["testapp.Tag", "testapp.Shelf"], count=5, seed=11, now=NOW, reset=True)
+    assert _dump(Tag) == alone
+
+
+def test_a_nullable_relation_to_a_model_the_run_does_not_seed_stays_empty() -> None:
+    from karni.seeding import _Run
+
+    Venue.objects.create(name="Hall")  # a row another app made, outside the run
+    run = _Run(seed_value=1, count=1, now=None, builder=None)
+    run.plan = {Tag}
+    nullable = type("Relation", (), {"null": True, "one_to_one": False, "name": "venue"})()
+    for _ in range(20):  # whatever the fill draw says, a row of another app is not this one's
+        assert run.pick(Venue, nullable) is None
+
+
 def test_integer_keys_give_the_same_rows_after_a_reset() -> None:
     """--reset restarts the sequences of the tables it wipes, so integer ids repeat too."""
     plan = [Part, Reading]
@@ -398,3 +418,44 @@ def test_cycled_takes_its_own_suffix_and_refuses_an_empty_list() -> None:
     assert cycled(["Oak"], 1, suffix="{name} (batch {round})") == "Oak (batch 2)"
     with pytest.raises(ValueError):
         cycled([], 0)
+
+
+def test_a_seeder_names_the_models_it_reads_and_they_come_first(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from karni import seeding
+
+    class NovelSeeder(Seeder):
+        class Meta:
+            model = Novel
+            after = ("testapp.Venue",)
+
+    assert seed_plan([Novel, Venue]) == [Novel, Venue]  # no relation: by label
+    monkeypatch.setattr(seeding, "seeders", lambda: {Novel: NovelSeeder})
+    assert seed_plan([Novel, Venue]) == [Venue, Novel]
+    assert seed_plan([Novel]) == [Novel]  # a model the run does not seed is not waited for
+
+
+def test_a_seeder_makes_a_login_per_role_with_rows_of_its_own(monkeypatch: Any) -> None:
+    """``SeedContext.account``: a demo login per role (SHARED piece 23)."""
+    from karni import seeding
+
+    class VenueSeeder(Seeder):
+        class Meta:
+            model = Venue
+
+        def seed(self, context: Any) -> list[Any]:
+            context.account("host@example.com", "organizer", first_name="Ana", last_name="Rios")
+            return context.create(1, name="Hall")
+
+    found = dict(seeders())
+    monkeypatch.setattr(seeding, "_SEEDERS", {**found, Venue: VenueSeeder})
+    report = seed(models=[Venue], count=1, seed=1, now=NOW, reset=True)
+    host = get_user_model().objects.get(email="host@example.com")
+    assert host.get_full_name() == "Ana Rios" and host.check_password(DEFAULT_PASSWORD)
+    assert host.email_verified is True
+    assert [group.name for group in host.groups.all()] == ["organizer"]
+    assert report.logins["host@example.com"] == ["organizer"]
+    assert "Also host@example.com / karni-password (roles: organizer)." in report.render()
+    seed(models=[Venue], count=1, seed=1, now=NOW, reset=False)
+    assert get_user_model().objects.filter(email="host@example.com").count() == 1

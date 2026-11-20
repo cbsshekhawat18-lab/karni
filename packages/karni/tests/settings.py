@@ -57,6 +57,18 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 # The suite reads X-Cache: no deprecated X-Karni-Cache (tests/api/test_cache_keys.py checks it).
 KARNI_API_CACHE_LEGACY_HEADER = False
 
+# The people contract (karni.people): installed by the switch, as a project's spec does.
+# Its viewsets stay off the default router so the test app's OpenAPI snapshot stays as it
+# is: tests/people/urls.py routes them.
+KARNI_PEOPLE = True
+KARNI_PEOPLE_API = False
+# The timeline's route too: tests/timeline mounts its own URLconf.
+KARNI_TIMELINE_API = False
+# And the preferences' route: tests/preferences mounts its own URLconf.
+KARNI_PREFERENCES_API = False
+# And the notifications' routes: tests/notify mounts its own URLconf.
+KARNI_NOTIFY_API = False
+
 karni_settings(globals(), env_name="dev")
 
 # Test-only apps exercised by the api (tests.testapp), admin (tests.adminapp),
@@ -71,6 +83,8 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # Typed field layer (karni.fields): portable fields, no viewsets.
     "tests.fieldsapp",
     "tests.lifecycleapp",
+    # Rules every write keeps (karni.rules): viewsets mounted by its own URLconf only.
+    "tests.rulesapp",
     # Required FileField and ImageField (assert_crud's uploads), no routed viewsets.
     "tests.uploadsapp",
     # Content loading (karni load): no viewsets, so the API never sees it.
@@ -92,6 +106,24 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # A 120-field model with markdown sections, field groups and column sets
     # (karni.layout): viewsets mounted by its own URLconf only.
     "tests.wideapp",
+    # Family events (experimental): the outbox, a help desk that publishes and a
+    # notes app that subscribes without importing it (tests/test_family_events.py).
+    "karni.outbox",
+    "tests.deskapp",
+    "tests.notesapp",
+    # Two small parts of a family project that each add a profile and a person fact to
+    # the people contract (tests/people): their viewsets are mounted by tests.people.urls.
+    "tests.loyaltyapp",
+    "tests.helpdeskapp",
+    # The timeline contract (tests/timeline): its API is mounted by tests.timeline.urls.
+    "karni.timeline",
+    # The preferences contract (tests/preferences): its API is mounted by
+    # tests.preferences.urls.
+    "karni.preferences",
+    # The notifications contract (tests/notify): its API is mounted by tests.notify.urls.
+    "karni.notify",
+    # Demo mode (karni.demo): inert unless a test sets KARNI_DEMO_MODE.
+    "karni.demo",
 ]
 # tests.searchapp's models declare search, and the default router does not serve
 # them (their router is tests.searchapp.urls'), so karni.W591 is expected here.
@@ -107,3 +139,9 @@ if os.environ.get("KARNI_TEST_USER_PK") == "bigint":
 
     if importlib.util.find_spec("django_otp") is not None:
         INSTALLED_APPS += ["django_otp", "django_otp.plugins.otp_totp"]  # type: ignore[name-defined]  # noqa: F821
+
+# Demo mode's middlewares do nothing while KARNI_DEMO_MODE is off (tests/demo/).
+MIDDLEWARE += [  # type: ignore[name-defined]  # noqa: F821
+    "karni.demo.middleware.DemoResetMiddleware",
+    "karni.demo.middleware.DemoWriteGuardMiddleware",
+]

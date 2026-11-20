@@ -44,6 +44,7 @@ from karni.exceptions import api_error
 from rest_framework.exceptions import ValidationError
 
 from karni_payments import conf
+from karni_payments.events import announce, refund_created
 from karni_payments.models import Payment, Refund, WebhookEvent
 from karni_payments.providers.base import (
     CheckoutSession,
@@ -246,6 +247,7 @@ def create_refund(payment: Payment, amount: Decimal | None = None, *, reason: st
         raise
     refund.provider_refund_id = provider_refund_id
     refund.save(update_fields=["provider_refund_id", "updated_at"])
+    refund_created.send(sender=Refund, refund=refund, payment=locked)
     return refund
 
 
@@ -338,12 +340,14 @@ def _apply_refund_event(event: WebhookEvent, payment: Payment, status: ParsedEve
         for refund in pending:
             refund.status = Refund.Status.FAILED
             refund.save(update_fields=["status", "updated_at"])
+            announce(refund, Refund.Status.PENDING)
         if not pending:
             _note(event, "no-op: refund_failed with no pending refunds")
         return
     for refund in pending:
         refund.status = Refund.Status.SUCCEEDED
         refund.save(update_fields=["status", "updated_at"])
+        announce(refund, Refund.Status.PENDING)
     succeeded_total = payment.refunds.filter(status=Refund.Status.SUCCEEDED).aggregate(
         total=Sum("amount")
     )["total"] or Decimal("0")
@@ -359,8 +363,10 @@ def _apply_refund_event(event: WebhookEvent, payment: Payment, status: ParsedEve
     if target not in PAYMENT_ADVANCES[payment.status]:
         _note(event, f"no-op: {payment.status} -> {target} would regress")
         return
+    source = payment.status
     payment.status = target
     payment.save(update_fields=["status", "updated_at"])
+    announce(payment, source)
 
 
 def apply_event(event: WebhookEvent) -> None:
@@ -401,5 +407,7 @@ def apply_event(event: WebhookEvent) -> None:
     if target not in PAYMENT_ADVANCES[payment.status]:
         _note(event, f"no-op: {payment.status} -> {target} would regress")
         return
+    source = payment.status
     payment.status = target
     payment.save(update_fields=["status", "updated_at"])
+    announce(payment, source)

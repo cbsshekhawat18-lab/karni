@@ -8,6 +8,7 @@ Celery to run the task exactly when a real commit would.
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import pytest
 
@@ -52,6 +53,12 @@ def test_get_is_not_allowed(client) -> None:
     assert client.get("/payments/webhook/test/").status_code == 405
 
 
+def _enqueues(callbacks: list[Any]) -> list[Any]:
+    """The webhook's own commit callbacks: the family event outbox adds its dispatch when a
+    subscriber (the timeline's, here) waits for payments.payment.succeeded."""
+    return [c for c in callbacks if "send_after_commit" not in getattr(c, "__qualname__", "")]
+
+
 def test_first_delivery_persists_enqueues_and_processes(
     deliver_webhook, make_payment, django_capture_on_commit_callbacks
 ) -> None:
@@ -66,7 +73,7 @@ def test_first_delivery_persists_enqueues_and_processes(
             }
         )
     assert response.status_code == 200
-    assert len(callbacks) == 1  # exactly one enqueue, after commit
+    assert len(_enqueues(callbacks)) == 1  # exactly one enqueue, after commit
     event = WebhookEvent.objects.get()
     assert event.provider == "test" and event.event_id == "evt_1"
     assert event.processed_at is not None
@@ -113,7 +120,7 @@ def test_duplicate_with_null_processed_at_is_reenqueued(
     with django_capture_on_commit_callbacks(execute=True) as retried:
         response = deliver_webhook(event)
     assert response.status_code == 200
-    assert len(retried) == 1  # re-enqueued despite being a duplicate
+    assert len(_enqueues(retried)) == 1  # re-enqueued despite being a duplicate
     stored.refresh_from_db()
     assert stored.processed_at is not None
     payment.refresh_from_db()

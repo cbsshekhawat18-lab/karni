@@ -46,6 +46,11 @@ the frontend's pages and the project's permissions
 (:func:`karni.navigation.checks.check_navigation`): ``karni.E533`` and
 ``E534`` fail, ``W630`` and ``W631`` are printed. Not with ``--deploy``
 either.
+
+It lists the declared family events and the subscribers of each (experimental,
+:func:`karni.outbox.checks.event_listing`), one ``events:`` line per event,
+including events subscribed to here that no installed part declares. Not with
+``--deploy`` either.
 """
 
 from __future__ import annotations
@@ -237,6 +242,13 @@ class Command(BaseCommand):
 
             for warning in search_index_failures():
                 self.stdout.write(f"search indexes: {warning}")
+
+            # Experimental: the declared family events and who subscribes to each
+            # (karni.events). A listing, never a failure: karni.E451 and W450 are checks.
+            from karni.outbox.checks import event_listing
+
+            for line in event_listing():
+                self.stdout.write(f"events: {line}")
 
         groups = ["karni.checks", *(["karni.checks.seo"] if seo else [])]
         for group in groups:

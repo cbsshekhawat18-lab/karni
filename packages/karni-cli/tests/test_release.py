@@ -179,8 +179,11 @@ def test_the_workflow_check_names_a_missing_package_and_an_unlike_upload_step(
     text = release.read_text()
     # karni-ai drops out of the npm build loop, and karni-site's upload loses skip-existing.
     text = text.replace(
-        ' modules/karni-ai/ui modules/karni-storage/ui; do\n            (cd "$d" && npm ci && npm run build && npm publish --dry-run',
-        ' modules/karni-storage/ui; do\n            (cd "$d" && npm ci && npm run build && npm publish --dry-run',
+        " modules/karni-ai/ui modules/karni-storage/ui modules/karni-commerce/ui"
+        " modules/karni-game/ui; do\n"
+        '            (cd "$d" && npm ci && npm run build && npm publish --dry-run',
+        " modules/karni-storage/ui modules/karni-commerce/ui modules/karni-game/ui; do\n"
+        '            (cd "$d" && npm ci && npm run build && npm publish --dry-run',
         1,
     )
     text = text.replace(
@@ -326,7 +329,11 @@ def test_the_readme_install_line_agrees_with_the_peer_ranges(directory: str) -> 
 @pytest.mark.parametrize("directory", NPM_DIRECTORIES[1:])
 def test_the_readme_names_no_stale_karni_ui_range(directory: str) -> None:
     readme = (REPO_ROOT / directory / "README.md").read_text(encoding="utf-8")
-    peer = _peers(directory)["@karni/ui"]
+    peer = _peers(directory).get("@karni/ui")
+    if peer is None:
+        # A package that does not build on @karni/ui (@karni/game) names no range of it.
+        assert re.findall(r"@karni/ui`?\s*\(?`?(\^\d[\d.]*)", readme) == [], directory
+        return
     stale = [
         spec
         for spec in re.findall(r"@karni/ui`?\s*\(?`?(\^\d[\d.]*)", readme)

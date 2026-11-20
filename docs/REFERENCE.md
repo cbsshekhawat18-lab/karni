@@ -33,12 +33,17 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Real content from a JSON or YAML file, created or updated by natural key (`karni load`) | `experimental` | Karni's own tests |
 | Models and real rows from a designer's pages: the repeated content, its fields and relations (`karni design analyze`, `karni design extract`) | `experimental` | Karni's own tests |
 | Model events and listeners, optionally queued to Celery (`@on_updated`) | `stable` | [listeners.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/listeners.py) |
+| Family events with an outbox: `declare`, `publish` in the writer's transaction, `subscribe` by name, delivered after the commit with retries and a sweep (`karni.outbox`). Experimental tier | `experimental` | Karni's own tests |
 | Field-level change history (`class Karni: audit = True`) | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/models.py) |
 | Scheduled tasks (`<app>/schedules.py`, `karni schedule`) | `experimental` | Karni's own tests |
 | External tables, SQL views and a second database as models Karni reads (`class Karni: external`, `writable`, `database`, `karni make model --external`). Experimental tier | `experimental` | Karni's own tests |
 | Tree models: `TreeModel` and `OrderedTreeModel` with cycle-safe walks (`roots`, `children`, `ancestors`, `descendants`, `subtree_ids`), `move_to()` and `delete_branch()`, and the tree changelist in the admin. Experimental tier | `experimental` | Karni's own tests |
 | Taxonomy tagging: one declaration tags a model to tree models (`class Karni: taxonomies`), a generated or adopted many-to-many per key, import and export columns by natural key, and the `tree:<key>` scope. Experimental tier | `experimental` | Karni's own tests |
 | A tenant scope on every model (the `karni-tenancy` module) | `planned` | [documented](models.md#scopes-the-filters-every-default-manager-applies) |
+| The people contract (`karni.people`, `KARNI_PEOPLE`): one person and one organisation record for every part of a project, `people.resolve` by account or email, the account linked once its email is verified, person facts in SQL, duplicates, merge with a preview and hooks, erase on request, `/api/people/`. Experimental tier | `experimental` | Karni's own tests |
+| The timeline contract (`karni.timeline`): one stream of moments per person and per record, `timeline.record` by hand, entries from family events that declare `timeline=`, `GET /api/timeline/` with each entry checked against the row scope of every record it is about, cursor paging, retention. Experimental tier | `experimental` | Karni's own tests |
+| The preferences contract (`karni.preferences`): the business's details, one settings section per part as a Pydantic model, `preferences.value(path, default)` with a typed default, locks a deployment fixes, connections and email switches, audited changes, `/api/preferences/` behind the Settings page. Experimental tier | `experimental` | Karni's own tests |
+| The notifications contract (`karni.notify`): message kinds on `karni.mail` sent to an email, the inbox or both, `notify.send` to users, people or addresses, emails a business edits (`/api/email-templates/`), the inbox API with retention, each person's switches, unsubscribing from marketing kinds by a signed link. Experimental tier | `experimental` | Karni's own tests |
 
 ### API
 
@@ -54,6 +59,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier | `experimental` | Karni's own tests |
 | Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier | `experimental` | Karni's own tests |
 | A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier | `experimental` | Karni's own tests |
+| Demo mode (`karni.demo`): demo accounts with one login per role, a write rule that lets only those accounts write, a reset to a fixed seed every N hours under a lock, `manage.py karni_demo_boot` and `GET /api/demo/` (`KARNI_DEMO_MODE`, `KARNI_DEMO_ACCOUNTS`, `karni.E950` to `E954`). Experimental tier | `experimental` | Karni's own tests |
 | Tree endpoints on a tree model's viewset (`tree/`, `children/`, `ancestors/`, `move/`, `?parent=`, `?descendants_of=`, `DELETE ?branch=true`) and `x-karni-tree` in the OpenAPI document. Experimental tier | `experimental` | Karni's own tests |
 | Taxonomy filters and counts: `?<key>=` and `?<key>_descendants=` on the list, `facets/` (rows per node under the list's filters and access, rolled up on request) and a tree node's `tagged/` per tagging model. Experimental tier | `experimental` | Karni's own tests |
 | Search across models: one ranked `GET /api/search/` over every model that declares `class Karni: search`, each under its own list access, one query per model, with the trigram indexes in its migrations (`karni.W590`). Experimental tier | `experimental` | Karni's own tests |
@@ -86,6 +92,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | `OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as `LoginForm`'s `codeSignIn` switch. Experimental tier | `experimental` | Karni's own tests |
 | `GlobalSearch` and `useGlobalSearch`: a Cmd or Ctrl+K command palette over search across models, grouped per resource, each hit linking to its ResourceDetail page (`<Layout search>`). Experimental tier | `experimental` | Karni's own tests |
 | `TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once the user accepts the current terms. Experimental tier | `experimental` | Karni's own tests |
+| `DemoNotice`, `DemoSignInPrompt` and `useDemo`: the demo accounts of a demo-mode server above the sign-in form (`GET /api/demo/`). Experimental tier | `experimental` | Karni's own tests |
 | `TreeView`, `TreeSelect` (used by `ResourceForm` for a relation to a tree) and `TreeBreadcrumb` (on `ResourceDetail` of a tree), with `useResourceTree`. Experimental tier | `experimental` | Karni's own tests |
 | `Layout`'s server menu (`navSource="server"`, `useNavigation`): collapsible groups, icons by name and the current page marked. Experimental tier | `experimental` | Karni's own tests |
 | `FacetPanel` and `ResourceTable`'s `facets`: rows per node of a taxonomy, and choosing nodes filters the table, with `useResourceFacets`. Experimental tier | `experimental` | Karni's own tests |
@@ -177,6 +184,12 @@ karni new "Corner Shop" --recipe shop
 Example:
 
 ```sh
+karni new "Studio" --recipe booking --recipe crm
+```
+
+Example:
+
+```sh
 mkdir crumb && cd crumb && karni new "Crumb Bakery" --kind site --here
 ```
 
@@ -189,13 +202,13 @@ karni new [OPTIONS] NAME
 | `NAME` (required) |  | Project name (slug is derived from it) |
 | `--output-dir`, `-o` PATH | `.` |  |
 | `--domain` TEXT | `example.com` | Production domain for Caddy |
-| `--kind` TEXT |  | What the project is: site (a public website the client edits in the admin), app (an API and a React app for signed-in users) or site+app. Asked when run in a terminal, else app (site with --design). |
+| `--kind` TEXT |  | What the project is: site (a public website the client edits in the admin), app (an API and a React app for signed-in users), site+app, or game (experimental: an app with a game in it, on karni-game and @karni/game). Asked when run in a terminal, else app (site with --design). |
 | `--design` PATH |  | A designer's folder of static pages (index.html, css/, img/): the site is built from it (karni design analyze, karni import design --editable), and the next steps are the rest of the site-from-design procedure. Implies a kind with a site. |
 | `--staff-app/--no-staff-app` |  | The React staff app in frontend/. An app always has it. A site has it unless --no-staff-app, and then staff work in the admin. |
 | `--site-app` TEXT | `website` | The label of the site app a kind with a site gets. |
 | `--here` |  | Write the project into the current folder, which must be empty (version control and editor files may be there), instead of a new folder under it. |
 | `--git/--no-git` | on | Make the project a git repository with a first commit of what karni new wrote. Skipped inside an existing repository and when git is not installed. |
-| `--recipe` TEXT |  | Experimental. Start the app from a recipe (karni recipes list, or blank): its karni.yaml with this name, then karni build, which also writes the recipe's own domain code, seeds and tests and runs the tests and karni check. Without the project's interpreter or database it stops after karni.yaml: run karni build next. |
+| `--recipe` TEXT (repeatable) |  | Experimental. Start the app from a recipe (karni recipes list, or blank): its karni.yaml with this name, then karni build, which also writes the recipe's own domain code, seeds and tests and runs the tests and karni check. Repeat it for several recipes in one project (--recipe booking --recipe crm): each one after the first is merged as karni recipes add does. Without the project's interpreter or database it stops after karni.yaml: run karni build next. |
 
 #### `karni add`
 
@@ -1613,7 +1626,7 @@ karni replay [OPTIONS] REQUEST_ID
 
 #### `karni recipes`
 
-Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show).
+Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show), and the parts of a project (add, remove, upgrade).
 
 ```
 karni recipes COMMAND [ARGS]...
@@ -1650,6 +1663,52 @@ karni recipes show [OPTIONS] NAME
 | `--files` |  | Print the recipe's own domain code instead: each file of its files/ folder, with the path it takes in a project (with --json: {recipe, files: {path: text}}). |
 | `--json` |  | Print {version, request, threshold, recipes, blank, next, problems} (docs/assets/karni-recipes.schema.json). |
 
+##### `karni recipes add`
+
+Experimental. Add a recipe to this project as a part, then karni build.
+
+The recipe's karni.yaml is merged into the project's (docs/family.md has the rules): its app under its own route, its roles named &lt;prefix&gt;-&lt;role&gt;, the family roles admin and customer adding up, what it requires switched on. A conflict stops it before anything is written (C442 to C447). The fragment is kept in .karni/recipes/&lt;name&gt;/, and karni build writes the recipe's own files by the stub rule, migrates and seeds only its new tables.
+
+```
+karni recipes add [OPTIONS] NAME
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | The recipe to add (karni recipes list). |
+| `--no-build` |  | Write karni.yaml and the record only. karni build does the rest. |
+
+##### `karni recipes remove`
+
+Experimental. Take a part out of this project, then karni build.
+
+Its apps, roles, pages, menu group and seed counts leave karni.yaml, and its record leaves .karni/recipes/. Dropping its tables is a risky change: pass --allow-destructive. Its files the project never changed are deleted, and the ones it changed stay on disk, each one listed.
+
+```
+karni recipes remove [OPTIONS] NAME
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | The part to take out (app.recipes). |
+| `--allow-destructive` |  | Let the build drop the part's tables (C270 stops it otherwise). |
+| `--no-build` |  | Write karni.yaml and the record only. karni build does the rest. |
+
+##### `karni recipes upgrade`
+
+Experimental. Bring each part to the recipe karni-cli has now, then karni build.
+
+A file of the part's the project never changed (its recorded sha256) is replaced. A file it changed is kept, and the recipe's new file is written beside it as &lt;file&gt;.recipe-&lt;version&gt;. In karni.yaml, each of the part's entities and roles the project left as added is updated, and each one it changed is reported.
+
+```
+karni recipes upgrade [OPTIONS] [NAME]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` |  | One part (default: every part). |
+| `--no-build` |  | Write karni.yaml and the record only. karni build does the rest. |
+
 ## Base classes
 
 The public names of the four packages a project builds on, from their `__all__`. *What you get* is read from the class itself: the fields and managers a model inherits, the attributes a viewset declares and the endpoints it serves, the admin hooks it overrides, a function's signature.
@@ -1675,16 +1734,18 @@ The public names of the four packages a project builds on, from their `__all__`.
 
 | Name | Kind | Purpose | What you get |
 |---|---|---|---|
-| `Access` | class | A viewset's access declaration: `access = Access(read=..., write=..., create=...)`. | `Access(*, read: Predicate, write: Predicate, create: Predicate \| None = None) -> None` |
+| `Access` | class | A viewset's access declaration: `access = Access(read=..., write=..., create=...)`. | `Access(*, read: Predicate, write: Predicate, create: Predicate \| None = None, delete: Predicate \| None = None, assign: Predicate \| None = None) -> None` |
 | `Authenticated` | class | Any authenticated user, on every row. | methods `allows`, `rows`, `facts`, `describe` |
-| `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `query_scaling`, `pagination`, `cache`, `throttle`, `scope_exempt`, `scope_exempt_reason`, `aggregation`, `read_only_refused_actions`, `tree_actions`, `tree_max_nodes`, `tree_default_depth`, `tree_max_depth`, `taxonomy_actions`, `write_or_create_actions`, `unbudgeted_actions` and get the endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `aggregate`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
+| `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `query_scaling`, `pagination`, `cache`, `throttle`, `scope_exempt`, `scope_exempt_reason`, `aggregation`, `row_actions`, `read_only_refused_actions`, `tree_actions`, `tree_max_nodes`, `tree_default_depth`, `tree_max_depth`, `taxonomy_actions`, `write_or_create_actions`, `unbudgeted_actions` and get the endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `aggregate`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
 | `Budget` | class | `query_budget = Budget(list=25, reason="...")`: a viewset's own query budgets. | `Budget(*, reason: str, default: Any = …, **actions: int \| None) -> None` |
 | `Cache` | class | `cache = Cache(ttl=60, depends_on=[Price])`: tune caching for one viewset. | `Cache(*, ttl: int \| None = None, depends_on: tuple[type[Model] \| str, ...] = ()) -> None` |
 | `Can` | class | The requesting user holds a grant for **any** of the named permissions (ADR 0002). | `Can(*keys: str) -> None` |
 | `Granted` | class | Whatever the roles say: `Can` for the viewset's own model and current action. | methods `bind`, `allows`, `rows`, `explain`, `describe` |
 | `HasRole` | class | The requesting user holds **any** of the named roles (Django groups). | `HasRole(*names: str) -> None` |
+| `Matching` | class | The row function of `Where(Matching(published=True))`: rows whose fields hold values. | `Matching(**lookups: Any) -> None` |
 | `Owned` | class | Rows whose `path` points at the requesting user. | `Owned(path: str \| None = None, *, bypass: Predicate \| None = None) -> None` |
 | `Public` | class | Everyone, anonymous included, on every row. The explicit public form. | methods `allows`, `rows`, `describe` |
+| `RowAction` | class | One row action: the states it runs from, the state it moves to, who may run it. | `RowAction(*, from_: str \| Iterable[str] \| None = None, to: str \| None = None, by: Any = None, field: str \| None = None) -> None` |
 | `Scaling` | class | Experimental. `query_scaling = Scaling(rows=(5, 500), seconds=0.3)`: a viewset's scaling. | `Scaling(*, rows: Any = None, seconds: float \| None = None) -> None` |
 | `Throttle` | class | `throttle = Throttle(create="10/hour")`: a rate per action. | `Throttle(**rates: str \| None) -> None` |
 | `Uncached` | class | `cache = Uncached(reason="...")`: never cache this viewset's responses. | `Uncached(*, reason: str) -> None` |
@@ -1711,13 +1772,16 @@ The public names of the four packages a project builds on, from their `__all__`.
 | `APITestCase` | class | DRF's `APITestCase` with clients per role and the one-call checks. | methods `user_as`, `client_as`, `assert_crud`, `assert_isolated`, `assert_row_hidden`, `assert_admin_row_hidden`, `assert_pages` |
 | `assert_admin_row_hidden` | function | Assert `row` behaves as "does not exist" in the admin for `client`'s staff user. | `assert_admin_row_hidden(client: Any, row: models.Model, *, visible: models.Model \| None = None, checks: Iterable[str] \| None = None, skip: Iterable[str] = (), site: Any = None, search: str \| None = None, probe: type[AdminHiddenRowProbe] \| None = None) -> HiddenRowReport` |
 | `assert_crud` | function | Assert the full CRUD surface of `resource` for `role` (see the module docstring). | `assert_crud(resource: Any, role: str \| None = None, *, user: Any = None, values: Mapping[str, Any] \| None = None, payload: Mapping[str, Any] \| None = None, expect: Mapping[str, int] \| None = None, skip: Iterable[str] = (), read_only: bool \| None = None) -> CrudReport` |
+| `assert_events_declared` | function | Experimental. Every `publish("<name>")` in the app's code names a declared event. | `assert_events_declared(app_label: str) -> list[str]` |
 | `assert_isolated` | function | Assert `role` cannot reach another owner's (or scope's) rows of `resource`. | `assert_isolated(resource: Any, role: str \| None = None, *, by: str \| tuple[str, ...] \| None = None, owner: str \| None = None, values: Mapping[str, Any] \| None = None) -> IsolationReport` |
 | `assert_module_manifest` | function | Experimental. Check `<package>/karni.module.toml` against the module; return it. | `assert_module_manifest(package: str) -> Manifest` |
 | `assert_pages` | function | Assert that every page in `urls` passes the page checks (see the module docstring). | `assert_pages(client: Any, urls: Iterable[str], *, follow: bool = False, check_links: bool = True, require_title: bool = True, require_description: bool = True, require_alt: bool = True, not_found_url: str \| None = '/karni-assert-pages-404/', ignore: Iterable[str \| re.Pattern[str]] = (), hosts: Iterable[str] = (), parser: type[PageParser] \| None = None) -> PagesReport` |
 | `assert_row_hidden` | function | Assert `row` is hidden from `client` on every API surface of `resource`. | `assert_row_hidden(client: Any, resource: Any, row: models.Model, *, visible: models.Model \| None = None, checks: Iterable[str] \| None = None, skip: Iterable[str] = (), search: str \| None = None, formats: Iterable[str] = ('csv', 'xlsx'), probe: type[HiddenRowProbe] \| None = None) -> HiddenRowReport` |
 | `assert_schema_snapshot` | function | Fail when the generated OpenAPI schema differs from the committed snapshot. | `assert_schema_snapshot(path: str \| Path \| None = None, *, update: bool \| None = None, urlconf: str \| None = None, hint: str = '') -> None` |
+| `capture_events` | function | Experimental. Collect every family event published inside the block. | `capture_events() -> Iterator[PublishedEvents]` |
 | `client_as` | function | A client authenticated as a new user holding `roles` (`None` alone: anonymous). | `client_as(*roles: str \| None, user: Any = None) -> KarniAPIClient` |
 | `create_external_tables` | function | Experimental. Create the missing table of each external model routed to `using`. | `create_external_tables(using: str = 'default', models: Iterable[type[Model]] \| None = None) -> list[str]` |
+| `deliver_now` | function | Experimental. Run every pending delivery now (or those of `event`), backoff ignored. | `deliver_now(*, event: Event \| str \| None = None, using: str \| None = None) -> Any` |
 | `load_content` | function | Load the content file at `path` into the test database and return the report. | `load_content(path: str \| Path = 'content/site.json', *, missing_ok: bool = False, **options: Any) -> Any` |
 | `query_budget` | function | Fail with the grouped duplicate report if the block runs more than `limit` queries. | `query_budget(limit: int, *, label: str = 'block', using: str \| None = None) -> Iterator[QueryRecorder]` |
 | `user_with_roles` | function | A new user (generated factory, or the explicit one) holding `roles` (Django groups). | `user_with_roles(*roles: str, **fields: Any) -> Any` |
@@ -1749,6 +1813,7 @@ class Lead(BaseModel):
 | `import_lookup` | karni | `{}` | For a relation field, the field of the related model that its import column carries. | `import_lookup = {"customer": "email"}` |
 | `import_transform` | karni | `None` | A callable, or its dotted path, that rewrites each imported row before validation. | `import_transform = "shop.imports.clean_order_row"` |
 | `after_import` | karni | `None` | A callable, or its dotted path, run once an import commits, with the result. | `after_import = "shop.imports.reindex"` |
+| `label` | karni | `None` | Experimental. The field that names a row for people, where another model's relation shows it: a table cell, a detail page, a select. Published as `label` in `x-karni-relation`. Unset, @karni/ui takes the first of name, title, label and email. | `label = "number"` |
 | `dashboard` | karni | `None` | Put the model on the staff app's dashboard: counts (all rows, new ones, one per state) and the newest rows. `True` for the defaults, or a dict ([API: dashboard](api.md#the-staff-dashboard)). | `dashboard = {"by": "status", "counts": {"Due today": {"due_on": "today"}}}` |
 | `aggregate` | karni | `None` | Experimental. What `GET <resource>/aggregate/` may group by and sum: the fields, relation paths and expressions in `group_by` (a date takes `:year`, `:quarter` or `:month`), the `values` a metric reads, the `metrics` allowed and named `expressions` ([aggregations](aggregations.md)). | `aggregate = {"group_by": ["region", "launched_on"], "values": ["price"]}` |
 | `search` | karni | `None` | Experimental. Put the model in cross-model search (`GET /api/search/`): the text `fields` to match, the `title` and `subtitle` a hit shows, a `weight` across models. Each field gets a GIN trigram index ([search across models](global-search.md)). | `search = {"fields": ["name", "sku"], "title": "name", "subtitle": "sku"}` |
@@ -1760,6 +1825,12 @@ class Lead(BaseModel):
 | `financial` | karni | inferred | Whether the model holds money for the CASCADE check. It is inferred from money fields and payments-like model names. | `financial = True` |
 | `not_money` | karni | `{}` | FloatFields whose money-like name is not money, each with what it is (silences `karni.E960` for that field). | `not_money = {"total_score": "a game score"}` |
 | `no_overlap` | karni | `None` | Rows that may not overlap in time per resource: a `NoOverlap(...)`, a tuple of the resource field(s) then the range, or a list of them. PostgreSQL enforces it with an `EXCLUDE` constraint the model's migration creates. Soft-deleted rows never block. | `no_overlap = NoOverlap("room", "during", ignore={"status": ["cancelled"]})` |
+| `bounds` | karni | `{}` | Experimental. The lowest and highest value of a number, date or datetime field, checked when the value is written new or changed: `{field: {min, max}}`, with `$now` and `$today` for dates (`E990`). The API schema publishes a number's limits. | `bounds = {"quantity": {"min": 1}, "expected_close": {"min": "$today"}}` |
+| `unique` | karni | `None` | Experimental. Fields whose values are unique among the live rows: a list of field lists, or `{fields, where}` with a row filter of fixed values. Each one is a partial unique index PostgreSQL and SQLite enforce (`E991`). | `unique = [["slot", "member"], {"fields": ["user"], "where": {"active": True}}]` |
+| `targets` | karni | `{}` | Experimental. The rows a foreign key may point at: `{field: <row filter>}`, with `$me`, `$now`, `$today` and `$<field of the row>` as values (`E993`). | `targets = {"listing": {"active": True, "seller__user": {"not": "$me"}}}` |
+| `frozen` | karni | `{}` | Experimental. Fields that never change after create (`True`), or not while the stored row matches a row filter (`E994`). | `frozen = {"slot": True, "value": {"stage": "won"}}` |
+| `delete` | karni | `None` | Experimental. When a row may be deleted: `when` (a row filter it must match) and `blocked_by` (related entities whose live rows keep it). A refusal is `E995` (409). | `delete = {"when": {"status": "pending"}, "blocked_by": ["Deal"]}` |
+| `moves` | karni | `{}` | Experimental. What a move into a state (or a boolean becoming true) requires, needs, stamps and who is emailed: `{state: {requires: [fields], needs: [entities], stamps: [fields], notify: <path to a user>}}` (`E996`). | `moves = {"lost": {"requires": ["lost_reason"], "stamps": ["closed_at"]}}` |
 | `external` | karni | `False` | Experimental. Another system owns the table or view: with `Meta.managed = False`, the model may inherit plain `models.Model`, Karni runs no DDL for it, the API answers its writes with 405 and the admin shows it read-only ([models: external tables](models.md#external-tables-views-and-a-second-database)). | `external = True` |
 | `writable` | karni | `False` | Experimental. Let the API and the admin write an external model's table. | `writable = True` |
 | `database` | karni | `None` (the default database) | Experimental. The `DATABASES` alias the model's reads, writes and migrations go to (`karni.db.DatabaseRouter`). | `database = "warehouse"` |
@@ -1806,8 +1877,31 @@ class Lead(BaseModel):
 | `KARNI_ROLES` |  | `{ "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}}, "user": {"name": "User", "grants": {"*": "own"}}, "customer": {"name": "Customer", "grants": {"*": "own"}}}` | The project's roles and grants: `{slug: {name, description, system, grants: {"app.model:action": scope}}}`. Grant patterns take `*` wildcards, and the scopes are `all` / `own` / `related:<key>` / `custom:<name>` / `tree:<path>`. See [roles](accounts.md#roles-as-data). |
 | `KARNI_ROLES_AUTOSYNC` | `KARNI_ROLES_AUTOSYNC` | `True` | Reconcile the role tables with `KARNI_ROLES` after every `migrate` (`karni sync-roles` does the same by hand). |
 | `KARNI_USER_GRANTS` | `KARNI_USER_GRANTS` | `False` | Experimental. Per-user grants: while `True`, each user's `UserGrant` rows (a pattern and a scope as in `KARNI_ROLES`, with targets and an expiry) join the grants of their roles, for one more query per request. `False` (the default) reads no row. See [per-user grants](accounts.md#per-user-grants). |
-| `KARNI_NAVIGATION` |  | `None` | Experimental. The menu `GET /api/navigation/` gives each user: a list of items (`{"label", "route", "icon", "order", "requires"}`) and groups (`{"label", "children": [...]}`), or `"db"` for the `NavItem` table edited in the admin (add `karni.navigation` to `INSTALLED_APPS`). `requires` is `public`, `authenticated` (the default) or a permission pattern as in `KARNI_ROLES`, so role grants and per-user grants open an item. `None` (the default) mounts no route. See [navigation](navigation.md). |
+| `KARNI_NAVIGATION` |  | `None` | Experimental. The menu `GET /api/navigation/` gives each user: a list of items (`{"label", "route", "icon", "order", "requires"}`) and groups (`{"label", "children": [...]}`), or `"db"` for the `NavItem` table edited in the admin (add `karni.navigation` to `INSTALLED_APPS`), or named menus as a mapping of a name to such a list (`{"app": [...], "public": [...], "account": [...]}`, read with `?menu=`; a list is the `app` menu). `requires` is `public`, `authenticated` (the default) or a permission pattern as in `KARNI_ROLES`, so role grants and per-user grants open an item. `None` (the default) mounts no route. See [navigation](navigation.md). |
 | `KARNI_NAVIGATION_PAGES` |  | `["frontend/src/routes.tsx"]` | Experimental. The frontend files whose `path:` entries are the app's pages. `karni check` reports a menu item whose route none of them serves (`E533`). `[]` turns that comparison off. |
+| `KARNI_PEOPLE` | `KARNI_PEOPLE` | `False` | Experimental. `True` installs the people contract, `karni.people`: one Person per human and one Organisation per company for every part of the project. Read during the call. `karni build` writes it when karni.yaml points at `people.Person`. See [people](people.md). |
+| `KARNI_PEOPLE_RESOLVER` |  | `"karni.people.services.Resolver"` | Experimental. Dotted path of the `Resolver` class (or a subclass) `people.resolve()` finds or creates people with. |
+| `KARNI_PEOPLE_LINK_ON_VERIFY` |  | `True` | Experimental. Link an account to the person with its email as soon as the email is verified (sign-up with verification, a sign-in code, a social sign-in with a verified address). `False` leaves linking to `people.link_account()`. |
+| `KARNI_PEOPLE_API` |  | `True` | Experimental. Route `/api/people/`, `/api/organisations/`, `/api/people-memberships/` and `/api/people-addresses/`. `False` leaves them out, for a project that routes its own viewsets over the people tables. |
+| `KARNI_PEOPLE_MERGE_SKIP` |  | `[]` | Experimental. Models a person or organisation merge leaves alone, as `"app_label.Model"`: their rows keep pointing at the merged record. |
+| `KARNI_PEOPLE_AUTODISCOVER` |  | `True` | Experimental. Import every installed app's `people.py` at startup, where a part registers its person facts, merge hooks and erase hooks. `False`: register them in the part's `AppConfig.ready()`. |
+| `KARNI_TIMELINE_API` |  | `True` | Experimental. Route `GET /api/timeline/`, a person's, an organisation's or a record's timeline, when `karni.timeline` is installed. `False` leaves it out, for a project that mounts its own `TimelineView`. See [timeline](timeline.md). |
+| `KARNI_TIMELINE_FROM_EVENTS` |  | `True` | Experimental. Write a timeline entry for each family event whose declaration names a timeline title (`declare(..., timeline=...)`). `False` writes entries with `timeline.record()` only. |
+| `KARNI_TIMELINE_PAGE_SIZE` |  | `25` | Experimental. Timeline entries per page of `GET /api/timeline/` when `?limit=` is not given. |
+| `KARNI_TIMELINE_MAX_PAGE_SIZE` |  | `100` | Experimental. The largest `?limit=` of `GET /api/timeline/`. |
+| `KARNI_TIMELINE_RETENTION_DAYS` |  | `None` | Experimental. Days a timeline entry is kept. `None` (the default) keeps them all and schedules no pruning. |
+| `KARNI_TIMELINE_VISIBILITY` |  | `"karni.timeline.access.Visibility"` | Experimental. Dotted path of the class (a subclass of `karni.timeline.access.Visibility`) that says which records a request may read, so which timeline entries it sees. |
+| `KARNI_PREFERENCES_LOCKED` |  | `{}` | Experimental. Values the deployment fixes, by group then name: `{"details": {"currency": "EUR"}, "bookings": {"refund_notice_hours": 48}, "connections": {"crm.deal_timeline": False}, "emails": {...}}`. Every read answers the lock, the Settings page shows it read only and a change is refused (`E324`). `karni check` refuses a name nobody declared or a value its field refuses (`E320`). See [preferences](preferences.md). |
+| `KARNI_PREFERENCES_DEFAULTS` |  | `{}` | Experimental. Values the deployment starts with, in the shape of `KARNI_PREFERENCES_LOCKED`. The business can change them in Settings. `karni build` writes the project's name here, and its currency (`app.currency`) in `KARNI_PREFERENCES_LOCKED`. |
+| `KARNI_PREFERENCES_API` |  | `True` | Experimental. Route `/api/preferences/`, the API behind the Settings page, when `karni.preferences` is installed. `False` leaves it out. |
+| `KARNI_PREFERENCES_AUTODISCOVER` |  | `True` | Experimental. Import every installed app's `preferences.py` and `connections.py` at startup, where parts declare their settings sections, connections and email kinds. |
+| `KARNI_NOTIFY_API` |  | `True` | Experimental. Route `/api/inbox/`, `/api/email-templates/` and `/api/notify/unsubscribe/` when `karni.notify` is installed. `False` leaves them out, for a project that mounts its own views. See [notifications](notify.md). |
+| `KARNI_NOTIFY_CHANNELS` |  | `["email", "inbox"]` | Experimental. The channels the project sends messages on: `"email"` and `"inbox"`. A kind declared on a channel left out here is not sent there. |
+| `KARNI_NOTIFY_PAGE_SIZE` |  | `25` | Experimental. Notifications per page of `GET /api/inbox/` when `?limit=` is not given. |
+| `KARNI_NOTIFY_MAX_PAGE_SIZE` |  | `100` | Experimental. The largest `?limit=` of `GET /api/inbox/`. |
+| `KARNI_NOTIFY_RETENTION_DAYS` |  | `180` | Experimental. Days a notification is kept in the inbox, read or not. A daily task deletes older ones. `None` keeps them all and schedules nothing. |
+| `KARNI_NOTIFY_UNSUBSCRIBE_PATH` |  | `"/api/notify/unsubscribe/?token={token}"` | Experimental. Where the unsubscribe link of a marketing email points, after `KARNI_FRONTEND_URL`: `{token}` is the signed token. The default is the API's own page, which asks before it unsubscribes. |
+| `KARNI_NOTIFY_MOVE_CHANNELS` |  | `["email", "inbox"]` | Experimental. Where the email of a move (`moves.<state>.notify` in karni.yaml) goes while `karni.notify` is installed: `["email", "inbox"]` (the default), or one of them. |
 | `KARNI_ACCOUNTS_TOKEN_TTL` |  | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
 | `KARNI_ACCOUNTS_LINKS` |  | `{ "verify_email": "{frontend}/auth/verify-email?token={token}", "reset_password": "{frontend}/auth/reset-password?token={token}", "change_email": "{frontend}/auth/confirm-email-change?token={token}"}` | Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders. |
 | `KARNI_AUTH_THROTTLE_RATES` |  | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object. `null` disables a scope. |
@@ -1818,6 +1912,13 @@ class Lead(BaseModel):
 |---|---|---|---|
 | `KARNI_CACHE` | `KARNI_CACHE` | `"redis"` | `redis` (the default cache at `REDIS_URL`) or `locmem`, an in-process cache for a host run without Redis (development only: throttle counters are then per process). |
 | `KARNI_SINGLE_PROCESS` | `KARNI_SINGLE_PROCESS` | `False` | A deployment of one process, without Redis or a Celery worker: the cache in memory (`KARNI_CACHE=locmem`), Celery tasks run in the process that sends them (`CELERY_TASK_ALWAYS_EAGER`, broker `memory://`), `/readyz` and `/health/ready/` leave the broker and the worker out, and `karni.W501` is quiet while `WEB_CONCURRENCY` is 1. Each only where the project sets no value of its own. Beat does not run: no scheduled task fires. See [a small server](deploy.md#a-small-server-one-process). |
+
+### Email
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_MAIL_DISABLED_KINDS` | `KARNI_MAIL_DISABLED_KINDS` | `[]` | Experimental. The kinds of email karni.mail does not send, by name (commerce.new_order). A kind is the stable name a part gives each email. |
+| `KARNI_MAIL_SOURCE` | `KARNI_MAIL_SOURCE` | `"karni.notify.source.NotifySource"` | Experimental. Dotted path of the object (or class) karni.mail asks what a business changed: `template(kind)` (an email edited in the app), `enabled(kind)`, `sender()` and, optionally, `send(...)`, which takes over the delivery of every message with a kind. The default, `karni.notify.source.NotifySource`, keeps edited emails, each person's switches and unsubscribes and the inbox while `karni.notify` is installed, and reads the files and the preferences contract otherwise. Blank: `karni.mail.DefaultSource`. See [notifications](notify.md). |
 
 ### Files & storage
 
@@ -1849,6 +1950,19 @@ class Lead(BaseModel):
 | `KARNI_QUERY_BUDGET` |  | `{ "list": 8, "retrieve": 8, "create": 12, "update": 12, "partial_update": 12, "destroy": 10, "*": 15}` | Queries allowed per `BaseViewSet` action (`"*"` for any other), merged over the defaults. Set it per viewset with `query_budget = Budget(...)`. |
 | `KARNI_QUERY_BUDGET_MODE` | `KARNI_QUERY_BUDGET_MODE` | `"off"` | `off`, `warn` (log an exceeded budget) or `raise` (fail the request, which is what the pytest plugin sets). |
 | `KARNI_QUERY_LOG` | `KARNI_QUERY_LOG` | `False` | Log each request's query count, duplicates and SQL time (`QueryLogMiddleware`). |
+| `KARNI_DEMO_MODE` | `KARNI_DEMO_MODE` | `env.bool("DEMO_MODE", default=False)` | Experimental. Turns demo mode on: only the demo accounts write, the data resets every `KARNI_DEMO_RESET_HOURS` hours, the sign-in pages list the accounts (`GET /api/demo/`). Also `DEMO_MODE`. Needs `karni.demo` in `INSTALLED_APPS` and its two middlewares. See [demo mode](demo-mode.md). |
+| `KARNI_DEMO_ACCOUNTS` | `KARNI_DEMO_ACCOUNTS` | `[]` | Experimental. The demo accounts, one per role: `[{"login": "customer@example.com", "label": "Customer", "can": "Place orders.", "roles": ["customer"]}]`. Keys: `login`, `label`, `can`, `roles` (a list or `"all"`), `staff`, `superuser`, `password`. Empty: the one account `karni seed` makes. Reported by `E950`. |
+| `KARNI_DEMO_SEED` | `KARNI_DEMO_SEED` | `env.int("DEMO_SEED", default=42)` | Experimental. The fixed seed every demo reset uses, so the data is the same each time. Also `DEMO_SEED`. |
+| `KARNI_DEMO_RESET_HOURS` | `KARNI_DEMO_RESET_HOURS` | `env.int("DEMO_RESET_HOURS", default=24)` | Experimental. Hours between two demo resets, and how old data may be at boot. Also `DEMO_RESET_HOURS`. |
+| `KARNI_DEMO_RESET_CHECK_SECONDS` | `KARNI_DEMO_RESET_CHECK_SECONDS` | `60` | Experimental. How often a worker asks whether a demo reset is due. One worker resets, under a lock. |
+| `KARNI_DEMO_RESET_STAMP` | `KARNI_DEMO_RESET_STAMP` | `env("DEMO_RESET_STAMP", default="")` | Experimental. The file that records the last demo reset. Empty: next to the SQLite database, else `<BASE_DIR>/data/demo-reset.json`. Also `DEMO_RESET_STAMP`. |
+| `KARNI_DEMO_APP_INDEX` | `KARNI_DEMO_APP_INDEX` | `env("DEMO_APP_INDEX", default="")` | Experimental. The built React app's `index.html` that `karni.demo.urls.app_urls()` serves. Empty: `<BASE_DIR>/frontend/dist/index.html`. Also `DEMO_APP_INDEX`. |
+| `KARNI_DEMO_KEEP_APPS` |  | `None` | Experimental. App labels whose rows a demo reset keeps. `None`: the accounts, roles, content types, sessions, the token blacklist and the beat schedule. |
+| `KARNI_DEMO_OPEN_PATHS` |  | `[]` | Experimental. Paths anyone may write to in demo mode, besides sign-in, refresh, sign-out and accept-terms. An exact path or a prefix ending in `*`, for example `["/api/contact/*"]`. |
+| `KARNI_DEMO_LOCKED_PATHS` |  | `[]` | Experimental. Paths no demo account may write to, besides the accounts API and the admin's user and role tables. Same pattern rule as `KARNI_DEMO_OPEN_PATHS`. |
+| `KARNI_DEMO_APP_RESERVED` |  | `[]` | Experimental. First path segments the demo's React page never answers, added to `api`, `health`, the admin, static and media, for example `["payments"]`. |
+| `KARNI_DEMO_WRITE_RULE` |  | `""` | Experimental. Dotted path of `f(request) -> Refusal \| None` that replaces `karni.demo.guard.refusal`. |
+| `KARNI_DEMO_SEEDER` |  | `""` | Experimental. Dotted path of `f(seed: int) -> str` that reseeds the emptied tables on a demo reset. Empty: `karni seed --reset` with the fixed seed. |
 | `KARNI_SEED_LOGINS` | `KARNI_SEED_LOGINS` | `{}` | Extra `karni seed` logins with their roles, as JSON: `{"organizer@example.com": ["organizer"]}`. |
 | `KARNI_API_CACHE` | `KARNI_API_CACHE` | `False` | Cache `BaseViewSet` list and retrieve responses, invalidated on every write. See [response caching](api.md#response-caching). |
 | `KARNI_API_CACHE_TTL` | `KARNI_API_CACHE_TTL` | `300` | Seconds a cached response lives. |
@@ -1877,7 +1991,7 @@ class Lead(BaseModel):
 | `KARNI_ADMIN_SEARCH_MAX` |  | `5` | Fields a derived admin searches at most. |
 | `KARNI_ADMIN_SITE` |  | `"django.contrib.admin.site"` | Dotted path of the admin site models are registered on. |
 | `KARNI_ADMIN_BASE` |  | `"unfold.admin.ModelAdmin"` | Dotted path of the `ModelAdmin` every derived admin is built on. |
-| `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_admin", "karni_audit", "karni_transfer", "karni_accounts.OneTimeToken", "karni_accounts.Permission", "karni_accounts.SocialIdentity", "karni_accounts.LoginCode"]` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
+| `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_admin", "karni_audit", "karni_transfer", "karni_outbox", "karni_accounts.OneTimeToken", "karni_accounts.Permission", "karni_accounts.SocialIdentity", "karni_accounts.LoginCode"]` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
 
 ### Security headers (karni.security)
 
@@ -1942,6 +2056,10 @@ class Lead(BaseModel):
 |---|---|---|---|
 | `KARNI_EVENTS_AUTODISCOVER` | `KARNI_EVENTS_AUTODISCOVER` | `True` | Import every app's `events.py` and `listeners.py` at startup. |
 | `KARNI_SCHEDULES_AUTODISCOVER` | `KARNI_SCHEDULES_AUTODISCOVER` | `True` | Import every app's `schedules.py` at startup. |
+| `KARNI_EVENTS_DISPATCHER` |  | `"karni.outbox.dispatch.celery"` | Experimental. Dotted path of the function that hands a committed family event to a worker: `(event_id, *, countdown=0)`. The default queues a Celery task, and the sweep sends what a down broker refused. See [family events](family-events.md). |
+| `KARNI_EVENTS_INLINE` | `KARNI_EVENTS_INLINE` | `None` | Experimental. Whether the default dispatcher delivers a committed family event in the process that committed, with no worker: `None` (the default) follows `DEBUG`, so development fills the timeline and the inbox at once, `True` for a small deployment that runs no broker, `False` keeps Celery. A `KARNI_EVENTS_DISPATCHER` of your own is used either way. See [family events](family-events.md). |
+| `KARNI_EVENTS_MAX_ATTEMPTS` | `KARNI_EVENTS_MAX_ATTEMPTS` | `8` | Experimental. Runs of one family event delivery before it is marked failed (1 to 100). Retries wait 10 seconds, then four times longer each time, at most 6 hours. |
+| `KARNI_EVENTS_RETENTION_DAYS` | `KARNI_EVENTS_RETENTION_DAYS` | `30` | Experimental. Days a delivered family event stays in the outbox. Events with a pending or failed delivery stay. `None` keeps them all and schedules no pruning. |
 | `KARNI_PK` |  | `"uuid"` | Experimental. The primary key `karni make model` writes: `uuid` (`BaseModel`) or `bigint` (`BigIntBaseModel`). The CLI reads it from a plain `KARNI_PK = "bigint"` line in `config/settings.py`, and `--pk` overrides it per model. Nothing else reads it: each model's class line decides its key. See [choosing the key type](models.md#choosing-the-key-type). |
 | `KARNI_ARCHITECTURE` |  | `{ "skip_apps": [], "sql_allowed": ["*/sql/*", "*/migrations/*"], "http_allowed": ["*/services/*", "*/providers/*", "*/tests/*", "conftest.py"], "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]}}` | Configuration of the architecture rules: `skip_apps`, `sql_allowed`, `http_allowed`, `dup`. See [enforcement](enforcement.md). |
 | `KARNI_CHECK_CACHE` |  | `True` | Experimental. `karni check` keeps each file check's results under the file's hash in `.karni/local/check-cache.json`, so an unchanged file is not checked again. `False` turns it off, a path (relative to the project root) moves it. See [the check cache](enforcement.md#the-check-cache). |
@@ -1951,6 +2069,7 @@ class Lead(BaseModel):
 | `KARNI_SEED_BATCH_SIZE` |  | `2000` | Experimental. Rows per bulk insert of `karni seed` (`--batch-size` overrides it). |
 | `KARNI_SEED_LEDGER` |  | `True` | Experimental. `karni seed` records the row count each table holds after a run in `.karni/local/seeded.json`, and `--volume` refuses a table holding rows no seed run left there. `False` turns it off, a path moves it. |
 | `KARNI_EXPLAIN_SEQ_SCAN_ROWS` |  | `1000` | Experimental. `karni queries --explain` flags each sequential scan on a table of this many rows or more, with the index that would serve it (PostgreSQL). |
+| `KARNI_RULES_CLOCK_SKEW` |  | `300` | Experimental. Seconds a `$now` bound of `class Karni: bounds` forgives, so a browser clock a little ahead or behind the server is not refused. See [rules](rules.md#bounds). |
 
 ### Module: karni-ai
 
@@ -1996,6 +2115,48 @@ class Lead(BaseModel):
 |---|---|---|---|
 | `KARNI_CHARTS_READ` | `KARNI_CHARTS_READ` | `"authenticated"` | Who may read the chart definitions (/api/charts/): "authenticated" (the default), "public" (anyone, for charts on a public page) or "granted" (the roles' grants on karni_charts.chart). The data always follows the source resource's own access, whoever reads the definition. |
 
+### Module: karni-commerce
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_COMMERCE_CURRENCY` | `KARNI_COMMERCE_CURRENCY` | `""` | The project's currency, as an ISO 4217 code. Blank (the default) takes KARNI_PAYMENTS_CURRENCY, so a project names its currency once. |
+| `KARNI_COMMERCE_HOLD_MINUTES` | `KARNI_COMMERCE_HOLD_MINUTES` | `30` | How long checkout holds an order's items for its payment, in minutes. An order not paid by then is cancelled and its items are free again. |
+| `KARNI_COMMERCE_MAX_QUANTITY` | `KARNI_COMMERCE_MAX_QUANTITY` | `99` | The most of one item a cart line takes. |
+| `KARNI_COMMERCE_FIRST_NUMBER` | `KARNI_COMMERCE_FIRST_NUMBER` | `1001` | The number of the first order. Later orders count up from it. |
+| `KARNI_COMMERCE_NUMBER` | `KARNI_COMMERCE_NUMBER` | `""` | The dotted path of the function that gives a new order its number: number(order) -&gt; int. Blank (the default) counts up from KARNI_COMMERCE_FIRST_NUMBER (karni_commerce.services.next_number). |
+| `KARNI_COMMERCE_ORDER_PATH` | `KARNI_COMMERCE_ORDER_PATH` | `"/orders/{number}?key={key}"` | Where a person reads an order in the app, after KARNI_FRONTEND_URL: {number} and {key} (the guest's secret) are filled in. The payment's return address and the emails' links point here. |
+| `KARNI_COMMERCE_MANUAL_HOLD_MINUTES` | `KARNI_COMMERCE_MANUAL_HOLD_MINUTES` | `2880` | How long an order staff place by hand (a phone order) holds its items for the buyer's payment, in minutes. Two days by default. |
+| `KARNI_COMMERCE_STAFF_EMAILS` | `KARNI_COMMERCE_STAFF_EMAILS` | `[]` | Who gets the new-order email (commerce.new_order): a list of addresses. Empty (the default) sends none. |
+| `KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR` | `KARNI_COMMERCE_OTHER_CHECKOUT_VALIDATOR` | `"karni_payments.services.default_checkout_validator"` | The checkout validator for payments that are not an order's (the dotted path karni_commerce.payments.checkout_validator hands them to). |
+| `KARNI_COMMERCE_PRICES_INCLUDE_TAX` | `KARNI_COMMERCE_PRICES_INCLUDE_TAX` | `False` | Whether the prices the sellables give include their tax. Off (the default): tax is added on top at checkout. On: the tax is the part of each price that is tax, and the total is the prices (with the discount and shipping). |
+| `KARNI_COMMERCE_SHIPPING` | `KARNI_COMMERCE_SHIPPING` | `"karni_commerce.pricing.ZoneShipping"` | The dotted path of the class that gives the shipping methods of an address (karni_commerce.pricing.ZoneShipping: the zones and methods staff set up). |
+| `KARNI_COMMERCE_TAX` | `KARNI_COMMERCE_TAX` | `"karni_commerce.pricing.RateTax"` | The dotted path of the class that gives the tax rate of a tax class at an address (karni_commerce.pricing.RateTax: the rates staff set up). |
+| `KARNI_COMMERCE_SELLABLES` |  | `{}` | Sellable adapters by kind, as dotted paths, over the ones the apps register in their sellables.py: {"product": "myapp.sellables.MyProduct"}. |
+| `KARNI_COMMERCE_FIRST_INVOICE` | `KARNI_COMMERCE_FIRST_INVOICE` | `1001` | The first invoice's number (karni_commerce.services.issue_invoice). |
+
+### Module: karni-game
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_GAME_RATES` |  | `` | The rates of the limited writes, by scope (docs/game-api.md, Rate limits). A project's dict is laid over these: {"score": "10/min"} changes one, None turns one off. |
+| `KARNI_GAME_TOKEN_HEADER` | `KARNI_GAME_TOKEN_HEADER` | `"X-Player-Token"` | The header a guest sends its token in. |
+| `KARNI_GAME_CORS_ORIGINS` | `KARNI_GAME_CORS_ORIGINS` | `[]` | The origins a portal build calls the game API from (https://games.example), or "*". Only /api/game/, only with a token (X-Player-Token or a JWT), never with cookies. |
+| `KARNI_GAME_SERVER_SECRET` | `KARNI_GAME_SERVER_SECRET` | `""` | The secret a realtime server of the project's own shares: it signs the player tokens Karni issues (HS256) and the results the server reports. Blank: no multiplayer (karni.GAME027 when a client asks for a token). |
+| `KARNI_GAME_TOKEN_ISSUER` | `KARNI_GAME_TOKEN_ISSUER` | `"karni-game"` | The iss claim of the player token. |
+| `KARNI_GAME_TOKEN_SECONDS` | `KARNI_GAME_TOKEN_SECONDS` | `300` | How long a player token for the realtime server lives, in seconds. |
+| `KARNI_GAME_PORTALS` |  | `{}` | Portals that call back when an ad was watched: {name: {"secret": "...", "verifier": "dotted.path.Verifier"}}. The verifier defaults to karni_game.signatures.HmacVerifier (X-Karni-Timestamp and X-Karni-Signature). |
+| `KARNI_GAME_SIGNATURE_TOLERANCE` | `KARNI_GAME_SIGNATURE_TOLERANCE` | `300` | How far a signed request's timestamp may be from the server's clock, in seconds. |
+| `KARNI_GAME_CLIENT_CLAIMS_PER_DAY` | `KARNI_GAME_CLIENT_CLAIMS_PER_DAY` | `5` | The most claims a day of an ad reward the client claims (trust "client"): any client can claim it, so it stays low. A reward's per_day may be lower, never higher. |
+| `KARNI_GAME_AD_INTENT_SECONDS` | `KARNI_GAME_AD_INTENT_SECONDS` | `3600` | How long an ad reward's intent token (POST rewards/&lt;key&gt;/intent/) is valid, in seconds. |
+| `KARNI_GAME_INTENT_DAYS` | `KARNI_GAME_INTENT_DAYS` | `7` | How many days a write's intent (the retry key) is kept. |
+| `KARNI_GAME_MAX_SAVE_BYTES` | `KARNI_GAME_MAX_SAVE_BYTES` | `1024 * 1024` | The largest save any game may allow, in bytes (a game's max_save_bytes stays below it). |
+| `KARNI_GAME_PLAYED_AT_WINDOW` | `KARNI_GAME_PLAYED_AT_WINDOW` | `86400` | How far back a score's played_at (when it was played, offline) is trusted, in seconds. A score played before midnight and sent after lands on the board of the day it was played. Older is GAME036. A played_at more than a minute ahead of the server is too. |
+| `KARNI_GAME_MAX_RUN_BYTES` | `KARNI_GAME_MAX_RUN_BYTES` | `256 * 1024` | The largest run record (seed, input log, meta) a score may carry, in bytes. |
+| `KARNI_GAME_MERGER` | `KARNI_GAME_MERGER` | `"karni_game.merge.Merger"` | The class that merges two players (an upgrade, or two people merged): a subclass of karni_game.merge.Merger. |
+| `KARNI_GAME_DAILY_SEED` | `KARNI_GAME_DAILY_SEED` | `"karni_game.daily.daily_seed"` | The function that gives a game's seed of a day: seed(game, day) -&gt; int. |
+| `KARNI_GAME_AUTODISCOVER` | `KARNI_GAME_AUTODISCOVER` | `True` | Import &lt;app&gt;/game.py of every installed app at startup (save migrations, run checks). |
+| `KARNI_GAME_ROLES` | `KARNI_GAME_ROLES` | `True` | Declare the roles game-manager and game-moderator (the karni.roles entry point). |
+
 ### Module: karni-impersonation
 
 | Setting | Env | Default | What it controls |
@@ -2017,6 +2178,7 @@ class Lead(BaseModel):
 | `KARNI_PAYMENTS_CHECKOUT_VALIDATOR` |  | `"karni_payments.services.default_checkout_validator"` | Dotted path called with (user=, amount=, currency=, metadata=) BEFORE a Payment is created. It is the server-side pricing authority. The default is a pass-through, and production projects should replace it (never trust client amounts). |
 | `KARNI_PAYMENTS_EVENT_HANDLER` |  | `"karni_payments.services.apply_event"` | Dotted path of the webhook state machine applied by the Celery task. |
 | `KARNI_PAYMENTS_ALLOWED_REDIRECTS` | `KARNI_PAYMENTS_ALLOWED_REDIRECTS` | `[]` | Extra URLs whose origins are allowed as checkout success/cancel redirects, on top of KARNI_FRONTEND_URL's origin. |
+| `KARNI_PAYMENTS_TEST_CHECKOUT_PAGE` |  | `None` | The test provider's checkout page (experimental): True serves it at payments/test-checkout/&lt;session&gt;/, where a person pays or declines a test payment in the browser. None (the default) serves it while DEBUG is on. False keeps the imaginary https://checkout.test/ address. |
 | `STRIPE_SECRET_KEY` | `STRIPE_SECRET_KEY` | `""` | Provider credentials: blank by default, validated lazily at use. |
 | `STRIPE_WEBHOOK_SECRET` | `STRIPE_WEBHOOK_SECRET` | `""` | Provider credentials: blank by default, validated lazily at use. |
 | `RAZORPAY_KEY_ID` | `RAZORPAY_KEY_ID` | `""` | Provider credentials: blank by default, validated lazily at use. |
@@ -2164,9 +2326,12 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `FacetPanel` | `resource: string`, `taxonomy: string`, `value: readonly (string \| number)[]`, `onChange: (value: (string \| number)[]) => void` | Experimental. The facet filter of a list tagged to a tree: each counted node with its count, nested under its parent, and a checkbox that chooses it. | [FacetPanel.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/facets/FacetPanel.tsx) |
 | `ChangeHistory` | `resource: string`, `id: string \| number` | The field-level change history of one row: when, by whom, what changed from what to what. | [ChangeHistory.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/history/ChangeHistory.tsx) |
 | `ResourceImport` | `resource: string` | Import a CSV or XLSX file into a resource: upload, map columns to fields, preview (the mandatory dry run, which shows N created / updated / skipped with every row's errors), confirm, then commit. | [ResourceImport.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/import/ResourceImport.tsx) |
+| `RecordLink` | `resource: string \| undefined`, `row: unknown`, `children: React.ReactNode` | Experimental. `children` as a link to the record, when its resource has a registered link. | [record-links.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/record-links.tsx) |
 | `EmptyValue` |  | A field that has no value (null, "", an empty list), the same in every Karni component: ResourceTable's cells, ResourceDetail's rows and ChangeHistory's before/after values. | [empty-value.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/empty-value.tsx) |
 | `KarniProvider` | `client: KarniClient` | Rendered once at the app root, it provides the Karni client and a TanStack QueryClient to everything inside it. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/provider.tsx) |
 | `AuthProvider` |  | Rendered inside `KarniProvider`, it holds the signed-in user and attaches credentials (JWT or session) to every request. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/provider.tsx) |
+| `DemoNotice` |  | Experimental. The demo accounts, or nothing when the server is not a demo. | [DemoNotice.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/demo/DemoNotice.tsx) |
+| `DemoNoticeBody` | `demo: DemoInfo` | Experimental. The default body: a sentence, then one row per account. | [DemoNotice.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/demo/DemoNotice.tsx) |
 | `AuthGuard` |  | Renders its children only for a signed-in user, optionally with one of the given roles, and otherwise says why. | [AuthGuard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/AuthGuard.tsx) |
 | `LoginForm` |  | Email and password sign-in form with inline errors and a callback for the two-factor step. | [LoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/LoginForm.tsx) |
 | `SocialButton` | `provider: string`, `getIdToken: () => Promise<string \| SocialIdToken \| null>` | Experimental. A "Continue with &lt;provider&gt;" button that signs in with the provider's ID token. | [SocialButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/SocialButton.tsx) |
@@ -2185,7 +2350,27 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `FileUpload` |  | Drag-and-drop or click-to-browse file picker that shows the current file and the pending ones. | [FileUpload.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/file-upload/FileUpload.tsx) |
 | `Stat` | `label: React.ReactNode`, `value: React.ReactNode` | KPI tile: label, value, optional delta and icon. | [stat.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/stat/stat.tsx) |
 | `Dashboard` |  | The staff app's home page: a Stat per count and the newest rows of every model that opts in with `Karni.dashboard`. | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
+| `DashboardTiles` |  | Experimental. The home tiles of the signed-in person, in a responsive grid. | [dashboard-tiles.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard-tiles.tsx) |
 | `DataChart` | `kind: DataChartKind`, `title: string` | Minimal line/bar chart driven by `{label, value}` points, named series, or the response of `useAggregate` (`aggregate`), with stacked bars (`stacked`). | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
+| `ResourceGrid` | `resource: string`, `renderCard: (row: T) => React.ReactNode` | Experimental. A resource's rows as cards, with search, sort, filters and paging. | [ResourceGrid.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource-grid/ResourceGrid.tsx) |
+| `AccountPage` |  |  | [AccountPage.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/account/AccountPage.tsx) |
+| `SignInPage` |  |  | [SignInPage.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/account/SignInPage.tsx) |
+| `SignUpForm` |  | Experimental. An account opened with an email and a password. | [SignUpForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/account/SignUpForm.tsx) |
+| `Timeline` |  | Experimental. The timeline of a person or a record, with a kind filter and paging. | [timeline.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/timeline.tsx) |
+| `EmailChoices` |  | Experimental. The person's own switches: which messages reach them by email and in the inbox. | [inbox.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/inbox.tsx) |
+| `InboxBell` |  | Experimental. The bell in the layout: the unread count, a link to the inbox. | [inbox.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/inbox.tsx) |
+| `InboxPage` |  | Experimental. `/inbox`: the person's notifications, with the unread filter and the read marks. | [inbox.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/inbox.tsx) |
+| `PeoplePage` | `navigate: (to: string) => void` | Experimental. `/people`: the people the caller may read, with the facts of every installed part. | [people.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/people.tsx) |
+| `PersonPage` | `id: string`, `navigate: (to: string) => void` | Experimental. `/people/<id>`: one person across every installed part. | [people.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/people.tsx) |
+| `SearchPage` |  | Experimental. `/search`: every part's results for one query, part by part. | [search.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/search.tsx) |
+| `MyAddresses` |  | Experimental. The signed-in person's addresses, to add and remove. | [addresses.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/addresses.tsx) |
+| `BackOffice` | `pathname: string`, `navigate: (to: string) => void`, `siteName: string`, `audience: Audience`, `inbox: boolean`, `search: boolean`, `routes: readonly string[]`, `storefront: boolean`, `children: React.ReactNode` | Experimental. The back office's frame: the app menu, search, the inbox bell and the account menu. | [family-layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/family-layout.tsx) |
+| `FamilyLayout` | `pathname: string`, `navigate: (to: string) => void` | Experimental. The app shell of a project of parts: the storefront or the back office per page. | [family-layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/family-layout.tsx) |
+| `Storefront` | `pathname: string`, `navigate: (to: string) => void`, `siteName: string`, `audience: Audience`, `inbox: boolean`, `search: boolean`, `routes: readonly string[]`, `storefront: boolean`, `children: React.ReactNode` | Experimental. The storefront's frame: the site's header (public and account menus) and footer. | [family-layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/family-layout.tsx) |
+| `FamilyEmptyHome` | `audience: Audience`, `navigate: (to: string) => void` | Experimental. The empty home: what to install, or where a role's tiles come from. | [family-home.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/family-home.tsx) |
+| `FamilyHome` | `navigate: (to: string) => void` | Experimental. `/`: the tiles of staff, the public home for everyone else. | [family-home.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/family-home.tsx) |
+| `SettingsPage` |  |  | [SettingsPage.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/settings/SettingsPage.tsx) |
+| `EmailTemplateEditor` | `kind: string` |  | [EmailTemplateEditor.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/settings/EmailTemplateEditor.tsx) |
 | `DashboardGrid` |  | Experimental. A responsive grid of cards (`DashboardCard`, `ChartCard`, or any element). | [dashboard-grid.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard-grid/dashboard-grid.tsx) |
 | `DashboardCard` | `title: string` | Experimental. One card of a DashboardGrid: a labelled region with a heading, optional description and actions, and loading, empty and error states. | [dashboard-grid.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard-grid/dashboard-grid.tsx) |
 | `ChartCard` | `title: string`, `kind: DataChartKind` | Experimental. A dashboard card holding one DataChart, with loading, empty and error states. | [chart-card.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard-grid/chart-card.tsx) |
@@ -2193,6 +2378,8 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `MarkdownView` | `source: string \| null \| undefined` | Experimental. Markdown shown as formatted, sanitized HTML (the parser loads on first use). | [markdown-view.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/markdown/markdown-view.tsx) |
 | `DataTable` | `caption: string`, `columns: readonly DataTableColumn<T>[]`, `rows: readonly T[]` | Experimental. A sortable, exportable table of rows the page computed, with a sticky header and first column, virtualized past `virtualizeAfter` rows. | [data-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/data-table/data-table.tsx) |
 | `ComparisonTable` | `caption: string`, `entities: readonly T[]`, `metrics: readonly ComparisonMetric<T>[]` | Experimental. Entities side by side: metrics as rows, entities as columns, the best value marked. | [comparison-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/comparison-table/comparison-table.tsx) |
+| `ResourceBoard` | `resource: string`, `renderCard: (row: T, context: ResourceBoardCardContext) => React.ReactNode` | Experimental. A resource's rows in columns by a state field, with legal moves by drag, keyboard or menu. | [ResourceBoard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource-board/ResourceBoard.tsx) |
+| `ResourceCalendar` | `resource: string`, `startField: string` | Experimental. A resource's rows on a day, week or month calendar, with free and full slots, moves and resizes. | [ResourceCalendar.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource-calendar/ResourceCalendar.tsx) |
 
 ### Hooks
 
@@ -2219,14 +2406,25 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `useResourceCounts` | `targets: readonly (string \| ResourceCountTarget)[]` | Experimental. The row count of each resource (`page_size=1` list requests), as chart points. | [useResourceCounts.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceCounts.ts) |
 | `useAggregate` | `resource: string`, `params: AggregateParams`, `options?: Omit<UseQueryOptions<AggregateResult, Error, AggregateResult, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Experimental. Fetches grouped counts and sums of a resource (`GET /<resource>/aggregate/`). | [useAggregate.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useAggregate.ts) |
 | `useGlobalSearch` | `params: GlobalSearchParams<R>`, `options?: UseGlobalSearchOptions<R> \| undefined` | Experimental. Searches every model that opts in (`GET /search/?q=`), grouped per resource. | [useGlobalSearch.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useGlobalSearch.ts) |
-| `useKarniClient` |  | Returns the Karni client from `KarniProvider` and throws a descriptive error outside one. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/provider.tsx) |
+| `useKarniClient` |  |  | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/provider.tsx) |
+| `useResourceSchemaIfKnown` | `resource: string` | Experimental. One resource's parsed schema when it is known, else `undefined`: never throws, and outside a &lt;KarniProvider&gt; it reads nothing. | [useSchema.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/useSchema.ts) |
 | `useSchema` | `resource: string` | Returns one resource's parsed schema (fields, types, relations, operations) from the backend's OpenAPI document, fetched once per app. | [useSchema.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/useSchema.ts) |
 | `useAuth` |  | Returns the signed-in user, auth status, `login` and `logout`, and throws a descriptive error outside `AuthProvider`. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/provider.tsx) |
+| `useDemo` | `options?: Omit<UseQueryOptions<DemoInfo, Error, DemoInfo, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Experimental. The demo accounts of the server (`GET /demo/`), cached for five minutes. | [useDemo.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/demo/useDemo.ts) |
 | `usePermission` |  | `isAuthenticated` and `hasRole(...names)` for the signed-in user. | [usePermission.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/usePermission.ts) |
 | `useSocialLogin` | `provider: string` | Experimental. Sign in with a provider's ID token: `{ signIn, status, error, reset }`. | [useSocialLogin.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/useSocialLogin.ts) |
 | `useOtpLogin` | `options?: UseOtpLoginOptions` | Experimental. Sign in with a code sent by email: `{ step, send, verify, resend, back, status }`. | [useOtpLogin.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/useOtpLogin.ts) |
-| `useNavigation` | `options?: Omit<UseQueryOptions<NavigationMenu, Error, NavigationMenu, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Experimental. The menu for the signed-in user (`GET /navigation/`), cached per user. | [useNavigation.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useNavigation.ts) |
+| `useNavigation` | `options?: UseNavigationOptions \| undefined` | Experimental. The menu for the signed-in user (`GET /navigation/`), cached per user. | [useNavigation.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useNavigation.ts) |
 | `useToast` |  | Imperative toast API + the live toast list. | [use-toast.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/toast/use-toast.ts) |
+| `useDashboardTiles` |  | Experimental. The home tiles of the signed-in person (`GET /dashboard/`), cached per user. | [dashboard-tiles.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard-tiles.tsx) |
+| `usePageMeta` | `__0: PageMeta` | Experimental. Sets `document.title` and the description meta tag while the caller is mounted. | [usePageMeta.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/usePageMeta.ts) |
+| `useAudience` | `customerRoles?: readonly string[]` | Experimental. The audience of the signed-in person (`visitor` outside `AuthProvider`). | [audience.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/audience.ts) |
+| `useBusiness` |  | Experimental. The business's public details (karni.preferences), read once and kept for 5 minutes. | [audience.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/audience.ts) |
+| `useSiteName` | `fallback?: string \| undefined` | Experimental. The business's name as Settings, Details has it, else `fallback`, else the page's title when the app started (the project's name, which `karni new` writes into index.html). | [audience.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/audience.ts) |
+| `useTimeline` | `params: TimelineParams` | Experimental. One timeline, a page at a time (`GET /timeline/`, cursor paging). | [timeline.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/timeline.tsx) |
+| `useInboxUnread` | `pollMs?: number` | Experimental. How many notifications the signed-in person has not read (null: unknown or off). | [inbox.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/inbox.tsx) |
+| `usePersonFacts` |  | Experimental. The person facts the installed parts contribute. | [people.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/people.tsx) |
+| `useMenu` | `menu: string` | Experimental. The entries of a named menu the signed-in person sees (empty while loading). | [family-layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/family-layout.tsx) |
 
 ### Functions and constants
 
@@ -2247,6 +2445,8 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `registerProtectedFileLink` | function | Experimental. Sets the component that shows a protected file field. | [protected-file.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/protected-file.tsx) |
 | `createHistoryStateStore` | function | The default store: the browser's URL through `window.history` (`pushState` / `replaceState`, `popstate` for Back and Forward). | [url-state.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/table/url-state.ts) |
 | `defaultResourceTableSlots` | constant |  | [slots.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/table/slots.ts) |
+| `parseRowActions` | function | Experimental. The `x-karni-actions` extension of a list operation: each declared row action's `from`, `to`, `field`, `by` and `requires`. | [parse.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/parse.ts) |
+| `rowActionOpen` | function | Experimental. Whether the declared row action `name` may run on `row` now: `true` or `false` from its `from` states, `undefined` when the schema declares no such action (the caller then falls back on its own rule). | [parse.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/parse.ts) |
 | `defaultResourceFormSlots` | constant | ResourceForm's own slot components, for wrapping rather than rewriting. | [ResourceForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/form/ResourceForm.tsx) |
 | `UNSAVED_CHANGES_MESSAGE` | constant | What the leave warning says. | [useUnsavedChangesGuard.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useUnsavedChangesGuard.ts) |
 | `defaultResourceDetailSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [ResourceDetail.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/detail/ResourceDetail.tsx) |
@@ -2254,6 +2454,9 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `defaultTreeViewSlots` | constant | Experimental. TreeView's own slot components, for wrapping rather than rewriting. | [tree-states.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/tree/tree-states.tsx) |
 | `defaultFacetPanelSlots` | constant | Experimental. FacetPanel's own slot components, for wrapping rather than rewriting. | [FacetPanel.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/facets/FacetPanel.tsx) |
 | `defaultChangeHistorySlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [ChangeHistory.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/history/ChangeHistory.tsx) |
+| `historyFieldLabel` | function | A field's name in words: its schema label, else the name humanized ("amount_refunded" reads "Amount refunded"). | [ChangeHistory.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/history/ChangeHistory.tsx) |
+| `historyHeadline` | function | Experimental. What an entry says happened, in words: "Created", "Changed", and for a move along a state field "Status changed from Paid to Part refunded". | [ChangeHistory.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/history/ChangeHistory.tsx) |
+| `historyValueText` | function | Experimental. One value of a history entry as people read it: money in its currency (`$52.00`), a state or a choice by its label ("Part refunded"), yes or no, a date in the browser's words. | [ChangeHistory.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/history/ChangeHistory.tsx) |
 | `changeHistoryKey` | function | The query key of one row's change history. | [useChangeHistory.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useChangeHistory.ts) |
 | `defaultResourceImportSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [ResourceImport.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/import/ResourceImport.tsx) |
 | `downloadResourceExport` | function | Fetches `GET /<resource>/export/?format=…` with the list's query and saves it through a temporary object URL. | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
@@ -2262,6 +2465,12 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `importJobKey` | function | The query key of one import job. | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
 | `isImportInFlight` | function | True while an import job is previewing or committing (the states worth polling). | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
 | `displayLabel` | function | Returns the first non-empty string among the `name` → `title` → `label` → `email` → `str` keys, falling back to `String(id)` and finally "". | [displayLabel.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/displayLabel.ts) |
+| `personName` | function | Experimental. A person's name, from an expanded user: "First Last", else their `name` or email, else the id. | [displayLabel.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/displayLabel.ts) |
+| `relationLabel` | function | Experimental. How a related row is named where a relation shows it: the field its model names its rows by (`class Karni: label`, published in `x-karni-relation`), a person's name, else displayLabel's guess. | [displayLabel.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/displayLabel.ts) |
+| `recordHref` | function | Experimental. The address of `row` of `resource`, when the app registered one. | [record-links.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/record-links.tsx) |
+| `registerRecordLink` | function | Experimental. Records of `resource` link to `href(row)` wherever a relation shows them. | [record-links.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/record-links.tsx) |
+| `setRecordNavigate` | function | Experimental. How a record link opens: the app's router (`null`: the browser's own). | [record-links.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/record-links.tsx) |
+| `unregisterRecordLink` | function | Experimental. Forget the link of `resource` (tests, an app that replaces it). | [record-links.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/record-links.tsx) |
 | `EMPTY_VALUE_LABEL` | constant | What a screen reader says for a field that has no value. | [empty-value.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/empty-value.tsx) |
 | `AUDIT_FIELDS` | constant | The audit field names (`created_at`, `created_by`, …) that tables hide and detail views group last. | [audit-fields.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/audit-fields.ts) |
 | `karniKeys` | constant | TanStack Query keys for the schema, a resource, its lists and its items (invalidate `karniKeys.resource(name)` to refresh every view of a resource). | [keys.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/keys.ts) |
@@ -2272,6 +2481,9 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `createKarniClient` | function | Creates the fetch client every hook in this package uses: base URL, JSON and multipart bodies, DRF errors as `KarniApiError`, and auth hooks. | [client.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/client.ts) |
 | `KarniApiError` | class | Thrown for non-2xx responses, with the parsed DRF error body in `data`. | [client.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/client.ts) |
 | `zodFor` | function | Builds a Zod validator for a resource's create or update payload from its schema. | [zod.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/zod.ts) |
+| `DEMO_PATH` | constant | Experimental. Where the demo's description comes from, relative to the client's `baseUrl`. | [useDemo.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/demo/useDemo.ts) |
+| `DemoSignInPrompt` | constant | Experimental. DemoNotice above Karni's sign-in prompt, as AuthGuard's `Anonymous` slot. | [DemoNotice.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/demo/DemoNotice.tsx) |
+| `createDemoSignInPrompt` | function | Experimental. An `Anonymous` slot for AuthGuard: DemoNotice above Karni's sign-in prompt. | [DemoNotice.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/demo/DemoNotice.tsx) |
 | `defaultAuthGuardSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [AuthGuard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/AuthGuard.tsx) |
 | `defaultLoginFormSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [LoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/LoginForm.tsx) |
 | `createLocalStorageTokenStorage` | function | The default storage, which keeps the refresh token in localStorage. | [storage.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/storage.ts) |
@@ -2284,6 +2496,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `defaultPageSlots` | constant | The default pieces of the page chrome, for wrapping one. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
 | `defaultGlobalSearchSlots` | constant | Experimental. The default pieces of the palette, for wrapping one. | [global-search.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/global-search/global-search.tsx) |
 | `defaultHitHref` | function | Experimental. The default link of a hit: `/<resource>/<id>`. | [global-search.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/global-search/global-search.tsx) |
+| `groupByPart` | function | Experimental. The groups of a search, part by part: each part where its best group came, its groups in the server's order (best hit first). | [global-search.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/global-search/global-search.tsx) |
 | `defaultLayoutSlots` | constant | The default pieces of the shell, which you spread to wrap one (`{ ...defaultLayoutSlots }`). | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
 | `isNavGroup` | function | Experimental. Whether a nav entry is a group (it has `children`). | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
 | `isSignInRoute` | function | A sign-in page: a path whose last segment is `login` or `sign-in` (`/login`, `/staff/login`). | [route-nav.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/route-nav.ts) |
@@ -2303,8 +2516,38 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `defaultDashboardSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
 | `resolveRelativeDate` | function | A declared filter value: `"today"`, `"today-7"` and `"today+1"` become the date they name (local time, `YYYY-MM-DD`). | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
 | `resolveSection` | function | The counts and table of one resource, from its declaration (exported for tests and overrides). | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
+| `DASHBOARD_PATH` | constant |  | [dashboard-tiles.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard-tiles.tsx) |
+| `registerTile` | function | Experimental. Draw the tile `key` with `Component` (a `custom` tile, or any tile your way). | [dashboard-tiles.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard-tiles.tsx) |
+| `registerTileKind` | function | Experimental. Draw every tile of `kind` with `Component` (a chart library of your own). | [dashboard-tiles.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard-tiles.tsx) |
+| `unregisterTile` | function | Experimental. Forget what `registerTile` or `registerTileKind` set (tests). | [dashboard-tiles.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard-tiles.tsx) |
 | `aggregateSeries` | function | Experimental. An aggregate response as DataChart series: one per series of the response, a point per category. | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
 | `defaultDataChartSlots` | constant | The default pieces of the chart, for wrapping one. | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
+| `xLabelStep` | function | Experimental. Every how many categories an x-axis label is drawn so the labels never run into each other: 1 draws every label, 2 every other one, and so on. | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
+| `defaultResourceGridSlots` | constant | Experimental. Karni's own slots, to wrap one instead of rewriting it. | [ResourceGrid.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource-grid/ResourceGrid.tsx) |
+| `formatMoney` | function | Experimental. `formatMoney("1234.5000", "USD")` is `$1,234.50`: an amount as people read it. | [money.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/lib/money.ts) |
+| `accountSections` | function | Experimental. The registered sections, in their order. | [sections.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/account/sections.ts) |
+| `registerAccountSection` | function | Experimental. Add (or replace) a section of the account page. | [sections.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/account/sections.ts) |
+| `unregisterAccountSection` | function | Experimental. Take a section out (a project that shows something else there). | [sections.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/account/sections.ts) |
+| `safeNext` | function | `next` when it is a path of this app, else `fallback` (never another site). | [SignInPage.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/account/SignInPage.tsx) |
+| `BUSINESS_QUERY_KEY` | constant | Experimental. The cache key of the business's public details. | [audience.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/audience.ts) |
+| `CUSTOMER_ROLES` | constant | Experimental. The roles that keep a signed-in person a customer: the family's `customer`. | [audience.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/audience.ts) |
+| `audienceOf` | function | Experimental. The audience of a session: `staff` once a role beyond `customerRoles` is held. | [audience.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/audience.ts) |
+| `personTabs` | function | Experimental. The registered person tabs, in order. | [registry.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/registry.ts) |
+| `publicHome` | function | Experimental. The public home `/` shows (the lowest `order`), or undefined when no part has one. | [registry.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/registry.ts) |
+| `registerPersonTab` | function | Experimental. Add (or replace) a tab of the person page. | [registry.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/registry.ts) |
+| `registerPublicHome` | function | Experimental. Add (or replace) a public home. | [registry.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/registry.ts) |
+| `registerTimelineKind` | function | Experimental. Say how `<Timeline>` shows entries of `kind` (`commerce.order.paid`). | [registry.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/registry.ts) |
+| `timelineKind` | function | Experimental. How `kind` is shown (`undefined`: the default). | [registry.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/registry.ts) |
+| `timelineKindLabel` | function | Experimental. `commerce.order.paid` in words: "Order paid", unless the kind registered a label. | [registry.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/registry.ts) |
+| `unregisterPersonTab` | function | Experimental. Take a tab of the person page out. | [registry.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/registry.ts) |
+| `unregisterPublicHome` | function | Experimental. Take a public home out. | [registry.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/registry.ts) |
+| `unregisterTimelineKind` | function | Experimental. Forget how a kind is shown. | [registry.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/registry.ts) |
+| `timelineKey` | function | Experimental. The cache key of one timeline. | [timeline.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/timeline.tsx) |
+| `timelineMoneyText` | function | Experimental. `text` with each amount the server wrote as plain money ("127.54 USD", kept in the entry's `data["$money"]`) shown as the project's money ("$127.54"). | [timeline.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/timeline.tsx) |
+| `factText` | function | Experimental. A fact's value in words, by its kind (money in the business's currency). | [people.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/people.tsx) |
+| `routeHref` | function | Experimental. Where a record of `resource` opens: its record link (`registerRecordLink`, which gets `row`), else the app's route that ends with `/<resource>/$id`, else `null`. | [search.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/search.tsx) |
+| `searchHitHref` | function | Experimental. Where a search hit opens: its record link, a route of the app, or `/<resource>/<id>`. | [search.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/search.tsx) |
+| `registerFamily` | function | Experimental. Register the account sections of the contracts the project holds. | [register.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/family/register.ts) |
 | `defaultDashboardCardSlots` | constant | The card's default states, exported so a project can wrap one. | [dashboard-grid.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard-grid/dashboard-grid.tsx) |
 | `defaultAccordionSlots` | constant | The accordion's default slots, exported so a project can wrap one. | [accordion.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/accordion/accordion.tsx) |
 | `toggleAccordion` | function | The ids open after `id` was toggled, by the accordion's rules. | [accordion.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/accordion/accordion.tsx) |
@@ -2314,6 +2557,8 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `compareValues` | function | Ascending order of two values: empty values last, numbers and dates by size, text naturally. | [data-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/data-table/data-table.tsx) |
 | `sortRows` | function | The rows in `sort`'s order (a stable sort: equal rows keep their order). | [data-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/data-table/data-table.tsx) |
 | `defaultComparisonTableSlots` | constant | ComparisonTable's default states, exported so a project can wrap one. | [comparison-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/comparison-table/comparison-table.tsx) |
+| `defaultResourceBoardSlots` | constant | Experimental. Karni's own slots, to wrap one instead of rewriting it. | [ResourceBoard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource-board/ResourceBoard.tsx) |
+| `defaultResourceCalendarSlots` | constant | Experimental. Karni's own slots, to wrap one instead of rewriting it. | [ResourceCalendar.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource-calendar/ResourceCalendar.tsx) |
 
 ## Modules
 
@@ -2324,6 +2569,8 @@ Optional apps for anything with a RAM cost or a separate service. `karni add <na
 | [`karni-ai`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-ai) | experimental | `karni add ai` | `@karni/ai-ui` | Rows for any resource read from text, a web page or a PDF by a language model, always through the import preview. |
 | [`karni-approvals`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-approvals) | experimental | `karni add approvals` | `@karni/approvals-ui` | A second person approves high-value changes before they are written, with a queue, an API and an audit trail. |
 | [`karni-charts`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-charts) | experimental | `karni add charts` | `@karni/charts-ui` | Charts defined and previewed in the admin, served through each resource's aggregate action under its access. |
+| [`karni-commerce`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-commerce) | experimental | `karni add commerce` | `@karni/commerce-ui` | One cart, checkout, orders, order numbers, payment settlement and refunds for anything a project sells, through a sellable adapter per kind. |
+| [`karni-game`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-game) | experimental | `karni add game` | `@karni/game` | Guest players, cloud saves, leaderboards, a soft-currency wallet, daily content and achievements, with a realtime server contract. |
 | [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail. |
 | [`karni-payments`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-payments) | stable | `karni add payments` | `@karni/payments-ui` | Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI. |
 | [`karni-reports`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-reports) | experimental | `karni add reports` | `@karni/reports-ui` | A row printed to PDF from an HTML template in the background, cached by template and data, served only to users who may see the row. |
@@ -2382,6 +2629,10 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E131`](errors.md#e131) | check | search_fields names a write-only field |
 | [`E132`](errors.md#e132) | exception | Throttle(...) is invalid |
 | [`E133`](errors.md#e133) | check | Karni.dashboard is malformed or names a field the model does not have |
+| [`E134`](errors.md#e134) | exception | The written row is outside the caller's write scope |
+| [`E135`](errors.md#e135) | exception | Only some roles may set the owner of a row |
+| [`E136`](errors.md#e136) | exception | A row action is declared wrongly |
+| [`W136`](errors.md#w136) | warning | A row action has nothing to run yet |
 | [`E201`](errors.md#e201) | exception | KARNI_ACCOUNTS_EMAIL_BACKEND is not an accounts email backend |
 | [`E202`](errors.md#e202) | exception | No KARNI_ACCOUNTS_LINKS entry for a token purpose |
 | [`E203`](errors.md#e203) | exception | create_user() or create_superuser() was called with invalid arguments |
@@ -2416,6 +2667,16 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E247`](errors.md#e247) | exception | A terms acceptance is a permanent record |
 | [`E248`](errors.md#e248) | check | The terms gate is not in MIDDLEWARE, or runs before authentication |
 | [`E249`](errors.md#e249) | api | Terms acceptance is turned off |
+| [`E250`](errors.md#e250) | exception | A merge of two people who both have an account |
+| [`E251`](errors.md#e251) | exception | A merge clash that only a merge hook can resolve |
+| [`E252`](errors.md#e252) | exception | A merge or an erase of records it does not take |
+| [`E253`](errors.md#e253) | exception | people.resolve() cannot run |
+| [`E254`](errors.md#e254) | api | Another person has this email |
+| [`E255`](errors.md#e255) | api | The email of a person with an account changes through the account |
+| [`E256`](errors.md#e256) | api | A value the people tables do not take |
+| [`E257`](errors.md#e257) | exception | A person fact, merge hook, erase hook or duplicate rule cannot be registered |
+| [`E258`](errors.md#e258) | exception | An account cannot be linked to this person |
+| [`E259`](errors.md#e259) | exception | A people event that is not declared |
 | [`E260`](errors.md#e260) | exception | A database alias is not configured |
 | [`E270`](errors.md#e270) | check | An external model is managed by Django |
 | [`E271`](errors.md#e271) | check | Karni.database names a database that is not in DATABASES |
@@ -2433,6 +2694,12 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E304`](errors.md#e304) | exception | karni_makemigrations --renames is not a rename list |
 | [`E305`](errors.md#e305) | exception | An app has more than one latest migration, so the renames have no place |
 | [`E310`](errors.md#e310) | test | A module's manifest does not match the module |
+| [`E320`](errors.md#e320) | check | A preferences lock or default names nothing, or a value its field refuses |
+| [`E321`](errors.md#e321) | exception | A settings section cannot be registered |
+| [`E322`](errors.md#e322) | exception | A connection or an email kind cannot be declared |
+| [`E323`](errors.md#e323) | api | A preferences change has a field or a value it cannot take |
+| [`E324`](errors.md#e324) | api | A preferences value is fixed by the deployment |
+| [`E325`](errors.md#e325) | exception | No such section, connection or email kind |
 | [`E340`](errors.md#e340) | exception | A tree node's new parent is the node itself or a node below it |
 | [`E341`](errors.md#e341) | exception | A tree node with live children cannot be deleted alone |
 | [`E342`](errors.md#e342) | api | A tree endpoint got a parameter it cannot use |
@@ -2465,6 +2732,27 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E411`](errors.md#e411) | exception | KARNI_API_CACHE_FLUSH is not a time of day |
 | [`E430`](errors.md#e430) | check | Karni.search is malformed or names a field the model does not have |
 | [`E431`](errors.md#e431) | api | ?models= names a resource cross-model search does not cover |
+| [`E440`](errors.md#e440) | exception | A message is sent as a kind nobody declared |
+| [`W440`](errors.md#w440) | warning | A message kind is declared on channels the project does not send on |
+| [`E441`](errors.md#e441) | api | A person cannot switch or unsubscribe from this message kind |
+| [`E442`](errors.md#e442) | api | An unsubscribe link is not one this project signed |
+| [`E443`](errors.md#e443) | exception | A message is sent to something that is not a recipient |
+| [`E444`](errors.md#e444) | api | An inbox request asks for a page that does not exist |
+| [`E445`](errors.md#e445) | exception | A message kind names a channel Karni does not send on |
+| [`E446`](errors.md#e446) | exception | Edited emails would be lost: karni.notify is not installed |
+| [`E450`](errors.md#e450) | exception | An event is published that is not declared |
+| [`W450`](errors.md#w450) | warning | A subscriber reads a version its event does not have |
+| [`E451`](errors.md#e451) | check | Family events need the karni.outbox app |
+| [`E452`](errors.md#e452) | exception | An event declaration is malformed |
+| [`E453`](errors.md#e453) | exception | A published event's fields do not match its declaration |
+| [`E454`](errors.md#e454) | exception | A subscriber is malformed |
+| [`E455`](errors.md#e455) | check | KARNI_EVENTS_DISPATCHER cannot be used |
+| [`E456`](errors.md#e456) | test | An assertion about family events failed |
+| [`E460`](errors.md#e460) | check | A timeline= option of an event declaration is not valid |
+| [`W460`](errors.md#w460) | warning | Events declare a timeline title and the outbox is not installed |
+| [`E461`](errors.md#e461) | check | The timeline needs the people contract |
+| [`E462`](errors.md#e462) | exception | timeline.record() was given an argument it cannot use |
+| [`E463`](errors.md#e463) | api | A timeline request names no record, or a malformed one |
 | [`E470`](errors.md#e470) | exception | A context slice names no app or model |
 | [`E471`](errors.md#e471) | exception | A context slice names a model two apps share |
 | [`E473`](errors.md#e473) | exception | A volume seed refused tables that hold rows no seed run left |
@@ -2576,6 +2864,11 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E941`](errors.md#e941) | exception | karni queries cannot find the user (--as) |
 | [`E942`](errors.md#e942) | exception | karni queries cannot build the request |
 | [`E943`](errors.md#e943) | exception | The view raised while karni queries requested it |
+| [`E950`](errors.md#e950) | check | KARNI_DEMO_ACCOUNTS is invalid |
+| [`E951`](errors.md#e951) | exception | karni_demo_boot refuses to run outside demo mode |
+| [`E952`](errors.md#e952) | exception | A demo setting names a function that cannot be imported |
+| [`E953`](errors.md#e953) | check | Demo mode is on and the write guard is not installed |
+| [`E954`](errors.md#e954) | api | Demo mode is turned off |
 | [`E960`](errors.md#e960) | check | A FloatField holds money |
 | [`E961`](errors.md#e961) | exception | A MoneyField's currency is not declared |
 | [`E962`](errors.md#e962) | exception | A float reached a MoneyField |
@@ -2598,6 +2891,14 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E986`](errors.md#e986) | exception | A capacity counter is used the wrong way |
 | [`E987`](errors.md#e987) | check | A no_overlap declaration is invalid |
 | [`E988`](errors.md#e988) | check | A guarded field on a model without GuardedModel |
+| [`E990`](errors.md#e990) | exception | A value is outside the bounds of its field |
+| [`E991`](errors.md#e991) | exception | A row with the same values already exists |
+| [`E993`](errors.md#e993) | exception | A relation points at a row its rule does not allow |
+| [`E994`](errors.md#e994) | exception | A field cannot change |
+| [`E995`](errors.md#e995) | exception | The row cannot be deleted now |
+| [`E996`](errors.md#e996) | exception | A move into a state misses what it needs |
+| [`E997`](errors.md#e997) | exception | A row action is not legal in the row's state |
+| [`E998`](errors.md#e998) | check | A rule of class Karni is declared wrongly |
 | [`SUG001`](errors.md#sug001) | suggestion | A foreign key to itself, named like a parent, is a hand-written tree |
 | [`SUG002`](errors.md#sug002) | suggestion | A text field that holds markdown is not a MarkdownField |
 | [`SUG003`](errors.md#sug003) | suggestion | Raw SQL with GROUP BY, opted out of the raw-sql rule, is an aggregate |
@@ -2637,6 +2938,47 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`CHART002`](errors.md#chart002) | api | A filter the chart does not allow |
 | [`CHART003`](errors.md#chart003) | exception | The chart's filters are not valid |
 | [`CHART004`](errors.md#chart004) | exception | The chart's axes do not fit the source's aggregation |
+| [`COM001`](errors.md#com001) | check | karni-commerce is installed without the people contract |
+| [`COM002`](errors.md#com002) | test | A sellable adapter does not keep the commerce contract |
+| [`COM003`](errors.md#com003) | exception | A sellable's hold is not a positive number of minutes |
+| [`COM004`](errors.md#com004) | exception | A sellable adapter is registered wrongly |
+| [`GAME001`](errors.md#game001) | check | karni-game is installed without the people contract |
+| [`GAME002`](errors.md#game002) | exception | The request names no player |
+| [`GAME003`](errors.md#game003) | exception | The guest token is unknown or revoked |
+| [`GAME004`](errors.md#game004) | exception | The account has no person yet: its email is not verified |
+| [`GAME005`](errors.md#game005) | exception | Guest play is off |
+| [`GAME006`](errors.md#game006) | exception | No active game has this slug |
+| [`GAME007`](errors.md#game007) | exception | The save is larger than the game allows |
+| [`GAME008`](errors.md#game008) | exception | The save changed on the server: a stale write |
+| [`GAME009`](errors.md#game009) | exception | The save's schema version is not one the server knows |
+| [`GAME010`](errors.md#game010) | exception | A save migration is missing |
+| [`GAME011`](errors.md#game011) | exception | Not a slot name, or no free slot |
+| [`GAME012`](errors.md#game012) | exception | No active board has this key in the game |
+| [`GAME013`](errors.md#game013) | exception | The score is outside the board's plausible range |
+| [`GAME014`](errors.md#game014) | exception | The run is missing, too large, or does not check out |
+| [`GAME015`](errors.md#game015) | exception | Too many requests of this kind |
+| [`GAME016`](errors.md#game016) | exception | Not enough of the currency |
+| [`GAME017`](errors.md#game017) | exception | The reward is not available now |
+| [`GAME018`](errors.md#game018) | exception | The client does not claim this reward |
+| [`GAME019`](errors.md#game019) | exception | A server-to-server request does not verify |
+| [`GAME020`](errors.md#game020) | exception | The intent token is not valid |
+| [`GAME021`](errors.md#game021) | exception | No such item for sale |
+| [`GAME022`](errors.md#game022) | exception | The player owns the item already |
+| [`GAME023`](errors.md#game023) | exception | The player does not own the item |
+| [`GAME024`](errors.md#game024) | exception | A progress event the game does not count |
+| [`GAME025`](errors.md#game025) | exception | An analytics event the game does not declare |
+| [`GAME026`](errors.md#game026) | exception | A game's settings do not validate |
+| [`GAME027`](errors.md#game027) | exception | Multiplayer is not set up |
+| [`GAME028`](errors.md#game028) | exception | The guest cannot be upgraded to this account |
+| [`GAME029`](errors.md#game029) | exception | The player is banned from the boards |
+| [`GAME030`](errors.md#game030) | check | karni_game.urls is not included |
+| [`GAME031`](errors.md#game031) | exception | A real-money item is sold through the cart |
+| [`GAME032`](errors.md#game032) | exception | A game hook is registered wrongly |
+| [`GAME033`](errors.md#game033) | exception | The intent was used already with another request |
+| [`GAME035`](errors.md#game035) | exception | A match report names what the game does not have |
+| [`GAME036`](errors.md#game036) | exception | A score's played_at is outside the window the server trusts |
+| [`GAME037`](errors.md#game037) | exception | The player has no save in this slot |
+| [`GAME038`](errors.md#game038) | check | Other origins may call the game API, and the browser cannot send its token |
 | [`IMP001`](errors.md#imp001) | api | Impersonation needs the explicit impersonate permission |
 | [`IMP002`](errors.md#imp002) | api | The target holds something the impersonator does not |
 | [`IMP003`](errors.md#imp003) | api | A reason is required to impersonate |
@@ -2845,11 +3187,20 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C421`](errors.md#c421) | cli | A recipe cannot be used |
 | [`C440`](errors.md#c440) | cli | karni new --recipe with an option it cannot go with |
 | [`C441`](errors.md#c441) | cli | A recipe's file would replace code of the project's |
+| [`C442`](errors.md#c442) | cli | A recipe's app label, or the recipe itself, is in the project already |
+| [`C443`](errors.md#c443) | cli | A recipe's role does not follow the family rules |
+| [`C444`](errors.md#c444) | cli | A route two apps want, or a family page's |
+| [`C445`](errors.md#c445) | cli | Two recipes set a module option differently |
+| [`C446`](errors.md#c446) | cli | A recipe requires what the project cannot have |
+| [`C447`](errors.md#c447) | cli | A recipe conflicts with a part or a module of the project |
+| [`C448`](errors.md#c448) | cli | The project does not hold that recipe |
+| [`C449`](errors.md#c449) | cli | A part has no record to upgrade from |
 | [`C460`](errors.md#c460) | cli | A tree entity's keys do not fit |
 | [`C620`](errors.md#c620) | cli | A role grant's tree:&lt;path&gt; does not lead to a tree entity |
 | [`C640`](errors.md#c640) | cli | A navigation entry names a page the spec does not have |
 | [`C641`](errors.md#c641) | cli | A navigation entry is not valid |
 | [`C642`](errors.md#c642) | cli | A navigation requirement is not valid |
+| [`C643`](errors.md#c643) | cli | A dashboard tile names something the spec does not have |
 | [`C700`](errors.md#c700) | cli | A taxonomy key is not a field name the entity can take |
 | [`C701`](errors.md#c701) | cli | A taxonomy does not point at a tree entity |
 | [`C702`](errors.md#c702) | cli | A taxonomy key names a field that is not a many-to-many to its tree |
@@ -2867,6 +3218,14 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C582`](errors.md#c582) | cli | The project's karni has no check cache |
 | [`C720`](errors.md#c720) | cli | A protected file field needs the storage module |
 | [`C740`](errors.md#c740) | cli | app.api_version is not a version name |
+| [`C760`](errors.md#c760) | cli | An entity's bounds do not fit its fields |
+| [`C761`](errors.md#c761) | cli | An entity's unique does not fit its fields |
+| [`C762`](errors.md#c762) | cli | An entity's targets name something that is not a foreign key |
+| [`C763`](errors.md#c763) | cli | An entity's frozen names a field it does not have |
+| [`C764`](errors.md#c764) | cli | An entity's delete rule does not fit |
+| [`C765`](errors.md#c765) | cli | An entity's moves do not fit its states and fields |
+| [`C766`](errors.md#c766) | cli | An entity's actions do not fit its states or roles |
+| [`C767`](errors.md#c767) | cli | A row filter cannot be read |
 | [`C780`](errors.md#c780) | cli | The project's karni predates suggestions |
 | [`C781`](errors.md#c781) | cli | manage.py karni_suggest failed |
 | [`C850`](errors.md#c850) | cli | The project folder already exists |
@@ -2928,6 +3287,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K311`](errors.md#k311) | rule | New app: /new-app. Never hand-write what karni.yaml expresses. |
 | [`K312`](errors.md#k312) | rule | Trees: TreeModel. |
 | [`K314`](errors.md#k314) | rule | GROUP BY: Karni.aggregate. |
+| [`K315`](errors.md#k315) | rule | Parts: never name another part. |
 
 ### ESLint plugin (`karni/…`)
 

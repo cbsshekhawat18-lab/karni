@@ -137,6 +137,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "models",
+        "Family events with an outbox: `declare`, `publish` in the writer's transaction, "
+        "`subscribe` by name, delivered after the commit with retries and a sweep "
+        "(`karni.outbox`). Experimental tier",
+    ),
+    Capability(
+        "models",
         "Field-level change history (`class Karni: audit = True`)",
         ((f"{SL}/crm/models.py", "audit = True"),),
     ),
@@ -218,6 +224,13 @@ CAPABILITIES: tuple[Capability, ...] = (
         "A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user "
         "accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). "
         "Experimental tier",
+    ),
+    Capability(
+        "api",
+        "Demo mode (`karni.demo`): demo accounts with one login per role, a write rule that "
+        "lets only those accounts write, a reset to a fixed seed every N hours under a lock, "
+        "`manage.py karni_demo_boot` and `GET /api/demo/` (`KARNI_DEMO_MODE`, "
+        "`KARNI_DEMO_ACCOUNTS`, `karni.E950` to `E954`). Experimental tier",
     ),
     Capability(
         "api",
@@ -333,6 +346,11 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "ui",
+        "`DemoNotice`, `DemoSignInPrompt` and `useDemo`: the demo accounts of a demo-mode "
+        "server above the sign-in form (`GET /api/demo/`). Experimental tier",
+    ),
+    Capability(
+        "ui",
         "`TreeView`, `TreeSelect` (used by `ResourceForm` for a relation to a tree) and "
         "`TreeBreadcrumb` (on `ResourceDetail` of a tree), with `useResourceTree`. "
         "Experimental tier",
@@ -420,6 +438,34 @@ CAPABILITIES: tuple[Capability, ...] = (
         "Navigation from data: each user's menu from `KARNI_NAVIGATION` or a `NavItem` tree "
         "edited in the admin, opened by the same role and per-user grants as the API "
         "(`GET /api/navigation/`). Experimental tier",
+    ),
+    Capability(
+        "models",
+        "The people contract (`karni.people`, `KARNI_PEOPLE`): one person and one organisation "
+        "record for every part of a project, `people.resolve` by account or email, the account "
+        "linked once its email is verified, person facts in SQL, duplicates, merge with a "
+        "preview and hooks, erase on request, `/api/people/`. Experimental tier",
+    ),
+    Capability(
+        "models",
+        "The timeline contract (`karni.timeline`): one stream of moments per person and per "
+        "record, `timeline.record` by hand, entries from family events that declare "
+        "`timeline=`, `GET /api/timeline/` with each entry checked against the row scope of "
+        "every record it is about, cursor paging, retention. Experimental tier",
+    ),
+    Capability(
+        "models",
+        "The preferences contract (`karni.preferences`): the business's details, one settings "
+        "section per part as a Pydantic model, `preferences.value(path, default)` with a typed "
+        "default, locks a deployment fixes, connections and email switches, audited changes, "
+        "`/api/preferences/` behind the Settings page. Experimental tier",
+    ),
+    Capability(
+        "models",
+        "The notifications contract (`karni.notify`): message kinds on `karni.mail` sent to an "
+        "email, the inbox or both, `notify.send` to users, people or addresses, emails a "
+        "business edits (`/api/email-templates/`), the inbox API with retention, each person's "
+        "switches, unsubscribing from marketing kinds by a signed link. Experimental tier",
     ),
     Capability("permissions", "Field visibility per role (`class Karni: field_roles`)"),
     Capability("permissions", "Row scope in the admin, from the same grants as the API"),

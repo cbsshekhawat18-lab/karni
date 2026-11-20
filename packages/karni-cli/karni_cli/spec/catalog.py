@@ -19,6 +19,7 @@ manifest (docs/modules.md#the-module-catalog). One without is added with
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
@@ -28,14 +29,21 @@ if TYPE_CHECKING:
     from karni.catalog import Ask, Manifest
 
 __all__ = [
+    "CONTRACT_ACTIONS",
+    "CONTRACT_GRANT_MODELS",
+    "CONTRACT_MODELS",
+    "CONTRACT_NEEDS",
+    "CONTRACT_SETTINGS",
     "DEFAULT_CACHE_TTL",
     "FEATURES",
     "MODULES",
+    "MODULE_CONTRACTS",
     "OTHER_MODELS",
     "SOCIAL_PROVIDERS",
     "USER_MODEL",
     "KnownFeature",
     "KnownModule",
+    "contracts_with_needs",
     "known_feature",
     "known_module",
     "module_setting",
@@ -45,6 +53,50 @@ __all__ = [
 USER_MODEL: Final = "karni_accounts.User"
 #: Experimental. Models a relation may target that are neither entities nor a module's.
 OTHER_MODELS: Final = frozenset({"auth.Group", "contenttypes.ContentType"})
+#: Experimental. The core contracts a relation may target, by app label: their models. A
+#: relation to one (``fk:people.Person``) makes the build turn the contract on.
+CONTRACT_MODELS: Final[dict[str, tuple[str, ...]]] = {
+    "people": ("Person", "Organisation", "Membership", "Address"),
+}
+#: Experimental. The models of each core contract a role's grant may name while the contract
+#: is on (``preferences.*:change`` for a part's settings manager): :data:`CONTRACT_MODELS`
+#: and the contracts no relation targets.
+CONTRACT_GRANT_MODELS: Final[dict[str, tuple[str, ...]]] = {
+    **CONTRACT_MODELS,
+    "preferences": ("Details", "SectionValue", "Switch"),
+    # notify.emailtemplate for whoever edits the emails (Settings, Emails)
+    "notify": ("EmailTemplate", "Notification", "Choice", "Unsubscribe"),
+}
+#: Experimental. The setting that installs each contract (``karni.conf`` reads it).
+CONTRACT_SETTINGS: Final[dict[str, str]] = {"people": "KARNI_PEOPLE"}
+#: Experimental. The explicit actions of each contract a role grants by name (``"*"`` does not
+#: reach them): ``people.*:merge``, ``people.person:erase``.
+CONTRACT_ACTIONS: Final[dict[str, tuple[str, ...]]] = {"people": ("merge", "erase")}
+#: Experimental. The contracts each contract needs, switched on with it: the timeline points
+#: at people and writes its entries from family events.
+CONTRACT_NEEDS: Final[dict[str, tuple[str, ...]]] = {"timeline": ("people", "events")}
+#: Experimental. The contracts a module needs, switched on when karni.yaml lists it:
+#: every order of karni-commerce names its person (karni.COM001 without it), and every player
+#: of karni-game is a person (karni.GAME001 without it).
+MODULE_CONTRACTS: Final[dict[str, tuple[str, ...]]] = {
+    "commerce": ("people",),
+    "game": ("people",),
+}
+
+
+def contracts_with_needs(names: Iterable[str]) -> list[str]:
+    """Experimental. ``names`` and every contract they need (:data:`CONTRACT_NEEDS`), needs first."""
+    found: list[str] = []
+
+    def add(name: str) -> None:
+        for needed in CONTRACT_NEEDS.get(name, ()):
+            add(needed)
+        if name not in found:
+            found.append(name)
+
+    for name in names:
+        add(name)
+    return found
 
 
 @dataclass(frozen=True)

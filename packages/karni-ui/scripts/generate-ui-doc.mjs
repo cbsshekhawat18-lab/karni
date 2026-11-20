@@ -25,6 +25,9 @@ const GROUPS = [
       "ResourceSelect",
       "ChangeHistory",
       "ResourceImport",
+      "ResourceGrid",
+      "ResourceBoard",
+      "ResourceCalendar",
       "TreeView",
       "TreeSelect",
       "TreeBreadcrumb",
@@ -50,6 +53,28 @@ const GROUPS = [
     ],
   ],
   [
+    "The family screens (one layout, home, people, inbox and search for every part)",
+    [
+      "FamilyLayout",
+      "Storefront",
+      "BackOffice",
+      "FamilyHome",
+      "FamilyEmptyHome",
+      "PeoplePage",
+      "PersonPage",
+      "Timeline",
+      "InboxBell",
+      "InboxPage",
+      "EmailChoices",
+      "MyAddresses",
+      "SearchPage",
+      "AccountPage",
+      "SignInPage",
+      "SignUpForm",
+      "SettingsPage",
+    ],
+  ],
+  [
     "Auth",
     [
       "AuthProvider",
@@ -58,6 +83,7 @@ const GROUPS = [
       "SocialButton",
       "OtpLoginForm",
       "TermsGate",
+      "DemoNotice",
       "KarniProvider",
     ],
   ],
@@ -65,14 +91,35 @@ const GROUPS = [
 
 /** Components and hooks under the experimental tier (docs/stability.md#experimental-names). */
 const EXPERIMENTAL = new Set([
+  "ResourceGrid",
+  "ResourceBoard",
+  "ResourceCalendar",
   "SocialButton",
   "OtpLoginForm",
   "TermsGate",
+  "DemoNotice",
   "TreeView",
   "TreeSelect",
   "TreeBreadcrumb",
   "FacetPanel",
   "GlobalSearch",
+  "FamilyLayout",
+  "Storefront",
+  "BackOffice",
+  "FamilyHome",
+  "FamilyEmptyHome",
+  "PeoplePage",
+  "PersonPage",
+  "Timeline",
+  "InboxBell",
+  "InboxPage",
+  "EmailChoices",
+  "MyAddresses",
+  "SearchPage",
+  "AccountPage",
+  "SignInPage",
+  "SignUpForm",
+  "SettingsPage",
 ]);
 
 /** The page blocks (experimental), each with when to use it. */
@@ -171,6 +218,57 @@ function pageBlocks(manifest) {
   return lines;
 }
 
+/** Related rows by name, record links, buttons by rights, import and bulk edit (shop M2). */
+function namesAndRights() {
+  return [
+    "## Names, links and rights on resource pages (experimental)",
+    "",
+    "### How a related row is named",
+    "",
+    "A table cell or a detail value that points at another row shows that row's",
+    "name, never its id. The model says which field names its rows with",
+    '`class Karni: label = "number"` (an order shows as `1021`, not as its',
+    "buyer's email). Without it, the first of `name`, `title`, `label` and",
+    "`email` is taken. A relation to the user model shows the person's name",
+    "(first and last name, else the email): ResourceTable and ResourceDetail",
+    "expand it on their own.",
+    "",
+    "An app turns those names into links once at startup:",
+    "",
+    "```tsx",
+    'import { registerRecordLink, setRecordNavigate } from "@karni/ui";',
+    "",
+    'registerRecordLink("orders", (row) => `/orders/${String(row.number)}`);',
+    "setRecordNavigate((to) => router.history.push(to));",
+    "```",
+    "",
+    "`getRowLabel` on ResourceTable and `fields` on ResourceDetail still render",
+    "a value any other way.",
+    "",
+    "### Only the buttons a role may use",
+    "",
+    "`/me/` lists the permission keys the signed-in person holds",
+    '(`permissions: ["shop.product:add", ...]`), so ResourceTable and',
+    "ResourceDetail offer New, Edit, Delete and Import only to a role whose",
+    'grants allow them: a reader sees no button that ends in "You can\'t". The',
+    "pages `karni build` writes pass `onCreate` and `onEdit`, so they follow the",
+    "same rule. The server checks every write again.",
+    "",
+    "A list whose resource takes imports (every Karni viewset) has an **Import**",
+    "button for those who may create rows: it opens ResourceImport above the table",
+    "(upload a CSV or XLSX file, check the preview with each row's problems,",
+    "commit), and the table reads its rows again afterwards. `importable={false}`",
+    "hides it.",
+    "",
+    '`bulkEdit={["price", "stock", "active"]}` (experimental) adds a "Select rows,',
+    'then set \u2026 to \u2026" line above the table and a bulk action that saves that value',
+    "on every selected row, each through the row's own update, so its rules and",
+    "history apply and a row the server refuses is marked with the reason. It",
+    "shows to roles that may update rows.",
+    "",
+  ];
+}
+
 /** Field groups, column sets and MarkdownField: a model with many fields (item 12). */
 function wideModels() {
   return [
@@ -253,6 +351,8 @@ const HOOKS = {
   useResourceList:
     "A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.",
   useResourceItem: "One row by id, optionally expanded.",
+  useResourceSchemaIfKnown:
+    "Experimental. One resource's parsed schema when it is known, else `undefined`: never throws, and reads nothing outside a `KarniProvider`.",
   useResourceTree:
     "Experimental. The nested nodes of a tree resource (`GET /<resource>/tree/?root=&depth=`): `{ results, truncated }`, each node with `has_children` and `children` (`null` until loaded).",
   useResourceChildren:
@@ -286,10 +386,24 @@ const HOOKS = {
   useSocialLogin:
     "Experimental. `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).",
   useNavigation:
-    'Experimental. The menu the signed-in user gets (`GET /navigation/`, Django\'s `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `<Layout navSource="server">` renders it.',
+    'Experimental. The menu the signed-in user gets (`GET /navigation/`, Django\'s `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `{ menu: "public" }` reads a named menu. `<Layout navSource="server">` renders it.',
   useGlobalSearch:
     "Experimental. `{ q, models, limit }` → `{ query, groups: [{ resource, label, hits: [{ resource, id, title, subtitle, score }] }] }`: cross-model search (`GET /search/`), each model under its own list access. A query under `minLength` (2) sends nothing.",
   useToast: "Show a toast through the mounted `Toaster`.",
+  useAudience:
+    "Experimental. Who is looking: `loading`, `visitor`, `customer` (only the family's `customer` role) or `staff` (any other role).",
+  useBusiness:
+    "Experimental. The business's public details (`GET /preferences/public/`): name, address, phone, email, currency, logo.",
+  useSiteName:
+    "Experimental. The business's name from Settings, Details, else the page title the app started with.",
+  useInboxUnread:
+    "Experimental. The signed-in person's unread count (`GET /inbox/unread/`), read again every minute; `null` while the inbox is off.",
+  usePersonFacts:
+    "Experimental. The person facts the installed parts contribute (`GET /people/facts/`): `[{ name, label, kind, source }]`.",
+  useTimeline:
+    "Experimental. One timeline a page at a time (`GET /timeline/?person=` or `?subject=`, cursor paging, `kinds`).",
+  useMenu:
+    "Experimental. The entries of one named menu (`GET /navigation/?menu=public`) the signed-in person sees.",
   useResourceCounts:
     "Experimental. `{ data, loading, error, refetch }`: the rows of each resource the user can read, as chart points (one list request each with `page_size=1`).",
   useUnsavedChangesGuard:
@@ -331,6 +445,7 @@ export function render(manifest) {
   }
   lines.push(...pageBlocks(manifest));
   lines.push(...wideModels());
+  lines.push(...namesAndRights());
   for (const [name] of PAGE_BLOCKS) placed.add(name);
   const rest = manifest.components.filter((name) => !placed.has(name));
   lines.push(

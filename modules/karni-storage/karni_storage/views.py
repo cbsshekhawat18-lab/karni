@@ -72,7 +72,7 @@ from karni_storage.tokens import (
     user_key,
 )
 
-__all__ = ["ConfirmView", "FileView", "UploadView", "basename", "inline"]
+__all__ = ["ConfirmView", "FileView", "UploadView", "basename", "inline", "serve"]
 
 #: Types a browser shows without running anything: served inline, the rest as attachments.
 _INLINE = ("image/", "audio/", "video/")
@@ -432,3 +432,40 @@ def _head(client: Any, bucket: str, key: str) -> dict[str, Any] | None:
             return None
         raise
     return head
+
+
+def serve(name: str, *, attachment: bool = True, filename: str = "") -> Any:
+    """Experimental. The protected file stored as ``name``, for code that decided itself
+    who may have it (a download a buyer paid for, a ticket with a link).
+
+    A short-lived signed URL in the bucket (a redirect) with S3, else the file
+    streamed, as the row endpoints serve it. Never cached by the browser.
+
+    :raises NotFound: ``STORE018`` when the file is missing from the storage.
+    """
+    shown = filename or basename(name)
+    if is_s3():
+        disposition = content_disposition_header(attachment, shown) or "inline"
+        url = protected_storage().url(
+            name,
+            parameters={"ResponseContentDisposition": disposition},
+            expire=int(conf.get("KARNI_STORAGE_URL_EXPIRY")),
+        )
+        redirect = HttpResponseRedirect(url)
+        redirect["Cache-Control"] = "private, no-store"
+        return redirect
+    try:
+        handle = protected_storage().open(name, "rb")
+    except FileNotFoundError:
+        raise NotFound(
+            coded("STORE018", "The file is missing from the storage."), "STORE018"
+        ) from None
+    response = FileResponse(
+        handle,
+        content_type=content_type_of(name, None),
+        as_attachment=attachment,
+        filename=shown,
+    )
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Cache-Control"] = "private, no-store"
+    return response

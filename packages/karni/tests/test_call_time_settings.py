@@ -31,6 +31,7 @@ CHANGED: dict[str, Any] = {
     "KARNI_JSON_LOGS": True,
     "KARNI_CACHE": "locmem",
     "KARNI_STORAGE": "s3",
+    "KARNI_PEOPLE": True,
     "KARNI_SINGLE_PROCESS": True,
     "KARNI_STATIC_STORAGE": "manifest",
 }

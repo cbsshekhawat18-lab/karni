@@ -81,7 +81,13 @@ consistent: an entry may lag the row by the queue's latency.
     so, and the OpenAPI document carries the operation only for audited
     resources.
 - **`@karni/ui`.** `<ChangeHistory resource="prices" id={id} />` renders the
-  list (`useChangeHistory(resource, id)` is the hook behind it).
+  list (`useChangeHistory(resource, id)` is the hook behind it). It reads the
+  resource's schema and says each entry in words: a field by its label, money
+  in its currency, a state or a choice by its label, and a move of a state as
+  "Status changed from Paid to Part refunded". When a money field's currency
+  is another field of the row, pass the row (`record={{ currency }}`).
+  `historyHeadline` and `historyValueText` are the same words for an `Entry`
+  slot of your own.
 
 **Visibility.** History respects [field-level visibility](api.md#field-visibility).
 A field that `Karni.field_roles` hides from a role is absent from every diff

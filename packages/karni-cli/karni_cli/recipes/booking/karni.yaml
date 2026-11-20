@@ -3,14 +3,22 @@ version: 1
 app:
   name: Booking
   kind: app
-  recipe: booking
+  currency: USD
 modules:
   payments: {provider: stripe, currency: usd}
 features:
   email_code_login: true
 roles:
-  staff: {name: Staff, system: true, grants: {"*": all}}
-  member: {name: Member, default: true, grants: {bookings.booking: own}}
+  admin: {name: Admin, description: "Everything, users and roles too.", system: true, grants: {"*": all}}
+  bookings-staff:
+    name: Staff
+    description: Runs the resources, the slots and every booking.
+    grants: {"bookings.*": all}
+  customer:
+    name: Member
+    description: Books slots and pays for them.
+    default: true
+    grants: {bookings.booking: own}
 apps:
   bookings:
     entities:
@@ -19,11 +27,13 @@ apps:
           name: "str:120"
           slug: "slug:name"
           description: "text?"
-          price: "money:USD"
+          price: money
         key: slug
         search: [name]
         order: name
-        access: {read: public, write: "role:staff"}
+        bounds: {price: {min: 0}}
+        delete: {blocked_by: [Slot]}
+        access: {read: public, write: ["role:bookings-staff", "role:admin"]}
       Slot:
         fields:
           resource: fk:Resource
@@ -32,7 +42,9 @@ apps:
           capacity: int
           remaining: "capacity:capacity"
         order: starts_at
-        access: {read: public, write: "role:staff"}
+        bounds: {capacity: {min: 1}, starts_at: {min: $now}}
+        delete: {blocked_by: {Booking: {status: {not: cancelled}}}}
+        access: {read: public, write: ["role:bookings-staff", "role:admin"]}
       Booking:
         fields:
           slot: fk:Slot
@@ -43,10 +55,30 @@ apps:
         owner: member
         audit: [status]
         order: -created_at
-        access: {read: ["owned:member", "role:staff"], write: "owned:member"}
+        unique: [{fields: [slot, member], where: {status: {not: cancelled}}}]
+        targets: {slot: {starts_at__gt: $now}}
+        frozen: {slot: true}
+        moves: {confirmed: {notify: member}, cancelled: {notify: member}}
+        actions:
+          pay: {from: pending, by: "owned:member"}
+          cancel:
+            from: [pending, confirmed]
+            to: cancelled
+            by: ["owned:member", "role:bookings-staff", "role:admin"]
+          confirm: {from: pending, to: confirmed, by: ["role:bookings-staff", "role:admin"]}
+        access:
+          read: ["owned:member", "role:bookings-staff", "role:admin"]
+          write: ["owned:member", "role:bookings-staff", "role:admin"]
+          delete: ["role:bookings-staff", "role:admin"]
+          assign: ["role:bookings-staff", "role:admin"]
 pages:
-  - home: dashboard
   - Resource: [list, detail, form]
   - Slot: [list, form]
   - Booking: [list, detail]
+# The back office's menu (the app menu): in a project of several parts it is the booking's
+# group. A member sees the entries their grants open (their own bookings).
+navigation:
+  - Booking: {label: Bookings, icon: list}
+  - Slot: {label: Slots, icon: calendar}
+  - Resource: {label: Resources, icon: box}
 seed: {Resource: 4, Slot: 30, Booking: 60}

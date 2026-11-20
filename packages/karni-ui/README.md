@@ -67,14 +67,14 @@ the schema root (`x-karni-auth-mode`). Override it with `mode="jwt" | "session"`
 Every visual value in every component resolves from a `--karni-*` CSS custom
 property defined in `@karni/ui/styles.css`:
 
-| Family             | What it holds                                                                                                                                                                                                                                                                                                             |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--karni-color-*`  | colours: background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, overlay, chart-1 … chart-5, and the derived `-foreground`, `-hover`, `-subtle` and `-border` shades                                                                                                  |
-| `--karni-space-*`  | the spacing scale: `--karni-space-unit` (0.25rem), or any step `--karni-space-<n>` (`--karni-space-4` is 1rem)                                                                                                                                                                                                            |
-| `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                                                                                                                            |
-| `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                                                                                                                         |
-| `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                                                                                                                              |
-| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box), `--karni-tree-indent` and `--karni-tree-max-height` (TreeView), and `--karni-search-*` (GlobalSearch) |
+| Family             | What it holds                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--karni-color-*`  | colours: background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, overlay, chart-1 … chart-5, and the derived `-foreground`, `-hover`, `-subtle` and `-border` shades                                                                                                                                                                                                                                 |
+| `--karni-space-*`  | the spacing scale: `--karni-space-unit` (0.25rem), or any step `--karni-space-<n>` (`--karni-space-4` is 1rem)                                                                                                                                                                                                                                                                                                                                           |
+| `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                                                                                                                                                                                                                                                           |
+| `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                                                                                                                                                                                                                                                        |
+| `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                                                                                                                                                                                                                                                             |
+| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box), `--karni-tree-indent` and `--karni-tree-max-height` (TreeView), `--karni-board-max-height` (ResourceBoard), `--karni-calendar-*` (ResourceCalendar), `--karni-search-*` (GlobalSearch) and `--karni-storefront-width` (FamilyLayout) |
 
 The Tailwind preset maps its scales onto these properties, so `bg-primary`,
 `p-4` or `rounded-md`, in a component or in your own code, reads them. Import
@@ -795,6 +795,246 @@ it, so a tree needs no code of its own:
   are the hooks underneath.
   `--karni-tree-indent` and `--karni-tree-max-height` theme it.
 
+### Trees: counts and search with ancestors (experimental)
+
+`TreeView` takes two more props for a tree that people browse, such as
+regions, topics or categories:
+
+```tsx
+<TreeView
+  resource="topics"
+  countField="dataset_count"
+  countNoun="datasets"
+  searchKeepsAncestors
+  onActivate={(topic) => navigate(`/topics/${topic.id}`)}
+/>
+```
+
+- `countField` names a number on each node. It shows at the end of the row. A
+  node without a number shows none. `countNoun` is said to screen readers
+  after the number. The number must be a field of the tree's own
+  serializer (a model property or an annotation): the component does not
+  count.
+- `searchKeepsAncestors` shows a search result under its path from the root
+  instead of flat. The matches are bold, every branch on a path is open and
+  can be closed, and two matches share their ancestors. The list's
+  `?search=` finds the matches and `ancestors/` gives each path, for the
+  first 20 matches (the tree says so when there are more). Without
+  `search_fields` the loaded nodes are cut down the same way.
+- `TreeSelect` takes both, for a parent or a foreign key picker that shows
+  the tree indented. `treeSlots.Node` receives `count`, `countNoun` and
+  `matched` to draw the row its own way.
+
+### ResourceBoard: a board by state (experimental)
+
+A pipeline is a board, not a table. `ResourceBoard` makes a column for each
+choice of a state field, in the order the state machine flows (from the
+initial state along the transitions, each state as far along as its longest
+way in, closed states last, the declared order of the choices only breaking
+ties), with a card per row and the count and the sum of a money field in each
+header:
+
+```tsx
+<ResourceBoard<Deal>
+  resource="deals"
+  field="stage"
+  totalField="value"
+  renderCard={(deal) => <DealCard deal={deal} />}
+  onOpen={(deal) => navigate(`/deals/${deal.id}`)}
+/>
+```
+
+- It reads the field's choices and labels, `x-karni-transitions`, the money
+  field's currency (`x-karni-money`), `x-karni-actions` and the update
+  operation's access rule from the schema. `field` defaults to the first
+  field with transitions. `columns` shows some states in an order you give.
+- Each column is its own request (`?<field>=<state>`), `pageSize` cards at a
+  time with a "Show more" button. A column with more rows than loaded marks
+  its total with a plus, since the sum covers the loaded cards.
+- A card moves only where the schema lets it: to a state listed under its
+  current state, through the declared row action that makes the move when
+  there is one (its `by` rule and `from` states are checked), else by
+  PATCHing the field when it is writable and the update rule does not refuse.
+  `canMove(row, from, to)` narrows that further.
+- A move shows at once and rolls back when the server refuses it, with the
+  server's sentence in an alert. `onMove` hears each move that was accepted.
+- Drag a card to a column (columns it may not enter dim). The keyboard works
+  too: Tab reaches the first card of each column, the arrows move between
+  cards and columns, Shift with Left or Right moves the card to the nearest
+  column it may enter and keeps the focus on it, and Enter opens it. Every
+  card also has a "Move to" menu, which is the way on a phone.
+- On a narrow screen the columns scroll sideways inside the board, never the
+  page.
+- `renderCard` is the card body. `slots` replaces `Loading`, `Empty` (a column
+  with no cards), `Error` and `ColumnHeader` (`defaultResourceBoardSlots`).
+  `--karni-board-max-height` sets how tall a column grows before it scrolls.
+
+### ResourceCalendar: day, week, month and list (experimental)
+
+Anything with a start and an end is a calendar. `ResourceCalendar` draws a
+resource's rows in a day, week or month view, and as a list at phone width:
+
+```tsx
+<ResourceCalendar<Slot>
+  resource="slots"
+  startField="starts_at"
+  endField="ends_at"
+  stateField="status"
+  capacity={{ capacity: "capacity", remaining: "remaining" }}
+  timeZone="Europe/Berlin"
+  onSelectEvent={(slot) => navigate(`/slots/${slot.id}`)}
+  onCreate={({ start, end }) => openNewBooking(start, end)}
+/>
+```
+
+- It loads one range for the visible dates through the list's
+  `<startField>__lte` and `<endField>__gte` filters (the start field alone,
+  widened by a day, when there is no end field). A row has an end, or a
+  `durationField` in minutes, or lasts `defaultDurationMinutes`. `limit` caps
+  the rows of a range (200) and the calendar says when more exist.
+- The day and week views open scrolled to the hour of the period's earliest
+  event (by time of day, so no event of the period sits above it), else to
+  `workdayStart` (the start of the working day, 8 by default). They scroll
+  once per period, so a move or a refetch never jumps. An event that crosses
+  midnight shows on each day it covers, and one that ends at midnight ends at
+  the bottom of its day.
+- `stateField` gives each event its label from the schema's choices and a
+  colour on its left edge (`stateTones` picks them). The state is also said
+  in words, never by colour alone.
+- Free and full: `capacity` names a row's capacity and its taken or
+  remaining field, so each event says "3 free" or "Full". `availability`
+  names a second resource of slots, drawn behind the events. A click on an
+  open one calls `onCreate` with `slot` set. A full one is not clickable.
+- Time zone: `timeZone` is the business zone the times are shown in. When
+  the viewer's zone is another one, a switch offers "Business time" and "My
+  time" and each event's tooltip gives both. The arithmetic uses `Intl`, so
+  a day that is 23 or 25 hours long where the clocks change is handled and
+  there is no date library.
+- Click an empty time (`onCreate`, with `start`, `end` and `allDay` for a
+  click on a month cell) or an event (`onSelectEvent`). Drag an event to move
+  it and its bottom edge to resize it, in steps of `slotMinutes`. The change
+  is PATCHed (or sent to `onReschedule`, or POSTed to the declared row action
+  `rescheduleAction`), shows at once and rolls back with the server's own
+  sentence when refused. It is offered only when the caller may: `canEdit`,
+  else the schema (the start and end fields are writable and the update rule
+  does not refuse, or the row action is open for the row and its `by` rule
+  allows the role).
+- Keyboard: Tab reaches an event, Shift with the arrows moves it, Alt with
+  Up or Down resizes it, Enter opens it. In the time grid the arrows walk the
+  empty times and Enter creates. In the month grid the arrows walk the days.
+  Page Up and Page Down change the period.
+- `renderEvent` is the event body, `view` and `date` are controlled when
+  given, `views` limits the switch, and `slots` replaces `Loading`, `Empty`
+  and `Error`. `--karni-calendar-hour-height`, `--karni-calendar-max-height`
+  and `--karni-calendar-month-min-width` theme it.
+
+### Catalogues, money and page titles (experimental)
+
+A public catalogue is cards, not a table. `ResourceGrid` reads one page of a
+resource and renders each row with `renderCard`, with a search box, a sort
+menu, filters the page passes, paging, and the loading, empty and error
+states. Search, sort and page are controlled when you pass them (keep them in
+the address), and a change goes back to page 1:
+
+```tsx
+<ResourceGrid<Product>
+  resource="products"
+  sortOptions={[
+    { value: "name", label: "Name" },
+    { value: "-created_at", label: "Newest" },
+  ]}
+  filters={{ categories: categoryId }}
+  renderCard={(product) => <ProductCard product={product} />}
+/>
+```
+
+`formatMoney("1234.5000", "USD")` is `$1,234.50`: an amount in its
+currency's digits, in the browser's language. Tables and details use it for
+every money field: a `MoneyField` publishes its currency in the schema
+(`x-karni-money`, fixed or another field of the row), so `ResourceTable` and
+`ResourceDetail` show `$60.00`, not `60.0000`. A field named `id`, `year`,
+`number` or ending in `_year` or `_number` reads without a thousands
+separator (`2024`, order `1027`).
+
+`usePageMeta({ title, description, siteName })` sets the browser tab's title
+(`Title | Site`) and the description search engines show, while the page is
+mounted. A public page sets both.
+
+### The family pages: account and sign-in (experimental)
+
+`AccountPage` is a signed-in person's `/account`: the sections the installed
+parts register, then their name and email, and sign-out. A part registers
+its section once at startup:
+
+```tsx
+registerAccountSection({ key: "orders", title: "Your orders", order: 10, component: MyOrders });
+```
+
+`roles` limits a section to some roles, `order` places it, and
+`unregisterAccountSection(key)` takes one out.
+
+`SignInPage` is `/signin`: a code sent by email (which opens an account for a
+new address when the project allows it, `KARNI_EMAIL_OTP_SIGNUP = "open"`),
+a password, or a new account with a password (`SignUpForm`, `POST
+<authBasePath>/register/`; `signUp={false}` hides it), then `next` (a path of
+this app only: `safeNext` refuses another site). Pass the router's push as
+`navigate`, and `notice` for a line above the forms (the demo logins).
+
+### The family screens: one layout for every part (experimental)
+
+A project of several parts (a shop, a CRM, a booking app) has one layout,
+one home, one person page, one inbox and one search. `karni build` writes
+the family pages and the layout when a project holds parts, each a few lines
+of router glue around these components:
+
+```tsx
+<FamilyLayout
+  pathname={pathname}
+  navigate={navigate}
+  area={route.area}
+  isPublic={route.public}
+  inbox
+  storeActions={<MiniCart />}
+>
+  <Outlet />
+</FamilyLayout>
+```
+
+- `FamilyLayout` picks a frame per page. `Storefront` is the site's header
+  (the `public` named menu, `GET /navigation/?menu=public`, and the `account`
+  menu once signed in) and footer, for a route with `staticData: { area:
+"store" }`. `BackOffice` is `Layout` with the `app` menu, the search box,
+  the inbox bell and the account menu. The home and an `area: "family"`
+  route (`/orders`) show in the back office to staff and in the storefront to
+  everyone else. Staff is anyone with a role beyond the family's `customer`
+  (`useAudience()`).
+- `FamilyHome` is `/`: the home tiles of staff's roles (`DashboardTiles`),
+  the public home a part registers for visitors and customers
+  (`registerPublicHome({ key: "shop", component: StoreHome, path: "/shop" })`),
+  and an empty state that says what to install when the project holds no
+  part.
+- `PeoplePage` (`/people`) lists the people with a column per person fact the
+  parts contribute, and `PersonPage` (`/people/<id>`) shows one person: the
+  facts, a tab per part (`registerPersonTab({ key: "orders", title: "Orders",
+component })`), the details (addresses, organisations), the `Timeline` with
+  the change history beside it, and Merge and Erase for who holds
+  `people.person:merge` and `people.person:erase`.
+- `Timeline` reads `GET /timeline/` a page at a time, with a filter by kind
+  (`registerTimelineKind(kind, { label, render })`).
+- `InboxBell` (the unread count), `InboxPage` (`/inbox`: the unread filter,
+  mark read and unread, mark all read) and `EmailChoices` (a person's own
+  switches) are built on karni.notify's `/inbox/`.
+- `SearchPage` (`/search`) shows every part's results part by part, keyboard
+  first, and `GlobalSearch` groups its hits by part too (the server names
+  each group's `part`). `searchHitHref(hit, routes)` finds a hit's page, and
+  `routeHref(resource, id, routes)` a record's: its record link, else the app's route
+  ending in `/<resource>/$id`.
+- `registerFamily({ people, notify })` adds "Your addresses" (`MyAddresses`)
+  and "Emails and notifications" (`EmailChoices`) to `AccountPage`.
+- `useBusiness()` and `useSiteName()` read the business's public details.
+
+`--karni-storefront-width` (72rem) sets how wide the storefront grows.
+
 ## Hooks
 
 ```tsx
@@ -935,6 +1175,25 @@ gate's 403 (`E245`) on any request made through the client, so terms bumped
 mid-session bring the gate back. If the version changed again before the user
 accepts (`E246`), the gate shows the new one. The `Panel` slot replaces the
 whole panel. These names are experimental: they may change in a minor release.
+
+### Demo accounts (experimental)
+
+A server in [demo mode](https://cbsshekhawat18-lab.github.io/karni/demo-mode/)
+answers `GET /api/demo/` with its demo accounts, what each can do and the reset
+period. `DemoNotice` shows them and renders nothing when the server is not a
+demo, and `DemoSignInPrompt` is `AuthGuard`'s `Anonymous` slot with the notice
+above Karni's sign-in prompt:
+
+```tsx
+<AuthGuard explain slots={{ Anonymous: DemoSignInPrompt }}>
+  <Outlet />
+</AuthGuard>
+```
+
+`DemoNotice`'s `onPick` adds a "Use" button per account, and its `Notice` prop
+replaces the body. `createDemoSignInPrompt(props)` builds the slot with your
+props, and `useDemo()` gives the data to a notice of your own. These names are
+experimental: they may change in a minor release.
 
 In JWT mode the refresh token is stored through a pluggable `TokenStorage`.
 The default is `localStorage`, which is simple but readable by any XSS on your
@@ -1120,6 +1379,22 @@ Other additions: `Layout` takes `mobileNavOpen`, `defaultMobileNavOpen` and
 `loading`, and `DataChart` also takes `summary`. `FileUpload` takes `error`,
 `uploading`, `rejectionMessage`, `aria-invalid`, `aria-describedby` and
 `aria-labelledby`.
+
+## Settings page
+
+Experimental. `SettingsPage` is the one Settings page of a project. It reads
+`GET /preferences/` and shows a Details tab, one tab for each settings section
+a part declares (its form is built from the section's schema), and an Emails tab
+with a switch for each email and an editor for its subject and text. Only the
+changed fields are saved. `EmailTemplateEditor` is exported alone for a page of
+your own.
+
+```tsx
+import { SettingsPage, EmailTemplateEditor } from "@karni/ui";
+
+<SettingsPage title="Settings" siteName="Corner Shop" />;
+<EmailTemplateEditor kind="commerce.order_paid" onClose={() => navigate("/settings")} />;
+```
 
 ## Accessibility
 

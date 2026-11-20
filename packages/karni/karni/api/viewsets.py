@@ -51,6 +51,14 @@ usual):
   (experimental): what ``GET <resource>/aggregate/`` may group and sum
   (:mod:`karni.aggregation`). The model's ``class Karni: aggregate`` is the
   default.
+* ``row_actions = {"ship": RowAction(from_="paid", to="shipped", by=...)}``
+  (experimental): named actions with the states and roles where each is
+  legal (:mod:`karni.api.actions`); ``run_row_action()`` is what a generated
+  one does.
+* ``check_written_row()`` (experimental): a create or an update must leave
+  the row inside its own predicate's rows (``E134``); override it to skip or
+  widen the check. ``Access(assign=...)`` names who may set an owner field
+  to another user (``E135``).
 
 Performance (ADR 0001, Decision 3) — every hatch is a declaration, never
 silence:
@@ -80,6 +88,7 @@ from typing import Any, ClassVar, Final
 import structlog
 from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
+from django.db import router, transaction
 from django.db.models import Model, Prefetch, QuerySet
 from django.db.models.expressions import Combinable
 from django.http import Http404, HttpRequest
@@ -290,6 +299,9 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     #: ``Aggregation(...)`` or its dict (:mod:`karni.aggregation`). ``None`` uses the
     #: model's ``class Karni: aggregate``. Override / escape hatch: :meth:`get_aggregation`.
     aggregation: ClassVar[Aggregation | Mapping[str, Any] | None] = None
+    #: Experimental. Named row actions: ``{"ship": RowAction(from_="paid", to="shipped",
+    #: by=Owned("listing__seller__user"))}`` (:mod:`karni.api.actions`).
+    row_actions: ClassVar[Mapping[str, Any]] = {}
 
     #: Experimental. The actions a viewset answers with 405 while :meth:`is_read_only` (a
     #: model with ``class Karni: external = True`` and no ``writable = True``): the writes
@@ -354,6 +366,9 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         if isinstance(declared, Granted):
             # The shorthand: reads, writes and creates all follow the roles' grants.
             cls.access = Access(read=declared, write=declared)
+        from karni.api.actions import install
+
+        install(cls)
         resolved = cls.get_queryset
         if not getattr(resolved, _SCOPED_MARK, False):
             cls.get_queryset = _scoped_get_queryset(resolved)  # type: ignore[method-assign]
@@ -740,8 +755,12 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         """DRF lookup over the read scope: out of scope → 404, not writable → 403.
 
         A 404 caused by a narrowing read scope names that scope, so the
-        cause is visible without revealing whether the row exists.
+        cause is visible without revealing whether the row exists. Inside a
+        row action the row its guard looked up is reused.
         """
+        found = self.__dict__.get("_karni_row_object")
+        if found is not None:
+            return found
         try:
             return super().get_object()
         except Http404 as exc:
@@ -1237,14 +1256,141 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         """Save, stamping every owner field from ``request.user`` (ADR 0001 R6).
 
-        The request body never chooses the owner. Override / escape hatch:
-        override this method (call ``serializer.save(...)`` yourself).
+        The request body never chooses the owner, unless ``Access(assign=...)``
+        admits the caller (``E135`` otherwise). The row is saved and checked
+        against the create predicate in one transaction (``E134``). Override /
+        escape hatch: override this method (call ``serializer.save(...)``
+        yourself), or :meth:`check_written_row`.
         """
         user = getattr(self.request, "user", None)
         stamps: dict[str, Any] = {}
         if user is not None and user.is_authenticated:
-            stamps = {name: user for name in self.get_owner_fields()}
-        serializer.save(**stamps)
+            given = getattr(serializer, "validated_data", {}) or {}
+            self.check_assigned(
+                [name for name in self.get_owner_fields() if _other(given.get(name), user)]
+            )
+            stamps = {name: user for name in self.get_owner_fields() if given.get(name) is None}
+        self._save_in_scope(lambda: serializer.save(**stamps), serializer)
+
+    def perform_update(self, serializer: BaseSerializer[Any]) -> None:
+        """Save, then check the row is still inside the write predicate (``E134``).
+
+        Changing an owner field needs ``Access(assign=...)`` (``E135``).
+        Override / escape hatch: override this method or :meth:`check_written_row`.
+        """
+        given = getattr(serializer, "validated_data", {}) or {}
+        instance = serializer.instance
+        changed = [
+            name
+            for name in self.get_owner_fields()
+            if name in given and _key(given[name]) != _key(getattr(instance, name, None))
+        ]
+        self.check_assigned(changed)
+        self._save_in_scope(serializer.save, serializer)
+
+    def _save_in_scope(self, save: Callable[[], Any], serializer: BaseSerializer[Any]) -> None:
+        """``save()`` and :meth:`check_written_row` in one transaction.
+
+        A write a ``pre_write`` receiver defers (``karni-approvals`` holds it for a
+        second person) commits what the receiver wrote, the pending change, and
+        is re-raised outside the transaction: nothing of the row was written.
+        """
+        deferred: KarniWriteDeferred | None = None
+        with transaction.atomic(using=router.db_for_write(self.get_model())):
+            try:
+                save()
+            except KarniWriteDeferred as exc:
+                deferred = exc
+            else:
+                self.check_written_row(serializer.instance)
+        if deferred is not None:
+            raise deferred
+
+    def may_assign(self) -> bool:
+        """Experimental. Whether the caller may set an owner field to another user."""
+        declaration = self.get_access()
+        if not isinstance(declaration, Access) or declaration.assign is None:
+            return False
+        return bool(declaration.assign.bind(self).allows(self.request))
+
+    def check_assigned(self, names: Sequence[str]) -> None:
+        """Experimental. ``E135`` (403) when the request sets ``names`` without ``assign``."""
+        if not names or self.may_assign():
+            return
+        from rest_framework.exceptions import PermissionDenied
+
+        from karni.exceptions import docs_url
+
+        declaration = self.get_access()
+        who = (
+            repr(declaration.assign)
+            if isinstance(declaration, Access) and declaration.assign is not None
+            else "nobody (no Access(assign=...))"
+        )
+        shown = ", ".join(names)
+        raise PermissionDenied(
+            detail=(
+                f"E135: {shown} is you on this {self.get_model().__name__}: leave it out. Only "
+                f"{who} may set it to someone else. See {docs_url('E135')}"
+            ),
+            code="E135",
+        )
+
+    def check_written_row(self, instance: Any) -> None:
+        """Experimental. ``E134`` (403) when the saved row is outside the action's predicate.
+
+        ``Owned("seller__user")`` in ``write`` limits the rows a caller may
+        change, so a create or an update that leaves the row outside it (a
+        listing in someone else's shop) is refused, and the transaction around
+        the save rolls it back. A predicate that admits every row costs no
+        query. Override / escape hatch: override this method.
+        """
+        declaration = self.get_access()
+        if instance is None or not isinstance(declaration, Access):
+            return
+        predicate = action_predicate(self, declaration)
+        rows = rows_or_exempt(self, predicate, self.request)
+        if rows is True:
+            return
+        model = type(instance)
+        allowed = rows is not False and (
+            apply_rows(model._default_manager.filter(pk=instance.pk), rows).exists()
+        )
+        if allowed:
+            return
+        from rest_framework.exceptions import PermissionDenied
+
+        from karni.exceptions import docs_url
+
+        raise PermissionDenied(
+            detail=(
+                f"E134: this {model.__name__} would not be yours to change: it must satisfy "
+                f"{predicate!r}. Nothing was saved. Point it at something of yours. "
+                f"See {docs_url('E134')}"
+            ),
+            code="E134",
+        )
+
+    def get_serializer(self, *args: Any, **kwargs: Any) -> Any:
+        """DRF's, with the owner fields optional when ``Access(assign=...)`` is declared."""
+        serializer = super().get_serializer(*args, **kwargs)
+        if self._assignable() and not kwargs.get("many"):
+            fields = getattr(serializer, "fields", {})
+            for name in self.get_owner_fields():
+                if name in fields:
+                    fields[name].required = False
+                    fields[name].allow_null = True
+        return serializer
+
+    def _assignable(self) -> bool:
+        declaration = self.get_access()
+        return isinstance(declaration, Access) and declaration.assign is not None
+
+    def run_row_action(self, name: str, request: Request) -> Response:
+        """Experimental. What a generated row action does (:func:`karni.api.actions.run`)."""
+        from karni.api.actions import run
+
+        return run(self, name, request)
 
     def get_serializer_class(self) -> type[BaseSerializer[Any]]:
         """Explicit ``serializer_class`` if set, else a generated serializer.
@@ -1269,7 +1415,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             return self.serializer_class
         from karni.tree import tree_spec
 
-        read_only = self.get_owner_fields()
+        read_only = () if self._assignable() else self.get_owner_fields()
         try:
             spec = tree_spec(self.get_model())
         except ImproperlyConfigured:
@@ -1437,6 +1583,16 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         if cache is not None:
             cache.store(response)
         return response
+
+
+def _key(value: Any) -> Any:
+    """A related row or its key, as its key (owner fields compare by key)."""
+    return value.pk if isinstance(value, Model) else value
+
+
+def _other(value: Any, user: Any) -> bool:
+    """Whether an owner field's value names someone other than ``user``."""
+    return value is not None and _key(value) != user.pk
 
 
 def _validate_performance(cls: type[BaseViewSet]) -> None:

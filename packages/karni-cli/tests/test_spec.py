@@ -77,6 +77,11 @@ def test_a_minimal_spec_and_its_defaults() -> None:
         "terms": None,
         "user_grants": False,
         "api_cache": False,
+        "people": False,
+        "events": False,
+        "preferences": False,
+        "timeline": False,
+        "notify": False,
     }
 
 
@@ -195,6 +200,8 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C720", SHOP + "        fields: {manual: 'file:protected?'}\n", 7),
     ("C254", SHOP + "        fields: {title: {type: str, was: name}, name: str}\n", 7),
     ("C254", SHOP + "        fields: {a: {type: str, was: x}, b: {type: str, was: x}}\n", 7),
+    ("C444", HEAD + "apps:\n  shop: {route: /cart}\n", 4),
+    ("C444", HEAD + "apps:\n  shop: {route: /s}\n  crm: {route: /s}\n", 5),
     ("C460", SHOP + "        {external: true, table: sales, tree: true}\n", 7),
     ("C460", SHOP + "        fields: {name: str, parent: 'fk:Product?'}\n        tree: true\n", 7),
     ("C460", SHOP + "        fields: {position: int}\n        tree: ordered\n", 7),
@@ -213,6 +220,7 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C641", NAV + "navigation:\n  - {Catalog: [Product], Other: [home]}\n", 12),
     ("C642", NAV + "navigation:\n  - Product: {requires: staff}\n", 12),
     ("C642", NAV + "navigation:\n  - Product: {requires: 'shop.prodct:view'}\n", 12),
+    ("C643", NAV + "dashboard:\n  - {key: shop.deals, entity: Deal}\n", 12),
     ("C700", tagged("{region_descendants: Category}"), 8),
     ("C700", tagged("{created_by: Category}"), 8),
     ("C700", tagged("{Region: Category}"), 8),
@@ -272,6 +280,17 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C681", SHOP + "        fields: {name: str}\n        column_sets: {default: []}\n", 8),
     ("C681", SHOP + "        fields: {name: str}\n        column_sets: {Money: [name]}\n", 8),
     ("C740", "version: 1\napp: {name: X, api_version: V1}\n", 2),
+    # the rules (karni.rules): bounds, unique, targets, frozen, delete, moves, actions, row filters
+    ("C760", SHOP + "        fields: {name: str}\n        bounds: {name: {min: 1}}\n", 8),
+    ("C760", SHOP + "        fields: {n: int}\n        bounds: {n: {min: many}}\n", 8),
+    ("C761", SHOP + "        fields: {name: str}\n        unique: [[nam]]\n", 8),
+    ("C762", SHOP + "        fields: {name: str}\n        targets: {name: {a: 1}}\n", 8),
+    ("C763", SHOP + "        fields: {name: str}\n        frozen: {nam: true}\n", 8),
+    ("C764", SHOP + "        fields: {name: str}\n        delete: {blocked_by: [Deal]}\n", 8),
+    ("C765", SHOP + "        fields: {name: str}\n        moves: {won: {stamps: [name]}}\n", 8),
+    ("C766", SHOP + "        fields: {s: 'state:a>b'}\n        actions: {go: {from: c, to: b}}\n",
+     8),
+    ("C767", SHOP + "        fields: {name: str}\n        frozen: {name: {nme: x}}\n", 8),
 ]  # fmt: skip
 
 
@@ -362,11 +381,11 @@ def test_an_undeclared_role_in_another_case_and_an_access_key_name_the_right_for
     issues = validate_text(ACCESS_SHOP + "        access: {read: 'role:STAFF'}\n").issues
     assert issues[0].code == "C232" and issues[0].message.endswith("Did you mean role:staff?")
     issues = validate_text(
-        ACCESS_SHOP + "        access: {read: public, delete: 'role:staff'}\n"
+        ACCESS_SHOP + "        access: {read: public, destroy: 'role:staff'}\n"
     ).issues
     assert issues[0].code == "C212"
-    assert issues[0].fix.startswith("Use write: access takes read, write and create")
-    assert "no :delete" in issues[0].fix
+    assert issues[0].fix.startswith("Use delete: access takes read, write, create, delete")
+    assert validate_text(ACCESS_SHOP + "        access: {read: public, delete: 'role:staff'}\n").ok
     issues = validate_text(ACCESS_SHOP + "        access: {list: public}\n").issues
     assert issues[0].fix.startswith("Use read: ")
     plain = validate_text(ACCESS_SHOP + "        access: {read: anyone_at_all}\n").issues
@@ -386,7 +405,8 @@ def test_every_code_is_tested_and_registered() -> None:
     # C680-C699 and the taxonomies' C700-C719.
     assert all(
         200 <= int(code[1:]) <= 269
-        or code in ("C324", "C720", "C740")
+        or code in ("C324", "C444", "C720", "C740")
+        or 760 <= int(code[1:]) <= 769
         or 460 <= int(code[1:]) <= 479
         or 500 <= int(code[1:]) <= 579
         or 620 <= int(code[1:]) <= 659
@@ -440,6 +460,89 @@ def test_relations_reach_users_modules_and_other_apps() -> None:
         """
     )
     assert report.ok, report.issues
+
+
+PEOPLE_SPEC = """\
+version: 1
+app: {name: Club}
+apps:
+  club:
+    entities:
+      Visit:
+        fields: {person: fk:people.Person, company: "fk:people.Organisation?", note: str}
+      Card:
+        fields: {holder: o2o:people.Person}
+"""
+
+
+def test_a_relation_reaches_the_people_contract_and_turns_it_on() -> None:
+    from karni_cli.builder import render
+
+    report = check(PEOPLE_SPEC)
+    assert report.ok and report.spec is not None, report.issues
+    block = render.settings_block(report.spec, 100)
+    assert block.count("KARNI_PEOPLE = True") == 1
+    plain_text = PEOPLE_SPEC.replace('"fk:people.Organisation?"', "str")
+    plain = check(plain_text.replace("fk:people.Person", "str").replace("o2o:people.Person", "str"))
+    assert plain.spec is not None and "KARNI_PEOPLE" not in render.settings_block(plain.spec, 100)
+
+
+def test_listing_commerce_turns_the_people_contract_on() -> None:
+    from karni_cli.builder import render
+
+    text = """\
+version: 1
+app: {name: Stall}
+modules:
+  payments: {provider: test}
+  commerce: {}
+apps:
+  stall:
+    entities:
+      Jar: {fields: {name: str}}
+"""
+    report = check(text)
+    assert report.ok and report.spec is not None, report.issues
+    assert "people" in render.features_on(report.spec)
+    assert render.settings_block(report.spec, 100).count("KARNI_PEOPLE = True") == 1
+
+
+def test_listing_the_game_module_turns_the_people_contract_on() -> None:
+    from karni_cli.builder import render
+
+    text = """\
+version: 1
+app: {name: Arcade}
+modules:
+  game: {}
+apps:
+  arcade:
+    entities:
+      Note: {fields: {name: str}}
+"""
+    report = check(text)
+    assert report.ok and report.spec is not None, report.issues
+    assert "people" in render.features_on(report.spec)
+    assert render.settings_block(report.spec, 100).count("KARNI_PEOPLE = True") == 1
+
+
+def test_a_contract_target_must_be_one_of_its_models() -> None:
+    found = codes(PEOPLE_SPEC.replace("fk:people.Person", "fk:people.Contact"))
+    assert [code for code, _line in found] == ["C230"]
+    report = check(PEOPLE_SPEC.replace("fk:people.Person", "fk:people.Contact"))
+    assert "people.Person, people.Organisation" in report.issues[0].fix
+
+
+def test_an_app_of_the_spec_named_people_is_its_own() -> None:
+    from karni_cli.builder import render
+
+    spec = PEOPLE_SPEC.replace("fk:people.Person", "fk:people.Member") + (
+        "  people:\n    entities:\n      Member: {fields: {name: str}}\n"
+    )
+    spec = spec.replace('"fk:people.Organisation?"', "str").replace("o2o:people.Person", "str")
+    report = check(spec)
+    assert report.ok and report.spec is not None, report.issues
+    assert "KARNI_PEOPLE" not in render.settings_block(report.spec, 100)
 
 
 def test_a_tree_entity_its_fields_and_its_normal_form() -> None:
@@ -1279,3 +1382,36 @@ def test_api_version_is_normalised_and_left_out_when_unset() -> None:
     bare = validate_text("version: 1\napp: {name: X}\n").spec
     assert bare is not None
     assert "api_version" not in normalise(bare)["app"]
+
+
+def test_export_reads_the_contracts_and_their_grants_and_leaves_family_pages_out(
+    tmp_path: Path,
+) -> None:
+    """A project of parts: features from the installed contracts, grants on their models,
+    and no family page (/cart, /settings) in pages."""
+    facts = _facts()
+    facts["contracts"] = ["people", "preferences"]
+    facts["settings"]["KARNI_ROLES"] = {
+        "admin": {"grants": {"*": "all", "people.*:merge": "all"}},
+        "shop-manager": {"grants": {"preferences.*:change": "all"}},
+    }
+    (tmp_path / "frontend" / "src" / "pages").mkdir(parents=True)
+    (tmp_path / "frontend" / "src" / "routes.tsx").write_text(
+        'import Cart from "./pages/cart";\nimport Terms from "./pages/terms";\n'
+        'createRoute({ getParentRoute: () => root, path: "/cart", component: Cart }),\n'
+        'createRoute({ getParentRoute: () => root, path: "/terms", component: Terms }),\n',
+        encoding="utf-8",
+    )
+    for name in ("cart", "terms"):
+        (tmp_path / "frontend" / "src" / "pages" / f"{name}.tsx").write_text(
+            "export default function Page() { return null; }\n", encoding="utf-8"
+        )
+    alone = build(facts, tmp_path).data
+    assert {"cart": "code"} in alone["pages"]  # a project without parts keeps its page
+    (tmp_path / ".karni" / "recipes").mkdir(parents=True)
+    data = build(facts, tmp_path).data
+    assert data["features"] == {"people": True, "preferences": True}
+    assert data["roles"]["admin"]["grants"]["people.*:merge"] == "all"
+    assert data["roles"]["shop-manager"]["grants"] == {"preferences.*:change": "all"}
+    assert data["pages"] == [{"terms": "code"}]
+    assert validate_text(build(facts, tmp_path).text()).ok

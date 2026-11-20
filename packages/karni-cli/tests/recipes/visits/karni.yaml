@@ -1,0 +1,22 @@
+version: 1
+app:
+  name: Visits
+  kind: app
+roles:
+  customer: {name: Customer, default: true, grants: {visits.visit: own}}
+  visits-staff: {name: Visit staff, description: Logs every visit., grants: {"visits.*": all}}
+apps:
+  visits:
+    entities:
+      Visit:
+        fields:
+          person: fk:people.Person
+          note: "str:200"
+        search: [note]
+        order: -created_at
+        access: {read: granted, write: granted}
+pages:
+  - Visit: [list, detail, form]
+navigation:
+  - Visit
+seed: {Visit: 3}

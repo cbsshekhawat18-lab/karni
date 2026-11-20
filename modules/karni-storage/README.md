@@ -86,6 +86,8 @@ or bucket, and a missing URL include.
 - `storage=` on one field, `thumbnails=False` on an image field.
 - `KARNI_THUMBNAILER` (core) replaces the thumbnail rendering.
 - The row's viewset decides who may download and upload: its `access`.
+- `karni_storage.views.serve(name)` hands out a file to code that checked
+  access itself (a paid download).
 - A `path()` of your own before the include replaces one endpoint.
 
 ## Admin

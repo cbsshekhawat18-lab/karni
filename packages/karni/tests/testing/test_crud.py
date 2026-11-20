@@ -162,12 +162,14 @@ def test_a_missing_permission_check_fails_the_denials() -> None:
     message = _fails(
         crud_urls.NoGateEventViewSet,
         "organizer",
-        "denials: POST /api/no-gate-events/ as anonymous answered 201, expected 401/403",
-        "access create=HasRole('organizer')",
-        "as a user without the role answered 201, expected 403",
-        "changed the row count",
+        "denials: GET /api/no-gate-events/ as anonymous answered 200, expected 401/403",
+        "access read=Owned('organizer') | HasRole('staff')",
+        "denials: PATCH /api/no-gate-events/",
     )
     assert "NoGateEventViewSet" in message
+    # The written row is still checked against the create predicate (E134), so even
+    # without the gate an anonymous or role-less create saves nothing.
+    assert "changed the row count" not in message
 
 
 def test_broken_pagination_fails_naming_the_paginator() -> None:

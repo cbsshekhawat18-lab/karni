@@ -38,6 +38,7 @@ from karni.api import Access, Authenticated, BaseViewSet, Can
 from karni.api.access import AccessPermission
 from karni.exceptions import KarniImproperlyConfigured, KarniValueError
 from karni.introspect import roles_section
+from karni.meta import explicit_actions
 from tests.testapp.models import Event, Venue
 
 pytestmark = pytest.mark.django_db
@@ -178,7 +179,13 @@ class TestSync:
             "testapp.event:view": ("related", "venue"),
             "testapp.event:approve": ("related", "venue"),
         }
-        assert synced.grants["ops"] == len(permission_keys())
+        # "*" reaches every key but the explicit actions (karni.people's merge and erase)
+        reachable = [
+            key
+            for key, model in permission_keys().items()
+            if key.rsplit(":", 1)[1] not in explicit_actions(model)
+        ]
+        assert synced.grants["ops"] == len(reachable)
 
     def test_sync_is_idempotent_and_reports_updates(self, synced: Any) -> None:
         with override_settings(KARNI_ROLES=PROJECT_ROLES):
@@ -468,7 +475,8 @@ def test_roles_section_lists_declared_roles_compactly() -> None:
         "venue_manager[testapp.event:view=related:venue,testapp.event:approve=related:venue]"
         in roles
     )
-    assert actions == "ACTIONS: Event(approve)"
+    # karni.people is installed in the suite: its models declare merge and erase
+    assert actions == "ACTIONS: Organisation(merge) Person(merge,erase) Event(approve)"
 
 
 def test_roles_section_degrades_on_a_bad_declaration(capsys: Any) -> None:

@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "karni": "0.6.0",
+  "recipes": [
+    "booking",
+    "crm",
+    "data-portal",
+    "lms",
+    "marketplace",
+    "shop"
+  ],
+  "python": "3.12.16",
+  "machine": "Linux x86_64",
+  "calibration": 0.1655,
+  "load_before": "0.92 0.40 0.15",
+  "load_after": "1.11 0.90 0.46",
+  "runs": 3,
+  "build_runs": 1,
+  "note": "The CI job's speed artifact on the 0.6.0 release candidate: GitHub's ubuntu-latest runner, one run (each quick step the median of 3, each build one run). Relative to the calibration, the builds and the karni commands ran 1.1 to 2.1 times slower there than on the laptop speed-baseline.json comes from.",
+  "times": {
+    "new_booking": 30.028,
+    "new_crm": 26.802,
+    "new_data-portal": 36.431,
+    "new_lms": 27.843,
+    "new_marketplace": 30.666,
+    "new_shop": 87.541,
+    "new_app": 28.221,
+    "build_nochange": 2.049,
+    "check_cold": 5.462,
+    "check_cached": 2.951,
+    "spec_validate": 0.431,
+    "plan": 2.033,
+    "plan_questions": 0.427
+  },
+  "inner": {
+    "new_booking": {
+      "migrations": 1.694,
+      "migrate": 4.046,
+      "seed": 3.564,
+      "types": 2.864,
+      "test": 10.379,
+      "check": 4.485
+    },
+    "new_crm": {
+      "migrations": 1.691,
+      "migrate": 3.687,
+      "seed": 3.327,
+      "types": 2.56,
+      "test": 8.976,
+      "check": 4.256
+    },
+    "new_data-portal": {
+      "migrations": 1.705,
+      "migrate": 5.361,
+      "seed": 3.866,
+      "types": 2.961,
+      "test": 15.78,
+      "check": 4.369
+    },
+    "new_lms": {
+      "migrations": 1.709,
+      "migrate": 3.588,
+      "seed": 3.505,
+      "types": 2.456,
+      "test": 9.915,
+      "check": 4.318
+    },
+    "new_marketplace": {
+      "migrations": 1.752,
+      "migrate": 3.791,
+      "seed": 3.491,
+      "types": 3.018,
+      "test": 11.481,
+      "check": 4.563
+    },
+    "new_shop": {
+      "migrations": 2.341,
+      "migrate": 12.45,
+      "seed": 8.952,
+      "types": 8.304,
+      "test": 46.364,
+      "check": 5.66
+    },
+    "new_app": {
+      "karni new": 0.132,
+      "recipes and the spec written": 0.015,
+      "questions and answers": 0.024,
+      "plan": 1.54,
+      "build": 18.733,
+      "domain method": 0.0,
+      "karni test and karni check": 7.778
+    }
+  }
+}

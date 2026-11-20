@@ -6,6 +6,7 @@
  */
 import * as React from "react";
 import { cn } from "../../../lib/cn";
+import { softBreaks } from "../../../lib/soft-breaks";
 import { AlertIcon } from "../../primitives/icons";
 import { DENSITY_CLASSES } from "./layout";
 import type { ResourceTableDensity } from "./preferences";
@@ -77,11 +78,17 @@ export function RowCard<T>(props: ResourceTableRowCardProps<T>): React.ReactElem
         </div>
       </div>
       {fields.length > 0 && (
-        <dl id={listId} className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
+        // The labels take what they need (up to 40%), the values the rest, and a
+        // long value (an email, a link) wraps at its dots and slashes, not mid-word.
+        <dl
+          id={listId}
+          // eslint-disable-next-line karni/no-style-literals -- a column layout, not a theme value
+          className="grid grid-cols-[fit-content(40%)_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm"
+        >
           {shown.map((field) => (
             <React.Fragment key={field.id}>
               <dt className="truncate text-muted-foreground">{field.label}</dt>
-              <dd className="min-w-0 break-words text-foreground">{field.value}</dd>
+              <dd className="min-w-0 break-words text-foreground">{softBreaks(field.value)}</dd>
             </React.Fragment>
           ))}
         </dl>

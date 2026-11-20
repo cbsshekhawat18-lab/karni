@@ -33,6 +33,7 @@ CONTEXT_SKIP_APPS: frozenset[str] = frozenset(
     {
         "karni_audit",
         "karni_transfer",
+        "karni_outbox",
         "admin",
         "auth",
         "contenttypes",

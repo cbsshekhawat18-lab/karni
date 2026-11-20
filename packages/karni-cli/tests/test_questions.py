@@ -229,7 +229,16 @@ def test_a_missing_app_kind() -> None:
 def test_every_module_ask_is_a_question_until_its_option_is_set(name: str) -> None:
     module = MODULES[name]
     kind = "site+app" if name == "site" else "app"
-    spec = f"version: 1\napp: {{name: X, kind: {kind}}}\nmodules:\n  {name}:\n"
+    # a module that requires another (commerce, payments) lists it, with its asks settled
+    needed = ""
+    for other in module.requires:
+        settled_options = ", ".join(
+            f"{item.setting.removeprefix(f'KARNI_{other.upper()}_').lower()}: "
+            f"{json.dumps(item.default if item.has_default else 'x')}"
+            for item in MODULES[other].asks
+        )
+        needed += f"  {other}: {{{settled_options}}}\n"
+    spec = f"version: 1\napp: {{name: X, kind: {kind}}}\nmodules:\n{needed}  {name}:\n"
     expected = []
     for item in module.asks:
         option = item.setting.removeprefix(f"KARNI_{name.upper()}_").lower()
@@ -558,8 +567,9 @@ def test_the_writer_keeps_everything_else(
 def test_the_writer_refuses_what_it_cannot_place() -> None:
     with pytest.raises(EditError, match="not a mapping"):
         set_value("a: 1\n", ("a", "b"), 2)
-    with pytest.raises(EditError, match="block"):
-        set_value("a:\n  b: 1\n", ("a",), {"c": 2})
+    # a block value is written again over its own lines, every other line kept
+    assert set_value("a:\n  b: 1\nc: 2  # kept\n", ("a",), {"c": 2}) == "a: {c: 2}\nc: 2  # kept\n"
+    assert set_value("x:\n  - 1\n  - 2\ny: 3\n", ("x",), [1, 2, 3]) == "x: [1, 2, 3]\ny: 3\n"
     with pytest.raises(EditError, match="more than that key"):
         set_value("a: &x {b: 1}\nc: *x\n", ("a", "d"), 2)
     with pytest.raises(EditError, match="not valid YAML"):
@@ -610,3 +620,17 @@ def test_the_docs_show_the_fixture_with_keys_removed() -> None:
     assert q.render(ask(spec), q.DEFAULT_MAX) == shown
     for line in (*REMOVED, "default: true"):
         assert line.strip() in section, line
+
+
+def test_the_project_currency_answers_the_payments_currency() -> None:
+    from karni_cli.spec.questions import questions
+    from karni_cli.spec.validate import validate_text
+
+    text = "version: 1\napp: {name: Shop, kind: app, currency: EUR}\nmodules: {payments: {}}\n"
+    report = validate_text(text)
+    assert report.ok and report.spec is not None and report.source is not None
+    asked = {question.id for question in questions(report.spec, report.source.data)}
+    assert "modules.payments.currency" not in asked
+    bare = validate_text(text.replace(", currency: EUR", ""))
+    assert bare.spec is not None and bare.source is not None
+    assert "modules.payments.currency" in {q.id for q in questions(bare.spec, bare.source.data)}

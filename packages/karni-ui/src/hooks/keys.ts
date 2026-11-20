@@ -5,7 +5,9 @@
  * - `["karni", "$schema"]`: the parsed OpenAPI schema (staleTime Infinity).
  * - `["karni", resource]`: the invalidation root for one resource.
  * - `["karni", resource, "list", normalizedParams]`: one list page.
- * - `["karni", "$navigation", user]`: the menu one user gets (experimental).
+ * - `["karni", "$navigation", user]`: the menu one user gets (experimental), and
+ *   `["karni", "$navigation", user, menu]` a named menu of theirs (`public`).
+ * - `["karni", "$demo"]`: the demo accounts of a demo-mode server (experimental).
  * - `["karni", "$search", normalizedParams]`: one cross-model search
  *   (experimental, `useGlobalSearch`).
  * - `["karni", resource, "detail", String(id)]`: one item. When the item was
@@ -103,17 +105,27 @@ export const karniKeys = {
     ] as const;
   },
 
+  /** Experimental. Key of the home tiles (`GET /dashboard/`) of one user (`null`: nobody). */
+  dashboardTiles(user?: string | number | null): readonly unknown[] {
+    return ["karni", "$dashboard", user === undefined || user === null ? null : String(user)];
+  },
+
   /**
    * Experimental. Key of the navigation menu (`GET /navigation/`) for one
    * user (`null`: nobody signed in). Each user has their own entry, so a
    * sign-in or sign-out reads the menu again.
    */
-  navigation(user?: string | number | null): readonly unknown[] {
-    return [
-      "karni",
-      "$navigation",
-      user === undefined || user === null ? null : String(user),
-    ] as const;
+  navigation(user?: string | number | null, menu?: string): readonly unknown[] {
+    const who = user === undefined || user === null ? null : String(user);
+    // The app menu keeps the three-part key; a named menu adds its name.
+    return menu === undefined || menu === "app"
+      ? (["karni", "$navigation", who] as const)
+      : (["karni", "$navigation", who, menu] as const);
+  },
+
+  /** Experimental. Key of the demo accounts (`GET /demo/`, `useDemo`). */
+  demo(): readonly unknown[] {
+    return ["karni", "$demo"] as const;
   },
 
   /** Experimental. Key for a node's `ancestors/` (the path above it, root first). */

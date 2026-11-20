@@ -2,11 +2,15 @@ import * as React from "react";
 import { useChangeHistory, type ChangeLogEntry } from "../../../hooks/useChangeHistory";
 import { cn } from "../../../lib/cn";
 import { registerComponentRole } from "../../../lib/roles";
+import { humanize } from "../../../schema/parse";
+import type { FieldDef } from "../../../schema/types";
+import { useResourceSchemaIfKnown } from "../../../schema/useSchema";
 import { ErrorState, type ErrorSlotProps } from "../../../states/ErrorState";
 import { useDelayedFlag, useOnlineStatus } from "../../../states/hooks";
 import { Skeleton } from "../../primitives/skeleton";
 import { EmptyValue } from "../empty-value";
 import { singularNoun } from "../nouns";
+import { formatMoneyValue } from "../number-value";
 import { offlineError, useRetryUnlessClientError, useRetryWhenOnline } from "../query-state";
 
 registerComponentRole("change-history", "ChangeHistory");
@@ -28,6 +32,10 @@ export interface ChangeHistoryEmptyProps {
 /** What the `Entry` slot receives: one recorded change. */
 export interface ChangeHistoryEntryProps {
   entry: ChangeLogEntry;
+  /** The resource's fields, when the schema is known: labels, money and state words. */
+  fields?: readonly FieldDef[];
+  /** The record the history is of: a money field's currency may be one of its fields. */
+  record?: Readonly<Record<string, unknown>> | null;
 }
 
 /**
@@ -55,15 +63,20 @@ export interface ChangeHistoryProps {
   resourceLabel?: string;
   /** Replace parts of the list: Loading, Error, Empty, Entry. */
   slots?: Partial<ChangeHistorySlots>;
+  /**
+   * The record itself, when the page has it: a money field whose currency is
+   * another field of the row (an order's `currency`) then reads in that currency.
+   */
+  record?: Readonly<Record<string, unknown>> | null;
   className?: string;
 }
 
 const ACTION_LABEL: Record<ChangeLogEntry["action"], string> = {
   create: "Created",
-  update: "Updated",
+  update: "Changed",
   delete: "Deleted",
   restore: "Restored",
-  transition: "Transitioned",
+  transition: "Moved on",
 };
 
 function formatWhen(value: string): string {
@@ -71,23 +84,92 @@ function formatWhen(value: string): string {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-function Value({ value }: { value: unknown }): React.ReactElement {
+function fieldOf(fields: readonly FieldDef[] | undefined, name: string): FieldDef | undefined {
+  return fields?.find((field) => field.name === name);
+}
+
+/** A field's name in words: its schema label, else the name humanized ("amount_refunded" reads "Amount refunded"). */
+export function historyFieldLabel(fields: readonly FieldDef[] | undefined, name: string): string {
+  return fieldOf(fields, name)?.label ?? humanize(name);
+}
+
+/**
+ * Experimental. One value of a history entry as people read it: money in its
+ * currency (`$52.00`), a state or a choice by its label ("Part refunded"), yes
+ * or no, a date in the browser's words. `null` is an empty value.
+ */
+export function historyValueText(
+  field: FieldDef | undefined,
+  value: unknown,
+  record?: Readonly<Record<string, unknown>> | null,
+): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "object") return JSON.stringify(value);
+  if (field === undefined) return String(value);
+  if (field.money !== undefined) {
+    const money = formatMoneyValue(field, value, record);
+    if (money !== null) return money;
+    const amount = Number(value);
+    return Number.isFinite(amount) ? amount.toFixed(2) : String(value);
+  }
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  const text = String(value);
+  if (field.enumLabels?.[text] !== undefined) return field.enumLabels[text];
+  if (field.transitions !== undefined || field.enumValues !== undefined) {
+    return humanize(text);
+  }
+  if (field.kind === "datetime" || field.format === "date-time") return formatWhen(text);
+  return text;
+}
+
+/**
+ * Experimental. What an entry says happened, in words: "Created", "Changed",
+ * and for a move along a state field "Status changed from Paid to Part refunded".
+ */
+export function historyHeadline(
+  entry: ChangeLogEntry,
+  fields?: readonly FieldDef[],
+  record?: Readonly<Record<string, unknown>> | null,
+): string {
+  if (entry.action === "transition") {
+    const moved = Object.entries(entry.diff)[0];
+    if (moved !== undefined) {
+      const [name, [before, after]] = moved;
+      const field = fieldOf(fields, name);
+      const label = historyFieldLabel(fields, name);
+      const from = historyValueText(field, before, record);
+      const to = historyValueText(field, after, record) ?? "empty";
+      return from !== null ? `${label} changed from ${from} to ${to}` : `${label} set to ${to}`;
+    }
+  }
+  return ACTION_LABEL[entry.action] ?? humanize(String(entry.action));
+}
+
+function Value({
+  field,
+  value,
+  record,
+}: {
+  field: FieldDef | undefined;
+  value: unknown;
+  record?: Readonly<Record<string, unknown>> | null;
+}): React.ReactElement {
   if (value === null || value === undefined || value === "") {
     return <EmptyValue />;
   }
   if (value === "[redacted]") {
     return <span className="italic text-muted-foreground">redacted</span>;
   }
-  const text = typeof value === "object" ? JSON.stringify(value) : String(value);
-  return <span className="break-words">{text}</span>;
+  return <span className="break-words">{historyValueText(field, value, record)}</span>;
 }
 
-function DefaultEntry({ entry }: ChangeHistoryEntryProps): React.ReactElement {
-  const fields = Object.entries(entry.diff);
+function DefaultEntry({ entry, fields, record }: ChangeHistoryEntryProps): React.ReactElement {
+  // A move along a state field says it all in its headline.
+  const changes = Object.entries(entry.diff).slice(entry.action === "transition" ? 1 : 0);
   return (
     <>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="font-medium">{ACTION_LABEL[entry.action] ?? entry.action}</span>
+        <span className="font-medium">{historyHeadline(entry, fields, record)}</span>
         <time dateTime={entry.timestamp} className="text-muted-foreground">
           {formatWhen(entry.timestamp)}
         </time>
@@ -95,23 +177,26 @@ function DefaultEntry({ entry }: ChangeHistoryEntryProps): React.ReactElement {
           {entry.actor?.email ?? <EmptyValue label="no user recorded" />}
         </span>
       </div>
-      {fields.length > 0 ? (
+      {changes.length > 0 ? (
         <dl className="mt-2 grid grid-cols-[max-content_1fr] items-baseline gap-x-3 gap-y-1">
-          {fields.map(([name, [before, after]]) => (
-            <React.Fragment key={name}>
-              <dt className="font-mono text-xs text-muted-foreground">{name}</dt>
-              <dd className="flex flex-wrap items-center gap-2">
-                <Value value={before} />
-                <span aria-hidden="true" className="text-muted-foreground">
-                  →
-                </span>
-                <span className="sr-only">changed to</span>
-                <Value value={after} />
-              </dd>
-            </React.Fragment>
-          ))}
+          {changes.map(([name, [before, after]]) => {
+            const field = fieldOf(fields, name);
+            return (
+              <React.Fragment key={name}>
+                <dt className="text-muted-foreground">{historyFieldLabel(fields, name)}</dt>
+                <dd className="flex flex-wrap items-center gap-2">
+                  <Value field={field} value={before} record={record} />
+                  <span aria-hidden="true" className="text-muted-foreground">
+                    →
+                  </span>
+                  <span className="sr-only">changed to</span>
+                  <Value field={field} value={after} record={record} />
+                </dd>
+              </React.Fragment>
+            );
+          })}
         </dl>
-      ) : (
+      ) : entry.action === "transition" ? null : (
         <p className="mt-2 text-muted-foreground">No visible field changed.</p>
       )}
     </>
@@ -180,9 +265,11 @@ export function ChangeHistory({
   empty = "No changes recorded.",
   resourceLabel,
   slots,
+  record,
   className,
 }: ChangeHistoryProps): React.ReactElement {
   const Slots: ChangeHistorySlots = { ...defaultChangeHistorySlots, ...slots };
+  const fields = useResourceSchemaIfKnown(resource)?.fields;
   const label = resourceLabel ?? singularNoun(resource);
   const retry = useRetryUnlessClientError();
   const online = useOnlineStatus();
@@ -232,7 +319,7 @@ export function ChangeHistory({
             className="rounded-md border bg-card p-3 text-sm"
             data-action={entry.action}
           >
-            <Slots.Entry entry={entry} />
+            <Slots.Entry entry={entry} fields={fields} record={record} />
           </li>
         ))}
       </ol>

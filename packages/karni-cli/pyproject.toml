@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni-cli"
-version = "0.5.2"
+version = "0.6.0"
 description = "The karni command: scaffold, generate, run and upgrade Karni projects. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -102,7 +102,7 @@ line-length = 100
 target-version = "py312"
 # A recipe's files/ are a project's code, laid out and imported as in a project (its apps are
 # first-party there), at the 88 columns Karni's generators write: tests/test_new_recipe.py.
-extend-exclude = ["karni_cli/_templates", "*.md", "karni_cli/recipes/*/files"]
+extend-exclude = ["karni_cli/_templates", "*.md", "karni_cli/recipes/*/files", "tests/recipes/*/files"]
 
 [tool.ruff.lint]
 # B008: typer's documented pattern puts typer.Option() in argument defaults.

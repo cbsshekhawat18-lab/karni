@@ -40,7 +40,7 @@ import textwrap
 from dataclasses import dataclass, field
 from typing import Any, Final
 
-from karni_cli.builder import layout
+from karni_cli.builder import family, layout
 from karni_cli.generators import apitest as test_gen
 from karni_cli.generators import page as page_gen
 from karni_cli.generators.app import plan as plan_app
@@ -55,7 +55,7 @@ from karni_cli.generators.fields import (
     render_model_body,
 )
 from karni_cli.generators.introspect import ModelInfo
-from karni_cli.generators.naming import default_route, verbose_plural
+from karni_cli.generators.naming import default_route, pascal, verbose_plural
 from karni_cli.generators.pysource import (
     Import,
     call,
@@ -67,7 +67,9 @@ from karni_cli.generators.pysource import (
     tuple_literal,
 )
 from karni_cli.project import CliError
-from karni_cli.spec import catalog, navigation, schema
+from karni_cli.settings_edit import MARKER as APPS_MARKER
+from karni_cli.settings_edit import add_entry
+from karni_cli.spec import catalog, dashboard, navigation, schema
 from karni_cli.spec.normal import related_tab
 
 __all__ = [
@@ -125,6 +127,8 @@ class Inputs:
     renames: dict[str, str] = field(default_factory=dict)
     #: labels of the entities this build removes (their project classes go too).
     removed: set[str] = field(default_factory=set)
+    #: the sha256 of each file ``karni new`` wrote that a build may replace (the record's).
+    scaffold: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -323,6 +327,7 @@ def _model_class(
         options.append(("field_groups", {t: list(names) for t, names in entity.groups.items()}))
     if entity.column_sets:
         options.append(("column_sets", {n: list(cols) for n, cols in entity.column_sets.items()}))
+    options += rule_options(entity)
     if options:
         lines += ["", "    class Karni:"]
         lines += [_literal(value, "        ", line, f"{key} = ") for key, value in options]
@@ -330,6 +335,56 @@ def _model_class(
     if shown is not None:
         lines += ["", "    def __str__(self) -> str:", f"        return self.{shown}"]
     return lines, imports, body.notes
+
+
+def _bare(value: Any) -> Any:
+    """A spec value as plain data: ``None`` and empty lists left out of mappings."""
+    if hasattr(value, "model_dump"):
+        value = value.model_dump(mode="json", by_alias=True)
+    if isinstance(value, dict):
+        return {
+            str(key): _bare(item)
+            for key, item in value.items()
+            if item is not None and item != [] and item != {}
+        }
+    if isinstance(value, list):
+        return [_bare(item) for item in value]
+    return value
+
+
+def rule_options(entity: schema.Entity) -> list[tuple[str, Any]]:
+    """Experimental. ``class Karni`` options of the rules (karni.rules), the spec's data as written."""
+    options: list[tuple[str, Any]] = []
+    for key in ("bounds", "unique", "targets", "frozen", "delete", "moves"):
+        value = getattr(entity, key)
+        if value in (None, [], {}):
+            continue
+        options.append((key, _bare(value)))
+    return options
+
+
+def _row_actions(entity: schema.Entity, line: int) -> tuple[list[str], set[str]]:
+    """``row_actions = {...}`` of the viewset from ``actions``, and the names it imports."""
+    if not entity.actions:
+        return [], set()
+    used = {"RowAction"}
+    lines = ["    row_actions = {"]
+    for name, rule in entity.actions.items():
+        args: list[str] = []
+        if rule.from_:
+            states = rule.from_
+            args.append(f"from_={_flat(states[0] if len(states) == 1 else tuple(states))}")
+        if rule.to is not None:
+            args.append(f"to={pystr(rule.to)}")
+        if rule.by is not None:
+            expression, names = access_expression(list(rule.by))
+            args.append(f"by={expression}")
+            used |= set(names)
+        if rule.field is not None:
+            args.append(f"field={pystr(rule.field)}")
+        lines.append(call(f"{pystr(name)}: RowAction", args, "        ", line, ","))
+    lines.append("    }")
+    return lines, used
 
 
 def protects(name: str, entity: schema.Entity, specs: list[FieldSpec]) -> bool:
@@ -391,6 +446,21 @@ def _module(ws: Workspace, rel: str, purpose: str, imports: list[Import], blocks
 # access ---------------------------------------------------------------------------
 
 
+def where_value(arg: str) -> tuple[str, Any]:
+    """Experimental. ``where:<field>[=<value>]`` as ``(field, value)``: ``true`` when bare.
+
+    ``true`` / ``false`` are booleans, a whole number an int, anything else text.
+    """
+    name, equals, raw = arg.partition("=")
+    if not equals:
+        return name, True
+    if raw in ("true", "false"):
+        return name, raw == "true"
+    if raw.lstrip("-").isdigit():
+        return name, int(raw)
+    return name, raw
+
+
 def access_expression(items: list[str]) -> tuple[str, list[str]]:
     """Experimental. ``(predicate expression, names to import)`` for one access slot of the spec."""
     parts: list[str] = []
@@ -403,6 +473,10 @@ def access_expression(items: list[str]) -> tuple[str, list[str]]:
         elif kind == "role":
             parts.append(f"HasRole({pystr(arg)})")
             names.append("HasRole")
+        elif kind == "where":
+            name, value = where_value(arg)
+            parts.append(f"Where(Matching({name}={_flat(value)}))")
+            names += ["Where", "Matching"]
         else:
             parts.append(f"Owned({pystr(arg)})")
             names.append("Owned")
@@ -411,11 +485,16 @@ def access_expression(items: list[str]) -> tuple[str, list[str]]:
 
 def _access_line(access: schema.Access, line: int) -> tuple[str, list[str]]:
     """``access = ...`` for a rule (``Granted()`` alone for the default), and the names it uses."""
-    if access.read == access.write == ["granted"] and access.create is None:
+    if (
+        access.read == access.write == ["granted"]
+        and access.create is None
+        and access.delete is None
+        and access.assign is None
+    ):
         return "    access = Granted()", ["Granted"]
     args: list[str] = []
     names = ["Access"]
-    for slot in ("read", "write", "create"):
+    for slot in ("read", "write", "create", "delete", "assign"):
         items = getattr(access, slot)
         if items is None:
             continue
@@ -464,6 +543,9 @@ def _api_file(ws: Workspace, inputs: Inputs, app: str, names: list[str]) -> str:
         if entity.search:
             items = [pystr(item) for item in entity.search]
             body.append(tuple_literal("search_fields = ", items, "    ", line))
+        actions, action_names = _row_actions(entity, line)
+        body += actions
+        used |= action_names
         if entity.cache is False:
             body.append(f"    cache = Uncached(reason={pystr(schema.UNCACHED_REASON)})")
             used.add("Uncached")
@@ -708,7 +790,8 @@ def _project_file(
 
 
 def settings_block(spec: schema.Spec, line: int) -> str:
-    """Experimental. The ``# karni:spec`` block: roles, features, module options and the menu."""
+    """Experimental. The ``# karni:spec`` block: roles, features, module options, the menu
+    and the home tiles."""
     rows: list[str] = [
         "# Roles, features and module options from karni.yaml. Change them there and run",
         "# karni build: it rewrites the lines between the markers.",
@@ -750,6 +833,9 @@ def settings_block(spec: schema.Spec, line: int) -> str:
     menu = navigation.menu(spec)
     if menu is not None:
         rows.append(_literal(menu, "", line, "KARNI_NAVIGATION = "))
+    tiles = dashboard.tiles(spec)
+    if tiles is not None:
+        rows.append(_literal(tiles, "", line, f"{dashboard.SETTING} = "))
     # Left out, KARNI_API_CACHE follows the environment: a project may turn it on there.
     if features.api_cache:
         rows.append("KARNI_API_CACHE = True")
@@ -757,10 +843,45 @@ def settings_block(spec: schema.Spec, line: int) -> str:
             rows.append(f"KARNI_API_CACHE_TTL = {features.api_cache.ttl}")
     if spec.app.api_version:
         rows.append(f"KARNI_API_VERSION = {pystr(spec.app.api_version)}")
+    for setting in contract_settings(spec):
+        rows.append(f"{setting} = True")
+    if "preferences" in features_on(spec):
+        # Where the business's details start: Settings, Details changes them.
+        details = {"name": spec.app.name}
+        rows.append(_literal({"details": details}, "", line, "KARNI_PREFERENCES_DEFAULTS = "))
+        if spec.app.currency:
+            # The project's one currency (app.currency): every money field is written in it,
+            # so Settings shows it and does not change it.
+            fixed = {"details": {"currency": spec.app.currency.upper()}}
+            rows.append(_literal(fixed, "", line, "KARNI_PREFERENCES_LOCKED = "))
     for module, options in spec.modules.items():
         for option, value in (options or {}).items():
             rows.append(_literal(value, "", line, f"{catalog.module_setting(module, option)} = "))
     return "\n".join(rows)
+
+
+def contract_settings(spec: schema.Spec) -> list[str]:
+    """Experimental. The settings of the core contracts the spec's relations point at.
+
+    ``fk:people.Person`` (an app the spec does not define itself) needs the
+    people contract, so the build writes ``KARNI_PEOPLE = True``.
+    """
+    on = features_on(spec)
+    used: list[str] = [
+        setting
+        for label, setting in catalog.CONTRACT_SETTINGS.items()
+        if label in on and label not in spec.apps
+    ]
+    for app in spec.apps.values():
+        for entity in app.entities.values():
+            for field_spec in _specs(entity):
+                if not field_spec.is_relation:
+                    continue
+                label = relation_name(field_spec).partition(".")[0]
+                setting = catalog.CONTRACT_SETTINGS.get(label)
+                if setting and label not in spec.apps and setting not in used:
+                    used.append(setting)
+    return used
 
 
 def _client_ids(provider: str) -> str:
@@ -864,6 +985,7 @@ def _pages(inputs: Inputs) -> list[_Page]:
             label = name if "." in name else by_name.get(name, name)
             _app, entity_name, entity = entities[label]
             route = default_route(entity_name)
+            base = inputs.spec.apps[_app].route if _app in inputs.spec.apps else None
             names = layout.page_names(entity_name)
             expand = [
                 s.name
@@ -877,7 +999,7 @@ def _pages(inputs: Inputs) -> list[_Page]:
                         names[kind],
                         resource=route,
                         kind=kind,
-                        path=None,
+                        path=f"{base}/{route}" if base else None,
                         expand=expand if kind == "detail" else None,
                         related=(
                             [related_tab(ref, label, apps) for ref in schema.page_related(written)]
@@ -970,6 +1092,95 @@ def render(ws: Workspace, inputs: Inputs) -> Output:
     return out
 
 
+#: Experimental. The file that registers each part's frontend (``app.recipes``), Karni's.
+PARTS_FILE: Final = "frontend/src/karni/parts.ts"
+#: The line routes.tsx's import block gets when the project holds parts.
+PARTS_IMPORT: Final = 'import "./karni/parts";'
+
+
+def parts_text(ws: Workspace, spec: schema.Spec) -> str:
+    """Experimental. ``frontend/src/karni/parts.ts``: each part's ``register()``, in order.
+
+    A part with a frontend has ``frontend/src/<app label>/index.ts`` exporting
+    ``register()``. The file imports and calls each one, so a part adds its
+    screens, sections and routes without a list anyone edits by hand. Before
+    them it registers what the family's contracts and modules add
+    (:func:`karni_cli.builder.family.parts_lines`): the account sections of
+    people and notify, and karni-commerce's.
+    """
+    labels = [label for label in spec.apps if ws.read(f"frontend/src/{label}/index.ts") is not None]
+    names = {label: f"register{pascal(label)}" for label in labels}
+    family_imports, family_calls = family.parts_lines(spec)
+    lines = [
+        f"// {HEADER}",
+        "// The parts this project holds (app.recipes). Each part with a frontend has",
+        "// frontend/src/<app label>/index.ts, whose register() runs here at startup, after",
+        "// what the family's contracts and modules register.",
+        *family_imports,
+        *(f'import {{ register as {names[label]} }} from "../{label}";' for label in labels),
+        "",
+        "export const PARTS: readonly string[] = ["
+        + ", ".join(pystr(name) for name in spec.app.recipes)
+        + "];",
+        "",
+        *family_calls,
+    ]
+    if labels:
+        lines += [*(f"{names[label]}();" for label in labels)]
+    return "\n".join(lines) + "\n"
+
+
+def render_parts(ws: Workspace, out: Output, inputs: Inputs) -> None:
+    """Experimental. Write ``parts.ts`` once the parts' own files are in ``ws``, and point the
+    scaffold's layout and home at the family's."""
+    if inputs.spec.app.recipes and ws.read(page_gen.ROUTES) is not None:
+        _owned(out, inputs, PARTS_FILE, parts_text(ws, inputs.spec))
+        _family_scaffold(ws, out, inputs)
+
+
+def _render_family(
+    ws: Workspace, out: Output, inputs: Inputs, own_routes: set[str]
+) -> tuple[list[str], list[str]]:
+    """The family's files of a project of parts, and their imports and routes in the block.
+
+    A family path the project routes itself (outside the Karni block) keeps its page.
+    """
+    spec = inputs.spec
+    _owned(out, inputs, family.ROUTER_FILE, family.router_text())
+    _owned(out, inputs, family.LAYOUT_FILE, family.layout_text(spec))
+    _owned(out, inputs, family.HOME_FILE, family.home_text())
+    imports: list[str] = []
+    entries: list[str] = []
+    for page in family.family_pages(spec):
+        paths = [path for path in page.paths if path not in own_routes]
+        if not paths:
+            continue
+        _owned(out, inputs, page.file, page.text)
+        imports.append(f'import {page.component} from "./karni/pages/{page.name}";')
+        entries += [page.route_line(path) for path in paths]
+    return imports, entries
+
+
+def _family_scaffold(ws: Workspace, out: Output, inputs: Inputs) -> None:
+    """The scaffold's layout and home as re-exports of the family's, while they are still what
+    ``karni new`` wrote. A file the project changed stays, and the build says so."""
+    for rel in (family.SCAFFOLD_LAYOUT, family.SCAFFOLD_HOME):
+        current = ws.read(rel)
+        wanted = family.reexport_text(rel)
+        if current is None or current == wanted:
+            continue
+        recorded = inputs.scaffold.get(rel)
+        scaffold = family.scaffold_text(rel, inputs.spec.app.name)
+        if (recorded is not None and recorded == family.digest(current)) or current == scaffold:
+            ws.write(rel, wanted)
+            out.project.setdefault(rel, []).append("re-exports the family's")
+            continue
+        target = family.LAYOUT_FILE if rel == family.SCAFFOLD_LAYOUT else family.HOME_FILE
+        out.project.setdefault(rel, []).append(
+            f"is the project's own: the family's is {target} (re-export it to use it)"
+        )
+
+
 def _owned(out: Output, inputs: Inputs, rel: str, text: str) -> None:
     if rel in inputs.adopted:
         return
@@ -987,7 +1198,9 @@ def _render_app(
     removed: set[str],
 ) -> None:
     spec = inputs.spec
-    if names:
+    # An app whose last entity goes keeps its (empty) Karni modules: its own files import them
+    # until the project deletes the app.
+    if names or removed:
         _owned(
             out, inputs, f"{app}/karni/__init__.py", docstring(HEADER, "", ws.line_length) + "\n"
         )
@@ -1002,7 +1215,7 @@ def _render_app(
         for ref in (name, label):
             if ref in spec.seed:
                 counts[name] = spec.seed[ref]
-    if counts:
+    if counts or (removed and not names and ws.exists(f"{app}/seeds.py")):
         _owned(out, inputs, layout.seeds_file(app), _seeds_file(ws, inputs, app, counts))
     models_wanted: list[tuple[str, str, list[str]]] = [(name, name, []) for name in names]
     access_code = [n for n in names if spec.apps[app].entities[n].access == "code"]
@@ -1096,7 +1309,49 @@ def _render_settings(ws: Workspace, out: Output, inputs: Inputs) -> None:
     if inputs.spec.features.social_login:
         # At the top with the other imports: inside the block it is an E402 in the project's lint.
         updated = ensure_imports(ws, SETTINGS, updated, [Import("karni.conf", "env")])
+    for app in contract_apps(inputs.spec):
+        # Installed apps go in the project's list (karni.conf reads the block before it builds
+        # INSTALLED_APPS), as karni add wires a module's.
+        with_app = add_entry(
+            updated, app, setting="INSTALLED_APPS", marker=APPS_MARKER, filename="settings.py"
+        )
+        updated = with_app if with_app is not None else updated
     ws.write(SETTINGS, updated)
+
+
+#: Experimental. The app each core contract switched on by a feature adds to INSTALLED_APPS,
+#: when no setting installs it (``features.events``: the family events outbox,
+#: ``features.timeline``: the timeline, ``features.preferences``: the Settings page's store,
+#: ``features.notify``: notifications, the inbox and the emails a business edits).
+CONTRACT_APPS: Final[dict[str, str]] = {
+    "events": "karni.outbox",
+    "timeline": "karni.timeline",
+    "preferences": "karni.preferences",
+    "notify": "karni.notify",
+}
+
+
+def features_on(spec: schema.Spec) -> list[str]:
+    """Experimental. The contracts ``features`` switches on, with the ones they need.
+
+    ``features.timeline`` needs people and events (``catalog.CONTRACT_NEEDS``), so
+    it switches them on too. A listed module switches on the contracts it needs
+    (``catalog.MODULE_CONTRACTS``): ``modules: {commerce: {}}`` turns people on.
+    """
+    named = [name for name in catalog.CONTRACT_NEEDS if getattr(spec.features, name, False)]
+    named += [
+        name
+        for name in (*catalog.CONTRACT_SETTINGS, *CONTRACT_APPS)
+        if getattr(spec.features, name, False)
+    ]
+    named += [name for module in spec.modules for name in catalog.MODULE_CONTRACTS.get(module, ())]
+    return catalog.contracts_with_needs(named)
+
+
+def contract_apps(spec: schema.Spec) -> list[str]:
+    """Experimental. The apps of the contracts ``features`` switches on, needs first."""
+    on = features_on(spec)
+    return [CONTRACT_APPS[name] for name in on if name in CONTRACT_APPS]
 
 
 def _render_pages(ws: Workspace, out: Output, inputs: Inputs) -> None:
@@ -1135,11 +1390,16 @@ def _render_pages(ws: Workspace, out: Output, inputs: Inputs) -> None:
         _owned(out, inputs, layout.page_file(page.spec.name), page_text(page.spec, routes))
         imports.append(f'import {page.spec.component} from "./pages/karni/{page.spec.name}";')
         entries += [page_gen.route_line(page.spec, path).strip() for path in page.spec.paths]
+    if inputs.spec.app.recipes:
+        imports.append(PARTS_IMPORT)
+        family_imports, family_entries = _render_family(ws, out, inputs, own_routes)
+        imports += family_imports
+        entries += family_entries
     blocks = {
         layout.ROUTES_BLOCKS[0]: "\n".join(imports),
         layout.ROUTES_BLOCKS[1]: "\n".join(entries),
     }
-    if not pages and all(read_block(text, name) is None for name in layout.ROUTES_BLOCKS):
+    if not entries and all(read_block(text, name) is None for name in layout.ROUTES_BLOCKS):
         return  # no page of Karni's, and no block yet: leave routes.tsx alone
     for name, (marker, before) in _ROUTE_BLOCKS.items():
         if before not in text and read_block(text, name) is None:

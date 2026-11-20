@@ -1,0 +1,1 @@
+Cancelled: {{ row.slot.resource }}, {{ row.slot.starts_at|date:"D j M, H:i" }}

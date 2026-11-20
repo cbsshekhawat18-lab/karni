@@ -59,7 +59,39 @@
           "type": "string"
         },
         "files": {
-          "description": "Its own domain code, seeds and tests, at the paths they take in the project.",
+          "description": "Its own domain code, seeds, tests and React files, at the paths they take in the project.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "routes": {
+          "description": "The React routes the first karni build registers for its own pages.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Experimental. Its recipe.toml version. null when it has none."
+        },
+        "requires": {
+          "description": "Experimental. The core contracts and modules it needs, with version ranges.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "conflicts": {
+          "description": "Experimental. The recipes and modules it cannot share a project with.",
           "items": {
             "type": "string"
           },
@@ -103,6 +135,10 @@
         "usually_changed",
         "source",
         "files",
+        "routes",
+        "version",
+        "requires",
+        "conflicts",
         "spec",
         "score",
         "matched"

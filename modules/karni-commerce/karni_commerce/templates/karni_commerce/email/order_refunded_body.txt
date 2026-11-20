@@ -1,0 +1,7 @@
+{% if order.buyer_name %}Hello {{ order.buyer_name }},{% else %}Hello,{% endif %}
+
+We have refunded {{ refund.amount|floatformat:2 }} {{ order.currency }} of order {{ order.number }}. It reaches you the way you paid, which can take a few days.
+
+See the order: {{ link }}
+{% if business.name %}
+{{ business.name }}{% endif %}

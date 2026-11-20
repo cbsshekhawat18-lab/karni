@@ -8,6 +8,7 @@ import datetime as dt
 from typing import Any, NamedTuple
 
 from courses.karni import seeds as karni
+from django.contrib.auth import get_user_model
 from karni.seeding import SeedContext, cycled
 
 from courses.models import Course, Enrolment, Lesson
@@ -232,9 +233,13 @@ def _subject(course: Course, position: int) -> Subject:
 
 
 class CourseSeeder(karni.CourseSeeder):
-    """Courses open to students, each with a summary of what it teaches."""
+    """Courses, each with a summary of what it teaches.
 
-    published = True
+    They start as drafts: a course is published once it has a lesson
+    (karni.yaml: moves), which LessonSeeder does.
+    """
+
+    published = False
 
     def seed(self, context: SeedContext) -> list[Any]:
         titles = [subject.title for subject in COURSES]
@@ -268,11 +273,76 @@ class LessonSeeder(karni.LessonSeeder):
             rows += context.create(
                 1, course=course, title=title, body=body, position=turn + 1
             )
+        # Every course with lessons is published, but the last, which an instructor is
+        # still writing (a draft only its instructor and staff see).
+        for course in courses[:-1] if len(courses) > 1 else courses:
+            if Lesson.objects.filter(course=course).exists():
+                course.published = True
+                course.save(update_fields=["published", "updated_at"])
         return rows
 
 
+STUDENTS = [
+    "amara.osei",
+    "bruno.keller",
+    "chen.wei",
+    "dalia.haddad",
+    "emil.lund",
+    "farah.qureshi",
+    "gita.rao",
+    "hugo.marin",
+    "ines.duarte",
+    "jonas.berg",
+]
+
+
+def _students(count: int) -> None:
+    """Make sure ``count`` demo students exist, the same on every run (no password)."""
+    from karni.accounts.permissions import assign_role
+
+    users = get_user_model().objects
+    for number in range(count):
+        name = cycled(STUDENTS, number, suffix="{name}{round}")
+        user = users.filter(email=f"{name}@students.example").first()
+        if user is None:
+            user = users.create_user(email=f"{name}@students.example", password=None)
+        assign_role(user, "student")
+
+
 class EnrolmentSeeder(karni.EnrolmentSeeder):
-    """The base class comes from karni.yaml (karni build). Add your own code here."""
+    """Students in the published courses, each once per course (karni.yaml: unique).
+
+    A course's own instructor never enrols in it. A run with more enrolments
+    than students times courses stops at the last free pair.
+    """
+
+    class Meta(karni.EnrolmentSeeder.Meta):
+        after = ("courses.Lesson",)  # the lessons publish the courses students enrol in
+
+    def seed(self, context: SeedContext) -> list[Any]:
+        courses = list(Course.objects.filter(published=True).order_by("title"))
+        if not courses:
+            return context.create(context.count)
+        _students(context.count // len(courses) + 2)
+        students = list(get_user_model().objects.order_by("email"))
+        taken = set(Enrolment.objects.values_list("course_id", "student_id"))
+        rows: list[Any] = []
+        for number in range(context.count):
+            course = courses[number % len(courses)]
+            student = next(
+                (
+                    user
+                    for user in students[number % max(len(students), 1) :] + students
+                    if (course.pk, user.pk) not in taken
+                    and user.pk != course.instructor_id
+                ),
+                None,
+            )
+            if student is None:
+                break  # every student is in every course: fewer rows, never a duplicate
+            taken.add((course.pk, student.pk))
+            rows += context.create(1, course=course, student=student)
+        return rows
 
 
 class LessonProgressSeeder(karni.LessonProgressSeeder):

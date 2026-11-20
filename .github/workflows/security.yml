@@ -23,7 +23,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [packages/karni, packages/karni-cli, modules/karni-payments, modules/karni-approvals, modules/karni-impersonation, modules/karni-site, modules/karni-charts, modules/karni-reports, modules/karni-ai, modules/karni-storage]
+        package: [packages/karni, packages/karni-cli, modules/karni-payments, modules/karni-approvals, modules/karni-impersonation, modules/karni-site, modules/karni-charts, modules/karni-reports, modules/karni-ai, modules/karni-storage, modules/karni-commerce, modules/karni-game]
+        # A module that depends on another Karni module names it here, so that
+        # one comes from this checkout too (karni-commerce needs karni-payments).
+        include:
+          - package: modules/karni-commerce
+            karni-deps: ./modules/karni-payments
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -31,11 +36,12 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install the package and pip-audit
-        # karni comes from this checkout: the modules depend on it, and the
-        # version they pin may not be on PyPI yet.
+        # karni (and any Karni module the package depends on) comes from this
+        # checkout: the version a module pins may not be on PyPI yet. Their
+        # third-party dependencies still come from PyPI and are audited.
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pip-audit ./packages/karni "./${{ matrix.package }}"
+          python -m pip install pip-audit ./packages/karni ${{ matrix.karni-deps }} "./${{ matrix.package }}"
       - name: pip-audit the installed environment
         # Fails on a known vulnerability in anything the package pulls in.
         run: python -m pip_audit --vulnerability-service osv --skip-editable
@@ -46,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [packages/karni-ui, modules/karni-payments/ui, modules/karni-approvals/ui, modules/karni-impersonation/ui, modules/karni-charts/ui, modules/karni-reports/ui, modules/karni-ai/ui, modules/karni-storage/ui, examples/eventhub/frontend, examples/shop-demo/frontend]
+        package: [packages/karni-ui, modules/karni-payments/ui, modules/karni-approvals/ui, modules/karni-impersonation/ui, modules/karni-charts/ui, modules/karni-reports/ui, modules/karni-ai/ui, modules/karni-storage/ui, modules/karni-commerce/ui, modules/karni-game/ui, examples/eventhub/frontend, examples/shop-demo/frontend, examples/hybrid-demo/frontend]
     defaults:
       run:
         working-directory: ${{ matrix.package }}

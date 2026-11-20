@@ -481,6 +481,46 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write dashboard = True, or a dict with the keys label, order, total, new_days, by, values, counts, recent, columns and date_field, naming fields of the model: e.g. dashboard = {'by': 'status', 'counts': {'Due today': {'due_on': 'today'}}, 'recent': 5}.
 
+<a id="e134"></a>
+
+#### E134: The written row is outside the caller's write scope
+
+*exception* · from `karni.api.viewsets.BaseViewSet.check_written_row (perform_create / perform_update)`
+
+**Why Karni objects.** An access rule such as Owned('seller__user') limits the rows a caller may change. A create or an update that leaves the row outside that rule (a listing in someone else's shop, a lesson in another instructor's course) would let the caller write rows that are not theirs, so it is refused with a 403 and nothing is saved.
+
+**Fix.** Point the row at something of yours (your shop, your course), or give the caller a role the rule admits.
+
+<a id="e135"></a>
+
+#### E135: Only some roles may set the owner of a row
+
+*exception* · from `karni.api.viewsets.BaseViewSet.perform_create / perform_update (Access(assign=...))`
+
+**Why Karni objects.** The owner field of a row (the member of a booking) is the caller. Access(assign=...) names who may set it to someone else (staff booking for a member, a manager reassigning a deal). Anyone else who sends another user is refused with a 403.
+
+**Fix.** Leave the owner field out (it becomes you), or ask someone the assign rule admits.
+
+<a id="e136"></a>
+
+#### E136: A row action is declared wrongly
+
+*exception* · from `karni.api.actions (RowAction, row_actions)`
+
+**Why Karni objects.** row_actions maps action names to RowAction(...), whose by= is an access predicate, and the states it names belong to the model's one StateField unless field= names another.
+
+**Fix.** Write row_actions = {'ship': RowAction(from_='paid', to='shipped', by=Owned(...))}, and name the StateField with field= when the model has two.
+
+<a id="w136"></a>
+
+#### W136: A row action has nothing to run yet
+
+*system check (warning)* · from `karni.api.actions.missing_methods; karni.checks.check_viewsets`
+
+**Why Karni objects.** A row action without to= is the viewset's own @action method of that name (pay opens a payment): Karni checks the state and who may, then runs it. Until the method exists no route answers the action. It is a warning so a project built from karni.yaml migrates and runs while the method is being written.
+
+**Fix.** Write the @action(detail=True, methods=['post']) method of that name in the project's viewset (&lt;app>/viewsets.py), or give the action a to= state.
+
 ### 2xx · Accounts
 
 <a id="e201"></a>
@@ -823,6 +863,106 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Set KARNI_TERMS = {"version": "&lt;version>", "url": "&lt;where the terms are>"} to ask users to accept terms, or remove the client's call.
 
+<a id="e250"></a>
+
+#### E250: A merge of two people who both have an account
+
+*exception* · from `karni.people.merge (MergeRefused, HTTP 409)`
+
+**Why Karni objects.** A person is linked to at most one account. Merging two people who each have one would have to merge the accounts too: their passwords, roles and sign-ins, which only a person can decide.
+
+**Fix.** Merge the accounts first, by hand: deactivate or delete one account (or unlink it from its person), then merge the people.
+
+<a id="e251"></a>
+
+#### E251: A merge clash that only a merge hook can resolve
+
+*exception* · from `karni.people.merge (MergeRefused, HTTP 409), karni.people.merge_plan`
+
+**Why Karni objects.** Both records have a one-to-one row of the same model (two CRM profiles), or moving the dropped record's rows breaks a unique rule of their model (two bookings for one slot). Karni cannot know which row wins, so it refuses instead of guessing.
+
+**Fix.** Register a merge hook for the model named in the message, in its app's people.py: @people.merge_hook(Model) def merge(keep, drop): fold the dropped record's row into the kept one and delete it. Or skip the model with KARNI_PEOPLE_MERGE_SKIP.
+
+<a id="e252"></a>
+
+#### E252: A merge or an erase of records it does not take
+
+*exception* · from `karni.people.merge, karni.people.merge_plan, karni.people.erase`
+
+**Why Karni objects.** A merge takes two live records of the same kind (two people or two organisations) that are not the same row, and an erase takes a person. A deleted or already merged record has nothing left to merge.
+
+**Fix.** Pass two different live people (or organisations). To merge into a record that was merged already, merge into the record it points at (merged_into).
+
+<a id="e253"></a>
+
+#### E253: people.resolve() cannot run
+
+*exception* · from `karni.people.resolve, karni.people.get_resolver (KARNI_PEOPLE_RESOLVER)`
+
+**Why Karni objects.** One email is one person, so a person is found or created by an account or an email, never by a name alone. The resolver itself comes from KARNI_PEOPLE_RESOLVER.
+
+**Fix.** Pass user= (a signed-in user) or email=. Point KARNI_PEOPLE_RESOLVER at karni.people.services.Resolver or a subclass of it.
+
+<a id="e254"></a>
+
+#### E254: Another person has this email
+
+*API 400 response* · from `karni.people.models.Person.clean (the API and the admin)`
+
+**Why Karni objects.** Email is the identity of a person: one live person per email, kept in lower case, so every part finds the same person for the same address.
+
+**Fix.** Open the person who has the email instead, or merge the two people (people.merge, POST /api/people/&lt;id>/merge/).
+
+<a id="e255"></a>
+
+#### E255: The email of a person with an account changes through the account
+
+*API 400 response* · from `karni.people.models.Person.clean (the API and the admin)`
+
+**Why Karni objects.** A person linked to an account has the account's verified email. Changing it on the person alone would let anyone with write access point the person at an address nobody verified.
+
+**Fix.** Change the email through the account (the email change flow verifies the new address), or unlink the account first.
+
+<a id="e256"></a>
+
+#### E256: A value the people tables do not take
+
+*API 400 response* · from `karni.people.models (clean of Person, Address, Membership)`
+
+**Why Karni objects.** A person's time zone is an IANA name and its language a language tag, an address belongs to exactly one owner (a person or an organisation), and a person is a member of an organisation once.
+
+**Fix.** Use a time zone such as Europe/Paris and a language such as en or pt-BR; set exactly one of person and organisation on an address; change the existing membership instead of adding a second one.
+
+<a id="e257"></a>
+
+#### E257: A person fact, merge hook, erase hook or duplicate rule cannot be registered
+
+*exception* · from `karni.people.registry (register_fact, merge_hook, erase_hook, register_duplicate_rule, annotate_facts, duplicates)`
+
+**Why Karni objects.** Facts become annotations, filters and orderings on Person, so a fact's name must be an identifier that is not a Person field, and every contribution has one owner: a second registration under a taken name would silently replace the first.
+
+**Fix.** Name the fact after what it measures (orders, total_spent), give a second contribution its own name, or pass replace=True to swap one on purpose. Ask only for registered facts and rules (people.facts(), people.duplicate_rules()).
+
+<a id="e258"></a>
+
+#### E258: An account cannot be linked to this person
+
+*exception* · from `karni.people.link_account`
+
+**Why Karni objects.** An account is linked to a person only after its email is verified, only to the person with that email, and a person has one account. Otherwise anyone could take over a guest's orders by signing up with their address.
+
+**Fix.** Verify the account's email first (the verification link, a sign-in code or a provider that verified it), link it to the person with the same email, and merge the accounts by hand when the person has another one.
+
+<a id="e259"></a>
+
+#### E259: A people event that is not declared
+
+*exception* · from `karni.people.events.publish, karni.people.events.signal_for`
+
+**Why Karni objects.** The people contract's events are declared with their fields (karni.people.events.EVENTS), so every subscriber gets the same payload.
+
+**Fix.** Publish one of the declared events (people.person.created, linked, merged, erased, people.organisation.created, merged) with exactly its declared fields.
+
 <a id="e260"></a>
 
 #### E260: A database alias is not configured
@@ -994,6 +1134,66 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** karni.module.toml is what karni modules, karni add, karni remove and the app spec read about a module. assert_module_manifest checks it parses, that the karni.modules entry point names the package, that its settings are the DEFAULTS fragment's, and that its models are the app's. Each listed line is one mismatch.
 
 **Fix.** Fix the manifest or the module as the line says: list every KARNI_&lt;NAME>_* setting of conf.DEFAULTS under [provides.settings] with its type, list the app's models under provides.models, and add [project.entry-points."karni.modules"] &lt;name> = "karni_&lt;name>" to pyproject.toml, then reinstall the module. docs/modules.md lists every key.
+
+<a id="e320"></a>
+
+#### E320: A preferences lock or default names nothing, or a value its field refuses
+
+*system check (error)* · from `karni.preferences.checks.check_preferences`
+
+**Why Karni objects.** KARNI_PREFERENCES_LOCKED and KARNI_PREFERENCES_DEFAULTS map a group (details, a section's key, connections, emails) to names and values. A name nobody declared is most likely a typo, and a value its field refuses would be refused on the Settings page too.
+
+**Fix.** Write {'details': {'name': ...}, '&lt;section>': {'&lt;field>': ...}, 'connections': {'&lt;name>': True}, 'emails': {'&lt;kind>': False}} with the names the message lists, and values each field takes.
+
+<a id="e321"></a>
+
+#### E321: A settings section cannot be registered
+
+*exception* · from `karni.preferences.section`
+
+**Why Karni objects.** A section is a subclass of karni.preferences.Section registered under its part's prefix, once. Every field needs a valid default, so a project that never opens Settings still works. details, connections and emails are kept for the Settings page.
+
+**Fix.** Subclass preferences.Section, give every field a default its constraints accept, and register it as @preferences.section('&lt;prefix>') once.
+
+<a id="e322"></a>
+
+#### E322: A connection or an email kind cannot be declared
+
+*exception* · from `karni.preferences.connection; karni.preferences.email`
+
+**Why Karni objects.** A connection is named '&lt;prefix>.&lt;what>', needs at least one contract or module, has a default of True or False and says in one sentence what it does. An email kind is named '&lt;prefix>.&lt;message>'. Each name is declared once.
+
+**Fix.** Correct the name, needs=, default= or describe= the message names, or pass replace=True to replace a declaration on purpose.
+
+<a id="e323"></a>
+
+#### E323: A preferences change has a field or a value it cannot take
+
+*API 400 response* · from `karni.preferences.save_details; karni.preferences.save_section; PATCH /api/preferences/`
+
+**Why Karni objects.** Details and sections take their declared fields only, and each value must pass its field's checks (a time zone name, an ISO currency code, a number in range, one of the choices).
+
+**Fix.** Send the fields the Settings page lists, with values the errors per field describe. null puts a section's field back to its default.
+
+<a id="e324"></a>
+
+#### E324: A preferences value is fixed by the deployment
+
+*API 400 response* · from `karni.preferences.save_details; karni.preferences.save_section; karni.preferences.switch`
+
+**Why Karni objects.** KARNI_PREFERENCES_LOCKED fixes this value for the deployment. Every read answers the lock, so a change would not hold. The API answers 409.
+
+**Fix.** Change KARNI_PREFERENCES_LOCKED in the deployment's settings, or leave the value as it is.
+
+<a id="e325"></a>
+
+#### E325: No such section, connection or email kind
+
+*exception* · from `karni.preferences.get; karni.preferences.switch; /api/preferences/`
+
+**Why Karni objects.** The name is not registered: the part that declares it is not installed, its preferences.py or connections.py was not imported, or the name is misspelt. preferences.value() never raises it: it returns the default it is given.
+
+**Fix.** Use a name GET /api/preferences/ lists, install the part, or read the value with preferences.value('&lt;section>.&lt;field>', default).
 
 <a id="e340"></a>
 
@@ -1316,6 +1516,216 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** GET /api/search/?models= picks the resources to search by their router prefix. A name that is not one of them is a typo or a model without class Karni: search, and searching nothing for it would hide the mistake, so the request answers 400 with the resources it covers.
 
 **Fix.** Name resources from the response's resources list (the router prefixes, e.g. products), or declare class Karni: search on the model and route a BaseViewSet for it.
+
+<a id="e440"></a>
+
+#### E440: A message is sent as a kind nobody declared
+
+*exception* · from `karni.notify.send`
+
+**Why Karni objects.** A message kind is what Settings, Emails lists, what a person switches off and what a business edits. notify.send() sends declared kinds only, so every message the project sends can be found, switched and edited. karni.mail.send_templated() with an undeclared kind still sends its email, as it always did.
+
+**Fix.** Declare the kind in the part's messages.py with karni.mail.register_kind('&lt;prefix>.&lt;message>', title=..., template='&lt;app>/email/&lt;stem>', fields={...}), or correct the name to one GET /api/email-templates/ lists.
+
+<a id="w440"></a>
+
+#### W440: A message kind is declared on channels the project does not send on
+
+*system check (warning)* · from `karni.notify.checks.check_notify`
+
+**Why Karni objects.** KARNI_NOTIFY_CHANNELS lists the channels the project sends on. A kind whose channels are all left out of it goes nowhere, so its moment passes without a message.
+
+**Fix.** Add the channel to KARNI_NOTIFY_CHANNELS, or declare the kind with a channel the project sends on, or silence karni.W440 when that is what the project wants.
+
+<a id="e441"></a>
+
+#### E441: A person cannot switch or unsubscribe from this message kind
+
+*API 400 response* · from <code>karni.notify.choose; karni.notify.unsubscribe; PATCH /api/inbox/choices/&lt;kind&gt;/</code>
+
+**Why Karni objects.** A person's own switches cover the declared kinds that are switchable. A kind declared switchable=False (a sign-in code) always goes out. Unsubscribing is for marketing kinds (transactional=False): a receipt is switched off in the person's own switches, never by a link.
+
+**Fix.** Use a kind GET /api/inbox/choices/ lists, or switch a transactional kind off with notify.choose(user, kind, email=False) instead of notify.unsubscribe().
+
+<a id="e442"></a>
+
+#### E442: An unsubscribe link is not one this project signed
+
+*API 400 response* · from `karni.notify.read_token; /api/notify/unsubscribe/`
+
+**Why Karni objects.** The link in a marketing email carries a token signed with the project's SECRET_KEY, naming the address and the kind. A changed or cut token, or one signed under another secret, would let anyone unsubscribe anyone.
+
+**Fix.** Open the link from the email as it is. After a SECRET_KEY rotation, old links stop working: the person unsubscribes from a newer email or in their own switches.
+
+<a id="e443"></a>
+
+#### E443: A message is sent to something that is not a recipient
+
+*exception* · from `karni.notify.send; karni.notify.recipients`
+
+**Why Karni objects.** A message goes to a user (its email and its inbox), a person of karni.people (its email, and its account when it has one), an email address, or a list of them. Anything else has no address and no inbox.
+
+**Fix.** Pass to=[user], to=[person], to='someone@example.com' or a list of those.
+
+<a id="e444"></a>
+
+#### E444: An inbox request asks for a page that does not exist
+
+*API 400 response* · from `karni.notify.api.InboxView`
+
+**Why Karni objects.** GET /api/inbox/ pages the signed-in person's notifications from page 1. A page past the last one, or one that is not a number, has nothing to show.
+
+**Fix.** Ask for ?page= from 1 up to the page the previous answer's next named, or leave it out for the first page.
+
+<a id="e445"></a>
+
+#### E445: A message kind names a channel Karni does not send on
+
+*exception* · from `karni.mail.register_kind`
+
+**Why Karni objects.** A message kind goes to an email, the recipient's inbox in the app (karni.notify), or both. A misspelt channel would send the message nowhere.
+
+**Fix.** Pass channels=('email',), ('inbox',) or ('email', 'inbox').
+
+<a id="e446"></a>
+
+#### E446: Edited emails would be lost: karni.notify is not installed
+
+*exception* · from `karni.notify.adopt.adopt_edited_emails (karni-commerce's migration 0008)`
+
+**Why Karni objects.** The emails a business edits moved to the notifications contract. A part that kept them in its own table (karni-commerce did) copies each one to notify.EmailTemplate before it drops its table, and without karni.notify there is no table to copy to.
+
+**Fix.** Add 'karni.notify' to INSTALLED_APPS (features: {notify: true} in karni.yaml, or a recipe that requires notify>=1) and run migrate again.
+
+<a id="e450"></a>
+
+#### E450: An event is published that is not declared
+
+*exception* · from `karni.events.publish`
+
+**Why Karni objects.** A family event is an API between parts: subscribers read its declared fields and karni check lists it. An event published without a declaration, or with a version nobody declared, would reach subscribers with a payload no one agreed on.
+
+**Fix.** Declare it in the publishing app's events.py with declare('&lt;prefix>.&lt;record>.&lt;moment>', version=1, fields={...}) before publishing it, or publish a declared version.
+
+<a id="w450"></a>
+
+#### W450: A subscriber reads a version its event does not have
+
+*system check (warning)* · from `karni.outbox.checks.check_event_bus`
+
+**Why Karni objects.** Subscribers name the payload version they read. When the installed publisher declares other versions only, nothing is ever delivered to this subscriber.
+
+**Fix.** Move the subscriber to a declared version (@subscribe(name, version=N)) and adapt it to that payload, or keep the publisher publishing the old version too.
+
+<a id="e451"></a>
+
+#### E451: Family events need the karni.outbox app
+
+*system check (error)* · from `karni.outbox.checks.check_event_bus; karni.events.publish; karni.events.once`
+
+**Why Karni objects.** Subscribers are delivered from the outbox tables, written in the publisher's transaction. Without the app there is nowhere to write the event, so the subscribers would never be called.
+
+**Fix.** Add 'karni.outbox' to INSTALLED_APPS and run migrate.
+
+<a id="e452"></a>
+
+#### E452: An event declaration is malformed
+
+*exception* · from `karni.events.declare`
+
+**Why Karni objects.** A name is &lt;prefix>.&lt;record>.&lt;moment> in lower case, a version is a whole number from 1, fields are lower case names with a description each, and one part owns each name and version.
+
+**Fix.** Fix what the message names: declare('shop.order.paid', version=1, fields={'order': 'the order id', 'total': 'a decimal string'}). Declare a changed shape as the next version, next to the old one.
+
+<a id="e453"></a>
+
+#### E453: A published event's fields do not match its declaration
+
+*exception* · from `karni.events.publish; karni.events.once`
+
+**Why Karni objects.** Subscribers rely on the declared fields being there, and on plain JSON values: ids, states and amounts, never model instances, so no subscriber depends on another part's models.
+
+**Fix.** Pass exactly the declared fields (None for a value you do not have), ids instead of model instances (str(obj.pk)), and a person when the declaration names one.
+
+<a id="e454"></a>
+
+#### E454: A subscriber is malformed
+
+*exception* · from `karni.events.subscribe`
+
+**Why Karni objects.** A delivery row names its subscriber, and every process (web, worker) finds it by that name. A nested function or a lambda has no stable name, and two subscribers cannot share one.
+
+**Fix.** Define the subscriber at the top level of &lt;app>/listeners.py and decorate it with @subscribe('&lt;event name>', version=1), or pass a distinct name='...'.
+
+<a id="e455"></a>
+
+#### E455: KARNI_EVENTS_DISPATCHER cannot be used
+
+*system check (error)* · from `karni.outbox.checks.check_event_bus; karni.outbox.dispatch.load`
+
+**Why Karni objects.** After a commit, Karni calls the dispatcher with each event's id to hand it to a worker. A path that does not import, or names something that cannot be called, would leave every event waiting for the sweep.
+
+**Fix.** Name a function taking (event_id, *, countdown=0), as 'package.module.function', or remove the setting for the default (karni.outbox.dispatch.celery).
+
+<a id="e456"></a>
+
+#### E456: An assertion about family events failed
+
+*test failure* · from `karni.testing.events (capture_events, assert_events_declared)`
+
+**Why Karni objects.** The test expected an event to be published with given values, or an app's published events to be declared, and the code did otherwise.
+
+**Fix.** Read the events the message lists: publish the expected event inside the action's transaction, with the expected fields, and declare every event an app publishes.
+
+<a id="e460"></a>
+
+#### E460: A timeline= option of an event declaration is not valid
+
+*system check (error)* · from `karni.timeline.checks.check_timeline; karni.timeline.parse_option`
+
+**Why Karni objects.** An event's timeline= option writes the title of every entry the event makes. A template that reads attributes or fields the event does not declare would show more than the payload holds, or nothing.
+
+**Fix.** Write a title template with {field} for declared fields only (no attribute, index, conversion or format), or a mapping with the keys title, body, subjects ({field: 'app_label.model'}) and kind.
+
+<a id="w460"></a>
+
+#### W460: Events declare a timeline title and the outbox is not installed
+
+*system check (warning)* · from `karni.timeline.checks.check_timeline`
+
+**Why Karni objects.** Entries from family events are written by a subscriber, and subscribers are delivered through karni.outbox. Without it, no entry is written from events.
+
+**Fix.** Add 'karni.outbox' to INSTALLED_APPS and run migrate, or set KARNI_TIMELINE_FROM_EVENTS = False and write entries with timeline.record().
+
+<a id="e461"></a>
+
+#### E461: The timeline needs the people contract
+
+*system check (error)* · from `karni.timeline.checks.check_timeline`
+
+**Why Karni objects.** Every timeline entry may point at a person (people.Person), so karni.timeline cannot work without karni.people.
+
+**Fix.** Set KARNI_PEOPLE = True above karni_settings(globals()), or add 'karni.people' to INSTALLED_APPS, and run migrate.
+
+<a id="e462"></a>
+
+#### E462: timeline.record() was given an argument it cannot use
+
+*exception* · from `karni.timeline.record`
+
+**Why Karni objects.** An entry needs a kind (lower-case words joined by dots), a title, and a person or a subject to show on. A person is a people.Person, a subject a saved record, and data holds JSON values only.
+
+**Fix.** Pass kind='part.what', a title, person=&lt;Person or id> and/or subjects=[record or ('app_label.model', id)], and ids instead of model instances in data.
+
+<a id="e463"></a>
+
+#### E463: A timeline request names no record, or a malformed one
+
+*API 400 response* · from `karni.timeline.api.TimelineView`
+
+**Why Karni objects.** GET /api/timeline/ lists the timeline of exactly one person, organisation or record, and pages with the cursor it gave.
+
+**Fix.** Name exactly one of ?person=&lt;id>, ?organisation=&lt;id> or ?subject=&lt;app_label.model>:&lt;id>, and pass ?cursor= as the previous page's next.
 
 <a id="e470"></a>
 
@@ -2437,6 +2847,56 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Fix the exception the traceback names (karni explain - explains a pasted traceback), then run karni queries again.
 
+<a id="e950"></a>
+
+#### E950: KARNI_DEMO_ACCOUNTS is invalid
+
+*system check (error)* · from `karni.demo.conf.accounts; karni.demo.checks.check_demo_mode`
+
+**Why Karni objects.** Each demo account is a dict with a login and optional label, can, roles, staff, superuser and password. Roles are a list of role names or 'all'. A login can be listed only once.
+
+**Fix.** Fix the entry the message names. Example: KARNI_DEMO_ACCOUNTS = [{'login': 'customer@example.com', 'label': 'Customer', 'roles': ['customer'], 'can': 'Place orders.'}].
+
+<a id="e951"></a>
+
+#### E951: karni_demo_boot refuses to run outside demo mode
+
+*exception* · from `manage.py karni_demo_boot`
+
+**Why Karni objects.** The boot command seeds the database with accounts that have a known password. That is right for a public demo and wrong for anything else, so it refuses while KARNI_DEMO_MODE is off and DEBUG is off.
+
+**Fix.** Set KARNI_DEMO_MODE=True (the environment variable DEMO_MODE=True works too) for the public demo. Do not run it against real data.
+
+<a id="e952"></a>
+
+#### E952: A demo setting names a function that cannot be imported
+
+*exception* · from `karni.demo.guard.check_request; karni.demo.reset.reseed`
+
+**Why Karni objects.** KARNI_DEMO_WRITE_RULE and KARNI_DEMO_SEEDER are dotted paths to a function. The path could not be imported.
+
+**Fix.** Fix the dotted path (module.function), or unset the setting to use Karni's own rule.
+
+<a id="e953"></a>
+
+#### E953: Demo mode is on and the write guard is not installed
+
+*system check (error)* · from `karni.demo.checks.check_demo_mode`
+
+**Why Karni objects.** KARNI_DEMO_MODE only changes behaviour through DemoWriteGuardMiddleware. Without it every visitor can write to the demo and to its accounts.
+
+**Fix.** Add 'karni.demo.middleware.DemoWriteGuardMiddleware' (and DemoResetMiddleware) to MIDDLEWARE after Karni's stack, and 'karni.demo' to INSTALLED_APPS.
+
+<a id="e954"></a>
+
+#### E954: Demo mode is turned off
+
+*API 400 response* · from `karni.demo.views.DemoInfoView`
+
+**Why Karni objects.** GET /api/demo/ answers only while KARNI_DEMO_MODE is on.
+
+**Fix.** Set KARNI_DEMO_MODE=True for the public demo, or remove the route from urls.py.
+
 <a id="e960"></a>
 
 #### E960: A FloatField holds money
@@ -2656,6 +3116,86 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** StateField, CapacityField and NoOverlap rely on karni.models.GuardedModel for the loaded-state tracking, the conditional UPDATE, the transition history and the named conflicts. Without it saves would skip all of that silently.
 
 **Fix.** Inherit karni.models.BaseModel (which includes GuardedModel), or add karni.models.GuardedModel to the model's bases.
+
+<a id="e990"></a>
+
+#### E990: A value is outside the bounds of its field
+
+*exception* · from `karni.rules (class Karni: bounds); the API's serializer limits`
+
+**Why Karni objects.** class Karni: bounds gives a number, date or datetime field its lowest and highest value ($now and $today for dates). A value written new or changed outside them is refused before any SQL: from the API (a 400 on the field), the admin (a form error) and the ORM. A value that was stored before the rule existed is not checked again until it changes.
+
+**Fix.** Send a value inside the bounds the message names, or change the bound in class Karni (karni.yaml: bounds) if the rule is wrong.
+
+<a id="e991"></a>
+
+#### E991: A row with the same values already exists
+
+*exception* · from `karni.rules (class Karni: unique); karni.rules.UniqueRule`
+
+**Why Karni objects.** class Karni: unique makes the fields unique among the live rows (and, with where, among the rows that match it), with a partial unique index PostgreSQL and SQLite enforce. Karni checks it before the write (a 400 on the first field), and the index refuses a duplicate that two requests write at the same moment (a 409).
+
+**Fix.** Change one of the values, or cancel or delete the row that holds them first.
+
+<a id="e993"></a>
+
+#### E993: A relation points at a row its rule does not allow
+
+*exception* · from `karni.rules (class Karni: targets)`
+
+**Why Karni objects.** class Karni: targets says which rows a foreign key may point at: a row filter on the target, with $me (the signed-in user), $now, $today and $&lt;field> (a field of the row being written, so two relations agree). A key that points elsewhere is refused with a 400 on the field.
+
+**Fix.** Point the field at a row that matches the filter the message names (an active listing, a course of yours, a contact of the deal's company).
+
+<a id="e994"></a>
+
+#### E994: A field cannot change
+
+*exception* · from `karni.rules (class Karni: frozen)`
+
+**Why Karni objects.** class Karni: frozen names fields that are set on create and never change (true), or that cannot change while the stored row matches a row filter (a won deal's value). Changing one would break what was decided from it (a reserved place, a paid amount).
+
+**Fix.** Leave the field as it is, or create a new row (a new booking for another slot).
+
+<a id="e995"></a>
+
+#### E995: The row cannot be deleted now
+
+*exception* · from `karni.rules (class Karni: delete)`
+
+**Why Karni objects.** class Karni: delete keeps a row while related rows point at it (blocked_by) or while it is not in a deletable state (when). Deleting it would leave orphans or erase a record that money or people depend on. The API answers 409.
+
+**Fix.** Delete or move the related rows the message counts first, or move the row to a state where it may be deleted (cancel it).
+
+<a id="e996"></a>
+
+#### E996: A move into a state misses what it needs
+
+*exception* · from `karni.rules (class Karni: moves)`
+
+**Why Karni objects.** class Karni: moves says what a move into a state (or a boolean becoming true) requires: fields that must hold a value (a lost reason) and related rows that must exist (a lesson before publishing). The move is refused with a 400 naming the field.
+
+**Fix.** Send the field the message names with the move, or add the related row first.
+
+<a id="e997"></a>
+
+#### E997: A row action is not legal in the row's state
+
+*exception* · from `karni.api.actions (RowAction, the viewset's row_actions; karni.yaml: actions)`
+
+**Why Karni objects.** A row action (pay, cancel, ship) declares the states it may run from. Called in another state it is refused with a 409 naming the state and the legal ones. An action that moves the row (to=) and finds it already there answers 200 and changes nothing, so calling it twice is safe.
+
+**Fix.** Reload the row and offer only the actions x-karni-actions lists for its state.
+
+<a id="e998"></a>
+
+#### E998: A rule of class Karni is declared wrongly
+
+*system check (error)* · from `karni.rules.rules_of; karni.checks.check_rules`
+
+**Why Karni objects.** bounds, unique, targets, frozen, delete and moves must name fields and relations the model has, with values of the right kind, so a rule never silently checks nothing.
+
+**Fix.** Fix the declaration the message names (karni.yaml: the entity's key of that name).
 
 ## Suggestions (`SUG`)
 
@@ -3006,6 +3546,420 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** The x axis, the metric and value of the y axis and the z axis must be ones the source's aggregation declares (karni.aggregation). The message quotes the source's own refusal, with its E38x code.
 
 **Fix.** Choose a group, metric and value the source declares, or add them to the source model's class Karni: aggregate.
+
+## COM (`COM`)
+
+<a id="com001"></a>
+
+### COM001: karni-commerce is installed without the people contract
+
+*system check (error)* · from `karni_commerce.checks.people_installed (karni.COM001)`
+
+**Why Karni objects.** Every order names the person who bought it (Order.person, found or made by karni.people.resolve at checkout), so the customers list, the person facts and the timeline are the same person in every part. Without karni.people the order table cannot be created.
+
+**Fix.** Set KARNI_PEOPLE = True above karni_settings(globals()) in config/settings.py (karni build writes it when karni.yaml lists the commerce module, or features: {people: true}), then run migrate.
+
+<a id="com002"></a>
+
+### COM002: A sellable adapter does not keep the commerce contract
+
+*test failure* · from `karni_commerce.testing.assert_sellable`
+
+**Why Karni objects.** Commerce calls the adapter of every kind the same way: it holds a line at checkout, lets it go when the order is not paid, takes it when paid and gives it back on a refund. An adapter that prices, holds or releases wrongly sells the same seat twice or loses stock.
+
+**Fix.** Read the message: it names the hook and what it saw. Fix that hook of the adapter (docs/commerce.md, Selling something), then run the test again.
+
+<a id="com003"></a>
+
+### COM003: A sellable's hold is not a positive number of minutes
+
+*exception* · from `karni_commerce.sellables.hold_of (Sellable.hold_minutes)`
+
+**Why Karni objects.** Checkout keeps an order's items for the shortest hold of its lines, and an order not paid by then is cancelled. Zero or a negative number would cancel it before the buyer could pay.
+
+**Fix.** Return None (the project's KARNI_COMMERCE_HOLD_MINUTES) or a whole number of minutes from 1 from the adapter's hold_minutes(item, options).
+
+<a id="com004"></a>
+
+### COM004: A sellable adapter is registered wrongly
+
+*exception* · from `karni_commerce.sellables.register`
+
+**Why Karni objects.** Commerce finds an adapter by its kind, and a cart line and an order line store that kind as a short name. register() takes a Sellable subclass whose kind is letters, digits and _.
+
+**Fix.** Decorate a subclass of karni_commerce.sellables.Sellable with @register and set kind = "booking" (a short name, unique in the project).
+
+## GAME (`GAME`)
+
+<a id="game001"></a>
+
+### GAME001: karni-game is installed without the people contract
+
+*system check (error)* · from `karni_game.checks.people_installed (karni.GAME001)`
+
+**Why Karni objects.** A player is the game profile of a person (karni.people), so a guest who signs in keeps their progress and the person page, the merge and the erase see the player. Without karni.people the player table cannot be created.
+
+**Fix.** Set KARNI_PEOPLE = True above karni_settings(globals()) in config/settings.py (karni build writes it when karni.yaml lists the game module), then run migrate.
+
+<a id="game002"></a>
+
+### GAME002: The request names no player
+
+*exception* · from `karni_game.api (HTTP 401)`
+
+**Why Karni objects.** Every save, score, wallet and progress call belongs to one player, found from the request alone: a signed-in account, or a guest's token. No endpoint takes a player's id from the client, so another player's progress is never reachable.
+
+**Fix.** Sign in, or call POST /api/game/guest/ once and send its token in the X-Player-Token header (KARNI_GAME_TOKEN_HEADER).
+
+<a id="game003"></a>
+
+### GAME003: The guest token is unknown or revoked
+
+*exception* · from `karni_game.players.player_for_token (HTTP 401)`
+
+**Why Karni objects.** A guest token is issued once and kept as a hash. It is revoked when the guest is upgraded to an account (its progress is the account's then) and when staff revoke it.
+
+**Fix.** Drop the stored token. Sign in to the account it was upgraded to, or issue a new guest with POST /api/game/guest/.
+
+<a id="game004"></a>
+
+### GAME004: The account has no person yet: its email is not verified
+
+*exception* · from `karni_game.players.player_for_user (HTTP 403)`
+
+**Why Karni objects.** An account is linked to a person only once its email is verified (the people contract), so nobody takes over another person's progress by signing up with their address. A player belongs to a person.
+
+**Fix.** Verify the account's email (the verification link or a sign-in with an email code), then call again. Until then the game can keep playing as a guest.
+
+<a id="game005"></a>
+
+### GAME005: Guest play is off
+
+*exception* · from `karni_game.api.GuestView (HTTP 403)`
+
+**Why Karni objects.** The project's Settings, Games section has allow_guests off, so only signed-in accounts play.
+
+**Fix.** Sign in first, or turn allow_guests on (preferences game.allow_guests).
+
+<a id="game006"></a>
+
+### GAME006: No active game has this slug
+
+*exception* · from `karni_game.api (HTTP 404)`
+
+**Why Karni objects.** Each path under /api/game/&lt;game>/ names a Game row by its slug. A game that is not active answers as if it did not exist.
+
+**Fix.** Use the slug of a game in the admin (Karni games, Games), or turn it active. karni load puts a game declared in a content file in the database.
+
+<a id="game007"></a>
+
+### GAME007: The save is larger than the game allows
+
+*exception* · from `karni_game.saves.write (HTTP 413)`
+
+**Why Karni objects.** A save is read and written whole on every sync, so each game caps its size (max_save_bytes in its settings, at most KARNI_GAME_MAX_SAVE_BYTES).
+
+**Fix.** Keep less in the save (derive what can be derived), or raise the game's max_save_bytes in its settings.
+
+<a id="game008"></a>
+
+### GAME008: The save changed on the server: a stale write
+
+*exception* · from `karni_game.saves (HTTP 409)`
+
+**Why Karni objects.** Every write names the version it started from (base_version). Another device wrote since, so this write would lose that one's progress. The server's version counter decides, not a device's clock.
+
+**Fix.** Read the server's copy in the answer's save, choose or combine, and write again with base_version set to its version.
+
+<a id="game009"></a>
+
+### GAME009: The save's schema version is not one the server knows
+
+*exception* · from `karni_game.saves.migrate (HTTP 400)`
+
+**Why Karni objects.** schema_version is the shape of the save's data. The server migrates an older save up to the game's save_schema_version, and cannot read a newer one: the client is ahead of the server.
+
+**Fix.** Raise the game's save_schema_version (and register the migration to it) before shipping a client that writes the new shape.
+
+<a id="game010"></a>
+
+### GAME010: A save migration is missing
+
+*exception* · from `karni_game.saves.migrate`
+
+**Why Karni objects.** The game saves a newer schema than a stored save, and each step from one schema version to the next is a function the project registers. A missing step would hand the client data of a shape it does not read.
+
+**Fix.** Register the step in &lt;app>/game.py: @hooks.save_migration("&lt;game>", n) on a function that takes the data of version n and returns the data of n + 1.
+
+<a id="game011"></a>
+
+### GAME011: Not a slot name, or no free slot
+
+*exception* · from `karni_game.saves (HTTP 400)`
+
+**Why Karni objects.** A slot is named in the path (a lowercase letter or digit, then up to 39 more, _ or -), and each game keeps at most max_slots slots per player.
+
+**Fix.** Use a slot name such as main or slot-2, or write to a slot the player has.
+
+<a id="game012"></a>
+
+### GAME012: No active board has this key in the game
+
+*exception* · from `karni_game.scores.find_board (HTTP 404)`
+
+**Why Karni objects.** A score goes to one board of one game, named by its key in the path. A board that is not active answers as if it did not exist.
+
+**Fix.** Use the key of one of the game's boards (GET /api/game/&lt;game>/ lists them), or turn the board active in the admin.
+
+<a id="game013"></a>
+
+### GAME013: The score is outside the board's plausible range
+
+*exception* · from `karni_game.scores.submit (HTTP 400)`
+
+**Why Karni objects.** A client can send any number, so each board names the lowest and the highest score a real run can make (min_value, max_value), and refuses the rest.
+
+**Fix.** Send the score the run made. When real runs go beyond the range, widen the board's min_value or max_value.
+
+<a id="game014"></a>
+
+### GAME014: The run is missing, too large, or does not check out
+
+*exception* · from `karni_game.scores.submit (HTTP 400)`
+
+**Why Karni objects.** A board may ask every score for its run (the seed and the input log a deterministic game replays), a daily board for a run on the day's seed, and the project's run check may refuse a run.
+
+**Fix.** Send run: {seed, inputs, duration_ms} with the score, use today's seed (GET /api/game/&lt;game>/daily/) on a daily board, and keep the run under KARNI_GAME_MAX_RUN_BYTES.
+
+<a id="game015"></a>
+
+### GAME015: Too many requests of this kind
+
+*exception* · from `karni_game.throttling.PlayerRateThrottle (HTTP 429)`
+
+**Why Karni objects.** Writes are limited per player (KARNI_GAME_RATES), so a script cannot flood the boards, the wallet or the events.
+
+**Fix.** Wait retry_after seconds (the Retry-After header) and send it again, or raise the scope's rate in KARNI_GAME_RATES.
+
+<a id="game016"></a>
+
+### GAME016: Not enough of the currency
+
+*exception* · from `karni_game.wallet.change (HTTP 409)`
+
+**Why Karni objects.** A balance never goes below 0. The wallet row is locked and written with a conditional update, so two purchases at once never spend the same coins.
+
+**Fix.** Earn more first: the answer has balance and needed.
+
+<a id="game017"></a>
+
+### GAME017: The reward is not available now
+
+*exception* · from `karni_game.rewards (HTTP 409)`
+
+**Why Karni objects.** Each reward says how often a player may have it: once a day for a daily reward, per_day claims in one of the game's days, and cooldown seconds between two.
+
+**Fix.** Ask again at next_at (the answer has it), or raise the reward's per_day or lower its cooldown.
+
+<a id="game018"></a>
+
+### GAME018: The client does not claim this reward
+
+*exception* · from `karni_game.rewards (HTTP 403)`
+
+**Why Karni objects.** Only an ad reward of trust client is claimed by the client. A daily reward comes with the check-in, a mission's and an achievement's with their progress, a match's with the realtime server's report, and an ad reward of trust callback only when the portal's server calls back, signed.
+
+**Fix.** Use the path the reward's kind has (docs/game-api.md, Rewards). For an ad reward of trust callback: POST rewards/&lt;key>/intent/ and hand the intent to the portal.
+
+<a id="game019"></a>
+
+### GAME019: A server-to-server request does not verify
+
+*exception* · from `karni_game.signatures.HmacVerifier (HTTP 403)`
+
+**Why Karni objects.** A portal's callback and a realtime server's report change balances and boards, so each is signed with a shared secret over its exact body, with a timestamp that stops a replay.
+
+**Fix.** Sign the raw body: X-Karni-Timestamp and X-Karni-Signature: sha256=&lt;HMAC-SHA256 of '&lt;timestamp>.' + body> with the secret in KARNI_GAME_PORTALS or KARNI_GAME_SERVER_SECRET, and keep the clocks within KARNI_GAME_SIGNATURE_TOLERANCE seconds.
+
+<a id="game020"></a>
+
+### GAME020: The intent token is not valid
+
+*exception* · from `karni_game.rewards.from_callback (HTTP 400)`
+
+**Why Karni objects.** An ad reward's callback names the player and the reward by the intent this server signed (POST rewards/&lt;key>/intent/), valid for KARNI_GAME_AD_INTENT_SECONDS.
+
+**Fix.** Hand the portal a fresh intent before each ad, and send it back unchanged.
+
+<a id="game021"></a>
+
+### GAME021: No such item for sale
+
+*exception* · from `karni_game.shop (HTTP 404)`
+
+**Why Karni objects.** The shop sells the game's active items that have a currency and a price.
+
+**Fix.** Use the key of an item GET shop/ lists with a price, or give the item a currency and a price in the admin.
+
+<a id="game022"></a>
+
+### GAME022: The player owns the item already
+
+*exception* · from `karni_game.shop (HTTP 409)`
+
+**Why Karni objects.** A cosmetic is owned once, so a second purchase would take currency for nothing.
+
+**Fix.** Equip it instead (POST items/&lt;item>/equip/).
+
+<a id="game023"></a>
+
+### GAME023: The player does not own the item
+
+*exception* · from `karni_game.shop (HTTP 409)`
+
+**Why Karni objects.** Only an item the player owns is worn.
+
+**Fix.** Buy it first (POST shop/&lt;item>/buy/), or earn it.
+
+<a id="game024"></a>
+
+### GAME024: A progress event the game does not count
+
+*exception* · from `karni_game.progress.report (HTTP 400)`
+
+**Why Karni objects.** Progress is counters the game reports, and the server unlocks from them. A counter no active achievement or mission counts, or an amount past the game's max_progress_step, would let a client invent progress or jump to a goal.
+
+**Fix.** Report the counters the game's achievements and missions name (GET achievements/ and missions/ list them), in amounts from 1 to max_progress_step. The answer's index names the event.
+
+<a id="game025"></a>
+
+### GAME025: An analytics event the game does not declare
+
+*exception* · from `karni_game.config.track (HTTP 400, or 202 with rejected)`
+
+**Why Karni objects.** Analytics events go through the family events to the project's own analytics, so each game declares the events it sends and their props (analytics in its settings). An undeclared event or prop, a wrong type or a long text is refused, so a client cannot fill the analytics with anything.
+
+**Fix.** Declare the event in the game's settings: analytics: {"level_done": {"level": "int"}}, and send at most 10 props of those types.
+
+<a id="game026"></a>
+
+### GAME026: A game's settings do not validate
+
+*exception* · from `karni_game.models.Game.clean (karni_game.settings.GameSettings)`
+
+**Why Karni objects.** A game's settings (its time zone, save limits, streak grace, analytics schema) are read on every call. A value the server cannot use is refused when it is saved, not when a player meets it.
+
+**Fix.** Read the message: it names each field and what it takes (docs/game.md, Game settings).
+
+<a id="game027"></a>
+
+### GAME027: Multiplayer is not set up
+
+*exception* · from `karni_game.multiplayer.secret (HTTP 503)`
+
+**Why Karni objects.** A realtime server verifies the player token and signs its reports with the secret it shares with the project. Without one, no token could be trusted.
+
+**Fix.** Set KARNI_GAME_SERVER_SECRET in the environment (a long random string) and give the same value to the realtime server.
+
+<a id="game028"></a>
+
+### GAME028: The guest cannot be upgraded to this account
+
+*exception* · from `karni_game.players.upgrade (HTTP 409)`
+
+**Why Karni objects.** An upgrade merges a guest's person into the account's person, and the guest's progress into the account's player. It needs a guest token, a guest (not an account already), and two people the people contract can merge.
+
+**Fix.** Send the guest's token in X-Player-Token (or guest_token) with a signed-in, verified account. The message names the reason a merge was refused.
+
+<a id="game029"></a>
+
+### GAME029: The player is banned from the boards
+
+*exception* · from `karni_game.scores.submit, karni_game.multiplayer (HTTP 403)`
+
+**Why Karni objects.** Staff banned the player (Game moderator, ban): their scores no longer count, they are on no board and get no realtime token. Their saves and wallet stay theirs.
+
+**Fix.** Staff unban the player in the admin or with POST /api/game-players/&lt;id>/unban/.
+
+<a id="game030"></a>
+
+### GAME030: karni_game.urls is not included
+
+*system check (error)* · from `karni_game.checks.run_checks`
+
+**Why Karni objects.** The game API (guest tokens, saves, scores, the wallet) is mounted by one include line. Without it the client's calls answer 404.
+
+**Fix.** Add path("api/game/", include("karni_game.urls")) to config/urls.py, before path("api/", include("karni.api.urls")).
+
+<a id="game031"></a>
+
+### GAME031: A real-money item is sold through the cart
+
+*exception* · from `karni_game.shop.buy (HTTP 400)`
+
+**Why Karni objects.** Real money goes through karni-commerce (the sellable kind game_item), with its checkout, payments and refunds. A soft currency never buys it.
+
+**Fix.** Add it to the cart: POST /api/carts/current/lines/ with kind game_item and the item's id, signed in. The item is the player's once the order is paid.
+
+<a id="game032"></a>
+
+### GAME032: A game hook is registered wrongly
+
+*exception* · from `karni_game.hooks (save_migration, run_check)`
+
+**Why Karni objects.** A save migration is one step from a schema version (a whole number from 1) to the next, and each game has one step per version and one run check per board, so the server knows which code runs.
+
+**Fix.** Register one function per step (@hooks.save_migration("&lt;game>", 1)) and per board (@hooks.run_check("&lt;game>", "&lt;board>")), or pass replace=True to swap one.
+
+<a id="game033"></a>
+
+### GAME033: The intent was used already with another request
+
+*exception* · from `karni_game.intents.once (HTTP 409)`
+
+**Why Karni objects.** An intent names one action, so a retry of a score, a claim or a purchase never counts twice. A second action under the same intent would be lost.
+
+**Fix.** Make a new intent (a UUID) for each new action, and send the same body when you retry one.
+
+<a id="game035"></a>
+
+### GAME035: A match report names what the game does not have
+
+*exception* · from `karni_game.multiplayer.report (HTTP 400)`
+
+**Why Karni objects.** A report is recorded whole or not at all, so each row must name a player the server knows (the token's sub), an active board of the game with a whole-number value, and active rewards of kind match.
+
+**Fix.** Read index in the answer: it is the row. Send the player's id from the token, and the keys of the game's boards and match rewards.
+
+<a id="game036"></a>
+
+### GAME036: A score's played_at is outside the window the server trusts
+
+*exception* · from `karni_game.scores.played_time (HTTP 400)`
+
+**Why Karni objects.** A score played offline names when it was played, so it lands on that day's and week's boards and a daily board takes that day's seed. The device's clock is trusted only that far back (KARNI_GAME_PLAYED_AT_WINDOW) and a minute ahead, so a changed clock cannot reach an old or a future board.
+
+**Fix.** Send queued scores sooner, send this one without played_at (it counts now), or widen KARNI_GAME_PLAYED_AT_WINDOW.
+
+<a id="game037"></a>
+
+### GAME037: The player has no save in this slot
+
+*exception* · from `karni_game.saves.empty (HTTP 404)`
+
+**Why Karni objects.** A slot the player never wrote, or deleted, has no save. The code tells it from a path that does not exist, so a client knows to start the slot (base_version 0).
+
+**Fix.** Write the slot with base_version 0, or read GET saves/ for the slots the player has.
+
+<a id="game038"></a>
+
+### GAME038: Other origins may call the game API, and the browser cannot send its token
+
+*system check (error)* · from `karni_game.checks.run_checks`
+
+**Why Karni objects.** A portal build of a game runs on the portal's domain and calls the game API with a token (X-Player-Token, or an account's JWT), never cookies. The browser sends the token's header only when CORS_ALLOW_HEADERS names it. Cookies never sign in across origins: the game views drop the session for such a call.
+
+**Fix.** Set CORS_ALLOW_HEADERS = (*default_headers, "x-player-token") (from corsheaders.defaults), or empty KARNI_GAME_CORS_ORIGINS.
 
 ## IMP (`IMP`)
 
@@ -3955,9 +4909,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni context, karni rules sync, karni add site (pyproject.toml [tool.karni] kind)`
 
-**Why Karni objects.** `karni new` records the project's kind in pyproject.toml: site, app or site+app. The agent files and `karni context` state it with its stack, so a value Karni cannot read stops them instead of guessing.
+**Why Karni objects.** `karni new` records the project's kind in pyproject.toml: site, app, site+app or game. The agent files and `karni context` state it with its stack, so a value Karni cannot read stops them instead of guessing.
 
-**Fix.** Set kind = "site", "app" or "site+app" under [tool.karni] in pyproject.toml (or remove the line, and Karni infers the kind from the project), then run `karni rules sync`.
+**Fix.** Set kind = "site", "app", "site+app" or "game" under [tool.karni] in pyproject.toml (or remove the line, and Karni infers the kind from the project), then run `karni rules sync`.
 
 <a id="c121"></a>
 
@@ -5047,7 +6001,87 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The first karni build after karni new --recipe writes the recipe's own files (its domain code, seeds and tests) over the stubs it writes itself. It never writes over anything else: a file that holds code of the project's stops the build, and nothing is written.
 
-**Fix.** Move your code out of the way (rename the file), run karni build again, then put your code back into the recipe's file. To build without the recipe's files, delete "recipe" from .karni/build.json.
+**Fix.** Move your code out of the way (rename the file), run karni build again, then put your code back into the recipe's file. To build without the recipe's files, delete it from "recipes" in .karni/build.json.
+
+<a id="c442"></a>
+
+### C442: A recipe's app label, or the recipe itself, is in the project already
+
+*karni command* · from `karni recipes add and karni new --recipe a --recipe b (karni_cli.recipes.compose)`
+
+**Why Karni objects.** A part is one Django app, so its app label must be new to the project, and a recipe is added once. The merge stops before anything is written.
+
+**Fix.** Rename the project's app (apps.&lt;new label>, with was: on each entity), or remove the part that brought it (karni recipes remove &lt;name>). For a newer version of a part, run karni recipes upgrade &lt;name>.
+
+<a id="c443"></a>
+
+### C443: A recipe's role does not follow the family rules
+
+*karni command* · from `karni recipes add and karni new --recipe a --recipe b (karni_cli.recipes.compose)`
+
+**Why Karni objects.** admin and customer are the family roles every part shares. Every other role of a part must be new to the project, and once the project holds another part it is named &lt;prefix>-&lt;role> (its app label first: bookings-staff), holds no "*" (only admin does) and is not a default role (customer is). Two parts with a staff role would otherwise give one part's staff the other part's rows.
+
+**Fix.** Rename the role in the recipe's karni.yaml (and every role:&lt;slug> and every test that signs in with it), move a default role's grants to customer, or grant the role its own app's patterns instead of "*".
+
+<a id="c444"></a>
+
+### C444: A route two apps want, or a family page's
+
+*karni command* · from `karni spec validate, karni recipes add (karni_cli.spec.validate, karni_cli.recipes.compose)`
+
+**Why Karni objects.** Each app's pages live under its own apps.&lt;label>.route, and the family pages (home at /, signin, account, search, inbox, settings, people, cart, checkout, orders) belong to Karni and its contracts, never to a part. A part that lists home when the project has one, or a page another part lists, would take a route twice.
+
+**Fix.** Give the app a route of its own (apps.&lt;label>.route: /&lt;label>), and drop the family page from the recipe's pages.
+
+<a id="c445"></a>
+
+### C445: Two recipes set a module option differently
+
+*karni command* · from `karni recipes add and karni new --recipe a --recipe b (karni_cli.recipes.compose)`
+
+**Why Karni objects.** Each part's module options are merged into one modules: section. A value the project wrote itself wins. Two parts that ask for different values of an option the project did not write leave karni-cli nothing to choose by.
+
+**Fix.** Write the value you want under modules.&lt;module>.&lt;option> in karni.yaml, then add the recipe again.
+
+<a id="c446"></a>
+
+### C446: A recipe requires what the project cannot have
+
+*karni command* · from `karni recipes add and karni new --recipe (karni_cli.recipes.compose)`
+
+**Why Karni objects.** recipe.toml's requires names core contracts (people, events) and modules, each with an optional version range. A version of a contract this Karni does not have, or a name that is neither a contract nor a module karni-cli knows, cannot be met.
+
+**Fix.** Upgrade Karni and karni-cli (karni upgrade), install the module (pip install karni-&lt;name>), or use a version of the recipe made for this Karni.
+
+<a id="c447"></a>
+
+### C447: A recipe conflicts with a part or a module of the project
+
+*karni command* · from `karni recipes add and karni new --recipe a --recipe b (karni_cli.recipes.compose)`
+
+**Why Karni objects.** recipe.toml's conflicts names recipes and modules a part cannot share a project with. It is checked both ways: the new recipe's list and each installed part's.
+
+**Fix.** Remove the other part first (karni recipes remove &lt;name>), or leave the recipe out.
+
+<a id="c448"></a>
+
+### C448: The project does not hold that recipe
+
+*karni command* · from `karni recipes remove and karni recipes upgrade (karni_cli.recipes.compose)`
+
+**Why Karni objects.** Only a recipe app.recipes lists is a part of the project.
+
+**Fix.** Name a recipe app.recipes lists in karni.yaml.
+
+<a id="c449"></a>
+
+### C449: A part has no record to upgrade from
+
+*karni command* · from `karni recipes upgrade (karni_cli.recipes.parts)`
+
+**Why Karni objects.** .karni/recipes/&lt;name>/ holds the fragment a part was added with and the sha256 of each of its files. Without it, karni-cli cannot tell the recipe's files from the project's changes, so it changes nothing.
+
+**Fix.** Compare with karni recipes show &lt;name> --files and copy what you want by hand, or restore .karni/recipes/&lt;name>/ from version control.
 
 <a id="c460"></a>
 
@@ -5098,6 +6132,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** requires is public, authenticated or a permission pattern as in grants (app.entity:action, with * for a part), so role grants and per-user grants open the entry the way they open the API. A pattern that names an entity the spec does not have opens it for nobody.
 
 **Fix.** Write public, authenticated, or a pattern such as shop.product:view, or leave requires out: each page takes its requirement from its access.
+
+<a id="c643"></a>
+
+### C643: A dashboard tile names something the spec does not have
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** A dashboard: tile counts or lists the rows of an entity of the spec, for the roles of the spec, or places a tile an app declares in code by its key. An entity or a role the spec does not have would show nothing, and two tiles with one key would hide one.
+
+**Fix.** Name an entity of apps (Shipment, shop.Shipment) and roles of roles, give each tile its own key, or leave entity out to place a code tile (commerce.revenue).
 
 <a id="c700"></a>
 
@@ -5268,6 +6312,86 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** app.api_version is the API's current version. karni build writes it as KARNI_API_VERSION, and the API is then mounted at /api/&lt;version>/. The name is a URL segment: lower case letters, digits and -, starting with a letter or digit, at most 16 characters, such as v1.
 
 **Fix.** Write a name like v1 or 2026-11, or leave the key out for an unversioned API.
+
+<a id="c760"></a>
+
+### C760: An entity's bounds do not fit its fields
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** bounds gives a number, date or datetime field its lowest and highest value. It names a field of the entity, takes min or max, a number for a number and a date, $now or $today for a date, and becomes class Karni: bounds (E990 when a write breaks it).
+
+**Fix.** Name a number, date or datetime field, e.g. bounds: {quantity: {min: 1}} or {expected_close: {min: $today}}.
+
+<a id="c761"></a>
+
+### C761: An entity's unique does not fit its fields
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** unique lists fields whose values are unique together among the live rows, as a list or as {fields, where}. It becomes a partial unique index, so it names fields of the entity, its where filter takes fixed values only, and an external entity takes none.
+
+**Fix.** Write unique: [[slot, member]] or [{fields: [slot, member], where: {status: {not: cancelled}}}] with fields of the entity.
+
+<a id="c762"></a>
+
+### C762: An entity's targets name something that is not a foreign key
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** targets maps a foreign key of the entity to a row filter the row it points at must match (E993 when a write breaks it).
+
+**Fix.** Name an fk or o2o field: targets: {listing: {active: true}}.
+
+<a id="c763"></a>
+
+### C763: An entity's frozen names a field it does not have
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** frozen maps a field to true (never changes after create) or to a row filter (cannot change while the row matches it, E994).
+
+**Fix.** Name a field of the entity: frozen: {slot: true, value: {stage: won}}.
+
+<a id="c764"></a>
+
+### C764: An entity's delete rule does not fit
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** delete takes when (a row filter the row must match to be deleted) and blocked_by (entities with an fk to this one whose live rows keep it). E995 refuses such a delete.
+
+**Fix.** Write delete: {when: {status: pending}, blocked_by: [Deal]}, naming an entity that points here (Entity.field when it has two fks to it).
+
+<a id="c765"></a>
+
+### C765: An entity's moves do not fit its states and fields
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** moves maps a state of the entity's state field (or a boolean field becoming true) to requires (fields), needs (entities that point here) and stamps (date or datetime fields). E996 refuses a move that misses one.
+
+**Fix.** Write moves: {lost: {requires: [lost_reason], stamps: [closed_at]}} with a state the field declares and fields of the entity.
+
+<a id="c766"></a>
+
+### C766: An entity's actions do not fit its states or roles
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** actions are row actions: from (the states it runs from), to (the state it moves to), by (who may, in access words) and field (the state field when there are two). They become the viewset's row_actions and x-karni-actions (E997 when called in another state).
+
+**Fix.** Name states of the entity's state field and access words of the spec: actions: {ship: {from: paid, to: shipped, by: owned:listing__seller__user}}.
+
+<a id="c767"></a>
+
+### C767: A row filter cannot be read
+
+*karni command* · from `karni spec validate (karni_cli.spec.rules)`
+
+**Why Karni objects.** A row filter is {path: value}: a field or a path through relations (ending in gt, gte, lt, lte, in or isnull), and a literal, $me, $now, $today, $&lt;field of the row> or {not: &lt;value>}. targets, frozen, delete, unique and blocked_by take one.
+
+**Fix.** Fix the path or the value the message names: {active: true}, {seller__user: {not: $me}}, {company: $company}.
 
 <a id="c780"></a>
 
@@ -5928,6 +7052,18 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** The aggregate action runs under the list's filters and access, in one query (two with Other), and refuses what the model does not declare. A hand-written GROUP BY view repeats the filters and the access check and is where hidden rows leak into totals.
 
 **Fix.** Declare the groups and values in `class Karni: aggregate`, then call <code>GET &lt;resource&gt;/aggregate/?group_by=...&amp;metric=...&amp;value=...</code>. Karni's docs page aggregations lists every parameter.
+
+<a id="k315"></a>
+
+### K315: Parts: never name another part.
+
+*agent rule, error* · enforced by `part-imports-part`, `part-role-prefix`, `part-route`
+
+**Rule.** A project may hold several recipes (`app.recipes`), each one a part with its app label as its prefix. A part's files (its app folder and <code>frontend/src/&lt;prefix&gt;/</code>) never import another part's code and never name its app label: no `import crm`, no `"crm.Deal"` in a foreign key, no `"crm.deal:own"`, no `"crm:deal-list"`, no `apps.get_model("crm", ...)`, no migration dependency on it, no `{% include "crm/..." %}`, no frontend import of another part's folder. Parts meet through the contracts: `karni.people`, `karni.events` (publish and subscribe by event name), `karni.timeline`, `karni.preferences`, `karni_commerce` and the modules the recipe requires. A connection to another part is code in <code>&lt;prefix&gt;/connections.py</code> that needs contracts and modules, never a recipe. Once a project holds a second part, every role a part adds is named <code>&lt;prefix&gt;-&lt;role&gt;</code> (`bookings-staff`) except `admin` and `customer`, and its pages live under its own base route (<code>apps.&lt;label&gt;.route</code>), never a family page's route (`/`, `/signin`, `/account`, `/search`, `/inbox`, `/settings`, `/people`, `/cart`, `/checkout`, `/orders`) and never another app's. `karni check` reads karni.yaml and `.karni/recipes/` and fails a role or route that breaks this, even after the merge accepted it.
+
+**Why Karni objects.** Every part must work alone and stay removable (`karni recipes remove`). One import or one foreign key to a sibling's model makes the pair inseparable and breaks the third part that was never meant to know either.
+
+**Fix.** Replace the reference with a contract: a person through `karni.people`, an event through `karni.events.publish` and a subscriber, a timeline entry through `karni.timeline.record`. Opt out with <code># karni: allow(part-imports-part): &lt;reason&gt;</code> (`//` in TypeScript) only for a file that is meant to join two parts. Rename a role <code>&lt;prefix&gt;-&lt;role&gt;</code>, or give the app its own <code>apps.&lt;label&gt;.route</code>, then `karni build`.
 
 ## ESLint rules (`@karni/ui/eslint-plugin`)
 

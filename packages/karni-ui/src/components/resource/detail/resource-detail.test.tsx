@@ -18,7 +18,15 @@ import { ResourceDetail } from "./ResourceDetail";
 
 vi.mock("../../../schema/useSchema", () => ({ useSchema: vi.fn() }));
 vi.mock("../../../hooks/useResourceItem", () => ({ useResourceItem: vi.fn() }));
-vi.mock("../displayLabel", () => ({ displayLabel: vi.fn() }));
+vi.mock("../displayLabel", () => {
+  // relationLabel and personName fall back to displayLabel: the mock sees every guess.
+  const guess = vi.fn();
+  return {
+    displayLabel: guess,
+    relationLabel: (_field: unknown, obj: Row) => guess(obj) as string,
+    personName: (obj: Row) => guess(obj) as string,
+  };
+});
 
 type Row = Record<string, unknown>;
 

@@ -468,12 +468,18 @@ def _kind(data: dict[str, Any]) -> Question | None:
     )
 
 
-def _module_asks(name: str, module: KnownModule, raw: dict[str, Any]) -> Iterable[Question]:
+def _module_asks(
+    name: str, module: KnownModule, raw: dict[str, Any], currency: str | None = None
+) -> Iterable[Question]:
+    from karni_cli.recipes.compose import CURRENCY_OPTIONS
+
     prefix = f"KARNI_{name.upper()}_"
     for ask in module.asks:
         option = ask.setting[len(prefix) :].lower() if ask.setting.startswith(prefix) else ""
         if option not in module.options or option in raw:
             continue
+        if currency and CURRENCY_OPTIONS.get(name) == option:
+            continue  # app.currency answers it (the build writes it)
         yield Question(
             id=f"modules.{name}.{option}",
             area="modules",
@@ -527,7 +533,9 @@ def questions(spec: schema.Spec, data: dict[str, Any]) -> list[Question]:
     if spec.app.kind != "app" and "site" in MODULES and "site" not in names:
         names.append("site")
     for name in names:
-        found += _module_asks(name, MODULES[name], _mapping(raw_modules.get(name)))
+        found += _module_asks(
+            name, MODULES[name], _mapping(raw_modules.get(name)), spec.app.currency
+        )
     raw_features = _mapping(data.get("features"))
     for name in schema.Features.model_fields:
         value = getattr(spec.features, name)

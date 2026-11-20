@@ -24,15 +24,20 @@ settings, optional dependencies, deploy checks and production
 why``, request ids, the development capture, ``karni trace``, ``karni replay``,
 ``karni queries``) · ``E96x``/``E97x`` typed fields and database guarantees
 (``karni.fields``) · ``E98x``/``W98x`` lifecycle and limited resources
-(``StateField``, capacity, ``no_overlap``) · ``E27x``/``W54x`` external
-tables, SQL views and a second database (``karni.db``) · ``E34x``/``W55x``
-tree models (``karni.tree``) · ``E49x``/``W62x`` the tree scope
+(``StateField``, capacity, ``no_overlap``) · ``E95x`` demo mode (``karni.demo``) ·
+``E27x``/``W54x`` external tables, SQL views and a second database (``karni.db``) ·
+``E34x``/``W55x`` tree models (``karni.tree``) · ``E49x``/``W62x`` the tree scope
 (``karni.accounts.tree_scope``) · ``E53x``/``W63x`` navigation from data
 (``karni.navigation``) · ``E57x``/``E58x``/``W65x`` taxonomy tagging
 (``karni.taxonomy``) · ``E38x``/``W57x``
 aggregations (``karni.aggregation``) · ``E43x``/``W59x`` cross-model search
 (``karni.global_search``) · ``E55x`` field groups and column sets
-(``karni.layout``).
+(``karni.layout``) · ``E45x``/``W45x`` family events and the outbox
+(``karni.events``, ``karni.outbox``) · ``E25x`` the people contract
+(``karni.people``) · ``E46x``/``W46x`` the timeline contract
+(``karni.timeline``) · ``E32x`` the preferences contract
+(``karni.preferences``) · ``E44x``/``W44x`` the notifications contract
+(``karni.notify``, and ``karni.mail``'s message kinds).
 ``SUG001`` to ``SUG099`` suggestions from code (``karni.suggestions``): what
 ``karni check`` and ``karni doctor`` print after the errors and warnings, never a
 failure. The prefix has three letters because the registry's code pattern reads
@@ -618,6 +623,50 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "'recent': 5}.",
     ),
     _e(
+        "E134",
+        "The written row is outside the caller's write scope",
+        "exception",
+        "karni.api.viewsets.BaseViewSet.check_written_row (perform_create / perform_update)",
+        "An access rule such as Owned('seller__user') limits the rows a caller may change. A "
+        "create or an update that leaves the row outside that rule (a listing in someone "
+        "else's shop, a lesson in another instructor's course) would let the caller write "
+        "rows that are not theirs, so it is refused with a 403 and nothing is saved.",
+        "Point the row at something of yours (your shop, your course), or give the caller a "
+        "role the rule admits.",
+    ),
+    _e(
+        "E135",
+        "Only some roles may set the owner of a row",
+        "exception",
+        "karni.api.viewsets.BaseViewSet.perform_create / perform_update (Access(assign=...))",
+        "The owner field of a row (the member of a booking) is the caller. Access(assign=...) "
+        "names who may set it to someone else (staff booking for a member, a manager "
+        "reassigning a deal). Anyone else who sends another user is refused with a 403.",
+        "Leave the owner field out (it becomes you), or ask someone the assign rule admits.",
+    ),
+    _e(
+        "E136",
+        "A row action is declared wrongly",
+        "exception",
+        "karni.api.actions (RowAction, row_actions)",
+        "row_actions maps action names to RowAction(...), whose by= is an access predicate, and "
+        "the states it names belong to the model's one StateField unless field= names another.",
+        "Write row_actions = {'ship': RowAction(from_='paid', to='shipped', by=Owned(...))}, "
+        "and name the StateField with field= when the model has two.",
+    ),
+    _e(
+        "W136",
+        "A row action has nothing to run yet",
+        "warning",
+        "karni.api.actions.missing_methods; karni.checks.check_viewsets",
+        "A row action without to= is the viewset's own @action method of that name (pay opens a "
+        "payment): Karni checks the state and who may, then runs it. Until the method exists no "
+        "route answers the action. It is a warning so a project built from karni.yaml migrates "
+        "and runs while the method is being written.",
+        "Write the @action(detail=True, methods=['post']) method of that name in the project's "
+        "viewset (<app>/viewsets.py), or give the action a to= state.",
+    ),
+    _e(
         "W101",
         "A hand-written serializer duplicates the one Karni generates",
         "warning",
@@ -1049,6 +1098,119 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         'Set KARNI_TERMS = {"version": "<version>", "url": "<where the terms are>"} to ask '
         "users to accept terms, or remove the client's call.",
     ),
+    # E250-E259 the people contract (karni.people, experimental)
+    _e(
+        "E250",
+        "A merge of two people who both have an account",
+        "exception",
+        "karni.people.merge (MergeRefused, HTTP 409)",
+        "A person is linked to at most one account. Merging two people who each have one "
+        "would have to merge the accounts too: their passwords, roles and sign-ins, which "
+        "only a person can decide.",
+        "Merge the accounts first, by hand: deactivate or delete one account (or unlink it "
+        "from its person), then merge the people.",
+    ),
+    _e(
+        "E251",
+        "A merge clash that only a merge hook can resolve",
+        "exception",
+        "karni.people.merge (MergeRefused, HTTP 409), karni.people.merge_plan",
+        "Both records have a one-to-one row of the same model (two CRM profiles), or moving "
+        "the dropped record's rows breaks a unique rule of their model (two bookings for one "
+        "slot). Karni cannot know which row wins, so it refuses instead of guessing.",
+        "Register a merge hook for the model named in the message, in its app's people.py: "
+        "@people.merge_hook(Model) def merge(keep, drop): fold the dropped record's row into "
+        "the kept one and delete it. Or skip the model with KARNI_PEOPLE_MERGE_SKIP.",
+    ),
+    _e(
+        "E252",
+        "A merge or an erase of records it does not take",
+        "exception",
+        "karni.people.merge, karni.people.merge_plan, karni.people.erase",
+        "A merge takes two live records of the same kind (two people or two organisations) "
+        "that are not the same row, and an erase takes a person. A deleted or already merged "
+        "record has nothing left to merge.",
+        "Pass two different live people (or organisations). To merge into a record that was "
+        "merged already, merge into the record it points at (merged_into).",
+    ),
+    _e(
+        "E253",
+        "people.resolve() cannot run",
+        "exception",
+        "karni.people.resolve, karni.people.get_resolver (KARNI_PEOPLE_RESOLVER)",
+        "One email is one person, so a person is found or created by an account or an email, "
+        "never by a name alone. The resolver itself comes from KARNI_PEOPLE_RESOLVER.",
+        "Pass user= (a signed-in user) or email=. Point KARNI_PEOPLE_RESOLVER at "
+        "karni.people.services.Resolver or a subclass of it.",
+    ),
+    _e(
+        "E254",
+        "Another person has this email",
+        "api",
+        "karni.people.models.Person.clean (the API and the admin)",
+        "Email is the identity of a person: one live person per email, kept in lower case, so "
+        "every part finds the same person for the same address.",
+        "Open the person who has the email instead, or merge the two people "
+        "(people.merge, POST /api/people/<id>/merge/).",
+    ),
+    _e(
+        "E255",
+        "The email of a person with an account changes through the account",
+        "api",
+        "karni.people.models.Person.clean (the API and the admin)",
+        "A person linked to an account has the account's verified email. Changing it on the "
+        "person alone would let anyone with write access point the person at an address "
+        "nobody verified.",
+        "Change the email through the account (the email change flow verifies the new "
+        "address), or unlink the account first.",
+    ),
+    _e(
+        "E256",
+        "A value the people tables do not take",
+        "api",
+        "karni.people.models (clean of Person, Address, Membership)",
+        "A person's time zone is an IANA name and its language a language tag, an address "
+        "belongs to exactly one owner (a person or an organisation), and a person is a "
+        "member of an organisation once.",
+        "Use a time zone such as Europe/Paris and a language such as en or pt-BR; set "
+        "exactly one of person and organisation on an address; change the existing "
+        "membership instead of adding a second one.",
+    ),
+    _e(
+        "E257",
+        "A person fact, merge hook, erase hook or duplicate rule cannot be registered",
+        "exception",
+        "karni.people.registry (register_fact, merge_hook, erase_hook, "
+        "register_duplicate_rule, annotate_facts, duplicates)",
+        "Facts become annotations, filters and orderings on Person, so a fact's name must "
+        "be an identifier that is not a Person field, and every contribution has one owner: "
+        "a second registration under a taken name would silently replace the first.",
+        "Name the fact after what it measures (orders, total_spent), give a second "
+        "contribution its own name, or pass replace=True to swap one on purpose. Ask only "
+        "for registered facts and rules (people.facts(), people.duplicate_rules()).",
+    ),
+    _e(
+        "E258",
+        "An account cannot be linked to this person",
+        "exception",
+        "karni.people.link_account",
+        "An account is linked to a person only after its email is verified, only to the "
+        "person with that email, and a person has one account. Otherwise anyone could take "
+        "over a guest's orders by signing up with their address.",
+        "Verify the account's email first (the verification link, a sign-in code or a "
+        "provider that verified it), link it to the person with the same email, and merge "
+        "the accounts by hand when the person has another one.",
+    ),
+    _e(
+        "E259",
+        "A people event that is not declared",
+        "exception",
+        "karni.people.events.publish, karni.people.events.signal_for",
+        "The people contract's events are declared with their fields (karni.people.events."
+        "EVENTS), so every subscriber gets the same payload.",
+        "Publish one of the declared events (people.person.created, linked, merged, erased, "
+        "people.organisation.created, merged) with exactly its declared fields.",
+    ),
     # E260-E269: command-line input the management commands refuse
     _e(
         "E260",
@@ -1283,6 +1445,74 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         'provides.models, and add [project.entry-points."karni.modules"] <name> = '
         '"karni_<name>" to pyproject.toml, then reinstall the module. docs/modules.md lists '
         "every key.",
+    ),
+    # E320-E329 the preferences contract (karni.preferences, experimental)
+    _e(
+        "E320",
+        "A preferences lock or default names nothing, or a value its field refuses",
+        "check",
+        "karni.preferences.checks.check_preferences",
+        "KARNI_PREFERENCES_LOCKED and KARNI_PREFERENCES_DEFAULTS map a group (details, a "
+        "section's key, connections, emails) to names and values. A name nobody declared is "
+        "most likely a typo, and a value its field refuses would be refused on the Settings "
+        "page too.",
+        "Write {'details': {'name': ...}, '<section>': {'<field>': ...}, 'connections': "
+        "{'<name>': True}, 'emails': {'<kind>': False}} with the names the message lists, "
+        "and values each field takes.",
+    ),
+    _e(
+        "E321",
+        "A settings section cannot be registered",
+        "exception",
+        "karni.preferences.section",
+        "A section is a subclass of karni.preferences.Section registered under its part's "
+        "prefix, once. Every field needs a valid default, so a project that never opens "
+        "Settings still works. details, connections and emails are kept for the Settings page.",
+        "Subclass preferences.Section, give every field a default its constraints accept, "
+        "and register it as @preferences.section('<prefix>') once.",
+    ),
+    _e(
+        "E322",
+        "A connection or an email kind cannot be declared",
+        "exception",
+        "karni.preferences.connection; karni.preferences.email",
+        "A connection is named '<prefix>.<what>', needs at least one contract or module, "
+        "has a default of True or False and says in one sentence what it does. An email "
+        "kind is named '<prefix>.<message>'. Each name is declared once.",
+        "Correct the name, needs=, default= or describe= the message names, or pass "
+        "replace=True to replace a declaration on purpose.",
+    ),
+    _e(
+        "E323",
+        "A preferences change has a field or a value it cannot take",
+        "api",
+        "karni.preferences.save_details; karni.preferences.save_section; PATCH /api/preferences/",
+        "Details and sections take their declared fields only, and each value must pass "
+        "its field's checks (a time zone name, an ISO currency code, a number in range, "
+        "one of the choices).",
+        "Send the fields the Settings page lists, with values the errors per field "
+        "describe. null puts a section's field back to its default.",
+    ),
+    _e(
+        "E324",
+        "A preferences value is fixed by the deployment",
+        "api",
+        "karni.preferences.save_details; karni.preferences.save_section; karni.preferences.switch",
+        "KARNI_PREFERENCES_LOCKED fixes this value for the deployment. Every read answers "
+        "the lock, so a change would not hold. The API answers 409.",
+        "Change KARNI_PREFERENCES_LOCKED in the deployment's settings, or leave the value "
+        "as it is.",
+    ),
+    _e(
+        "E325",
+        "No such section, connection or email kind",
+        "exception",
+        "karni.preferences.get; karni.preferences.switch; /api/preferences/",
+        "The name is not registered: the part that declares it is not installed, its "
+        "preferences.py or connections.py was not imported, or the name is misspelt. "
+        "preferences.value() never raises it: it returns the default it is given.",
+        "Use a name GET /api/preferences/ lists, install the part, or read the value with "
+        "preferences.value('<section>.<field>', default).",
     ),
     # E340-E359 / W550-W559 tree models (karni.models.TreeModel, karni.tree, experimental)
     _e(
@@ -1727,6 +1957,236 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "one worker leaves the other workers serving the old response until the TTL ends.",
         "Point KARNI_API_CACHE_ALIAS at a cache every process shares (Redis, the database "
         "cache) in production, or silence karni.W580 for a single-process deployment.",
+    ),
+    # E450-E469 / W450-W459 family events and the outbox (karni.events, karni.outbox,
+    # experimental)
+    _e(
+        "E450",
+        "An event is published that is not declared",
+        "exception",
+        "karni.events.publish",
+        "A family event is an API between parts: subscribers read its declared fields and "
+        "karni check lists it. An event published without a declaration, or with a version "
+        "nobody declared, would reach subscribers with a payload no one agreed on.",
+        "Declare it in the publishing app's events.py with declare('<prefix>.<record>.<moment>', "
+        "version=1, fields={...}) before publishing it, or publish a declared version.",
+    ),
+    _e(
+        "E451",
+        "Family events need the karni.outbox app",
+        "check",
+        "karni.outbox.checks.check_event_bus; karni.events.publish; karni.events.once",
+        "Subscribers are delivered from the outbox tables, written in the publisher's "
+        "transaction. Without the app there is nowhere to write the event, so the "
+        "subscribers would never be called.",
+        "Add 'karni.outbox' to INSTALLED_APPS and run migrate.",
+    ),
+    _e(
+        "E452",
+        "An event declaration is malformed",
+        "exception",
+        "karni.events.declare",
+        "A name is <prefix>.<record>.<moment> in lower case, a version is a whole number from "
+        "1, fields are lower case names with a description each, and one part owns each "
+        "name and version.",
+        "Fix what the message names: declare('shop.order.paid', version=1, fields={'order': "
+        "'the order id', 'total': 'a decimal string'}). Declare a changed shape as the next "
+        "version, next to the old one.",
+    ),
+    _e(
+        "E453",
+        "A published event's fields do not match its declaration",
+        "exception",
+        "karni.events.publish; karni.events.once",
+        "Subscribers rely on the declared fields being there, and on plain JSON values: ids, "
+        "states and amounts, never model instances, so no subscriber depends on another "
+        "part's models.",
+        "Pass exactly the declared fields (None for a value you do not have), ids instead of "
+        "model instances (str(obj.pk)), and a person when the declaration names one.",
+    ),
+    _e(
+        "E454",
+        "A subscriber is malformed",
+        "exception",
+        "karni.events.subscribe",
+        "A delivery row names its subscriber, and every process (web, worker) finds it by "
+        "that name. A nested function or a lambda has no stable name, and two subscribers "
+        "cannot share one.",
+        "Define the subscriber at the top level of <app>/listeners.py and decorate it with "
+        "@subscribe('<event name>', version=1), or pass a distinct name='...'.",
+    ),
+    _e(
+        "E455",
+        "KARNI_EVENTS_DISPATCHER cannot be used",
+        "check",
+        "karni.outbox.checks.check_event_bus; karni.outbox.dispatch.load",
+        "After a commit, Karni calls the dispatcher with each event's id to hand it to a "
+        "worker. A path that does not import, or names something that cannot be called, "
+        "would leave every event waiting for the sweep.",
+        "Name a function taking (event_id, *, countdown=0), as 'package.module.function', or "
+        "remove the setting for the default (karni.outbox.dispatch.celery).",
+    ),
+    _e(
+        "E456",
+        "An assertion about family events failed",
+        "test",
+        "karni.testing.events (capture_events, assert_events_declared)",
+        "The test expected an event to be published with given values, or an app's published "
+        "events to be declared, and the code did otherwise.",
+        "Read the events the message lists: publish the expected event inside the action's "
+        "transaction, with the expected fields, and declare every event an app publishes.",
+    ),
+    _e(
+        "W450",
+        "A subscriber reads a version its event does not have",
+        "warning",
+        "karni.outbox.checks.check_event_bus",
+        "Subscribers name the payload version they read. When the installed publisher declares "
+        "other versions only, nothing is ever delivered to this subscriber.",
+        "Move the subscriber to a declared version (@subscribe(name, version=N)) and adapt it "
+        "to that payload, or keep the publisher publishing the old version too.",
+    ),
+    # E46x/W46x the timeline contract (experimental, karni.timeline)
+    _e(
+        "E460",
+        "A timeline= option of an event declaration is not valid",
+        "check",
+        "karni.timeline.checks.check_timeline; karni.timeline.parse_option",
+        "An event's timeline= option writes the title of every entry the event makes. A "
+        "template that reads attributes or fields the event does not declare would show "
+        "more than the payload holds, or nothing.",
+        "Write a title template with {field} for declared fields only (no attribute, index, "
+        "conversion or format), or a mapping with the keys title, body, subjects "
+        "({field: 'app_label.model'}) and kind.",
+    ),
+    _e(
+        "E461",
+        "The timeline needs the people contract",
+        "check",
+        "karni.timeline.checks.check_timeline",
+        "Every timeline entry may point at a person (people.Person), so karni.timeline "
+        "cannot work without karni.people.",
+        "Set KARNI_PEOPLE = True above karni_settings(globals()), or add 'karni.people' to "
+        "INSTALLED_APPS, and run migrate.",
+    ),
+    _e(
+        "E462",
+        "timeline.record() was given an argument it cannot use",
+        "exception",
+        "karni.timeline.record",
+        "An entry needs a kind (lower-case words joined by dots), a title, and a person or a "
+        "subject to show on. A person is a people.Person, a subject a saved record, and data "
+        "holds JSON values only.",
+        "Pass kind='part.what', a title, person=<Person or id> and/or subjects=[record or "
+        "('app_label.model', id)], and ids instead of model instances in data.",
+    ),
+    _e(
+        "E463",
+        "A timeline request names no record, or a malformed one",
+        "api",
+        "karni.timeline.api.TimelineView",
+        "GET /api/timeline/ lists the timeline of exactly one person, organisation or record, "
+        "and pages with the cursor it gave.",
+        "Name exactly one of ?person=<id>, ?organisation=<id> or ?subject=<app_label.model>:"
+        "<id>, and pass ?cursor= as the previous page's next.",
+    ),
+    _e(
+        "W460",
+        "Events declare a timeline title and the outbox is not installed",
+        "warning",
+        "karni.timeline.checks.check_timeline",
+        "Entries from family events are written by a subscriber, and subscribers are "
+        "delivered through karni.outbox. Without it, no entry is written from events.",
+        "Add 'karni.outbox' to INSTALLED_APPS and run migrate, or set "
+        "KARNI_TIMELINE_FROM_EVENTS = False and write entries with timeline.record().",
+    ),
+    # E440-E449 / W440-W449 the notifications contract (experimental, karni.notify, and
+    # the message kinds of karni.mail)
+    _e(
+        "E440",
+        "A message is sent as a kind nobody declared",
+        "exception",
+        "karni.notify.send",
+        "A message kind is what Settings, Emails lists, what a person switches off and what "
+        "a business edits. notify.send() sends declared kinds only, so every message the "
+        "project sends can be found, switched and edited. karni.mail.send_templated() with "
+        "an undeclared kind still sends its email, as it always did.",
+        "Declare the kind in the part's messages.py with karni.mail.register_kind('<prefix>."
+        "<message>', title=..., template='<app>/email/<stem>', fields={...}), or correct the "
+        "name to one GET /api/email-templates/ lists.",
+    ),
+    _e(
+        "E441",
+        "A person cannot switch or unsubscribe from this message kind",
+        "api",
+        "karni.notify.choose; karni.notify.unsubscribe; PATCH /api/inbox/choices/<kind>/",
+        "A person's own switches cover the declared kinds that are switchable. A kind "
+        "declared switchable=False (a sign-in code) always goes out. Unsubscribing is for "
+        "marketing kinds (transactional=False): a receipt is switched off in the person's "
+        "own switches, never by a link.",
+        "Use a kind GET /api/inbox/choices/ lists, or switch a transactional kind off with "
+        "notify.choose(user, kind, email=False) instead of notify.unsubscribe().",
+    ),
+    _e(
+        "E442",
+        "An unsubscribe link is not one this project signed",
+        "api",
+        "karni.notify.read_token; /api/notify/unsubscribe/",
+        "The link in a marketing email carries a token signed with the project's SECRET_KEY, "
+        "naming the address and the kind. A changed or cut token, or one signed under another "
+        "secret, would let anyone unsubscribe anyone.",
+        "Open the link from the email as it is. After a SECRET_KEY rotation, old links stop "
+        "working: the person unsubscribes from a newer email or in their own switches.",
+    ),
+    _e(
+        "E443",
+        "A message is sent to something that is not a recipient",
+        "exception",
+        "karni.notify.send; karni.notify.recipients",
+        "A message goes to a user (its email and its inbox), a person of karni.people (its "
+        "email, and its account when it has one), an email address, or a list of them. "
+        "Anything else has no address and no inbox.",
+        "Pass to=[user], to=[person], to='someone@example.com' or a list of those.",
+    ),
+    _e(
+        "E444",
+        "An inbox request asks for a page that does not exist",
+        "api",
+        "karni.notify.api.InboxView",
+        "GET /api/inbox/ pages the signed-in person's notifications from page 1. A page past "
+        "the last one, or one that is not a number, has nothing to show.",
+        "Ask for ?page= from 1 up to the page the previous answer's next named, or leave it "
+        "out for the first page.",
+    ),
+    _e(
+        "E445",
+        "A message kind names a channel Karni does not send on",
+        "exception",
+        "karni.mail.register_kind",
+        "A message kind goes to an email, the recipient's inbox in the app (karni.notify), or "
+        "both. A misspelt channel would send the message nowhere.",
+        "Pass channels=('email',), ('inbox',) or ('email', 'inbox').",
+    ),
+    _e(
+        "E446",
+        "Edited emails would be lost: karni.notify is not installed",
+        "exception",
+        "karni.notify.adopt.adopt_edited_emails (karni-commerce's migration 0008)",
+        "The emails a business edits moved to the notifications contract. A part that kept "
+        "them in its own table (karni-commerce did) copies each one to notify.EmailTemplate "
+        "before it drops its table, and without karni.notify there is no table to copy to.",
+        "Add 'karni.notify' to INSTALLED_APPS (features: {notify: true} in karni.yaml, or a "
+        "recipe that requires notify>=1) and run migrate again.",
+    ),
+    _e(
+        "W440",
+        "A message kind is declared on channels the project does not send on",
+        "warning",
+        "karni.notify.checks.check_notify",
+        "KARNI_NOTIFY_CHANNELS lists the channels the project sends on. A kind whose channels "
+        "are all left out of it goes nowhere, so its moment passes without a message.",
+        "Add the channel to KARNI_NOTIFY_CHANNELS, or declare the kind with a channel the "
+        "project sends on, or silence karni.W440 when that is what the project wants.",
     ),
     # E47x/E48x/W61x tooling for large projects (experimental): context slices, the
     # check cache, volume seeding, the scaling budgets and query plans
@@ -2796,6 +3256,56 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Fix the exception the traceback names (karni explain - explains a pasted traceback), "
         "then run karni queries again.",
     ),
+    # E95x demo mode (karni.demo)
+    _e(
+        "E950",
+        "KARNI_DEMO_ACCOUNTS is invalid",
+        "check",
+        "karni.demo.conf.accounts; karni.demo.checks.check_demo_mode",
+        "Each demo account is a dict with a login and optional label, can, roles, staff, superuser "
+        "and password. Roles are a list of role names or 'all'. A login can be listed only once.",
+        "Fix the entry the message names. Example: KARNI_DEMO_ACCOUNTS = [{'login': "
+        "'customer@example.com', 'label': 'Customer', 'roles': ['customer'], "
+        "'can': 'Place orders.'}].",
+    ),
+    _e(
+        "E951",
+        "karni_demo_boot refuses to run outside demo mode",
+        "exception",
+        "manage.py karni_demo_boot",
+        "The boot command seeds the database with accounts that have a known password. That is "
+        "right for a public demo and wrong for anything else, so it refuses while KARNI_DEMO_MODE "
+        "is off and DEBUG is off.",
+        "Set KARNI_DEMO_MODE=True (the environment variable DEMO_MODE=True works too) for the "
+        "public demo. Do not run it against real data.",
+    ),
+    _e(
+        "E952",
+        "A demo setting names a function that cannot be imported",
+        "exception",
+        "karni.demo.guard.check_request; karni.demo.reset.reseed",
+        "KARNI_DEMO_WRITE_RULE and KARNI_DEMO_SEEDER are dotted paths to a function. The path "
+        "could not be imported.",
+        "Fix the dotted path (module.function), or unset the setting to use Karni's own rule.",
+    ),
+    _e(
+        "E953",
+        "Demo mode is on and the write guard is not installed",
+        "check",
+        "karni.demo.checks.check_demo_mode",
+        "KARNI_DEMO_MODE only changes behaviour through DemoWriteGuardMiddleware. Without it "
+        "every visitor can write to the demo and to its accounts.",
+        "Add 'karni.demo.middleware.DemoWriteGuardMiddleware' (and DemoResetMiddleware) to "
+        "MIDDLEWARE after Karni's stack, and 'karni.demo' to INSTALLED_APPS.",
+    ),
+    _e(
+        "E954",
+        "Demo mode is turned off",
+        "api",
+        "karni.demo.views.DemoInfoView",
+        "GET /api/demo/ answers only while KARNI_DEMO_MODE is on.",
+        "Set KARNI_DEMO_MODE=True for the public demo, or remove the route from urls.py.",
+    ),
     # E96x-E97x typed fields and database guarantees (karni.fields: E960-E970, W964-W967)
     _e(
         "E960",
@@ -3050,6 +3560,95 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "StateField and CapacityField CHECK constraints do work on SQLite.",
         "Use PostgreSQL wherever overlaps matter (production, CI). Silence karni.W980 only for a "
         "development database where accepting overlaps is fine.",
+    ),
+    # E990-E998 rules every write keeps (karni.rules, class Karni: bounds, unique, targets,
+    # frozen, delete, moves; row actions, experimental)
+    _e(
+        "E990",
+        "A value is outside the bounds of its field",
+        "exception",
+        "karni.rules (class Karni: bounds); the API's serializer limits",
+        "class Karni: bounds gives a number, date or datetime field its lowest and highest "
+        "value ($now and $today for dates). A value written new or changed outside them is "
+        "refused before any SQL: from the API (a 400 on the field), the admin (a form error) "
+        "and the ORM. A value that was stored before the rule existed is not checked again "
+        "until it changes.",
+        "Send a value inside the bounds the message names, or change the bound in class Karni "
+        "(karni.yaml: bounds) if the rule is wrong.",
+    ),
+    _e(
+        "E991",
+        "A row with the same values already exists",
+        "exception",
+        "karni.rules (class Karni: unique); karni.rules.UniqueRule",
+        "class Karni: unique makes the fields unique among the live rows (and, with where, "
+        "among the rows that match it), with a partial unique index PostgreSQL and SQLite "
+        "enforce. Karni checks it before the write (a 400 on the first field), and the index "
+        "refuses a duplicate that two requests write at the same moment (a 409).",
+        "Change one of the values, or cancel or delete the row that holds them first.",
+    ),
+    _e(
+        "E993",
+        "A relation points at a row its rule does not allow",
+        "exception",
+        "karni.rules (class Karni: targets)",
+        "class Karni: targets says which rows a foreign key may point at: a row filter on the "
+        "target, with $me (the signed-in user), $now, $today and $<field> (a field of the row "
+        "being written, so two relations agree). A key that points elsewhere is refused with a "
+        "400 on the field.",
+        "Point the field at a row that matches the filter the message names (an active "
+        "listing, a course of yours, a contact of the deal's company).",
+    ),
+    _e(
+        "E994",
+        "A field cannot change",
+        "exception",
+        "karni.rules (class Karni: frozen)",
+        "class Karni: frozen names fields that are set on create and never change (true), or "
+        "that cannot change while the stored row matches a row filter (a won deal's value). "
+        "Changing one would break what was decided from it (a reserved place, a paid amount).",
+        "Leave the field as it is, or create a new row (a new booking for another slot).",
+    ),
+    _e(
+        "E995",
+        "The row cannot be deleted now",
+        "exception",
+        "karni.rules (class Karni: delete)",
+        "class Karni: delete keeps a row while related rows point at it (blocked_by) or while "
+        "it is not in a deletable state (when). Deleting it would leave orphans or erase a "
+        "record that money or people depend on. The API answers 409.",
+        "Delete or move the related rows the message counts first, or move the row to a state "
+        "where it may be deleted (cancel it).",
+    ),
+    _e(
+        "E996",
+        "A move into a state misses what it needs",
+        "exception",
+        "karni.rules (class Karni: moves)",
+        "class Karni: moves says what a move into a state (or a boolean becoming true) "
+        "requires: fields that must hold a value (a lost reason) and related rows that must "
+        "exist (a lesson before publishing). The move is refused with a 400 naming the field.",
+        "Send the field the message names with the move, or add the related row first.",
+    ),
+    _e(
+        "E997",
+        "A row action is not legal in the row's state",
+        "exception",
+        "karni.api.actions (RowAction, the viewset's row_actions; karni.yaml: actions)",
+        "A row action (pay, cancel, ship) declares the states it may run from. Called in "
+        "another state it is refused with a 409 naming the state and the legal ones. An action "
+        "that moves the row (to=) and finds it already there answers 200 and changes nothing, "
+        "so calling it twice is safe.",
+        "Reload the row and offer only the actions x-karni-actions lists for its state.",
+    ),
+    _e(
+        "E998",
+        "A rule of class Karni is declared wrongly",
+        "check",
+        "karni.rules.rules_of; karni.checks.check_rules",
+        "bounds, unique, targets, frozen, delete and moves must name fields and relations the "
+        "model has, with values of the right kind, so a rule never silently checks nothing.",
+        "Fix the declaration the message names (karni.yaml: the entity's key of that name).",
     ),
     # E430-E449 / W590-W599 cross-model search (karni.global_search, experimental)
     _e(

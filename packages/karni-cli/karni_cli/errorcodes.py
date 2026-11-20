@@ -264,11 +264,13 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C112",
         "The project's kind is not one Karni knows",
         "karni context, karni rules sync, karni add site (pyproject.toml [tool.karni] kind)",
-        "`karni new` records the project's kind in pyproject.toml: site, app or site+app. The "
+        "`karni new` records the project's kind in pyproject.toml: site, app, site+app or "
+        "game. The "
         "agent files and `karni context` state it with its stack, so a value Karni cannot "
         "read stops them instead of guessing.",
-        'Set kind = "site", "app" or "site+app" under [tool.karni] in pyproject.toml (or remove '
-        "the line, and Karni infers the kind from the project), then run `karni rules sync`.",
+        'Set kind = "site", "app", "site+app" or "game" under [tool.karni] in pyproject.toml '
+        "(or remove the line, and Karni infers the kind from the project), then run `karni "
+        "rules sync`.",
     ),
     _c(
         "C121",
@@ -1173,7 +1175,86 @@ CODES: Final[tuple[CliCode, ...]] = (
         "is written.",
         "Move your code out of the way (rename the file), run karni build again, then put your "
         "code back into the recipe's file. To build without the recipe's files, delete "
-        '"recipe" from .karni/build.json.',
+        'it from "recipes" in .karni/build.json.',
+    ),
+    _c(
+        "C442",
+        "A recipe's app label, or the recipe itself, is in the project already",
+        "karni recipes add and karni new --recipe a --recipe b (karni_cli.recipes.compose)",
+        "A part is one Django app, so its app label must be new to the project, and a recipe is "
+        "added once. The merge stops before anything is written.",
+        "Rename the project's app (apps.<new label>, with was: on each entity), or remove the "
+        "part that brought it (karni recipes remove <name>). For a newer version of a part, run "
+        "karni recipes upgrade <name>.",
+    ),
+    _c(
+        "C443",
+        "A recipe's role does not follow the family rules",
+        "karni recipes add and karni new --recipe a --recipe b (karni_cli.recipes.compose)",
+        "admin and customer are the family roles every part shares. Every other role of a part "
+        "must be new to the project, and once the project holds another part it is named "
+        '<prefix>-<role> (its app label first: bookings-staff), holds no "*" (only admin '
+        "does) and is not a default role (customer is). Two parts with a staff role would "
+        "otherwise give one part's staff the other part's rows.",
+        "Rename the role in the recipe's karni.yaml (and every role:<slug> and every test that "
+        "signs in with it), move a default role's grants to customer, or grant the role its own "
+        'app\'s patterns instead of "*".',
+    ),
+    _c(
+        "C444",
+        "A route two apps want, or a family page's",
+        "karni spec validate, karni recipes add (karni_cli.spec.validate, karni_cli.recipes.compose)",
+        "Each app's pages live under its own apps.<label>.route, and the family pages (home at /, "
+        "signin, account, search, inbox, settings, people, cart, checkout, orders) belong to "
+        "Karni and its contracts, never to a part. A part that lists home when the project has "
+        "one, or a page another part lists, would take a route twice.",
+        "Give the app a route of its own (apps.<label>.route: /<label>), and drop the family "
+        "page from the recipe's pages.",
+    ),
+    _c(
+        "C445",
+        "Two recipes set a module option differently",
+        "karni recipes add and karni new --recipe a --recipe b (karni_cli.recipes.compose)",
+        "Each part's module options are merged into one modules: section. A value the project "
+        "wrote itself wins. Two parts that ask for different values of an option the project "
+        "did not write leave karni-cli nothing to choose by.",
+        "Write the value you want under modules.<module>.<option> in karni.yaml, then add the "
+        "recipe again.",
+    ),
+    _c(
+        "C446",
+        "A recipe requires what the project cannot have",
+        "karni recipes add and karni new --recipe (karni_cli.recipes.compose)",
+        "recipe.toml's requires names core contracts (people, events) and modules, each with an "
+        "optional version range. A version of a contract this Karni does not have, or a name "
+        "that is neither a contract nor a module karni-cli knows, cannot be met.",
+        "Upgrade Karni and karni-cli (karni upgrade), install the module (pip install "
+        "karni-<name>), or use a version of the recipe made for this Karni.",
+    ),
+    _c(
+        "C447",
+        "A recipe conflicts with a part or a module of the project",
+        "karni recipes add and karni new --recipe a --recipe b (karni_cli.recipes.compose)",
+        "recipe.toml's conflicts names recipes and modules a part cannot share a project with. "
+        "It is checked both ways: the new recipe's list and each installed part's.",
+        "Remove the other part first (karni recipes remove <name>), or leave the recipe out.",
+    ),
+    _c(
+        "C448",
+        "The project does not hold that recipe",
+        "karni recipes remove and karni recipes upgrade (karni_cli.recipes.compose)",
+        "Only a recipe app.recipes lists is a part of the project.",
+        "Name a recipe app.recipes lists in karni.yaml.",
+    ),
+    _c(
+        "C449",
+        "A part has no record to upgrade from",
+        "karni recipes upgrade (karni_cli.recipes.parts)",
+        ".karni/recipes/<name>/ holds the fragment a part was added with and the sha256 of each "
+        "of its files. Without it, karni-cli cannot tell the recipe's files from the project's "
+        "changes, so it changes nothing.",
+        "Compare with karni recipes show <name> --files and copy what you want by hand, or "
+        "restore .karni/recipes/<name>/ from version control.",
     ),
     # C460-C479 tree models in karni.yaml (experimental)
     _c(
@@ -1230,6 +1311,16 @@ CODES: Final[tuple[CliCode, ...]] = (
         "nobody.",
         "Write public, authenticated, or a pattern such as shop.product:view, or leave requires "
         "out: each page takes its requirement from its access.",
+    ),
+    _c(
+        "C643",
+        "A dashboard tile names something the spec does not have",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "A dashboard: tile counts or lists the rows of an entity of the spec, for the roles of "
+        "the spec, or places a tile an app declares in code by its key. An entity or a role the "
+        "spec does not have would show nothing, and two tiles with one key would hide one.",
+        "Name an entity of apps (Shipment, shop.Shipment) and roles of roles, give each tile its "
+        "own key, or leave entity out to place a code tile (commerce.revenue).",
     ),
     # C700-C719 taxonomies in karni.yaml (experimental)
     _c(
@@ -1391,6 +1482,83 @@ CODES: Final[tuple[CliCode, ...]] = (
         "and the API is then mounted at /api/<version>/. The name is a URL segment: lower case "
         "letters, digits and -, starting with a letter or digit, at most 16 characters, such as v1.",
         "Write a name like v1 or 2026-11, or leave the key out for an unversioned API.",
+    ),
+    # C760-C769 rules of an entity (karni.rules in core, experimental)
+    _c(
+        "C760",
+        "An entity's bounds do not fit its fields",
+        "karni spec validate (karni_cli.spec.rules)",
+        "bounds gives a number, date or datetime field its lowest and highest value. It names a "
+        "field of the entity, takes min or max, a number for a number and a date, $now or "
+        "$today for a date, and becomes class Karni: bounds (E990 when a write breaks it).",
+        "Name a number, date or datetime field, e.g. bounds: {quantity: {min: 1}} or "
+        "{expected_close: {min: $today}}.",
+    ),
+    _c(
+        "C761",
+        "An entity's unique does not fit its fields",
+        "karni spec validate (karni_cli.spec.rules)",
+        "unique lists fields whose values are unique together among the live rows, as a list or "
+        "as {fields, where}. It becomes a partial unique index, so it names fields of the entity, "
+        "its where filter takes fixed values only, and an external entity takes none.",
+        "Write unique: [[slot, member]] or [{fields: [slot, member], where: {status: {not: "
+        "cancelled}}}] with fields of the entity.",
+    ),
+    _c(
+        "C762",
+        "An entity's targets name something that is not a foreign key",
+        "karni spec validate (karni_cli.spec.rules)",
+        "targets maps a foreign key of the entity to a row filter the row it points at must "
+        "match (E993 when a write breaks it).",
+        "Name an fk or o2o field: targets: {listing: {active: true}}.",
+    ),
+    _c(
+        "C763",
+        "An entity's frozen names a field it does not have",
+        "karni spec validate (karni_cli.spec.rules)",
+        "frozen maps a field to true (never changes after create) or to a row filter (cannot "
+        "change while the row matches it, E994).",
+        "Name a field of the entity: frozen: {slot: true, value: {stage: won}}.",
+    ),
+    _c(
+        "C764",
+        "An entity's delete rule does not fit",
+        "karni spec validate (karni_cli.spec.rules)",
+        "delete takes when (a row filter the row must match to be deleted) and blocked_by "
+        "(entities with an fk to this one whose live rows keep it). E995 refuses such a delete.",
+        "Write delete: {when: {status: pending}, blocked_by: [Deal]}, naming an entity that "
+        "points here (Entity.field when it has two fks to it).",
+    ),
+    _c(
+        "C765",
+        "An entity's moves do not fit its states and fields",
+        "karni spec validate (karni_cli.spec.rules)",
+        "moves maps a state of the entity's state field (or a boolean field becoming true) to "
+        "requires (fields), needs (entities that point here) and stamps (date or datetime "
+        "fields). E996 refuses a move that misses one.",
+        "Write moves: {lost: {requires: [lost_reason], stamps: [closed_at]}} with a state the "
+        "field declares and fields of the entity.",
+    ),
+    _c(
+        "C766",
+        "An entity's actions do not fit its states or roles",
+        "karni spec validate (karni_cli.spec.rules)",
+        "actions are row actions: from (the states it runs from), to (the state it moves to), "
+        "by (who may, in access words) and field (the state field when there are two). They "
+        "become the viewset's row_actions and x-karni-actions (E997 when called in another "
+        "state).",
+        "Name states of the entity's state field and access words of the spec: actions: {ship: "
+        "{from: paid, to: shipped, by: owned:listing__seller__user}}.",
+    ),
+    _c(
+        "C767",
+        "A row filter cannot be read",
+        "karni spec validate (karni_cli.spec.rules)",
+        "A row filter is {path: value}: a field or a path through relations (ending in gt, gte, "
+        "lt, lte, in or isnull), and a literal, $me, $now, $today, $<field of the row> or "
+        "{not: <value>}. targets, frozen, delete, unique and blocked_by take one.",
+        "Fix the path or the value the message names: {active: true}, {seller__user: {not: "
+        "$me}}, {company: $company}.",
     ),
     # C780-C799 suggestions from code (experimental)
     _c(
