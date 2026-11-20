@@ -295,7 +295,7 @@ def _action(before: dict[str, Any] | None, diff: dict[str, Any], deleted: bool) 
 
 
 def record(instance: models.Model, action: str, diff: dict[str, Any]) -> None:
-    """Write (or enqueue) one entry for ``instance``; a no-op when ``diff`` is empty.
+    """Write (or enqueue) one entry for ``instance``. A no-op when ``diff`` is empty.
 
     Also a no-op inside :func:`unrecorded`.
     """
