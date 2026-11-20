@@ -602,6 +602,15 @@ apply codemods and list the manual steps. This file is the human summary.
   page has a section for it, the kinds table in docs/public-site.md and `karni new --kind`'s
   help name the `game` kind, and `examples/hybrid-demo` is an app with a game inside it, with
   a CI job.
+- **Fixed (experimental): @karni/game, found by playing a new game project end to end.** A
+  press made in a frame that ran no fixed step reaches the next step (on a 120 Hz screen with a
+  step of 1/60 every other tap was lost): the loop's `afterFrame`, Pixi's `afterTick` and
+  `useEndInputFrame(input, fixed)` clear input edges only after a frame that ran a step
+  (`FixedStep.lastSteps`). A device with no copy of a slot asks the save list first, so a new
+  player's empty slot is never a 404 in the console. `signInGuest()` signed in, with no guest on
+  the device, is the account's own player, where it made a stray guest for every member of an
+  app. `karni-game package` reports a missing portal id in one line with exit code 1, and a fresh
+  checkout type-checks before a build.
 
 ## 0.5.1 (2026-11-12)
 
