@@ -1824,7 +1824,7 @@ class Lead(BaseModel):
 | Setting | Env | Default | What it controls |
 |---|---|---|---|
 | `KARNI_STORAGE` | `KARNI_STORAGE` | `"local"` | `local` (filesystem) or `s3` (any S3-compatible service, needs `karni[s3]`). |
-| `KARNI_STATIC_STORAGE` | `KARNI_STATIC_STORAGE` | `"plain"` | The static files' storage (`STORAGES['staticfiles']`): `plain` (the default, the names as written), `manifest` (`karni.storage.static.ManifestStaticStorage`: `collectstatic` gives each file a name with a hash of its content, `{% static %}` names it, and a web server may let browsers keep it a year; a file missing from the manifest gets its plain name instead of a failed page) or a dotted path. New site projects set `manifest` in their production `.env`. See [static and media files](deploy.md#14-static-and-media-files). |
+| `KARNI_STATIC_STORAGE` | `KARNI_STATIC_STORAGE` | `"plain"` | The static files' storage (`STORAGES['staticfiles']`): `plain` (the default, the names as written), `manifest` (`karni.storage.static.ManifestStaticStorage`: `collectstatic` gives each file a name with a hash of its content, `{% static %}` names it, and a web server may let browsers keep it a year, while a file missing from the manifest gets its plain name instead of a failed page) or a dotted path. New site projects set `manifest` in their production `.env`. See [static and media files](deploy.md#14-static-and-media-files). |
 
 ### API (karni.api)
 
