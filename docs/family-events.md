@@ -181,6 +181,16 @@ Pass `name="notes.write_note"` to keep its deliveries when the function moves.
   `karni.outbox.tasks.deliver`. With `CELERY_TASK_ALWAYS_EAGER` (tests, a
   project run without a worker) delivery runs right after the commit, in the
   process that committed.
+- **In development, no worker needed.** While `DEBUG` is on, the default
+  dispatcher is `karni.outbox.dispatch.inline`: delivery runs right after the
+  commit, in the process that committed, as eager mode does. So a
+  `runserver` with no Celery worker fills the timeline and the inbox at
+  once. `KARNI_EVENTS_INLINE` decides it: unset (`None`) follows `DEBUG`,
+  `True` does the same in a small deployment that runs no broker and no
+  worker, `False` keeps Celery even in `DEBUG`. A dispatcher of your own
+  (`KARNI_EVENTS_DISPATCHER`) is used either way, and production (`DEBUG`
+  off, the switch unset) queues the Celery task as before. A retry due later
+  is left to the sweep.
 - **One transaction per subscriber.** Each subscriber runs inside a savepoint
   of the transaction that marks its delivery delivered, under a lock on that
   delivery's row only (`SKIP LOCKED` on PostgreSQL). Its writes and the mark

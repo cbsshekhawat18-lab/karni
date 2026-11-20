@@ -836,6 +836,9 @@ BASE: dict[str, Any] = {
     # event reaches a worker, the runs of one delivery before it is failed, and the days a
     # delivered event is kept (None keeps them all).
     "KARNI_EVENTS_DISPATCHER": "karni.outbox.dispatch.celery",
+    # Deliver family events in the process that committed, with no worker: None follows
+    # DEBUG (development), True for a small deployment with no broker, False never.
+    "KARNI_EVENTS_INLINE": env.bool("KARNI_EVENTS_INLINE", default=None),
     "KARNI_EVENTS_MAX_ATTEMPTS": env.int("KARNI_EVENTS_MAX_ATTEMPTS", default=8),
     "KARNI_EVENTS_RETENTION_DAYS": env.int("KARNI_EVENTS_RETENTION_DAYS", default=30),
     # The key type `karni make model` writes (experimental): "uuid" (BaseModel) or

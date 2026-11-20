@@ -195,6 +195,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_DEBUG_TRACE_DAYS": "Days of `.karni/trace/` files to keep.",
     "KARNI_EVENTS_AUTODISCOVER": "Import every app's `events.py` and `listeners.py` at startup.",
     "KARNI_EVENTS_DISPATCHER": "Experimental. Dotted path of the function that hands a committed family event to a worker: `(event_id, *, countdown=0)`. The default queues a Celery task, and the sweep sends what a down broker refused. See [family events](family-events.md).",
+    "KARNI_EVENTS_INLINE": "Experimental. Whether the default dispatcher delivers a committed family event in the process that committed, with no worker: `None` (the default) follows `DEBUG`, so development fills the timeline and the inbox at once, `True` for a small deployment that runs no broker, `False` keeps Celery. A `KARNI_EVENTS_DISPATCHER` of your own is used either way. See [family events](family-events.md).",
     "KARNI_EVENTS_MAX_ATTEMPTS": "Experimental. Runs of one family event delivery before it is marked failed (1 to 100). Retries wait 10 seconds, then four times longer each time, at most 6 hours.",
     "KARNI_EVENTS_RETENTION_DAYS": "Experimental. Days a delivered family event stays in the outbox. Events with a pending or failed delivery stay. `None` keeps them all and schedules no pruning.",
     "KARNI_SCHEDULES_AUTODISCOVER": "Import every app's `schedules.py` at startup.",
