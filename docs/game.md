@@ -410,8 +410,10 @@ writes an app project (the API, the admin, the React app) with:
   signing in with a code sent by email (`KARNI_EMAIL_OTP = True`): the page
   then calls `POST upgrade/`.
 - `frontend/portal/`, the same game alone for the game portals: `npm run
-  game:package` builds, checks and zips one package per portal
-  ([building for portals](game-client.md#building-for-portals)). A package
+  game:package` builds, checks and zips one package per portal that needs no
+  id of the project's (web, itch.io, Poki, CrazyGames), and `--portal
+  gamedistribution` or `--portal y8` adds one once its ids are in the build
+  environment ([building for portals](game-client.md#building-for-portals)). A package
   calls the game API named by `KARNI_GAME_API_URL` with the guest's token,
   and the server lists the portals' origins in `KARNI_GAME_CORS_ORIGINS`
   (read from the environment in `config/settings.py`, with

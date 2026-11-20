@@ -222,7 +222,12 @@ FILES = (
 FRONTEND_PACKAGE = "frontend/package.json"
 TSCONFIG = "frontend/tsconfig.json"
 GITIGNORE = ".gitignore"
-PORTAL_SCRIPT = ("game:package", "karni-game package --root portal")
+#: The portals that need no id of the project's: add --portal gamedistribution and
+#: --portal y8 once their ids are in the build environment (karni-game portals).
+PORTAL_SCRIPT = (
+    "game:package",
+    "karni-game package --root portal --portal web --portal itch --portal poki --portal crazygames",
+)
 PORTAL_IGNORE = (
     "# The portal packages of the game (npm run game:package).\nfrontend/portal/dist-portals/\n"
 )
