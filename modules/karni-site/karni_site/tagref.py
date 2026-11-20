@@ -47,7 +47,7 @@ TAGS: Final[tuple[Tag, ...]] = (
         "karni_seo",
         "tag",
         '{% karni_seo %}<title>...</title><meta name="description" content="...">{% endkarni_seo %}',
-        "In base.html's <head>, around the design's own title and description. It writes the page's title, description, canonical link, robots for a hidden page, the Open Graph and Twitter tags and the site's JSON-LD. Each value is the first of: the admin's entry for the page (Page titles and descriptions), `seo` in the view's context (a dict), the page's row, the tags written inside, the site's settings. The page's row is `seo` or `object` in the context when it is a row, else the row in the context whose get_absolute_url() is the page's path. Its fields are the ones `class Karni: seo` names, else seo_title, seo_description and seo_image, else a title, description or image field by a usual name. A detail page that has its row in the context needs no title of its own.",
+        "In base.html's <head>, around the design's own title and description. It writes the page's title, description, canonical link, robots for a hidden page (and noindex, nofollow on every page of a site closed to search engines), the Open Graph and Twitter tags and the site's JSON-LD. Each value is the first of: the admin's entry for the page (Page titles and descriptions), `seo` in the view's context (a dict), the page's row, the tags written inside, the site's settings. The page's row is `seo` or `object` in the context when it is a row, else the row in the context whose get_absolute_url() is the page's path. Its fields are the ones `class Karni: seo` names, else seo_title, seo_description and seo_image, else a title, description or image field by a usual name. A detail page that has its row in the context needs no title of its own.",
         "seo-by-default",
     ),
     Tag(
@@ -89,7 +89,7 @@ TAGS: Final[tuple[Tag, ...]] = (
         "get_menu",
         "tag",
         '{% get_menu "header" seed="website/menus/header.html" as items %}',
-        "A menu's items for a {% for %} loop in the design's markup: item.title, item.url, item.new_tab, item.current (this page), item.active (this page or one under it) and item.children. With seed, a menu the database does not have yet is created from the links in that template. An item with children from a model lists that model's rows, so a new row appears in the menu by itself, and with no title or address of its own it lists them in its place. karni import design --editable --map seeds a list of a model's detail pages that way.",
+        "A menu's items for a {% for %} loop in the design's markup: item.title, item.url, item.new_tab, item.current (this page), item.active (this page or one under it) and item.children. With seed, a menu the database does not have yet is created from the links in that template, and it follows that template afterwards: the items nobody changed in the admin take the seed's new links, and those someone changed, added or deleted stay theirs. An item with children from a model lists that model's rows, so a new row appears in the menu by itself, and with no title or address of its own it lists them in its place. karni import design --editable --map seeds a list of a model's detail pages that way.",
         "everything-the-client-edits",
     ),
     Tag(

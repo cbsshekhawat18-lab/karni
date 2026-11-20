@@ -340,6 +340,9 @@ class PageMeta:
     image_width: int | None = None
     image_height: int | None = None
     noindex: bool = False
+    #: The robots meta tag's directives: ``"noindex"`` for a page hidden from search engines,
+    #: ``KARNI_SITE_ROBOTS_TAG`` while the whole site is closed, ``""`` for none.
+    robots: str = ""
     type: str = "website"
     twitter_card: str = "summary"
     site_name: str = ""
@@ -359,8 +362,9 @@ class PageMeta:
         ]
         if self.canonical:
             lines.append(f'<link rel="canonical" href="{escape(self.canonical)}">')
-        if self.noindex:
-            lines.append('<meta name="robots" content="noindex">')
+        robots = self.robots or ("noindex" if self.noindex else "")
+        if robots:
+            lines.append(f'<meta name="robots" content="{escape(robots)}">')
         lines.append(meta("name", "generator", generator()))
         lines += [
             meta("property", "og:type", self.type),
@@ -485,6 +489,9 @@ def resolve(context: Any, request: Any, head: Head | None = None) -> PageMeta:
 
     noindex = bool(getattr(entry, "noindex", False) or view.get("noindex"))
     noindex = noindex or "noindex" in head.meta.get("robots", "").lower()
+    from karni_site.seo_views import robots_tag
+
+    closed = robots_tag()
     return PageMeta(
         title=title,
         description=description,
@@ -493,7 +500,8 @@ def resolve(context: Any, request: Any, head: Head | None = None) -> PageMeta:
         image_alt=_text(view.get("image_alt") or head.meta.get("og:image:alt") or title),
         image_width=image_width,
         image_height=image_height,
-        noindex=noindex,
+        noindex=noindex or bool(closed),
+        robots=closed or ("noindex" if noindex else ""),
         type=str(
             view.get("type") or from_object.get("type") or head.meta.get("og:type") or "website"
         ),

@@ -31,8 +31,9 @@ def no_ci(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_ci: None) -> Path:
     root = tmp_path / "proj"
-    root.mkdir()
+    (root / "frontend").mkdir(parents=True)
     (root / "manage.py").write_text("")
+    (root / "frontend" / "package.json").write_text("{}\n")  # a project with a staff app
     monkeypatch.chdir(root)
     monkeypatch.setattr(project_mod, "compose_service_running", lambda *a: False)
     monkeypatch.setattr(doctor_mod, "tool_version", lambda name: f"{name}-9.9.9")
@@ -92,6 +93,19 @@ def test_doctor_reports_the_environment(runner, project: Path) -> None:
     assert "stale (1 files)" in result.stdout  # AGENTS.md is not generated in this bare project
     assert "no store detected (installed: gigai-chronicle)" in result.stdout
     assert TIP_FIRST_LINE not in result.output
+
+
+def test_doctor_skips_node_and_the_ui_without_a_staff_app(
+    runner, project: Path, monkeypatch
+) -> None:
+    """A site made with --no-staff-app has no frontend/: no npm or @karni/ui to report."""
+    shutil.rmtree(project / "frontend")
+    monkeypatch.setattr(doctor_mod, "tool_version", _versions("v20.20.1", "10.7.0"))
+    out = runner.invoke(app, ["doctor", "-q"]).stdout
+    node = next(line for line in out.splitlines() if line.startswith("node"))
+    ui = next(line for line in out.splitlines() if line.startswith("ui"))
+    assert "not checked: no frontend/package.json" in node and "not checked" in ui
+    assert "too old" not in out and "manifest absent" not in out and "npm install" not in out
 
 
 def test_doctor_mentions_deprecated_agent_files_once(runner, project: Path) -> None:
@@ -257,6 +271,7 @@ def test_check_prints_the_tip_on_stderr_only(runner, project: Path) -> None:
 
 
 def test_failing_check_keeps_the_tip_for_later(runner, project: Path, monkeypatch) -> None:
+    shutil.rmtree(project / "frontend")  # an installed-less frontend/ would be skipped instead
     monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p, **kwargs: 1)
     failed = runner.invoke(app, ["check"])
     assert failed.exit_code == 1 and TIP_FIRST_LINE not in failed.output

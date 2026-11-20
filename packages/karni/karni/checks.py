@@ -803,25 +803,47 @@ def check_throttle_cache(app_configs: Any = None, **kwargs: Any) -> list[checks.
     DRF keeps its rate-limit counters in the ``default`` cache. A per-process
     backend (locmem, dummy) multiplies every limit by the number of workers,
     so a login throttle of 10/min becomes 10/min *per worker*.
+
+    A deployment that declares one process (``KARNI_SINGLE_PROCESS = True``)
+    has one set of counters, so the check is quiet, unless ``WEB_CONCURRENCY``
+    in the environment asks gunicorn for more than one worker.
     """
+    import os
+
     from django.conf import settings
 
     if settings.DEBUG:
         return []
     backend = str((getattr(settings, "CACHES", None) or {}).get("default", {}).get("BACKEND", ""))
-    if backend.endswith((".LocMemCache", ".DummyCache")):
+    if not backend.endswith((".LocMemCache", ".DummyCache")):
+        return []
+    workers = os.environ.get("WEB_CONCURRENCY", "").strip()
+    if getattr(settings, "KARNI_SINGLE_PROCESS", False):
+        if workers in ("", "1"):
+            return []
         return [
             check_warning(
                 "W501",
-                f"CACHES['default'] is {backend}, which is private to each process: the "
-                "auth throttles (login, register, password reset) are enforced per worker, "
-                "not per client.",
-                hint="Use a backend every worker shares (Redis, the database cache) in "
-                "production, or silence karni.W501 for a single-process deployment.",
+                f"KARNI_SINGLE_PROCESS is on, but WEB_CONCURRENCY={workers} starts that many "
+                f"gunicorn workers, and CACHES['default'] is {backend}, private to each: the "
+                "auth throttles are enforced per worker, not per client.",
+                hint="Set WEB_CONCURRENCY=1 (threads give one process its concurrency), or "
+                "use a backend every worker shares (Redis, the database cache).",
                 obj=backend,
             )
         ]
-    return []
+    return [
+        check_warning(
+            "W501",
+            f"CACHES['default'] is {backend}, which is private to each process: the "
+            "auth throttles (login, register, password reset) are enforced per worker, "
+            "not per client.",
+            hint="Use a backend every worker shares (Redis, the database cache) in "
+            "production, or declare a deployment of one process with "
+            "KARNI_SINGLE_PROCESS=True (and WEB_CONCURRENCY=1).",
+            obj=backend,
+        )
+    ]
 
 
 def _short(value: Any) -> str:

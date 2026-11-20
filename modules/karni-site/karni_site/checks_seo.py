@@ -37,7 +37,10 @@ Findings, one line each:
   without a word.
 
 Duplicates are counted among the pages search engines may index (no
-``noindex``, a canonical link to themselves).
+``noindex``, a canonical link to themselves). The run requests the pages as an
+open site serves them (``KARNI_SITE_ALLOW_INDEXING = True`` while it runs), so
+a development copy, closed to search engines on every page, is checked as
+production will be.
 
 An upload the pages show without its smaller copies gets them first, made
 in this process (:func:`karni_site.renditions.made_inline`), and the run
@@ -528,12 +531,21 @@ class SeoCrawl:
     # the run
 
     def run(self) -> list[str]:
-        with renditions.made_inline() as made:
+        from django.test.utils import override_settings
+
+        # The pages as an open site serves them: a development copy is closed to search
+        # engines (noindex on every page), and the check judges what production will say.
+        with override_settings(KARNI_SITE_ALLOW_INDEXING=True), renditions.made_inline() as made:
             failures = self._run()
         self.made = list(dict.fromkeys(made))
         return failures
 
-    def _run(self) -> list[str]:
+    def crawl(self) -> set[str] | None:
+        """Request every page: ``/``, the sitemap's, the named ones and those they link to.
+
+        Fills :attr:`pages` and returns the sitemap's paths (``None`` without a sitemap).
+        ``manage.py karni_site_seed`` calls it alone, to render each page once.
+        """
         from karni_site.routes import site_pages
 
         self._pending: deque[str] = deque(["/"])
@@ -549,6 +561,10 @@ class SeoCrawl:
                 hop = self.local(page.location, f"https://testserver{path}")
                 if hop is not None:
                     self._pending.append(hop)
+        return listed
+
+    def _run(self) -> list[str]:
+        listed = self.crawl()
         pages = [page for page in self.pages.values() if page.html]
         self.check_texts(pages)
         for page in pages:

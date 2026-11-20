@@ -915,7 +915,7 @@
   "code": "SITE019",
   "title": "An SEO tag or declaration is written wrongly",
   "kind": "exception",
-  "why": "{% karni_seo %} takes nothing and ends with {% endkarni_seo %}. {% image %} takes the image, then name=value pairs, alt among them. class Karni: sitemap is True, False or a dict of filter, exclude, lastmod, changefreq and priority, on a model with get_absolute_url(). class Karni: seo maps title, description, image and type to fields.",
+  "why": "{% karni_seo %} takes nothing and ends with {% endkarni_seo %}. {% image %} takes the image, then name=value pairs, alt among them. class Karni: sitemap is True, False or a dict of filter, exclude, lastmod, changefreq and priority, on a model with get_absolute_url(). class Karni: seo maps title, description, image and type to fields. @pages on a view gives the captures of each of its addresses.",
   "fix": "Write it as the message shows. The karni-site README has an example of each.",
   "source": "karni_site.seo_tags"
  },
@@ -950,6 +950,14 @@
   "why": "karni_site.notify.notify_recipients(row, setting=\"NAME\", ...) emails the addresses in settings.NAME, and to=[...] emails fixed addresses. It needs exactly one of the two. A setting that does not exist is a typo or a missing line, and the email would never go out. An empty list only logs a warning.",
   "fix": "Pass setting= or to=. For a setting, add NAME = env.list(\"NAME\", default=[]) to config/settings.py and NAME=team@example.com to .env (karni make form --notify NAME writes both).",
   "source": "karni_site.notify.recipients; karni_site.notify.notify_recipients"
+ },
+ {
+  "code": "SITE024",
+  "title": "A page fails while karni_site_seed renders it",
+  "kind": "exception",
+  "why": "manage.py karni_site_seed renders every page of the site once, in a deploy, so the blocks, menus and site details its templates give are stored before the first visitor. A page that answers a server error (500) with the new code and the migrated database would fail for every visitor too, and its defaults are not stored.",
+  "fix": "Open the page the message names with `karni serve` (or read the error the command printed) and fix the view or the template. --keep-going reports the failing pages without failing the run.",
+  "source": "karni_site.management.commands.karni_site_seed"
  },
  {
   "code": "STORE001",

@@ -1,0 +1,7 @@
+{% load karni_site %}{% site_defaults name="Harbour Notes" phone="01234 567890" %}<!DOCTYPE html>
+<html lang="en"><head><title>{% block title %}{% endblock %}</title></head>
+<body>
+<nav>{% get_menu "main" seed="seed/menu.html" as items %}{% for item in items %}<a href="{{ item.url }}">{{ item.title }}</a>{% endfor %}</nav>
+{% block content %}{% endblock %}
+<footer>{% editable "shared.footer" %}Open every day{% endeditable %}</footer>
+</body></html>

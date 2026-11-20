@@ -28,3 +28,5 @@ TEMPLATES[0]["DIRS"] = [Path(__file__).resolve().parent / "templates"]  # type: 
 TEMPLATES[0]["OPTIONS"]["context_processors"] += ["karni_site.context_processors.site"]  # type: ignore[name-defined]  # noqa: F821
 MEDIA_ROOT = tempfile.mkdtemp(prefix="karni-site-media-")
 ALLOWED_HOSTS = ["testserver", "www.example.com"]
+# The pages as an open site serves them. The tests of a closed site turn it off.
+KARNI_SITE_ALLOW_INDEXING = True

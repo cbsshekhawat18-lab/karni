@@ -242,6 +242,13 @@ body {
   font-size: 1.06rem;
 }
 .md-typeset .karni-hero .md-button { margin: 0.25rem 0.3rem; }
+.md-typeset .karni-tagline {
+  max-width: 40rem;
+  margin: -0.4rem auto 1.1rem;
+  font-size: 1.3rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
 .md-typeset .karni-eyebrow {
   display: inline-flex;
   align-items: center;

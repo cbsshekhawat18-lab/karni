@@ -349,6 +349,9 @@ Experimental now:
   `navigationEntries`, `activeRoute`, `defaultNavIcons`, `navIcon`,
   `isNavGroup`, `LayoutNavGroup`, the `NavGroup` slot and `Layout`'s
   `navSource`, `pathname` and `icons` in `@karni/ui`.
+- [Pages behind a capture without a model](public-site.md#pages-behind-a-capture-without-a-model-experimental):
+  `karni_site.sitemaps.pages` and `declared_pages`, and the page test's
+  `*declared_pages()` that `karni make site` writes.
 - [Taxonomies](models.md#taxonomies): `class Karni: taxonomies`,
   `karni.taxonomy`, `karni.api.taxonomy` (the `?<key>=` and
   `?<key>_descendants=` filters, the `facets/` and `tagged/` endpoints),

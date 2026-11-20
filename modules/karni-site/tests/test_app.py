@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from importlib import resources
 from importlib.metadata import entry_points
+from typing import Any
 
 from django.apps import apps
 from karni.errorcodes import registry
@@ -20,6 +21,7 @@ SEO_SETTINGS = {
     "KARNI_SITE_URL",
     "KARNI_SITE_ALLOW_INDEXING",
     "KARNI_SITE_ROBOTS_DISALLOW",
+    "KARNI_SITE_ROBOTS_TAG",
     "KARNI_SITE_SITEMAP_EXCLUDE",
     "KARNI_SITE_SITEMAPS",
     "KARNI_SITE_TECHNICAL_ROUTES",
@@ -61,6 +63,7 @@ def test_settings_fragment_is_import_light_and_read_through_get() -> None:
         "KARNI_SITE_MENU_ROWS",
         "KARNI_SITE_MENU_ROWS_LIMIT",
         "KARNI_SITE_MENU_SECTIONS",
+        "KARNI_SITE_MENU_FOLLOW_SEED",
         "KARNI_SITE_REDIRECTS_BEFORE_VIEWS",
         "KARNI_SITE_EDITOR_ROLE",
         # public forms
@@ -102,5 +105,53 @@ def test_entry_points_register_codes_and_checks() -> None:
     assert codes == (
         {f"SITE00{n}" for n in range(1, 10)}
         | {f"SITE01{n}" for n in range(10)}
-        | {f"SITE02{n}" for n in range(4)}
+        | {f"SITE02{n}" for n in range(5)}
     )
+
+
+#: The settings a deployment sets in its .env: read from the environment, as Karni's own.
+FROM_ENVIRONMENT = {
+    "KARNI_SITE_URL": ("https://www.example.com", "https://www.example.com"),
+    "KARNI_SITE_ALLOW_INDEXING": ("False", False),
+    "KARNI_SITE_QUEUE_RENDITIONS": ("false", False),
+    "KARNI_SITE_SEED_ON_RENDER": ("0", False),
+    "KARNI_SITE_ROBOTS_TAG": ("noindex", "noindex"),
+    "KARNI_SITE_NOTIFY_FROM": ("forms@example.com", "forms@example.com"),
+}
+
+
+def test_deployment_settings_come_from_the_environment(monkeypatch: Any) -> None:
+    import importlib
+
+    defaults = {name: conf.DEFAULTS[name] for name in FROM_ENVIRONMENT}
+    assert defaults == {
+        "KARNI_SITE_URL": None,
+        "KARNI_SITE_ALLOW_INDEXING": None,
+        "KARNI_SITE_QUEUE_RENDITIONS": True,
+        "KARNI_SITE_SEED_ON_RENDER": True,
+        "KARNI_SITE_ROBOTS_TAG": "noindex, nofollow",
+        "KARNI_SITE_NOTIFY_FROM": "",
+    }, "unset, each keeps its default"
+    for name, (text, _value) in FROM_ENVIRONMENT.items():
+        monkeypatch.setenv(name, text)
+    try:
+        importlib.reload(conf)
+        assert {name: conf.DEFAULTS[name] for name in FROM_ENVIRONMENT} == {
+            name: value for name, (_text, value) in FROM_ENVIRONMENT.items()
+        }
+    finally:
+        for name in FROM_ENVIRONMENT:
+            monkeypatch.delenv(name)
+        importlib.reload(conf)
+    assert {name: conf.DEFAULTS[name] for name in FROM_ENVIRONMENT} == defaults
+
+
+def test_the_settings_reference_names_their_variables() -> None:
+    from karni.conf.reference import module_conf_files, module_settings
+
+    path = dict(module_conf_files())["karni-site"]
+    found = {setting.name: setting.env for setting in module_settings(path, "karni-site")}
+    assert {name: found[name] for name in FROM_ENVIRONMENT} == {
+        name: name for name in FROM_ENVIRONMENT
+    }
+    assert found["KARNI_SITE_HIGHLIGHT"] is None, "a setting of the code, not the deployment"

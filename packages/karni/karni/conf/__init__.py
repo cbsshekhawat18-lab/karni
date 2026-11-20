@@ -42,7 +42,13 @@ from karni.conf.prod import PROD
 from karni.conf.sentry import maybe_init_sentry
 from karni.exceptions import KarniImproperlyConfigured
 
-__all__ = ["CALL_TIME_SETTINGS", "env", "karni_settings", "settings_changed_after_call"]
+__all__ = [
+    "CALL_TIME_SETTINGS",
+    "SINGLE_PROCESS_SETTINGS",
+    "env",
+    "karni_settings",
+    "settings_changed_after_call",
+]
 
 _PROFILES: dict[str, dict[str, Any]] = {"dev": DEV, "prod": PROD}
 
@@ -79,6 +85,21 @@ CALL_TIME_SETTINGS: dict[str, str] = {
     "KARNI_CACHE": "CACHES",
     "KARNI_STORAGE": "STORAGES",
     "KARNI_PEOPLE": "INSTALLED_APPS (karni.people, the people contract)",
+    "KARNI_STATIC_STORAGE": "STORAGES['staticfiles']",
+    "KARNI_SINGLE_PROCESS": (
+        "KARNI_CACHE, CELERY_TASK_ALWAYS_EAGER, CELERY_BROKER_URL, KARNI_READYZ_CHECKS and "
+        "KARNI_HEALTH_CHECKS"
+    ),
+}
+
+#: What ``KARNI_SINGLE_PROCESS = True`` sets, each only where the project, an override or
+#: the environment does not: one process, no Redis, no Celery worker.
+SINGLE_PROCESS_SETTINGS: dict[str, str] = {
+    "KARNI_CACHE": "locmem: the cache lives in the process",
+    "CELERY_TASK_ALWAYS_EAGER": "True: a task runs in the process that sends it",
+    "CELERY_BROKER_URL": "memory://: nothing ever opens a connection to a broker",
+    "KARNI_READYZ_CHECKS": "the database and the cache, not the broker",
+    "KARNI_HEALTH_CHECKS": "the database and the cache, not a Celery worker",
 }
 
 #: Per settings module (its ``__name__``): the namespace and a copy of each
@@ -408,6 +429,32 @@ def _ensure_sqlite_dir(databases: Any) -> None:
         Path(name).parent.mkdir(parents=True, exist_ok=True)
 
 
+def _single_process(
+    merged: dict[str, Any], namespace: MutableMapping[str, Any], overrides: dict[str, Any]
+) -> None:
+    """Apply :data:`SINGLE_PROCESS_SETTINGS` to the merged defaults.
+
+    A setting the namespace defines, an override passes or the environment sets
+    keeps its value: the switch only changes defaults.
+    """
+
+    def free(name: str) -> bool:
+        return name not in namespace and name not in overrides and name not in os.environ
+
+    if free("KARNI_CACHE"):
+        merged["KARNI_CACHE"] = "locmem"
+    if free("CELERY_TASK_ALWAYS_EAGER"):
+        merged["CELERY_TASK_ALWAYS_EAGER"] = True
+    if free("CELERY_BROKER_URL"):
+        merged["CELERY_BROKER_URL"] = "memory://"
+    for name, left_out in (
+        ("KARNI_READYZ_CHECKS", "karni.health.checks.check_broker"),
+        ("KARNI_HEALTH_CHECKS", "karni.health.checks.check_celery"),
+    ):
+        if free(name):
+            merged[name] = [check for check in merged.get(name, []) if check != left_out]
+
+
 def _record_consumed(namespace: MutableMapping[str, Any], used: Iterable[str]) -> None:
     """Keep a copy of each call-time input ``used``, keyed by the settings module's name.
 
@@ -509,9 +556,14 @@ def karni_settings(
     * ``SILENCED_SYSTEM_CHECKS``: starts as an empty list, so a project
       extends it (``SILENCED_SYSTEM_CHECKS += ["karni.W967"]``) instead of
       hitting a NameError.
-    * ``KARNI_CACHE`` / ``KARNI_STORAGE``: ``CACHES`` / ``STORAGES`` follow
-      their final value (namespace, override or environment) unless the
-      project supplies ``CACHES`` / ``STORAGES`` itself.
+    * ``KARNI_CACHE`` / ``KARNI_STORAGE`` and ``KARNI_STATIC_STORAGE``:
+      ``CACHES`` / ``STORAGES`` follow their final value (namespace, override
+      or environment) unless the project supplies ``CACHES`` / ``STORAGES``
+      itself.
+    * ``KARNI_SINGLE_PROCESS``: a deployment of one process, without Redis or
+      a Celery worker. It sets the defaults :data:`SINGLE_PROCESS_SETTINGS`
+      lists (the cache in memory, tasks in the process, the probes without the
+      broker and the worker), each only where the project has no value of its own.
     * ``KARNI_ADMIN_LOGO``: ``UNFOLD["SITE_LOGO"]`` and ``["SITE_ICON"]``
       default to resolvers that read the setting on every admin request, so
       it works wherever it is assigned. A bad value raises ``E303`` here.
@@ -561,6 +613,10 @@ def karni_settings(
         people=bool(final("KARNI_PEOPLE")),
     )
 
+    single_process = bool(final("KARNI_SINGLE_PROCESS"))
+    if single_process:
+        _single_process(merged, namespace, overrides)
+
     # Whole-value replacement: a project-supplied REST_FRAMEWORK (predefined
     # or passed as an override) owns its throttle rates untouched.
     rest_framework_is_karni = (
@@ -568,14 +624,23 @@ def karni_settings(
     )
     # CACHES and STORAGES follow KARNI_CACHE / KARNI_STORAGE defined before the
     # call too, not only the environment BASE read them from.
-    used = ["KARNI_AUTH_MODE", "KARNI_2FA", "KARNI_SOCIAL_AUTH", "KARNI_PEOPLE"]
-    for flag, derived, build in (
-        ("KARNI_CACHE", "CACHES", _caches),
-        ("KARNI_STORAGE", "STORAGES", _storages),
-    ):
-        if derived not in namespace and derived not in overrides:
-            merged[derived] = build(env, str(final(flag) or "") or None)
-            used.append(flag)
+    used = [
+        "KARNI_AUTH_MODE",
+        "KARNI_2FA",
+        "KARNI_SOCIAL_AUTH",
+        "KARNI_PEOPLE",
+        "KARNI_SINGLE_PROCESS",
+    ]
+    if "CACHES" not in namespace and "CACHES" not in overrides:
+        merged["CACHES"] = _caches(env, str(final("KARNI_CACHE") or "") or None)
+        used.append("KARNI_CACHE")
+    if "STORAGES" not in namespace and "STORAGES" not in overrides:
+        merged["STORAGES"] = _storages(
+            env,
+            str(final("KARNI_STORAGE") or "") or None,
+            str(final("KARNI_STATIC_STORAGE") or "") or None,
+        )
+        used += ["KARNI_STORAGE", "KARNI_STATIC_STORAGE"]
     if bool(final("KARNI_SOCIAL_AUTH")):
         used.append("KARNI_SOCIAL_PROVIDERS")
     if auth_mode == "session":

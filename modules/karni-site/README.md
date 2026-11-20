@@ -94,7 +94,38 @@ time a template renders, they are stored. A block nobody changed follows
 the template: a new version of the design changes it. A block someone
 changed keeps their version. Deleting a block hands it back to the
 template, and so does the admin action *Reset to the template's text or
-image*. Every change is in the History tab (`karni.audit`).
+image*. Every change someone makes is in the History tab (`karni.audit`).
+Storing a template's default, or following a new one, is nobody's edit and
+leaves no entry there.
+
+### `manage.py karni_site_seed`: the defaults stored in a deploy
+
+Without it, the first render of a page is a visitor's request, and that
+request stores each new block, the menu its seed gives and the site's
+details. Run the command in a deploy, after `migrate`, and no visitor's
+request writes:
+
+```sh
+python manage.py karni_site_seed
+```
+
+It requests every page the way `karni check --seo` finds them (`/`,
+sitemap.xml, the named URLs without arguments and every page they link to,
+up to `KARNI_SITE_SEO_MAX_PAGES`), through Django's test client in its own
+process, and stores what the templates give that the database does not
+hold yet. A block or menu item nobody edited takes the template's new
+default. It prints what it stored, and fails with `SITE024` when a page
+answers a server error (`--keep-going` reports those and exits 0). The
+release step of `karni make deploy compose` and `deploy.sh` of `karni make
+deploy systemd-nginx` run it in a project with this module.
+
+It seeds whatever `KARNI_SITE_SEED_ON_RENDER` says. With the command in
+the deploy, `KARNI_SITE_SEED_ON_RENDER = False` makes a visitor's request
+write nothing at all. A page the command does not reach (one only a form or
+a signed-in user opens, a page behind a capture that no link or sitemap
+entry names) then shows its template's defaults without storing them, so
+the client cannot edit them until a run reaches it. Leave the setting on to
+have such pages store their defaults on their first visit.
 
 ### `site`: the site's own details
 
@@ -225,8 +256,22 @@ footer-services.
 `seed` names a template holding the design's own navigation. The first
 time the menu is asked for and the database has none of that name, the
 links in it (nested lists becoming children) become the menu, so the
-client starts with the designer's menu. A deleted menu is seeded again. A
-list in the seed marked `data-karni-children-from="website.Service"` becomes
+client starts with the designer's menu. A deleted menu is seeded again.
+
+The menu then follows its seed, the way a block follows its template's
+text. When the seed's links change (a new link, a new text, a link to
+another page, such as a view that was renamed), each item the seed made and
+nobody changed takes its link's new text, target and place, an item whose
+link left the seed goes, and a new link becomes an item. An item someone
+changed in the admin (its title, where it goes, its place, shown or not),
+an item someone added and an item someone deleted stay as they are. A menu
+someone made in the admin, without a seed, never follows one.
+`KARNI_SITE_MENU_FOLLOW_SEED = False` seeds a menu once and leaves it, and
+`karni_site.menus.sync_menu(name, markup, source=...)` follows a seed from
+code of your own. A menu seeded before Karni 0.5.2 follows too: the items
+nobody saved since the seed made them follow, and the others are kept.
+
+A list in the seed marked `data-karni-children-from="website.Service"` becomes
 an item with children from that model instead of its links (in its parent's
 place when it is the whole menu), and keeps its links when the project has no
 such model. `karni import design --editable --map` marks a list whose links
@@ -331,7 +376,22 @@ Without a filter, the first boolean field `KARNI_SITE_PUBLISHED_FIELDS`
 names (`published`, `is_published`, `is_public`, `public`, `visible`,
 `is_visible`) must be true, a `status` with a `published` choice must be
 `published`, and a `published_at` must have passed. `sitemap = False`
-leaves a model out. A page or row hidden from search engines in the admin
+leaves a model out.
+
+A view behind a capture with a known set of addresses and no model
+(`/topics/<slug:slug>/` for a few topics) declares them, and they join the
+`pages` section and the page test (experimental):
+
+```python
+from karni_site.sitemaps import pages
+
+
+@pages({"slug": "tides"}, {"slug": "harbours"})  # or a function that returns them
+def topic(request, slug): ...
+```
+
+`karni_site.sitemaps.declared_pages()` lists their paths:
+`assert_pages(client, [*PAGES, *declared_pages()])`. A page or row hidden from search engines in the admin
 is left out, and so is what `KARNI_SITE_SITEMAP_EXCLUDE` names (URL names
 or paths, wildcards allowed). Karni's own routes (the health and readiness
 probes and the welcome page) are never listed, here or in the menu item's
@@ -346,6 +406,18 @@ copy is never indexed. `KARNI_SITE_ALLOW_INDEXING = True` or `False`
 decides for every environment. While indexing is allowed it names the
 sitemap and asks crawlers to stay out of `KARNI_SITE_ROBOTS_DISALLOW`.
 A `karni_site/robots.txt` template of the project's own replaces it.
+
+robots.txt is a request a proxy can rewrite: a CDN may put its own
+`Allow: /` in front of the file. So while indexing is not allowed, every
+page says it too. The redirect middleware adds `X-Robots-Tag: noindex,
+nofollow` to every response Django sends (a view that sets the header
+keeps its own), and `{% karni_seo %}` writes `<meta name="robots"
+content="noindex, nofollow">`. `KARNI_SITE_ROBOTS_TAG` holds the
+directives, and `""` sends neither. Static and media files are served by
+the web server, not Django: add the header in its configuration when they
+must stay out of search results too. `karni check --seo` checks the pages
+as an open site serves them, so a development copy is judged as production
+will be.
 
 ### `{% image %}`: uploads at the size the page shows them
 
@@ -617,6 +689,14 @@ module's plain `karni_site/500.html` (or `404.html`), which needs nothing.
 
 Every setting arrives through the module's settings fragment
 (`karni_site.conf.DEFAULTS`) and is overridable in the project's settings.py.
+The ones that differ between deployments of a project are read from the
+environment too, the way Karni's own are: `KARNI_SITE_URL`,
+`KARNI_SITE_ALLOW_INDEXING`, `KARNI_SITE_QUEUE_RENDITIONS`,
+`KARNI_SITE_SEED_ON_RENDER`, `KARNI_SITE_ROBOTS_TAG` and
+`KARNI_SITE_NOTIFY_FROM`, set in `.env` or `.env.prod` (the production
+examples `karni make deploy` writes list them). Leave a variable unset for
+its default: an empty one is a value. settings.py wins over the
+environment.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
@@ -631,10 +711,11 @@ Every setting arrives through the module's settings fragment
 | `KARNI_SITE_IMAGE_TYPES` | `["jpg", "jpeg", "png", "gif", "webp", "avif", "ico"]` | The image types an upload may be, checked by extension and content. |
 | `KARNI_SITE_CACHE` | `"default"` | The cache alias blocks, menus, redirects, page SEO entries and the settings are kept in. |
 | `KARNI_SITE_CACHE_TIMEOUT` | `3600` | Seconds a cached entry lives. Every save clears what it changed, so this is a backstop. |
-| `KARNI_SITE_SEED_ON_RENDER` | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). |
+| `KARNI_SITE_SEED_ON_RENDER` | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). `manage.py karni_site_seed` stores them whatever this says. |
 | `KARNI_SITE_MENU_ROWS` | `"karni_site.menus.menu_rows"` | The `(model, item) -> rows` function a *children from* item lists. The default is the model's default manager, so its scopes apply. |
 | `KARNI_SITE_MENU_ROWS_LIMIT` | `100` | At most this many rows per *children from* item. |
 | `KARNI_SITE_MENU_SECTIONS` | `True` | Whether a menu item is active on every page under its own path too (`/services/` on `/services/web/`). The home page never is. |
+| `KARNI_SITE_MENU_FOLLOW_SEED` | `True` | Whether a menu seeded from a template follows it: the items nobody changed take the seed's new links. `False` seeds it once. |
 | `KARNI_SITE_REDIRECTS_BEFORE_VIEWS` | `False` | `True` looks every request up before its view, so a redirect also replaces a page that exists. |
 | `KARNI_SITE_EDITOR_ROLE` | `"editor"` | The slug of the role this module declares, or `None` for none. |
 | `KARNI_SITE_FORMS` | `{}` | Form name to a viewset's dotted path or a model label, for a name that is not a model's. |
@@ -651,6 +732,7 @@ Every setting arrives through the module's settings fragment
 | `KARNI_SITE_URL` | `None` | The site's address, `"https://www.example.com"`, for canonical links, share tags, the sitemap and robots.txt. `None`: the address each request came to. |
 | `KARNI_SITE_ALLOW_INDEXING` | `None` | Whether search engines may index the site. `None`: only where `DJANGO_ENV` is `prod`. |
 | `KARNI_SITE_ROBOTS_DISALLOW` | `[]` | Paths robots.txt asks crawlers to stay out of while indexing is allowed. |
+| `KARNI_SITE_ROBOTS_TAG` | `"noindex, nofollow"` | What every page says while indexing is not allowed: the `X-Robots-Tag` header and the robots meta tag of `{% karni_seo %}`. `""` sends neither. |
 | `KARNI_SITE_SITEMAP_EXCLUDE` | `[]` | URL names and paths the sitemap leaves out, wildcards allowed. |
 | `KARNI_SITE_TECHNICAL_ROUTES` | `[]` | URL names and paths added to Karni's own technical routes, which neither the sitemap nor the menu's "goes to" choices list. |
 | `KARNI_SITE_SITEMAPS` | `"karni_site.sitemaps.sitemaps"` | The `() -> {name: Sitemap}` function that lists the sitemap's sections. |
@@ -663,7 +745,7 @@ Every setting arrives through the module's settings fragment
 | `KARNI_SITE_IMAGE_WIDTHS` | `[320, 480, 640, 800, 960, 1280, 1600, 1920]` | The widths of an upload's WebP copies (and its own width). `[]` makes none. |
 | `KARNI_SITE_IMAGE_QUALITY` | `80` | Their WebP quality. |
 | `KARNI_SITE_IMAGE_MAX_SIZE` | `2560` | An upload wider or taller is scaled down to fit. `None` keeps it. |
-| `KARNI_SITE_QUEUE_RENDITIONS` | `True` | Whether an upload, and a page that shows an image without copies, queue them. |
+| `KARNI_SITE_QUEUE_RENDITIONS` | `True` | Whether an upload, and a page that shows an image without copies, queue them. With `KARNI_SINGLE_PROCESS` the queue runs in the process, so the copies are made without a worker. |
 | `KARNI_SITE_RENDITIONER` | `"karni_site.renditions.generate"` | The `(name, storage) -> Manifest` function that makes the copies. |
 | `KARNI_SITE_IMAGE_STYLE` | `height: auto` for `img[data-karni-image]` | The CSS `{% karni_seo %}` writes for the images Karni sized. `""` leaves it out. |
 | `KARNI_SITE_SEO_MAX_PAGES` | `500` | `karni check --seo` requests at most this many pages. |
@@ -695,7 +777,9 @@ wrong `class Karni: sitemap` or `seo`). A redirect in a circle is refused
 with `SITE006`, a menu item that points nowhere with `SITE007`, and a
 `KARNI_SITE_SETTINGS_MODEL` that names no installed model fails with
 `SITE009`. A form whose view is not routed raises `SITE022`, and a
-notification naming a setting the project lacks `SITE023`.
+notification naming a setting the project lacks `SITE023`. A page that
+fails while `manage.py karni_site_seed` renders it stops that command with
+`SITE024`.
 
 ## Escape hatches
 
@@ -703,8 +787,11 @@ notification naming a setting the project lacks `SITE023`.
 - `KARNI_SITE_SANITIZER`, `KARNI_SITE_INLINE_TAGS`, `KARNI_SITE_LINK_SCHEMES`
   and `KARNI_SITE_HIGHLIGHT`: what an edited block keeps.
 - `KARNI_SITE_SEED_ON_RENDER = False`: nothing is written while a page
-  renders. Load blocks, menus and settings with `karni load` instead.
+  renders. Store the defaults with `manage.py karni_site_seed` in the
+  deploy, or load blocks, menus and settings with `karni load`.
 - `KARNI_SITE_MENU_ROWS`: which rows a *children from* item lists.
+- `KARNI_SITE_MENU_FOLLOW_SEED = False`: a seeded menu never follows its seed,
+  and `karni_site.menus.sync_menu()` follows one when you choose.
 - `KARNI_SITE_EDITOR_ROLE`, a role of that slug in `KARNI_ROLES`, or the
   permission matrix: the editor's grants.
 - Unregister any of this module's admins and register your own subclass.
@@ -736,7 +823,8 @@ notification naming a setting the project lacks `SITE023`.
 - The sitemap: `class Karni: sitemap`, `KARNI_SITE_SITEMAP_EXCLUDE`,
   `KARNI_SITE_PUBLISHED_FIELDS`, or `KARNI_SITE_SITEMAPS`. robots.txt:
   `KARNI_SITE_ALLOW_INDEXING`, `KARNI_SITE_ROBOTS_DISALLOW` or a
-  `karni_site/robots.txt` template. Or a route of your own for either path
+  `karni_site/robots.txt` template. A closed site's header and meta tag:
+  `KARNI_SITE_ROBOTS_TAG`, or `RedirectMiddleware.robots()` in a subclass. Or a route of your own for either path
   before the include.
 - Images: `KARNI_SITE_IMAGE_WIDTHS`, `KARNI_SITE_IMAGE_QUALITY`,
   `KARNI_SITE_IMAGE_MAX_SIZE`, `KARNI_SITE_RENDITIONER`, and
