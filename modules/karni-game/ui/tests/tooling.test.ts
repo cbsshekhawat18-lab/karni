@@ -14,6 +14,7 @@ import { inflateRawSync } from "node:zlib";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   PortalConfigError,
+  apiHosts,
   checkPackage,
   checkSource,
   crc32,
@@ -22,6 +23,7 @@ import {
   hostsIn,
   packagePortals,
   portalRow,
+  resolveApiUrl,
   resolvePortal,
   zipFolder,
 } from "../src/tooling";
@@ -76,6 +78,25 @@ describe("portal config", () => {
     expect(source).toContain('import { poki } from "@karni/game/portals/poki";');
     expect(source).toContain('export const portalName = "poki";');
     expect(source).not.toContain("crazygames");
+    expect(source).toContain("export const gameApiUrl = null;");
+    expect(portalModuleSource(portalRow("web"), {}, "https://api.example.com")).toContain(
+      'export const gameApiUrl = "https://api.example.com";',
+    );
+  });
+
+  it("names the game API a portal build calls: the option, else the environment", () => {
+    expect(resolveApiUrl(undefined, {})).toBeNull();
+    expect(resolveApiUrl(undefined, { KARNI_GAME_API_URL: "https://api.example.com/" })).toBe(
+      "https://api.example.com",
+    );
+    expect(
+      resolveApiUrl("https://play.example.com/backend", {
+        KARNI_GAME_API_URL: "https://api.example.com",
+      }),
+    ).toBe("https://play.example.com/backend");
+    expect(() => resolveApiUrl("api.example.com")).toThrow(PortalConfigError);
+    expect(apiHosts("https://api.example.com:8443")).toEqual(["api.example.com"]);
+    expect(apiHosts(null)).toEqual([]);
   });
 });
 
@@ -232,6 +253,30 @@ describe("the Vite preset and the per-portal packaging", { timeout: 120_000 }, (
     expect(reports.find((r) => r.portal === "web")?.zip).toBeNull();
     expect(existsSync(join(out, "poki.zip"))).toBe(true);
     expect(existsSync(join(out, "crazygames.zip"))).toBe(false);
+  });
+
+  it("builds a portal package that calls the game API on the project's domain, and allows its host", async () => {
+    const out = join(work, "api");
+    const [report] = await packagePortals({
+      root: fixture,
+      outDir: out,
+      portals: ["poki"],
+      apiUrl: "https://api.block-hopper.example",
+    });
+    expect(report?.problems).toEqual([]);
+    expect(process.env.KARNI_GAME_API_URL).toBeUndefined();
+    const code = readdirSync(join(out, "poki", "assets"))
+      .map((f) => readFileSync(join(out, "poki", "assets", f), "utf8"))
+      .join("");
+    expect(code).toContain("https://api.block-hopper.example");
+    // The same package checked without the API's host: the host is refused.
+    expect(checkPackage(join(out, "poki"), portalRow("poki")).map((p) => p.rule)).toEqual(["host"]);
+    const lines: string[] = [];
+    const args = ["check", join(out, "poki"), "--portal", "poki"];
+    expect(await main(args, (line) => lines.push(line))).toBe(1);
+    expect(
+      await main([...args, "--allow-host", "api.block-hopper.example"], (l) => lines.push(l)),
+    ).toBe(0);
   });
 
   it("fails a portal build whose id is missing, naming the variable", async () => {

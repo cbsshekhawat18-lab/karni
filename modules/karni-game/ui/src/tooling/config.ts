@@ -58,3 +58,38 @@ export function resolvePortal(
   }
   return { row, options: resolved };
 }
+
+/** The build environment variable that names the game API a portal build calls. */
+export const API_URL_ENV = "KARNI_GAME_API_URL";
+
+/**
+ * The game API a build calls: `apiUrl`, else `KARNI_GAME_API_URL`, else
+ * null (the page's own origin, as the project's own site has it). A game on
+ * a portal runs on the portal's domain, so its build names the API's
+ * absolute URL (`https://api.example.com`), and the server lists the
+ * portal's origin in `KARNI_GAME_CORS_ORIGINS`.
+ */
+export function resolveApiUrl(
+  apiUrl: string | undefined,
+  env: Readonly<Record<string, string | undefined>> = {},
+): string | null {
+  const value = (apiUrl ?? env[API_URL_ENV] ?? "").trim();
+  if (!value) return null;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new PortalConfigError(
+      `${API_URL_ENV}=${value} is not an absolute URL: name the game API as https://api.example.com`,
+    );
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    throw new PortalConfigError(`${API_URL_ENV}=${value} is not an http(s) URL`);
+  }
+  return value.replace(/\/+$/, "");
+}
+
+/** The host a package may name for the game API (`api.example.com`), or none. */
+export function apiHosts(apiUrl: string | null): string[] {
+  return apiUrl ? [new URL(apiUrl).hostname] : [];
+}

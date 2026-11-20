@@ -1,5 +1,5 @@
 import type { Plugin, UserConfig } from "vite";
-import { resolvePortal, type PortalConfig } from "./config";
+import { resolveApiUrl, resolvePortal, type PortalConfig } from "./config";
 import { PORTALS, definePortals, portalRow, type PortalRow } from "./portals";
 
 /** The module a game imports for its build's portal adapter. */
@@ -20,6 +20,12 @@ export interface KarniGameViteOptions {
   config?: PortalConfig;
   /** Where `KARNI_GAME_*` values are read. Default `process.env`. */
   env?: Readonly<Record<string, string | undefined>>;
+  /**
+   * The game API a build calls from another origin (a portal's), as
+   * `https://api.example.com`: `gameApiUrl` of `virtual:karni-game/portal`.
+   * Default `KARNI_GAME_API_URL`, else null: the page's own origin.
+   */
+  apiUrl?: string;
   /** Put the scripts and styles inside index.html, for file:// and sandboxed frames. */
   singleFile?: boolean;
   /** Keep the relative base (`./`) the portals and zips need. Default true. */
@@ -35,12 +41,14 @@ function processEnv(): Readonly<Record<string, string | undefined>> {
 export function portalModuleSource(
   row: Pick<PortalRow, "name" | "adapter">,
   options: object,
+  apiUrl: string | null = null,
 ): string {
   const { module, factory } = row.adapter;
   return [
     `import { ${factory} } from ${JSON.stringify(module)};`,
     `export const portalName = ${JSON.stringify(row.name)};`,
     `export const portalOptions = ${JSON.stringify(options)};`,
+    `export const gameApiUrl = ${JSON.stringify(apiUrl)};`,
     `export function createPortalAdapter() { return ${factory}(portalOptions); }`,
     `export default createPortalAdapter;`,
     "",
@@ -95,6 +103,7 @@ export function inlineIntoHtml(
 export function karniGame(options: KarniGameViteOptions = {}): Plugin[] {
   const env = options.env ?? processEnv();
   const portals = options.portals ?? PORTALS;
+  const apiUrl = resolveApiUrl(options.apiUrl, env);
   let command: "build" | "serve" = "build";
   let selected: { row: PortalRow; options: Record<string, unknown> } | null = null;
 
@@ -152,7 +161,7 @@ export function karniGame(options: KarniGameViteOptions = {}): Plugin[] {
     load(id) {
       if (id !== RESOLVED) return null;
       const { row, options: adapterOptions } = pick();
-      return portalModuleSource(row, adapterOptions);
+      return portalModuleSource(row, adapterOptions, apiUrl);
     },
     transformIndexHtml() {
       const { row } = pick();

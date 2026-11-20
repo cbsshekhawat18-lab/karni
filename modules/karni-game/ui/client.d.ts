@@ -15,6 +15,11 @@ declare module "virtual:karni-game/portal" {
   export const portalName: string;
   /** The adapter options the build resolved from the project's config. */
   export const portalOptions: Readonly<Record<string, string | number | boolean>>;
+  /**
+   * The game API this build calls from another origin (`KARNI_GAME_API_URL`,
+   * `https://api.example.com`), or null: the page's own origin.
+   */
+  export const gameApiUrl: string | null;
   /** The adapter of the build's portal, and no other portal's. */
   export function createPortalAdapter(): PortalAdapter;
   export default createPortalAdapter;

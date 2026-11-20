@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { checkPackage, checkSource, formatProblems } from "./checks";
+import { API_URL_ENV, apiHosts, resolveApiUrl } from "./config";
 import { packagePortals } from "./package";
 import { PORTALS, portalRow } from "./portals";
 
@@ -8,10 +9,13 @@ const USAGE = `karni-game: build tools of @karni/game
   karni-game portals                       list the portal table
   karni-game package [--portal NAME]...    build, check and zip one package per portal
                      [--out DIR] [--root DIR]
+                     [--api-url URL] [--allow-host HOST]...
   karni-game check DIR --portal NAME       check a built package
+                     [--allow-host HOST]...
   karni-game check-source [DIR]...         look for portal ids typed into the source (default: src scripts)
 
-Portal ids come from the build environment (KARNI_GAME_<PORTAL>_<OPTION>) or karniGame({ config }).`;
+Portal ids come from the build environment (KARNI_GAME_<PORTAL>_<OPTION>) or karniGame({ config }).
+The game API a portal build calls comes from --api-url or KARNI_GAME_API_URL, and its host is allowed.`;
 
 function values(args: readonly string[], flag: string): string[] {
   const found: string[] = [];
@@ -46,6 +50,8 @@ export async function main(
       root: values(args, "--root")[0],
       outDir: values(args, "--out")[0],
       portals: portals.length ? portals : undefined,
+      apiUrl: values(args, "--api-url")[0],
+      check: { allowHosts: values(args, "--allow-host") },
     });
     let failed = false;
     for (const report of reports) {
@@ -69,7 +75,11 @@ export async function main(
       out(USAGE);
       return 2;
     }
-    const problems = checkPackage(resolve(dir), portalRow(portal));
+    const allowHosts = [
+      ...values(args, "--allow-host"),
+      ...apiHosts(resolveApiUrl(undefined, process.env)),
+    ];
+    const problems = checkPackage(resolve(dir), portalRow(portal), { allowHosts });
     out(problems.length ? `FAIL ${portal}\n${formatProblems(problems)}` : `ok   ${portal}`);
     return problems.length ? 1 : 0;
   }
@@ -78,7 +88,11 @@ export async function main(
     const env = process.env;
     const ids = Object.entries(env)
       .filter(
-        ([name, value]) => name.startsWith("KARNI_GAME_") && name !== "KARNI_GAME_PORTAL" && value,
+        ([name, value]) =>
+          name.startsWith("KARNI_GAME_") &&
+          name !== "KARNI_GAME_PORTAL" &&
+          name !== API_URL_ENV &&
+          value,
       )
       .map(([, value]) => value as string);
     const problems = checkSource(

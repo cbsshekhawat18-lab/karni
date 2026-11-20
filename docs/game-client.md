@@ -259,8 +259,30 @@ const client = createGameClient({
 
 Without `@karni/ui`, the built-in transport takes `baseUrl`,
 `getAccessToken` (a JWT) or `getHeaders: csrfHeader` (a session cookie on the
-same site). A game hosted on a portal runs on the portal's domain, so it
-signs in with a token.
+same site).
+
+A game built for a portal runs on the portal's domain and calls the game
+API on the project's. Its build names the API (`KARNI_GAME_API_URL`, or
+`karniGame({ apiUrl })`), the game reads it as `gameApiUrl` and passes it to
+the built-in transport:
+
+```ts
+import { createPortalAdapter, gameApiUrl } from "virtual:karni-game/portal";
+
+const client = createGameClient({
+  game: "block-hopper",
+  storage,
+  server: gameApiUrl
+    ? { baseUrl: gameApiUrl } // a portal build: the guest's token, or getAccessToken (a JWT)
+    : { transport: karniClient, signedIn: () => auth.user !== null },
+});
+```
+
+The server lists the portal's origin in `KARNI_GAME_CORS_ORIGINS` and lets
+the browser send the token's header
+([from another origin](game.md#players-a-guest-first-an-account-later)). Such
+a call signs in with a token only, the guest's `X-Player-Token` or an
+account's JWT: a session cookie never crosses origins.
 
 The server owns the truth. The client never sends a coin amount, an unlock
 or a reward: it reports what happened, and the server decides. `grant()`
@@ -307,11 +329,13 @@ comes from `portal`, else `KARNI_GAME_PORTAL`, else `web`.
 `karni-game package` (or `packagePortals()`) builds one package per row of
 the portal table into `dist-portals/<portal>/`, checks it and zips it when
 the row says. `karni-game check <dir> --portal <name>` checks a package
-alone. A check fails the package for:
+alone. `--api-url` (or `KARNI_GAME_API_URL`) names the game API the packages
+call, and its host is allowed. `--allow-host` allows another (a font host). A
+check fails the package for:
 
 - No index.html at its root, or a path from the site's root (`/assets/...`).
-- A host that is not the portal's own SDK host (`allowHosts` adds the game's
-  API), a localhost or plain-http address.
+- A host that is not the portal's own SDK host or the game API's, a
+  localhost or plain-http address.
 - Another portal's SDK (one SDK per build) or the row's forbidden patterns
   (a Poki build must not turn on the SDK's debug mode).
 - A secret-shaped token (a private key, a live payment key, a cloud access
