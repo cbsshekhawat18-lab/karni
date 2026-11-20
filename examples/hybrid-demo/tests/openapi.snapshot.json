@@ -524,6 +524,14 @@
             "description": "The model's plural name, for a heading.",
             "type": "string"
           },
+          "part": {
+            "description": "The app label of the model: the part it belongs to.",
+            "type": "string"
+          },
+          "part_label": {
+            "description": "The app's name, for a heading.",
+            "type": "string"
+          },
           "resource": {
             "type": "string"
           }
@@ -531,6 +539,8 @@
         "required": [
           "hits",
           "label",
+          "part",
+          "part_label",
           "resource"
         ],
         "type": "object"
@@ -5142,6 +5152,147 @@
         ],
         "type": "object"
       },
+      "PeoplePersonDetail": {
+        "description": "Auto-generated serializer for people.Person. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "can": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PersonCan"
+              }
+            ],
+            "readOnly": true
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-user": true
+          },
+          "display_name": {
+            "default": "",
+            "description": "What screens show. Blank: the full name, else the email.",
+            "maxLength": 300,
+            "type": "string"
+          },
+          "email": {
+            "oneOf": [
+              {
+                "default": "",
+                "format": "email",
+                "maxLength": 254,
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "erased_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "family_name": {
+            "default": "",
+            "maxLength": 150,
+            "type": "string"
+          },
+          "given_name": {
+            "default": "",
+            "maxLength": 150,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "language": {
+            "default": "",
+            "description": "A language tag, e.g. en or pt-BR.",
+            "maxLength": 16,
+            "type": "string"
+          },
+          "merged_into": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "people"
+            }
+          },
+          "organisation": {
+            "description": "The organisation the person mainly belongs to.",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "organisations"
+            }
+          },
+          "phone": {
+            "default": "",
+            "maxLength": 40,
+            "type": "string"
+          },
+          "source": {
+            "description": "The part that created it: an app label such as shop or crm.",
+            "readOnly": true,
+            "type": "string"
+          },
+          "time_zone": {
+            "default": "",
+            "description": "An IANA time zone, e.g. Europe/Paris.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "updated_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-user": true
+          },
+          "user": {
+            "description": "The person's account, linked once its email is verified.",
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-user": true
+          }
+        },
+        "required": [
+          "can",
+          "created_at",
+          "created_by",
+          "erased_at",
+          "id",
+          "merged_into",
+          "source",
+          "updated_at",
+          "updated_by",
+          "user"
+        ],
+        "type": "object"
+      },
       "PeoplePersonRequest": {
         "description": "Auto-generated serializer for people.Person. See karni.api.serializers.build_serializer.",
         "properties": {
@@ -5213,6 +5364,24 @@
           "weekly"
         ],
         "type": "string"
+      },
+      "PersonCan": {
+        "description": "Experimental. What the caller may do with one person beyond reading and changing it.",
+        "properties": {
+          "erase": {
+            "description": "The caller holds people.person:erase.",
+            "type": "boolean"
+          },
+          "merge": {
+            "description": "The caller holds people.person:merge.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "erase",
+          "merge"
+        ],
+        "type": "object"
       },
       "PersonSelf": {
         "description": "Experimental. What a person reads and changes of their own row (``/api/people/me/``).",
@@ -26474,7 +26643,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PeoplePerson"
+                  "$ref": "#/components/schemas/PeoplePersonDetail"
                 }
               }
             },
