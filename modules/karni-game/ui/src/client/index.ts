@@ -1,5 +1,6 @@
 export { createGameClient } from "./client";
 export type {
+  AdRewardResult,
   BootResult,
   DailyState,
   GameClient,
