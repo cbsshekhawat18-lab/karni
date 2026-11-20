@@ -1,5 +1,5 @@
-# gitleaks (Security scans → Secrets): the default rules, plus the two kinds
-# of secret-shaped text this repository contains on purpose. Neither is a
+# gitleaks (Security scans → Secrets): the default rules, plus the kinds of
+# secret-shaped text this repository contains on purpose. None is a
 # credential for anything that exists.
 [extend]
 useDefault = true
@@ -11,8 +11,16 @@ paths = [
   # issued by scratch projects on localhost, each with its own random
   # SECRET_KEY, long since deleted.
   '''^docs/audit/evidence/''',
+  # A project's build record: the sha256 of each file karni build wrote. The
+  # generic rule reads "api.py": "<digest>" as an API key.
+  '''(^|/)\.karni/build\.json$''',
+  # The tests of @karni/game's package check, which must find a secret-shaped
+  # string in a bundle: the strings are made up in the test.
+  '''^modules/karni-game/ui/tests/tooling\.test\.ts$''',
 ]
 regexes = [
   # Passwords the test suites give their fixture users.
   '''^pw-12345678\d*$''',
+  # The password the benchmark's acceptance tests give their users.
+  '''^bench-pass-123$''',
 ]
