@@ -32,7 +32,12 @@ for config in apps.get_app_configs():
 
 
 def _run(module: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    env = {**os.environ, "DJANGO_SETTINGS_MODULE": "tests.settings", "PYTHONPATH": str(module)}
+    # The module first, then every other module of the checkout: a module's test settings
+    # may install another (karni-commerce needs karni-payments), and the core-only job
+    # installs none of them.
+    others = [path for path in sorted((REPO_ROOT / "modules").glob("karni-*")) if path != module]
+    path = os.pathsep.join(str(entry) for entry in (module, *others))
+    env = {**os.environ, "DJANGO_SETTINGS_MODULE": "tests.settings", "PYTHONPATH": path}
     env.pop("VIRTUAL_ENV", None)
     return subprocess.run(
         [sys.executable, *args], cwd=module, env=env, capture_output=True, text=True, check=False
