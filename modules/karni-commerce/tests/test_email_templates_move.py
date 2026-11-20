@@ -19,6 +19,15 @@ AFTER = [("karni_commerce", "0008_email_templates_to_notify")]
 MOVE = importlib.import_module("karni_commerce.migrations.0008_email_templates_to_notify")
 
 
+@pytest.fixture(autouse=True)
+def _migrations_run(request: pytest.FixtureRequest) -> None:
+    """These tests run commerce's migrations back and forth. pytest-django's
+    ``--no-migrations`` (the PostgreSQL overlay needs it for ``tests.testapp``) leaves
+    no migration to run, so there they skip: the sqlite run of the suite runs them."""
+    if request.config.getoption("nomigrations", default=False):
+        pytest.skip("runs the migrations, which --no-migrations turns off")
+
+
 def _at(targets: list[tuple[str, str]]) -> StateApps:
     executor = MigrationExecutor(connection)
     executor.migrate(targets)
