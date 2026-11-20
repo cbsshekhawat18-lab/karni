@@ -745,6 +745,12 @@ export function createGameClient(options: GameClientOptions): GameClient {
         if (!transport || mine?.dirty) return mine ? { ...mine, source: "device" } : null;
         try {
           await ensureServerPlayer();
+          // A device with no copy asks the list first: a new player's empty slot is
+          // never a 404 in the browser's console.
+          if (!mine) {
+            const listed = await request<SaveList>("GET", gamePath("saves/"));
+            if (!listed.results.some((save) => save.slot === slot)) return null;
+          }
           const save = await request<ServerSave<T>>("GET", gamePath(`saves/${slot}/`));
           const state = fromServer(save, mine?.rev ?? 0);
           keepSlot(state);

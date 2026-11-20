@@ -491,6 +491,25 @@ describe("the server's contract, as it closed the client's gaps", () => {
     expect(client.queue.size).toBe(0);
   });
 
+  it("asks a new device's list first, so an empty slot is never fetched", async () => {
+    const { client, server } = make();
+    await client.signInGuest();
+    expect(await client.saves.load("main")).toBeNull();
+    expect(server?.calls.filter((call) => call.includes("saves/"))).toEqual([
+      "GET block-hopper/saves/",
+    ]);
+    server?.saves.set("p1:main", {
+      slot: "main",
+      version: 2,
+      schema_version: 1,
+      data: { level: 4 },
+    });
+    expect(await client.saves.load<{ level: number }>("main")).toMatchObject({
+      version: 2,
+      data: { level: 4 },
+    });
+  });
+
   it("forgets a slot the server says is empty (GAME037), and keeps it on a 404 without a code", async () => {
     const { client, server, storage } = make();
     await client.signInGuest();

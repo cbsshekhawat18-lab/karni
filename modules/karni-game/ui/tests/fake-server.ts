@@ -172,6 +172,13 @@ export class FakeGameServer implements Transport {
     if (game !== "block-hopper") this.error(404, "GAME006");
     const tail = rest.join("/");
     if (tail === "" && method === "GET") return this.boot;
+    if (tail === "saves/" && method === "GET") {
+      const id = this.need(headers);
+      const results = [...this.saves.entries()]
+        .filter(([key]) => key.startsWith(`${id}:`))
+        .map(([, save]) => ({ slot: save.slot, version: save.version, schema_version: 1 }));
+      return { results, max_slots: 5, max_bytes: 65536 };
+    }
     if (tail.startsWith("saves/")) {
       const id = this.need(headers);
       const slot = tail.split("/")[1] ?? "";
