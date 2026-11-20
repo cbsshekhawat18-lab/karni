@@ -9,7 +9,7 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
-## 0.5.2 (unreleased)
+## 0.6.0 (unreleased)
 
 - **Changed: `karni seed` in a project built from a recipe writes realistic demo data.** The
   shop, booking, CRM, LMS, marketplace and data-portal recipes now ship their own
@@ -54,7 +54,7 @@ apply codemods and list the manual steps. This file is the human summary.
   say plain `npm install`. CI runs the quickstart page on Node 22 (npm 10.9)
   as well as Node 20 (npm 10.8) and Node 24. `karni upgrade` changes an
   earlier project's `"npm": ">=11"` to `"npm": ">=10.8"`
-  ([migration note](docs/migrations/0.5.md#the-frontend-installs-with-plain-npm-install)).
+  ([migration note](docs/migrations/0.6.md#the-frontend-installs-with-plain-npm-install)).
 
 - **A one-click shop demo.** `examples/shop-demo` is the shop recipe as `karni new
   "Shop Demo" --recipe shop` builds it, deployed by `render.yaml` at the repository root
@@ -109,7 +109,7 @@ apply codemods and list the manual steps. This file is the human summary.
   security fix. A create or an update is checked against its own predicate's rows in the
   save's transaction, so a listing posted into someone else's shop under
   `write=Owned("seller__user")` is now a 403 (`E134`) and nothing is saved. See the
-  [migration note](docs/migrations/0.5.md#a-written-row-must-stay-inside-the-callers-write-scope).
+  [migration note](docs/migrations/0.6.md#a-written-row-must-stay-inside-the-callers-write-scope).
 - **Fixed: the booking, CRM, LMS, marketplace and data-portal recipes keep their business
   rules.** Each declares them in its `karni.yaml`, with a `tests/test_rules.py` that sends
   the request an audit of the recipe sent and gets the refusal: one booking per member
@@ -121,8 +121,8 @@ apply codemods and list the manual steps. This file is the human summary.
   own shop, no order of a paused or your own listing, quantity at least 1 and fixed, ship,
   deliver and refund as actions, the refund voiding the payout; one indicator per
   dataset, place, topic and year. Their seeds keep the rules (a payout for every paid
-  order, demo students enrolled once). A project built from one before 0.5.2 takes the
-  rules by hand: see the [migration note](docs/migrations/0.5.md#rules-a-karniyaml-can-say-and-the-recipes-that-use-them).
+  order, demo students enrolled once). A project built from one before 0.6.0 takes the
+  rules by hand: see the [migration note](docs/migrations/0.6.md#rules-a-karniyaml-can-say-and-the-recipes-that-use-them).
 - **Changed: test factories and `assert_crud` follow the rules.** Generated values stay
   inside `bounds`, a required relation with a `targets` rule gets a row that fits it, a
   flag whose move needs a related row gets one, `assert_crud` leaves owner fields to the
@@ -206,7 +206,7 @@ apply codemods and list the manual steps. This file is the human summary.
   `/bookings` and `/crm`). See [several recipes in one project](docs/family.md).
 - **Deprecated: `app.recipe` in karni.yaml.** Write `app.recipes: [<name>]`. The old key is
   read as a list of one, with a `KarniDeprecationWarning`, until 1.0, and `karni upgrade`
-  rewrites it. See the [migration note](docs/migrations/0.5.md#a-project-lists-its-recipes-in-apprecipes).
+  rewrites it. See the [migration note](docs/migrations/0.6.md#a-project-lists-its-recipes-in-apprecipes).
 - **Added (experimental): the preferences contract, `karni.preferences`.** What a business
   changes without code, behind one Settings API. `Details` holds the business's name, legal
   name, address, phone, contact email, the sender of its emails, logo, time zone, language,
@@ -406,7 +406,7 @@ apply codemods and list the manual steps. This file is the human summary.
   `KARNI_DEMO_LOCKED_PATHS`, `KARNI_DEMO_WRITE_RULE`, `KARNI_DEMO_SEEDER`,
   `KARNI_DEMO_KEEP_APPS`. New codes `karni.E950` to `E954`. `examples/shop-demo` lost its
   own `demo/` app and uses this (two demo accounts now, a staff and a customer), with the
-  same `render.yaml` variables. It needs `karni>=0.5.2` and `@karni/ui` 0.5.2, so the live
+  same `render.yaml` variables. It needs `karni>=0.6.0` and `@karni/ui` 0.6.0, so the live
   demo stays as it is until the release and a redeploy.
   [docs/demo-mode.md](docs/demo-mode.md) lists every setting and how to move from a copied
   `demo/` app. No public name was renamed.
@@ -642,7 +642,7 @@ apply codemods and list the manual steps. This file is the human summary.
   `KARNI_SITE_MENU_FOLLOW_SEED = False` seeds once as before, and
   `karni_site.menus.sync_menu()` follows a seed from code. karni-site's migration 0002 adds
   `Menu.seeded` and `MenuItem.seed_key`
-  ([migration note](docs/migrations/0.5.md#seeded-menus-follow-their-seed)).
+  ([migration note](docs/migrations/0.6.md#seeded-menus-follow-their-seed)).
 
 - **Added: `manage.py karni_site_seed`, a site's defaults stored in a deploy, not on a
   visit.** A page's first render was a visitor's request, which stored each new
@@ -656,7 +656,7 @@ apply codemods and list the manual steps. This file is the human summary.
   karni-site. Storing a template's default now leaves no change-history entry, on a visit
   as in a deploy, through the new `karni.audit.capture.unrecorded(reason)`: an edit by a
   person is recorded as before. A new block's place no longer costs a count query
-  ([migration note](docs/migrations/0.5.md#a-sites-defaults-are-stored-in-the-deploy-and-leave-no-history)).
+  ([migration note](docs/migrations/0.6.md#a-sites-defaults-are-stored-in-the-deploy-and-leave-no-history)).
 
 - **Fixed: a site closed to search engines says so on every page, not in robots.txt alone.**
   With `KARNI_SITE_ALLOW_INDEXING` off (or outside `DJANGO_ENV=prod` by default), only
@@ -667,7 +667,7 @@ apply codemods and list the manual steps. This file is the human summary.
   nofollow">`. The new `KARNI_SITE_ROBOTS_TAG` holds the directives, `""` sends neither.
   `karni check --seo` checks the pages as an open site serves them, so a development copy
   is judged as production will be
-  ([migration note](docs/migrations/0.5.md#a-closed-site-says-noindex-on-every-page)).
+  ([migration note](docs/migrations/0.6.md#a-closed-site-says-noindex-on-every-page)).
 
 - **Fixed: karni-site's deployment settings are read from the environment.**
   `KARNI_SITE_URL`, `KARNI_SITE_ALLOW_INDEXING`, `KARNI_SITE_QUEUE_RENDITIONS`,
@@ -705,7 +705,7 @@ apply codemods and list the manual steps. This file is the human summary.
   keep fingerprinted names for a year and plain ones for an hour at most. An unknown value
   fails with `E510`
   ([docs](docs/deploy.md#14-static-and-media-files),
-  [migration note](docs/migrations/0.5.md#static-files-under-fingerprinted-names)).
+  [migration note](docs/migrations/0.6.md#static-files-under-fingerprinted-names)).
 
 - **Added (experimental): `@pages`, the known pages of a view behind a capture.** A view
   such as `/topics/<slug:slug>/` with a small, fixed set of addresses and no model had no
@@ -798,6 +798,11 @@ apply codemods and list the manual steps. This file is the human summary.
 - **Fixed (experimental): what a staff check of the person page found.** The merge preview names
   the other record by its email too (a duplicate often has the same name), and a timeline entry
   gives no link to the page already shown (the person's own page after a merge).
+- **Changed: one release, 0.6.0.** What was to be 0.5.2 ships with the family, commerce,
+  notifications, the shared screens and the game add-on as 0.6.0: every Python and npm package
+  is 0.6.0, the modules ask for `karni>=0.6,<0.7` and `@karni/ui` `^0.6.0`, a new project's
+  `@karni/ui` range is `^0.6.0`, the changelog data is `karni/changelog/0.6.0.toml` with its
+  two codemods under `upgrades/v0_6`, and the upgrade notes are docs/migrations/0.6.md.
 
 ## 0.5.1 (2026-11-12)
 

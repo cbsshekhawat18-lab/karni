@@ -1,7 +1,7 @@
 """``app.recipe: shop`` in karni.yaml becomes ``app.recipes: [shop]``.
 
-Changelog entry ``app-recipes`` (0.5.2). Migration note:
-docs/migrations/0.5.md#a-project-lists-its-recipes-in-apprecipes.
+Changelog entry ``app-recipes`` (0.6.0). Migration note:
+docs/migrations/0.6.md#a-project-lists-its-recipes-in-apprecipes.
 
 A project may hold several recipes now, so karni.yaml lists them in
 ``app.recipes``. ``app.recipe`` is still read, as a list of one, with a

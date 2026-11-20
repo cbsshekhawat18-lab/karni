@@ -1,7 +1,7 @@
 """``frontend/package.json`` asks for npm 10.8, not npm 11, in ``engines``.
 
-Changelog entry ``frontend-npm-floor`` (0.5.2). Migration note:
-docs/migrations/0.5.md#the-frontend-installs-with-plain-npm-install.
+Changelog entry ``frontend-npm-floor`` (0.6.0). Migration note:
+docs/migrations/0.6.md#the-frontend-installs-with-plain-npm-install.
 
 Karni 0.5.0 and 0.5.1 wrote ``"npm": ">=11"``, and with ``engine-strict`` in
 ``frontend/.npmrc`` npm 10 stops there with EBADENGINE. npm 10 installs a

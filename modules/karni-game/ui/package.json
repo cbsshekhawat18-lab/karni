@@ -1,6 +1,6 @@
 {
   "name": "@karni/game",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "The browser side of the Karni game add-on: portal and ad adapters, a canvas loop, input, audio, local saves, a seeded random generator, an offline-first data client and per-portal builds. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.",
   "keywords": [
     "game",

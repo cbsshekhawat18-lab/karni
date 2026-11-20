@@ -153,6 +153,7 @@ nav:
   - Karni for AI agents: agents.md
   - Upgrading:
       - Stability promise: stability.md
+      - Migrating to 0.6: migrations/0.6.md
       - Migrating to 0.5: migrations/0.5.md
       - Migrating to 0.4: migrations/0.4.md
       - Migrating to 0.3: migrations/0.3.md

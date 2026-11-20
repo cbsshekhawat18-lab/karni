@@ -295,7 +295,7 @@ def start(root: Path, spec_file: Path, recipe: Recipe, *, name: str, kind: str) 
     name and kind and what the merge adds: ``app.recipes``, ``app.currency``,
     the part's route, money fields in the project's currency.
     """
-    from karni_cli.upgrades.v0_5.recipe_list import recipes_key
+    from karni_cli.upgrades.v0_6.recipe_list import recipes_key
 
     blank = {"version": 1, "app": {"name": name, "kind": kind}}
     fragment = _fragment(recipe)

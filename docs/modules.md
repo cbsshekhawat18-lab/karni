@@ -318,7 +318,7 @@ Django command. Install a third-party module first, then add it.
    app project becomes a site+app.
    When the module has a UI package (`provides.ui`) and the project has
    `frontend/package.json`, it also adds that package to `dependencies` at the
-   release's range (`^0.5.0`) and says to run `npm install` in `frontend/`. A
+   release's range (`^0.6.0`) and says to run `npm install` in `frontend/`. A
    project without a frontend is left alone. `karni remove` takes the entry out
    again.
 4. Records `AGENTS.fragment.md` as `.karni/modules/<x>.md` and refreshes

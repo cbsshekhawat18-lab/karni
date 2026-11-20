@@ -30,13 +30,13 @@ service after 15 idle minutes, so the first page can take a minute to wake.
    prompt shows the demo logins.
 
 The image installs the released packages: `karni` and `karni-payments` from
-PyPI (`karni>=0.5.2,<0.6`, in `pyproject.toml`) and `@karni/ui` from npm (locked in
+PyPI (`karni>=0.6.0,<0.7`, in `pyproject.toml`) and `@karni/ui` from npm (locked in
 `frontend/package-lock.json`), not a checkout of this repository.
 
-The demo uses Karni's [demo mode](demo-mode.md), which first ships in 0.5.2,
-so the image needs `karni>=0.5.2` and `@karni/ui` 0.5.2 or later. Until 0.5.2 is
+The demo uses Karni's [demo mode](demo-mode.md), which first ships in 0.6.0,
+so the image needs `karni>=0.6.0` and `@karni/ui` 0.6.0 or later. Until 0.6.0 is
 released, a build from the repository fails at `pip install`. After the release,
-run `npm install @karni/ui@^0.5.2` in `examples/shop-demo/frontend` to move its
+run `npm install @karni/ui@^0.6.0` in `examples/shop-demo/frontend` to move its
 lock file to the release, commit the lock, then redeploy by hand. The
 `render.yaml` variables did not change.
 

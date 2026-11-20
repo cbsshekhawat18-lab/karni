@@ -419,7 +419,7 @@ def test_spec_text_keeps_the_comments_it_does_not_change() -> None:
 
 
 def test_the_codemod_writes_app_recipes() -> None:
-    from karni_cli.upgrades.v0_5.recipe_list import recipes_key
+    from karni_cli.upgrades.v0_6.recipe_list import recipes_key
 
     text = "version: 1\napp:\n  name: Shop  # mine\n  recipe: shop\n"
     assert recipes_key(text) == "version: 1\napp:\n  name: Shop  # mine\n  recipes: [shop]\n"

@@ -188,7 +188,7 @@ def test_a_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         assert (project / rel).is_file(), rel
     assert "slug: block-hopper" in (project / "content" / "game.yaml").read_text()
     package = json.loads((project / "frontend" / "package.json").read_text())
-    assert package["dependencies"]["@karni/game"] == "^0.5.0"
+    assert package["dependencies"]["@karni/game"] == "^0.6.0"
     assert package["scripts"]["game:package"].startswith("karni-game package --root portal")
     # The game is the project's own code: its rules, its canvas, its session, its page.
     frontend = project / "frontend"

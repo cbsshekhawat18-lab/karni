@@ -121,7 +121,7 @@ def test_the_dockerfile_serves_the_start_command_from_its_last_stage() -> None:
 
 def test_the_image_installs_released_packages() -> None:
     pyproject = (PROJECT / "pyproject.toml").read_text()
-    assert '"karni>=0.5.2,<0.6"' in pyproject and '"karni-payments>=0.5,<0.6"' in pyproject
+    assert '"karni>=0.6.0,<0.7"' in pyproject and '"karni-payments>=0.6,<0.7"' in pyproject
     package = (PROJECT / "frontend" / "package.json").read_text()
     assert '"@karni/ui": "^' in package and "file:" not in package
 

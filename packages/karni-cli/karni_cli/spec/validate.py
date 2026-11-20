@@ -2398,7 +2398,7 @@ def validate_text(text: str, *, databases: Collection[str] | None = None) -> Rep
 
 
 def _warn_recipe_key() -> None:
-    """``app.recipe`` is deprecated (0.5.2): ``app.recipes``, removed in 1.0."""
+    """``app.recipe`` is deprecated (0.6.0): ``app.recipes``, removed in 1.0."""
     import warnings
 
     try:
@@ -2415,7 +2415,7 @@ def _warn_recipe_key() -> None:
             "app.recipe in karni.yaml",
             "app.recipes: [<name>]",
             removed_in="1.0",
-            doc_anchor="migrations/0.5.md#a-project-lists-its-recipes-in-apprecipes",
+            doc_anchor="migrations/0.6.md#a-project-lists-its-recipes-in-apprecipes",
         )
     warnings.warn(message, category, stacklevel=3)
 
