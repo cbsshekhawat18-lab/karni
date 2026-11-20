@@ -221,6 +221,8 @@ FILES = (
 )
 FRONTEND_PACKAGE = "frontend/package.json"
 TSCONFIG = "frontend/tsconfig.json"
+ESLINT = "frontend/eslint.config.js"
+ESLINT_IGNORES = '"src/api/**"]'
 GITIGNORE = ".gitignore"
 #: The portals that need no id of the project's: add --portal gamedistribution and
 #: --portal y8 once their ids are in the build environment (karni-game portals).
@@ -312,7 +314,7 @@ def _vite(ws: Workspace) -> str:
 
 
 def _portal(ws: Workspace) -> str:
-    """The portal build: its script, the folder in the type-check, its packages ignored."""
+    """The portal build: its script, its folder type-checked, its output out of lint and git."""
     import json
 
     text = ws.read(FRONTEND_PACKAGE)
@@ -323,6 +325,13 @@ def _portal(ws: Workspace) -> str:
     config = ws.read(TSCONFIG)
     if config is not None and '"include": ["src"]' in config:
         ws.write(TSCONFIG, config.replace('"include": ["src"]', '"include": ["src", "portal"]', 1))
+    lint = ws.read(ESLINT)
+    if lint is not None and ESLINT_IGNORES in lint and "dist-portals" not in lint:
+        # The portal builds are bundles, not the project's code.
+        lint = lint.replace(
+            ESLINT_IGNORES, '"src/api/**", "portal/dist/", "portal/dist-portals/"]', 1
+        )
+        ws.write(ESLINT, lint)
     ignore = ws.read(GITIGNORE)
     if ignore is not None and "dist-portals" not in ignore:
         ws.write(GITIGNORE, ignore.rstrip("\n") + "\n\n" + PORTAL_IGNORE)

@@ -208,6 +208,7 @@ def test_a_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert "export function replay(" in rules  # a seed and an input log replay a run
     assert '"include": ["src", "portal"]' in (frontend / "tsconfig.json").read_text()
     assert "frontend/portal/dist-portals/" in (project / ".gitignore").read_text()
+    assert '"portal/dist/", "portal/dist-portals/"]' in (frontend / "eslint.config.js").read_text()
     vite = (frontend / "vite.config.ts").read_text()
     assert 'import { karniGame } from "@karni/game/vite";' in vite
     # The app keeps its own base: the relative base is the portal build's.
