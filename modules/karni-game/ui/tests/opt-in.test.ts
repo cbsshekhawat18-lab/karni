@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -7,12 +7,16 @@ import { describe, expect, it } from "vitest";
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 const read = (path: string): string => readFileSync(join(repo, path), "utf8");
 
+const SCAFFOLD = "templates/project/{{cookiecutter.project_slug}}/frontend/package.json";
+// karni-cli's build copies templates/project here (packages/karni-cli/hatch_build.py).
+// The copy exists once karni-cli is installed, not in a checkout that ran npm ci only.
+const BUNDLED =
+  "packages/karni-cli/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/package.json";
+
 describe("the game add-on is opt-in on the npm side", () => {
-  it("is in no plain project's frontend (both copies of the scaffold)", () => {
-    for (const template of [
-      "templates/project/{{cookiecutter.project_slug}}/frontend/package.json",
-      "packages/karni-cli/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/package.json",
-    ]) {
+  it("is in no plain project's frontend (the scaffold, and its copy in karni-cli when built)", () => {
+    const templates = [SCAFFOLD, ...(existsSync(join(repo, BUNDLED)) ? [BUNDLED] : [])];
+    for (const template of templates) {
       expect(read(template), template).not.toContain("@karni/game");
     }
   });
