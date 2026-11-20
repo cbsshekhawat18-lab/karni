@@ -1,0 +1,6 @@
+# Findings gitleaks reports that are not secrets, by fingerprint
+# (commit:file:rule:line). Each was read before it was listed here.
+# An example token in the game API page, cut short with "...".
+74d135c7a54beb4a8d513983354511e68c20e305:docs/game-api.md:generic-api-key:524
+# A made-up UUID a test uses as a row key.
+684085fd4c05f76c1fbde5b65e81843361ab87d8:packages/karni/tests/testing/test_hidden.py:generic-api-key:337
