@@ -308,7 +308,7 @@ jobs:
   # scratch (karni new --recipe), a second karni build with no spec change,
   # karni check cold and cached, karni spec validate, karni plan, karni plan
   # --questions and the /new-app fake-agent flow, each the median of its runs.
-  # A time above its budget fails the job (scripts/benchmark/speed-baseline.json
+  # A time above its budget fails the job (scripts/benchmark/speed-baseline-ci.json
   # x the run's calibration x 1.5, plus slack; a no-change rebuild has an
   # absolute ceiling). The times are an artifact.
   # ---------------------------------------------------------------------------
@@ -334,8 +334,11 @@ jobs:
             modules/karni-site/pyproject.toml
       - name: Install Karni and its modules from this checkout (editable)
         run: make install-py
+      # Against the baseline recorded on this runner type: relative to the
+      # calibration, the builds and the karni commands run 1.1 to 2.1 times slower
+      # here than on the laptop speed-baseline.json comes from (docs/recipes/index.md).
       - name: Time karni new, build, check, plan and the /new-app flow
-        run: python scripts/benchmark/speed.py --out speed.json
+        run: python scripts/benchmark/speed.py --out speed.json --baseline scripts/benchmark/speed-baseline-ci.json
       - uses: actions/upload-artifact@v7
         if: always()
         with:

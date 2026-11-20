@@ -134,6 +134,14 @@ as an artifact. Run it yourself with `python scripts/benchmark/speed.py`, and
 record a new baseline on a quiet machine with `--record` when a growth is
 expected.
 
+The calibration is pure Python, and the builds are not: relative to it, the
+builds and the `karni` commands ran 1.1 to 2.1 times slower on GitHub's Linux
+runner than on that laptop. So the CI job compares with
+`scripts/benchmark/speed-baseline-ci.json`, the times of one CI run (the job's
+`speed` artifact), and the laptop's baseline stays for runs on a laptop. A
+change that slows a step on purpose records both: `--record` on the laptop, and
+the CI job's `speed` artifact copied to `speed-baseline-ci.json`.
+
 ## The stub rule
 
 `karni build` creates the project's own files (`<app>/models.py`,

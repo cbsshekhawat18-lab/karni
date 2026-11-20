@@ -81,3 +81,16 @@ def test_every_built_in_recipe_is_in_the_baseline() -> None:
     bench = _script()
     baseline = json.loads(Path(bench.BASELINE).read_text())
     assert sorted(recipes_mod.load(installed=False).recipes) == sorted(baseline["recipes"])
+
+
+def test_the_ci_baseline_is_a_run_on_the_ci_runner_with_every_step_and_recipe() -> None:
+    from karni_cli import recipes as recipes_mod
+
+    bench = _script()
+    baseline = json.loads((SCRIPT.parent / "speed-baseline-ci.json").read_text())
+    assert baseline["version"] == bench.VERSION and baseline["calibration"] > 0
+    assert baseline["machine"].startswith("Linux") and baseline["runs"] >= 3
+    assert sorted(recipes_mod.load(installed=False).recipes) == sorted(baseline["recipes"])
+    for step in (*bench.QUICK, "new_app", *(f"new_{name}" for name in baseline["recipes"])):
+        assert step in baseline["times"], step
+    assert baseline["times"]["build_nochange"] < bench.REBUILD_CEILING
