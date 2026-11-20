@@ -9,7 +9,7 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
-## 0.6.0 (unreleased)
+## 0.6.0 (2026-11-20)
 
 - **Changed: `karni seed` in a project built from a recipe writes realistic demo data.** The
   shop, booking, CRM, LMS, marketplace and data-portal recipes now ship their own
