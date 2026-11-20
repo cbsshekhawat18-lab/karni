@@ -417,8 +417,9 @@ function MergeDialog({
         ) : (
           <div className="space-y-3">
             <p className="text-sm">
-              Merging <span className="font-medium">{drop.display_name || drop.email}</span> into
-              this record.{" "}
+              Merging <span className="font-medium">{drop.display_name || drop.email}</span>
+              {/* A duplicate often has the same name: its email tells the two apart. */}
+              {drop.display_name && drop.email ? ` (${drop.email})` : ""} into this record.{" "}
               <Button variant="link" size="sm" onClick={() => setDrop(null)}>
                 Choose another
               </Button>

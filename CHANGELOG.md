@@ -595,6 +595,9 @@ apply codemods and list the manual steps. This file is the human summary.
   views open scrolled to the hour of the period's earliest event, else to `workdayStart` (new,
   default 8:00), once per period. An event that ends at midnight ends at the bottom of its day
   instead of drawing upside down, and one that crosses midnight shows on both days.
+- **Fixed (experimental): what a staff check of the person page found.** The merge preview names
+  the other record by its email too (a duplicate often has the same name), and a timeline entry
+  gives no link to the page already shown (the person's own page after a merge).
 
 ## 0.5.1 (2026-11-12)
 

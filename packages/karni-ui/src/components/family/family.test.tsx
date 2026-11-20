@@ -291,6 +291,30 @@ describe("Timeline", () => {
     expect(await axeViolations(container)).toEqual([]);
   });
 
+  it("gives no link to the page already shown", async () => {
+    server.use(
+      http.get(`${API}/timeline/`, () =>
+        HttpResponse.json({
+          results: [
+            {
+              ...ENTRY,
+              id: "e8",
+              kind: "people.person.merged",
+              title: "Merged with a duplicate record",
+              links: [{ model: "people.person", resource: "people", id: "p1" }],
+            },
+          ],
+          next: null,
+        }),
+      ),
+    );
+    window.history.pushState({}, "", "/people/p1");
+    mount(<Timeline person="p1" hrefFor={(resource, id) => `/${resource}/${id}`} />);
+    expect(await screen.findByText("Merged with a duplicate record")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open person" })).toBeNull();
+    window.history.pushState({}, "", "/");
+  });
+
   it("links an entry's first record with the entry's data (an order by its number)", async () => {
     server.use(
       http.get(`${API}/timeline/`, () =>
@@ -670,6 +694,7 @@ describe("people", () => {
     await userEvent.type(screen.getByLabelText("Find the other record"), "ines");
     await userEvent.click(await screen.findByRole("button", { name: /Ines M\./ }));
     expect(await screen.findByText("2 Order rows move here")).toBeInTheDocument();
+    expect(screen.getByText(/\(ines\+shop@example\.com\) into this record\./)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Merge" }));
     await waitFor(() => expect(merged).toEqual([{ drop: "p2" }]));
     await userEvent.click(screen.getByRole("button", { name: "Erase" }));

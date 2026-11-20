@@ -156,6 +156,10 @@ function when(value: string): string {
     : date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
+function currentPath(): string | null {
+  return typeof window === "undefined" ? null : window.location.pathname;
+}
+
 function EntryLinks({
   entry,
   hrefFor,
@@ -177,8 +181,10 @@ function EntryLinks({
           )
         : null,
     }))
-    .filter((found): found is { link: TimelineEntry["links"][number]; href: string } =>
-      Boolean(found.href),
+    // A link to the page already shown (the person's own page) is no link.
+    .filter(
+      (found): found is { link: TimelineEntry["links"][number]; href: string } =>
+        Boolean(found.href) && found.href !== currentPath(),
     );
   if (links.length === 0) return null;
   return (
