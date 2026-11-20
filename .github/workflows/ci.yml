@@ -847,7 +847,9 @@ jobs:
       # @karni/ui added (DemoSignInPrompt), so CI installs the lock's packages and
       # then puts this checkout's packed @karni/ui over the released one.
       - name: Install the frontend (the lock's packages, then this checkout's @karni/ui)
+        # npm pack --pack-destination does not create the folder: make it first.
         run: |
+          mkdir -p "$RUNNER_TEMP/karni-ui"
           (cd ../../packages/karni-ui && npm ci && npm run build \
             && npm pack --pack-destination "$RUNNER_TEMP/karni-ui")
           cd frontend
