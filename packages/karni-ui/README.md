@@ -892,6 +892,12 @@ resource's rows in a day, week or month view, and as a list at phone width:
   widened by a day, when there is no end field). A row has an end, or a
   `durationField` in minutes, or lasts `defaultDurationMinutes`. `limit` caps
   the rows of a range (200) and the calendar says when more exist.
+- The day and week views open scrolled to the hour of the period's earliest
+  event (by time of day, so no event of the period sits above it), else to
+  `workdayStart` (the start of the working day, 8 by default). They scroll
+  once per period, so a move or a refetch never jumps. An event that crosses
+  midnight shows on each day it covers, and one that ends at midnight ends at
+  the bottom of its day.
 - `stateField` gives each event its label from the schema's choices and a
   colour on its left edge (`stateTones` picks them). The state is also said
   in words, never by colour alone.

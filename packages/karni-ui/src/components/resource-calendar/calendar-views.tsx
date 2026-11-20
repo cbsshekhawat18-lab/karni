@@ -68,6 +68,10 @@ export interface ViewShared<T extends object> {
   locale: string | undefined;
   slotMinutes: number;
   hours: { start: number; end: number };
+  /** The hour the day and week views open at when the period has no event. */
+  workdayStart: number;
+  /** The items are the period's own, not the last period's kept on screen while it loads. */
+  settled: boolean;
   now: number;
   toneOf: (item: CalendarItem<T>) => CalendarTone;
   stateLabelOf: (item: CalendarItem<T>) => string | null;
@@ -342,9 +346,40 @@ function slotCount(shared: { hours: { start: number; end: number }; slotMinutes:
 export function TimeGrid<T extends object>(props: ViewShared<T>): React.ReactElement {
   const { range, timeZone, locale, hours, slotMinutes, items, slots, now } = props;
   const columns = React.useRef<HTMLDivElement>(null);
+  const scroller = React.useRef<HTMLDivElement>(null);
+  const scrolledFor = React.useRef<string | null>(null);
   const startMinute = hours.start * 60;
   const spanMinutes = (hours.end - hours.start) * 60;
   const cellCount = slotCount(props);
+  const workdayMinute = Math.min(
+    Math.max(props.workdayStart * 60, startMinute),
+    startMinute + spanMinutes - 60,
+  );
+  const shown = (segment: DaySegment<T>): boolean =>
+    segment.endMinute > startMinute && segment.startMinute < startMinute + spanMinutes;
+  // The earliest time of day any event of the period starts (or goes on from
+  // the day before), so every event of the period is at or below it.
+  let earliest: number | null = null;
+  for (const day of range.days) {
+    for (const segment of segmentsForDay(items, day, timeZone)) {
+      if (!shown(segment)) continue;
+      const minute = Math.max(segment.startMinute, startMinute);
+      if (earliest === null || minute < earliest) earliest = minute;
+    }
+  }
+  const opensAt = earliest !== null ? Math.floor(earliest / 60) * 60 : workdayMinute;
+  const period = `${range.start}:${range.days.length}`;
+  // Open each period scrolled to its first event, else to the start of the
+  // working day: once per period, so a move or a refetch never jumps.
+  React.useLayoutEffect(() => {
+    if (!props.settled || scrolledFor.current === period) return;
+    const element = scroller.current;
+    const body = columns.current?.querySelector<HTMLElement>("[data-day-body]");
+    if (element === null || body === null || body === undefined) return;
+    scrolledFor.current = period;
+    const perMinute = body.getBoundingClientRect().height / spanMinutes;
+    element.scrollTop = Math.max(0, (opensAt - startMinute) * perMinute);
+  }, [props.settled, period, opensAt, startMinute, spanMinutes]);
   const [focused, setFocused] = React.useState<{ day: number; slot: number } | null>(null);
   const drag = useScheduleDrag<T>(props, "time", () => {
     const element = columns.current;
@@ -355,7 +390,7 @@ export function TimeGrid<T extends object>(props: ViewShared<T>): React.ReactEle
   const todayKey = dayKey(now, timeZone);
   const defaultSlot = Math.min(
     cellCount - 1,
-    Math.max(0, Math.round((8 * 60 - startMinute) / slotMinutes)),
+    Math.max(0, Math.round((opensAt - startMinute) / slotMinutes)),
   );
   const tab = focused ?? { day: 0, slot: defaultSlot };
   const creatable = props.onCreate !== undefined;
@@ -404,7 +439,11 @@ export function TimeGrid<T extends object>(props: ViewShared<T>): React.ReactEle
   };
 
   return (
-    <div className="relative flex max-h-[var(--karni-calendar-max-height)] min-w-0 overflow-auto rounded-md border border-border bg-background">
+    <div
+      ref={scroller}
+      data-time-grid=""
+      className="relative flex max-h-[var(--karni-calendar-max-height)] min-w-0 overflow-auto rounded-md border border-border bg-background"
+    >
       <div
         aria-hidden="true"
         className="sticky left-0 z-raised w-16 shrink-0 bg-background pt-9 text-right text-xs text-muted-foreground"
@@ -425,10 +464,7 @@ export function TimeGrid<T extends object>(props: ViewShared<T>): React.ReactEle
         style={{ gridTemplateColumns: `repeat(${range.days.length}, minmax(7rem, 1fr))` }}
       >
         {range.days.map((day, dayIndex) => {
-          const segments = segmentsForDay(items, day, timeZone).filter(
-            (segment) =>
-              segment.endMinute > startMinute && segment.startMinute < startMinute + spanMinutes,
-          );
+          const segments = segmentsForDay(items, day, timeZone).filter(shown);
           const placed = layoutLanes(segments);
           const daySlots = segmentsForDay(slots, day, timeZone);
           const isToday = dayKey(day, timeZone) === todayKey;
@@ -460,6 +496,7 @@ export function TimeGrid<T extends object>(props: ViewShared<T>): React.ReactEle
                 )}
               </h3>
               <div
+                data-day-body=""
                 className="relative h-[calc(var(--karni-calendar-hour-height)*var(--karni-calendar-hours))]"
                 style={{ ["--karni-calendar-hours" as string]: hours.end - hours.start }}
               >

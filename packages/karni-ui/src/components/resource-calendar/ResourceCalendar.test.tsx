@@ -215,6 +215,7 @@ beforeAll(() => {
 afterAll(() => vi.unstubAllGlobals());
 
 const MONDAY = "Monday, March 2, 2026";
+const nightRow = { status: "open", capacity: 1, remaining: 1 };
 
 beforeEach(() => {
   rows = seed();
@@ -240,6 +241,64 @@ describe("ResourceCalendar week view", () => {
     );
     expect(screen.queryByText(/April cut/)).toBeNull();
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(7);
+  });
+
+  it("shows an event that crosses midnight on both days, and one from the week before", async () => {
+    rows.push(
+      // Tuesday 22:00 to Wednesday 02:00 in Tokyo.
+      {
+        ...nightRow,
+        id: 5,
+        name: "Night shift",
+        starts_at: "2026-03-03T13:00:00Z",
+        ends_at: "2026-03-03T17:00:00Z",
+      },
+      // Sunday 23:00 (the week before) to Monday 01:00 in Tokyo.
+      {
+        ...nightRow,
+        id: 6,
+        name: "Weekend close",
+        starts_at: "2026-03-01T14:00:00Z",
+        ends_at: "2026-03-01T16:00:00Z",
+      },
+    );
+    render();
+    const tuesday = await screen.findByRole("region", { name: "Tuesday, March 3, 2026" });
+    expect(await within(tuesday).findByRole("button", { name: /Night shift/ })).toBeInTheDocument();
+    const wednesday = screen.getByRole("region", { name: "Wednesday, March 4, 2026" });
+    expect(within(wednesday).getByRole("button", { name: /Night shift/ })).toBeInTheDocument();
+    const monday = screen.getByRole("region", { name: MONDAY });
+    expect(within(monday).getByRole("button", { name: /Weekend close/ })).toBeInTheDocument();
+  });
+
+  it("opens scrolled to the earliest event of the period, else to the start of the working day", async () => {
+    // jsdom lays nothing out: a day's body is 1440px, a pixel a minute.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const height = this.hasAttribute("data-day-body") ? 1440 : 0;
+      return {
+        height,
+        width: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: height,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      };
+    });
+    const user = userEvent.setup();
+    const { container } = render({ workdayStart: 7 });
+    await screen.findByRole("button", { name: /Morning cut/ });
+    const grid = container.querySelector<HTMLElement>("[data-time-grid]") as HTMLElement;
+    // Morning cut is the earliest, at 9:00 in Tokyo.
+    expect(grid.scrollTop).toBe(9 * 60);
+    grid.scrollTop = 0;
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    // The next week has no event: it opens at the working day's 7:00.
+    await waitFor(() => expect(grid.scrollTop).toBe(7 * 60));
   });
 
   it("asks for the range with the start and end filters, ordered by start", async () => {

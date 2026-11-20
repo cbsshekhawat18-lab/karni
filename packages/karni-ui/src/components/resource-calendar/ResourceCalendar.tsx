@@ -24,6 +24,10 @@
  * `availability` a second resource's slots (a capacity and what is taken)
  * show behind the events: open ones can be clicked to create.
  *
+ * The day and week views open scrolled to the hour of the period's earliest
+ * event, else to `workdayStart` (default 8:00). An event that crosses
+ * midnight shows on each day it covers.
+ *
  * Time zones: `timeZone` is the business zone the times are shown in
  * (default: the viewer's). When the viewer's zone differs a switch changes
  * between the two and a tooltip gives both times.
@@ -183,6 +187,12 @@ export interface ResourceCalendarProps<T extends object> {
   slotMinutes?: 15 | 30 | 60;
   /** The hours the time grid shows. Default 0 to 24. */
   hours?: { start: number; end: number };
+  /**
+   * The start of the working day, the hour the day and week views open at
+   * when the period shown has no event (with events they open at the hour of
+   * the earliest one). Default 8.
+   */
+  workdayStart?: number;
   /** Most rows loaded for one range. Default 200. */
   limit?: number;
   /** The event body. */
@@ -563,6 +573,8 @@ export function ResourceCalendar<T extends object>(
     locale,
     slotMinutes,
     hours,
+    workdayStart: props.workdayStart ?? 8,
+    settled: !list.isPlaceholderData,
     now,
     toneOf,
     stateLabelOf,

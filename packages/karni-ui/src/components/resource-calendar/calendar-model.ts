@@ -192,11 +192,13 @@ export function segmentsForDay<T>(
     }
     const before = item.start < day;
     const after = item.end > next;
+    // An end at the next midnight is the end of this day, not its first minute.
+    const toMidnight = after || item.end === next;
     found.push({
       item,
       day,
       startMinute: before ? 0 : minutesIntoDay(item.start, timeZone),
-      endMinute: after ? 1440 : Math.max(minutesIntoDay(item.end, timeZone), 1),
+      endMinute: toMidnight ? 1440 : Math.max(minutesIntoDay(item.end, timeZone), 1),
       continuesBefore: before,
       continuesAfter: after,
     });

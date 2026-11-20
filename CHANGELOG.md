@@ -591,6 +591,10 @@ apply codemods and list the manual steps. This file is the human summary.
 - **Fixed (experimental): `ResourceBoard` orders its columns the way the state machine flows.**
   From the initial state along the transitions, each state as far along as its longest way in,
   closed states last, the declared order of the choices only breaking ties.
+- **Fixed (experimental): `ResourceCalendar` opens where the events are.** The day and week
+  views open scrolled to the hour of the period's earliest event, else to `workdayStart` (new,
+  default 8:00), once per period. An event that ends at midnight ends at the bottom of its day
+  instead of drawing upside down, and one that crosses midnight shows on both days.
 
 ## 0.5.1 (2026-11-12)
 
