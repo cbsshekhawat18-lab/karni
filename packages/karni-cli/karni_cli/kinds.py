@@ -230,8 +230,9 @@ class ProjectKind:
                 "scores, the wallet, daily content, achievements and remote config, mounted at "
                 "`/api/game/`. The game is declared in `content/game.yaml` (`karni load`), its "
                 "server hooks (save migrations, run checks) go in `games/game.py`, and its code "
-                "in `frontend/src/game/` on the @karni/game client. Never let the client decide "
-                "coins, scores or unlocks: the server does."
+                "in `frontend/src/game/` on the @karni/game client, which `frontend/portal/` also "
+                "builds alone for the game portals (`npm run game:package`). Never let the client "
+                "decide coins, scores or unlocks: the server does."
             )
         elif self.kind == "site":
             staff = (
