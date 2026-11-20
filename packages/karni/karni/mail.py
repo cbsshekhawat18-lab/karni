@@ -156,6 +156,12 @@ class MessageKind:
     (the recipient's inbox in the app, ``karni.notify``) or both. A kind that is
     not ``transactional`` is marketing: it carries an unsubscribe link while
     ``karni.notify`` is installed, and goes to nobody who unsubscribed.
+
+    ``requires`` is who can be in its audience, read like a menu entry's
+    (:func:`karni.navigation.opens`): ``authenticated`` (anyone signed in, the
+    default: the buyer, a member) or a permission pattern for a message to the
+    business (``karni_commerce.order:view`` for a new order). A person's own
+    switches list only the kinds they can receive.
     """
 
     name: str
@@ -169,6 +175,7 @@ class MessageKind:
     sample: Callable[[], Mapping[str, Any] | None] | None = field(default=None, compare=False)
     samples: Mapping[str, Any] = field(default_factory=dict, compare=False)
     channels: tuple[str, ...] = ("email",)
+    requires: str = "authenticated"
 
     @property
     def marketing(self) -> bool:
@@ -202,6 +209,7 @@ def register_kind(
     samples: Mapping[str, Any] | None = None,
     channels: Iterable[str] = ("email",),
     replace: bool = True,
+    requires: str = "authenticated",
 ) -> MessageKind:
     """Experimental. Declare the email ``name`` (registering it again replaces it).
 
@@ -209,6 +217,8 @@ def register_kind(
     ``channels`` names where it goes: ``"email"``, ``"inbox"`` or both.
     ``replace=False`` keeps a declaration of the same name that is already there
     and returns it: a default that a part's own declaration wins over.
+    ``requires`` names who can receive it (``authenticated``, or a permission
+    pattern for a message to the business's people).
 
     :raises KarniValueError: E445, a channel that is not one of :data:`CHANNELS`, or none.
     """
@@ -234,6 +244,7 @@ def register_kind(
         sample=sample,
         samples=dict(samples or {}),
         channels=chosen,
+        requires=str(requires or "authenticated"),
     )
     _KINDS[name] = found
     return found

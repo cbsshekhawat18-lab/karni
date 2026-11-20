@@ -49,6 +49,7 @@ __all__ = [
     "KINDS",
     "ORDER_FIELDS",
     "ORDER_SAMPLES",
+    "REQUIRES",
     "business",
     "context",
     "latest",
@@ -238,6 +239,11 @@ _LATEST: dict[str, Callable[[], tuple[Order, dict[str, Any]] | None]] = {
 }
 
 
+#: Experimental. Who can receive a kind that is not the buyer's: a person's own switches list
+#: it only to who holds this (karni.mail ``requires``).
+REQUIRES: dict[str, str] = {"commerce.new_order": "karni_commerce.order:view"}
+
+
 def latest(kind: str) -> Callable[[], dict[str, Any] | None]:
     """Experimental. The context ``kind`` would be sent with, for the latest matching order
     (``None`` while there is none): what the email editor's preview shows."""
@@ -260,6 +266,8 @@ for _name, (_title, _audience, _describe, _more) in _DECLARED.items():
         sample=latest(_name),
         samples=ORDER_SAMPLES,
         channels=CHANNELS[_name],
+        # who can be in its audience: the buyer is anyone signed in, the new order is staff's
+        requires=REQUIRES.get(_name, "authenticated"),
     )
 
 

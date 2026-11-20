@@ -84,6 +84,7 @@ register_kind(
 | `switchable` | `False` for a message nobody may switch off (a sign-in code). |
 | `sample`, `samples` | What the editor's preview renders with: the latest matching record, else these values. |
 | `replace` | `False` keeps a declaration of the same name that is already there. |
+| `requires` | Who can be in its audience, read like a menu entry's: `authenticated` (the default: the person, a buyer, a member) or a permission pattern for a message to the business's people (`karni_commerce.order:view` for a new order). A person's own switches list only the kinds they can receive. |
 
 ## Send it
 
