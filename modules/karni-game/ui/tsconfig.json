@@ -23,7 +23,14 @@
     "skipLibCheck": true,
     "noEmit": true,
 
-    "types": ["node", "vitest/globals"]
+    "types": ["node", "vitest/globals"],
+
+    // The example game and the test fixtures import the package by its name, as a
+    // game does: read it from src, so a fresh checkout type-checks before a build.
+    "paths": {
+      "@karni/game": ["./src/index.ts"],
+      "@karni/game/portals/*": ["./src/portal/adapters/*.ts"]
+    }
   },
   "include": [
     "src",
