@@ -287,6 +287,11 @@ describe("the Vite preset and the per-portal packaging", { timeout: 120_000 }, (
         portals: ["gamedistribution"],
       }),
     ).rejects.toThrow(/KARNI_GAME_GAMEDISTRIBUTION_GAME_ID/);
+    // The command says the same in one line, with exit code 1 and no stack.
+    const lines: string[] = [];
+    const args = ["package", "--root", fixture, "--out", join(work, "missing-cli")];
+    expect(await main([...args, "--portal", "gamedistribution"], (l) => lines.push(l))).toBe(1);
+    expect(lines).toEqual([expect.stringMatching(/^FAIL .*KARNI_GAME_GAMEDISTRIBUTION_GAME_ID/)]);
   });
 
   it("makes a single-file build that needs no other file", async () => {

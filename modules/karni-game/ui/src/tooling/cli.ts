@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { checkPackage, checkSource, formatProblems } from "./checks";
-import { API_URL_ENV, apiHosts, resolveApiUrl } from "./config";
+import { API_URL_ENV, PortalConfigError, apiHosts, resolveApiUrl } from "./config";
 import { packagePortals } from "./package";
 import { PORTALS, portalRow } from "./portals";
 
@@ -31,11 +31,28 @@ function positional(args: readonly string[]): string[] {
   return args.filter((arg, index) => !arg.startsWith("--") && !args[index - 1]?.startsWith("--"));
 }
 
-/** Run the command line. Returns the exit code. */
+/**
+ * Run the command line. Returns the exit code. A build that cannot start (a
+ * portal's id missing, a bad KARNI_GAME_API_URL) is one line naming what to
+ * set, and exit code 1.
+ */
 export async function main(
   argv: readonly string[],
   out: (line: string) => void = (line) => process.stdout.write(`${line}\n`),
 ): Promise<number> {
+  try {
+    return await run(argv, out);
+  } catch (error) {
+    // By name: the project's Vite config may load its own copy of the class.
+    const refused =
+      error instanceof PortalConfigError || (error as Error)?.name === "PortalConfigError";
+    if (!refused) throw error;
+    out(`FAIL ${(error as Error).message}`);
+    return 1;
+  }
+}
+
+async function run(argv: readonly string[], out: (line: string) => void): Promise<number> {
   const [command, ...args] = argv;
   if (command === "portals") {
     for (const row of PORTALS) {
