@@ -572,6 +572,26 @@ apply codemods and list the manual steps. This file is the human summary.
   stray spaces, and "Your orders" lines up in columns. The person detail with `can` is its own
   schema component (`PeoplePersonDetail`), karni-commerce's app reads "Commerce", and a merged
   menu never labels a part's group with a page's name (the booking part groups as "Bookings").
+- **Fixed (experimental): a timeline entry shows money the project's way.** A `timeline=`
+  option names its money fields (`"money": {"amount": "currency"}`), the entry's title and body
+  read "$127.54", not "127.5400 usd", and `<Timeline>` draws it with the business's currency
+  display. karni-payments, karni-commerce and the recipes declare their amounts.
+  `timeline.skip_when(name, check)` leaves an event off the timeline: with karni-commerce, a
+  payment for an order writes no entry of its own (the order's entry says it), and a payment
+  with no order keeps its entry.
+- **Added: family events without a worker in development.** With `DEBUG` on, or
+  `KARNI_EVENTS_INLINE=true`, a published event is delivered right after the commit, in the
+  process, so a timeline entry or an inbox message shows up with no Celery worker. Production
+  keeps the outbox and the worker.
+- **Fixed (experimental): a person's inbox switches list only what they can receive.**
+  `karni.mail.register_kind(..., requires=)` says who can receive a kind (read like a menu
+  entry's `requires`), `karni.notify.receives(user, kind)` answers it, and
+  `GET /api/inbox/choices/` lists a customer no staff kinds. Commerce's new order and the shop's
+  low stock are the staff's.
+- **Fixed (experimental): `ResourceBoard` orders its columns the way the state machine flows.**
+  From the initial state along the transitions, each state as far along as its longest way in,
+  closed states last, the declared order of the choices only breaking ties.
+
 ## 0.5.1 (2026-11-12)
 
 - **Fixed: `karni new` in a terminal stopped with an AssertionError at the project-kind

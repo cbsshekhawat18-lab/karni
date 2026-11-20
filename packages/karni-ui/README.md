@@ -828,8 +828,11 @@ regions, topics or categories:
 ### ResourceBoard: a board by state (experimental)
 
 A pipeline is a board, not a table. `ResourceBoard` makes a column for each
-choice of a state field, in the order the schema lists them, with a card per
-row and the count and the sum of a money field in each header:
+choice of a state field, in the order the state machine flows (from the
+initial state along the transitions, each state as far along as its longest
+way in, closed states last, the declared order of the choices only breaking
+ties), with a card per row and the count and the sum of a money field in each
+header:
 
 ```tsx
 <ResourceBoard<Deal>

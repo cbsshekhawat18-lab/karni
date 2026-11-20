@@ -3,8 +3,10 @@
  *
  * A pipeline is a board, not a table: deals by stage, orders by status,
  * bookings by state. One column per choice of the state field, in the order
- * the schema lists them, a card per row, and the count (and the sum of a money
- * field) of each column in its header:
+ * the state machine flows (from the initial state along the transitions,
+ * closed states last, the declared order of the choices only breaking ties),
+ * a card per row, and the count (and the sum of a money field) of each column
+ * in its header:
  *
  *   <ResourceBoard<Deal>
  *     resource="deals"
