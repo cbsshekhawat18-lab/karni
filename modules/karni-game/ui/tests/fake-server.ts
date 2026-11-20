@@ -20,7 +20,14 @@ export class FakeGameServer implements Transport {
   readonly tokens = new Map<string, string>();
   readonly accounts = new Map<string, string>();
   readonly saves = new Map<string, ServerSave>();
-  readonly scores: { player: string; board: string; value: number }[] = [];
+  readonly scores: { player: string; board: string; value: number; playedAt?: string }[] = [];
+  /** Refuse a score's played_at (GAME036), as a server whose window it is outside. */
+  refusePlayedAt = false;
+  /** The ad rewards it declares, by key: who vouches for each. */
+  adRewards: Record<string, "callback" | "client"> = {
+    "ad-coins": "client",
+    "ad-gems": "callback",
+  };
   readonly intents = new Map<string, string>();
   readonly events: unknown[] = [];
   balance = 100;
@@ -108,7 +115,22 @@ export class FakeGameServer implements Transport {
     const body = options.body as Record<string, unknown> | undefined;
     const headers = options.headers;
     if (method === "POST" && route === "guest/") {
+      const intent = body?.intent as string | undefined;
+      const seen = intent ? this.intents.get(`guest:${intent}`) : undefined;
+      if (intent && seen !== undefined) {
+        const [handle, earlier] = JSON.parse(seen) as [string | null, string];
+        if (handle !== ((body?.handle as string | undefined) ?? null)) this.error(409, "GAME033");
+        const token = `gt_${earlier}_again`;
+        this.tokens.set(token, earlier);
+        return { token, player: this.players.get(earlier), replayed: true };
+      }
       const id = `p${this.players.size + 1}`;
+      if (intent) {
+        this.intents.set(
+          `guest:${intent}`,
+          JSON.stringify([(body?.handle as string | undefined) ?? null, id]),
+        );
+      }
       const player: Player = {
         id,
         handle: (body?.handle as string) ?? `Player ${id}`,
@@ -156,7 +178,7 @@ export class FakeGameServer implements Transport {
       const key = `${id}:${slot}`;
       const current = this.saves.get(key);
       if (method === "GET") {
-        if (!current) throw new GameApiError(404, { detail: "Not found." });
+        if (!current) this.error(404, "GAME037");
         return current;
       }
       if (method === "PUT") {
@@ -172,6 +194,7 @@ export class FakeGameServer implements Transport {
         return saved;
       }
       if (method === "DELETE") {
+        if (!current) this.error(404, "GAME037");
         this.saves.delete(key);
         return null;
       }
@@ -181,10 +204,12 @@ export class FakeGameServer implements Transport {
       const key = board[1] ?? "";
       if (board[2] === "scores/") {
         const id = this.need(headers);
+        const playedAt = body?.played_at as string | undefined;
+        if (playedAt && this.refusePlayedAt) this.error(400, "GAME036", { window: 86400 });
         const replayed = this.replay(body);
         const value = body?.value as number;
         if (value > 100_000) this.error(400, "GAME013");
-        if (!replayed) this.scores.push({ player: id, board: key, value });
+        if (!replayed) this.scores.push({ player: id, board: key, value, playedAt });
         return {
           score: { id: `s${this.scores.length}`, value, status: "accepted", created_at: "" },
           best: {},
@@ -263,12 +288,41 @@ export class FakeGameServer implements Transport {
     }
     if (tail === "events/") {
       this.need(headers);
-      this.events.push(...((body?.events as unknown[]) ?? []));
-      return { accepted: (body?.events as unknown[]).length, rejected: [] };
+      const replayed = this.replay(body);
+      if (!replayed) this.events.push(...((body?.events as unknown[]) ?? []));
+      return {
+        accepted: (body?.events as unknown[]).length,
+        rejected: [],
+        ...(replayed as object),
+      };
+    }
+    if (tail === "rewards/") {
+      this.need(headers);
+      return {
+        results: Object.entries(this.adRewards).map(([key, trust]) => ({
+          key,
+          title: key,
+          kind: "ad",
+          currency: "coins",
+          amount: 25,
+          trust,
+          callback: trust === "callback",
+          per_day: 3,
+          claimed_today: 0,
+          available: true,
+          next_at: null,
+        })),
+      };
+    }
+    const intentFor = tail.match(/^rewards\/([^/]+)\/intent\/$/);
+    if (intentFor) {
+      this.need(headers);
+      return { intent: `signed:${intentFor[1]}`, expires_at: "2026-11-19T09:30:00Z" };
     }
     const claim = tail.match(/^rewards\/([^/]+)\/claim\/$/);
     if (claim) {
       this.need(headers);
+      if (this.adRewards[claim[1] ?? ""] === "callback") this.error(403, "GAME018");
       this.balance += 25;
       return {
         granted: { currency: "coins", amount: 25, balance: this.balance },

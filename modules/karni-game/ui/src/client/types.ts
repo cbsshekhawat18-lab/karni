@@ -16,6 +16,8 @@ export interface Player {
 export interface GuestResponse {
   token: string;
   player: Player;
+  /** A retried `intent`: the same guest as the lost answer's, with a new token. */
+  replayed?: boolean;
 }
 
 export interface UpgradeResponse {
@@ -175,12 +177,21 @@ export interface EquipResponse {
   equipped: boolean;
 }
 
+/**
+ * Who vouches for a reward: `callback`, the portal's server with a signed
+ * callback (an ad), `client`, any client's claim (an ad, capped low), or
+ * `server`, the server's own rule (every other kind).
+ */
+export type RewardTrust = "callback" | "client" | "server";
+
 export interface RewardInfo {
   key: string;
   title: string;
   kind: "daily" | "ad" | "mission" | "achievement" | "match" | "grant";
   currency: string;
   amount: number;
+  /** Absent from a server older than the field: read `callback` then. */
+  trust?: RewardTrust;
   callback: boolean;
   per_day?: number | null;
   claimed_today?: number;

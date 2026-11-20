@@ -26,6 +26,7 @@ import type {
   BuyResponse,
   CheckInResponse,
   ClaimResponse,
+  Granted,
   EquipResponse,
   GameBoot,
   GuestResponse,
@@ -38,6 +39,7 @@ import type {
   ProgressEvent,
   ProgressResponse,
   RewardInfo,
+  RewardTrust,
   RunRecord,
   SaveList,
   ScoreResponse,
@@ -145,6 +147,20 @@ export interface WriteResult<T> {
   server?: T;
 }
 
+/** What `adReward()` came to. */
+export type AdRewardResult =
+  /** Granted now: a reward the client claims (`trust` `client`), or the device's own. */
+  | { status: "granted"; granted: Granted; capped: boolean; nextAt: string | null }
+  /**
+   * Watched, and the portal's server grants it with its signed callback
+   * (`trust` `callback`): read the wallet again in a moment.
+   */
+  | { status: "pending"; intent: string }
+  /** The ad was not watched to the end: nothing is granted. */
+  | { status: "not-watched" }
+  /** Not an ad reward, or not available now (`nextAt`: when it is again, or null). */
+  | { status: "unavailable"; nextAt: string | null };
+
 export interface GameClientEvents {
   /** The player changed (signed in, upgraded, forgotten). */
   player: Player | null;
@@ -203,10 +219,15 @@ export interface GameClient {
     remove(slot: string): Promise<void>;
   };
 
+  /**
+   * Send a score. It carries when it was played (`playedAt`, default now on
+   * the server's clock), so a score sent later from the queue is on the
+   * boards of the day it was played.
+   */
   submitScore(
     board: string,
     value: number,
-    options?: { run?: RunRecord; intent?: string },
+    options?: { run?: RunRecord; intent?: string; playedAt?: Date },
   ): Promise<ScoreResult>;
   leaderboard(board: string, options?: { period?: Period; limit?: number }): Promise<BoardResponse>;
   around(
@@ -224,6 +245,14 @@ export interface GameClient {
   claimReward(key: string, options?: { intent?: string }): Promise<ClaimResponse>;
   /** For a reward the portal's server grants: the intent to hand to the portal's ad call. */
   rewardIntent(key: string): Promise<{ intent: string; expires_at: string }>;
+  /**
+   * An ad reward, by its `trust`. `show` plays the ad (`() => portal.rewarded()`)
+   * and resolves true when it was watched to the end. With `trust` `callback`
+   * it gets the intent to hand to the portal's ad call first, and the portal's
+   * server grants the reward. With `client` the reward is claimed once the ad
+   * was watched. The client never names an amount.
+   */
+  adReward(key: string, show: (intent: string | null) => Promise<boolean>): Promise<AdRewardResult>;
   /** Add currency earned in play, on a game with no server only (the server grants its own). */
   grant(currency: string, amount: number, reference?: string): Balance;
 
@@ -247,6 +276,13 @@ export interface GameClient {
   sync(): Promise<FlushResult>;
   /** Stop the timers and listeners. */
   destroy(): void;
+}
+
+/** Where a guest's issue waits for its answer: its intent and body. */
+const GUEST_PENDING = "guest.pending";
+interface GuestPending {
+  intent: string;
+  body: { handle?: string };
 }
 
 function randomIntent(): string {
@@ -382,14 +418,53 @@ export function createGameClient(options: GameClientOptions): GameClient {
   };
   const gamePath = (rest = ""): string => `${game}/${rest}`;
 
+  /**
+   * Issue a guest on the server. The request's intent and body are kept until
+   * an answer arrives, and a retry sends them again: a lost answer gives the
+   * same guest (with a new token), never a second one.
+   */
+  const issueGuest = async (body: { handle?: string }, fresh = false): Promise<GuestResponse> => {
+    const kept = fresh ? null : storage.getJson<GuestPending>(GUEST_PENDING);
+    const pending: GuestPending =
+      kept && typeof kept.intent === "string" ? kept : { intent: newIntent(), body };
+    storage.setJson(GUEST_PENDING, pending);
+    let answer: GuestResponse;
+    try {
+      answer = await request<GuestResponse>("POST", "guest/", {
+        body: { ...pending.body, intent: pending.intent },
+      });
+    } catch (error) {
+      // Kept past the server's hour, or its guest is gone: a new intent makes a new guest.
+      if (fresh || httpError(error)?.code !== "GAME033") throw error;
+      return issueGuest(body, true);
+    }
+    storage.remove(GUEST_PENDING);
+    setToken(answer.token);
+    setPlayer(answer.player);
+    return answer;
+  };
+
   /** Make sure the server knows who is calling: an account, or a guest token. */
   const ensureServerPlayer = async (): Promise<void> => {
     if (!transport || signedIn() || token) return;
-    const answer = await request<GuestResponse>("POST", "guest/", {
-      body: player?.handle && player.local ? { handle: player.handle } : {},
-    });
-    setToken(answer.token);
-    setPlayer(answer.player);
+    await issueGuest(player?.handle && player.local ? { handle: player.handle } : {});
+  };
+
+  /**
+   * POST a write. A score whose `played_at` the server does not trust
+   * (`GAME036`: older than its window, or a device clock ahead of it) is sent
+   * again without it, and counts as played now.
+   */
+  const post = async <T>(path: string, body: unknown): Promise<T> => {
+    try {
+      return await request<T>("POST", path, { body });
+    } catch (error) {
+      const fields = body as Record<string, unknown> | undefined;
+      if (httpError(error)?.code !== "GAME036" || !fields || !("played_at" in fields)) throw error;
+      const now: Record<string, unknown> = { ...fields };
+      delete now.played_at;
+      return request<T>("POST", path, { body: now });
+    }
   };
 
   // --- saves -------------------------------------------------------------------
@@ -481,6 +556,8 @@ export function createGameClient(options: GameClientOptions): GameClient {
         const result = await sendSave((write.body as { slot: string }).slot);
         if (result.outcome !== "done") return result.outcome;
         response = result.response;
+      } else if (write.method === "POST") {
+        response = await post(write.path, write.body);
       } else {
         response = await request(write.method, write.path, { body: write.body });
       }
@@ -518,7 +595,7 @@ export function createGameClient(options: GameClientOptions): GameClient {
     if (queue.size === 0 && deviceOnline()) {
       try {
         await ensureServerPlayer();
-        const answer = await request<T>("POST", queued.path, { body: queued.body });
+        const answer = await post<T>(queued.path, queued.body);
         return { queued: false, server: answer };
       } catch (error) {
         const http = httpError(error);
@@ -549,12 +626,14 @@ export function createGameClient(options: GameClientOptions): GameClient {
     while (pendingEvents.length > 0) {
       const batch = pendingEvents.slice(0, 20);
       pendingEvents = pendingEvents.slice(20);
+      // The batch's intent: a retry after a lost answer publishes nothing twice.
+      const intent = newIntent();
       queue.add({
-        id: newIntent(),
+        id: intent,
         kind: "events",
         method: "POST",
         path: gamePath("events/"),
-        body: { events: batch },
+        body: { events: batch, intent },
       });
     }
     void sync();
@@ -606,12 +685,7 @@ export function createGameClient(options: GameClientOptions): GameClient {
       if (player) return player;
       if (transport && deviceOnline()) {
         try {
-          const answer = await request<GuestResponse>("POST", "guest/", {
-            body: handle ? { handle } : {},
-          });
-          setToken(answer.token);
-          setPlayer(answer.player);
-          return answer.player;
+          return (await issueGuest(handle ? { handle } : {})).player;
         } catch (error) {
           if (httpError(error)) throw error;
         }
@@ -657,6 +731,7 @@ export function createGameClient(options: GameClientOptions): GameClient {
     signOut() {
       setToken(null);
       setPlayer(null);
+      storage.remove(GUEST_PENDING);
       queue.clear();
     },
 
@@ -675,8 +750,9 @@ export function createGameClient(options: GameClientOptions): GameClient {
           keepSlot(state);
           return state;
         } catch (error) {
-          const http = httpError(error);
-          if (http?.status === 404 && !http.code) {
+          // GAME037: the server has no save in the slot (deleted on another device,
+          // or never written). A 404 without a code is a path that does not exist.
+          if (httpError(error)?.code === "GAME037") {
             if (mine && mine.version > 0) storage.remove(slotKey(slot));
             return mine && mine.version === 0 ? { ...mine, source: "device" } : null;
           }
@@ -713,16 +789,25 @@ export function createGameClient(options: GameClientOptions): GameClient {
         storage.remove(slotKey(slot));
         if (!transport || !mine || mine.version === 0) return;
         await ensureServerPlayer();
-        await request("DELETE", gamePath(`saves/${slot}/`), {
-          query: { base_version: mine.version },
-        });
+        try {
+          await request("DELETE", gamePath(`saves/${slot}/`), {
+            query: { base_version: mine.version },
+          });
+        } catch (error) {
+          // GAME037: the slot is empty on the server already.
+          if (httpError(error)?.code !== "GAME037") throw error;
+        }
       },
     },
 
     async submitScore(board, value, scoreOptions = {}) {
       const { improved } = local.addScore(board, value);
       if (!transport) return { improved, queued: false };
-      const body: Record<string, unknown> = { value, intent: scoreOptions.intent ?? newIntent() };
+      const body: Record<string, unknown> = {
+        value,
+        intent: scoreOptions.intent ?? newIntent(),
+        played_at: (scoreOptions.playedAt ?? now()).toISOString(),
+      };
       if (scoreOptions.run) body.run = scoreOptions.run;
       const result = await write<ScoreResponse>("score", `boards/${board}/scores/`, body);
       return { improved, ...result };
@@ -818,6 +903,7 @@ export function createGameClient(options: GameClientOptions): GameClient {
           kind: r.kind,
           currency: r.currency,
           amount: r.amount,
+          trust: (r.kind === "ad" ? "client" : "server") as RewardTrust,
           callback: false,
           per_day: r.perDay ?? null,
           available: true,
@@ -841,6 +927,31 @@ export function createGameClient(options: GameClientOptions): GameClient {
         "POST",
         gamePath(`rewards/${key}/intent/`),
       );
+    },
+    async adReward(key, show) {
+      const info = (await client.rewards()).find((reward) => reward.key === key);
+      if (!info || info.kind !== "ad") return { status: "unavailable", nextAt: null };
+      if (!info.available) return { status: "unavailable", nextAt: info.next_at };
+      const trust: RewardTrust = info.trust ?? (info.callback ? "callback" : "client");
+      if (trust === "callback") {
+        const { intent } = await client.rewardIntent(key);
+        return (await show(intent)) ? { status: "pending", intent } : { status: "not-watched" };
+      }
+      if (!(await show(null))) return { status: "not-watched" };
+      try {
+        const answer = await client.claimReward(key);
+        return {
+          status: "granted",
+          granted: answer.granted,
+          capped: answer.capped,
+          nextAt: answer.next_at,
+        };
+      } catch (error) {
+        const refused = httpError(error) ?? (error instanceof LocalRuleError ? error : null);
+        if (refused?.code !== "GAME017") throw error;
+        const nextAt = (refused.data as { next_at?: string | null } | undefined)?.next_at;
+        return { status: "unavailable", nextAt: nextAt ?? null };
+      }
     },
     grant(currency, amount, reference) {
       if (transport) {

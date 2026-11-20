@@ -201,12 +201,12 @@ contract ([the game API](game-api.md)). Without `server` the same calls run on t
 | Call | With a server | Without one |
 |---|---|---|
 | `boot()`, `config(key, fallback)`, `flag(key)` | the game's config, flags and clock, cached for offline | the bundled `defaults` |
-| `signInGuest(handle)` | a server-issued guest token | a device guest, which joins the server when it can |
+| `signInGuest(handle)` | a server-issued guest token, asked for with an intent | a device guest, which joins the server when it can |
 | `upgrade()` | the guest's progress joins the account the player signed in to | not available |
 | `saves.write(slot, data, schemaVersion)`, `saves.load(slot)` | kept on the device at once, sent with the version it was based on | the device |
-| `submitScore(board, value, { run })`, `leaderboard`, `around` | the server's boards (a run carries a seed and an input log) | the device's board per period |
+| `submitScore(board, value, { run, playedAt })`, `leaderboard`, `around` | the server's boards (a run carries a seed and an input log, a score when it was played) | the device's board per period |
 | `wallet`, `ledger`, `shop`, `buy`, `equip`, `unequip` | the server's wallet: only the server changes a balance | the device's wallet by the declared `local` setup |
-| `rewards`, `claimReward`, `rewardIntent` | rewards the server declares | the device's ad and daily rewards |
+| `rewards`, `adReward`, `claimReward`, `rewardIntent` | rewards the server declares, each with its `trust` | the device's ad and daily rewards |
 | `daily`, `checkIn` | the server's date, seed and streak | the device's |
 | `progress(events)`, `achievements`, `missions` | counters the server turns into unlocks | the device's counters and achievements |
 | `track(name, props)` | batched, the events the game declares | the `analyticsSink` only |
@@ -220,6 +220,25 @@ asks, and drops a write the server refuses for good (the `rejected` event).
 The latest save of a slot replaces a waiting one. `sync()` sends what waits,
 and the client also tries when the browser comes online and every
 `syncEveryMs` (30000).
+
+Every write is safe to send twice:
+
+- A guest is asked for with an intent, kept with its body until the answer
+  arrives. A lost answer gives the same guest on the next try (with a new
+  token), never a second one.
+- An analytics batch carries its intent, so a retried batch is published
+  once.
+- A score carries `played_at`, when it was played on the server's clock (the
+  device's, corrected by the server's last answer). A score played offline
+  before midnight is on that day's boards when it reaches the server the
+  next morning. When the server does not trust the time (`GAME036`: older
+  than `KARNI_GAME_PLAYED_AT_WINDOW`, or a device clock ahead of it), the
+  score is sent again without it and counts as played now.
+
+A slot the server says is empty (`404 GAME037`, a save deleted on another
+device) is forgotten on this device too, unless this device changed it. A
+`404` without a code is a path the server does not have (the API mounted
+elsewhere), and the device's copy is kept.
 
 A save changed here and on the server (`409 GAME008`) is settled by
 `onConflict(local, server)`: return `"local"`, `"server"` or merged data.
@@ -246,6 +265,20 @@ signs in with a token.
 The server owns the truth. The client never sends a coin amount, an unlock
 or a reward: it reports what happened, and the server decides. `grant()`
 exists only without a server, and the device's balances never reach one.
+
+An ad reward is played by its `trust` (who vouches that the ad was watched):
+
+```ts
+const result = await client.adReward("ad-coins", (intent) => portal.rewarded());
+// "granted" (with the new balance), "pending", "not-watched" or "unavailable"
+```
+
+With `trust: "client"` the reward is claimed once the ad was watched to the
+end. With `trust: "callback"` the client first asks for the reward's intent
+and passes it to `show`, which hands it to the portal's ad call. The
+portal's server then calls the game API back, signed, and the server grants
+the reward: the result is `"pending"`, and the wallet shows it a moment
+later. Without a server every ad reward is the device's own.
 
 ## Building for portals
 

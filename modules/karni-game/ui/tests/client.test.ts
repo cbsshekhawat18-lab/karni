@@ -222,7 +222,9 @@ describe("a game with a server", () => {
     });
     expect(result.queued).toBe(false);
     expect(result.server?.score.status).toBe("accepted");
-    expect(server?.scores).toEqual([{ player: "p1", board: "high", value: 300 }]);
+    expect(server?.scores).toEqual([
+      { player: "p1", board: "high", value: 300, playedAt: "2026-11-19T08:30:00.000Z" },
+    ]);
     const board = await client.leaderboard("high");
     expect(board.local).toBeUndefined();
     expect(board.entries[0]?.value).toBe(300);
@@ -293,7 +295,9 @@ describe("offline first", () => {
     expect(synced).toEqual(["score", "progress", "save"]);
     expect(client.player).toMatchObject({ handle: "Swift Fox", guest: true });
     expect(client.player?.local).toBeUndefined();
-    expect(server.scores).toEqual([{ player: "p1", board: "high", value: 250 }]);
+    expect(server.scores).toEqual([
+      { player: "p1", board: "high", value: 250, playedAt: "2026-11-19T08:30:00.000Z" },
+    ]);
     expect(server.saves.get("p1:main")?.data).toEqual({ level: 4 });
     expect(client.online).toBe(true);
   });
@@ -404,5 +408,155 @@ describe("guest to account", () => {
     expect(client.player).toBeNull();
     expect(storage.get("token")).toBeNull();
     expect(client.queue.size).toBe(0);
+  });
+});
+
+describe("the server's contract, as it closed the client's gaps", () => {
+  it("sends a score with when it was played, so one sent after midnight is on the day it was played", async () => {
+    const server = new FakeGameServer();
+    let clock = new Date("2026-11-18T23:58:10Z");
+    const { client } = make({ server, now: () => clock });
+    await client.signInGuest();
+    server.down = true;
+    expect((await client.submitScore("high", 640)).queued).toBe(true);
+    clock = new Date("2026-11-19T00:05:00Z");
+    server.down = false;
+    for (const write of client.queue.list()) write.notBefore = 0;
+    await client.sync();
+    expect(server.scores).toEqual([
+      { player: "p1", board: "high", value: 640, playedAt: "2026-11-18T23:58:10.000Z" },
+    ]);
+  });
+
+  it("sends a score again without played_at when the server does not trust it (GAME036), never dropping it", async () => {
+    const { client, server } = make();
+    await client.signInGuest();
+    if (!server) throw new Error("no server");
+    server.refusePlayedAt = true;
+    const result = await client.submitScore("high", 300);
+    expect(result.server?.score.status).toBe("accepted");
+    expect(server.scores).toEqual([{ player: "p1", board: "high", value: 300 }]);
+    server.down = true;
+    await client.submitScore("high", 310);
+    server.down = false;
+    const rejected: unknown[] = [];
+    client.on("rejected", (event) => rejected.push(event));
+    for (const write of client.queue.list()) write.notBefore = 0;
+    await client.sync();
+    expect(rejected).toEqual([]);
+    expect(server.scores.map((score) => score.value)).toEqual([300, 310]);
+  });
+
+  it("asks for a guest with an intent, so a lost answer never makes a second guest", async () => {
+    const server = new FakeGameServer();
+    const { client, storage } = make({ server });
+    server.loseNextAnswer = true;
+    const guest = await client.signInGuest("Swift Fox");
+    // The server made the guest, the answer was lost: the game plays as a device guest.
+    expect(guest.local).toBe(true);
+    expect(storage.getJson<{ intent: string }>("guest.pending")?.intent).toMatch(/^intent-/);
+    await client.wallet();
+    expect(server.players.size).toBe(1);
+    expect(client.player).toMatchObject({ id: "p1", handle: "Swift Fox" });
+    expect(client.player?.local).toBeUndefined();
+    expect(storage.get("token")).toBe("gt_p1_again");
+    expect(storage.get("guest.pending")).toBeNull();
+  });
+
+  it("starts a guest's issue again with a new intent when the server says it was used (GAME033)", async () => {
+    const server = new FakeGameServer();
+    const { client, storage } = make({ server });
+    server.intents.set("guest:intent-old-1", JSON.stringify(["Calm Owl", "p0"]));
+    storage.setJson("guest.pending", { intent: "intent-old-1", body: { handle: "Swift Fox" } });
+    const player = await client.signInGuest("Swift Fox");
+    expect(player).toMatchObject({ id: "p1", handle: "Swift Fox", guest: true });
+    expect(storage.get("guest.pending")).toBeNull();
+  });
+
+  it("sends an analytics batch with its intent, so a retried batch is published once", async () => {
+    const { client, server } = make();
+    await client.boot();
+    await client.signInGuest();
+    if (!server) throw new Error("no server");
+    client.track("jumped", { height: 2 });
+    server.loseNextAnswer = true;
+    client.flushEvents();
+    await client.sync();
+    expect(server.events).toHaveLength(1);
+    const [waiting] = client.queue.list();
+    expect(waiting?.body).toMatchObject({ intent: waiting?.id });
+    for (const write of client.queue.list()) write.notBefore = 0;
+    await client.sync();
+    expect(server.events).toHaveLength(1);
+    expect(client.queue.size).toBe(0);
+  });
+
+  it("forgets a slot the server says is empty (GAME037), and keeps it on a 404 without a code", async () => {
+    const { client, server, storage } = make();
+    await client.signInGuest();
+    if (!server) throw new Error("no server");
+    client.saves.write("main", { level: 3 }, 1);
+    await client.sync();
+    // Deleted on another device.
+    server.saves.delete("p1:main");
+    expect(await client.saves.load("main")).toBeNull();
+    expect(storage.get("slot.main")).toBeNull();
+
+    client.saves.write("alt", { level: 5 }, 1);
+    await client.sync();
+    server.failNext = { status: 404, data: { detail: "Not found." } };
+    expect(await client.saves.load<{ level: number }>("alt")).toMatchObject({
+      source: "device",
+      data: { level: 5 },
+    });
+    server.saves.delete("p1:alt");
+    await expect(client.saves.remove("alt")).resolves.toBeUndefined();
+  });
+
+  it("plays an ad reward by its trust: claimed after the ad, or left to the portal's callback", async () => {
+    const { client, server } = make();
+    await client.signInGuest();
+    const shown: (string | null)[] = [];
+    const watch = async (intent: string | null): Promise<boolean> => {
+      shown.push(intent);
+      return true;
+    };
+    const claimed = await client.adReward("ad-coins", watch);
+    expect(claimed).toMatchObject({ status: "granted", granted: { amount: 25, balance: 125 } });
+    const pending = await client.adReward("ad-gems", watch);
+    expect(pending).toEqual({ status: "pending", intent: "signed:ad-gems" });
+    // The callback reward's intent went to the ad call, and the client claimed nothing for it.
+    expect(shown).toEqual([null, "signed:ad-gems"]);
+    expect(server?.calls.filter((call) => call.endsWith("/claim/"))).toEqual([
+      "POST block-hopper/rewards/ad-coins/claim/",
+    ]);
+    expect(await client.adReward("ad-coins", async () => false)).toEqual({
+      status: "not-watched",
+    });
+    expect(await client.adReward("missing", watch)).toEqual({
+      status: "unavailable",
+      nextAt: null,
+    });
+  });
+
+  it("plays an ad reward on the device with no server, and says when the day's claims are used", async () => {
+    const { client } = make({
+      server: null,
+      local: {
+        currencies: [{ key: "coins", title: "Coins", cap: 500 }],
+        rewards: [
+          { key: "ad-coins", title: "Ad", kind: "ad", currency: "coins", amount: 5, perDay: 1 },
+        ],
+      },
+    });
+    expect((await client.rewards())[0]?.trust).toBe("client");
+    expect(await client.adReward("ad-coins", async () => true)).toMatchObject({
+      status: "granted",
+      granted: { balance: 5 },
+    });
+    expect(await client.adReward("ad-coins", async () => true)).toEqual({
+      status: "unavailable",
+      nextAt: null,
+    });
   });
 });
