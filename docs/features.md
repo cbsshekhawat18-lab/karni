@@ -68,6 +68,14 @@ Reference or Debugging sections.
 - **[The module contract](modules.md)**: one command to add a module, one to remove it, and the catalog every module describes itself in.
 - **[PDF reports](reports.md)**, **[AI extraction](ai-extraction.md)**, **[protected files](storage.md)**, **[commerce](commerce.md)**, **[games](game.md)** (with [the game API](game-api.md) a game client codes against, and [the browser side](game-client.md)) and the [other modules](#every-module): each a separate package for anything with its own service or a real memory cost.
 
+## Build games
+
+- **[A game project](game.md#a-new-game-project)** (experimental): `karni new "Block Hopper" --kind game` makes a small game you can play, its server declared in `content/game.yaml`, a page in the app where a guest keeps their progress by signing in, and a package per game portal with `npm run game:package`.
+- **[The server side, karni-game](game.md)** (experimental): guest players with a token the server issues, cloud saves with a version counter, leaderboards with plausible ranges, a soft-currency wallet with a ledger, rewards and a shop, daily content on the server's date, achievements and missions, remote config and analytics, decided on the server.
+- **[The browser side, @karni/game](game-client.md)** (experimental): a canvas loop with a fixed step, input, audio, saves on the device, a seeded random generator, an offline-first data client, per-portal builds with checks, adapters for Poki, CrazyGames, GameDistribution and Y8, adapters for Phaser, PixiJS and React Three Fiber, and a browser smoke harness.
+- **[The game API](game-api.md)** (experimental): the HTTP contract a game client, a realtime server of your own and a portal's server call.
+- **[A game inside an app](https://github.com/cbsshekhawat18-lab/karni/tree/main/examples/hybrid-demo)**: `examples/hybrid-demo`, an app whose members play a game as their accounts, with a leaderboard page and the game in the admin.
+
 ## Coding agents
 
 - **[Karni for coding agents](agents.md)**: AGENTS.md from one rule set, `karni context`, `karni rules`, the procedures and the MCP server.

@@ -585,10 +585,11 @@ def new(
     kind: str | None = typer.Option(
         None,
         "--kind",
-        metavar="[site|app|site+app]",
+        metavar="[site|app|site+app|game]",
         help=(
             "What the project is: site (a public website the client edits in the admin), app "
-            "(an API and a React app for signed-in users) or site+app. Asked when run in a "
+            "(an API and a React app for signed-in users), site+app, or game (experimental: an "
+            "app with a game in it, on karni-game and @karni/game). Asked when run in a "
             "terminal, else app (site with --design)."
         ),
         show_default=False,

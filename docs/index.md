@@ -189,6 +189,17 @@ The [benchmark report](benchmarks/tokens.md) has every figure with its range, th
     [MCP server](agents.md#mcp), [`karni check`](enforcement.md) and the
     [debugging commands](debugging/why.md).
 
+-   **Build games** (experimental)
+
+    ---
+
+    [`karni new --kind game`](game.md#a-new-game-project) makes a small game
+    you can play, with its server and a package per game portal.
+    [karni-game](game.md) keeps guest players, saves, leaderboards, a wallet
+    and achievements on the server, and [@karni/game](game-client.md) is the
+    browser side, with adapters for game portals and engines
+    ([the game API](game-api.md)).
+
 -   **Production**
 
     ---

@@ -597,6 +597,11 @@ apply codemods and list the manual steps. This file is the human summary.
   where the relative base had broken its routes under `/app/`, and the page fits
   `karni/max-page-lines`, which `karni check` had failed on a new game project. Found by playing a
   new project end to end in a browser.
+- **Docs: build games is a main feature.** README.md and the docs home list it next to the
+  others (`karni new --kind game`, karni-game, @karni/game and the game API), the features
+  page has a section for it, the kinds table in docs/public-site.md and `karni new --kind`'s
+  help name the `game` kind, and `examples/hybrid-demo` is an app with a game inside it, with
+  a CI job.
 
 ## 0.5.1 (2026-11-12)
 
