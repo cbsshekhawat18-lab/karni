@@ -1,0 +1,9 @@
+{
+  "minTokens": 70,
+  "threshold": 2,
+  "path": ["src"],
+  "pattern": "**/*.{ts,tsx}",
+  "ignore": ["**/node_modules/**", "src/api/**"],
+  "exitCode": 1,
+  "reporters": ["consoleFull"]
+}

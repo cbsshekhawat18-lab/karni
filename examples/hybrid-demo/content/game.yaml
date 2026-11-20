@@ -1,0 +1,19 @@
+# Tile Match, the game inside the app, declared on the server:
+# karni load content/game.yaml (again after a change). docs/game.md says what each row means.
+karni_game.Game:
+  - slug: tile-match
+    title: Tile Match
+    settings:
+      timezone: UTC
+      save_schema_version: 1
+      analytics:
+        deal_cleared: {moves: int, ms: int}
+    boards:
+      - {key: best, title: Best clears, order: desc, periods: [all, weekly],
+         min_value: 0, max_value: 1000}
+      # Today's deal: the same deal for every member, from the server's daily seed.
+      - {key: daily, title: Today's deal, order: desc, periods: [daily], daily_seed: true,
+         requires_run: true, min_value: 0, max_value: 1000}
+    achievements:
+      - {key: first-clear, title: First clear, counter: deals_cleared, goal: 1}
+      - {key: ten-clears, title: Ten clears, counter: deals_cleared, goal: 10}
