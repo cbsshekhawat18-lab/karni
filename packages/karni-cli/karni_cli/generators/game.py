@@ -11,27 +11,41 @@ What it adds to a new app project:
 * ``content/game.yaml``: the game declared on the server (its boards, its
   currency, rewards, an item, an achievement, a mission and config), loaded
   with ``karni load content/game.yaml``;
-* a page at ``/game`` (``frontend/src/pages/game.tsx``) that hosts the game,
-  and ``frontend/src/game/`` where the game's own code goes; the page passes
-  the project's own API client (``useKarniClient``) to ``createGameClient`` as
-  its transport, and the build's portal adapter (``virtual:karni-game/portal``)
-  to ``createPortal``;
-* ``karniGame()`` from ``@karni/game/vite`` in ``frontend/vite.config.ts`` (the
-  portal builds) and its types in ``frontend/src/vite-env.d.ts``.
+* a small game to start from, the project's own code in ``frontend/src/game/``
+  (the files of :data:`FILES`): its rules as plain functions (a seeded world,
+  a run replayed from its seed and input log), the canvas on @karni/game's
+  loop and input, the session with the server (the portal, the data client, a
+  finished run reported as a score, progress, a save and analytics), and the
+  page's hook and panels;
+* a page at ``/game`` (``frontend/src/pages/game.tsx``) that hosts it inside the
+  app: the calls go through the app's own API client, so a signed-in player's
+  carry the account, and a guest keeps their progress by signing in with a
+  code sent by email (``KARNI_EMAIL_OTP = True``);
+* the game alone for the portals (``frontend/portal/``): ``npm run
+  game:package`` builds, checks and zips one package per portal, calling the
+  game API named by ``KARNI_GAME_API_URL`` across origins with the guest's
+  token (``KARNI_GAME_CORS_ORIGINS`` on the server);
+* ``karniGame({ relativeBase: false })`` from ``@karni/game/vite`` in
+  ``frontend/vite.config.ts`` (the page's portal module, while the app keeps
+  its own base) and its types in ``frontend/src/vite-env.d.ts``.
 
 Only the project's own files are written: everything else is a dependency.
 
 Override / escape hatch: every written file is the project's to change.
-:data:`CLIENT_PACKAGE` names the client package in one place.
+:data:`CLIENT_PACKAGE` names the client package in one place, and the files
+are plain files in ``game_files/`` (``__GAME_SLUG__`` and ``__GAME_TITLE__``
+are the game's).
 """
 
 from __future__ import annotations
+
+from importlib import resources
 
 from karni_cli.generators.core import SETTINGS, Workspace
 from karni_cli.project import CliError
 from karni_cli.urls_edit import add_route
 
-__all__ = ["CLIENT_PACKAGE", "GAME_URLS", "plan"]
+__all__ = ["CLIENT_PACKAGE", "FILES", "GAME_URLS", "plan"]
 
 #: The game's client package (``modules/karni-game/ui``): what the game page imports.
 CLIENT_PACKAGE = "@karni/game"
@@ -43,14 +57,17 @@ IMPORT_MARKER = "// karni:page-imports"
 ROUTE_MARKER = "// karni:routes"
 PEOPLE = (
     "# A player is the game profile of a person: karni-game needs the people contract.\n"
-    "KARNI_PEOPLE = True\n\n"
+    "KARNI_PEOPLE = True\n"
+    "# A guest keeps their progress by signing in with a code sent by email (no password).\n"
+    "KARNI_EMAIL_OTP = True\n\n"
 )
 CALL = "karni_settings(globals())"
 IMPORT = "from karni.conf import karni_settings\n"
 CORS_IMPORT = "from corsheaders.defaults import default_headers\n"
 CORS = (
-    "\n\n# A portal build of the game calls /api/game/ from the portal's domain with a token\n"
-    "# (KARNI_GAME_CORS_ORIGINS lists those origins): the browser may send its header.\n"
+    "\n\n# A portal build of the game calls /api/game/ from the portal's domain with a token.\n"
+    "# KARNI_GAME_CORS_ORIGINS lists those origins, and the browser may send the header.\n"
+    'KARNI_GAME_CORS_ORIGINS = env.list("KARNI_GAME_CORS_ORIGINS", default=[])  # noqa: F821\n'
     'CORS_ALLOW_HEADERS = (*default_headers, "x-player-token")'
 )
 
@@ -99,6 +116,36 @@ def test_a_guest_plays_the_game() -> None:
     score = client.post(f"{{GAME}}boards/high/scores/", {{"value": 120}}, format="json")
     assert score.status_code == 201
     assert client.get(f"{{GAME}}boards/high/").data["entries"][0]["value"] == 120
+
+
+@pytest.mark.django_db
+def test_a_finished_run_counts_and_unlocks_the_first_achievement() -> None:
+    load_content(Path(settings.BASE_DIR) / "content" / "game.yaml")
+    client = APIClient()
+    guest = client.post("/api/game/guest/", {{}}, format="json")
+    client.credentials(HTTP_X_PLAYER_TOKEN=guest.data["token"])
+    events = [
+        {{"counter": "levels_done", "amount": 1}},
+        {{"counter": "coins_collected", "amount": 3}},
+    ]
+    done = client.post(f"{{GAME}}progress/", {{"events": events}}, format="json")
+    assert done.status_code == 200
+    assert [row["key"] for row in done.data["unlocked"]] == ["first-run"]
+
+
+@pytest.mark.django_db
+def test_one_player_never_sees_another_players_save_or_wallet() -> None:
+    load_content(Path(settings.BASE_DIR) / "content" / "game.yaml")
+    first, second = APIClient(), APIClient()
+    for client in (first, second):
+        guest = client.post("/api/game/guest/", {{}}, format="json")
+        client.credentials(HTTP_X_PLAYER_TOKEN=guest.data["token"])
+    save = {{"data": {{"best": 900}}, "schema_version": 1, "base_version": 0}}
+    assert first.put(f"{{GAME}}saves/main/", save, format="json").status_code == 200
+    assert first.post(f"{{GAME}}daily/check-in/", {{}}, format="json").status_code == 200
+    assert second.get(f"{{GAME}}saves/main/").status_code == 404
+    coins = second.get(f"{{GAME}}wallet/").data["balances"]
+    assert all(balance["balance"] == 0 for balance in coins)
 '''
 
 CONTENT = """# {title}, declared on the server: karni load content/game.yaml (again after a change).
@@ -130,6 +177,13 @@ karni_game.Game:
           - {{game: {slug}, key: ad-coins, title: Coins for an ad, kind: ad, amount: 25,
               trust: client, per_day: 3, cooldown: 60}}
           - game: {slug}
+            key: first-run
+            title: First run prize
+            kind: achievement
+            amount: 20
+            achievements:
+              - {{game: {slug}, key: first-run, title: First run, counter: levels_done, goal: 1}}
+          - game: {slug}
             key: collector
             title: Collector's prize
             kind: achievement
@@ -152,99 +206,39 @@ karni_game.Game:
       - {{key: new_levels, flag: true, value: false}}
 """
 
-GAME_SHELL = """// The game itself. Keep its rules in pure functions (tested without a browser)
-// and its drawing here. @karni/game has the loop, input, audio, local saves, the
-// portal adapter and the data client: docs/game.md.
+#: The game's own files, from ``game_files/``: the frontend's game, its page and its portal build.
+FILES = (
+    "frontend/src/game/rules.ts",
+    "frontend/src/game/play.ts",
+    "frontend/src/game/session.ts",
+    "frontend/src/game/useGame.ts",
+    "frontend/src/game/Hud.tsx",
+    "frontend/src/pages/game.tsx",
+    "frontend/portal/index.html",
+    "frontend/portal/main.ts",
+    "frontend/portal/style.css",
+    "frontend/portal/vite.config.ts",
+)
+FRONTEND_PACKAGE = "frontend/package.json"
+TSCONFIG = "frontend/tsconfig.json"
+GITIGNORE = ".gitignore"
+PORTAL_SCRIPT = ("game:package", "karni-game package --root portal")
+PORTAL_IGNORE = (
+    "# The portal packages of the game (npm run game:package).\nfrontend/portal/dist-portals/\n"
+)
 
-export interface Running {
-    stop(): void;
-}
 
-export function startGame(canvas: HTMLCanvasElement, title: string): Running {
-    const context = canvas.getContext("2d");
-    let frame = 0;
-    const draw = (): void => {
-        if (context !== null) {
-            context.fillStyle = "#101820";
-            context.fillRect(0, 0, canvas.width, canvas.height);
-            context.fillStyle = "#f2f2f2";
-            context.font = "20px sans-serif";
-            context.fillText(title, 24, 48);
-        }
-        frame = requestAnimationFrame(draw);
-    };
-    frame = requestAnimationFrame(draw);
-    return { stop: () => cancelAnimationFrame(frame) };
-}
-"""
+def game_file(rel: str, *, slug: str, title: str) -> str:
+    """One of :data:`FILES`, with the game's slug and title in it."""
+    text = resources.files("karni_cli.generators").joinpath("game_files", rel).read_text("utf-8")
+    return text.replace("__GAME_SLUG__", slug).replace("__GAME_TITLE__", title)
 
-PAGE = """// The page that hosts the game: the canvas, the portal, the player, the data client.
-// The game's code is in ../game. Guests play without an account and keep their
-// progress when they sign in (docs/game.md). The calls go through the app's own API
-// client, so a signed-in player's carry their account.
-import {{ createGameClient, createPortal, createStorage }} from "{package}";
-import {{ useAuth, useKarniClient }} from "@karni/ui";
-import {{ useEffect, useRef, useState }} from "react";
-import {{ createPortalAdapter }} from "virtual:karni-game/portal";
-import {{ startGame }} from "../game";
-
-const GAME = "{slug}";
-
-export default function GamePage() {{
-    const canvas = useRef<HTMLCanvasElement | null>(null);
-    const karniClient = useKarniClient();
-    const auth = useAuth();
-    const signedIn = useRef(false);
-    signedIn.current = auth.user !== null;
-    const [ready, setReady] = useState(false);
-
-    useEffect(() => {{
-        const element = canvas.current;
-        if (element === null) {{
-            return undefined;
-        }}
-        const portal = createPortal(createPortalAdapter());
-        let live = true;
-        let stop = (): void => undefined;
-        void portal.init().then(async () => {{
-            // The storage is made after the portal's init, so a portal's data module is read.
-            const storage = createStorage({{ namespace: GAME }});
-            const client = createGameClient({{
-                game: GAME,
-                storage,
-                server: {{
-                    transport: karniClient,
-                    signedIn: () => signedIn.current,
-                    path: "/api/game/",
-                }},
-            }});
-            await client.boot();
-            await client.signInGuest();
-            if (!live) {{
-                return;
-            }}
-            portal.loadingFinished();
-            stop = startGame(element, "{title}").stop;
-            setReady(true);
-        }});
-        return () => {{
-            live = false;
-            stop();
-        }};
-    }}, [karniClient]);
-
-    return (
-        <main className="mx-auto max-w-3xl p-4">
-            <h1 className="mb-4 text-2xl font-semibold">{title}</h1>
-            <canvas ref={{canvas}} width={{960}} height={{540}} className="w-full rounded" />
-            <p className="mt-2 text-sm">{{ready ? "Playing." : "Loading."}}</p>
-        </main>
-    );
-}}
-"""
 
 VITE = "frontend/vite.config.ts"
 VITE_IMPORT = 'import { karniGame } from "@karni/game/vite";\n'
+#: The app keeps its own base (``/``, or ``--base`` of the image's build): a relative
+#: base is for the portal packages, which frontend/portal/ builds.
+VITE_GAME = "karniGame({ relativeBase: false })"
 VITE_AFTER = 'import { karniTheme } from "@karni/ui/vite";\n'
 VITE_PLUGINS = "plugins: [react(), tailwindcss(), karniTheme()]"
 ENV_TYPES = "frontend/src/vite-env.d.ts"
@@ -303,13 +297,34 @@ def _vite(ws: Workspace) -> str:
         return f"Add karniGame() from @karni/game/vite to the plugins in {VITE} yourself."
     text = text.replace(VITE_AFTER, VITE_AFTER + VITE_IMPORT, 1)
     text = text.replace(
-        VITE_PLUGINS, "plugins: [react(), tailwindcss(), karniTheme(), karniGame()]", 1
+        VITE_PLUGINS, f"plugins: [react(), tailwindcss(), karniTheme(), {VITE_GAME}]", 1
     )
     ws.write(VITE, text)
     types = ws.read(ENV_TYPES)
     if types is not None and GAME_TYPES not in types:
         ws.write(ENV_TYPES, types + GAME_TYPES)
-    return f"karniGame(): in {VITE} (the portal builds), with its types in {ENV_TYPES}"
+    return f"{VITE_GAME}: in {VITE} (the page's portal module), with its types in {ENV_TYPES}"
+
+
+def _portal(ws: Workspace) -> str:
+    """The portal build: its script, the folder in the type-check, its packages ignored."""
+    import json
+
+    text = ws.read(FRONTEND_PACKAGE)
+    if text is not None:
+        data = json.loads(text)
+        data.setdefault("scripts", {}).setdefault(*PORTAL_SCRIPT)
+        ws.write(FRONTEND_PACKAGE, json.dumps(data, indent=4) + "\n")
+    config = ws.read(TSCONFIG)
+    if config is not None and '"include": ["src"]' in config:
+        ws.write(TSCONFIG, config.replace('"include": ["src"]', '"include": ["src", "portal"]', 1))
+    ignore = ws.read(GITIGNORE)
+    if ignore is not None and "dist-portals" not in ignore:
+        ws.write(GITIGNORE, ignore.rstrip("\n") + "\n\n" + PORTAL_IGNORE)
+    return (
+        "frontend/portal/: the game alone for the portals (npm run game:package, "
+        "KARNI_GAME_API_URL names the game API)"
+    )
 
 
 def plan(ws: Workspace, *, title: str, slug: str) -> list[str]:
@@ -326,12 +341,13 @@ def plan(ws: Workspace, *, title: str, slug: str) -> list[str]:
     ws.create("content/game.yaml", CONTENT.format(slug=slug, title=title))
     lines.append("games: the game's server hooks (games/game.py) and its test")
     lines.append("content/game.yaml: the game, its boards, currency, rewards and config")
-    if ws.exists("frontend/package.json"):
-        ws.create("frontend/src/game/index.ts", GAME_SHELL)
-        ws.create(
-            "frontend/src/pages/game.tsx",
-            PAGE.format(slug=slug, title=title, package=CLIENT_PACKAGE),
+    if ws.exists(FRONTEND_PACKAGE):
+        for rel in FILES:
+            ws.create(rel, game_file(rel, slug=slug, title=title))
+        lines.append(
+            "frontend/src/game/: the game (its rules, canvas, session with the server and panels)"
         )
         lines.append(_route(ws))
         lines.append(_vite(ws))
+        lines.append(_portal(ws))
     return lines

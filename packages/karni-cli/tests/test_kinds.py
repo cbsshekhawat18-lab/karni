@@ -24,6 +24,7 @@ from karni_cli import kinds
 from karni_cli import project as project_mod
 from karni_cli.commands import context as context_cmd
 from karni_cli.commands import new as new_cmd
+from karni_cli.generators import game
 from karni_cli.main import app
 from karni_cli.project import CliError
 
@@ -188,14 +189,34 @@ def test_a_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert "slug: block-hopper" in (project / "content" / "game.yaml").read_text()
     package = json.loads((project / "frontend" / "package.json").read_text())
     assert package["dependencies"]["@karni/game"] == "^0.5.0"
-    page = (project / "frontend" / "src" / "pages" / "game.tsx").read_text()
-    assert 'from "@karni/game"' in page and 'const GAME = "block-hopper";' in page
-    assert 'import { createPortalAdapter } from "virtual:karni-game/portal";' in page
-    assert "createPortal(createPortalAdapter())" in page
-    assert "transport: karniClient" in page and 'path: "/api/game/"' in page
-    vite = (project / "frontend" / "vite.config.ts").read_text()
+    assert package["scripts"]["game:package"] == "karni-game package --root portal"
+    # The game is the project's own code: its rules, its canvas, its session, its page.
+    frontend = project / "frontend"
+    for rel in game.FILES:
+        assert (project / rel).is_file(), rel
+        assert "__GAME_" not in (project / rel).read_text(), rel
+    page = (frontend / "src" / "pages" / "game.tsx").read_text()
+    assert len(page.splitlines()) <= 50  # karni/max-page-lines
+    assert '<Page title="Block Hopper"' in page
+    session = (frontend / "src" / "game" / "session.ts").read_text()
+    assert 'export const GAME = "block-hopper";' in session
+    assert 'from "virtual:karni-game/portal"' in session
+    assert "createPortal(createPortalAdapter())" in session
+    assert "transport: app.transport" in session and 'path: "/api/game/"' in session
+    assert "{ baseUrl: gameApiUrl }" in session  # a portal build: the API across origins
+    rules = (frontend / "src" / "game" / "rules.ts").read_text()
+    assert "export function replay(" in rules  # a seed and an input log replay a run
+    assert '"include": ["src", "portal"]' in (frontend / "tsconfig.json").read_text()
+    assert "frontend/portal/dist-portals/" in (project / ".gitignore").read_text()
+    vite = (frontend / "vite.config.ts").read_text()
     assert 'import { karniGame } from "@karni/game/vite";' in vite
-    assert "karniTheme(), karniGame()]" in vite
+    # The app keeps its own base: the relative base is the portal build's.
+    assert "karniTheme(), karniGame({ relativeBase: false })]" in vite
+    assert "karniGame()" in (frontend / "portal" / "vite.config.ts").read_text()
+    assert settings.index("KARNI_EMAIL_OTP = True") < settings.index("karni_settings(globals())")
+    assert 'KARNI_GAME_CORS_ORIGINS = env.list("KARNI_GAME_CORS_ORIGINS"' in settings
+    content = (project / "content" / "game.yaml").read_text()
+    assert "key: first-run" in content and "counter: levels_done" in content
     env_types = (project / "frontend" / "src" / "vite-env.d.ts").read_text()
     assert '/// <reference types="@karni/game/client" />' in env_types
     routes = (project / "frontend" / "src" / "routes.tsx").read_text()

@@ -1,0 +1,30 @@
+html,
+body {
+    margin: 0;
+    height: 100%;
+    background: #000;
+    color: #e8eef2;
+    font: 14px sans-serif;
+    overflow: hidden;
+}
+#frame {
+    position: absolute;
+    inset: 0 0 24px 0;
+}
+#game {
+    display: block;
+    touch-action: none;
+}
+#bar {
+    position: absolute;
+    bottom: 0;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    height: 24px;
+}
+#hud {
+    margin: 0;
+}

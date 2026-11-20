@@ -388,23 +388,37 @@ writes an app project (the API, the admin, the React app) with:
 - karni-game wired as `karni add game` wires it, `KARNI_PEOPLE = True` and
   the include in `config/urls.py`.
 - a `games` app: `games/game.py` for the save migrations and run checks, and
-  a test that a guest boots the game, saves and scores.
+  tests that a guest boots the game, saves and scores, that a finished run
+  unlocks the first achievement, and that one player never sees another's
+  save or wallet.
 - `content/game.yaml`: the game, a board and a daily board, a currency with
-  daily, ad, achievement and mission rewards, an item, an achievement, a
+  daily, ad, achievement and mission rewards, an item, two achievements, a
   mission and config. Run `karni load content/game.yaml` after `karni
   migrate`, and again after each change.
-- `frontend/src/pages/game.tsx`, a public page at `/game` that hosts the
-  game, and `frontend/src/game/`, where the game's own code goes, on
-  [`@karni/game`](game-client.md) (the client of the add-on, `modules/karni-game/ui`), which
-  `frontend/package.json` names. The page makes the build's portal adapter
-  (`createPortal(createPortalAdapter())` from `virtual:karni-game/portal`) and
-  passes the app's own API client to `createGameClient` as its transport
-  (`server: {transport: karniClient, signedIn, path: "/api/game/"}`), so a
-  signed-in player's calls carry the account.
-- `karniGame()` from `@karni/game/vite` in `frontend/vite.config.ts`, for the
-  per-portal builds, and its types in `frontend/src/vite-env.d.ts`.
-- `CORS_ALLOW_HEADERS` with `x-player-token`, for a portal build on another
-  origin (`KARNI_GAME_CORS_ORIGINS`).
+- a small game to start from, the project's own code in `frontend/src/game/`
+  on [`@karni/game`](game-client.md) (the client of the add-on,
+  `modules/karni-game/ui`), which `frontend/package.json` names:
+  `rules.ts` (the rules as plain functions: a world made from a seed, a run
+  replayed from its seed and input log), `play.ts` (the canvas, the loop and
+  the input), `session.ts` (the portal, the data client, and what a finished
+  run reports: a score with its run, progress, a save and an analytics
+  event), and `useGame.ts` and `Hud.tsx` for the page.
+- `frontend/src/pages/game.tsx`, a public page at `/game`: the canvas, the
+  player, the wallet and the shop, the daily check-in, the board and the
+  achievements. The calls go through the app's own API client, so a
+  signed-in player's carry the account. A guest keeps their progress by
+  signing in with a code sent by email (`KARNI_EMAIL_OTP = True`): the page
+  then calls `POST upgrade/`.
+- `frontend/portal/`, the same game alone for the game portals: `npm run
+  game:package` builds, checks and zips one package per portal
+  ([building for portals](game-client.md#building-for-portals)). A package
+  calls the game API named by `KARNI_GAME_API_URL` with the guest's token,
+  and the server lists the portals' origins in `KARNI_GAME_CORS_ORIGINS`
+  (read from the environment in `config/settings.py`, with
+  `CORS_ALLOW_HEADERS` sending `x-player-token`).
+- `karniGame({ relativeBase: false })` from `@karni/game/vite` in
+  `frontend/vite.config.ts` (the page's portal module, while the app keeps
+  its own base) and its types in `frontend/src/vite-env.d.ts`.
 
 The kind is recorded in pyproject.toml (`kind = "game"`), and `karni context`
 and the agent files state it. A project made without `--kind game` names

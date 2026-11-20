@@ -585,6 +585,18 @@ apply codemods and list the manual steps. This file is the human summary.
   `KARNI_GAME_API_URL` (or `karniGame({ apiUrl })`, `karni-game package --api-url`), reads it
   as `gameApiUrl` of `virtual:karni-game/portal` and calls it with tokens, and the package
   checks allow its host (`--allow-host` for another).
+- **Changed (experimental): `karni new --kind game` writes a game you can play.** A small
+  platformer as the project's own code in `frontend/src/game/` (its rules as plain functions
+  replayed from a seed and an input log, the canvas on @karni/game's loop and input, the session
+  that reports a finished run as a score, progress, a save and analytics, and the page's panels:
+  the wallet and the shop, the daily check-in, the board and the achievements), a guest who keeps
+  their progress by signing in with a code sent by email (`KARNI_EMAIL_OTP = True`, then
+  `POST upgrade/`), and `frontend/portal/`, the same game alone for the game portals (`npm run
+  game:package`, the game API from `KARNI_GAME_API_URL`, the portals' origins in
+  `KARNI_GAME_CORS_ORIGINS`). The app keeps its own base (`karniGame({ relativeBase: false })`),
+  where the relative base had broken its routes under `/app/`, and the page fits
+  `karni/max-page-lines`, which `karni check` had failed on a new game project. Found by playing a
+  new project end to end in a browser.
 
 ## 0.5.1 (2026-11-12)
 
