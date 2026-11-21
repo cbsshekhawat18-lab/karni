@@ -18,6 +18,7 @@ import {
   type BoardEntry,
   type RunRecord,
 } from "@karni/game";
+import { createAssets, type LoadProgress } from "@karni/game/assets";
 import { drawCover } from "@karni/game/scenes";
 import {
   applySettings,
@@ -25,9 +26,13 @@ import {
   createSettings,
   createUi,
   guardBoot,
+  showBootFailure,
 } from "@karni/game/ui";
+import { assetHosts } from "virtual:karni-game/assets";
 import { createPortalAdapter } from "virtual:karni-game/portal";
 import { createGameScenes } from "./scenes";
+import { createSounds, playEvent } from "./sound";
+import { STAGES, assetManifest, stageInfo, type StageInfo, type StageName } from "./stages";
 import { BINDINGS } from "./ui";
 import { WORLD, createHopper, revive, score, stepHopper, type Hopper } from "./core";
 
@@ -74,44 +79,90 @@ const stick = createVirtualStick(input, {
 });
 const audio = createAudio({ volumes: { effects: 0.6 } });
 audio.unlockOn(input);
+const sfx = createSounds(audio);
+// Pictures, the stage table and every stage's art load from the assets folder, by group.
+const assets = createAssets({ manifest: assetManifest, audio, allowHosts: assetHosts });
 const ui = createUi({ input });
 // Settings have their own save. A mute kept by an older version of the game carries over once.
 const settings = createSettings({ storage });
 if (progress.muted && settings.loaded.status === "new") settings.set({ muted: true });
 applySettings({ store: settings, audio, input, ui });
 
-type Screen = "title" | "play" | "over";
+type Screen = "loading" | "title" | "play" | "over";
 let screen: Screen = "title";
 let hopper: Hopper = createHopper(1);
 let inputs: [number, string][] = [];
 let board: BoardEntry[] = [];
 let revived = false;
 
-const blip = (frequency: number): void => {
-  const ctx = audio.context;
-  if (!ctx || !audio.unlocked) return;
-  const length = Math.floor(ctx.sampleRate * 0.08);
-  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < length; i += 1)
-    data[i] = Math.sin((i / ctx.sampleRate) * frequency * Math.PI * 2) * (1 - i / length) * 0.4;
-  audio.play(buffer);
-};
+let stage: StageName | null = null;
+let stageData: StageInfo | null = null;
+let starting = false;
+const memory = (): number =>
+  assets.memory("core") + assets.memory("meadow") + assets.memory("cave");
 
 const show = (next: Screen): void => {
   screen = next;
   hud.dataset.screen = next;
   hud.dataset.best = String(progress.best);
-  app.go(next);
+  // The loading scene is put on by `app.load`.
+  if (next !== "loading") app.go(next);
   if (next === "play") portal.gameplayStart();
   else portal.gameplayStop();
 };
 
-const start = (): void => {
-  hopper = createHopper(Math.floor(Math.random() * 2 ** 31));
-  inputs = [];
-  revived = false;
-  show("play");
+/** Run a load behind the loading scene. A failure shows the boot failure screen, and Try again loads again. */
+const withLoading = (title: string, work: (progress: (p: LoadProgress) => void) => Promise<void>) =>
+  new Promise<void>((done) => {
+    show("loading");
+    const attempt = (): void =>
+      app.load({
+        title,
+        run: (report) => work((p) => report(p.fraction)),
+        onDone: done,
+        onFailed: (error) => {
+          // A readable screen with the files that failed, and Try again loads them again.
+          const failure = showBootFailure({
+            error,
+            onRetry: () => {
+              failure.destroy();
+              attempt();
+            },
+          });
+        },
+      });
+    attempt();
+  });
+
+/** The next run's stage alternates. Its art loads first, and the last stage's art is freed after. */
+const start = async (): Promise<void> => {
+  if (starting) return;
+  starting = true;
+  try {
+    const next = STAGES[progress.plays % STAGES.length] as StageName;
+    if (!assets.isLoaded(next)) {
+      await withLoading(`Loading ${next}`, async (onProgress) => {
+        await assets.load(next, { onProgress });
+      });
+    }
+    const last = stage;
+    stage = next;
+    stageData = stageInfo(assets, next);
+    if (last && last !== next) assets.unload(last);
+    hud.dataset.stage = next;
+    hud.dataset.artMemory = String(memory());
+    hud.dataset.groups = (["core", ...STAGES] as const).filter((g) => assets.isLoaded(g)).join(",");
+    sfx.music(stageData.theme === "cave" ? "theme-cave" : "theme-meadow", {
+      fade: 1.2,
+      volume: 0.7,
+    });
+    hopper = createHopper(Math.floor(Math.random() * 2 ** 31));
+    inputs = [];
+    revived = false;
+    show("play");
+  } finally {
+    starting = false;
+  }
 };
 
 const finish = async (): Promise<void> => {
@@ -143,7 +194,7 @@ const update = (dt: number): void => {
     settings.set({ muted: !settings.state.muted });
   }
   if (screen !== "play") {
-    if (input.pressed("jump")) start();
+    if (input.pressed("jump")) void start();
     if (screen === "over" && !revived && input.pressed("revive")) {
       void portal.rewarded("continue").then((rewarded) => {
         if (!rewarded) return;
@@ -161,8 +212,7 @@ const update = (dt: number): void => {
   };
   if (step.jump) inputs.push([Math.round(hopper.time * 1000), "jump"]);
   for (const event of stepHopper(hopper, step, dt)) {
-    if (event === "jump") blip(520);
-    if (event === "coin") blip(880);
+    playEvent(sfx, event);
     if (event === "fall") void finish();
   }
   hud.dataset.score = String(score(hopper));
@@ -178,15 +228,30 @@ const render = (): void => {
   context.fillStyle = "#1b263b";
   context.fillRect(0, 0, WORLD.width, WORLD.height);
   const cameraX = Math.max(0, hopper.x - WORLD.width / 3);
+  if (stage && assets.isLoaded(stage)) {
+    // The backdrop moves slower than the platforms. Its art repeats at its own width.
+    const backdrop = assets.image(stage, "bg");
+    const shift = -((cameraX * 0.25) % backdrop.width);
+    context.drawImage(backdrop.source, shift, 0);
+    context.drawImage(backdrop.source, shift + backdrop.width, 0);
+  }
   context.save();
   context.translate(-cameraX, 0);
-  context.fillStyle = "#778da9";
+  context.fillStyle = stageData?.platform ?? "#778da9";
   for (const p of hopper.platforms)
     if (p.x + p.w > cameraX && p.x < cameraX + WORLD.width) context.fillRect(p.x, p.y, p.w, 8);
+  const art = assets.isLoaded("core");
   context.fillStyle = "#ffd166";
-  for (const c of hopper.pickups) if (!c.taken) context.fillRect(c.x - 5, c.y - 5, 10, 10);
-  context.fillStyle = "#ef476f";
-  context.fillRect(hopper.x, hopper.y, WORLD.size, WORLD.size);
+  for (const c of hopper.pickups) {
+    if (c.taken) continue;
+    if (art) context.drawImage(assets.image("core", "coin").source, c.x - 5, c.y - 5);
+    else context.fillRect(c.x - 5, c.y - 5, 10, 10);
+  }
+  if (art) context.drawImage(assets.image("core", "hopper").source, hopper.x, hopper.y);
+  else {
+    context.fillStyle = "#ef476f";
+    context.fillRect(hopper.x, hopper.y, WORLD.size, WORLD.size);
+  }
   context.restore();
   context.fillStyle = "#e0e1dd";
   context.font = "14px system-ui, sans-serif";
@@ -214,23 +279,37 @@ const toTitle = (): void => {
 };
 const app = createGameScenes(
   { loop, input, audio, save, portal, client, ui, settings },
-  { update, render, start, toTitle },
+  { update, render, start: () => void start(), toTitle },
 );
 createDevOverlay(ui, { loop, entities: () => hopper.platforms.length + hopper.pickups.length });
 pauseOnHidden([loop, audio]);
+// A pause menu pauses the loop, and the sound stops with it.
+audio.follow(loop);
 linkPortal(portal, { audio, loop, input });
 
 void guardBoot(async () => {
   portal.loadingStart();
+  loop.start();
   await Promise.all([portal.init(), client.boot()]);
   await client.signInGuest();
+  // The shared art, the fonts and the stage table load behind the loading scene.
+  await withLoading("Loading", async (onProgress) => {
+    await assets.load("core", { onProgress });
+    await assets.fontsReady();
+  });
   portal.loadingFinished();
   hud.dataset.loaded = loaded.status;
   show("title");
-  loop.start();
 });
 
 if (__KARNI_GAME_DEV__) {
   // A development handle, dropped from every build by the preset's flag.
-  (window as unknown as Record<string, unknown>).__blockHopper = { loop, client, portal };
+  (window as unknown as Record<string, unknown>).__blockHopper = {
+    loop,
+    client,
+    portal,
+    assets,
+    sfx,
+    audio,
+  };
 }

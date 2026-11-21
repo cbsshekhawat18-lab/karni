@@ -126,6 +126,8 @@ nav:
       - "Games in the browser (@karni/game)": game-client.md
       - "Scenes (@karni/game/scenes)": game-scenes.md
       - "Game UI (@karni/game/ui)": game-ui.md
+      - "Assets (@karni/game/assets)": game-assets.md
+      - "Sound (@karni/game/sfx)": game-sound.md
       - "App spec (karni.yaml)": app-spec.md
       - Recipes:
           - All recipes: recipes/index.md

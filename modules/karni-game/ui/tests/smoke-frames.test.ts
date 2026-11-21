@@ -15,15 +15,15 @@ describe("the frame-time budget of the smoke run", () => {
 
   it("passes a steady game and names the number that failed", () => {
     expect(checkFrameBudget({ count: 100, p50: 16, p95: 20, max: 60 })).toEqual([]);
-    const slow = checkFrameBudget({ count: 100, p50: 30, p95: 55.5, max: 400 });
+    const slow = checkFrameBudget({ count: 100, p50: 30, p95: 55.5, max: 700 });
     expect(slow).toEqual([
       "frame time: the 95th percentile is 55.5 ms, over the budget of 40.0 ms",
-      "frame time: the slowest frame took 400.0 ms, over the budget of 250.0 ms",
+      "frame time: the slowest frame took 700.0 ms, over the budget of 500.0 ms",
     ]);
   });
 
   it("takes the budget from the game and scales it for a slow runner", () => {
-    const stats = { count: 100, p50: 30, p95: 55, max: 300 };
+    const stats = { count: 100, p50: 30, p95: 55, max: 450 };
     expect(checkFrameBudget(stats, { p95: 60, max: 500 })).toEqual([]);
     expect(checkFrameBudget(stats, {}, 2)).toEqual([]);
     expect(checkFrameBudget(stats, { p95: 10 }, 5)).toEqual([

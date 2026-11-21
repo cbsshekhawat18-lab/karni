@@ -1,6 +1,6 @@
 import type { Plugin, UserConfig } from "vite";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, join, resolve as resolvePath } from "node:path";
+import { dirname, isAbsolute, join, resolve as resolvePath, sep } from "node:path";
 import {
   ASSET_DIR,
   ASSET_REPORT,
@@ -18,6 +18,8 @@ import { PORTALS, definePortals, portalRow, type PortalRow } from "./portals";
 
 /** The module a game imports for its asset manifest. */
 export const ASSETS_MODULE = "virtual:karni-game/assets";
+/** Where the WebP copies are written, under the root's `node_modules/.cache`. */
+const WEBP_CACHE = "node_modules/.cache/karni-game/webp/";
 const ASSETS_RESOLVED = `\0${ASSETS_MODULE}`;
 
 /** The module a game imports for its build's portal adapter. */
@@ -164,7 +166,7 @@ function assetsPlugin(
     }
     scanned = await scanAssets(dir(), {
       encode,
-      cacheDir: join(root, "node_modules", ".cache", "karni-game", "webp"),
+      cacheDir: join(root, WEBP_CACHE),
     });
     return scanned;
   };
@@ -172,6 +174,25 @@ function assetsPlugin(
   return {
     name: "karni-game:assets",
     enforce: "pre",
+    config(config) {
+      // Files of the assets folder stay files: a small picture inlined as text would load with the page, not with its group.
+      if (
+        options.singleFile ||
+        options.assets === false ||
+        config.build?.assetsInlineLimit !== undefined
+      ) {
+        return;
+      }
+      const folder = settings.dir ?? ASSET_DIR;
+      return {
+        build: {
+          assetsInlineLimit: (file: string) => {
+            const path = file.split(sep).join("/");
+            return path.includes(`/${folder}/`) || path.includes(WEBP_CACHE) ? false : undefined;
+          },
+        },
+      };
+    },
     configResolved(config) {
       root = config.root;
       building = config.command === "build";

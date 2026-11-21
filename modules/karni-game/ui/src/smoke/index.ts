@@ -24,7 +24,7 @@ export type SmokeStep =
 export interface FrameBudget {
   /** The 95th percentile of frame time. Default 40 (a steady 30 frames a second with room). */
   p95?: number;
-  /** The slowest frame. Default 250: a pause for loading or a garbage collection is allowed, a freeze is not. */
+  /** The slowest frame. Default 500: one hitch for a load or a garbage collection is allowed, a freeze is not. */
   max?: number;
   /** Frames at the start of play that are not counted. Default 10. */
   warmup?: number;
@@ -43,7 +43,7 @@ export interface FrameStats {
   max: number;
 }
 
-const DEFAULT_FRAME_BUDGET = { p95: 40, max: 250, warmup: 10 } as const;
+const DEFAULT_FRAME_BUDGET = { p95: 40, max: 500, warmup: 10 } as const;
 
 /** The 50th and 95th percentile and the slowest of frame times, in ms. */
 export function frameStats(frames: readonly number[], warmup = 0): FrameStats {

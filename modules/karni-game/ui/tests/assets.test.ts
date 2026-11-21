@@ -50,6 +50,8 @@ function rig(): Rig {
     "data/levels.csv": "a,b\n1,2",
     "https://cdn.example.com/a.json": "{}",
     "/x.json": "{}",
+    [`${location.origin}/own.json`]: "{}",
+    "file:///game/dist/s.json": "{}",
     "data:application/json,%7B%7D": "{}",
   };
   state.platform = {
@@ -227,6 +229,8 @@ describe("createAssets", () => {
           bad: { kind: "data", url: "https://evil.example.net/b.json" },
           inline: { kind: "data", url: "data:application/json,%7B%7D" },
           rooted: { kind: "data", url: "/x.json" },
+          own: { kind: "data", url: `${location.origin}/own.json` },
+          sibling: { kind: "data", url: "file:///game/dist/s.json" },
         },
       },
     });
@@ -240,13 +244,21 @@ describe("createAssets", () => {
     expect(report.failed.map((f) => [f.name, f.reason])).toEqual([
       ["bad", "evil.example.net is not an allowed host (allowHosts)"],
     ]);
-    expect(r.fetched.sort()).toEqual([
-      "/x.json",
-      "data:application/json,%7B%7D",
-      "https://cdn.example.com/a.json",
-    ]);
+    expect([...r.fetched].sort()).toEqual(
+      [
+        "/x.json",
+        "file:///game/dist/s.json",
+        `${location.origin}/own.json`,
+        "data:application/json,%7B%7D",
+        "https://cdn.example.com/a.json",
+      ].sort(),
+    );
+
     const none = createAssets({ manifest: remote, platform: rig().platform, retries: 0 });
-    expect((await none.load("g", { strict: false })).failed).toHaveLength(2);
+    expect((await none.load("g", { strict: false })).failed.map((f) => f.name)).toEqual([
+      "ok",
+      "bad",
+    ]);
   });
 
   it("says plainly that sounds need the audio layer", async () => {

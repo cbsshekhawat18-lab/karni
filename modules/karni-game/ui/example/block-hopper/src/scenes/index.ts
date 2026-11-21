@@ -1,4 +1,5 @@
 import { createSceneStack } from "@karni/game/scenes";
+import { createLoadingScene, type LoadingOptions } from "./loading";
 import { createPlayScene } from "./play";
 import type { GameHooks, GameServices } from "./services";
 import { createTitleScene } from "./title";
@@ -6,6 +7,7 @@ import { createTitleScene } from "./title";
 export type { GameHooks, GameServices } from "./services";
 
 export type ScreenName = "title" | "play" | "over";
+export type { LoadingOptions } from "./loading";
 
 /**
  * Block Hopper's scenes on the scene stack: a title, a play scene and a pause
@@ -24,6 +26,12 @@ export function createGameScenes(services: GameServices, hooks: GameHooks) {
     /** How covered the screen is while a scene change fades. */
     get cover(): number {
       return stack.cover;
+    },
+    /** Replace what is on screen with a loading scene. `onDone` or `onFailed` runs when `run` ends. */
+    load(options: LoadingOptions): void {
+      const scene = createLoadingScene(hooks, options);
+      if (stack.depth === 0) stack.push(scene);
+      else stack.replace(scene, { duration: 0.2 });
     },
     /** Show the scene for the game's screen. "over" stays on the play scene. */
     go(screen: ScreenName): void {

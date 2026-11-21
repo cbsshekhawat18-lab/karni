@@ -94,18 +94,18 @@ export interface Assets<M extends AssetManifest> {
 
 const CONTENT_ERROR = "Karni assets: ";
 
-function sameOrigin(url: string): boolean {
-  if (/^(data|blob):/i.test(url)) return true;
-  if (!/^[a-z][a-z0-9+.-]*:|^\/\//i.test(url)) return true;
-  return false;
-}
-
-function hostOf(url: string): string | null {
+/** The page's own: a relative URL, `data:`, `blob:`, a file next to a `file://` page, or this page's origin. */
+function ownUrl(url: string): boolean {
+  let parsed: URL;
   try {
-    return new URL(url, "http://relative.invalid").hostname.toLowerCase();
+    parsed = new URL(url, "relative:///");
   } catch {
-    return null;
+    return false;
   }
+  if (parsed.protocol === "relative:") return true;
+  if (["data:", "blob:", "file:"].includes(parsed.protocol)) return true;
+  const here = (globalThis as { location?: { origin?: string } }).location?.origin;
+  return here !== undefined && parsed.origin === here;
 }
 
 /**
@@ -136,8 +136,13 @@ export function createAssets<M extends AssetManifest>(options: AssetsOptions<M>)
   };
 
   const check = (url: string): void => {
-    if (sameOrigin(url)) return;
-    const host = hostOf(url);
+    if (ownUrl(url)) return;
+    let host: string | null = null;
+    try {
+      host = new URL(url).hostname.toLowerCase();
+    } catch {
+      // A URL that does not parse is refused below.
+    }
     if (!host || !allowed.has(host)) {
       throw new Error(`${host ?? url} is not an allowed host (allowHosts)`);
     }

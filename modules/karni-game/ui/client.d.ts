@@ -29,6 +29,8 @@ declare module "virtual:karni-game/portal" {
  * Merged by the file the preset writes when `assets.types` is set, so
  * `assets.image("stage1", "hero")` checks the group and the file name.
  */
+// Empty on purpose: the generated file adds the groups to it.
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface KarniAssetGroups {}
 
 declare module "virtual:karni-game/assets" {
