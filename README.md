@@ -5,10 +5,10 @@
   </picture>
 </p>
 
-<h3 align="center">The Django + React framework where your coding agent writes only your app</h3>
+<h3 align="center">The Django + React framework where your coding agent writes only your app or your game</h3>
 
 <p align="center">
-Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.
+Karni is an open-source Django + React framework for building web apps and web games with AI coding agents. Your agent writes only your domain or your game. The API, admin, permissions, React screens and game engine come from packages you upgrade. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.
 </p>
 
 <p align="center">
@@ -42,13 +42,13 @@ Coding agents write that setup faster, but they write it again in every project.
 
 ## What is Karni
 
-**The problem.** Every Django + React project needs the same code before it does anything of its own: serializers, permission classes, admin files, sign-in pages, tables and forms. A boilerplate copies it once. A coding agent writes it again in every project. Either way, a fix made upstream never reaches the copies.
+**The problem.** Every Django + React project needs the same code before it does anything of its own: serializers, permission classes, admin files, sign-in pages, tables and forms. A web game needs its own share: a loop, input, scenes and menus, saves, leaderboards, a wallet the player cannot edit, and a package for each game portal. A boilerplate copies that code once. A coding agent writes it again in every project. Either way, a fix made upstream never reaches the copies.
 
-**How Karni solves it.** That code ships as versioned packages: `karni` (Python), `@karni/ui` (React) and the `karni` command. `karni upgrade` moves a project to each new release, so a fix reaches every project that depends on Karni.
+**How Karni solves it.** That code ships as versioned packages on one base. Apps and games are peers: a project is an app, a game, or both ([apps and games](docs/apps-and-games.md)). The app side is `karni` (Python), `@karni/ui` (React) and the `karni` command. The game side is `karni-game` (the server) and `@karni/game` (the game in the browser), on the same accounts, admin, roles and deploy. `karni upgrade` moves a project to each new release, so a fix reaches every project that depends on Karni.
 
-**What you get.** You declare a model and who may access it. Karni gives you the REST API, the admin, role-based access, the React screens, the tests and the demo data.
+**What you get.** For an app, you declare a model and who may access it, and Karni gives you the REST API, the admin, role-based access, the React screens, the tests and the demo data. For a game, `karni new --kind game` gives you a small game you can play, scenes, a UI kit, drawing, collision, assets, sound and a seeded simulation to build it on, and a server that decides players, saves, scores and coins.
 
-**What you still write.** Your domain: your models, the rules for who may do what, and the logic and pages your product needs. AGENTS.md tells the agent the same, and `karni check` fails the build when it hand-writes what Karni ships.
+**What you still write.** Your domain or your game: your models, the rules for who may do what and the pages your product needs, or your game's rules, scenes and content. AGENTS.md tells the agent the same, and `karni check` fails the build when it hand-writes what Karni ships.
 
 ## Build an app from one line
 

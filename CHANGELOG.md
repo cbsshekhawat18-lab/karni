@@ -157,6 +157,12 @@ apply codemods and list the manual steps. This file is the human summary.
   and the continue when an ad can play), where the text was drawn over the block on a phone in
   portrait, and its touch buttons step aside while the pause menu or that panel is up.
 
+- **Docs: Karni is a framework for web apps and web games.** The description on every surface
+  (docs/seo/description.txt, copied by `scripts/check_description.py --write`), the tagline ("The
+  Django + React framework where your coding agent writes only your app or your game"), the
+  README's What is Karni, the docs home, the FAQ and llms.txt say that apps and games are two peers
+  on one base, and @karni/game's package description names the 0.7.0 layer.
+
 ## 0.6.0 (2026-11-20)
 
 - **Changed: `karni seed` in a project built from a recipe writes realistic demo data.** The
