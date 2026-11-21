@@ -17,6 +17,26 @@ staff create the accounts.
 requests a public form collects.
 {%- else %} There is no React staff app: staff work in the admin.
 {%- endif %}
+{%- elif cookiecutter.kind == "game" -%}
+{%- set game = cookiecutter.project_slug.replace("_", "-") -%}
+A game (`kind = "game"` in pyproject.toml), experimental: the game is the front
+door. Its client is `game/{{ game }}/`, its own npm package on
+[@karni/game](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-game/ui),
+served at `/play/{{ game }}/`. Its server side is the
+[karni-game](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-game)
+module at `/api/game/`: the game declared in `content/game.yaml` (`karni load
+content/game.yaml`), its server hooks in `games/game.py`, and its players,
+boards and wallets in the admin.
+{%- if cookiecutter.staff_app == "yes" %} The staff app in `frontend/` is for staff.
+{%- else %} There is no React staff app: staff work in the admin.
+{%- endif %}
+{%- elif cookiecutter.kind == "app+game" -%}
+An app with a game in it (`kind = "app+game"` in pyproject.toml), experimental:
+a REST API and the React app in `frontend/` for signed-in users, whose page
+`/game` hosts the game (`frontend/src/game/`, on
+[@karni/game](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-game/ui)).
+Its server side is the karni-game module at `/api/game/`, declared in
+`content/game.yaml`, with its server hooks in `games/game.py`.
 {%- elif cookiecutter.kind == "site+app" -%}
 A public website and an app (`kind = "site+app"` in pyproject.toml): a site app
 of Django views and templates on the [karni-site](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
@@ -45,6 +65,9 @@ This boots:
 | `beat`     | Celery beat (django-celery-beat DB scheduler)   | none                   |
 {%- if cookiecutter.staff_app == "yes" %}
 | `frontend` | Vite dev server (React + TS), proxies `/api` and `/health` to django | http://localhost:5173 |
+{%- endif %}
+{%- if cookiecutter.kind == "game" %}
+| `game`     | Vite dev server of the game, proxies `/api` to django | http://localhost:5174/play/{{ cookiecutter.project_slug.replace("_", "-") }}/ |
 {%- endif %}
 
 Verify the stack (Postgres, Redis and Celery all checked):
@@ -215,8 +238,15 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 Every container from the `prod` image runs `karni check --deploy` before its
 command, and refuses to start while a value is unsafe (E520).
 `KARNI_SKIP_DEPLOY_CHECK=1` starts it anyway in an emergency, logged on every
-start. The staff app in `frontend/` is built into the image and served by
+start.
+{%- if cookiecutter.kind == "game" %} Each game in `game/<slug>/` is built into the
+image and served by Caddy at `/play/<slug>/`, with the same security headers
+Django sends, and `/` goes to the game.
+{%- if cookiecutter.staff_app == "yes" %} So is the staff app in `frontend/`, at `/app/`.
+{%- endif %}
+{%- else %} The staff app in `frontend/` is built into the image and served by
 Caddy, with the same security headers Django sends.
+{%- endif %}
 
 [Deploying to a server](https://cbsshekhawat18-lab.github.io/karni/deploy/)
 covers DNS, TLS, the first superuser, updates without failed requests,

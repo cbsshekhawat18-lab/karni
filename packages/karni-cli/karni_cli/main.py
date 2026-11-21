@@ -49,8 +49,9 @@ from karni_cli.project import PASSTHROUGH, CliError
 
 ROOT_HELP = (
     'The Karni framework CLI. Start a project with `karni new "Name"`: --kind site (a public '
-    "website), app or site+app, and --design <folder> to build the site from a designer's "
-    "pages. Inside a project, AGENTS.md, `karni context` and `karni rules` say what to do next."
+    "website), app, site+app, game (a game first) or app+game, and --design <folder> to build "
+    "the site from a designer's pages. Inside a project, AGENTS.md, `karni context` and `karni "
+    "rules` say what to do next."
 )
 
 app = typer.Typer(

@@ -39,8 +39,8 @@ testpaths = ["tests", "*/tests"]
 # The Karni release this project was generated for. `karni upgrade` starts
 # from here (or from the installed karni, whichever is newer).
 baseline = "0.6.0"
-# What the project is: site (a public website), app (an API and a React app) or
-# site+app. `karni context` and the agent files state it with its stack, and
-# `karni add site` turns an app into a site+app. Run `karni rules sync` after
-# changing it.
-kind = "app"
+# What the project is: site (a public website), app (an API and a React app),
+# site+app, game (a game first) or app+game (an app with a game in it). `karni
+# context` and the agent files state it with its stack, and `karni add game`
+# turned this app into an app+game. Run `karni rules sync` after changing it.
+kind = "app+game"

@@ -14,7 +14,11 @@ It writes a ``deploy/`` folder:
 * ``web.service`` (gunicorn), and with Celery ``worker.service`` and ``beat.service``:
   systemd units, installed as ``<app>-web.service`` and so on.
 * ``nginx.conf``: the vhost, TLS for the domain, ``/static/`` and ``/media/`` from
-  disk, everything else proxied to gunicorn's socket.
+  disk, everything else proxied to gunicorn's socket. A project with games
+  (``game/<slug>/``) gets ``/play/<slug>/`` from disk too: each release builds the
+  games (npm, unless a game's ``dist/`` came with the source) and publishes the
+  builds into ``<root>/shared/web/play/`` with ``manage.py karni_publish_web
+  --front``, and a game-first project's ``/`` goes to its game.
 * ``env.example``: every production value for this server. The first run copies it
   to ``<root>/shared/.env`` and stops, so the values are filled in on the server.
 * ``README.md``: preparing the server, the first deploy, updates, rollback, logs.
@@ -68,6 +72,10 @@ class Options:
     #: One process without Redis or Celery (KARNI_SINGLE_PROCESS): one gunicorn worker with
     #: threads, no worker or beat unit.
     single_process: bool = False
+    #: The project's games (``game/<slug>/``), served at ``/play/<slug>/``.
+    games: tuple[str, ...] = ()
+    #: The game ``/`` goes to: a game-first project's one game.
+    front_door: str | None = None
 
     @property
     def app_root(self) -> str:
@@ -113,6 +121,66 @@ def validate(options: Options) -> Options:
     return options
 
 
+_GAME_FUNCTIONS = """\
+# build_games <release dir>: npm builds each game in game/ whose dist/ did not come with
+# the source. It needs Node.js 20.19 or later and npm on this server.
+build_games() {
+  local dir slug
+  for dir in "$1"/game/*/; do
+    [ -f "${dir}package.json" ] || continue
+    slug="$(basename "$dir")"
+    if [ -f "${dir}dist/index.html" ]; then
+      echo "   game $slug: its dist/ came with the source"
+      continue
+    fi
+    need npm "the game $slug is built with npm: install Node.js 20.19 or later, or run npm run build in game/$slug/ before deploy.sh copies the project."
+    if [ -f "${dir}package-lock.json" ]; then
+      (cd "$dir" && npm ci --no-audit --no-fund)
+    else
+      (cd "$dir" && npm install --no-audit --no-fund)
+    fi
+    (cd "$dir" && npm run build)
+    echo "   game $slug: built"
+  done
+}
+
+# publish_games <release dir>: the release's game builds into $ROOT/shared/web/play/<slug>/,
+# where nginx serves /play/<slug>/. A build's earlier files stay a week, for open pages.
+publish_games() {
+  local dir slug
+  for dir in "$1"/game/*/; do
+    [ -f "${dir}dist/index.html" ] || continue
+    slug="$(basename "$dir")"
+    manage "$1" karni_publish_web --root "$ROOT/shared/web" --caddyfile "" --app "" \\
+      --front "play/$slug=game/$slug/dist" >/dev/null
+    echo "   game $slug: published to $ROOT/shared/web/play/$slug/"
+  done
+}
+
+"""
+
+_GAME_LOCATIONS = """\
+
+    # The games (game/<slug>/: {games}), each at /play/<slug>/. Every release publishes
+    # their builds to @ROOT@/shared/web/play/, so only the builds are served, never a
+    # game's source. A build's assets carry their content's hash in their names.
+    location /play/ {{
+        alias @ROOT@/shared/web/play/;
+        add_header Cache-Control $@APP_ID@_play_cache;
+        add_header X-Content-Type-Options "nosniff" always;
+    }}
+"""
+
+_GAME_MAP = """\
+
+# A game's assets (/play/<slug>/assets/) carry their content's hash: a year. Its page: no-cache.
+map $uri $@APP_ID@_play_cache {
+    "~^/play/[^/]+/assets/" "public, max-age=31536000, immutable";
+    default "no-cache";
+}
+"""
+
+
 def _fill(name: str, options: Options) -> str:
     text = (_TEMPLATES / name).read_text(encoding="utf-8")
     values = {
@@ -150,6 +218,20 @@ def _fill(name: str, options: Options) -> str:
             if options.site
             else ""
         ),
+        "games_step": ('  build_games "$rel"\n  publish_games "$rel"\n' if options.games else ""),
+        "games_rollback": ('  publish_games "$ROOT/releases/$target"\n' if options.games else ""),
+        "games_functions": _GAME_FUNCTIONS if options.games else "",
+        "games_map": _GAME_MAP if options.games else "",
+        "games_locations": (
+            _GAME_LOCATIONS.format(games=", ".join(options.games)) if options.games else ""
+        ),
+        "front_door": (
+            "\n    # The front door of a game-first project: its game.\n"
+            f"    location = / {{\n        return 302 /play/{options.front_door}/;\n    }}\n"
+            if options.front_door is not None and options.front_door in options.games
+            else ""
+        ),
+        "web_dir": ' "$ROOT/shared/web"' if options.games else "",
     }
     for key, value in values.items():
         text = text.replace("{{" + key + "}}", value)
@@ -233,6 +315,30 @@ def env_example(options: Options, email: list[str], static: list[str] | None = N
     return "\n".join(out).rstrip("\n") + "\n"
 
 
+def _games_readme(options: Options) -> list[str]:
+    if not options.games:
+        return []
+    door = (
+        [f"`/` goes to `/play/{options.front_door}/`, the game being the project's front door.", ""]
+        if options.front_door is not None and options.front_door in options.games
+        else []
+    )
+    return [
+        "## The games",
+        "",
+        f"Each release builds the games in `game/` ({', '.join(options.games)}) with npm",
+        "(`npm ci`, or `npm install` until a game has a package-lock.json, then `npm run",
+        "build`), and publishes each build to",
+        f"`{options.app_root}/shared/web/play/<slug>/`, which nginx serves at `/play/<slug>/`.",
+        "So the server needs Node.js 20.19 or later and npm (a distribution's own package",
+        "may be older). Without them, build each game where you deploy from (`npm run",
+        "build` in `game/<slug>/`): a game whose `dist/` comes with the project is not built",
+        "again. A rollback publishes the builds of the release it goes back to.",
+        "",
+        *door,
+    ]
+
+
 def readme(options: Options) -> str:
     """The text of ``deploy/README.md``."""
     slug, root, domain = options.slug, options.app_root, options.domain
@@ -308,6 +414,7 @@ def readme(options: Options) -> str:
             "sudo deploy/deploy.sh                     # the release, the units, nginx",
             "```",
             "",
+            *_games_readme(options),
             "## Updates",
             "",
             "```sh",

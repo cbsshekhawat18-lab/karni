@@ -345,6 +345,12 @@ portal's SDK tag in the page, and defines `__KARNI_GAME_DEV__` (true only in
 and styles inside index.html, for `file://` and sandboxed frames. The portal
 comes from `portal`, else `KARNI_GAME_PORTAL`, else `web`.
 
+`devBase` is where `vite dev` serves the game: the path the project serves the
+build at, so links and reloads work the same while developing. A game-first
+project's game ([apps and games](apps-and-games.md)) has
+`karniGame({ devBase: "/play/block-hopper/" })`. A build keeps the relative
+base, which suits that path and every portal's package.
+
 `karni-game package` (or `packagePortals()`) builds one package per row of
 the portal table into `dist-portals/<portal>/`, checks it and zips it when
 the row says. `karni-game check <dir> --portal <name>` checks a package

@@ -285,6 +285,8 @@ export default defineConfig({ plugins: [karniGame()] });
 The preset sets a relative base, gives `virtual:karni-game/portal` the one adapter of the build,
 puts that portal's SDK tag in the page and sets `__KARNI_GAME_DEV__` (true in `vite dev` only).
 `singleFile: true` puts everything into index.html for `file://` and sandboxed frames.
+`devBase: "/play/block-hopper/"` serves `vite dev` at the path the project serves the build at
+(a game-first Karni project's `/play/<slug>/`), while a build keeps the relative base.
 
 ```bash
 KARNI_GAME_GAMEDISTRIBUTION_GAME_ID=... npx karni-game package

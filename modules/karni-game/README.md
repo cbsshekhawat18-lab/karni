@@ -25,7 +25,7 @@ KARNI_PEOPLE = True
 path("api/game/", include("karni_game.urls")),
 ```
 
-Then `make migrate`. `karni new "Block Hopper" --kind game` writes all of it, with a `games` app, the game in `content/game.yaml` and a page at `/game`.
+Then `make migrate`. `karni new "Block Hopper" --kind game` writes all of it, with a `games` app, the game declared in `content/game.yaml`, and the game itself in `game/block-hopper/`, served at `/play/block-hopper/`. `--kind app+game` puts the game on a page of an app instead, at `/game`.
 
 ## What it adds
 

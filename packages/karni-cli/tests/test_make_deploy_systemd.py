@@ -500,8 +500,133 @@ def test_list_and_help_need_no_server_tools(server: Server) -> None:
     assert server.run("--bogus").returncode == 2
 
 
+# a project with a game: /play/<slug>/ from the release's build
+
+
+_NPM = """#!/bin/sh
+echo "npm $* in $(basename "$(pwd)")" >> "$FAKE_LOG"
+if [ "$1" = "run" ] && [ "$2" = "build" ]; then
+  mkdir -p dist/assets && echo '<canvas></canvas>' > dist/index.html
+fi
+exit 0
+"""
+
+
+def _with_a_game(project: Path, *, kind: str = "game") -> None:
+    """The project gets game/sky-dash/ (a package.json and its source) and records ``kind``."""
+    game = project / "game" / "sky-dash"
+    (game / "src").mkdir(parents=True)
+    (game / "package.json").write_text('{"name": "sky-dash", "private": true}\n')
+    (game / "src" / "main.ts").write_text("export {};\n")
+    pyproject = project / "pyproject.toml"
+    pyproject.write_text(pyproject.read_text().replace('kind = "site"', f'kind = "{kind}"'))
+
+
+def test_a_project_with_a_game_serves_its_build_at_play(project: Path) -> None:
+    _with_a_game(project)
+    assert make("--domain", "clinic.example.com").exit_code == 0
+    folder = project / "deploy"
+    vhost = (folder / "nginx.conf").read_text()
+    assert "    location /play/ {\n        alias @ROOT@/shared/web/play/;\n" in vhost
+    assert "add_header Cache-Control $@APP_ID@_play_cache;" in vhost
+    assert "map $uri $@APP_ID@_play_cache {" in vhost
+    assert "    location = / {\n        return 302 /play/sky-dash/;\n    }\n" in vhost
+    assert vhost.count("{") == vhost.count("}")
+    script = (folder / "deploy.sh").read_text()
+    assert "build_games() {" in script and "publish_games() {" in script
+    assert '  build_games "$rel"\n  publish_games "$rel"\n  touch "$rel/.built"' in script
+    assert '  publish_games "$ROOT/releases/$target"\n  activate "$target"' in script
+    for path in folder.iterdir():
+        assert "{{" not in path.read_text(), f"{path.name} keeps a generator token"
+    assert "## The games" in (folder / "README.md").read_text()
+    assert "\n# KARNI_GAME_CORS_ORIGINS=" in (folder / "env.example").read_text()
+
+
+def test_a_game_is_no_front_door_beside_an_app(project: Path) -> None:
+    """A game in a project that is not game-first is served at /play/<slug>/, and / stays."""
+    _with_a_game(project, kind="site")
+    assert make("--domain", "clinic.example.com").exit_code == 0
+    vhost = (project / "deploy" / "nginx.conf").read_text()
+    assert "location /play/ {" in vhost and "location = / {" not in vhost
+
+
+def test_a_project_without_a_game_has_no_play_location(project: Path) -> None:
+    assert make("--domain", "clinic.example.com").exit_code == 0
+    folder = project / "deploy"
+    for path in folder.iterdir():
+        assert "/play/" not in path.read_text() and "game" not in path.read_text(), path.name
+
+
+def test_a_deploy_builds_and_publishes_each_game_and_a_rollback_publishes_its_own(
+    server: Server,
+) -> None:
+    _with_a_game(server.project)
+    assert make("--domain", "clinic.example.com", "--force").exit_code == 0
+    npm = Path(server.env["PATH"].split(os.pathsep)[0]) / "npm"
+    npm.write_text(_NPM)
+    npm.chmod(0o755)
+    first_deploy(server)
+    older = server.current()
+    calls = server.calls()
+    assert "npm install --no-audit --no-fund in sky-dash" in calls  # no lock yet
+    assert "npm run build in sky-dash" in calls
+    managed = [call for call in calls if call.startswith("manage ")]
+    assert managed[-1] == f"manage karni_publish_web in {older}"
+    assert (
+        server.root / "releases" / older / "game" / "sky-dash" / "dist" / "index.html"
+    ).is_file()
+    assert (server.root / "shared" / "web").is_dir()
+    # A game whose dist/ comes with the source is not built again, and a lock means npm ci.
+    (server.project / "game" / "sky-dash" / "package-lock.json").write_text("{}\n")
+    server.clear()
+    assert server.run().returncode == 0
+    assert "npm ci --no-audit --no-fund in sky-dash" in server.calls()
+    built = server.project / "game" / "sky-dash" / "dist"
+    built.mkdir()
+    (built / "index.html").write_text("<canvas></canvas>\n")
+    server.clear()
+    again = server.run()
+    assert again.returncode == 0, again.stderr
+    assert not [call for call in server.calls() if call.startswith("npm ")]
+    assert "game sky-dash: its dist/ came with the source" in again.stdout
+    server.clear()
+    back = server.run("--rollback", older)
+    assert back.returncode == 0, back.stderr
+    managed = [call for call in server.calls() if call.startswith("manage ")]
+    assert managed == [f"manage collectstatic in {older}", f"manage karni_publish_web in {older}"]
+
+
+def test_a_game_without_npm_and_without_its_build_stops_the_deploy(server: Server) -> None:
+    plain = os.pathsep.join(("/usr/bin", "/bin"))
+    if shutil.which("npm", path=plain) is not None:
+        pytest.skip("npm is on this system's /usr/bin or /bin")
+    _with_a_game(server.project)
+    assert make("--domain", "clinic.example.com", "--force").exit_code == 0
+    first = server.run()
+    assert first.returncode == 1  # writes the .env and stops
+    (server.root / "shared" / ".env").write_text("SECRET_KEY=filled-in-on-the-server\n")
+    bin_dir = server.env["PATH"].split(os.pathsep)[0]
+    stopped = server.run(PATH=os.pathsep.join((bin_dir, plain)))
+    assert stopped.returncode == 1
+    assert "npm is not installed. the game sky-dash is built with npm" in stopped.stderr
+    assert not (server.root / "current").exists()
+
+
 @pytest.mark.skipif(shutil.which("shellcheck") is None, reason="needs shellcheck on PATH")
 def test_shellcheck_passes(project: Path) -> None:
+    assert make().exit_code == 0
+    result = subprocess.run(
+        ["shellcheck", "-s", "bash", str(project / SCRIPT)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout
+
+
+@pytest.mark.skipif(shutil.which("shellcheck") is None, reason="needs shellcheck on PATH")
+def test_shellcheck_passes_with_a_game(project: Path) -> None:
+    _with_a_game(project)
     assert make().exit_code == 0
     result = subprocess.run(
         ["shellcheck", "-s", "bash", str(project / SCRIPT)],

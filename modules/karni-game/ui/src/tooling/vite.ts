@@ -76,6 +76,19 @@ export interface KarniGameViteOptions {
   singleFile?: boolean;
   /** Keep the relative base (`./`) the portals and zips need. Default true. */
   relativeBase?: boolean;
+  /**
+   * Where `vite dev` serves the game, as `/play/block-hopper/`: the path the
+   * project serves its build at, so a link or a reload works the same while
+   * developing. A build keeps the relative base, which suits that path and
+   * every portal. Default: none, and `vite dev` serves the game at `/`.
+   */
+  devBase?: string;
+}
+
+/** `play/block-hopper` as `/play/block-hopper/`: a base with a slash at each end. */
+export function servedBase(path: string): string {
+  const inner = path.trim().replace(/^\/+|\/+$/g, "");
+  return inner ? `/${inner}/` : "/";
 }
 
 function processEnv(): Readonly<Record<string, string | undefined>> {
@@ -234,10 +247,10 @@ function assetsPlugin(
 }
 
 /**
- * The Vite preset of a game: a relative base, the build's one portal adapter
- * behind `virtual:karni-game/portal`, that portal's SDK tag in the page, the
- * `__KARNI_GAME_DEV__` flag (true only in `vite dev`), and an optional
- * single-file build.
+ * The Vite preset of a game: a relative base (or `devBase` in `vite dev`),
+ * the build's one portal adapter behind `virtual:karni-game/portal`, that
+ * portal's SDK tag in the page, the `__KARNI_GAME_DEV__` flag (true only in
+ * `vite dev`), and an optional single-file build.
  */
 export function karniGame(options: KarniGameViteOptions = {}): Plugin[] {
   const env = options.env ?? processEnv();
@@ -280,7 +293,8 @@ export function karniGame(options: KarniGameViteOptions = {}): Plugin[] {
           __KARNI_GAME_PORTAL__: JSON.stringify(pick().row.name),
         },
       };
-      if (options.relativeBase ?? true) config.base = "./";
+      if (dev && options.devBase !== undefined) config.base = servedBase(options.devBase);
+      else if (options.relativeBase ?? true) config.base = "./";
       if (options.singleFile) {
         // Vite 8 bundles with Rolldown, earlier versions with Rollup: each has its own switch.
         const rolldown = "rolldownVersion" in this.meta;

@@ -170,7 +170,7 @@ or set CERT and CERT_KEY at the top of deploy/deploy.sh to the certificate you h
 }
 
 shared() {
-  mkdir -p "$ROOT/releases" "$ROOT/shared/media" "$ROOT/shared/static"
+  mkdir -p "$ROOT/releases" "$ROOT/shared/media" "$ROOT/shared/static"{{web_dir}}
   if [ ! -e "$ROOT/shared/.env" ]; then
     [ -f "$SRC/deploy/env.example" ] || fail "$SRC/deploy/env.example is missing: run karni make deploy systemd-nginx in the project."
     (umask 077 && cp "$SRC/deploy/env.example" "$ROOT/shared/.env")
@@ -182,7 +182,7 @@ shared() {
   fi
   echo "   $ROOT/shared/.env is there, left as it is"
   if as_root; then
-    chown -R "$RUN_AS:$RUN_AS" "$ROOT/shared/media" "$ROOT/shared/static"
+    chown -R "$RUN_AS:$RUN_AS" "$ROOT/shared/media" "$ROOT/shared/static"{{web_dir}}
   fi
 }
 
@@ -216,7 +216,7 @@ shutil.copytree(source, target, ignore=ignore, symlinks=True, dirs_exist_ok=True
 PY
 }
 
-build() {
+{{games_functions}}build() {
   local id rev rel old
   [ -f "$SRC/manage.py" ] || fail "$SRC has no manage.py: run deploy/deploy.sh from the project's deploy/ folder."
   id="$(date -u +%Y%m%d%H%M%S)"
@@ -250,7 +250,7 @@ build() {
   manage "$rel" karni_check --deploy --no-cache
   manage "$rel" migrate --noinput
   manage "$rel" collectstatic --noinput -v 0
-{{seed_step}}  touch "$rel/.built"
+{{seed_step}}{{games_step}}  touch "$rel/.built"
   RELEASE="$id"
 }
 
@@ -406,7 +406,7 @@ rollback() {
   [ "$target" != "$cur" ] || fail "$target is the current release already."
   say "rolling back from $cur to $target"
   manage "$ROOT/releases/$target" collectstatic --noinput -v 0
-  activate "$target"
+{{games_rollback}}  activate "$target"
   say "rolled back to $target"
   echo "Migrations that $cur applied stay in the database. If $target cannot run with them,"
   echo "reverse them with $cur's code first (manage.py migrate <app> <migration>), then roll back."

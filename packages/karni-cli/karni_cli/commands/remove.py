@@ -4,9 +4,9 @@ What it takes out, from the module's manifest (:mod:`karni_cli.catalog`):
 the dependency in ``pyproject.toml``, its apps in the ``# karni:apps``
 block, its middleware and context processors (and the context processors
 block once it is empty), its include in config/urls.py, the kind it gave
-the project (a site+app goes back to an app), and its recorded agent
-guidance, ``.karni/modules/<module>.md``, after which the agent files are
-refreshed (``karni rules sync``).
+the project (a site+app or an app+game goes back to an app), and its
+recorded agent guidance, ``.karni/modules/<module>.md``, after which the
+agent files are refreshed (``karni rules sync``).
 
 It refuses when another added module requires it (``C316``). It never drops
 data: it counts the rows of each of the module's tables through ``manage.py
@@ -170,6 +170,15 @@ def plan_removal(project: Path, name: str, manifest: Manifest | None) -> Removal
                 removal.notes.append(
                     'pyproject.toml keeps kind = "site": a site without karni-site has no '
                     "content to edit. Set the kind under [tool.karni] yourself."
+                )
+        if name == "game":
+            kind = kinds.recorded_kind(text)
+            if kind == "app+game":
+                removal.edit(PYPROJECT, kinds.set_kind_text(text, "app"), "kind: app+game -> app")
+            elif kind == "game":
+                removal.notes.append(
+                    'pyproject.toml keeps kind = "game": a game without karni-game has no '
+                    "server. Set the kind under [tool.karni] yourself."
                 )
 
     settings = project / SETTINGS

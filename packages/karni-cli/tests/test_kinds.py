@@ -1,11 +1,14 @@
-"""Project kinds: ``karni new --kind site|app|site+app``, ``--design``, the record, the agent files.
+"""Project kinds: ``karni new --kind site|app|site+app|game|app+game``, ``--design``, the record.
 
 Every kind scaffolds, records ``kind`` under ``[tool.karni]``, and states it
 in ``karni context`` and the agent files. ``--design`` runs the analysis and
 the editable import on every generic fixture design and prints the rest of
 the site-from-design procedure. ``karni add site`` turns an app into a
-site+app. The real runs (each kind's own tests, ruff and ``karni check``)
-are at the end.
+site+app, ``karni add game`` an app into an app+game. The game side is
+opt-in, and the tests prove it per kind: an app names no game package, a
+game first names no staff-app package it does not use, and a project with
+both shares one base. The real runs (each kind's own tests, ruff and ``karni
+check``, and a project 0.6.0 made with ``--kind game``) are at the end.
 """
 
 from __future__ import annotations
@@ -173,9 +176,11 @@ def test_a_site_and_an_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
     )
 
 
-def test_a_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    project = _made(tmp_path, monkeypatch, "Block Hopper", "--kind", "game")
-    assert _kind(project) == "game"
+def test_an_app_with_a_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """--kind app+game: what --kind game made in 0.6.0, the game on a page of the app."""
+    project = _made(tmp_path, monkeypatch, "Block Hopper", "--kind", "app+game")
+    assert _kind(project) == "app+game"
+    assert not (project / "game").exists()
     pyproject = tomllib.loads((project / "pyproject.toml").read_text())
     assert "karni-game" in pyproject["project"]["dependencies"]
     settings = (project / "config" / "settings.py").read_text()
@@ -223,26 +228,190 @@ def test_a_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     routes = (project / "frontend" / "src" / "routes.tsx").read_text()
     assert 'import GamePage from "./pages/game";' in routes and 'path: "/game"' in routes
     agents = _agents(project)
-    assert "A game (kind `game` in pyproject.toml). The stack is set" in agents
+    assert "An app with a game in it (kind `app+game` in pyproject.toml). The stack is" in agents
     assert "karni-game module" in agents and "`content/game.yaml`" in agents
+    assert "`frontend/src/game/`" in agents
     assert _context(project, monkeypatch).splitlines()[0] == (
-        "KIND: game (a game on karni-game: games app, content/game.yaml; "
+        "KIND: app+game (a game on karni-game, on a page of the app: content/game.yaml; "
         "API + React app in frontend/)"
     )
+    assert 'An app with a game in it (`kind = "app+game"`' in (project / "README.md").read_text()
+    # The prod stack serves the app, and the game is a page of it: nothing at /play/.
+    assert "/play/" not in (project / "Caddyfile").read_text()
 
 
-def test_a_project_without_the_game_kind_has_no_game_dependency(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def _staff_app_names(text: str) -> list[str]:
+    """The packages of the React staff app that ``text`` names."""
+    names = ("@karni/ui", "react", "@tanstack/", "tailwindcss", "@vitejs/plugin-react")
+    return [name for name in names if f'"{name}' in text]
+
+
+def test_a_game_first(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """--kind game: the game is the front door, in game/<slug>/ at /play/<slug>/, no staff app."""
+    result = _new(tmp_path, monkeypatch, "Block Hopper", "--kind", "game")
+    assert result.exit_code == 0, f"{result.output}\n{result.exception!r}"
+    project = tmp_path / "block_hopper"
+    assert _kind(project) == "game"
+    # The server side is the same as the hybrid's.
+    pyproject = tomllib.loads((project / "pyproject.toml").read_text())
+    assert pyproject["project"]["dependencies"] == [
+        "karni",
+        "gunicorn",
+        "uvicorn-worker",
+        "psycopg[binary]",
+        "karni-game",
+    ]
+    settings = (project / "config" / "settings.py").read_text()
+    assert '"karni_game"' in settings and '"games"' in settings
+    assert settings.index("KARNI_PEOPLE = True") < settings.index("karni_settings(globals())")
+    assert 'CORS_ALLOW_HEADERS = (*default_headers, "x-player-token")' in settings
+    urls = (project / "config" / "urls.py").read_text()
+    assert 'path("api/game/", include("karni_game.urls")),' in urls
+    assert 'include("karni.accounts.urls")' in urls  # one sign-in, as every kind
+    for rel in ("games/game.py", "games/tests/test_game.py", "content/game.yaml"):
+        assert (project / rel).is_file(), rel
+    # The game is its own npm package, with nothing of the staff app's.
+    folder = project / "game" / "block-hopper"
+    for rel in game.GAME_FILES:
+        text = (folder / rel).read_text()
+        for mark in ("__GAME_SLUG__", "__GAME_TITLE__", "__KARNI_GAME_SPEC__"):
+            assert mark not in text, (rel, mark)
+    package = json.loads((folder / "package.json").read_text())
+    assert package["name"] == "block-hopper" and package["private"] is True
+    assert package["dependencies"] == {"@karni/game": "^0.6.0"}
+    assert set(package["devDependencies"]) == {"typescript", "vite", "vitest"}
+    assert "author" not in package and "contributors" not in package  # no names of people
+    assert package["scripts"]["package"].startswith("karni-game package --portal web")
+    assert package["scripts"]["test"] == "vitest run"
+    assert (
+        'karniGame({ devBase: "/play/block-hopper/" })' in (folder / "vite.config.ts").read_text()
+    )
+    assert 'export const GAME = "block-hopper";' in (folder / "src" / "session.ts").read_text()
+    main = (folder / "src" / "main.ts").read_text()
+    assert 'openSession(portalName === "web" ? "same-origin" : undefined)' in main
+    assert "export function replay(" in (folder / "src" / "rules" / "index.ts").read_text()
+    assert 'from "../src/rules"' in (folder / "tests" / "rules.test.ts").read_text()
+    # No staff app: no frontend/, and no file of the project names a staff-app package.
+    assert not (project / "frontend").exists()
+    for rel in ("pyproject.toml", "docker-compose.yml", "game/block-hopper/package.json"):
+        assert _staff_app_names((project / rel).read_text()) == [], rel
+    assert "karni-site" not in (project / "pyproject.toml").read_text()
+    compose = (project / "docker-compose.yml").read_text()
+    assert "\n  frontend:" not in compose and "\n  game:\n" in compose
+    assert (
+        "./game/block-hopper:/app" in compose and '"${KARNI_GAME_DEV_PORT:-5174}:5174"' in compose
+    )
+    # Served at /play/<slug>/ in production, and / goes to the game.
+    caddy = (project / "Caddyfile").read_text()
+    assert "\thandle /play/* {\n\t\troot * /srv/data/web\n" in caddy
+    assert "\tredir / /play/block-hopper/ 302\n" in caddy
+    assert "The staff app (frontend/)" not in caddy
+    prod = (project / "docker-compose.prod.yml").read_text()
+    assert (
+        'karni_publish_web --root /data/web --app "" --front play/block-hopper=game/block-hopper/dist'
+        in prod
+    )
+    dockerfile = (project / "Dockerfile").read_text()
+    assert "FROM node:24-alpine AS games\n" in dockerfile
+    assert "COPY --from=games /out/ /app/\n" in dockerfile
+    ignore = (project / ".gitignore").read_text()
+    for entry in ("game/*/node_modules/", "game/*/dist/", "game/*/dist-portals/"):
+        assert entry in ignore, entry
+    assert "game/*/test-results/" in ignore and "game/*/playwright-report/" in ignore
+    assert "game/*/node_modules" in (project / ".dockerignore").read_text()
+    # What karni new says, what the agent files and karni context state.
+    assert "No staff app (frontend/): staff work in the admin." in result.output
+    assert "(cd game/block-hopper && npm install)" in result.output
+    assert "http://localhost:5174/play/block-hopper/" in result.output
+    assert "/new-app" not in result.output.split("Next steps:")[1]
+    agents = _agents(project)
+    assert "A game (kind `game` in pyproject.toml). The stack is set" in agents
+    assert "`game/block-hopper/`" in agents and "`/play/block-hopper/`" in agents
+    assert "There is no React staff app: staff work in the admin." in agents
+    assert _context(project, monkeypatch).splitlines()[0] == (
+        "KIND: game (a game first: game/block-hopper/ at /play/block-hopper/, its server on "
+        "karni-game: games app, content/game.yaml; no staff app)"
+    )
+    readme = (project / "README.md").read_text()
+    assert 'A game (`kind = "game"` in pyproject.toml)' in readme and "## Frontend" not in readme
+
+
+def test_a_game_first_with_a_staff_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """--staff-app adds the React app for staff, which gets no game package: the game has its own."""
+    project = _made(tmp_path, monkeypatch, "Tile Match", "--kind", "game", "--staff-app")
+    assert _kind(project) == "game"
+    staff = json.loads((project / "frontend" / "package.json").read_text())
+    assert "@karni/ui" in staff["dependencies"] and "@karni/game" not in staff["dependencies"]
+    assert "karniGame" not in (project / "frontend" / "vite.config.ts").read_text()
+    assert (project / "game" / "tile-match" / "package.json").is_file()
+    caddy = (project / "Caddyfile").read_text()
+    assert "The staff app (frontend/), built into the image for /app/." in caddy
+    assert "\thandle /play/* {" in caddy and "\tredir / /play/tile-match/ 302\n" in caddy
+    compose = (project / "docker-compose.yml").read_text()
+    assert "\n  frontend:" in compose and "\n  game:\n" in compose
+    assert "Staff also have the React staff app in `frontend/`" in _agents(project)
+
+
+@pytest.mark.parametrize(
+    "args", [["--kind", "app"], ["--kind", "site+app"], ["--kind", "site", "--no-staff-app"]]
+)
+def test_a_project_without_a_game_kind_has_no_game_package(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, args: list[str]
 ) -> None:
-    """The add-on is opt-in: a plain project names neither karni-game nor @karni/game."""
-    for kind in ("app", "site+app"):
-        project = _made(tmp_path / kind.replace("+", "-"), monkeypatch, "Plain One", "--kind", kind)
-        for rel in ("pyproject.toml", "config/settings.py", "config/urls.py"):
-            text = (project / rel).read_text()
-            assert "karni-game" not in text and "karni_game" not in text, (kind, rel)
+    """The game side is opt-in: a project made without it names neither package, and no file
+    the scaffold or the production stack writes builds or serves a game."""
+    project = _made(tmp_path, monkeypatch, "Plain One", *args)
+    for rel in ("pyproject.toml", "config/settings.py", "config/urls.py"):
+        text = (project / rel).read_text()
+        assert "karni-game" not in text and "karni_game" not in text, (args, rel)
+    for rel in (
+        "Dockerfile",
+        "docker-compose.yml",
+        "docker-compose.prod.yml",
+        "Caddyfile",
+        ".gitignore",
+        ".dockerignore",
+        ".env.prod.example",
+    ):
+        text = (project / rel).read_text()
+        assert "/play/" not in text and "game/" not in text and "KARNI_GAME" not in text, rel
+    if (project / "frontend").exists():
         assert "@karni/game" not in (project / "frontend" / "package.json").read_text()
         assert "karniGame" not in (project / "frontend" / "vite.config.ts").read_text()
-        assert not (project / "games").exists() and not (project / "content" / "game.yaml").exists()
+    assert not (project / "games").exists() and not (project / "game").exists()
+    assert not (project / "content" / "game.yaml").exists()
+
+
+@pytest.mark.parametrize("args", [["--kind", "app+game"], ["--kind", "game", "--staff-app"]])
+def test_a_project_with_both_shares_one_base(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, args: list[str]
+) -> None:
+    """An app and a game in one project: one Django project, one database, one sign-in, one
+    API, one web front, both npm packages beside each other and nothing written twice."""
+    project = _made(tmp_path, monkeypatch, "Both Kinds", *args)
+    assert sorted(path.name for path in project.glob("*/settings.py")) == ["settings.py"]
+    assert len(list(project.rglob("urls.py"))) == 1  # config/urls.py: no app wrote its own
+    urls = (project / "config" / "urls.py").read_text()
+    assert urls.count('include("karni.accounts.urls")') == 1
+    assert urls.count('include("karni_game.urls")') == 1 and urls.count("*api_urls()") == 1
+    pyproject = tomllib.loads((project / "pyproject.toml").read_text())
+    assert pyproject["project"]["dependencies"].count("karni") == 1
+    assert pyproject["project"]["dependencies"].count("karni-game") == 1
+    compose = (project / "docker-compose.yml").read_text()
+    assert compose.count("\n  db:\n") == 1 and compose.count("image: postgres:16") == 1
+    caddy = (project / "Caddyfile").read_text()
+    assert caddy.count("{$DOMAIN} {") == 1 and caddy.count("import django") == 1
+    packages = {
+        path.relative_to(project).as_posix(): json.loads(path.read_text())
+        for path in project.glob("*/package.json")
+    } | {
+        path.relative_to(project).as_posix(): json.loads(path.read_text())
+        for path in project.glob("game/*/package.json")
+    }
+    named = {rel: set(data["dependencies"]) for rel, data in packages.items()}
+    assert any("@karni/ui" in deps for deps in named.values())
+    assert any("@karni/game" in deps for deps in named.values())
+    assert sum("@karni/game" in deps for deps in named.values()) == 1
 
 
 @pytest.mark.parametrize(
@@ -254,7 +423,8 @@ def test_a_project_without_the_game_kind_has_no_game_dependency(
         (["--design", str(DESIGNS / "bakery" / "css")], "has no .html page"),
         (["--site-app", "Web-Site"], "Site app name 'Web-Site' must be snake_case"),
         (["--kind", "game", "--recipe", "shop"], "--kind game makes a game on karni-game"),
-        (["--kind", "game", "--no-staff-app"], "--no-staff-app leaves frontend/ out"),
+        (["--kind", "app+game", "--recipe", "shop"], "--kind app+game makes a game on karni-game"),
+        (["--kind", "app+game", "--no-staff-app"], "--no-staff-app leaves frontend/ out"),
     ],
 )
 def test_choices_that_do_not_fit_are_refused(
@@ -269,7 +439,7 @@ def test_choices_that_do_not_fit_are_refused(
 def test_an_unknown_kind_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     result = _new(tmp_path, monkeypatch, "Odd One", "--kind", "blog")
     assert isinstance(result.exception, CliError) and result.exception.code == "C106"
-    assert "--kind 'blog' is not a kind. Use one of site, app, site+app, game" in str(
+    assert "--kind 'blog' is not a kind. Use one of site, app, site+app, game, app+game" in str(
         result.exception
     )
     assert not (tmp_path / "odd_one").exists()
@@ -357,6 +527,46 @@ def test_a_project_without_a_kind_is_read_from_its_files(generated_project: Path
     )
     pyproject.unlink()
     assert kinds.project_kind(generated_project) is None  # not a project Karni made
+
+
+def test_a_game_is_read_from_its_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """karni_game installed: a game first with game/<slug>/, an app+game with the game in the
+    staff app. A recorded game with 0.6.0's layout is read as app+game, and says so."""
+    first = _made(tmp_path / "first", monkeypatch, "Sky Dash", "--kind", "game")
+    hybrid = _made(tmp_path / "hybrid", monkeypatch, "Sky Dash", "--kind", "app+game")
+    for project in (first, hybrid):
+        pyproject = project / "pyproject.toml"
+        pyproject.write_text(pyproject.read_text().replace(f'kind = "{_kind(project)}"\n', ""))
+    assert (_project_kind(first).kind, _project_kind(first).games) == ("game", ("sky-dash",))
+    assert _project_kind(hybrid).kind == "app+game"
+    # 0.6.0's --kind game: the hybrid's layout, recorded as game.
+    pyproject = hybrid / "pyproject.toml"
+    pyproject.write_text(kinds.set_kind_text(pyproject.read_text(), "game"))
+    found = _project_kind(hybrid)
+    assert (found.kind, found.recorded, found.recorded_as) == ("app+game", True, "game")
+    assert found.context_line().startswith(
+        'KIND: app+game, recorded as game (the 0.6.0 name): set kind = "app+game" under '
+        "[tool.karni] (a game on karni-game, on a page of the app"
+    )
+    agents = " ".join(found.agent_lines())
+    assert "An app with a game in it (kind `game` in pyproject.toml, read as `app+game`" in agents
+    assert "`frontend/src/game/`" in agents
+
+
+def test_add_game_turns_an_app_into_an_app_with_a_game(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _made(tmp_path, monkeypatch, "Reading Club")
+    monkeypatch.chdir(project)
+    result = ok("add", "game")
+    assert _kind(project) == "app+game"
+    assert "kind: app -> app+game (kind under [tool.karni] in pyproject.toml)" in result.output
+    assert 'To go back, set kind = "app" under [tool.karni] again' in result.output
+    assert "@karni/game" in (project / "frontend" / "package.json").read_text()
+    assert "An app with a game in it (kind `app+game`" in _agents(project)
+    assert "kind: " not in ok("add", "game").output  # once is enough
+    removed = ok("remove", "game")
+    assert "kind: app+game -> app" in removed.output and _kind(project) == "app"
 
 
 def test_a_kind_karni_does_not_know_stops_context_and_sync(
@@ -516,15 +726,36 @@ def _run(project: Path, python: Path, *args: str) -> subprocess.CompletedProcess
         ["--kind", "site", "--design", str(DESIGNS / "school")],
         ["--kind", "site+app", "--design", str(DESIGNS / "bakery")],
         ["--kind", "game"],
+        ["--kind", "app+game"],
+        ["--kind", "app+game", "0.6.0"],
     ],
-    ids=["app", "site", "site-no-staff-app", "site+app", "site-design", "site+app-design", "game"],
+    ids=[
+        "app",
+        "site",
+        "site-no-staff-app",
+        "site+app",
+        "site-design",
+        "site+app-design",
+        "game",
+        "app+game",
+        "game-made-by-0.6.0",
+    ],
 )
 def test_each_kind_passes_its_own_tests_lint_and_checks(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, args: list[str]
 ) -> None:
-    require_modules("karni-site", *(("karni-game",) if "game" in args else ()))
-    project = _made(tmp_path, monkeypatch, "Kind Check", *args)
+    """Each kind, and a project 0.6.0 made with --kind game (the app+game layout, recorded as
+    game): its own tests, karni check and the agent files karni rules sync writes."""
+    require_modules("karni-site", *(("karni-game",) if any("game" in a for a in args) else ()))
+    made_by_0_6 = args[-1] == "0.6.0"
+    project = _made(tmp_path, monkeypatch, "Kind Check", *args[: -1 if made_by_0_6 else None])
     monkeypatch.chdir(project)
+    if made_by_0_6:
+        pyproject = project / "pyproject.toml"
+        pyproject.write_text(pyproject.read_text().replace('kind = "app+game"', 'kind = "game"'))
+        ok("rules", "sync")
+        assert "kind `game` in pyproject.toml, read as `app+game`" in _agents(project)
+        ok("rules", "sync", "--check")
     python = _project_interpreter(project, tmp_path, monkeypatch)
     ok("migrate")
     checked = _run(project, python, "manage.py", "karni_check")

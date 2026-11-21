@@ -11,7 +11,7 @@ How it was made, with the documented commands:
 
 ```sh
 karni new "Hybrid Demo" --kind app
-karni add game
+karni add game          # the kind becomes app+game: an app with a game in it
 # config/settings.py: KARNI_PEOPLE = True above karni_settings(globals())
 # config/urls.py: path("api/game/", include("karni_game.urls")) at the karni:urls marker
 karni make app library
@@ -65,8 +65,10 @@ Anything you assign after the call wins.
 
 ## What this project is
 
-An app (`kind = "app"` in pyproject.toml): a REST API and the React app in
-`frontend/` for signed-in users. `karni add site` adds a public website.
+An app with a game in it (`kind = "app+game"` in pyproject.toml), experimental:
+a REST API and the React app in `frontend/` for signed-in users, whose pages
+host the game (`frontend/src/game/`, on @karni/game). Its server side is the
+karni-game module at `/api/game/`, declared in `content/game.yaml`.
 
 ## Quickstart
 
