@@ -23,7 +23,9 @@ const ENTRIES: Record<string, string> = {
   phaser: "src/engines/phaser.ts",
   pixi: "src/engines/pixi.ts",
   r3f: "src/engines/r3f.tsx",
+  assets: "src/assets/index.ts",
   scenes: "src/scenes/index.ts",
+  sfx: "src/sfx/index.ts",
   smoke: "src/smoke/index.ts",
   ui: "src/ui/index.ts",
 };

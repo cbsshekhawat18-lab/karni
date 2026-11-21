@@ -24,3 +24,22 @@ declare module "virtual:karni-game/portal" {
   export function createPortalAdapter(): PortalAdapter;
   export default createPortalAdapter;
 }
+
+/**
+ * Merged by the file the preset writes when `assets.types` is set, so
+ * `assets.image("stage1", "hero")` checks the group and the file name.
+ */
+interface KarniAssetGroups {}
+
+declare module "virtual:karni-game/assets" {
+  import type { AssetEntry, AssetManifest } from "@karni/game/assets";
+  /** The files of the assets folder, by group: its first-level folders, and `core` for the files directly in it. */
+  export const manifest: [keyof KarniAssetGroups] extends [never]
+    ? AssetManifest
+    : { readonly groups: { readonly [G in keyof KarniAssetGroups]: KarniAssetGroups[G] } };
+  /** The hosts this build may fetch files from (the portal's, the game API's and the project's own). */
+  export const assetHosts: readonly string[];
+  /** The download budget of each group, in bytes. */
+  export const assetBudgets: Readonly<Record<string, number>>;
+  export type { AssetEntry };
+}

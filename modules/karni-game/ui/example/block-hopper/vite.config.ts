@@ -14,7 +14,9 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: /^@karni\/game\/portals\/(.*)$/, replacement: `${src}/portal/adapters/$1.ts` },
+      { find: /^@karni\/game\/assets$/, replacement: `${src}/assets/index.ts` },
       { find: /^@karni\/game\/scenes$/, replacement: `${src}/scenes/index.ts` },
+      { find: /^@karni\/game\/sfx$/, replacement: `${src}/sfx/index.ts` },
       { find: /^@karni\/game\/ui$/, replacement: `${src}/ui/index.ts` },
       { find: /^@karni\/game$/, replacement: `${src}/index.ts` },
     ],

@@ -46,6 +46,10 @@
       "types": "./dist/src/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./assets": {
+      "types": "./dist/src/assets/index.d.ts",
+      "import": "./dist/assets.js"
+    },
     "./build": {
       "types": "./dist/src/tooling/index.d.ts",
       "import": "./dist/build.js"
@@ -72,6 +76,10 @@
     "./scenes": {
       "types": "./dist/src/scenes/index.d.ts",
       "import": "./dist/scenes.js"
+    },
+    "./sfx": {
+      "types": "./dist/src/sfx/index.d.ts",
+      "import": "./dist/sfx.js"
     },
     "./smoke": {
       "types": "./dist/src/smoke/index.d.ts",
