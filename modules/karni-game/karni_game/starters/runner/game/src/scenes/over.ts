@@ -36,10 +36,11 @@ export function createOverScene(hooks: GameHooks, result: RunResult): Scene<Game
             },
         });
         panel = opened;
+        opened.element.querySelector(".kg-panel")?.classList.add("sd-compact");
         void result.board.then((entries) => {
             if (panel !== opened || entries.length === 0) return;
             const list = document.createElement("ol");
-            list.className = "sd-list";
+            list.className = "sd-list sd-board";
             list.setAttribute("aria-label", daily ? "Today's board" : "Distance board");
             for (const entry of entries.slice(0, 5)) {
                 const item = document.createElement("li");

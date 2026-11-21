@@ -55,8 +55,15 @@ export function createShopScene(_hooks: unknown): Scene<GameServices> {
             const render = async (): Promise<void> => {
                 if (!session) return;
                 const items = await session.shop();
+                // The rows are made again: focus goes back to the same item's button, so the
+                // keyboard stays inside the dialog (Escape still closes it).
+                const focused = (document.activeElement as HTMLElement | null)?.dataset.item;
                 balance.textContent = `You have ${session.coins()} coins.`;
                 list.replaceChildren(...items.map((item) => row(item, session.coins(), act)));
+                if (focused) {
+                    const again = list.querySelector<HTMLButtonElement>(`button[data-item="${focused}"]`);
+                    (again && !again.disabled ? again : dialog?.element.querySelector<HTMLElement>("[data-kg-primary]"))?.focus();
+                }
             };
             const act = (item: ShopItem): void => {
                 if (!session) return;
@@ -76,13 +83,18 @@ export function createShopScene(_hooks: unknown): Scene<GameServices> {
                 button.className = "kg-btn";
                 button.dataset.kgAction = id;
                 button.textContent = label;
+                let busy = false;
                 button.addEventListener("click", () => {
-                    button.disabled = true;
+                    // Busy, not disabled: a disabled button would drop the focus out of the dialog.
+                    if (busy) return;
+                    busy = true;
+                    button.setAttribute("aria-busy", "true");
                     void run()
                         .then((message) => services.ui.toast(message))
                         .then(render)
                         .finally(() => {
-                            button.disabled = false;
+                            busy = false;
+                            button.removeAttribute("aria-busy");
                         });
                 });
                 extras.append(button);

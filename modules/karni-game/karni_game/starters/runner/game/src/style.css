@@ -58,3 +58,21 @@ body {
     margin: 8px 0 4px;
     accent-color: var(--kg-accent);
 }
+
+/* The board is read, not pressed: no touch-sized rows. */
+.sd-board li {
+    min-height: 0;
+    padding: 2px 0;
+}
+
+/* A short screen (a phone on its side): the game-over buttons two to a row. */
+@media (max-height: 520px) {
+    .kg-panel.sd-compact .kg-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .kg-panel.sd-compact .kg-actions > .kg-btn {
+        flex: 1 1 45%;
+    }
+}
