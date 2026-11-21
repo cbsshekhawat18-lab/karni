@@ -16,6 +16,10 @@ rollback changes the Caddyfile, the staff app and the headers together:
   builds stay for ``keep_days`` after their last build, so a browser still
   holding the previous ``index.html`` loads its scripts during an update.
   ``index.html`` is written last.
+* ``<root>/<path>/``: each other built front end the project serves itself,
+  given as ``(path, build)`` in ``fronts`` (``--front play/sky-dash=game/sky-dash/dist``,
+  a game the project serves at ``/play/sky-dash/``), copied the same way. Only the
+  build is published, never the folder around it.
 
 Override / escape hatch: every path is an argument (and a command option),
 and :func:`caddy_headers` is a plain function a project may call to write its
@@ -25,18 +29,29 @@ own snippet. A project without a staff app or a Caddyfile skips that part.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import time
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-__all__ = ["HEADERS_FILE", "Published", "caddy_headers", "publish", "security_headers"]
+__all__ = [
+    "HEADERS_FILE",
+    "Published",
+    "caddy_headers",
+    "front_path",
+    "publish",
+    "security_headers",
+]
 
 HEADERS_FILE = "karni-headers.caddy"
 APP_DIR = "app"
 SEEN_FILE = ".karni-app-files.json"
 SNIPPET = "karni_headers"
+_FRONT_PATH = re.compile(r"^[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*$")
+#: Paths of the web root a front end may not take: the staff app's and the published files'.
+_TAKEN = frozenset({APP_DIR, "Caddyfile", HEADERS_FILE})
 
 
 def security_headers() -> dict[str, str]:
@@ -136,6 +151,22 @@ def _copy_app(source: Path, target: Path, keep_days: float, now: float) -> int:
     return len(files)
 
 
+def front_path(path: str) -> str:
+    """``path`` as a folder of the web root (``"/play/sky-dash/"`` is ``"play/sky-dash"``).
+
+    :raises ValueError: for a path that is not plain folder names (``..``, a
+        dot, a space) or that the staff app or the published files take.
+    """
+    clean = path.strip().strip("/")
+    if not _FRONT_PATH.match(clean) or clean.split("/")[0] in _TAKEN:
+        raise ValueError(
+            f"{path!r} is not a path a front end can be published at: give folder names of "
+            f"letters, digits, - and _ joined by /, such as play/sky-dash, and not "
+            f"{', '.join(sorted(_TAKEN))}."
+        )
+    return clean
+
+
 def publish(
     root: Path,
     *,
@@ -144,9 +175,16 @@ def publish(
     headers: dict[str, str] | None = None,
     keep_days: float = 7.0,
     now: float | None = None,
+    fronts: Sequence[tuple[str, Path]] = (),
 ) -> Published:
-    """Write the Caddyfile, the headers snippet and the staff app under ``root``."""
+    """Write the Caddyfile, the headers snippet, the staff app and ``fronts`` under ``root``.
+
+    ``fronts`` are ``(path, build)`` pairs: the build folder of another front
+    end, published at ``root/<path>/`` (:func:`front_path`).
+    """
+    targets = [(front_path(path), build) for path, build in fronts]
     result = Published()
+    moment = time.time() if now is None else now
     root.mkdir(parents=True, exist_ok=True)
     snippet = root / HEADERS_FILE
     snippet.write_text(caddy_headers(security_headers() if headers is None else headers))
@@ -157,10 +195,16 @@ def publish(
     else:
         result.skipped.append(f"no Caddyfile at {caddyfile}")
     if app is not None and (app / "index.html").is_file():
-        count = _copy_app(app, root / APP_DIR, keep_days, time.time() if now is None else now)
+        count = _copy_app(app, root / APP_DIR, keep_days, moment)
         result.written.append(f"{root / APP_DIR} ({count} files from {app})")
     else:
         result.skipped.append(f"no built staff app at {app} (no index.html)")
+    for path, build in targets:
+        if not (build / "index.html").is_file():
+            result.skipped.append(f"no build at {build} for /{path}/ (no index.html)")
+            continue
+        count = _copy_app(build, root / path, keep_days, moment)
+        result.written.append(f"{root / path} ({count} files from {build})")
     return result
 
 

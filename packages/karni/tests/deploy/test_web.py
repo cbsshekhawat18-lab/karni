@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import io
 import json
+import shutil
 from pathlib import Path
 
 import pytest
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.test import Client, override_settings
 
 from karni.deploy import web
@@ -92,3 +93,56 @@ def test_the_command(tmp_path: Path) -> None:
     )
     assert "published:" in out.getvalue() and "skipped:" in out.getvalue()
     assert (tmp_path / "web" / "app" / "assets" / "main-ccc.js").is_file()
+
+
+def test_a_front_end_is_published_at_its_path_alone(tmp_path: Path) -> None:
+    """A game's build goes to <root>/play/<slug>/: the build only, kept like the staff app's."""
+    root = tmp_path / "web"
+    game = tmp_path / "game" / "sky-dash"
+    (game / "src").mkdir(parents=True)
+    (game / "src" / "rules.ts").write_text("export const secret = 1;")
+    first = _build(game / "dist", "index-aaa.js")
+    day = 86400.0
+    result = web.publish(
+        root, app=None, caddyfile=None, headers={}, fronts=[("/play/sky-dash/", first)], now=day
+    )
+    played = root / "play" / "sky-dash"
+    assert (played / "index.html").is_file() and (played / "assets" / "index-aaa.js").is_file()
+    assert not (played / "src").exists() and not (root / "play" / "src").exists()
+    assert any(str(played) in line for line in result.written)
+    shutil.rmtree(first)
+    second = _build(game / "dist", "index-bbb.js")
+    later = 1.5 * day
+    web.publish(
+        root, app=None, caddyfile=None, headers={}, fronts=[("play/sky-dash", second)], now=later
+    )
+    assert (played / "assets" / "index-aaa.js").is_file()  # an open page still loads it
+    missing = web.publish(
+        root, app=None, caddyfile=None, headers={}, fronts=[("play/gone", tmp_path / "none")]
+    )
+    assert any("for /play/gone/ (no index.html)" in line for line in missing.skipped)
+
+
+@pytest.mark.parametrize("path", ["../web", "play/../app", "app", "Caddyfile", "", "play/a b"])
+def test_a_front_end_path_must_be_plain_folders_of_its_own(path: str, tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="is not a path a front end can be published at"):
+        web.publish(tmp_path, app=None, caddyfile=None, headers={}, fronts=[(path, tmp_path)])
+
+
+@pytest.mark.django_db
+def test_the_command_publishes_each_front_end(tmp_path: Path) -> None:
+    out = io.StringIO()
+    build = _build(tmp_path / "dist", "main-ddd.js")
+    call_command(
+        "karni_publish_web",
+        root=str(tmp_path / "web"),
+        app="",
+        caddyfile="",
+        front=[f"play/tile-match={build}"],
+        stdout=out,
+    )
+    assert (tmp_path / "web" / "play" / "tile-match" / "assets" / "main-ddd.js").is_file()
+    with pytest.raises(CommandError, match="give PATH=DIR"):
+        call_command("karni_publish_web", root=str(tmp_path / "web"), front=["play/x"])
+    with pytest.raises(CommandError, match="is not a path"):
+        call_command("karni_publish_web", root=str(tmp_path / "web"), front=[f"../x={build}"])
