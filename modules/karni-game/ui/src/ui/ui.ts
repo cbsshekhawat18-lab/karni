@@ -186,7 +186,8 @@ export function createUi(options: UiOptions = {}): Ui {
         tabindex: "-1",
       },
       el("h2", { id: titleId }, dialogOptions.title),
-      body,
+      // The body scrolls inside the dialog: the title above and the buttons below stay in view.
+      el("div", { class: "kg-body" }, body),
       actions.length > 0 ? actionsRow : null,
     );
     const element = el("div", { class: "kg-modal" }, panel);
@@ -305,7 +306,11 @@ export function createUi(options: UiOptions = {}): Ui {
           "div",
           { class: "kg-panel" },
           el("h2", { id: titleId }, screenOptions.title),
-          screenOptions.text ? el("p", {}, screenOptions.text) : null,
+          el(
+            "div",
+            { class: "kg-body" },
+            screenOptions.text ? el("p", {}, screenOptions.text) : null,
+          ),
           actions,
         ),
       );

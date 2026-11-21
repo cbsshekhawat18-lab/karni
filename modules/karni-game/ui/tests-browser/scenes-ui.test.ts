@@ -294,6 +294,61 @@ void guardBoot(async () => {
     }
   }
 
+  for (const [name, size] of [
+    ["phone", { width: 390, height: 520 }],
+    ["short desktop", { width: 1024, height: 360 }],
+  ] as const) {
+    it(
+      `${name}: a dialog taller than the screen scrolls inside itself, with its title and Close in view`,
+      { timeout: 120_000 },
+      async () => {
+        const { page, context, problems } = await open("phone", "dark");
+        await page.setViewportSize(size);
+        await page.getByRole("button", { name: "Settings", exact: true }).tap();
+        await page.waitForSelector('[role="dialog"]');
+        const measure = () =>
+          page.evaluate(() => {
+            const rect = (selector: string) =>
+              document.querySelector(selector)?.getBoundingClientRect() ?? null;
+            const body = document.querySelector<HTMLElement>(".kg-dialog .kg-body");
+            return {
+              dialog: rect(".kg-dialog"),
+              title: rect(".kg-dialog h2"),
+              close: rect(".kg-dialog .kg-actions .kg-btn"),
+              bodyScrolls: !!body && body.scrollHeight > body.clientHeight,
+              page: document.documentElement.scrollHeight <= window.innerHeight,
+              height: window.innerHeight,
+            };
+          });
+        const before = await measure();
+        expect(before.bodyScrolls).toBe(true);
+        expect(before.page).toBe(true);
+        expect(before.dialog?.top).toBeGreaterThanOrEqual(0);
+        expect(before.dialog?.bottom).toBeLessThanOrEqual(before.height);
+        expect(before.title?.top).toBeGreaterThanOrEqual(0);
+        expect(before.close?.bottom).toBeLessThanOrEqual(before.height);
+        await shot(page, `${name.replace(" ", "-")}-dark-9-tall-dialog`);
+        // Scroll the body to its end: the last row shows and Close has not moved.
+        await page.evaluate(() => {
+          const body = document.querySelector(".kg-dialog .kg-body");
+          body?.scrollTo(0, body.scrollHeight);
+        });
+        const after = await measure();
+        expect(after.close?.top).toBe(before.close?.top);
+        expect(after.title?.top).toBe(before.title?.top);
+        const reset = await page.getByRole("button", { name: "Reset controls" }).boundingBox();
+        expect((reset?.y ?? 0) + (reset?.height ?? 0)).toBeLessThanOrEqual(
+          (after.close?.top ?? 0) + 1,
+        );
+        expect(await axeViolations(page)).toEqual([]);
+        await page.getByRole("button", { name: "Close", exact: true }).tap();
+        await page.waitForSelector('[role="dialog"]', { state: "detached" });
+        expect(problems).toEqual([]);
+        await context.close();
+      },
+    );
+  }
+
   it(
     "shows the dev overlay and pauses the loop under the pause menu in a dev server",
     { timeout: 120_000 },

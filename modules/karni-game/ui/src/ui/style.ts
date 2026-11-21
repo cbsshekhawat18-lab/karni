@@ -49,10 +49,13 @@ export const css = `
 .kg-root[data-kg-fixed] { position: fixed; }
 .kg-hud { position: absolute; inset: 0; pointer-events: none; }
 
-.kg-modal { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; background: var(--kg-scrim); pointer-events: auto; }
-.kg-dialog { width: min(440px, 100%); max-height: 100%; overflow: auto; overflow-wrap: anywhere; padding: 20px; border: 1px solid var(--kg-line); border-radius: 12px; background: var(--kg-bg); color: var(--kg-fg); }
+.kg-modal { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: var(--kg-scrim); pointer-events: auto; }
+.kg-dialog { display: flex; flex-direction: column; width: min(440px, 100%); max-height: 100%; overflow: hidden; overflow-wrap: anywhere; padding: 20px; border: 1px solid var(--kg-line); border-radius: 12px; background: var(--kg-bg); color: var(--kg-fg); }
 .kg-dialog h2, .kg-screen h2, .kg-boot h1 { margin: 0 0 8px; font-size: 1.35rem; line-height: 1.2; }
 .kg-dialog p, .kg-screen p, .kg-boot p { margin: 0 0 12px; }
+.kg-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -6px; padding: 0 6px; }
+.kg-dialog h2, .kg-panel h2 { flex: 0 0 auto; }
+.kg-dialog .kg-actions, .kg-panel .kg-actions { flex: 0 0 auto; }
 .kg-hint { color: var(--kg-muted); font-size: 0.875rem; }
 .kg-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .kg-actions > .kg-btn { flex: 1 1 8rem; }
@@ -65,7 +68,7 @@ export const css = `
 
 .kg-screen { position: absolute; inset: 0; display: flex; padding: 16px; pointer-events: none; align-items: center; justify-content: center; }
 .kg-screen[data-kg-align="bottom"] { align-items: flex-end; }
-.kg-panel { width: min(380px, 100%); max-height: 100%; overflow: auto; overflow-wrap: anywhere; padding: 20px; border: 1px solid var(--kg-line); border-radius: 12px; background: var(--kg-bg); color: var(--kg-fg); pointer-events: auto; text-align: center; }
+.kg-panel { display: flex; flex-direction: column; width: min(380px, 100%); max-height: 100%; overflow: hidden; overflow-wrap: anywhere; padding: 20px; border: 1px solid var(--kg-line); border-radius: 12px; background: var(--kg-bg); color: var(--kg-fg); pointer-events: auto; text-align: center; }
 .kg-panel .kg-actions { flex-direction: column; }
 .kg-panel .kg-actions > .kg-btn { flex: 0 0 auto; }
 
