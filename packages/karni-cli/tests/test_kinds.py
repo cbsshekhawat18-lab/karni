@@ -565,6 +565,8 @@ def test_add_game_turns_an_app_into_an_app_with_a_game(
     assert "@karni/game" in (project / "frontend" / "package.json").read_text()
     assert "An app with a game in it (kind `app+game`" in _agents(project)
     assert "kind: " not in ok("add", "game").output  # once is enough
+    removed = ok("remove", "game")
+    assert "kind: app+game -> app" in removed.output and _kind(project) == "app"
 
 
 def test_a_kind_karni_does_not_know_stops_context_and_sync(

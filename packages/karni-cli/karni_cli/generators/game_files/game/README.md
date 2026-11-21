@@ -24,3 +24,9 @@ npm run package    # one package per game portal in dist-portals/, checked and z
 The game API is on the page's own origin when the project serves the game. A
 portal package calls the API named by `KARNI_GAME_API_URL` when the build has
 it, and plays on the device without it.
+
+The first `npm install` writes `package-lock.json`: commit it, and the
+production build installs exactly that (`npm ci`). Without a lock, npm before
+11.6 can stop with `Cannot read properties of null (reading 'edgesOut')` while
+it resolves Vite's optional peers. Run that first install with npm 11.6 or
+later then (`npx --yes npm@11 install`).
