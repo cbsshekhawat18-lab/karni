@@ -4,8 +4,6 @@
  * the way a game uses it.
  */
 import {
-  POINTER,
-  STICK,
   createAudio,
   createGameClient,
   createInput,
@@ -20,7 +18,17 @@ import {
   type BoardEntry,
   type RunRecord,
 } from "@karni/game";
+import { drawCover } from "@karni/game/scenes";
+import {
+  applySettings,
+  createDevOverlay,
+  createSettings,
+  createUi,
+  guardBoot,
+} from "@karni/game/ui";
 import { createPortalAdapter } from "virtual:karni-game/portal";
+import { createGameScenes } from "./scenes";
+import { BINDINGS } from "./ui";
 import { WORLD, createHopper, revive, score, stepHopper, type Hopper } from "./core";
 
 interface SaveV2 {
@@ -59,20 +67,18 @@ const view = createView({ canvas, width: WORLD.width, height: WORLD.height });
 const input = createInput({
   target: canvas,
   view,
-  bindings: {
-    left: ["ArrowLeft", "KeyA", STICK.left],
-    right: ["ArrowRight", "KeyD", STICK.right],
-    jump: ["Space", "ArrowUp", "KeyW", POINTER],
-    mute: ["KeyM"],
-    revive: ["KeyR"],
-  },
+  bindings: BINDINGS,
 });
 const stick = createVirtualStick(input, {
   area: () => ({ width: WORLD.width, height: WORLD.height }),
 });
 const audio = createAudio({ volumes: { effects: 0.6 } });
 audio.unlockOn(input);
-audio.setMuted("player", progress.muted);
+const ui = createUi({ input });
+// Settings have their own save. A mute kept by an older version of the game carries over once.
+const settings = createSettings({ storage });
+if (progress.muted && settings.loaded.status === "new") settings.set({ muted: true });
+applySettings({ store: settings, audio, input, ui });
 
 type Screen = "title" | "play" | "over";
 let screen: Screen = "title";
@@ -96,6 +102,7 @@ const show = (next: Screen): void => {
   screen = next;
   hud.dataset.screen = next;
   hud.dataset.best = String(progress.best);
+  app.go(next);
   if (next === "play") portal.gameplayStart();
   else portal.gameplayStop();
 };
@@ -133,9 +140,7 @@ const finish = async (): Promise<void> => {
 
 const update = (dt: number): void => {
   if (input.pressed("mute")) {
-    progress.muted = !progress.muted;
-    audio.setMuted("player", progress.muted);
-    save.write(progress);
+    settings.set({ muted: !settings.state.muted });
   }
   if (screen !== "play") {
     if (input.pressed("jump")) start();
@@ -186,8 +191,6 @@ const render = (): void => {
   context.fillStyle = "#e0e1dd";
   context.font = "14px system-ui, sans-serif";
   context.fillText(`Score ${score(hopper)}   Best ${progress.best}`, 10, 20);
-  if (screen === "title")
-    context.fillText("Block Hopper: arrows or stick to move, space or tap to jump", 40, 130);
   if (screen === "over") {
     context.fillText("Fell! Space or tap to hop again. R: watch an ad to continue", 40, 110);
     board.forEach((entry, index) =>
@@ -196,13 +199,28 @@ const render = (): void => {
   }
   if (portal.adPlaying) context.fillText("Ad playing...", 200, 250);
   stick.draw(context);
+  drawCover(context, app.cover, canvas.width, canvas.height, "#0d1b2a");
 };
 
-const loop = createLoop({ step: WORLD.step, update, render, afterFrame: () => input.endFrame() });
+const loop = createLoop({
+  step: WORLD.step,
+  update: (dt) => app.update(dt),
+  render: (alpha) => app.draw(alpha),
+  afterFrame: () => input.endFrame(),
+});
+const toTitle = (): void => {
+  hopper = createHopper(1);
+  show("title");
+};
+const app = createGameScenes(
+  { loop, input, audio, save, portal, client, ui, settings },
+  { update, render, start, toTitle },
+);
+createDevOverlay(ui, { loop, entities: () => hopper.platforms.length + hopper.pickups.length });
 pauseOnHidden([loop, audio]);
 linkPortal(portal, { audio, loop, input });
 
-void (async () => {
+void guardBoot(async () => {
   portal.loadingStart();
   await Promise.all([portal.init(), client.boot()]);
   await client.signInGuest();
@@ -210,7 +228,7 @@ void (async () => {
   hud.dataset.loaded = loaded.status;
   show("title");
   loop.start();
-})();
+});
 
 if (__KARNI_GAME_DEV__) {
   // A development handle, dropped from every build by the preset's flag.
