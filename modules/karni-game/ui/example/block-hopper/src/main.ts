@@ -9,7 +9,6 @@ import {
   createAudio,
   createGameClient,
   createInput,
-  createLoop,
   createPortal,
   createSave,
   createStorage,
@@ -18,10 +17,10 @@ import {
   linkPortal,
   pauseOnHidden,
   type BoardEntry,
-  type RunRecord,
 } from "@karni/game";
+import { createRecorder, createSimLoop, toRunRecord } from "@karni/game/sim";
 import { createPortalAdapter } from "virtual:karni-game/portal";
-import { WORLD, createHopper, revive, score, stepHopper, type Hopper } from "./core";
+import { WORLD, hopperSim, score, type HopperEvent } from "./rules";
 
 interface SaveV2 {
   best: number;
@@ -76,8 +75,9 @@ audio.setMuted("player", progress.muted);
 
 type Screen = "title" | "play" | "over";
 let screen: Screen = "title";
-let hopper: Hopper = createHopper(1);
-let inputs: [number, string][] = [];
+const newRun = (seed: number) => createRecorder(hopperSim, { seed });
+let recorder = newRun(1);
+let reviveNext = false;
 let board: BoardEntry[] = [];
 let revived = false;
 
@@ -101,14 +101,14 @@ const show = (next: Screen): void => {
 };
 
 const start = (): void => {
-  hopper = createHopper(Math.floor(Math.random() * 2 ** 31));
-  inputs = [];
+  // The page may use any clock or Math.random: only src/rules may not.
+  recorder = newRun(Math.floor(Math.random() * 2 ** 31));
   revived = false;
   show("play");
 };
 
 const finish = async (): Promise<void> => {
-  const value = score(hopper);
+  const value = recorder.sim.score;
   progress.plays += 1;
   if (value > progress.best) {
     progress.best = value;
@@ -116,11 +116,7 @@ const finish = async (): Promise<void> => {
   }
   save.write(progress);
   show("over");
-  const run: RunRecord = {
-    seed: String(hopper.seed),
-    inputs,
-    duration_ms: Math.round(hopper.time * 1000),
-  };
+  const run = toRunRecord(recorder.finish());
   try {
     await client.submitScore("high", value, { run });
     board = (await client.leaderboard("high", { limit: 5 })).entries;
@@ -131,41 +127,50 @@ const finish = async (): Promise<void> => {
   void portal.interstitial("game-over");
 };
 
-const update = (dt: number): void => {
+/** Menus and keys: runs on every step, whatever the screen. */
+const beforeStep = (): void => {
   if (input.pressed("mute")) {
     progress.muted = !progress.muted;
     audio.setMuted("player", progress.muted);
     save.write(progress);
   }
-  if (screen !== "play") {
-    if (input.pressed("jump")) start();
-    if (screen === "over" && !revived && input.pressed("revive")) {
-      void portal.rewarded("continue").then((rewarded) => {
-        if (!rewarded) return;
-        revived = true;
-        revive(hopper);
-        show("play");
-      });
-    }
-    return;
+  if (screen === "play") return;
+  if (input.pressed("jump")) start();
+  if (screen === "over" && !revived && input.pressed("revive")) {
+    void portal.rewarded("continue").then((rewarded) => {
+      if (!rewarded) return;
+      revived = true;
+      reviveNext = true;
+      show("play");
+    });
   }
+};
+
+/** The player's input for one tick of the rules, read once per step. */
+const readInput = () => {
   const step = {
     left: input.held("left"),
     right: input.held("right"),
     jump: input.pressed("jump"),
+    revive: reviveNext,
   };
-  if (step.jump) inputs.push([Math.round(hopper.time * 1000), "jump"]);
-  for (const event of stepHopper(hopper, step, dt)) {
+  reviveNext = false;
+  // The jump edge is read by the first step of the frame only.
+  input.endFrame();
+  return step;
+};
+
+const onEvents = (events: readonly HopperEvent[]): void => {
+  for (const event of events) {
     if (event === "jump") blip(520);
     if (event === "coin") blip(880);
     if (event === "fall") void finish();
   }
-  hud.dataset.score = String(score(hopper));
-  // The jump edge is read by the first step of the frame only.
-  input.endFrame();
 };
 
 const render = (): void => {
+  const hopper = recorder.sim.state;
+  hud.dataset.score = String(score(hopper));
   context.setTransform(1, 0, 0, 1, 0, 0);
   context.fillStyle = "#0d1b2a";
   context.fillRect(0, 0, canvas.width, canvas.height);
@@ -198,7 +203,15 @@ const render = (): void => {
   stick.draw(context);
 };
 
-const loop = createLoop({ step: WORLD.step, update, render, afterFrame: () => input.endFrame() });
+const loop = createSimLoop({
+  target: () => recorder,
+  input: readInput,
+  beforeStep,
+  active: () => screen === "play",
+  onEvents,
+  render,
+  afterFrame: () => input.endFrame(),
+});
 pauseOnHidden([loop, audio]);
 linkPortal(portal, { audio, loop, input });
 

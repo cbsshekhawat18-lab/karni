@@ -37,6 +37,7 @@ npm install @karni/game
 | `@karni/game/vite` | `karniGame()`, the Vite preset |
 | `@karni/game/build` | Node: the portal table, the package and source checks, `packagePortals`, `zipFolder` |
 | `@karni/game/phaser`, `@karni/game/pixi`, `@karni/game/r3f` | the engine adapters |
+| `@karni/game/sim` | the simulation contract, recorder, replay, state hash and test kit ([Simulation and replay](game-sim.md)) |
 | `@karni/game/smoke` | Node: `runSmoke`, the browser smoke harness (needs Playwright) |
 | `@karni/game/client` | types for `virtual:karni-game/portal`, `__KARNI_GAME_DEV__` and `__KARNI_GAME_PORTAL__` |
 
@@ -376,9 +377,12 @@ with the version the game uses.
 
 ## Testing a game
 
-Keep the rules in plain modules with no page, as the example's
-`example/block-hopper/src/core.ts` does: a test then plays the game headless,
-and a seed plus the input log replays a run exactly.
+Keep the rules in `src/rules/` on the contract of `@karni/game/sim`, as the
+example's `example/block-hopper/src/rules/` does: a test then plays the game
+headless, and a seed plus the input log replays a run exactly. The page
+[Simulation and replay](game-sim.md) has the contract, the recorder, the
+determinism and fuzz helpers and the purity check
+(`karni-game check-rules`).
 
 `runSmoke(options)` from `@karni/game/smoke` tests the built game in
 headless Chromium:

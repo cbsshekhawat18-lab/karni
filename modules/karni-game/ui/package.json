@@ -69,6 +69,10 @@
       "types": "./dist/src/engines/r3f.d.ts",
       "import": "./dist/r3f.js"
     },
+    "./sim": {
+      "types": "./dist/src/sim/index.d.ts",
+      "import": "./dist/sim.js"
+    },
     "./smoke": {
       "types": "./dist/src/smoke/index.d.ts",
       "import": "./dist/smoke.js"

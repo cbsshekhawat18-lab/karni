@@ -312,6 +312,11 @@ Request:
 `run` is optional unless the board has `requires_run`. It is kept for staff
 to review when the board keeps runs: the seed and the input log let a
 deterministic game replay the run. Limited by `score`.
+A game written on `@karni/game/sim` makes this run with `toRunRecord`: the
+inputs are `[tick, input as JSON text]` for the ticks where the input changed,
+and the state hash and score go in `meta`
+([Simulation and replay](game-sim.md#a-run-on-the-server)). The server stores
+it as it stores any run, and adds nothing for it.
 
 `played_at` is optional: when the score was played, for a score played offline
 and sent later. The server trusts it inside `KARNI_GAME_PLAYED_AT_WINDOW`

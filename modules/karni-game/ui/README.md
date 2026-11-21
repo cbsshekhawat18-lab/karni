@@ -29,6 +29,7 @@ Vite (for the preset), Playwright (for the smoke harness), React Three Fiber and
 | `@karni/game/vite`                                          | `karniGame()`, the Vite preset                                                                        |
 | `@karni/game/build`                                         | the portal table, the package checks, `packagePortals`, `zipFolder`                                   |
 | `@karni/game/phaser`, `@karni/game/pixi`, `@karni/game/r3f` | the engine adapters                                                                                   |
+| `@karni/game/sim`                                           | the simulation contract, recorder, replay, state hash and test kit                                    |
 | `@karni/game/smoke`                                         | `runSmoke`, the browser smoke harness                                                                 |
 | `@karni/game/client`                                        | types for `virtual:karni-game/portal` and `__KARNI_GAME_DEV__`                                        |
 
@@ -110,6 +111,36 @@ and a rewarded continue), and the browser tests play it.
   conflict rule, submits scores with their runs, reads boards, the wallet, the shop, rewards,
   daily content, achievements and missions, remote config and flags, and batches analytics. A
   project with `@karni/ui` passes its own client as the `transport`, so calls carry the account.
+
+## Simulation and replay
+
+`@karni/game/sim` is the contract for a game's rules: plain state, a `step` over fixed ticks,
+inputs as data and the seeded generator. A run is its seed and the inputs that changed, so it
+replays to the same state hash. No clock and no `Math.random` in the rules, and a check enforces it.
+
+```ts
+import { checkDeterminism, createRecorder, defineSim, fuzz, verify } from "@karni/game/sim";
+
+const rules = defineSim<{ x: number }, { right: boolean }>({
+  idle: { right: false },
+  init: () => ({ x: 0 }),
+  step: (state, input, ctx) => {
+    state.x += input.right ? 200 * ctx.dt : 0;
+  },
+  randomInput: (rng) => ({ right: rng.chance(0.5) }),
+});
+
+const recorder = createRecorder(rules, { seed: 7 });
+recorder.step({ right: true });
+verify(rules, recorder.finish()).ok; // true: the replay reaches the recorded hash
+checkDeterminism(rules, { seed: 7, ticks: 300 });
+fuzz(rules, { runs: 10, ticks: 300 });
+```
+
+`toRunRecord(recording)` makes the `run` of a score, with no change on the server. `createSimLoop`
+runs a sim on the loop's fixed step. `karni-game check-rules` fails on a clock, outside randomness,
+the page or the network in `src/rules/`, and a marker with a reason allows one use. See
+[Simulation and replay](https://cbsshekhawat18-lab.github.io/karni/game-sim/).
 
 ## Building for portals
 
