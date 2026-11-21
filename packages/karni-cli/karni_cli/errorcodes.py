@@ -1155,6 +1155,35 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Fix the key the message names (docs/app-spec.md#recipes lists every key), or rename "
         "the recipe, then run karni recipes show <name>.",
     ),
+    # C480-C499 game starters: karni new --kind game --genre, karni starters (experimental)
+    _c(
+        "C480",
+        "No starter of that genre",
+        "karni new --genre, karni starters show (karni_cli.starters)",
+        "The starters are the blank start built into karni-cli and the karni.starters entry "
+        "points of its environment: karni-game ships the runner. A genre whose package is not "
+        "installed is not there.",
+        "Run karni starters list for the genres (the message names them, and what to install "
+        'for a known one), then karni new "<Name>" --kind game --genre <genre>.',
+    ),
+    _c(
+        "C481",
+        "--genre with a kind or option it cannot go with",
+        "karni new --genre (karni_cli.commands.new)",
+        "A starter is a game first: it writes game/<slug>/ and the game's server side. It goes "
+        "with --kind game only, and not with --recipe or --design, which make an app or a site.",
+        "Add --kind game, or leave --genre out. An app with a game in it is --kind app+game.",
+    ),
+    _c(
+        "C482",
+        "A starter cannot be used",
+        "karni starters list, karni new --genre (karni_cli.starters)",
+        "A starter is a folder with a starter.toml (name, title, purpose, use_when, "
+        "usually_changed) and a game/ folder, named by a karni.starters entry point. One that "
+        "is not, or whose name another starter has already, is left out and reported.",
+        "Fix the folder or the key the message names (docs/game-starters.md), then run karni "
+        "starters show <genre>.",
+    ),
     # C440-C459 a new project from a recipe: karni new --recipe
     _c(
         "C440",

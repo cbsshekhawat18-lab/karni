@@ -94,6 +94,7 @@ __all__ = [
     "karni_owned",
     "load",
     "match",
+    "overlap",
     "parse",
     "read_folder",
     "words",
@@ -600,22 +601,36 @@ def match(
     asked = words(request)
     ranked: list[Match] = []
     for recipe in recipes:
-        wanted = {word for phrase in recipe.use_when for word in words(phrase)}
-        described = set(words(recipe.purpose))
-        nouns = {w for phrase in recipe.use_when if len(words(phrase)) == 1 for w in words(phrase)}
-        nouns |= set(words(recipe.name))
-        score, matched = 0, []
-        for word in asked:
-            if word in nouns:
-                score += 4
-            elif word in wanted:
-                score += 2
-            elif word in described:
-                score += 1
-            else:
-                continue
-            matched.append(word)
+        score, matched = overlap(asked, recipe.name, recipe.purpose, recipe.use_when)
         if score >= threshold:
-            ranked.append(Match(recipe, score, tuple(matched)))
+            ranked.append(Match(recipe, score, matched))
     ranked.sort(key=lambda found: (-found.score, found.recipe.name))
     return ranked[:limit]
+
+
+def overlap(
+    asked: list[str], name: str, purpose: str, use_when: Iterable[str]
+) -> tuple[int, tuple[str, ...]]:
+    """Experimental. How well a thing with a name, a purpose and use_when phrases fits a request.
+
+    ``asked`` is :func:`words` of the request. The rule is :func:`match`'s: 4 for
+    the thing's own noun, 2 for a word of a use_when phrase, 1 for a word of the
+    purpose. The game starters (:mod:`karni_cli.starters`) are ranked by it too.
+    """
+    phrases = list(use_when)
+    wanted = {word for phrase in phrases for word in words(phrase)}
+    described = set(words(purpose))
+    nouns = {w for phrase in phrases if len(words(phrase)) == 1 for w in words(phrase)}
+    nouns |= set(words(name))
+    score, matched = 0, []
+    for word in asked:
+        if word in nouns:
+            score += 4
+        elif word in wanted:
+            score += 2
+        elif word in described:
+            score += 1
+        else:
+            continue
+        matched.append(word)
+    return score, tuple(matched)

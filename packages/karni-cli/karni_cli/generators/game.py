@@ -55,6 +55,7 @@ from __future__ import annotations
 from importlib import resources
 
 from karni_cli import kinds, scaffold
+from karni_cli import starters as starters_mod
 from karni_cli.generators.core import SETTINGS, Workspace
 from karni_cli.project import CliError
 from karni_cli.urls_edit import add_route
@@ -380,8 +381,19 @@ def _portal(ws: Workspace) -> str:
     )
 
 
-def _server(ws: Workspace, *, title: str, slug: str, ui: bool) -> list[str]:
-    """The game's server side, the same in both kinds: karni-game, the games app, the content."""
+def _server(
+    ws: Workspace,
+    *,
+    title: str,
+    slug: str,
+    ui: bool,
+    files: dict[str, str] | None = None,
+) -> list[str]:
+    """The game's server side, the same in both kinds: karni-game, the games app, the content.
+
+    ``files`` are a starter's own (``games/game.py``, ``games/tests/``,
+    ``content/game.yaml``): each one is written in place of the blank start's.
+    """
     from karni_cli.commands.add import plan_module
     from karni_cli.generators import app
 
@@ -389,28 +401,49 @@ def _server(ws: Workspace, *, title: str, slug: str, ui: bool) -> list[str]:
     lines.append(_settings(ws))
     lines.append(_urls(ws))
     app.plan(ws, "games", next_step=False)
-    ws.create("games/game.py", HOOKS.format(slug=slug))
-    ws.create("games/tests/test_game.py", TEST.format(slug=slug))
-    ws.create("content/game.yaml", CONTENT.format(slug=slug, title=title))
+    blank = {
+        "games/game.py": HOOKS.format(slug=slug),
+        "games/tests/test_game.py": TEST.format(slug=slug),
+        "content/game.yaml": CONTENT.format(slug=slug, title=title),
+    }
+    for rel, text in {**blank, **(files or {})}.items():
+        ws.create(rel, text)
     lines.append("games: the game's server hooks (games/game.py) and its test")
     lines.append("content/game.yaml: the game, its boards, currency, rewards and config")
     return lines
 
 
-def plan_game_first(ws: Workspace, *, title: str, slug: str) -> list[str]:
+def plan_game_first(
+    ws: Workspace, *, title: str, slug: str, starter: starters_mod.Starter | None = None
+) -> list[str]:
     """Plan ``--kind game``'s files into ``ws`` (a new project); returns what it did.
 
     The game is its own npm package in ``game/<slug>/``. A staff app the
     project has (``frontend/``) stays as it is: it gets no game package.
+    ``starter`` (``--genre``) writes a starter's game and server files instead
+    of the blank start's (:mod:`karni_cli.starters`).
     """
-    lines = _server(ws, title=title, slug=slug, ui=False)
     folder = f"{GAME_FOLDER}/{slug}"
-    for rel, source in GAME_FILES.items():
-        ws.create(f"{folder}/{rel}", game_file(source, slug=slug, title=title))
-    lines.append(
-        f"{folder}/: the game on {CLIENT_PACKAGE} (its rules, canvas, session and page, and "
-        "the tests of its rules), its own npm package"
-    )
+    if starter is not None and starter.folder is not None:
+        spec = scaffold.UI_REGISTRY_SPEC
+        project = starter.render(starters_mod.PROJECT_DIR, slug=slug, title=title, spec=spec)
+        lines = _server(ws, title=title, slug=slug, ui=False, files=project)
+        for rel, data in starter.render(
+            starters_mod.GAME_DIR, slug=slug, title=title, spec=spec
+        ).items():
+            ws.create(f"{folder}/{rel}", data)
+        lines.append(
+            f"{folder}/: the {starter.name} starter ({starter.title}) on {CLIENT_PACKAGE}: its "
+            "rules, scenes, drawing, sounds and session, and their tests, its own npm package"
+        )
+    else:
+        lines = _server(ws, title=title, slug=slug, ui=False)
+        for rel, source in GAME_FILES.items():
+            ws.create(f"{folder}/{rel}", game_file(source, slug=slug, title=title))
+        lines.append(
+            f"{folder}/: the game on {CLIENT_PACKAGE} (its rules, canvas, session and page, and "
+            "the tests of its rules), its own npm package"
+        )
     lines.append(
         f"/play/{slug}/: where the project serves it (npm run dev in {folder}/, and the "
         "production web front from its build)"

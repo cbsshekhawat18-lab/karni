@@ -1,0 +1,71 @@
+# __GAME_TITLE__, declared on the server: karni load content/game.yaml (again after a change).
+# The server decides every reward and price from here: the client only reports and asks.
+# The game's src/game.ts names the same keys. docs/game.md says what each row means.
+karni_game.Game:
+  - slug: __GAME_SLUG__
+    title: __GAME_TITLE__
+    settings:
+      timezone: UTC
+      save_schema_version: 1
+      max_slots: 3
+      analytics:
+        run_end: {mode: str, score: int, ms: int}
+    boards:
+      # Every score comes with its run (the seed and the inputs), checked by games/game.py.
+      - {key: distance, title: Distance, order: desc, periods: [all, daily, weekly],
+          min_value: 0, max_value: 200000, requires_run: true}
+      # Today's run: only a run on the server's seed of the day counts here.
+      - {key: daily, title: Today's run, order: desc, periods: [daily], daily_seed: true,
+          min_value: 0, max_value: 200000, requires_run: true}
+    currencies:
+      - key: coins
+        title: Coins
+        cap: 99999
+        rewards:
+          - {game: __GAME_SLUG__, key: daily-coins, title: Daily coins, kind: daily, amount: 20}
+          # trust: client lets any client claim an ad reward, so it stays low (per_day). With a
+          # portal that confirms ads server to server, trust: callback (the default) is safer.
+          - {game: __GAME_SLUG__, key: ad-coins, title: Coins for an ad, kind: ad, amount: 25,
+              trust: client, per_day: 3, cooldown: 60}
+          # A continue after a fall: an ad reward of no coins. The server counts the claims and
+          # refuses a fourth one in a day, so a client cannot continue for ever.
+          - {game: __GAME_SLUG__, key: continue, title: A continue, kind: ad, amount: 0,
+              trust: client, per_day: 3}
+          - game: __GAME_SLUG__
+            key: first-run
+            title: First run
+            kind: achievement
+            amount: 30
+            achievements:
+              - {game: __GAME_SLUG__, key: first-run, title: First run, counter: runs, goal: 1}
+          - game: __GAME_SLUG__
+            key: collector
+            title: Collector
+            kind: achievement
+            amount: 60
+            achievements:
+              - {game: __GAME_SLUG__, key: collector, title: Collector, counter: coins_collected,
+                  goal: 100}
+          - game: __GAME_SLUG__
+            key: three-runs
+            title: Three runs today
+            kind: mission
+            amount: 25
+            missions:
+              - {game: __GAME_SLUG__, key: three-runs, title: Three runs today, counter: runs,
+                  goal: 3, period: daily}
+          - game: __GAME_SLUG__
+            key: daily-run
+            title: Today's run
+            kind: mission
+            amount: 15
+            missions:
+              - {game: __GAME_SLUG__, key: daily-run, title: Run today's track, counter: daily_runs,
+                  goal: 1, period: daily}
+        items:
+          - {game: __GAME_SLUG__, key: spark-trail, title: Spark trail, slot: trail, price: 60}
+          - {game: __GAME_SLUG__, key: comet-trail, title: Comet trail, slot: trail, price: 150}
+          - {game: __GAME_SLUG__, key: cap, title: Cap, slot: hat, price: 40}
+          - {game: __GAME_SLUG__, key: crown, title: Crown, slot: hat, price: 120}
+    config:
+      - {key: max_speed, value: 320}

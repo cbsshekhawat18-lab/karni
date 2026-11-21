@@ -1,0 +1,25 @@
+# The runner starter: karni new "<Name>" --kind game --genre runner (karni starters show runner).
+name = "runner"
+title = "One-tap runner"
+purpose = "An endless runner: a seeded track, a daily run, a cosmetics shop and an ad continue"
+use_when = [
+    "runner",
+    "endless runner",
+    "one-tap",
+    "one tap",
+    "tap to jump",
+    "jump over gaps",
+    "daily challenge",
+    "daily run",
+    "cosmetics shop",
+    "hats and trails",
+    "arcade",
+    "endless",
+]
+usually_changed = [
+    "the obstacles and their patterns (src/rules/track.ts)",
+    "the runner's numbers: speed, gravity, jumps (src/rules/world.ts)",
+    "the look (src/art/, src/palette.ts) and the sounds (src/sound.ts)",
+    "the items and prices (content/game.yaml and src/game.ts)",
+]
+example = "Sky Dash"

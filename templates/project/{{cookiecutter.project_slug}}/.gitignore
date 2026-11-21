@@ -15,6 +15,7 @@ frontend/dist/
 game/*/node_modules/
 game/*/dist/
 game/*/dist-portals/
+game/*/dist-smoke/
 game/*/test-results/
 game/*/playwright-report/
 game/*/coverage/

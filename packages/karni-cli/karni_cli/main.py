@@ -37,6 +37,7 @@ from karni_cli.commands.seed import seed
 from karni_cli.commands.serve import serve
 from karni_cli.commands.shell import shell
 from karni_cli.commands.spec import spec_app
+from karni_cli.commands.starters import starters_app
 from karni_cli.commands.suggest import suggest
 from karni_cli.commands.sync_roles import sync_roles
 from karni_cli.commands.trace import trace
@@ -98,6 +99,7 @@ app.add_typer(spec_app, name="spec")
 app.command(help="Compare karni.yaml with the project: what karni build would change")(plan)
 app.command(help="Make the project match karni.yaml, without touching hand-written code")(build)
 app.add_typer(recipes_app, name="recipes")
+app.add_typer(starters_app, name="starters")
 app.command(
     help="Serve context, rules, check, the debugging tools and the app-builder flow (recipes, "
     "questions, answer, plan, build) as MCP tools (needs karni-cli\\[mcp])"

@@ -63,6 +63,10 @@ game = "karni_game.checks:run_checks"
 [project.entry-points."karni.roles"]
 game = "karni_game.roles:declared"
 
+# The game starters karni new --kind game --genre <genre> writes (karni starters list).
+[project.entry-points."karni.starters"]
+runner = "karni_game.starters:runner"
+
 [dependency-groups]
 dev = [
     "pytest>=8.2",
