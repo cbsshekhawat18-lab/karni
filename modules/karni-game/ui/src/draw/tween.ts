@@ -1,8 +1,12 @@
 import { linear, type Ease } from "./ease";
 
-/** The number properties of `T`: what a tween can move. */
+type Same<X, Y, A, B> = (<V>() => V extends X ? 1 : 2) extends <V>() => V extends Y ? 1 : 2 ? A : B;
+
+/** The writable number properties of `T`: what a tween can move (not a read-only count). */
 export type NumberKeys<T> = {
-  [K in keyof T]-?: T[K] extends number ? K : never;
+  [K in keyof T]-?: T[K] extends number
+    ? Same<{ [Q in K]: T[K] }, { -readonly [Q in K]: T[K] }, K, never>
+    : never;
 }[keyof T];
 
 export interface TweenOptions<T> {

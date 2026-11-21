@@ -262,6 +262,18 @@ describe("createTweens", () => {
     expect(box.x).toBeCloseTo(2.5);
   });
 
+  it("moves only writable numbers: the types refuse a read-only one", () => {
+    const tweens = createTweens();
+    const thing = { x: 0, label: "a" } as { x: number; readonly count: number; label: string };
+    tweens.to(thing, { x: 1 }, 1);
+    // @ts-expect-error a read-only number cannot be tweened
+    tweens.to(thing, { count: 1 }, 1);
+    // @ts-expect-error a string cannot be tweened
+    tweens.to(thing, { label: 1 }, 1);
+    tweens.clear();
+    expect(tweens.size).toBe(0);
+  });
+
   it("cancels every tween of a thing, waits on the game clock and clears", () => {
     const tweens = createTweens();
     const a = { x: 0 };

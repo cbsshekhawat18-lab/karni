@@ -149,6 +149,26 @@ describe("createRenderer", () => {
     );
   });
 
+  it("lets a draw function remove itself without skipping the next one", () => {
+    const { context, calls } = recordingContext();
+    const renderer = createRenderer({ context, view: fakeView(), layers: ["fx"] });
+    const off = renderer.on("fx", (g) => {
+      g.rect(0, 0, 1, 1, "once");
+      off();
+    });
+    renderer.on("fx", (g) => g.rect(0, 0, 1, 1, "always"));
+    renderer.render();
+    renderer.render();
+    expect(ops(calls, "fillRect").map((call) => call.fill)).toEqual([
+      "#000000",
+      "once",
+      "always",
+      "#000000",
+      "always",
+    ]);
+    expect(renderer.layer("fx").size).toBe(1);
+  });
+
   it("gives each layer its opacity and resets the painter's between draw functions", () => {
     const { context, calls } = recordingContext();
     const renderer = createRenderer({

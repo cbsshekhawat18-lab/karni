@@ -37,7 +37,7 @@ apply codemods and list the manual steps. This file is the human summary.
   tweens, the box mover, trigger zones, hit-stop and slow motion. Both are played in headless
   Chromium by the smoke run.
 - **Budgets:** each new entry point has a gzip size budget checked by a test on a minified build
-  (7.2 KB for `/draw`, 2.3 KB for `/collide`), a test checks that the per-frame paths of the
+  (7.1 KB for `/draw`, 2.2 KB for `/collide`), a test checks that the per-frame paths of the
   built bundles make no garbage, and a browser benchmark (2000 sprites, 1500 particles, 200
   tweens and 50 bodies on the mover at 60 Hz, desktop and phone size) fails when the 95th
   percentile of a frame's work passes 12 ms.

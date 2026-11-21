@@ -289,7 +289,7 @@ own setting wins: set both from its settings screen.
   at 60 Hz, at desktop and phone size, and fails when the 95th percentile
   of a frame's work passes 12 ms (`KARNI_GAME_BENCH_BUDGET_MS` changes it).
 - The entry point has a gzip size budget, checked by a test on a minified
-  build: 7.2 KB for all of `@karni/game/draw`. A game bundles only what it
+  build: 7.1 KB for all of `@karni/game/draw`. A game bundles only what it
   imports.
 
 ## Escape hatches

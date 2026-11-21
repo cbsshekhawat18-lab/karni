@@ -85,6 +85,9 @@ export interface Renderer<L extends string> {
 /** A class with number fields started as numbers, so a tweened `alpha` is written in place. */
 class LayerState implements Layer {
   readonly fns: DrawFn[] = [];
+  /** True while the renderer runs this layer's functions: removals then wait for the end. */
+  drawing = false;
+  private readonly dropped: DrawFn[] = [];
   screen = false;
   parallax = 1;
   alpha = 1;
@@ -120,13 +123,27 @@ class LayerState implements Layer {
   add(fn: DrawFn): () => void {
     this.fns.push(fn);
     return () => {
-      const at = this.fns.indexOf(fn);
-      if (at >= 0) this.fns.splice(at, 1);
+      if (this.drawing) this.dropped.push(fn);
+      else this.drop(fn);
     };
   }
 
   clear(): void {
-    this.fns.length = 0;
+    if (this.drawing) this.dropped.push(...this.fns);
+    else this.fns.length = 0;
+  }
+
+  private drop(fn: DrawFn): void {
+    const at = this.fns.indexOf(fn);
+    if (at >= 0) this.fns.splice(at, 1);
+  }
+
+  /** After drawing: apply the removals asked for meanwhile, so none skipped a function. */
+  settle(): void {
+    this.drawing = false;
+    if (this.dropped.length === 0) return;
+    for (const fn of this.dropped) this.drop(fn);
+    this.dropped.length = 0;
   }
 }
 
@@ -237,6 +254,7 @@ export function createRenderer<L extends string>(options: RendererOptions<L>): R
           );
         }
         const fns = layer.fns;
+        layer.drawing = true;
         for (let j = 0; j < fns.length; j += 1) {
           if (j > 0) frame.restore();
           calls += 1;
@@ -246,6 +264,7 @@ export function createRenderer<L extends string>(options: RendererOptions<L>): R
             onError(error, layer.name as L);
           }
         }
+        layer.settle();
       }
       context.restore();
       stats.drawn = painter.drawn;

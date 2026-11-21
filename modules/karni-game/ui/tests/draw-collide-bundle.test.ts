@@ -16,7 +16,7 @@ const work = mkdtempSync(join(cache, "karni-game-2d-"));
  * them (whitespace too). Set from the first build: raising one needs a
  * CHANGELOG note.
  */
-const BUDGETS = { draw: 7_200, collide: 2_300 } as const;
+const BUDGETS = { draw: 7_100, collide: 2_200 } as const;
 
 /** Bundle `entries` (name to source) minified whole, as a game's production build would. */
 async function bundle(outDir: string, entries: Record<string, string>): Promise<void> {

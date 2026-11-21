@@ -151,7 +151,7 @@ pickups.update(player); // or an array of bodies
 The tests, the sweeps, the mover and the triggers' updates make no garbage
 per step: results go into objects the game makes once (`createHit`,
 `createContact`, `createMove`). The entry point has a gzip size budget of
-2.3 KB, checked by a test on a minified build, and a game bundles only what
+2.2 KB, checked by a test on a minified build, and a game bundles only what
 it imports.
 
 ## The example
