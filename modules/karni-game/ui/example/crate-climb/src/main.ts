@@ -238,7 +238,7 @@ const react = (event: ClimbEvent): void => {
       loop.timeScale = 0.35;
       screenTweens.to(loop, { timeScale: 1 }, 1.2, { delay: 0.6 });
       screenTweens.to(camera, { zoom: 1.6 }, 1.2, { ease: inOutSine });
-      screenTweens.to(banner, { y: 70 }, 0.8, { ease: outBack, delay: 0.3 });
+      screenTweens.to(banner, { y: 30 }, 0.8, { ease: outBack, delay: 0.3 });
       break;
   }
 };
@@ -346,5 +346,10 @@ loop.start();
 
 if (__KARNI_GAME_DEV__) {
   // A development handle, dropped from every build by the preset's flag.
-  (window as unknown as Record<string, unknown>).__crateClimb = { loop, camera, renderer };
+  (window as unknown as Record<string, unknown>).__crateClimb = {
+    loop,
+    camera,
+    renderer,
+    climb: () => climb,
+  };
 }
