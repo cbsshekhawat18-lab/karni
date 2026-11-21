@@ -150,7 +150,7 @@ export function openSettings(ui: Ui, options: SettingsDialogOptions): DialogHand
       show();
       store.set({ [field]: Number(input.value) / 100 });
     });
-    return el("div", { class: "kg-row" }, el("label", { for: id }, label), input, output);
+    return el("div", { class: "kg-row kg-slider" }, el("label", { for: id }, label), input, output);
   };
 
   const toggle = (
@@ -271,6 +271,8 @@ export function openSettings(ui: Ui, options: SettingsDialogOptions): DialogHand
   return ui.dialog({
     title: t("settingsTitle"),
     body,
+    // The first control, so a tall dialog opens at its heading and not at its last button.
+    initialFocus: body.querySelector<HTMLElement>("input") ?? undefined,
     actions: [{ id: "close", label: t("close"), primary: true }],
     onClose: () => {
       cancelCapture?.();

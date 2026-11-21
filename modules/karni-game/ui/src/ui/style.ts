@@ -45,7 +45,7 @@ export const css = `
 @media (prefers-color-scheme: dark) { .kg-ui[data-kg-palette="safe"]:not([data-kg-theme="light"]) { ${SAFE_DARK} } }
 .kg-ui[data-kg-palette="safe"][data-kg-theme="dark"] { ${SAFE_DARK} }
 .kg-ui *, .kg-ui *::before, .kg-ui *::after { box-sizing: inherit; }
-.kg-root { position: absolute; inset: 0; z-index: 10; overflow: hidden; pointer-events: none; }
+.kg-root { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; position: absolute; inset: 0; z-index: 10; overflow: hidden; pointer-events: none; }
 .kg-root[data-kg-fixed] { position: fixed; }
 .kg-hud { position: absolute; inset: 0; pointer-events: none; }
 
@@ -67,15 +67,17 @@ export const css = `
 .kg-screen[data-kg-align="bottom"] { align-items: flex-end; }
 .kg-panel { width: min(380px, 100%); max-height: 100%; overflow: auto; overflow-wrap: anywhere; padding: 20px; border: 1px solid var(--kg-line); border-radius: 12px; background: var(--kg-bg); color: var(--kg-fg); pointer-events: auto; text-align: center; }
 .kg-panel .kg-actions { flex-direction: column; }
+.kg-panel .kg-actions > .kg-btn { flex: 0 0 auto; }
 
 .kg-group { margin: 0 0 16px; padding: 0; border: 0; }
 .kg-group > legend { margin: 0 0 8px; padding: 0; font-weight: 700; }
 .kg-row { display: flex; align-items: center; gap: 12px; min-height: 44px; }
 .kg-row > label, .kg-row > .kg-label { flex: 1 1 auto; min-width: 0; }
-.kg-row input[type="range"] { flex: 0 1 11rem; min-width: 0; width: 100%; min-height: 44px; accent-color: var(--kg-accent); }
+.kg-slider > label { flex: 0 0 6.5rem; }
+.kg-row input[type="range"] { flex: 1 1 auto; min-width: 0; width: 100%; min-height: 44px; accent-color: var(--kg-accent); }
 .kg-row output { flex: 0 0 3.5rem; text-align: right; font-variant-numeric: tabular-nums; }
 .kg-row input[type="checkbox"] { flex: 0 0 auto; width: 24px; height: 24px; accent-color: var(--kg-accent); }
-.kg-row .kg-btn { flex: 0 1 auto; max-width: 60%; }
+.kg-row .kg-btn { flex: 1 1 auto; text-align: left; }
 .kg-row .kg-btn[aria-pressed="true"] { background: var(--kg-accent); border-color: var(--kg-accent); color: var(--kg-accent-fg); }
 
 .kg-toasts { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 16px; pointer-events: none; }

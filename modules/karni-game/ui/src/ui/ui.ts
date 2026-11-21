@@ -22,8 +22,12 @@ export interface DialogOptions {
   actions?: DialogAction[];
   /** Escape and a click outside close it, resolving null. Default true. */
   dismissable?: boolean;
-  /** The action to focus first. Default: the primary action, else the first control. */
-  initialFocus?: string;
+  /**
+   * What to focus first: an action id, or an element of the body. Default:
+   * the primary action, else the first control. A long dialog that opens on
+   * its last button scrolls its heading away, so give it the first control.
+   */
+  initialFocus?: string | HTMLElement;
   /** `alertdialog` for a question that needs an answer. Default `dialog`. */
   role?: "dialog" | "alertdialog";
   /** Called for every action. The dialog closes after it unless the action has `keepOpen`. */
@@ -254,15 +258,16 @@ export function createUi(options: UiOptions = {}): Ui {
     modals.push({ element, handle, restore: document.activeElement });
     root.appendChild(element);
     refreshInert();
+    const initial = dialogOptions.initialFocus;
     const wanted =
-      (dialogOptions.initialFocus &&
-        actionsRow.querySelector<HTMLElement>(
-          `[data-kg-action="${dialogOptions.initialFocus}"]`,
-        )) ||
+      (typeof initial === "string"
+        ? actionsRow.querySelector<HTMLElement>(`[data-kg-action="${initial}"]`)
+        : initial) ||
       actionsRow.querySelector<HTMLElement>("[data-kg-primary]") ||
       focusables(panel)[0] ||
       panel;
-    wanted.focus();
+    // The dialog opens at its heading: focusing a control must not scroll a tall body away from it.
+    wanted.focus({ preventScroll: true });
     return handle;
   };
 

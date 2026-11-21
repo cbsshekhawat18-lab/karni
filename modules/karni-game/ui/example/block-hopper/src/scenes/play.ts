@@ -18,10 +18,12 @@ export function createPlayScene(hooks: GameHooks): Scene<GameServices> {
       buttons = null;
     },
     update({ services, stack }, dt) {
-      hooks.update(dt);
+      // Asked before the rules run: they clear the input's edge flags after a step.
       if (services.input?.pressed("pause") && stack.top?.name === "play") {
         stack.push(createPauseScene(hooks), { overlay: true });
+        return;
       }
+      hooks.update(dt);
     },
     draw: () => hooks.render(),
   };

@@ -317,6 +317,13 @@ describe("settings", () => {
     expect(await violations(kit.root)).toEqual([]);
   });
 
+  it("opens on its first control, so a tall dialog starts at its heading", () => {
+    const { store, kit } = setup();
+    const dialog = openSettings(kit, { store });
+    expect(document.activeElement).toBe(dialog.element.querySelector("input"));
+    expect(document.activeElement?.getAttribute("type")).toBe("range");
+  });
+
   it("remaps a control with the next key, keeps the pointer code, and says so", () => {
     const { store, kit } = setup();
     const input = createInput({ bindings: { jump: ["Space", "Pointer"], left: ["ArrowLeft"] } });
