@@ -54,7 +54,7 @@ from __future__ import annotations
 
 from importlib import resources
 
-from karni_cli import scaffold
+from karni_cli import kinds, scaffold
 from karni_cli.generators.core import SETTINGS, Workspace
 from karni_cli.project import CliError
 from karni_cli.urls_edit import add_route
@@ -266,8 +266,8 @@ GAME_FILES = {
     "src/rules/index.ts": "frontend/src/game/rules.ts",
     "tests/rules.test.ts": "game/tests/rules.test.ts",
 }
-#: Where a game-first project keeps each game.
-GAME_FOLDER = "game"
+#: Where a game-first project keeps each game (``game/<slug>/``).
+GAME_FOLDER = kinds.GAME_FOLDER
 
 
 def game_file(rel: str, *, slug: str, title: str) -> str:
