@@ -431,7 +431,7 @@ def test_a_module_ui_package_follows_add_and_remove(
     added = runner.invoke(app, ["add", "charts"])
     assert added.exit_code == 0, added.output
     deps = json.loads(package.read_text())["dependencies"]
-    assert deps["@karni/charts-ui"] == "^0.6.0"
+    assert deps["@karni/charts-ui"] == "^0.7.0"
     assert "@karni/charts-ui: added to frontend/package.json" in added.output
     assert list(deps) == sorted(deps)
     again = runner.invoke(app, ["add", "charts"])
