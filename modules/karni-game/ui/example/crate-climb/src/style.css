@@ -1,0 +1,22 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #0b132b;
+  overflow: hidden;
+  touch-action: none;
+}
+
+#stage {
+  position: fixed;
+  inset: 0;
+}
+
+#game {
+  display: block;
+}
+
+#hud {
+  position: fixed;
+  left: -9999px;
+}

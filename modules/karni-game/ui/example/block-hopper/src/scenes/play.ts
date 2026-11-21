@@ -25,6 +25,6 @@ export function createPlayScene(hooks: GameHooks): Scene<GameServices> {
       }
       hooks.update(dt);
     },
-    draw: () => hooks.render(),
+    draw: (_context, alpha) => hooks.render(alpha),
   };
 }

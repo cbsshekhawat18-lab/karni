@@ -20,6 +20,8 @@ const ENTRIES: Record<string, string> = {
   build: "src/tooling/index.ts",
   vite: "src/tooling/vite.ts",
   cli: "src/tooling/cli.ts",
+  collide: "src/collide/index.ts",
+  draw: "src/draw/index.ts",
   phaser: "src/engines/phaser.ts",
   pixi: "src/engines/pixi.ts",
   r3f: "src/engines/r3f.tsx",

@@ -28,6 +28,6 @@ export function createTitleScene(hooks: GameHooks): Scene<GameServices> {
     },
     // The game's keys: the jump that starts a run, and the mute key.
     update: (_context, dt) => hooks.update(dt),
-    draw: () => hooks.render(),
+    draw: (_context, alpha) => hooks.render(alpha),
   };
 }

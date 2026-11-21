@@ -12,7 +12,8 @@ export interface GameServices extends SceneServices {
 export interface GameHooks {
   /** The game's keys on every fixed step: start, continue, mute. The sim loop runs the rules after it. */
   update(dt: number): void;
-  render(): void;
+  /** Draw the world: `alpha` is the leftover fraction of a fixed step. */
+  render(alpha: number): void;
   start(): void;
   toTitle(): void;
 }

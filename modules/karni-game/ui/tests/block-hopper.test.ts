@@ -76,7 +76,7 @@ describe("Block Hopper's rules on the simulation contract", () => {
     // A golden run: a change to the rules or to the hash changes these two.
     expect({ ticks: run.ticks, score: run.score, hash: run.hash }).toMatchInlineSnapshot(`
       {
-        "hash": "d6fffd6b9b799124",
+        "hash": "7ef469197238e514",
         "score": 231,
         "ticks": 1331,
       }

@@ -57,6 +57,14 @@
     "./client": {
       "types": "./client.d.ts"
     },
+    "./collide": {
+      "types": "./dist/src/collide/index.d.ts",
+      "import": "./dist/collide.js"
+    },
+    "./draw": {
+      "types": "./dist/src/draw/index.d.ts",
+      "import": "./dist/draw.js"
+    },
     "./phaser": {
       "types": "./dist/src/engines/phaser.d.ts",
       "import": "./dist/phaser.js"
@@ -104,7 +112,8 @@
     "format:check": "prettier --check .",
     "test:smoke": "vitest run --config vitest.smoke.config.ts",
     "example:dev": "vite --config example/block-hopper/vite.config.ts",
-    "example:build": "vite build --config example/block-hopper/vite.config.ts"
+    "example:build": "vite build --config example/block-hopper/vite.config.ts",
+    "example:climb": "vite --config example/crate-climb/vite.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

@@ -1,7 +1,8 @@
 /**
  * Block Hopper, the example game of @karni/game: move, jump, score, save and
- * a leaderboard, on plain canvas. Every piece of the package is used here
- * the way a game uses it.
+ * a leaderboard, drawn with @karni/game/draw and moved with
+ * @karni/game/collide. Every piece of the package is used here the way a
+ * game uses it.
  */
 import {
   createAudio,
@@ -16,6 +17,14 @@ import {
   pauseOnHidden,
   type BoardEntry,
 } from "@karni/game";
+import {
+  REDUCED_MOTION,
+  createCamera,
+  createParticles,
+  createRenderer,
+  textStyle,
+  type Painter,
+} from "@karni/game/draw";
 import { drawCover } from "@karni/game/scenes";
 import { createRecorder, createSimLoop, toRunRecord } from "@karni/game/sim";
 import {
@@ -38,7 +47,6 @@ interface SaveV2 {
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 const hud = document.getElementById("hud") as HTMLElement;
-const context = canvas.getContext("2d") as CanvasRenderingContext2D;
 
 const storage = createStorage({ namespace: "block-hopper" });
 const save = createSave<SaveV2>({
@@ -79,9 +87,52 @@ const settings = createSettings({ storage });
 if (progress.muted && settings.loaded.status === "new") settings.set({ muted: true });
 applySettings({ store: settings, audio, input, ui });
 
+// The camera keeps the block a third of the way across, and never shows left of the start.
+const camera = createCamera({
+  view,
+  offset: { x: -WORLD.width / 6, y: 0 },
+  bounds: { x: 0, y: 0, w: Infinity, h: WORLD.height },
+});
+const renderer = createRenderer({
+  canvas,
+  view,
+  camera,
+  background: "#0d1b2a",
+  layers: [{ name: "sky", screen: true }, "world", "effects", { name: "hud", screen: true }],
+});
+const effects = createParticles({ max: 120 });
+const sparkle = effects.emitter({
+  speed: [40, 110],
+  life: [0.25, 0.5],
+  size: [2, 4],
+  colors: ["#ffd166", "#fff3c4"],
+});
+const dust = effects.emitter({
+  speed: [10, 40],
+  angle: [Math.PI, Math.PI * 2],
+  life: [0.2, 0.35],
+  size: 3,
+  colors: ["#778da9"],
+});
+// The player's reduced-motion setting scales the shake and the particles down.
+const followMotion = (reduced: boolean): void => {
+  camera.motion = reduced ? REDUCED_MOTION : 1;
+  effects.motion = reduced ? REDUCED_MOTION : 1;
+};
+followMotion(settings.state.reducedMotion);
+settings.subscribe((state) => followMotion(state.reducedMotion));
+const text = textStyle({ font: "14px system-ui, sans-serif", fill: "#e0e1dd" });
+const message = textStyle({ font: "14px system-ui, sans-serif", fill: "#e0e1dd", wrap: 400 });
+
 type Screen = "title" | "play" | "over";
 let screen: Screen = "title";
-const newRun = (seed: number) => createRecorder(hopperSim, { seed });
+const newRun = (seed: number) => {
+  const run = createRecorder(hopperSim, { seed });
+  // The sim steps its state in place, so the camera follows the same object all run.
+  camera.follow(run.sim.state);
+  camera.snap();
+  return run;
+};
 let recorder = newRun(1);
 let reviveNext = false;
 let board: BoardEntry[] = [];
@@ -110,6 +161,7 @@ const show = (next: Screen): void => {
 const start = (): void => {
   // The page may use any clock or Math.random: only src/rules may not.
   recorder = newRun(Math.floor(Math.random() * 2 ** 31));
+  effects.clear();
   revived = false;
   show("play");
 };
@@ -134,8 +186,9 @@ const finish = async (): Promise<void> => {
   void portal.interstitial("game-over");
 };
 
-/** Menus and keys: runs on every step, whatever the screen. */
-const beforeStep = (): void => {
+/** Menus, keys and effects: runs on every fixed step, whatever the screen. */
+const beforeStep = (dt: number): void => {
+  effects.update(dt);
   if (input.pressed("mute")) {
     settings.set({ muted: !settings.state.muted });
   }
@@ -166,45 +219,48 @@ const readInput = () => {
 };
 
 const onEvents = (events: readonly HopperEvent[]): void => {
+  const hopper = recorder.sim.state;
   for (const event of events) {
     if (event === "jump") blip(520);
-    if (event === "coin") blip(880);
+    if (event === "coin") {
+      blip(880);
+      sparkle.burst(hopper.x + hopper.w / 2, hopper.y, 12);
+    }
+    if (event === "land") dust.burst(hopper.x + hopper.w / 2, hopper.y + hopper.h, 6);
     if (event === "fall") void finish();
   }
 };
 
-const render = (): void => {
+renderer.on("sky", (g) => g.rect(0, 0, WORLD.width, WORLD.height, "#1b263b"));
+renderer.on("world", (g) => {
   const hopper = recorder.sim.state;
-  hud.dataset.score = String(score(hopper));
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.fillStyle = "#0d1b2a";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  view.apply(context);
-  context.fillStyle = "#1b263b";
-  context.fillRect(0, 0, WORLD.width, WORLD.height);
-  const cameraX = Math.max(0, hopper.x - WORLD.width / 3);
-  context.save();
-  context.translate(-cameraX, 0);
-  context.fillStyle = "#778da9";
-  for (const p of hopper.platforms)
-    if (p.x + p.w > cameraX && p.x < cameraX + WORLD.width) context.fillRect(p.x, p.y, p.w, 8);
-  context.fillStyle = "#ffd166";
-  for (const c of hopper.pickups) if (!c.taken) context.fillRect(c.x - 5, c.y - 5, 10, 10);
-  context.fillStyle = "#ef476f";
-  context.fillRect(hopper.x, hopper.y, WORLD.size, WORLD.size);
-  context.restore();
-  context.fillStyle = "#e0e1dd";
-  context.font = "14px system-ui, sans-serif";
-  context.fillText(`Score ${score(hopper)}   Best ${progress.best}`, 10, 20);
+  // Off-screen platforms and coins are culled by the painter.
+  for (const p of hopper.platforms) g.rect(p.x, p.y, p.w, p.h, "#778da9");
+  for (const c of hopper.pickups) if (!c.taken) g.rect(c.x - 5, c.y - 5, 10, 10, "#ffd166");
+  g.rect(hopper.x, hopper.y, hopper.w, hopper.h, "#ef476f");
+});
+renderer.on("effects", (g) => effects.draw(g));
+renderer.on("hud", (g: Painter) => {
+  const hopper = recorder.sim.state;
+  g.text(`Score ${score(hopper)}   Best ${progress.best}`, 10, 8, text);
   if (screen === "over") {
-    context.fillText("Fell! Space or tap to hop again. R: watch an ad to continue", 40, 110);
+    g.text("Fell! Space or tap to hop again. R: watch an ad to continue", 40, 100, message);
     board.forEach((entry, index) =>
-      context.fillText(`${entry.rank}. ${entry.handle} ${entry.value}`, 180, 140 + index * 18),
+      g.text(`${entry.rank}. ${entry.handle} ${entry.value}`, 180, 130 + index * 18, text),
     );
   }
-  if (portal.adPlaying) context.fillText("Ad playing...", 200, 250);
-  stick.draw(context);
-  drawCover(context, app.cover, canvas.width, canvas.height, "#0d1b2a");
+  if (portal.adPlaying) g.text("Ad playing...", 200, 240, text);
+  stick.draw(g.ctx);
+});
+
+/** The frame time of the frame being drawn, for the camera and the renderer. */
+let frameDt = 0;
+/** The world under the title and the play scene: the scenes call it from their draw. */
+const render = (alpha: number): void => {
+  hud.dataset.score = String(score(recorder.sim.state));
+  camera.update(frameDt);
+  renderer.render(alpha, frameDt);
+  drawCover(renderer.context, app.cover, canvas.width, canvas.height, "#0d1b2a");
 };
 
 // The scene stack runs on every fixed step (menus, keys, the pause overlay) and
@@ -215,7 +271,10 @@ const loop = createSimLoop({
   beforeStep: (dt) => app.update(dt),
   active: () => screen === "play" && app.stack.top?.name === "play",
   onEvents,
-  render: (alpha) => app.draw(alpha),
+  render: (alpha, dt) => {
+    frameDt = dt;
+    app.draw(alpha);
+  },
   afterFrame: () => input.endFrame(),
 });
 const toTitle = (): void => {
@@ -228,7 +287,8 @@ const app = createGameScenes(
 );
 createDevOverlay(ui, {
   loop,
-  entities: () => recorder.sim.state.platforms.length + recorder.sim.state.pickups.length,
+  entities: () =>
+    recorder.sim.state.platforms.length + recorder.sim.state.pickups.length + effects.count,
 });
 pauseOnHidden([loop, audio]);
 linkPortal(portal, { audio, loop, input });
