@@ -69,9 +69,17 @@
       "types": "./dist/src/engines/r3f.d.ts",
       "import": "./dist/r3f.js"
     },
+    "./scenes": {
+      "types": "./dist/src/scenes/index.d.ts",
+      "import": "./dist/scenes.js"
+    },
     "./smoke": {
       "types": "./dist/src/smoke/index.d.ts",
       "import": "./dist/smoke.js"
+    },
+    "./ui": {
+      "types": "./dist/src/ui/index.d.ts",
+      "import": "./dist/ui.js"
     },
     "./portals/*": {
       "types": "./dist/src/portal/adapters/*.d.ts",
@@ -102,6 +110,7 @@
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@types/three": "^0.186.0",
+    "axe-core": "^4.14.1",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react-hooks": "^5.2.0",

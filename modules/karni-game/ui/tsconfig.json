@@ -29,6 +29,8 @@
     // game does: read it from src, so a fresh checkout type-checks before a build.
     "paths": {
       "@karni/game": ["./src/index.ts"],
+      "@karni/game/scenes": ["./src/scenes/index.ts"],
+      "@karni/game/ui": ["./src/ui/index.ts"],
       "@karni/game/portals/*": ["./src/portal/adapters/*.ts"]
     }
   },
