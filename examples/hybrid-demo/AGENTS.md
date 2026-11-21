@@ -4,11 +4,18 @@
 This is a Karni project. Karni already implements everything generic, so you write
 only domain code.
 
-An app (kind `app` in pyproject.toml). The stack is set, so never ask which technology
-to use: Python 3.12, Django 5.2, PostgreSQL, Redis and Celery, a REST API on Django REST
-framework, and a React 18 + TypeScript app in `frontend/` on @karni/ui. Screens go in
-`frontend/src/pages/` (`karni make page`). A public website joins with `karni add site`
-(rule K309).
+An app with a game in it (kind `app+game` in pyproject.toml). The stack is set, so never
+ask which technology to use: Python 3.12, Django 5.2, PostgreSQL, Redis and Celery, a
+REST API on Django REST framework, and a React 18 + TypeScript app in `frontend/` on
+@karni/ui whose pages host the game, its code in `frontend/src/game/` on the @karni/game
+client. The server side is the karni-game module: players (guests first), saves, scores,
+the wallet, daily content, achievements and remote config, mounted at `/api/game/`, with
+its screens in the admin. The game is declared in `content/game.yaml` (`karni load`) and
+its server hooks (save migrations, run checks) go in the `game.py` of an app. A project
+`karni new --kind app+game` made has the game's page at `/game`, its hooks in
+`games/game.py`, and `frontend/portal/`, which builds the game alone for the game
+portals (`npm run game:package`). Never let the client decide coins, scores or unlocks:
+the server does.
 
 Before any work, run these two commands and follow what they return:
 

@@ -4909,9 +4909,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni context, karni rules sync, karni add site (pyproject.toml [tool.karni] kind)`
 
-**Why Karni objects.** `karni new` records the project's kind in pyproject.toml: site, app, site+app or game. The agent files and `karni context` state it with its stack, so a value Karni cannot read stops them instead of guessing.
+**Why Karni objects.** `karni new` records the project's kind in pyproject.toml: site, app, site+app, game or app+game. The agent files and `karni context` state it with its stack, so a value Karni cannot read stops them instead of guessing.
 
-**Fix.** Set kind = "site", "app", "site+app" or "game" under [tool.karni] in pyproject.toml (or remove the line, and Karni infers the kind from the project), then run `karni rules sync`.
+**Fix.** Set kind = "site", "app", "site+app", "game" or "app+game" under [tool.karni] in pyproject.toml (or remove the line, and Karni infers the kind from the project), then run `karni rules sync`.
 
 <a id="c121"></a>
 

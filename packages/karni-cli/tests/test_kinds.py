@@ -232,7 +232,7 @@ def test_an_app_with_a_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     assert "karni-game module" in agents and "`content/game.yaml`" in agents
     assert "`frontend/src/game/`" in agents
     assert _context(project, monkeypatch).splitlines()[0] == (
-        "KIND: app+game (a game on karni-game in the app: games app, content/game.yaml; "
+        "KIND: app+game (a game on karni-game, on a page of the app: content/game.yaml; "
         "API + React app in frontend/)"
     )
     assert 'An app with a game in it (`kind = "app+game"`' in (project / "README.md").read_text()
@@ -546,7 +546,7 @@ def test_a_game_is_read_from_its_files(tmp_path: Path, monkeypatch: pytest.Monke
     assert (found.kind, found.recorded, found.recorded_as) == ("app+game", True, "game")
     assert found.context_line().startswith(
         'KIND: app+game, recorded as game (the 0.6.0 name): set kind = "app+game" under '
-        "[tool.karni] (a game on karni-game in the app"
+        "[tool.karni] (a game on karni-game, on a page of the app"
     )
     agents = " ".join(found.agent_lines())
     assert "An app with a game in it (kind `game` in pyproject.toml, read as `app+game`" in agents

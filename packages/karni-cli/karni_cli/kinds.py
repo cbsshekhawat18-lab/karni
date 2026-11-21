@@ -265,7 +265,7 @@ class ProjectKind:
                 "content/game.yaml"
             )
         if self.kind == "app+game":
-            parts.append("a game on karni-game in the app: games app, content/game.yaml")
+            parts.append("a game on karni-game, on a page of the app: content/game.yaml")
         if self.site:
             parts.append("public site (Django templates on karni-site, edited in the admin)")
         if self.app:
@@ -295,13 +295,13 @@ class ProjectKind:
             return f"kind `{self.kind}` in pyproject.toml"
         return f"kind `{self.kind}`, inferred: set `kind` under `[tool.karni]` in pyproject.toml"
 
-    def _game_server(self) -> str:
+    def _game_server(self, hooks: str) -> str:
         return (
             "The server side is the karni-game module: players (guests first), saves, scores, "
             "the wallet, daily content, achievements and remote config, mounted at "
             "`/api/game/`, with its screens in the admin. The game is declared in "
             "`content/game.yaml` (`karni load`) and its server hooks (save migrations, run "
-            "checks) go in `games/game.py`."
+            f"checks) go in {hooks}."
         )
 
     def agent_lines(self) -> list[str]:
@@ -338,15 +338,18 @@ class ProjectKind:
                 f"its own npm package, served at `/play/{slug}/` (`npm run dev` there) and "
                 "packaged for the game portals (`npm run package`). Its rules are plain "
                 f"functions in `{folder}/src/rules/`, tested in `{folder}/tests/`. "
-                f"{self._game_server()} {staff} {honest}"
+                f"{self._game_server('`games/game.py`')} {staff} {honest}"
             )
         elif self.kind == "app+game":
+            hooks = "the `game.py` of an app"
             text = (
                 f"An app with a game in it ({recorded}). {stack}, a REST API on Django REST "
-                "framework, and a React 18 + TypeScript app in `frontend/` on @karni/ui, whose "
-                f"page `/game` hosts the game. {self._game_server()} The game's code is in "
-                "`frontend/src/game/` on the @karni/game client, which `frontend/portal/` also "
-                f"builds alone for the game portals (`npm run game:package`). {honest}"
+                "framework, and a React 18 + TypeScript app in `frontend/` on @karni/ui whose "
+                "pages host the game, its code in `frontend/src/game/` on the @karni/game "
+                f"client. {self._game_server(hooks)} A project `karni new --kind app+game` "
+                "made has the game's page at `/game`, its hooks in `games/game.py`, and "
+                "`frontend/portal/`, which builds the game alone for the game portals (`npm "
+                f"run game:package`). {honest}"
             )
         elif self.kind == "site":
             staff = (

@@ -9,6 +9,48 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
+## 0.7.0 (unreleased)
+
+- **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web
+  apps and web games as peers on one base, and a project is an app, a game or both. The
+  game kind's project has the game as its front door: the game in `game/<slug>/`, its own
+  npm package on `@karni/game` with its rules in `src/rules/` and their tests in `tests/`
+  (`npm test`), served at `/play/<slug>/` (and `/` goes there) by its Vite dev server in
+  development (the `game` service of `docker-compose.yml`, port 5174) and by the production
+  web front from its build. The API, the admin and karni-game's server side (the `games`
+  app, `content/game.yaml`) are as before, and there is no React staff app unless
+  `--staff-app` asks for one. `npm run package` builds the same game for each portal. The
+  game's `package.json` names no author, and `.gitignore` keeps each game's installs,
+  builds, portal packages and test output out of git.
+- **Added (experimental): `karni new --kind app+game`**, an app with a game in it, what
+  `--kind game` made in 0.6.0 (the game on a page of the React app, `frontend/portal/` for
+  the portals). `karni add game` turns an app into an `app+game`. A project that records
+  `kind = "game"` with 0.6.0's layout (the game in `frontend/`, no `game/<slug>/` folder)
+  is read as `app+game`: nothing in it moves, its build, tests and `karni check` are as
+  before, `karni context` says to record the new name, and `karni rules sync` writes its
+  agent files for an app with a game. `docs/migrations/0.7.md` says how to record it, or
+  how to move the game out of the app.
+- **Added: the production web front serves the games.** A project with `game/<slug>/`
+  folders gets a `games` stage in its Dockerfile (each game built with `npm ci`, or `npm
+  install` until it has a lock), `/play/*` in the Caddyfile `karni make deploy compose`
+  writes (the build only, with the security headers Django sends and hashed assets cached
+  for a year), and, from `karni make deploy systemd-nginx`, a `location /play/` in the
+  nginx vhost with each release building the games (Node.js 20.19 or later on the server,
+  unless a game's `dist/` comes with the project) and a rollback publishing its own builds.
+- **Added: `manage.py karni_publish_web --front PATH=DIR`** (repeatable), and `fronts` in
+  `karni.deploy.web.publish`: another built front end published at a path of the web root,
+  kept like the staff app's build (an earlier build's files stay a week). The release step
+  publishes each game with it.
+- **Added: `karniGame({ devBase })` in `@karni/game/vite`**: where `vite dev` serves the
+  game, the path the project serves its build at (`/play/<slug>/`). A build keeps the
+  relative base.
+- **Fixed: the generated game draws inside its world only**, so a fall into a gap no longer
+  shows in the letterbox on a tall phone screen.
+- **Docs: [Apps and games](docs/apps-and-games.md)**, what each kind installs, what an app and
+  a game share, the layout of a game-first project and how a game is served. The kinds
+  table, the README, the docs home, the game pages and the deploy guide follow it, and
+  `examples/hybrid-demo` records the kind `app+game`.
+
 ## 0.6.0 (2026-11-20)
 
 - **Changed: `karni seed` in a project built from a recipe writes realistic demo data.** The

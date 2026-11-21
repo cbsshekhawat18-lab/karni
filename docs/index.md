@@ -195,8 +195,9 @@ The [benchmark report](benchmarks/tokens.md) has every figure with its range, th
 
     ---
 
-    [`karni new --kind game`](game.md#a-new-game-project) makes a small game
-    you can play, with its server and a package per game portal.
+    [`karni new --kind game`](apps-and-games.md) makes a game first: a small
+    game you can play at `/play/<slug>/`, its server, the admin and a package
+    per game portal. Apps and games are peers on one base, alone or together.
     [karni-game](game.md) keeps guest players, saves, leaderboards, a wallet
     and achievements on the server, and [@karni/game](game-client.md) is the
     browser side, with adapters for game portals and engines

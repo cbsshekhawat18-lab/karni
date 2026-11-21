@@ -70,7 +70,7 @@ Reference or Debugging sections.
 
 ## Build games
 
-- **[A game project](game.md#a-new-game-project)** (experimental): `karni new "Block Hopper" --kind game` makes a small game you can play, its server declared in `content/game.yaml`, a page in the app where a guest keeps their progress by signing in, and a package per game portal with `npm run game:package`.
+- **[A game project](apps-and-games.md)** (experimental): `karni new "Block Hopper" --kind game` makes a game first, a small game you can play in `game/block-hopper/`, served at `/play/block-hopper/`, with its server declared in `content/game.yaml`, the admin, and a package per game portal with `npm run package`. `--kind app+game` puts the game on a page of an app, where a guest keeps their progress by signing in.
 - **[The server side, karni-game](game.md)** (experimental): guest players with a token the server issues, cloud saves with a version counter, leaderboards with plausible ranges, a soft-currency wallet with a ledger, rewards and a shop, daily content on the server's date, achievements and missions, remote config and analytics, decided on the server.
 - **[The browser side, @karni/game](game-client.md)** (experimental): a canvas loop with a fixed step, input, audio, saves on the device, a seeded random generator, an offline-first data client, per-portal builds with checks, adapters for Poki, CrazyGames, GameDistribution and Y8, adapters for Phaser, PixiJS and React Three Fiber, and a browser smoke harness.
 - **[The game API](game-api.md)** (experimental): the HTTP contract a game client, a realtime server of your own and a portal's server call.
@@ -276,7 +276,7 @@ Each command links to its entry in the [reference](REFERENCE.md#commands).
 <!-- generated:commands -->
 | Command | What it does |
 |---|---|
-| [`karni new`](REFERENCE.md#karni-new) | Create a project: a public website, an app, or both |
+| [`karni new`](REFERENCE.md#karni-new) | Create a project: a public website, an app, both, or a game |
 | [`karni add`](REFERENCE.md#karni-add) | Install an optional module and wire it into settings |
 | [`karni remove`](REFERENCE.md#karni-remove) | Take a module out again: what karni add wired, never its data |
 | [`karni modules`](REFERENCE.md#karni-modules) | The module catalog (experimental): every module and built-in feature, added or not, with what it provides and the questions to ask (list, show): [list](REFERENCE.md#karni-modules-list), [show](REFERENCE.md#karni-modules-show) |
