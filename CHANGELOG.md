@@ -9,6 +9,39 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
+## 0.7.0 (unreleased)
+
+- **Added: `@karni/game/draw`, a light 2D layer on Canvas 2D (experimental).** `createRenderer`
+  draws named layers in order over `createView`: world layers through a camera with parallax,
+  screen layers in game units, a clip to the game area and culling of what is off screen.
+  `createCamera` follows a point or a box with a dead zone, an offset and smoothing, stays in
+  bounds, shakes and zooms. The painter draws shapes, text in a `textStyle` that lays out each
+  string once (with wrapping), and sprites cut from an image or a sheet (`createSprite`,
+  `sheetFrames`), turned, scaled or flipped. `defineClips` and `createAnimator` play frame
+  animation. `createTweens` moves number properties with sixteen easing functions (separate
+  exports), delays, repeats and there-and-back, and `damp` follows a value the same way at any
+  frame rate. `createParticles` keeps its particles in a pool and `createPool` is that pool for
+  anything else. Shake and particles scale down when the browser asks for less motion. No
+  WebGL, no scene graph beyond layers, no entity system. See docs/game-draw.md.
+- **Added: `@karni/game/collide`, kinematic collision (experimental).** Overlap and contact
+  tests for axis-aligned boxes and circles, segment and sweep tests, `castRay`, `moveBox` (slides
+  against solid boxes, never passes through a thin one, one-way ledges with drop-through, a
+  broad phase of the game's own as an option) and `createTriggers` (enter, stay and exit per
+  zone). No rigid-body physics. See docs/game-collide.md.
+- **Added: `loop.timeScale` and `loop.hitStop(ms)` on `createLoop`.** Slow motion keeps the fixed
+  step's size and runs fewer steps, so a seeded simulation stays deterministic. A hit-stop
+  freezes updates for real milliseconds while `render` goes on, and keeps a press made during it
+  for the first update after.
+- **Changed: Block Hopper, the example game, draws with `/draw` and moves with `/collide`**, and
+  a second example scene, Crate Climb, shows the camera, parallax, animated sprites, particles,
+  tweens, the box mover, trigger zones, hit-stop and slow motion. Both are played in headless
+  Chromium by the smoke run.
+- **Budgets:** each new entry point has a gzip size budget checked by a test on a minified build
+  (7.2 KB for `/draw`, 2.3 KB for `/collide`), a test checks that the per-frame paths of the
+  built bundles make no garbage, and a browser benchmark (2000 sprites, 1500 particles, 200
+  tweens and 50 bodies on the mover at 60 Hz, desktop and phone size) fails when the 95th
+  percentile of a frame's work passes 12 ms.
+
 ## 0.6.0 (2026-11-20)
 
 - **Changed: `karni seed` in a project built from a recipe writes realistic demo data.** The

@@ -1,8 +1,8 @@
 # @karni/game
 
 The browser side of the Karni game add-on: portal and ad adapters, a canvas loop, input, audio,
-local saves, a seeded random generator, an offline-first data client and per-portal builds.
-Experimental.
+local saves, a seeded random generator, an offline-first data client, per-portal builds, and a
+light 2D layer for drawing and collision on plain canvas. Experimental.
 
 [![npm](https://img.shields.io/npm/v/@karni/game)](https://www.npmjs.com/package/@karni/game) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/game-client/)
 
@@ -26,6 +26,8 @@ Vite (for the preset), Playwright (for the smoke harness), React Three Fiber and
 | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `@karni/game`                                               | the portal, the loop and view, input, audio, the save layer, the random generator and the data client |
 | `@karni/game/portals/<name>`                                | one portal's adapter: `none`, `fake`, `poki`, `crazygames`, `gamedistribution`, `y8`                  |
+| `@karni/game/draw`                                          | layers, a camera, shapes, text, sprites and frame animation, tweens, particles, a pool                |
+| `@karni/game/collide`                                       | boxes and circles, overlap and sweep tests, a ray cast, the box mover, trigger zones                  |
 | `@karni/game/vite`                                          | `karniGame()`, the Vite preset                                                                        |
 | `@karni/game/build`                                         | the portal table, the package checks, `packagePortals`, `zipFolder`                                   |
 | `@karni/game/phaser`, `@karni/game/pixi`, `@karni/game/r3f` | the engine adapters                                                                                   |
@@ -82,7 +84,8 @@ loop.start();
 ```
 
 `example/block-hopper/` is a whole game on these pieces (move, jump, score, save, a leaderboard
-and a rewarded continue), and the browser tests play it.
+and a rewarded continue), and the browser tests play it. `example/crate-climb/` is a scene for the
+2D layer below.
 
 ## The pieces
 
@@ -110,6 +113,51 @@ and a rewarded continue), and the browser tests play it.
   conflict rule, submits scores with their runs, reads boards, the wallet, the shop, rewards,
   daily content, achievements and missions, remote config and flags, and batches analytics. A
   project with `@karni/ui` passes its own client as the `transport`, so calls carry the account.
+
+## Drawing and collision
+
+For a game on plain canvas, two entry points cover what such games write by hand before their own
+rules. Both are Canvas 2D and plain numbers only: no WebGL, no scene graph beyond layers, no entity
+system and no rigid-body physics. A game that outgrows them moves to an engine adapter.
+
+```ts
+import { createCamera, createParticles, createRenderer, textStyle } from "@karni/game/draw";
+import { createMove, moveBox } from "@karni/game/collide";
+
+const camera = createCamera({
+  view,
+  bounds: { x: 0, y: 0, w: 1600, h: 540 },
+  deadZone: { w: 60, h: 50 },
+});
+camera.follow(player);
+const renderer = createRenderer({
+  canvas,
+  view,
+  camera,
+  layers: [{ name: "hills", parallax: 0.35 }, "world", "effects", { name: "hud", screen: true }],
+});
+renderer.on("world", (g) => g.sprite(hero.sprite, player.x, player.y, player.facing, 1));
+
+const moved = createMove();
+moveBox(player, dx, player.vy * dt, level.solids, undefined, moved);
+player.grounded = moved.bottom;
+```
+
+- **Drawing** (`@karni/game/draw`). `createRenderer` draws layers in order (world layers through
+  the camera with parallax, screen layers in game units), culls what is off screen and keeps the
+  drawing in the game area. The painter draws shapes, text in a style that measures each string
+  once, and sprites cut from sheets (`sheetFrames`, `defineClips`, `createAnimator`).
+  `createCamera` follows with a dead zone and smoothing, stays in bounds, shakes and zooms.
+  `createTweens` moves number properties with an easing, `createParticles` keeps its particles in
+  a pool, and `createPool` is that pool for anything else. Shake and particles scale down under
+  reduced motion.
+- **Time scale and hit-stop** are on the loop: `loop.timeScale` and `loop.hitStop(ms)`.
+- **Collision** (`@karni/game/collide`). Overlap and contact tests for boxes and circles, segment
+  and sweep tests, `castRay`, `moveBox` (slides against solid boxes, one-way ledges, never passes
+  through a thin solid) and `createTriggers` (enter, stay and exit per zone).
+
+The per-frame paths make no garbage, a browser benchmark holds a frame budget with 2000 sprites
+and 1500 particles, and each entry point has a gzip size budget checked by a test.
 
 ## Building for portals
 
@@ -139,7 +187,9 @@ ids typed into code. `definePortals` changes a row or adds a portal of the proje
 Every piece takes its collaborators as options: the adapter of a portal Karni does not list, the
 frame scheduler and clock of the loop, the AudioContext, the storage backend, the transport and
 conflict rule of the data client, the build function of the packaging step and the browser of the
-smoke harness. Each module also works alone.
+smoke harness. The painter hands out the raw 2D context in the layer's units, the camera and the
+particles take their own random source, and the box mover takes a broad phase of the game's own.
+Each module also works alone.
 
 ## License
 
