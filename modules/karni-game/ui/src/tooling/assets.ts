@@ -216,6 +216,13 @@ export function manifestSource(
     const fields = [`kind: ${JSON.stringify(asset.kind)}`, `url: ${imp(asset.file)}`];
     if (asset.webp) fields.push(`webp: ${imp(asset.webp.file)}`);
     fields.push(`bytes: ${asset.bytes}`);
+    if (asset.kind === "data") {
+      // Written down so an inlined file (a data: URL has no extension) is read the same way.
+      const ext = asset.file.toLowerCase().split(".").pop() ?? "";
+      const format =
+        ext === "json" ? "json" : ["txt", "csv", "tsv"].includes(ext) ? "text" : "binary";
+      fields.push(`format: ${JSON.stringify(format)}`);
+    }
     if (asset.kind === "font")
       fields.push(`family: ${JSON.stringify(asset.name.split("/").pop())}`);
     (groups.get(asset.group) ?? groups.set(asset.group, []).get(asset.group) ?? []).push(

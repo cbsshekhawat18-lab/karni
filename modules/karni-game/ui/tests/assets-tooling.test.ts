@@ -243,6 +243,7 @@ document.title = JSON.stringify({ manifest, assetHosts });`,
     expect(js).toMatch(/webp: /);
     // The bundler may print 1000 as 1e3.
     expect(js).toMatch(/bytes:\s*(1000|1e3)/);
+    expect(js).toMatch(/format:\s*"json"/);
     const report = JSON.parse(readFileSync(join(out, ASSET_REPORT), "utf8"));
     expect(report.groups.stage1).toEqual({
       files: 1,

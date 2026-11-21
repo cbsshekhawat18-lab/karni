@@ -8,6 +8,8 @@ import type { GameHooks, GameServices } from "./services";
 /** A run: the rules advance here, and Pause opens the pause overlay above it. */
 export function createPlayScene(hooks: GameHooks): Scene<GameServices> {
   let buttons: TouchButtons | null = null;
+  // A slow frame runs several steps with one key press in all of them: ask for the menu once.
+  let asked = false;
   return {
     name: "play",
     enter({ services }) {
@@ -17,9 +19,13 @@ export function createPlayScene(hooks: GameHooks): Scene<GameServices> {
       buttons?.destroy();
       buttons = null;
     },
+    resume() {
+      asked = false;
+    },
     update({ services, stack }, dt) {
       // Asked before the rules run: they clear the input's edge flags after a step.
-      if (services.input?.pressed("pause") && stack.top?.name === "play") {
+      if (services.input?.pressed("pause") && stack.top?.name === "play" && !asked) {
+        asked = true;
         stack.push(createPauseScene(hooks), { overlay: true });
         return;
       }

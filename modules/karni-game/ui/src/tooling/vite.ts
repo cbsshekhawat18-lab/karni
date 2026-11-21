@@ -221,7 +221,9 @@ function assetsPlugin(
       return manifestSource(assets, hosts, settings.budget);
     },
     generateBundle() {
-      if (options.assets === false || !scanned || scanned.length === 0) return;
+      // A single file holds everything: there is no group to download, so no report.
+      if (options.assets === false || options.singleFile || !scanned || scanned.length === 0)
+        return;
       this.emitFile({
         type: "asset",
         fileName: ASSET_REPORT,
