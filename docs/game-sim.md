@@ -118,7 +118,7 @@ browsers and Node, keep them out of the rules, or round their result.
 ## A run on the server
 
 The score API's `run` is `{ seed, inputs, duration_ms, build, meta }`
-([the game API](game-api.md#post-gameboardsboardscores)). A recording fits it
+([the game API](game-api.md#scores-and-boards)). A recording fits it
 without any change on the server:
 
 ```ts

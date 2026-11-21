@@ -1929,6 +1929,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Run production with DJANGO_ENV=prod, which turns DEBUG off, or set DEBUG=False in the environment.
 
+<a id="e511"></a>
+
+#### E511: A front end cannot be published at that path
+
+*exception* · from `karni.deploy.web.front_path; manage.py karni_publish_web --front`
+
+**Why Karni objects.** karni_publish_web --front PATH=DIR publishes another built front end, a game's build for one, at a folder of the web root. PATH must be folder names of letters, digits, - and _ joined by / (play/sky-dash), outside the folders the staff app and the published files take, and the option needs both PATH and DIR.
+
+**Fix.** Give --front play/&lt;slug>=game/&lt;slug>/dist, as the release step does for each game. The message names the paths that are taken.
+
 <a id="w511"></a>
 
 #### W511: SECRET_KEY is weak or a development key

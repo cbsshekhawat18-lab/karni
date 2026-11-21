@@ -2368,6 +2368,18 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Set KARNI_STATIC_STORAGE to `plain` (the default), `manifest` or the dotted path of "
         "a storage class, or define STORAGES yourself in settings.py.",
     ),
+    _e(
+        "E511",
+        "A front end cannot be published at that path",
+        "exception",
+        "karni.deploy.web.front_path; manage.py karni_publish_web --front",
+        "karni_publish_web --front PATH=DIR publishes another built front end, a game's build "
+        "for one, at a folder of the web root. PATH must be folder names of letters, digits, - "
+        "and _ joined by / (play/sky-dash), outside the folders the staff app and the published "
+        "files take, and the option needs both PATH and DIR.",
+        "Give --front play/<slug>=game/<slug>/dist, as the release step does for each game. The "
+        "message names the paths that are taken.",
+    ),
     # W51x and W520 deploy checks (manage.py check --deploy, karni check --deploy)
     _e(
         "E508",

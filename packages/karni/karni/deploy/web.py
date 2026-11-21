@@ -36,6 +36,8 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from karni.exceptions import KarniValueError
+
 __all__ = [
     "HEADERS_FILE",
     "Published",
@@ -154,15 +156,16 @@ def _copy_app(source: Path, target: Path, keep_days: float, now: float) -> int:
 def front_path(path: str) -> str:
     """``path`` as a folder of the web root (``"/play/sky-dash/"`` is ``"play/sky-dash"``).
 
-    :raises ValueError: for a path that is not plain folder names (``..``, a
-        dot, a space) or that the staff app or the published files take.
+    :raises KarniValueError: ``E511`` for a path that is not plain folder names (``..``,
+        a dot, a space) or that the staff app or the published files take.
     """
     clean = path.strip().strip("/")
     if not _FRONT_PATH.match(clean) or clean.split("/")[0] in _TAKEN:
-        raise ValueError(
+        raise KarniValueError(
             f"{path!r} is not a path a front end can be published at: give folder names of "
             f"letters, digits, - and _ joined by /, such as play/sky-dash, and not "
-            f"{', '.join(sorted(_TAKEN))}."
+            f"{', '.join(sorted(_TAKEN))}.",
+            code="E511",
         )
     return clean
 

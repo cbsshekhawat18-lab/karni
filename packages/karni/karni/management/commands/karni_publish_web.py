@@ -17,9 +17,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from django.core.management.base import BaseCommand, CommandError, CommandParser
+from django.core.management.base import BaseCommand, CommandParser
 
 from karni.deploy.web import describe, front_path, publish
+from karni.exceptions import KarniCommandError, KarniValueError
 
 
 class Command(BaseCommand):
@@ -52,12 +53,14 @@ class Command(BaseCommand):
         fronts: list[tuple[str, Path]] = []
         for given in options["front"]:
             path, sep, folder = str(given).partition("=")
+            if not sep or not folder:
+                raise KarniCommandError(
+                    f"--front {given!r}: give PATH=DIR, such as play/x=x/dist", code="E511"
+                )
             try:
-                if not sep or not folder:
-                    raise ValueError(f"--front {given!r}: give PATH=DIR, such as play/x=x/dist")
                 fronts.append((front_path(path), Path(folder)))
-            except ValueError as exc:
-                raise CommandError(str(exc)) from exc
+            except KarniValueError as exc:
+                raise KarniCommandError(exc.message, code=exc.code) from exc
         result = publish(
             Path(options["root"]),
             app=Path(options["app"]) if options["app"] else None,

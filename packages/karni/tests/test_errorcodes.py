@@ -85,12 +85,17 @@ ALLOWED_FILES = {"errorcodes/__init__.py"}
 MARKER = "karni: bare-raise-ok"
 
 
+#: Folders of a package that are not its code: a game starter's files are a new project's
+#: own (its tests assert as pytest does), written by karni new --genre (karni_game/starters/).
+NOT_PACKAGE_CODE = {"migrations", "__pycache__", "starters"}
+
+
 def _python_files(roots: Iterable[Path] = SOURCES) -> list[Path]:
     return [
         path
         for root in roots
         for path in sorted(root.rglob("*.py"))
-        if "migrations" not in path.parts and "__pycache__" not in path.parts
+        if not NOT_PACKAGE_CODE & set(path.parts)
     ]
 
 

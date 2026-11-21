@@ -31,7 +31,7 @@ traceback. `KARNI_DB_CHECK=false` skips the check.
 - **Debugging**: [why](#karni-why), [why-empty](#karni-why-empty)
 - **Generators**: [make](#karni-make), [import](#karni-import), [design](#karni-design), [spec](#karni-spec), [plan](#karni-plan), [build](#karni-build)
 - **Debugging**: [trace](#karni-trace), [replay](#karni-replay)
-- **Other**: [recipes](#karni-recipes)
+- **Other**: [recipes](#karni-recipes), [starters](#karni-starters)
 
 ## Project
 
@@ -68,6 +68,12 @@ karni new "Block Hopper" --kind game
 Example:
 
 ```sh
+karni new "Sky Dash" --kind game --genre runner
+```
+
+Example:
+
+```sh
 karni new "Studio" --recipe booking --recipe crm
 ```
 
@@ -92,6 +98,7 @@ karni new [OPTIONS] NAME
 | `--site-app` TEXT | `website` | The label of the site app a kind with a site gets. |
 | `--here` |  | Write the project into the current folder, which must be empty (version control and editor files may be there), instead of a new folder under it. |
 | `--git/--no-git` | on | Make the project a git repository with a first commit of what karni new wrote. Skipped inside an existing repository and when git is not installed. |
+| `--genre` TEXT |  | Experimental, with --kind game: start the game from a starter (karni starters list): runner, a one-tap endless runner with a daily run, a cosmetics shop and an ad continue, from karni-game. blank (the default) is the small game --kind game writes on its own. |
 | `--recipe` TEXT (repeatable) |  | Experimental. Start the app from a recipe (karni recipes list, or blank): its karni.yaml with this name, then karni build, which also writes the recipe's own domain code, seeds and tests and runs the tests and karni check. Repeat it for several recipes in one project (--recipe booking --recipe crm): each one after the first is merged as karni recipes add does. Without the project's interpreter or database it stops after karni.yaml: run karni build next. |
 
 ### `karni add`
@@ -1592,3 +1599,37 @@ karni recipes upgrade [OPTIONS] [NAME]
 | --- | --- | --- |
 | `NAME` |  | One part (default: every part). |
 | `--no-build` |  | Write karni.yaml and the record only. karni build does the rest. |
+
+### `karni starters`
+
+Game starters (experimental): ready games karni new --kind game --genre &lt;genre&gt; writes, matched to a one-line request (list, show).
+
+```
+karni starters COMMAND [ARGS]...
+```
+
+#### `karni starters list`
+
+Experimental. Every starter, or with --match the best few for a request, and the blank start.
+
+```
+karni starters list [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--match` TEXT |  | A one-line request: the best few starters for it, with their scores (as karni recipes list --match scores recipes). |
+| `--json` |  | Print {version, request, starters, blank, missing, problems}. |
+
+#### `karni starters show`
+
+Experimental. One starter: what it is, what people usually change, and the files it writes.
+
+```
+karni starters show [OPTIONS] GENRE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `GENRE` (required) |  | A starter's name (karni starters list), or blank. |
+| `--json` |  | Print the starter and its files as JSON. |

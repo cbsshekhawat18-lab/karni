@@ -2822,6 +2822,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E509`](errors.md#e509) | exception | Sign-in with an ID token needs the cryptography package |
 | [`E510`](errors.md#e510) | exception | KARNI_STATIC_STORAGE names an unknown storage |
 | [`W510`](errors.md#w510) | warning | DEBUG is on in a deployment |
+| [`E511`](errors.md#e511) | exception | A front end cannot be published at that path |
 | [`W511`](errors.md#w511) | warning | SECRET_KEY is weak or a development key |
 | [`W512`](errors.md#w512) | warning | ALLOWED_HOSTS is empty or allows every host |
 | [`W513`](errors.md#w513) | warning | CSRF_TRUSTED_ORIGINS is missing, a wildcard or plain http |
