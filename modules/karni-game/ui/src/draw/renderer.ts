@@ -82,9 +82,52 @@ export interface Renderer<L extends string> {
   readonly stats: RenderStats;
 }
 
-interface LayerState extends Layer {
-  readonly fns: DrawFn[];
-  readonly index: number;
+/** A class with number fields started as numbers, so a tweened `alpha` is written in place. */
+class LayerState implements Layer {
+  readonly fns: DrawFn[] = [];
+  screen = false;
+  parallax = 1;
+  alpha = 1;
+  visible = true;
+  cull = true;
+  private place = 0;
+
+  constructor(
+    readonly name: string,
+    readonly index: number,
+    options: LayerOptions,
+    private readonly moved: () => void,
+  ) {
+    this.place = options.order ?? index;
+    this.screen = options.screen ?? false;
+    this.parallax = options.parallax ?? 1;
+    this.alpha = options.alpha ?? 1;
+    this.visible = options.visible ?? true;
+    this.cull = options.cull ?? true;
+  }
+
+  get order(): number {
+    return this.place;
+  }
+  set order(value: number) {
+    this.place = value;
+    this.moved();
+  }
+  get size(): number {
+    return this.fns.length;
+  }
+
+  add(fn: DrawFn): () => void {
+    this.fns.push(fn);
+    return () => {
+      const at = this.fns.indexOf(fn);
+      if (at >= 0) this.fns.splice(at, 1);
+    };
+  }
+
+  clear(): void {
+    this.fns.length = 0;
+  }
 }
 
 /**
@@ -118,38 +161,9 @@ export function createRenderer<L extends string>(options: RendererOptions<L>): R
     const opts: LayerOptions<L> = typeof spec === "string" ? { name: spec } : spec;
     if (layers.has(opts.name))
       throw new Error(`createRenderer: layer "${opts.name}" is named twice`);
-    const fns: DrawFn[] = [];
-    let order = opts.order ?? index;
-    const layer: LayerState = {
-      name: opts.name,
-      index,
-      fns,
-      get order() {
-        return order;
-      },
-      set order(value: number) {
-        order = value;
-        dirty = true;
-      },
-      screen: opts.screen ?? false,
-      parallax: opts.parallax ?? 1,
-      alpha: opts.alpha ?? 1,
-      visible: opts.visible ?? true,
-      cull: opts.cull ?? true,
-      add(fn) {
-        fns.push(fn);
-        return () => {
-          const at = fns.indexOf(fn);
-          if (at >= 0) fns.splice(at, 1);
-        };
-      },
-      clear() {
-        fns.length = 0;
-      },
-      get size() {
-        return fns.length;
-      },
-    };
+    const layer = new LayerState(opts.name, index, opts, () => {
+      dirty = true;
+    });
     layers.set(opts.name, layer);
     ordered.push(layer);
   });

@@ -95,23 +95,35 @@ export function createPainterFrame(context: CanvasRenderingContext2D): {
 } {
   let name: string | null = null;
   let known = false;
-  let ba = 1;
-  let bd = 1;
-  let be = 0;
-  let bf = 0;
-  let left = -Infinity;
-  let top = -Infinity;
-  let width = Infinity;
-  let height = Infinity;
   let culling = false;
-  let layerAlpha = 1;
-  let alpha = 1;
+  // The numbers change every layer. Kept on an object (made with fractions, so
+  // each field holds a double from the start) they are written in place, where
+  // closure variables would box a new number on many writes.
+  const m = {
+    ba: 1.5,
+    bd: 1.5,
+    be: 0.5,
+    bf: 0.5,
+    left: -Infinity,
+    top: -Infinity,
+    width: Infinity,
+    height: Infinity,
+    layerAlpha: 0.5,
+    alpha: 0.5,
+  };
+  m.ba = 1;
+  m.bd = 1;
+  m.be = 0;
+  m.bf = 0;
+  m.layerAlpha = 1;
+  m.alpha = 1;
   let lastStyle: TextStyle | null = null;
   let drawn = 0;
   let culled = 0;
 
   const sees = (x: number, y: number, w: number, h: number): boolean =>
-    !culling || (x + w >= left && x <= left + width && y + h >= top && y <= top + height);
+    !culling ||
+    (x + w >= m.left && x <= m.left + m.width && y + h >= m.top && y <= m.top + m.height);
   /** Count and test: true when the shape should be drawn. */
   const keep = (x: number, y: number, w: number, h: number): boolean => {
     if (sees(x, y, w, h)) {
@@ -151,24 +163,24 @@ export function createPainterFrame(context: CanvasRenderingContext2D): {
       return name;
     },
     get left() {
-      return left;
+      return m.left;
     },
     get top() {
-      return top;
+      return m.top;
     },
     get width() {
-      return width;
+      return m.width;
     },
     get height() {
-      return height;
+      return m.height;
     },
     visible: sees,
     get alpha() {
-      return alpha;
+      return m.alpha;
     },
     set alpha(value: number) {
-      alpha = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 1));
-      context.globalAlpha = layerAlpha * alpha;
+      m.alpha = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 1));
+      context.globalAlpha = m.layerAlpha * m.alpha;
     },
     rect(x, y, w, h, fill) {
       if (!keep(x, y, w, h)) return;
@@ -309,12 +321,12 @@ export function createPainterFrame(context: CanvasRenderingContext2D): {
       const sin = Math.sin(rotation);
       if (known) {
         context.setTransform(
-          ba * cos * scaleX,
-          bd * sin * scaleX,
-          -ba * sin * scaleY,
-          bd * cos * scaleY,
-          ba * x + be,
-          bd * y + bf,
+          m.ba * cos * scaleX,
+          m.bd * sin * scaleX,
+          -m.ba * sin * scaleY,
+          m.bd * cos * scaleY,
+          m.ba * x + m.be,
+          m.bd * y + m.bf,
         );
         context.drawImage(
           image,
@@ -327,7 +339,7 @@ export function createPainterFrame(context: CanvasRenderingContext2D): {
           sprite.w,
           sprite.h,
         );
-        context.setTransform(ba, 0, 0, bd, be, bf);
+        context.setTransform(m.ba, 0, 0, m.bd, m.be, m.bf);
       } else {
         context.save();
         context.transform(cos * scaleX, sin * scaleX, -sin * scaleY, cos * scaleY, x, y);
@@ -363,22 +375,22 @@ export function createPainterFrame(context: CanvasRenderingContext2D): {
     layer(layerName, a, d, e, f, l, t, w, h, cull, opacity) {
       name = layerName;
       known = true;
-      ba = a;
-      bd = d;
-      be = e;
-      bf = f;
-      left = l;
-      top = t;
-      width = w;
-      height = h;
+      m.ba = a;
+      m.bd = d;
+      m.be = e;
+      m.bf = f;
+      m.left = l;
+      m.top = t;
+      m.width = w;
+      m.height = h;
       culling = cull;
-      layerAlpha = opacity;
+      m.layerAlpha = opacity;
       frame.restore();
     },
     restore() {
-      context.setTransform(ba, 0, 0, bd, be, bf);
-      alpha = 1;
-      context.globalAlpha = layerAlpha;
+      context.setTransform(m.ba, 0, 0, m.bd, m.be, m.bf);
+      m.alpha = 1;
+      context.globalAlpha = m.layerAlpha;
     },
   };
   return { painter, frame };

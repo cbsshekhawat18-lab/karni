@@ -135,8 +135,10 @@ export function createParticles(options: ParticlesOptions = {}): Particles {
     }),
   });
   const pick = (r: readonly [number, number]): number => r[0] + (r[1] - r[0]) * random();
-  let step = 0;
+  // The frame's time, on an object so the write is not boxed anew each frame.
+  const frame = { dt: 0.5 };
   const age = (p: Particle): boolean => {
+    const step = frame.dt;
     p.age += step;
     if (p.age >= p.life) return false;
     const s = p.style;
@@ -252,7 +254,7 @@ export function createParticles(options: ParticlesOptions = {}): Particles {
     },
     update(dt) {
       if (!(dt > 0)) return;
-      step = dt;
+      frame.dt = dt;
       pool.retain(age);
     },
     draw(painter) {

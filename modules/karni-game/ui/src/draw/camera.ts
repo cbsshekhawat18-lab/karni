@@ -95,141 +95,162 @@ function clampAxis(value: number, start: number, size: number, half: number): nu
   return value;
 }
 
+/** Where the centre must go on one axis so the target is inside the dead zone. */
+function goal(current: number, target: number, zone: number): number {
+  const half = zone / 2;
+  if (target > current + half) return target - half;
+  if (target < current - half) return target + half;
+  return current;
+}
+
+/**
+ * The camera is a class with every number field started as a number: `x`
+ * and `y` change every frame, and V8 writes a number field in place only
+ * when the field never held anything else (a field declared bare starts as
+ * undefined, and a literal with getters keeps no number fields).
+ */
+class Camera2D implements Camera {
+  x = 0;
+  y = 0;
+  zoom = 1;
+  bounds: Area | null = null;
+  readonly deadZone: { w: number; h: number };
+  readonly offset: { x: number; y: number };
+  smoothing = 0;
+  motion = 1;
+  private target: FollowTarget | null = null;
+  private strength = 0;
+  private duration = 0;
+  private remaining = 0;
+  private sx = 0;
+  private sy = 0;
+
+  constructor(
+    private readonly view: { readonly width: number; readonly height: number },
+    private readonly random: () => number,
+    options: CameraOptions,
+  ) {
+    this.x = options.x ?? view.width / 2;
+    this.y = options.y ?? view.height / 2;
+    this.zoom = options.zoom ?? 1;
+    this.bounds = options.bounds ?? null;
+    this.deadZone = { w: options.deadZone?.w ?? 0, h: options.deadZone?.h ?? 0 };
+    this.offset = { x: options.offset?.x ?? 0, y: options.offset?.y ?? 0 };
+    this.smoothing = options.smoothing ?? 0;
+    this.motion = options.motion ?? motionScale();
+  }
+
+  private safeZoom(): number {
+    return this.zoom > 0 && Number.isFinite(this.zoom) ? this.zoom : 1;
+  }
+
+  private clamp(): void {
+    const bounds = this.bounds;
+    if (!bounds) return;
+    const zoom = this.safeZoom();
+    this.x = clampAxis(this.x, bounds.x, bounds.w, this.view.width / zoom / 2);
+    this.y = clampAxis(this.y, bounds.y, bounds.h, this.view.height / zoom / 2);
+  }
+
+  follow(next: FollowTarget | null): void {
+    this.target = next;
+  }
+
+  snap(): void {
+    const target = this.target;
+    if (target) {
+      this.x = target.x + (target.w ?? 0) / 2 - this.offset.x;
+      this.y = target.y + (target.h ?? 0) / 2 - this.offset.y;
+    }
+    this.clamp();
+  }
+
+  update(dt: number): void {
+    const step = Number.isFinite(dt) && dt > 0 ? dt : 0;
+    const target = this.target;
+    if (target) {
+      const gx = goal(this.x, target.x + (target.w ?? 0) / 2 - this.offset.x, this.deadZone.w);
+      const gy = goal(this.y, target.y + (target.h ?? 0) / 2 - this.offset.y, this.deadZone.h);
+      if (this.smoothing > 0) {
+        const k = step > 0 ? 1 - Math.exp(-this.smoothing * step) : 0;
+        this.x += (gx - this.x) * k;
+        this.y += (gy - this.y) * k;
+      } else {
+        this.x = gx;
+        this.y = gy;
+      }
+    }
+    this.clamp();
+    // A frame with no time (paused) holds the shake where it is.
+    if (step > 0) {
+      if (this.remaining > 0) this.remaining = Math.max(0, this.remaining - step);
+      const fade = this.remaining > 0 ? this.remaining / this.duration : 0;
+      const amount = this.strength * fade * fade * Math.max(0, Math.min(1, this.motion));
+      if (amount > 0) {
+        this.sx = (this.random() * 2 - 1) * amount;
+        this.sy = (this.random() * 2 - 1) * amount;
+      } else {
+        this.sx = 0;
+        this.sy = 0;
+      }
+    }
+  }
+
+  shake(strength: number, seconds = 0.25): void {
+    if (!(strength > 0) || !(seconds > 0)) return;
+    const current = this.remaining > 0 ? this.strength * (this.remaining / this.duration) ** 2 : 0;
+    if (strength < current) return;
+    this.strength = strength;
+    this.duration = seconds;
+    this.remaining = seconds;
+  }
+
+  get shakeX(): number {
+    return this.sx;
+  }
+  get shakeY(): number {
+    return this.sy;
+  }
+  get left(): number {
+    return this.x - this.view.width / this.safeZoom() / 2;
+  }
+  get top(): number {
+    return this.y - this.view.height / this.safeZoom() / 2;
+  }
+  get width(): number {
+    return this.view.width / this.safeZoom();
+  }
+  get height(): number {
+    return this.view.height / this.safeZoom();
+  }
+
+  sees(x: number, y: number, w: number, h: number): boolean {
+    const zoom = this.safeZoom();
+    const hw = this.view.width / zoom / 2;
+    const hh = this.view.height / zoom / 2;
+    return x + w >= this.x - hw && x <= this.x + hw && y + h >= this.y - hh && y <= this.y + hh;
+  }
+
+  toScreen(x: number, y: number, out: Point): Point {
+    const zoom = this.safeZoom();
+    out.x = (x - this.x - this.sx) * zoom + this.view.width / 2;
+    out.y = (y - this.y - this.sy) * zoom + this.view.height / 2;
+    return out;
+  }
+
+  toWorld(x: number, y: number, out: Point): Point {
+    const zoom = this.safeZoom();
+    out.x = (x - this.view.width / 2) / zoom + this.x + this.sx;
+    out.y = (y - this.view.height / 2) / zoom + this.y + this.sy;
+    return out;
+  }
+}
+
 /**
  * A 2D camera over a view: it follows a target with a dead zone and
  * smoothing, stays inside the world's bounds, shakes and zooms. The renderer
  * applies it to every layer that is not a screen layer.
  */
 export function createCamera(options: CameraOptions): Camera {
-  const view = options.view;
-  const random = options.random ?? generator(1);
-  let target: FollowTarget | null = null;
-  let shakeStrength = 0;
-  let shakeTime = 0;
-  let shakeLeft = 0;
-  let shakeX = 0;
-  let shakeY = 0;
-
-  const safeZoom = (): number =>
-    camera.zoom > 0 && Number.isFinite(camera.zoom) ? camera.zoom : 1;
-
-  const clamp = (): void => {
-    const bounds = camera.bounds;
-    if (!bounds) return;
-    const zoom = safeZoom();
-    const hw = view.width / zoom / 2;
-    const hh = view.height / zoom / 2;
-    camera.x = clampAxis(camera.x, bounds.x, bounds.w, hw);
-    camera.y = clampAxis(camera.y, bounds.y, bounds.h, hh);
-  };
-
-  /** Where the centre must go so the target is inside the dead zone. */
-  const goalX = (): number => {
-    if (!target) return camera.x;
-    const tx = target.x + (target.w ?? 0) / 2 - camera.offset.x;
-    const dz = camera.deadZone.w / 2;
-    if (tx > camera.x + dz) return tx - dz;
-    if (tx < camera.x - dz) return tx + dz;
-    return camera.x;
-  };
-  const goalY = (): number => {
-    if (!target) return camera.y;
-    const ty = target.y + (target.h ?? 0) / 2 - camera.offset.y;
-    const dz = camera.deadZone.h / 2;
-    if (ty > camera.y + dz) return ty - dz;
-    if (ty < camera.y - dz) return ty + dz;
-    return camera.y;
-  };
-
-  const camera: Camera = {
-    x: options.x ?? view.width / 2,
-    y: options.y ?? view.height / 2,
-    zoom: options.zoom ?? 1,
-    bounds: options.bounds ?? null,
-    deadZone: { w: options.deadZone?.w ?? 0, h: options.deadZone?.h ?? 0 },
-    offset: { x: options.offset?.x ?? 0, y: options.offset?.y ?? 0 },
-    smoothing: options.smoothing ?? 0,
-    motion: options.motion ?? motionScale(),
-    follow(next) {
-      target = next;
-    },
-    snap() {
-      if (target) {
-        camera.x = target.x + (target.w ?? 0) / 2 - camera.offset.x;
-        camera.y = target.y + (target.h ?? 0) / 2 - camera.offset.y;
-      }
-      clamp();
-    },
-    update(dt) {
-      const step = Number.isFinite(dt) && dt > 0 ? dt : 0;
-      const gx = goalX();
-      const gy = goalY();
-      if (camera.smoothing > 0 && step > 0) {
-        const k = 1 - Math.exp(-camera.smoothing * step);
-        camera.x += (gx - camera.x) * k;
-        camera.y += (gy - camera.y) * k;
-      } else if (camera.smoothing <= 0) {
-        camera.x = gx;
-        camera.y = gy;
-      }
-      clamp();
-      if (shakeLeft > 0 && step > 0) {
-        shakeLeft = Math.max(0, shakeLeft - step);
-        const fade = shakeLeft / shakeTime;
-        const amount = shakeStrength * fade * fade * Math.max(0, Math.min(1, camera.motion));
-        shakeX = (random() * 2 - 1) * amount;
-        shakeY = (random() * 2 - 1) * amount;
-      } else if (shakeLeft <= 0) {
-        shakeX = 0;
-        shakeY = 0;
-      }
-    },
-    shake(strength, seconds = 0.25) {
-      if (!(strength > 0) || !(seconds > 0)) return;
-      const current = shakeLeft > 0 ? shakeStrength * (shakeLeft / shakeTime) ** 2 : 0;
-      if (strength < current) return;
-      shakeStrength = strength;
-      shakeTime = seconds;
-      shakeLeft = seconds;
-    },
-    get shakeX() {
-      return shakeX;
-    },
-    get shakeY() {
-      return shakeY;
-    },
-    get left() {
-      return camera.x - view.width / safeZoom() / 2;
-    },
-    get top() {
-      return camera.y - view.height / safeZoom() / 2;
-    },
-    get width() {
-      return view.width / safeZoom();
-    },
-    get height() {
-      return view.height / safeZoom();
-    },
-    sees(x, y, w, h) {
-      const zoom = safeZoom();
-      const hw = view.width / zoom / 2;
-      const hh = view.height / zoom / 2;
-      return (
-        x + w >= camera.x - hw && x <= camera.x + hw && y + h >= camera.y - hh && y <= camera.y + hh
-      );
-    },
-    toScreen(x, y, out) {
-      const zoom = safeZoom();
-      out.x = (x - camera.x - shakeX) * zoom + view.width / 2;
-      out.y = (y - camera.y - shakeY) * zoom + view.height / 2;
-      return out;
-    },
-    toWorld(x, y, out) {
-      const zoom = safeZoom();
-      out.x = (x - view.width / 2) / zoom + camera.x + shakeX;
-      out.y = (y - view.height / 2) / zoom + camera.y + shakeY;
-      return out;
-    },
-  };
-  return camera;
+  return new Camera2D(options.view, options.random ?? generator(1), options);
 }

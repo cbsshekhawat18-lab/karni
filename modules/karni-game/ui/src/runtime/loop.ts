@@ -128,7 +128,11 @@ export function createLoop(options: LoopOptions): Loop {
     const paused = pauses.paused;
     // A hit-stop counts down in real time, and not while paused.
     const stopped = !paused && stopLeft > 0;
-    if (stopped) stopLeft = Math.max(0, stopLeft - clamped);
+    if (stopped) {
+      stopLeft -= clamped;
+      // Rounding must not leave a sliver of a stop for one more frame.
+      if (stopLeft < 1e-9) stopLeft = 0;
+    }
     let alpha = 0;
     if (!paused) {
       const scaled = stopped ? 0 : clamped * timeScale;

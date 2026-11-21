@@ -169,7 +169,7 @@ export interface Animator<K extends string> {
 
 export function createAnimator<K extends string>(
   clips: Record<K, Clip>,
-  first: K,
+  first: NoInfer<K>,
   onEnd?: (clip: K) => void,
 ): Animator<K> {
   let name = first;

@@ -53,29 +53,30 @@ export function createMove<S extends Solid = Solid>(): Move<S> {
 const EPS = 1e-7;
 const shared = createMove<Solid>();
 const area: Box = { x: 0, y: 0, w: 0, h: 0 };
-// The move in progress, read by the visitors so a query needs no new closure.
+/**
+ * The move in progress, read by the visitors so a query needs no new
+ * closure. Numbers live on an object: a module-level number would be boxed
+ * on every write.
+ */
+const state = { allowed: 0, forward: true, drop: false };
 let body: Box = area;
-let allowed = 0;
-/** The move is toward +x (or +y): fixed for the sweep, while `allowed` shrinks to 0. */
-let forward = true;
 let hit: Solid | null = null;
-let drop = false;
 let filter: ((solid: Solid) => boolean) | undefined;
 
 function visitX(solid: Solid): void {
   if (solid.oneWay || (solid as Box) === body) return;
   if (filter && !filter(solid)) return;
   if (!(body.y < solid.y + solid.h && body.y + body.h > solid.y)) return;
-  if (forward) {
+  if (state.forward) {
     const gap = solid.x - (body.x + body.w);
-    if (gap >= -EPS && gap <= allowed) {
-      allowed = gap > 0 ? gap : 0;
+    if (gap >= -EPS && gap <= state.allowed) {
+      state.allowed = gap > 0 ? gap : 0;
       hit = solid;
     }
   } else {
     const gap = solid.x + solid.w - body.x;
-    if (gap <= EPS && gap >= allowed) {
-      allowed = gap < 0 ? gap : 0;
+    if (gap <= EPS && gap >= state.allowed) {
+      state.allowed = gap < 0 ? gap : 0;
       hit = solid;
     }
   }
@@ -83,20 +84,20 @@ function visitX(solid: Solid): void {
 
 function visitY(solid: Solid): void {
   if ((solid as Box) === body) return;
-  if (solid.oneWay && (!forward || drop)) return;
+  if (solid.oneWay && (!state.forward || state.drop)) return;
   if (filter && !filter(solid)) return;
   if (!(body.x < solid.x + solid.w && body.x + body.w > solid.x)) return;
-  if (forward) {
+  if (state.forward) {
     // Only what is at or below the feet stops a fall, so a one-way ledge is passed from below.
     const gap = solid.y - (body.y + body.h);
-    if (gap >= -EPS && gap <= allowed) {
-      allowed = gap > 0 ? gap : 0;
+    if (gap >= -EPS && gap <= state.allowed) {
+      state.allowed = gap > 0 ? gap : 0;
       hit = solid;
     }
   } else {
     const gap = solid.y + solid.h - body.y;
-    if (gap <= EPS && gap >= allowed) {
-      allowed = gap < 0 ? gap : 0;
+    if (gap <= EPS && gap >= state.allowed) {
+      state.allowed = gap < 0 ? gap : 0;
       hit = solid;
     }
   }
@@ -138,20 +139,20 @@ export function moveBox<S extends Solid>(
   result.hitX = null;
   result.hitY = null;
   body = mover;
-  drop = options?.dropThrough ?? false;
+  state.drop = options?.dropThrough ?? false;
   filter = options?.filter as ((solid: Solid) => boolean) | undefined;
   try {
     if (Number.isFinite(dx) && dx !== 0) {
-      allowed = dx;
-      forward = dx > 0;
+      state.allowed = dx;
+      state.forward = dx > 0;
       hit = null;
       area.x = Math.min(mover.x, mover.x + dx);
       area.y = mover.y;
       area.w = mover.w + Math.abs(dx);
       area.h = mover.h;
       sweep(solids, visitX);
-      mover.x += allowed;
-      result.dx = allowed;
+      mover.x += state.allowed;
+      result.dx = state.allowed;
       if (hit) {
         result.hitX = hit as S;
         if (dx > 0) result.right = true;
@@ -159,16 +160,16 @@ export function moveBox<S extends Solid>(
       }
     }
     if (Number.isFinite(dy) && dy !== 0) {
-      allowed = dy;
-      forward = dy > 0;
+      state.allowed = dy;
+      state.forward = dy > 0;
       hit = null;
       area.x = mover.x;
       area.y = Math.min(mover.y, mover.y + dy);
       area.w = mover.w;
       area.h = mover.h + Math.abs(dy);
       sweep(solids, visitY);
-      mover.y += allowed;
-      result.dy = allowed;
+      mover.y += state.allowed;
+      result.dy = state.allowed;
       if (hit) {
         result.hitY = hit as S;
         if (dy > 0) result.bottom = true;
