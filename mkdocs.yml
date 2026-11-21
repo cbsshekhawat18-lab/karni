@@ -124,6 +124,7 @@ nav:
       - "Games (karni-game)": game.md
       - The game API: game-api.md
       - "Games in the browser (@karni/game)": game-client.md
+      - "Simulation and replay (@karni/game/sim)": game-sim.md
       - "Scenes (@karni/game/scenes)": game-scenes.md
       - "Game UI (@karni/game/ui)": game-ui.md
       - "App spec (karni.yaml)": app-spec.md

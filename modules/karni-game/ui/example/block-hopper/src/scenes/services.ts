@@ -8,8 +8,9 @@ export interface GameServices extends SceneServices {
   settings: Store<Settings>;
 }
 
-/** What the scenes call back into the game's rules and canvas code. */
+/** What the scenes call back into the game's own code in main.ts. */
 export interface GameHooks {
+  /** The game's keys on every fixed step: start, continue, mute. The sim loop runs the rules after it. */
   update(dt: number): void;
   render(): void;
   start(): void;

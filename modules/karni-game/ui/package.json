@@ -73,6 +73,10 @@
       "types": "./dist/src/scenes/index.d.ts",
       "import": "./dist/scenes.js"
     },
+    "./sim": {
+      "types": "./dist/src/sim/index.d.ts",
+      "import": "./dist/sim.js"
+    },
     "./smoke": {
       "types": "./dist/src/smoke/index.d.ts",
       "import": "./dist/smoke.js"

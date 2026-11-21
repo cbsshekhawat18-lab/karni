@@ -18,3 +18,5 @@ export type { BuildProblem, CheckOptions, SourceCheckOptions } from "./checks";
 export { packagePortals, viteBuild } from "./package";
 export type { PackageOptions, PackageReport } from "./package";
 export { crc32, zipFolder } from "./zip";
+export { checkRules, formatImpurities } from "./rules";
+export type { Impurity } from "./rules";

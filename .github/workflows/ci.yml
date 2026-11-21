@@ -1267,5 +1267,5 @@ jobs:
           # @karni/game is ESM only: every entry point imports, and the command runs.
           cd ../../karni-game/ui
           node --input-type=module -e "const m = await import('@karni/game'); if (!m.createPortal || !m.createGameClient) throw new Error('ESM @karni/game missing exports')"
-          node --input-type=module -e "for (const p of ['build', 'vite', 'phaser', 'pixi', 'scenes', 'smoke', 'ui', 'portals/poki', 'portals/none']) await import('@karni/game/' + p)"
+          node --input-type=module -e "for (const p of ['build', 'vite', 'phaser', 'pixi', 'scenes', 'sim', 'smoke', 'ui', 'portals/poki', 'portals/none']) await import('@karni/game/' + p)"
           node bin/karni-game.js portals

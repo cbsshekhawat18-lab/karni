@@ -9,8 +9,9 @@ export type ScreenName = "title" | "play" | "over";
 
 /**
  * Block Hopper's scenes on the scene stack: a title, a play scene and a pause
- * overlay. The rules and the canvas drawing stay in main.ts and are reached
- * through `hooks`, so a scene imports no global.
+ * overlay. The rules live in src/rules on @karni/game/sim, the sim loop and
+ * the canvas drawing stay in main.ts, and scenes reach them through `hooks`,
+ * so a scene imports no global.
  */
 export function createGameScenes(services: GameServices, hooks: GameHooks) {
   const stack = createSceneStack<GameServices>({

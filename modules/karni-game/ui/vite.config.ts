@@ -24,6 +24,7 @@ const ENTRIES: Record<string, string> = {
   pixi: "src/engines/pixi.ts",
   r3f: "src/engines/r3f.tsx",
   scenes: "src/scenes/index.ts",
+  sim: "src/sim/index.ts",
   smoke: "src/smoke/index.ts",
   ui: "src/ui/index.ts",
 };

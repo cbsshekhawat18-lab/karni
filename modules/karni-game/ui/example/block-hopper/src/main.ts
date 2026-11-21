@@ -7,7 +7,6 @@ import {
   createAudio,
   createGameClient,
   createInput,
-  createLoop,
   createPortal,
   createSave,
   createStorage,
@@ -16,9 +15,9 @@ import {
   linkPortal,
   pauseOnHidden,
   type BoardEntry,
-  type RunRecord,
 } from "@karni/game";
 import { drawCover } from "@karni/game/scenes";
+import { createRecorder, createSimLoop, toRunRecord } from "@karni/game/sim";
 import {
   applySettings,
   createDevOverlay,
@@ -27,9 +26,9 @@ import {
   guardBoot,
 } from "@karni/game/ui";
 import { createPortalAdapter } from "virtual:karni-game/portal";
+import { WORLD, hopperSim, score, type HopperEvent } from "./rules";
 import { createGameScenes } from "./scenes";
 import { BINDINGS } from "./ui";
-import { WORLD, createHopper, revive, score, stepHopper, type Hopper } from "./core";
 
 interface SaveV2 {
   best: number;
@@ -82,8 +81,9 @@ applySettings({ store: settings, audio, input, ui });
 
 type Screen = "title" | "play" | "over";
 let screen: Screen = "title";
-let hopper: Hopper = createHopper(1);
-let inputs: [number, string][] = [];
+const newRun = (seed: number) => createRecorder(hopperSim, { seed });
+let recorder = newRun(1);
+let reviveNext = false;
 let board: BoardEntry[] = [];
 let revived = false;
 
@@ -108,14 +108,14 @@ const show = (next: Screen): void => {
 };
 
 const start = (): void => {
-  hopper = createHopper(Math.floor(Math.random() * 2 ** 31));
-  inputs = [];
+  // The page may use any clock or Math.random: only src/rules may not.
+  recorder = newRun(Math.floor(Math.random() * 2 ** 31));
   revived = false;
   show("play");
 };
 
 const finish = async (): Promise<void> => {
-  const value = score(hopper);
+  const value = recorder.sim.score;
   progress.plays += 1;
   if (value > progress.best) {
     progress.best = value;
@@ -123,11 +123,7 @@ const finish = async (): Promise<void> => {
   }
   save.write(progress);
   show("over");
-  const run: RunRecord = {
-    seed: String(hopper.seed),
-    inputs,
-    duration_ms: Math.round(hopper.time * 1000),
-  };
+  const run = toRunRecord(recorder.finish());
   try {
     await client.submitScore("high", value, { run });
     board = (await client.leaderboard("high", { limit: 5 })).entries;
@@ -138,39 +134,48 @@ const finish = async (): Promise<void> => {
   void portal.interstitial("game-over");
 };
 
-const update = (dt: number): void => {
+/** Menus and keys: runs on every step, whatever the screen. */
+const beforeStep = (): void => {
   if (input.pressed("mute")) {
     settings.set({ muted: !settings.state.muted });
   }
-  if (screen !== "play") {
-    if (input.pressed("jump")) start();
-    if (screen === "over" && !revived && input.pressed("revive")) {
-      void portal.rewarded("continue").then((rewarded) => {
-        if (!rewarded) return;
-        revived = true;
-        revive(hopper);
-        show("play");
-      });
-    }
-    return;
+  if (screen === "play") return;
+  if (input.pressed("jump")) start();
+  if (screen === "over" && !revived && input.pressed("revive")) {
+    void portal.rewarded("continue").then((rewarded) => {
+      if (!rewarded) return;
+      revived = true;
+      reviveNext = true;
+      show("play");
+    });
   }
+};
+
+/** The player's input for one tick of the rules, read once per step. */
+const readInput = () => {
   const step = {
     left: input.held("left"),
     right: input.held("right"),
     jump: input.pressed("jump"),
+    revive: reviveNext,
   };
-  if (step.jump) inputs.push([Math.round(hopper.time * 1000), "jump"]);
-  for (const event of stepHopper(hopper, step, dt)) {
+  reviveNext = false;
+  // The jump edge is read by the first step of the frame only.
+  input.endFrame();
+  return step;
+};
+
+const onEvents = (events: readonly HopperEvent[]): void => {
+  for (const event of events) {
     if (event === "jump") blip(520);
     if (event === "coin") blip(880);
     if (event === "fall") void finish();
   }
-  hud.dataset.score = String(score(hopper));
-  // The jump edge is read by the first step of the frame only.
-  input.endFrame();
 };
 
 const render = (): void => {
+  const hopper = recorder.sim.state;
+  hud.dataset.score = String(score(hopper));
   context.setTransform(1, 0, 0, 1, 0, 0);
   context.fillStyle = "#0d1b2a";
   context.fillRect(0, 0, canvas.width, canvas.height);
@@ -202,21 +207,29 @@ const render = (): void => {
   drawCover(context, app.cover, canvas.width, canvas.height, "#0d1b2a");
 };
 
-const loop = createLoop({
-  step: WORLD.step,
-  update: (dt) => app.update(dt),
+// The scene stack runs on every fixed step (menus, keys, the pause overlay) and
+// the rules run one tick after it while a run is on screen.
+const loop = createSimLoop({
+  target: () => recorder,
+  input: readInput,
+  beforeStep: (dt) => app.update(dt),
+  active: () => screen === "play" && app.stack.top?.name === "play",
+  onEvents,
   render: (alpha) => app.draw(alpha),
   afterFrame: () => input.endFrame(),
 });
 const toTitle = (): void => {
-  hopper = createHopper(1);
+  recorder = newRun(1);
   show("title");
 };
 const app = createGameScenes(
   { loop, input, audio, save, portal, client, ui, settings },
-  { update, render, start, toTitle },
+  { update: beforeStep, render, start, toTitle },
 );
-createDevOverlay(ui, { loop, entities: () => hopper.platforms.length + hopper.pickups.length });
+createDevOverlay(ui, {
+  loop,
+  entities: () => recorder.sim.state.platforms.length + recorder.sim.state.pickups.length,
+});
 pauseOnHidden([loop, audio]);
 linkPortal(portal, { audio, loop, input });
 

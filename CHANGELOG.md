@@ -11,6 +11,22 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## 0.7.0 (unreleased)
 
+- **Added: `@karni/game/sim`, the simulation contract of a game's rules (experimental).** A
+  game's rules are plain state, a `step` over fixed ticks, inputs as data and the seeded
+  generator of `@karni/game`, with no clock and no `Math.random`. `defineSim` declares them,
+  `createSim` runs them and `createRecorder` keeps the seed and the ticks where the input
+  changed. `replay` and `verify` run a recording again and check it reaches its state hash
+  and score, and `hashState` is a 64-bit hash of canonical text that is the same on every
+  machine. `toRunRecord` and `fromRunRecord` fit a recording into the `run` of the score API
+  with no server change. `createSimLoop` runs a sim on the loop's fixed step. The test kit is
+  `runHeadless`, `checkDeterminism` and `fuzz` (random inputs for N ticks, with the invariants
+  the rules declare). The purity check, `findImpurities` and `karni-game check-rules` (also
+  `checkRules` in `@karni/game/build`), fails on `Date`, `performance`, `Math.random`, the
+  page, the network and timers in `src/rules/`, and a `karni-allow` marker with a reason
+  allows one use. The entry has a gzip size budget of 7200 bytes, tested. The example game's
+  rules moved to `example/block-hopper/src/rules/` on the contract, and its rewarded
+  continue is now an input. Docs: [Simulation and replay](docs/game-sim.md).
+
 - **Added: `@karni/game/scenes` and `@karni/game/ui`, scenes and the UI kit (experimental).** The scene
   stack has `push`, `pop` and `replace`, overlays that pause the scene below, fade transitions that
   are instant under reduced motion, hooks for enter, exit, pause, resume, update and draw, and

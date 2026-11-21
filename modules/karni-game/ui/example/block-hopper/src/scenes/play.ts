@@ -5,7 +5,7 @@ import { TOUCH_BUTTONS } from "../ui";
 import { createPauseScene } from "./pause";
 import type { GameHooks, GameServices } from "./services";
 
-/** A run: the rules advance here, and Pause opens the pause overlay above it. */
+/** A run: the sim loop steps the rules after this scene's update, and Pause opens the pause overlay above it. */
 export function createPlayScene(hooks: GameHooks): Scene<GameServices> {
   let buttons: TouchButtons | null = null;
   return {
