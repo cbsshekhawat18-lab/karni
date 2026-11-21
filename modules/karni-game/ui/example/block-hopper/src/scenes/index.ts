@@ -1,15 +1,17 @@
 import { createSceneStack } from "@karni/game/scenes";
+import { createOverScene, type RunResult } from "./over";
 import { createPlayScene } from "./play";
 import type { GameHooks, GameServices } from "./services";
 import { createTitleScene } from "./title";
 
+export type { RunResult } from "./over";
 export type { GameHooks, GameServices } from "./services";
 
-export type ScreenName = "title" | "play" | "over";
+export type ScreenName = "title" | "play";
 
 /**
- * Block Hopper's scenes on the scene stack: a title, a play scene and a pause
- * overlay. The rules live in src/rules on @karni/game/sim, the sim loop and
+ * Block Hopper's scenes on the scene stack: a title, a play scene, and the
+ * pause and game-over overlays above it. The rules live in src/rules on @karni/game/sim, the sim loop and
  * the canvas drawing stay in main.ts, and scenes reach them through `hooks`,
  * so a scene imports no global.
  */
@@ -26,16 +28,23 @@ export function createGameScenes(services: GameServices, hooks: GameHooks) {
     get cover(): number {
       return stack.cover;
     },
-    /** Show the scene for the game's screen. "over" stays on the play scene. */
+    /** Show the scene for the game's screen. */
     go(screen: ScreenName): void {
       if (screen === "title" && !stack.has("title")) {
         stack.clear();
         stack.push(createTitleScene(hooks));
+      } else if (screen === "play" && stack.top?.name === "over") {
+        // Hop again or continue: the play scene is still below.
+        stack.pop();
       } else if (screen === "play" && !stack.has("play")) {
         const scene = createPlayScene(hooks);
         if (stack.depth === 0) stack.push(scene);
         else stack.replace(scene, { duration: 0.3 });
       }
+    },
+    /** The run ended: the game-over panel over the world where it ended. */
+    over(result: RunResult): void {
+      if (!stack.has("over")) stack.push(createOverScene(hooks, result), { overlay: true });
     },
   };
 }

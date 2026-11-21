@@ -209,6 +209,10 @@ export function createPortal(
       return outcome;
     },
 
+    canShowRewarded() {
+      return status === "ready" && !adPlaying && Boolean(adapter.rewarded);
+    },
+
     async rewarded(placement = "rewarded") {
       const show = adapter.rewarded;
       if (adPlaying || status !== "ready" || !show) return false;

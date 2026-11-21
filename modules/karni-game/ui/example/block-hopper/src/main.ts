@@ -36,7 +36,7 @@ import {
 } from "@karni/game/ui";
 import { createPortalAdapter } from "virtual:karni-game/portal";
 import { WORLD, hopperSim, score, type HopperEvent } from "./rules";
-import { createGameScenes } from "./scenes";
+import { createGameScenes, type RunResult } from "./scenes";
 import { BINDINGS } from "./ui";
 
 interface SaveV2 {
@@ -122,7 +122,6 @@ const followMotion = (reduced: boolean): void => {
 followMotion(settings.state.reducedMotion);
 settings.subscribe((state) => followMotion(state.reducedMotion));
 const text = textStyle({ font: "14px system-ui, sans-serif", fill: "#e0e1dd" });
-const message = textStyle({ font: "14px system-ui, sans-serif", fill: "#e0e1dd", wrap: 400 });
 
 type Screen = "title" | "play" | "over";
 let screen: Screen = "title";
@@ -135,7 +134,6 @@ const newRun = (seed: number) => {
 };
 let recorder = newRun(1);
 let reviveNext = false;
-let board: BoardEntry[] = [];
 let revived = false;
 
 const blip = (frequency: number): void => {
@@ -149,11 +147,12 @@ const blip = (frequency: number): void => {
   audio.play(buffer);
 };
 
-const show = (next: Screen): void => {
+const show = (next: Screen, result?: RunResult): void => {
   screen = next;
   hud.dataset.screen = next;
   hud.dataset.best = String(progress.best);
-  app.go(next);
+  if (result) app.over(result);
+  else if (next !== "over") app.go(next);
   if (next === "play") portal.gameplayStart();
   else portal.gameplayStop();
 };
@@ -166,7 +165,18 @@ const start = (): void => {
   show("play");
 };
 
-const finish = async (): Promise<void> => {
+/** Send the score with its run, then read the top of the board. Offline, the device's board. */
+const sendScore = async (value: number): Promise<readonly BoardEntry[]> => {
+  const run = toRunRecord(recorder.finish());
+  try {
+    await client.submitScore("high", value, { run });
+    return (await client.leaderboard("high", { limit: 5 })).entries;
+  } catch {
+    return [];
+  }
+};
+
+const finish = (): void => {
   const value = recorder.sim.score;
   progress.plays += 1;
   if (value > progress.best) {
@@ -174,16 +184,31 @@ const finish = async (): Promise<void> => {
     portal.happyMoment();
   }
   save.write(progress);
-  show("over");
-  const run = toRunRecord(recorder.finish());
-  try {
-    await client.submitScore("high", value, { run });
-    board = (await client.leaderboard("high", { limit: 5 })).entries;
-  } catch {
-    board = [];
-  }
+  const board = sendScore(value);
+  show("over", {
+    score: value,
+    best: progress.best,
+    canContinue: !revived && portal.canShowRewarded(),
+    board,
+  });
   client.track("run_over", { score: value });
   void portal.interstitial("game-over");
+};
+
+/** A rewarded ad brings the block back once a run; the revive reaches the rules as an input. */
+const continueRun = (): void => {
+  if (revived || screen !== "over") return;
+  if (!portal.canShowRewarded()) {
+    // An interstitial may still be playing: say so rather than do nothing.
+    ui.toast("No ad to watch right now. Try again in a moment.");
+    return;
+  }
+  void portal.rewarded("continue").then((rewarded) => {
+    if (!rewarded) return;
+    revived = true;
+    reviveNext = true;
+    show("play");
+  });
 };
 
 /** Menus, keys and effects: runs on every fixed step, whatever the screen. */
@@ -194,14 +219,7 @@ const beforeStep = (dt: number): void => {
   }
   if (screen === "play") return;
   if (input.pressed("jump")) start();
-  if (screen === "over" && !revived && input.pressed("revive")) {
-    void portal.rewarded("continue").then((rewarded) => {
-      if (!rewarded) return;
-      revived = true;
-      reviveNext = true;
-      show("play");
-    });
-  }
+  if (screen === "over" && input.pressed("revive")) continueRun();
 };
 
 /** The player's input for one tick of the rules, read once per step. */
@@ -227,7 +245,7 @@ const onEvents = (events: readonly HopperEvent[]): void => {
       sparkle.burst(hopper.x + hopper.w / 2, hopper.y, 12);
     }
     if (event === "land") dust.burst(hopper.x + hopper.w / 2, hopper.y + hopper.h, 6);
-    if (event === "fall") void finish();
+    if (event === "fall") finish();
   }
 };
 
@@ -243,12 +261,6 @@ renderer.on("effects", (g) => effects.draw(g));
 renderer.on("hud", (g: Painter) => {
   const hopper = recorder.sim.state;
   g.text(`Score ${score(hopper)}   Best ${progress.best}`, 10, 8, text);
-  if (screen === "over") {
-    g.text("Fell! Space or tap to hop again. R: watch an ad to continue", 40, 100, message);
-    board.forEach((entry, index) =>
-      g.text(`${entry.rank}. ${entry.handle} ${entry.value}`, 180, 130 + index * 18, text),
-    );
-  }
   if (portal.adPlaying) g.text("Ad playing...", 200, 240, text);
   stick.draw(g.ctx);
 });
@@ -283,7 +295,7 @@ const toTitle = (): void => {
 };
 const app = createGameScenes(
   { loop, input, audio, save, portal, client, ui, settings },
-  { update: beforeStep, render, start, toTitle },
+  { update: beforeStep, render, start, continueRun, toTitle },
 );
 createDevOverlay(ui, {
   loop,

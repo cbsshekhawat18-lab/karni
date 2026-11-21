@@ -78,6 +78,13 @@ apply codemods and list the manual steps. This file is the human summary.
   tweens and 50 bodies on the mover at 60 Hz, desktop and phone size) fails when the 95th
   percentile of a frame's work passes 12 ms.
 
+- **Added: `portal.canShowRewarded()`.** It is true when a rewarded ad can be asked for: the
+  portal is ready, its SDK has rewarded ads and none is playing. A build with no SDK (web,
+  itch.io) has none, so a game shows its "watch an ad" button only then. Block Hopper's game
+  over is now a panel of the UI kit at the foot of the screen (the score, the board, Hop again
+  and the continue when an ad can play), where the text was drawn over the block on a phone in
+  portrait, and its touch buttons step aside while the pause menu or that panel is up.
+
 ## 0.6.0 (2026-11-20)
 
 - **Changed: `karni seed` in a project built from a recipe writes realistic demo data.** The

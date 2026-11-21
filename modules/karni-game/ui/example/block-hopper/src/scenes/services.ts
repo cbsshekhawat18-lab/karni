@@ -15,5 +15,7 @@ export interface GameHooks {
   /** Draw the world: `alpha` is the leftover fraction of a fixed step. */
   render(alpha: number): void;
   start(): void;
+  /** Watch a rewarded ad and, when it pays, go on with the run. */
+  continueRun(): void;
   toTitle(): void;
 }

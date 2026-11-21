@@ -62,6 +62,9 @@ rules every game needs:
 - `interstitial()` keeps `interstitialCooldownMs` (60000) between ads that
   played, and `firstInterstitialAfterMs` after start. It reports `shown`,
   `skipped`, `cooldown`, `busy`, `unavailable` or `error`.
+- `canShowRewarded()` is true when a rewarded ad can be asked for: the
+  portal is ready, its SDK has rewarded ads and none is playing. A build
+  without an SDK (web, itch.io) has none, so show "watch an ad" only then.
 - `rewarded()` resolves true only on the SDK's completed event. A dismissed,
   failed, unfilled or timed-out ad gives nothing. A completed one restarts
   the interstitial cooldown (`rewardedResetsCooldown`).
