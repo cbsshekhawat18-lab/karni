@@ -24,8 +24,8 @@ export interface Store<T extends object> {
   readonly loaded: LoadResult<T>;
   /** Merge a patch into the state. */
   set(patch: Partial<T>): void;
-  /** Change a copy of the state: return the new state, or change the draft and return nothing. */
-  update(change: (draft: T) => T | undefined): void;
+  /** Change a copy of the state in place: `update((draft) => { draft.stars[id] = 3; })`. */
+  update(change: (draft: T) => void): void;
   /** Call `listener` after every change. Returns the function that removes it. */
   subscribe(listener: (state: Readonly<T>, previous: Readonly<T>) => void): () => void;
   /** Go back to the save's defaults. */
@@ -97,8 +97,8 @@ export function createStore<T extends object>(options: StoreOptions<T>): Store<T
     set: (patch) => change({ ...state, ...patch }),
     update(mutate) {
       const draft = copy(state);
-      const result = mutate(draft);
-      change(result ?? draft);
+      mutate(draft);
+      change(draft);
     },
     subscribe(listener) {
       listeners.add(listener);
