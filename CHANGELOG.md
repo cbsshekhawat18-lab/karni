@@ -96,6 +96,13 @@ apply codemods and list the manual steps. This file is the human summary.
   than the screen scrolls its body while the title and buttons stay in view. Docs:
   [Assets](docs/game-assets.md) and [Sound](docs/game-sound.md).
 
+- **Added: sprites from an asset group.** `createSprite` and `sheetFrames` of `@karni/game/draw`
+  take an image of `@karni/game/assets` as it comes (`assets.image(group, name)`, with its source
+  and size). A sprite sheet and its frame data load as one group, and a sprite cut from a group
+  that was unloaded draws nothing, so a game draws a shape instead. Block Hopper's block, coins
+  and stage backdrops are drawn this way, and its HUD text has an outline. Docs:
+  [Drawing](docs/game-draw.md#sprites-from-an-asset-group) and [Assets](docs/game-assets.md).
+
 - **Added: `portal.canShowRewarded()`.** It is true when a rewarded ad can be asked for: the
   portal is ready, its SDK has rewarded ads and none is playing. A build with no SDK (web,
   itch.io) has none, so a game shows its "watch an ad" button only then. Block Hopper's game

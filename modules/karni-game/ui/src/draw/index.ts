@@ -50,9 +50,11 @@ export type {
   Clip,
   ClipOptions,
   SheetOptions,
+  LoadedImage,
   Sprite,
   SpriteImage,
   SpriteOptions,
+  SpriteSource,
 } from "./sprite";
 export { textStyle } from "./text";
 export type { TextLayout, TextStyle, TextStyleOptions } from "./text";

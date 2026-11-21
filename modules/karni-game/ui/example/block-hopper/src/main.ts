@@ -20,14 +20,6 @@ import {
   type BoardEntry,
 } from "@karni/game";
 import { createAssets, type LoadProgress } from "@karni/game/assets";
-import {
-  REDUCED_MOTION,
-  createCamera,
-  createParticles,
-  createRenderer,
-  textStyle,
-  type Painter,
-} from "@karni/game/draw";
 import { drawCover } from "@karni/game/scenes";
 import { createRecorder, createSimLoop, toRunRecord } from "@karni/game/sim";
 import {
@@ -40,6 +32,7 @@ import {
 } from "@karni/game/ui";
 import { assetHosts } from "virtual:karni-game/assets";
 import { createPortalAdapter } from "virtual:karni-game/portal";
+import { createArt } from "./art";
 import { WORLD, hopperSim, score, type HopperEvent } from "./rules";
 import { createGameScenes, type RunResult } from "./scenes";
 import { createSounds, playEvent } from "./sound";
@@ -97,64 +90,35 @@ const settings = createSettings({ storage });
 if (progress.muted && settings.loaded.status === "new") settings.set({ muted: true });
 applySettings({ store: settings, audio, input, ui });
 
-// The camera keeps the block a third of the way across, and never shows left of the start.
-const camera = createCamera({
-  view,
-  offset: { x: -WORLD.width / 6, y: 0 },
-  bounds: { x: 0, y: 0, w: Infinity, h: WORLD.height },
-});
-const renderer = createRenderer({
+let stage: StageName | null = null;
+let stageData: StageInfo | null = null;
+const art = createArt({
   canvas,
   view,
-  camera,
-  background: "#0d1b2a",
-  layers: [
-    { name: "sky", screen: true },
-    // The stage's backdrop moves at a quarter of the platforms' speed.
-    { name: "backdrop", parallax: 0.25 },
-    "world",
-    "effects",
-    { name: "hud", screen: true },
-  ],
+  assets,
+  source: {
+    hopper: () => recorder.sim.state,
+    stage: () => (stage && stageData ? { name: stage, info: stageData } : null),
+    best: () => progress.best,
+    adPlaying: () => portal.adPlaying !== null,
+    overlay: (context) => stick.draw(context),
+  },
 });
-const effects = createParticles({ max: 120 });
-const sparkle = effects.emitter({
-  speed: [40, 110],
-  life: [0.25, 0.5],
-  size: [2, 4],
-  colors: ["#ffd166", "#fff3c4"],
-});
-const dust = effects.emitter({
-  speed: [10, 40],
-  angle: [Math.PI, Math.PI * 2],
-  life: [0.2, 0.35],
-  size: 3,
-  colors: ["#778da9"],
-});
-// The player's reduced-motion setting scales the shake and the particles down.
-const followMotion = (reduced: boolean): void => {
-  camera.motion = reduced ? REDUCED_MOTION : 1;
-  effects.motion = reduced ? REDUCED_MOTION : 1;
-};
-followMotion(settings.state.reducedMotion);
-settings.subscribe((state) => followMotion(state.reducedMotion));
-const text = textStyle({ font: "14px system-ui, sans-serif", fill: "#e0e1dd" });
+art.reduceMotion(settings.state.reducedMotion);
+settings.subscribe((state) => art.reduceMotion(state.reducedMotion));
 
 type Screen = "loading" | "title" | "play" | "over";
 let screen: Screen = "title";
 const newRun = (seed: number) => {
   const run = createRecorder(hopperSim, { seed });
   // The sim steps its state in place, so the camera follows the same object all run.
-  camera.follow(run.sim.state);
-  camera.snap();
+  art.follow(run.sim.state);
   return run;
 };
 let recorder = newRun(1);
 let reviveNext = false;
 let revived = false;
 
-let stage: StageName | null = null;
-let stageData: StageInfo | null = null;
 let starting = false;
 const memory = (): number =>
   assets.memory("core") + assets.memory("meadow") + assets.memory("cave");
@@ -217,7 +181,6 @@ const start = async (): Promise<void> => {
     });
     // The page may use any clock or Math.random: only src/rules may not.
     recorder = newRun(Math.floor(Math.random() * 2 ** 31));
-    effects.clear();
     revived = false;
     show("play");
   } finally {
@@ -273,7 +236,7 @@ const continueRun = (): void => {
 
 /** Menus, keys and effects: runs on every fixed step, whatever the screen. */
 const beforeStep = (dt: number): void => {
-  effects.update(dt);
+  art.effects.update(dt);
   if (input.pressed("mute")) {
     settings.set({ muted: !settings.state.muted });
   }
@@ -300,52 +263,19 @@ const onEvents = (events: readonly HopperEvent[]): void => {
   const hopper = recorder.sim.state;
   for (const event of events) {
     playEvent(sfx, event);
-    if (event === "coin") sparkle.burst(hopper.x + hopper.w / 2, hopper.y, 12);
-    if (event === "land") dust.burst(hopper.x + hopper.w / 2, hopper.y + hopper.h, 6);
+    if (event === "coin") art.coin(hopper.x + hopper.w / 2, hopper.y);
+    if (event === "land") art.land(hopper.x + hopper.w / 2, hopper.y + hopper.h);
     if (event === "fall") finish();
   }
 };
-
-renderer.on("sky", (g) => g.rect(0, 0, WORLD.width, WORLD.height, "#1b263b"));
-renderer.on("backdrop", (g) => {
-  // A group's images are closed when it unloads: draw only from a loaded group.
-  if (!stage || !assets.isLoaded(stage)) return;
-  const backdrop = assets.image(stage, "bg");
-  // The art repeats at its own width across what this layer shows.
-  const first = Math.floor(g.left / backdrop.width) * backdrop.width;
-  for (let x = first; x < g.left + g.width; x += backdrop.width) {
-    g.ctx.drawImage(backdrop.source, x, 0);
-  }
-});
-renderer.on("world", (g) => {
-  const hopper = recorder.sim.state;
-  const art = assets.isLoaded("core");
-  // Off-screen platforms and coins are culled by the painter.
-  for (const p of hopper.platforms) g.rect(p.x, p.y, p.w, p.h, stageData?.platform ?? "#778da9");
-  for (const c of hopper.pickups) {
-    if (c.taken || !g.visible(c.x - 5, c.y - 5, 10, 10)) continue;
-    if (art) g.ctx.drawImage(assets.image("core", "coin").source, c.x - 5, c.y - 5);
-    else g.rect(c.x - 5, c.y - 5, 10, 10, "#ffd166");
-  }
-  if (art) g.ctx.drawImage(assets.image("core", "hopper").source, hopper.x, hopper.y);
-  else g.rect(hopper.x, hopper.y, hopper.w, hopper.h, "#ef476f");
-});
-renderer.on("effects", (g) => effects.draw(g));
-renderer.on("hud", (g: Painter) => {
-  const hopper = recorder.sim.state;
-  g.text(`Score ${score(hopper)}   Best ${progress.best}`, 10, 8, text);
-  if (portal.adPlaying) g.text("Ad playing...", 200, 240, text);
-  stick.draw(g.ctx);
-});
 
 /** The frame time of the frame being drawn, for the camera and the renderer. */
 let frameDt = 0;
 /** The world under the title and the play scene: the scenes call it from their draw. */
 const render = (alpha: number): void => {
   hud.dataset.score = String(score(recorder.sim.state));
-  camera.update(frameDt);
-  renderer.render(alpha, frameDt);
-  drawCover(renderer.context, app.cover, canvas.width, canvas.height, "#0d1b2a");
+  art.render(alpha, frameDt);
+  drawCover(art.renderer.context, app.cover, canvas.width, canvas.height, "#0d1b2a");
 };
 
 // The scene stack runs on every fixed step (menus, keys, the pause overlay) and
@@ -373,7 +303,7 @@ const app = createGameScenes(
 createDevOverlay(ui, {
   loop,
   entities: () =>
-    recorder.sim.state.platforms.length + recorder.sim.state.pickups.length + effects.count,
+    recorder.sim.state.platforms.length + recorder.sim.state.pickups.length + art.effects.count,
 });
 pauseOnHidden([loop, audio]);
 // A pause menu pauses the loop, and the sound stops with it.
@@ -390,6 +320,7 @@ void guardBoot(async () => {
     await assets.load("core", { onProgress });
     await assets.fontsReady();
   });
+  art.useCore();
   portal.loadingFinished();
   hud.dataset.loaded = loaded.status;
   show("title");

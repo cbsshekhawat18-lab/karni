@@ -180,9 +180,14 @@ every other file.
 ## What a drawing layer needs
 
 The images are plain `ImageBitmap` or `HTMLImageElement` values in `source`, with `width` and
-`height`. A sprite or tilemap code takes `source` for `drawImage`. `assets.unload` closes the
-bitmaps, so a sprite must not draw from a group it has unloaded: `assets.isLoaded(group)` says
-whether it may.
+`height`. [`@karni/game/draw`](game-draw.md#sprites-from-an-asset-group) takes them as they come:
+`createSprite(assets.image("core", "hero"))` and `sheetFrames(assets.image("hero", "sheet"), 16, 24)`.
+An atlas is a plain image, and its frame data is a data file in the same group, so the two load
+and unload together. Other drawing code takes `source` for `drawImage`.
+
+`assets.unload` closes the bitmaps. A sprite of `@karni/game/draw` cut from a closed bitmap draws
+nothing (`g.sprite` returns false, so the game can draw a shape), and other code must not draw from
+a group it has unloaded: `assets.isLoaded(group)` says whether it may.
 
 ## Sizes
 

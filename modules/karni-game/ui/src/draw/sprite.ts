@@ -1,6 +1,21 @@
 /** An image a sprite is cut from: a loaded image, a canvas painted in code, a bitmap. */
 export type SpriteImage = HTMLImageElement | HTMLCanvasElement | ImageBitmap | OffscreenCanvas;
 
+/**
+ * An image as `@karni/game/assets` gives it (`assets.image(group, name)`):
+ * its `source` (an `ImageBitmap` or an `<img>`) and its size. A sprite cut
+ * from it draws nothing once the group is unloaded, since a closed bitmap has
+ * no size.
+ */
+export interface LoadedImage {
+  readonly source: CanvasImageSource;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** What `createSprite` and `sheetFrames` cut from: an image, or an image of an asset group. */
+export type SpriteSource = SpriteImage | LoadedImage;
+
 /** A region of an image, drawn at a size in game units around an anchor. */
 export interface Sprite {
   readonly image: SpriteImage;
@@ -29,14 +44,19 @@ export interface SpriteOptions {
   scale?: number;
 }
 
-function imageSize(image: SpriteImage): { width: number; height: number } {
+function imageSize(image: SpriteSource): { width: number; height: number } {
   if ("naturalWidth" in image) return { width: image.naturalWidth, height: image.naturalHeight };
   return { width: image.width, height: image.height };
 }
 
-/** A sprite from a whole image or a region of one. */
-export function createSprite(image: SpriteImage, options: SpriteOptions = {}): Sprite {
-  const size = options.w === undefined || options.h === undefined ? imageSize(image) : null;
+/** The image to draw. An asset's source is a bitmap or an `<img>`, both a SpriteImage. */
+const drawable = (image: SpriteSource): SpriteImage =>
+  "source" in image ? (image.source as SpriteImage) : image;
+
+/** A sprite from a whole image or a region of one, or from an image of an asset group. */
+export function createSprite(source: SpriteSource, options: SpriteOptions = {}): Sprite {
+  const image = drawable(source);
+  const size = options.w === undefined || options.h === undefined ? imageSize(source) : null;
   const sw = options.w ?? size?.width ?? 0;
   const sh = options.h ?? size?.height ?? 0;
   const scale = options.scale ?? 1;
@@ -69,7 +89,7 @@ export interface SheetOptions {
 
 /** The frames of a sprite sheet laid out in a grid, left to right and top to bottom. */
 export function sheetFrames(
-  image: SpriteImage,
+  image: SpriteSource,
   frameWidth: number,
   frameHeight: number,
   options: SheetOptions = {},

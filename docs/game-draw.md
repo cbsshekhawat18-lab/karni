@@ -165,8 +165,9 @@ context of your own, with no renderer.
 ## Sprites and frame animation
 
 A sprite is a region of an image, drawn at a size in game units around an
-anchor. The image is a loaded `<img>`, a canvas painted in code or an
-`ImageBitmap`.
+anchor. The image is a loaded `<img>`, a canvas painted in code, an
+`ImageBitmap`, or an image of an asset group as
+[`@karni/game/assets`](game-assets.md) gives it.
 
 ```ts
 const frames = sheetFrames(image, 16, 24, { anchor: [0.5, 1] }); // bottom centre
@@ -190,8 +191,30 @@ g.sprite(hero.sprite, player.x, player.y, player.facing, 1); // -1 flips it
 - `createAnimator(clips, first, onEnd)` plays one clip at a time:
   `speed`, `done` and `index` are there for the game's own logic.
 
-Loading images is the game's own for now (an asset loader with groups is
-planned for a later release).
+### Sprites from an asset group
+
+`createSprite` and `sheetFrames` take `assets.image(group, name)` as it comes
+(`{ source, width, height }`). A sprite sheet is a plain image in a group, and
+its frame data is a data file in the same group, so both load and unload
+together:
+
+```ts
+await assets.load("hero");
+const data = assets.data("hero", "frames") as { w: number; h: number };
+const frames = sheetFrames(assets.image("hero", "sheet"), data.w, data.h, { anchor: [0.5, 1] });
+
+renderer.on("world", (g) => {
+  // Before the group loads, and after it unloads, g.sprite draws nothing and returns false.
+  if (!g.sprite(hero.sprite, player.x, player.y)) g.rect(player.x - 8, player.y - 24, 16, 24, "#ef476f");
+});
+```
+
+`assets.unload` closes the group's bitmaps, and a closed bitmap has no size,
+so a sprite cut from it is skipped instead of drawn. Cut the sprites again
+after the group loads again. Block Hopper draws its block, its coins and each
+stage's backdrop this way, with shapes until the art arrives, and a test
+loads a sheet and its frame data through a group and draws them
+(`tests/draw-assets.test.ts`).
 
 ## Tweens and easing
 
@@ -311,4 +334,5 @@ own setting wins: set both from its settings screen.
   functions, the game holds its own list of things.
 - No tilemaps and no atlas packer. Engines bring their own, and a canvas
   game draws a grid of sprites from a layer.
-- No asset loader yet: sprites take an image that is already loaded.
+- No loading of its own: images come from [`@karni/game/assets`](game-assets.md)
+  or from the game.
