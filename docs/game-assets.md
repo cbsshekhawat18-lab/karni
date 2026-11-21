@@ -186,5 +186,5 @@ whether it may.
 
 ## Sizes
 
-The gzip size of the whole entry is checked by a test against a budget of BUDGET_ASSETS bytes.
-A game that loads one group and nothing else bundles about LOAD_ASSETS bytes.
+The gzip size of the whole entry is checked by a test against a budget of 3400 bytes.
+A game that loads one group and nothing else bundles about 3000 bytes.

@@ -9,15 +9,15 @@ const ui = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
  * The gzip budgets of the `assets` and `sfx` entry points, in bytes, for the
- * whole entry minified with its shared chunks. Set from the first build
- * (ASSETS_FIRST and SFX_FIRST bytes). Raise one only with a CHANGELOG note.
+ * whole entry minified with its shared chunks. Measured at 2974 (assets) and
+ * 2666 (sfx) bytes, with about 15% room. Raise one only with a CHANGELOG note.
  */
-const ASSETS_BUDGET = 9999;
-const SFX_BUDGET = 9999;
+const ASSETS_BUDGET = 3400;
+const SFX_BUDGET = 3100;
 /** A game that renders a tone and nothing else (no loader, no music). */
-const SYNTH_BUDGET = 9999;
+const SYNTH_BUDGET = 1300;
 /** A game that loads one group and nothing else. */
-const LOAD_BUDGET = 9999;
+const LOAD_BUDGET = 3400;
 
 async function bundle(source: string): Promise<{ code: string; gzip: number }> {
   const { build } = await import("vite");
@@ -42,7 +42,8 @@ async function bundle(source: string): Promise<{ code: string; gzip: number }> {
       .flatMap((result) => ("output" in result ? result.output : []))
       .map((chunk) => ("code" in chunk ? chunk.code : ""))
       .join("\n");
-    return { code, gzip: gzipSync(code).length };
+    const gzip = gzipSync(code).length;
+    return { code, gzip };
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -77,7 +78,7 @@ describe("the assets entry point", () => {
       const all = await bundle(`export * from ASSETS;`);
       expect(all.code).not.toMatch(/node:|require\(/);
       // The only fetch is the loader's own, through the replaceable platform.
-      expect(code.match(/fetch\(/g)?.length ?? 0).toBeLessThanOrEqual(1);
+      expect(code.match(/(?<![.\w])fetch\(/g)?.length ?? 0).toBeLessThanOrEqual(1);
       expect(all.code).not.toContain("XMLHttpRequest");
     },
   );

@@ -111,5 +111,5 @@ the decoded buffer that [Assets](game-assets.md) loads.
 
 ## Sizes
 
-The gzip size of the whole entry is checked by a test against a budget of BUDGET_SFX bytes. A game
-that only renders a tone bundles about SYNTH_SFX bytes.
+The gzip size of the whole entry is checked by a test against a budget of 3100 bytes. A game
+that only renders a tone bundles about 1100 bytes.
