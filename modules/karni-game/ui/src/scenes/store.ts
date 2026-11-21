@@ -25,7 +25,7 @@ export interface Store<T extends object> {
   /** Merge a patch into the state. */
   set(patch: Partial<T>): void;
   /** Change a copy of the state: return the new state, or change the draft and return nothing. */
-  update(change: (draft: T) => T | void): void;
+  update(change: (draft: T) => T | undefined): void;
   /** Call `listener` after every change. Returns the function that removes it. */
   subscribe(listener: (state: Readonly<T>, previous: Readonly<T>) => void): () => void;
   /** Go back to the save's defaults. */
