@@ -30,6 +30,8 @@ Vite (for the preset), Playwright (for the smoke harness), React Three Fiber and
 | `@karni/game/build`                                         | the portal table, the package checks, `packagePortals`, `zipFolder`                                   |
 | `@karni/game/phaser`, `@karni/game/pixi`, `@karni/game/r3f` | the engine adapters                                                                                   |
 | `@karni/game/scenes`                                        | the scene stack, overlays, transitions, the entity list and the store                                 |
+| `@karni/game/assets`                                        | the asset manifest and loader: groups, progress, unloading, fonts, WebP copies, budgets               |
+| `@karni/game/sfx`                                           | procedural sounds, one-shots with variation, music with crossfade and ducking                         |
 | `@karni/game/smoke`                                         | `runSmoke`, the browser smoke harness                                                                 |
 | `@karni/game/ui`                                            | the DOM UI kit: settings, pause, dialogs, toasts, touch buttons, boot failure screen, dev overlay     |
 | `@karni/game/client`                                        | types for `virtual:karni-game/portal` and `__KARNI_GAME_DEV__`                                        |
@@ -155,6 +157,41 @@ openPause(ui, { loop, onSettings: () => openSettings(ui, { store: settings }) })
 ```
 
 See [Game UI](https://cbsshekhawat18-lab.github.io/karni/game-ui/).
+
+## Assets
+
+`@karni/game/assets` loads a game's files in named groups with progress, retries and a readable
+failure, and unloads a group to free its memory. With the Vite preset the `assets/` folder is the
+manifest, PNG and JPEG files get a WebP copy (with `sharp` installed), and each group has a size
+budget that `karni-game check` enforces.
+
+```ts
+import { createAssets } from "@karni/game/assets";
+import { manifest, assetHosts } from "virtual:karni-game/assets";
+
+const assets = createAssets({ manifest, audio, allowHosts: assetHosts });
+await assets.load("core", { onProgress: ({ fraction }) => bar.set(fraction) });
+context.drawImage(assets.image("core", "hero").source, 0, 0);
+assets.unload("core");
+```
+
+See [Assets](https://cbsshekhawat18-lab.github.io/karni/game-assets/).
+
+## Sound
+
+`@karni/game/sfx` makes sounds from a few numbers (tones, sweeps, noise, envelopes, arpeggios), plays
+them on the audio layer's buses with pitch and volume variation and a voice limit, and plays music
+with a crossfade and ducking. It is silent until the first gesture and holds still while paused.
+
+```ts
+import { createSfx, presets } from "@karni/game/sfx";
+
+const sfx = createSfx({ audio });
+sfx.define("jump", presets.jump());
+sfx.play("jump", { pitchVariation: 0.06 });
+```
+
+See [Sound](https://cbsshekhawat18-lab.github.io/karni/game-sound/).
 
 ## Building for portals
 

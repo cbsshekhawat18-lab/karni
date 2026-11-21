@@ -39,6 +39,8 @@ npm install @karni/game
 | `@karni/game/phaser`, `@karni/game/pixi`, `@karni/game/r3f` | the engine adapters |
 | `@karni/game/scenes` | the scene stack, overlays, transitions, the entity list and the store ([Scenes](game-scenes.md)) |
 | `@karni/game/ui` | the DOM UI kit: settings, pause, dialogs, toasts, touch buttons, the boot failure screen, the dev overlay ([Game UI](game-ui.md)) |
+| `@karni/game/assets` | the asset manifest, loading by group with progress, unloading, fonts, WebP copies, budgets ([Assets](game-assets.md)) |
+| `@karni/game/sfx` | procedural sounds, one-shots with variation, music with crossfade and ducking ([Sound](game-sound.md)) |
 | `@karni/game/smoke` | Node: `runSmoke`, the browser smoke harness (needs Playwright) |
 | `@karni/game/client` | types for `virtual:karni-game/portal`, `__KARNI_GAME_DEV__` and `__KARNI_GAME_PORTAL__` |
 
@@ -405,16 +407,18 @@ game's own assertions. It needs Playwright and its Chromium.
 `modules/karni-game/ui/example/block-hopper/` is Block Hopper, a small
 platformer on every piece: move, jump, coins, a score, a versioned save with
 a migration, a leaderboard, a rewarded continue, the touch stick and a
-procedural sound. `npm run example:dev` plays it with the fake portal, and
-`npm run test:smoke` builds it and plays it in a headless browser over http,
+procedural sound, a loading scene and two stages whose art loads and
+unloads by group. `npm run example:dev` plays it with the fake portal, and
+`npm run test:smoke` builds it and plays it in a headless browser over http (with a frame-time budget: p95 40 ms, max 500 ms,
+scaled by `frameMultiplier` or `KARNI_SMOKE_FRAME_MULTIPLIER`, and `cpuThrottle` to slow the CPU),
 by touch, and as a single file from `file://`.
 
 ## What it does not do
 
 - It runs no realtime server: [the karni-game module](game.md#multiplayer-a-realtime-server-of-your-own) issues the token a
   realtime server of the project's own verifies.
-- It has no scene system, physics, asset loader, procedural music, service
-  worker or quality tiers. Engines bring their own, and most of these are
+- It has no physics, music composition tool, service worker or quality tiers
+  (scenes, an asset loader and procedural sound are the entries above). Engines bring their own, and most of these are
   the game's own business.
 - The device's rules without a server are for play, not trust: a player can
   edit local storage. Shared boards and balances need the server.
