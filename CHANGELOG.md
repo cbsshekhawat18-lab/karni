@@ -9,6 +9,24 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
+## 0.7.0 (unreleased)
+
+- **Added: `@karni/game/scenes` and `@karni/game/ui`, scenes and the UI kit (experimental).** The scene
+  stack has `push`, `pop` and `replace`, overlays that pause the scene below, fade transitions that
+  are instant under reduced motion, hooks for enter, exit, pause, resume, update and draw, and
+  services handed in so no scene imports a global. `createEntityList` is an ordered list with tags
+  and removal that is safe during a loop, and `createStore` keeps settings and progress on the
+  save layer with a debounced write. The UI kit is a DOM layer above the canvas: `createUi` with
+  dialogs, confirm, screens and toasts, `openSettings` (volumes, mute, reduced motion, a
+  colour-safe palette and key remapping over `input.bind`), `openPause` wired to the loop's pause
+  reasons, `createTouchButtons` that feed the input layer, `showBootFailure` and `guardBoot` for a
+  start that throws, `createDevOverlay` (development builds only) and a strings table for every
+  word. Dialogs trap and restore focus, label themselves for screen readers and stay inside a
+  phone width, and the tests run axe in jsdom and, with colour contrast, in headless Chromium at
+  desktop and phone width in light and dark. The gzip size budgets are 2600 bytes for `scenes` and
+  9800 for `ui`, tested. The example game has a title scene, a play scene, a pause overlay and a
+  settings dialog on them. Docs: [Scenes](docs/game-scenes.md) and [Game UI](docs/game-ui.md).
+
 ## 0.6.0 (2026-11-20)
 
 - **Changed: `karni seed` in a project built from a recipe writes realistic demo data.** The

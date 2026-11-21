@@ -37,6 +37,8 @@ npm install @karni/game
 | `@karni/game/vite` | `karniGame()`, the Vite preset |
 | `@karni/game/build` | Node: the portal table, the package and source checks, `packagePortals`, `zipFolder` |
 | `@karni/game/phaser`, `@karni/game/pixi`, `@karni/game/r3f` | the engine adapters |
+| `@karni/game/scenes` | the scene stack, overlays, transitions, the entity list and the store ([Scenes](game-scenes.md)) |
+| `@karni/game/ui` | the DOM UI kit: settings, pause, dialogs, toasts, touch buttons, the boot failure screen, the dev overlay ([Game UI](game-ui.md)) |
 | `@karni/game/smoke` | Node: `runSmoke`, the browser smoke harness (needs Playwright) |
 | `@karni/game/client` | types for `virtual:karni-game/portal`, `__KARNI_GAME_DEV__` and `__KARNI_GAME_PORTAL__` |
 

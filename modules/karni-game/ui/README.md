@@ -29,7 +29,9 @@ Vite (for the preset), Playwright (for the smoke harness), React Three Fiber and
 | `@karni/game/vite`                                          | `karniGame()`, the Vite preset                                                                        |
 | `@karni/game/build`                                         | the portal table, the package checks, `packagePortals`, `zipFolder`                                   |
 | `@karni/game/phaser`, `@karni/game/pixi`, `@karni/game/r3f` | the engine adapters                                                                                   |
+| `@karni/game/scenes`                                        | the scene stack, overlays, transitions, the entity list and the store                                 |
 | `@karni/game/smoke`                                         | `runSmoke`, the browser smoke harness                                                                 |
+| `@karni/game/ui`                                            | the DOM UI kit: settings, pause, dialogs, toasts, touch buttons, boot failure screen, dev overlay     |
 | `@karni/game/client`                                        | types for `virtual:karni-game/portal` and `__KARNI_GAME_DEV__`                                        |
 
 The command `karni-game` lists the portals, packages a game for each and checks a package.
@@ -110,6 +112,49 @@ and a rewarded continue), and the browser tests play it.
   conflict rule, submits scores with their runs, reads boards, the wallet, the shop, rewards,
   daily content, achievements and missions, remote config and flags, and batches analytics. A
   project with `@karni/ui` passes its own client as the `transport`, so calls carry the account.
+
+## Scenes
+
+`@karni/game/scenes` is the switch between a game's screens: a stack with `push`, `pop` and
+`replace`, overlays that pause the scene below, a fade between scenes that is instant when the
+player prefers reduced motion, an entity list with tags and safe removal, and a store for
+settings and progress on the save layer. A scene gets the loop, input, audio, save, portal and
+client from the stack and imports no global.
+
+```ts
+import { createSceneStack, type Scene } from "@karni/game/scenes";
+
+const title: Scene = {
+  name: "title",
+  update: ({ services, stack }) => {
+    if (services.input?.pressed("jump")) stack.replace(play, { duration: 0.3 });
+  },
+};
+const stack = createSceneStack({ services: { loop, input, audio } });
+stack.push(title);
+// the loop's update calls stack.update(dt), its render calls stack.draw(alpha)
+```
+
+See [Scenes](https://cbsshekhawat18-lab.github.io/karni/game-scenes/).
+
+## Game UI
+
+`@karni/game/ui` is a DOM layer above the canvas, so the browser lays out the text, moves the
+focus and reads it aloud. It has settings (volume sliders, mute, reduced motion, a colour-safe
+palette switch, key remapping on the input), a pause menu wired to the loop, dialogs and confirm,
+toasts, touch buttons that press the input's actions, a boot failure screen with Try again, a dev
+overlay that shows only in development, and one strings table so every word can be replaced.
+
+```ts
+import { applySettings, createSettings, createUi, openPause, openSettings } from "@karni/game/ui";
+
+const ui = createUi({ input });
+const settings = createSettings({ storage });
+applySettings({ store: settings, audio, input, ui });
+openPause(ui, { loop, onSettings: () => openSettings(ui, { store: settings }) });
+```
+
+See [Game UI](https://cbsshekhawat18-lab.github.io/karni/game-ui/).
 
 ## Building for portals
 
