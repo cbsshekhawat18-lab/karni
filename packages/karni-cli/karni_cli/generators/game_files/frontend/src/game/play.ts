@@ -73,6 +73,11 @@ export function startGame(canvas: HTMLCanvasElement, options: PlayOptions): Play
         context.fillStyle = "#000";
         context.fillRect(0, 0, canvas.width, canvas.height);
         view.apply(context);
+        // Only the world is drawn: a hopper falling into a gap never shows in the letterbox.
+        context.save();
+        context.beginPath();
+        context.rect(0, 0, WORLD.width, WORLD.height);
+        context.clip();
         context.fillStyle = COLORS.sky;
         context.fillRect(0, 0, WORLD.width, WORLD.height);
         const left = run.distance;
@@ -99,6 +104,7 @@ export function startGame(canvas: HTMLCanvasElement, options: PlayOptions): Play
         context.font = "14px sans-serif";
         const text = screen === "play" ? String(runScore(run)) : screen === "over" ? "Tap or press Space to play again" : "Tap or press Space to start";
         context.fillText(text, 12, 22);
+        context.restore();
     };
 
     const loop = createLoop({
