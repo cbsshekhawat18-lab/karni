@@ -238,10 +238,14 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 Every container from the `prod` image runs `karni check --deploy` before its
 command, and refuses to start while a value is unsafe (E520).
 `KARNI_SKIP_DEPLOY_CHECK=1` starts it anyway in an emergency, logged on every
-start. The staff app in `frontend/` is built into the image and served by
+start.
+{%- if cookiecutter.kind == "game" %} Each game in `game/<slug>/` is built into the
+image and served by Caddy at `/play/<slug>/`, with the same security headers
+Django sends, and `/` goes to the game.
+{%- if cookiecutter.staff_app == "yes" %} So is the staff app in `frontend/`, at `/app/`.
+{%- endif %}
+{%- else %} The staff app in `frontend/` is built into the image and served by
 Caddy, with the same security headers Django sends.
-{%- if cookiecutter.kind == "game" %} So is each game in
-`game/<slug>/`, at `/play/<slug>/`, and `/` goes to the game.
 {%- endif %}
 
 [Deploying to a server](https://cbsshekhawat18-lab.github.io/karni/deploy/)
