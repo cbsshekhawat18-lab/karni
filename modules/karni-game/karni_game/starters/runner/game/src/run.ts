@@ -5,7 +5,7 @@ import type { BoardEntry } from "@karni/game";
 import { createRecorder, toRunRecord, type Recorder } from "@karni/game/sim";
 import type { Art } from "./art/art";
 import type { Mode } from "./game";
-import { distance, runnerSim, type RunEvent, type RunState, type RunnerInput } from "./rules";
+import { WORLD, distance, runnerSim, type RunEvent, type RunState, type RunnerInput } from "./rules";
 import type { Sfx } from "@karni/game/sfx";
 import type { Session } from "./session";
 import { playEvent } from "./sound";
@@ -86,7 +86,8 @@ export function createRunControl(options: RunOptions): RunControl {
         };
         reported = { coins: state.coins, once: true };
         const board = session ? session.finish(report) : Promise.resolve([]);
-        const canContinue = state.continues < 1 && session !== null && session.portal.canShowRewarded();
+        const canContinue =
+            state.continues < WORLD.continues && session !== null && session.portal.canShowRewarded();
         last = { mode, score: value, distance: distance(state), coins: state.coins, best, canContinue, board };
         control.show("over");
         options.onOver(last);
@@ -146,7 +147,7 @@ export function createRunControl(options: RunOptions): RunControl {
             }
         },
         async continueRun() {
-            if (!session || screen !== "over" || recorder.sim.state.continues >= 1) return false;
+            if (!session || screen !== "over" || recorder.sim.state.continues >= WORLD.continues) return false;
             if (!(await session.continueRun())) return false;
             // The recording goes on: the continue is an input of the same run.
             reviveNext = true;
