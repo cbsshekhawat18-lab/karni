@@ -382,9 +382,51 @@ vetoes: deleting a save is blocked by the default list, and
 ## A new game project
 
 ```sh
-karni new "Block Hopper" --kind game        # a game first
-karni new "Block Hopper" --kind app+game    # an app with the game on a page
+karni new "Sky Dash" --kind game --genre runner   # a complete small game from a starter
+karni new "Block Hopper" --kind game              # a game first, the small blank start
+karni new "Block Hopper" --kind app+game          # an app with the game on a page
 ```
+
+### One command to a playable game
+
+`--genre runner` starts from the runner starter
+([game starters](game-starters.md)): a complete one-tap runner, made as "Sky
+Dash", on every layer of `@karni/game` and on this module. `karni starters
+list --match "<one line>"` finds the starter for a request.
+
+```sh
+pip install karni karni-cli karni-game
+karni new "Sky Dash" --kind game --genre runner && cd sky_dash
+cp .env.example .env && docker compose up -d
+karni migrate && karni load content/game.yaml
+(cd game/sky-dash && npm install && npm run dev)  # http://localhost:5174/play/sky-dash/
+```
+
+1. **Loading, then the title.** The loading scene opens the session: the
+   portal, the guest player, the save slots, today's seed and the wallet.
+   The title shows the bests, the coins and today's run.
+2. **A run.** Space or a tap jumps, and again in the air jumps twice. The
+   rules in `game/sky-dash/src/rules/` are a simulation, so the track comes
+   from the run's seed and every run is recorded as its seed and inputs.
+3. **Game over.** The score goes to the `distance` board with its run, and
+   `games/game.py` checks the run before the score counts. The board's top
+   five come back to the game-over panel. A rewarded ad buys one continue
+   a run, through the server's `continue` reward, three a day.
+4. **Today's run.** Everyone plays the server's seed of the day, and its own
+   board takes only a run on that seed.
+5. **The shop.** The coins of the daily gift, the missions, the
+   achievements and the ads buy two trails and two hats. The prices and the
+   balance are the server's.
+6. **The checks.** `npm test` and `npm run check-rules` in the game,
+   `npm run smoke` in a headless browser, and `karni test` for the server,
+   which proves that one player never reaches another's saves, scores or
+   wallet. `npm run package` makes one package per portal.
+
+The game's files are the project's own, and only the game's own code is in
+them: the rules, the scenes, the drawing, the sounds and the content. The
+rest is imported from `@karni/game`.
+
+### The blank start and the app with a game
 
 Both kinds write the game's server side:
 
@@ -406,7 +448,7 @@ Both kinds write the game's server side:
 unless `--staff-app` ([apps and games](apps-and-games.md) has the layout and
 how it is served):
 
-- `game/block-hopper/`, the game as its own npm package on
+- `game/block-hopper/` (the blank start, `--genre blank`, the default), the game as its own npm package on
   [`@karni/game`](game-client.md): `src/rules/` (the rules as plain
   functions: a world made from a seed, a run replayed from its seed and input
   log), `tests/` (the rules' tests, `npm test`), `src/play.ts` (the canvas,

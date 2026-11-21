@@ -66,6 +66,11 @@ game/block-hopper/      the game, its own npm package on @karni/game
 content/game.yaml       the game declared on the server (karni load content/game.yaml)
 ```
 
+That is the blank start. `--genre runner` writes a complete small game in the
+same place instead, with its scenes, drawing, sounds, shop and daily run, and
+its own server rows and tests ([game starters](game-starters.md)):
+`karni new "Sky Dash" --kind game --genre runner`.
+
 The game is the project's front door. It is served at `/play/<slug>/`, and `/`
 goes there. The admin is at `KARNI_ADMIN_PATH` and the API at `/api/`, as in
 every kind. The server side is [karni-game](game.md), wired as `karni add

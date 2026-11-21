@@ -228,9 +228,10 @@ Every feature, grouped by what you need. The [features page](docs/features.md) l
 **Build games** (experimental)
 
 - [`karni new --kind game`](docs/apps-and-games.md): a game first, a small game you can play at `/play/<slug>/`, its server, the admin and a package per game portal. `--kind app+game` puts the game on a page of an app
+- [Game starters](docs/game-starters.md): `karni new "Sky Dash" --kind game --genre runner` writes a complete one-tap runner (a seeded track, a daily run with its own board, a shop of trails and hats, an ad continue) with its tests, and `karni starters list --match` finds the starter for a request
 - [Apps and games](docs/apps-and-games.md): the kinds, what each one installs, and the base an app and a game share
 - [karni-game](docs/game.md): guest players who keep their progress when they sign in, cloud saves, leaderboards, a soft-currency wallet, daily content and achievements, all decided on the server
-- [@karni/game](docs/game-client.md): a canvas loop, input, audio, saves on the device, an offline queue, adapters for Poki, CrazyGames, GameDistribution and Y8, and adapters for Phaser, PixiJS and React Three Fiber
+- [@karni/game](docs/game-client.md): a canvas loop, input, audio, saves on the device, an offline queue, a [simulation contract](docs/game-sim.md) with replay, [scenes](docs/game-scenes.md), a [UI kit](docs/game-ui.md), [drawing](docs/game-draw.md), [collision](docs/game-collide.md), [assets](docs/game-assets.md) and [sound](docs/game-sound.md), adapters for Poki, CrazyGames, GameDistribution and Y8, and adapters for Phaser, PixiJS and React Three Fiber
 - [The game API](docs/game-api.md): the HTTP contract, for a client or a realtime server of your own
 
 </td>

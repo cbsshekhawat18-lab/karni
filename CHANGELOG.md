@@ -157,6 +157,33 @@ apply codemods and list the manual steps. This file is the human summary.
   and the continue when an ad can play), where the text was drawn over the block on a phone in
   portrait, and its touch buttons step aside while the pause menu or that panel is up.
 
+- **Added: game starters, and the runner (experimental, M6).** `karni new "<Name>" --kind game
+  --genre runner` writes a complete one-tap runner, made as "Sky Dash", on every layer of
+  `@karni/game` and on karni-game: a seeded endless track on `@karni/game/sim` moved with
+  `collide` (every gap one a jump clears at the speed there, a second jump in the air, one
+  continue a run as an input), loading, title, play, pause, game-over and shop scenes with the
+  UI kit's panels, settings, pause and touch buttons, drawing on `draw` (seven layers with
+  parallax, sprites painted in code, particles, two trails and two hats), every sound from
+  `sfx`, save slots for progress and today's run, the daily run on the server's seed with its
+  own board, a shop paid in the server's coins, coins for an ad, and an ad continue through a
+  reward of no coins that the server caps at three a day. Its server side is in the project:
+  `content/game.yaml`, a run check in `games/game.py` on both boards (a score its own run claims
+  and a run of that length can reach) and six server tests, one of them proving that one player
+  never reads or changes another's saves, scores or wallet. The game's own tests (the rules,
+  determinism, a fuzz run, a replayed run), its purity check and a smoke run in headless
+  Chromium by touch and by keys within its frame budget pass on the first run. A colour-safe
+  palette on the Okabe-Ito set, with outlines in the colour-safe setting. `--genre blank`, the
+  default, is the game `--kind game` writes on its own, and `--genre` alone implies `--kind
+  game`. `karni starters list` (`--match "<one line>"`, `--json`) ranks the starters as `karni
+  recipes list` ranks recipes, and `karni starters show <genre>` lists the files one writes. A
+  starter is data and templates in the package that owns it (karni-game ships the runner in
+  `karni_game/starters/`), found through the `karni.starters` entry points, so a package of
+  your own adds one. New codes: C480 (no starter of that genre, naming the genres and what to
+  install), C481 (`--genre` with another kind, `--recipe` or `--design`), C482 (a starter that
+  cannot be read). CI's starters job builds each starter from scratch and runs every check of
+  it. Docs: [Game starters](docs/game-starters.md), and the walk-through in
+  [docs/game.md](docs/game.md#one-command-to-a-playable-game).
+
 - **Docs: Karni is a framework for web apps and web games.** The description on every surface
   (docs/seo/description.txt, copied by `scripts/check_description.py --write`), the tagline ("The
   Django + React framework where your coding agent writes only your app or your game"), the
