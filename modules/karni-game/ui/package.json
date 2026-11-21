@@ -57,6 +57,14 @@
     "./client": {
       "types": "./client.d.ts"
     },
+    "./collide": {
+      "types": "./dist/src/collide/index.d.ts",
+      "import": "./dist/collide.js"
+    },
+    "./draw": {
+      "types": "./dist/src/draw/index.d.ts",
+      "import": "./dist/draw.js"
+    },
     "./phaser": {
       "types": "./dist/src/engines/phaser.d.ts",
       "import": "./dist/phaser.js"
