@@ -1,0 +1,26 @@
+{
+    "name": "__GAME_SLUG__",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "engines": {
+        "node": ">=20.19",
+        "npm": ">=10.8"
+    },
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc --noEmit && vite build",
+        "preview": "vite preview",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit",
+        "package": "karni-game package --portal web --portal itch --portal poki --portal crazygames"
+    },
+    "dependencies": {
+        "@karni/game": "__KARNI_GAME_SPEC__"
+    },
+    "devDependencies": {
+        "typescript": "^5.5.4",
+        "vite": "^8.3.4",
+        "vitest": "^5.0.5"
+    }
+}

@@ -54,7 +54,7 @@ class Command(BaseCommand):
             path, sep, folder = str(given).partition("=")
             try:
                 if not sep or not folder:
-                    raise ValueError(f"--front {given!r}: give PATH=DIR, such as play/x=game/x/dist")
+                    raise ValueError(f"--front {given!r}: give PATH=DIR, such as play/x=x/dist")
                 fronts.append((front_path(path), Path(folder)))
             except ValueError as exc:
                 raise CommandError(str(exc)) from exc

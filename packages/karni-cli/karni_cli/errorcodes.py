@@ -264,11 +264,12 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C112",
         "The project's kind is not one Karni knows",
         "karni context, karni rules sync, karni add site (pyproject.toml [tool.karni] kind)",
-        "`karni new` records the project's kind in pyproject.toml: site, app, site+app or "
-        "game. The "
+        "`karni new` records the project's kind in pyproject.toml: site, app, site+app, "
+        "game or app+game. The "
         "agent files and `karni context` state it with its stack, so a value Karni cannot "
         "read stops them instead of guessing.",
-        'Set kind = "site", "app", "site+app" or "game" under [tool.karni] in pyproject.toml '
+        'Set kind = "site", "app", "site+app", "game" or "app+game" under [tool.karni] in '
+        "pyproject.toml "
         "(or remove the line, and Karni infers the kind from the project), then run `karni "
         "rules sync`.",
     ),

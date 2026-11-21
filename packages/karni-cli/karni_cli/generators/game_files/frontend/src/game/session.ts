@@ -1,6 +1,6 @@
 // The game's session with the server: the portal, the player and the data client
-// of @karni/game, and what a finished run reports. No React here, so the app's
-// page (../pages/game.tsx) and the portal build (../../portal/main.ts) share it.
+// of @karni/game, and what a finished run reports. No React here, so every page
+// that hosts the game shares it: a page of the app, the game's own page, a portal.
 // The server decides every reward, balance and unlock: the client only reports
 // what happened and asks (docs/game.md).
 import {
@@ -96,16 +96,20 @@ const shared = async (work: Promise<BoardResponse>, last: BoardResponse | null):
  * module is read) and the data client. A portal build calls the game API on
  * the project's domain (gameApiUrl, KARNI_GAME_API_URL) with the guest's
  * token. Inside the app the calls go through the app's own client.
+ * "same-origin": the project serves the page (/play/<slug>/), so the game API
+ * is on the page's own origin. Without any of them the game plays on the device.
  */
-export async function openSession(app?: AppServer): Promise<Session> {
+export async function openSession(app?: AppServer | "same-origin"): Promise<Session> {
     const portal = createPortal(createPortalAdapter());
     await portal.init();
     const storage = createStorage({ namespace: GAME, portal: portal.storage() });
     const server = gameApiUrl
         ? { baseUrl: gameApiUrl }
-        : app
-          ? { transport: app.transport, signedIn: () => app.signedIn(), path: "/api/game/" }
-          : undefined;
+        : app === "same-origin"
+          ? {}
+          : app
+            ? { transport: app.transport, signedIn: () => app.signedIn(), path: "/api/game/" }
+            : undefined;
     const client = createGameClient({ game: GAME, storage, server });
     await client.boot();
     await client.signInGuest();

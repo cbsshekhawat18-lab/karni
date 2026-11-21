@@ -1,16 +1,27 @@
-"""Experimental. ``karni new --kind game``: a project with a game in it, on the karni-game module.
+"""Experimental. ``karni new --kind game`` and ``--kind app+game``: a project with a game on karni-game.
 
-What it adds to a new app project:
+Both kinds get the game's server side, as ``karni add game`` wires it:
 
-* the karni-game module, as ``karni add game`` wires it: the dependency, the
-  app, and the client package ``@karni/game`` in ``frontend/package.json``;
+* the karni-game module: the dependency and the app;
 * ``KARNI_PEOPLE = True`` (a player is the game profile of a person) and the
   game API's include in ``config/urls.py``;
 * a ``games`` app: ``games/game.py`` for the game's server hooks (save
   migrations, run checks) and a test that a guest plays;
 * ``content/game.yaml``: the game declared on the server (its boards, its
   currency, rewards, an item, an achievement, a mission and config), loaded
-  with ``karni load content/game.yaml``;
+  with ``karni load content/game.yaml``.
+
+``--kind game`` (:func:`plan_game_first`) makes the game the front door: the
+game in ``game/<slug>/`` (the files of :data:`GAME_FILES`), its own npm
+package on ``@karni/game`` with its rules in ``src/rules/`` and their tests in
+``tests/``, served by the project at ``/play/<slug>/`` (``npm run dev`` there,
+the production web front from its build) and packaged per portal (``npm run
+package``). The staff app's ``frontend/``, when the project has one, gets no
+game package.
+
+``--kind app+game`` (:func:`plan`) is what ``--kind game`` made in 0.6.0, the
+game inside the app:
+
 * a small game to start from, the project's own code in ``frontend/src/game/``
   (the files of :data:`FILES`): its rules as plain functions (a seeded world,
   a run replayed from its seed and input log), the canvas on @karni/game's
@@ -30,22 +41,25 @@ What it adds to a new app project:
   its own base) and its types in ``frontend/src/vite-env.d.ts``.
 
 Only the project's own files are written: everything else is a dependency.
+The scaffold's own files for a game kind (the Dockerfile's ``games`` stage,
+the dev ``game`` service, the ignore rules) come from the template.
 
 Override / escape hatch: every written file is the project's to change.
 :data:`CLIENT_PACKAGE` names the client package in one place, and the files
 are plain files in ``game_files/`` (``__GAME_SLUG__`` and ``__GAME_TITLE__``
-are the game's).
+are the game's, ``__KARNI_GAME_SPEC__`` the client package's npm range).
 """
 
 from __future__ import annotations
 
 from importlib import resources
 
+from karni_cli import scaffold
 from karni_cli.generators.core import SETTINGS, Workspace
 from karni_cli.project import CliError
 from karni_cli.urls_edit import add_route
 
-__all__ = ["CLIENT_PACKAGE", "FILES", "GAME_URLS", "plan"]
+__all__ = ["CLIENT_PACKAGE", "FILES", "GAME_FILES", "GAME_URLS", "plan", "plan_game_first"]
 
 #: The game's client package (``modules/karni-game/ui``): what the game page imports.
 CLIENT_PACKAGE = "@karni/game"
@@ -235,10 +249,35 @@ PORTAL_IGNORE = (
 )
 
 
+#: A game-first project's game, ``game/<slug>/``: each file by its path there, and the file of
+#: ``game_files/`` it is written from. The rules, the canvas and the session are the same
+#: files as the app+game kind's, so the two kinds start from one game.
+GAME_FILES = {
+    "package.json": "game/package.json",
+    "tsconfig.json": "game/tsconfig.json",
+    "vite.config.ts": "game/vite.config.ts",
+    "index.html": "game/index.html",
+    "README.md": "game/README.md",
+    "src/main.ts": "game/src/main.ts",
+    "src/env.d.ts": "game/src/env.d.ts",
+    "src/style.css": "frontend/portal/style.css",
+    "src/play.ts": "frontend/src/game/play.ts",
+    "src/session.ts": "frontend/src/game/session.ts",
+    "src/rules/index.ts": "frontend/src/game/rules.ts",
+    "tests/rules.test.ts": "game/tests/rules.test.ts",
+}
+#: Where a game-first project keeps each game.
+GAME_FOLDER = "game"
+
+
 def game_file(rel: str, *, slug: str, title: str) -> str:
-    """One of :data:`FILES`, with the game's slug and title in it."""
+    """A file of ``game_files/`` (:data:`FILES`, :data:`GAME_FILES`), with the game's names in it."""
     text = resources.files("karni_cli.generators").joinpath("game_files", rel).read_text("utf-8")
-    return text.replace("__GAME_SLUG__", slug).replace("__GAME_TITLE__", title)
+    return (
+        text.replace("__GAME_SLUG__", slug)
+        .replace("__GAME_TITLE__", title)
+        .replace("__KARNI_GAME_SPEC__", scaffold.UI_REGISTRY_SPEC)
+    )
 
 
 VITE = "frontend/vite.config.ts"
@@ -341,12 +380,12 @@ def _portal(ws: Workspace) -> str:
     )
 
 
-def plan(ws: Workspace, *, title: str, slug: str) -> list[str]:
-    """Plan the game kind's files into ``ws`` (a new app project); returns what it did."""
+def _server(ws: Workspace, *, title: str, slug: str, ui: bool) -> list[str]:
+    """The game's server side, the same in both kinds: karni-game, the games app, the content."""
     from karni_cli.commands.add import plan_module
     from karni_cli.generators import app
 
-    lines = plan_module(ws, "game")
+    lines = plan_module(ws, "game", ui=ui)
     lines.append(_settings(ws))
     lines.append(_urls(ws))
     app.plan(ws, "games", next_step=False)
@@ -355,6 +394,33 @@ def plan(ws: Workspace, *, title: str, slug: str) -> list[str]:
     ws.create("content/game.yaml", CONTENT.format(slug=slug, title=title))
     lines.append("games: the game's server hooks (games/game.py) and its test")
     lines.append("content/game.yaml: the game, its boards, currency, rewards and config")
+    return lines
+
+
+def plan_game_first(ws: Workspace, *, title: str, slug: str) -> list[str]:
+    """Plan ``--kind game``'s files into ``ws`` (a new project); returns what it did.
+
+    The game is its own npm package in ``game/<slug>/``. A staff app the
+    project has (``frontend/``) stays as it is: it gets no game package.
+    """
+    lines = _server(ws, title=title, slug=slug, ui=False)
+    folder = f"{GAME_FOLDER}/{slug}"
+    for rel, source in GAME_FILES.items():
+        ws.create(f"{folder}/{rel}", game_file(source, slug=slug, title=title))
+    lines.append(
+        f"{folder}/: the game on {CLIENT_PACKAGE} (its rules, canvas, session and page, and "
+        "the tests of its rules), its own npm package"
+    )
+    lines.append(
+        f"/play/{slug}/: where the project serves it (npm run dev in {folder}/, and the "
+        "production web front from its build)"
+    )
+    return lines
+
+
+def plan(ws: Workspace, *, title: str, slug: str) -> list[str]:
+    """Plan ``--kind app+game``'s files into ``ws`` (a new app project); returns what it did."""
+    lines = _server(ws, title=title, slug=slug, ui=True)
     if ws.exists(FRONTEND_PACKAGE):
         for rel in FILES:
             ws.create(rel, game_file(rel, slug=slug, title=title))

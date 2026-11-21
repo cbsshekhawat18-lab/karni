@@ -323,13 +323,16 @@ def plan_module(
     module: str,
     *,
     found: tuple[Manifest | None, Catalog] | None = None,
+    ui: bool = True,
 ) -> list[str]:
     """Plan ``karni add <module>``'s file edits into ``ws``; returns the lines it reports.
 
     What to wire comes from the module's manifest (:func:`find_manifest`):
     the dependency in ``pyproject.toml``, its apps in the ``# karni:apps``
-    block, its middleware and context processors, and for a site module the
-    kind (an app becomes a site+app). A module without a manifest is wired by
+    block, its middleware and context processors, its UI package in
+    ``frontend/package.json`` (``ui=False`` leaves it out: a game-first
+    project's game has its own package), and for a site module the kind (an
+    app becomes a site+app). A module without a manifest is wired by
     convention. ``karni build`` plans its modules the same way, so
     ``--dry-run`` shows them. Recording the module's agent guidance needs it
     installed, so :func:`record_guidance` runs after the write.
@@ -370,7 +373,8 @@ def plan_module(
     lines += notes
     if settings != ws.read(SETTINGS):
         ws.write(SETTINGS, settings)
-    lines += _ui_package(ws, manifest)
+    if ui:
+        lines += _ui_package(ws, manifest)
     if manifest is not None and manifest.wiring.kind == "site":
         from karni_cli import kinds
 
@@ -428,6 +432,17 @@ def _site_next(project: Path) -> None:
         )
 
 
+def _game_kind(ws: Workspace) -> list[str]:
+    """``karni add game`` turns an app into an app+game (the game lives in its frontend/)."""
+    from karni_cli import kinds
+
+    adopted = kinds.adopt_game_text(ws.read("pyproject.toml") or "")
+    if adopted is None:
+        return []
+    ws.write("pyproject.toml", adopted[0])
+    return [kinds.game_adoption_note(adopted[1], adopted[2])]
+
+
 def add(
     module: str = typer.Argument(
         ...,
@@ -443,6 +458,8 @@ def add(
     app_name = manifest.app if manifest else f"karni_{module.replace('-', '_')}"
     ws = Workspace(project)
     lines = plan_module(ws, module, found=(manifest, loaded))
+    if module == "game":
+        lines += _game_kind(ws)
     for path, _before, after in ws.changes():
         path.write_text(after, encoding="utf-8")
     for line in lines:
