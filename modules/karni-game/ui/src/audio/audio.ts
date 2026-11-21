@@ -29,6 +29,8 @@ export interface PlayOptions {
 export interface Sound {
   stop(): void;
   readonly playing: boolean;
+  /** This sound's own gain, on its bus: fade it with `linearRampToValueAtTime` (music crossfades do). */
+  readonly gain: GainNode;
 }
 
 export interface GameAudio {
@@ -54,8 +56,12 @@ export interface GameAudio {
   follow(loop: { on(event: "pause" | "resume", listener: () => void): () => void }): () => void;
   /** A bus's gain node, to connect a game's own audio graph. Null before unlock. */
   bus(name: Bus): GainNode | null;
+  /** Call `listener` each time audio starts running (the first gesture). Returns a function that stops it. */
+  onUnlock(listener: () => void): () => void;
   /** Fetch and decode a sound. Resolves null (never rejects) when it cannot. */
   load(url: string): Promise<AudioBuffer | null>;
+  /** Decode the bytes of a sound file. Resolves null (never rejects) when it cannot. */
+  decode(data: ArrayBuffer): Promise<AudioBuffer | null>;
   /** Play a decoded sound. Returns null (silently) before unlock or without a buffer. */
   play(buffer: AudioBuffer | null, options?: PlayOptions): Sound | null;
   /** Play one music track on loop, replacing the last. Asked before unlock, it starts on unlock. */
@@ -91,6 +97,7 @@ export function createAudio(options: AudioOptions = {}): GameAudio {
   const mutes = new Set<MuteSource>();
   const pauses = new Set<string>();
   const sounds = new Set<{ source: AudioBufferSourceNode; sound: Sound }>();
+  const unlockListeners = new Set<() => void>();
   const fetcher = options.fetch ?? ((url: string) => fetch(url));
   let context: AudioContext | null = null;
   let buses: Record<Bus, GainNode> | null = null;
@@ -169,6 +176,7 @@ export function createAudio(options: AudioOptions = {}): GameAudio {
           get playing() {
             return playing;
           },
+          gain,
         },
       };
       source.onended = () => {
@@ -209,6 +217,7 @@ export function createAudio(options: AudioOptions = {}): GameAudio {
         pendingMusic = null;
         audio.music(buffer, musicOptions);
       }
+      if (running()) for (const listener of [...unlockListeners]) listener();
       return running();
     },
     unlockOn(input) {
@@ -250,14 +259,23 @@ export function createAudio(options: AudioOptions = {}): GameAudio {
       };
     },
     bus: (name) => buses?.[name] ?? null,
+    onUnlock(listener) {
+      unlockListeners.add(listener);
+      return () => void unlockListeners.delete(listener);
+    },
+    async decode(data) {
+      try {
+        const ctx = ensure();
+        return ctx ? await ctx.decodeAudioData(data) : null;
+      } catch {
+        return null;
+      }
+    },
     async load(url) {
       try {
         const response = await fetcher(url);
         if (!response.ok) return null;
-        const data = await response.arrayBuffer();
-        const ctx = ensure();
-        if (!ctx) return null;
-        return await ctx.decodeAudioData(data);
+        return await audio.decode(await response.arrayBuffer());
       } catch {
         return null;
       }

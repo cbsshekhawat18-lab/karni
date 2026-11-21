@@ -42,6 +42,8 @@ npm install @karni/game
 | `@karni/game/ui` | the DOM UI kit: settings, pause, dialogs, toasts, touch buttons, the boot failure screen, the dev overlay ([Game UI](game-ui.md)) |
 | `@karni/game/draw` | [drawing](game-draw.md): layers, a camera, shapes, text, sprites and frame animation, tweens, particles, a pool |
 | `@karni/game/collide` | [collision](game-collide.md): boxes and circles, overlap and sweep tests, a ray cast, the box mover, trigger zones |
+| `@karni/game/assets` | the asset manifest, loading by group with progress, unloading, fonts, WebP copies, budgets ([Assets](game-assets.md)) |
+| `@karni/game/sfx` | procedural sounds, one-shots with variation, music with crossfade and ducking ([Sound](game-sound.md)) |
 | `@karni/game/smoke` | Node: `runSmoke`, the browser smoke harness (needs Playwright) |
 | `@karni/game/client` | types for `virtual:karni-game/portal`, `__KARNI_GAME_DEV__` and `__KARNI_GAME_PORTAL__` |
 
@@ -422,12 +424,17 @@ platformer on every piece: move, jump, coins, a score, a versioned save with
 a migration, a leaderboard, a rewarded continue, the touch stick and a
 procedural sound. Its rules live in `src/rules/` on
 [`@karni/game/sim`](game-sim.md), so a run replays from its seed and inputs.
-It has a title, a play scene and a pause overlay on
-[`@karni/game/scenes`](game-scenes.md), with settings and touch buttons from
-[`@karni/game/ui`](game-ui.md), draws with [`@karni/game/draw`](game-draw.md)
-and moves with [`@karni/game/collide`](game-collide.md). `npm run example:dev` plays
-it with the fake portal, and `npm run test:smoke` builds it and plays it in
-a headless browser over http, by touch, and as a single file from `file://`.
+It has a loading scene, a title, a play scene and the pause and game-over
+overlays on [`@karni/game/scenes`](game-scenes.md), with settings and touch
+buttons from [`@karni/game/ui`](game-ui.md), draws with
+[`@karni/game/draw`](game-draw.md), moves with
+[`@karni/game/collide`](game-collide.md), loads two stages whose art loads
+and unloads by group through [`@karni/game/assets`](game-assets.md), and
+plays its sounds through [`@karni/game/sfx`](game-sound.md).
+`npm run example:dev` plays it with the fake portal, and
+`npm run test:smoke` builds it and plays it in a headless browser over http (with a frame-time budget: p95 40 ms, max 500 ms,
+scaled by `frameMultiplier` or `KARNI_SMOKE_FRAME_MULTIPLIER`, and `cpuThrottle` to slow the CPU),
+by touch, and as a single file from `file://`.
 
 `example/crate-climb/` is Crate Climb, a scene for the 2D layer: a level
 three screens wide with a following camera, parallax, animated sprites,
@@ -439,10 +446,12 @@ the layer under load against a frame budget.
 
 - It runs no realtime server: [the karni-game module](game.md#multiplayer-a-realtime-server-of-your-own) issues the token a
   realtime server of the project's own verifies.
-- It has no physics engine, asset loader, procedural music, service worker
-  or quality tiers. Engines bring their own, and most of these are the
-  game's own business. Scenes, the UI kit, drawing and kinematic collision
-  for plain canvas are the [scenes](game-scenes.md), [ui](game-ui.md),
-  [draw](game-draw.md) and [collide](game-collide.md) entry points.
+- It has no physics engine, music composition tool, service worker or
+  quality tiers. Engines bring their own, and most of these are the game's
+  own business. Scenes, the UI kit, drawing, kinematic collision, an asset
+  loader and procedural sound for plain canvas are the
+  [scenes](game-scenes.md), [ui](game-ui.md), [draw](game-draw.md),
+  [collide](game-collide.md), [assets](game-assets.md) and
+  [sfx](game-sound.md) entry points.
 - The device's rules without a server are for play, not trust: a player can
   edit local storage. Shared boards and balances need the server.

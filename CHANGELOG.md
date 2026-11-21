@@ -42,7 +42,6 @@ apply codemods and list the manual steps. This file is the human summary.
   desktop and phone width in light and dark. The gzip size budgets are 2600 bytes for `scenes` and
   9800 for `ui`, tested. The example game has a title scene, a play scene, a pause overlay and a
   settings dialog on them. Docs: [Scenes](docs/game-scenes.md) and [Game UI](docs/game-ui.md).
-
 - **Added: `@karni/game/draw`, a light 2D layer on Canvas 2D (experimental).** `createRenderer`
   draws named layers in order over `createView`: world layers through a camera with parallax,
   screen layers in game units, a clip to the game area and culling of what is off screen.
@@ -77,6 +76,25 @@ apply codemods and list the manual steps. This file is the human summary.
   built bundles make no garbage, and a browser benchmark (2000 sprites, 1500 particles, 200
   tweens and 50 bodies on the mover at 60 Hz, desktop and phone size) fails when the 95th
   percentile of a frame's work passes 12 ms.
+
+- **Added: `@karni/game/assets` and `@karni/game/sfx`, assets and sound (experimental).** The
+  asset loader takes a manifest of images, fonts, sounds and data files in named groups and loads a
+  group with progress that never goes back, retries with a wait, a timeout and a readable
+  `AssetLoadError` for a boot failure screen. `unload` closes bitmaps, removes fonts and reports the
+  memory freed. Fonts are ready before the first text, and a file from a host that is not allowed is
+  refused. The Vite preset reads the `assets/` folder as the manifest (`virtual:karni-game/assets`),
+  writes an optional types file for exact names, makes a WebP copy of each PNG and JPEG through the
+  project's own `sharp` (or an encoder you pass) and keeps the original as the fallback, and writes
+  `karni-assets.json`: `checkPackage` fails a group over its size budget (2 MiB by default). The sound
+  module renders tones, sweeps, noise and arpeggios from plain specs, plays one-shots with pitch and
+  volume variation and a voice limit, loops music with a crossfade, and ducks it; ramps run on the
+  audio clock, so a pause holds them, and nothing sounds before the first gesture. The audio layer
+  gained `Sound.gain`, `onUnlock` and `decode`. The smoke harness has a frame-time budget (p95 40 ms,
+  max 500 ms, scaled by `frameMultiplier` or `KARNI_SMOKE_FRAME_MULTIPLIER`) and `cpuThrottle`. The
+  gzip budgets are 3400 bytes for `assets` and 3100 for `sfx`, tested. The example game has a loading
+  scene, two stages whose art loads and unloads, and every sound from `sfx`. Fixed: a dialog taller
+  than the screen scrolls its body while the title and buttons stay in view. Docs:
+  [Assets](docs/game-assets.md) and [Sound](docs/game-sound.md).
 
 - **Added: `portal.canShowRewarded()`.** It is true when a rewarded ad can be asked for: the
   portal is ready, its SDK has rewarded ads and none is playing. A build with no SDK (web,

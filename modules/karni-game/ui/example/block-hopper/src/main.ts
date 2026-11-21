@@ -1,8 +1,10 @@
 /**
  * Block Hopper, the example game of @karni/game: move, jump, score, save and
- * a leaderboard, drawn with @karni/game/draw and moved with
- * @karni/game/collide. Every piece of the package is used here the way a
- * game uses it.
+ * a leaderboard. Its rules are a simulation (@karni/game/sim) that moves with
+ * @karni/game/collide, its screens are scenes (@karni/game/scenes) with the
+ * UI kit (@karni/game/ui), it draws with @karni/game/draw, loads its art by
+ * group (@karni/game/assets) and makes its sounds with @karni/game/sfx.
+ * Every piece of the package is used here the way a game uses it.
  */
 import {
   createAudio,
@@ -17,6 +19,7 @@ import {
   pauseOnHidden,
   type BoardEntry,
 } from "@karni/game";
+import { createAssets, type LoadProgress } from "@karni/game/assets";
 import {
   REDUCED_MOTION,
   createCamera,
@@ -33,10 +36,14 @@ import {
   createSettings,
   createUi,
   guardBoot,
+  showBootFailure,
 } from "@karni/game/ui";
+import { assetHosts } from "virtual:karni-game/assets";
 import { createPortalAdapter } from "virtual:karni-game/portal";
 import { WORLD, hopperSim, score, type HopperEvent } from "./rules";
 import { createGameScenes, type RunResult } from "./scenes";
+import { createSounds, playEvent } from "./sound";
+import { STAGES, assetManifest, stageInfo, type StageInfo, type StageName } from "./stages";
 import { BINDINGS } from "./ui";
 
 interface SaveV2 {
@@ -81,6 +88,9 @@ const stick = createVirtualStick(input, {
 });
 const audio = createAudio({ volumes: { effects: 0.6 } });
 audio.unlockOn(input);
+const sfx = createSounds(audio);
+// Pictures, the stage table and every stage's art load from the assets folder, by group.
+const assets = createAssets({ manifest: assetManifest, audio, allowHosts: assetHosts });
 const ui = createUi({ input });
 // Settings have their own save. A mute kept by an older version of the game carries over once.
 const settings = createSettings({ storage });
@@ -98,7 +108,14 @@ const renderer = createRenderer({
   view,
   camera,
   background: "#0d1b2a",
-  layers: [{ name: "sky", screen: true }, "world", "effects", { name: "hud", screen: true }],
+  layers: [
+    { name: "sky", screen: true },
+    // The stage's backdrop moves at a quarter of the platforms' speed.
+    { name: "backdrop", parallax: 0.25 },
+    "world",
+    "effects",
+    { name: "hud", screen: true },
+  ],
 });
 const effects = createParticles({ max: 120 });
 const sparkle = effects.emitter({
@@ -123,7 +140,7 @@ followMotion(settings.state.reducedMotion);
 settings.subscribe((state) => followMotion(state.reducedMotion));
 const text = textStyle({ font: "14px system-ui, sans-serif", fill: "#e0e1dd" });
 
-type Screen = "title" | "play" | "over";
+type Screen = "loading" | "title" | "play" | "over";
 let screen: Screen = "title";
 const newRun = (seed: number) => {
   const run = createRecorder(hopperSim, { seed });
@@ -136,33 +153,76 @@ let recorder = newRun(1);
 let reviveNext = false;
 let revived = false;
 
-const blip = (frequency: number): void => {
-  const ctx = audio.context;
-  if (!ctx || !audio.unlocked) return;
-  const length = Math.floor(ctx.sampleRate * 0.08);
-  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < length; i += 1)
-    data[i] = Math.sin((i / ctx.sampleRate) * frequency * Math.PI * 2) * (1 - i / length) * 0.4;
-  audio.play(buffer);
-};
+let stage: StageName | null = null;
+let stageData: StageInfo | null = null;
+let starting = false;
+const memory = (): number =>
+  assets.memory("core") + assets.memory("meadow") + assets.memory("cave");
 
 const show = (next: Screen, result?: RunResult): void => {
   screen = next;
   hud.dataset.screen = next;
   hud.dataset.best = String(progress.best);
+  // The loading scene is put on by `app.load`, and game over by `app.over`.
   if (result) app.over(result);
-  else if (next !== "over") app.go(next);
+  else if (next === "title" || next === "play") app.go(next);
   if (next === "play") portal.gameplayStart();
   else portal.gameplayStop();
 };
 
-const start = (): void => {
-  // The page may use any clock or Math.random: only src/rules may not.
-  recorder = newRun(Math.floor(Math.random() * 2 ** 31));
-  effects.clear();
-  revived = false;
-  show("play");
+/** Run a load behind the loading scene. A failure shows the boot failure screen, and Try again loads again. */
+const withLoading = (title: string, work: (progress: (p: LoadProgress) => void) => Promise<void>) =>
+  new Promise<void>((done) => {
+    show("loading");
+    const attempt = (): void =>
+      app.load({
+        title,
+        run: (report) => work((p) => report(p.fraction)),
+        onDone: done,
+        onFailed: (error) => {
+          // A readable screen with the files that failed, and Try again loads them again.
+          const failure = showBootFailure({
+            error,
+            onRetry: () => {
+              failure.destroy();
+              attempt();
+            },
+          });
+        },
+      });
+    attempt();
+  });
+
+/** The next run's stage alternates. Its art loads first, and the last stage's art is freed after. */
+const start = async (): Promise<void> => {
+  if (starting) return;
+  starting = true;
+  try {
+    const next = STAGES[progress.plays % STAGES.length] as StageName;
+    if (!assets.isLoaded(next)) {
+      await withLoading(`Loading ${next}`, async (onProgress) => {
+        await assets.load(next, { onProgress });
+      });
+    }
+    const last = stage;
+    stage = next;
+    stageData = stageInfo(assets, next);
+    if (last && last !== next) assets.unload(last);
+    hud.dataset.stage = next;
+    hud.dataset.artMemory = String(memory());
+    hud.dataset.groups = (["core", ...STAGES] as const).filter((g) => assets.isLoaded(g)).join(",");
+    sfx.music(stageData.theme === "cave" ? "theme-cave" : "theme-meadow", {
+      fade: 1.2,
+      volume: 0.7,
+    });
+    // The page may use any clock or Math.random: only src/rules may not.
+    recorder = newRun(Math.floor(Math.random() * 2 ** 31));
+    effects.clear();
+    revived = false;
+    show("play");
+  } finally {
+    starting = false;
+  }
 };
 
 /** Send the score with its run, then read the top of the board. Offline, the device's board. */
@@ -218,7 +278,7 @@ const beforeStep = (dt: number): void => {
     settings.set({ muted: !settings.state.muted });
   }
   if (screen === "play") return;
-  if (input.pressed("jump")) start();
+  if (input.pressed("jump")) void start();
   if (screen === "over" && input.pressed("revive")) continueRun();
 };
 
@@ -239,23 +299,36 @@ const readInput = () => {
 const onEvents = (events: readonly HopperEvent[]): void => {
   const hopper = recorder.sim.state;
   for (const event of events) {
-    if (event === "jump") blip(520);
-    if (event === "coin") {
-      blip(880);
-      sparkle.burst(hopper.x + hopper.w / 2, hopper.y, 12);
-    }
+    playEvent(sfx, event);
+    if (event === "coin") sparkle.burst(hopper.x + hopper.w / 2, hopper.y, 12);
     if (event === "land") dust.burst(hopper.x + hopper.w / 2, hopper.y + hopper.h, 6);
     if (event === "fall") finish();
   }
 };
 
 renderer.on("sky", (g) => g.rect(0, 0, WORLD.width, WORLD.height, "#1b263b"));
+renderer.on("backdrop", (g) => {
+  // A group's images are closed when it unloads: draw only from a loaded group.
+  if (!stage || !assets.isLoaded(stage)) return;
+  const backdrop = assets.image(stage, "bg");
+  // The art repeats at its own width across what this layer shows.
+  const first = Math.floor(g.left / backdrop.width) * backdrop.width;
+  for (let x = first; x < g.left + g.width; x += backdrop.width) {
+    g.ctx.drawImage(backdrop.source, x, 0);
+  }
+});
 renderer.on("world", (g) => {
   const hopper = recorder.sim.state;
+  const art = assets.isLoaded("core");
   // Off-screen platforms and coins are culled by the painter.
-  for (const p of hopper.platforms) g.rect(p.x, p.y, p.w, p.h, "#778da9");
-  for (const c of hopper.pickups) if (!c.taken) g.rect(c.x - 5, c.y - 5, 10, 10, "#ffd166");
-  g.rect(hopper.x, hopper.y, hopper.w, hopper.h, "#ef476f");
+  for (const p of hopper.platforms) g.rect(p.x, p.y, p.w, p.h, stageData?.platform ?? "#778da9");
+  for (const c of hopper.pickups) {
+    if (c.taken || !g.visible(c.x - 5, c.y - 5, 10, 10)) continue;
+    if (art) g.ctx.drawImage(assets.image("core", "coin").source, c.x - 5, c.y - 5);
+    else g.rect(c.x - 5, c.y - 5, 10, 10, "#ffd166");
+  }
+  if (art) g.ctx.drawImage(assets.image("core", "hopper").source, hopper.x, hopper.y);
+  else g.rect(hopper.x, hopper.y, hopper.w, hopper.h, "#ef476f");
 });
 renderer.on("effects", (g) => effects.draw(g));
 renderer.on("hud", (g: Painter) => {
@@ -295,7 +368,7 @@ const toTitle = (): void => {
 };
 const app = createGameScenes(
   { loop, input, audio, save, portal, client, ui, settings },
-  { update: beforeStep, render, start, continueRun, toTitle },
+  { update: beforeStep, render, start: () => void start(), continueRun, toTitle },
 );
 createDevOverlay(ui, {
   loop,
@@ -303,19 +376,33 @@ createDevOverlay(ui, {
     recorder.sim.state.platforms.length + recorder.sim.state.pickups.length + effects.count,
 });
 pauseOnHidden([loop, audio]);
+// A pause menu pauses the loop, and the sound stops with it.
+audio.follow(loop);
 linkPortal(portal, { audio, loop, input });
 
 void guardBoot(async () => {
   portal.loadingStart();
+  loop.start();
   await Promise.all([portal.init(), client.boot()]);
   await client.signInGuest();
+  // The shared art, the fonts and the stage table load behind the loading scene.
+  await withLoading("Loading", async (onProgress) => {
+    await assets.load("core", { onProgress });
+    await assets.fontsReady();
+  });
   portal.loadingFinished();
   hud.dataset.loaded = loaded.status;
   show("title");
-  loop.start();
 });
 
 if (__KARNI_GAME_DEV__) {
   // A development handle, dropped from every build by the preset's flag.
-  (window as unknown as Record<string, unknown>).__blockHopper = { loop, client, portal };
+  (window as unknown as Record<string, unknown>).__blockHopper = {
+    loop,
+    client,
+    portal,
+    assets,
+    sfx,
+    audio,
+  };
 }

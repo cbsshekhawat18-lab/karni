@@ -1,0 +1,12 @@
+{
+  "meadow": {
+    "title": "Meadow",
+    "platform": "#4e6e58",
+    "theme": "meadow"
+  },
+  "cave": {
+    "title": "Cave",
+    "platform": "#8d99c4",
+    "theme": "cave"
+  }
+}

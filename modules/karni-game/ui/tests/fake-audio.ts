@@ -1,10 +1,22 @@
 /** A small stand-in for AudioContext: enough graph to test what @karni/game asks of it. */
 export class FakeParam {
   value = 1;
+  /** Every automation call, in order: `["linear", 0.3, 1.5]` is a ramp to 0.3 ending at 1.5 s. */
+  calls: [string, number, number?][] = [];
   setTargetAtTime(value: number): void {
     this.value = value;
   }
-  cancelScheduledValues(): void {}
+  setValueAtTime(value: number, at: number): void {
+    this.calls.push(["set", value, at]);
+    this.value = value;
+  }
+  linearRampToValueAtTime(value: number, at: number): void {
+    this.calls.push(["linear", value, at]);
+    this.value = value;
+  }
+  cancelScheduledValues(at: number): void {
+    this.calls.push(["cancel", at]);
+  }
 }
 
 export class FakeNode {

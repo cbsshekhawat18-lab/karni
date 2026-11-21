@@ -8,6 +8,8 @@ import type { GameHooks, GameServices } from "./services";
 /** A run: the sim loop steps the rules after this scene's update, and Pause opens the pause overlay above it. */
 export function createPlayScene(hooks: GameHooks): Scene<GameServices> {
   let buttons: TouchButtons | null = null;
+  // A slow frame runs several steps with one key press in all of them: ask for the menu once.
+  let asked = false;
   const addButtons = ({ ui, input }: GameServices): void => {
     if (input && !buttons) buttons = createTouchButtons(ui, input, TOUCH_BUTTONS);
   };
@@ -21,10 +23,14 @@ export function createPlayScene(hooks: GameHooks): Scene<GameServices> {
     exit: removeButtons,
     // The pause menu and the game-over panel cover the run: its buttons go while they are up.
     pause: removeButtons,
-    resume: ({ services }) => addButtons(services),
+    resume: ({ services }) => {
+      asked = false;
+      addButtons(services);
+    },
     update({ services, stack }, dt) {
       // Asked before the rules run: they clear the input's edge flags after a step.
-      if (services.input?.pressed("pause") && stack.top?.name === "play") {
+      if (services.input?.pressed("pause") && stack.top?.name === "play" && !asked) {
+        asked = true;
         stack.push(createPauseScene(hooks), { overlay: true });
         return;
       }
