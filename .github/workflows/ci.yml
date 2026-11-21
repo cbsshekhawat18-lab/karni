@@ -471,6 +471,55 @@ jobs:
         run: python -m pytest -q -p no:cacheprovider -m recipes tests/test_family_build.py tests/test_family_rules.py
 
   # ---------------------------------------------------------------------------
+  # The game starters (docs/game-starters.md), each built from scratch: karni
+  # new --kind game --genre <genre>, the server's migrations, karni check and
+  # tests on SQLite, then the game on this checkout's packed @karni/game: its
+  # type check, the rules' tests (determinism, fuzz, a replayed run), the
+  # purity check, the build and the smoke run in headless Chromium within its
+  # frame budget (tests/test_starter_builds.py). About six runner minutes, in
+  # parallel with the other jobs.
+  # ---------------------------------------------------------------------------
+  starters:
+    name: Game starters (karni new --genre, built from scratch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHON: python
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      KARNI_REQUIRE_MODULES: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/karni/pyproject.toml
+            packages/karni-cli/pyproject.toml
+            modules/karni-game/pyproject.toml
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: modules/karni-game/ui/package-lock.json
+      - name: Install Karni and its modules from this checkout (editable)
+        run: make install-py
+      # The generated game names @karni/game's release range: it installs this
+      # checkout's build instead, so the starter is tested against the
+      # framework it ships with next.
+      - name: Pack this checkout's @karni/game
+        run: |
+          mkdir -p "$RUNNER_TEMP/karni-game"
+          (cd modules/karni-game/ui && npm ci && npm run build \
+            && npm pack --pack-destination "$RUNNER_TEMP/karni-game")
+          echo "KARNI_GAME_TARBALL=$(ls "$RUNNER_TEMP"/karni-game/karni-game-*.tgz)" >> "$GITHUB_ENV"
+      - name: Chromium's system libraries, for the smoke run
+        run: npx --yes playwright install-deps chromium
+      - name: karni new --genre, the server's checks, and the game's tests, build and smoke run
+        working-directory: packages/karni-cli
+        run: python -m pytest -q -p no:cacheprovider -s -m starters tests/test_starter_builds.py
+
+  # ---------------------------------------------------------------------------
   # The documentation site (Material for MkDocs): built strictly on every
   # push and pull request, deployed to GitHub Pages from main.
   # ---------------------------------------------------------------------------
