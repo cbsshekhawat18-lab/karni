@@ -65,7 +65,7 @@ payments = "karni_payments.errorcodes:CODES"
 dev = [
     "pytest>=8.2",
     "pytest-django>=4.8",
-    "ruff>=0.5",
+    "ruff>=0.17.6",
 ]
 
 [tool.hatch.build.targets.wheel]
