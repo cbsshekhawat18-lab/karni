@@ -63,7 +63,7 @@ payments = "karni_payments.errorcodes:CODES"
 
 [dependency-groups]
 dev = [
-    "pytest>=8.2",
+    "pytest>=9.2.0",
     "pytest-django>=4.8",
     "ruff>=0.5",
 ]
