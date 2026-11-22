@@ -9,7 +9,7 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
-## 0.7.0 (unreleased)
+## 0.7.0 (2026-11-22)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web
   apps and web games as peers on one base, and a project is an app, a game or both. The
