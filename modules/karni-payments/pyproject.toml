@@ -40,7 +40,7 @@ Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
 Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"
 
 [project.optional-dependencies]
-stripe = ["stripe>=10"]
+stripe = ["stripe>=17.1.0"]
 razorpay = ["razorpay>=1.4"]
 
 # The catalog entry, karni_payments/karni.module.toml: `karni modules`, `karni add`
