@@ -42,7 +42,7 @@ classifiers = [
 dependencies = [
     "typer>=0.12",
     "cookiecutter>=2.5",
-    "tomlkit>=0.12",
+    "tomlkit>=0.15.2",
     "packaging>=24.0",
     "pyyaml>=6.0",
     # `karni upgrade`'s Python codemods. A hard dependency, not an extra: the
