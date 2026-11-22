@@ -56,7 +56,7 @@ dependencies = [
     "psycopg[binary]>=3.1",
     # The admin builds on unfold's action decorators and templates; move the
     # range deliberately, with the admin suite, not with every release.
-    "django-unfold>=0.110,<0.111",
+    "django-unfold>=0.110.1,<0.111",
     "pydantic>=2",
     "redis>=5",
     "celery[redis]>=5.3",
