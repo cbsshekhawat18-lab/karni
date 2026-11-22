@@ -51,7 +51,7 @@ dependencies = [
     "libcst>=1.4",
     # `karni spec`: the karni.yaml format and its JSON Schema. Karni itself depends on
     # Pydantic 2, so a project has it already (prebuilt wheels for every platform).
-    "pydantic>=2",
+    "pydantic>=2.14.4",
 ]
 
 [project.urls]
