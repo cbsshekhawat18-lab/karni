@@ -18,3 +18,21 @@ export type { BuildProblem, CheckOptions, SourceCheckOptions } from "./checks";
 export { packagePortals, viteBuild } from "./package";
 export type { PackageOptions, PackageReport } from "./package";
 export { crc32, zipFolder } from "./zip";
+export {
+  ASSET_DIR,
+  ASSET_REPORT,
+  CORE_GROUP,
+  DEFAULT_GROUP_BUDGET,
+  checkAssetReport,
+  kindOfFile,
+  manifestSource,
+  reportOf,
+  scanAssets,
+  sharpEncoder,
+  typesSource,
+} from "./assets";
+export type { AssetReport, GroupBudget, ScanOptions, ScannedAsset, WebpEncoder } from "./assets";
+export { ASSETS_MODULE } from "./vite";
+export type { AssetsPluginOptions } from "./vite";
+export { checkRules, formatImpurities } from "./rules";
+export type { Impurity } from "./rules";

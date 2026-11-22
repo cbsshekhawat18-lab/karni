@@ -5,10 +5,10 @@
   </picture>
 </p>
 
-<h3 align="center">The Django + React framework where your coding agent writes only your app</h3>
+<h3 align="center">The Django + React framework where your coding agent writes only your app or your game</h3>
 
 <p align="center">
-Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.
+Karni is an open-source Django + React framework for building web apps and web games with AI coding agents. Your agent writes only your domain or your game. The API, admin, permissions, React screens and game engine come from packages you upgrade. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.
 </p>
 
 <p align="center">
@@ -42,13 +42,13 @@ Coding agents write that setup faster, but they write it again in every project.
 
 ## What is Karni
 
-**The problem.** Every Django + React project needs the same code before it does anything of its own: serializers, permission classes, admin files, sign-in pages, tables and forms. A boilerplate copies it once. A coding agent writes it again in every project. Either way, a fix made upstream never reaches the copies.
+**The problem.** Every Django + React project needs the same code before it does anything of its own: serializers, permission classes, admin files, sign-in pages, tables and forms. A web game needs its own share: a loop, input, scenes and menus, saves, leaderboards, a wallet the player cannot edit, and a package for each game portal. A boilerplate copies that code once. A coding agent writes it again in every project. Either way, a fix made upstream never reaches the copies.
 
-**How Karni solves it.** That code ships as versioned packages: `karni` (Python), `@karni/ui` (React) and the `karni` command. `karni upgrade` moves a project to each new release, so a fix reaches every project that depends on Karni.
+**How Karni solves it.** That code ships as versioned packages on one base. Apps and games are peers: a project is an app, a game, or both ([apps and games](docs/apps-and-games.md)). The app side is `karni` (Python), `@karni/ui` (React) and the `karni` command. The game side is `karni-game` (the server) and `@karni/game` (the game in the browser), on the same accounts, admin, roles and deploy. `karni upgrade` moves a project to each new release, so a fix reaches every project that depends on Karni.
 
-**What you get.** You declare a model and who may access it. Karni gives you the REST API, the admin, role-based access, the React screens, the tests and the demo data.
+**What you get.** For an app, you declare a model and who may access it, and Karni gives you the REST API, the admin, role-based access, the React screens, the tests and the demo data. For a game, `karni new --kind game` gives you a small game you can play, scenes, a UI kit, drawing, collision, assets, sound and a seeded simulation to build it on, and a server that decides players, saves, scores and coins.
 
-**What you still write.** Your domain: your models, the rules for who may do what, and the logic and pages your product needs. AGENTS.md tells the agent the same, and `karni check` fails the build when it hand-writes what Karni ships.
+**What you still write.** Your domain or your game: your models, the rules for who may do what and the pages your product needs, or your game's rules, scenes and content. AGENTS.md tells the agent the same, and `karni check` fails the build when it hand-writes what Karni ships.
 
 ## Build an app from one line
 
@@ -227,9 +227,11 @@ Every feature, grouped by what you need. The [features page](docs/features.md) l
 
 **Build games** (experimental)
 
-- [`karni new --kind game`](docs/game.md#a-new-game-project): a small game you can play, its server, a page in the app and a package per game portal
+- [`karni new --kind game`](docs/apps-and-games.md): a game first, a small game you can play at `/play/<slug>/`, its server, the admin and a package per game portal. `--kind app+game` puts the game on a page of an app
+- [Game starters](docs/game-starters.md): `karni new "Sky Dash" --kind game --genre runner` writes a complete one-tap runner (a seeded track, a daily run with its own board, a shop of trails and hats, an ad continue) with its tests, and `karni starters list --match` finds the starter for a request
+- [Apps and games](docs/apps-and-games.md): the kinds, what each one installs, and the base an app and a game share
 - [karni-game](docs/game.md): guest players who keep their progress when they sign in, cloud saves, leaderboards, a soft-currency wallet, daily content and achievements, all decided on the server
-- [@karni/game](docs/game-client.md): a canvas loop, input, audio, saves on the device, an offline queue, adapters for Poki, CrazyGames, GameDistribution and Y8, and adapters for Phaser, PixiJS and React Three Fiber
+- [@karni/game](docs/game-client.md): a canvas loop, input, audio, saves on the device, an offline queue, a [simulation contract](docs/game-sim.md) with replay, [scenes](docs/game-scenes.md), a [UI kit](docs/game-ui.md), [drawing](docs/game-draw.md), [collision](docs/game-collide.md), [assets](docs/game-assets.md) and [sound](docs/game-sound.md), adapters for Poki, CrazyGames, GameDistribution and Y8, and adapters for Phaser, PixiJS and React Three Fiber
 - [The game API](docs/game-api.md): the HTTP contract, for a client or a realtime server of your own
 
 </td>

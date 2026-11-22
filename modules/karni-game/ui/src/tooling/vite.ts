@@ -1,12 +1,58 @@
 import type { Plugin, UserConfig } from "vite";
-import { resolveApiUrl, resolvePortal, type PortalConfig } from "./config";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, join, resolve as resolvePath, sep } from "node:path";
+import {
+  ASSET_DIR,
+  ASSET_REPORT,
+  manifestSource,
+  reportOf,
+  scanAssets,
+  sharpEncoder,
+  typesSource,
+  type GroupBudget,
+  type ScannedAsset,
+  type WebpEncoder,
+} from "./assets";
+import { apiHosts, resolveApiUrl, resolvePortal, type PortalConfig } from "./config";
 import { PORTALS, definePortals, portalRow, type PortalRow } from "./portals";
+
+/** The module a game imports for its asset manifest. */
+export const ASSETS_MODULE = "virtual:karni-game/assets";
+/** Where the WebP copies are written, under the root's `node_modules/.cache`. */
+const WEBP_CACHE = "node_modules/.cache/karni-game/webp/";
+const ASSETS_RESOLVED = `\0${ASSETS_MODULE}`;
 
 /** The module a game imports for its build's portal adapter. */
 export const PORTAL_MODULE = "virtual:karni-game/portal";
 const RESOLVED = `\0${PORTAL_MODULE}`;
 
+export interface AssetsPluginOptions {
+  /** The folder of the game's files, from the project root. Default "assets". */
+  dir?: string;
+  /**
+   * The most one group may download, in bytes: one number for every group,
+   * or a table by group name (`"*"` for the rest). Default 2 MiB. The package
+   * check fails a group over it.
+   */
+  budget?: GroupBudget;
+  /**
+   * Write a WebP copy of each PNG and JPEG when it is smaller, and keep the
+   * original as the fallback. `false` keeps the originals. Default true in a build.
+   * `encode` is the encoder to use (default: `sharp`, if the project installed it).
+   */
+  webp?: boolean | { quality?: number; encode?: WebpEncoder };
+  /** Write a `.d.ts` with the exact group and file names, at this path from the root. */
+  types?: string;
+  /** Hosts files may be fetched from besides the portal's own and the game API's. Default none. */
+  hosts?: readonly string[];
+}
+
 export interface KarniGameViteOptions {
+  /**
+   * The asset manifest: `virtual:karni-game/assets` lists the files of the
+   * assets folder by group. On when the folder exists. `false` turns it off.
+   */
+  assets?: AssetsPluginOptions | false;
   /** The portal this build is for. Default `KARNI_GAME_PORTAL` from the environment, else "web". */
   portal?: string;
   /**
@@ -30,6 +76,19 @@ export interface KarniGameViteOptions {
   singleFile?: boolean;
   /** Keep the relative base (`./`) the portals and zips need. Default true. */
   relativeBase?: boolean;
+  /**
+   * Where `vite dev` serves the game, as `/play/block-hopper/`: the path the
+   * project serves its build at, so a link or a reload works the same while
+   * developing. A build keeps the relative base, which suits that path and
+   * every portal. Default: none, and `vite dev` serves the game at `/`.
+   */
+  devBase?: string;
+}
+
+/** `play/block-hopper` as `/play/block-hopper/`: a base with a slash at each end. */
+export function servedBase(path: string): string {
+  const inner = path.trim().replace(/^\/+|\/+$/g, "");
+  return inner ? `/${inner}/` : "/";
 }
 
 function processEnv(): Readonly<Record<string, string | undefined>> {
@@ -94,11 +153,104 @@ export function inlineIntoHtml(
   return { html: out, inlined };
 }
 
+function assetsPlugin(
+  options: KarniGameViteOptions,
+  pick: () => { row: PortalRow },
+  apiUrl: string | null,
+): Plugin {
+  const settings: AssetsPluginOptions = options.assets || {};
+  let root = process.cwd();
+  let building = false;
+  let scanned: ScannedAsset[] | null = null;
+
+  const dir = (): string => {
+    const folder = settings.dir ?? ASSET_DIR;
+    return isAbsolute(folder) ? folder : resolvePath(root, folder);
+  };
+  const scan = async (): Promise<ScannedAsset[]> => {
+    const webp = settings.webp ?? true;
+    const given = typeof webp === "object" ? webp.encode : undefined;
+    const quality = typeof webp === "object" ? (webp.quality ?? 80) : 80;
+    const encode = webp && building ? (given ?? (await sharpEncoder(quality))) : null;
+    if (webp && building && !encode) {
+      console.warn(
+        "karni-game: no WebP copies were made. Install `sharp` (npm i -D sharp) or pass assets.webp.encode.",
+      );
+    }
+    scanned = await scanAssets(dir(), {
+      encode,
+      cacheDir: join(root, WEBP_CACHE),
+    });
+    return scanned;
+  };
+
+  return {
+    name: "karni-game:assets",
+    enforce: "pre",
+    config(config) {
+      // Files of the assets folder stay files: a small picture inlined as text would load with the page, not with its group.
+      if (
+        options.singleFile ||
+        options.assets === false ||
+        config.build?.assetsInlineLimit !== undefined
+      ) {
+        return;
+      }
+      const folder = settings.dir ?? ASSET_DIR;
+      return {
+        build: {
+          assetsInlineLimit: (file: string) => {
+            const path = file.split(sep).join("/");
+            return path.includes(`/${folder}/`) || path.includes(WEBP_CACHE) ? false : undefined;
+          },
+        },
+      };
+    },
+    configResolved(config) {
+      root = config.root;
+      building = config.command === "build";
+    },
+    resolveId(id) {
+      return id === ASSETS_MODULE ? ASSETS_RESOLVED : null;
+    },
+    async buildStart() {
+      if (options.assets === false || !existsSync(dir())) return;
+      this.addWatchFile(dir());
+      const assets = await scan();
+      if (settings.types) {
+        const file = resolvePath(root, settings.types);
+        const text = typesSource(assets);
+        const same = existsSync(file) && readFileSync(file, "utf8") === text;
+        if (!same) {
+          mkdirSync(dirname(file), { recursive: true });
+          writeFileSync(file, text);
+        }
+      }
+    },
+    async load(id) {
+      if (id !== ASSETS_RESOLVED) return null;
+      const assets = options.assets === false ? [] : (scanned ?? (await scan()));
+      const hosts = [...pick().row.hosts, ...apiHosts(apiUrl), ...(settings.hosts ?? [])];
+      return manifestSource(assets, hosts, settings.budget);
+    },
+    generateBundle() {
+      // A single file holds everything: there is no group to download, so no report.
+      if (options.assets === false || options.singleFile || !scanned || scanned.length === 0)
+        return;
+      this.emitFile({
+        type: "asset",
+        fileName: ASSET_REPORT,
+        source: JSON.stringify(reportOf(scanned, settings.budget), null, 2),
+      });
+    },
+  };
+}
+
 /**
- * The Vite preset of a game: a relative base, the build's one portal adapter
- * behind `virtual:karni-game/portal`, that portal's SDK tag in the page, the
- * `__KARNI_GAME_DEV__` flag (true only in `vite dev`), and an optional
- * single-file build.
+ * The Vite preset of a game: a relative base (or `devBase` in `vite dev`),
+ * the build's one portal adapter behind `virtual:karni-game/portal`, that
+ * portal's SDK tag in the page, the `__KARNI_GAME_DEV__` flag (true only in
+ * `vite dev`), and an optional single-file build.
  */
 export function karniGame(options: KarniGameViteOptions = {}): Plugin[] {
   const env = options.env ?? processEnv();
@@ -141,7 +293,8 @@ export function karniGame(options: KarniGameViteOptions = {}): Plugin[] {
           __KARNI_GAME_PORTAL__: JSON.stringify(pick().row.name),
         },
       };
-      if (options.relativeBase ?? true) config.base = "./";
+      if (dev && options.devBase !== undefined) config.base = servedBase(options.devBase);
+      else if (options.relativeBase ?? true) config.base = "./";
       if (options.singleFile) {
         // Vite 8 bundles with Rolldown, earlier versions with Rollup: each has its own switch.
         const rolldown = "rolldownVersion" in this.meta;
@@ -193,7 +346,12 @@ export function karniGame(options: KarniGameViteOptions = {}): Plugin[] {
     },
   };
 
-  return options.singleFile ? [main, singleFile] : [main];
+  const plugins = [
+    main,
+    assetsPlugin(options, pick, apiUrl),
+    ...(options.singleFile ? [singleFile] : []),
+  ];
+  return plugins;
 }
 
 export default karniGame;

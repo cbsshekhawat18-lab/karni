@@ -9,6 +9,187 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
+## 0.7.0 (unreleased)
+
+- **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web
+  apps and web games as peers on one base, and a project is an app, a game or both. The
+  game kind's project has the game as its front door: the game in `game/<slug>/`, its own
+  npm package on `@karni/game` with its rules in `src/rules/` and their tests in `tests/`
+  (`npm test`), served at `/play/<slug>/` (and `/` goes there) by its Vite dev server in
+  development (the `game` service of `docker-compose.yml`, port 5174) and by the production
+  web front from its build. The API, the admin and karni-game's server side (the `games`
+  app, `content/game.yaml`) are as before, and there is no React staff app unless
+  `--staff-app` asks for one. `npm run package` builds the same game for each portal. The
+  game's `package.json` names no author, and `.gitignore` keeps each game's installs,
+  builds, portal packages and test output out of git.
+
+- **Added (experimental): `karni new --kind app+game`**, an app with a game in it, what
+  `--kind game` made in 0.6.0 (the game on a page of the React app, `frontend/portal/` for
+  the portals). `karni add game` turns an app into an `app+game`. A project that records
+  `kind = "game"` with 0.6.0's layout (the game in `frontend/`, no `game/<slug>/` folder)
+  is read as `app+game`: nothing in it moves, its build, tests and `karni check` are as
+  before, `karni context` says to record the new name, and `karni rules sync` writes its
+  agent files for an app with a game. `docs/migrations/0.7.md` says how to record it, or
+  how to move the game out of the app.
+
+- **Added: the production web front serves the games.** A project with `game/<slug>/`
+  folders gets a `games` stage in its Dockerfile (each game built with `npm ci`, or `npm
+  install` until it has a lock), `/play/*` in the Caddyfile `karni make deploy compose`
+  writes (the build only, with the security headers Django sends and hashed assets cached
+  for a year), and, from `karni make deploy systemd-nginx`, a `location /play/` in the
+  nginx vhost with each release building the games (Node.js 20.19 or later on the server,
+  unless a game's `dist/` comes with the project) and a rollback publishing its own builds.
+
+- **Added: `manage.py karni_publish_web --front PATH=DIR`** (repeatable), and `fronts` in
+  `karni.deploy.web.publish`: another built front end published at a path of the web root,
+  kept like the staff app's build (an earlier build's files stay a week). The release step
+  publishes each game with it.
+
+- **Added: `karniGame({ devBase })` in `@karni/game/vite`**: where `vite dev` serves the
+  game, the path the project serves its build at (`/play/<slug>/`). A build keeps the
+  relative base.
+
+- **Fixed: the generated game draws inside its world only**, so a fall into a gap no longer
+  shows in the letterbox on a tall phone screen.
+
+- **Docs: [Apps and games](docs/apps-and-games.md)**, what each kind installs, what an app and
+  a game share, the layout of a game-first project and how a game is served. The kinds
+  table, the README, the docs home, the game pages and the deploy guide follow it, and
+  `examples/hybrid-demo` records the kind `app+game`.
+
+- **Added: `@karni/game/sim`, the simulation contract of a game's rules (experimental).** A
+  game's rules are plain state, a `step` over fixed ticks, inputs as data and the seeded
+  generator of `@karni/game`, with no clock and no `Math.random`. `defineSim` declares them,
+  `createSim` runs them and `createRecorder` keeps the seed and the ticks where the input
+  changed. `replay` and `verify` run a recording again and check it reaches its state hash
+  and score, and `hashState` is a 64-bit hash of canonical text that is the same on every
+  machine. `toRunRecord` and `fromRunRecord` fit a recording into the `run` of the score API
+  with no server change. `createSimLoop` runs a sim on the loop's fixed step. The test kit is
+  `runHeadless`, `checkDeterminism` and `fuzz` (random inputs for N ticks, with the invariants
+  the rules declare). The purity check, `findImpurities` and `karni-game check-rules` (also
+  `checkRules` in `@karni/game/build`), fails on `Date`, `performance`, `Math.random`, the
+  page, the network and timers in `src/rules/`, and a `karni-allow` marker with a reason
+  allows one use. The entry has a gzip size budget of 7200 bytes, tested. The example game's
+  rules moved to `example/block-hopper/src/rules/` on the contract, and its rewarded
+  continue is now an input. Docs: [Simulation and replay](docs/game-sim.md).
+
+- **Added: `@karni/game/scenes` and `@karni/game/ui`, scenes and the UI kit (experimental).** The scene
+  stack has `push`, `pop` and `replace`, overlays that pause the scene below, fade transitions that
+  are instant under reduced motion, hooks for enter, exit, pause, resume, update and draw, and
+  services handed in so no scene imports a global. `createEntityList` is an ordered list with tags
+  and removal that is safe during a loop, and `createStore` keeps settings and progress on the
+  save layer with a debounced write. The UI kit is a DOM layer above the canvas: `createUi` with
+  dialogs, confirm, screens and toasts, `openSettings` (volumes, mute, reduced motion, a
+  colour-safe palette and key remapping over `input.bind`), `openPause` wired to the loop's pause
+  reasons, `createTouchButtons` that feed the input layer, `showBootFailure` and `guardBoot` for a
+  start that throws, `createDevOverlay` (development builds only) and a strings table for every
+  word. Dialogs trap and restore focus, label themselves for screen readers and stay inside a
+  phone width, and the tests run axe in jsdom and, with colour contrast, in headless Chromium at
+  desktop and phone width in light and dark. The gzip size budgets are 2600 bytes for `scenes` and
+  9800 for `ui`, tested. The example game has a title scene, a play scene, a pause overlay and a
+  settings dialog on them. Docs: [Scenes](docs/game-scenes.md) and [Game UI](docs/game-ui.md).
+
+- **Added: `@karni/game/draw`, a light 2D layer on Canvas 2D (experimental).** `createRenderer`
+  draws named layers in order over `createView`: world layers through a camera with parallax,
+  screen layers in game units, a clip to the game area and culling of what is off screen.
+  `createCamera` follows a point or a box with a dead zone, an offset and smoothing, stays in
+  bounds, shakes and zooms. The painter draws shapes, text in a `textStyle` that lays out each
+  string once (with wrapping), and sprites cut from an image or a sheet (`createSprite`,
+  `sheetFrames`), turned, scaled or flipped. `defineClips` and `createAnimator` play frame
+  animation. `createTweens` moves number properties with sixteen easing functions (separate
+  exports), delays, repeats and there-and-back, and `damp` follows a value the same way at any
+  frame rate. `createParticles` keeps its particles in a pool and `createPool` is that pool for
+  anything else. Shake and particles scale down when the browser asks for less motion. No
+  WebGL, no scene graph beyond layers, no entity system. See docs/game-draw.md.
+
+- **Added: `@karni/game/collide`, kinematic collision (experimental).** Overlap and contact
+  tests for axis-aligned boxes and circles, segment and sweep tests, `castRay`, `moveBox` (slides
+  against solid boxes, never passes through a thin one, one-way ledges with drop-through, a
+  broad phase of the game's own as an option) and `createTriggers` (enter, stay and exit per
+  zone). No rigid-body physics. See docs/game-collide.md.
+
+- **Added: `loop.timeScale` and `loop.hitStop(ms)` on `createLoop`.** Slow motion keeps the fixed
+  step's size and runs fewer steps, so a seeded simulation stays deterministic. A hit-stop
+  freezes updates for real milliseconds while `render` goes on, and keeps a press made during it
+  for the first update after.
+
+- **Changed: Block Hopper, the example game, draws with `/draw` and moves with `/collide`**, and
+  a second example scene, Crate Climb, shows the camera, parallax, animated sprites, particles,
+  tweens, the box mover, trigger zones, hit-stop and slow motion. Both are played in headless
+  Chromium by the smoke run.
+
+- **Budgets:** each new entry point has a gzip size budget checked by a test on a minified build
+  (7.1 KB for `/draw`, 2.2 KB for `/collide`), a test checks that the per-frame paths of the
+  built bundles make no garbage, and a browser benchmark (2000 sprites, 1500 particles, 200
+  tweens and 50 bodies on the mover at 60 Hz, desktop and phone size) fails when the 95th
+  percentile of a frame's work passes 12 ms.
+
+- **Added: `@karni/game/assets` and `@karni/game/sfx`, assets and sound (experimental).** The
+  asset loader takes a manifest of images, fonts, sounds and data files in named groups and loads a
+  group with progress that never goes back, retries with a wait, a timeout and a readable
+  `AssetLoadError` for a boot failure screen. `unload` closes bitmaps, removes fonts and reports the
+  memory freed. Fonts are ready before the first text, and a file from a host that is not allowed is
+  refused. The Vite preset reads the `assets/` folder as the manifest (`virtual:karni-game/assets`),
+  writes an optional types file for exact names, makes a WebP copy of each PNG and JPEG through the
+  project's own `sharp` (or an encoder you pass) and keeps the original as the fallback, and writes
+  `karni-assets.json`: `checkPackage` fails a group over its size budget (2 MiB by default). The sound
+  module renders tones, sweeps, noise and arpeggios from plain specs, plays one-shots with pitch and
+  volume variation and a voice limit, loops music with a crossfade, and ducks it. Ramps run on the
+  audio clock, so a pause holds them, and nothing sounds before the first gesture. The audio layer
+  gained `Sound.gain`, `onUnlock` and `decode`. The smoke harness has a frame-time budget (p95 40 ms,
+  max 500 ms, scaled by `frameMultiplier` or `KARNI_SMOKE_FRAME_MULTIPLIER`) and `cpuThrottle`. The
+  gzip budgets are 3400 bytes for `assets` and 3100 for `sfx`, tested. The example game has a loading
+  scene, two stages whose art loads and unloads, and every sound from `sfx`. Fixed: a dialog taller
+  than the screen scrolls its body while the title and buttons stay in view. Docs:
+  [Assets](docs/game-assets.md) and [Sound](docs/game-sound.md).
+
+- **Added: sprites from an asset group.** `createSprite` and `sheetFrames` of `@karni/game/draw`
+  take an image of `@karni/game/assets` as it comes (`assets.image(group, name)`, with its source
+  and size). A sprite sheet and its frame data load as one group, and a sprite cut from a group
+  that was unloaded draws nothing, so a game draws a shape instead. Block Hopper's block, coins
+  and stage backdrops are drawn this way, and its HUD text has an outline. Docs:
+  [Drawing](docs/game-draw.md#sprites-from-an-asset-group) and [Assets](docs/game-assets.md).
+
+- **Added: `portal.canShowRewarded()`.** It is true when a rewarded ad can be asked for: the
+  portal is ready, its SDK has rewarded ads and none is playing. A build with no SDK (web,
+  itch.io) has none, so a game shows its "watch an ad" button only then. Block Hopper's game
+  over is now a panel of the UI kit at the foot of the screen (the score, the board, Hop again
+  and the continue when an ad can play), where the text was drawn over the block on a phone in
+  portrait, and its touch buttons step aside while the pause menu or that panel is up.
+
+- **Added: game starters, and the runner (experimental, M6).** `karni new "<Name>" --kind game
+  --genre runner` writes a complete one-tap runner, made as "Sky Dash", on every layer of
+  `@karni/game` and on karni-game: a seeded endless track on `@karni/game/sim` moved with
+  `collide` (every gap one a jump clears at the speed there, a second jump in the air, one
+  continue a run as an input), loading, title, play, pause, game-over and shop scenes with the
+  UI kit's panels, settings, pause and touch buttons, drawing on `draw` (seven layers with
+  parallax, sprites painted in code, particles, two trails and two hats), every sound from
+  `sfx`, save slots for progress and today's run, the daily run on the server's seed with its
+  own board, a shop paid in the server's coins, coins for an ad, and an ad continue through a
+  reward of no coins that the server caps at three a day. Its server side is in the project:
+  `content/game.yaml`, a run check in `games/game.py` on both boards (a score its own run claims
+  and a run of that length can reach) and six server tests, one of them proving that one player
+  never reads or changes another's saves, scores or wallet. The game's own tests (the rules,
+  determinism, a fuzz run, a replayed run), its purity check and a smoke run in headless
+  Chromium by touch and by keys within its frame budget pass on the first run. A colour-safe
+  palette on the Okabe-Ito set, with outlines in the colour-safe setting. `--genre blank`, the
+  default, is the game `--kind game` writes on its own, and `--genre` alone implies `--kind
+  game`. `karni starters list` (`--match "<one line>"`, `--json`) ranks the starters as `karni
+  recipes list` ranks recipes, and `karni starters show <genre>` lists the files one writes. A
+  starter is data and templates in the package that owns it (karni-game ships the runner in
+  `karni_game/starters/`), found through the `karni.starters` entry points, so a package of
+  your own adds one. New codes: C480 (no starter of that genre, naming the genres and what to
+  install), C481 (`--genre` with another kind, `--recipe` or `--design`), C482 (a starter that
+  cannot be read). CI's starters job builds each starter from scratch and runs every check of
+  it. Docs: [Game starters](docs/game-starters.md), and the walk-through in
+  [docs/game.md](docs/game.md#one-command-to-a-playable-game).
+
+- **Docs: Karni is a framework for web apps and web games.** The description on every surface
+  (docs/seo/description.txt, copied by `scripts/check_description.py --write`), the tagline ("The
+  Django + React framework where your coding agent writes only your app or your game"), the
+  README's What is Karni, the docs home, the FAQ and llms.txt say that apps and games are two peers
+  on one base, and @karni/game's package description names the 0.7.0 layer.
+
 ## 0.6.0 (2026-11-20)
 
 - **Changed: `karni seed` in a project built from a recipe writes realistic demo data.** The

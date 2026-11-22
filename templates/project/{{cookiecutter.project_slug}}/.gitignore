@@ -10,6 +10,16 @@ __pycache__/
 .karni-ui/
 frontend/node_modules/
 frontend/dist/
+{%- if cookiecutter.kind == "game" %}
+# The games (game/<slug>/): installs, builds, portal packages and test output.
+game/*/node_modules/
+game/*/dist/
+game/*/dist-portals/
+game/*/dist-smoke/
+game/*/test-results/
+game/*/playwright-report/
+game/*/coverage/
+{%- endif %}
 /data/
 # Machine-local karni state (one-time tips etc.); also self-ignored via its own .gitignore.
 .karni/local/

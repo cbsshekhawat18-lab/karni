@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni-charts"
-version = "0.6.0"
-description = "Saved charts for Karni: charts defined and previewed in the admin, served through each resource's aggregate action under its access. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
+version = "0.7.0"
+description = "Saved charts for Karni: charts defined and previewed in the admin, served through each resource's aggregate action under its access. Karni is an open-source Django + React framework for building web apps and web games with AI coding agents. Your agent writes only your domain or your game. The API, admin, permissions, React screens and game engine come from packages you upgrade. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
@@ -28,7 +28,7 @@ classifiers = [
 ]
 # Range-pinned per the module contract (docs/modules.md): karni 0.x minors
 # may break, so a module pins the minor it was built against.
-dependencies = ["karni>=0.6,<0.7"]
+dependencies = ["karni>=0.7,<0.8"]
 
 [project.urls]
 Homepage = "https://github.com/cbsshekhawat18-lab/karni"

@@ -19,6 +19,7 @@ describe("createPortal", () => {
     portal.happyMoment();
     await expect(portal.interstitial()).resolves.toBe("unavailable");
     await expect(portal.rewarded()).resolves.toBe(false);
+    expect(portal.canShowRewarded()).toBe(false);
     expect(portal.storage()).toBeNull();
     await expect(portal.hasAdblock()).resolves.toBe(false);
   });
@@ -129,6 +130,21 @@ describe("createPortal", () => {
       await portal.init();
       await expect(portal.rewarded()).resolves.toBe(expected);
     }
+  });
+
+  it("says a rewarded ad can be asked for only when ready, with an SDK that has them, and none playing", async () => {
+    const portal = createPortal(fakePortal({ adMs: 500 }));
+    expect(portal.canShowRewarded()).toBe(false);
+    await portal.init();
+    expect(portal.canShowRewarded()).toBe(true);
+    const watching = portal.rewarded("continue");
+    expect(portal.canShowRewarded()).toBe(false);
+    await vi.advanceTimersByTimeAsync(500);
+    await expect(watching).resolves.toBe(true);
+    expect(portal.canShowRewarded()).toBe(true);
+    const plain = createPortal(noPortal({ name: "web" }));
+    await plain.init();
+    expect(plain.canShowRewarded()).toBe(false);
   });
 
   it("treats anything but true from an adapter as no reward", async () => {

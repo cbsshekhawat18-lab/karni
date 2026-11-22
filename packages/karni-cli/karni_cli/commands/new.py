@@ -1,13 +1,17 @@
 """``karni new <name>``: scaffold a project of a kind from templates/project.
 
 The kind (:mod:`karni_cli.kinds`) is what the project is: ``site`` (a public
-website the client edits in the admin), ``app`` (an API and a React app) or
-``site+app``. ``--kind`` names it, an interactive run asks, and a run nobody
-can answer makes an app (a site with ``--design``). It is recorded as
-``kind`` under ``[tool.karni]`` in pyproject.toml. A kind with a site gets
-the site app (``karni make site``'s code, karni-site wired), and the
-template's settings for a site: registration off, the roles staff and
-editor. ``--no-staff-app`` leaves ``frontend/`` out of a site.
+website the client edits in the admin), ``app`` (an API and a React app),
+``site+app``, ``game`` (a game first, experimental) or ``app+game`` (an app
+with a game in it, experimental). ``--kind`` names it, an interactive run
+asks, and a run nobody can answer makes an app (a site with ``--design``). It
+is recorded as ``kind`` under ``[tool.karni]`` in pyproject.toml. A kind with
+a site gets the site app (``karni make site``'s code, karni-site wired), and
+the template's settings for a site: registration off, the roles staff and
+editor. ``--no-staff-app`` leaves ``frontend/`` out of a site. A game has no
+staff app unless ``--staff-app`` asks for one: its game is in
+``game/<slug>/`` (:func:`karni_cli.generators.game.plan_game_first`), served at
+``/play/<slug>/``.
 
 ``--design <dir>`` builds the site from a designer's pages, as an agent
 would by hand: ``karni design analyze --map content/design-map.json`` (the
@@ -67,7 +71,7 @@ from typing import TYPE_CHECKING
 
 import typer
 
-from karni_cli import agent_data, kinds, scaffold
+from karni_cli import agent_data, kinds, scaffold, starters
 from karni_cli.adapters import MODULES_DIR, sync
 from karni_cli.brand import print_mark
 from karni_cli.generators import deploy
@@ -257,7 +261,7 @@ def choose_kind(kind: str | None, design: Path | None, *, ask: bool) -> str:
         raise CliError(
             f"--kind {kind!r} is not a kind. Use one of {', '.join(kinds.KINDS)}: site for a "
             "public website, app for an API and a React app, site+app for both, game for a "
-            "game.",
+            "game first, app+game for an app with a game in it.",
             code="C106",
         )
     if design is not None and not kinds.has_site(kind):
@@ -270,8 +274,46 @@ def choose_kind(kind: str | None, design: Path | None, *, ask: bool) -> str:
     return kind
 
 
+def choose_genre(
+    genre: str | None, *, kind: str | None, recipe: bool, design: bool
+) -> starters.Starter | None:
+    """The starter ``--genre`` names, checked before anything is written.
+
+    ``None`` without ``--genre`` and for ``blank``: the game ``--kind game``
+    writes on its own.
+
+    :raises CliError: ``C481`` for a kind or option a starter cannot go with,
+        ``C480`` for a genre that is not there.
+    """
+    if genre is None:
+        return None
+    clash = (
+        "--recipe makes an app from a recipe's karni.yaml"
+        if recipe
+        else "--design builds a public site"
+        if design
+        else f"--kind {kind or kinds.DEFAULT} is not a game first"
+        if kind != "game"
+        else None
+    )
+    if clash is not None:
+        raise CliError(
+            f"--genre {genre} writes a game in game/<slug>/, and {clash}. Use --kind game with "
+            "--genre (an app with a game in it is --kind app+game, without --genre).",
+            code="C481",
+        )
+    found = starters.load().require(genre)
+    return None if found.name == starters.BLANK else found
+
+
 def choose_staff_app(kind: str, staff_app: bool | None, *, ask: bool) -> bool:
-    """Whether ``frontend/`` is made: always for an app, a choice for a site (default yes)."""
+    """Whether ``frontend/`` is made: always for an app, a choice for a site (default yes).
+
+    A game (``--kind game``) has none unless ``--staff-app`` asks: staff work
+    in the admin, which has the game's screens.
+    """
+    if kind == "game":
+        return bool(staff_app)
     if kind != "site":
         if staff_app is False:
             raise CliError(
@@ -320,14 +362,28 @@ def _make_site(project: Path, site_app: str) -> None:
     record_site_guidance(project)
 
 
-def _make_game(project: Path, name: str) -> list[str]:
-    """The game kind's files (karni-game, the games app, the content file, the game page)."""
+def game_slug(slug: str) -> str:
+    """The game's slug from the project's (``block_hopper`` is ``block-hopper``)."""
+    return slug.replace("_", "-")
+
+
+def _make_game(
+    project: Path, name: str, slug: str, kind: str, starter: starters.Starter | None = None
+) -> list[str]:
+    """A game kind's files: karni-game, the games app, the content file, and the game itself.
+
+    ``game``: the game in ``game/<slug>/``, from ``starter`` when ``--genre``
+    names one. ``app+game``: the game inside the staff app, on a page.
+    """
     from karni_cli.commands.add import record_guidance
     from karni_cli.generators import game as game_gen
     from karni_cli.generators.core import Workspace
 
     ws = Workspace(project)
-    lines = game_gen.plan(ws, title=name, slug=project.name.replace("_", "-"))
+    if kind == "game":
+        lines = game_gen.plan_game_first(ws, title=name, slug=game_slug(slug), starter=starter)
+    else:
+        lines = game_gen.plan(ws, title=name, slug=game_slug(slug))
     ws.commit(dry_run=False)
     record_guidance(project, "game", "karni_game")
     return lines
@@ -363,7 +419,13 @@ def _site_from_design(project: Path, design: Path, site_app: str) -> None:
 
 
 def _setup_lines(
-    slug: str, project: Path, staff_app: bool, site: bool, *, here: bool = False
+    slug: str,
+    project: Path,
+    staff_app: bool,
+    site: bool,
+    *,
+    here: bool = False,
+    game_first: bool = False,
 ) -> list[str]:
     without_docker = (
         '  # Without Docker: README.md, "Using a local Karni checkout" (a virtualenv with '
@@ -379,6 +441,11 @@ def _setup_lines(
         lines.append(
             "  (cd frontend && npm install)  # editor, lint, type-check and `karni check` on "
             "the host"
+        )
+    if game_first:
+        folder = f"game/{game_slug(slug)}"
+        lines.append(
+            f"  (cd {folder} && npm install)  # editor, type-check and the rules' tests on the host"
         )
     if site and not (project / MODULES_DIR / "site.md").is_file():
         lines.append(
@@ -396,6 +463,37 @@ def _new_app_lines() -> list[str]:
         (
             "  (if your tool does not pass that line on, the prompt: Run `karni rules "
             "--procedure new-app` and follow every step for: <the app in one line>)"
+        ),
+    ]
+
+
+def _new_game_lines(game: str, starter: starters.Starter | None = None) -> list[str]:
+    """The last lines of ``karni new --kind game``: where the game's own code goes."""
+    folder = f"game/{game}"
+    if starter is not None:
+        changed = "; ".join(starter.usually_changed) or "the game's own code"
+        return [
+            (
+                f"  (cd {folder} && npm test && npm run check-rules)  # the rules, determinism, "
+                "fuzz and replay tests, and the rules' purity"
+            ),
+            (
+                f"  (cd {folder} && npx playwright install chromium && npm run smoke)  # played "
+                "in a headless browser within its frame budget"
+            ),
+            "  karni test  # the server tests: the boards, the shop, the continue, players kept apart",
+            (
+                f"The {starter.name} starter is the project's own code now, on @karni/game. "
+                f"What people usually change: {changed}. docs/game-starters.md walks through it."
+            ),
+        ]
+    return [
+        (
+            "Then build the game with your agent. Its own code is its rules in "
+            f"{folder}/src/rules/ (plain functions of a seed and the inputs, tested in "
+            f"{folder}/tests/), its drawing in {folder}/src/play.ts, and what the server "
+            "declares (boards, coins, rewards, items) in content/game.yaml. docs/game.md and "
+            "docs/game-client.md describe both sides."
         ),
     ]
 
@@ -439,8 +537,8 @@ def choose_recipe(
         if design is not None
         else "--kind site has no React app for the recipe's pages"
         if kind == "site"
-        else "--kind game makes a game on karni-game, without a karni.yaml"
-        if kind == "game"
+        else f"--kind {kind} makes a game on karni-game, without a karni.yaml"
+        if kind is not None and kinds.has_game(kind)
         else "--no-staff-app leaves out the React app the recipe's pages live in"
         if staff_app is False
         else None
@@ -627,12 +725,14 @@ def new(
     kind: str | None = typer.Option(
         None,
         "--kind",
-        metavar="[site|app|site+app|game]",
+        metavar="[site|app|site+app|game|app+game]",
         help=(
             "What the project is: site (a public website the client edits in the admin), app "
-            "(an API and a React app for signed-in users), site+app, or game (experimental: an "
-            "app with a game in it, on karni-game and @karni/game). Asked when run in a "
-            "terminal, else app (site with --design)."
+            "(an API and a React app for signed-in users), site+app, game (experimental: a "
+            "game first, in game/<slug>/ and served at /play/<slug>/, on karni-game and "
+            "@karni/game, with the admin and no staff app), or app+game (experimental: an app "
+            "with a game on one of its pages). Asked when run in a terminal, else app (site "
+            "with --design)."
         ),
         show_default=False,
     ),
@@ -650,7 +750,8 @@ def new(
         "--staff-app/--no-staff-app",
         help=(
             "The React staff app in frontend/. An app always has it. A site has it unless "
-            "--no-staff-app, and then staff work in the admin."
+            "--no-staff-app, and then staff work in the admin. A game has it only with "
+            "--staff-app."
         ),
         show_default=False,
     ),
@@ -669,6 +770,17 @@ def new(
         help="Make the project a git repository with a first commit of what karni new wrote. "
         "Skipped inside an existing repository and when git is not installed.",
     ),
+    genre: str | None = typer.Option(
+        None,
+        "--genre",
+        help=(
+            "Experimental, with --kind game: start the game from a starter (karni starters "
+            "list): runner, a one-tap endless runner with a daily run, a cosmetics shop and an "
+            "ad continue, from karni-game. blank (the default) is the small game --kind game "
+            "writes on its own."
+        ),
+        show_default=False,
+    ),
     recipe: list[str] | None = typer.Option(
         None,
         "--recipe",
@@ -683,7 +795,7 @@ def new(
         show_default=False,
     ),
 ) -> None:
-    """Create a project: a public website, an app, or both.
+    """Create a project: a public website, an app, both, or a game.
 
     Every kind has the API, the admin, PostgreSQL, Redis, Celery, the
     security defaults and the production stack. A site (--kind site) also has
@@ -691,6 +803,11 @@ def new(
     text, image, menu and page title in the admin, registration off and the
     roles staff and editor. An app (--kind app) has the React app in
     frontend/. A site+app has both.
+
+    A game (--kind game, experimental) is the game first: the game in
+    game/<slug>/ on @karni/game, served at /play/<slug>/, its server on
+    karni-game, and no staff app unless --staff-app. An app+game (--kind
+    app+game) is an app with the game on one of its pages.
 
     With --design, the site is built from a designer's pages, and the next
     steps say what is left: the models, the real content and the loops
@@ -704,6 +821,10 @@ def new(
     Example: karni new "Crumb Bakery" --kind site --design ../design
 
     Example: karni new "Corner Shop" --recipe shop
+
+    Example: karni new "Block Hopper" --kind game
+
+    Example: karni new "Sky Dash" --kind game --genre runner
 
     Example: karni new "Studio" --recipe booking --recipe crm
 
@@ -737,6 +858,9 @@ def new(
         staff_app=staff_app,
     )
     more = more_recipes(chosen_recipes)
+    if genre is not None and kind is None:
+        kind = "game"  # a starter is a game first
+    starter = choose_genre(genre, kind=kind, recipe=bool(chosen_recipes), design=design is not None)
     source = _design_folder(design) if design is not None else None
     ask = interactive()
     chosen = choose_kind(recipe_kind or kind, source, ask=ask)
@@ -771,7 +895,7 @@ def new(
         _site_from_design(project, source, site_app)
     elif site:
         _make_site(project, site_app)
-    game_lines = _make_game(project, name) if chosen == "game" else []
+    game_lines = _make_game(project, name, slug, chosen, starter) if kinds.has_game(chosen) else []
     # The production stack: the same files `karni make deploy compose` writes.
     deploy.write_new_project(project, domain=domain, staff_app=with_staff_app)
     write_agent_adapters(project)
@@ -813,7 +937,10 @@ def new(
         _recipe_next(picked, blocker, _setup_lines(slug, project, with_staff_app, site, here=here))
         return
     typer.echo("Next steps:")
-    for line in _setup_lines(slug, project, with_staff_app, site, here=here):
+    setup = _setup_lines(
+        slug, project, with_staff_app, site, here=here, game_first=chosen == "game"
+    )
+    for line in setup:
         typer.echo(line)
     if source is not None:
         typer.echo("  karni migrate && karni test  # the page test covers every page")
@@ -834,13 +961,21 @@ def new(
             f"designer's pages (karni rules --procedure {PROCEDURE}), or karni make view <name> "
             f"--app {site_app}"
         )
-    if chosen == "game":
+    if kinds.has_game(chosen):
         typer.echo("  karni migrate && karni load content/game.yaml  # the game on the server")
+    if chosen == "game":
+        played = game_slug(slug)
         typer.echo(
-            "  # the game's code: frontend/src/game/, on @karni/game (the client of karni-game, "
-            "modules/karni-game/ui). Until that package is published, npm install needs it "
-            "from a Karni checkout."
+            f"  # the game: game/{played}/ on @karni/game, at http://localhost:5174/play/{played}/ "
+            f"(docker compose's game service, or npm run dev in game/{played}/), the admin at "
+            "http://localhost:8000/admin/"
+        )
+    elif chosen == "app+game":
+        typer.echo(
+            "  # the game's code: frontend/src/game/, on @karni/game, on the page /game of the "
+            "app (http://localhost:5173/game)"
         )
     typer.echo("  karni check")
-    for line in _new_app_lines():
+    lines = _new_game_lines(game_slug(slug), starter) if chosen == "game" else _new_app_lines()
+    for line in lines:
         typer.echo(line)

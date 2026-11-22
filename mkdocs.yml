@@ -1,5 +1,5 @@
 site_name: Karni
-site_description: "Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
+site_description: "Karni is an open-source Django + React framework for building web apps and web games with AI coding agents. Your agent writes only your domain or your game. The API, admin, permissions, React screens and game engine come from packages you upgrade. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
 site_url: https://cbsshekhawat18-lab.github.io/karni/
 repo_url: https://github.com/cbsshekhawat18-lab/karni
 repo_name: cbsshekhawat18-lab/karni
@@ -121,9 +121,18 @@ nav:
       - "AI extraction (karni-ai)": ai-extraction.md
       - Protected files (S3): storage.md
       - "Commerce (karni-commerce)": commerce.md
+      - Apps and games: apps-and-games.md
       - "Games (karni-game)": game.md
       - The game API: game-api.md
       - "Games in the browser (@karni/game)": game-client.md
+      - "Game starters (karni new --genre)": game-starters.md
+      - "Simulation and replay (@karni/game/sim)": game-sim.md
+      - "Scenes (@karni/game/scenes)": game-scenes.md
+      - "Game UI (@karni/game/ui)": game-ui.md
+      - "Drawing (@karni/game/draw)": game-draw.md
+      - "Collision (@karni/game/collide)": game-collide.md
+      - "Assets (@karni/game/assets)": game-assets.md
+      - "Sound (@karni/game/sfx)": game-sound.md
       - "App spec (karni.yaml)": app-spec.md
       - Recipes:
           - All recipes: recipes/index.md
@@ -153,6 +162,7 @@ nav:
   - Karni for AI agents: agents.md
   - Upgrading:
       - Stability promise: stability.md
+      - Migrating to 0.7: migrations/0.7.md
       - Migrating to 0.6: migrations/0.6.md
       - Migrating to 0.5: migrations/0.5.md
       - Migrating to 0.4: migrations/0.4.md
@@ -172,4 +182,4 @@ nav:
 
 extra:
   # The line after the name in the home page title, the hero and the README.
-  tagline: "The Django + React framework where your coding agent writes only your app"
+  tagline: "The Django + React framework where your coding agent writes only your app or your game"

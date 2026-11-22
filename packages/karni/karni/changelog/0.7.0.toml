@@ -1,0 +1,18 @@
+# Karni 0.7.0: what changed since 0.6.0 that a project may notice.
+# Schema and rules: karni/changelog/__init__.py. Migration notes: docs/migrations/0.7.md.
+version = "0.7.0"
+
+[[change]]
+id = "game-kind-game-first"
+kind = "project-files"
+symbol = "karni new --kind game, [tool.karni] kind"
+replacement = 'kind = "app+game"'
+summary = """\
+karni new --kind game makes a game first: the game in game/<slug>/, served \
+at /play/<slug>/, with no React staff app unless --staff-app. What 0.6.0's \
+--kind game made, an app with the game on a page, is the kind app+game. A \
+project made with 0.6.0's --kind game keeps working and is read as app+game: \
+record kind = "app+game" under [tool.karni] and run karni rules sync, or move \
+the game out of the app as the migration note says."""
+mechanical = false
+migration = "migrations/0.7.md#the-game-kind-makes-a-game-first"

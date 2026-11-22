@@ -111,6 +111,11 @@ export interface Portal {
   /** Can an interstitial be asked for now (ready, no ad playing, cooldown passed)? */
   canShowInterstitial(): boolean;
   interstitial(placement?: string): Promise<InterstitialOutcome>;
+  /**
+   * Can a rewarded ad be asked for now (ready, an SDK with rewarded ads, no ad
+   * playing)? A game shows its "watch an ad" button only then.
+   */
+  canShowRewarded(): boolean;
   /** True only when the SDK reports the ad as watched to the end. */
   rewarded(placement?: string): Promise<boolean>;
   /** The portal's data module, or null. */

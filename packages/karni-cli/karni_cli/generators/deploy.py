@@ -15,8 +15,10 @@ without Docker, gunicorn and Celery under systemd behind nginx, written into
   bind mount of source.
 * ``Caddyfile``: the web front. Caddy reads it from the shared volume, where
   the release step publishes it from the image (``manage.py
-  karni_publish_web``), together with the built staff app and the security
-  headers Django sends.
+  karni_publish_web``), together with the built staff app, each game's build
+  (a project with ``game/<slug>/`` folders: served at ``/play/<slug>/``, and
+  ``/`` goes to the game in a game-first project) and the security headers
+  Django sends.
 * ``.env.prod.example``: every production value, to copy to ``.env.prod``.
 * ``.gitignore`` and ``.dockerignore`` get ``.env.prod`` when they lack it, so
   the secrets are neither committed nor copied into the image.
@@ -42,6 +44,7 @@ from pathlib import Path
 
 import typer
 
+from karni_cli import kinds
 from karni_cli.generators import systemd_nginx
 from karni_cli.generators.core import DRY_RUN_OPTION, FORCE_OPTION, Workspace, project_workspace
 from karni_cli.project import CliError
@@ -89,6 +92,11 @@ class Options:
     #: Whether the project has a public site (karni_site): the release step then renders
     #: every page once (``manage.py karni_site_seed``), so no visit has to store a default.
     site: bool = False
+    #: The project's games (``game/<slug>/``): the image builds each one, the release step
+    #: publishes it, and the web front serves it at ``/play/<slug>/``.
+    games: tuple[str, ...] = ()
+    #: The game ``/`` goes to: a game-first project's one game (``kind = "game"``).
+    front_door: str | None = None
 
     @property
     def app(self) -> bool:
@@ -98,6 +106,15 @@ class Options:
     def app_base(self) -> str:
         """The Vite base the staff app is built with."""
         return "/" if self.app_domain or not self.app_path else self.app_path
+
+    @property
+    def door(self) -> str | None:
+        """The game ``/`` goes to, unless the staff app is served at ``/``."""
+        if self.front_door is None or self.front_door not in self.games:
+            return None
+        return (
+            None if self.app and not self.app_domain and self.app_base == "/" else self.front_door
+        )
 
     @property
     def app_url(self) -> str:
@@ -160,6 +177,7 @@ def compose(options: Options) -> str:
     publish = "python manage.py karni_publish_web --root /data/web"
     if not options.app:
         publish += ' --app ""'
+    publish += "".join(f" --front play/{slug}=game/{slug}/dist" for slug in options.games)
     seed = ["        && python manage.py karni_site_seed"] if options.site else []
     out = [
         f"# Production stack for {slug}. `karni make deploy compose` wrote this file, and it",
@@ -201,6 +219,11 @@ def compose(options: Options) -> str:
         "  # Runs to completion before the others start: the deploy checks, the",
         "  # migrations, collectstatic, then the Caddyfile, the security headers and",
         "  # the staff app into /data/web for caddy. If it fails, nothing starts.",
+        *(
+            ["  # --front publishes each game's build (game/<slug>/dist) for /play/<slug>/."]
+            if options.games
+            else []
+        ),
         *(
             [
                 "  # karni_site_seed renders every page of the site once, so the defaults its",
@@ -451,6 +474,37 @@ _FILES = """\
 """
 
 
+def _games_block(options: Options) -> list[str]:
+    """The Caddyfile's lines for the games: each build at ``/play/<slug>/``, and the front door."""
+    if not options.games:
+        return []
+    out = [
+        "",
+        "\t# The games (game/<slug>/), built into the image and published by the release step,",
+        "\t# each at /play/<slug>/. Only the builds are served, never a game's source. A",
+        "\t# build's assets carry their content's hash in their names.",
+        f"\t# Games: {', '.join(options.games)}.",
+        "\t@play_bare path_regexp ^/play/[^/]+$",
+        "\tredir @play_bare {path}/ 308",
+        "\thandle /play/* {",
+        f"\t\troot * {WEB_ROOT}",
+        "\t\timport karni_headers",
+        "\t\t@play_assets path_regexp ^/play/[^/]+/assets/",
+        '\t\theader @play_assets Cache-Control "public, max-age=31536000, immutable"',
+        "\t\t@play_pages not path_regexp ^/play/[^/]+/assets/",
+        '\t\theader @play_pages Cache-Control "no-cache"',
+        "\t\tfile_server",
+        "\t}",
+    ]
+    if options.door is not None:
+        out += [
+            "",
+            "\t# The front door of a game-first project: its game.",
+            f"\tredir / /play/{options.door}/ 302",
+        ]
+    return out
+
+
 def _app_block(prefix: str, root: str, index: str) -> list[str]:
     assets = f"{prefix}assets/*"
     return [
@@ -469,6 +523,7 @@ def _app_block(prefix: str, root: str, index: str) -> list[str]:
 def caddyfile(options: Options) -> str:
     """The text of the ``Caddyfile``."""
     files = _FILES.replace("{volume}", VOLUME)
+    games = _games_block(options)
     out = [
         f"# The web front of {options.slug}'s production stack (docker-compose.prod.yml).",
         "# `karni make deploy compose` wrote it, and it is yours to edit. The release step",
@@ -493,6 +548,7 @@ def caddyfile(options: Options) -> str:
         "\tencode zstd gzip",
         "",
         files.rstrip("\n"),
+        *games,
     ]
     in_path = options.app and not options.app_domain and options.app_base != "/"
     at_root = options.app and not options.app_domain and options.app_base == "/"
@@ -607,6 +663,16 @@ def site_lines(domain: str) -> list[str]:
     ]
 
 
+def game_lines() -> list[str]:
+    """The games' section of a production environment file (compose and systemd-nginx)."""
+    return [
+        "# --- The games (karni-game) -------------------------------------------------------",
+        "# The project serves each game at /play/<slug>/, on this origin. A portal package",
+        "# calls /api/game/ from the portal's origin: list those origins, comma-separated.",
+        "# KARNI_GAME_CORS_ORIGINS=https://games.example.com",
+    ]
+
+
 def env_example(options: Options) -> str:
     """The text of ``.env.prod.example``."""
     hosts = [options.domain]
@@ -660,6 +726,7 @@ def env_example(options: Options) -> str:
         *email_lines(options.domain),
         "",
         *([*site_lines(options.domain), ""] if options.site else []),
+        *([*game_lines(), ""] if options.games else []),
         "# --- Database and Redis ---------------------------------------------------------",
     ]
     if options.db:
@@ -772,6 +839,8 @@ def required_targets(options: Options) -> list[str]:
     needed = ["prod"]
     if options.app:
         needed.append("staff-app")
+    if options.games:
+        needed.append("games")
     if options.backups:
         needed.append("backup")
     return needed
@@ -802,8 +871,9 @@ def plan(ws: Workspace, options: Options) -> None:
             f"The Dockerfile has no {', '.join(missing)} target"
             f"{'s' if len(missing) > 1 else ''}, which docker-compose.prod.yml builds. Add "
             f"{'them' if len(missing) > 1 else 'it'} from a fresh `karni new` project's "
-            "Dockerfile (docs/deploy.md#an-existing-project), or leave out what needs "
-            "it (--no-app for staff-app, --no-backups for backup).",
+            "Dockerfile (docs/deploy.md#an-existing-project, a game's in "
+            "docs/apps-and-games.md#serving-a-game), or leave out what needs it (--no-app for "
+            "staff-app, --no-backups for backup).",
             code="C105",
         )
     ws.create(COMPOSE_FILE, compose(options))
@@ -823,15 +893,28 @@ def has_site(ws: Workspace) -> bool:
     return '"karni_site"' in (ws.read("config/settings.py") or "")
 
 
+def game_facts(ws: Workspace) -> tuple[tuple[str, ...], str | None]:
+    """The project's games (``game/<slug>/``) and the one ``/`` goes to in a game-first project."""
+    games = kinds.game_folders(ws.root)
+    try:
+        recorded = kinds.recorded_kind(ws.read("pyproject.toml"))
+    except CliError:
+        recorded = None
+    return games, games[0] if recorded == "game" and len(games) == 1 else None
+
+
 def defaults(ws: Workspace, *, domain: str | None = None) -> Options:
     example = ws.read(".env.example")
     urls = ws.read("config/urls.py") or ""
+    games, front_door = game_facts(ws)
     return Options(
         ready_path="/readyz" if "karni.health.probe_urls" in urls else "/health/",
         site=has_site(ws),
         slug=project_slug(ws),
         domain=domain or _env_value(example, "DOMAIN") or DEFAULT_DOMAIN,
         auth_mode=_env_value(example, "KARNI_AUTH_MODE") or "jwt",
+        games=games,
+        front_door=front_door,
     )
 
 
@@ -891,6 +974,8 @@ def _systemd_nginx(
         ready_path=base.ready_path,
         site=base.site,
         single_process=single_process,
+        games=base.games,
+        front_door=base.front_door,
     )
     systemd_nginx.plan(
         ws,
@@ -898,6 +983,7 @@ def _systemd_nginx(
         [
             *email_lines(options.domain),
             *(["", *site_lines(options.domain)] if options.site else []),
+            *(["", *game_lines()] if options.games else []),
         ],
         static_lines(options.site),
     )
@@ -1086,7 +1172,7 @@ def command(
             "between slashes, e.g. /app/ or /staff/ or /.",
             code="C106",
         )
-    if path in ("/static/", "/media/", "/api/", "/health/"):
+    if path in ("/static/", "/media/", "/api/", "/health/", "/play/"):
         raise CliError(f"--app-path {path} is a path Django or Caddy already serves.", code="C106")
     ws = project_workspace(force or dry_run)  # a dry run shows the diff against what exists
     base = defaults(ws, domain=_host(domain, "--domain") if domain else None)
@@ -1102,6 +1188,8 @@ def command(
         auth_mode=base.auth_mode,
         ready_path=base.ready_path,
         site=base.site,
+        games=base.games,
+        front_door=base.front_door,
     )
     plan(ws, options)
     if dry_run and not force:

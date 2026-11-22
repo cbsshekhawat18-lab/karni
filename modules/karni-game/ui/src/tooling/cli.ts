@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { checkPackage, checkSource, formatProblems } from "./checks";
 import { API_URL_ENV, PortalConfigError, apiHosts, resolveApiUrl } from "./config";
 import { packagePortals } from "./package";
+import { checkRules, formatImpurities } from "./rules";
 import { PORTALS, portalRow } from "./portals";
 
 const USAGE = `karni-game: build tools of @karni/game
@@ -13,6 +14,7 @@ const USAGE = `karni-game: build tools of @karni/game
   karni-game check DIR --portal NAME       check a built package
                      [--allow-host HOST]...
   karni-game check-source [DIR]...         look for portal ids typed into the source (default: src scripts)
+  karni-game check-rules [DIR]             fail on a clock, Math.random, the page or the network in the rules (default: src/rules)
 
 Portal ids come from the build environment (KARNI_GAME_<PORTAL>_<OPTION>) or karniGame({ config }).
 The game API a portal build calls comes from --api-url or KARNI_GAME_API_URL, and its host is allowed.`;
@@ -117,6 +119,12 @@ async function run(argv: readonly string[], out: (line: string) => void): Promis
       { ids },
     );
     out(problems.length ? `FAIL\n${formatProblems(problems)}` : "ok   no portal id in the source");
+    return problems.length ? 1 : 0;
+  }
+  if (command === "check-rules") {
+    const [dir] = positional(args);
+    const problems = checkRules(dir ?? "src/rules");
+    out(problems.length ? `FAIL\n${formatImpurities(problems)}` : "ok   the rules are pure");
     return problems.length ? 1 : 0;
   }
   out(USAGE);

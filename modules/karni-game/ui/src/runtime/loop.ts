@@ -25,6 +25,8 @@ export interface LoopOptions {
   afterFrame?(): void;
   /** Keep calling `render` while paused, so a pause screen is drawn. Default true. */
   renderWhilePaused?: boolean;
+  /** Game seconds per real second: 0.5 is slow motion. Default 1. See `Loop.timeScale`. */
+  timeScale?: number;
   /**
    * A frame that throws is reported here and the loop keeps running, so one
    * bad frame never stops the game. Default: `console.error` for the first ten.
@@ -57,6 +59,20 @@ export interface Loop {
   readonly frame: number;
   /** The fixed-step accumulator, when `step` is set. */
   readonly fixed: FixedStep | null;
+  /**
+   * Game seconds per real second, from 0 (frozen) up: 0.5 is slow motion.
+   * With a fixed step the step stays the same size and fewer steps run, so a
+   * seeded simulation stays deterministic. `render` keeps the real frame time.
+   */
+  timeScale: number;
+  /**
+   * Freeze the game for `ms` real milliseconds (the pause on a hit): no
+   * update runs, `render` goes on, and a press made meanwhile waits for the
+   * first update after it. A second call keeps the longer of the two.
+   */
+  hitStop(ms: number): void;
+  /** The hit-stop left, in milliseconds (0 when none). */
+  readonly hitStopMs: number;
   /** Run one frame of `dt` seconds by hand: for tests and headless runs. */
   tick(dt: number): void;
   on<K extends keyof LoopEvents>(event: K, listener: (value: LoopEvents[K]) => void): () => void;
@@ -93,6 +109,10 @@ export function createLoop(options: LoopOptions): Loop {
   let handle: number | null = null;
   let last: number | null = null;
   let frame = 0;
+  const scaleOf = (value: number): number => (Number.isFinite(value) ? Math.max(0, value) : 1);
+  let timeScale = scaleOf(options.timeScale ?? 1);
+  /** Seconds of hit-stop left. */
+  let stopLeft = 0;
 
   const safely = (phase: "update" | "render" | "afterFrame", fn: () => void): void => {
     try {
@@ -106,18 +126,26 @@ export function createLoop(options: LoopOptions): Loop {
     frame += 1;
     const clamped = Math.min(Math.max(0, Number.isFinite(dt) ? dt : 0), maxDt);
     const paused = pauses.paused;
+    // A hit-stop counts down in real time, and not while paused.
+    const stopped = !paused && stopLeft > 0;
+    if (stopped) {
+      stopLeft -= clamped;
+      // Rounding must not leave a sliver of a stop for one more frame.
+      if (stopLeft < 1e-9) stopLeft = 0;
+    }
     let alpha = 0;
     if (!paused) {
+      const scaled = stopped ? 0 : clamped * timeScale;
       safely("update", () => {
-        if (fixed) alpha = fixed.advance(clamped, options.update);
-        else options.update(clamped);
+        if (fixed) alpha = fixed.advance(scaled, options.update);
+        else if (!stopped) options.update(scaled);
       });
     }
     if (options.render && (!paused || renderWhilePaused)) {
       const render = options.render;
       safely("render", () => render(alpha, paused ? 0 : clamped));
     }
-    const stepped = paused || !fixed || fixed.lastSteps > 0;
+    const stepped = paused || (fixed ? fixed.lastSteps > 0 : !stopped);
     if (options.afterFrame && stepped) safely("afterFrame", options.afterFrame);
   };
 
@@ -154,6 +182,18 @@ export function createLoop(options: LoopOptions): Loop {
     },
     get frame() {
       return frame;
+    },
+    get timeScale() {
+      return timeScale;
+    },
+    set timeScale(value: number) {
+      timeScale = scaleOf(value);
+    },
+    hitStop(ms) {
+      if (Number.isFinite(ms) && ms > 0) stopLeft = Math.max(stopLeft, ms / 1000);
+    },
+    get hitStopMs() {
+      return stopLeft * 1000;
     },
     fixed,
     tick,

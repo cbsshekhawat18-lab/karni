@@ -6,7 +6,7 @@ description: "karni-game (experimental): the server side of a game. Guest player
 
 !!! warning "Experimental"
     The karni-game module, its HTTP contract ([the game API](game-api.md)) and
-    `karni new --kind game` are [experimental](stability.md#experimental-names):
+    the game kinds of `karni new` are [experimental](stability.md#experimental-names):
     their names may change in a minor release, with a CHANGELOG entry. The
     error codes keep their meaning.
 
@@ -35,8 +35,10 @@ contract is needed (`karni.GAME001` until `KARNI_PEOPLE` is set). `karni
 check` reports `GAME030` while the include is missing.
 
 `karni new "Block Hopper" --kind game` makes a project with all of that
-written, a `games` app, the game declared in `content/game.yaml` and a page
-at `/game` that hosts it ([below](#a-new-game-project)).
+written, a `games` app, the game declared in `content/game.yaml`, and the game
+itself in `game/block-hopper/`, served at `/play/block-hopper/`. `--kind
+app+game` puts the game on a page of an app instead ([below](#a-new-game-project),
+and [apps and games](apps-and-games.md)).
 
 ## What a game declares
 
@@ -380,10 +382,53 @@ vetoes: deleting a save is blocked by the default list, and
 ## A new game project
 
 ```sh
-karni new "Block Hopper" --kind game
+karni new "Sky Dash" --kind game --genre runner   # a complete small game from a starter
+karni new "Block Hopper" --kind game              # a game first, the small blank start
+karni new "Block Hopper" --kind app+game          # an app with the game on a page
 ```
 
-writes an app project (the API, the admin, the React app) with:
+### One command to a playable game
+
+`--genre runner` starts from the runner starter
+([game starters](game-starters.md)): a complete one-tap runner, made as "Sky
+Dash", on every layer of `@karni/game` and on this module. `karni starters
+list --match "<one line>"` finds the starter for a request.
+
+```sh
+pip install karni karni-cli karni-game
+karni new "Sky Dash" --kind game --genre runner && cd sky_dash
+cp .env.example .env && docker compose up -d
+karni migrate && karni load content/game.yaml
+(cd game/sky-dash && npm install && npm run dev)  # http://localhost:5174/play/sky-dash/
+```
+
+1. **Loading, then the title.** The loading scene opens the session: the
+   portal, the guest player, the save slots, today's seed and the wallet.
+   The title shows the bests, the coins and today's run.
+2. **A run.** Space or a tap jumps, and again in the air jumps twice. The
+   rules in `game/sky-dash/src/rules/` are a simulation, so the track comes
+   from the run's seed and every run is recorded as its seed and inputs.
+3. **Game over.** The score goes to the `distance` board with its run, and
+   `games/game.py` checks the run before the score counts. The board's top
+   five come back to the game-over panel. A rewarded ad buys one continue
+   a run, through the server's `continue` reward, three a day.
+4. **Today's run.** Everyone plays the server's seed of the day, and its own
+   board takes only a run on that seed.
+5. **The shop.** The coins of the daily gift, the missions, the
+   achievements and the ads buy two trails and two hats. The prices and the
+   balance are the server's.
+6. **The checks.** `npm test` and `npm run check-rules` in the game,
+   `npm run smoke` in a headless browser, and `karni test` for the server,
+   which proves that one player never reaches another's saves, scores or
+   wallet. `npm run package` makes one package per portal.
+
+The game's files are the project's own, and only the game's own code is in
+them: the rules, the scenes, the drawing, the sounds and the content. The
+rest is imported from `@karni/game`.
+
+### The blank start and the app with a game
+
+Both kinds write the game's server side:
 
 - karni-game wired as `karni add game` wires it, `KARNI_PEOPLE = True` and
   the include in `config/urls.py`.
@@ -395,14 +440,37 @@ writes an app project (the API, the admin, the React app) with:
   daily, ad, achievement and mission rewards, an item, two achievements, a
   mission and config. Run `karni load content/game.yaml` after `karni
   migrate`, and again after each change.
+- the CORS lines a portal package needs: `KARNI_GAME_CORS_ORIGINS` (read
+  from the environment in `config/settings.py`) and `CORS_ALLOW_HEADERS`
+  sending `x-player-token`.
+
+**`--kind game`** makes the game the front door, with no React staff app
+unless `--staff-app` ([apps and games](apps-and-games.md) has the layout and
+how it is served):
+
+- `game/block-hopper/` (the blank start, `--genre blank`, the default), the game as its own npm package on
+  [`@karni/game`](game-client.md): `src/rules/` (the rules as plain
+  functions: a world made from a seed, a run replayed from its seed and input
+  log), `tests/` (the rules' tests, `npm test`), `src/play.ts` (the canvas,
+  the loop and the input), `src/session.ts` (the portal, the data client, and
+  what a finished run reports: a score with its run, progress, a save and an
+  analytics event) and the page, `index.html` and `src/main.ts`.
+- served at `/play/block-hopper/`, with `/` going there: by its Vite dev
+  server in development (`npm run dev`, or the `game` service of
+  `docker-compose.yml`), and by the production web front from its build. The
+  page calls the game API on its own origin.
+- `npm run package` builds, checks and zips one package per portal that
+  needs no id of the project's (web, itch.io, Poki, CrazyGames). A package
+  calls the game API named by `KARNI_GAME_API_URL` with the guest's token, and
+  plays on the device without it.
+
+**`--kind app+game`** writes an app project (the API, the admin, the React
+app) with the game inside it, as `--kind game` did in Karni 0.6.0:
+
 - a small game to start from, the project's own code in `frontend/src/game/`
-  on [`@karni/game`](game-client.md) (the client of the add-on,
-  `modules/karni-game/ui`), which `frontend/package.json` names:
-  `rules.ts` (the rules as plain functions: a world made from a seed, a run
-  replayed from its seed and input log), `play.ts` (the canvas, the loop and
-  the input), `session.ts` (the portal, the data client, and what a finished
-  run reports: a score with its run, progress, a save and an analytics
-  event), and `useGame.ts` and `Hud.tsx` for the page.
+  on [`@karni/game`](game-client.md), which `frontend/package.json` names:
+  `rules.ts`, `play.ts` and `session.ts` as above, and `useGame.ts` and
+  `Hud.tsx` for the page.
 - `frontend/src/pages/game.tsx`, a public page at `/game`: the canvas, the
   player, the wallet and the shop, the daily check-in, the board and the
   achievements. The calls go through the app's own API client, so a
@@ -410,21 +478,18 @@ writes an app project (the API, the admin, the React app) with:
   signing in with a code sent by email (`KARNI_EMAIL_OTP = True`): the page
   then calls `POST upgrade/`.
 - `frontend/portal/`, the same game alone for the game portals: `npm run
-  game:package` builds, checks and zips one package per portal that needs no
-  id of the project's (web, itch.io, Poki, CrazyGames), and `--portal
-  gamedistribution` or `--portal y8` adds one once its ids are in the build
-  environment ([building for portals](game-client.md#building-for-portals)). A package
-  calls the game API named by `KARNI_GAME_API_URL` with the guest's token,
-  and the server lists the portals' origins in `KARNI_GAME_CORS_ORIGINS`
-  (read from the environment in `config/settings.py`, with
-  `CORS_ALLOW_HEADERS` sending `x-player-token`).
+  game:package` builds, checks and zips one package per portal, and
+  `--portal gamedistribution` or `--portal y8` adds one once its ids are in
+  the build environment ([building for portals](game-client.md#building-for-portals)).
 - `karniGame({ relativeBase: false })` from `@karni/game/vite` in
   `frontend/vite.config.ts` (the page's portal module, while the app keeps
   its own base) and its types in `frontend/src/vite-env.d.ts`.
 
-The kind is recorded in pyproject.toml (`kind = "game"`), and `karni context`
-and the agent files state it. A project made without `--kind game` names
-neither karni-game nor `@karni/game`.
+The kind is recorded in pyproject.toml (`kind = "game"` or `kind =
+"app+game"`), and `karni context` and the agent files state it. A project
+that 0.6.0 made with `--kind game` keeps working and is read as `app+game`
+([migrating to 0.7](migrations/0.7.md#the-game-kind-makes-a-game-first)). A
+project made without a game kind names neither karni-game nor `@karni/game`.
 
 ## Settings
 

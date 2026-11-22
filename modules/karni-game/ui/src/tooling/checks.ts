@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
+import { ASSET_REPORT, checkAssetReport, type AssetReport } from "./assets";
 import { PORTALS, type PortalRow } from "./portals";
 
 export interface BuildProblem {
@@ -90,7 +91,8 @@ export function hostsIn(text: string): { host: string; url: string }[] {
  * Check one portal's package: index.html at its root, relative paths only,
  * no host but the portal's own, no other portal's SDK, no localhost or
  * plain-http address, no secret-shaped token, no stray debug hook or
- * console call, the row's forbidden patterns, and the size budget.
+ * console call, the row's forbidden patterns, the size budget, and the
+ * download budget of each asset group.
  */
 export function checkPackage(
   dir: string,
@@ -108,6 +110,20 @@ export function checkPackage(
       rule: "size",
       message: `the package is ${total} bytes, over the ${row.title} budget of ${row.sizeBudget}`,
     });
+  }
+  const reportFile = join(dir, ASSET_REPORT);
+  if (existsSync(reportFile)) {
+    try {
+      problems.push(
+        ...checkAssetReport(JSON.parse(readFileSync(reportFile, "utf8")) as AssetReport),
+      );
+    } catch {
+      problems.push({
+        rule: "asset-budget",
+        file: ASSET_REPORT,
+        message: "the asset report is not readable JSON",
+      });
+    }
   }
   const allowed = new Set(
     [...row.hosts, ...(options.allowHosts ?? [])].map((host) => host.toLowerCase()),

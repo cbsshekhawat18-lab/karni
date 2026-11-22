@@ -28,7 +28,7 @@ import {
   zipFolder,
 } from "../src/tooling";
 import { main } from "../src/tooling/cli";
-import { inlineIntoHtml, portalModuleSource } from "../src/tooling/vite";
+import { inlineIntoHtml, karniGame, portalModuleSource, servedBase } from "../src/tooling/vite";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cache = join(root, "node_modules", ".cache");
@@ -292,6 +292,22 @@ describe("the Vite preset and the per-portal packaging", { timeout: 120_000 }, (
     const args = ["package", "--root", fixture, "--out", join(work, "missing-cli")];
     expect(await main([...args, "--portal", "gamedistribution"], (l) => lines.push(l))).toBe(1);
     expect(lines).toEqual([expect.stringMatching(/^FAIL .*KARNI_GAME_GAMEDISTRIBUTION_GAME_ID/)]);
+  });
+
+  it("serves vite dev at devBase, the path the project serves the build at, and builds relative", async () => {
+    const { resolveConfig } = await import("vite");
+    const base = async (command: "serve" | "build", devBase?: string): Promise<string> => {
+      const plugins = karniGame(devBase === undefined ? {} : { devBase });
+      const config = await resolveConfig({ root: fixture, configFile: false, plugins }, command);
+      return config.base;
+    };
+    expect(await base("serve", "/play/tiny-game/")).toBe("/play/tiny-game/");
+    expect(await base("serve", "play/tiny-game")).toBe("/play/tiny-game/");
+    expect(await base("build", "/play/tiny-game/")).toBe("./");
+    expect(await base("build")).toBe("./");
+    expect(await base("serve")).toBe("/");
+    expect(servedBase(" play ")).toBe("/play/");
+    expect(servedBase("/")).toBe("/");
   });
 
   it("makes a single-file build that needs no other file", async () => {

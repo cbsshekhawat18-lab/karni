@@ -1,5 +1,5 @@
 ---
-description: "Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
+description: "Karni is an open-source Django + React framework for building web apps and web games with AI coding agents. Your agent writes only your domain or your game. The API, admin, permissions, React screens and game engine come from packages you upgrade. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
 hide:
   - navigation
   - toc
@@ -11,13 +11,13 @@ hide:
 
 # Karni
 
-<div class="karni-tagline">The Django + React framework where your coding agent writes only your app</div>
+<div class="karni-tagline">The Django + React framework where your coding agent writes only your app or your game</div>
 
-Karni is an open-source Django + React framework for building with AI coding
-agents. Your agent writes only your domain. The API, admin, permissions and
-React screens come from a package you upgrade, not code it rewrites in each
-project. One rule set covers every coding agent. The build fails when an
-agent hand-writes what Karni ships.
+Karni is an open-source Django + React framework for building web apps and
+web games with AI coding agents. Your agent writes only your domain or your
+game. The API, admin, permissions, React screens and game engine come from
+packages you upgrade. One rule set covers every coding agent. The build
+fails when an agent hand-writes what Karni ships.
 
 [Quickstart](quickstart.md){ .md-button .md-button--primary }
 [Recipes](recipes/index.md){ .md-button }
@@ -32,10 +32,15 @@ admin, permissions, CRUD endpoints, tables, forms, Docker and Celery. Coding
 agents write that setup faster, but they write it again in every project, a
 little different each time, and every copy has to be maintained.
 
-Karni ships that code as versioned packages: `karni` (Python), `@karni/ui`
-(React) and the `karni` command. You declare a model and who may access it,
-and Karni gives you the REST API, the admin, role-based access, the React
-screens, the tests and the demo data. The agent writes only your domain, and
+Karni ships that code as versioned packages on one base, and apps and games
+are peers on it: a project is an app, a game, or both ([apps and
+games](apps-and-games.md)). For an app, `karni` (Python), `@karni/ui` (React)
+and the `karni` command: you declare a model and who may access it, and
+Karni gives you the REST API, the admin, role-based access, the React
+screens, the tests and the demo data. For a game, `karni-game` and
+`@karni/game`: a server that decides players, saves, scores and coins, and
+the scenes, UI, drawing, collision, assets, sound and simulation a browser
+game is built on. The agent writes only your domain or your game, and
 `karni check` fails the build when it hand-writes what Karni ships. Karni
 grew out of the 34 projects we built before it.
 
@@ -195,8 +200,9 @@ The [benchmark report](benchmarks/tokens.md) has every figure with its range, th
 
     ---
 
-    [`karni new --kind game`](game.md#a-new-game-project) makes a small game
-    you can play, with its server and a package per game portal.
+    [`karni new --kind game`](apps-and-games.md) makes a game first: a small
+    game you can play at `/play/<slug>/`, its server, the admin and a package
+    per game portal. Apps and games are peers on one base, alone or together.
     [karni-game](game.md) keeps guest players, saves, leaderboards, a wallet
     and achievements on the server, and [@karni/game](game-client.md) is the
     browser side, with adapters for game portals and engines

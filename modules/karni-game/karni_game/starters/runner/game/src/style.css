@@ -1,0 +1,78 @@
+html,
+body {
+    margin: 0;
+    height: 100%;
+    background: #0b1d33;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+#stage {
+    position: fixed;
+    inset: 0;
+}
+
+#game {
+    display: block;
+}
+
+/* The page's state for tests and assistive tools: never on screen. */
+#hud {
+    position: fixed;
+    left: -9999px;
+}
+
+/* The lists inside the kit's panels: the board, the shop. */
+.sd-list {
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+    text-align: left;
+}
+
+.sd-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+}
+
+.sd-list .sd-name {
+    flex: 1 1 auto;
+}
+
+.sd-swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    flex: 0 0 auto;
+}
+
+.sd-progress {
+    display: block;
+    width: 100%;
+    height: 14px;
+    margin: 8px 0 4px;
+    accent-color: var(--kg-accent);
+}
+
+/* The board is read, not pressed: no touch-sized rows. */
+.sd-board li {
+    min-height: 0;
+    padding: 2px 0;
+}
+
+/* A short screen (a phone on its side): the game-over buttons two to a row. */
+@media (max-height: 520px) {
+    .kg-panel.sd-compact .kg-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .kg-panel.sd-compact .kg-actions > .kg-btn {
+        flex: 1 1 45%;
+    }
+}

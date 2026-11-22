@@ -29,6 +29,13 @@
     // game does: read it from src, so a fresh checkout type-checks before a build.
     "paths": {
       "@karni/game": ["./src/index.ts"],
+      "@karni/game/assets": ["./src/assets/index.ts"],
+      "@karni/game/collide": ["./src/collide/index.ts"],
+      "@karni/game/draw": ["./src/draw/index.ts"],
+      "@karni/game/scenes": ["./src/scenes/index.ts"],
+      "@karni/game/sfx": ["./src/sfx/index.ts"],
+      "@karni/game/sim": ["./src/sim/index.ts"],
+      "@karni/game/ui": ["./src/ui/index.ts"],
       "@karni/game/portals/*": ["./src/portal/adapters/*.ts"]
     }
   },

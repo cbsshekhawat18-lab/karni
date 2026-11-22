@@ -70,9 +70,12 @@ Reference or Debugging sections.
 
 ## Build games
 
-- **[A game project](game.md#a-new-game-project)** (experimental): `karni new "Block Hopper" --kind game` makes a small game you can play, its server declared in `content/game.yaml`, a page in the app where a guest keeps their progress by signing in, and a package per game portal with `npm run game:package`.
+- **[A game project](apps-and-games.md)** (experimental): `karni new "Block Hopper" --kind game` makes a game first, a small game you can play in `game/block-hopper/`, served at `/play/block-hopper/`, with its server declared in `content/game.yaml`, the admin, and a package per game portal with `npm run package`. `--kind app+game` puts the game on a page of an app, where a guest keeps their progress by signing in.
+- **[Game starters](game-starters.md)** (experimental): `karni new "Sky Dash" --kind game --genre runner` writes a complete one-tap runner on every layer of `@karni/game`: a seeded endless track with replay-checked scores, loading, title, play, pause, game-over and shop scenes, parallax and particles, procedural sound, settings and touch buttons, save slots, a daily run with its own board, trails and hats bought with coins, and an ad continue. Its rules, determinism, fuzz, browser smoke and server tests come with it, and `karni starters list --match` finds the starter for a one-line request.
 - **[The server side, karni-game](game.md)** (experimental): guest players with a token the server issues, cloud saves with a version counter, leaderboards with plausible ranges, a soft-currency wallet with a ledger, rewards and a shop, daily content on the server's date, achievements and missions, remote config and analytics, decided on the server.
-- **[The browser side, @karni/game](game-client.md)** (experimental): a canvas loop with a fixed step, input, audio, saves on the device, a seeded random generator, an offline-first data client, per-portal builds with checks, adapters for Poki, CrazyGames, GameDistribution and Y8, adapters for Phaser, PixiJS and React Three Fiber, and a browser smoke harness.
+- **[The browser side, @karni/game](game-client.md)** (experimental): a canvas loop with a fixed step, input, audio, saves on the device, a seeded random generator, [a simulation contract](game-sim.md) with a recorder, replay, a state hash and a test kit, [scenes](game-scenes.md) with overlays and transitions, a [DOM UI kit](game-ui.md) (settings, pause, dialogs, toasts, touch buttons, a boot failure screen), an [asset loader](game-assets.md) (groups, progress, unloading, WebP copies, size budgets), [procedural sound](game-sound.md) (one-shots, music, ducking), an offline-first data client, per-portal builds with checks, adapters for Poki, CrazyGames, GameDistribution and Y8, adapters for Phaser, PixiJS and React Three Fiber, and a browser smoke harness.
+- **[Drawing, @karni/game/draw](game-draw.md)** (experimental): a light 2D layer on Canvas 2D: layers in order, a camera that follows, shakes and zooms, shapes, text, sprites and frame animation, tweens, pooled particles, and time scale and hit-stop on the loop.
+- **[Collision, @karni/game/collide](game-collide.md)** (experimental): boxes and circles, overlap and sweep tests, a ray cast, a box mover with one-way ledges, and trigger zones.
 - **[The game API](game-api.md)** (experimental): the HTTP contract a game client, a realtime server of your own and a portal's server call.
 - **[A game inside an app](https://github.com/cbsshekhawat18-lab/karni/tree/main/examples/hybrid-demo)**: `examples/hybrid-demo`, an app whose members play a game as their accounts, with a leaderboard page and the game in the admin.
 
@@ -276,7 +279,7 @@ Each command links to its entry in the [reference](REFERENCE.md#commands).
 <!-- generated:commands -->
 | Command | What it does |
 |---|---|
-| [`karni new`](REFERENCE.md#karni-new) | Create a project: a public website, an app, or both |
+| [`karni new`](REFERENCE.md#karni-new) | Create a project: a public website, an app, both, or a game |
 | [`karni add`](REFERENCE.md#karni-add) | Install an optional module and wire it into settings |
 | [`karni remove`](REFERENCE.md#karni-remove) | Take a module out again: what karni add wired, never its data |
 | [`karni modules`](REFERENCE.md#karni-modules) | The module catalog (experimental): every module and built-in feature, added or not, with what it provides and the questions to ask (list, show): [list](REFERENCE.md#karni-modules-list), [show](REFERENCE.md#karni-modules-show) |
@@ -317,6 +320,7 @@ Each command links to its entry in the [reference](REFERENCE.md#commands).
 | [`karni trace`](REFERENCE.md#karni-trace) | Follow a captured request: its tasks, retries, email, webhooks, audit |
 | [`karni replay`](REFERENCE.md#karni-replay) | Re-run a captured request against the current code, as any user |
 | [`karni recipes`](REFERENCE.md#karni-recipes) | Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show), and the parts of a project (add, remove, upgrade): [list](REFERENCE.md#karni-recipes-list), [show](REFERENCE.md#karni-recipes-show), [add](REFERENCE.md#karni-recipes-add), [remove](REFERENCE.md#karni-recipes-remove), [upgrade](REFERENCE.md#karni-recipes-upgrade) |
+| [`karni starters`](REFERENCE.md#karni-starters) | Game starters (experimental): ready games karni new --kind game --genre &lt;genre&gt; writes, matched to a one-line request (list, show): [list](REFERENCE.md#karni-starters-list), [show](REFERENCE.md#karni-starters-show) |
 <!-- /generated:commands -->
 
 ## Make targets

@@ -20,10 +20,17 @@ const ENTRIES: Record<string, string> = {
   build: "src/tooling/index.ts",
   vite: "src/tooling/vite.ts",
   cli: "src/tooling/cli.ts",
+  assets: "src/assets/index.ts",
+  collide: "src/collide/index.ts",
+  draw: "src/draw/index.ts",
   phaser: "src/engines/phaser.ts",
   pixi: "src/engines/pixi.ts",
   r3f: "src/engines/r3f.tsx",
+  scenes: "src/scenes/index.ts",
+  sfx: "src/sfx/index.ts",
+  sim: "src/sim/index.ts",
   smoke: "src/smoke/index.ts",
+  ui: "src/ui/index.ts",
 };
 
 export default defineConfig({

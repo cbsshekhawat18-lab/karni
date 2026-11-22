@@ -10,7 +10,9 @@ of the page.
 
 ## What is Karni?
 
-Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.
+Karni is an open-source Django + React framework for building web apps and web games with AI coding agents. Your agent writes only your domain or your game. The API, admin, permissions, React screens and game engine come from packages you upgrade. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.
+
+Apps and games are two peers on one base. An app is `karni`, `@karni/ui` and the `karni` command. A game is `karni-game` on the server and `@karni/game` in the browser. Both use the same sign-in, people, admin, roles and deploy, and a project can be an app, a game, or both ([apps and games](apps-and-games.md)).
 
 ## How is Karni different from a Django boilerplate or starter template?
 

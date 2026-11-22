@@ -6,6 +6,9 @@
 #   prod:   docker-compose.prod.yml's django, worker, beat and release services.
 #           Slim and non-root: gunicorn with uvicorn workers, the built staff app
 #           in frontend/dist, and `karni check --deploy` before every start.
+{%- if cookiecutter.kind == "game" %}
+#           Each game's build too, in game/<slug>/dist (the games target).
+{%- endif %}
 #   backup: docker-compose.prod.yml's backup service: pg_dump of the database's
 #           major version and Karni's backup tool (karni-backup).
 #
@@ -75,6 +78,24 @@ RUN if [ ! -f frontend/package.json ]; then mkdir -p frontend/dist; exit 0; fi \
     fi \
     && if grep -q '"node_modules/@karni/ui"' package-lock.json 2>/dev/null; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi \
     && npm run build -- --base="${KARNI_APP_PATH}"
+{%- if cookiecutter.kind == "game" %}
+
+# The games (game/<slug>/), each built for production into its dist/, which the
+# release step publishes for Caddy at /play/<slug>/. `npm ci` needs the game's
+# package-lock.json: until the first `npm install` writes it (commit it), the
+# build runs `npm install`. Only the builds reach the prod image.
+FROM node:24-alpine AS games
+WORKDIR /build
+COPY game/ /build/game/
+RUN mkdir -p /out/game \
+    && for dir in game/*/; do \
+        [ -f "${dir}package.json" ] || continue; \
+        ( cd "$dir" \
+          && if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi \
+          && npm run build ) || exit 1; \
+        mkdir -p "/out/${dir}" && cp -R "${dir}dist" "/out/${dir}dist"; \
+    done
+{%- endif %}
 
 FROM python:3.12-slim AS prod
 WORKDIR /app
@@ -87,6 +108,9 @@ RUN addgroup --system app && adduser --system --ingroup app app
 COPY --from=deps /venv /venv
 COPY . /app/
 COPY --from=staff-app /build/frontend/dist /app/frontend/dist
+{%- if cookiecutter.kind == "game" %}
+COPY --from=games /out/ /app/
+{%- endif %}
 # collectstatic at build time checks the static files collect, and gives a new
 # /data volume its first copy, owned by the app user. The release step collects
 # again on every start. DJANGO_ENV=dev + a dummy SECRET_KEY keep the strict

@@ -1,8 +1,10 @@
 # Karni
 
-> Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.
+> Karni is an open-source Django + React framework for building web apps and web games with AI coding agents. Your agent writes only your domain or your game. The API, admin, permissions, React screens and game engine come from packages you upgrade. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.
 
 The site is https://cbsshekhawat18-lab.github.io/karni/ and the source is https://github.com/cbsshekhawat18-lab/karni. Python 3.12+, Django 5.2 LTS, React 18, TypeScript.
+
+Apps and games are two peers on one base. The app side is `karni`, `@karni/ui` and the `karni` command. The game side is `karni-game` (players, saves, leaderboards, a wallet and daily content, decided on the server) and `@karni/game` (the game in the browser: loop, scenes, UI kit, drawing, collision, assets, sound, a seeded simulation and portal packages). Both share sign-in, people, the admin, roles and deploy, and a project is an app, a game, or both.
 
 ## Start here
 
@@ -13,6 +15,7 @@ The site is https://cbsshekhawat18-lab.github.io/karni/ and the source is https:
 - [Recipes](https://cbsshekhawat18-lab.github.io/karni/recipes/): six ready apps (shop, booking, crm, lms, marketplace, data-portal), each built by `karni new "<Name>" --recipe <name>` with its domain code, demo data and tests.
 - [The /new-app flow](https://cbsshekhawat18-lab.github.io/karni/agents/#agents-the-new-app-flow): from a one-line request to a running app through `karni.yaml`, `karni plan` and `karni build`.
 - [Every feature](https://cbsshekhawat18-lab.github.io/karni/features/): every feature grouped by what you need, with its page and its status.
+- [Apps and games](https://cbsshekhawat18-lab.github.io/karni/apps-and-games/): the kinds `karni new` makes (app, game, app+game, site), what each installs and the base an app and a game share.
 
 ## Main concepts
 

@@ -1,7 +1,7 @@
 {
   "name": "@karni/game",
-  "version": "0.6.0",
-  "description": "The browser side of the Karni game add-on: portal and ad adapters, a canvas loop, input, audio, local saves, a seeded random generator, an offline-first data client and per-portal builds. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.",
+  "version": "0.7.0",
+  "description": "The browser side of Karni's games: a canvas loop, input, audio, saves, scenes, a UI kit, drawing, collision, assets, sound, a seeded simulation, portal and ad adapters and per-portal builds. Karni is an open-source Django + React framework for building web apps and web games with AI coding agents. Your agent writes only your domain or your game. The API, admin, permissions, React screens and game engine come from packages you upgrade. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships.",
   "keywords": [
     "game",
     "html5",
@@ -46,6 +46,10 @@
       "types": "./dist/src/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./assets": {
+      "types": "./dist/src/assets/index.d.ts",
+      "import": "./dist/assets.js"
+    },
     "./build": {
       "types": "./dist/src/tooling/index.d.ts",
       "import": "./dist/build.js"
@@ -56,6 +60,14 @@
     },
     "./client": {
       "types": "./client.d.ts"
+    },
+    "./collide": {
+      "types": "./dist/src/collide/index.d.ts",
+      "import": "./dist/collide.js"
+    },
+    "./draw": {
+      "types": "./dist/src/draw/index.d.ts",
+      "import": "./dist/draw.js"
     },
     "./phaser": {
       "types": "./dist/src/engines/phaser.d.ts",
@@ -69,9 +81,25 @@
       "types": "./dist/src/engines/r3f.d.ts",
       "import": "./dist/r3f.js"
     },
+    "./scenes": {
+      "types": "./dist/src/scenes/index.d.ts",
+      "import": "./dist/scenes.js"
+    },
+    "./sfx": {
+      "types": "./dist/src/sfx/index.d.ts",
+      "import": "./dist/sfx.js"
+    },
+    "./sim": {
+      "types": "./dist/src/sim/index.d.ts",
+      "import": "./dist/sim.js"
+    },
     "./smoke": {
       "types": "./dist/src/smoke/index.d.ts",
       "import": "./dist/smoke.js"
+    },
+    "./ui": {
+      "types": "./dist/src/ui/index.d.ts",
+      "import": "./dist/ui.js"
     },
     "./portals/*": {
       "types": "./dist/src/portal/adapters/*.d.ts",
@@ -92,7 +120,8 @@
     "format:check": "prettier --check .",
     "test:smoke": "vitest run --config vitest.smoke.config.ts",
     "example:dev": "vite --config example/block-hopper/vite.config.ts",
-    "example:build": "vite build --config example/block-hopper/vite.config.ts"
+    "example:build": "vite build --config example/block-hopper/vite.config.ts",
+    "example:climb": "vite --config example/crate-climb/vite.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -102,6 +131,7 @@
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@types/three": "^0.186.0",
+    "axe-core": "^4.14.1",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react-hooks": "^5.2.0",

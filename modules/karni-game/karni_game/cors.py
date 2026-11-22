@@ -18,7 +18,7 @@ The project lets the browser send the token's header:
     CORS_ALLOW_HEADERS = (*default_headers, "x-player-token")
 
 ``karni check`` reports ``GAME038`` while ``KARNI_GAME_CORS_ORIGINS`` is set and
-the header is missing. ``karni new --kind game`` writes the line.
+the header is missing. ``karni new --kind game`` (and ``app+game``) writes the line.
 
 Override / escape hatch: connect a receiver of your own to
 ``check_request_enabled`` for other rules, or list the origins in

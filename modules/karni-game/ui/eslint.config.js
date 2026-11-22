@@ -11,7 +11,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist/", "node_modules/", "coverage/", "example/**/dist/"] },
+  { ignores: ["dist/", "node_modules/", "coverage/", "example/**/dist/", "**/*.gen.d.ts"] },
   js.configs.recommended,
   ...tseslint.configs.strict,
   {

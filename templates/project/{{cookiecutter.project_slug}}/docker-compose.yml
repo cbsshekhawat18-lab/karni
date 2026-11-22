@@ -126,10 +126,32 @@ services:
         read_only: true
 {%- endif %}
 {%- endif %}
+{%- if cookiecutter.kind == "game" %}
+{%- set game = cookiecutter.project_slug.replace("_", "-") %}
+
+  # The game (game/{{ game }}/): Vite at http://localhost:5174/play/{{ game }}/, the path
+  # the production stack serves it at, with /api proxied to django. KARNI_GAME_DEV_PORT
+  # in .env moves the published port.
+  game:
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm install --no-audit --no-fund && exec npm run dev -- --host"
+    environment:
+      KARNI_API_PROXY: http://django:8000
+    ports:
+      - "${KARNI_GAME_DEV_PORT:-5174}:5174"
+    volumes:
+      - ./game/{{ game }}:/app
+      # Container-built node_modules (Linux binaries), never the host's.
+      - game_node_modules:/app/node_modules
+{%- endif %}
 
 volumes:
   postgres_data:
   app_data:
 {%- if cookiecutter.staff_app == "yes" %}
   frontend_node_modules:
+{%- endif %}
+{%- if cookiecutter.kind == "game" %}
+  game_node_modules:
 {%- endif %}

@@ -5,6 +5,11 @@
 *.pyc
 frontend/node_modules
 frontend/dist
+{%- if cookiecutter.kind == "game" %}
+game/*/node_modules
+game/*/dist
+game/*/dist-portals
+{%- endif %}
 .karni/requests
 .karni/failures
 .karni/trace

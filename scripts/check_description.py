@@ -120,8 +120,8 @@ PREFIXES = {
         "checkout, an order's page and a person's orders."
     ),
     "modules/karni-game/ui/package.json": (
-        "The browser side of the Karni game add-on: portal and ad adapters, a canvas loop, "
-        "input, audio, local saves, a seeded random generator, an offline-first data client "
+        "The browser side of Karni's games: a canvas loop, input, audio, saves, scenes, a UI "
+        "kit, drawing, collision, assets, sound, a seeded simulation, portal and ad adapters "
         "and per-portal builds."
     ),
 }

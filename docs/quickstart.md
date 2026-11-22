@@ -35,7 +35,8 @@ one. In a folder you made for the project already (empty, or holding only
 `.git`), `karni new "Ticket Shop" --here` writes into it instead. Run in a terminal, `karni new` first asks what kind of project
 it is: Enter takes `app`, this page's kind, and `--kind app` skips the
 question (`--kind site` makes a public website, see
-[start a site project](public-site.md#start-a-site-project)). `docker compose up -d --wait db` starts the project's
+[start a site project](public-site.md#start-a-site-project), and `--kind game`
+a game, see [apps and games](apps-and-games.md)). `docker compose up -d --wait db` starts the project's
 PostgreSQL 16 from that stack, published on localhost only (set
 `KARNI_DB_PORT` in `.env` when port 5432 is taken). The two `.env` lines point
 the app at it and at an in-process cache instead of Redis. Uploads go to

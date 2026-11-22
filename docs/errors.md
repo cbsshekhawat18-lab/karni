@@ -1929,6 +1929,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Run production with DJANGO_ENV=prod, which turns DEBUG off, or set DEBUG=False in the environment.
 
+<a id="e511"></a>
+
+#### E511: A front end cannot be published at that path
+
+*exception* · from `karni.deploy.web.front_path; manage.py karni_publish_web --front`
+
+**Why Karni objects.** karni_publish_web --front PATH=DIR publishes another built front end, a game's build for one, at a folder of the web root. PATH must be folder names of letters, digits, - and _ joined by / (play/sky-dash), outside the folders the staff app and the published files take, and the option needs both PATH and DIR.
+
+**Fix.** Give --front play/&lt;slug>=game/&lt;slug>/dist, as the release step does for each game. The message names the paths that are taken.
+
 <a id="w511"></a>
 
 #### W511: SECRET_KEY is weak or a development key
@@ -4909,9 +4919,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni context, karni rules sync, karni add site (pyproject.toml [tool.karni] kind)`
 
-**Why Karni objects.** `karni new` records the project's kind in pyproject.toml: site, app, site+app or game. The agent files and `karni context` state it with its stack, so a value Karni cannot read stops them instead of guessing.
+**Why Karni objects.** `karni new` records the project's kind in pyproject.toml: site, app, site+app, game or app+game. The agent files and `karni context` state it with its stack, so a value Karni cannot read stops them instead of guessing.
 
-**Fix.** Set kind = "site", "app", "site+app" or "game" under [tool.karni] in pyproject.toml (or remove the line, and Karni infers the kind from the project), then run `karni rules sync`.
+**Fix.** Set kind = "site", "app", "site+app", "game" or "app+game" under [tool.karni] in pyproject.toml (or remove the line, and Karni infers the kind from the project), then run `karni rules sync`.
 
 <a id="c121"></a>
 
@@ -5982,6 +5992,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A recipe is a folder with a recipe.toml that follows its schema, a name that is the folder's (or the entry point's), and a karni.yaml. One that does not, or whose name another recipe has already, is left out and reported.
 
 **Fix.** Fix the key the message names (docs/app-spec.md#recipes lists every key), or rename the recipe, then run karni recipes show &lt;name>.
+
+<a id="c480"></a>
+
+### C480: No starter of that genre
+
+*karni command* · from `karni new --genre, karni starters show (karni_cli.starters)`
+
+**Why Karni objects.** The starters are the blank start built into karni-cli and the karni.starters entry points of its environment: karni-game ships the runner. A genre whose package is not installed is not there.
+
+**Fix.** Run karni starters list for the genres (the message names them, and what to install for a known one), then karni new "&lt;Name>" --kind game --genre &lt;genre>.
+
+<a id="c481"></a>
+
+### C481: --genre with a kind or option it cannot go with
+
+*karni command* · from `karni new --genre (karni_cli.commands.new)`
+
+**Why Karni objects.** A starter is a game first: it writes game/&lt;slug>/ and the game's server side. It goes with --kind game only, and not with --recipe or --design, which make an app or a site.
+
+**Fix.** Add --kind game, or leave --genre out. An app with a game in it is --kind app+game.
+
+<a id="c482"></a>
+
+### C482: A starter cannot be used
+
+*karni command* · from `karni starters list, karni new --genre (karni_cli.starters)`
+
+**Why Karni objects.** A starter is a folder with a starter.toml (name, title, purpose, use_when, usually_changed) and a game/ folder, named by a karni.starters entry point. One that is not, or whose name another starter has already, is left out and reported.
+
+**Fix.** Fix the folder or the key the message names (docs/game-starters.md), then run karni starters show &lt;genre>.
 
 <a id="c440"></a>
 

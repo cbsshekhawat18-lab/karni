@@ -37,6 +37,13 @@ npm install @karni/game
 | `@karni/game/vite` | `karniGame()`, the Vite preset |
 | `@karni/game/build` | Node: the portal table, the package and source checks, `packagePortals`, `zipFolder` |
 | `@karni/game/phaser`, `@karni/game/pixi`, `@karni/game/r3f` | the engine adapters |
+| `@karni/game/sim` | the simulation contract, recorder, replay, state hash and test kit ([Simulation and replay](game-sim.md)) |
+| `@karni/game/scenes` | the scene stack, overlays, transitions, the entity list and the store ([Scenes](game-scenes.md)) |
+| `@karni/game/ui` | the DOM UI kit: settings, pause, dialogs, toasts, touch buttons, the boot failure screen, the dev overlay ([Game UI](game-ui.md)) |
+| `@karni/game/draw` | [drawing](game-draw.md): layers, a camera, shapes, text, sprites and frame animation, tweens, particles, a pool |
+| `@karni/game/collide` | [collision](game-collide.md): boxes and circles, overlap and sweep tests, a ray cast, the box mover, trigger zones |
+| `@karni/game/assets` | the asset manifest, loading by group with progress, unloading, fonts, WebP copies, budgets ([Assets](game-assets.md)) |
+| `@karni/game/sfx` | procedural sounds, one-shots with variation, music with crossfade and ducking ([Sound](game-sound.md)) |
 | `@karni/game/smoke` | Node: `runSmoke`, the browser smoke harness (needs Playwright) |
 | `@karni/game/client` | types for `virtual:karni-game/portal`, `__KARNI_GAME_DEV__` and `__KARNI_GAME_PORTAL__` |
 
@@ -57,6 +64,9 @@ rules every game needs:
 - `interstitial()` keeps `interstitialCooldownMs` (60000) between ads that
   played, and `firstInterstitialAfterMs` after start. It reports `shown`,
   `skipped`, `cooldown`, `busy`, `unavailable` or `error`.
+- `canShowRewarded()` is true when a rewarded ad can be asked for: the
+  portal is ready, its SDK has rewarded ads and none is playing. A build
+  without an SDK (web, itch.io) has none, so show "watch an ad" only then.
 - `rewarded()` resolves true only on the SDK's completed event. A dismissed,
   failed, unfilled or timed-out ad gives nothing. A completed one restarts
   the interstitial cooldown (`rewardedResetsCooldown`).
@@ -111,6 +121,12 @@ loop.start();
   player paused. `createPauseReasons` gives the same to any target.
 - `pauseOnHidden(targets, { blur })` pauses on a hidden tab ("hidden") and on
   a window without focus ("blur").
+- `loop.timeScale` slows the game down (0.5 is half speed) or speeds it up.
+  With a fixed step the step keeps its size and fewer steps run, so a seeded
+  simulation stays deterministic. `render` keeps the real frame time.
+- `loop.hitStop(ms)` freezes the game for a moment on a hit: no update
+  runs, `render` goes on, and a press made meanwhile reaches the first
+  update after it.
 - `createFixedStep({ step, maxSteps })` is the accumulator alone, for a loop
   of another kind.
 - `createView({ canvas, width, height })` sizes the canvas's backing store to
@@ -329,6 +345,12 @@ portal's SDK tag in the page, and defines `__KARNI_GAME_DEV__` (true only in
 and styles inside index.html, for `file://` and sandboxed frames. The portal
 comes from `portal`, else `KARNI_GAME_PORTAL`, else `web`.
 
+`devBase` is where `vite dev` serves the game: the path the project serves the
+build at, so links and reloads work the same while developing. A game-first
+project's game ([apps and games](apps-and-games.md)) has
+`karniGame({ devBase: "/play/block-hopper/" })`. A build keeps the relative
+base, which suits that path and every portal's package.
+
 `karni-game package` (or `packagePortals()`) builds one package per row of
 the portal table into `dist-portals/<portal>/`, checks it and zips it when
 the row says. `karni-game check <dir> --portal <name>` checks a package
@@ -376,9 +398,12 @@ with the version the game uses.
 
 ## Testing a game
 
-Keep the rules in plain modules with no page, as the example's
-`example/block-hopper/src/core.ts` does: a test then plays the game headless,
-and a seed plus the input log replays a run exactly.
+Keep the rules in `src/rules/` on the contract of `@karni/game/sim`, as the
+example's `example/block-hopper/src/rules/` does: a test then plays the game
+headless, and a seed plus the input log replays a run exactly. The page
+[Simulation and replay](game-sim.md) has the contract, the recorder, the
+determinism and fuzz helpers and the purity check
+(`karni-game check-rules`).
 
 `runSmoke(options)` from `@karni/game/smoke` tests the built game in
 headless Chromium:
@@ -398,21 +423,41 @@ a failed request, checks that the canvas changed, then boots again with
 every stored value broken and plays again. `check(page, phase)` adds the
 game's own assertions. It needs Playwright and its Chromium.
 
-## The example game
+## The example games
 
 `modules/karni-game/ui/example/block-hopper/` is Block Hopper, a small
 platformer on every piece: move, jump, coins, a score, a versioned save with
 a migration, a leaderboard, a rewarded continue, the touch stick and a
-procedural sound. `npm run example:dev` plays it with the fake portal, and
-`npm run test:smoke` builds it and plays it in a headless browser over http,
+procedural sound. Its rules live in `src/rules/` on
+[`@karni/game/sim`](game-sim.md), so a run replays from its seed and inputs.
+It has a loading scene, a title, a play scene and the pause and game-over
+overlays on [`@karni/game/scenes`](game-scenes.md), with settings and touch
+buttons from [`@karni/game/ui`](game-ui.md), draws with
+[`@karni/game/draw`](game-draw.md), moves with
+[`@karni/game/collide`](game-collide.md), loads two stages whose art loads
+and unloads by group through [`@karni/game/assets`](game-assets.md), and
+plays its sounds through [`@karni/game/sfx`](game-sound.md).
+`npm run example:dev` plays it with the fake portal, and
+`npm run test:smoke` builds it and plays it in a headless browser over http (with a frame-time budget: p95 40 ms, max 500 ms,
+scaled by `frameMultiplier` or `KARNI_SMOKE_FRAME_MULTIPLIER`, and `cpuThrottle` to slow the CPU),
 by touch, and as a single file from `file://`.
+
+`example/crate-climb/` is Crate Climb, a scene for the 2D layer: a level
+three screens wide with a following camera, parallax, animated sprites,
+particles, tweens, one-way ledges, trigger zones, hit-stop and slow motion
+(`npm run example:climb`). The smoke run plays it too, and a benchmark draws
+the layer under load against a frame budget.
 
 ## What it does not do
 
 - It runs no realtime server: [the karni-game module](game.md#multiplayer-a-realtime-server-of-your-own) issues the token a
   realtime server of the project's own verifies.
-- It has no scene system, physics, asset loader, procedural music, service
-  worker or quality tiers. Engines bring their own, and most of these are
-  the game's own business.
+- It has no physics engine, music composition tool, service worker or
+  quality tiers. Engines bring their own, and most of these are the game's
+  own business. Scenes, the UI kit, drawing, kinematic collision, an asset
+  loader and procedural sound for plain canvas are the
+  [scenes](game-scenes.md), [ui](game-ui.md), [draw](game-draw.md),
+  [collide](game-collide.md), [assets](game-assets.md) and
+  [sfx](game-sound.md) entry points.
 - The device's rules without a server are for play, not trust: a player can
   edit local storage. Shared boards and balances need the server.

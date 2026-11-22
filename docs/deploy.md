@@ -37,11 +37,11 @@ a deploy script ([without Docker](#without-docker-systemd-and-nginx)).
 
 | Service | What it does | Health check |
 |---|---|---|
-| `release` | Runs once per start, before the others: the deploy checks, `migrate`, `collectstatic`, in a project with a public site `karni_site_seed` (every page rendered once, so a visitor's request never stores a template's defaults), then `karni_publish_web`, which copies the Caddyfile, the built staff app and the security headers into the shared volume. If it fails, nothing else starts. | none: the others wait for it to exit with 0 |
+| `release` | Runs once per start, before the others: the deploy checks, `migrate`, `collectstatic`, in a project with a public site `karni_site_seed` (every page rendered once, so a visitor's request never stores a template's defaults), then `karni_publish_web`, which copies the Caddyfile, the built staff app, each game's build (`--front`) and the security headers into the shared volume. If it fails, nothing else starts. | none: the others wait for it to exit with 0 |
 | `django` | gunicorn with uvicorn workers (`WEB_CONCURRENCY`, default 2). It serves the API, the admin, `/healthz`, `/readyz`, `/health/` and a public site app. | `/readyz`, asked as Caddy asks it ([health checks](#12-health-checks)) |
 | `worker` | The Celery worker (`KARNI_WORKER_CONCURRENCY`, default 2). | `celery inspect ping` |
 | `beat` | Celery beat. Run exactly one. | its process has passed the deploy checks |
-| `caddy` | TLS for `DOMAIN`, `/static/` and `/media/` from the shared volume, the staff app, and everything else proxied to `django`. Publishes ports 80 and 443. | its admin API |
+| `caddy` | TLS for `DOMAIN`, `/static/` and `/media/` from the shared volume, the staff app, each game at `/play/<slug>/`, and everything else proxied to `django`. Publishes ports 80 and 443. | its admin API |
 | `db` | PostgreSQL (`POSTGRES_VERSION`, default 16). Not reachable from outside the stack. | `pg_isready` |
 | `redis` | The Celery broker and the cache. Under memory pressure it drops cache keys, never a queued task. | `redis-cli ping` |
 | `backup` | Database and media backups on a schedule, with retention. | the last backup did not fail |
@@ -100,6 +100,18 @@ during an update.
 
 A project without `frontend/package.json` gets no staff app, and nothing else
 changes.
+
+### The games
+
+A project with games (`game/<slug>/`, [apps and games](apps-and-games.md))
+builds each one in the Dockerfile's `games` stage: `npm ci` (or `npm install`
+until the game has a `package-lock.json`), then `npm run build`. The prod
+image holds the builds, the release step publishes each one with
+`karni_publish_web --front play/<slug>=game/<slug>/dist`, and Caddy serves
+`/play/<slug>/` from the shared volume with the security headers, the hashed
+assets cached for a year. A game-first project's `/` goes to its game. Only
+the build is published, never the game's source. The page calls the API on
+the same origin.
 
 ## 1. A server
 
@@ -664,7 +676,10 @@ Each run, in order, and each step stops the run with a message when it fails:
 4. Runs `karni_check --deploy`, `migrate` and `collectstatic` with the
    server's `.env`, as the units' user, and in a project with a public site
    `karni_site_seed`, which renders every page once so a visitor's request
-   never stores a template's defaults.
+   never stores a template's defaults. In a project with games, it builds
+   each game with npm (unless the game's `dist/` came with the project) and
+   publishes the builds to `<root>/shared/web/play/`, which nginx serves at
+   `/play/<slug>/`. That needs Node.js 20.19 or later on the server.
 5. Points `<root>/current` at the release (an atomic switch), installs the
    units, restarts them and asks `/readyz` on gunicorn's socket until it
    answers 200. When it does not, the run stops before nginx and says which
@@ -740,6 +755,7 @@ migrations, reverse them first with the newer code, as in
   from a release's `.venv` ([backups](#10-backups)).
 - The staff app in `frontend/` is not served. Serve its build with a
   `location` of your own in `deploy/nginx.conf`, or use the compose stack.
+  The games are served, at `/play/<slug>/`.
 - `KARNI_NUM_PROXIES=1` counts nginx. Behind a CDN or a load balancer as
   well, set it to 2, so rate limits see the visitor's address.
 

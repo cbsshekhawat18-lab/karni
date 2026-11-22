@@ -164,6 +164,9 @@ HISTORY_MARKER = "history_provider"
 #: build). They are slow, so they run only when -m names them: pytest -m recipes (CI's recipes
 #: job runs one per recipe).
 RECIPES_MARKER = "recipes"
+#: Tests marked with it build a game starter from scratch and run its checks (npm, a browser):
+#: pytest -m starters (CI's starters job).
+STARTERS_MARKER = "starters"
 
 #: Recipes only the family tests use (tests/test_family_build.py): their files are a project's
 #: code, collected by that project's own test run, never by this suite.
@@ -180,15 +183,20 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers", f"{RECIPES_MARKER}: a recipe built from scratch, run only with -m recipes"
     )
+    config.addinivalue_line(
+        "markers", f"{STARTERS_MARKER}: a game starter built from scratch, only with -m starters"
+    )
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    if RECIPES_MARKER in str(config.getoption("markexpr") or ""):
-        return
-    skip = pytest.mark.skip(reason=f"a recipe built from scratch: run it with -m {RECIPES_MARKER}")
-    for item in items:
-        if item.get_closest_marker(RECIPES_MARKER) is not None:
-            item.add_marker(skip)
+    chosen = str(config.getoption("markexpr") or "")
+    for marker, what in ((RECIPES_MARKER, "a recipe"), (STARTERS_MARKER, "a game starter")):
+        if marker in chosen:
+            continue
+        skip = pytest.mark.skip(reason=f"{what} built from scratch: run it with -m {marker}")
+        for item in items:
+            if item.get_closest_marker(marker) is not None:
+                item.add_marker(skip)
 
 
 def _spawns_chronicle(args: Any) -> bool:
