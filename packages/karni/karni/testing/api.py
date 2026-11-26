@@ -1002,7 +1002,13 @@ class _Crud:
                 want, have = sent.data[name], rendered[name]
             if want != have:
                 self.fail(
-                    f"{action}: sent {name}={sent.data[name]!r} but stored {rendered[name]!r}"
+                    f"{action}: sent {name}={sent.data[name]!r} but stored {rendered[name]!r}. "
+                    f"Something replaced the value after it was sent. If the model computes "
+                    f"{name} (in save(), a property or a signal), declare it editable=False: "
+                    "the API then does not take it as input and this check does not send it. "
+                    "Other causes: a serializer or a perform_create/perform_update that sets "
+                    "the field (validate, create, update, save(field=...)), or a signal "
+                    "handler that writes it after the save."
                 )
         for name in sent.files:
             stored = getattr(row, name, None)

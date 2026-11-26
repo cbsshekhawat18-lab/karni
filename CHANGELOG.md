@@ -179,6 +179,15 @@ apply codemods and list the manual steps. This file is the human summary.
   migration `karni_ai.0002_call_kind_and_unit` adds both columns: earlier calls are
   extractions counted in tokens. The extraction endpoint's answer is unchanged.
 
+- **Changed: `assert_crud`'s "sent X but stored Y" failure says what to do.** A field the model
+  computes (in `save()`, a property or a signal) should be `editable=False`, so the API does
+  not take it as input and the check does not send it. The message also names the other causes:
+  a serializer or `perform_create` / `perform_update` that sets the field, and a signal handler
+  that writes it after the save. The OpenAPI snapshot failure (`E608`) already says how to
+  accept the change (`KARNI_UPDATE_SNAPSHOTS=1 karni test` or `pytest --karni-update-snapshots`)
+  and has since the testing utilities were added, so only a test now pins that. See
+  [testing](docs/testing.md#a-value-that-comes-back-different).
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web

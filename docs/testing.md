@@ -142,6 +142,16 @@ request, so one object serves all of them:
 self.assert_crud(PhotoViewSet, "staff", payload={"image": my_upload})
 ```
 
+### A value that comes back different
+
+`create: sent status='pending' but stored 'reviewed'` means the server replaced
+a value the check sent. Usually the model computes the field (in `save()`, a
+property or a signal), and then the field should be `editable=False`: the API
+does not take it as input and `assert_crud` does not send it. The failure says
+so, and names the other causes: a serializer or a `perform_create` /
+`perform_update` that sets the field, or a signal handler that writes it after
+the save.
+
 ### A role that may not write
 
 When the declaration refuses create, update and delete to the role, the run
@@ -499,7 +509,8 @@ matches CI on the other). A
 difference fails, listing breaking changes (removed and changed paths) first.
 A missing snapshot is written and the test passes, except under CI, where it
 fails, because a snapshot that was never committed protects nothing. To
-accept an intended change, run `KARNI_UPDATE_SNAPSHOTS=1 karni test`, then
+accept an intended change, run `KARNI_UPDATE_SNAPSHOTS=1 karni test` (or
+`pytest --karni-update-snapshots`; the failure message names both), then
 commit the file. A `karni make` command that changes the API (`karni make
 viewset`, `karni make form`, `karni make serializer`, `karni make model` for
 a model a viewset serves, or with `--with viewset`) says so when the project
