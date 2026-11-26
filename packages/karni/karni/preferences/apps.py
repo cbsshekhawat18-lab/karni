@@ -6,7 +6,7 @@ from django.apps import AppConfig
 
 
 class PreferencesConfig(AppConfig):
-    """Experimental. ``karni.preferences`` (label ``preferences``): Details, SectionValue, Switch.
+    """``karni.preferences`` (label ``preferences``): Details, SectionValue, Switch.
 
     Add ``"karni.preferences"`` to ``INSTALLED_APPS`` (``karni build`` does it
     for ``features: {preferences: true}``) and run migrate.

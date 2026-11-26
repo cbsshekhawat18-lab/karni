@@ -1,5 +1,5 @@
 /**
- * Experimental. What a coupon may be limited to besides items: the coupon keys
+ * What a coupon may be limited to besides items: the coupon keys
  * a selling app's adapter gives (`Sellable.coupon_keys`), such as the shop's
  * categories. An app registers each once at startup and the coupon form offers
  * a picker for it:
@@ -22,12 +22,12 @@ export interface CouponLimit {
 
 const LIMITS = new Map<string, CouponLimit>();
 
-/** Experimental. Offer a coupon limit on the coupon form (the same key replaces it). */
+/** Offer a coupon limit on the coupon form (the same key replaces it). */
 export function registerCouponLimit(limit: CouponLimit): void {
   LIMITS.set(limit.key, limit);
 }
 
-/** Experimental. The coupon limits apps registered, in the order they did. */
+/** The coupon limits apps registered, in the order they did. */
 export function couponLimits(): CouponLimit[] {
   return [...LIMITS.values()];
 }

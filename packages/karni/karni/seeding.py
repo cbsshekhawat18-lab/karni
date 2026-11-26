@@ -86,7 +86,7 @@ a model's rows (``context.create(n, **values)``, ``context.pick(Model)``,
 pass ``builder=`` to :func:`seed`; ``--model`` narrows the run. Listeners
 (:mod:`karni.events`) fire for seeded rows as for any save.
 
-**Volume (experimental).** ``karni seed --volume N`` writes N rows per model
+**Volume.** ``karni seed --volume N`` writes N rows per model
 in bulk for performance work, and a model whose count reaches
 ``KARNI_SEED_BULK_THRESHOLD`` takes the same bulk path in a plain run:
 :mod:`karni.bulk_seeding`. Bulk rows skip ``save()`` and listeners.
@@ -439,7 +439,7 @@ def planned_rows(model: type[models.Model], count: int) -> int:
 
 
 def volume_rows(model: type[models.Model], volume: int) -> int:
-    """Experimental. Rows a volume run (``--volume``) creates for ``model``.
+    """Rows a volume run (``--volume``) creates for ``model``.
 
     ``volume`` for every model, users aside (:func:`karni.bulk_seeding.volume_users`:
     one per hundred rows, at least three). A seeder's ``Meta.count = 0``
@@ -512,11 +512,11 @@ class SeedReport:
     logins: dict[str, list[str]] = field(default_factory=dict)
     reset: list[str] = field(default_factory=list)
     seconds: float = 0.0
-    #: Experimental. The rows per model of a volume run (``--volume``), else ``None``.
+    #: The rows per model of a volume run (``--volume``), else ``None``.
     volume: int | None = None
-    #: Experimental. The models inserted in bulk (:mod:`karni.bulk_seeding`).
+    #: The models inserted in bulk (:mod:`karni.bulk_seeding`).
     bulk: list[str] = field(default_factory=list)
-    #: Experimental. Seconds per model.
+    #: Seconds per model.
     timings: dict[str, float] = field(default_factory=dict)
 
     def render(self) -> str:
@@ -606,7 +606,7 @@ class SeedContext:
         return self.random.choice(pool) if pool else None
 
     def pool(self, model: type[models.Model]) -> list[Any]:
-        """Experimental. The rows of ``model`` this run picks from: the ones it seeded (or
+        """The rows of ``model`` this run picks from: the ones it seeded (or
         found again), else the table's first rows by key.
 
         Read users from here, not from the table: another app's demo logins
@@ -616,7 +616,7 @@ class SeedContext:
         return list(self.run.pool(model))
 
     def account(self, login: str, *roles: str, first_name: str = "", last_name: str = "") -> Any:
-        """Experimental. A demo login holding ``roles``, made once and found again.
+        """A demo login holding ``roles``, made once and found again.
 
         For the demo accounts a recipe's rules need (a shop manager, a member
         with bookings): the password is ``karni-password``, the email counts as
@@ -983,10 +983,10 @@ def seed(
     :param models: only these models (classes or ``"app.Model"`` labels).
     :param now: the anchor relative dates use (default: the start of today).
     :param builder: a :class:`SeedBuilder` (or any FactoryBuilder) to infer with.
-    :param volume: experimental. ``volume`` rows per model, in bulk
+    :param volume: ``volume`` rows per model, in bulk
         (:mod:`karni.bulk_seeding`), users aside (:func:`volume_rows`).
-    :param bulk: experimental. The :class:`karni.bulk_seeding.BulkSeeder` class to use.
-    :param batch_size: experimental. Rows per bulk insert.
+    :param bulk: The :class:`karni.bulk_seeding.BulkSeeder` class to use.
+    :param batch_size: Rows per bulk insert.
     :raises SeedError: naming the model and the fix.
     """
     started = time.perf_counter()

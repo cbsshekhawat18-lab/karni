@@ -6,7 +6,7 @@ from django.apps import AppConfig
 
 
 class NotifyConfig(AppConfig):
-    """Experimental. ``karni.notify`` (label ``notify``): EmailTemplate, Notification, Choice,
+    """``karni.notify`` (label ``notify``): EmailTemplate, Notification, Choice,
     Unsubscribe.
 
     Add ``"karni.notify"`` to ``INSTALLED_APPS`` (``karni build`` does it for

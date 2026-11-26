@@ -1,4 +1,4 @@
-"""Experimental. Suggestions from code: what Karni could do that the project does by hand.
+"""Suggestions from code: what Karni could do that the project does by hand.
 
 ``karni check`` and ``karni doctor`` print them after the errors and
 warnings. A suggestion never fails a run and never changes an exit code: it

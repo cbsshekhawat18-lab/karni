@@ -183,11 +183,11 @@ class KarniAdminMixin(admin.ModelAdmin):
       choices are limited to target rows the user may view.
       ``scope_exempt = True`` with a ``scope_exempt_reason`` turns the row
       scope off for one admin (``karni check`` lists every exemption).
-    * **Read-only external models** (experimental): a model with ``class
+    * **Read-only external models**: a model with ``class
       Karni: external = True`` and no ``writable = True`` has no add, change
       or delete permission here, so the admin lists it and shows its rows
       read-only (:meth:`is_read_only`).
-    * **Tree models** (experimental): a :class:`karni.models.TreeModel`'s
+    * **Tree models**: a :class:`karni.models.TreeModel`'s
       changelist lists the rows in tree order with the name indented by
       depth (:mod:`karni.admin.tree`, ``tree_changelist_max_rows``).
     * **Import and export** (ADR 0002, P6) come from
@@ -220,7 +220,7 @@ class KarniAdminMixin(admin.ModelAdmin):
     """
 
     tree_changelist_max_rows: ClassVar[int] = 10000
-    """Experimental. The most rows a tree model's changelist puts in tree order (0: never)."""
+    """The most rows a tree model's changelist puts in tree order (0: never)."""
 
     karni_read_only: ClassVar[tuple[str, ...]] = ()
     """``AdminMeta.read_only`` entries, appended to the *derived*
@@ -426,7 +426,7 @@ class KarniAdminMixin(admin.ModelAdmin):
         )
 
     def is_read_only(self) -> bool:
-        """Experimental. Whether this admin only shows rows (:func:`karni.db.is_read_only`).
+        """Whether this admin only shows rows (:func:`karni.db.is_read_only`).
 
         True for a model with ``class Karni: external = True`` that does not
         declare ``writable = True``: no add, change or delete, the import
@@ -705,7 +705,7 @@ class KarniAdminMixin(admin.ModelAdmin):
     def derive_fieldsets(
         self, request: HttpRequest, obj: models.Model | None = None
     ) -> list[tuple[str | None, dict[str, Any]]] | None:
-        """The fieldsets ``Karni.field_groups`` gives (experimental), or ``None`` without groups.
+        """The fieldsets ``Karni.field_groups`` gives, or ``None`` without groups.
 
         A malformed declaration also gives ``None`` (Django's single fieldset):
         ``karni check`` reports it (E550 to E552). Override to group otherwise.

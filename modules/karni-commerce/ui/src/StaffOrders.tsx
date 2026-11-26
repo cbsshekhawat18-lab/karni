@@ -1,5 +1,5 @@
 /**
- * Experimental. The staff's orders list: every order their grants give, newest
+ * The staff's orders list: every order their grants give, newest
  * first, with search (number, email, name), filters by money state and by the
  * day it was placed, sorting, paging and a CSV export, each row opening the
  * order's page. "New order" places one by hand for a buyer who called.

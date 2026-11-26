@@ -1,4 +1,4 @@
-"""Experimental. The ``tree:<path>`` scope: a grant on a node reaches every row under it.
+"""The ``tree:<path>`` scope: a grant on a node reaches every row under it.
 
 A large app grants nodes of a hierarchy (a region, a product category), and a
 user then sees every row tagged with one of those nodes or with any node below
@@ -89,7 +89,7 @@ _SHOWN: Final = 5
 
 @dataclass(frozen=True)
 class TreePath:
-    """Experimental. A ``tree:<path>`` resolved on a model: the tree it ends at.
+    """A ``tree:<path>`` resolved on a model: the tree it ends at.
 
     ``to_many`` is true when a step of the path is a many-to-many or a reverse
     relation, so a row can carry several nodes (the row filter then reads
@@ -119,7 +119,7 @@ def _refuse(model: type[models.Model], path: str, why: str) -> KarniImproperlyCo
 
 
 def resolve_path(model: type[models.Model], path: str) -> TreePath:
-    """Experimental. ``tree:<path>`` on ``model``, or ``E490`` when it does not end at a tree.
+    """``tree:<path>`` on ``model``, or ``E490`` when it does not end at a tree.
 
     Each step of ``path`` is a relation of the model before it (a foreign
     key, a one-to-one, a many-to-many or a reverse relation), and the last one
@@ -158,7 +158,7 @@ def resolve_path(model: type[models.Model], path: str) -> TreePath:
 
 
 def tree_path(model: type[models.Model], path: str) -> TreePath | None:
-    """Experimental. :func:`resolve_path`, or ``None`` when the path does not end at a tree."""
+    """:func:`resolve_path`, or ``None`` when the path does not end at a tree."""
     try:
         return resolve_path(model, path)
     except KarniImproperlyConfigured:
@@ -193,7 +193,7 @@ def _node_keys(tree_model: type[models.Model], nodes: Iterable[Any]) -> list[Any
 
 
 class SubtreeKeys(Expression):
-    """Experimental. The keys of every live node in the subtrees under ``nodes``: one subquery.
+    """The keys of every live node in the subtrees under ``nodes``: one subquery.
 
     ``Q(region__in=SubtreeKeys(Region, [europe.pk, asia.pk]))`` reads the rows
     whose region is Europe, Asia or a node below either. The SQL is the walk
@@ -255,7 +255,7 @@ def _listed(items: Sequence[str], word: str = "and") -> str:
 
 
 def subtree_rows(model: type[models.Model], path: str, nodes: Iterable[Any]) -> Q | bool:
-    """Experimental. The rows of ``model`` whose ``path`` is one of ``nodes`` or below one.
+    """The rows of ``model`` whose ``path`` is one of ``nodes`` or below one.
 
     ``False`` (no row) without a valid node: the tree scope never reaches
     every row. Otherwise one ``Q`` on ``path`` whose value is a
@@ -273,7 +273,7 @@ def subtree_rows(model: type[models.Model], path: str, nodes: Iterable[Any]) -> 
 
 
 def granted_targets(user: Any, path: str, *, permission: str | None = None) -> list[TargetGrant]:
-    """Experimental. The nodes ``user`` holds under ``tree:<path>``, each with its grant.
+    """The nodes ``user`` holds under ``tree:<path>``, each with its grant.
 
     :func:`karni.accounts.grants.scope_targets` for the scope, read once per
     request: the answer is cached on the user per path and permission, and
@@ -296,7 +296,7 @@ def granted_targets(user: Any, path: str, *, permission: str | None = None) -> l
 def tree_rows(
     user: Any, model: type[models.Model], path: str, *, permission: str | None = None
 ) -> Q | bool:
-    """Experimental. The rows of ``model`` under every node ``user`` holds under ``tree:<path>``.
+    """The rows of ``model`` under every node ``user`` holds under ``tree:<path>``.
 
     ``permission`` (a key or a ``KARNI_ROLES`` pattern) keeps the grants of the
     permissions it matches, ``None`` every grant of the scope. One subquery
@@ -308,7 +308,7 @@ def tree_rows(
 
 
 def source_nodes(user: Any, path: str, permission: str, source: GrantSource | Grant) -> list[str]:
-    """Experimental. The nodes one grant gives: a user grant by its id, a role grant by its role.
+    """The nodes one grant gives: a user grant by its id, a role grant by its role.
 
     ``source`` is a :class:`~karni.accounts.roles.Grant` (the rows of one
     grant) or a :class:`~karni.accounts.roles.GrantSource` (``karni why``).
@@ -331,14 +331,14 @@ def source_nodes(user: Any, path: str, permission: str, source: GrantSource | Gr
 
 
 def grant_nodes(user: Any, grant: Grant) -> list[str]:
-    """Experimental. The nodes one resolved grant of ``tree:<path>`` gives ``user``."""
+    """The nodes one resolved grant of ``tree:<path>`` gives ``user``."""
     return source_nodes(user, grant.scope_path, grant.permission, grant)
 
 
 def tree_scope(
     model: type[models.Model], path: str, *, permission: str | None = None
 ) -> Callable[[Any], Q | bool]:
-    """Experimental. A ``Where`` function: the rows under the nodes the requester holds.
+    """A ``Where`` function: the rows under the nodes the requester holds.
 
     ``access = Access(read=Where(tree_scope(Order, "region")))`` reads the
     orders under every node the user holds under ``tree:region``, whatever
@@ -369,7 +369,7 @@ def tree_scope(
 
 @dataclass
 class ForestNode:
-    """Experimental. One node of an access forest.
+    """One node of an access forest.
 
     ``granted`` is true for a node a grant names. Its ancestors and the other
     roots are there for navigation, with ``granted`` false. ``children`` lists
@@ -399,7 +399,7 @@ class ForestNode:
 
 @dataclass
 class Forest:
-    """Experimental. A user's access forest for one tree model (:func:`access_forest`).
+    """A user's access forest for one tree model (:func:`access_forest`).
 
     ``all`` is true when the user reaches every node (a superuser, or a grant
     of scope ``all`` of the permission asked about): every root is then
@@ -501,7 +501,7 @@ def access_forest(
     permission: str | None = None,
     max_nodes: int = 1000,
 ) -> Forest:
-    """Experimental. The nodes ``user`` holds in ``tree_model``, their ancestors and every root.
+    """The nodes ``user`` holds in ``tree_model``, their ancestors and every root.
 
     The granted nodes come from every ``tree:<path>`` grant of the user whose
     path ends at ``tree_model`` (``permission``, a key or a pattern, keeps the
@@ -619,7 +619,7 @@ def _node(
 
 @dataclass(frozen=True)
 class RowVerdict:
-    """Experimental. Which granted node a row is under, for one grant (:func:`explain_row`).
+    """Which granted node a row is under, for one grant (:func:`explain_row`).
 
     ``nodes`` are the grant's nodes and ``values`` the row's own nodes on the
     path, each as ``(key, label)``. ``under`` is ``(row node, granted node)``
@@ -666,7 +666,7 @@ class RowVerdict:
 def explain_row(
     model: type[models.Model], path: str, row: models.Model | None, nodes: Iterable[Any]
 ) -> RowVerdict:
-    """Experimental. Whether ``row``'s nodes on ``path`` are under one of ``nodes``, and which.
+    """Whether ``row``'s nodes on ``path`` are under one of ``nodes``, and which.
 
     Three queries: the row's nodes, one walk up from them, and the labels.
     Without a row, the verdict only names the nodes (one query).

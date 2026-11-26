@@ -1,5 +1,5 @@
 /**
- * <GlobalSearch> (experimental) against the msw backend's GET /api/search/:
+ * <GlobalSearch> against the msw backend's GET /api/search/:
  * the shortcut, the WAI-ARIA combobox, keyboard navigation, the grouped
  * results, the links to ResourceDetail pages, the states and the slots.
  */

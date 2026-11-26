@@ -2,8 +2,8 @@
 
 The kind (:mod:`karni_cli.kinds`) is what the project is: ``site`` (a public
 website the client edits in the admin), ``app`` (an API and a React app),
-``site+app``, ``game`` (a game first, experimental) or ``app+game`` (an app
-with a game in it, experimental). ``--kind`` names it, an interactive run
+``site+app``, ``game`` (a game first) or ``app+game`` (an app
+with a game in it). ``--kind`` names it, an interactive run
 asks, and a run nobody can answer makes an app (a site with ``--design``). It
 is recorded as ``kind`` under ``[tool.karni]`` in pyproject.toml. A kind with
 a site gets the site app (``karni make site``'s code, karni-site wired), and
@@ -21,7 +21,7 @@ client sees editable except what becomes rows, the staff app and the admin
 themed from the design's CSS). It prints the rest of the site-from-design
 procedure as the next steps.
 
-``--recipe <name>`` (experimental) starts the app from a recipe
+``--recipe <name>`` starts the app from a recipe
 (:mod:`karni_cli.recipes`): the project as above, the recipe's karni.yaml
 with this project's name, the recipe named in ``.karni/build.json``, then
 ``karni build``, which writes the recipe's own files (its domain code, seeds
@@ -728,9 +728,9 @@ def new(
         metavar="[site|app|site+app|game|app+game]",
         help=(
             "What the project is: site (a public website the client edits in the admin), app "
-            "(an API and a React app for signed-in users), site+app, game (experimental: a "
-            "game first, in game/<slug>/ and served at /play/<slug>/, on karni-game and "
-            "@karni/game, with the admin and no staff app), or app+game (experimental: an app "
+            "(an API and a React app for signed-in users), site+app, game (a game "
+            "first, in game/<slug>/ and served at /play/<slug>/, on karni-game and "
+            "@karni/game, with the admin and no staff app), or app+game (an app "
             "with a game on one of its pages). Asked when run in a terminal, else app (site "
             "with --design)."
         ),
@@ -774,7 +774,7 @@ def new(
         None,
         "--genre",
         help=(
-            "Experimental, with --kind game: start the game from a starter (karni starters "
+            "With --kind game: start the game from a starter (karni starters "
             "list): runner, a one-tap endless runner with a daily run, a cosmetics shop and an "
             "ad continue, from karni-game. blank (the default) is the small game --kind game "
             "writes on its own."
@@ -785,7 +785,7 @@ def new(
         None,
         "--recipe",
         help=(
-            "Experimental. Start the app from a recipe (karni recipes list, or blank): its "
+            "Start the app from a recipe (karni recipes list, or blank): its "
             "karni.yaml with this name, then karni build, which also writes the recipe's own "
             "domain code, seeds and tests and runs the tests and karni check. Repeat it for "
             "several recipes in one project (--recipe booking --recipe crm): each one after "
@@ -804,7 +804,7 @@ def new(
     roles staff and editor. An app (--kind app) has the React app in
     frontend/. A site+app has both.
 
-    A game (--kind game, experimental) is the game first: the game in
+    A game (--kind game) is the game first: the game in
     game/<slug>/ on @karni/game, served at /play/<slug>/, its server on
     karni-game, and no staff app unless --staff-app. An app+game (--kind
     app+game) is an app with the game on one of its pages.
@@ -813,7 +813,7 @@ def new(
     steps say what is left: the models, the real content and the loops
     (karni rules --procedure site-from-design).
 
-    With --recipe (experimental), the app starts from a recipe's karni.yaml,
+    With --recipe, the app starts from a recipe's karni.yaml,
     and karni build makes it: the models and the API, the recipe's own
     domain code, seeds and tests, the migrations, demo data, the tests and
     karni check.

@@ -1,4 +1,4 @@
-"""``karni modules`` (experimental): the module catalog, every module and built-in feature.
+"""``karni modules``: the module catalog, every module and built-in feature.
 
     karni modules list [--json]           every entry, added or not, with its questions
     karni modules show NAME [--json]      one entry: what it provides, asks and wires
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 modules_app = typer.Typer(
     help=(
-        "The module catalog (experimental): every module and built-in feature, added or not, "
+        "The module catalog: every module and built-in feature, added or not, "
         "with what it provides and the questions to ask (list, show)."
     ),
     no_args_is_help=True,
@@ -70,7 +70,7 @@ def _entry(loaded: Catalog, manifest: Manifest) -> dict[str, Any]:
 
 @modules_app.command("list")
 def list_(as_json: bool = typer.Option(False, "--json", help=_JSON_HELP)) -> None:
-    """Experimental. Every module and built-in feature: kind, status, state, purpose, questions.
+    """Every module and built-in feature: kind, status, state, purpose, questions.
 
     Modules first, then features. A module is added (in the # karni:apps
     block), installed (the project's interpreter has it) or available. Each
@@ -164,7 +164,7 @@ def show(
     name: str = typer.Argument(..., help="A module or feature, e.g. payments or two_factor."),
     as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
-    """Experimental. One module or feature: what it provides, the questions, the wiring.
+    """One module or feature: what it provides, the questions, the wiring.
 
     For a module: what karni add writes (apps, middleware, context
     processors, the kind) and prints (the URL include, extras), which karni

@@ -1,5 +1,5 @@
 /**
- * <ExtractPreview>: the import preview of an extraction, and its commit. Experimental.
+ * <ExtractPreview>: the import preview of an extraction, and its commit.
  *
  * Shows the proposed rows, a problem per field (found while reading the
  * answer, or by the import's dry run), the preview's counts, and Commit,
@@ -26,18 +26,18 @@ import {
 import * as React from "react";
 import type { ExtractProblem, ExtractResult } from "./types";
 
-/** Experimental. What the `Rows` slot receives: the proposed rows and their fields. */
+/** What the `Rows` slot receives: the proposed rows and their fields. */
 export interface ExtractRowsProps {
   rows: ReadonlyArray<Record<string, unknown>>;
   fields: readonly string[];
 }
 
-/** Experimental. What the `Problems` slot receives: one problem per field, rows from 1. */
+/** What the `Problems` slot receives: one problem per field, rows from 1. */
 export interface ExtractProblemsProps {
   problems: readonly ExtractProblem[];
 }
 
-/** Experimental. The replaceable parts of ExtractPreview. */
+/** The replaceable parts of ExtractPreview. */
 export interface ExtractPreviewSlots {
   Rows: React.ComponentType<ExtractRowsProps>;
   Problems: React.ComponentType<ExtractProblemsProps>;
@@ -71,7 +71,7 @@ function cell(value: unknown): React.ReactNode {
   return String(value);
 }
 
-/** Experimental. The fields the rows use, in the order they first appear. */
+/** The fields the rows use, in the order they first appear. */
 export function rowFields(rows: ReadonlyArray<Record<string, unknown>>): string[] {
   const seen: string[] = [];
   for (const row of rows) {
@@ -165,7 +165,7 @@ function DefaultProblems({ problems }: ExtractProblemsProps): React.ReactElement
   );
 }
 
-/** Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. */
+/** Karni's own slots, exported so a project can wrap one instead of rewriting it. */
 export const defaultExtractPreviewSlots: ExtractPreviewSlots = {
   Rows: DefaultRows,
   Problems: DefaultProblems,
@@ -174,7 +174,7 @@ export const defaultExtractPreviewSlots: ExtractPreviewSlots = {
   Progress: defaultResourceImportSlots.Progress,
 };
 
-/** Experimental. The preview of an extraction, with the import's own commit. */
+/** The preview of an extraction, with the import's own commit. */
 export function ExtractPreview({
   result,
   resourceLabel,

@@ -1,4 +1,4 @@
-/** @karni/ai-ui public barrel: explicit exports only. Experimental. */
+/** Experimental. @karni/ai-ui public barrel: explicit exports only. */
 import { registerAiRoles } from "./roles";
 
 export { ExtractButton } from "./ExtractButton";

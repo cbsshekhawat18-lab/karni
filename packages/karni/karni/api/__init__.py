@@ -19,8 +19,8 @@ supporting machinery lives in the submodules — :mod:`karni.api.access` (the
 :mod:`karni.api.routers` / :mod:`karni.api.urls` (autodiscovery) and
 :mod:`karni.api.schema` — each documenting its own escape hatches.
 
-The performance declarations are re-exported here too: ``Budget`` and the
-experimental ``Scaling`` (:mod:`karni.performance`), ``Unpaginated``
+The performance declarations are re-exported here too: ``Budget`` and
+``Scaling`` (:mod:`karni.performance`), ``Unpaginated``
 (:mod:`karni.pagination`),
 ``Cache`` / ``Uncached`` (:mod:`karni.api.caching`).
 

@@ -66,7 +66,7 @@ def _build() -> Storage:
 
 
 def protected_storage() -> Storage:
-    """Experimental. The storage of protected files (see the module docstring for the choice)."""
+    """The storage of protected files (see the module docstring for the choice)."""
     global _cached
     if _cached is None:
         _cached = _build()
@@ -109,7 +109,7 @@ def object_key(name: str, storage: Storage | None = None) -> str:
 
 
 class PrivateFileSystemStorage(FileSystemStorage):
-    """Experimental. A directory of protected files: it has no URL, the API streams them.
+    """A directory of protected files: it has no URL, the API streams them.
 
     Override / escape hatch: ``STORAGES["protected"]`` replaces it.
     """
@@ -126,7 +126,7 @@ class PrivateFileSystemStorage(FileSystemStorage):
 
 @deconstructible(path="karni_storage.storage.ProtectedStorage")
 class ProtectedStorage(Storage):
-    """Experimental. A protected field's storage: each call goes to :func:`protected_storage`.
+    """A protected field's storage: each call goes to :func:`protected_storage`.
 
     Override / escape hatch: ``STORAGES["protected"]`` replaces the target,
     or a field takes ``storage=`` of its own.

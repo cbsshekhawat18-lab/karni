@@ -1,4 +1,4 @@
-"""Experimental. The parts of a project: the lasting record of each recipe added, and its upgrade.
+"""The parts of a project: the lasting record of each recipe added, and its upgrade.
 
 Each part a project holds has a folder of its own::
 
@@ -62,11 +62,11 @@ __all__ = [
     "write_base",
 ]
 
-#: Experimental. Where each part's record lives, in the project.
+#: Where each part's record lives, in the project.
 PARTS_DIR: Final = ".karni/recipes"
-#: Experimental. The recipe's fragment as it was added.
+#: The recipe's fragment as it was added.
 BASE_FILE: Final = "karni.yaml"
-#: Experimental. The part's record: version, source and the hash of each file written.
+#: The part's record: version, source and the hash of each file written.
 RECORD_FILE: Final = "record.json"
 #: The version of record.json. It moves only for a breaking change.
 _RECORD_VERSION: Final = 1
@@ -74,7 +74,7 @@ _RECORD_VERSION: Final = 1
 
 @dataclass
 class PartRecord:
-    """Experimental. ``.karni/recipes/<name>/record.json``."""
+    """``.karni/recipes/<name>/record.json``."""
 
     name: str
     recipe_version: str = ""
@@ -97,7 +97,7 @@ def _folder(root: Path, name: str) -> Path:
 
 
 def recipe_version(recipe: Recipe) -> str:
-    """Experimental. The recipe's ``version``, or karni-cli's for a recipe that has none."""
+    """The recipe's ``version``, or karni-cli's for a recipe that has none."""
     if recipe.version:
         return recipe.version
     from karni_cli import __version__
@@ -106,7 +106,7 @@ def recipe_version(recipe: Recipe) -> str:
 
 
 def write_base(root: Path, recipe: Recipe) -> None:
-    """Experimental. Keep the recipe's fragment as added: the base of a later upgrade."""
+    """Keep the recipe's fragment as added: the base of a later upgrade."""
     folder = _folder(root, recipe.name)
     folder.mkdir(parents=True, exist_ok=True)
     (folder / BASE_FILE).write_text(recipe.spec(), encoding="utf-8")
@@ -117,7 +117,7 @@ def write_base(root: Path, recipe: Recipe) -> None:
 
 
 def bases(root: Path, names: list[str]) -> dict[str, dict[str, Any]]:
-    """Experimental. The fragment each part was added with, by name (a part without one is left out)."""
+    """The fragment each part was added with, by name (a part without one is left out)."""
     found: dict[str, dict[str, Any]] = {}
     for name in names:
         path = _folder(root, name) / BASE_FILE
@@ -133,7 +133,7 @@ def bases(root: Path, names: list[str]) -> dict[str, dict[str, Any]]:
 
 
 def load_record(root: Path, name: str) -> PartRecord | None:
-    """Experimental. The part's record, or ``None`` when it has none."""
+    """The part's record, or ``None`` when it has none."""
     path = _folder(root, name) / RECORD_FILE
     if not path.is_file():
         return None
@@ -154,14 +154,14 @@ def load_record(root: Path, name: str) -> PartRecord | None:
 
 
 def save_record(root: Path, part: PartRecord) -> None:
-    """Experimental. Write the part's record."""
+    """Write the part's record."""
     folder = _folder(root, part.name)
     folder.mkdir(parents=True, exist_ok=True)
     (folder / RECORD_FILE).write_text(part.text(), encoding="utf-8")
 
 
 def record_files(root: Path, recipe: Recipe, written: Mapping[str, str]) -> None:
-    """Experimental. Record the sha256 of each of the recipe's files a build wrote."""
+    """Record the sha256 of each of the recipe's files a build wrote."""
     current = load_record(root, recipe.name) or PartRecord(recipe.name)
     current.recipe_version = current.recipe_version or recipe_version(recipe)
     current.source = current.source or recipe.source
@@ -189,7 +189,7 @@ def _header(text: str) -> list[str]:
 
 
 def spec_text(text: str, data: dict[str, Any], changed: list[tuple[str, ...]]) -> str:
-    """Experimental. karni.yaml's ``text`` with ``data``, keeping the layout where it can.
+    """karni.yaml's ``text`` with ``data``, keeping the layout where it can.
 
     Each changed key is set in the text (:func:`karni_cli.spec.edit.set_value`),
     so comments elsewhere stay. When that cannot give ``data`` exactly (a key
@@ -255,7 +255,7 @@ def _pending(root: Path, name: str, *, add: bool) -> None:
 
 
 def add(root: Path, spec_file: Path, recipe: Recipe, loaded: Loaded) -> compose.Merged:
-    """Experimental. Merge ``recipe`` into the project's karni.yaml and record it (no build).
+    """Merge ``recipe`` into the project's karni.yaml and record it (no build).
 
     :raises CliError: the merge's refusals (``C442`` to ``C447``), before anything is written.
     """
@@ -276,7 +276,7 @@ def add(root: Path, spec_file: Path, recipe: Recipe, loaded: Loaded) -> compose.
 
 
 def diff_paths(before: Any, after: Any, path: tuple[str, ...] = ()) -> list[tuple[str, ...]]:
-    """Experimental. The keys whose values differ, as deep as both sides are mappings."""
+    """The keys whose values differ, as deep as both sides are mappings."""
     if isinstance(before, Mapping) and isinstance(after, Mapping) and path != ("pages",):
         found: list[tuple[str, ...]] = []
         for key in after:
@@ -289,7 +289,7 @@ def diff_paths(before: Any, after: Any, path: tuple[str, ...] = ()) -> list[tupl
 
 
 def start(root: Path, spec_file: Path, recipe: Recipe, *, name: str, kind: str) -> compose.Merged:
-    """Experimental. A new project's karni.yaml from its first recipe, and the part's record.
+    """A new project's karni.yaml from its first recipe, and the part's record.
 
     The recipe's text is kept (its comments and layout), with the project's
     name and kind and what the merge adds: ``app.recipes``, ``app.currency``,
@@ -312,7 +312,7 @@ def start(root: Path, spec_file: Path, recipe: Recipe, *, name: str, kind: str) 
 
 @dataclass
 class Removed:
-    """Experimental. What ``karni recipes remove`` did with the part's files."""
+    """What ``karni recipes remove`` did with the part's files."""
 
     #: The part's files the project never changed (their recorded sha256): deleted.
     deleted: list[str] = field(default_factory=list)
@@ -321,7 +321,7 @@ class Removed:
 
 
 def remove(root: Path, spec_file: Path, name: str) -> tuple[compose.Merged, Removed]:
-    """Experimental. Take the part ``name`` out of karni.yaml, its record and its files.
+    """Take the part ``name`` out of karni.yaml, its record and its files.
 
     A file of the part's the project never changed (its recorded sha256) is
     deleted: its app is leaving, and its tests would import models that are
@@ -358,7 +358,7 @@ def remove(root: Path, spec_file: Path, name: str) -> tuple[compose.Merged, Remo
 
 @dataclass
 class Upgrade:
-    """Experimental. What ``karni recipes upgrade`` did for one part."""
+    """What ``karni recipes upgrade`` did for one part."""
 
     name: str
     old: str
@@ -416,7 +416,7 @@ def _set(data: dict[str, Any], path: tuple[str, ...], value: Any) -> None:
 
 
 def upgrade(root: Path, spec_file: Path, recipe: Recipe) -> Upgrade:
-    """Experimental. Bring the part ``recipe.name`` to the recipe's current files and fragment.
+    """Bring the part ``recipe.name`` to the recipe's current files and fragment.
 
     :raises CliError: ``C449`` when the project holds no record of the part.
     """

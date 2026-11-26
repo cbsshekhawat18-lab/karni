@@ -8,7 +8,7 @@ from django.apps import AppConfig
 
 
 class KarniDemoConfig(AppConfig):
-    """Experimental. Demo mode (see :mod:`karni.demo`)."""
+    """Demo mode (see :mod:`karni.demo`)."""
 
     name = "karni.demo"
     label = "karni_demo_mode"

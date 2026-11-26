@@ -1,4 +1,4 @@
-"""Experimental. What happens to people and organisations, as signals any app can receive.
+"""What happens to people and organisations, as signals any app can receive.
 
 Every family event of the people contract is published from this module, by
 :func:`publish`, inside the transaction of the change it reports::
@@ -80,7 +80,7 @@ organisation_merged = Signal()
 
 @dataclass(frozen=True)
 class EventSpec:
-    """Experimental. One declared event: its signal, version, fields and person.
+    """One declared event: its signal, version, fields and person.
 
     ``fields`` maps each payload field to what it holds. ``person`` says where
     the person the event is about comes from: ``"person"`` (``publish``'s
@@ -103,7 +103,7 @@ class EventSpec:
 _SOURCE = {"source": "the app label of the part that created it"}
 _MERGED = {"kept": "the id of the record that stays", "removed": "the id of the merged record"}
 
-#: Experimental. Every event of the people contract, by name.
+#: Every event of the people contract, by name.
 EVENTS: Final[dict[str, EventSpec]] = {
     spec.name: spec
     for spec in (
@@ -158,7 +158,7 @@ EVENTS: Final[dict[str, EventSpec]] = {
 
 
 def declare_all(declare: Callable[..., Any]) -> None:
-    """Experimental. Call ``declare(name, version=, fields=, person=, describe=)`` for each event.
+    """Call ``declare(name, version=, fields=, person=, describe=)`` for each event.
 
     What hands the people events to a family event bus: pass its ``declare``.
     An event with a timeline title gets ``timeline=`` too.
@@ -176,7 +176,7 @@ def declare_all(declare: Callable[..., Any]) -> None:
 
 
 def signal_for(name: str) -> Signal:
-    """Experimental. The signal of the event ``name`` (``E259`` for a name not declared here)."""
+    """The signal of the event ``name`` (``E259`` for a name not declared here)."""
     spec = EVENTS.get(name)
     if spec is None:
         raise KarniValueError(
@@ -197,7 +197,7 @@ def _value(value: Any) -> Any:
 def publish(
     name: str, *, subject: models.Model, person: models.Model | None = None, **fields: Any
 ) -> dict[str, Any]:
-    """Experimental. Publish the event ``name`` about ``subject`` and return its payload.
+    """Publish the event ``name`` about ``subject`` and return its payload.
 
     The event goes to the family bus first (:func:`karni.events.publish`:
     an outbox row in the current transaction when ``karni.outbox`` is

@@ -1,4 +1,4 @@
-"""Experimental. The preferences contract: the project's details and the settings parts declare.
+"""The preferences contract: the project's details and the settings parts declare.
 
 A business changes these without code, on one Settings page: its details
 (name, legal name, address, phone, contact email, sender, logo, time zone,
@@ -81,7 +81,7 @@ if TYPE_CHECKING:
         value,
     )
 
-#: Experimental. The version of the preferences contract. A breaking change raises it.
+#: The version of the preferences contract. A breaking change raises it.
 CONTRACT: Final = 1
 
 __all__ = [

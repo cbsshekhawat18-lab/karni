@@ -303,7 +303,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "over it would lose those edits.",
         "Write the draft to another file, or pass --force to replace the map.",
     ),
-    # C140-C149 karni make model --external (experimental)
+    # C140-C149 karni make model --external
     _c(
         "C140",
         "The database to read the table from cannot be used",
@@ -407,7 +407,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "karni add manages the [project].dependencies table of the project's pyproject.toml.",
         "Add the table (or the dependency) by hand, then re-run.",
     ),
-    # C21x-C24x karni spec (experimental): karni.yaml
+    # C21x-C24x karni spec: karni.yaml
     _c(
         "C210",
         "No spec file",
@@ -971,7 +971,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Add what the message says is required (under modules: or features:), or leave one of "
         "the two that conflict out. karni modules show <name> lists both.",
     ),
-    # C500-C519 aggregations in karni.yaml (experimental)
+    # C500-C519 aggregations in karni.yaml
     _c(
         "C500",
         "aggregate names a field or path the entity does not have",
@@ -1155,7 +1155,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Fix the key the message names (docs/app-spec.md#recipes lists every key), or rename "
         "the recipe, then run karni recipes show <name>.",
     ),
-    # C480-C499 game starters: karni new --kind game --genre, karni starters (experimental)
+    # C480-C499 game starters: karni new --kind game --genre, karni starters
     _c(
         "C480",
         "No starter of that genre",
@@ -1286,7 +1286,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Compare with karni recipes show <name> --files and copy what you want by hand, or "
         "restore .karni/recipes/<name>/ from version control.",
     ),
-    # C460-C479 tree models in karni.yaml (experimental)
+    # C460-C479 tree models in karni.yaml
     _c(
         "C460",
         "A tree entity's keys do not fit",
@@ -1297,7 +1297,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Remove tree from an external entity, and remove parent (and position) from the fields "
         "of a tree entity, or rename a field that means something else.",
     ),
-    # C620-C639 the tree scope in karni.yaml (experimental)
+    # C620-C639 the tree scope in karni.yaml
     _c(
         "C620",
         "A role grant's tree:<path> does not lead to a tree entity",
@@ -1311,7 +1311,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "tree:product__categories. Add tree: true to the entity the path ends at, or grant "
         "another scope.",
     ),
-    # C640-C659 navigation from data in karni.yaml (experimental)
+    # C640-C659 navigation from data in karni.yaml
     _c(
         "C640",
         "A navigation entry names a page the spec does not have",
@@ -1352,7 +1352,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Name an entity of apps (Shipment, shop.Shipment) and roles of roles, give each tile its "
         "own key, or leave entity out to place a code tile (commerce.revenue).",
     ),
-    # C700-C719 taxonomies in karni.yaml (experimental)
+    # C700-C719 taxonomies in karni.yaml
     _c(
         "C700",
         "A taxonomy key is not a field name the entity can take",
@@ -1390,7 +1390,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Remove taxonomies from the external entity, or remove external and let Karni own the "
         "table.",
     ),
-    # C520-C539 response caching in karni.yaml (experimental)
+    # C520-C539 response caching in karni.yaml
     _c(
         "C520",
         "An entity's cache value is not valid",
@@ -1464,7 +1464,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "menu (financial reads Financial), and a set without columns shows an empty table.",
         "Name the set in snake_case (default, financial) and list at least one field.",
     ),
-    # C58x/C59x tooling for large projects (experimental)
+    # C58x/C59x tooling for large projects
     _c(
         "C580",
         "The project's karni has no context slices",
@@ -1513,7 +1513,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "letters, digits and -, starting with a letter or digit, at most 16 characters, such as v1.",
         "Write a name like v1 or 2026-11, or leave the key out for an unversioned API.",
     ),
-    # C760-C769 rules of an entity (karni.rules in core, experimental)
+    # C760-C769 rules of an entity (karni.rules in core)
     _c(
         "C760",
         "An entity's bounds do not fit its fields",
@@ -1590,7 +1590,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Fix the path or the value the message names: {active: true}, {seller__user: {not: "
         "$me}}, {company: $company}.",
     ),
-    # C780-C799 suggestions from code (experimental)
+    # C780-C799 suggestions from code
     _c(
         "C780",
         "The project's karni predates suggestions",

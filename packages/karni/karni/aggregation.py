@@ -1,4 +1,4 @@
-"""Experimental. Grouped counts and sums a resource declares, under the list's filters and access.
+"""Grouped counts and sums a resource declares, under the list's filters and access.
 
 A model declares what may be aggregated, next to its other Karni options::
 
@@ -105,15 +105,15 @@ __all__ = [
     "run_aggregate",
 ]
 
-#: Experimental. The metrics a request may name, in the order the docs list them.
+#: The metrics a request may name, in the order the docs list them.
 METRICS: Final[tuple[str, ...]] = ("count", "sum", "avg", "min", "max", "distinct_count")
-#: Experimental. The date buckets a date or datetime field takes after a colon.
+#: The date buckets a date or datetime field takes after a colon.
 BUCKETS: Final[tuple[str, ...]] = ("year", "quarter", "month")
-#: Experimental. The keys a declaration takes.
+#: The keys a declaration takes.
 KEYS: Final[frozenset[str]] = frozenset({"group_by", "values", "metrics", "expressions"})
-#: Experimental. The query parameters the aggregate action reads: never list filters there.
+#: The query parameters the aggregate action reads: never list filters there.
 PARAMETERS: Final[tuple[str, ...]] = ("group_by", "metric", "value", "top", "stack", "series")
-#: Experimental. ``KARNI_AGGREGATE_MAX_GROUPS`` when it is unset.
+#: ``KARNI_AGGREGATE_MAX_GROUPS`` when it is unset.
 DEFAULT_MAX_GROUPS: Final = 1000
 
 #: The metrics that read a number (``count`` and ``distinct_count`` take any value).
@@ -147,12 +147,12 @@ _M, _N, _R = "karni_agg_value", "karni_agg_rows", "karni_agg_rank"
 
 
 class AggregationError(KarniError):
-    """Experimental. A request the declaration does not allow: a 400 with the code."""
+    """A request the declaration does not allow: a 400 with the code."""
 
 
 # text numbers ------------------------------------------------------------------------
 
-#: Experimental. The suffixes :class:`TextNumber` reads, upper case, with their multipliers.
+#: The suffixes :class:`TextNumber` reads, upper case, with their multipliers.
 TEXT_NUMBER_SUFFIXES: Final[Mapping[str, float]] = {
     "K": 1e3,
     "THOUSAND": 1e3,
@@ -167,13 +167,13 @@ TEXT_NUMBER_SUFFIXES: Final[Mapping[str, float]] = {
     "TN": 1e12,
     "TRILLION": 1e12,
 }
-#: Experimental. What :class:`TextNumber` removes before it reads the number.
+#: What :class:`TextNumber` removes before it reads the number.
 TEXT_NUMBER_STRIP: Final[tuple[str, ...]] = ("$", "€", "£", "¥", "₹", ",", " ")
 _NUMBER: Final = r"-?[0-9]+(\.[0-9]+)?"
 
 
 class TextNumber(Case):
-    """Experimental. A number stored as text, read in SQL: ``"$1.2B"`` is 1200000000.0.
+    """A number stored as text, read in SQL: ``"$1.2B"`` is 1200000000.0.
 
     For money and counts a source wrote as text (``"$1,045,000"``, ``"450K"``,
     ``"9.5 million"``, ``"2.1bn"``). It trims the text, upper-cases it,
@@ -229,7 +229,7 @@ def _names(owner: str, key: str, value: Any) -> tuple[str, ...]:
 
 @dataclass(frozen=True)
 class Aggregation:
-    """Experimental. What a resource may be aggregated by (see the module docstring).
+    """What a resource may be aggregated by (see the module docstring).
 
     ``group_by``: fields, relation paths or expression names a request may
     group by, a date field with or without a bucket (``launched_on:year``).
@@ -281,7 +281,7 @@ class Aggregation:
 
     @classmethod
     def coerce(cls, value: Any, owner: str) -> Aggregation:
-        """Experimental. ``value`` (a dict or an ``Aggregation``) as an ``Aggregation``.
+        """``value`` (a dict or an ``Aggregation``) as an ``Aggregation``.
 
         :raises karni.exceptions.KarniImproperlyConfigured: (``E380``) for any
             other value or an unknown key.
@@ -314,7 +314,7 @@ class Aggregation:
             ) from None
 
     def problems(self, model: type[models.Model]) -> list[str]:
-        """Experimental. What in this declaration does not fit ``model`` (empty when all fits)."""
+        """What in this declaration does not fit ``model`` (empty when all fits)."""
         found: list[str] = []
         if not self.group_by:
             found.append("group_by is empty: name at least one field to group by")
@@ -359,17 +359,17 @@ class Aggregation:
         return found
 
     def unused_expressions(self) -> list[str]:
-        """Experimental. Expression names neither ``group_by`` nor ``values`` lists."""
+        """Expression names neither ``group_by`` nor ``values`` lists."""
         used = {entry.partition(":")[0] for entry in self.group_by} | set(self.values)
         return [name for name in self.expressions if name not in used]
 
     def allows_group(self, name: str) -> bool:
-        """Experimental. Whether a request may group by ``name`` (``launched_on:year``)."""
+        """Whether a request may group by ``name`` (``launched_on:year``)."""
         path = name.partition(":")[0]
         return name in self.group_by or path in self.group_by
 
     def describe(self, model: type[models.Model]) -> dict[str, Any]:
-        """Experimental. The declaration as OpenAPI shows it (``x-karni-aggregate``)."""
+        """The declaration as OpenAPI shows it (``x-karni-aggregate``)."""
         return {
             "group_by": list(self.group_options(model)),
             "values": list(self.values),
@@ -377,7 +377,7 @@ class Aggregation:
         }
 
     def group_options(self, model: type[models.Model]) -> tuple[str, ...]:
-        """Experimental. Every ``group_by`` value a request may send, buckets spelled out."""
+        """Every ``group_by`` value a request may send, buckets spelled out."""
         options: list[str] = []
         for entry in self.group_by:
             options.append(entry)
@@ -393,7 +393,7 @@ class Aggregation:
 
 
 def aggregation_of(model: type[models.Model] | None) -> Aggregation | None:
-    """Experimental. The model's ``class Karni: aggregate``, or ``None`` when it declares none.
+    """The model's ``class Karni: aggregate``, or ``None`` when it declares none.
 
     :raises karni.exceptions.KarniImproperlyConfigured: (``E380``) for a
         declaration that is not a dict or an ``Aggregation``.
@@ -407,7 +407,7 @@ def aggregation_of(model: type[models.Model] | None) -> Aggregation | None:
 
 
 def max_groups() -> int:
-    """Experimental. ``KARNI_AGGREGATE_MAX_GROUPS``: the most groups one request returns."""
+    """``KARNI_AGGREGATE_MAX_GROUPS``: the most groups one request returns."""
     from django.conf import settings
 
     return int(getattr(settings, "KARNI_AGGREGATE_MAX_GROUPS", DEFAULT_MAX_GROUPS))
@@ -495,7 +495,7 @@ _EVERY_FIELD: Final = SimpleNamespace(is_superuser=True, is_authenticated=True)
 
 @dataclass(frozen=True)
 class Dimension:
-    """Experimental. One grouping of a request: its key expression, label expression and kind.
+    """One grouping of a request: its key expression, label expression and kind.
 
     ``kind`` is ``relation`` (the key is the related row's key, the label its
     readable field, :func:`karni.meta.label_field`), ``date`` (a bucket, or a
@@ -634,7 +634,7 @@ def _dimension(
 
 @dataclass(frozen=True)
 class AggregateQuery:
-    """Experimental. One aggregate request, checked against the declaration (``parse_query``)."""
+    """One aggregate request, checked against the declaration (``parse_query``)."""
 
     group_by: Dimension
     metric: str = "count"
@@ -690,7 +690,7 @@ def parse_query(
     user: Any = None,
     check_visibility: bool = True,
 ) -> AggregateQuery:
-    """Experimental. The request's parameters, checked against ``aggregation``.
+    """The request's parameters, checked against ``aggregation``.
 
     ``params`` is a mapping of the query parameters (a ``QueryDict`` works).
     Fields hidden from ``user`` (``Karni.field_roles``, ``APIMeta.write_only``)
@@ -839,7 +839,7 @@ def _sorted(dimension: Dimension, entries: list[dict[str, Any]], by_key: bool) -
 def run_aggregate(
     queryset: QuerySet[Any], query: AggregateQuery, *, limit: int | None = None
 ) -> dict[str, Any]:
-    """Experimental. Run ``query`` over ``queryset``: one query, or two with ``top`` ("Other").
+    """Run ``query`` over ``queryset``: one query, or two with ``top`` ("Other").
 
     ``queryset`` is the rows the list shows (access and filters applied).
     The result::

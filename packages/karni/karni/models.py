@@ -6,7 +6,7 @@ inherits:
 
 * :class:`UUIDModel` — random UUID primary key (no sequential enumeration).
 * :class:`IntegerKeyModel` — a 64-bit auto-incrementing integer primary key
-  instead (experimental). :class:`BigIntBaseModel` is :class:`BaseModel` with
+  instead. :class:`BigIntBaseModel` is :class:`BaseModel` with
   it: the key type shows in each model's class line, so one project can mix
   both.
 * :class:`TimestampedModel` — ``created_at`` / ``updated_at``.
@@ -17,7 +17,7 @@ inherits:
 * :class:`AuditedModel` — ``created_by`` / ``updated_by``, stamped from
   :func:`karni.middleware.get_current_user` (contextvars; WSGI and ASGI).
 * :class:`TreeModel` / :class:`OrderedTreeModel` — a ``parent`` hierarchy
-  with cycle-safe walks (experimental). List it before the base:
+  with cycle-safe walks. List it before the base:
   ``class Region(TreeModel, BaseModel)``.
 
 Override / escape hatch: every class is abstract — subclass, redeclare a
@@ -88,7 +88,7 @@ class UUIDModel(models.Model):
 
 
 class IntegerKeyModel(models.Model):
-    """Experimental. A 64-bit auto-incrementing integer primary key (``BigAutoField``).
+    """A 64-bit auto-incrementing integer primary key (``BigAutoField``).
 
     The database numbers rows 1, 2, 3, ..., so a key is short and sorts by
     insertion, and it can be guessed: a public detail URL lets anyone walk
@@ -471,7 +471,7 @@ class BaseModel(_KarniModel, UUIDModel):
 
 
 class BigIntBaseModel(_KarniModel, IntegerKeyModel):
-    """Experimental. :class:`BaseModel` with a 64-bit integer key (:class:`IntegerKeyModel`).
+    """:class:`BaseModel` with a 64-bit integer key (:class:`IntegerKeyModel`).
 
     Everything else is the same: timestamps, soft delete, audit users, the
     guards, the managers and ``pre_write``. Choose it per model, in the class
@@ -489,7 +489,7 @@ class BigIntBaseModel(_KarniModel, IntegerKeyModel):
         abstract = True
 
 
-# trees (experimental)
+# trees
 
 #: ``_karni_tree_loaded_parent`` before a row is loaded: the parent it had is unknown.
 _UNKNOWN: Any = object()
@@ -518,7 +518,7 @@ def _key(model: type[models.Model], value: Any) -> Any:
 
 
 class TreeModel(models.Model):
-    """Experimental. A node of a hierarchy: ``parent`` points at another row of the same model.
+    """A node of a hierarchy: ``parent`` points at another row of the same model.
 
     List it before the base, ``class Region(TreeModel, BaseModel)`` (or
     ``BigIntBaseModel``), so ``objects`` is a :class:`karni.managers.TreeManager`
@@ -754,7 +754,7 @@ class TreeModel(models.Model):
 
 
 class OrderedTreeModel(TreeModel):
-    """Experimental. A :class:`TreeModel` whose siblings have an order: ``position``.
+    """A :class:`TreeModel` whose siblings have an order: ``position``.
 
     Siblings sort by ``position`` (0 first), then ``created_at``, then the
     key. A node created without a position goes after its last sibling (one

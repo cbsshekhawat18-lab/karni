@@ -1,4 +1,4 @@
-"""The saved chart: a source resource, its axes and its filters (experimental).
+"""The saved chart: a source resource, its axes and its filters.
 
 A chart's data is never stored. It is the source's aggregate
 (``GET <source>/aggregate/``) for the axes below, fetched as the person who
@@ -28,7 +28,7 @@ _METRIC_LABELS = {
 
 
 class Chart(BaseModel):
-    """Experimental. A chart people edit in the admin and the app draws with ``SavedChart``.
+    """A chart people edit in the admin and the app draws with ``SavedChart``.
 
     The x axis is ``x_field`` (a group of the source's aggregation) with an
     optional date bucket. The y axis is ``y_metric`` over ``y_value``. The z
@@ -123,7 +123,7 @@ class Chart(BaseModel):
         return self.name
 
     def query(self) -> dict[str, str]:
-        """Experimental. The source's aggregate parameters for this chart's axes."""
+        """The source's aggregate parameters for this chart's axes."""
         found = {
             "group_by": f"{self.x_field}:{self.x_bucket}" if self.x_bucket else self.x_field,
             "metric": self.y_metric,

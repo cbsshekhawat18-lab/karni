@@ -166,7 +166,7 @@ class CartSerializer(serializers.Serializer[Any]):
 
 
 def checkout_options() -> dict[str, Any]:
-    """Experimental. What checkout asks, from the Checkout settings."""
+    """What checkout asks, from the Checkout settings."""
     from karni import preferences
 
     return {

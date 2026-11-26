@@ -70,7 +70,7 @@ async function failed(canvasElement: HTMLElement): Promise<void> {
 
 export const Default: Story = {};
 
-/** Experimental: a "Sign in with a code" switch shows OtpLoginForm in place of the password. */
+/** A "Sign in with a code" switch shows OtpLoginForm in place of the password. */
 export const WithCodeSignIn: Story = { args: { codeSignIn: true } };
 
 /**

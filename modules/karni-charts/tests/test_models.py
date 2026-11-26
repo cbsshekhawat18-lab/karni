@@ -1,4 +1,4 @@
-"""The Chart model: its query string and the checks a save runs (experimental)."""
+"""The Chart model: its query string and the checks a save runs."""
 
 from __future__ import annotations
 

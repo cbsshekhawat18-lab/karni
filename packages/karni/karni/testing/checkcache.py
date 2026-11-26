@@ -1,4 +1,4 @@
-"""Experimental. ``karni check``'s cache: a check reruns only on the files that changed.
+"""``karni check``'s cache: a check reruns only on the files that changed.
 
 ``manage.py karni_check`` keeps, per check and per file, what the check found
 in that file, under the hash of the file's content. On the next run a file
@@ -91,7 +91,7 @@ def fingerprint() -> str:
 
 @dataclass
 class CheckCache:
-    """Experimental. Per-check, per-file results, keyed by each file's content hash.
+    """Per-check, per-file results, keyed by each file's content hash.
 
     ``enabled=False`` computes everything and stores nothing. ``changed``
     (paths relative to ``root``) narrows a run: :meth:`wanted` says which

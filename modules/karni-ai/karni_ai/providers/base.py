@@ -50,7 +50,7 @@ __all__ = [
 
 @dataclass(frozen=True)
 class Usage:
-    """Experimental. The tokens one provider call used, as the provider reported them."""
+    """The tokens one provider call used, as the provider reported them."""
 
     input_tokens: int
     output_tokens: int
@@ -62,7 +62,7 @@ class Usage:
 
 @dataclass(frozen=True)
 class StructuredRequest:
-    """Experimental. What a provider is asked.
+    """What a provider is asked.
 
     ``instructions`` is the system prompt, ``source`` the text to read (data,
     never instructions), ``schema`` the JSON Schema the answer must follow and
@@ -80,7 +80,7 @@ class StructuredRequest:
 
 @dataclass(frozen=True)
 class StructuredAnswer:
-    """Experimental. A provider's answer: the decoded JSON, its usage and the model that gave it."""
+    """A provider's answer: the decoded JSON, its usage and the model that gave it."""
 
     data: Any
     usage: Usage
@@ -90,7 +90,7 @@ class StructuredAnswer:
 
 
 class Provider(ABC):
-    """Experimental. A language model behind one API.
+    """A language model behind one API.
 
     Subclass it to use a provider Karni does not ship: give it a unique
     ``name``, implement :meth:`structured` (and :meth:`problems` when it needs
@@ -122,7 +122,7 @@ PROVIDER_SHORTCUTS: dict[str, str] = {
     "openai": "karni_ai.providers.openai.OpenAIProvider",
     "test": "karni_ai.providers.test.TestProvider",
 }
-"""Experimental. The names ``KARNI_AI_PROVIDER`` takes besides a dotted path."""
+"""The names ``KARNI_AI_PROVIDER`` takes besides a dotted path."""
 
 _cache: dict[str, Provider] = {}
 
@@ -133,7 +133,7 @@ def provider_spec() -> str:
 
 
 def get_provider(spec: str | None = None) -> Provider:
-    """Experimental. The provider ``KARNI_AI_PROVIDER`` names (or ``spec``), cached per value.
+    """The provider ``KARNI_AI_PROVIDER`` names (or ``spec``), cached per value.
 
     :raises KarniImproperlyConfigured: AI001 when nothing is set, AI002 when
         the value is neither a shortcut nor a ``Provider`` subclass.

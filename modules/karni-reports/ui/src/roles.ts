@@ -1,7 +1,7 @@
 /**
  * Component-role registration, feature-detected on @karni/ui's registry.
  *
- * Experimental. When the installed @karni/ui exports `registerComponentRole`,
+ * When the installed @karni/ui exports `registerComponentRole`,
  * the role `report-button` is registered at import time under the component
  * name. `registerReportRoles` is the escape hatch: call it with your own
  * registry object to register the role elsewhere.

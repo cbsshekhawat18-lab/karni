@@ -1,4 +1,4 @@
-"""Experimental. What commerce tells the people contract about a person: their orders.
+"""What commerce tells the people contract about a person: their orders.
 
 ``karni.people`` imports this module at startup (``<app>/people.py``). The
 facts are SQL expressions over :class:`~karni_commerce.models.Order`, so a CRM

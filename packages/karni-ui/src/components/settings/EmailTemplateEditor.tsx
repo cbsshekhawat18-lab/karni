@@ -1,5 +1,5 @@
 /**
- * Experimental. Edits one email a business sends: the subject and the text,
+ * Edits one email a business sends: the subject and the text,
  * with the merge fields the email offers, a preview, and a way back to the
  * default. Works on `/email-templates/<kind>/`.
  */

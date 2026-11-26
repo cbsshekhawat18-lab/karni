@@ -1,4 +1,4 @@
-"""``manage.py karni_rows '<requests>'`` (experimental): row counts for ``karni plan``.
+"""``manage.py karni_rows '<requests>'``: row counts for ``karni plan``.
 
 Prints :func:`karni.facts.count_rows` for a JSON list of requests, each
 ``{"model": "app.Model", "field": ..., "kind": ..., "arg": ...}``, as
@@ -22,7 +22,7 @@ from karni.facts import count_rows
 
 
 class Command(BaseCommand):
-    help = "Experimental. Count rows for karni plan: a JSON list of requests in, counts out."
+    help = "Count rows for karni plan: a JSON list of requests in, counts out."
     # The counts must print even when system checks fail: `karni check` owns checks.
     requires_system_checks: list[Any] = []
 

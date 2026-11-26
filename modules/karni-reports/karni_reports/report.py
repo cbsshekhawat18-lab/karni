@@ -41,7 +41,7 @@ __all__ = ["Report"]
 
 
 class Report:
-    """Experimental. A PDF the rows of one model print as, rendered from one template.
+    """A PDF the rows of one model print as, rendered from one template.
 
     Class attributes:
 

@@ -1196,7 +1196,7 @@ def test_detail_pages_expand_the_model_relations(project: Path) -> None:
 
 
 def test_a_detail_page_takes_related_tabs(project: Path) -> None:
-    """Experimental: --related writes ResourceDetail's related tabs."""
+    """--related writes ResourceDetail's related tabs."""
     ok("make", "page", "company-detail", "--resource", "companies", "--kind", "detail",
        "--related", "deals", "--related", "people.company")  # fmt: skip
     page = (project / "frontend" / "src" / "pages" / "company-detail.tsx").read_text()
@@ -1255,7 +1255,7 @@ def test_generated_site_pages_start_with_the_placeholder_karni_site_reports() ->
 
 
 def test_a_dashboard_page_counts_the_routed_resources(project: Path) -> None:
-    """Experimental: --kind dashboard composes DashboardGrid and ChartCard with useResourceCounts."""
+    """--kind dashboard composes DashboardGrid and ChartCard with useResourceCounts."""
     ok("make", "app", "shop")
     ok("make", "model", "Product", "name:str", "--with", "viewset")
     ok("make", "model", "Supplier", "name:str", "--with", "viewset")

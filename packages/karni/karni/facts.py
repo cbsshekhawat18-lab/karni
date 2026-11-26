@@ -1,4 +1,4 @@
-"""Experimental. The project as plain facts: models, viewsets, roles, features, modules, seeders.
+"""The project as plain facts: models, viewsets, roles, features, modules, seeders.
 
 ``manage.py karni_facts`` prints :func:`project_facts` as JSON, and
 ``karni spec export`` turns it into a ``karni.yaml``. The facts say what the
@@ -59,7 +59,7 @@ FEATURE_SETTINGS: tuple[str, ...] = (
     "KARNI_ACCOUNTS_DEFAULT_ROLES",
     "KARNI_PK",
 )
-#: Experimental. What :func:`count_rows` counts (see its docstring).
+#: What :func:`count_rows` counts (see its docstring).
 COUNT_KINDS: tuple[str, ...] = ("all", "set", "empty", "longer", "in")
 
 
@@ -95,7 +95,7 @@ def _base_root() -> Path:
 
 
 def project_apps() -> list[AppConfig]:
-    """Experimental. The project's own app configs (see the module docstring)."""
+    """The project's own app configs (see the module docstring)."""
     chosen = getattr(settings, "KARNI_FACTS_APPS", None)
     if chosen is not None:
         return [apps.get_app_config(label) for label in chosen]
@@ -358,7 +358,7 @@ def _seeders() -> dict[str, Any]:
 
 
 def project_facts() -> dict[str, Any]:
-    """Experimental. Everything ``karni spec export`` reads, as JSON-safe data."""
+    """Everything ``karni spec export`` reads, as JSON-safe data."""
     from karni.conf import base
 
     user = get_user_model()
@@ -398,7 +398,7 @@ def project_facts() -> dict[str, Any]:
 
 
 def _seed_bulk_threshold() -> int:
-    """Experimental. Rows per model from which karni seed inserts in bulk, for karni plan."""
+    """Rows per model from which karni seed inserts in bulk, for karni plan."""
     from karni.bulk_seeding import bulk_threshold
 
     return bulk_threshold()
@@ -457,7 +457,7 @@ def _unreachable(alias: str) -> str | None:
 
 
 def count_rows(requests: list[Mapping[str, Any]]) -> dict[str, Any]:
-    """Experimental. Row counts for ``karni plan``: one count per request, ``None`` when it fails.
+    """Row counts for ``karni plan``: one count per request, ``None`` when it fails.
 
     Each request is ``{"model": "app.Model"}``, plus ``"field"`` and
     ``"kind"`` to count part of the rows: ``all`` (every row), ``set`` (rows

@@ -1,5 +1,5 @@
 /**
- * Experimental. The family's own account sections, registered once at
+ * The family's own account sections, registered once at
  * startup for the contracts the project holds. The build's
  * `frontend/src/karni/parts.ts` calls it with what karni.yaml switches on:
  *
@@ -18,7 +18,7 @@ import { registerAccountSection } from "../account/sections";
 import { MyAddresses } from "./addresses";
 import { EmailChoices } from "./inbox";
 
-/** Experimental. Which contracts the project holds, as karni.yaml's `features` says. */
+/** Which contracts the project holds, as karni.yaml's `features` says. */
 export interface FamilyContracts {
   people?: boolean;
   notify?: boolean;

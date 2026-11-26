@@ -141,13 +141,13 @@ export interface ResourceDetailSlots {
   Deleted: React.ComponentType<ResourceDetailDeletedProps>;
   /** The lifecycle buttons of one StateField (see the `transitions` prop). */
   Transitions: React.ComponentType<ResourceDetailTransitionsProps>;
-  /** Experimental. The path above a node of a tree resource (see the `breadcrumb` prop). */
+  /** The path above a node of a tree resource (see the `breadcrumb` prop). */
   Breadcrumb: React.ComponentType<TreeBreadcrumbProps>;
-  /** Experimental. The related tabs (see the `related` prop): one ResourceTable per tab. */
+  /** The related tabs (see the `related` prop): one ResourceTable per tab. */
   Related: React.ComponentType<ResourceDetailRelatedProps>;
 }
 
-/** Experimental. Links for the breadcrumb of a tree resource's record. */
+/** Links for the breadcrumb of a tree resource's record. */
 export type ResourceDetailBreadcrumbOptions = Pick<TreeBreadcrumbProps, "href" | "onNavigate">;
 
 export interface ResourceDetailProps {
@@ -163,7 +163,7 @@ export interface ResourceDetailProps {
   /** Appended below the field list (e.g. a child <ResourceTable>), even while the record loads. */
   sections?: ReadonlyArray<React.ReactNode>;
   /**
-   * Experimental. A tab per reverse relation, each a ResourceTable of the
+   * A tab per reverse relation, each a ResourceTable of the
    * related rows filtered to this record: `related={["deals", "people"]}`.
    * A name is the relation's name, its resource, or `resource.field` when two
    * relations lead to one resource (the backend publishes them as
@@ -200,7 +200,7 @@ export interface ResourceDetailProps {
   /** Called after a lifecycle move succeeded, with the record as the server returned it. */
   onTransition?: (item: Item, field: string, target: string) => void;
   /**
-   * Experimental. On a tree resource (`x-karni-tree`), the path from the root
+   * On a tree resource (`x-karni-tree`), the path from the root
    * to this record above it, from `ancestors/`. Default true. `false` hides
    * it, and an object gives its ancestors links (`href`, `onNavigate`).
    */
@@ -208,12 +208,12 @@ export interface ResourceDetailProps {
   /** Replace parts of the view: Loading, Error, NotFound, EmptyValue, DeleteDialog, Deleted. */
   slots?: Partial<ResourceDetailSlots>;
   /**
-   * Experimental. The groups the fields show in, as sections or tabs. Default:
+   * The groups the fields show in, as sections or tabs. Default:
    * the model's `Karni.field_groups` (`x-karni-field-groups`). The fields in no
    * group come last, under "Other". `false` shows one list.
    */
   fieldGroups?: false | readonly FieldGroupDef[];
-  /** Experimental. `"sections"` or `"tabs"`. Default: the model's `field_group_layout`. */
+  /** `"sections"` or `"tabs"`. Default: the model's `field_group_layout`. */
   groupLayout?: FieldGroupLayout;
   className?: string;
 }
@@ -644,7 +644,7 @@ function shownFields(
  *
  * A MarkdownField shows formatted and sanitized (MarkdownView), across the
  * width. A model with `Karni.field_groups` shows its domain fields in those
- * groups, as sections or tabs (experimental), the fields in no group last.
+ * groups, as sections or tabs, the fields in no group last.
  *
  * Escape hatches: per-field `fields` overrides (label/hidden/render, audit
  * fields included), appended `sections`, the title/actions header, the

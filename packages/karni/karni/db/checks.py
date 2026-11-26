@@ -1,4 +1,4 @@
-"""Checks for external models and ``Karni.database`` (experimental).
+"""Checks for external models and ``Karni.database``.
 
 Two kinds:
 
@@ -344,7 +344,7 @@ def _reachable(alias: str) -> str | None:
 def check_external_tables(
     databases: Iterable[str] | None = None, models: Iterable[type[Model]] | None = None
 ) -> list[checks.CheckMessage]:
-    """Experimental. Compare each external model with its table or view, where the database answers.
+    """Compare each external model with its table or view, where the database answers.
 
     ``databases`` limits the aliases compared (default: every alias that
     holds an external model), and ``models`` the models (default: every

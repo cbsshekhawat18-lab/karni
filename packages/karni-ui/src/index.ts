@@ -192,7 +192,7 @@ export type {
   ResourceSelectOptionProps,
 } from "./components/resource/ResourceSelect";
 
-// tree models (experimental)
+// tree models
 export { TreeView } from "./components/resource/tree/TreeView";
 export type { TreeViewProps, TreeValue } from "./components/resource/tree/TreeView";
 export { defaultTreeViewSlots } from "./components/resource/tree/tree-states";
@@ -225,7 +225,7 @@ export type {
   TreeMutations,
 } from "./hooks/useResourceTree";
 
-// taxonomies (experimental)
+// taxonomies
 export { FacetPanel, defaultFacetPanelSlots } from "./components/resource/facets/FacetPanel";
 export type {
   FacetPanelProps,
@@ -314,7 +314,7 @@ export { karniKeys } from "./hooks/keys";
 export { useResourceList } from "./hooks/useResourceList";
 export { useResourceItem } from "./hooks/useResourceItem";
 export { useResourceMutations } from "./hooks/useResourceMutations";
-// row counts per resource, for dashboard charts (experimental)
+// row counts per resource, for dashboard charts
 export { useResourceCounts } from "./hooks/useResourceCounts";
 export type {
   ResourceCountPoint,
@@ -384,7 +384,7 @@ export type {
 export { AuthProvider, useAuth } from "./auth/provider";
 export type { AuthProviderProps, AuthContextValue } from "./auth/provider";
 
-// demo mode (experimental): the demo accounts on a sign-in page
+// demo mode: the demo accounts on a sign-in page
 export { DEMO_PATH, useDemo } from "./demo/useDemo";
 export type { DemoAccount, DemoInfo } from "./demo/useDemo";
 export {
@@ -424,7 +424,7 @@ export type {
   TermsClientInfo,
 } from "./auth/types";
 
-// sign-in with an ID token (experimental)
+// sign-in with an ID token
 export { useSocialLogin } from "./auth/useSocialLogin";
 export type { SocialLoginStatus, UseSocialLoginResult } from "./auth/useSocialLogin";
 
@@ -437,7 +437,7 @@ export type {
   SocialIdToken,
 } from "./auth/SocialButton";
 
-// sign-in with a code sent by email (experimental)
+// sign-in with a code sent by email
 export { useOtpLogin } from "./auth/useOtpLogin";
 export type {
   OtpLoginStatus,
@@ -454,7 +454,7 @@ export type {
   OtpLoginFormApprovalProps,
 } from "./auth/OtpLoginForm";
 
-// terms acceptance (experimental)
+// terms acceptance
 export { TermsGate, defaultTermsGateSlots } from "./auth/TermsGate";
 export type { TermsGateProps, TermsGateSlots, TermsGatePanelProps } from "./auth/TermsGate";
 
@@ -609,7 +609,7 @@ export type {
   DataChartLoadingProps,
 } from "./components/chart/data-chart";
 
-// a resource's rows as cards: catalogues (experimental)
+// a resource's rows as cards: catalogues
 export { ResourceGrid, defaultResourceGridSlots } from "./components/resource-grid/ResourceGrid";
 export type {
   ResourceGridProps,
@@ -620,7 +620,7 @@ export type {
   ResourceGridLoadingProps,
 } from "./components/resource-grid/ResourceGrid";
 
-// money and page metadata for public pages (experimental)
+// money and page metadata for public pages
 export { formatMoney } from "./lib/money";
 export { usePageMeta } from "./hooks/usePageMeta";
 export { AccountPage } from "./components/account/AccountPage";
@@ -637,7 +637,7 @@ export { SignUpForm } from "./components/account/SignUpForm";
 export type { SignUpFormProps } from "./components/account/SignUpForm";
 export type { PageMeta } from "./hooks/usePageMeta";
 
-// the family screens: one layout, home, people, inbox, search for every part (experimental)
+// the family screens: one layout, home, people, inbox, search for every part
 export {
   BUSINESS_QUERY_KEY,
   CUSTOMER_ROLES,
@@ -697,16 +697,16 @@ export type { FamilyHomeProps } from "./components/family/family-home";
 export { registerFamily } from "./components/family/register";
 export type { FamilyContracts } from "./components/family/register";
 
-/** Experimental. The one Settings page: details, settings sections and emails, from `/preferences/`. */
+/** The one Settings page: details, settings sections and emails, from `/preferences/`. */
 export { SettingsPage } from "./components/settings/SettingsPage";
-/** Experimental. Props of `SettingsPage`. */
+/** Props of `SettingsPage`. */
 export type { SettingsPageProps } from "./components/settings/SettingsPage";
-/** Experimental. Edits one email's subject and text through `/email-templates/<kind>/`. */
+/** Edits one email's subject and text through `/email-templates/<kind>/`. */
 export { EmailTemplateEditor } from "./components/settings/EmailTemplateEditor";
-/** Experimental. Props of `EmailTemplateEditor`. */
+/** Props of `EmailTemplateEditor`. */
 export type { EmailTemplateEditorProps } from "./components/settings/EmailTemplateEditor";
 
-// page blocks beyond CRUD (experimental)
+// page blocks beyond CRUD
 export {
   DashboardGrid,
   DashboardCard,
@@ -777,7 +777,7 @@ export type {
   ComparisonTableEmptyProps,
 } from "./components/comparison-table/comparison-table";
 
-// board by state (experimental)
+// board by state
 export {
   ResourceBoard,
   defaultResourceBoardSlots,
@@ -791,7 +791,7 @@ export type {
   ResourceBoardLoadingProps,
 } from "./components/resource-board/ResourceBoard";
 
-// calendar (experimental)
+// calendar
 export {
   ResourceCalendar,
   defaultResourceCalendarSlots,

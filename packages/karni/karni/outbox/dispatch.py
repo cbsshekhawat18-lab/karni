@@ -1,4 +1,4 @@
-"""Experimental. How a committed family event reaches a worker: ``KARNI_EVENTS_DISPATCHER``.
+"""How a committed family event reaches a worker: ``KARNI_EVENTS_DISPATCHER``.
 
 A dispatcher is a callable ``(event_id: str, *, countdown: float = 0) ->
 None``. Karni calls it once the publishing transaction commits, and again

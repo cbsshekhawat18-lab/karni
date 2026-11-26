@@ -1,5 +1,5 @@
 /**
- * Experimental. `usePageMeta({ title, description })`: the page's title and description
+ * `usePageMeta({ title, description })`: the page's title and description
  * for search engines and for the browser tab.
  *
  * A public page (a catalogue, a product, a course) is found through a search
@@ -28,7 +28,7 @@ function descriptionTag(): HTMLMetaElement {
   return created;
 }
 
-/** Experimental. Sets `document.title` and the description meta tag while the caller is mounted. */
+/** Sets `document.title` and the description meta tag while the caller is mounted. */
 export function usePageMeta({ title, description, siteName }: PageMeta): void {
   useEffect(() => {
     if (title === undefined) return undefined;

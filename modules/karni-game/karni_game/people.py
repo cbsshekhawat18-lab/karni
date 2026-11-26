@@ -1,4 +1,4 @@
-"""Experimental. What karni-game tells the people contract: a person's player.
+"""What karni-game tells the people contract: a person's player.
 
 ``karni.people`` imports this module at startup (``<app>/people.py``):
 

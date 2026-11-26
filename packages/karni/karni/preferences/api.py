@@ -1,4 +1,4 @@
-"""Experimental. The API behind the Settings page: ``/api/preferences/``.
+"""The API behind the Settings page: ``/api/preferences/``.
 
 * ``GET preferences/``: everything the page shows, for a caller who may change
   at least one part of it (403 otherwise): ``details`` (values, fields,
@@ -113,7 +113,7 @@ def _detail_fields() -> list[dict[str, Any]]:
 
 
 def settings_page(user: Any) -> dict[str, Any]:
-    """Experimental. What ``GET preferences/`` answers for ``user``."""
+    """What ``GET preferences/`` answers for ``user``."""
     from karni.preferences import CONTRACT
 
     shown = services.details()
@@ -199,14 +199,14 @@ def _may_open(user: Any) -> bool:
 
 
 class SettingsView(APIView):
-    """Experimental. ``GET preferences/``: the Settings page (see the module docstring)."""
+    """``GET preferences/``: the Settings page (see the module docstring)."""
 
     permission_classes: ClassVar[list[type]] = [IsAuthenticated]
 
     @extend_schema(
         operation_id="preferences_page",
         tags=["preferences"],
-        description="Experimental. The Settings page: details, sections, connections, emails.",
+        description="The Settings page: details, sections, connections, emails.",
         responses={200: OpenApiTypes.OBJECT},
     )
     def get(self, request: Request, **kwargs: Any) -> Response:
@@ -216,7 +216,7 @@ class SettingsView(APIView):
 
 
 class PublicDetailsView(APIView):
-    """Experimental. ``GET preferences/public/``: the details any visitor may see."""
+    """``GET preferences/public/``: the details any visitor may see."""
 
     permission_classes: ClassVar[list[type]] = [AllowAny]
     authentication_classes: ClassVar[list[type]] = []
@@ -224,7 +224,7 @@ class PublicDetailsView(APIView):
     @extend_schema(
         operation_id="preferences_public",
         tags=["preferences"],
-        description="Experimental. The business's public details, for the header and footer.",
+        description="The business's public details, for the header and footer.",
         responses={200: OpenApiTypes.OBJECT},
     )
     def get(self, request: Request, **kwargs: Any) -> Response:
@@ -233,7 +233,7 @@ class PublicDetailsView(APIView):
 
 
 class DetailsView(APIView):
-    """Experimental. ``PATCH preferences/details/``: change some details."""
+    """``PATCH preferences/details/``: change some details."""
 
     permission_classes: ClassVar[list[type]] = [IsAuthenticated]
 
@@ -257,7 +257,7 @@ class DetailsView(APIView):
 
 
 class SectionView(APIView):
-    """Experimental. ``PATCH preferences/sections/<key>/``: change some fields of a section."""
+    """``PATCH preferences/sections/<key>/``: change some fields of a section."""
 
     permission_classes: ClassVar[list[type]] = [IsAuthenticated]
 
@@ -306,7 +306,7 @@ class _SwitchView(APIView):
 
 
 class ConnectionView(_SwitchView):
-    """Experimental. ``PATCH preferences/connections/<name>/``: switch a connection."""
+    """``PATCH preferences/connections/<name>/``: switch a connection."""
 
     kind = "connection"
     target = "connections"
@@ -322,7 +322,7 @@ class ConnectionView(_SwitchView):
 
 
 class EmailView(_SwitchView):
-    """Experimental. ``PATCH preferences/emails/<kind>/``: switch an email kind."""
+    """``PATCH preferences/emails/<kind>/``: switch an email kind."""
 
     kind = "email"
     target = "emails"
@@ -338,7 +338,7 @@ class EmailView(_SwitchView):
 
 
 class HistoryView(APIView):
-    """Experimental. ``GET preferences/history/``: the latest 100 changes, newest first."""
+    """``GET preferences/history/``: the latest 100 changes, newest first."""
 
     permission_classes: ClassVar[list[type]] = [IsAuthenticated]
 
@@ -395,7 +395,7 @@ def _labels(rows: Any, types: dict[Any, Any]) -> dict[tuple[int, str], str]:
 
 
 def build_urlpatterns(*, force: bool = False) -> list[Any]:
-    """Experimental. The ``preferences/`` routes, unless ``KARNI_PREFERENCES_API`` is False.
+    """The ``preferences/`` routes, unless ``KARNI_PREFERENCES_API`` is False.
 
     ``force=True`` returns them whatever the setting says (a project's own URLconf).
     """

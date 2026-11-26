@@ -1,7 +1,7 @@
 /**
  * <DataTable>: a table of rows the page computed, not a resource.
  *
- * Experimental. ResourceTable lists a resource through the API (paging,
+ * ResourceTable lists a resource through the API (paging,
  * filters, permissions). DataTable shows rows a page already has: a summary,
  * a breakdown, a report's result. It sorts on a click of a header (ascending,
  * descending, then as given), keeps its header and its first column in view
@@ -237,7 +237,7 @@ export const defaultDataTableSlots: DataTableSlots = {
 const EXPORT_LABEL: Record<DataTableExportFormat, string> = { csv: "CSV", xlsx: "XLSX" };
 
 /**
- * Experimental. A sortable, exportable table of rows the page computed, with
+ * A sortable, exportable table of rows the page computed, with
  * a sticky header and first column, virtualized past `virtualizeAfter` rows.
  */
 export function DataTable<T>(props: DataTableProps<T>): React.ReactElement {

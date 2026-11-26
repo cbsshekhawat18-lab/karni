@@ -1,4 +1,4 @@
-"""Tables for external models in a test database (experimental).
+"""Tables for external models in a test database.
 
 An external model (``class Karni: external = True``, ``Meta.managed =
 False``) reads a table or view another system owns, so neither migrations

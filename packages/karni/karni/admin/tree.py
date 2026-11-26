@@ -1,4 +1,4 @@
-"""Experimental. A tree model's changelist: the rows in tree order, each name indented by depth.
+"""A tree model's changelist: the rows in tree order, each name indented by depth.
 
 :class:`karni.admin.KarniModelAdmin` applies it to every tree model
 (:class:`karni.models.TreeModel`) with no declaration:
@@ -39,7 +39,7 @@ DEPTH_ATTR = "_karni_tree_depth"
 
 
 class TreeLabel:
-    """Experimental. The ``tree_label`` column: a row's name, indented by its depth.
+    """The ``tree_label`` column: a row's name, indented by its depth.
 
     ``field`` is the model field shown (``None``: ``str(row)``). Outside tree
     order (a sorted changelist) the name is not indented.

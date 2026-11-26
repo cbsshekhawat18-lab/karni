@@ -26,7 +26,7 @@
   ``validators=[...]`` built on it when you need to know that a number is
   assignable, not just well-formed.
 
-* :class:`MarkdownField` (experimental): a ``TextField`` whose value is
+* :class:`MarkdownField`: a ``TextField`` whose value is
   markdown. The column is plain text and nothing is rendered on the server:
   the OpenAPI schema says ``format: markdown``, so ``@karni/ui``'s
   ResourceForm edits it with Write and Preview tabs and ResourceDetail shows
@@ -362,7 +362,7 @@ class PhoneField(KarniField, models.CharField):
 
 
 class MarkdownField(KarniField, models.TextField):
-    """Experimental. Long-form text written in markdown (see the module docstring).
+    """Long-form text written in markdown (see the module docstring).
 
     A ``TextField`` in the database, in forms and in search. The API publishes
     it as ``{"type": "string", "format": "markdown"}``, and that is the only

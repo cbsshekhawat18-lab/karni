@@ -1,4 +1,4 @@
-"""``karni.facts`` and ``manage.py karni_facts`` (experimental): the project as JSON facts."""
+"""``karni.facts`` and ``manage.py karni_facts``: the project as JSON facts."""
 
 from __future__ import annotations
 

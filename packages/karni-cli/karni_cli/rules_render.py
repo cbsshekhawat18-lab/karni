@@ -52,12 +52,12 @@ def render_procedure(procedure: dict[str, Any], arguments: str = "<arguments>") 
     return "\n".join(lines)
 
 
-#: Experimental. Mirrors karni.agent.rules.REFERENCE_HEADING (an older karni has no reference).
+#: Mirrors karni.agent.rules.REFERENCE_HEADING (an older karni has no reference).
 REFERENCE_HEADING = "Reference:"
 
 
 def reference_lines(procedure: dict[str, Any]) -> list[str]:
-    """Experimental. A procedure's reference bullets under their heading, after a blank line."""
+    """A procedure's reference bullets under their heading, after a blank line."""
     reference = procedure.get("reference") or []
     if not reference:
         return []
@@ -65,7 +65,7 @@ def reference_lines(procedure: dict[str, Any]) -> list[str]:
 
 
 def render_topic(topic: dict[str, Any]) -> str:
-    """Experimental. ``karni explain <topic>``: its title, then its lines."""
+    """``karni explain <topic>``: its title, then its lines."""
     return "\n".join([f"{topic['name']}: {topic['title']}", "", *topic["lines"]])
 
 

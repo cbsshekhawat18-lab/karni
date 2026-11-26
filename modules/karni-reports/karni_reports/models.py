@@ -29,7 +29,7 @@ def report_file_name(instance: GeneratedReport, filename: str) -> str:
 
 
 class GeneratedReport(BaseModel):
-    """Experimental. One rendered PDF: a report of one row, at one template and data version.
+    """One rendered PDF: a report of one row, at one template and data version.
 
     The cache key is the report's name, the row (``content_type`` and
     ``object_id``), ``template_version`` (a hash of the template's source, the

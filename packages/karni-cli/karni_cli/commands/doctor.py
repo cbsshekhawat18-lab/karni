@@ -246,7 +246,7 @@ def _history(project: Path) -> list[str]:
 
 
 def _suggestions(project: Path, service: str) -> list[str]:
-    """Experimental. The suggestions of ``karni suggest``, as doctor's lines (never an error)."""
+    """The suggestions of ``karni suggest``, as doctor's lines (never an error)."""
     try:
         try:
             core = suggest_mod.core_suggestions(project, service=service)

@@ -1,4 +1,4 @@
-"""Experimental. What parts contribute to the people contract: facts, merge, erase, duplicates.
+"""What parts contribute to the people contract: facts, merge, erase, duplicates.
 
 A part declares its contributions in ``<app>/people.py``, which
 :class:`karni.people.apps.PeopleConfig` imports at startup for every
@@ -128,7 +128,7 @@ def _caller_app(depth: int = 2) -> str:
 
 @dataclass(frozen=True)
 class Fact:
-    """Experimental. One person fact: a name, how to compute it, and what it means.
+    """One person fact: a name, how to compute it, and what it means.
 
     ``expression`` is a callable returning a Django expression evaluated
     against ``Person`` (``OuterRef("pk")`` is the person). It is called when a
@@ -164,7 +164,7 @@ def register_fact(
     source: str = "",
     replace: bool = False,
 ) -> Fact:
-    """Experimental. Register the person fact ``name`` (``E257`` for a bad or taken name).
+    """Register the person fact ``name`` (``E257`` for a bad or taken name).
 
     ``expression`` is a Django expression over ``Person``, or a callable that
     returns one (the builders below return callables). ``name`` must be a
@@ -215,7 +215,7 @@ def register_fact(
 def fact(
     name: str, *, label: str = "", kind: str = "number", description: str = ""
 ) -> Callable[[Callable[[], Any]], Callable[[], Any]]:
-    """Experimental. :func:`register_fact` as a decorator over a function that builds it."""
+    """:func:`register_fact` as a decorator over a function that builds it."""
 
     def decorate(function: Callable[[], Any]) -> Callable[[], Any]:
         register_fact(
@@ -232,17 +232,17 @@ def fact(
 
 
 def unregister_fact(name: str) -> None:
-    """Experimental. Remove the person fact ``name`` (nothing when it is not registered)."""
+    """Remove the person fact ``name`` (nothing when it is not registered)."""
     _FACTS.pop(name, None)
 
 
 def facts() -> dict[str, Fact]:
-    """Experimental. The registered person facts, by name, in registration order."""
+    """The registered person facts, by name, in registration order."""
     return dict(_FACTS)
 
 
 def annotate_facts(queryset: QuerySet[Any], names: Iterable[str] | None = None) -> QuerySet[Any]:
-    """Experimental. ``queryset`` of Person with the facts ``names`` (``None``: all) annotated.
+    """``queryset`` of Person with the facts ``names`` (``None``: all) annotated.
 
     An unknown name is ``E257``.
     """
@@ -267,7 +267,7 @@ def _related(model: ModelRef, path: str, filter: Q | None) -> QuerySet[Any]:
 def count_of(
     model: ModelRef, path: str = "person", *, filter: Q | None = None
 ) -> Callable[[], Any]:
-    """Experimental. How many live rows of ``model`` point at the person through ``path``."""
+    """How many live rows of ``model`` point at the person through ``path``."""
 
     def build() -> Any:
         rows = _related(model, path, filter).order_by().values(path)
@@ -280,7 +280,7 @@ def count_of(
 def sum_of(
     model: ModelRef, field_name: str, path: str = "person", *, filter: Q | None = None
 ) -> Callable[[], Any]:
-    """Experimental. The sum of ``field_name`` over the person's live rows of ``model`` (or 0)."""
+    """The sum of ``field_name`` over the person's live rows of ``model`` (or 0)."""
 
     def build() -> Any:
         target = _model(model)._meta.get_field(field_name)
@@ -300,7 +300,7 @@ def sum_of(
 def latest_of(
     model: ModelRef, field_name: str, path: str = "person", *, filter: Q | None = None
 ) -> Callable[[], Any]:
-    """Experimental. The latest ``field_name`` (a date) of the person's live rows, or ``None``."""
+    """The latest ``field_name`` (a date) of the person's live rows, or ``None``."""
 
     def build() -> Any:
         target = _model(model)._meta.get_field(field_name)
@@ -314,7 +314,7 @@ def latest_of(
 def exists_of(
     model: ModelRef, path: str = "person", *, filter: Q | None = None
 ) -> Callable[[], Any]:
-    """Experimental. Whether the person has a live row of ``model`` (with ``filter``)."""
+    """Whether the person has a live row of ``model`` (with ``filter``)."""
 
     def build() -> Any:
         return Exists(_related(model, path, filter))
@@ -328,7 +328,7 @@ def exists_of(
 def merge_hook(
     model: ModelRef, *, replace: bool = False
 ) -> Callable[[Callable[[Any, Any], None]], Callable[[Any, Any], None]]:
-    """Experimental. Register what a merge does with ``model``'s rows (``E257`` when taken).
+    """Register what a merge does with ``model``'s rows (``E257`` when taken).
 
     The hook is called as ``hook(keep, drop)`` with the two people (or the
     two organisations) inside the merge's transaction, before Karni moves the
@@ -355,7 +355,7 @@ def merge_hook(
 
 
 def merge_hooks() -> dict[type[models.Model], Callable[[Any, Any], None]]:
-    """Experimental. The registered merge hooks, by model."""
+    """The registered merge hooks, by model."""
     return dict(_MERGE_HOOKS)
 
 
@@ -365,7 +365,7 @@ def merge_hooks() -> dict[type[models.Model], Callable[[Any, Any], None]]:
 def erase_hook(
     name: str | None = None, *, replace: bool = False
 ) -> Callable[[Callable[[Any], None]], Callable[[Any], None]]:
-    """Experimental. Register ``hook(person)``: anonymise a part's rows of a person (``E257``).
+    """Register ``hook(person)``: anonymise a part's rows of a person (``E257``).
 
     Hooks run in registration order inside ``people.erase``'s transaction,
     before the person's own row is anonymised. ``name`` defaults to the
@@ -387,7 +387,7 @@ def erase_hook(
 
 
 def erase_hooks() -> dict[str, Callable[[Any], None]]:
-    """Experimental. The registered erase hooks, by name, in the order they run."""
+    """The registered erase hooks, by name, in the order they run."""
     return dict(_ERASE_HOOKS)
 
 
@@ -398,7 +398,7 @@ def erasable(
     path: str = "person",
     history: bool = True,
 ) -> Callable[[Any], None]:
-    """Experimental. Register an erase hook writing ``fields`` on the person's rows of ``model``.
+    """Register an erase hook writing ``fields`` on the person's rows of ``model``.
 
     ``people.erasable(Order, fields={"name": "", "email": ""})`` blanks the
     name and email of every order of the person (soft-deleted rows too) and,
@@ -428,7 +428,7 @@ def erasable(
 
 @dataclass(frozen=True)
 class DuplicateRule:
-    """Experimental. A way two people may be the same human: ``find(queryset)`` yields groups.
+    """A way two people may be the same human: ``find(queryset)`` yields groups.
 
     ``find`` takes the live people to look at and returns lists of person
     keys that this rule says belong together (two or more each).
@@ -447,7 +447,7 @@ def register_duplicate_rule(
     describe: str = "",
     replace: bool = False,
 ) -> DuplicateRule:
-    """Experimental. Add a rule ``people.duplicates()`` applies (``E257`` when it is taken)."""
+    """Add a rule ``people.duplicates()`` applies (``E257`` when it is taken)."""
     if name in _DUPLICATE_RULES and not replace:
         raise KarniImproperlyConfigured(
             f"A duplicate rule named {name!r} is registered already. Pass replace=True to swap it.",
@@ -459,7 +459,7 @@ def register_duplicate_rule(
 
 
 def duplicate_rules() -> dict[str, DuplicateRule]:
-    """Experimental. The registered duplicate rules, by name."""
+    """The registered duplicate rules, by name."""
     return dict(_DUPLICATE_RULES)
 
 

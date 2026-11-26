@@ -1,7 +1,7 @@
 /**
  * <DashboardGrid> and <DashboardCard>: a responsive grid of titled cards.
  *
- * Experimental. The grid lays its cards out one per row on phones, two from
+ * The grid lays its cards out one per row on phones, two from
  * the `md` breakpoint and `columns` (2, 3 or 4) from `xl`. A card spans one
  * column, or `span` of them (clamped to the grid's columns), or the whole row
  * (`"full"`). Each card is a labelled region with a heading, an optional
@@ -48,7 +48,7 @@ const SPAN_CLASSES: Record<Exclude<DashboardCardSpan, "full">, string> = {
 };
 
 /**
- * Experimental. A responsive grid of cards (`DashboardCard`, `ChartCard`, or
+ * A responsive grid of cards (`DashboardCard`, `ChartCard`, or
  * any element). One column on phones, two on `md` screens, `columns` on `xl`.
  */
 export const DashboardGrid = React.forwardRef<HTMLDivElement, DashboardGridProps>(
@@ -156,7 +156,7 @@ function spanClass(span: DashboardCardSpan, columns: DashboardGridColumns): stri
 const HEADINGS = { 2: "h2", 3: "h3", 4: "h4" } as const;
 
 /**
- * Experimental. One card of a DashboardGrid: a labelled region with a heading,
+ * One card of a DashboardGrid: a labelled region with a heading,
  * optional description and actions, and loading, empty and error states.
  */
 export const DashboardCard = React.forwardRef<HTMLElement, DashboardCardProps>(

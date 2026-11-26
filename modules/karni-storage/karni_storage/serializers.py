@@ -127,7 +127,7 @@ class _Protected:
 
 
 class ProtectedFileSerializerField(_Protected, serializers.FileField):
-    """Experimental. A protected file: its download path out, a file or an upload token in."""
+    """A protected file: its download path out, a file or an upload token in."""
 
     def to_internal_value(self, data: Any) -> Any:
         token = self._token(data)
@@ -137,7 +137,7 @@ class ProtectedFileSerializerField(_Protected, serializers.FileField):
 
 
 class ProtectedImageSerializerField(_Protected, serializers.ImageField):
-    """Experimental. A protected image: as :class:`ProtectedFileSerializerField`, Pillow-checked."""
+    """A protected image: as :class:`ProtectedFileSerializerField`, Pillow-checked."""
 
     def to_internal_value(self, data: Any) -> Any:
         token = self._token(data)

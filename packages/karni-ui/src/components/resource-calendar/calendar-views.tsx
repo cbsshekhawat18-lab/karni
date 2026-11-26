@@ -29,7 +29,7 @@ import {
 
 type Row = Readonly<Record<string, unknown>>;
 
-/** Experimental. The colour of an event's left edge: a chart colour, or a plain tone. */
+/** The colour of an event's left edge: a chart colour, or a plain tone. */
 export type CalendarTone = "1" | "2" | "3" | "4" | "5" | "primary" | "destructive" | "muted";
 
 const TONE_CLASS: Record<CalendarTone, string> = {
@@ -43,7 +43,7 @@ const TONE_CLASS: Record<CalendarTone, string> = {
   muted: "border-l-muted-foreground",
 };
 
-/** Experimental. What `renderEvent` receives besides the row. */
+/** What `renderEvent` receives besides the row. */
 export interface CalendarEventContext<T> {
   item: CalendarItem<T>;
   /** "10:00 AM – 11:00 AM", in the zone the calendar shows. */
@@ -342,7 +342,7 @@ function slotCount(shared: { hours: { start: number; end: number }; slotMinutes:
   return Math.round(((shared.hours.end - shared.hours.start) * 60) / shared.slotMinutes);
 }
 
-/** Experimental. The day and week views: a column per day, a block per item, an open cell per time. */
+/** The day and week views: a column per day, a block per item, an open cell per time. */
 export function TimeGrid<T extends object>(props: ViewShared<T>): React.ReactElement {
   const { range, timeZone, locale, hours, slotMinutes, items, slots, now } = props;
   const columns = React.useRef<HTMLDivElement>(null);
@@ -681,7 +681,7 @@ function SlotBand<T extends object>(props: {
 
 const MAX_PER_CELL = 3;
 
-/** Experimental. The month view: a cell per day with its items, a few at a time. */
+/** The month view: a cell per day with its items, a few at a time. */
 export function MonthGrid<T extends object>(props: ViewShared<T>): React.ReactElement {
   const { range, timeZone, locale, items, slots, now } = props;
   const grid = React.useRef<HTMLDivElement>(null);
@@ -856,7 +856,7 @@ export function MonthGrid<T extends object>(props: ViewShared<T>): React.ReactEl
 
 // --- list -------------------------------------------------------------------
 
-/** Experimental. The list view, and the phone layout: items by day, in time order, with open slots. */
+/** The list view, and the phone layout: items by day, in time order, with open slots. */
 export function ListView<T extends object>(props: ViewShared<T>): React.ReactElement | null {
   const { range, timeZone, locale, items, slots } = props;
   const days = range.days

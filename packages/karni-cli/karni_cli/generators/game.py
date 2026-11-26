@@ -1,4 +1,4 @@
-"""Experimental. ``karni new --kind game`` and ``--kind app+game``: a project with a game on karni-game.
+"""``karni new --kind game`` and ``--kind app+game``: a project with a game on karni-game.
 
 Both kinds get the game's server side, as ``karni add game`` wires it:
 

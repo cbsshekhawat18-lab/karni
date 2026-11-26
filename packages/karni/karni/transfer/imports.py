@@ -134,7 +134,7 @@ class Importer:
     viewset the roles' grants do. ``serializer_class`` defaults to the
     viewset's (or the generated one) — the same validation the API runs.
 
-    ``match_ids`` and ``keep_ids`` (experimental) are the two id options of
+    ``match_ids`` and ``keep_ids`` are the two id options of
     an upload: match existing rows by the ``id`` column, and keep the ids of
     created rows (:attr:`write_pk`). Both are off by default.
 
@@ -156,7 +156,7 @@ class Importer:
     #: where an unknown id creates a new row. The content loader turns it on,
     #: because a row keyed by its id must keep that id to be found again.
     write_pk: bool = False
-    #: Experimental. A row whose key matches nothing (or a model without a key) is
+    #: A row whose key matches nothing (or a model without a key) is
     #: matched to an existing row by its ``id`` column. Off, the ``id`` column never
     #: matches: an export from another environment cannot update unrelated rows.
     match_ids: bool = False

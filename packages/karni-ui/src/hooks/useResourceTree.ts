@@ -1,5 +1,5 @@
 /**
- * Experimental. Hooks for a tree resource (a Karni `TreeModel`): its nested
+ * Hooks for a tree resource (a Karni `TreeModel`): its nested
  * nodes, a node's children and ancestors, and moving or deleting a branch.
  *
  * - `useResourceTree` → `GET /<resource>/tree/?root=&depth=`
@@ -30,7 +30,7 @@ import { detailPath, listPath } from "./params";
 import type { Paginated } from "./types";
 
 /**
- * Experimental. One node of a tree response: the row's own fields, whether
+ * One node of a tree response: the row's own fields, whether
  * it has children, and its children when they were loaded (`null`: not loaded,
  * so ask for them with `root`).
  */
@@ -39,14 +39,14 @@ export type TreeNode<T extends object = Record<string, unknown>> = T & {
   children: Array<TreeNode<T>> | null;
 };
 
-/** Experimental. The `tree/` answer: the top nodes, nested, and whether the node limit cut it. */
+/** The `tree/` answer: the top nodes, nested, and whether the node limit cut it. */
 export interface TreeResponse<T extends object = Record<string, unknown>> {
   results: Array<TreeNode<T>>;
   /** True when the server's node limit cut the answer: some nodes have `children: null`. */
   truncated: boolean;
 }
 
-/** Experimental. What `useResourceTree` asks for. */
+/** What `useResourceTree` asks for. */
 export interface ResourceTreeParams {
   /** The node whose children are the top level. Absent or null: the roots. */
   root?: string | number | null;
@@ -56,14 +56,14 @@ export interface ResourceTreeParams {
   enabled?: boolean;
 }
 
-/** Experimental. What `useResourceChildren` asks for. */
+/** What `useResourceChildren` asks for. */
 export interface ResourceChildrenParams {
   page?: number;
   pageSize?: number;
   enabled?: boolean;
 }
 
-/** Experimental. The body of a move: the new parent (null for a root) and, on an ordered tree, the position. */
+/** The body of a move: the new parent (null for a root) and, on an ordered tree, the position. */
 export interface TreeMoveInput {
   id: string | number;
   parent: string | number | null;
@@ -71,7 +71,7 @@ export interface TreeMoveInput {
   position?: number;
 }
 
-/** Experimental. The two tree writes: `move` and `removeBranch`. */
+/** The two tree writes: `move` and `removeBranch`. */
 export interface TreeMutations<T extends object = Record<string, unknown>> {
   move: UseMutationResult<TreeNode<T>, unknown, TreeMoveInput>;
   /** Deletes the node and every live node below it (`DELETE ?branch=true`). */
@@ -79,7 +79,7 @@ export interface TreeMutations<T extends object = Record<string, unknown>> {
 }
 
 /**
- * Experimental. One node of the access forest: its id, label and parent, and
+ * One node of the access forest: its id, label and parent, and
  * whether a grant names it (`granted`). Its ancestors and the other roots are
  * there for navigation, with `granted: false`. A granted node's children are
  * `null` when it has some: load them from `tree/?root=<id>`.
@@ -92,7 +92,7 @@ export type AccessForestNode = TreeNode<{
 }>;
 
 /**
- * Experimental. The `access/` answer: the requester's granted nodes with the
+ * The `access/` answer: the requester's granted nodes with the
  * path from their roots, then every other root. `all` is true when the
  * requester reaches every node (every root is then granted).
  */
@@ -102,7 +102,7 @@ export interface AccessForest {
   truncated: boolean;
 }
 
-/** Experimental. What `useResourceAccessForest` asks for. */
+/** What `useResourceAccessForest` asks for. */
 export interface AccessForestParams {
   /** A permission key or pattern (`shop.order:view`): only its grants count. Default: every tree grant. */
   permission?: string;
@@ -118,7 +118,7 @@ export function treeQuery(params?: ResourceTreeParams): Record<string, string> {
   return query;
 }
 
-/** Experimental. The nested nodes of a tree resource (`GET /<resource>/tree/`), under `root` or from the roots. */
+/** The nested nodes of a tree resource (`GET /<resource>/tree/`), under `root` or from the roots. */
 export function useResourceTree<T extends object = Record<string, unknown>>(
   resource: string,
   params?: ResourceTreeParams,
@@ -138,7 +138,7 @@ export function useResourceTree<T extends object = Record<string, unknown>>(
 }
 
 /**
- * Experimental. The requester's access forest of a tree resource
+ * The requester's access forest of a tree resource
  * (`GET /<resource>/access/`): the nodes their `tree:<path>` grants name,
  * the ancestors of each and every other root. `TreeView`'s `access` prop
  * shows it.
@@ -162,7 +162,7 @@ export function useResourceAccessForest(
   });
 }
 
-/** Experimental. One page of a node's children (`GET /<resource>/<id>/children/`). */
+/** One page of a node's children (`GET /<resource>/<id>/children/`). */
 export function useResourceChildren<T extends object = Record<string, unknown>>(
   resource: string,
   id: string | number,
@@ -185,7 +185,7 @@ export function useResourceChildren<T extends object = Record<string, unknown>>(
   });
 }
 
-/** Experimental. The nodes above one node, root first (`GET /<resource>/<id>/ancestors/`). */
+/** The nodes above one node, root first (`GET /<resource>/<id>/ancestors/`). */
 export function useResourceAncestors<T extends object = Record<string, unknown>>(
   resource: string,
   id: string | number,
@@ -200,7 +200,7 @@ export function useResourceAncestors<T extends object = Record<string, unknown>>
   });
 }
 
-/** Experimental. Move a node or delete a branch. Each success refreshes every query of the resource. */
+/** Move a node or delete a branch. Each success refreshes every query of the resource. */
 export function useTreeMutations<T extends object = Record<string, unknown>>(
   resource: string,
 ): TreeMutations<T> {

@@ -1,4 +1,4 @@
-"""Experimental. An order's invoice and packing slip, as printable pages and, with
+"""An order's invoice and packing slip, as printable pages and, with
 karni-reports installed, as PDF.
 
 ``GET /api/orders/{id}/document/?kind=invoice`` (or ``packing_slip``) answers

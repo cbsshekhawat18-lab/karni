@@ -271,10 +271,10 @@ BASE: dict[str, Any] = {
         # Backs AuditedModel.created_by/updated_by; resolves the user lazily,
         # so JWT users authenticated later inside DRF views are seen too.
         "karni.middleware.CurrentUserMiddleware",
-        # Deprecation / Sunset / Link on a deprecated API version (experimental); removed
+        # Deprecation / Sunset / Link on a deprecated API version; removed
         # from the chain at startup while no version is deprecated.
         "karni.api.versions.ApiVersionHeadersMiddleware",
-        # The terms gate (experimental): 403 E245 under KARNI_TERMS["paths"] until a
+        # The terms gate: 403 E245 under KARNI_TERMS["paths"] until a
         # signed-in user accepts the current version. Removed from the chain at
         # startup unless KARNI_TERMS requires acceptance. After authentication.
         "karni.accounts.terms.TermsGateMiddleware",
@@ -322,7 +322,7 @@ BASE: dict[str, Any] = {
     "KARNI_2FA": env.bool("KARNI_2FA", default=False),
     "KARNI_SOCIAL_AUTH": env.bool("KARNI_SOCIAL_AUTH", default=False),
     "KARNI_SOCIAL_PROVIDERS": env.list("KARNI_SOCIAL_PROVIDERS", default=[]),
-    # Sign-in with a Google, Microsoft or Apple ID token (experimental), in both
+    # Sign-in with a Google, Microsoft or Apple ID token, in both
     # auth modes and independent of KARNI_SOCIAL_AUTH: {name: {"client_ids": [...]}}.
     # Each configured name mounts social/<name>/. Needs karni[social-token].
     "KARNI_SOCIAL_TOKEN_PROVIDERS": env.json("KARNI_SOCIAL_TOKEN_PROVIDERS", default={}),
@@ -337,7 +337,7 @@ BASE: dict[str, Any] = {
     "KARNI_SOCIAL_TOKEN_JWKS_TTL": env.int("KARNI_SOCIAL_TOKEN_JWKS_TTL", default=21600),
     # Dotted path of the function that fetches a key set: (url) -> dict.
     "KARNI_SOCIAL_TOKEN_JWKS_FETCHER": "karni.accounts.social_token.fetch_jwks",
-    # Sign-in with a code sent by email (experimental), in both auth modes: mounts
+    # Sign-in with a code sent by email, in both auth modes: mounts
     # otp/send/ and otp/verify/ while True. The code goes through the accounts email backend.
     "KARNI_EMAIL_OTP": env.bool("KARNI_EMAIL_OTP", default=False),
     # Seconds a code lives (60 to 3600).
@@ -349,7 +349,7 @@ BASE: dict[str, Any] = {
     # Who an address without an account may become: "open", "approval" or "existing".
     # None follows KARNI_ACCOUNTS_REGISTRATION ("open" while it is on, else "existing").
     "KARNI_EMAIL_OTP_SIGNUP": env("KARNI_EMAIL_OTP_SIGNUP", default=None),
-    # A versioned terms (EULA) acceptance gate (experimental): {"version": "2026-11",
+    # A versioned terms (EULA) acceptance gate: {"version": "2026-11",
     # "url": "/terms/", "required": True}, plus "paths" (default ["/api/"]) and "exempt".
     # Set, it mounts terms/ and terms/accept/. None (the default) gates nothing.
     "KARNI_TERMS": env.json("KARNI_TERMS", default=None),
@@ -373,17 +373,17 @@ BASE: dict[str, Any] = {
         "customer": {"name": "Customer", "grants": {"*": "own"}},
     },
     "KARNI_ROLES_AUTOSYNC": env.bool("KARNI_ROLES_AUTOSYNC", default=True),
-    # Per-user grants (experimental): while True, each user's UserGrant rows join their
+    # Per-user grants: while True, each user's UserGrant rows join their
     # role grants (one more query per request). Off, they grant nothing and cost nothing.
     "KARNI_USER_GRANTS": env.bool("KARNI_USER_GRANTS", default=False),
-    # Navigation from data (experimental): a list of menu items and groups, "db" (the
+    # Navigation from data: a list of menu items and groups, "db" (the
     # NavItem table of the karni.navigation app), named menus ({"app": [...], "public":
     # [...]}, read with ?menu=) or None (no menu, no navigation/ route).
     "KARNI_NAVIGATION": None,
     # The frontend files whose `path:` entries are the app's pages: karni check reports
     # a menu item whose route none of them serves. [] turns that comparison off.
     "KARNI_NAVIGATION_PAGES": ["frontend/src/routes.tsx"],
-    # The people contract (experimental): True installs karni.people (Person, Organisation,
+    # The people contract: True installs karni.people (Person, Organisation,
     # Membership, Address). karni build writes it when karni.yaml points at people.Person.
     "KARNI_PEOPLE": env.bool("KARNI_PEOPLE", default=False),
     # Dotted path of the Resolver class people.resolve() uses.
@@ -396,7 +396,7 @@ BASE: dict[str, Any] = {
     "KARNI_PEOPLE_MERGE_SKIP": [],
     # Import every installed app's people.py (its person facts, merge and erase hooks).
     "KARNI_PEOPLE_AUTODISCOVER": True,
-    # The timeline contract (experimental, the karni.timeline app): route GET /api/timeline/,
+    # The timeline contract (the karni.timeline app): route GET /api/timeline/,
     # write entries from events that declare timeline=, the page sizes, the days an entry
     # is kept (None keeps them all) and the class that says which records a caller may read.
     "KARNI_TIMELINE_API": True,
@@ -405,7 +405,7 @@ BASE: dict[str, Any] = {
     "KARNI_TIMELINE_MAX_PAGE_SIZE": 100,
     "KARNI_TIMELINE_RETENTION_DAYS": None,
     "KARNI_TIMELINE_VISIBILITY": "karni.timeline.access.Visibility",
-    # The preferences contract (experimental, the karni.preferences app): values the
+    # The preferences contract (the karni.preferences app): values the
     # deployment fixes and values it starts with ({"details": {...}, "<section>": {...},
     # "connections": {...}, "emails": {...}}), route /api/preferences/, and import every
     # app's preferences.py and connections.py.
@@ -413,7 +413,7 @@ BASE: dict[str, Any] = {
     "KARNI_PREFERENCES_DEFAULTS": {},
     "KARNI_PREFERENCES_API": True,
     "KARNI_PREFERENCES_AUTODISCOVER": True,
-    # The notifications contract (experimental, the karni.notify app): route /api/inbox/,
+    # The notifications contract (the karni.notify app): route /api/inbox/,
     # /api/email-templates/ and /api/notify/unsubscribe/, the channels the project sends
     # on, the inbox's page sizes, the days a notification is kept (None keeps them all),
     # where an unsubscribe link points (after KARNI_FRONTEND_URL) and the channels of a
@@ -448,7 +448,7 @@ BASE: dict[str, Any] = {
     "DATABASES": {
         "default": env.db_url("DATABASE_URL", default="postgres://karni:karni@db:5432/karni"),
     },
-    # Experimental: class Karni: database = "<alias>" sends a model to another alias. A
+    # class Karni: database = "<alias>" sends a model to another alias. A
     # project's own routers go before this one (karni_settings() appends it after them).
     "DATABASE_ROUTERS": ["karni.db.DatabaseRouter"],
     # "redis" (the default cache at REDIS_URL) or "locmem" (a host run without Redis).
@@ -461,10 +461,10 @@ BASE: dict[str, Any] = {
     # --- Email ----------------------------------------------------------------
     # EMAIL_URL (smtp+tls://user:password@host:587), DEFAULT_FROM_EMAIL, SERVER_EMAIL.
     **_email(env),
-    # Experimental. The kinds of email karni.mail does not send (a list of
+    # The kinds of email karni.mail does not send (a list of
     # names such as "commerce.new_order"): a project switches one off here.
     "KARNI_MAIL_DISABLED_KINDS": env.list("KARNI_MAIL_DISABLED_KINDS", default=[]),
-    # Experimental. Where karni.mail finds what a business changed: the notifications
+    # Where karni.mail finds what a business changed: the notifications
     # contract's source (edited emails, each person's switches and unsubscribes, the
     # inbox) while karni.notify is installed, else the files and karni.preferences.
     "KARNI_MAIL_SOURCE": env("KARNI_MAIL_SOURCE", default="karni.notify.source.NotifySource"),
@@ -515,7 +515,7 @@ BASE: dict[str, Any] = {
         # binary format on the request side (frontend codegen relies on it).
         "COMPONENT_SPLIT_REQUEST": True,
         # One document per API version when versions are mounted; spectacular's own
-        # generator otherwise (karni.api.versions, experimental).
+        # generator otherwise (karni.api.versions).
         "DEFAULT_GENERATOR_CLASS": "karni.api.versions.VersionedSchemaGenerator",
         # spectacular's enum postprocessing, with colliding enums named by
         # model and field (BookingStatusEnum, not Status469Enum), then the root
@@ -576,7 +576,7 @@ BASE: dict[str, Any] = {
         default="karni.api.search.postgres.PostgresSearchProvider",
     ),
     "KARNI_API_MAX_EXPAND_DEPTH": env.int("KARNI_API_MAX_EXPAND_DEPTH", default=2),
-    # Cross-model search, GET /api/search/ (karni.global_search, experimental).
+    # Cross-model search, GET /api/search/ (karni.global_search).
     "KARNI_GLOBAL_SEARCH_MIN_LENGTH": env.int("KARNI_GLOBAL_SEARCH_MIN_LENGTH", default=2),
     "KARNI_GLOBAL_SEARCH_LIMIT": env.int("KARNI_GLOBAL_SEARCH_LIMIT", default=5),
     "KARNI_GLOBAL_SEARCH_MAX_LIMIT": env.int("KARNI_GLOBAL_SEARCH_MAX_LIMIT", default=20),
@@ -638,7 +638,7 @@ BASE: dict[str, Any] = {
     "KARNI_API_CACHE": env.bool("KARNI_API_CACHE", default=False),
     "KARNI_API_CACHE_TTL": env.int("KARNI_API_CACHE_TTL", default=300),
     "KARNI_API_CACHE_ALIAS": env("KARNI_API_CACHE_ALIAS", default="default"),
-    # The most groups one GET <resource>/aggregate/ returns (karni.aggregation, experimental).
+    # The most groups one GET <resource>/aggregate/ returns (karni.aggregation).
     "KARNI_AGGREGATE_MAX_GROUPS": env.int("KARNI_AGGREGATE_MAX_GROUPS", default=1000),
     # A daily full flush through Celery beat: "03:30" or "03:30 Europe/Paris". Off by default.
     "KARNI_API_CACHE_FLUSH": env("KARNI_API_CACHE_FLUSH", default=None),
@@ -817,7 +817,7 @@ BASE: dict[str, Any] = {
     "KARNI_LOG_QUIET_PATHS": env.list(
         "KARNI_LOG_QUIET_PATHS", default=["/healthz", "/readyz", "/health/"]
     ),
-    # --- API versions (karni.api.versions, experimental) --------------------
+    # --- API versions (karni.api.versions) --------------------
     # "v1" mounts the API at /api/v1/ (karni.api.versions.api_urls in config/urls.py).
     "KARNI_API_VERSION": env.str("KARNI_API_VERSION", default=""),
     # {"v0": {"deprecated": "2026-06-01", "sunset": "2027-01-31", "notes": "https://..."}}
@@ -859,7 +859,7 @@ BASE: dict[str, Any] = {
     # autodiscovered at startup; set False to wire them yourself.
     "KARNI_EVENTS_AUTODISCOVER": env.bool("KARNI_EVENTS_AUTODISCOVER", default=True),
     "KARNI_SCHEDULES_AUTODISCOVER": env.bool("KARNI_SCHEDULES_AUTODISCOVER", default=True),
-    # Family events with an outbox (experimental, the karni.outbox app): how a committed
+    # Family events with an outbox (the karni.outbox app): how a committed
     # event reaches a worker, the runs of one delivery before it is failed, and the days a
     # delivered event is kept (None keeps them all).
     "KARNI_EVENTS_DISPATCHER": "karni.outbox.dispatch.celery",
@@ -868,7 +868,7 @@ BASE: dict[str, Any] = {
     "KARNI_EVENTS_INLINE": env.bool("KARNI_EVENTS_INLINE", default=None),
     "KARNI_EVENTS_MAX_ATTEMPTS": env.int("KARNI_EVENTS_MAX_ATTEMPTS", default=8),
     "KARNI_EVENTS_RETENTION_DAYS": env.int("KARNI_EVENTS_RETENTION_DAYS", default=30),
-    # The key type `karni make model` writes (experimental): "uuid" (BaseModel) or
+    # The key type `karni make model` writes: "uuid" (BaseModel) or
     # "bigint" (BigIntBaseModel). Read by the CLI from config/settings.py, nothing
     # else: each model's class line decides its key.
     "KARNI_PK": "uuid",
@@ -880,10 +880,10 @@ BASE: dict[str, Any] = {
         "http_allowed": ["*/services/*", "*/providers/*", "*/tests/*", "conftest.py"],
         "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]},
     },
-    # Tooling for large projects (experimental). karni check's cache of per-file
+    # Tooling for large projects. karni check's cache of per-file
     # results (.karni/local/check-cache.json): False turns it off, a path moves it.
     "KARNI_CHECK_CACHE": True,
-    # Suggestions in karni check and karni doctor (experimental): False turns them off.
+    # Suggestions in karni check and karni doctor: False turns them off.
     "KARNI_SUGGESTIONS": True,
     # The rows the scaling check compares, small then large (query_scaling overrides).
     "KARNI_SCALING_ROWS": [2, 12],

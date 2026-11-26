@@ -54,7 +54,7 @@ def scope(action: str) -> str:
 
 
 def storage_rate(action: str) -> str | None:
-    """Experimental. The rate limiting ``action``, or ``None`` when it is turned off.
+    """The rate limiting ``action``, or ``None`` when it is turned off.
 
     ``REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["storage.<action>"]`` first,
     then ``KARNI_STORAGE_THROTTLE_RATES[action]``, then :data:`DEFAULT_RATES`.
@@ -99,7 +99,7 @@ def rate_problems() -> list[str]:
 
 
 class StorageRateThrottle(ActionRateThrottle):
-    """Experimental. Karni's action throttle under the module's scopes (``storage.<action>``).
+    """Karni's action throttle under the module's scopes (``storage.<action>``).
 
     The view names its endpoint in ``throttle_action``. Override / escape
     hatch: subclass it (``get_cache_key`` for another caller identity) and

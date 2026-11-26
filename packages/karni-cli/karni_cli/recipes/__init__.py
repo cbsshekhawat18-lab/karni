@@ -100,32 +100,32 @@ __all__ = [
     "words",
 ]
 
-#: Experimental. The entry point group third-party recipes are found in.
+#: The entry point group third-party recipes are found in.
 ENTRY_POINT_GROUP: Final = "karni.recipes"
-#: Experimental. The file that says what a recipe is.
+#: The file that says what a recipe is.
 RECIPE_FILE: Final = "recipe.toml"
-#: Experimental. The recipe's spec.
+#: The recipe's spec.
 SPEC_FILE: Final = "karni.yaml"
-#: Experimental. The folder of the recipe's own files, at their paths in the project.
+#: The folder of the recipe's own files, at their paths in the project.
 FILES_DIR: Final = "files"
-#: Experimental. Where a recipe's React files go in the project: its pages are named from here.
+#: Where a recipe's React files go in the project: its pages are named from here.
 FRONTEND_SRC: Final = "frontend/src"
-#: Experimental. The name of the blank start. No recipe takes it.
+#: The name of the blank start. No recipe takes it.
 BLANK: Final = "blank"
-#: Experimental. How many recipes :func:`match` returns at most.
+#: How many recipes :func:`match` returns at most.
 MATCH_LIMIT: Final = 3
-#: Experimental. The lowest score :func:`match` returns: one word of a ``use_when`` phrase,
+#: The lowest score :func:`match` returns: one word of a ``use_when`` phrase,
 #: or two words of the purpose.
 MATCH_THRESHOLD: Final = 2
-#: Experimental. Where the JSON Schema of ``recipe.toml`` is published.
+#: Where the JSON Schema of ``recipe.toml`` is published.
 RECIPE_SCHEMA_URL: Final = (
     "https://cbsshekhawat18-lab.github.io/karni/assets/karni-recipe.schema.json"
 )
-#: Experimental. The longest purpose, as for a module's manifest.
+#: The longest purpose, as for a module's manifest.
 PURPOSE_MAX: Final = 80
-#: Experimental. What a recipe's name looks like.
+#: What a recipe's name looks like.
 NAME: Final = r"^[a-z][a-z0-9_-]*$"
-#: Experimental. What a recipe's version looks like: numbers and dots, e.g. 1.0.0.
+#: What a recipe's version looks like: numbers and dots, e.g. 1.0.0.
 VERSION: Final = r"^\d+(\.\d+){0,2}$"
 
 _STOPWORDS_TEXT: Final = """
@@ -135,7 +135,7 @@ _STOPWORDS_TEXT: Final = """
     them then there these this to tool up us use want we what where which who will with
     would you your
 """
-#: Experimental. Words that say nothing about which app is meant. They never count in
+#: Words that say nothing about which app is meant. They never count in
 #: :func:`match`.
 STOPWORDS: Final = frozenset(_STOPWORDS_TEXT.split())
 
@@ -144,11 +144,11 @@ _Line = Annotated[str, StringConstraints(min_length=1, pattern=r"^[^\n]+$")]
 
 
 class RecipeError(ValueError):
-    """Experimental. A recipe that cannot be used: the message names the folder and each problem."""
+    """A recipe that cannot be used: the message names the folder and each problem."""
 
 
 class RecipeRoute(BaseModel):
-    """Experimental. A ``[[routes]]`` entry: a path of the React app and the recipe's page for it."""
+    """A ``[[routes]]`` entry: a path of the React app and the recipe's page for it."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -188,7 +188,7 @@ class RecipeRoute(BaseModel):
 
 
 class RecipeToml(BaseModel):
-    """Experimental. ``recipe.toml``: what a recipe is, and when to start from it."""
+    """``recipe.toml``: what a recipe is, and when to start from it."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -214,18 +214,18 @@ class RecipeToml(BaseModel):
     )
     version: Annotated[str, StringConstraints(pattern=VERSION)] | None = Field(
         None,
-        description="Experimental. The recipe's own version, e.g. 1.0.0, recorded when a project "
+        description="The recipe's own version, e.g. 1.0.0, recorded when a project "
         "adds it and compared by karni recipes upgrade. Default: karni-cli's version.",
     )
     requires: list[str] = Field(
         default_factory=list,
-        description="Experimental. Core contracts and modules the recipe needs, each with an "
+        description="Core contracts and modules the recipe needs, each with an "
         'optional version range: ["people>=1", "events>=1", "storage"]. Adding the recipe '
         "switches each contract on and lists each module.",
     )
     conflicts: list[str] = Field(
         default_factory=list,
-        description="Experimental. Recipes and modules the recipe cannot share a project with.",
+        description="Recipes and modules the recipe cannot share a project with.",
     )
 
     @field_validator("requires")
@@ -245,7 +245,7 @@ class RecipeToml(BaseModel):
 
 
 def json_schema() -> dict[str, Any]:
-    """Experimental. The JSON Schema of ``recipe.toml``, as published at :data:`RECIPE_SCHEMA_URL`."""
+    """The JSON Schema of ``recipe.toml``, as published at :data:`RECIPE_SCHEMA_URL`."""
     from karni_cli.spec.schema import _tidy
 
     body = _tidy(RecipeToml.model_json_schema())
@@ -255,7 +255,7 @@ def json_schema() -> dict[str, Any]:
         "$id": RECIPE_SCHEMA_URL,
         "title": "recipe.toml",
         "description": (
-            "Experimental. What a Karni recipe is: a ready-made karni.yaml and when to start "
+            "What a Karni recipe is: a ready-made karni.yaml and when to start "
             "from it. Generated by python -m karni_cli.recipes. Never edit it by hand."
         ),
         **body,
@@ -264,7 +264,7 @@ def json_schema() -> dict[str, Any]:
 
 @dataclass(frozen=True)
 class Recipe:
-    """Experimental. One recipe: its ``recipe.toml``, where it came from, and its files."""
+    """One recipe: its ``recipe.toml``, where it came from, and its files."""
 
     name: str
     title: str
@@ -276,15 +276,15 @@ class Recipe:
     folder: Traversable = field(repr=False)
     #: The recipe's own files under ``files/``, as the paths they take in the project.
     files: tuple[str, ...] = ()
-    #: Experimental. ``recipe.toml``'s version (empty: none), requires and conflicts.
+    #: ``recipe.toml``'s version (empty: none), requires and conflicts.
     version: str = ""
     requires: tuple[str, ...] = ()
     conflicts: tuple[str, ...] = ()
-    #: Experimental. The React routes the first build registers (``[[routes]]``).
+    #: The React routes the first build registers (``[[routes]]``).
     routes: tuple[RecipeRoute, ...] = ()
 
     def spec(self) -> str:
-        """Experimental. The recipe's ``karni.yaml``, as written."""
+        """The recipe's ``karni.yaml``, as written."""
         return self.folder.joinpath(SPEC_FILE).read_text(encoding="utf-8")
 
     def to_dict(self, *, spec: bool = False) -> dict[str, Any]:
@@ -306,7 +306,7 @@ class Recipe:
 
 @dataclass
 class Loaded:
-    """Experimental. Every recipe found, by name, and the problems of those left out."""
+    """Every recipe found, by name, and the problems of those left out."""
 
     recipes: dict[str, Recipe] = field(default_factory=dict)
     problems: list[str] = field(default_factory=list)
@@ -317,7 +317,7 @@ class Loaded:
         return self.recipes.get(name)
 
     def require(self, name: str) -> Recipe | None:
-        """Experimental. The recipe ``name`` (``None`` for the blank start).
+        """The recipe ``name`` (``None`` for the blank start).
 
         :raises CliError: ``C421`` when it is there but cannot be used, ``C420``
             when there is none of that name (naming the closest names).
@@ -345,7 +345,7 @@ class Loaded:
 
 @dataclass(frozen=True)
 class Match:
-    """Experimental. A recipe ranked for a request: its score and the words that gave it."""
+    """A recipe ranked for a request: its score and the words that gave it."""
 
     recipe: Recipe
     score: int
@@ -356,7 +356,7 @@ class Match:
 
 
 def parse(text: str, source: str) -> RecipeToml:
-    """Experimental. ``recipe.toml``'s text checked against :class:`RecipeToml`.
+    """``recipe.toml``'s text checked against :class:`RecipeToml`.
 
     :raises RecipeError: naming ``source`` and every problem, each with its key.
     """
@@ -404,7 +404,7 @@ _BUILD_FILES: Final = frozenset(
 
 
 def karni_owned(rel: str) -> bool:
-    """Experimental. Whether ``karni build`` owns the project path ``rel`` (so a recipe file cannot).
+    """Whether ``karni build`` owns the project path ``rel`` (so a recipe file cannot).
 
     ``<app>/karni/``, ``<app>/tests/karni/``, ``frontend/src/pages/karni/``,
     ``frontend/src/karni/`` (``parts.ts``),
@@ -421,7 +421,7 @@ def karni_owned(rel: str) -> bool:
 
 
 def read_folder(folder: Traversable, *, name: str, source: str) -> Recipe:
-    """Experimental. The recipe in ``folder``, whose name must be ``name``.
+    """The recipe in ``folder``, whose name must be ``name``.
 
     :raises RecipeError: for a missing or invalid ``recipe.toml``, a name that
         is not ``name``, a missing ``karni.yaml``, or a file at a path karni build
@@ -472,7 +472,7 @@ def read_folder(folder: Traversable, *, name: str, source: str) -> Recipe:
 
 
 def builtin_root() -> Traversable:
-    """Experimental. Where the built-in recipes are: the folders of this package."""
+    """Where the built-in recipes are: the folders of this package."""
     return resources.files(__name__)
 
 
@@ -501,7 +501,7 @@ def _installed(problems: list[str]) -> Iterable[tuple[str, Traversable, str]]:
 
 
 def load(builtin: Traversable | Path | None = None, *, installed: bool = True) -> Loaded:
-    """Experimental. Every recipe: the built-in ones, then the installed ones.
+    """Every recipe: the built-in ones, then the installed ones.
 
     ``builtin`` replaces the folder of built-in recipes, and ``installed=False``
     leaves the entry points out. A recipe that cannot be used is left out, and
@@ -530,7 +530,7 @@ def load(builtin: Traversable | Path | None = None, *, installed: bool = True) -
 
 
 def app_name(project: Path | None) -> str:
-    """Experimental. The app's name for the blank start: the project's, else this folder's."""
+    """The app's name for the blank start: the project's, else this folder's."""
     if project is None:
         return Path.cwd().resolve().name
     from karni_cli.spec.export import _project_name
@@ -539,7 +539,7 @@ def app_name(project: Path | None) -> str:
 
 
 def blank_spec(app_name: str) -> str:
-    """Experimental. The blank start: a spec with the version and the app's name, nothing else."""
+    """The blank start: a spec with the version and the app's name, nothing else."""
     from karni_cli.spec import emit, schema
 
     header = [f"yaml-language-server: $schema={schema.SCHEMA_URL}"]
@@ -565,7 +565,7 @@ def _stem(word: str) -> str:
 
 
 def words(text: str) -> list[str]:
-    """Experimental. The words of ``text`` :func:`match` compares, in order, each once.
+    """The words of ``text`` :func:`match` compares, in order, each once.
 
     Lowercase, letters and digits only, the plural made singular, and the
     :data:`STOPWORDS` left out.
@@ -587,7 +587,7 @@ def match(
     limit: int = MATCH_LIMIT,
     threshold: int = MATCH_THRESHOLD,
 ) -> list[Match]:
-    """Experimental. The recipes that fit ``request`` best, by plain word overlap.
+    """The recipes that fit ``request`` best, by plain word overlap.
 
     Each word of the request scores 2 when a ``use_when`` phrase of the recipe
     has it, else 1 when its purpose has it. A word that is the recipe's own
@@ -611,7 +611,7 @@ def match(
 def overlap(
     asked: list[str], name: str, purpose: str, use_when: Iterable[str]
 ) -> tuple[int, tuple[str, ...]]:
-    """Experimental. How well a thing with a name, a purpose and use_when phrases fits a request.
+    """How well a thing with a name, a purpose and use_when phrases fits a request.
 
     ``asked`` is :func:`words` of the request. The rule is :func:`match`'s: 4 for
     the thing's own noun, 2 for a word of a use_when phrase, 1 for a word of the

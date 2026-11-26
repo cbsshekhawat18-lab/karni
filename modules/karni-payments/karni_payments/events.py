@@ -1,4 +1,4 @@
-"""Experimental. What happens to a payment or a refund, as signals any app can receive.
+"""What happens to a payment or a refund, as signals any app can receive.
 
 An app that sells through karni-payments (an order, a booking, an
 enrolment) reacts to a payment without reading the webhook itself::

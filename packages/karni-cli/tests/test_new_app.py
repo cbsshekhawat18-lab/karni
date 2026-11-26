@@ -1,4 +1,4 @@
-"""The /new-app flow (experimental), end to end, with a scripted fake agent and no language model.
+"""The /new-app flow, end to end, with a scripted fake agent and no language model.
 
 From a one-line request in a fresh ``karni new`` project, the fake agent
 calls the MCP tool functions in the flow's order: ``recipes`` (match, or the

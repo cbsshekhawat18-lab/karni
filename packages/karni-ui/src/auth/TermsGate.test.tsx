@@ -1,5 +1,5 @@
 /**
- * <TermsGate> (experimental) through the real AuthProvider against msw: the
+ * <TermsGate> through the real AuthProvider against msw: the
  * terms from `/me/`, accepting them (with what the app sends about itself), a
  * version bumped mid-session caught from the gate's 403 (E245), the terms
  * changing again while the page is open (E246), the frame, and the loading,

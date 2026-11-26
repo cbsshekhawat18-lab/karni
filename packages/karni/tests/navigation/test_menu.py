@@ -1,4 +1,4 @@
-"""Navigation from data (experimental): whose menu shows what, from the grants the API reads.
+"""Navigation from data: whose menu shows what, from the grants the API reads.
 
 The menu is a product catalog's (``conftest.MENU``) over ``tests.testapp``:
 Products and Categories under a Catalog group, Regions, Events and Account.

@@ -34,7 +34,7 @@ function breakText(text: string, key: string): React.ReactNode {
 }
 
 /**
- * Experimental. `node` with wrap points in its long words: an email wraps after
+ * `node` with wrap points in its long words: an email wraps after
  * "@" and before a ".", a link before a "/" or a "?", so a narrow column breaks
  * `lena.vogt@example.com` as `lena.vogt@` / `example.com`, never inside a word.
  * Text inside elements is handled too (a link around an email). Short words are

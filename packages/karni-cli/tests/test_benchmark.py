@@ -1,4 +1,4 @@
-"""scripts/benchmark/large_project.py (experimental): a small project, timed, and the comparison.
+"""scripts/benchmark/large_project.py: a small project, timed, and the comparison.
 
 The CI job runs it on 100 models. Here it runs on 5, so the default suite
 proves the whole path (karni new, the spec, karni build, every timed step)

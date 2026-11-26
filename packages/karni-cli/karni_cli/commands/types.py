@@ -69,7 +69,7 @@ def _write_schema(
 
 
 def api_versions(schema: Path) -> list[str]:
-    """Experimental. The API versions a schema file lists (``x-karni-api-versions``), in order.
+    """The API versions a schema file lists (``x-karni-api-versions``), in order.
 
     Empty for an unversioned API. The current version's document is the project's
     ``schema`` file, and each version, the current one included, has its own.
@@ -89,7 +89,7 @@ def write_types(
     """Write the schema, ``types.ts`` and ``hooks.ts``; returns what was written.
 
     With API versions mounted (``KARNI_API_VERSION``), it also writes the same three files for
-    each version, in ``<out>/<version>/`` (experimental). ``karni build`` calls it for its
+    each version, in ``<out>/<version>/``. ``karni build`` calls it for its
     types step. Raises :class:`CliError` (``C006`` when openapi-typescript fails, ``C106`` for a
     bad suffix), or :class:`SchemaFailed` when the backend cannot print its schema.
     """

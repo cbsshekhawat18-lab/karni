@@ -200,7 +200,7 @@ export const FocusAfterNavigation: Story = {
 };
 
 /**
- * Experimental. Collapsible groups in the nav: a button (Enter or Space)
+ * Collapsible groups in the nav: a button (Enter or Space)
  * opens and closes each one, and the group that holds the current page opens
  * by itself. Icons come from `defaultNavIcons` here.
  */
@@ -287,7 +287,7 @@ function ServerMenuApp(): React.ReactElement {
   );
 }
 
-/** Experimental. `navSource="server"`: the menu from GET /navigation/, icons by name. */
+/** `navSource="server"`: the menu from GET /navigation/, icons by name. */
 export const ServerMenu: Story = {
   render: () => <ServerMenuApp />,
 };

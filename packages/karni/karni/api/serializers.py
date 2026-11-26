@@ -643,7 +643,7 @@ def _effective_field_names(model: type[Model], api_meta: Any) -> list[str]:
 
 
 def entered_key(model: type[Model]) -> bool:
-    """Whether the API takes ``model``'s primary key in a create (experimental).
+    """Whether the API takes ``model``'s primary key in a create.
 
     True for an external model (``class Karni: external = True``,
     :mod:`karni.db`) whose key the database does not generate: no

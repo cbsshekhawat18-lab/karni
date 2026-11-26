@@ -1,5 +1,5 @@
 /**
- * Experimental. An order's printable document, an invoice or a packing slip
+ * An order's printable document, an invoice or a packing slip
  * (`GET /orders/document/`). The server answers a whole HTML page, shown here
  * in a frame so its own styles stay apart from the app's.
  */

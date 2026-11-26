@@ -1,4 +1,4 @@
-"""The built-in recipes and ``karni new --recipe`` (experimental), without a full build.
+"""The built-in recipes and ``karni new --recipe``, without a full build.
 
 Every recipe's ``recipe.toml`` and ``karni.yaml`` are valid, its spec has no
 open question, ``karni plan`` on an empty project lists what it builds, and

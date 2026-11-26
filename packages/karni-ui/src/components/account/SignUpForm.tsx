@@ -1,5 +1,5 @@
 /**
- * Experimental. `<SignUpForm>`: open an account with an email and a
+ * `<SignUpForm>`: open an account with an email and a
  * password (`POST <authBasePath>/register/`, karni.accounts).
  *
  * The server sends the verification email. When it signs the new account in
@@ -42,7 +42,7 @@ function fieldErrors(error: unknown): Record<string, string> {
   return found;
 }
 
-/** Experimental. An account opened with an email and a password. */
+/** An account opened with an email and a password. */
 export function SignUpForm({
   authBasePath = "/auth",
   onSignedUp,

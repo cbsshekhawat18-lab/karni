@@ -1,5 +1,5 @@
 /**
- * @karni/charts-ui public barrel (experimental).
+ * @karni/charts-ui public barrel.
  *
  * Explicit exports only, mirroring @karni/ui's barrel conventions.
  */

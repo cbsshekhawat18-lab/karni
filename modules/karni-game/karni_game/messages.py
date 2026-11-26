@@ -1,4 +1,4 @@
-"""Experimental. The message karni-game sends, under a stable kind name (``karni.notify``).
+"""The message karni-game sends, under a stable kind name (``karni.notify``).
 
 * ``game.achievement_unlocked``, to the player's account, in the inbox only:
   the server unlocked an achievement (:mod:`karni_game.progress`). A guest

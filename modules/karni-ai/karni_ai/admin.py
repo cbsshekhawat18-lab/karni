@@ -18,7 +18,7 @@ __all__ = ["AICallAdmin"]
 
 @admin.register(AICall)
 class AICallAdmin(KarniModelAdmin):
-    """Experimental. Calls are logged, never added, changed or deleted by hand."""
+    """Calls are logged, never added, changed or deleted by hand."""
 
     list_display: ClassVar[list[str]] = [
         "created_at",

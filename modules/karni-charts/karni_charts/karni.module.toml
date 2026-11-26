@@ -4,7 +4,7 @@ name = "charts"
 kind = "module"
 title = "Saved charts"
 purpose = "Charts edited in the admin, drawn from a resource's aggregate."
-status = "experimental"
+status = "stable"
 use_when = [
     "saved charts",
     "charts edited in the admin",

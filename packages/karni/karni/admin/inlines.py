@@ -212,7 +212,7 @@ def build_inline(model: type[models.Model], fk_name: str) -> type[TabularInline]
     if passwords:
         attrs["exclude"] = list(passwords)
     if is_read_only(model):
-        # An external table Karni only reads (experimental): its rows show, none changes.
+        # An external table Karni only reads: its rows show, none changes.
         attrs.update(
             has_add_permission=_refuse,
             has_change_permission=_refuse,

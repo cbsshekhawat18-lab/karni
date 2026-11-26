@@ -1,4 +1,4 @@
-"""Experimental. The shared seed pool: one set of people and organisations for every part.
+"""The shared seed pool: one set of people and organisations for every part.
 
 ``karni seed`` runs :class:`OrganisationSeeder` and :class:`PersonSeeder`
 once, before any part's seeders (a part's rows point at people). The people
@@ -81,7 +81,7 @@ PERSONAL_DOMAINS: Final = ("example.com", "example.org", "example.net")
 
 
 def pool(*, with_account: bool | None = None) -> list[Any]:
-    """Experimental. The live people, in the fixed order every part's seeders pick from.
+    """The live people, in the fixed order every part's seeders pick from.
 
     Ordered by email, then key, so the same seed gives the same order.
     ``with_account`` keeps only people with (``True``) or without
@@ -101,7 +101,7 @@ def _phone(index: int) -> str:
 
 
 class OrganisationSeeder(Seeder):
-    """Experimental. The organisations of the shared pool: about one for every four people."""
+    """The organisations of the shared pool: about one for every four people."""
 
     class Meta:
         model = "people.Organisation"
@@ -128,7 +128,7 @@ class OrganisationSeeder(Seeder):
 
 
 class PersonSeeder(Seeder):
-    """Experimental. The people of the shared pool (see the module docstring)."""
+    """The people of the shared pool (see the module docstring)."""
 
     class Meta:
         model = "people.Person"

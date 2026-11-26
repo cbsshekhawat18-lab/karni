@@ -1,4 +1,4 @@
-"""Experimental. ``karni queries --explain`` on PostgreSQL: each query's plan, and the scans to fix.
+"""``karni queries --explain`` on PostgreSQL: each query's plan, and the scans to fix.
 
 :func:`explain_analyze` runs ``EXPLAIN (ANALYZE, FORMAT JSON)`` for every
 distinct ``SELECT`` an endpoint ran, each in a savepoint inside the request's
@@ -57,14 +57,14 @@ _SORT_KEY = re.compile(r"^(?:\"?(?P<table>\w+)\"?\.)?\"?(?P<column>\w+)\"?(?P<de
 
 
 def seq_scan_threshold() -> int:
-    """Experimental. ``KARNI_EXPLAIN_SEQ_SCAN_ROWS``, else :data:`SEQ_SCAN_ROWS`."""
+    """``KARNI_EXPLAIN_SEQ_SCAN_ROWS``, else :data:`SEQ_SCAN_ROWS`."""
     value = getattr(settings, "KARNI_EXPLAIN_SEQ_SCAN_ROWS", None)
     return int(value) if value else SEQ_SCAN_ROWS
 
 
 @dataclass(frozen=True)
 class SeqScan:
-    """Experimental. A sequential scan on a large table, and the index that would serve it."""
+    """A sequential scan on a large table, and the index that would serve it."""
 
     table: str
     rows: int
@@ -109,7 +109,7 @@ class SeqScan:
 
 @dataclass
 class Explained:
-    """Experimental. What :func:`explain_analyze` found: a plan per statement, and the scans."""
+    """What :func:`explain_analyze` found: a plan per statement, and the scans."""
 
     plans: list[tuple[str, str]] = field(default_factory=list)
     scans: list[SeqScan] = field(default_factory=list)
@@ -122,7 +122,7 @@ def _nodes(plan: dict[str, Any], parents: tuple[dict[str, Any], ...] = ()) -> It
 
 
 def render_plan(plan: dict[str, Any]) -> str:
-    """Experimental. A JSON plan node as text: one line per node with actual rows, loops, time."""
+    """A JSON plan node as text: one line per node with actual rows, loops, time."""
     lines: list[str] = []
     for node, parents in _nodes(plan):
         indent = "  " * len(parents)
@@ -199,7 +199,7 @@ def _existing_index(alias: str, table: str, columns: list[str]) -> str | None:
 def suggest_index(
     model: type[Model] | None, filter_text: str, sort: Iterable[str] = ()
 ) -> tuple[str, str]:
-    """Experimental. ``(index, why)``: the ``models.Index(...)`` that serves a scan, or why not.
+    """``(index, why)``: the ``models.Index(...)`` that serves a scan, or why not.
 
     Equality columns first (in the filter's order), then one range column;
     with no usable filter, a ``LIKE`` (``icontains``, search) asks for a
@@ -303,7 +303,7 @@ def _scan(
 
 
 def explain_analyze(queries: Iterable[Any], *, alias: str = "default") -> Explained:
-    """Experimental. ``EXPLAIN (ANALYZE, FORMAT JSON)`` of each distinct ``SELECT`` of ``queries``.
+    """``EXPLAIN (ANALYZE, FORMAT JSON)`` of each distinct ``SELECT`` of ``queries``.
 
     ``queries`` carry ``sql``, ``params`` and ``control``
     (:class:`karni.api.diagnose.TracedQuery`). Each runs in a savepoint, so a

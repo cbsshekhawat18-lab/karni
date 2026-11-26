@@ -1,6 +1,6 @@
 /**
  * SavedChart: a chart defined in the admin, drawn by @karni/ui's DataChart
- * (karni-charts, experimental).
+ * (karni-charts).
  *
  * `<SavedChart chart="launches-per-year" />` fetches the chart's definition and
  * data in one request (`GET /charts/<slug>/data/`) and draws them: the saved
@@ -30,19 +30,19 @@ import type { SavedChartData } from "./types";
 
 registerComponentRole("saved-chart", "SavedChart");
 
-/** Experimental. What the `Error` slot receives: the failure and a retry. */
+/** What the `Error` slot receives: the failure and a retry. */
 export interface SavedChartErrorProps {
   error: unknown;
   onRetry: () => void;
   retrying: boolean;
 }
 
-/** Experimental. DataChart's slots plus the error state. */
+/** DataChart's slots plus the error state. */
 export interface SavedChartSlots extends DataChartSlots {
   Error: React.ComponentType<SavedChartErrorProps>;
 }
 
-/** Experimental. The props of `SavedChart`. */
+/** The props of `SavedChart`. */
 export interface SavedChartProps extends Omit<
   DataChartProps,
   "kind" | "title" | "data" | "series" | "aggregate" | "loading" | "slots"
@@ -65,7 +65,7 @@ function DefaultError({ error, onRetry, retrying }: SavedChartErrorProps): React
   return <ErrorState error={error} onRetry={onRetry} retrying={retrying} />;
 }
 
-/** Experimental. Draws a chart saved in the admin, with the viewer's data. */
+/** Draws a chart saved in the admin, with the viewer's data. */
 export function SavedChart({
   chart,
   filters,

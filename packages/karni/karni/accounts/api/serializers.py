@@ -48,12 +48,12 @@ __all__ = [
 
 _PASSWORD_STYLE: dict[str, str] = {"input_type": "password"}
 
-#: Experimental. The largest ``client`` object ``terms/accept/`` stores, in bytes of JSON.
+#: The largest ``client`` object ``terms/accept/`` stores, in bytes of JSON.
 CLIENT_MAX_BYTES = 4096
 
 
 class MeTermsSerializer(serializers.Serializer):
-    """Experimental. The ``terms`` of ``me/`` while ``KARNI_TERMS`` is set.
+    """The ``terms`` of ``me/`` while ``KARNI_TERMS`` is set.
 
     ``required`` and ``accepted`` together say whether the API will refuse the
     user (``E245``) until they accept ``version``, which is at ``url``.
@@ -73,7 +73,7 @@ class MeSerializer(serializers.ModelSerializer):
     email-change flow and everything else is audit data. ``roles`` (amendment
     A15) lists the user's Django group names via
     :func:`karni.accounts.permissions.user_roles` — the ``@karni/ui``
-    ``usePermission`` hook consumes it. ``permissions`` (experimental) lists
+    ``usePermission`` hook consumes it. ``permissions`` lists
     the permission keys the user's roles and grants hold
     (``shop.product:add``), so the UI offers New, Edit and Delete only to
     those who may: the server checks every write again.
@@ -110,7 +110,7 @@ class MeSerializer(serializers.ModelSerializer):
         ]
 
     def get_fields(self) -> dict[str, serializers.Field]:
-        """The declared fields, plus ``terms`` while ``KARNI_TERMS`` is set (experimental).
+        """The declared fields, plus ``terms`` while ``KARNI_TERMS`` is set.
 
         ``terms`` is ``{"required", "version", "url", "accepted"}``
         (:func:`karni.accounts.terms.me_status`). Unset, the field is absent
@@ -129,14 +129,14 @@ class MeSerializer(serializers.ModelSerializer):
         return user_roles(user)
 
     def get_permissions(self, user: AbstractBaseUser) -> list[str]:
-        """Experimental. The permission keys the user holds (``app.model:action``), sorted."""
+        """The permission keys the user holds (``app.model:action``), sorted."""
         from karni.accounts.roles import grants_for
 
         return sorted(key for key, grants in grants_for(user).items() if grants)
 
     @extend_schema_field(MeTermsSerializer)
     def get_terms(self, user: AbstractBaseUser) -> dict[str, Any] | None:
-        """Experimental. The terms the user must accept, and whether they have."""
+        """The terms the user must accept, and whether they have."""
         from karni.accounts import terms
 
         return terms.me_status(user)
@@ -281,14 +281,14 @@ class EmailChangeSerializer(CurrentPasswordMixin):
 
 
 class SocialNameSerializer(serializers.Serializer):
-    """Experimental. The optional ``name`` of ``social/<provider>/``: Apple's first sign-in."""
+    """The optional ``name`` of ``social/<provider>/``: Apple's first sign-in."""
 
     first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
 
 
 class SocialTokenLoginSerializer(serializers.Serializer):
-    """Experimental. Request body of ``social/<provider>/``: the ID token, a nonce and a name.
+    """Request body of ``social/<provider>/``: the ID token, a nonce and a name.
 
     ``nonce`` is the raw value the app generated for this sign-in (the token
     carries it, or its SHA-256 hex digest). ``name`` is used only when the
@@ -304,13 +304,13 @@ class SocialTokenLoginSerializer(serializers.Serializer):
 
 
 class OtpSendSerializer(serializers.Serializer):
-    """Experimental. Request body of ``otp/send/``: the address to send a sign-in code to."""
+    """Request body of ``otp/send/``: the address to send a sign-in code to."""
 
     email = serializers.EmailField()
 
 
 class OtpVerifySerializer(serializers.Serializer):
-    """Experimental. Request body of ``otp/verify/``: the address and the code it received.
+    """Request body of ``otp/verify/``: the address and the code it received.
 
     Whitespace inside the code is ignored, so ``"123 456"`` is ``"123456"``.
     """
@@ -320,7 +320,7 @@ class OtpVerifySerializer(serializers.Serializer):
 
 
 class TermsStatusSerializer(serializers.Serializer):
-    """Experimental. The answer of ``terms/`` and ``terms/accept/``.
+    """The answer of ``terms/`` and ``terms/accept/``.
 
     ``accepted_at`` is when the user accepted ``version``, ``null`` when they
     have not. While ``required`` is true and ``accepted`` false, the API
@@ -335,7 +335,7 @@ class TermsStatusSerializer(serializers.Serializer):
 
 
 class TermsAcceptSerializer(serializers.Serializer):
-    """Experimental. Request body of ``terms/accept/``: the version shown, and the client.
+    """Request body of ``terms/accept/``: the version shown, and the client.
 
     ``version`` is the version the user read and accepted. ``client`` is an
     optional JSON object the app sends about itself (a mobile app's device,

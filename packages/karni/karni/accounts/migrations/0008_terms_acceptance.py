@@ -1,4 +1,4 @@
-"""Terms acceptance (experimental): the ``TermsAcceptance`` table.
+"""Terms acceptance: the ``TermsAcceptance`` table.
 
 One row per user and accepted version of ``KARNI_TERMS``, unique per (user,
 version) among live rows, with when, the client's IP, its user agent and what

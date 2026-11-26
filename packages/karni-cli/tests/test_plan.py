@@ -1,4 +1,4 @@
-"""``karni plan`` (experimental): what ``karni build`` would change, writing nothing.
+"""``karni plan``: what ``karni build`` would change, writing nothing.
 
 Two real projects, each made once per module: an empty one (the template
 alone) for the fixture's plan, and one built from :data:`BASE` with
@@ -201,7 +201,7 @@ def test_adding_a_field_an_entity_a_page_and_a_seed(base: Project) -> None:
 
 
 def test_related_tabs_and_a_dashboard_page(base: Project) -> None:
-    """Experimental: a detail page's related tabs and a dashboard page other than home."""
+    """A detail page's related tabs and a dashboard page other than home."""
     plan = _plan(
         _edit(
             (
@@ -249,7 +249,7 @@ def test_turning_on_per_user_grants_plans_its_setting(base: Project) -> None:
 
 
 def test_navigation_is_planned_as_the_setting_it_writes(base: Project) -> None:
-    """The menu (experimental): a change in the pages area, named after KARNI_NAVIGATION."""
+    """The menu: a change in the pages area, named after KARNI_NAVIGATION."""
     import copy
 
     text = _edit(("seed: {Product: 5}\n", "navigation: true\nseed: {Product: 5}\n"))
@@ -434,7 +434,7 @@ def test_only_a_change_of_the_searched_fields_writes_a_migration() -> None:
 
 
 def test_text_and_markdown_swap_safely_and_the_layout_keys(base: Project) -> None:
-    """Experimental (wide models): the markdown type, groups and column sets."""
+    """Wide models: the markdown type, groups and column sets."""
     plan = _plan(
         _edit(
             ("          note: text?\n", "          note: markdown?\n"),
@@ -1119,7 +1119,7 @@ def test_the_fixture_plan_fits_the_token_budget(empty: tuple[str, dict[str, Any]
     assert len(encoding.encode(text)) < TOKEN_BUDGET
 
 
-# seed volumes (experimental)
+# seed volumes
 
 
 def test_a_large_seed_count_shows_its_volume_and_time_class(base: Project) -> None:

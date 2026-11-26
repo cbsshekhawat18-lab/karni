@@ -1,4 +1,4 @@
-"""Experimental. karni-game's settings section: who may play, and who may read the boards.
+"""karni-game's settings section: who may play, and who may read the boards.
 
 Read with ``preferences.value("game.allow_guests", True)`` (``karni.preferences``).
 Without ``karni.preferences`` installed every value is its default. A game's own

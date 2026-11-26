@@ -1,4 +1,4 @@
-"""Experimental. The ``karni.yaml`` format as Pydantic models, and its JSON Schema.
+"""The ``karni.yaml`` format as Pydantic models, and its JSON Schema.
 
 Each model is one level of the file and each attribute one key. The shape
 checks (unknown keys, types, required keys) come from these models. What a
@@ -71,26 +71,26 @@ __all__ = [
     "page_related",
 ]
 
-#: Experimental. The format version this release reads and writes.
+#: The format version this release reads and writes.
 VERSION: Final = 1
-#: Experimental. Where the JSON Schema is published (the docs site serves docs/assets/).
+#: Where the JSON Schema is published (the docs site serves docs/assets/).
 SCHEMA_URL: Final = "https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json"
 
-#: Experimental. The reason of the ``Uncached(reason=...)`` an entity's ``cache: false`` means.
+#: The reason of the ``Uncached(reason=...)`` an entity's ``cache: false`` means.
 UNCACHED_REASON: Final = "spec"
 
 APP_LABEL: Final = r"[a-z][a-z0-9_]*"
 ENTITY_NAME: Final = r"[A-Z][A-Za-z0-9]*"
-#: Experimental. A name for ``app.api_version``: a URL segment (core's ``VERSION_NAME``).
+#: A name for ``app.api_version``: a URL segment (core's ``VERSION_NAME``).
 API_VERSION: Final = r"[a-z0-9][a-z0-9-]{0,15}"
 FIELD_NAME: Final = r"[a-z][a-z0-9_]*"
 ROLE_SLUG: Final = r"[A-Za-z0-9][A-Za-z0-9_.-]*"
 PAGE_NAME: Final = r"[a-z][a-z0-9-]*"
-#: Experimental. An app's ``route``: a base path of kebab-case segments.
+#: An app's ``route``: a base path of kebab-case segments.
 ROUTE: Final = r"^/[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)*$"
-#: Experimental. The metrics ``aggregate.metrics`` takes: ``karni.aggregation.METRICS``.
+#: The metrics ``aggregate.metrics`` takes: ``karni.aggregation.METRICS``.
 AGGREGATE_METRICS: Final = ("count", "sum", "avg", "min", "max", "distinct_count")
-#: Experimental. The date buckets a group takes after a colon: ``karni.aggregation.BUCKETS``.
+#: The date buckets a group takes after a colon: ``karni.aggregation.BUCKETS``.
 AGGREGATE_BUCKETS: Final = ("year", "quarter", "month")
 
 
@@ -126,7 +126,7 @@ class _Node(BaseModel):
 
 
 class AppInfo(_Node):
-    """Experimental. ``app:``: what the project is."""
+    """``app:``: what the project is."""
 
     name: str = Field(description="The project's name, as given to karni new.")
     kind: Literal["site", "app", "site+app"] = Field(
@@ -142,14 +142,14 @@ class AppInfo(_Node):
     recipes: list[str] = Field(
         default_factory=list,
         description=(
-            "Experimental. The recipes this project holds, in the order they were added. "
+            "The recipes this project holds, in the order they were added. "
             "karni recipes add and remove keep it, and karni build writes a new one's files."
         ),
     )
     currency: str | None = Field(
         default=None,
         description=(
-            "Experimental. The project's currency, an ISO 4217 code (EUR). A money field without "
+            "The project's currency, an ISO 4217 code (EUR). A money field without "
             "a currency of its own is in it, and the payments module's currency follows it."
         ),
         pattern="^[A-Z]{3}$",
@@ -165,7 +165,7 @@ class AppInfo(_Node):
 
 
 class Terms(_Node):
-    """Experimental. ``features.terms``: ``KARNI_TERMS``."""
+    """``features.terms``: ``KARNI_TERMS``."""
 
     version: str = Field(description="The current terms version, e.g. 2026-11.")
     url: str = Field(description="Where the terms are, e.g. /terms/.")
@@ -177,7 +177,7 @@ class Terms(_Node):
 
 
 class ApiCache(_Node):
-    """Experimental. ``features.api_cache`` as a mapping: on, with its lifetime."""
+    """``features.api_cache`` as a mapping: on, with its lifetime."""
 
     ttl: int = Field(
         description="KARNI_API_CACHE_TTL: the seconds a cached response lives (default 300)."
@@ -206,7 +206,7 @@ CacheValue = Annotated[
 
 
 class Features(_Node):
-    """Experimental. ``features:``: built-in options, each switched by a setting."""
+    """``features:``: built-in options, each switched by a setting."""
 
     two_factor: bool = Field(False, description="KARNI_2FA. Needs karni[2fa].")
     email_code_login: bool = Field(False, description="KARNI_EMAIL_OTP: sign-in with a code.")
@@ -222,18 +222,18 @@ class Features(_Node):
     people: bool = Field(
         False,
         description=(
-            "Experimental. KARNI_PEOPLE: the people contract (karni.people). A relation to "
+            "KARNI_PEOPLE: the people contract (karni.people). A relation to "
             "people.Person switches it on too."
         ),
     )
     events: bool = Field(
         False,
-        description="Experimental. Family events: karni.outbox in INSTALLED_APPS.",
+        description="Family events: karni.outbox in INSTALLED_APPS.",
     )
     preferences: bool = Field(
         False,
         description=(
-            "Experimental. The preferences contract: karni.preferences in INSTALLED_APPS, the "
+            "The preferences contract: karni.preferences in INSTALLED_APPS, the "
             "business's details, one settings section per part, connections and email "
             "switches behind the Settings page."
         ),
@@ -241,14 +241,14 @@ class Features(_Node):
     timeline: bool = Field(
         False,
         description=(
-            "Experimental. The timeline contract: karni.timeline in INSTALLED_APPS. It needs "
+            "The timeline contract: karni.timeline in INSTALLED_APPS. It needs "
             "people and events, which it switches on too."
         ),
     )
     notify: bool = Field(
         False,
         description=(
-            "Experimental. The notifications contract: karni.notify in INSTALLED_APPS, the "
+            "The notifications contract: karni.notify in INSTALLED_APPS, the "
             "emails a business edits in the app, the inbox, each person's switches and "
             "unsubscribing from marketing emails."
         ),
@@ -266,7 +266,7 @@ class Features(_Node):
 
 
 class Role(_Node):
-    """Experimental. One role of ``roles:``: an entry of ``KARNI_ROLES``."""
+    """One role of ``roles:``: an entry of ``KARNI_ROLES``."""
 
     name: str | None = Field(None, description="The role's name (default: from the slug).")
     description: str = Field("", description="What the role is for.")
@@ -279,7 +279,7 @@ class Role(_Node):
         description=(
             'Permission pattern -> scope. Patterns: "*", app.entity, app.entity:action, with * '
             "for a part. Scopes: all, own, own:<owner field>, related:<scope path key>, "
-            "custom:<registered name>, tree:<path to a tree entity> (experimental)."
+            "custom:<registered name>, tree:<path to a tree entity>."
         ),
     )
 
@@ -289,7 +289,7 @@ def _access_member(value: Any) -> str:
 
 
 class Access(_Node):
-    """Experimental. ``access:`` of an entity: the viewset's ``Access(...)``.
+    """``access:`` of an entity: the viewset's ``Access(...)``.
 
     Each slot takes ``public``, ``authenticated``, ``granted``,
     ``role:<slug>``, ``owned:<field>``, ``where:<field>[=<value>]``, or a
@@ -306,13 +306,11 @@ class Access(_Node):
         description="Who changes and deletes which rows.",
     )
     create: Names | None = Field(None, description="Who creates rows (default: write).")
-    delete: Names | None = Field(
-        None, description="Experimental. Who deletes which rows (default: write)."
-    )
+    delete: Names | None = Field(None, description="Who deletes which rows (default: write).")
     assign: Names | None = Field(
         None,
         description=(
-            "Experimental. Who may set the owner field (owned:<field> in write or create) to "
+            "Who may set the owner field (owned:<field> in write or create) to "
             "another user. Default: nobody, the owner is the signed-in user."
         ),
     )
@@ -338,7 +336,7 @@ def _tree_member(value: Any) -> str:
     return "=bool" if isinstance(value, bool) else "=kind"
 
 
-#: Experimental. ``tree:`` of an entity: ``true`` (TreeModel), ``ordered`` or ``false``.
+#: ``tree:`` of an entity: ``true`` (TreeModel), ``ordered`` or ``false``.
 TreeValue = Annotated[
     Annotated[bool, Tag("=bool")] | Annotated[Literal["ordered"], Tag("=kind")],
     Discriminator(_tree_member),
@@ -346,7 +344,7 @@ TreeValue = Annotated[
 
 
 class GlobalSearch(_Node):
-    """Experimental. ``global_search:`` of an entity as a mapping: ``class Karni: search``.
+    """``global_search:`` of an entity as a mapping: ``class Karni: search``.
 
     Every key is optional. ``fields`` defaults to the entity's ``search``
     list, ``title`` to the first field, ``weight`` to 1.
@@ -377,7 +375,7 @@ GlobalSearchValue = Annotated[
 
 
 class FieldEntry(_Node):
-    """Experimental. A field written as a mapping, to say what it was called before.
+    """A field written as a mapping, to say what it was called before.
 
     ``title: {type: "str:200", was: name}`` is the field ``title`` of type
     ``str:200``, which ``karni plan`` and ``karni build`` treat as the field
@@ -401,7 +399,7 @@ FieldValue = Annotated[
 
 
 class Aggregate(_Node):
-    """Experimental. ``aggregate:`` of an entity: ``class Karni: aggregate``.
+    """``aggregate:`` of an entity: ``class Karni: aggregate``.
 
     What ``GET <resource>/aggregate/`` may group by and sum (docs/aggregations.md).
     Expressions (``TextNumber`` and your own) stay in the project's code.
@@ -426,13 +424,13 @@ class Aggregate(_Node):
     )
 
 
-#: Experimental. A row filter: path (``seller__user``, optionally ``__gt``, ``__in``, ...) to a
+#: A row filter: path (``seller__user``, optionally ``__gt``, ``__in``, ...) to a
 #: value: a literal, ``$me``, ``$now``, ``$today``, ``$<field of the row>`` or ``{not: value}``.
 RowFilter = dict[str, Any]
 
 
 class Bound(_Node):
-    """Experimental. One field's ``bounds``: its lowest and highest value."""
+    """One field's ``bounds``: its lowest and highest value."""
 
     min: int | float | str | None = Field(
         None, description="The lowest value: a number, a date, $now or $today."
@@ -443,7 +441,7 @@ class Bound(_Node):
 
 
 class UniqueEntry(_Node):
-    """Experimental. One ``unique`` entry written as a mapping: its fields and a row filter."""
+    """One ``unique`` entry written as a mapping: its fields and a row filter."""
 
     fields: list[str] = Field(description="The fields whose values are unique together.")
     where: RowFilter | None = Field(
@@ -483,7 +481,7 @@ BlockedBy = Annotated[
 
 
 class DeleteRule(_Node):
-    """Experimental. ``delete:`` of an entity: when a row may be deleted (class Karni: delete)."""
+    """``delete:`` of an entity: when a row may be deleted (class Karni: delete)."""
 
     when: RowFilter | None = Field(
         None, description="A row filter the row must match to be deleted (its state)."
@@ -498,7 +496,7 @@ class DeleteRule(_Node):
 
 
 class MoveRule(_Node):
-    """Experimental. One ``moves:`` entry: what a move into a state needs (class Karni: moves)."""
+    """One ``moves:`` entry: what a move into a state needs (class Karni: moves)."""
 
     requires: Names = Field(
         default_factory=list, description="Fields that must hold a value after the move."
@@ -520,7 +518,7 @@ class MoveRule(_Node):
 
 
 class ActionRule(_Node):
-    """Experimental. One ``actions:`` entry: a row action (the viewset's row_actions)."""
+    """One ``actions:`` entry: a row action (the viewset's row_actions)."""
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -543,7 +541,7 @@ class ActionRule(_Node):
 
 
 class Entity(_Node):
-    """Experimental. One entity: a model on BaseModel or BigIntBaseModel, its viewset and options."""
+    """One entity: a model on BaseModel or BigIntBaseModel, its viewset and options."""
 
     fields: dict[str, FieldValue] = Field(
         default_factory=dict,
@@ -588,14 +586,14 @@ class Entity(_Node):
     tree: TreeValue = Field(
         False,
         description=(
-            "Experimental. A hierarchy: true inherits TreeModel (a parent field and the tree "
+            "A hierarchy: true inherits TreeModel (a parent field and the tree "
             "endpoints), ordered inherits OrderedTreeModel (also a position among siblings)."
         ),
     )
     taxonomies: dict[str, str] = Field(
         default_factory=dict,
         description=(
-            "Experimental. Tag the entity to tree entities: key -> tree entity (Name or "
+            "Tag the entity to tree entities: key -> tree entity (Name or "
             "app.Name). Each key is a many-to-many of that name, with the list filters "
             "?<key>= and ?<key>_descendants=, the facets/ counts and the tree:<key> scope "
             "(class Karni: taxonomies)."
@@ -669,63 +667,63 @@ class Entity(_Node):
     bounds: dict[str, Bound] = Field(
         default_factory=dict,
         description=(
-            "Experimental. Field -> {min, max}: the lowest and highest value of a number, date "
+            "Field -> {min, max}: the lowest and highest value of a number, date "
             "or datetime ($now and $today for dates). class Karni: bounds."
         ),
     )
     unique: list[UniqueValue] = Field(
         default_factory=list,
         description=(
-            "Experimental. Fields unique together among the live rows: a list of fields, or "
+            "Fields unique together among the live rows: a list of fields, or "
             "{fields, where} with a row filter. A partial unique index (class Karni: unique)."
         ),
     )
     targets: dict[str, RowFilter] = Field(
         default_factory=dict,
         description=(
-            "Experimental. Foreign key -> a row filter the row it points at must match "
+            "Foreign key -> a row filter the row it points at must match "
             "($me, $now, $today, $<field>). class Karni: targets."
         ),
     )
     frozen: dict[str, FrozenValue] = Field(
         default_factory=dict,
         description=(
-            "Experimental. Field -> true (never changes after create) or a row filter (cannot "
+            "Field -> true (never changes after create) or a row filter (cannot "
             "change while the row matches it). class Karni: frozen."
         ),
     )
     delete: DeleteRule | None = Field(
         None,
         description=(
-            "Experimental. When a row may be deleted: {when, blocked_by} (class Karni: delete). "
+            "When a row may be deleted: {when, blocked_by} (class Karni: delete). "
             "Who may delete is access.delete."
         ),
     )
     moves: dict[str, MoveRule] = Field(
         default_factory=dict,
         description=(
-            "Experimental. State (or boolean field becoming true) -> {requires, needs, stamps} "
+            "State (or boolean field becoming true) -> {requires, needs, stamps} "
             "(class Karni: moves)."
         ),
     )
     actions: dict[str, ActionRule] = Field(
         default_factory=dict,
         description=(
-            "Experimental. Row actions: name -> {from, to, by, field}, POST "
+            "Row actions: name -> {from, to, by, field}, POST "
             "<resource>/<id>/<name>/ (the viewset's row_actions, x-karni-actions)."
         ),
         json_schema_extra=_names(FIELD_NAME),
     )
 
     def tokens(self) -> dict[str, str]:
-        """Experimental. Field name -> type, for both forms of a field."""
+        """Field name -> type, for both forms of a field."""
         return {
             name: value if isinstance(value, str) else value.type
             for name, value in self.fields.items()
         }
 
     def renamed(self) -> dict[str, str]:
-        """Experimental. New field name -> old name, for the fields written with ``was``."""
+        """New field name -> old name, for the fields written with ``was``."""
         return {
             name: value.was
             for name, value in self.fields.items()
@@ -734,12 +732,12 @@ class Entity(_Node):
 
 
 class App(_Node):
-    """Experimental. One Django app of ``apps:`` and its entities."""
+    """One Django app of ``apps:`` and its entities."""
 
     route: str | None = Field(
         default=None,
         description=(
-            "Experimental. The base path its entity pages are mounted under (/bookings: the "
+            "The base path its entity pages are mounted under (/bookings: the "
             "resources list is /bookings/resources). Default: none, each page at /<route>. "
             "karni recipes add sets /<label> for a recipe's app."
         ),
@@ -753,7 +751,7 @@ class App(_Node):
 
 
 class DetailOptions(_Node):
-    """Experimental. What a detail page shows besides the record: ``{related: [Deal, Person]}``."""
+    """What a detail page shows besides the record: ``{related: [Deal, Person]}``."""
 
     related: Names = Field(
         default_factory=list,
@@ -766,7 +764,7 @@ class DetailOptions(_Node):
 
 
 class DetailPage(_Node):
-    """Experimental. An entity's detail page with options: ``{detail: {related: [Deal]}}``."""
+    """An entity's detail page with options: ``{detail: {related: [Deal]}}``."""
 
     detail: DetailOptions = Field(description="The detail page's options.")
 
@@ -789,7 +787,7 @@ PageKinds = Annotated[list[PageKind], BeforeValidator(_one_kind_or_many)]
 
 
 def page_kind_names(kinds: list[Any]) -> list[str]:
-    """Experimental. The kinds of a page entry by name (``{detail: {...}}`` is ``detail``)."""
+    """The kinds of a page entry by name (``{detail: {...}}`` is ``detail``)."""
     names: list[str] = []
     for kind in kinds:
         if isinstance(kind, str):
@@ -802,7 +800,7 @@ def page_kind_names(kinds: list[Any]) -> list[str]:
 
 
 def page_related(kinds: list[Any]) -> list[str]:
-    """Experimental. The ``related`` of an entry's detail page, as written (``[]`` for none)."""
+    """The ``related`` of an entry's detail page, as written (``[]`` for none)."""
     for kind in kinds:
         if isinstance(kind, DetailPage):
             return list(kind.detail.related)
@@ -819,7 +817,7 @@ ModuleOptions = Annotated[
 
 
 class NavigationOptions(_Node):
-    """Experimental. A ``navigation:`` entry written as a mapping's value: a page's or a group's options.
+    """A ``navigation:`` entry written as a mapping's value: a page's or a group's options.
 
     A page takes ``label``, ``icon`` and ``requires``. A group takes
     ``items`` (its entries), ``icon`` and ``requires``.
@@ -838,7 +836,7 @@ class NavigationOptions(_Node):
 
 
 class DashboardTile(_Node):
-    """Experimental. One ``dashboard:`` tile: a box on the home page of the roles it names.
+    """One ``dashboard:`` tile: a box on the home page of the roles it names.
 
     A tile with ``entity`` counts (``stat``) or lists (``list``) that entity's
     rows matching ``filters``, through its list endpoint. A tile whose
@@ -892,7 +890,7 @@ def _navigation_switch(value: Any) -> str:
     return "=menus" if isinstance(value, dict) else "=list"
 
 
-#: Experimental. One ``navigation:`` entry: a page's key, or a one-key mapping to a page's
+#: One ``navigation:`` entry: a page's key, or a one-key mapping to a page's
 #: options or to a group's entries.
 type NavigationEntry = Annotated[
     Annotated[str, Tag("=page")]
@@ -910,10 +908,10 @@ type NavigationEntry = Annotated[
     Discriminator(_navigation_member),
 ]
 
-#: Experimental. A menu's name in ``navigation:``: ``app``, ``public``, ``account``.
+#: A menu's name in ``navigation:``: ``app``, ``public``, ``account``.
 MENU_NAME: Final = r"^[a-z][a-z0-9_-]{0,39}$"
 
-#: Experimental. ``navigation:``: ``true`` (every page, in order), a list of entries (the
+#: ``navigation:``: ``true`` (every page, in order), a list of entries (the
 #: ``app`` menu), or named menus (``{app: [...], public: [...], account: [...]}``).
 NavigationValue = Annotated[
     Annotated[bool, Tag("=bool")]
@@ -927,7 +925,7 @@ NavigationValue = Annotated[
 
 
 class Spec(_Node):
-    """Experimental. A whole ``karni.yaml``."""
+    """A whole ``karni.yaml``."""
 
     version: Literal[1] = Field(description="The format version: 1.")
     app: AppInfo = Field(description="What the project is.")
@@ -964,7 +962,7 @@ class Spec(_Node):
     navigation: NavigationValue = Field(
         False,
         description=(
-            "Experimental. The menu karni build writes to KARNI_NAVIGATION: true for every page "
+            "The menu karni build writes to KARNI_NAVIGATION: true for every page "
             "of pages in their order, or a list of pages (by their key) and groups "
             "({label: [entries]}), each page with optional {label, icon, requires}, or named "
             "menus ({app: [...], public: [...], account: [...]}), each such a list."
@@ -973,7 +971,7 @@ class Spec(_Node):
     dashboard: list[DashboardTile] = Field(
         default_factory=list,
         description=(
-            "Experimental. The home tiles karni build writes to KARNI_DASHBOARD_TILES: each "
+            "The home tiles karni build writes to KARNI_DASHBOARD_TILES: each "
             "counts or lists an entity's rows for the roles it names, or places a tile an "
             "app declares in code."
         ),
@@ -999,7 +997,7 @@ def _in_currency(token: str, currency: str) -> str:
 
 
 def _project_currency(spec: Spec) -> Spec:
-    """Experimental. A money field without a currency reads ``app.currency`` when it is set.
+    """A money field without a currency reads ``app.currency`` when it is set.
 
     The old ``app.recipe`` is read as ``app.recipes`` of one.
     """
@@ -1037,7 +1035,7 @@ def _tidy(node: Any, *, names: bool = False) -> Any:
 
 
 def json_schema() -> dict[str, Any]:
-    """Experimental. The JSON Schema of ``karni.yaml``, as published at :data:`SCHEMA_URL`."""
+    """The JSON Schema of ``karni.yaml``, as published at :data:`SCHEMA_URL`."""
     schema = _tidy(Spec.model_json_schema())
     # Each page entry is one key: an entity with its pages, or a page name with its kind.
     items = schema["properties"]["pages"]["items"]
@@ -1052,7 +1050,7 @@ def json_schema() -> dict[str, Any]:
         "$id": SCHEMA_URL,
         "title": "karni.yaml",
         "description": (
-            "Experimental. A Karni app spec: what karni make, karni add and the settings "
+            "A Karni app spec: what karni make, karni add and the settings "
             "build. Generated by python -m karni_cli.spec.schema. Never edit it by hand."
         ),
         **schema,

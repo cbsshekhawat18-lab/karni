@@ -4,7 +4,7 @@
  * - Domain fields first, in declaration order. writeOnly / json / file /
  *   unknown fields and markdown (a MarkdownField's long text) are skipped
  *   unless the consumer explicitly names them in the `columns` prop.
- * - A column set (`only`, experimental) shows exactly its fields, in its
+ * - A column set (`only`) shows exactly its fields, in its
  *   order, whatever their kind. `columns` still overrides them, and its
  *   entries naming fields the schema does not declare are still appended.
  * - Audit fields (AUDIT_FIELDS: id, created_at, updated_at, created_by,
@@ -229,7 +229,7 @@ export interface DeriveColumnsArgs<T> {
   getRowLabel?: RowLabeler;
   /** Show every audit field (AUDIT_FIELDS) without naming each in `columns`. */
   showAuditFields?: boolean;
-  /** Experimental. A column set: exactly these fields, in this order. */
+  /** A column set: exactly these fields, in this order. */
   only?: readonly string[];
 }
 

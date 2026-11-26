@@ -1,5 +1,5 @@
 /**
- * useGlobalSearch (experimental) against the msw backend's GET /api/search/:
+ * useGlobalSearch against the msw backend's GET /api/search/:
  * the query it sends, the short-query rule, the key and the typed result.
  */
 import { QueryClient } from "@tanstack/react-query";

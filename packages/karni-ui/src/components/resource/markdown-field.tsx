@@ -1,5 +1,5 @@
 /**
- * A MarkdownField in the resource components (experimental).
+ * A MarkdownField in the resource components.
  *
  * A model's `MarkdownField` is a text property with `format: "markdown"` in
  * the OpenAPI schema. ResourceForm edits it with Write and Preview tabs (the

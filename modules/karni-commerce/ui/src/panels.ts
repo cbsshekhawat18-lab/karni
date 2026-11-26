@@ -1,5 +1,5 @@
 /**
- * Experimental. Panels a selling part adds to the order pages.
+ * Panels a selling part adds to the order pages.
  *
  * Commerce holds the money. What happens to what was bought is the selling
  * part's: the shop's parcel (ship it with a tracking number), a booking's
@@ -57,7 +57,7 @@ export interface PanelRegistry<O extends Order> {
   applied: (order: O) => AppliedPanel<O>[];
 }
 
-/** Experimental. A registry of panels for one order page. */
+/** A registry of panels for one order page. */
 export function panelRegistry<O extends Order>(): PanelRegistry<O> {
   const panels = new Map<string, OrderPanel<O>>();
   return {
@@ -88,37 +88,37 @@ export function panelRegistry<O extends Order>(): PanelRegistry<O> {
 const STAFF = panelRegistry<StaffOrder>();
 const BUYER = panelRegistry<Order>();
 
-/** Experimental. Add a panel to the staff's order page (the same key replaces it). */
+/** Add a panel to the staff's order page (the same key replaces it). */
 export function registerOrderPanel(panel: OrderPanel): void {
   STAFF.register(panel);
 }
 
-/** Experimental. Take a panel off the staff's order page. */
+/** Take a panel off the staff's order page. */
 export function unregisterOrderPanel(key: string): void {
   STAFF.unregister(key);
 }
 
-/** Experimental. The staff page's panels that apply to `order`, in order. */
+/** The staff page's panels that apply to `order`, in order. */
 export function orderPanels(order: StaffOrder): OrderPanel[] {
   return STAFF.applied(order).map(({ panel }) => panel);
 }
 
-/** Experimental. The staff page's panels that apply to `order`, each with its lines. */
+/** The staff page's panels that apply to `order`, each with its lines. */
 export function appliedOrderPanels(order: StaffOrder): AppliedPanel[] {
   return STAFF.applied(order);
 }
 
-/** Experimental. Add a panel to the buyer's order page (the same key replaces it). */
+/** Add a panel to the buyer's order page (the same key replaces it). */
 export function registerBuyerOrderPanel(panel: OrderPanel<Order>): void {
   BUYER.register(panel);
 }
 
-/** Experimental. Take a panel off the buyer's order page. */
+/** Take a panel off the buyer's order page. */
 export function unregisterBuyerOrderPanel(key: string): void {
   BUYER.unregister(key);
 }
 
-/** Experimental. The buyer page's panels that apply to `order`, each with its lines. */
+/** The buyer page's panels that apply to `order`, each with its lines. */
 export function buyerOrderPanels(order: Order): AppliedPanel<Order>[] {
   return BUYER.applied(order);
 }

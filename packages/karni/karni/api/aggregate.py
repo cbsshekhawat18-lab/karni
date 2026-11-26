@@ -1,4 +1,4 @@
-"""Experimental. The OpenAPI side of ``GET <resource>/aggregate/`` (:mod:`karni.aggregation`).
+"""The OpenAPI side of ``GET <resource>/aggregate/`` (:mod:`karni.aggregation`).
 
 :class:`AggregateResultSerializer` describes the response, so a typed client
 (``openapi-typescript``, ``karni types``) gets ``AggregateResult``, and
@@ -30,7 +30,7 @@ __all__ = [
 
 
 class AggregateCategorySerializer(serializers.Serializer[Any]):
-    """Experimental. One group of the first dimension (a bar, a point on the x axis)."""
+    """One group of the first dimension (a bar, a point on the x axis)."""
 
     key = serializers.JSONField(
         allow_null=True,
@@ -42,7 +42,7 @@ class AggregateCategorySerializer(serializers.Serializer[Any]):
 
 
 class AggregateSeriesSerializer(serializers.Serializer[Any]):
-    """Experimental. One series: a value per category, in the categories' order."""
+    """One series: a value per category, in the categories' order."""
 
     key = serializers.JSONField(
         allow_null=True, help_text="The second dimension's key, null without one."
@@ -55,7 +55,7 @@ class AggregateSeriesSerializer(serializers.Serializer[Any]):
 
 
 class AggregateResultSerializer(serializers.Serializer[Any]):
-    """Experimental. The response of ``GET <resource>/aggregate/``."""
+    """The response of ``GET <resource>/aggregate/``."""
 
     group_by = serializers.CharField()
     metric = serializers.ChoiceField(choices=list(METRICS))
@@ -70,7 +70,7 @@ class AggregateResultSerializer(serializers.Serializer[Any]):
 
 
 def aggregate_parameters(aggregation: Aggregation, model: Any) -> list[OpenApiParameter]:
-    """Experimental. The aggregate action's query parameters, with the declared values as enums."""
+    """The aggregate action's query parameters, with the declared values as enums."""
     groups = list(aggregation.group_options(model))
 
     def query(name: str, description: str, **extra: Any) -> OpenApiParameter:

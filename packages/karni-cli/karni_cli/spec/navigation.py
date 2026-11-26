@@ -1,4 +1,4 @@
-"""Experimental. ``navigation:`` of ``karni.yaml``: the menu ``karni build`` writes to ``KARNI_NAVIGATION``.
+"""``navigation:`` of ``karni.yaml``: the menu ``karni build`` writes to ``KARNI_NAVIGATION``.
 
 ``navigation: true`` is every page of ``pages`` that has a route of its own,
 in the order ``pages`` lists them (a sign-in page and an entity without a
@@ -84,7 +84,7 @@ LABEL_MAX: Final = 100
 
 @dataclass(frozen=True)
 class Page:
-    """Experimental. A page of ``pages`` that a menu entry can name."""
+    """A page of ``pages`` that a menu entry can name."""
 
     key: str
     route: str | None
@@ -116,7 +116,7 @@ def _entity(spec: schema.Spec, ref: str) -> tuple[str, str, schema.Entity] | Non
     return found[0] if len(found) == 1 else None
 
 
-#: Experimental. The family pages a menu may name without listing them in ``pages``, each
+#: The family pages a menu may name without listing them in ``pages``, each
 #: with what provides it: a module (``modules.commerce``), a contract (``features.people``)
 #: or Karni itself (``""``). They belong to Karni and its contracts, never to a part.
 FAMILY_PROVIDERS: Final[dict[str, str]] = {
@@ -134,7 +134,7 @@ FAMILY_PROVIDERS: Final[dict[str, str]] = {
 
 
 def provided(spec: schema.Spec, provider: str) -> bool:
-    """Experimental. Whether ``provider`` (``modules.commerce``, ``features.people``, ``""``)
+    """Whether ``provider`` (``modules.commerce``, ``features.people``, ``""``)
     is installed in ``spec``."""
     group, _dot, name = provider.partition(".")
     if group == "modules":
@@ -145,19 +145,19 @@ def provided(spec: schema.Spec, provider: str) -> bool:
 
 
 def sells_alone(spec: schema.Spec) -> bool:
-    """Experimental. The project holds one part, and it sells (commerce is installed): a shop
+    """The project holds one part, and it sells (commerce is installed): a shop
     alone. Its people are its customers."""
     return len(spec.app.recipes) == 1 and "commerce" in spec.modules
 
 
 def people_label(spec: schema.Spec) -> str:
-    """Experimental. What the family's people list is called: ``Customers`` in a project whose
+    """What the family's people list is called: ``Customers`` in a project whose
     only part sells, else ``People``."""
     return "Customers" if sells_alone(spec) else "People"
 
 
 def family_pages(spec: schema.Spec) -> dict[str, Page]:
-    """Experimental. The family pages this spec's modules and contracts provide, by name."""
+    """The family pages this spec's modules and contracts provide, by name."""
     from karni_cli.recipes.compose import FAMILY_PAGES
 
     found: dict[str, Page] = {}
@@ -171,14 +171,14 @@ def family_pages(spec: schema.Spec) -> dict[str, Page]:
 
 
 def known_pages(spec: schema.Spec) -> dict[str, Page]:
-    """Experimental. The pages a menu entry may name: the family pages the project's
+    """The pages a menu entry may name: the family pages the project's
     modules and contracts provide (:func:`family_pages`: ``orders`` with commerce,
     ``settings`` with preferences), then every page of ``pages`` (:func:`pages`)."""
     return {**family_pages(spec), **pages(spec)}
 
 
 def pages(spec: schema.Spec) -> dict[str, Page]:
-    """Experimental. Every page of ``pages`` by its key, with its route, label and requirement.
+    """Every page of ``pages`` by its key, with its route, label and requirement.
 
     ``route`` is ``None`` for an entity without a ``list`` page (its pages
     take an id). A key that names no entity of the spec is left out.
@@ -222,7 +222,7 @@ def pages(spec: schema.Spec) -> dict[str, Page]:
 
 
 def requirement_problem(value: str) -> str | None:
-    """Experimental. Why ``value`` is not a requirement (``None`` when it is one)."""
+    """Why ``value`` is not a requirement (``None`` when it is one)."""
     if value in (PUBLIC, AUTHENTICATED, "*"):
         return None
     label, sep, action = value.rpartition(":")
@@ -278,7 +278,7 @@ def _entry(entry: Any, known: dict[str, Page]) -> dict[str, Any] | None:
 
 
 def menus(spec: schema.Spec) -> dict[str, list[Any]]:
-    """Experimental. The entries of each menu ``navigation:`` names: a list is ``app``."""
+    """The entries of each menu ``navigation:`` names: a list is ``app``."""
     if isinstance(spec.navigation, bool):
         return {}
     if isinstance(spec.navigation, dict):
@@ -292,7 +292,7 @@ def _built(entries: list[Any], known: dict[str, Page]) -> list[dict[str, Any]]:
 
 
 def menu(spec: schema.Spec) -> list[dict[str, Any]] | dict[str, list[dict[str, Any]]] | None:
-    """Experimental. The ``KARNI_NAVIGATION`` value of ``spec``, or ``None`` without ``navigation``.
+    """The ``KARNI_NAVIGATION`` value of ``spec``, or ``None`` without ``navigation``.
 
     A list for the ``app`` menu alone (``true`` or a list), a mapping of named
     menus for ``navigation: {app: [...], public: [...]}``.
@@ -309,7 +309,7 @@ def menu(spec: schema.Spec) -> list[dict[str, Any]] | dict[str, list[dict[str, A
 
 
 def summary(items: list[dict[str, Any]] | dict[str, list[dict[str, Any]]] | None) -> str:
-    """Experimental. ``Home /, Catalog (Products /products, Categories /categories)``, and for
+    """``Home /, Catalog (Products /products, Categories /categories)``, and for
     named menus ``app: ...; public: ...``."""
 
     def show(item: dict[str, Any]) -> str:
@@ -329,7 +329,7 @@ def summary(items: list[dict[str, Any]] | dict[str, list[dict[str, Any]]] | None
 def entries_from_setting(
     value: Any, known: dict[str, Page], left_out: list[str]
 ) -> list[Any] | dict[str, list[Any]] | None:
-    """Experimental. The ``navigation:`` entries a ``KARNI_NAVIGATION`` value writes, or ``None``.
+    """The ``navigation:`` entries a ``KARNI_NAVIGATION`` value writes, or ``None``.
 
     An item becomes the page whose route it links to, with the options where
     it differs from the page's defaults. A group keeps its label. What the

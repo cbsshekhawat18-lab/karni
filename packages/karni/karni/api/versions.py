@@ -1,4 +1,4 @@
-"""Experimental. A versioned API for mobile clients: ``/api/v1/``, deprecation headers, documents.
+"""A versioned API for mobile clients: ``/api/v1/``, deprecation headers, documents.
 
 A web app ships with its API, so the two change together. A mobile app does not: an old
 build keeps calling the API for years. Versioning lets the API change for new builds while
@@ -69,9 +69,9 @@ __all__ = [
     "versions",
 ]
 
-#: Experimental. What a version name may be: it is a URL segment, so lower case and short.
+#: What a version name may be: it is a URL segment, so lower case and short.
 VERSION_NAME: Final = re.compile(r"^[a-z0-9][a-z0-9-]{0,15}$")
-#: Experimental. The values of ``KARNI_API_UNVERSIONED``.
+#: The values of ``KARNI_API_UNVERSIONED``.
 UNVERSIONED_MODES: Final = ("keep", "redirect", "remove")
 _KEYS: Final = frozenset({"router", "deprecated", "sunset", "notes"})
 
@@ -86,7 +86,7 @@ class _PermanentRedirect(HttpResponseRedirect):
 
 @dataclass(frozen=True)
 class ApiVersion:
-    """Experimental. One entry of ``KARNI_API_VERSIONS`` as read."""
+    """One entry of ``KARNI_API_VERSIONS`` as read."""
 
     name: str
     #: Dotted path of a zero-argument router factory, or ``None`` for ``KARNI_API_ROUTER``.
@@ -113,17 +113,17 @@ def _day(value: Any) -> date | None:
 
 
 def current_version() -> str:
-    """Experimental. ``KARNI_API_VERSION``: the current version's name, ``""`` when unversioned."""
+    """``KARNI_API_VERSION``: the current version's name, ``""`` when unversioned."""
     return str(getattr(settings, "KARNI_API_VERSION", "") or "")
 
 
 def unversioned_mode() -> str:
-    """Experimental. ``KARNI_API_UNVERSIONED``: ``"keep"``, ``"redirect"`` or ``"remove"``."""
+    """``KARNI_API_UNVERSIONED``: ``"keep"``, ``"redirect"`` or ``"remove"``."""
     return str(getattr(settings, "KARNI_API_UNVERSIONED", "keep") or "keep")
 
 
 def versions() -> dict[str, ApiVersion]:
-    """Experimental. Every version mounted, in the order mounted: the current one is last.
+    """Every version mounted, in the order mounted: the current one is last.
 
     The current version (``KARNI_API_VERSION``) is included even when
     ``KARNI_API_VERSIONS`` does not list it. A bad entry is skipped here and reported by
@@ -153,7 +153,7 @@ def versions() -> dict[str, ApiVersion]:
 
 
 def problems() -> list[tuple[str, str, str]]:
-    """Experimental. What is wrong with the version settings: ``(code, message, hint)`` rows.
+    """What is wrong with the version settings: ``(code, message, hint)`` rows.
 
     ``E590``: ``KARNI_API_VERSION`` or ``KARNI_API_VERSIONS`` cannot work. ``E591``:
     ``KARNI_API_UNVERSIONED`` is not ``keep``, ``redirect`` or ``remove``, or asks for a
@@ -284,7 +284,7 @@ def _importable(dotted: str) -> bool:
 
 
 def version_headers(version: ApiVersion) -> dict[str, str]:
-    """Experimental. The headers a response of ``version`` carries (none unless deprecated)."""
+    """The headers a response of ``version`` carries (none unless deprecated)."""
     if not version.deprecated:
         return {}
     headers: dict[str, str] = {}
@@ -302,7 +302,7 @@ def version_headers(version: ApiVersion) -> dict[str, str]:
 
 
 class ApiVersionHeadersMiddleware:
-    """Experimental. Sends ``Deprecation``, ``Sunset`` and ``Link`` on a deprecated version.
+    """Sends ``Deprecation``, ``Sunset`` and ``Link`` on a deprecated version.
 
     Which version answered comes from the ``version`` URL keyword of the route, so any route
     :func:`api_urls` mounted is covered, whatever its prefix. It is not used (Django drops it
@@ -369,7 +369,7 @@ def _version_patterns(version: ApiVersion, router: Any) -> list[URLPattern | URL
 
 
 class VersionedSchemaGenerator(SchemaGenerator):
-    """Experimental. drf-spectacular's generator, limited to one API version's routes.
+    """drf-spectacular's generator, limited to one API version's routes.
 
     With versions mounted, a document holds the routes of one version, the version asked for
     (``manage.py spectacular --api-version v1``, ``/api/v1/schema/``) or else the current
@@ -405,7 +405,7 @@ def _redirect(request: HttpRequest, rest: str) -> HttpResponse:
 
 
 def api_urls(names: Iterable[str] | None = None) -> list[URLPattern | URLResolver]:
-    """Experimental. The API's routes: what ``path("api/", include("karni.api.urls"))`` was.
+    """The API's routes: what ``path("api/", include("karni.api.urls"))`` was.
 
     Without ``KARNI_API_VERSION`` and ``KARNI_API_VERSIONS`` that is all it returns. With
     them, it returns a mount per version at ``/api/<version>/`` with its OpenAPI document and

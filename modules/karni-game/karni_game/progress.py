@@ -1,4 +1,4 @@
-"""Experimental. Achievements and missions, unlocked by the server from the counters a game reports.
+"""Achievements and missions, unlocked by the server from the counters a game reports.
 
 A game reports progress as counters (``coins_collected``, ``levels_done``)
 with amounts. :func:`report` refuses a counter no active achievement or

@@ -1,4 +1,4 @@
-"""``manage.py karni_suggest`` (experimental): the suggestions of :mod:`karni.suggestions`.
+"""``manage.py karni_suggest``: the suggestions of :mod:`karni.suggestions`.
 
 Prints the compact block, or with ``--json`` ``{version, enabled, suggestions}``
 (the shape of ``docs/assets/karni-suggestions.schema.json``, which ``karni
@@ -18,7 +18,7 @@ from karni import suggestions
 
 
 class Command(BaseCommand):
-    help = "Print what Karni could do that the project does by hand (suggestions, experimental)."
+    help = "Print what Karni could do that the project does by hand (suggestions)."
 
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument(

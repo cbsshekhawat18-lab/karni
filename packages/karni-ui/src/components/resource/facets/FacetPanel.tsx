@@ -1,5 +1,5 @@
 /**
- * Experimental. FacetPanel: how many rows each node of a taxonomy counts,
+ * FacetPanel: how many rows each node of a taxonomy counts,
  * as a list of checkboxes that filter the list (`GET /<resource>/facets/`).
  */
 import { HEADING_TAGS, type HeadingLevel } from "../../../lib/heading";
@@ -18,13 +18,13 @@ import { Skeleton } from "../../primitives/skeleton";
 
 registerComponentRole("facet-panel", "FacetPanel");
 
-/** Experimental. What the `Empty` slot of FacetPanel receives. */
+/** What the `Empty` slot of FacetPanel receives. */
 export interface FacetPanelEmptyProps {
   /** The panel's heading ("Region"). */
   label: string;
 }
 
-/** Experimental. The replaceable parts of FacetPanel (`slots`). */
+/** The replaceable parts of FacetPanel (`slots`). */
 export interface FacetPanelSlots {
   /** While the counts load. */
   Loading: React.ComponentType<{ rows: number }>;
@@ -34,7 +34,7 @@ export interface FacetPanelSlots {
   Error: React.ComponentType<ErrorSlotProps>;
 }
 
-/** Experimental. The props of FacetPanel. */
+/** The props of FacetPanel. */
 export interface FacetPanelProps {
   /** The panel heading's level. Default 2, the level under a page's `<h1>`. */
   headingLevel?: HeadingLevel;
@@ -88,7 +88,7 @@ function FacetPanelError(props: ErrorSlotProps): React.ReactElement {
   return <ErrorState variant="inline" {...props} />;
 }
 
-/** Experimental. FacetPanel's own slot components, for wrapping rather than rewriting. */
+/** FacetPanel's own slot components, for wrapping rather than rewriting. */
 export const defaultFacetPanelSlots: FacetPanelSlots = {
   Loading: FacetPanelLoading,
   Empty: FacetPanelEmpty,
@@ -112,7 +112,7 @@ export function facetRows(nodes: readonly FacetNode[]): Array<FacetNode & { dept
 }
 
 /**
- * Experimental. The facet filter of a list tagged to a tree: each counted
+ * The facet filter of a list tagged to a tree: each counted
  * node with its count, nested under its parent, and a checkbox that chooses
  * it. The counts come from `facets/` with the list's other filters, so they
  * say how many rows each choice would show. ResourceTable shows one per

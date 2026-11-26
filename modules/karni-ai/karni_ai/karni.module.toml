@@ -5,7 +5,7 @@ name = "ai"
 kind = "module"
 title = "AI extraction"
 purpose = "Rows for any resource read from text, a URL or a PDF by a language model."
-status = "experimental"
+status = "stable"
 use_when = [
     "extract data from text",
     "read a PDF into records",

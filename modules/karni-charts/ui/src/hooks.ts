@@ -1,5 +1,5 @@
 /**
- * useSavedChart: one saved chart's definition and data (karni-charts, experimental).
+ * useSavedChart: one saved chart's definition and data (karni-charts).
  *
  * `useSavedChart("launches-per-year", { channel: "online" })` fetches
  * `GET /charts/launches-per-year/data/?channel=online`. The filters must be ones
@@ -18,7 +18,7 @@ import type { SavedChartData } from "./types";
 
 export const RESOURCE = "charts";
 
-/** Experimental. The query string a chart's filters make: lists repeat, empty values drop. */
+/** The query string a chart's filters make: lists repeat, empty values drop. */
 export function savedChartQuery(
   filters?: Record<string, FilterValue>,
 ): Record<string, string | readonly string[]> {
@@ -34,7 +34,7 @@ export function savedChartQuery(
   return query;
 }
 
-/** Experimental. The query key of one chart's data. */
+/** The query key of one chart's data. */
 export function savedChartKey(
   slug: string,
   filters?: Record<string, FilterValue>,
@@ -46,7 +46,7 @@ export function savedChartKey(
   return [...karniKeys.resource(RESOURCE), "data", slug, sorted] as const;
 }
 
-/** Experimental. Fetches a saved chart's definition and data (`GET /charts/<slug>/data/`). */
+/** Fetches a saved chart's definition and data (`GET /charts/<slug>/data/`). */
 export function useSavedChart(
   slug: string,
   filters?: Record<string, FilterValue>,

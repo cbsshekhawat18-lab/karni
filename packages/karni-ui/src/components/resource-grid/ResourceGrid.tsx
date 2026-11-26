@@ -1,5 +1,5 @@
 /**
- * Experimental. ResourceGrid: a resource's rows as cards, with search, sort and paging.
+ * ResourceGrid: a resource's rows as cards, with search, sort and paging.
  *
  * A catalogue is cards, not a table: products, listings, courses, rooms or
  * datasets, each with a picture, a title and what it costs or holds. The grid
@@ -39,14 +39,14 @@ import { registerComponentRole } from "../../lib/roles";
 
 registerComponentRole("resource-grid", "ResourceGrid");
 
-/** Experimental. One choice of the sort menu: an `ordering` value and its label. */
+/** One choice of the sort menu: an `ordering` value and its label. */
 export interface ResourceGridSortOption {
   /** What the list endpoint takes as `?ordering=` (`-created_at`, `name`). */
   value: string;
   label: string;
 }
 
-/** Experimental. What the `Pagination` slot receives. */
+/** What the `Pagination` slot receives. */
 export interface ResourceGridPaginationProps {
   page: number;
   pages: number;
@@ -56,20 +56,20 @@ export interface ResourceGridPaginationProps {
   busy: boolean;
 }
 
-/** Experimental. What the `Empty` slot receives. */
+/** What the `Empty` slot receives. */
 export interface ResourceGridEmptyProps {
   /** True when a search or a filter is on: nothing matches, not nothing at all. */
   filtered: boolean;
   onClear?: () => void;
 }
 
-/** Experimental. What the `Loading` slot receives. */
+/** What the `Loading` slot receives. */
 export interface ResourceGridLoadingProps {
   /** How many cards a page holds: draw as many placeholders. */
   count: number;
 }
 
-/** Experimental. The replaceable parts of ResourceGrid. */
+/** The replaceable parts of ResourceGrid. */
 export interface ResourceGridSlots {
   Loading: React.ComponentType<ResourceGridLoadingProps>;
   Empty: React.ComponentType<ResourceGridEmptyProps>;
@@ -77,7 +77,7 @@ export interface ResourceGridSlots {
   Pagination: React.ComponentType<ResourceGridPaginationProps>;
 }
 
-/** Experimental. Props of ResourceGrid. */
+/** Props of ResourceGrid. */
 export interface ResourceGridProps<T> {
   /** The router prefix of the resource (`products`). */
   resource: string;
@@ -182,7 +182,7 @@ function DefaultPagination({
   );
 }
 
-/** Experimental. Karni's own slots, to wrap one instead of rewriting it. */
+/** Karni's own slots, to wrap one instead of rewriting it. */
 export const defaultResourceGridSlots: ResourceGridSlots = {
   Loading: DefaultLoading,
   Empty: DefaultEmpty,
@@ -215,7 +215,7 @@ function rowKey(row: unknown): string {
   return JSON.stringify(row);
 }
 
-/** Experimental. A resource's rows as cards, with search, sort, filters and paging. */
+/** A resource's rows as cards, with search, sort, filters and paging. */
 export function ResourceGrid<T>(props: ResourceGridProps<T>): React.ReactElement {
   const {
     resource,

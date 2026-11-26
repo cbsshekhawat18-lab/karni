@@ -1,4 +1,4 @@
-"""Experimental. Put every demo account back the way it was made.
+"""Put every demo account back the way it was made.
 
 The write rule (:mod:`karni.demo.guard`) already stops a demo account from
 changing itself. :func:`ensure` is the second line: every boot and every reset

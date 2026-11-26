@@ -1,4 +1,4 @@
-"""Experimental. Navigation from data: each user's menu, opened by the same grants as the API.
+"""Navigation from data: each user's menu, opened by the same grants as the API.
 
 Large apps show each customer a different set of modules and pages, and
 admins change the menu without a deploy. The menu comes from one of two
@@ -130,7 +130,7 @@ _KEYS: Final = frozenset({"label", "route", "icon", "order", "requires", "childr
 
 @dataclass(frozen=True)
 class NavNode:
-    """Experimental. One entry of the menu: an item (it has a ``route``) or a group (it has none).
+    """One entry of the menu: an item (it has a ``route``) or a group (it has none).
 
     ``icon`` is a name (``None`` for none) and ``requires`` is ``public``,
     ``authenticated`` or a permission pattern. ``children`` are a group's
@@ -160,7 +160,7 @@ class NavNode:
 
 
 def source() -> str | None:
-    """Experimental. ``"settings"``, ``"db"``, or ``None`` while ``KARNI_NAVIGATION`` is unset."""
+    """``"settings"``, ``"db"``, or ``None`` while ``KARNI_NAVIGATION`` is unset."""
     value = getattr(settings, SETTING, None)
     if value is None:
         return None
@@ -171,7 +171,7 @@ def source() -> str | None:
 
 
 def requirement_problem(value: Any) -> str | None:
-    """Experimental. Why ``value`` is not a requirement (``None`` when it is one).
+    """Why ``value`` is not a requirement (``None`` when it is one).
 
     A requirement is ``public``, ``authenticated``, ``*`` or a permission
     pattern ``app_label.model:action`` with ``*`` for any part.
@@ -192,7 +192,7 @@ def requirement_problem(value: Any) -> str | None:
 
 
 def route_problem(value: Any) -> str | None:
-    """Experimental. Why ``value`` is not a route (``None`` when it is one).
+    """Why ``value`` is not a route (``None`` when it is one).
 
     A route is an app path that starts with ``/``, such as ``/products``.
     """
@@ -204,7 +204,7 @@ def route_problem(value: Any) -> str | None:
 
 
 def icon_problem(value: Any) -> str | None:
-    """Experimental. Why ``value`` is not an icon name (``None`` when it is one, or empty)."""
+    """Why ``value`` is not an icon name (``None`` when it is one, or empty)."""
     if value is None or value == "":
         return None
     if not isinstance(value, str) or not ICON_NAME.match(value) or len(value) > ICON_MAX:
@@ -264,7 +264,7 @@ def _item_problems(item: Any, where: str) -> list[str]:
 
 
 def settings_problems(value: Any, installed_apps: Iterable[Any] | None = None) -> list[str]:
-    """Experimental. Every problem with a ``KARNI_NAVIGATION`` value, each ending with its code.
+    """Every problem with a ``KARNI_NAVIGATION`` value, each ending with its code.
 
     ``None`` and a valid list have none. ``"db"`` needs ``karni.navigation`` in
     ``installed_apps`` (``E531``; not checked when ``installed_apps`` is
@@ -330,7 +330,7 @@ def _ordered(items: Sequence[dict[str, Any]]) -> tuple[NavNode, ...]:
 
 
 def menus(value: Any = None) -> list[str]:
-    """Experimental. The names of the menus ``KARNI_NAVIGATION`` declares (default: the setting's).
+    """The names of the menus ``KARNI_NAVIGATION`` declares (default: the setting's).
 
     A list or ``"db"`` is the one menu ``app``. ``None`` declares none.
     """
@@ -341,7 +341,7 @@ def menus(value: Any = None) -> list[str]:
 
 
 def nodes_from_setting(value: Any = None, menu: str = DEFAULT_MENU) -> tuple[NavNode, ...]:
-    """Experimental. The menu ``menu`` of a ``KARNI_NAVIGATION`` value (default: the setting's).
+    """The menu ``menu`` of a ``KARNI_NAVIGATION`` value (default: the setting's).
 
     A list is the ``app`` menu, a mapping holds named menus. Siblings sort by
     ``order`` (default 0), then by their place in the list. A value with a
@@ -369,7 +369,7 @@ def nodes_from_setting(value: Any = None, menu: str = DEFAULT_MENU) -> tuple[Nav
 
 
 def nodes_from_db(using: str | None = None) -> tuple[NavNode, ...]:
-    """Experimental. The menu the ``NavItem`` rows hold: one query, siblings in tree order.
+    """The menu the ``NavItem`` rows hold: one query, siblings in tree order.
 
     A soft-deleted row hides its branch. A row with a route is an item: the
     admin refuses children under it (``E536``), and any it has are not shown.
@@ -405,7 +405,7 @@ def nodes_from_db(using: str | None = None) -> tuple[NavNode, ...]:
 
 
 def load_nodes(menu: str = DEFAULT_MENU) -> tuple[NavNode, ...]:
-    """Experimental. The whole menu ``menu`` of the active source, before any user's requirements.
+    """The whole menu ``menu`` of the active source, before any user's requirements.
 
     The database source holds the ``app`` menu only.
     """
@@ -418,7 +418,7 @@ def load_nodes(menu: str = DEFAULT_MENU) -> tuple[NavNode, ...]:
 
 
 def walk(nodes: Iterable[NavNode], trail: tuple[str, ...] = ()) -> Iterator[tuple[str, NavNode]]:
-    """Experimental. Every node depth first, with its place: ``"Catalog > Products"``."""
+    """Every node depth first, with its place: ``"Catalog > Products"``."""
     for node in nodes:
         place = (*trail, node.label)
         yield " > ".join(place), node
@@ -433,7 +433,7 @@ def _authenticated(user: Any) -> bool:
 
 
 def opens(requirement: str, user: Any) -> bool:
-    """Experimental. Whether ``requirement`` lets ``user`` see an entry.
+    """Whether ``requirement`` lets ``user`` see an entry.
 
     A permission pattern reads :func:`karni.accounts.roles.grants_for`, the
     grants ``Granted()`` and ``user.can`` read: role grants and live user
@@ -470,7 +470,7 @@ def _visible(node: NavNode, user: Any) -> NavNode | None:
 def menu_for(
     user: Any, nodes: Iterable[NavNode] | None = None, *, menu: str = DEFAULT_MENU
 ) -> list[NavNode]:
-    """Experimental. The entries ``user`` sees, in order: hidden ones and empty groups left out.
+    """The entries ``user`` sees, in order: hidden ones and empty groups left out.
 
     ``nodes`` is the menu to filter (default: the active source's menu
     ``menu``, :func:`load_nodes`). ``user`` may be anonymous.
@@ -482,5 +482,5 @@ def menu_for(
 def payload(
     user: Any, nodes: Iterable[NavNode] | None = None, *, menu: str = DEFAULT_MENU
 ) -> dict[str, Any]:
-    """Experimental. ``{"items": [...]}``: the body of ``GET /api/navigation/`` for ``user``."""
+    """``{"items": [...]}``: the body of ``GET /api/navigation/`` for ``user``."""
     return {"items": [node.as_dict() for node in menu_for(user, nodes, menu=menu)]}

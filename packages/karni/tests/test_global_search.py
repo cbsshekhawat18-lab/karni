@@ -1,4 +1,4 @@
-"""Cross-model search (experimental): ``class Karni: search`` and ``GET /api/search/``.
+"""Cross-model search: ``class Karni: search`` and ``GET /api/search/``.
 
 The catalog in :mod:`tests.searchapp` has four routed resources with four
 access rules (public products, suppliers for signed-in users, notes for their

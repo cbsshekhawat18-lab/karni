@@ -40,7 +40,7 @@ function refusal(status: number, code: string): () => Response {
 const meta = {
   title: "Auth/SocialButton",
   component: SocialButton,
-  tags: ["autodocs", "experimental"],
+  tags: ["autodocs"],
   args: {
     provider: "google",
     getIdToken: () => Promise.resolve("id-token-from-the-provider-sdk"),

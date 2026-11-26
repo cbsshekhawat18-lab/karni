@@ -621,7 +621,7 @@ def apply_changes(operator: Any, requested: Requested) -> Plan:
 class Source:
     """Why a user holds a permission: the role, its scope and where that grant came from.
 
-    A per-user grant (experimental) has ``origin`` ``"user_grant"``, no role,
+    A per-user grant has ``origin`` ``"user_grant"``, no role,
     and ``grant`` (its id), ``reason``, ``expires_at`` and ``targets``, which
     ``to_dict()`` adds for it alone.
     """
@@ -697,7 +697,7 @@ def effective_permissions(user: Any) -> EffectiveReport:
     user's roles, including a cell the matrix revoked (scope ``None``,
     origin ``matrix``) so "why can't this person…" is answered too. While
     ``KARNI_USER_GRANTS`` is on, the user's live user grants follow, with
-    origin ``user_grant`` (experimental).
+    origin ``user_grant``.
     """
     from karni.accounts.models import RolePermission
     from karni.accounts.permissions import user_roles

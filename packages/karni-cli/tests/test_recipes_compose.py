@@ -1,4 +1,4 @@
-"""The merge of a part's karni.yaml into a project's (experimental): karni_cli.recipes.compose."""
+"""The merge of a part's karni.yaml into a project's: karni_cli.recipes.compose."""
 
 from __future__ import annotations
 

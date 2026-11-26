@@ -13,7 +13,7 @@ where ``status`` is a :class:`ParsedEventStatus` value (or absent for a
 no-op event), signed with ``X-Test-Signature: sha256(body + secret)``.
 :meth:`TestProvider.build_webhook` assembles body + headers for you.
 
-The checkout page (experimental): while
+The checkout page: while
 ``KARNI_PAYMENTS_TEST_CHECKOUT_PAGE`` is on (by default, while ``DEBUG``
 is), a checkout started in a request gets the address of
 ``payments/test-checkout/<session>/`` on that request's host

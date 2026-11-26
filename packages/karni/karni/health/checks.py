@@ -39,7 +39,7 @@ DEFAULT_READY_CHECKS: tuple[str, ...] = (
     "karni.health.checks.check_cache",
     "karni.health.checks.check_broker",
 )
-"""Experimental. Dotted paths ``/readyz`` runs when ``KARNI_READYZ_CHECKS`` is absent."""
+"""Dotted paths ``/readyz`` runs when ``KARNI_READYZ_CHECKS`` is absent."""
 
 #: Cache key written and read back by :func:`check_cache`.
 CACHE_KEY: str = "karni-health"
@@ -91,7 +91,7 @@ def check_celery() -> CheckResult:
 
 
 def check_broker() -> CheckResult:
-    """Experimental. Open a connection to the Celery broker and close it.
+    """Open a connection to the Celery broker and close it.
 
     Retries once within ``KARNI_HEALTH_TIMEOUT`` seconds (default 3), so a
     broker that is down fails the check instead of hanging the probe. It asks

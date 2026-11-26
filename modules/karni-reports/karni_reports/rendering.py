@@ -48,7 +48,7 @@ SHORTCUTS = {
 
 
 class Renderer:
-    """Experimental. Turns a report's HTML into the bytes of a PDF.
+    """Turns a report's HTML into the bytes of a PDF.
 
     Override / escape hatch: subclass it, implement :meth:`render` and name
     the class in ``KARNI_REPORTS_RENDERER``.
@@ -66,7 +66,7 @@ class Renderer:
 
 
 class FakeRenderer(Renderer):
-    """Experimental. A renderer for tests: deterministic bytes and no system library.
+    """A renderer for tests: deterministic bytes and no system library.
 
     The HTML of every render is appended to :attr:`rendered`, so a test reads
     what was printed. :meth:`reset` empties it.
@@ -85,7 +85,7 @@ class FakeRenderer(Renderer):
 
 
 class WeasyPrintRenderer(Renderer):
-    """Experimental. The PDF drawn by WeasyPrint (``KARNI_REPORTS_RENDERER = "weasyprint"``).
+    """The PDF drawn by WeasyPrint (``KARNI_REPORTS_RENDERER = "weasyprint"``).
 
     WeasyPrint needs Pango, a system library: ``REPORT006`` names the
     packages when it is missing. While rendering, a URL is read only when it

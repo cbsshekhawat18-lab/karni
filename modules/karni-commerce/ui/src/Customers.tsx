@@ -1,5 +1,5 @@
 /**
- * Experimental. The staff's customers: the people who bought (karni.people),
+ * The staff's customers: the people who bought (karni.people),
  * one row per person with commerce's facts (their orders, what they spent,
  * their last order), and one customer's page with their orders, addresses
  * and account.

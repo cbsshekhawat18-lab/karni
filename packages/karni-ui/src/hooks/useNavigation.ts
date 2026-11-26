@@ -1,5 +1,5 @@
 /**
- * Experimental. The menu the signed-in user gets from the server:
+ * The menu the signed-in user gets from the server:
  * `GET /navigation/` (Django's `KARNI_NAVIGATION`, the settings list or the
  * `NavItem` rows edited in the admin), filtered by the same grants as the
  * API. A group has `route: null`, an item `children: []`.
@@ -29,7 +29,7 @@ import { KarniApiError } from "../schema/client";
 import { useKarniClient } from "../schema/provider";
 import { karniKeys } from "./keys";
 
-/** Experimental. One entry of the server's menu: an item (with a route) or a group (without). */
+/** One entry of the server's menu: an item (with a route) or a group (without). */
 export interface NavigationItem {
   label: string;
   /** An icon name the app maps to a picture (Layout's `icons`), or null. */
@@ -40,15 +40,15 @@ export interface NavigationItem {
   children: NavigationItem[];
 }
 
-/** Experimental. The body of `GET /navigation/`. */
+/** The body of `GET /navigation/`. */
 export interface NavigationMenu {
   items: NavigationItem[];
 }
 
-/** Experimental. Where the menu comes from, relative to the client's `baseUrl`. */
+/** Where the menu comes from, relative to the client's `baseUrl`. */
 export const NAVIGATION_PATH = "/navigation/";
 
-/** Experimental. The options of `useNavigation`: TanStack Query's, and the menu's name. */
+/** The options of `useNavigation`: TanStack Query's, and the menu's name. */
 export type UseNavigationOptions = Omit<UseQueryOptions<NavigationMenu>, "queryKey" | "queryFn"> & {
   /**
    * The named menu (`GET /navigation/?menu=`): `app` (the default, the staff
@@ -59,7 +59,7 @@ export type UseNavigationOptions = Omit<UseQueryOptions<NavigationMenu>, "queryK
   menu?: string;
 };
 
-/** Experimental. The menu for the signed-in user (`GET /navigation/`), cached per user. */
+/** The menu for the signed-in user (`GET /navigation/`), cached per user. */
 export function useNavigation(options?: UseNavigationOptions): UseQueryResult<NavigationMenu> {
   const { menu, ...queryOptions } = options ?? {};
   const client = useKarniClient();

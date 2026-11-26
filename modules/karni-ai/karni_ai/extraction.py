@@ -50,7 +50,7 @@ __all__ = ["Extraction", "Extractor", "get_extractor"]
 
 @dataclass
 class Extraction:
-    """Experimental. What one extraction proposes: rows, problems, the previewed job, usage."""
+    """What one extraction proposes: rows, problems, the previewed job, usage."""
 
     resource: str
     source: Source
@@ -86,7 +86,7 @@ class Extraction:
 
 
 class Extractor:
-    """Experimental. Runs extractions for the user behind ``request`` (a DRF request)."""
+    """Runs extractions for the user behind ``request`` (a DRF request)."""
 
     def __init__(self, request: Any) -> None:
         self.request = request
@@ -301,7 +301,7 @@ class Extractor:
 
 
 def get_extractor(request: Any) -> Extractor:
-    """Experimental. The ``KARNI_AI_EXTRACTOR`` class, for ``request``."""
+    """The ``KARNI_AI_EXTRACTOR`` class, for ``request``."""
     extractor_class = load_class("KARNI_AI_EXTRACTOR", Extractor)
     extractor: Extractor = extractor_class(request)
     return extractor

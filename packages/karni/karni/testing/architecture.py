@@ -105,7 +105,7 @@ def check_model_base() -> list[Violation]:
 
 
 def _is_external_table(model: type) -> bool:
-    """A table or view another system owns (``karni.db``, experimental): model-base accepts it.
+    """A table or view another system owns (``karni.db``): model-base accepts it.
 
     Both declarations are needed: ``class Karni: external = True`` and
     ``Meta.managed = False`` (``karni.E270`` reports the first without the second).
@@ -463,7 +463,7 @@ def _audited_bulk_write_in(path: Path, tree: ast.Module, audited: set[str]) -> l
     return violations
 
 
-# running every rule, with the check cache (experimental)
+# running every rule, with the check cache
 
 FileRule = Callable[[Path, ast.Module], list[Violation]]
 
@@ -488,7 +488,7 @@ def _each_file(rule: FileRule, applies: Callable[[Path], bool] | None = None) ->
     return violations
 
 
-# hand-written-tree (tree models, experimental)
+# hand-written-tree (tree models)
 
 
 def _self_parent(model: type) -> str | None:
@@ -502,7 +502,7 @@ def _self_parent(model: type) -> str | None:
 
 
 def check_hand_written_tree() -> list[Violation]:
-    """Experimental. A project model with a ``parent`` foreign key to itself, not a tree model."""
+    """A project model with a ``parent`` foreign key to itself, not a tree model."""
     from karni.models import TreeModel
 
     violations: list[Violation] = []
@@ -616,7 +616,7 @@ def run_checks() -> list[str]:
     """``karni.checks`` entry point: every architecture violation, rendered.
 
     The rules that read one file at a time go through the active check cache
-    (:mod:`karni.testing.checkcache`, experimental): an unchanged file is not
+    (:mod:`karni.testing.checkcache`): an unchanged file is not
     parsed again. With ``--changed`` only the findings in the changed files
     are reported.
     """

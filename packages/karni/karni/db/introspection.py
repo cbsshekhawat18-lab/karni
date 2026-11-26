@@ -1,4 +1,4 @@
-"""What a database says about one table or view, schema-qualified names included (experimental).
+"""What a database says about one table or view, schema-qualified names included.
 
 Django's introspection finds a PostgreSQL table only on the search path, so
 for ``'reporting"."sales'`` these helpers put the schema on the search path
@@ -32,7 +32,7 @@ __all__ = ["Column", "columns", "inspect_table", "relation_exists", "relation_ki
 
 @dataclass(frozen=True)
 class Column:
-    """Experimental. One column of a table or view: its name and the Django field type it maps to.
+    """One column of a table or view: its name and the Django field type it maps to.
 
     ``field_type`` is ``None`` when the database reports no type Django knows
     (an expression column of a SQLite view, a custom PostgreSQL type).
@@ -67,7 +67,7 @@ def _search_path(
 
 
 def relation_exists(connection: BaseDatabaseWrapper, db_table: str) -> bool:
-    """Experimental. Whether a table or view ``db_table`` exists (``'schema"."table'`` too)."""
+    """Whether a table or view ``db_table`` exists (``'schema"."table'`` too)."""
     schema, table = split_table(db_table)
     with connection.cursor() as cursor:
         if _is_postgres(connection):
@@ -80,7 +80,7 @@ def relation_exists(connection: BaseDatabaseWrapper, db_table: str) -> bool:
 
 
 def relation_kind(connection: BaseDatabaseWrapper, db_table: str) -> str | None:
-    """Experimental. ``"table"`` or ``"view"`` for an existing ``db_table``, else ``None``."""
+    """``"table"`` or ``"view"`` for an existing ``db_table``, else ``None``."""
     schema, table = split_table(db_table)
     if schema is not None and not _is_postgres(connection):
         return None
@@ -99,7 +99,7 @@ def _field_type(connection: BaseDatabaseWrapper, row: Any) -> str | None:
 
 
 def columns(connection: BaseDatabaseWrapper, db_table: str) -> list[Column]:
-    """Experimental. The columns of an existing table or view, in their order."""
+    """The columns of an existing table or view, in their order."""
     schema, table = split_table(db_table)
     with connection.cursor() as cursor, _search_path(connection, cursor, schema):
         description = connection.introspection.get_table_description(cursor, table)
@@ -109,7 +109,7 @@ def columns(connection: BaseDatabaseWrapper, db_table: str) -> list[Column]:
 
 
 def inspect_table(connection: BaseDatabaseWrapper, db_table: str) -> dict[str, Any]:
-    """Experimental. The model fields Django's ``inspectdb`` derives from ``db_table``, as data.
+    """The model fields Django's ``inspectdb`` derives from ``db_table``, as data.
 
     ``{"kind", "fields": [{"name", "type", "params", "notes"}], "notes"}``:
     ``type`` is a ``django.db.models`` field class name and ``params`` its

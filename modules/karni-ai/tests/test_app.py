@@ -25,7 +25,7 @@ def test_settings_fragment_has_no_default_provider_or_model() -> None:
 
 def test_the_manifest_matches_the_module() -> None:
     manifest = assert_module_manifest("karni_ai")
-    assert manifest.name == "ai" and manifest.status == "experimental"
+    assert manifest.name == "ai" and manifest.status == "stable"
     assert [ask.setting for ask in manifest.asks] == ["KARNI_AI_PROVIDER"]
 
 

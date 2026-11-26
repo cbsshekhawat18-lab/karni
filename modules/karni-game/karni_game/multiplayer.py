@@ -1,4 +1,4 @@
-"""Experimental. The contract with a realtime game server of the project's own.
+"""The contract with a realtime game server of the project's own.
 
 Karni runs no realtime server: a match server is a separate service (any
 language), and two calls join it to the player and the boards:

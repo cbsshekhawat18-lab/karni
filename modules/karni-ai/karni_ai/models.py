@@ -12,7 +12,7 @@ __all__ = ["AICall"]
 
 
 class AICall(BigIntBaseModel):
-    """Experimental. One provider call: who, for which resource, which model, its tokens and cost.
+    """One provider call: who, for which resource, which model, its tokens and cost.
 
     Written by :mod:`karni_ai.usage` for every call, the failed ones included
     (``status`` failed, ``error_code`` AI006 or AI007, with the tokens the

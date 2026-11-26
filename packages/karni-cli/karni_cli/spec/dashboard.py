@@ -1,4 +1,4 @@
-"""Experimental. ``dashboard:`` of ``karni.yaml``: the home tiles ``karni build`` writes.
+"""``dashboard:`` of ``karni.yaml``: the home tiles ``karni build`` writes.
 
 Each entry becomes one dict of ``KARNI_DASHBOARD_TILES`` (:mod:`karni.tiles`
 reads it): ``entity`` turns into the entity's API ``resource``
@@ -66,14 +66,14 @@ def _tile(spec: schema.Spec, tile: schema.DashboardTile) -> dict[str, Any]:
 
 
 def tiles(spec: schema.Spec) -> list[dict[str, Any]] | None:
-    """Experimental. The ``KARNI_DASHBOARD_TILES`` value of ``spec``, or ``None`` without tiles."""
+    """The ``KARNI_DASHBOARD_TILES`` value of ``spec``, or ``None`` without tiles."""
     if not spec.dashboard:
         return None
     return [_tile(spec, tile) for tile in spec.dashboard]
 
 
 def summary(items: list[dict[str, Any]] | None) -> str:
-    """Experimental. ``shop.to_send (shipments), commerce.revenue``."""
+    """``shop.to_send (shipments), commerce.revenue``."""
     return ", ".join(
         f"{item['key']} ({item['resource']})" if item.get("resource") else str(item["key"])
         for item in items or []
@@ -83,7 +83,7 @@ def summary(items: list[dict[str, Any]] | None) -> str:
 def entries_from_setting(
     value: Any, spec: schema.Spec, left_out: list[str]
 ) -> list[dict[str, Any]] | None:
-    """Experimental. The ``dashboard:`` entries a ``KARNI_DASHBOARD_TILES`` list writes.
+    """The ``dashboard:`` entries a ``KARNI_DASHBOARD_TILES`` list writes.
 
     A ``resource`` becomes the entity whose route it is. A tile on a resource
     no entity of the spec has is added to ``left_out`` and skipped, and so is

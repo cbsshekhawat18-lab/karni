@@ -1,4 +1,4 @@
-"""Experimental. Field groups and column sets: usable screens for a model with many fields.
+"""Field groups and column sets: usable screens for a model with many fields.
 
 A model with a hundred columns and a dozen long markdown sections turns a
 generated form or detail page into one endless list, and its table into a
@@ -81,7 +81,7 @@ Layout = Literal["sections", "tabs"]
 
 @dataclass(frozen=True)
 class FieldGroup:
-    """Experimental. One titled group of fields, in the order listed."""
+    """One titled group of fields, in the order listed."""
 
     label: str
     fields: tuple[str, ...]
@@ -89,7 +89,7 @@ class FieldGroup:
 
 @dataclass(frozen=True)
 class ColumnSet:
-    """Experimental. One named column preset of ResourceTable."""
+    """One named column preset of ResourceTable."""
 
     name: str
     label: str
@@ -248,12 +248,12 @@ def _set_errors(
 
 
 def layout_errors(model: type[models.Model]) -> list[KarniImproperlyConfigured]:
-    """Experimental. Every problem of ``field_groups``, ``field_group_layout``, ``column_sets``."""
+    """Every problem of ``field_groups``, ``field_group_layout``, ``column_sets``."""
     return [*_group_errors(model)[1], *_set_errors(model)[1]]
 
 
 def field_groups(model: type[models.Model]) -> tuple[FieldGroup, ...]:
-    """Experimental. The model's ``Karni.field_groups``, in order (empty when it declares none).
+    """The model's ``Karni.field_groups``, in order (empty when it declares none).
 
     Raises :class:`~karni.exceptions.KarniImproperlyConfigured` (``E550`` to
     ``E552``) for the first problem, as ``karni check`` reports every one.
@@ -265,7 +265,7 @@ def field_groups(model: type[models.Model]) -> tuple[FieldGroup, ...]:
 
 
 def field_group_layout(model: type[models.Model]) -> Layout:
-    """Experimental. ``"sections"`` (the default) or ``"tabs"``: how the UI shows the groups."""
+    """``"sections"`` (the default) or ``"tabs"``: how the UI shows the groups."""
     layout = karni_option(model, "field_group_layout", "sections")
     if layout not in LAYOUTS:
         raise _malformed(
@@ -275,7 +275,7 @@ def field_group_layout(model: type[models.Model]) -> Layout:
 
 
 def column_sets(model: type[models.Model]) -> tuple[ColumnSet, ...]:
-    """Experimental. The model's ``Karni.column_sets``, in order (empty when it declares none).
+    """The model's ``Karni.column_sets``, in order (empty when it declares none).
 
     Raises :class:`~karni.exceptions.KarniImproperlyConfigured` (``E551`` or
     ``E553``) for the first problem.
@@ -287,7 +287,7 @@ def column_sets(model: type[models.Model]) -> tuple[ColumnSet, ...]:
 
 
 def default_column_set(sets: Iterable[ColumnSet]) -> str | None:
-    """Experimental. The set shown first: the one named ``default``, else the first one."""
+    """The set shown first: the one named ``default``, else the first one."""
     names = [found.name for found in sets]
     if DEFAULT_SET in names:
         return DEFAULT_SET
@@ -297,7 +297,7 @@ def default_column_set(sets: Iterable[ColumnSet]) -> str | None:
 def fieldsets(
     model: type[models.Model], names: Iterable[str]
 ) -> list[tuple[str | None, dict[str, Any]]] | None:
-    """Experimental. The admin's fieldsets for ``names`` (its form's fields), from ``field_groups``.
+    """The admin's fieldsets for ``names`` (its form's fields), from ``field_groups``.
 
     Each group keeps the fields of ``names`` it lists, in its order, and a
     group left with none is dropped. The fields of ``names`` in no group form

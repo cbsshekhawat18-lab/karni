@@ -1,4 +1,4 @@
-"""Experimental. How two players become one: a guest who signs in, or two people merged.
+"""How two players become one: a guest who signs in, or two people merged.
 
 The people contract calls the merge hook of :class:`~karni_game.models.Player`
 (:mod:`karni_game.people`) inside ``people.merge``. When only the dropped

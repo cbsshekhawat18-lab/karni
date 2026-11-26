@@ -72,7 +72,7 @@ def test_detail_op_without_pagination_is_skipped(schema: dict) -> None:
 
 
 def test_the_navigation_endpoint_is_no_resource(schema: dict) -> None:
-    """``GET /api/navigation/`` (experimental) is typed by types.ts alone, never a resource hook."""
+    """``GET /api/navigation/`` is typed by types.ts alone, never a resource hook."""
     schema["paths"]["/api/navigation/"] = {
         "get": {
             "operationId": "navigation",
@@ -125,7 +125,7 @@ def test_cross_model_search_gets_a_typed_hook(schema: dict) -> None:
     assert "export type SearchResource = never;" in generate_hooks(schema)
 
 
-# one typed client per API version (experimental)
+# one typed client per API version
 
 
 def _fake_project(

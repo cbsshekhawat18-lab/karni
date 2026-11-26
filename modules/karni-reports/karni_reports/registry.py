@@ -31,7 +31,7 @@ def _qualified(cls: type) -> str:
 
 
 def register[ReportClass: type[Report]](report_class: ReportClass) -> ReportClass:
-    """Experimental. Add a report to the registry (a class decorator). Returns the class.
+    """Add a report to the registry (a class decorator). Returns the class.
 
     Checks the declaration: a model class, a template name and a valid name
     (``REPORT002``), unique among the reports (``REPORT003``). Registering the

@@ -1,4 +1,4 @@
-"""The database menu in the admin (experimental): the tree changelist, the form and the preview."""
+"""The database menu in the admin: the tree changelist, the form and the preview."""
 
 from __future__ import annotations
 

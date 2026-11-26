@@ -1,4 +1,4 @@
-"""Experimental. ``karni build``: apply ``karni plan`` to the project, idempotently.
+"""``karni build``: apply ``karni plan`` to the project, idempotently.
 
 The agent writes a small spec (``karni.yaml``) and Karni turns it into code
 deterministically. Karni's code lives in files of its own

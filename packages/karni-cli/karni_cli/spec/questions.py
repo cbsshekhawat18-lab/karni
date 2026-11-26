@@ -82,16 +82,16 @@ __all__ = [
     "shown",
 ]
 
-#: Experimental. How many questions ``karni plan --questions`` shows without ``--max``.
+#: How many questions ``karni plan --questions`` shows without ``--max``.
 DEFAULT_MAX: Final = 5
-#: Experimental. The version of the ``--json`` output. It moves only for a breaking change.
+#: The version of the ``--json`` output. It moves only for a breaking change.
 QUESTIONS_VERSION: Final = 1
-#: Experimental. Where the JSON Schema of ``karni plan --questions --json`` is published.
+#: Where the JSON Schema of ``karni plan --questions --json`` is published.
 QUESTIONS_SCHEMA_URL: Final = (
     "https://cbsshekhawat18-lab.github.io/karni/assets/karni-questions.schema.json"
 )
 Area = Literal["owner", "access", "roles", "app", "modules", "features"]
-#: Experimental. The kinds of gap, most impact first: the order questions come in.
+#: The kinds of gap, most impact first: the order questions come in.
 AREAS: Final[tuple[str, ...]] = get_args(Area)
 #: The answer to the sign-up role question that gives a new account no role.
 NO_ROLE: Final = "none"
@@ -99,12 +99,12 @@ _JSON_TYPES: Final = {bool: "boolean", int: "integer", float: "number", str: "st
 
 
 class AnswerError(ValueError):
-    """Experimental. A value the question does not take: the message says which ones it does."""
+    """A value the question does not take: the message says which ones it does."""
 
 
 @dataclass(frozen=True)
 class Option:
-    """Experimental. One answer a question offers: the value written, and what it means."""
+    """One answer a question offers: the value written, and what it means."""
 
     value: Any
     label: str
@@ -115,7 +115,7 @@ class Option:
 
 @dataclass(frozen=True)
 class Question:
-    """Experimental. One gap of the spec, asked as one sentence with its options.
+    """One gap of the spec, asked as one sentence with its options.
 
     ``id`` is the same for the same gap whatever else the spec says, ``key``
     is the dotted path of the spec key the answer sets, ``options`` are the
@@ -135,7 +135,7 @@ class Question:
     target: Loc = field(default=(), repr=False)
 
     def parse(self, raw: str) -> Any:
-        """Experimental. The value ``raw`` (as typed on the command line) stands for.
+        """The value ``raw`` (as typed on the command line) stands for.
 
         Raises :class:`AnswerError` when it is not one of the options, or not
         of a type the key takes.
@@ -174,7 +174,7 @@ class Question:
         )
 
     def writes(self, value: Any) -> list[tuple[Loc, Any]]:
-        """Experimental. The ``(spec path, value)`` pairs answering ``value`` sets."""
+        """The ``(spec path, value)`` pairs answering ``value`` sets."""
         if self.area == "access":
             return [(self.target, access_rule(str(value)))]
         if self.area == "roles":
@@ -266,7 +266,7 @@ def _ask_text(title: str, question: str) -> str:
 
 
 def access_rule(preset: str) -> dict[str, str]:
-    """Experimental. The ``access:`` mapping an ``--access`` preset is in karni.yaml.
+    """The ``access:`` mapping an ``--access`` preset is in karni.yaml.
 
     The table of docs/app-spec.md#access: ``public-read`` is ``{read: public,
     write: "role:staff"}``, ``owned:member`` is ``{read: "owned:member",
@@ -517,7 +517,7 @@ def _feature_asks(
 
 
 def questions(spec: schema.Spec, data: dict[str, Any]) -> list[Question]:
-    """Experimental. Every gap of a valid spec, as a question, most impact first.
+    """Every gap of a valid spec, as a question, most impact first.
 
     ``spec`` is the validated spec and ``data`` the file's own data
     (:attr:`karni_cli.spec.validate.Report.source`), which says which keys
@@ -545,7 +545,7 @@ def questions(spec: schema.Spec, data: dict[str, Any]) -> list[Question]:
 
 
 def shown(found: list[Question], limit: int | None) -> list[Question]:
-    """Experimental. The first ``limit`` questions (all of them for ``None`` or ``0``)."""
+    """The first ``limit`` questions (all of them for ``None`` or ``0``)."""
     return found[:limit] if limit else list(found)
 
 
@@ -553,7 +553,7 @@ def shown(found: list[Question], limit: int | None) -> list[Question]:
 
 
 def render(found: list[Question], limit: int | None, *, file: str = "karni.yaml") -> str:
-    """Experimental. What ``karni plan --questions`` prints."""
+    """What ``karni plan --questions`` prints."""
     if not found:
         return (
             f"No questions: {file} settles everything Karni asks before a build.\n"
@@ -612,7 +612,7 @@ class _QuestionOut(_Out):
 
 
 class _QuestionsOut(_Out):
-    """Experimental. The output of karni plan --questions --json."""
+    """The output of karni plan --questions --json."""
 
     version: Literal[1] = Field(description="The version of this output: 1.")
     file: str = Field(description="The spec file, as given.")
@@ -626,7 +626,7 @@ class _QuestionsOut(_Out):
 
 
 def json_schema() -> dict[str, Any]:
-    """Experimental. The JSON Schema of ``karni plan --questions --json``."""
+    """The JSON Schema of ``karni plan --questions --json``."""
     from karni_cli.spec.schema import _tidy
 
     return {
@@ -634,7 +634,7 @@ def json_schema() -> dict[str, Any]:
         "$id": QUESTIONS_SCHEMA_URL,
         "title": "karni plan --questions --json",
         "description": (
-            "Experimental. The questions to ask the user before karni build. Generated by "
+            "The questions to ask the user before karni build. Generated by "
             "python -m karni_cli.spec.questions. Never edit it by hand."
         ),
         **_tidy(_QuestionsOut.model_json_schema()),
@@ -647,7 +647,7 @@ def checked_output(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def output(found: list[Question], limit: int | None, *, file: str) -> dict[str, Any]:
-    """Experimental. The ``--json`` output of a valid spec."""
+    """The ``--json`` output of a valid spec."""
     return checked_output(
         {
             "version": QUESTIONS_VERSION,
@@ -680,7 +680,7 @@ def invalid_output(
 
 @dataclass(frozen=True)
 class Answered:
-    """Experimental. An answer written into a spec's text (``karni spec answer``)."""
+    """An answer written into a spec's text (``karni spec answer``)."""
 
     #: The spec's text with the answer in it. Every other line is as it was.
     text: str
@@ -693,7 +693,7 @@ class Answered:
 def answer(
     text: str, found: list[Question], question_id: str, value: str, *, file: str
 ) -> Answered:
-    """Experimental. ``karni spec answer``: the answer to ``question_id`` written into ``text``.
+    """``karni spec answer``: the answer to ``question_id`` written into ``text``.
 
     ``found`` is :func:`questions` of the valid spec ``text`` holds, and
     ``value`` the answer as typed. Nothing is written to disk here.

@@ -1,4 +1,4 @@
-"""Experimental. Hand edited emails kept in a part's own table to the notifications contract.
+"""Hand edited emails kept in a part's own table to the notifications contract.
 
 A part that kept the emails a business rewrote in a table of its own (as
 karni-commerce did) moves them in a data migration::
@@ -62,7 +62,7 @@ def _copy(source: Any, target: Any, alias: str) -> int:
 
 
 def adopt_edited_emails(apps: Any, schema_editor: Any, source: str) -> int:
-    """Experimental. Copy the live rows of ``source`` (``"app_label.Model"``) to notify.
+    """Copy the live rows of ``source`` (``"app_label.Model"``) to notify.
 
     Returns how many were copied. ``apps`` and ``schema_editor`` are the ones
     ``RunPython`` passes.
@@ -86,7 +86,7 @@ def adopt_edited_emails(apps: Any, schema_editor: Any, source: str) -> int:
 
 
 def return_edited_emails(apps: Any, schema_editor: Any, target: str) -> int:
-    """Experimental. The way back: copy notify's edited emails to ``target`` again."""
+    """The way back: copy notify's edited emails to ``target`` again."""
     if not installed():
         return 0
     alias = schema_editor.connection.alias

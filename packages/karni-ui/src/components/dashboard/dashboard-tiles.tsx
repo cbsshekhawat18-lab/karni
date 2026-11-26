@@ -1,5 +1,5 @@
 /**
- * Experimental. <DashboardTiles>: the home tiles the signed-in person sees.
+ * <DashboardTiles>: the home tiles the signed-in person sees.
  *
  * Reads `GET /dashboard/` (Django's `karni.tiles`): the tiles each installed
  * part declares, in code or in karni.yaml's `dashboard:`, filtered on the
@@ -41,7 +41,7 @@ import { resolveRelativeDate } from "./dashboard";
 
 registerComponentRole("dashboard-tiles", "DashboardTiles");
 
-/** Experimental. One figure of a stat tile the server worked out. */
+/** One figure of a stat tile the server worked out. */
 export interface TileValue {
   label: string;
   value: string | number;
@@ -50,7 +50,7 @@ export interface TileValue {
   link: string | null;
 }
 
-/** Experimental. One home tile, as `GET /dashboard/` answers it. */
+/** One home tile, as `GET /dashboard/` answers it. */
 export interface DashboardTileDef {
   key: string;
   title: string;
@@ -66,7 +66,7 @@ export interface DashboardTileDef {
   data: Record<string, unknown> | null;
 }
 
-/** Experimental. The body of `GET /dashboard/`. */
+/** The body of `GET /dashboard/`. */
 export interface DashboardTilesBody {
   tiles: DashboardTileDef[];
 }
@@ -82,7 +82,7 @@ export interface TileProps {
 
 export const DASHBOARD_PATH = "/dashboard/";
 
-/** Experimental. The home tiles of the signed-in person (`GET /dashboard/`), cached per user. */
+/** The home tiles of the signed-in person (`GET /dashboard/`), cached per user. */
 export function useDashboardTiles(): UseQueryResult<DashboardTilesBody> {
   const client = useKarniClient();
   const auth = React.useContext(AuthContext);
@@ -97,17 +97,17 @@ export function useDashboardTiles(): UseQueryResult<DashboardTilesBody> {
 const BY_KEY = new Map<string, React.ComponentType<TileProps>>();
 const BY_KIND = new Map<string, React.ComponentType<TileProps>>();
 
-/** Experimental. Draw the tile `key` with `Component` (a `custom` tile, or any tile your way). */
+/** Draw the tile `key` with `Component` (a `custom` tile, or any tile your way). */
 export function registerTile(key: string, Component: React.ComponentType<TileProps>): void {
   BY_KEY.set(key, Component);
 }
 
-/** Experimental. Draw every tile of `kind` with `Component` (a chart library of your own). */
+/** Draw every tile of `kind` with `Component` (a chart library of your own). */
 export function registerTileKind(kind: string, Component: React.ComponentType<TileProps>): void {
   BY_KIND.set(kind, Component);
 }
 
-/** Experimental. Forget what `registerTile` or `registerTileKind` set (tests). */
+/** Forget what `registerTile` or `registerTileKind` set (tests). */
 export function unregisterTile(key: string): void {
   BY_KEY.delete(key);
   BY_KIND.delete(key);
@@ -411,7 +411,7 @@ export interface DashboardTilesProps {
   className?: string;
 }
 
-/** Experimental. The home tiles of the signed-in person, in a responsive grid. */
+/** The home tiles of the signed-in person, in a responsive grid. */
 export function DashboardTiles(props: DashboardTilesProps): React.ReactElement | null {
   const { onOpen, tiles, empty = null, now, className } = props;
   const query = useDashboardTiles();

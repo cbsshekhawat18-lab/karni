@@ -1,5 +1,5 @@
 /**
- * Experimental. ResourceCalendar: a resource's rows on a day, week or month
+ * ResourceCalendar: a resource's rows on a day, week or month
  * calendar, or as a list.
  *
  * Anything with a start and an end (or a start and a duration) is a calendar:
@@ -105,7 +105,7 @@ export type { CalendarEventContext, CalendarTone } from "./calendar-views";
 
 type Row = Record<string, unknown>;
 
-/** Experimental. A second resource whose rows are open or full slots, drawn behind the events. */
+/** A second resource whose rows are open or full slots, drawn behind the events. */
 export interface CalendarAvailability extends CalendarCapacity {
   /** The slots' resource (`slots`). */
   resource: string;
@@ -115,7 +115,7 @@ export interface CalendarAvailability extends CalendarCapacity {
   filters?: Record<string, FilterValue>;
 }
 
-/** Experimental. What `onCreate` receives: an empty time, or an open slot of `availability`. */
+/** What `onCreate` receives: an empty time, or an open slot of `availability`. */
 export interface CalendarCreateRequest {
   start: Date;
   end: Date;
@@ -125,25 +125,25 @@ export interface CalendarCreateRequest {
   slot?: Row;
 }
 
-/** Experimental. What the `Empty` slot receives. */
+/** What the `Empty` slot receives. */
 export interface CalendarEmptyProps {
   /** The range shown, in words ("March 2026"). */
   period: string;
 }
 
-/** Experimental. What the `Loading` slot receives. */
+/** What the `Loading` slot receives. */
 export interface CalendarLoadingProps {
   view: CalendarView;
 }
 
-/** Experimental. The replaceable parts of ResourceCalendar. */
+/** The replaceable parts of ResourceCalendar. */
 export interface ResourceCalendarSlots {
   Loading: React.ComponentType<CalendarLoadingProps>;
   Empty: React.ComponentType<CalendarEmptyProps>;
   Error: React.ComponentType<ErrorSlotProps>;
 }
 
-/** Experimental. Props of ResourceCalendar. */
+/** Props of ResourceCalendar. */
 export interface ResourceCalendarProps<T extends object> {
   /** The router prefix of the resource (`bookings`). */
   resource: string;
@@ -250,7 +250,7 @@ function DefaultError(props: ErrorSlotProps): React.ReactElement {
   return <ErrorState {...props} />;
 }
 
-/** Experimental. Karni's own slots, to wrap one instead of rewriting it. */
+/** Karni's own slots, to wrap one instead of rewriting it. */
 export const defaultResourceCalendarSlots: ResourceCalendarSlots = {
   Loading: DefaultLoading,
   Empty: DefaultEmpty,

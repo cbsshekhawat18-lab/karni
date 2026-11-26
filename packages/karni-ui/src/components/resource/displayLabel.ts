@@ -23,7 +23,7 @@ export function displayLabel(obj: Record<string, unknown>): string {
 }
 
 /**
- * Experimental. A person's name, from an expanded user: "First Last", else
+ * A person's name, from an expanded user: "First Last", else
  * their `name` or email, else the id.
  */
 export function personName(obj: Record<string, unknown>): string {
@@ -41,7 +41,7 @@ export interface LabelledField {
 }
 
 /**
- * Experimental. How a related row is named where a relation shows it: the
+ * How a related row is named where a relation shows it: the
  * field its model names its rows by (`class Karni: label`, published in
  * `x-karni-relation`), a person's name, else displayLabel's guess.
  */

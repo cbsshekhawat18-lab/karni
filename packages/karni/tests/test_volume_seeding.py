@@ -1,4 +1,4 @@
-"""Volume seeding (experimental): bulk rows that keep their relations, and the ledger's refusal."""
+"""Volume seeding: bulk rows that keep their relations, and the ledger's refusal."""
 
 from __future__ import annotations
 

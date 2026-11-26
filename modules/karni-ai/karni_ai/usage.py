@@ -45,7 +45,7 @@ def _price(value: Any) -> Decimal | None:
 
 
 def cost_of(model: str, usage: Usage) -> Decimal | None:
-    """Experimental. What ``usage`` cost on ``model``, by ``KARNI_AI_PRICES`` (or ``None``)."""
+    """What ``usage`` cost on ``model``, by ``KARNI_AI_PRICES`` (or ``None``)."""
     prices = conf.get("KARNI_AI_PRICES") or {}
     entry = prices.get(model) if isinstance(prices, dict) else None
     if not isinstance(entry, dict):
@@ -58,13 +58,13 @@ def cost_of(model: str, usage: Usage) -> Decimal | None:
 
 
 def month_start(now: datetime | None = None) -> datetime:
-    """Experimental. The start of the current calendar month in the project's time zone."""
+    """The start of the current calendar month in the project's time zone."""
     local = timezone.localtime(now or timezone.now())
     return local.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
 def spent(user: Any = None, *, since: datetime | None = None) -> int:
-    """Experimental. Tokens spent since ``since`` (this month), by ``user`` or everyone."""
+    """Tokens spent since ``since`` (this month), by ``user`` or everyone."""
     calls = AICall.objects.filter(created_at__gte=since or month_start())
     if user is not None:
         calls = calls.filter(user=user)
@@ -80,7 +80,7 @@ def _budget(name: str) -> int | None:
 
 
 def check_budget(user: Any) -> None:
-    """Experimental. Refuse the next call when a monthly budget is spent (AI013, AI014)."""
+    """Refuse the next call when a monthly budget is spent (AI013, AI014)."""
     per_user = _budget("KARNI_AI_MONTHLY_TOKENS_PER_USER")
     if per_user is not None and getattr(user, "is_authenticated", False):
         used = spent(user)
@@ -113,7 +113,7 @@ def log_call(
     usage: Usage,
     error_code: str = "",
 ) -> AICall:
-    """Experimental. Write one provider call to the usage log, with its cost."""
+    """Write one provider call to the usage log, with its cost."""
     owner = user if getattr(user, "is_authenticated", False) else None
     return AICall.objects.create(
         user=owner,

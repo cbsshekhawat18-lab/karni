@@ -1,5 +1,5 @@
 /**
- * Experimental. useOtpLogin: sign in with a one-time code sent by email.
+ * useOtpLogin: sign in with a one-time code sent by email.
  *
  * Two steps. `send(email)` asks the server to email a code (`POST
  * <authBasePath>/otp/send/`) and moves to the code step. `verify(code)` posts
@@ -13,11 +13,11 @@ import * as React from "react";
 import { useAuth } from "./provider";
 import type { OtpLoginResult, OtpSendResult } from "./types";
 
-/** Experimental. Which step the sign-in is on: typing the address, or the code. */
+/** Which step the sign-in is on: typing the address, or the code. */
 export type OtpLoginStep = "email" | "code";
 
 /**
- * Experimental. Where a sign-in by code stands: `idle`, `sending` while a
+ * Where a sign-in by code stands: `idle`, `sending` while a
  * code is requested, `code-sent`, `verifying` while the code is checked,
  * `success`, `requires-2fa` (finish with the 2FA step), `awaiting-approval`
  * (a new account an administrator must activate) or `error`.
@@ -32,13 +32,13 @@ export type OtpLoginStatus =
   | "awaiting-approval"
   | "error";
 
-/** Experimental. Options of `useOtpLogin`. */
+/** Options of `useOtpLogin`. */
 export interface UseOtpLoginOptions {
   /** Seconds before `resend()` may ask for another code. Default 30. */
   resendCooldown?: number;
 }
 
-/** Experimental. What `useOtpLogin` returns. */
+/** What `useOtpLogin` returns. */
 export interface UseOtpLoginResult {
   step: OtpLoginStep;
   /** The address the code was last asked for ("" before the first send). */
@@ -104,7 +104,7 @@ class ResendTooSoon extends Error {
 }
 
 /**
- * Experimental. Sign in with a code sent by email: `{ step, send, verify, resend, back, status }`.
+ * Sign in with a code sent by email: `{ step, send, verify, resend, back, status }`.
  *
  * Render inside `AuthProvider`. Escape hatch: `OtpLoginForm` is this hook
  * plus a form, so a project that wants its own form calls the hook directly.

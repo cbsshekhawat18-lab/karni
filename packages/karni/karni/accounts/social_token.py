@@ -1,4 +1,4 @@
-"""Experimental. Sign-in with a Google, Microsoft or Apple ID token, in JWT and session mode.
+"""Sign-in with a Google, Microsoft or Apple ID token, in JWT and session mode.
 
 A mobile app or a single-page app signs the user in with the provider's own
 SDK (Google Identity Services, MSAL, Sign in with Apple), receives an OpenID
@@ -78,14 +78,14 @@ __all__ = [
     "verify_id_token",
 ]
 
-#: Experimental. The providers Karni ships, by the name their route uses.
+#: The providers Karni ships, by the name their route uses.
 BUILTIN_PROVIDERS: Final[dict[str, str]] = {
     "google": "karni.accounts.social_token.GoogleProvider",
     "microsoft": "karni.accounts.social_token.MicrosoftProvider",
     "apple": "karni.accounts.social_token.AppleProvider",
 }
 
-#: Experimental. The values ``KARNI_SOCIAL_TOKEN_SIGNUP`` takes (``None`` follows registration).
+#: The values ``KARNI_SOCIAL_TOKEN_SIGNUP`` takes (``None`` follows registration).
 SIGNUP_POLICIES: Final[tuple[str, ...]] = ("open", "approval", "existing")
 
 #: Route names a provider may not take: allauth's own pages live under ``social/`` too
@@ -112,7 +112,7 @@ _REFETCH_KEY: Final = "karni:social-token:jwks-refetch:{provider}"
 
 
 class SocialTokenRefused(KarniError):
-    """Experimental. A refused ID-token sign-in, with its code and the HTTP answer.
+    """A refused ID-token sign-in, with its code and the HTTP answer.
 
     ``code`` is the registry code (``E215``-``E227``), ``status`` the HTTP
     status the view answers with (401 for the token, 400 for the policy, 404
@@ -180,7 +180,7 @@ def _string_list_errors(
 
 
 class IdTokenProvider:
-    """Experimental. One identity provider whose ID tokens Karni accepts.
+    """One identity provider whose ID tokens Karni accepts.
 
     A subclass sets :attr:`jwks_url`, :attr:`issuers` and, when the provider
     does not sign with RS256, :attr:`algorithms`. The methods read the claims
@@ -268,7 +268,7 @@ class IdTokenProvider:
 
 
 class GoogleProvider(IdTokenProvider):
-    """Experimental. Google ID tokens (Google Identity Services, Sign-In for iOS and Android).
+    """Google ID tokens (Google Identity Services, Sign-In for iOS and Android).
 
     ``iss`` is ``accounts.google.com`` or ``https://accounts.google.com``, and
     the ``email_verified`` claim says whether the address is verified.
@@ -279,7 +279,7 @@ class GoogleProvider(IdTokenProvider):
 
 
 class MicrosoftProvider(IdTokenProvider):
-    """Experimental. Microsoft identity platform v2.0 ID tokens (MSAL), work, school or personal.
+    """Microsoft identity platform v2.0 ID tokens (MSAL), work, school or personal.
 
     The issuer carries the tenant: ``https://login.microsoftonline.com/{tid}/v2.0``
     must match the token's own ``tid``, and the tenant must be one the entry's
@@ -384,7 +384,7 @@ class MicrosoftProvider(IdTokenProvider):
 
 
 class AppleProvider(IdTokenProvider):
-    """Experimental. Sign in with Apple ID tokens (native apps and the web).
+    """Sign in with Apple ID tokens (native apps and the web).
 
     ``iss`` is ``https://appleid.apple.com``. ``email_verified`` may be the
     string ``"true"``, and private relay addresses
@@ -402,7 +402,7 @@ class AppleProvider(IdTokenProvider):
 
 
 def configured_providers() -> dict[str, Mapping[str, Any]]:
-    """Experimental. ``KARNI_SOCIAL_TOKEN_PROVIDERS``: provider name -> its entry."""
+    """``KARNI_SOCIAL_TOKEN_PROVIDERS``: provider name -> its entry."""
     value = getattr(settings, "KARNI_SOCIAL_TOKEN_PROVIDERS", None) or {}
     return dict(value) if isinstance(value, Mapping) else {}
 
@@ -428,7 +428,7 @@ def provider_class(name: str, config: Mapping[str, Any]) -> type[IdTokenProvider
 
 
 def get_provider(name: str) -> IdTokenProvider | None:
-    """Experimental. The configured provider called ``name``, or ``None`` when there is none."""
+    """The configured provider called ``name``, or ``None`` when there is none."""
     config = configured_providers().get(name)
     if not isinstance(config, Mapping):
         return None
@@ -439,7 +439,7 @@ def get_provider(name: str) -> IdTokenProvider | None:
 
 
 def fetch_jwks(url: str) -> dict[str, Any]:
-    """Experimental. Fetch the JWKS document at ``url`` (HTTPS, 5 second timeout).
+    """Fetch the JWKS document at ``url`` (HTTPS, 5 second timeout).
 
     The default ``KARNI_SOCIAL_TOKEN_JWKS_FETCHER``. Override / escape hatch:
     name another function ``(url) -> dict`` in that setting, for a proxy, a
@@ -500,7 +500,7 @@ def _find_key(keys: list[dict[str, Any]], kid: Any, alg: str) -> dict[str, Any] 
 
 
 def signing_key(provider: IdTokenProvider, kid: Any, alg: str) -> Any:
-    """Experimental. The public key with id ``kid`` from the provider's key set.
+    """The public key with id ``kid`` from the provider's key set.
 
     The set comes from the default cache, fetched on a miss. An unknown
     ``kid`` fetches the set again, at most once every
@@ -568,7 +568,7 @@ def _check_nonce(provider: IdTokenProvider, claims: Mapping[str, Any], nonce: st
 def verify_id_token(
     provider: IdTokenProvider, token: str, *, nonce: str | None = None
 ) -> dict[str, Any]:
-    """Experimental. Verify ``token`` for ``provider`` offline and return its claims.
+    """Verify ``token`` for ``provider`` offline and return its claims.
 
     Checks, in order: the header's algorithm (one of the provider's
     :attr:`~IdTokenProvider.algorithms`), the signature against the key
@@ -651,7 +651,7 @@ def verify_id_token(
 
 
 def signup_policy(setting: str = "KARNI_SOCIAL_TOKEN_SIGNUP") -> str:
-    """Experimental. A sign-up policy setting, with ``None`` resolved from registration.
+    """A sign-up policy setting, with ``None`` resolved from registration.
 
     ``setting`` is ``KARNI_SOCIAL_TOKEN_SIGNUP`` (the default) or
     ``KARNI_EMAIL_OTP_SIGNUP`` (sign-in with a code). Its value is one of
@@ -667,7 +667,7 @@ def signup_policy(setting: str = "KARNI_SOCIAL_TOKEN_SIGNUP") -> str:
 
 @dataclass(frozen=True)
 class SignInResult:
-    """Experimental. What :func:`sign_in` decided.
+    """What :func:`sign_in` decided.
 
     ``user`` signs in unless ``awaiting_approval`` (a new, inactive account
     under the ``approval`` policy). ``created`` and ``linked`` say whether
@@ -859,7 +859,7 @@ def sign_in(
     *,
     name: Mapping[str, Any] | None = None,
 ) -> SignInResult:
-    """Experimental. The account a verified token signs in, by the sign-up and linking policy.
+    """The account a verified token signs in, by the sign-up and linking policy.
 
     1. An identity already linked (``SocialIdentity`` by provider and
        subject) signs its user in, whatever the email is now.
@@ -891,6 +891,6 @@ def sign_in(
 
 
 def mark_used(identity: SocialIdentity) -> None:
-    """Experimental. Record a completed sign-in through ``identity`` (``last_used_at``)."""
+    """Record a completed sign-in through ``identity`` (``last_used_at``)."""
     identity.last_used_at = timezone.now()
     identity.save(update_fields=["last_used_at", "updated_at"])

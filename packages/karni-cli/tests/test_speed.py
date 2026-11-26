@@ -1,4 +1,4 @@
-"""scripts/benchmark/speed.py (experimental): the speed budgets and their comparison.
+"""scripts/benchmark/speed.py: the speed budgets and their comparison.
 
 The CI job runs the script for every recipe. Here the default suite checks the
 budget arithmetic and the stored baseline: the run itself takes minutes.

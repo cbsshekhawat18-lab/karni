@@ -1,4 +1,4 @@
-"""Experimental. The tree endpoints a ``BaseViewSet`` serves when its model is a tree model.
+"""The tree endpoints a ``BaseViewSet`` serves when its model is a tree model.
 
 A viewset whose model is a :class:`karni.models.TreeModel` gets four more
 routes, and its list two more filters, with no declaration:
@@ -88,7 +88,7 @@ _ACCESS_CACHE: dict[type[models.Model], type[serializers.Serializer[Any]]] = {}
 
 
 class HasChildrenField(serializers.BooleanField):
-    """Experimental. ``has_children``: whether the node has children the requester may read.
+    """``has_children``: whether the node has children the requester may read.
 
     The tree endpoints annotate it in the query that fetches the nodes. A row
     without the annotation asks the database (one query), so a single node
@@ -106,7 +106,7 @@ class HasChildrenField(serializers.BooleanField):
 
 
 class TreeChildrenField(serializers.Field):  # type: ignore[type-arg]
-    """Experimental. ``children``: the nested nodes ``tree/`` loaded, else ``null``.
+    """``children``: the nested nodes ``tree/`` loaded, else ``null``.
 
     The serializer always renders ``null``. The ``tree/`` endpoint fills the
     lists in after rendering every node in one pass, so the per-page access
@@ -142,7 +142,7 @@ def _stem(serializer_class: type[Any]) -> str:
 
 
 def tree_node_serializer(base: type[Any]) -> type[serializers.Serializer[Any]]:
-    """Experimental. ``base`` plus ``has_children`` and ``children`` (cached per class).
+    """``base`` plus ``has_children`` and ``children`` (cached per class).
 
     The class is named after ``base`` (``TestappRegionSerializer`` gives
     ``TestappRegionTreeNodeSerializer``), so the OpenAPI component is
@@ -171,7 +171,7 @@ def tree_node_serializer(base: type[Any]) -> type[serializers.Serializer[Any]]:
 
 
 def tree_response_serializer(node: type[Any]) -> type[serializers.Serializer[Any]]:
-    """Experimental. The ``tree/`` answer: ``{"results": [node], "truncated": bool}``."""
+    """The ``tree/`` answer: ``{"results": [node], "truncated": bool}``."""
     cached = _RESPONSE_CACHE.get(node)
     if cached is not None:
         return cached
@@ -191,7 +191,7 @@ def tree_response_serializer(node: type[Any]) -> type[serializers.Serializer[Any
 
 
 def tree_move_serializer(model: type[models.Model]) -> type[serializers.Serializer[Any]]:
-    """Experimental. The body of ``move/``: ``parent`` (a key or null) and ``position``."""
+    """The body of ``move/``: ``parent`` (a key or null) and ``position``."""
     cached = _MOVE_CACHE.get(model)
     if cached is not None:
         return cached
@@ -225,7 +225,7 @@ def _key_field(model: type[models.Model], **kwargs: Any) -> serializers.Field[An
 
 
 def tree_access_serializer(model: type[models.Model]) -> type[serializers.Serializer[Any]]:
-    """Experimental. The ``access/`` answer: ``{"results": [node], "all", "truncated"}``.
+    """The ``access/`` answer: ``{"results": [node], "all", "truncated"}``.
 
     A node is ``{id, label, parent, granted, has_children, children}``. The
     serializers describe the answer in the OpenAPI document (components
@@ -529,7 +529,7 @@ def _require_walks(view: Any, queryset: Any) -> None:
 
 @extend_schema_field(OpenApiTypes.STR)
 class TreeParentFilter(django_filters.CharFilter):
-    """Experimental. ``?parent=<key>`` (the children of a node) or ``?parent=null`` (the roots)."""
+    """``?parent=<key>`` (the children of a node) or ``?parent=null`` (the roots)."""
 
     def filter(self, qs: Any, value: Any) -> Any:
         if value in (None, ""):
@@ -541,7 +541,7 @@ class TreeParentFilter(django_filters.CharFilter):
 
 @extend_schema_field(OpenApiTypes.STR)
 class DescendantsFilter(django_filters.CharFilter):
-    """Experimental. ``?descendants_of=<key>``: every readable node below a readable node.
+    """``?descendants_of=<key>``: every readable node below a readable node.
 
     The walk runs over the list's readable rows before any other filter, so
     ``?descendants_of=<key>&name__icontains=lake`` is the lakes anywhere in

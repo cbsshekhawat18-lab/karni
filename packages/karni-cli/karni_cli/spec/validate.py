@@ -1,4 +1,4 @@
-"""Experimental. ``karni spec validate``: every problem in a ``karni.yaml``, with its code and line.
+"""``karni spec validate``: every problem in a ``karni.yaml``, with its code and line.
 
 Three passes, each reporting every problem it finds:
 
@@ -72,7 +72,7 @@ from karni_cli.spec.source import Loc, Source, YamlError, load
 
 __all__ = ["SHIPPED_ROLES", "Issue", "Report", "iter_codes", "validate_text"]
 
-#: Experimental. Karni's own KARNI_ROLES (karni.conf.base), the roles a spec without ``roles:`` has.
+#: Karni's own KARNI_ROLES (karni.conf.base), the roles a spec without ``roles:`` has.
 SHIPPED_ROLES: Final = ("staff", "user", "customer")
 #: Roles a module declares through the ``karni.roles`` entry point.
 MODULE_ROLES: Final = {"site": ("editor",)}
@@ -84,7 +84,7 @@ RESERVED: Final[dict[str, dict[str, str]]] = {
 #: Field types a later release adds (``markdown`` was one until large-apps item 12 shipped it).
 RESERVED_TYPES: Final[dict[str, str]] = {}
 ACCESS_WORDS: Final = ("public", "authenticated", "granted")
-#: Experimental. Words people write for an access word, folded (lower case, ``_`` for ``-``).
+#: Words people write for an access word, folded (lower case, ``_`` for ``-``).
 _ACCESS_NEAR: Final = {
     **dict.fromkeys(
         (
@@ -103,11 +103,11 @@ _ACCESS_NEAR: Final = {
     ),
     **dict.fromkeys(("grant", "grants", "permissions", "perms", "default"), "granted"),
 }  # fmt: skip
-#: Experimental. Words people write for owned:<field>, folded.
+#: Words people write for owned:<field>, folded.
 _OWNED_NEAR: Final = ("own", "owner", "owned", "owns", "mine", "self", "owner_only", "own_rows")
-#: Experimental. Words people write for role:<slug>, folded.
+#: Words people write for role:<slug>, folded.
 _ROLE_NEAR: Final = ("role", "roles", "group", "groups", "has_role", "hasrole")
-#: Experimental. Keys people write in access, by the slot that covers them.
+#: Keys people write in access, by the slot that covers them.
 _ACCESS_KEYS_NEAR: Final = {
     **dict.fromkeys(("destroy", "remove"), "delete"),
     **dict.fromkeys(("update", "change", "edit", "patch", "put", "modify"), "write"),
@@ -125,7 +125,7 @@ SEARCHABLE_KINDS: Final = frozenset(
 )
 #: Fields every BaseModel has, which key, order and search may name.
 BASE_FIELDS: Final = ("id", "created_at", "updated_at")
-#: Experimental. The fields ``tree: true`` (TreeModel) and ``tree: ordered`` add.
+#: The fields ``tree: true`` (TreeModel) and ``tree: ordered`` add.
 TREE_FIELDS: Final = {True: ("parent",), "ordered": ("parent", "position")}
 _USER_TARGET: Final = "__user__"
 #: App labels a spec app may not take: Django's and Karni's own.
@@ -143,7 +143,7 @@ DEFAULT_DATABASE: Final = "default"
 
 @dataclass(frozen=True)
 class Issue:
-    """Experimental. One problem in a spec: code, line, where, what is wrong and the fix."""
+    """One problem in a spec: code, line, where, what is wrong and the fix."""
 
     code: str
     line: int | None
@@ -167,7 +167,7 @@ class Issue:
 
 @dataclass
 class Report:
-    """Experimental. The outcome: the spec when its shape is valid, and every issue."""
+    """The outcome: the spec when its shape is valid, and every issue."""
 
     spec: schema.Spec | None
     issues: list[Issue] = field(default_factory=list)
@@ -498,7 +498,7 @@ class _Entity:
     fields: dict[str, FieldSpec]
     #: relation field -> target ("app.Name", _USER_TARGET, or a module/other model label).
     targets: dict[str, str]
-    #: Experimental. taxonomy key -> its tree entity ("app.Name"), once checked.
+    #: taxonomy key -> its tree entity ("app.Name"), once checked.
     taxonomy_targets: dict[str, str] = field(default_factory=dict)
 
     @property
@@ -1272,7 +1272,7 @@ class _Meaning:
             )
 
     def tree(self, entity: _Entity) -> None:
-        """Experimental. ``tree`` on an entity (``C460``)."""
+        """``tree`` on an entity (``C460``)."""
         e, path = entity.entity, entity.path
         if not e.tree:
             return
@@ -1298,7 +1298,7 @@ class _Meaning:
                 )
 
     def taxonomies(self, entity: _Entity) -> None:
-        """Experimental. ``taxonomies`` on an entity (``C700`` to ``C703``)."""
+        """``taxonomies`` on an entity (``C700`` to ``C703``)."""
         e, path = entity.entity, entity.path
         if not e.taxonomies:
             return
@@ -1620,7 +1620,7 @@ class _Meaning:
         matched: list[_Entity | None],
         explicit: _Entity | None,
     ) -> None:
-        """Experimental. ``tree:<path>``: from the entity, through relations, to a tree entity."""
+        """``tree:<path>``: from the entity, through relations, to a tree entity."""
         if explicit is not None:
             tree = self.leads_to_tree(explicit, path)
             if tree is None:
@@ -1649,7 +1649,7 @@ class _Meaning:
             )
 
     def leads_to_tree(self, entity: _Entity, path: str) -> _Entity | None:
-        """Experimental. The tree entity ``path`` (``a__b``) reaches from ``entity``, else ``None``."""
+        """The tree entity ``path`` (``a__b``) reaches from ``entity``, else ``None``."""
         if not _PATH.match(path):
             return None
         current: _Entity | None = entity
@@ -1658,7 +1658,7 @@ class _Meaning:
                 return None
             spec = current.fields.get(part)
             if spec is None or not spec.is_relation:
-                tagged = current.taxonomy_targets.get(part)  # a taxonomy key (experimental)
+                tagged = current.taxonomy_targets.get(part)  # a taxonomy key
                 if tagged is None:
                     return None
                 current = self.entities.get(tagged)
@@ -1862,7 +1862,7 @@ class _Meaning:
         return app.route if app is not None and app.route else ""
 
     def app_routes(self) -> None:
-        """``apps.<label>.route`` (experimental): each app's own, and never a family page's."""
+        """``apps.<label>.route``: each app's own, and never a family page's."""
         from karni_cli.recipes.compose import FAMILY_ROUTES
 
         taken: dict[str, str] = {}
@@ -1916,7 +1916,7 @@ class _Meaning:
     def app_page(
         self, index: int, name: str, label: str, rest: str, written: list[Any]
     ) -> list[str]:
-        """``<app>.<name>: code`` (experimental): a code page under the app's route."""
+        """``<app>.<name>: code``: a code page under the app's route."""
         where: Loc = ("pages", index, name)
         if label not in self.spec.apps:
             self.add(
@@ -2062,7 +2062,7 @@ class _Meaning:
                 routes[path] = index
 
     def navigation(self) -> None:
-        """``navigation:`` (experimental): each entry names a page with a route, or is a group."""
+        """``navigation:``: each entry names a page with a route, or is a group."""
         from karni_cli.spec import navigation as nav
 
         if isinstance(self.spec.navigation, bool):
@@ -2187,7 +2187,7 @@ class _Meaning:
         entries(("navigation",), self.spec.navigation)
 
     def dashboard(self) -> None:
-        """``dashboard:`` (experimental): each tile's entity and roles exist, keys are unique."""
+        """``dashboard:``: each tile's entity and roles exist, keys are unique."""
         seen: set[str] = set()
         for position, tile in enumerate(self.spec.dashboard):
             where: Loc = ("dashboard", position)
@@ -2225,7 +2225,7 @@ class _Meaning:
                 self.requirement((*where, "requires"), tile.requires)
 
     def requirement(self, where: Loc, value: str) -> None:
-        """A navigation entry's ``requires`` (experimental): a pattern the spec can name."""
+        """A navigation entry's ``requires``: a pattern the spec can name."""
         from karni_cli.spec import navigation as nav
 
         problem = nav.requirement_problem(value)
@@ -2357,7 +2357,7 @@ def _json_type(value: Any) -> str:
 
 
 def validate_text(text: str, *, databases: Collection[str] | None = None) -> Report:
-    """Experimental. Validate a spec's text: the parsed :class:`~schema.Spec` and every issue.
+    """Validate a spec's text: the parsed :class:`~schema.Spec` and every issue.
 
     ``databases``: the project's ``DATABASES`` aliases, when the caller knows
     them, to check each entity's ``database`` against (``C252``).
@@ -2421,7 +2421,7 @@ def _warn_recipe_key() -> None:
 
 
 def iter_codes() -> Iterator[str]:
-    """Experimental. Every code this module reports (the error registry documents each one)."""
+    """Every code this module reports (the error registry documents each one)."""
     yield from ("C211", "C212", "C213", "C214", "C215", "C216", "C217", "C218", "C219")
     yield from ("C220", "C221", "C222", "C223", "C224", "C225")
     yield from (f"C{n}" for n in range(230, 243))
@@ -2431,7 +2431,7 @@ def iter_codes() -> Iterator[str]:
     yield from ("C680", "C681")
     yield "C324"
     yield "C460"
-    yield "C444"  # apps.<label>.route (experimental)
+    yield "C444"  # apps.<label>.route
     yield "C620"
     yield from ("C640", "C641", "C642", "C643")
     yield from ("C700", "C701", "C702", "C703")

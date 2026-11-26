@@ -6,7 +6,7 @@ from django.apps import AppConfig
 
 
 class KarniNavigationConfig(AppConfig):
-    """Experimental. ``karni.navigation`` (label ``karni_navigation``).
+    """``karni.navigation`` (label ``karni_navigation``).
 
     Add it to ``INSTALLED_APPS`` only with ``KARNI_NAVIGATION = "db"``: it
     brings the ``NavItem`` table and its admin. The settings source, the

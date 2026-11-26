@@ -146,12 +146,12 @@ export interface ResourceFormProps {
    */
   resourceLabel?: ResourceLabel;
   /**
-   * Experimental. The groups the fields show in, as sections or tabs. Default:
+   * The groups the fields show in, as sections or tabs. Default:
    * the model's `Karni.field_groups` (`x-karni-field-groups`). The fields in no
    * group come last, under "Other". `false` shows one list.
    */
   fieldGroups?: false | readonly FieldGroupDef[];
-  /** Experimental. `"sections"` or `"tabs"`. Default: the model's `field_group_layout`. */
+  /** `"sections"` or `"tabs"`. Default: the model's `field_group_layout`. */
   groupLayout?: FieldGroupLayout;
 }
 
@@ -960,7 +960,7 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
  * fields (a summary lists them when more than one fails) and moves focus there.
  * Any other failure (offline, 403, 409, 5xx) is a banner with "Try again" when
  * it can help. A model with `Karni.field_groups` shows its fields in those
- * groups, as sections or tabs (experimental): a tab with an error is marked,
+ * groups, as sections or tabs: a tab with an error is marked,
  * and moving focus to a field opens its tab. A MarkdownField is edited with
  * Write and Preview tabs. Escape hatches: per-field overrides (`fields`),
  * `extraFields`, `transformSubmit`, `actions`, `slots`, `validationMode` /

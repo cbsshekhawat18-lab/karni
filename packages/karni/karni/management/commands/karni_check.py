@@ -18,7 +18,7 @@ slow (karni-site's renders every page of the site), so they run only when
 asked for.
 
 The checks that read one file at a time keep their results in a cache
-(:mod:`karni.testing.checkcache`, experimental): an unchanged file is not
+(:mod:`karni.testing.checkcache`): an unchanged file is not
 read again. ``--no-cache`` (or ``KARNI_CHECK_CACHE = False``) turns it off.
 ``--changed FILE ...`` narrows a run to those files (paths relative to the
 project root): the file checks read only them and every check reports only
@@ -26,29 +26,29 @@ their findings, while the checks that read the whole project (Django's
 system checks, the external tables, every other hook) run in full.
 ``karni check --changed`` passes the files git reports as changed.
 
-It also compares every external model (``class Karni: external = True``,
-experimental) with its table or view where the database answers
+It also compares every external model (``class Karni: external = True``)
+with its table or view where the database answers
 (:func:`karni.db.checks.check_external_tables`): ``karni.E272`` to ``E274``
 fail, ``karni.W540`` (a database that does not answer) is printed. Not with
 ``--deploy``, which the production image runs before ``migrate``. In the same
 place it prints ``karni.W590`` for a field ``class Karni: search`` searches
-whose table has no trigram index on PostgreSQL (experimental).
+whose table has no trigram index on PostgreSQL.
 
-Suggestions (experimental, :mod:`karni.suggestions`) print last, after the errors
+Suggestions (:mod:`karni.suggestions`) print last, after the errors
 and warnings: what Karni could do that the project does by hand, each with its
 file, line and fix. They never fail the run. ``--no-suggestions`` leaves them out,
 ``--suggestions-file PATH`` (or the ``KARNI_SUGGESTIONS_FILE`` variable) writes them there
 as JSON instead of printing them (``karni check`` merges them with its own), and
 ``KARNI_SUGGESTIONS = False`` turns them off for the project.
 
-While ``KARNI_NAVIGATION`` is set (experimental), it compares the menu with
+While ``KARNI_NAVIGATION`` is set, it compares the menu with
 the frontend's pages and the project's permissions
 (:func:`karni.navigation.checks.check_navigation`): ``karni.E533`` and
 ``E534`` fail, ``W630`` and ``W631`` are printed. Not with ``--deploy``
 either.
 
-It lists the declared family events and the subscribers of each (experimental,
-:func:`karni.outbox.checks.event_listing`), one ``events:`` line per event,
+It lists the declared family events and the subscribers of each
+(:func:`karni.outbox.checks.event_listing`), one ``events:`` line per event,
 including events subscribed to here that no installed part declares. Not with
 ``--deploy`` either.
 """
@@ -103,17 +103,17 @@ class Command(BaseCommand):
         parser.add_argument(
             "--no-cache",
             action="store_true",
-            help="Check every file again: do not read or write the check cache. Experimental.",
+            help="Check every file again: do not read or write the check cache.",
         )
         parser.add_argument(
             "--no-suggestions",
             action="store_true",
-            help="Do not print suggestions (karni.suggestions). Experimental.",
+            help="Do not print suggestions (karni.suggestions).",
         )
         parser.add_argument(
             "--suggestions-file",
             metavar="PATH",
-            help="Write the suggestions to PATH as JSON instead of printing them. Experimental.",
+            help="Write the suggestions to PATH as JSON instead of printing them.",
         )
         parser.add_argument(
             "--changed",
@@ -121,7 +121,7 @@ class Command(BaseCommand):
             default=None,
             metavar="FILE",
             help="Only these files (relative to the project root): the file checks read only "
-            "them and every check reports only their findings. Experimental.",
+            "them and every check reports only their findings.",
         )
 
     def handle(self, *args: Any, **options: Any) -> None:
@@ -162,7 +162,7 @@ class Command(BaseCommand):
             return None
 
     def _suggest(self, to_file: str | None) -> None:
-        """Experimental. Print the suggestions, or write them to ``to_file``. Never fails."""
+        """Print the suggestions, or write them to ``to_file``. Never fails."""
         import json
         from pathlib import Path
 
@@ -227,7 +227,7 @@ class Command(BaseCommand):
                 self.stdout.write(f"external tables: {warning}")
             failures.extend(f"external tables: {error}" for error in errors)
 
-            # The menu (experimental): each route has a page, each requirement a
+            # The menu: each route has a page, each requirement a
             # permission. The database menu is read where the database answers.
             from karni.navigation.checks import navigation_check_failures
 
@@ -236,14 +236,14 @@ class Command(BaseCommand):
                 self.stdout.write(f"navigation: {warning}")
             failures.extend(f"navigation: {error}" for error in errors)
 
-            # Experimental: a field Karni.search searches whose table lacks its
+            # A field Karni.search searches whose table lacks its
             # trigram index on PostgreSQL (karni.W590). Printed, not failed.
             from karni.global_search import search_index_failures
 
             for warning in search_index_failures():
                 self.stdout.write(f"search indexes: {warning}")
 
-            # Experimental: the declared family events and who subscribes to each
+            # The declared family events and who subscribes to each
             # (karni.events). A listing, never a failure: karni.E451 and W450 are checks.
             from karni.outbox.checks import event_listing
 

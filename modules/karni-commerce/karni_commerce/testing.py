@@ -1,4 +1,4 @@
-"""Experimental. Test helpers for a part that sells through commerce: does its adapter keep
+"""Test helpers for a part that sells through commerce: does its adapter keep
 the contract?
 
 A part runs :func:`assert_sellable` on its own adapter, in its own tests::
@@ -297,7 +297,7 @@ def assert_sellable(
     options: Mapping[str, Any] | None = None,
     buyer: Any = None,
 ) -> SellableReport:
-    """Experimental. Check that the adapter of a kind keeps commerce's contract for ``item``.
+    """Check that the adapter of a kind keeps commerce's contract for ``item``.
 
     ``kind_or_adapter`` is the kind (``"booking"``) or the adapter; ``options`` are
     what the item is sold with (``{"variation": "<id>"}``). Everything runs in a

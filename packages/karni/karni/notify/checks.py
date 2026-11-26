@@ -1,4 +1,4 @@
-"""Experimental. System checks of the notifications contract.
+"""System checks of the notifications contract.
 
 * ``karni.W440``: a declared message kind sends only on channels the project
   leaves out of ``KARNI_NOTIFY_CHANNELS``, so it goes nowhere.

@@ -789,7 +789,7 @@ class TestAdmin:
 
 
 class TestBigIntBaseModel:
-    """``BigIntBaseModel`` (experimental): ``BaseModel`` with a 64-bit integer key."""
+    """``BigIntBaseModel``: ``BaseModel`` with a 64-bit integer key."""
 
     def test_the_key_is_a_bigautofield_and_every_other_field_matches_basemodel(self) -> None:
         from karni.models import BaseModel, BigIntBaseModel, IntegerKeyModel

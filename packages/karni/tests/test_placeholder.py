@@ -1,4 +1,4 @@
-"""karni.placeholder (experimental): drawn, deterministic placeholder images."""
+"""karni.placeholder: drawn, deterministic placeholder images."""
 
 from __future__ import annotations
 

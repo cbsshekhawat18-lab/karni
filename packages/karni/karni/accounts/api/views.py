@@ -283,7 +283,7 @@ class LoginView(APIView):
 )
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class SocialTokenLoginView(APIView):
-    """Experimental. ``POST social/<provider>/``: sign in with a provider's ID token (both modes).
+    """``POST social/<provider>/``: sign in with a provider's ID token (both modes).
 
     The body is ``{"id_token", "nonce"?, "name"?}`` (see
     :class:`SocialTokenLoginSerializer`). The token is verified offline by
@@ -378,7 +378,7 @@ class SocialTokenLoginView(APIView):
 @extend_schema(request=OtpSendSerializer, responses={200: OpenApiTypes.OBJECT})
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class OtpSendView(APIView):
-    """Experimental. ``POST otp/send/`` ``{email}``: email a sign-in code, enumeration-silent.
+    """``POST otp/send/`` ``{email}``: email a sign-in code, enumeration-silent.
 
     Always the same 200 and the same body (:func:`karni.accounts.otp.send_answer`:
     ``{"detail", "length", "expires_in"}``), whether the address has an
@@ -417,7 +417,7 @@ class OtpSendView(APIView):
 )
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class OtpVerifyView(APIView):
-    """Experimental. ``POST otp/verify/`` ``{email, code}``: sign in with the emailed code.
+    """``POST otp/verify/`` ``{email, code}``: sign in with the emailed code.
 
     The answer is the one ``login/`` gives: ``{"access", "refresh", "user"}``
     in JWT mode, a session plus ``{"user"}`` in session mode, or the 2FA gate
@@ -502,7 +502,7 @@ class OtpVerifyView(APIView):
 
 @extend_schema(responses={200: TermsStatusSerializer, 404: OpenApiTypes.OBJECT})
 class TermsView(APIView):
-    """Experimental. ``GET terms/``: the current terms, and whether the user accepted them.
+    """``GET terms/``: the current terms, and whether the user accepted them.
 
     ``{"version", "url", "required", "accepted", "accepted_at"}``
     (:func:`karni.accounts.terms.status`). 401 without a signed-in user. The
@@ -534,7 +534,7 @@ class TermsView(APIView):
     },
 )
 class TermsAcceptView(APIView):
-    """Experimental. ``POST terms/accept/`` ``{version, client?}``: accept the current terms.
+    """``POST terms/accept/`` ``{version, client?}``: accept the current terms.
 
     Records the acceptance (:func:`karni.accounts.terms.accept`) with the
     client's IP (read like the throttles read it, honouring ``NUM_PROXIES``),

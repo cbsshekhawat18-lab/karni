@@ -1,4 +1,4 @@
-"""Experimental. A recipe's own files written into a project, over the stubs of ``karni build``.
+"""A recipe's own files written into a project, over the stubs of ``karni build``.
 
 ``karni new "<Name>" --recipe <name>`` writes the recipe's ``karni.yaml``
 and names the recipe in ``.karni/build.json``. The first ``karni build``
@@ -53,12 +53,12 @@ from karni_cli.recipes import FILES_DIR, Recipe, RecipeRoute
 
 __all__ = ["RECORD_KEY", "contents", "refused", "route_lines", "scaffold_digests", "stage"]
 
-#: Experimental. The key of ``.karni/build.json`` that names the recipes the next build writes.
+#: The key of ``.karni/build.json`` that names the recipes the next build writes.
 RECORD_KEY: Final = "recipes"
 
 
 def contents(recipe: Recipe) -> dict[str, str]:
-    """Experimental. The recipe's own files: the path each takes in the project, and its text."""
+    """The recipe's own files: the path each takes in the project, and its text."""
     return {
         rel: recipe.folder.joinpath(FILES_DIR, *rel.split("/")).read_text(encoding="utf-8")
         for rel in recipe.files
@@ -75,7 +75,7 @@ def _digest(text: str) -> str:
 
 
 def scaffold_digests(project: Path, recipe: Recipe) -> dict[str, str]:
-    """Experimental. The sha256 of each file of ``project`` where ``recipe`` has a file of its own.
+    """The sha256 of each file of ``project`` where ``recipe`` has a file of its own.
 
     ``karni new --recipe`` records them right after it writes the project, so
     the first build replaces those files only while they are still what
@@ -91,7 +91,7 @@ def scaffold_digests(project: Path, recipe: Recipe) -> dict[str, str]:
 
 
 def refused(ws: Workspace, recipe: Recipe, scaffold: Mapping[str, str] | None = None) -> list[str]:
-    """Experimental. The recipe's files the stub rule keeps out: the project's code is there.
+    """The recipe's files the stub rule keeps out: the project's code is there.
 
     ``scaffold`` maps a file to the sha256 ``karni new`` recorded for it
     (:func:`scaffold_digests`): such a file is a stub while it still has it.
@@ -129,7 +129,7 @@ def _kept_classes(ws: Workspace, rel: str, stub: str, text: str) -> str:
 
 
 def route_lines(route: RecipeRoute) -> tuple[str, str]:
-    """Experimental. The import and the ``createRoute(...)`` line ``route`` adds to the routes file."""
+    """The import and the ``createRoute(...)`` line ``route`` adds to the routes file."""
     module = route.page
     import_line = f'import {route.component} from "./{module}";'
     values = {**({"public": True} if route.public else {}), **route.data}
@@ -171,7 +171,7 @@ def _register_routes(ws: Workspace, recipe: Recipe) -> None:
 
 
 def stage(ws: Workspace, recipe: Recipe, *, scaffold: Mapping[str, str] | None = None) -> list[str]:
-    """Experimental. Plan the recipe's own files into ``ws``, over build's stubs, and its routes.
+    """Plan the recipe's own files into ``ws``, over build's stubs, and its routes.
 
     ``scaffold`` holds the digests ``karni new`` recorded (:func:`scaffold_digests`).
     Returns the paths whose content changes.

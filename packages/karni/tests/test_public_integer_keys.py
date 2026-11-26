@@ -1,4 +1,4 @@
-"""karni.W530 (experimental): anyone may read a resource whose integer ids can be guessed.
+"""karni.W530: anyone may read a resource whose integer ids can be guessed.
 
 Integer keys are sequential. A resource whose read access admits anonymous
 callers and whose detail route looks rows up by that key lets a visitor count

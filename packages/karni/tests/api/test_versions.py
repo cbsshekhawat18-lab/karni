@@ -1,4 +1,4 @@
-"""API versions (experimental): prefix, unversioned API, deprecation headers, a document each."""
+"""API versions: prefix, unversioned API, deprecation headers, a document each."""
 
 from __future__ import annotations
 

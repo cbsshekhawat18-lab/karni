@@ -1,4 +1,4 @@
-"""Experimental. System checks of the family event bus, and the listing ``karni check`` prints.
+"""System checks of the family event bus, and the listing ``karni check`` prints.
 
 Registered by :mod:`karni.checks` whether or not ``karni.outbox`` is
 installed, so a subscriber in a project without the outbox is reported:

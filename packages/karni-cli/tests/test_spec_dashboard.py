@@ -1,4 +1,4 @@
-"""``dashboard:`` of ``karni.yaml`` (experimental): the home tiles karni build writes.
+"""``dashboard:`` of ``karni.yaml``: the home tiles karni build writes.
 
 A shop's staff home: parcels to send and products sold out (entities of the
 spec, counted for the roles that may read them), and the revenue tile an app

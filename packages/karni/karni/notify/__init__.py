@@ -1,4 +1,4 @@
-"""Experimental. The notifications contract: message kinds, edited emails, the inbox, switches.
+"""The notifications contract: message kinds, edited emails, the inbox, switches.
 
 A project that holds several parts sends one set of messages: an order is
 paid, a booking is confirmed, a deal is assigned. Each part declares the
@@ -63,7 +63,7 @@ if TYPE_CHECKING:
         unsubscribed,
     )
 
-#: Experimental. The version of the notifications contract. A breaking change raises it.
+#: The version of the notifications contract. A breaking change raises it.
 CONTRACT: Final = 1
 
 __all__ = [

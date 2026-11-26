@@ -3,7 +3,7 @@
 :func:`story` reads ``.karni/trace/*.jsonl`` (every event carrying the id —
 the request, the tasks it enqueued and their retries minutes later, email,
 webhooks), the request record, the family events it published with each
-delivery's state (``karni.outbox``, experimental), and the change log
+delivery's state (``karni.outbox``), and the change log
 (``ChangeLog`` and ``ChangeBatch`` rows with that ``request_id``; the database is optional —
 when it cannot be read, the story says so and goes on). Requests whose
 events share a ref (``karni_payments.Payment:<pk>``) with this one are

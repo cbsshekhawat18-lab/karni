@@ -1,4 +1,4 @@
-"""Per-user grants (experimental): the ``UserGrant`` table.
+"""Per-user grants: the ``UserGrant`` table.
 
 One row per grant to one user: a permission pattern and a scope written as in
 ``KARNI_ROLES``, the row ids the scope points at, an optional expiry, who gave

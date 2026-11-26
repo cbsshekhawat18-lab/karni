@@ -1,5 +1,5 @@
 /**
- * Experimental. `<FamilyHome>`: `/` in a project of parts.
+ * `<FamilyHome>`: `/` in a project of parts.
  *
  * - **Staff** (a role beyond `customer`): the home tiles of their roles,
  *   which every installed part contributes (`GET /dashboard/`, karni.tiles):
@@ -46,7 +46,7 @@ function command(name: string): React.ReactElement {
   return <code className="rounded bg-muted px-1 py-0.5 font-mono text-sm">{name}</code>;
 }
 
-/** Experimental. The empty home: what to install, or where a role's tiles come from. */
+/** The empty home: what to install, or where a role's tiles come from. */
 export function FamilyEmptyHome({
   parts = [],
   audience,
@@ -87,7 +87,7 @@ export function FamilyEmptyHome({
   );
 }
 
-/** Experimental. `/`: the tiles of staff, the public home for everyone else. */
+/** `/`: the tiles of staff, the public home for everyone else. */
 export function FamilyHome({
   navigate,
   parts,

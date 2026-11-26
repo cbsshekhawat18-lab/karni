@@ -1,5 +1,5 @@
 /**
- * <OtpLoginForm> (experimental) through the real AuthProvider against msw: the
+ * <OtpLoginForm> through the real AuthProvider against msw: the
  * email step, the code step and its one input, success, the 2FA step, an
  * account awaiting approval, refusals in plain words, the resend cooldown,
  * the way back, and the form's accessible states. Also LoginForm's switch.

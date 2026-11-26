@@ -11,7 +11,7 @@ database, ``E615``) or when one of those tables already holds rows
 (``E617``, seed cannot tell demo rows from content) unless ``--reset`` wipes
 the tables first or ``--force`` is given.
 
-``--volume N`` (experimental) writes N rows per model in bulk, for
+``--volume N`` writes N rows per model in bulk, for
 performance work (:mod:`karni.bulk_seeding`), and prints the rows and the
 time per model. It refuses (``E473``) when a table holds rows a seed run did
 not leave there (the ledger in ``.karni/local/seeded.json``), unless
@@ -79,14 +79,14 @@ class Command(BaseCommand):
             default=None,
             metavar="N",
             help="N rows per model, inserted in bulk, for performance data (users: one per "
-            "hundred). Experimental.",
+            "hundred).",
         )
         parser.add_argument(
             "--batch-size",
             type=int,
             default=None,
             metavar="N",
-            help="Rows per bulk insert (default KARNI_SEED_BATCH_SIZE, else 2000). Experimental.",
+            help="Rows per bulk insert (default KARNI_SEED_BATCH_SIZE, else 2000).",
         )
         parser.add_argument("--json", action="store_true", help="Print the report as JSON.")
 

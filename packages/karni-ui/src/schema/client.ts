@@ -72,7 +72,7 @@ export interface KarniAuthHooks {
   /** fetch credentials mode. Session mode sets "include". */
   credentials?: RequestCredentials;
   /**
-   * Experimental. Called with every `KarniApiError` just before the client
+   * Called with every `KarniApiError` just before the client
    * throws it. The auth layer watches it for the terms gate's 403 (`E245`),
    * so terms bumped mid-session are caught by whichever request meets them.
    * It cannot change the error.

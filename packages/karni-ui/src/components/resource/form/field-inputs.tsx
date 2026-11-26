@@ -280,7 +280,7 @@ function renderControl({
         );
       }
       if (field.tree !== undefined) {
-        // A relation to a tree model: pick the node in its tree (experimental).
+        // A relation to a tree model: pick the node in its tree.
         return (
           <TreeSelect
             ref={rhf.ref}

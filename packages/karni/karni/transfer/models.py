@@ -22,7 +22,7 @@ class ImportJob(BaseModel):
     ignores a column), ``result`` and ``problems`` are what the last run
     found, ``batch_id`` is the ``karni.audit`` batch a commit wrote.
     ``created_by`` (from ``BaseModel``) is the person importing.
-    ``match_ids`` and ``keep_ids`` (experimental) are the run's id options
+    ``match_ids`` and ``keep_ids`` are the run's id options
     (:class:`karni.transfer.imports.Importer`).
     """
 

@@ -1,4 +1,4 @@
-"""Each built-in recipe built from scratch (experimental): ``karni new --recipe``, every step real.
+"""Each built-in recipe built from scratch: ``karni new --recipe``, every step real.
 
 ``pytest -m recipes`` runs these, one test per recipe, and CI's recipes job
 runs each one on its own, so a recipe never rots. The test renders ``karni

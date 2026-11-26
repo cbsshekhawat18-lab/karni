@@ -1,4 +1,4 @@
-"""Experimental. What a demo exposes: ``GET /api/demo/`` and the built React app at ``/``.
+"""What a demo exposes: ``GET /api/demo/`` and the built React app at ``/``.
 
 ``GET /api/demo/`` answers, while ``KARNI_DEMO_MODE`` is on (and 404 ``E954`` otherwise)::
 
@@ -79,7 +79,7 @@ def turned_off() -> Response:
 
 
 class DemoInfoView(APIView):
-    """Experimental. ``GET demo/``: the demo accounts and the reset period, for anyone.
+    """``GET demo/``: the demo accounts and the reset period, for anyone.
 
     Override / escape hatch: override :meth:`payload`.
     """

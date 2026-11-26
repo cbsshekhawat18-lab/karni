@@ -28,7 +28,7 @@ __all__ = ["GeneratedReportAdmin"]
 
 @admin.register(GeneratedReport)
 class GeneratedReportAdmin(KarniModelAdmin):
-    """Experimental. The generated files: status, size, versions, errors, a Regenerate action."""
+    """The generated files: status, size, versions, errors, a Regenerate action."""
 
     list_display = (
         "report",

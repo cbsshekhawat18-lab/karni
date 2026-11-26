@@ -1,4 +1,4 @@
-"""How a saved chart finds its source, checks itself and fetches its data (experimental).
+"""How a saved chart finds its source, checks itself and fetches its data.
 
 The data is the source resource's own ``GET <source>/aggregate/``, called
 in-process as the person viewing the chart: the request is a copy of theirs
@@ -41,11 +41,11 @@ _IGNORED = frozenset({"format"})
 
 
 class ChartError(KarniError):
-    """Experimental. A chart that cannot run as defined, or a viewer's filter it does not allow."""
+    """A chart that cannot run as defined, or a viewer's filter it does not allow."""
 
 
 def sources() -> dict[str, type[BaseViewSet]]:
-    """Experimental. Every routed resource a chart may read: prefix -> viewset.
+    """Every routed resource a chart may read: prefix -> viewset.
 
     A resource qualifies when its viewset (or its model) declares an
     aggregation. A malformed declaration is left out (``karni check`` reports
@@ -68,7 +68,7 @@ def sources() -> dict[str, type[BaseViewSet]]:
 
 
 def source_viewset(name: str) -> type[BaseViewSet]:
-    """Experimental. The viewset of the source ``name``, or ``ChartError`` (``CHART001``)."""
+    """The viewset of the source ``name``, or ``ChartError`` (``CHART001``)."""
     found = sources()
     if name not in found:
         known = ", ".join(sorted(found)) or "none: no routed resource declares an aggregation"
@@ -112,7 +112,7 @@ def _check_filters(chart: Chart) -> None:
 
 
 def check_chart(chart: Chart) -> None:
-    """Experimental. Raise ``ChartError`` when the chart cannot run as defined.
+    """Raise ``ChartError`` when the chart cannot run as defined.
 
     ``CHART003`` for its filters, ``CHART001`` for its source, ``CHART004``
     for axes the source's aggregation does not declare. Field visibility is not
@@ -134,7 +134,7 @@ def check_chart(chart: Chart) -> None:
 
 
 def chart_filters(chart: Chart, params: Mapping[str, Any]) -> dict[str, list[str]]:
-    """Experimental. The chart's ``default_filters`` with the viewer's allowed filters on top.
+    """The chart's ``default_filters`` with the viewer's allowed filters on top.
 
     ``params`` are the viewer's query parameters (a ``QueryDict`` keeps every
     value of a repeated one). A parameter ``allowed_filters`` does not name
@@ -169,7 +169,7 @@ def _text(value: Any) -> str:
 
 
 def run_chart(chart: Chart, request: Any, filters: Mapping[str, list[str]]) -> Any:
-    """Experimental. The source's aggregate for ``chart``, called as ``request``'s user.
+    """The source's aggregate for ``chart``, called as ``request``'s user.
 
     ``request`` is a DRF ``Request`` or a Django ``HttpRequest`` (the admin's
     preview). Returns the source's DRF ``Response``: its ``data`` is the

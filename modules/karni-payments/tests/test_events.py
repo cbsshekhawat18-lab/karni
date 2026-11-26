@@ -1,4 +1,4 @@
-"""karni_payments.events (experimental): payment and refund signals."""
+"""karni_payments.events: payment and refund signals."""
 
 from __future__ import annotations
 

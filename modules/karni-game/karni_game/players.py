@@ -1,4 +1,4 @@
-"""Experimental. Who is playing: guests, accounts, and a guest who signs in.
+"""Who is playing: guests, accounts, and a guest who signs in.
 
 * :func:`issue_guest` makes a person with no account, its player and a token.
   The token is returned once and kept as its SHA-256.

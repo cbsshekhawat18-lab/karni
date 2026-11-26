@@ -107,7 +107,7 @@ SINGLE_PROCESS_SETTINGS: dict[str, str] = {
 _consumed: dict[str, tuple[MutableMapping[str, Any], dict[str, Any]]] = {}
 
 _CONTRIB_ADMIN = "django.contrib.admin"
-#: The app ``KARNI_PEOPLE = True`` installs (the people contract, experimental).
+#: The app ``KARNI_PEOPLE = True`` installs (the people contract).
 PEOPLE_APP = "karni.people"
 _AUTHENTICATION_MIDDLEWARE = "django.contrib.auth.middleware.AuthenticationMiddleware"
 _REQUEST_CONTEXT_PROCESSOR = "django.template.context_processors.request"
@@ -533,7 +533,7 @@ def karni_settings(
       as an override or via env), the allauth / django-otp apps, middleware
       and companion settings are added to the defaults before merging.
       django-otp's ``OTPMiddleware`` is installed only in session auth mode.
-    * ``KARNI_PEOPLE`` (experimental): when true, ``karni.people`` (the
+    * ``KARNI_PEOPLE``: when true, ``karni.people`` (the
       people contract) joins ``INSTALLED_APPS`` before ``karni.admin``.
     * ``KARNI_AUTH_THROTTLE_RATES``: merged into
       ``REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]`` unless the project

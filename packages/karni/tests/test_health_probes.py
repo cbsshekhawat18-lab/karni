@@ -1,4 +1,4 @@
-"""``/healthz`` and ``/readyz`` (experimental): each dependency failing in turn and the exemptions.
+"""``/healthz`` and ``/readyz``: each dependency failing in turn and the exemptions.
 
 No service runs: the cache is LocMemCache, the database is the SQLite test database and the
 Celery broker is Celery's in-memory transport. A dependency "fails" by being replaced with one

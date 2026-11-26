@@ -1,4 +1,4 @@
-"""Experimental. ``/healthz`` and ``/readyz``: the probes a proxy or an orchestrator asks.
+"""``/healthz`` and ``/readyz``: the probes a proxy or an orchestrator asks.
 
 Add them to the project's URLconf::
 

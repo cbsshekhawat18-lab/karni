@@ -1,17 +1,17 @@
 /**
  * Shared report types for @karni/reports-ui.
  *
- * Experimental. `ReportState` is what `POST /api/reports/<report>/<id>/` and
+ * `ReportState` is what `POST /api/reports/<report>/<id>/` and
  * `GET /api/reports/<report>/<id>/status/` answer (karni_reports'
  * ReportStatusSerializer).
  */
 
-/** Experimental. The statuses of a report. `none`: never requested for this row. */
+/** The statuses of a report. `none`: never requested for this row. */
 export const REPORT_STATUSES = ["none", "pending", "rendering", "ready", "failed"] as const;
 
 export type ReportStatusValue = (typeof REPORT_STATUSES)[number];
 
-/** Experimental. One report of one row, as the API answers it. */
+/** One report of one row, as the API answers it. */
 export interface ReportState {
   id: string | null;
   report: string;

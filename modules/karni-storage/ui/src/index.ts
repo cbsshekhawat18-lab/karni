@@ -1,10 +1,7 @@
 /**
- * @karni/storage-ui public barrel: protected files of the karni_storage
+ * Experimental. @karni/storage-ui public barrel: protected files of the karni_storage
  * module (`karni add storage`). Explicit exports only. Importing the package
  * registers its component roles when @karni/ui has the registry (G8).
- *
- * Experimental: every name here may change in a minor release, with a
- * CHANGELOG entry.
  */
 import { registerProtectedFileLink } from "@karni/ui";
 import { ProtectedFileLink } from "./ProtectedFileLink";

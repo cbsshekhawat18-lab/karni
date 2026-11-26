@@ -24,7 +24,7 @@ Override / escape hatches: ``KARNI_QUERY_BUDGET`` (partial dict merged over
 :data:`DEFAULT_QUERY_BUDGET`), ``KARNI_QUERY_BUDGET_MODE``, and per viewset
 ``query_budget = Budget(list=25, reason="...")``. The scaling check's row
 counts are ``KARNI_SCALING_ROWS`` and, per viewset, ``query_scaling =
-Scaling(rows=(5, 500), seconds=0.3)`` (experimental), which also sets a time
+Scaling(rows=(5, 500), seconds=0.3)``, which also sets a time
 budget.
 """
 
@@ -415,7 +415,7 @@ class Budget:
         return ", ".join(f"{action}={value}" for action, value in self.limits.items())
 
 
-#: Experimental. The rows the scaling check compares, small then large (``KARNI_SCALING_ROWS``).
+#: The rows the scaling check compares, small then large (``KARNI_SCALING_ROWS``).
 DEFAULT_SCALING_ROWS: Final[tuple[int, int]] = (2, 12)
 
 
@@ -442,7 +442,7 @@ def _scaling_rows(value: Any, where: str) -> tuple[int, int]:
 
 @dataclass(frozen=True, init=False)
 class Scaling:
-    """Experimental. ``query_scaling = Scaling(rows=(5, 500), seconds=0.3)``: a viewset's scaling.
+    """``query_scaling = Scaling(rows=(5, 500), seconds=0.3)``: a viewset's scaling.
 
     ``rows`` are the row counts the scaling check compares (default
     ``KARNI_SCALING_ROWS``, else :data:`DEFAULT_SCALING_ROWS`): a list is
@@ -485,7 +485,7 @@ class Scaling:
 
 
 def scaling_rows(declared: Scaling | None = None) -> tuple[int, int]:
-    """Experimental. ``(small, large)``: the viewset's ``Scaling(rows=)``, else the setting."""
+    """``(small, large)``: the viewset's ``Scaling(rows=)``, else the setting."""
     if declared is not None and declared.rows is not None:
         return declared.rows
     configured = getattr(settings, "KARNI_SCALING_ROWS", None)

@@ -1,4 +1,4 @@
-"""``karni build`` (experimental): apply ``karni plan`` to the project, idempotently.
+"""``karni build``: apply ``karni plan`` to the project, idempotently.
 
     karni build                         karni.yaml in the project root
     karni build --dry-run               the plan and the files it would write
@@ -67,7 +67,7 @@ def build(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Experimental. Make the project match karni.yaml, without touching hand-written code.
+    """Make the project match karni.yaml, without touching hand-written code.
 
     It computes karni plan, refuses risky changes without --allow-destructive
     (C270), checks that no Karni-owned file was edited by hand (C273), then

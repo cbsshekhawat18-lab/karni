@@ -1,4 +1,4 @@
-"""``x-karni-related`` (experimental): each model's reverse relations in the OpenAPI schema.
+"""``x-karni-related``: each model's reverse relations in the OpenAPI schema.
 
 ``@karni/ui``'s ResourceDetail builds its related tabs from it, so the
 schema says, per relation, which resource holds the rows, which field

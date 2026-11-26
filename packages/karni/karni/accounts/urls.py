@@ -14,26 +14,26 @@ mode). Only the optional feature blocks are conditional at import time:
 * ``register/`` exists while ``KARNI_ACCOUNTS_REGISTRATION`` is ``True`` (the
   default). ``False`` leaves it out, so it answers 404 and is absent from the
   OpenAPI schema. Use it when staff create every account.
-* ``otp/send/`` and ``otp/verify/`` (experimental) exist while
+* ``otp/send/`` and ``otp/verify/`` exist while
   ``KARNI_EMAIL_OTP`` is ``True`` (default ``False``): sign-in with a code
   sent by email, in both modes (:class:`~karni.accounts.api.views.OtpSendView`,
   :class:`~karni.accounts.api.views.OtpVerifyView`). Off, they answer 404 and
   are absent from the OpenAPI schema, like ``register/``;
-* ``terms/`` and ``terms/accept/`` (experimental) exist while
+* ``terms/`` and ``terms/accept/`` exist while
   ``KARNI_TERMS`` is set: the current terms and their acceptance
   (:class:`~karni.accounts.api.views.TermsView`,
   :class:`~karni.accounts.api.views.TermsAcceptView`). The terms gate
   (:class:`karni.accounts.terms.TermsGateMiddleware`) leaves every route of
   this URLconf open, wherever it is mounted;
 * ``permissions/grants/``, ``permissions/grants/<id>/`` and
-  ``permissions/grants/bulk/`` (experimental) exist while
+  ``permissions/grants/bulk/`` exist while
   ``KARNI_USER_GRANTS`` is ``True``: per-user grants
   (:mod:`karni.accounts.api.grants`). Off, they answer 404 and are absent
   from the OpenAPI schema.
 * ``2fa/...`` is included from :mod:`karni.accounts.twofa` when ``KARNI_2FA``
   is enabled — the module is referenced by dotted path so core installs
   (without the ``karni[2fa]`` extra) never import it;
-* ``social/<provider>/`` (experimental) exists for each provider named in
+* ``social/<provider>/`` exists for each provider named in
   ``KARNI_SOCIAL_TOKEN_PROVIDERS``: sign-in with that provider's ID token, in
   both modes (:class:`~karni.accounts.api.views.SocialTokenLoginView`). An
   unconfigured provider has no route and answers 404. These routes come
@@ -155,7 +155,7 @@ def _social_urlpatterns() -> list[URLPattern | URLResolver]:
 
 
 def _social_token_urlpatterns() -> list[URLPattern | URLResolver]:
-    """One ``social/<provider>/`` route per ``KARNI_SOCIAL_TOKEN_PROVIDERS`` entry (experimental).
+    """One ``social/<provider>/`` route per ``KARNI_SOCIAL_TOKEN_PROVIDERS`` entry.
 
     The route passes the provider's name to the view as ``provider``. A name
     startup validation would refuse (not a slug, or one of allauth's own
@@ -177,7 +177,7 @@ def _social_token_urlpatterns() -> list[URLPattern | URLResolver]:
 
 
 def _grant_patterns() -> list[URLPattern | URLResolver]:
-    """The per-user grants routes (experimental), imported only while the switch is on."""
+    """The per-user grants routes, imported only while the switch is on."""
     from karni.accounts.api import grants as grant_views
 
     return [

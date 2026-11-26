@@ -9,12 +9,12 @@ loaded) the factory named by the ``KARNI_API_ROUTER`` setting — default
 :func:`karni.api.routers.get_default_router` — is called once; it owns
 autodiscovery and returns the router whose URLs are exposed here.
 
-While ``KARNI_NAVIGATION`` is set (experimental), ``navigation/`` comes first:
+While ``KARNI_NAVIGATION`` is set, ``navigation/`` comes first:
 the requesting user's menu (:mod:`karni.navigation.api`).
 It also mounts ``search/``, cross-model search
-(:class:`karni.api.global_search.GlobalSearchView`, experimental), before the
+(:class:`karni.api.global_search.GlobalSearchView`), before the
 routes, so it answers ``GET /api/search/`` whatever the router registers, and
-``timeline/`` (:class:`karni.timeline.api.TimelineView`, experimental) while
+``timeline/`` (:class:`karni.timeline.api.TimelineView`) while
 ``karni.timeline`` is installed and ``KARNI_TIMELINE_API`` is on, and ``inbox/``
 and ``notify/unsubscribe/`` (:mod:`karni.notify.api`) while ``karni.notify`` is.
 
@@ -78,7 +78,7 @@ def _preferences_urlpatterns() -> list[Any]:
 
 
 #: What Karni mounts before the router's routes: ``navigation/`` while ``KARNI_NAVIGATION``
-#: is set, ``search/``, ``dashboard/`` (the home tiles, experimental), ``timeline/``
+#: is set, ``search/``, ``dashboard/`` (the home tiles), ``timeline/``
 #: with ``karni.timeline``, ``preferences/`` with ``karni.preferences``, and ``inbox/``
 #: and ``notify/`` with ``karni.notify``.
 #: :func:`karni.api.versions.api_urls` mounts them in each version.

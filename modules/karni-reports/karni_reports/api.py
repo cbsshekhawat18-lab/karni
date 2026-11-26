@@ -24,7 +24,7 @@ def download_path(report: str, object_id: str) -> str | None:
 
 
 class ReportStatusSerializer(serializers.ModelSerializer[GeneratedReport]):
-    """Experimental. One generated report: its status and, once ready, its download path.
+    """One generated report: its status and, once ready, its download path.
 
     ``status`` is ``pending``, ``rendering``, ``ready`` or ``failed``.
     ``url`` is set only while the file is ready. ``error`` never carries the

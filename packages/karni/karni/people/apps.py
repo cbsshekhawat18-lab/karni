@@ -6,7 +6,7 @@ from django.apps import AppConfig
 
 
 class PeopleConfig(AppConfig):
-    """Experimental. ``karni.people`` (label ``people``): Person, Organisation, Membership, Address.
+    """``karni.people`` (label ``people``): Person, Organisation, Membership, Address.
 
     Installed by ``KARNI_PEOPLE = True`` (which ``karni_settings()`` turns into
     an ``INSTALLED_APPS`` entry, and which ``karni build`` writes when the spec

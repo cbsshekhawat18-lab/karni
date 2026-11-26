@@ -1,4 +1,4 @@
-"""``manage.py karni_makemigrations [app ...] [--renames JSON]`` (experimental), for karni build.
+"""``manage.py karni_makemigrations [app ...] [--renames JSON]``, for karni build.
 
 Django's ``makemigrations``, run without questions, with the two answers it
 cannot give alone:
@@ -42,7 +42,7 @@ from karni.exceptions import KarniCommandError
 
 
 class EmptyTableQuestioner(NonInteractiveMigrationQuestioner):
-    """Experimental. Adds a required field to a model whose table holds no row, without a value."""
+    """Adds a required field to a model whose table holds no row, without a value."""
 
     def ask_not_null_addition(self, field_name: str, model_name: str) -> Any:
         model = _model(self.specified_apps, model_name)
@@ -91,7 +91,7 @@ def _generated_reading(state: Any, app_label: str, model: str, field_name: str) 
 
 
 def write_renames(renames: dict[str, Any]) -> list[str]:
-    """Experimental. Write the rename migrations ``renames`` asks for; returns their paths."""
+    """Write the rename migrations ``renames`` asks for; returns their paths."""
     loader = MigrationLoader(None, ignore_no_migrations=True)
     state = loader.project_state()
     was = {(app, str(new)): str(old) for app, old, new in renames.get("models") or []}
@@ -131,7 +131,7 @@ def write_renames(renames: dict[str, Any]) -> list[str]:
 
 class Command(django_makemigrations.Command):
     help = (
-        "Experimental. makemigrations for karni build: explicit renames first, and a required "
+        "makemigrations for karni build: explicit renames first, and a required "
         "field added to an empty table without a one-off value. Never asks a question."
     )
 

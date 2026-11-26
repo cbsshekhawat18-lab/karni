@@ -11,7 +11,7 @@ ResourceDetail shows it formatted and sanitized.
 A :class:`~karni.fields.MoneyField` becomes a :class:`MoneyDecimalField`: the
 same ``DecimalField``, plus ``x-karni-money`` on its property, the currency it
 is in: ``{"currency": "EUR"}`` for a fixed one, ``{"currency_field":
-"price_currency"}`` for a currency per row (experimental). ``@karni/ui``
+"price_currency"}`` for a currency per row. ``@karni/ui``
 reads it: tables and details show the amount in its currency (``$60.00``).
 
 Override / escape hatch: give your own ``TextField`` subclass an
@@ -59,7 +59,7 @@ def format_of(model_field: Any) -> str | None:
 
 
 class MoneyDecimalField(serializers.DecimalField):
-    """Experimental. A ``DecimalField`` whose schema property carries ``x-karni-money``."""
+    """A ``DecimalField`` whose schema property carries ``x-karni-money``."""
 
     def __init__(self, *args: Any, money: dict[str, str] | None = None, **kwargs: Any) -> None:
         self.money = dict(money or {})
@@ -81,7 +81,7 @@ class MoneyDecimalFieldExtension(OpenApiSerializerFieldExtension):
 
 
 def money_of(model_field: Any) -> dict[str, str] | None:
-    """Experimental. A MoneyField's currency, as ``x-karni-money`` gives it, else ``None``."""
+    """A MoneyField's currency, as ``x-karni-money`` gives it, else ``None``."""
     from karni.fields.money import MoneyField
 
     if not isinstance(model_field, MoneyField):

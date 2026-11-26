@@ -851,7 +851,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "'workspace__members'`, or the scope path), teach the custom scope the new model, "
         "or narrow the grant's pattern so it does not cover the model.",
     ),
-    # E215-E227 sign-in with an ID token (karni.accounts.social_token, experimental)
+    # E215-E227 sign-in with an ID token (karni.accounts.social_token)
     _e(
         "E215",
         "The ID token is not valid",
@@ -1010,7 +1010,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "yet. To link on a verified email, set KARNI_SOCIAL_TOKEN_LINK_VERIFIED = True (the "
         "default).",
     ),
-    # E235-E236 sign-in with a code sent by email (karni.accounts.otp, experimental)
+    # E235-E236 sign-in with a code sent by email (karni.accounts.otp)
     _e(
         "E235",
         "The sign-in code is wrong or has expired",
@@ -1034,7 +1034,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Set KARNI_EMAIL_OTP = True (or KARNI_EMAIL_OTP=True in the environment) to offer "
         "sign-in with a code, or sign in with login/.",
     ),
-    # E245-E249 terms acceptance (karni.accounts.terms, experimental)
+    # E245-E249 terms acceptance (karni.accounts.terms)
     _e(
         "E245",
         "The signed-in user has not accepted the current terms",
@@ -1098,7 +1098,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         'Set KARNI_TERMS = {"version": "<version>", "url": "<where the terms are>"} to ask '
         "users to accept terms, or remove the client's call.",
     ),
-    # E250-E259 the people contract (karni.people, experimental)
+    # E250-E259 the people contract (karni.people)
     _e(
         "E250",
         "A merge of two people who both have an account",
@@ -1223,7 +1223,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "more), or add the database to DATABASES.",
     ),
     # E270-E279 / W540-W549 external tables, SQL views and a second database
-    # (karni.db, experimental)
+    # (karni.db)
     _e(
         "E270",
         "An external model is managed by Django",
@@ -1342,7 +1342,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "router with an answer wins). If your own router routes these models, add "
         "'karni.W542' to SILENCED_SYSTEM_CHECKS.",
     ),
-    # E280-E289 / W280-W289 model display (karni.meta, experimental)
+    # E280-E289 / W280-W289 model display (karni.meta)
     _e(
         "E280",
         "Karni.label_field names a field the model does not have",
@@ -1411,7 +1411,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Set KARNI_ADMIN_LOGO = 'karni' for Karni's mark, or {'light': '<static path>', 'dark': "
         "..., 'icon': ...} with at least 'light'. Leave it unset for a text header.",
     ),
-    # E304-E305 manage.py karni_makemigrations (karni build, experimental)
+    # E304-E305 manage.py karni_makemigrations (karni build)
     _e(
         "E304",
         "karni_makemigrations --renames is not a rename list",
@@ -1446,7 +1446,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         '"karni_<name>" to pyproject.toml, then reinstall the module. docs/modules.md lists '
         "every key.",
     ),
-    # E320-E329 the preferences contract (karni.preferences, experimental)
+    # E320-E329 the preferences contract (karni.preferences)
     _e(
         "E320",
         "A preferences lock or default names nothing, or a value its field refuses",
@@ -1514,7 +1514,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Use a name GET /api/preferences/ lists, install the part, or read the value with "
         "preferences.value('<section>.<field>', default).",
     ),
-    # E340-E359 / W550-W559 tree models (karni.models.TreeModel, karni.tree, experimental)
+    # E340-E359 / W550-W559 tree models (karni.models.TreeModel, karni.tree)
     _e(
         "E340",
         "A tree node's new parent is the node itself or a node below it",
@@ -1585,7 +1585,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Remove the redeclared `parent` field, or declare it as models.ForeignKey('self', "
         "null=True, blank=True, on_delete=models.PROTECT, related_name='children').",
     ),
-    # E360-E379 per-user grants (karni.accounts.grants, experimental)
+    # E360-E379 per-user grants (karni.accounts.grants)
     _e(
         "E360",
         "A user grant's permission pattern matches no permission",
@@ -1661,7 +1661,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Pass only permission, scope, targets, expires_at or reason. To move access to another "
         "user, revoke() this grant and grant() a new one.",
     ),
-    # E490-E499 / W620-W629 the tree scope (karni.accounts.tree_scope, experimental)
+    # E490-E499 / W620-W629 the tree scope (karni.accounts.tree_scope)
     _e(
         "E490",
         "A tree:<path> scope does not end at a tree model",
@@ -1705,7 +1705,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "grants. Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] otherwise when "
         "something else gives the nodes on purpose.",
     ),
-    # E570-E589 / W650-W659 taxonomy tagging (karni.taxonomy, experimental)
+    # E570-E589 / W650-W659 taxonomy tagging (karni.taxonomy)
     _e(
         "E570",
         "class Karni: taxonomies is malformed",
@@ -1755,7 +1755,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Send node keys (?region=3,7), true or false for the flags, and one of the keys the "
         "message lists as ?taxonomy=.",
     ),
-    # E38x aggregations (karni.aggregation, experimental)
+    # E38x aggregations (karni.aggregation)
     _e(
         "E380",
         "An aggregation declaration is not valid",
@@ -1958,8 +1958,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Point KARNI_API_CACHE_ALIAS at a cache every process shares (Redis, the database "
         "cache) in production, or silence karni.W580 for a single-process deployment.",
     ),
-    # E450-E469 / W450-W459 family events and the outbox (karni.events, karni.outbox,
-    # experimental)
+    # E450-E469 / W450-W459 family events and the outbox (karni.events, karni.outbox)
     _e(
         "E450",
         "An event is published that is not declared",
@@ -2046,7 +2045,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Move the subscriber to a declared version (@subscribe(name, version=N)) and adapt it "
         "to that payload, or keep the publisher publishing the old version too.",
     ),
-    # E46x/W46x the timeline contract (experimental, karni.timeline)
+    # E46x/W46x the timeline contract (karni.timeline)
     _e(
         "E460",
         "A timeline= option of an event declaration is not valid",
@@ -2100,7 +2099,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Add 'karni.outbox' to INSTALLED_APPS and run migrate, or set "
         "KARNI_TIMELINE_FROM_EVENTS = False and write entries with timeline.record().",
     ),
-    # E440-E449 / W440-W449 the notifications contract (experimental, karni.notify, and
+    # E440-E449 / W440-W449 the notifications contract (karni.notify, and
     # the message kinds of karni.mail)
     _e(
         "E440",
@@ -2188,7 +2187,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Add the channel to KARNI_NOTIFY_CHANNELS, or declare the kind with a channel the "
         "project sends on, or silence karni.W440 when that is what the project wants.",
     ),
-    # E47x/E48x/W61x tooling for large projects (experimental): context slices, the
+    # E47x/E48x/W61x tooling for large projects: context slices, the
     # check cache, volume seeding, the scaling budgets and query plans
     _e(
         "E470",
@@ -2545,7 +2544,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         ".env.prod.example lists them. A project that sends no email adds 'karni.W520' to "
         "SILENCED_SYSTEM_CHECKS.",
     ),
-    # W53x integer primary keys (karni.models.BigIntBaseModel, experimental)
+    # W53x integer primary keys (karni.models.BigIntBaseModel)
     _e(
         "W530",
         "Anyone may read a resource whose ids can be guessed",
@@ -2589,7 +2588,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "KARNI_BACKUP_DIR and, with KARNI_BACKUP_S3_BUCKET, the AWS_* credentials. Then run "
         "`docker compose -f docker-compose.prod.yml exec backup karni-backup run`.",
     ),
-    # E530-E549 / W630-W639 navigation from data (karni.navigation, experimental)
+    # E530-E549 / W630-W639 navigation from data (karni.navigation)
     _e(
         "E530",
         "KARNI_NAVIGATION is not valid",
@@ -2692,7 +2691,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "List the file that registers the frontend's routes in KARNI_NAVIGATION_PAGES, or set "
         "it to [] when the menu serves a client whose pages Karni cannot read (a mobile app).",
     ),
-    # E55x wide models: field groups and column sets (karni.layout, experimental)
+    # E55x wide models: field groups and column sets (karni.layout)
     _e(
         "E550",
         "Karni.field_groups or Karni.field_group_layout is malformed",
@@ -2737,7 +2736,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Map each set's name to a list of field names, each once, e.g. column_sets = "
         "{'default': ['name', 'price'], 'financial': ['name', 'price', 'cost']}.",
     ),
-    # E590-E599 / W660-W669 production proof: API versions (karni.api.versions, experimental)
+    # E590-E599 / W660-W669 production proof: API versions (karni.api.versions)
     _e(
         "E590",
         "The API version settings cannot work",
@@ -3574,7 +3573,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "development database where accepting overlaps is fine.",
     ),
     # E990-E998 rules every write keeps (karni.rules, class Karni: bounds, unique, targets,
-    # frozen, delete, moves; row actions, experimental)
+    # frozen, delete, moves; row actions)
     _e(
         "E990",
         "A value is outside the bounds of its field",
@@ -3662,7 +3661,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "model has, with values of the right kind, so a rule never silently checks nothing.",
         "Fix the declaration the message names (karni.yaml: the entity's key of that name).",
     ),
-    # E430-E449 / W590-W599 cross-model search (karni.global_search, experimental)
+    # E430-E449 / W590-W599 cross-model search (karni.global_search)
     _e(
         "E430",
         "Karni.search is malformed or names a field the model does not have",

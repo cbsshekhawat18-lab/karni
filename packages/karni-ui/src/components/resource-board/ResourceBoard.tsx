@@ -1,5 +1,5 @@
 /**
- * Experimental. ResourceBoard: a resource's rows in columns by a state field.
+ * ResourceBoard: a resource's rows in columns by a state field.
  *
  * A pipeline is a board, not a table: deals by stage, orders by status,
  * bookings by state. One column per choice of the state field, in the order
@@ -62,14 +62,14 @@ registerComponentRole("resource-board", "ResourceBoard");
 
 type Row = Record<string, unknown>;
 
-/** Experimental. What `renderCard` receives besides the row. */
+/** What `renderCard` receives besides the row. */
 export interface ResourceBoardCardContext {
   column: BoardColumnDef;
   /** True while this card's move is being saved. */
   moving: boolean;
 }
 
-/** Experimental. What the `ColumnHeader` slot receives. */
+/** What the `ColumnHeader` slot receives. */
 export interface ResourceBoardHeaderProps {
   column: BoardColumnDef;
   /** Rows in the column (all of them, not only the loaded ones). */
@@ -80,18 +80,18 @@ export interface ResourceBoardHeaderProps {
   partial: boolean;
 }
 
-/** Experimental. What the `Empty` slot (a column without cards) receives. */
+/** What the `Empty` slot (a column without cards) receives. */
 export interface ResourceBoardEmptyProps {
   column: BoardColumnDef;
 }
 
-/** Experimental. What the `Loading` slot receives. */
+/** What the `Loading` slot receives. */
 export interface ResourceBoardLoadingProps {
   /** How many columns to draw placeholders for. */
   columns: number;
 }
 
-/** Experimental. The replaceable parts of ResourceBoard. */
+/** The replaceable parts of ResourceBoard. */
 export interface ResourceBoardSlots {
   Loading: React.ComponentType<ResourceBoardLoadingProps>;
   Empty: React.ComponentType<ResourceBoardEmptyProps>;
@@ -99,7 +99,7 @@ export interface ResourceBoardSlots {
   ColumnHeader: React.ComponentType<ResourceBoardHeaderProps>;
 }
 
-/** Experimental. Props of ResourceBoard. */
+/** Props of ResourceBoard. */
 export interface ResourceBoardProps<T extends object> {
   /** The router prefix of the resource (`deals`). */
   resource: string;
@@ -183,7 +183,7 @@ function DefaultColumnHeader({
   );
 }
 
-/** Experimental. Karni's own slots, to wrap one instead of rewriting it. */
+/** Karni's own slots, to wrap one instead of rewriting it. */
 export const defaultResourceBoardSlots: ResourceBoardSlots = {
   Loading: DefaultLoading,
   Empty: DefaultEmpty,

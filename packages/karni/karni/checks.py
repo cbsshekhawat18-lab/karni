@@ -364,7 +364,7 @@ REDUNDANT_SERIALIZER_RULE = "redundant-serializer"
 
 @checks.register(checks.Tags.urls)
 def check_public_integer_keys(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
-    """karni.W530 (experimental): anyone may read a resource whose ids can be guessed.
+    """karni.W530: anyone may read a resource whose ids can be guessed.
 
     Reported for every routed :class:`~karni.api.viewsets.BaseViewSet`
     whose model has an integer primary key (``BigIntBaseModel``, an
@@ -664,7 +664,7 @@ def check_global_search_routes(app_configs: Any = None, **kwargs: Any) -> list[c
 
 @checks.register(checks.Tags.urls)
 def check_aggregations(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
-    """karni.E380 / W570 / E280: every aggregation declaration (experimental) fits its model.
+    """karni.E380 / W570 / E280: every aggregation declaration fits its model.
 
     A model's ``class Karni: aggregate`` and a routed viewset's ``aggregation``
     must name fields, relation paths or declared expressions, with buckets
@@ -720,7 +720,7 @@ def check_aggregations(app_configs: Any = None, **kwargs: Any) -> list[checks.Ch
 
 @checks.register(checks.Tags.models)
 def check_layouts(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
-    """karni.E550 to E553: every ``Karni.field_groups`` and ``Karni.column_sets`` (experimental).
+    """karni.E550 to E553: every ``Karni.field_groups`` and ``Karni.column_sets``.
 
     A malformed declaration, a group or column set naming a field the model
     does not have, and a field in two groups, each reported with the model,
@@ -1137,7 +1137,7 @@ def check_tree_scopes(app_configs: Any = None, **kwargs: Any) -> list[checks.Che
     key names, or from any model a wildcard matches. W620 is a role grant
     whose members get no node: the user model has no attribute named after
     the path's last step, the node a role grant of the scope reaches
-    (experimental, :mod:`karni.accounts.tree_scope`).
+    (:mod:`karni.accounts.tree_scope`).
     """
     from django.conf import settings
     from django.contrib.auth import get_user_model
@@ -1229,7 +1229,7 @@ def check_taxonomies(app_configs: Any = None, **kwargs: Any) -> list[checks.Chec
     E571 is a ``class Karni: taxonomies`` key whose many-to-many points at a
     model that is not a :class:`karni.models.TreeModel`. E572 is a key the
     model adopts (it declares a field of that name) whose field is not a
-    many-to-many to the declared target (experimental, :mod:`karni.taxonomy`).
+    many-to-many to the declared target (:mod:`karni.taxonomy`).
     """
     from karni.taxonomy import taxonomies
 
@@ -1249,7 +1249,7 @@ def check_taxonomies(app_configs: Any = None, **kwargs: Any) -> list[checks.Chec
 
 @checks.register(checks.Tags.urls)
 def check_api_versions(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
-    """karni.E590 / E591 / W660: the API version settings (experimental).
+    """karni.E590 / E591 / W660: the API version settings.
 
     E590 is a bad ``KARNI_API_VERSION`` or ``KARNI_API_VERSIONS``, E591 a bad
     ``KARNI_API_UNVERSIONED``, and W660 a version past its sunset date.

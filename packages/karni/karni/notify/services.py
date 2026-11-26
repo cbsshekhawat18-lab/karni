@@ -1,4 +1,4 @@
-"""Experimental. Sending a message kind, the inbox, each person's switches and unsubscribes.
+"""Sending a message kind, the inbox, each person's switches and unsubscribes.
 
 :func:`send` is the one call a part makes to tell people something::
 
@@ -95,13 +95,13 @@ _ELLIPSIS: Final = "..."
 
 
 def installed() -> bool:
-    """Experimental. Whether ``karni.notify`` is in ``INSTALLED_APPS``."""
+    """Whether ``karni.notify`` is in ``INSTALLED_APPS``."""
     return apps.is_installed(APP)
 
 
 @dataclass(frozen=True)
 class Recipient:
-    """Experimental. Who a message goes to: an address, an account, or both."""
+    """Who a message goes to: an address, an account, or both."""
 
     email: str
     user: Any = None
@@ -118,14 +118,14 @@ class Recipient:
 
 @dataclass(frozen=True)
 class Sent:
-    """Experimental. What :func:`send` did: the emails sent and the inbox rows written."""
+    """What :func:`send` did: the emails sent and the inbox rows written."""
 
     email: int = 0
     inbox: int = 0
 
 
 def project_channels() -> tuple[str, ...]:
-    """Experimental. The channels the project sends on (``KARNI_NOTIFY_CHANNELS``)."""
+    """The channels the project sends on (``KARNI_NOTIFY_CHANNELS``)."""
     chosen = getattr(settings, "KARNI_NOTIFY_CHANNELS", CHANNELS)
     return tuple(channel for channel in CHANNELS if channel in set(chosen or ()))
 
@@ -153,7 +153,7 @@ def _saved(user: Any) -> Any:
 
 
 def recipients(to: Any) -> list[Recipient]:
-    """Experimental. ``to`` as recipients: users, people, addresses, or a list of them.
+    """``to`` as recipients: users, people, addresses, or a list of them.
 
     A user gives its account and its email. A person (``karni.people``) gives
     its email and its account when it has one. An address gives itself, and the
@@ -208,7 +208,7 @@ def recipients(to: Any) -> list[Recipient]:
 
 
 def holders(*roles: str) -> Any:
-    """Experimental. The active users who hold any of ``roles``: a role as an audience.
+    """The active users who hold any of ``roles``: a role as an audience.
 
     ``notify.send("commerce.new_order", to=notify.holders("shop-manager"), ...)``
     tells everyone who holds the role, each on their own switches. A role is
@@ -283,7 +283,7 @@ class _Wants:
 
 
 def reply_to() -> list[str] | None:
-    """Experimental. The details' reply-to address (Settings, Details), as a list, or ``None``."""
+    """The details' reply-to address (Settings, Details), as a list, or ``None``."""
     if not apps.is_installed("karni.preferences"):
         return None
     from karni import preferences
@@ -300,7 +300,7 @@ def send(
     link: str | None = None,
     from_email: str | None = None,
 ) -> Sent:
-    """Experimental. Send the declared message ``kind`` to ``to`` (see the module docstring).
+    """Send the declared message ``kind`` to ``to`` (see the module docstring).
 
     :param to: users, people, addresses, or a list of them (:func:`recipients`).
     :param context: what the templates render with (the kind's merge fields).
@@ -336,7 +336,7 @@ def send_mail(
     cc: Iterable[str] | None = None,
     bcc: Iterable[str] | None = None,
 ) -> int:
-    """Experimental. What ``karni.mail.send_templated(..., kind=...)`` does here: returns the
+    """What ``karni.mail.send_templated(..., kind=...)`` does here: returns the
     emails sent. A kind nobody declared goes by email only, with no switch but the project's.
     """
     found = deliver_kind(
@@ -369,7 +369,7 @@ def deliver_kind(
     bcc: list[str] | None = None,
     together: bool = False,
 ) -> Sent:
-    """Experimental. Send the kind ``name`` to recipients already resolved (:func:`recipients`).
+    """Send the kind ``name`` to recipients already resolved (:func:`recipients`).
 
     What :func:`send` and ``send_templated`` do once they know the kind and the
     people: the project's switch, the channels, each person's switch and
@@ -487,7 +487,7 @@ def on_event(
     version: int = 1,
     registry: Any = None,
 ) -> None:
-    """Experimental. Send ``kind`` each time the family event ``event`` is published.
+    """Send ``kind`` each time the family event ``event`` is published.
 
     ``to(event)`` gives the recipients and ``context(event)`` what the message
     renders with (default: the event's declared fields). Put the call in the
@@ -512,14 +512,14 @@ def on_event(
 
 
 def unread_count(user: Any) -> int:
-    """Experimental. How many of ``user``'s notifications are unread."""
+    """How many of ``user``'s notifications are unread."""
     from karni.notify.models import Notification
 
     return Notification.objects.filter(recipient=user, read_at__isnull=True).count()
 
 
 def mark_read(user: Any, ids: Iterable[Any] | None = None) -> int:
-    """Experimental. Mark ``user``'s notifications ``ids`` read (every one when ``None``)."""
+    """Mark ``user``'s notifications ``ids`` read (every one when ``None``)."""
     from karni.notify.models import Notification
 
     rows = Notification.objects.filter(recipient=user, read_at__isnull=True)
@@ -529,20 +529,20 @@ def mark_read(user: Any, ids: Iterable[Any] | None = None) -> int:
 
 
 def mark_unread(user: Any, ids: Iterable[Any]) -> int:
-    """Experimental. Mark ``user``'s notifications ``ids`` unread again."""
+    """Mark ``user``'s notifications ``ids`` unread again."""
     from karni.notify.models import Notification
 
     return Notification.objects.filter(recipient=user, pk__in=list(ids)).update(read_at=None)
 
 
 def retention_days() -> int | None:
-    """Experimental. ``KARNI_NOTIFY_RETENTION_DAYS``: days a notification is kept, or ``None``."""
+    """``KARNI_NOTIFY_RETENTION_DAYS``: days a notification is kept, or ``None``."""
     days = getattr(settings, "KARNI_NOTIFY_RETENTION_DAYS", None)
     return int(days) if days is not None else None
 
 
 def prune(days: int | None = None) -> int:
-    """Experimental. Delete notifications older than ``days`` (``KARNI_NOTIFY_RETENTION_DAYS``).
+    """Delete notifications older than ``days`` (``KARNI_NOTIFY_RETENTION_DAYS``).
 
     Returns how many went. With no days given and the setting ``None``, nothing goes.
     """
@@ -569,14 +569,14 @@ def _switchable() -> list[MessageKind]:
 
 
 def receives(user: Any, kind: MessageKind) -> bool:
-    """Experimental. Whether ``user`` can be in ``kind``'s audience (its ``requires``)."""
+    """Whether ``user`` can be in ``kind``'s audience (its ``requires``)."""
     from karni.navigation import opens
 
     return opens(kind.requires or "authenticated", user)
 
 
 def choices(user: Any) -> list[dict[str, Any]]:
-    """Experimental. Each kind ``user`` may switch, with where it goes for them now.
+    """Each kind ``user`` may switch, with where it goes for them now.
 
     The kinds the project sends (switched on in Settings, Emails) that a person
     may turn off and can receive (each kind's ``requires``: a customer never
@@ -620,7 +620,7 @@ def choices(user: Any) -> list[dict[str, Any]]:
 def choose(
     user: Any, kind: str, *, email: bool | None = None, inbox: bool | None = None
 ) -> dict[str, Any]:
-    """Experimental. ``user`` turns ``kind`` on or off for themselves, per channel.
+    """``user`` turns ``kind`` on or off for themselves, per channel.
 
     Turning a marketing kind's email on again takes back an unsubscribe of
     their address. Returns the kind as :func:`choices` lists it.
@@ -656,12 +656,12 @@ def choose(
 
 
 def unsubscribe_token(address: str, kind: str) -> str:
-    """Experimental. The signed token of ``address`` leaving ``kind`` (no expiry, no secret)."""
+    """The signed token of ``address`` leaving ``kind`` (no expiry, no secret)."""
     return signing.dumps({"a": address.strip().lower(), "k": kind}, salt=TOKEN_SALT, compress=True)
 
 
 def read_token(token: str) -> tuple[str, str]:
-    """Experimental. ``(address, kind)`` of a token :func:`unsubscribe_token` signed.
+    """``(address, kind)`` of a token :func:`unsubscribe_token` signed.
 
     :raises KarniValueError: E442, a token this project did not sign.
     """
@@ -678,7 +678,7 @@ def read_token(token: str) -> tuple[str, str]:
 
 
 def unsubscribe_url(address: str, kind: str) -> str:
-    """Experimental. The link a marketing email carries: ``KARNI_FRONTEND_URL`` and
+    """The link a marketing email carries: ``KARNI_FRONTEND_URL`` and
     ``KARNI_NOTIFY_UNSUBSCRIBE_PATH`` with the token."""
     base = str(getattr(settings, "KARNI_FRONTEND_URL", "") or "").rstrip("/")
     path = str(
@@ -688,7 +688,7 @@ def unsubscribe_url(address: str, kind: str) -> str:
 
 
 def unsubscribe(address: str, kind: str) -> bool:
-    """Experimental. ``address`` gets no more of the marketing ``kind``. True when it is new.
+    """``address`` gets no more of the marketing ``kind``. True when it is new.
 
     :raises KarniValueError: E441, a kind that is not a declared marketing kind.
     """
@@ -706,7 +706,7 @@ def unsubscribe(address: str, kind: str) -> bool:
 
 
 def resubscribe(address: str, kind: str) -> bool:
-    """Experimental. Take back an unsubscribe. True when there was one."""
+    """Take back an unsubscribe. True when there was one."""
     from karni.notify.models import Unsubscribe
 
     deleted, _ = Unsubscribe.objects.filter(address=address.strip().lower(), kind=kind).delete()
@@ -714,7 +714,7 @@ def resubscribe(address: str, kind: str) -> bool:
 
 
 def unsubscribed(address: str, kind: str) -> bool:
-    """Experimental. Whether ``address`` left the marketing ``kind``."""
+    """Whether ``address`` left the marketing ``kind``."""
     from karni.notify.models import Unsubscribe
 
     return Unsubscribe.objects.filter(address=address.strip().lower(), kind=kind).exists()

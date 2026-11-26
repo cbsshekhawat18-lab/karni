@@ -1,5 +1,5 @@
 /**
- * Experimental. `formatMoney("1234.5000", "USD")` is `$1,234.50`: an amount as people read it.
+ * `formatMoney("1234.5000", "USD")` is `$1,234.50`: an amount as people read it.
  *
  * The API sends money as a decimal string with four places (`"60.0000"`).
  * This rounds it to the currency's own digits with `Intl.NumberFormat`, in

@@ -1,4 +1,4 @@
-"""Experimental. The timeline contract: one stream of moments per person and per record.
+"""The timeline contract: one stream of moments per person and per record.
 
 A project that holds several parts shows, on a person's page and on a
 record's page (an order, a ticket, a deal), what happened to them in every
@@ -58,7 +58,7 @@ if TYPE_CHECKING:
     )
     from karni.timeline.subscribers import connect, disconnect
 
-#: Experimental. The version of the timeline contract. A breaking change raises it.
+#: The version of the timeline contract. A breaking change raises it.
 CONTRACT: Final = 1
 
 __all__ = [

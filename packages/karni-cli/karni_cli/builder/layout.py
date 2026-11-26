@@ -1,4 +1,4 @@
-"""Experimental. Where ``karni build`` puts Karni's code and where the project's code lives.
+"""Where ``karni build`` puts Karni's code and where the project's code lives.
 
 Karni's code and the project's code live in separate files. Karni rewrites
 its own files on every build and creates the project's files only once:
@@ -39,38 +39,38 @@ __all__ = [
     "test_file",
 ]
 
-#: Experimental. The ownership record: a sha256 of every Karni-owned file and block.
+#: The ownership record: a sha256 of every Karni-owned file and block.
 RECORD: Final = ".karni/build.json"
 SETTINGS: Final = "config/settings.py"
 ROUTES: Final = "frontend/src/routes.tsx"
-#: Experimental. The settings block's name in the record, and its markers.
+#: The settings block's name in the record, and its markers.
 SETTINGS_BLOCK: Final = "config/settings.py"
-#: Experimental. The two routes blocks (the imports, the route entries) by their names in the record.
+#: The two routes blocks (the imports, the route entries) by their names in the record.
 ROUTES_BLOCKS: Final = ("frontend/src/routes.tsx imports", "frontend/src/routes.tsx routes")
 
 
 def models_file(app: str) -> str:
-    """Experimental. Karni's abstract model classes of ``app``."""
+    """Karni's abstract model classes of ``app``."""
     return f"{app}/karni/models.py"
 
 
 def api_file(app: str) -> str:
-    """Experimental. Karni's viewset base classes of ``app``."""
+    """Karni's viewset base classes of ``app``."""
     return f"{app}/karni/api.py"
 
 
 def seeds_file(app: str) -> str:
-    """Experimental. Karni's seeders of ``app`` (one per entity with a seed count)."""
+    """Karni's seeders of ``app`` (one per entity with a seed count)."""
     return f"{app}/karni/seeds.py"
 
 
 def test_file(app: str, entity: str) -> str:
-    """Experimental. Karni's API test of one entity."""
+    """Karni's API test of one entity."""
     return f"{app}/tests/karni/test_{snake(entity)}.py"
 
 
 def page_names(entity: str) -> dict[str, str]:
-    """Experimental. kind -> page name of an entity's pages (``karni make model -a``'s names)."""
+    """kind -> page name of an entity's pages (``karni make model -a``'s names)."""
     return {
         "list": default_route(entity),
         "detail": f"{kebab(entity)}-detail",
@@ -79,5 +79,5 @@ def page_names(entity: str) -> dict[str, str]:
 
 
 def page_file(name: str) -> str:
-    """Experimental. A page Karni writes."""
+    """A page Karni writes."""
     return f"frontend/src/pages/karni/{name}.tsx"

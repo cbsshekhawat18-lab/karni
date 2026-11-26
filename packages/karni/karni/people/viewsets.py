@@ -1,4 +1,4 @@
-"""Experimental. The people API: ``/api/people/``, ``/api/organisations/`` and their rows.
+"""The people API: ``/api/people/``, ``/api/organisations/`` and their rows.
 
 Every endpoint answers the roles granted on it (``Granted()``): an admin with
 ``"*"`` sees everyone, a ``crm-rep`` granted ``people.person:view`` sees
@@ -76,7 +76,7 @@ ORDERABLE: tuple[str, ...] = (
 
 
 class MergeInputSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. The body of a merge: the record merged into this one."""
+    """The body of a merge: the record merged into this one."""
 
     drop = serializers.UUIDField(help_text="The id of the record merged into this one.")
 
@@ -94,7 +94,7 @@ class RefusalSerializer(serializers.Serializer):  # type: ignore[type-arg]
 
 
 class MergePlanSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. What a merge moves, fills and refuses (``people.merge_plan``)."""
+    """What a merge moves, fills and refuses (``people.merge_plan``)."""
 
     keep = serializers.CharField()
     drop = serializers.CharField()
@@ -105,14 +105,14 @@ class MergePlanSerializer(serializers.Serializer):  # type: ignore[type-arg]
 
 
 class PersonCanSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. What the caller may do with one person beyond reading and changing it."""
+    """What the caller may do with one person beyond reading and changing it."""
 
     merge = serializers.BooleanField(help_text="The caller holds people.person:merge.")
     erase = serializers.BooleanField(help_text="The caller holds people.person:erase.")
 
 
 class FactSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. One registered person fact."""
+    """One registered person fact."""
 
     name = serializers.CharField()
     label = serializers.CharField()
@@ -122,14 +122,14 @@ class FactSerializer(serializers.Serializer):  # type: ignore[type-arg]
 
 
 class DuplicateGroupSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. People one duplicate rule groups together, oldest first."""
+    """People one duplicate rule groups together, oldest first."""
 
     rule = serializers.CharField()
     people = serializers.ListField(child=serializers.CharField())
 
 
 class PersonSelfSerializer(serializers.ModelSerializer):  # type: ignore[type-arg]
-    """Experimental. What a person reads and changes of their own row (``/api/people/me/``)."""
+    """What a person reads and changes of their own row (``/api/people/me/``)."""
 
     class Meta:
         model = Person
@@ -225,7 +225,7 @@ _BULK = (
 
 
 class PersonViewSet(_MergeActions, BaseViewSet):
-    """Experimental. ``/api/people/``: the people, with facts, merge, duplicates and erase."""
+    """``/api/people/``: the people, with facts, merge, duplicates and erase."""
 
     model = Person
     route = "people"
@@ -409,7 +409,7 @@ class PersonViewSet(_MergeActions, BaseViewSet):
 
 
 class OrganisationViewSet(_MergeActions, BaseViewSet):
-    """Experimental. ``/api/organisations/``: the organisations, with merge."""
+    """``/api/organisations/``: the organisations, with merge."""
 
     model = Organisation
     route = "organisations"
@@ -440,7 +440,7 @@ class OrganisationViewSet(_MergeActions, BaseViewSet):
 
 
 class MembershipViewSet(BaseViewSet):
-    """Experimental. ``/api/people-memberships/``: who belongs to which organisation."""
+    """``/api/people-memberships/``: who belongs to which organisation."""
 
     model = Membership
     route = "people-memberships"
@@ -450,7 +450,7 @@ class MembershipViewSet(BaseViewSet):
 
 
 class AddressViewSet(BaseViewSet):
-    """Experimental. ``/api/people-addresses/``: addresses of people and organisations."""
+    """``/api/people-addresses/``: addresses of people and organisations."""
 
     model = Address
     route = "people-addresses"

@@ -1,4 +1,4 @@
-"""``karni spec`` (experimental): the app spec, ``karni.yaml``.
+"""``karni spec``: the app spec, ``karni.yaml``.
 
     karni spec validate                  check ./karni.yaml (or the project's)
     karni spec validate --spec other.yaml --json
@@ -22,7 +22,7 @@ from karni_cli.project import CliError
 
 spec_app = typer.Typer(
     help=(
-        "The app spec, karni.yaml (experimental): check it (validate), write it from an "
+        "The app spec, karni.yaml: check it (validate), write it from an "
         "existing project (export), or answer a question of karni plan --questions (answer)."
     ),
     no_args_is_help=True,
@@ -49,7 +49,7 @@ def validate(
         False, "--json", help="Print {file, valid, issues: [{code, line, path, message, fix}]}."
     ),
 ) -> None:
-    """Experimental. Check a karni.yaml: every problem with its code, line and fix.
+    """Check a karni.yaml: every problem with its code, line and fix.
 
     It checks the YAML, every key and value (unknown keys are errors, keys that
     start with x- are kept and ignored), each field through karni make model's
@@ -100,7 +100,7 @@ def export(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Experimental. Write the spec of this project from its code (manage.py karni_facts).
+    """Write the spec of this project from its code (manage.py karni_facts).
 
     The models become entities (each field in the field syntax when its type
     makes the same column), the viewsets their access and search, KARNI_ROLES
@@ -150,7 +150,7 @@ def answer(
         show_default=False,
     ),
 ) -> None:
-    """Experimental. Write the answer to a question of karni plan --questions into karni.yaml.
+    """Write the answer to a question of karni plan --questions into karni.yaml.
 
     The answer goes to the key the question names, and every other line of the
     file stays as it was: comments, order and layout. The question is then
