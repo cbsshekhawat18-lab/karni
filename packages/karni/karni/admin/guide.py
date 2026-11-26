@@ -62,9 +62,15 @@ def _admin_for(site: Any, model: type[Any]) -> Any:
 
 
 def _sections(site: Any, request: HttpRequest) -> list[dict[str, Any]]:
-    """Each app section of the index with its models and what they are for."""
+    """Each section of the index with its models and what they are for.
+
+    The sections are the home page's: ``KARNI_ADMIN_MENU``'s groups when the
+    menu is in use (:func:`karni.admin.menu.grouped_app_list`), else the apps.
+    """
+    from karni.admin.menu import grouped_app_list
+
     sections: list[dict[str, Any]] = []
-    for app in site.get_app_list(request):
+    for app in grouped_app_list(request, site.get_app_list(request)):
         entries = []
         for entry in app.get("models", ()):
             model = entry.get("model")

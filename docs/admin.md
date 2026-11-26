@@ -23,16 +23,17 @@ permissions allow them. The sections below describe what each screen holds.
 
 ### The home page and the guide
 
-The home page lists the sections and models the user may open. Above the list
-sits a **Getting started** panel with three parts: the first steps (add your
-first record, invite a user, set roles, each with a link when the user may do
-it), a list of what each section is for (the one-line help of its models,
-below), and links to these docs. The panel has a **Dismiss** button. It stays
-dismissed for that user only, and the user menu (the name at the bottom of the
-sidebar) has **Show the getting started guide** to bring it back. The
-dismissal is one row in the `karni_admin_guidedismissal` table, so run
-`migrate` after upgrading. `KARNI_ADMIN_GUIDE = False` removes the panel and
-the menu entry.
+The home page lists the sections and models the user may open, in the side
+menu's groups when `KARNI_ADMIN_MENU` is set ([the side
+menu](#the-side-menu)). Above the list sits a **Getting started** panel with
+three parts: the first steps (add your first record, invite a user, set roles,
+each with a link when the user may do it), a list of what each section is for
+(the one-line help of its models, below), and links to these docs. The panel
+has a **Dismiss** button. It stays dismissed for that user only, and the user
+menu (the name at the bottom of the sidebar) has **Show the getting started
+guide** to bring it back. The dismissal is one row in the
+`karni_admin_guidedismissal` table, so run `migrate` after upgrading.
+`KARNI_ADMIN_GUIDE = False` removes the panel and the menu entry.
 
 *Add your first record* links the first model of the project's own apps that
 the user may add to, in the order of the home page. An app is the project's
@@ -403,14 +404,18 @@ KARNI_ADMIN_MENU = [
   Django permission. A group with none is left out.
 - What the menu does not name is hidden, except from superusers, who keep the
   full list: the rest comes last, in a collapsed group *Other*, by app.
+- The home page and the guide's *What each section is for* follow the menu:
+  the same groups, in the same order, with the same entries the side menu
+  shows that user. A superuser's *Other* there lists each entry as
+  *App › Model*.
 - A label that names no installed app or model is the warning
   [`karni.W301`](errors.md#w301), and a group of the wrong shape stops
   startup with a message that says what is missing.
 
 The menu decides what is listed, and the grants decide what a user may open.
-An entry the menu leaves out still opens from the home page or its address
-for a user who may open it, and an entry the menu names stays hidden from a
-user who may not.
+Hiding an entry changes no permission: an entry the menu leaves out still
+opens from its address (a bookmark, a link) for a user who may open it, as
+before, and an entry the menu names stays hidden from a user who may not.
 
 A site project starts with karni-site's menu. Its settings say
 `KARNI_ADMIN_MENU = KARNI_SITE_ADMIN_MENU`: the project's apps (*Content*),
@@ -418,11 +423,14 @@ karni-site's pages (*Site*), then users and roles (*People*). Task results,
 schedules, tokens and sign-in codes are not in it, so only superusers see
 them. A site project made before 0.7.1 adds that line to get it.
 
-`KARNI_ADMIN_MENU = None`, the default, keeps the list of every app. The menu
-is unfold's `UNFOLD["SIDEBAR"]`, which `karni_settings()` sets to
+`KARNI_ADMIN_MENU = None`, the default, keeps the list of every app, in the
+side menu and on the home page. The menu is unfold's `UNFOLD["SIDEBAR"]`,
+which `karni_settings()` sets to
 `{"navigation": "karni.admin.menu.sidebar_navigation", ...}` (a function that
-builds the groups for each request). A `SIDEBAR` of your own replaces it, and
+builds the groups for each request). A `SIDEBAR` of your own replaces it, the
+home page then keeps its list of every app, and
 [`karni.W302`](errors.md#w302) warns while `KARNI_ADMIN_MENU` is set as well.
+An `app_list` passed in the index's `extra_context` wins over the groups.
 
 ## Row scope
 

@@ -195,6 +195,17 @@ apply codemods and list the manual steps. This file is the human summary.
   a link. The help now shows the tag names as text. `BlockForm.text_help()` returns it,
   for a form of your own to say something else.
 
+- **Changed: with `KARNI_ADMIN_MENU`, the admin's home page and the guide show the side
+  menu's groups.** The side menu hid the technical tables from a client, but the home page
+  below it and the guide's *What each section is for* still listed every app the user
+  may open. Both now show the same groups, in the same order, with the same entries as
+  the side menu shows that user, and a superuser keeps everything, the rest under
+  *Other*. One function builds the groups for all three
+  (`karni.admin.menu.grouped_app_list`). Hiding an entry changes no permission: its pages
+  open from their addresses as before. Without `KARNI_ADMIN_MENU`, or with an
+  `UNFOLD["SIDEBAR"]` of the project's own, the home page is unchanged. See
+  [the side menu](docs/admin.md#the-side-menu).
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web

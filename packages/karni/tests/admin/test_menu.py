@@ -20,7 +20,13 @@ from django.test import Client, RequestFactory, override_settings
 
 from karni.accounts.permissions import assign_role
 from karni.accounts.roles import sync_roles
-from karni.admin.menu import NAVIGATION, PROJECT, menu_problems, sidebar_navigation
+from karni.admin.menu import (
+    NAVIGATION,
+    PROJECT,
+    grouped_app_list,
+    menu_problems,
+    sidebar_navigation,
+)
 from karni.checks import check_admin_menu
 from karni.conf import karni_settings
 from karni.conf.validation import validate_settings
@@ -35,6 +41,14 @@ ROLES = {
             "adminapp.widget:*": "all",
             "adminapp.gizmo:view": "all",
             "karni_navigation.navitem:*": "all",
+        }
+    },
+    # A client's staff account: the content, the users, and a table the menu does not name.
+    "office": {
+        "grants": {
+            "adminapp.widget:*": "all",
+            "karni_accounts.user:view": "all",
+            "adminapp.category:view": "all",
         }
     },
 }
@@ -187,6 +201,106 @@ def test_the_page_shows_the_menu() -> None:
     assert ">Other" in everything.split('id="nav-sidebar-apps"', 1)[1].replace("\n", "").replace(
         " ", ""
     )
+
+
+# -- the home page and the guide show the side menu's groups ------------------------------
+
+
+def home(user: Any, menu: Any = MENU) -> dict[str, Any]:
+    """The home page as ``user`` sees it: its sections, the guide's, and the side menu's."""
+    client = Client()
+    client.force_login(user)
+    with override_settings(KARNI_ADMIN_MENU=menu):
+        response = client.get("/admin/")
+        side = navigation(user, menu)
+    assert response.status_code == 200
+    return {
+        "page": [
+            (str(app["name"]), [str(row["name"]) for row in app["models"]])
+            for app in response.context["app_list"]
+        ],
+        "guide": [
+            (str(section["name"]), [str(row["name"]) for row in section["models"]])
+            for section in response.context["karni_guide"]["sections"]
+        ],
+        "side": side,
+        "html": response.content.decode(),
+    }
+
+
+def _side_sections(side: list[dict[str, Any]]) -> list[tuple[str, list[str]]]:
+    """The side menu's groups with their entries, *Other* flattened to "App › Model"."""
+    found = []
+    for group in side:
+        if group.get("collapsible"):
+            rows = [
+                f"{app['title']} › {model['title']}"
+                for app in group["items"]
+                for model in app["items"]
+            ]
+        else:
+            rows = [str(item["title"]) for item in group["items"]]
+        found.append((str(group["title"]), rows))
+    return found
+
+
+def test_an_editor_sees_the_side_menus_groups_on_the_home_page_and_in_the_guide() -> None:
+    seen = home(_user("content@example.com", roles=("content",)))
+    expected = [("Things", ["Gizmos", "Widgets"]), ("Menus", ["Navigation items"])]
+    assert _side_sections(seen["side"]) == expected
+    assert seen["page"] == expected  # the same groups, order and entries
+    assert seen["guide"] == expected
+
+
+def test_a_staff_account_no_longer_sees_tables_the_menu_hides_but_may_still_open_them() -> None:
+    user = _user("office@example.com", roles=("office",))
+    seen = home(user)
+    expected = [("Things", ["Widgets"]), ("People", ["Users"])]
+    assert _side_sections(seen["side"]) == expected
+    assert seen["page"] == expected and seen["guide"] == expected
+    assert "/admin/adminapp/category/" not in seen["html"]
+    client = Client()
+    client.force_login(user)
+    with override_settings(KARNI_ADMIN_MENU=MENU):
+        assert client.get("/admin/adminapp/category/").status_code == 200  # hidden, not refused
+    without = home(user, menu=None)  # no menu: the home page lists every app, as before
+    assert ("Karni admin test app", ["Categories", "Widgets"]) in without["page"]
+
+
+def test_a_superuser_sees_every_entry_once_with_the_rest_under_other(
+    site: admin.AdminSite,
+) -> None:
+    root = _user("root@example.com", superuser=True)
+    seen = home(root)
+    assert [name for name, _rows in seen["page"]] == [
+        "Things",
+        "Menus",
+        "People",
+        "Schedules",
+        "Other",
+    ]
+    assert seen["page"] == _side_sections(seen["side"]) == seen["guide"]
+    other = dict(seen["page"])["Other"]
+    assert "Authentication and Authorization › Groups" in other
+    rows = [row.split(" › ")[-1] for _name, rows in seen["page"] for row in rows]
+    assert sorted(rows) == sorted(index_titles(site, root))  # every model once
+
+
+def test_the_home_page_keeps_every_app_without_the_menu_or_with_a_sidebar_of_its_own(
+    settings: Any,
+) -> None:
+    root = _user("root@example.com", superuser=True)
+    request = RequestFactory().get("/admin/")
+    request.user = root
+    apps = [{"name": "Shop", "app_label": "shop", "models": []}]
+    with override_settings(KARNI_ADMIN_MENU=None):
+        assert grouped_app_list(request, apps) is apps
+    own = {"navigation": [{"title": "Mine", "items": [{"title": "Home", "link": "/admin/"}]}]}
+    settings.UNFOLD = {**settings.UNFOLD, "SIDEBAR": own}
+    with override_settings(KARNI_ADMIN_MENU=MENU):
+        assert grouped_app_list(request, apps) is apps
+    page = home(root)["page"]
+    assert "Things" not in [name for name, _rows in page]  # the project's own menu wins
 
 
 # -- the setting's shape, the checks and the escape hatch ----------------------------------

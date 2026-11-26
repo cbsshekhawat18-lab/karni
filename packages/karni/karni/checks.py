@@ -804,11 +804,9 @@ def check_admin_menu(app_configs: Any = None, **kwargs: Any) -> list[checks.Chec
     otherwise hides. An ``UNFOLD["SIDEBAR"]`` of the project's own replaces the
     menu Karni builds, so the setting would change nothing.
     """
-    from collections.abc import Mapping
-
     from django.conf import settings
 
-    from karni.admin.menu import NAVIGATION, sidebar_navigation, unknown_labels
+    from karni.admin.menu import karni_sidebar, unknown_labels
 
     declared = getattr(settings, "KARNI_ADMIN_MENU", None)
     if not declared:
@@ -822,10 +820,7 @@ def check_admin_menu(app_configs: Any = None, **kwargs: Any) -> list[checks.Chec
         )
         for label in unknown_labels(declared)
     ]
-    unfold = getattr(settings, "UNFOLD", None)
-    sidebar = unfold.get("SIDEBAR") if isinstance(unfold, Mapping) else None
-    navigation = sidebar.get("navigation") if isinstance(sidebar, Mapping) else None
-    if navigation not in (NAVIGATION, sidebar_navigation):
+    if not karni_sidebar():
         messages.append(
             check_warning(
                 "W302",

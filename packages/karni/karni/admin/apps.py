@@ -58,6 +58,9 @@ class KarniAdminConfig(AppConfig):
         from karni.admin.guide import install as install_guide
 
         install_guide(admin_site())  # the Getting started panel (karni.admin.guide)
+        from karni.admin.menu import install as install_menu
+
+        install_menu(admin_site())  # the home page in KARNI_ADMIN_MENU's groups
         if not getattr(settings, "KARNI_ADMIN_AUTODISCOVER", True):
             return
 
