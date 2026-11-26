@@ -236,6 +236,11 @@ line = 'stable or experimental|\(stable\|experimental\)'
 reason = "the manifest's status values"
 
 [[allow]]
+path = "*"
+line = 'check_experimental|experimental\.toml'
+reason = "a reference to this check or its list, not a mark"
+
+[[allow]]
 path = "docs/modules.md"
 line = '`stable` or `experimental`'
 reason = "the manifest's status values"

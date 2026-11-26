@@ -568,6 +568,10 @@ jobs:
       # outside the exceptions it lists with their reasons.
       - name: No AI tool names outside the exceptions
         run: python scripts/check_tool_names.py
+      # docs/stability.md#where-the-mark-is-shown: one note per feature section, its
+      # line in the list and its entry points, nowhere else.
+      - name: The mark only where the stability rule puts it
+        run: python scripts/check_experimental.py
       # scripts/docs_seo.py: every page has its own title and description,
       # JSON-LD on the homepage and FAQ, llms-full.txt; warnings fail --strict.
       - name: "Build (strict: a broken link, a missing page or a missing description fails)"
