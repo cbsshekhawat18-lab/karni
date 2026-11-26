@@ -771,6 +771,7 @@ environment.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
+| `KARNI_SITE_ADMIN_MENU` | *Content* (`"@project"`), *Site* (`"karni_site"`), *People* (users, roles) | The admin's side menu a site project starts with: its settings say `KARNI_ADMIN_MENU = KARNI_SITE_ADMIN_MENU`. Technical apps (task results, schedules, tokens) show to superusers only. See Karni's [side menu](https://cbsshekhawat18-lab.github.io/karni/admin/#the-side-menu). |
 | `KARNI_SITE_IS_ACTIVE` | `"karni_site.navigation.is_active"` | The `(request, pattern) -> bool` function `{% ifactive %}` and menu items ask for each pattern. |
 | `KARNI_SITE_NOT_FOUND_TEMPLATES` | `["404.html", "karni_site/404.html"]` | The templates `page_not_found` tries, in order. |
 | `KARNI_SITE_SERVER_ERROR_TEMPLATES` | `["500.html", "karni_site/500.html"]` | The templates `server_error` tries, in order. |
@@ -874,6 +875,8 @@ fails while `manage.py karni_site_seed` renders it stops that command with
   and `karni_site.menus.sync_menu()` follows one when you choose.
 - `KARNI_SITE_EDITOR_ROLE`, a role of that slug in `KARNI_ROLES`, or the
   permission matrix: the editor's grants.
+- `KARNI_ADMIN_MENU`: groups of your own in the admin's side menu, or `None`
+  for the list of every app, instead of `KARNI_SITE_ADMIN_MENU`.
 - Unregister any of this module's admins and register your own subclass.
   Every Karni admin page opens for a grant, so your own models' pages do
   too (`KARNI_ADMIN_GRANTS_OPEN_PAGES`, [admin](https://cbsshekhawat18-lab.github.io/karni/admin/#who-may-open-a-page)).

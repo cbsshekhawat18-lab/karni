@@ -48,6 +48,7 @@ SEO_SETTINGS = {
 def test_settings_fragment_is_import_light_and_read_through_get() -> None:
     assert SEO_SETTINGS <= set(conf.DEFAULTS)
     assert set(conf.DEFAULTS) - SEO_SETTINGS == {
+        "KARNI_SITE_ADMIN_MENU",
         "KARNI_SITE_IS_ACTIVE",
         "KARNI_SITE_SERVER_ERROR_TEMPLATES",
         "KARNI_SITE_NOT_FOUND_TEMPLATES",

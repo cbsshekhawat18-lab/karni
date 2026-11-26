@@ -26,6 +26,19 @@ from django.conf import settings
 env = environ.Env()
 
 DEFAULTS: dict[str, Any] = {
+    # The admin's side menu a site project starts with (its settings say
+    # KARNI_ADMIN_MENU = KARNI_SITE_ADMIN_MENU): the project's own apps, then this
+    # module's pages, then the people. The rest (task results, schedules, tokens)
+    # shows to superusers only, in a last group. See Karni's docs/admin.md.
+    "KARNI_SITE_ADMIN_MENU": [
+        {"title": "Content", "icon": "article", "items": ["@project"]},
+        {"title": "Site", "icon": "web", "items": ["karni_site"]},
+        {
+            "title": "People",
+            "icon": "group",
+            "items": ["karni_accounts.User", "karni_accounts.Role"],
+        },
+    ],
     # The function {% ifactive %} asks whether a pattern names the current page:
     # (request, pattern) -> bool. A dotted path, so a project can swap the rule.
     "KARNI_SITE_IS_ACTIVE": "karni_site.navigation.is_active",

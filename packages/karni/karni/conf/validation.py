@@ -143,6 +143,7 @@ class KarniSettingsModel(BaseModel):
     KARNI_NOTIFY_UNSUBSCRIBE_PATH: str = "/api/notify/unsubscribe/?token={token}"
     KARNI_NOTIFY_MOVE_CHANNELS: list[_Channel] = Field(default_factory=_both_channels)
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)
+    KARNI_ADMIN_MENU: Any = None
     KARNI_ADMIN_GRANTS_OPEN_PAGES: bool = True
     KARNI_MATRIX_EXCLUDE: list[Any] = Field(default_factory=list)
     KARNI_IMPORT_INLINE_ROWS: int = Field(default=500, ge=0)
@@ -739,6 +740,10 @@ class KarniSettingsModel(BaseModel):
                     f"KARNI_MATRIX_EXCLUDE entry {entry!r} must be a string "
                     "(an app_label or 'app_label.ModelName')"
                 )
+        # The side menu's shape (karni.admin.menu); its labels are a system check (W301).
+        from karni.admin.menu import menu_problems
+
+        errors.extend(menu_problems(self.KARNI_ADMIN_MENU))
         # Read per request by the admin, so a bad value set after the call is caught here.
         from karni.conf.admin_logo import logo_paths
 

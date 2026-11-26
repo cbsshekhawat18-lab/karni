@@ -796,6 +796,47 @@ def check_admin_scope(app_configs: Any = None, **kwargs: Any) -> list[checks.Che
     return messages
 
 
+@checks.register(checks.Tags.admin)
+def check_admin_menu(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.W301 / W302: ``KARNI_ADMIN_MENU`` names what is not installed, or is not used.
+
+    A label that matches no installed app or model shows nothing, which a typo
+    otherwise hides. An ``UNFOLD["SIDEBAR"]`` of the project's own replaces the
+    menu Karni builds, so the setting would change nothing.
+    """
+    from collections.abc import Mapping
+
+    from django.conf import settings
+
+    from karni.admin.menu import NAVIGATION, sidebar_navigation, unknown_labels
+
+    declared = getattr(settings, "KARNI_ADMIN_MENU", None)
+    if not declared:
+        return []
+    messages: list[checks.CheckMessage] = [
+        check_warning(
+            "W301",
+            f"KARNI_ADMIN_MENU names {label!r}, which is no installed app label or model "
+            "label ('app_label.ModelName'), so the admin's side menu shows nothing for it.",
+            hint=_fix("W301"),
+        )
+        for label in unknown_labels(declared)
+    ]
+    unfold = getattr(settings, "UNFOLD", None)
+    sidebar = unfold.get("SIDEBAR") if isinstance(unfold, Mapping) else None
+    navigation = sidebar.get("navigation") if isinstance(sidebar, Mapping) else None
+    if navigation not in (NAVIGATION, sidebar_navigation):
+        messages.append(
+            check_warning(
+                "W302",
+                "KARNI_ADMIN_MENU is set, but UNFOLD['SIDEBAR'] has a navigation of the "
+                "project's own, which replaces the menu Karni builds from it.",
+                hint=_fix("W302"),
+            )
+        )
+    return messages
+
+
 @checks.register(checks.Tags.caches)
 def check_throttle_cache(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
     """karni.W501: with DEBUG off, throttle counters must live in a cache every worker shares.

@@ -112,6 +112,8 @@ def test_a_site(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         'env.bool(  # noqa: F821\n    "KARNI_ACCOUNTS_REGISTRATION", default=False\n)' in settings
     )
     assert 'KARNI_ROLES = {"staff": KARNI_ROLES["staff"]}  # noqa: F821' in settings
+    # The admin's side menu: the project's apps, karni-site's pages, then people.
+    assert "\nKARNI_ADMIN_MENU = KARNI_SITE_ADMIN_MENU  # noqa: F821\n" in settings
     assert 'path("", include("website.urls"))' in (project / "config" / "urls.py").read_text()
     assert "karni-site" in (project / "pyproject.toml").read_text()
     # The staff app is there for staff (the requests a form collects), and the stack serves it.

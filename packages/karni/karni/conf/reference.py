@@ -169,6 +169,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_ADMIN_LIST_FILTER_MAX": "Sidebar filters a derived admin shows at most.",
     "KARNI_ADMIN_SEARCH_MAX": "Fields a derived admin searches at most.",
     "KARNI_ADMIN_SITE": "Dotted path of the admin site models are registered on.",
+    "KARNI_ADMIN_MENU": 'The admin\'s side menu in groups: `[{"title": ..., "icon": ..., "items": [...]}]`, each item an app label, a model label (`app_label.ModelName`) or `"@project"` (the project\'s own apps). Each user sees the entries they may open, and superusers the rest in a last group. `None` keeps unfold\'s list of every app. A site project starts with karni-site\'s `KARNI_SITE_ADMIN_MENU`. See [admin](admin.md#the-side-menu).',
     "KARNI_ADMIN_LOGO": 'Logo for the admin header and login: `karni` for Karni\'s mark, or `{"light": <static path>, "dark": ..., "icon": ...}`. Its icon is the admin\'s favicon. Leaving it unset keeps the text header and a neutral favicon. See [admin](admin.md#theming).',
     "KARNI_THEME_CSS": 'The project\'s `karni-theme.css` (relative to the project root, or absolute), the file `karni ui detect` writes for the staff app. The admin loads it too, so one file holds the brand. `""` turns it off. See [theming](theming.md#one-theme-for-the-staff-app-and-the-admin).',
     "KARNI_ADMIN_BASE": "Dotted path of the `ModelAdmin` every derived admin is built on.",

@@ -132,6 +132,21 @@ apply codemods and list the manual steps. This file is the human summary.
   and page titles still hold one text each, the same in every language, and neither the
   pages nor the sitemap carry hreflang alternates.
 
+- **Added: `KARNI_ADMIN_MENU`, the admin's side menu in groups.** Each group has a title,
+  an optional icon and items: app labels, model labels or `"@project"` (the project's own
+  apps), in the order written. Each user sees the entries they may open, role grants
+  included, and no empty group. What the menu does not name is hidden, except from
+  superusers, who find it in a last group, *Other*. A label that names nothing is the
+  warning `karni.W301`, and a project's own `UNFOLD["SIDEBAR"]` still wins (`karni.W302`
+  says so while the setting is set). `None`, the default, keeps the list of every app. See
+  [the side menu](docs/admin.md#the-side-menu).
+
+- **Added: karni-site's `KARNI_SITE_ADMIN_MENU`, and a new site project uses it.** The
+  project's apps (*Content*), the site's pages (*Site*), then users and roles (*People*), so
+  a client no longer sees task results, schedules or tokens beside the content: those show
+  to superusers only. `karni new --kind site` writes `KARNI_ADMIN_MENU =
+  KARNI_SITE_ADMIN_MENU` in the settings, and an existing site project adds that line.
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web

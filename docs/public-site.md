@@ -459,6 +459,11 @@ The module also gives a site:
   ([everything the client edits](#everything-the-client-edits)).
 - the redirect middleware, which answers the admin's redirects where the
   site has no page.
+- the admin's side menu, `KARNI_SITE_ADMIN_MENU`: the project's apps, the
+  site's pages, then users and roles, with the technical apps for
+  superusers only. A site project's settings say `KARNI_ADMIN_MENU =
+  KARNI_SITE_ADMIN_MENU`, and a project made before 0.7.1 adds that line
+  ([the side menu](admin.md#the-side-menu)).
 - `karni_site.views.page_not_found` and `server_error`, which `karni make
   site` sets as `handler404` and `handler500`: they render the site's own
   `404.html` and `500.html` with the request, so the layout's links, menu

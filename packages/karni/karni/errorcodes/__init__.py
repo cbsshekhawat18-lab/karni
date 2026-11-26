@@ -14,7 +14,7 @@ Code ranges
 -----------
 ``E0xx``/``W0xx`` models, managers, scopes · ``E1xx``/``W1xx`` API (access,
 viewsets, serializers, pagination, budgets, caching, expand) · ``E2xx``
-accounts · ``E3xx`` admin · ``E4xx`` events, listeners, schedules, Celery ·
+accounts · ``E3xx``/``W30x`` admin · ``E4xx`` events, listeners, schedules, Celery ·
 ``E47x``/``E48x``/``W61x`` tooling for large projects (context slices, the
 check cache, volume seeding, scaling budgets, query plans) · ``E5xx``
 settings, optional dependencies, deploy checks and production
@@ -1442,6 +1442,28 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "List classes or dotted paths to classes: class AdminMeta: mixins = "
         "['shop.admin_mixins.TotalsPanel']. Keep the mixins in a module that imports without "
         "errors, and give two mixins no base classes that conflict.",
+    ),
+    # W301-W302 the admin's side menu (KARNI_ADMIN_MENU)
+    _e(
+        "W301",
+        "KARNI_ADMIN_MENU names something that is not installed",
+        "warning",
+        "karni.checks.check_admin_menu",
+        "Each item of a group is an installed app label, a model label or '@project'. A label "
+        "that matches nothing shows nothing, so a typo would silently drop a section from the "
+        "menu.",
+        "Fix the label: an app's label (its AppConfig.label, usually the app's folder name) or "
+        "'app_label.ModelName'. Remove it if the app is gone.",
+    ),
+    _e(
+        "W302",
+        "KARNI_ADMIN_MENU is set, but UNFOLD['SIDEBAR'] replaces it",
+        "warning",
+        "karni.checks.check_admin_menu",
+        "Karni draws the menu through UNFOLD['SIDEBAR']['navigation']. A SIDEBAR of the "
+        "project's own wins, so the setting changes nothing.",
+        "Keep one of the two: delete KARNI_ADMIN_MENU, or drop the project's "
+        "UNFOLD['SIDEBAR'] (or set its 'navigation' to 'karni.admin.menu.sidebar_navigation').",
     ),
     # E31x the module catalog
     _e(

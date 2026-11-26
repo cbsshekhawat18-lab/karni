@@ -13,6 +13,7 @@ models = ["SiteSettings", "OpeningHours", "SocialLink", "Block", "Menu", "MenuIt
 pages = ["admin: the site's text, images, menus, redirects and page titles", "the site's own 404 and 500 pages"]
 
 [provides.settings]
+KARNI_SITE_ADMIN_MENU = "array"
 KARNI_SITE_IS_ACTIVE = "string"
 KARNI_SITE_SERVER_ERROR_TEMPLATES = "array"
 KARNI_SITE_NOT_FOUND_TEMPLATES = "array"

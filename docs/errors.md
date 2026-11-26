@@ -1085,6 +1085,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Point KARNI_ADMIN_BASE at an importable django.contrib.admin.ModelAdmin subclass (default 'unfold.admin.ModelAdmin').
 
+<a id="w301"></a>
+
+#### W301: KARNI_ADMIN_MENU names something that is not installed
+
+*system check (warning)* · from `karni.checks.check_admin_menu`
+
+**Why Karni objects.** Each item of a group is an installed app label, a model label or '@project'. A label that matches nothing shows nothing, so a typo would silently drop a section from the menu.
+
+**Fix.** Fix the label: an app's label (its AppConfig.label, usually the app's folder name) or 'app_label.ModelName'. Remove it if the app is gone.
+
 <a id="e302"></a>
 
 #### E302: AdminMeta.inline_on is invalid
@@ -1094,6 +1104,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** inline_on names the foreign key under whose parent the model is shown inline.
 
 **Fix.** Name a ForeignKey field of the model: class AdminMeta: inline_on = 'event'.
+
+<a id="w302"></a>
+
+#### W302: KARNI_ADMIN_MENU is set, but UNFOLD['SIDEBAR'] replaces it
+
+*system check (warning)* · from `karni.checks.check_admin_menu`
+
+**Why Karni objects.** Karni draws the menu through UNFOLD['SIDEBAR']['navigation']. A SIDEBAR of the project's own wins, so the setting changes nothing.
+
+**Fix.** Keep one of the two: delete KARNI_ADMIN_MENU, or drop the project's UNFOLD['SIDEBAR'] (or set its 'navigation' to 'karni.admin.menu.sidebar_navigation').
 
 <a id="e303"></a>
 

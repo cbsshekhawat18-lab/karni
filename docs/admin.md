@@ -316,7 +316,8 @@ KARNI_ROLES = {
 A person with staff status and the `front_desk` role sees Appointments and
 Patients on the admin index, opens and changes appointments, and reads
 patients. The index, the app pages and the sidebar list exactly the models
-the user may open. Every other page is a 403.
+the user may open ([the side menu](#the-side-menu) may list fewer). Every
+other page is a 403.
 
 - Signing in to the admin still needs `is_staff` (Django's own rule). A
   role alone never opens the admin.
@@ -342,6 +343,54 @@ class LedgerAdmin(KarniModelAdmin):
     def granted(self, request, action):
         return False  # Django's model permissions only, for this page
 ```
+
+## The side menu
+
+Without a setting, the side menu lists every app the user may open,
+alphabetical, as the home page does. `KARNI_ADMIN_MENU` puts it in groups of
+your own, in the order written:
+
+```python
+KARNI_ADMIN_MENU = [
+    {"title": "Catalogue", "icon": "inventory_2", "items": ["shop"]},
+    {"title": "Orders", "icon": "receipt_long", "items": ["sales.Order", "sales.Refund"]},
+    {"title": "People", "icon": "group", "items": ["karni_accounts.User", "karni_accounts.Role"]},
+]
+```
+
+- An item is an app label (every model of the app, in the home page's
+  order), a model label (`app_label.ModelName`, in any case) or `"@project"`:
+  every app whose code lives in the project folder, the rule the guide's
+  first step uses. A model goes to the first group that names it by its own
+  label, else to the first that names its app, else to the first
+  `"@project"`.
+- `icon` is optional, a [Material Symbols](https://fonts.google.com/icons)
+  name shown on each entry of the group.
+- Each user sees the entries they may open, the ones the home page lists for
+  them: a role's grant ([who may open a page](#who-may-open-a-page)) or a
+  Django permission. A group with none is left out.
+- What the menu does not name is hidden, except from superusers, who keep the
+  full list: the rest comes last, in a collapsed group *Other*, by app.
+- A label that names no installed app or model is the warning
+  [`karni.W301`](errors.md#w301), and a group of the wrong shape stops
+  startup with a message that says what is missing.
+
+The menu decides what is listed, and the grants decide what a user may open.
+An entry the menu leaves out still opens from the home page or its address
+for a user who may open it, and an entry the menu names stays hidden from a
+user who may not.
+
+A site project starts with karni-site's menu. Its settings say
+`KARNI_ADMIN_MENU = KARNI_SITE_ADMIN_MENU`: the project's apps (*Content*),
+karni-site's pages (*Site*), then users and roles (*People*). Task results,
+schedules, tokens and sign-in codes are not in it, so only superusers see
+them. A site project made before 0.7.1 adds that line to get it.
+
+`KARNI_ADMIN_MENU = None`, the default, keeps the list of every app. The menu
+is unfold's `UNFOLD["SIDEBAR"]`, which `karni_settings()` sets to
+`{"navigation": "karni.admin.menu.sidebar_navigation", ...}` (a function that
+builds the groups for each request). A `SIDEBAR` of your own replaces it, and
+[`karni.W302`](errors.md#w302) warns while `KARNI_ADMIN_MENU` is set as well.
 
 ## Row scope
 

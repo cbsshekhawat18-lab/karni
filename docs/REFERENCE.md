@@ -2028,6 +2028,7 @@ class Lead(BaseModel):
 | `KARNI_ADMIN_GRANTS_OPEN_PAGES` | `KARNI_ADMIN_GRANTS_OPEN_PAGES` | `True` | A role's grant (`app.model:<action>`) opens that model's admin page for that action, inside the grant's scope. `False` restores the 0.4.0 rule: only Django's model permissions open pages. Signing in to the admin still needs `is_staff`. See [admin](admin.md#who-may-open-a-page). |
 | `KARNI_GENERATOR` | `KARNI_GENERATOR` | `"Karni"` | The `<meta name="generator">` value Karni's public pages carry (`{% karni_seo %}`), so tools that list a site's technologies see Karni. It names no version on purpose. `""` turns it off and keeps a design's own tag. |
 | `KARNI_ADMIN_LOGO` | `KARNI_ADMIN_LOGO` | `env("KARNI_ADMIN_LOGO", default="") or None` | Logo for the admin header and login: `karni` for Karni's mark, or `{"light": <static path>, "dark": ..., "icon": ...}`. Its icon is the admin's favicon. Leaving it unset keeps the text header and a neutral favicon. See [admin](admin.md#theming). |
+| `KARNI_ADMIN_MENU` |  | `None` | The admin's side menu in groups: `[{"title": ..., "icon": ..., "items": [...]}]`, each item an app label, a model label (`app_label.ModelName`) or `"@project"` (the project's own apps). Each user sees the entries they may open, and superusers the rest in a last group. `None` keeps unfold's list of every app. A site project starts with karni-site's `KARNI_SITE_ADMIN_MENU`. See [admin](admin.md#the-side-menu). |
 | `KARNI_THEME_CSS` | `KARNI_THEME_CSS` | `"frontend/src/karni-theme.css"` | The project's `karni-theme.css` (relative to the project root, or absolute), the file `karni ui detect` writes for the staff app. The admin loads it too, so one file holds the brand. `""` turns it off. See [theming](theming.md#one-theme-for-the-staff-app-and-the-admin). |
 | `KARNI_ADMIN_PATH` | `KARNI_ADMIN_PATH` | `"admin/"` | URL path the scaffold mounts the Django admin at (trailing slash). Set it to something unguessable in production. |
 | `KARNI_ADMIN_EXCLUDE` | `KARNI_ADMIN_EXCLUDE` | `[ "sessions", "contenttypes", "admin", "auth.Permission", "django_celery_results.ChordCounter"]` | App labels or `app_label.ModelName` entries the admin leaves out. |
@@ -2249,6 +2250,7 @@ class Lead(BaseModel):
 
 | Setting | Env | Default | What it controls |
 |---|---|---|---|
+| `KARNI_SITE_ADMIN_MENU` |  | `[{"title": "Content", "icon": "article", "items": ["@project"]}, {"title": "Site", "icon": "web", "items": ["karni_site"]}, {"title": "People", "icon": "group", "items": ["karni_accounts.User", "karni_accounts.Role"]}]` | The admin's side menu a site project starts with (its settings say KARNI_ADMIN_MENU = KARNI_SITE_ADMIN_MENU): the project's own apps, then this module's pages, then the people. The rest (task results, schedules, tokens) shows to superusers only, in a last group. See Karni's docs/admin.md. |
 | `KARNI_SITE_IS_ACTIVE` |  | `"karni_site.navigation.is_active"` | The function {% ifactive %} asks whether a pattern names the current page: (request, pattern) -&gt; bool. A dotted path, so a project can swap the rule. |
 | `KARNI_SITE_SERVER_ERROR_TEMPLATES` |  | `["500.html", "karni_site/500.html"]` | The templates karni_site.views.server_error tries in order. The first that renders is the page. The last is this module's plain page, which needs nothing. |
 | `KARNI_SITE_NOT_FOUND_TEMPLATES` |  | `["404.html", "karni_site/404.html"]` | The same for karni_site.views.page_not_found. |
@@ -2739,7 +2741,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E290`](errors.md#e290) | check | Karni.explicit_actions names an action the model does not have |
 | [`E291`](errors.md#e291) | check | Karni.natural_key or import_key is not one field of the model |
 | [`E301`](errors.md#e301) | exception | KARNI_ADMIN_BASE is not a ModelAdmin class |
+| [`W301`](errors.md#w301) | warning | KARNI_ADMIN_MENU names something that is not installed |
 | [`E302`](errors.md#e302) | exception | AdminMeta.inline_on is invalid |
+| [`W302`](errors.md#w302) | warning | KARNI_ADMIN_MENU is set, but UNFOLD['SIDEBAR'] replaces it |
 | [`E303`](errors.md#e303) | exception | KARNI_ADMIN_LOGO is not a logo declaration |
 | [`E304`](errors.md#e304) | exception | karni_makemigrations --renames is not a rename list |
 | [`E305`](errors.md#e305) | exception | An app has more than one latest migration, so the renames have no place |

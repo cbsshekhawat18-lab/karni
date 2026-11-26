@@ -724,6 +724,11 @@ BASE: dict[str, Any] = {
     # Its icon is the favicon of every admin page (a neutral one without a logo).
     # Wired into UNFOLD by karni_settings(); see docs/admin.md#theming.
     "KARNI_ADMIN_LOGO": env("KARNI_ADMIN_LOGO", default="") or None,
+    # The admin's side menu in groups, as written: [{"title": ..., "icon": ..., "items":
+    # [app labels, "app_label.ModelName", or "@project" for the project's own apps]}].
+    # Each user sees what they may open; superusers get the rest in a last group.
+    # None keeps unfold's list of every app (karni.admin.menu).
+    "KARNI_ADMIN_MENU": None,
     # The project's brand tokens, the file `karni ui detect` writes for the
     # staff app; the admin loads it too (karni.admin.theme). "" for none.
     "KARNI_THEME_CSS": env("KARNI_THEME_CSS", default="frontend/src/karni-theme.css"),
