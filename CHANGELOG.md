@@ -9,7 +9,7 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
-## 0.7.0 (2026-11-22)
+## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web
   apps and web games as peers on one base, and a project is an app, a game or both. The
@@ -189,6 +189,15 @@ apply codemods and list the manual steps. This file is the human summary.
   Django + React framework where your coding agent writes only your app or your game"), the
   README's What is Karni, the docs home, the FAQ and llms.txt say that apps and games are two peers
   on one base, and @karni/game's package description names the 0.7.0 layer.
+
+- **Fixed: `SENTRY_DSN` works with sentry-sdk 3.** sentry-sdk 3 removed `send_default_pii`,
+  which Karni passed, so a project that installed the new major failed at start-up with a DSN
+  set. `karni.conf.sentry` now passes what the installed SDK takes: the one switch on
+  sentry-sdk 2, and on sentry-sdk 3 a `data_collection` that keeps out what version 2 kept out
+  (the signed-in user, cookies, prompts and answers of AI calls, the bodies of outgoing
+  requests), although version 3 collects them by default. `karni.conf.sentry.privacy_options`
+  returns those options; to choose your own, call `sentry_sdk.init` yourself with `SENTRY_DSN`
+  unset.
 
 ## 0.6.0 (2026-11-20)
 
