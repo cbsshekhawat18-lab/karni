@@ -141,26 +141,128 @@ without the deprecation cycle above. Every such change is noted in the
 and in the migration notes of that release, so an upgrade never changes one
 silently.
 
-A name is experimental only when it is marked, and the mark is visible
-wherever you meet the name:
-
-- its docstring (Python) or doc comment (TypeScript) starts with
-  `Experimental.`,
-- the docs section that describes it opens with an *Experimental* note,
-- its capability in the [reference](REFERENCE.md#capabilities-and-status)
-  has the status `experimental` and says *Experimental tier*. The status
-  `experimental` alone only means that no reference application uses the
-  capability yet: those names keep the promise.
-
 Some parts never become experimental. An error code keeps its meaning forever
 and is never reused, also for an experimental feature. A change to the
 database schema of an experimental model always comes with a migration.
 
-An experimental name becomes stable in a minor release, once a reference
-application uses it. The CHANGELOG entry of that release says so, and from
-then on the promise above applies in full.
+### When a name becomes stable
+
+A name becomes stable once it is used for real: by a real project built on
+Karni, or by an example, a recipe, the scaffold or a module in this
+repository. Use in a private project counts. It is recorded as "a real
+project (private)", never with the project's name. The release that makes a
+name stable says so in its CHANGELOG entry, and from then on the promise
+above applies in full.
+
+A feature stays experimental while nothing uses it yet, or while a known plan
+will still change it. Each line below says which.
+
+### Where the mark is shown
+
+The mark is shown once per feature, in these places and nowhere else:
+
+- the feature's line in the list below,
+- one *Experimental* note at the top of the docs section that describes the
+  feature (for a package that is experimental as a whole, also at the top of
+  its README),
+- the docstring (Python) or doc comment (TypeScript) of the feature's public
+  entry points: the module or package that is the feature's own, and the main
+  class, function or component a project imports from a shared module such
+  as `karni.models` or `@karni/ui`. That docstring starts with
+  `Experimental.`
+
+The feature's other names (its methods, options, props, types, settings,
+commands, error codes and the rows of generated tables) carry no mark. Each
+of them is documented in the feature's docs section, which opens with the
+note.
+
+In the [reference](REFERENCE.md#capabilities-and-status), the status
+`experimental` means this and nothing else. A capability that keeps the
+promise but that no project or example uses yet has the status `tested`.
+
+`scripts/experimental.toml` lists the experimental features with their docs
+sections and entry points. `python scripts/check_experimental.py` fails when a
+mark is anywhere else, or when a feature in the list has no note in its docs
+section or no line below. CI runs it.
 
 Experimental now:
+
+- [Games](game.md): the karni-game module (its models, services, hooks, the
+  `game.*` family events, `karni_game.merge.Merger`, the signatures, the
+  roles), the `KARNI_GAME_*` settings, [the game API](game-api.md) and its
+  answers, everything in [`@karni/game`](game-client.md) and its subpaths
+  ([sim](game-sim.md), [scenes](game-scenes.md), [ui](game-ui.md),
+  [draw](game-draw.md), [collide](game-collide.md),
+  [assets](game-assets.md), [sfx](game-sound.md)), the
+  [game starters](game-starters.md) (`--genre`, `karni starters`), the
+  [game kinds](apps-and-games.md) `game` and `app+game` of `karni new` and
+  the `karni-game` command. The next milestones extend the game side, and no
+  real project uses it yet.
+- [The built-in recipes](recipes/index.md): `shop`, `booking`, `crm`, `lms`,
+  `marketplace` and `data-portal` (their specs, files and names), `karni new
+  --recipe`, the `recipe` key of `.karni/build.json` (`Record.recipe`), the
+  stub rule (`karni_cli.recipes.apply`, `karni_cli.builder.render.is_stub_file`,
+  `karni_cli.recipes.karni_owned`) and the `recipes` pytest marker of
+  karni-cli's suite. Each recipe is to grow into a full app, so their files
+  and names will change.
+- [The family](family.md): several recipes in one project (`app.recipes`,
+  `app.currency`, `apps.<label>.route`, the `features.people`,
+  `features.events`, `features.timeline` and `features.preferences` keys,
+  the `requires`, `conflicts` and `version` keys of `recipe.toml`, `karni
+  recipes add`, `remove` and `upgrade`, `karni new --recipe a --recipe b`,
+  `.karni/recipes/`, `frontend/src/karni/parts.ts`,
+  `karni_cli.recipes.compose`), its screens in `@karni/ui` (`FamilyHome`,
+  `FamilyLayout`, `AccountPage`, `SignInPage`, `SettingsPage`, the inbox and
+  the person's addresses), [named menus](navigation.md#named-menus-experimental)
+  and [the family rules](family.md#how-the-rules-are-kept) (`part-imports-part`,
+  `part-role-prefix`, `part-route` (K315), `karni.testing.parts` and the `//`
+  form of the `karni: allow(...)` marker). Only Karni's own family builds use
+  it, and it moves with the recipes.
+- [The /new-app flow](agents.md#agents-the-new-app-flow): the `new-app`
+  procedure and rule K311, [recipes](app-spec.md#recipes) (`karni recipes
+  list` and `show`, `--match` and its ranking, the blank start, the
+  `recipe.toml` format and its schema, the `karni.recipes` entry point group,
+  `karni recipes --json` and its schema, `karni_cli.recipes`),
+  [clarifying questions](app-spec.md#questions) (`karni plan --questions`, its
+  `--max`, `--json` and schema, the question ids and rules, `karni spec
+  answer`, `karni_cli.spec.questions` and `karni_cli.spec.edit`) and
+  [the MCP tools](app-spec.md#mcp-tools) `recipes`, `spec_validate`,
+  `questions`, `answer`, `plan`, `build` and `modules` with their results'
+  schema (`karni_cli.agent_tools`). No project was made through it yet.
+- [External tables, views and a second database](models.md#external-tables-views-and-a-second-database):
+  the `class Karni` options `external`, `writable` and `database`, `karni.db`
+  (with `DatabaseRouter`, `karni.db.checks` and `karni.db.introspection`),
+  [read-only models](api.md#read-only-models) (`BaseViewSet.is_read_only`
+  and `read_only_refused_actions`, `KarniModelAdmin.is_read_only`,
+  `assert_crud`'s `read_only`), `karni.testing.create_external_tables`, the
+  pytest option `--karni-external-tables`, `manage.py karni_inspect` and
+  `karni make model --external`. No project or example uses it yet.
+- [Pages behind a capture without a model](public-site.md#pages-behind-a-capture-without-a-model-experimental):
+  `karni_site.sitemaps.pages` and `declared_pages`, and the page test's
+  `*declared_pages()` that `karni make site` writes. No project or example
+  uses it yet.
+- [People](people.md): the `karni.people` app and its models, the functions
+  of `karni.people`, its events, the `KARNI_PEOPLE*` settings, the people
+  endpoints and `fk:people.Person` in `karni.yaml`. It is to be proven by
+  the six recipes first, and one uses it.
+- [`@karni/ai-ui`](ai-extraction.md#react): `ExtractButton`, `ExtractPreview`
+  and `useExtract`. No project or example renders it yet.
+- [`@karni/reports-ui`](reports.md#in-react): `ReportButton` and `useReport`.
+  No project or example renders it yet.
+- [`@karni/storage-ui`](storage.md#the-react-side): everything in it. No
+  project or example renders it yet.
+- [`ResourceBoard`](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/README.md#resourceboard-a-board-by-state-experimental):
+  the component, its props and its slots. No project or example renders it
+  yet.
+- [`ResourceCalendar`](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/README.md#resourcecalendar-day-week-month-and-list-experimental):
+  the component, its views, props and slots. No project or example renders it
+  yet.
+- [`karni remove`](modules.md#taking-a-module-out-karni-remove-x): the
+  command and what it writes. No project or example has taken a module out
+  with it yet.
+
+Stable since 0.7.1. These were experimental and are now used for real, so the
+promise above covers them:
 
 - [Sign-in with an ID token (Google, Microsoft, Apple)](accounts.md#sign-in-with-an-id-token-google-microsoft-apple):
   the `social/<provider>/` endpoint, the `KARNI_SOCIAL_TOKEN_*` settings,
@@ -178,23 +280,14 @@ Experimental now:
   `terms`, `termsRequired` and `acceptTerms` in `@karni/ui`.
 - [Demo mode](demo-mode.md): `karni.demo` (its accounts, write rule, reset,
   middlewares, `manage.py karni_demo_boot`, `GET /api/demo/` and `app_urls()`),
-  the `KARNI_DEMO_*` settings, `karni.E950` to `E954`, and `DemoNotice`,
-  `DemoSignInPrompt`, `useDemo` and `karniKeys.demo` in `@karni/ui`.
+  the `KARNI_DEMO_*` settings, and `DemoNotice`, `DemoSignInPrompt`, `useDemo`
+  and `karniKeys.demo` in `@karni/ui`.
 - [Integer primary keys](models.md#choosing-the-key-type):
   `karni.models.BigIntBaseModel` and `IntegerKeyModel`, the `KARNI_PK`
   setting, `karni make model --pk`, `karni.api.filters.IntegerFilter`, the
   import options `match_ids` and `keep_ids` (with the `ImportJob` fields of
-  the same names), and the `KEYS:` line of `karni context`.
-- The `API:` line of `karni context` (`karni.introspect.api_section`): how a
-  list pages, read from the project's paginator.
-- [External tables, views and a second database](models.md#external-tables-views-and-a-second-database):
-  the `class Karni` options `external`, `writable` and `database`, `karni.db`
-  (with `DatabaseRouter`, `karni.db.checks` and `karni.db.introspection`),
-  `BaseViewSet.is_read_only` and `read_only_refused_actions`,
-  `KarniModelAdmin.is_read_only`, `assert_crud`'s `read_only`,
-  `karni.testing.create_external_tables`, the pytest option
-  `--karni-external-tables`, `manage.py karni_inspect` and `karni make model
-  --external`.
+  the same names), the `KEYS:` line of `karni context` and the `API:` line
+  (`karni.introspect.api_section`).
 - [Per-user grants](accounts.md#per-user-grants): the `KARNI_USER_GRANTS`
   setting, the `UserGrant` model, `karni.accounts.grants`, the `targets` and
   `grant_id` of `karni.accounts.roles.Grant` and the user-grant fields of
@@ -212,12 +305,8 @@ Experimental now:
   types`, and `GlobalSearch`, `useGlobalSearch`, `karniKeys.search` and
   `Layout`'s `search` in `@karni/ui`.
 - [The app spec](app-spec.md): the `karni.yaml` format and its JSON Schema,
-  `karni spec validate`, `karni spec export`, `manage.py karni_facts`,
-  `karni.facts` and the `karni_cli.spec` package.
-- [Clarifying questions](app-spec.md#questions): `karni plan --questions`
-  (its `--max`, its `--json` output and schema, the question ids and the
-  rules that choose them), `karni spec answer`, `karni_cli.spec.questions`
-  and `karni_cli.spec.edit`.
+  `karni spec validate`, `karni spec export`, `karni plan`, `manage.py
+  karni_facts`, `karni.facts` and the `karni_cli.spec` package.
 - [`karni build`](app-spec.md#karni-build): the command, its `--json` output
   and schema, the layout of the files it writes (`<app>/karni/`,
   `<app>/tests/karni/`, `frontend/src/pages/karni/`, the `karni:spec`
@@ -234,93 +323,84 @@ Experimental now:
   `stacked` in `@karni/ui`.
 - [Saved charts](charts.md): the karni-charts module (the `Chart` model and
   its admin, `/api/charts/` and its `data` action, `karni_charts.services`,
-  `KARNI_CHARTS_READ`, the `CHART` codes' wording) and `@karni/charts-ui`
-  (`SavedChart`, `useSavedChart`, `savedChartKey`, `savedChartQuery`).
-- [Page blocks](ui.md#page-blocks-experimental): `DashboardGrid`,
-  `DashboardCard`, `ChartCard`, `DataTable`, `ComparisonTable`, `Accordion`,
-  `MarkdownView` (with `preloadMarkdown`), `useResourceCounts`, their slots,
-  props and types, ResourceDetail's `related` prop and `Related` slot, the
-  `RelatedDef` schema type, the `--karni-dashboard-gap`,
-  `--karni-data-table-max-height` and `--karni-data-table-row-height` tokens,
-  the `x-karni-related` OpenAPI extension and
-  `KarniAutoSchema.get_karni_related`, the spec's `{detail: {related: [...]}}`
-  and dashboard pages other than `home`, `karni make page --kind dashboard`
-  (`--count`) and `--related`, and the `components` key of `karni ui detect
-  --json`.
-- [Field groups and column sets](ui.md#field-groups-and-column-sets-experimental):
-  `karni.fields.MarkdownField` (and its `markdown` type in `karni make
-  model` and the spec), `karni.api.formats` (`FormattedCharField`, a model
-  field's `openapi_format`), the `class Karni` options `field_groups`,
+  `KARNI_CHARTS_READ`) and `@karni/charts-ui` (`SavedChart`,
+  `useSavedChart`, `savedChartKey`, `savedChartQuery`).
+- [Page blocks](ui.md#page-blocks): `DashboardGrid`, `DashboardCard`,
+  `ChartCard`, `DataTable`, `ComparisonTable`, `Accordion`, `MarkdownView`
+  (with `preloadMarkdown`), `useResourceCounts`, their slots, props and
+  types, ResourceDetail's `related` prop and `Related` slot, the `RelatedDef`
+  schema type, the `--karni-dashboard-gap`, `--karni-data-table-max-height`
+  and `--karni-data-table-row-height` tokens, the `x-karni-related` OpenAPI
+  extension and `KarniAutoSchema.get_karni_related`, the spec's `{detail:
+  {related: [...]}}` and dashboard pages other than `home`, `karni make page
+  --kind dashboard` (`--count`) and `--related`, and the `components` key of
+  `karni ui detect --json`.
+- [Field groups and column sets](ui.md#field-groups-and-column-sets):
+  `karni.fields.MarkdownField` (and its `markdown` type in `karni make model`
+  and the spec), `karni.api.formats` (`FormattedCharField`, a model field's
+  `openapi_format`), the `class Karni` options `field_groups`,
   `field_group_layout` and `column_sets`, `karni.layout`, the
   `x-karni-field-groups` and `x-karni-column-sets` OpenAPI extensions with
   `KarniAutoSchema.get_karni_field_groups` and `get_karni_column_sets`,
-  `KarniAdminMixin.derive_fieldsets`, the spec's entity `groups` (now
-  `Karni.field_groups`) and `column_sets`, the `fieldGroups` and
-  `groupLayout` props of ResourceForm and ResourceDetail, ResourceTable's
-  `columnSets`, `columnSet` and `onColumnSetChange`, and the `FieldGroupDef`,
-  `FieldGroupLayout`, `FieldGroupsDef`, `ColumnSetDef` and `ColumnSetsDef`
-  types in `@karni/ui`.
+  `KarniAdminMixin.derive_fieldsets`, the spec's `column_sets`, the
+  `fieldGroups` and `groupLayout` props of ResourceForm and ResourceDetail,
+  ResourceTable's `columnSets`, `columnSet` and `onColumnSetChange`, and the
+  `FieldGroupDef`, `FieldGroupLayout`, `FieldGroupsDef`, `ColumnSetDef` and
+  `ColumnSetsDef` types in `@karni/ui`.
+- [Names, links and rights on resource pages](ui.md#names-links-and-rights-on-resource-pages):
+  `class Karni: label`, how a related row is named and linked, and the
+  `onCreate` and `onEdit` rights of the resource pages.
+- [Catalogues, money and page titles](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/README.md#catalogues-money-and-page-titles):
+  `ResourceGrid`, the money helpers and `usePageMeta` in `@karni/ui`.
 - [AI extraction](ai-extraction.md): the karni-ai module (`karni_ai`, its
   `POST /api/ai/extract/` endpoint and answer, `/api/ai/`, the `AICall`
   model, the `KARNI_AI_*` settings and each provider's key and model
   settings, the `ai.extract` throttle scope, `karni_ai.providers`,
   `karni_ai.extraction`, `karni_ai.schema`, `karni_ai.sources`,
-  `karni_ai.services.fetch`, `karni_ai.usage`) and `@karni/ai-ui`
-  (`ExtractButton`, `ExtractPreview`, `useExtract`).
+  `karni_ai.services.fetch`, `karni_ai.usage`). `@karni/ai-ui` stays
+  experimental.
 - [Family events](family-events.md): `declare`, `publish`, `subscribe`, `once`,
   `Event`, `Declaration`, `Subscriber`, `Registry` and `CONTRACT` in
   `karni.events`, the `karni.outbox` app (its models, admin, tasks, beat
   entries, `karni.outbox.delivery`, `dispatch`, `checks` and `health`), the
-  `KARNI_EVENTS_DISPATCHER`, `KARNI_EVENTS_MAX_ATTEMPTS` and
-  `KARNI_EVENTS_RETENTION_DAYS` settings, the `events:` lines of `karni
-  check`, the outbox rows in `karni trace`, karni-payments' `payments.*`
-  events, and `capture_events`, `deliver_now` and `assert_events_declared`
-  in `karni.testing`.
+  `KARNI_EVENTS_*` settings, the `events:` lines of `karni check`, the outbox
+  rows in `karni trace`, karni-payments' `payments.*` events, and
+  `capture_events`, `deliver_now` and `assert_events_declared` in
+  `karni.testing`.
 - [Timeline](timeline.md): the `karni.timeline` app (its models
   `TimelineEntry` and `TimelineLink`, admin, task and beat entry,
-  `karni.timeline.api`, `access`, `checks`, `services` and `subscribers`),
-  `record`, `prune`, `render`, `parse_option`, `write_from_event`,
-  `live_person`, `connect`, `disconnect`, `installed` and `CONTRACT` in
-  `karni.timeline`, the `timeline=` option of `declare()`,
-  `GET /api/timeline/`, the `KARNI_TIMELINE_*` settings, the timeline titles
-  of the people events and of `payments.payment.succeeded`, and the person
-  karni-payments' events carry.
+  `karni.timeline.api`, `access`, `checks`, `services` and `subscribers`), the
+  functions and `CONTRACT` of `karni.timeline`, the `timeline=` option of
+  `declare()`, `GET /api/timeline/`, the `KARNI_TIMELINE_*` settings, the
+  timeline titles of the people events and of `payments.payment.succeeded`,
+  and the person karni-payments' events carry.
 - [Notifications](notify.md): the `karni.notify` app (its models
   `EmailTemplate`, `Notification`, `Choice` and `Unsubscribe`, admin, task
   and beat entry, `karni.notify.api`, `viewsets`, `editor`, `moves`,
-  `source`, `adopt`, `checks` and `services`), `send`, `Sent`, `Recipient`,
-  `recipients`, `holders`, `on_event`, `choices`, `choose`, `unsubscribe`,
-  `resubscribe`, `unsubscribed`, `unsubscribe_url`, `unread_count`,
-  `mark_read`, `mark_unread`, `prune`, `installed` and `CONTRACT` in
+  `source`, `adopt`, `checks` and `services`), the names and `CONTRACT` of
   `karni.notify`, the `channels=` and `replace=` arguments and `CHANNELS`,
   `deliver` and `is_silenced` of `karni.mail`, `/api/inbox/`,
   `/api/email-templates/`, `/api/notify/unsubscribe/`, `features.notify`,
   and the `KARNI_NOTIFY_*` and `KARNI_MAIL_SOURCE` settings.
-- [The family rules](family.md#how-the-rules-are-kept): the architecture rules
-  `part-imports-part`, `part-role-prefix` and `part-route` (K315),
-  `karni.testing.parts` (`installed_parts`, `references_in`,
-  `check_part_imports`, `check_part_roles`, `check_part_routes`), and the
-  `//` form of the `karni: allow(...)` marker.
+- [Preferences](preferences.md): the `karni.preferences` app and its models,
+  the names and `CONTRACT` of `karni.preferences`, `/api/preferences/`, the
+  admin and the `KARNI_PREFERENCES_*` settings.
+- [Emails at business moments](events.md#emails-at-business-moments):
+  `karni.mail` (`send_templated`, its `kind` and `KARNI_MAIL_DISABLED_KINDS`).
+- [Home tiles per role](api.md#home-tiles-per-role): `karni.tiles` (`Tile`,
+  `register`), `GET /api/dashboard/`, karni.yaml's `dashboard:`, and
+  `DashboardTiles`, `registerTile` and `registerTileKind` in `@karni/ui`.
+- [Rules](rules.md): the `class Karni` options `bounds`, `unique`,
+  `targets`, `frozen`, `delete` and `moves` (`karni.rules`),
+  `Access(delete=..., assign=...)`, the written-row check, `Matching`,
+  [row actions](api.md#row-actions) (`karni.api.actions`) and the karni.yaml
+  keys that write them.
 - [The module catalog](modules.md#the-module-catalog): the `karni.module.toml`
   manifest format and the feature manifests, the `karni.modules` entry point
   group, `karni.catalog` (with `python -m karni.catalog`),
   `karni.testing.assert_module_manifest`, `karni modules list` and `show`,
-  `karni remove`, the `CATALOG:` lines of `karni context`, the `FEATURES:`
-  line of `manage.py karni_context`, and `karni_cli.catalog`.
-- [The /new-app flow](agents.md#agents-the-new-app-flow): the `new-app`
-  procedure and rule K311, [recipes](app-spec.md#recipes) (`karni recipes
-  list` and `show`, `--match` and its ranking, the blank start, the
-  `recipe.toml` format and its schema, the `karni.recipes` entry point group,
-  `karni recipes --json` and its schema, `karni_cli.recipes`), and [the MCP
-  tools](app-spec.md#mcp-tools) `recipes`, `spec_validate`, `questions`,
-  `answer`, `plan`, `build` and `modules` with their results' schema
-  (`karni_cli.agent_tools`).
-- [The built-in recipes](recipes/index.md): `shop`, `booking`, `crm`, `lms`,
-  `marketplace` and `data-portal` (their specs, files and names), `karni new --recipe`,
-  the `recipe` key of `.karni/build.json` (`Record.recipe`), the stub rule
-  (`karni_cli.recipes.apply`, `karni_cli.builder.render.is_stub_file`,
-  `karni_cli.recipes.karni_owned`) and the `recipes` pytest marker of
-  karni-cli's suite.
+  the `CATALOG:` lines of `karni context`, the `FEATURES:` line of `manage.py
+  karni_context`, and `karni_cli.catalog`. `karni remove` stays experimental.
 - [Tree models](models.md#tree-models): `karni.models.TreeModel` and
   `OrderedTreeModel`, `karni.managers.TreeQuerySet` and `TreeManager`,
   `karni.tree`, `karni.api.tree` (the `tree/`, `children/`, `ancestors/` and
@@ -348,10 +428,8 @@ Experimental now:
   `karni_cli.spec.navigation`, and `useNavigation`, `karniKeys.navigation`,
   `navigationEntries`, `activeRoute`, `defaultNavIcons`, `navIcon`,
   `isNavGroup`, `LayoutNavGroup`, the `NavGroup` slot and `Layout`'s
-  `navSource`, `pathname` and `icons` in `@karni/ui`.
-- [Pages behind a capture without a model](public-site.md#pages-behind-a-capture-without-a-model-experimental):
-  `karni_site.sitemaps.pages` and `declared_pages`, and the page test's
-  `*declared_pages()` that `karni make site` writes.
+  `navSource`, `pathname` and `icons` in `@karni/ui`. Named menus stay
+  experimental with the family.
 - [Taxonomies](models.md#taxonomies): `class Karni: taxonomies`,
   `karni.taxonomy`, `karni.api.taxonomy` (the `?<key>=` and
   `?<key>_descendants=` filters, the `facets/` and `tagged/` endpoints),
@@ -360,29 +438,12 @@ Experimental now:
   `karni.tree.walk_sql`, the `taxonomies` fact, the `taxonomies` key of
   `karni.yaml`, and `FacetPanel`, `useResourceFacets` and `ResourceTable`'s
   `facets` in `@karni/ui`.
-
-Stable since 0.4.1:
-
-- [Response caching](api.md#response-caching): `Cache`, `Uncached`,
-  `karni.api.caching` (`invalidate`, `invalidation_batch`, `clear`,
-  `access_scope`, `dependencies`, `normalized_query`, `cache_enabled`,
-  `flush_time`, `FlushTime`, `CACHE_HEADER` and `BYPASS_HEADER`),
-  `BaseViewSet.cache`, `get_cache_scope` and `get_response_cache`, the
-  `KARNI_API_CACHE`, `KARNI_API_CACHE_TTL`, `KARNI_API_CACHE_ALIAS` and
-  `KARNI_API_CACHE_FLUSH` settings, the `X-Cache` response header and the
-  `X-Bypass-Cache` request header, the `karni.E410`, `E411` and `W580`
-  checks, the `karni-flush-api-cache` schedule and its task
-  `karni.tasks.flush_api_cache`, and `karni.admin.cache` (the *API cache*
-  screen). The `X-Karni-Cache` header is deprecated and goes in 1.0, with
-  the transitional setting `KARNI_API_CACHE_LEGACY_HEADER`. The spec's keys
-  for it (`features: api_cache`, an entity's `cache:`) follow the app spec,
-  which is experimental.
 - [Suggestions from code](enforcement.md#suggestions) (the `SUG001` to `SUG007`
   codes and their silencing rules `suggest-*`, `karni suggest` and `--json`
   with `karni-suggestions.schema.json`, `karni.suggestions`, `manage.py
   karni_suggest`, `karni_check --no-suggestions` and `--suggestions-file`,
-  `.karni/local/suggestions.json`, `KARNI_SUGGESTIONS`, and `C780` and `C781`),
-- Tooling for large projects:
+  `.karni/local/suggestions.json`, `KARNI_SUGGESTIONS`, and `C780` and `C781`).
+- [Tooling for large projects](large-projects.md):
   [context slices](agents.md#large-projects-one-area-at-a-time)
   (`karni context --summary`, `--app`, `--model` and `--max-tokens`, the
   same flags of `manage.py karni_context`, `karni.introspect`'s
@@ -406,39 +467,29 @@ Stable since 0.4.1:
   of `--json` and `KARNI_EXPLAIN_SEQ_SCAN_ROWS`), the seed volume of
   `karni plan` (`karni_cli.spec.plan.seed_time_class`, the `seed_bulk_threshold`
   fact) and `scripts/benchmark/large_project.py` with its baseline.
-- [The `karni-reports` module](modules.md#modules-in-this-repository): the
-  whole of `karni_reports` (`Report`, `register`, `get_report`, the
-  renderers, `GeneratedReport`, `karni_reports.services`), the
-  `KARNI_REPORTS_*` settings, the `/api/reports/` endpoints and their
-  throttle scopes, the base print template `karni_reports/base.html` and its
-  blocks, `manage.py karni_pregenerate`, and `useReport` and `ReportButton`
-  in `@karni/reports-ui`. The six-letter code prefix (`REPORT001`) is not
-  experimental: codes keep their meaning.
+- [The `karni-reports` module](reports.md): the whole of `karni_reports`
+  (`Report`, `register`, `get_report`, the renderers, `GeneratedReport`,
+  `karni_reports.services`), the `KARNI_REPORTS_*` settings, the
+  `/api/reports/` endpoints and their throttle scopes, the base print
+  template `karni_reports/base.html` and its blocks, and `manage.py
+  karni_pregenerate`. `@karni/reports-ui` stays experimental.
 - [The `karni-storage` module](storage.md): the whole of `karni_storage`
   (`ProtectedFileField`, `ProtectedImageField`, the presets, the storage, the
   tokens, `Thumbnail`, `karni_storage.thumbnails`), the `KARNI_STORAGE_*`
   settings, the `<resource>/<id>/files/<field>/`, `upload/` and `confirm/`
   endpoints and their answers, `x-karni-storage` in the schema, the
   `application/vnd.karni.upload` reference part, `manage.py
-  karni_thumbnails`, the `file:protected` and `image:protected` field types,
-  and everything in `@karni/storage-ui`.
+  karni_thumbnails` and the `file:protected` and `image:protected` field
+  types. `@karni/storage-ui` stays experimental.
 - [The `karni-commerce` module](commerce.md): the whole of `karni_commerce`
   (the models, the `Sellable` adapter and its registry, `karni_commerce.services`,
   the signals of `karni_commerce.events`, `karni_commerce.fulfilment`, the
   checkout validator, the email kinds), the `KARNI_COMMERCE_*` settings, the
   cart and order endpoints and their answers, and everything in
-  `@karni/commerce-ui`. `karni.mail` (`send_templated`, its `kind` and
-  `KARNI_MAIL_DISABLED_KINDS`) is experimental too.
-- [The `karni-game` module](game.md): the whole of `karni_game` (the models,
-  the services, the hooks of `karni_game.hooks`, the family events `game.*`,
-  `karni_game.merge.Merger`, the signatures, the roles), the `KARNI_GAME_*`
-  settings, [the game API](game-api.md) and its answers, and the `game` kind of
-  `karni new`.
-- [The game client](game-client.md): everything in `@karni/game` (the
-  portal, its adapters and the portal table, the loop, view, input, audio,
-  save and random helpers, the data client and its queue, the Vite preset,
-  the package checks, the `karni-game` command, the engine adapters and the
-  smoke harness).
+  `@karni/commerce-ui`.
+- [karni-payments' signals and test checkout](https://github.com/cbsshekhawat18-lab/karni/blob/main/modules/karni-payments/README.md#signals):
+  the signals of `karni_payments.events`, the test provider's checkout page
+  and `KARNI_PAYMENTS_TEST_CHECKOUT_PAGE`.
 - [API versions](api.md#api-versions): the `KARNI_API_VERSION`,
   `KARNI_API_VERSIONS` and `KARNI_API_UNVERSIONED` settings, `karni.api.versions`
   (with `api_urls`, `ApiVersionHeadersMiddleware` and `VersionedSchemaGenerator`),
@@ -448,8 +499,25 @@ Stable since 0.4.1:
   (`karni.health.probe_urls`, `karni.health.views.readyz`,
   `karni.health.checks.check_broker`), the `KARNI_READYZ_CHECKS`,
   `KARNI_HEALTH_TIMEOUT` and `KARNI_LOG_QUIET_PATHS` settings, and
-  `karni.conf.logging.QuietPaths`. The older `/health/` and `/health/ready/`
-  keep the promise.
+  `karni.conf.logging.QuietPaths`.
+- `karni.placeholder` (drawn, deterministic placeholder images) and
+  `manage.py karni_publish_web`.
+
+Stable since 0.4.1:
+
+- [Response caching](api.md#response-caching): `Cache`, `Uncached`,
+  `karni.api.caching` (`invalidate`, `invalidation_batch`, `clear`,
+  `access_scope`, `dependencies`, `normalized_query`, `cache_enabled`,
+  `flush_time`, `FlushTime`, `CACHE_HEADER` and `BYPASS_HEADER`),
+  `BaseViewSet.cache`, `get_cache_scope` and `get_response_cache`, the
+  `KARNI_API_CACHE`, `KARNI_API_CACHE_TTL`, `KARNI_API_CACHE_ALIAS` and
+  `KARNI_API_CACHE_FLUSH` settings, the `X-Cache` response header and the
+  `X-Bypass-Cache` request header, the `karni.E410`, `E411` and `W580`
+  checks, the `karni-flush-api-cache` schedule and its task
+  `karni.tasks.flush_api_cache`, and `karni.admin.cache` (the *API cache*
+  screen). The `X-Karni-Cache` header is deprecated and goes in 1.0, with
+  the transitional setting `KARNI_API_CACHE_LEGACY_HEADER`. The spec's keys
+  for it (`features: api_cache`, an entity's `cache:`) follow the app spec.
 
 ## Supported platforms
 
