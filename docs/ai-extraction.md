@@ -222,12 +222,13 @@ locked PDF, one past `KARNI_AI_MAX_PDF_PAGES`, one past
 
 ## Usage, costs and budgets
 
-Every provider call is logged as an `AICall`: the user, the resource, the
-source kind, the provider, the model, the input and output tokens, the
-cost, the status, and the import job it previewed. Failed calls are logged
-too, with their code and the tokens the provider still billed (a declined or
-cut-off answer costs its tokens). The admin shows the log read-only. Each
-user reads their own calls at `GET /api/ai/`.
+Every provider call is logged as an `AICall`: the user, the job (`kind`,
+`extraction` for this module's own), the resource, the source kind, the
+provider, the model, the input and output counts and their `unit`
+(`tokens`), the cost, the status, and the import job it previewed. Failed
+calls are logged too, with their code and the tokens the provider still
+billed (a declined or cut-off answer costs its tokens). The admin shows the
+log read-only. Each user reads their own calls at `GET /api/ai/`.
 
 The cost comes from `KARNI_AI_PRICES`, per million tokens, in whatever
 currency you write the table in:
@@ -235,10 +236,13 @@ currency you write the table in:
 ```python
 KARNI_AI_PRICES = {
     "the-model-name": {"input": "1.00", "output": "4.00"},
+    "a-translation-service": {"unit": "characters", "input": "20.00", "output": "0"},
 }
 ```
 
-A model the table does not name logs no cost, never a guessed one.
+A model the table does not name logs no cost, never a guessed one. An
+entry prices one unit, `tokens` unless it names another, and a call counted
+in another unit has no cost from it.
 
 Two optional budgets, in tokens per calendar month (in the project's
 `TIME_ZONE`), refuse the next call with a `429` once spent:
@@ -249,7 +253,9 @@ Two optional budgets, in tokens per calendar month (in the project's
 | `KARNI_AI_MONTHLY_TOKENS` (the whole project) | `AI014` |
 
 A call that starts under the budget finishes, so the last one may go past
-it. Calls are also rate limited per user with Karni's
+it. The budgets count calls in tokens only: a call counted in another unit
+never uses them up (`karni_ai.usage.spent(unit="characters")` counts that
+unit, for a budget of your own). Calls are also rate limited per user with Karni's
 [throttles](api.md): 30 an hour under the scope `ai.extract`. Change it, or
 turn it off with `None`:
 
@@ -258,6 +264,58 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {"ai.extract": "100/day"},
 }
 ```
+
+## Jobs other than extraction
+
+Does karni-ai support providers for other jobs, such as a translation
+service? **Yes, as parts to build on, not as features.** karni-ai ships one
+job, extraction: its endpoint, its prompt and its `Extractor`. What that job
+stands on is not specific to it: a provider behind one interface, a log of
+every call with its cost, and monthly budgets. A job of your own
+(translating a text, summarising one) uses the same parts:
+
+- **its provider**: a `Provider` subclass of your own.
+  `get_provider("<dotted path>")` loads it beside the one `KARNI_AI_PROVIDER`
+  names for extraction;
+- **its parameters** in `StructuredRequest.metadata` (`{"target_language":
+  "fr"}`). Karni passes them to the provider as given and never reads them,
+  and the shipped providers ignore them;
+- **the unit its service bills in**: `Usage(input, output, unit="characters")`.
+  The cost and the token budgets never mix units (above);
+- **its line in the log**: `log_call(..., kind="translation")`. The admin and
+  `GET /api/ai/` show each call's `kind` and `unit`.
+
+```python
+from karni_ai.providers.base import StructuredRequest, get_provider
+from karni_ai.usage import log_call
+
+
+def translate(text: str, target: str, user) -> str:
+    provider = get_provider("website.translation.Translator")
+    answer = provider.structured(
+        StructuredRequest(
+            instructions="",
+            source=text,
+            schema={},
+            name="translation",
+            metadata={"target_language": target},
+        )
+    )
+    log_call(
+        user=user,
+        provider=provider.name,
+        model=answer.model,
+        resource="website.page",
+        source="text",
+        usage=answer.usage,  # Usage(..., unit="characters")
+        kind="translation",
+    )
+    return answer.data["text"]
+```
+
+Karni ships no translation or other job, no endpoint and no prompt for one,
+and the checks `AI001` to `AI005` look at the extraction provider only.
+Calls logged before these fields existed are extractions counted in tokens.
 
 ## React
 
@@ -279,7 +337,8 @@ backend's words.
 
 - **Another provider:** subclass `karni_ai.providers.base.Provider`
   (`structured()`, and `problems()` for `karni check`) and point
-  `KARNI_AI_PROVIDER` at it. To add request options to a shipped provider
+  `KARNI_AI_PROVIDER` at it, or load it with `get_provider("<dotted path>")`
+  for a job of your own ([above](#jobs-other-than-extraction)). To add request options to a shipped provider
   (thinking or effort settings, a beta, a service tier), subclass
   `AnthropicProvider` or `OpenAIProvider` and override `request_params()`.
 - **The prompt, the schema, the access rule or the budget rule:** subclass

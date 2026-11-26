@@ -166,6 +166,19 @@ apply codemods and list the manual steps. This file is the human summary.
   check` names it with `SITE026`, as it does a setting that adds nothing because
   `KARNI_ROLES` replaces the role (which still wins) or `KARNI_SITE_EDITOR_ROLE` is `None`.
 
+- **Added (experimental): karni-ai's providers and usage log for jobs other than
+  extraction.** karni-ai ships one job, extraction, but a project's own job (a plain
+  translation service) had no place for its parameters, could not log its calls under its
+  own name, and could only report tokens. `StructuredRequest.metadata` carries a job's
+  parameters to its provider, passed as given and never read by Karni (the shipped
+  providers ignore it). `AICall.kind` names the job (`extraction` for karni-ai's own,
+  `log_call(kind=...)` for yours) beside the three kinds of source, and `Usage.unit` (with
+  `AICall.unit`) says what the counts are: `tokens` by default, `characters` or any unit the
+  provider names. A price in `KARNI_AI_PRICES` prices one unit (`"unit"`, tokens by
+  default), and the token budgets count tokens only (`spent(unit=...)` counts another). The
+  migration `karni_ai.0002_call_kind_and_unit` adds both columns: earlier calls are
+  extractions counted in tokens. The extraction endpoint's answer is unchanged.
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web
