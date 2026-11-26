@@ -1,4 +1,4 @@
-"""Experimental. The errors the game API answers with: a status, a code and the fix.
+"""The errors the game API answers with: a status, a code and the fix.
 
 Every refusal the server decides is a :class:`GameError`. The player views
 answer it as ``{"detail": "GAME008: ... See <docs url>", "code": "GAME008",

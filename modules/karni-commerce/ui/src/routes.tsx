@@ -75,7 +75,7 @@ export interface CommerceProviderProps {
 let registered: Partial<CommercePaths> = {};
 
 /**
- * Experimental. Paths a selling part sets once at startup, under the
+ * Paths a selling part sets once at startup, under the
  * provider's `paths`: the shop's catalogue is where an empty cart sends the
  * buyer (`registerCommercePaths({ browse: "/shop/catalogue" })`).
  */
@@ -83,7 +83,7 @@ export function registerCommercePaths(paths: Partial<CommercePaths>): void {
   registered = { ...registered, ...paths };
 }
 
-/** Experimental. The paths parts registered (tests, a project's own provider). */
+/** The paths parts registered (tests, a project's own provider). */
 export function registeredCommercePaths(): Partial<CommercePaths> {
   return registered;
 }

@@ -1,5 +1,5 @@
 /**
- * Experimental. Commerce's part of the family pages.
+ * Commerce's part of the family pages.
  *
  * - `FamilyOrdersPage` is `/orders`: every order for staff (`StaffOrders`),
  *   a customer's own (`OrdersPage`).
@@ -35,7 +35,7 @@ export interface FamilyOrdersPageProps {
   siteName?: string;
 }
 
-/** Experimental. `/orders`: every order for staff, a customer's own orders. */
+/** `/orders`: every order for staff, a customer's own orders. */
 export function FamilyOrdersPage({ siteName }: FamilyOrdersPageProps) {
   const audience = useAudience();
   if (audience === "loading") return null;
@@ -51,7 +51,7 @@ export interface FamilyOrderPageProps {
   siteName?: string;
 }
 
-/** Experimental. `/orders/<number>`: the order to run for staff, the order for its buyer. */
+/** `/orders/<number>`: the order to run for staff, the order for its buyer. */
 export function FamilyOrderPage({
   number,
   orderKey = "",
@@ -71,7 +71,7 @@ const PERSON_COLUMNS: ReadonlyArray<ResourceColumn> = [
   "total",
 ].map((field) => ({ field, ...(field === "number" ? { header: "Order" } : {}) }));
 
-/** Experimental. The Orders tab of the person page: one person's orders. */
+/** The Orders tab of the person page: one person's orders. */
 export function PersonOrders({ personId }: PersonTabProps) {
   const { paths, navigate } = useCommerce();
   return (
@@ -94,7 +94,7 @@ function YourOrders() {
   return <MyOrders pageSize={5} />;
 }
 
-/** Experimental. Commerce's sections, tab and record links on the family pages. */
+/** Commerce's sections, tab and record links on the family pages. */
 export function register(): void {
   registerAccountSection({ key: "orders", title: "Your orders", order: 10, component: YourOrders });
   registerPersonTab({ key: "orders", title: "Orders", order: 10, component: PersonOrders });

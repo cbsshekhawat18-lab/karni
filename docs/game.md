@@ -1,5 +1,5 @@
 ---
-description: "karni-game (experimental): the server side of a game. Guest players with a token the server issues, who keep their progress when they sign in, versioned cloud saves with a conflict rule, leaderboards with plausible ranges and flagged runs, a soft-currency wallet with a ledger, rewards and a shop, daily content on the server's date, achievements and missions, remote config and flags, analytics through the family events, the admin, and a contract for a realtime server of your own."
+description: "karni-game: the server side of a game. Guest players with a token the server issues, who keep their progress when they sign in, versioned cloud saves with a conflict rule, leaderboards with plausible ranges and flagged runs, a soft-currency wallet with a ledger, rewards and a shop, daily content on the server's date, achievements and missions, remote config and flags, analytics through the family events, the admin, and a contract for a realtime server of your own."
 ---
 
 # Games (karni-game)

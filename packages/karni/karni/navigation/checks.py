@@ -1,4 +1,4 @@
-"""Experimental. ``karni check`` on the menu: each route has a page, each requirement a permission.
+"""``karni check`` on the menu: each route has a page, each requirement a permission.
 
 ``manage.py karni_check`` (``karni check``) runs :func:`check_navigation`
 while ``KARNI_NAVIGATION`` is set:
@@ -74,7 +74,7 @@ def _page_files() -> list[Path]:
 
 
 def frontend_routes() -> list[str] | None:
-    """Experimental. The ``path:`` routes of the ``KARNI_NAVIGATION_PAGES`` files, in file order.
+    """The ``path:`` routes of the ``KARNI_NAVIGATION_PAGES`` files, in file order.
 
     ``None`` when no file is configured or none exists.
     """
@@ -107,7 +107,7 @@ def _pattern(route: str) -> re.Pattern[str]:
 
 
 def route_served(route: str, routes: Iterable[str]) -> bool:
-    """Experimental. Whether one of ``routes`` serves ``route`` (``$id`` takes any one segment)."""
+    """Whether one of ``routes`` serves ``route`` (``$id`` takes any one segment)."""
     wanted = _normal(route)
     return any(_pattern(candidate).match(wanted) for candidate in routes)
 
@@ -151,7 +151,7 @@ def _nodes() -> tuple[tuple[navigation.NavNode, ...] | None, list[checks.CheckMe
 def check_navigation(
     nodes: Iterable[navigation.NavNode] | None = None, routes: list[str] | None = None
 ) -> list[checks.CheckMessage]:
-    """Experimental. ``E533``, ``E534``, ``W630`` and ``W631`` for the active menu.
+    """``E533``, ``E534``, ``W630`` and ``W631`` for the active menu.
 
     ``nodes`` and ``routes`` default to the active source's menu and
     :func:`frontend_routes`. Nothing to report while ``KARNI_NAVIGATION`` is
@@ -211,7 +211,7 @@ def _unsilenced(messages: list[checks.CheckMessage]) -> list[checks.CheckMessage
 
 
 def navigation_check_failures() -> tuple[list[str], list[str]]:
-    """Experimental. ``(errors, warnings)`` of :func:`check_navigation`, for ``karni check``."""
+    """``(errors, warnings)`` of :func:`check_navigation`, for ``karni check``."""
     errors: list[str] = []
     warnings: list[str] = []
     for message in check_navigation():

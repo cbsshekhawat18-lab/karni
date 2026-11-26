@@ -1,0 +1,314 @@
+# The features that are experimental now (docs/stability.md#experimental-names),
+# read by scripts/check_experimental.py (CI and
+# packages/karni-cli/tests/test_experimental_marks.py).
+#
+# [[feature]]: its name, `docs` (the sections that open with the note: a page,
+# `page.md#anchor`, or a package README; the first one is the link of its line
+# in docs/stability.md's "Experimental now") and `marks` (its public entry
+# points, whose docstring or doc comment starts with "Experimental.": `path`
+# for a module's docstring or a file's first doc comment, `path::name` for one
+# class, function or export).
+# [[allow]]: where the word is not the mark (`path` an fnmatch glob, `line` a
+# regular expression the line matches), with the reason.
+#
+# A feature that becomes stable leaves this file, its line moves to "Stable
+# since <version>" in docs/stability.md, and its notes and marks go.
+
+[[feature]]
+name = "Games"
+docs = [
+    "docs/game.md",
+    "docs/game-api.md",
+    "docs/game-client.md",
+    "docs/game-sim.md",
+    "docs/game-scenes.md",
+    "docs/game-ui.md",
+    "docs/game-draw.md",
+    "docs/game-collide.md",
+    "docs/game-assets.md",
+    "docs/game-sound.md",
+    "docs/game-starters.md",
+    "docs/apps-and-games.md",
+    "modules/karni-game/README.md",
+    "modules/karni-game/ui/README.md",
+]
+marks = [
+    "modules/karni-game/karni_game/__init__.py",
+    "modules/karni-game/karni_game/starters/__init__.py",
+    "modules/karni-game/ui/src/index.ts",
+]
+
+[[feature]]
+name = "The built-in recipes"
+docs = [
+    "docs/recipes/index.md",
+    "docs/recipes/shop.md",
+    "docs/recipes/booking.md",
+    "docs/recipes/crm.md",
+    "docs/recipes/lms.md",
+    "docs/recipes/marketplace.md",
+    "docs/recipes/data-portal.md",
+]
+marks = ["packages/karni-cli/karni_cli/recipes/apply.py"]
+
+[[feature]]
+name = "The family"
+docs = [
+    "docs/family.md",
+    "docs/navigation.md#named-menus-experimental",
+    "packages/karni-ui/README.md#the-family-pages-account-and-sign-in-experimental",
+    "packages/karni-ui/README.md#the-family-screens-one-layout-for-every-part-experimental",
+    "packages/karni-ui/README.md#settings-page",
+]
+marks = [
+    "packages/karni-cli/karni_cli/recipes/compose.py",
+    "packages/karni/karni/testing/parts.py",
+    "packages/karni-ui/src/components/family/register.ts::registerFamily",
+    "packages/karni-ui/src/components/family/family-layout.tsx::FamilyLayout",
+]
+
+[[feature]]
+name = "The /new-app flow"
+docs = [
+    "docs/agents.md#agents-the-new-app-flow",
+    "docs/app-spec.md#recipes",
+    "docs/app-spec.md#mcp-tools",
+]
+marks = [
+    "packages/karni-cli/karni_cli/recipes/__init__.py",
+    "packages/karni-cli/karni_cli/agent_tools.py",
+]
+
+[[feature]]
+name = "Clarifying questions"
+docs = ["docs/app-spec.md#questions"]
+marks = [
+    "packages/karni-cli/karni_cli/spec/questions.py",
+    "packages/karni-cli/karni_cli/spec/edit.py",
+]
+
+[[feature]]
+name = "External tables, views and a second database"
+docs = [
+    "docs/models.md#external-tables-views-and-a-second-database",
+    "docs/api.md#read-only-models",
+    "docs/admin.md#external-tables-and-views",
+    "docs/testing.md#external-tables",
+]
+marks = [
+    "packages/karni/karni/db/__init__.py",
+    "packages/karni/karni/testing/external.py::create_external_tables",
+]
+
+[[feature]]
+name = "Pages behind a capture without a model"
+docs = ["docs/public-site.md#pages-behind-a-capture-without-a-model-experimental"]
+marks = [
+    "modules/karni-site/karni_site/sitemaps.py::pages",
+    "modules/karni-site/karni_site/sitemaps.py::declared_pages",
+]
+
+[[feature]]
+name = "People"
+docs = ["docs/people.md"]
+marks = ["packages/karni/karni/people/__init__.py"]
+
+[[feature]]
+name = "Family events"
+docs = ["docs/family-events.md"]
+marks = [
+    "packages/karni/karni/outbox/__init__.py",
+    "packages/karni/karni/outbox/bus.py::declare",
+    "packages/karni/karni/outbox/bus.py::subscribe",
+    "packages/karni/karni/outbox/bus.py::publish",
+]
+
+[[feature]]
+name = "Timeline"
+docs = ["docs/timeline.md"]
+marks = ["packages/karni/karni/timeline/__init__.py"]
+
+[[feature]]
+name = "Notifications"
+docs = ["docs/notify.md"]
+marks = ["packages/karni/karni/notify/__init__.py"]
+
+[[feature]]
+name = "Preferences"
+docs = ["docs/preferences.md"]
+marks = ["packages/karni/karni/preferences/__init__.py"]
+
+[[feature]]
+name = "Home tiles per role"
+docs = ["docs/api.md#home-tiles-per-role-experimental", "docs/app-spec.md#dashboard-experimental"]
+marks = [
+    "packages/karni/karni/tiles.py",
+    "packages/karni-ui/src/components/dashboard/dashboard-tiles.tsx::DashboardTiles",
+]
+
+[[feature]]
+name = "Rules and row actions"
+docs = ["docs/rules.md", "docs/api.md#row-actions-experimental"]
+marks = ["packages/karni/karni/rules.py", "packages/karni/karni/api/actions.py"]
+
+[[feature]]
+name = "Catalogues, money and page titles"
+docs = ["packages/karni-ui/README.md#catalogues-money-and-page-titles-experimental"]
+marks = [
+    "packages/karni-ui/src/components/resource-grid/ResourceGrid.tsx::ResourceGrid",
+    "packages/karni-ui/src/lib/money.ts",
+    "packages/karni-ui/src/hooks/usePageMeta.ts::usePageMeta",
+]
+
+[[feature]]
+name = "karni-commerce"
+docs = [
+    "docs/commerce.md",
+    "modules/karni-commerce/README.md",
+    "modules/karni-commerce/ui/README.md",
+]
+marks = [
+    "modules/karni-commerce/karni_commerce/__init__.py",
+    "modules/karni-commerce/ui/src/index.ts",
+]
+
+[[feature]]
+name = "karni-payments' signals"
+docs = ["modules/karni-payments/README.md#signals-experimental"]
+marks = ["modules/karni-payments/karni_payments/events.py"]
+
+[[feature]]
+name = "Volume seeding"
+docs = ["docs/seeding.md#volume-seeding", "docs/large-projects.md#volume-seeding"]
+marks = ["packages/karni/karni/bulk_seeding.py"]
+
+[[feature]]
+name = "The scaling settings"
+docs = ["docs/testing.md#3-the-scaling-check", "docs/large-projects.md#the-scaling-check"]
+marks = ["packages/karni/karni/performance.py::Scaling"]
+
+[[feature]]
+name = "Query plans"
+docs = [
+    "docs/debugging/queries.md#query-plans-explain",
+    "docs/large-projects.md#query-plans-karni-queries-explain",
+]
+marks = ["packages/karni/karni/api/explain.py"]
+
+[[feature]]
+name = "@karni/ai-ui"
+docs = ["docs/ai-extraction.md#react", "modules/karni-ai/ui/README.md"]
+marks = ["modules/karni-ai/ui/src/index.ts"]
+
+[[feature]]
+name = "@karni/reports-ui"
+docs = ["docs/reports.md#in-react", "modules/karni-reports/ui/README.md"]
+marks = ["modules/karni-reports/ui/src/index.ts"]
+
+[[feature]]
+name = "@karni/storage-ui"
+docs = ["docs/storage.md#the-react-side", "modules/karni-storage/ui/README.md"]
+marks = ["modules/karni-storage/ui/src/index.ts"]
+
+[[feature]]
+name = "ResourceBoard"
+docs = ["packages/karni-ui/README.md#resourceboard-a-board-by-state-experimental"]
+marks = ["packages/karni-ui/src/components/resource-board/ResourceBoard.tsx::ResourceBoard"]
+
+[[feature]]
+name = "ResourceCalendar"
+docs = ["packages/karni-ui/README.md#resourcecalendar-day-week-month-and-list-experimental"]
+marks = ["packages/karni-ui/src/components/resource-calendar/ResourceCalendar.tsx::ResourceCalendar"]
+
+[[feature]]
+name = "karni remove"
+docs = ["docs/modules.md#taking-a-module-out-karni-remove-x"]
+marks = []
+
+[[feature]]
+name = "Karni's makemigrations and migrate"
+docs = ["docs/fields.md#changing-a-generated-field"]
+marks = [
+    "packages/karni/karni/migration_autodetector.py",
+    "packages/karni/karni/management/commands/makemigrations.py",
+    "packages/karni/karni/management/commands/migrate.py",
+]
+
+[[feature]]
+name = "karni-ai for jobs other than extraction"
+docs = [
+    "docs/ai-extraction.md#jobs-other-than-extraction",
+    "modules/karni-ai/README.md#jobs-other-than-extraction",
+]
+# Parameters and fields of stable karni-ai names: no entry point of their own to mark.
+marks = []
+
+[[allow]]
+path = "*"
+line = '''["']experimental["']'''
+reason = "a value, not the mark: a manifest's status (stable or experimental) and the code and tests that read it"
+
+[[allow]]
+path = "packages/karni/karni/catalog/__init__.py"
+line = 'stable or experimental|\(stable\|experimental\)'
+reason = "the manifest's status values"
+
+[[allow]]
+path = "*"
+line = 'check_experimental|experimental\.toml'
+reason = "a reference to this check or its list, not a mark"
+
+[[allow]]
+path = "docs/modules.md"
+line = '`stable` or `experimental`'
+reason = "the manifest's status values"
+
+[[allow]]
+path = "docs/roadmap/*"
+line = '.'
+reason = "the plans say how a new name ships (in the experimental tier), not a mark"
+
+[[allow]]
+path = "docs/stability.md"
+line = '.'
+reason = "the rule itself"
+
+[[allow]]
+path = "docs/REFERENCE.md"
+line = '`experimental`'
+reason = "the status column, generated by scripts/gen_reference.py"
+
+[[allow]]
+path = "docs/features.md"
+line = '`experimental`'
+reason = "the status of each capability, generated by scripts/gen_reference.py"
+
+[[allow]]
+path = "scripts/gen_reference.py"
+line = '.'
+reason = "computes the status experimental and its note"
+
+[[allow]]
+path = "scripts/gen_reference_ui.mjs"
+line = '.'
+reason = "drops the mark from the summaries it reads"
+
+[[allow]]
+path = "scripts/check_experimental.py"
+line = '.'
+reason = "this check"
+
+[[allow]]
+path = "packages/karni-cli/tests/test_experimental_marks.py"
+line = '.'
+reason = "the tests of this check"
+
+[[allow]]
+path = "examples/*/frontend/src/api/*"
+line = '.'
+reason = "the typed client `karni types` wrote from an example's schema at the time: it follows the docstrings on the example's next `karni types`, with the rest of the drift since"
+
+[[allow]]
+path = "packages/karni-ui/tests/axe.ts"
+line = 'axe has this rule, but it is experimental'
+reason = "a rule of the axe library, not a Karni name"

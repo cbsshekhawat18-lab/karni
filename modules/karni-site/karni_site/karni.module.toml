@@ -13,6 +13,7 @@ models = ["SiteSettings", "OpeningHours", "SocialLink", "Block", "Menu", "MenuIt
 pages = ["admin: the site's text, images, menus, redirects and page titles", "the site's own 404 and 500 pages"]
 
 [provides.settings]
+KARNI_SITE_ADMIN_MENU = "array"
 KARNI_SITE_IS_ACTIVE = "string"
 KARNI_SITE_SERVER_ERROR_TEMPLATES = "array"
 KARNI_SITE_NOT_FOUND_TEMPLATES = "array"
@@ -25,10 +26,12 @@ KARNI_SITE_IMAGE_TYPES = "array"
 KARNI_SITE_CACHE = "string"
 KARNI_SITE_CACHE_TIMEOUT = "integer"
 KARNI_SITE_SEED_ON_RENDER = "boolean"
+KARNI_SITE_CODE_BLOCKS = "array"
 KARNI_SITE_MENU_ROWS = "string"
 KARNI_SITE_MENU_ROWS_LIMIT = "integer"
 KARNI_SITE_REDIRECTS_BEFORE_VIEWS = "boolean"
 KARNI_SITE_EDITOR_ROLE = ["string", "null"]
+KARNI_SITE_EDITOR_GRANTS = "object"
 KARNI_SITE_FORMS = "object"
 KARNI_SITE_FORM_CLASS = "string"
 KARNI_SITE_FORM_TEMPLATE = "string"

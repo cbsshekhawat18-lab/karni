@@ -59,7 +59,7 @@ _PARAMETERS = [
 
 
 class GeneratedReportViewSet(BaseViewSet):
-    """Experimental. Request, follow and download the PDF report of one row."""
+    """Request, follow and download the PDF report of one row."""
 
     model = GeneratedReport
     route = "reports"

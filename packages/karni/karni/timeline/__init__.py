@@ -58,7 +58,7 @@ if TYPE_CHECKING:
     )
     from karni.timeline.subscribers import connect, disconnect
 
-#: Experimental. The version of the timeline contract. A breaking change raises it.
+#: The version of the timeline contract. A breaking change raises it.
 CONTRACT: Final = 1
 
 __all__ = [

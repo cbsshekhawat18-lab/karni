@@ -52,7 +52,7 @@ def flush_expired_tokens() -> dict[str, int | bool]:
 
 @shared_task(name="karni.accounts.tasks.flush_login_codes")
 def flush_login_codes() -> dict[str, int]:
-    """Experimental. Delete the sign-in codes past their expiry (sign-in with a code).
+    """Delete the sign-in codes past their expiry (sign-in with a code).
 
     Each send already deletes the earlier codes of its address and every
     expired one. This hourly sweep removes what no later send reached, so no

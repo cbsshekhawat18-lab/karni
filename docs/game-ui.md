@@ -1,5 +1,5 @@
 ---
-description: "The game UI kit in @karni/game/ui (experimental): a DOM layer above the canvas with settings, key remapping, pause, dialogs, confirm, toasts, touch buttons, a boot failure screen, a dev overlay and a strings table, with keyboard focus, screen reader labels and light and dark colours."
+description: "The game UI kit in @karni/game/ui: a DOM layer above the canvas with settings, key remapping, pause, dialogs, confirm, toasts, touch buttons, a boot failure screen, a dev overlay and a strings table, with keyboard focus, screen reader labels and light and dark colours."
 ---
 
 # Game UI (@karni/game/ui)

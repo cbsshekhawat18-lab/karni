@@ -13,9 +13,15 @@ back from the user menu (*Show the getting started guide*), which deletes the ro
 Karni's ``index_template`` (unless the site names one), adds the context to the
 index, and serves ``<admin>/karni/guide/dismiss/`` and ``<admin>/karni/guide/show/``.
 
+The first step links the first model of the project's own apps (their code
+lives in the project folder) the user may add to, never Django's groups, a
+Karni module's pages or a third-party app's tables. A project with no model of
+its own links the first model the user may add to.
+
 Override / escape hatch: ``KARNI_ADMIN_GUIDE = False`` removes the panel and the
 menu entry. Replace ``karni_admin/includes/guide_panel.html`` to change the
-panel, or the site's ``index_template`` to drop it with the rest of the page.
+panel (its ``guide.steps`` hold each step's text, link and label), or the
+site's ``index_template`` to drop it with the rest of the page.
 """
 
 from __future__ import annotations
@@ -56,9 +62,15 @@ def _admin_for(site: Any, model: type[Any]) -> Any:
 
 
 def _sections(site: Any, request: HttpRequest) -> list[dict[str, Any]]:
-    """Each app section of the index with its models and what they are for."""
+    """Each section of the index with its models and what they are for.
+
+    The sections are the home page's: ``KARNI_ADMIN_MENU``'s groups when the
+    menu is in use (:func:`karni.admin.menu.grouped_app_list`), else the apps.
+    """
+    from karni.admin.menu import grouped_app_list
+
     sections: list[dict[str, Any]] = []
-    for app in site.get_app_list(request):
+    for app in grouped_app_list(request, site.get_app_list(request)):
         entries = []
         for entry in app.get("models", ()):
             model = entry.get("model")
@@ -81,17 +93,44 @@ def _url(site: Any, name: str, *args: Any) -> str | None:
         return None
 
 
+def _own_app_labels() -> frozenset[str]:
+    """The labels of the project's own apps: their code lives in the project folder.
+
+    An app counts when its module lives under ``BASE_DIR`` (else the folder
+    above the settings package) and not in site-packages, the rule ``karni
+    check``'s architecture rules use (:func:`karni.testing._source.project_app_configs`).
+    Django's apps, Karni and its modules, and third-party apps are installed
+    packages, so they never count, whatever their names.
+    """
+    from karni.testing._source import project_app_configs
+
+    return frozenset(config.label for config in project_app_configs(skip_apps=False))
+
+
 def _first_add_link(site: Any, request: HttpRequest) -> dict[str, str] | None:
-    """The first model (in index order) the user may add rows to, as a link."""
+    """The first model of the project's own apps (in index order) the user may add rows to.
+
+    Django's, Karni's and third-party models (auth's Groups, a module's pages,
+    a task schedule) are never the first record. Only a project with no model
+    of its own on the site falls back to the first model the user may add to.
+    """
+    own = _own_app_labels()
+    fallback: dict[str, str] | None = None
     for app in site.get_app_list(request):
         for entry in app.get("models", ()):
             model = entry.get("model")
             model_admin = _admin_for(site, model) if model is not None else None
             if model_admin is None or not entry.get("add_url"):
                 continue
-            if model_admin.has_add_permission(request):
-                return {"name": str(entry["name"]), "url": entry["add_url"]}
-    return None
+            if not model_admin.has_add_permission(request):
+                continue
+            link = {"name": str(entry["name"]), "url": entry["add_url"]}
+            if model._meta.app_label in own:
+                return link
+            fallback = fallback or link
+    if any(model._meta.app_label in own for model in site._registry):
+        return None
+    return fallback
 
 
 def _steps(site: Any, request: HttpRequest) -> list[dict[str, Any]]:

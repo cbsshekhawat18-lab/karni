@@ -1,4 +1,4 @@
-"""Experimental. The family events karni-game publishes (``karni.events``).
+"""The family events karni-game publishes (``karni.events``).
 
 Another part subscribes by name and never imports karni-game::
 

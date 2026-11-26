@@ -1,5 +1,5 @@
 /**
- * Experimental. `usePageMeta({ title, description })`: the page's title and description
+ * `usePageMeta({ title, description })`: the page's title and description
  * for search engines and for the browser tab.
  *
  * A public page (a catalogue, a product, a course) is found through a search

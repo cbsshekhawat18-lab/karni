@@ -1,5 +1,5 @@
 ---
-description: "Sound in @karni/game/sfx (experimental): one-shots with pitch and volume variation and a voice limit, music with crossfade and ducking, and procedural tones, sweeps and noise with envelopes, on the audio layer's buses, mutes and pause, silent until the first gesture."
+description: "Sound in @karni/game/sfx: one-shots with pitch and volume variation and a voice limit, music with crossfade and ducking, and procedural tones, sweeps and noise with envelopes, on the audio layer's buses, mutes and pause, silent until the first gesture."
 ---
 
 # Sound (@karni/game/sfx)

@@ -1,4 +1,4 @@
-"""A MoneyField reaches the schema with its currency (``x-karni-money``, experimental)."""
+"""A MoneyField reaches the schema with its currency (``x-karni-money``)."""
 
 from __future__ import annotations
 

@@ -123,7 +123,7 @@ class AccountRateThrottle(_AuthRateFallbackMixin):
 
 
 class OtpEmailRateThrottle(AccountRateThrottle):
-    """Experimental. Per-address throttle for ``otp/send/``: codes one address receives.
+    """Per-address throttle for ``otp/send/``: codes one address receives.
 
     Keyed on the normalized posted email exactly like
     :class:`AccountRateThrottle`, under the scope ``auth.otp_send_email``

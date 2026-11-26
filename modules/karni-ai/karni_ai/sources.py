@@ -61,7 +61,7 @@ _PDF_TYPES: Final = frozenset({"application/pdf", "application/x-pdf"})
 
 @dataclass(frozen=True)
 class Source:
-    """Experimental. What an extraction reads: ``text``, ``url`` or ``pdf``, a label, the text."""
+    """What an extraction reads: ``text``, ``url`` or ``pdf``, a label, the text."""
 
     kind: str
     label: str
@@ -94,7 +94,7 @@ class _Visible(HTMLParser):
 
 
 def visible_text(html: str) -> str:
-    """Experimental. The text a reader sees on an HTML page, one line per block."""
+    """The text a reader sees on an HTML page, one line per block."""
     parser = _Visible()
     parser.feed(html)
     parser.close()
@@ -112,7 +112,7 @@ def _lines(text: str) -> str:
 
 
 def pdf_text(data: bytes) -> str:
-    """Experimental. A PDF's text layer, page by page (AI010: not one, locked, too long)."""
+    """A PDF's text layer, page by page (AI010: not one, locked, too long)."""
     from pypdf import PdfReader
     from pypdf.errors import PyPdfError
 
@@ -196,7 +196,7 @@ def _from_file(upload: Any) -> Source:
 
 
 def read_source(*, text: str | None = None, url: str | None = None, file: Any = None) -> Source:
-    """Experimental. The one source given, as text within the limits in settings."""
+    """The one source given, as text within the limits in settings."""
     given = [name for name, value in (("text", text), ("url", url), ("file", file)) if value]
     if len(given) != 1:
         raise ExtractionRefused(

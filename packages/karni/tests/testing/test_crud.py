@@ -207,6 +207,19 @@ def test_an_owner_that_is_not_stamped_fails_create() -> None:
     )
 
 
+def test_a_value_the_server_replaces_says_to_declare_the_field_editable_false() -> None:
+    message = _fails(
+        crud_urls.ForcedTitleEventViewSet,
+        "organizer",
+        "create: sent title=",
+        "but stored 'Computed title'",
+        "declare it editable=False",
+        "a serializer or a perform_create/perform_update that sets the field",
+        "a signal handler",
+    )
+    assert "title" in message
+
+
 def test_a_refusal_access_does_not_declare_says_to_declare_it() -> None:
     """A 403 from code where access admits the request names the karni.yaml way."""
     _fails(

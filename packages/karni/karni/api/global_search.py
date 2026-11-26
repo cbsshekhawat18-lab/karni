@@ -1,4 +1,4 @@
-"""Experimental. ``GET /api/search/``: one ranked search over every model that opts in.
+"""``GET /api/search/``: one ranked search over every model that opts in.
 
 A model opts in with ``class Karni: search = {...}`` (:mod:`karni.global_search`).
 The endpoint is mounted by ``karni.api.urls``, next to the routed resources::
@@ -108,7 +108,7 @@ _PORTABLE_SCORES: Final = (1.0, 0.75, 0.5)
 
 @dataclass(frozen=True)
 class SearchTarget:
-    """Experimental. One searchable resource: its model, routed viewset and declaration."""
+    """One searchable resource: its model, routed viewset and declaration."""
 
     resource: str
     model: type[Model]
@@ -122,7 +122,7 @@ class SearchTarget:
 
 
 def search_targets(router: Any | None = None) -> list[SearchTarget]:
-    """Experimental. Every model that declares ``Karni.search`` and has a routed ``BaseViewSet``.
+    """Every model that declares ``Karni.search`` and has a routed ``BaseViewSet``.
 
     In the router's registration order, one target per model (the first
     viewset that serves it, as :func:`karni.api.routers.viewset_for_model`
@@ -229,7 +229,7 @@ def _portable(queryset: QuerySet[Any], query: str, fields: Sequence[str]) -> Que
 def search_queryset(
     queryset: QuerySet[Any], query: str, declaration: SearchDeclaration
 ) -> QuerySet[Any]:
-    """Experimental. The rows of ``queryset`` that match ``query``, best first.
+    """The rows of ``queryset`` that match ``query``, best first.
 
     The default every ``BaseViewSet.global_search_queryset`` returns (see the
     module docstring for the matching and the scores). The result carries the
@@ -264,7 +264,7 @@ class _KeyField(serializers.Field):  # type: ignore[type-arg]
 
 
 class GlobalSearchHitSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. One hit: a row of one resource, ready to link to its page."""
+    """One hit: a row of one resource, ready to link to its page."""
 
     resource = serializers.CharField(help_text="The resource (router prefix) of the row.")
     id = _KeyField(help_text="The row's primary key: its page is /<resource>/<id>.")
@@ -274,7 +274,7 @@ class GlobalSearchHitSerializer(serializers.Serializer):  # type: ignore[type-ar
 
 
 class GlobalSearchGroupSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. The hits of one resource, best first."""
+    """The hits of one resource, best first."""
 
     resource = serializers.CharField()
     label = serializers.CharField(help_text="The model's plural name, for a heading.")
@@ -284,14 +284,14 @@ class GlobalSearchGroupSerializer(serializers.Serializer):  # type: ignore[type-
 
 
 class GlobalSearchResultSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. The answer of GET /api/search/: groups ordered by their best hit."""
+    """The answer of GET /api/search/: groups ordered by their best hit."""
 
     query = serializers.CharField()
     groups = GlobalSearchGroupSerializer(many=True)
 
 
 class GlobalSearchErrorSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. A refused request: E431 and the resources search covers."""
+    """A refused request: E431 and the resources search covers."""
 
     code = serializers.CharField()
     detail = serializers.CharField()
@@ -299,7 +299,7 @@ class GlobalSearchErrorSerializer(serializers.Serializer):  # type: ignore[type-
 
 
 class GlobalSearchSchema(KarniAutoSchema):
-    """Experimental. The OpenAPI operation of :class:`GlobalSearchView`.
+    """The OpenAPI operation of :class:`GlobalSearchView`.
 
     Documents ``q``, ``models`` (an enum of the resources search covers),
     ``limit``, the response, and ``x-karni-search: {"resources": [...]}``.
@@ -321,7 +321,7 @@ class GlobalSearchSchema(KarniAutoSchema):
 
     def get_description(self) -> str:  # type: ignore[override]
         return (
-            "Experimental. Search every model that declares class Karni: search, each "
+            "Search every model that declares class Karni: search, each "
             "through its list endpoint's access for this request. Results are grouped per "
             "resource, best first."
         )
@@ -374,7 +374,7 @@ class GlobalSearchSchema(KarniAutoSchema):
 
 
 class GlobalSearchView(APIView):
-    """Experimental. ``GET /api/search/?q=&models=&limit=`` (see the module docstring).
+    """``GET /api/search/?q=&models=&limit=`` (see the module docstring).
 
     Open to every caller: what each one finds is what each model's list
     endpoint shows them.

@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from karni.conf.admin_logo import logo_paths, site_icon, site_logo
+from karni.conf.admin_logo import logo_paths, site_favicons, site_icon, site_logo
 from karni.conf.base import (
     ALLAUTH_MIDDLEWARE,
     BASE,
@@ -61,6 +61,10 @@ _LIST_MERGED_SETTINGS = ("INSTALLED_APPS", "MIDDLEWARE", "DATABASE_ROUTERS")
 #: three-occurrences rule: the group ships with its first producer
 #: (karni-payments) because `karni add` is contracted to rely on it.
 _SETTINGS_FRAGMENT_GROUP = "karni.settings"
+
+#: ``UNFOLD["SIDEBAR"]["navigation"]``: the side menu of ``KARNI_ADMIN_MENU``
+#: (:data:`karni.admin.menu.NAVIGATION`, a path so settings import no admin code).
+_ADMIN_MENU = "karni.admin.menu.sidebar_navigation"
 
 #: Settings ``karni_settings()`` reads during the call to compute other settings,
 #: with what it computes from each. Assigned after the call, such a setting
@@ -107,7 +111,7 @@ SINGLE_PROCESS_SETTINGS: dict[str, str] = {
 _consumed: dict[str, tuple[MutableMapping[str, Any], dict[str, Any]]] = {}
 
 _CONTRIB_ADMIN = "django.contrib.admin"
-#: The app ``KARNI_PEOPLE = True`` installs (the people contract, experimental).
+#: The app ``KARNI_PEOPLE = True`` installs (the people contract).
 PEOPLE_APP = "karni.people"
 _AUTHENTICATION_MIDDLEWARE = "django.contrib.auth.middleware.AuthenticationMiddleware"
 _REQUEST_CONTEXT_PROCESSOR = "django.template.context_processors.request"
@@ -533,7 +537,7 @@ def karni_settings(
       as an override or via env), the allauth / django-otp apps, middleware
       and companion settings are added to the defaults before merging.
       django-otp's ``OTPMiddleware`` is installed only in session auth mode.
-    * ``KARNI_PEOPLE`` (experimental): when true, ``karni.people`` (the
+    * ``KARNI_PEOPLE``: when true, ``karni.people`` (the
       people contract) joins ``INSTALLED_APPS`` before ``karni.admin``.
     * ``KARNI_AUTH_THROTTLE_RATES``: merged into
       ``REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]`` unless the project
@@ -564,9 +568,14 @@ def karni_settings(
       a Celery worker. It sets the defaults :data:`SINGLE_PROCESS_SETTINGS`
       lists (the cache in memory, tasks in the process, the probes without the
       broker and the worker), each only where the project has no value of its own.
-    * ``KARNI_ADMIN_LOGO``: ``UNFOLD["SITE_LOGO"]`` and ``["SITE_ICON"]``
-      default to resolvers that read the setting on every admin request, so
-      it works wherever it is assigned. A bad value raises ``E303`` here.
+    * ``KARNI_ADMIN_LOGO``: ``UNFOLD["SITE_LOGO"]``, ``["SITE_ICON"]`` and
+      ``["SITE_FAVICONS"]`` default to resolvers that read the setting on
+      every admin request, so it works wherever it is assigned. A bad value
+      raises ``E303`` here. Without it the favicon is Karni's neutral admin
+      icon.
+    * ``KARNI_ADMIN_MENU``: ``UNFOLD["SIDEBAR"]`` defaults to a side menu
+      built from it on every admin request (:mod:`karni.admin.menu`), and to
+      unfold's list of every app while it is ``None``.
 
     The settings in :data:`CALL_TIME_SETTINGS` are read during the call.
     Assigning one after the call cannot change what was computed from it, so
@@ -706,6 +715,13 @@ def karni_settings(
     if isinstance(unfold, dict):
         unfold.setdefault("SITE_LOGO", site_logo)
         unfold.setdefault("SITE_ICON", site_icon)
+        # A favicon on every admin page: the logo's icon, else Karni's neutral one.
+        unfold.setdefault("SITE_FAVICONS", site_favicons())
+        # The side menu: KARNI_ADMIN_MENU's groups, else unfold's list of every app.
+        unfold.setdefault(
+            "SIDEBAR",
+            {"show_search": False, "show_all_applications": False, "navigation": _ADMIN_MENU},
+        )
         # The admin is light only: a project's own UNFOLD dict gets it too.
         unfold.setdefault("THEME", "light")
         # The user menu: Change password and "Show the getting started guide".

@@ -1,5 +1,5 @@
 /**
- * @karni/reports-ui public barrel (experimental).
+ * Experimental. @karni/reports-ui public barrel.
  *
  * Explicit exports only, mirroring @karni/ui's barrel conventions. Importing
  * the package registers the `report-button` component role when @karni/ui

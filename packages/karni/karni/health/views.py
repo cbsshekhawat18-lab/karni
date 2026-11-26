@@ -29,7 +29,7 @@ DEFAULT_TIMEOUT: float = 3.0
 
 
 def probe(view: Callable[..., Any]) -> Callable[..., Any]:
-    """Experimental. Mark ``view`` as a probe: never cached, open before the terms are accepted.
+    """Mark ``view`` as a probe: never cached, open before the terms are accepted.
 
     The terms gate (``karni.accounts.terms``) leaves a view with this mark alone
     wherever ``KARNI_TERMS["paths"]`` reaches, and ``never_cache`` keeps a proxy
@@ -79,7 +79,7 @@ def readiness(request: HttpRequest) -> JsonResponse:
 
 @probe
 def readyz(request: HttpRequest) -> JsonResponse:
-    """Experimental. ``GET /readyz``: the database, the cache and the Celery broker.
+    """``GET /readyz``: the database, the cache and the Celery broker.
 
     The same answer as :func:`readiness` over the checks in ``KARNI_READYZ_CHECKS``
     (default :data:`karni.health.checks.DEFAULT_READY_CHECKS`). The Celery check

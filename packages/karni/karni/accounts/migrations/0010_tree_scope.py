@@ -1,4 +1,4 @@
-"""The tree scope (experimental): ``tree`` among a role grant's scopes.
+"""The tree scope: ``tree`` among a role grant's scopes.
 
 ``RolePermission.scope`` takes ``tree`` (its ``scope_path`` is the path to a
 tree model), and the help texts of ``UserGrant.scope`` and ``targets`` name

@@ -1,4 +1,4 @@
-"""Experimental. Game starters: ready games a new game project starts from.
+"""Game starters: ready games a new game project starts from.
 
 ``karni new "<Name>" --kind game --genre <genre>`` writes one, and ``karni
 starters list`` (``--match "<one line>"``, ``show <genre>``) lists them, as
@@ -46,13 +46,13 @@ __all__ = [
     "match",
 ]
 
-#: Experimental. The entry point group a package adds its starters to.
+#: The entry point group a package adds its starters to.
 ENTRY_POINT_GROUP: Final = "karni.starters"
-#: Experimental. The empty start: the small game ``karni new --kind game`` writes.
+#: The empty start: the small game ``karni new --kind game`` writes.
 BLANK: Final = "blank"
-#: Experimental. The file that says what a starter is.
+#: The file that says what a starter is.
 STARTER_FILE: Final = "starter.toml"
-#: Experimental. The folders of a starter: the game's files, and the project's.
+#: The folders of a starter: the game's files, and the project's.
 GAME_DIR: Final = "game"
 PROJECT_DIR: Final = "project"
 #: Where each starter's install comes from, when its package is not installed.
@@ -73,7 +73,7 @@ class _StarterToml(BaseModel):
 
 @dataclass(frozen=True)
 class Starter:
-    """Experimental. One starter: what it is, where it comes from and its folder."""
+    """One starter: what it is, where it comes from and its folder."""
 
     name: str
     title: str
@@ -147,7 +147,7 @@ BLANK_STARTER: Final = Starter(
 
 @dataclass
 class Loaded:
-    """Experimental. Every starter, and the problems of those that cannot be used."""
+    """Every starter, and the problems of those that cannot be used."""
 
     starters: dict[str, Starter] = field(default_factory=dict)
     problems: list[str] = field(default_factory=list)
@@ -183,7 +183,7 @@ class Loaded:
 
 @dataclass(frozen=True)
 class Match:
-    """Experimental. A starter ranked for a request: its score and the words that gave it."""
+    """A starter ranked for a request: its score and the words that gave it."""
 
     starter: Starter
     score: int
@@ -204,7 +204,7 @@ def _folder_of(point: EntryPoint) -> Traversable | Path:
 
 
 def read(folder: Traversable | Path, *, source: str) -> Starter:
-    """Experimental. The starter in ``folder``.
+    """The starter in ``folder``.
 
     :raises ValueError: naming ``source`` and what is wrong.
     """
@@ -230,7 +230,7 @@ def read(folder: Traversable | Path, *, source: str) -> Starter:
 
 
 def load(*, installed: bool = True) -> Loaded:
-    """Experimental. The blank start, then every installed starter.
+    """The blank start, then every installed starter.
 
     A starter that cannot be used is left out, and its problem is in
     :attr:`Loaded.problems` (``C482``).
@@ -257,7 +257,7 @@ def load(*, installed: bool = True) -> Loaded:
 
 
 def match(starters: Iterable[Starter], request: str, *, limit: int = 3) -> list[Match]:
-    """Experimental. The starters that fit ``request`` best, by the recipes' word overlap.
+    """The starters that fit ``request`` best, by the recipes' word overlap.
 
     Each word of the request scores 4 for a starter's own noun (its name, or a
     use_when phrase of one word), 2 for a word of a use_when phrase and 1 for a

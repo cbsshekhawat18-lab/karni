@@ -1,4 +1,4 @@
-"""Experimental. The app spec, ``karni.yaml``: its format, validation and export.
+"""The app spec, ``karni.yaml``: its format, validation and export.
 
 A spec describes a Karni project in the terms ``karni make``, ``karni add``
 and the settings already use: the apps and their entities (fields in

@@ -21,8 +21,8 @@ nested class, next to ``Meta``, ``APIMeta`` and ``AdminMeta``::
             after_import = "shop.imports.reindex"
             no_overlap = ("room", "during")     # one live row per room and slot (PostgreSQL)
             field_groups = {"Order": ["number", "customer"], "Notes": ["note"]}  # karni.layout
-            # external = True, writable = True, database = "warehouse": karni.db (experimental)
-            # search = {"fields": ["number"]}: karni.global_search (experimental)
+            # external = True, writable = True, database = "warehouse": karni.db
+            # search = {"fields": ["number"]}: karni.global_search
 
 Every option has a default, so a model with no ``Karni`` class behaves
 sensibly: owned by whoever created it, no extra scope paths, the four
@@ -148,7 +148,7 @@ OPTIONS: Final[tuple[Option, ...]] = (
     Option(
         "label_field",
         "the first text field named `name`, `title` or `label`, else `natural_key`",
-        "Experimental. The field that shows a row to people where only its key would show "
+        "The field that shows a row to people where only its key would show "
         "otherwise: the groups of an aggregate on a relation (chart legends and axes, "
         "comparison headers).",
         'label_field = "display_name"',
@@ -189,7 +189,7 @@ OPTIONS: Final[tuple[Option, ...]] = (
     Option(
         "label",
         "`None`",
-        "Experimental. The field that names a row for people, where another model's "
+        "The field that names a row for people, where another model's "
         "relation shows it: a table cell, a detail page, a select. Published as `label` in "
         "`x-karni-relation`. Unset, @karni/ui takes the first of name, title, label and "
         "email.",
@@ -206,42 +206,41 @@ OPTIONS: Final[tuple[Option, ...]] = (
     Option(
         "aggregate",
         "`None`",
-        "Experimental. What `GET <resource>/aggregate/` may group by and sum: the fields, "
+        "What `GET <resource>/aggregate/` may group by and sum: the fields, "
         "relation paths and expressions in `group_by` (a date takes `:year`, `:quarter` or "
         "`:month`), the `values` a metric reads, the `metrics` allowed and named `expressions` "
         "([aggregations](aggregations.md)).",
         'aggregate = {"group_by": ["region", "launched_on"], "values": ["price"]}',
     ),
-    # cross-model search (karni.global_search, experimental)
+    # cross-model search (karni.global_search)
     Option(
         "search",
         "`None`",
-        "Experimental. Put the model in cross-model search (`GET /api/search/`): the text "
+        "Put the model in cross-model search (`GET /api/search/`): the text "
         "`fields` to match, the `title` and `subtitle` a hit shows, a `weight` across models. "
         "Each field gets a GIN trigram index "
         "([search across models](global-search.md)).",
         'search = {"fields": ["name", "sku"], "title": "name", "subtitle": "sku"}',
     ),
-    # wide models: field groups and column sets (karni.layout, experimental)
+    # wide models: field groups and column sets (karni.layout)
     Option(
         "field_groups",
         "`{}`",
-        "Experimental. Titled groups of fields: sections (or tabs) in ResourceForm and "
+        "Titled groups of fields: sections (or tabs) in ResourceForm and "
         "ResourceDetail, fieldsets in the admin. The fields in no group go into a last group, "
-        "Other ([UI: field groups](ui.md#field-groups-and-column-sets-experimental)).",
+        "Other ([UI: field groups](ui.md#field-groups-and-column-sets)).",
         'field_groups = {"Overview": ["name", "summary"], "Financials": ["price", "cost"]}',
     ),
     Option(
         "field_group_layout",
         '`"sections"`',
-        'Experimental. How ResourceForm and ResourceDetail show `field_groups`: `"sections"` '
-        'or `"tabs"`.',
+        'How ResourceForm and ResourceDetail show `field_groups`: `"sections"` or `"tabs"`.',
         'field_group_layout = "tabs"',
     ),
     Option(
         "column_sets",
         "`{}`",
-        "Experimental. Named column presets of ResourceTable, with a selector that remembers "
+        "Named column presets of ResourceTable, with a selector that remembers "
         "each user's choice. The set named `default` is shown first, else the first set.",
         'column_sets = {"default": ["name", "price"], "financial": ["name", "price", "cost"]}',
     ),
@@ -283,11 +282,11 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "`EXCLUDE` constraint the model's migration creates. Soft-deleted rows never block.",
         'no_overlap = NoOverlap("room", "during", ignore={"status": ["cancelled"]})',
     ),
-    # rules every write keeps (karni.rules, experimental)
+    # rules every write keeps (karni.rules)
     Option(
         "bounds",
         "`{}`",
-        "Experimental. The lowest and highest value of a number, date or datetime field, "
+        "The lowest and highest value of a number, date or datetime field, "
         "checked when the value is written new or changed: `{field: {min, max}}`, with `$now` "
         "and `$today` for dates (`E990`). The API schema publishes a number's limits.",
         'bounds = {"quantity": {"min": 1}, "expected_close": {"min": "$today"}}',
@@ -295,7 +294,7 @@ OPTIONS: Final[tuple[Option, ...]] = (
     Option(
         "unique",
         "`None`",
-        "Experimental. Fields whose values are unique among the live rows: a list of field "
+        "Fields whose values are unique among the live rows: a list of field "
         "lists, or `{fields, where}` with a row filter of fixed values. Each one is a partial "
         "unique index PostgreSQL and SQLite enforce (`E991`).",
         'unique = [["slot", "member"], {"fields": ["user"], "where": {"active": True}}]',
@@ -303,37 +302,37 @@ OPTIONS: Final[tuple[Option, ...]] = (
     Option(
         "targets",
         "`{}`",
-        "Experimental. The rows a foreign key may point at: `{field: <row filter>}`, with "
+        "The rows a foreign key may point at: `{field: <row filter>}`, with "
         "`$me`, `$now`, `$today` and `$<field of the row>` as values (`E993`).",
         'targets = {"listing": {"active": True, "seller__user": {"not": "$me"}}}',
     ),
     Option(
         "frozen",
         "`{}`",
-        "Experimental. Fields that never change after create (`True`), or not while the stored "
+        "Fields that never change after create (`True`), or not while the stored "
         "row matches a row filter (`E994`).",
         'frozen = {"slot": True, "value": {"stage": "won"}}',
     ),
     Option(
         "delete",
         "`None`",
-        "Experimental. When a row may be deleted: `when` (a row filter it must match) and "
+        "When a row may be deleted: `when` (a row filter it must match) and "
         "`blocked_by` (related entities whose live rows keep it). A refusal is `E995` (409).",
         'delete = {"when": {"status": "pending"}, "blocked_by": ["Deal"]}',
     ),
     Option(
         "moves",
         "`{}`",
-        "Experimental. What a move into a state (or a boolean becoming true) requires, needs, "
+        "What a move into a state (or a boolean becoming true) requires, needs, "
         "stamps and who is emailed: `{state: {requires: [fields], needs: [entities], stamps: "
         "[fields], notify: <path to a user>}}` (`E996`).",
         'moves = {"lost": {"requires": ["lost_reason"], "stamps": ["closed_at"]}}',
     ),
-    # external tables, SQL views and a second database (karni.db, experimental)
+    # external tables, SQL views and a second database (karni.db)
     Option(
         "external",
         "`False`",
-        "Experimental. Another system owns the table or view: with `Meta.managed = False`, "
+        "Another system owns the table or view: with `Meta.managed = False`, "
         "the model may inherit plain `models.Model`, Karni runs no DDL for it, the API answers "
         "its writes with 405 and the admin shows it read-only "
         "([models: external tables](models.md#external-tables-views-and-a-second-database)).",
@@ -342,21 +341,21 @@ OPTIONS: Final[tuple[Option, ...]] = (
     Option(
         "writable",
         "`False`",
-        "Experimental. Let the API and the admin write an external model's table.",
+        "Let the API and the admin write an external model's table.",
         "writable = True",
     ),
     Option(
         "database",
         "`None` (the default database)",
-        "Experimental. The `DATABASES` alias the model's reads, writes and migrations go to "
+        "The `DATABASES` alias the model's reads, writes and migrations go to "
         "(`karni.db.DatabaseRouter`).",
         'database = "warehouse"',
     ),
-    # taxonomy tagging (karni.taxonomy, experimental)
+    # taxonomy tagging (karni.taxonomy)
     Option(
         "taxonomies",
         "`{}`",
-        "Experimental. Tag the model to tree models: key -> tree model. Each key is a "
+        "Tag the model to tree models: key -> tree model. Each key is a "
         "many-to-many of that name (generated, or yours adopted), the list filters "
         "`?<key>=` and `?<key>_descendants=`, the `facets/` counts and the `tree:<key>` scope "
         "([models: taxonomies](models.md#taxonomies)).",
@@ -470,7 +469,7 @@ LABEL_FIELD_NAMES: Final[tuple[str, ...]] = ("name", "title", "label")
 
 
 def label_field(model: type[models.Model]) -> str | None:
-    """Experimental. The field that shows a row of ``model`` to people: ``Karni.label_field``.
+    """The field that shows a row of ``model`` to people: ``Karni.label_field``.
 
     What an aggregate's group on a relation is labelled with, so a chart reads
     ``Europe`` where the key is a slug or an id. Declared explicitly, else the

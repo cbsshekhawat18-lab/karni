@@ -30,9 +30,7 @@ builders :func:`count_of`, :func:`sum_of`, :func:`latest_of`,
 seed pool (:func:`pool`).
 
 The contract is versioned: :data:`CONTRACT` is its version, which a part's
-recipe names in ``requires``. It is Experimental until the six recipes use
-it (docs/stability.md); a breaking change after that warns for one minor
-release first.
+recipe names in ``requires``.
 
 Override / escape hatch: ``KARNI_PEOPLE_RESOLVER`` (a :class:`Resolver`
 subclass), the hook registries, ``KARNI_PEOPLE_LINK_ON_VERIFY``,
@@ -80,7 +78,7 @@ if TYPE_CHECKING:
         resolve,
     )
 
-#: Experimental. The version of the people contract. A breaking change raises it.
+#: The version of the people contract. A breaking change raises it.
 CONTRACT: Final = 1
 
 __all__ = [

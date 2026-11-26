@@ -19,6 +19,14 @@ The model name and the API key are read per call through
 :func:`karni_ai.conf.get`, never from code, so ``override_settings`` works in
 tests and nothing is checked at boot.
 
+Extraction is the one job karni-ai ships. A job of the project's own (a
+translation service, a summary) may use the same contract: its own
+:class:`Provider` subclass, its parameters in :attr:`StructuredRequest.metadata`,
+its usage in the unit the service bills in (:attr:`Usage.unit`), and the call
+logged with its own ``kind`` (:func:`karni_ai.usage.log_call`).
+:func:`get_provider` takes that provider's dotted path, beside the one
+``KARNI_AI_PROVIDER`` names for extraction.
+
 Override / escape hatch: set ``KARNI_AI_PROVIDER`` to ``"anthropic"``,
 ``"openai"``, ``"test"`` or the dotted path of your own :class:`Provider`
 subclass. The instance is cached per value and the cache is reset whenever a
@@ -28,8 +36,9 @@ subclass. The instance is cached per value and the cache is reset whenever a
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Final
 
 from django.test.signals import setting_changed
 from django.utils.module_loading import import_string
@@ -39,6 +48,7 @@ from karni_ai import conf
 
 __all__ = [
     "PROVIDER_SHORTCUTS",
+    "TOKENS",
     "Provider",
     "StructuredAnswer",
     "StructuredRequest",
@@ -48,12 +58,23 @@ __all__ = [
 ]
 
 
+#: The unit a language model counts in, and the default of :attr:`Usage.unit`.
+TOKENS: Final = "tokens"
+
+
 @dataclass(frozen=True)
 class Usage:
-    """Experimental. The tokens one provider call used, as the provider reported them."""
+    """What one provider call used, as the provider reported it.
+
+    ``input_tokens`` and ``output_tokens`` are counted in ``unit``: tokens for a
+    language model (the default), or the unit another service bills in
+    (``"characters"`` for a translation service). The cost and the token budgets
+    never mix units (:mod:`karni_ai.usage`).
+    """
 
     input_tokens: int
     output_tokens: int
+    unit: str = TOKENS
 
     @property
     def total(self) -> int:
@@ -62,11 +83,14 @@ class Usage:
 
 @dataclass(frozen=True)
 class StructuredRequest:
-    """Experimental. What a provider is asked.
+    """What a provider is asked.
 
     ``instructions`` is the system prompt, ``source`` the text to read (data,
     never instructions), ``schema`` the JSON Schema the answer must follow and
     ``name`` a short identifier of that schema (some APIs require one).
+    ``metadata`` carries the parameters of a job of the project's own to its
+    provider (``{"target_language": "fr"}`` for a translation): Karni passes it
+    as given and never reads it, and the shipped providers ignore it.
     """
 
     instructions: str
@@ -76,11 +100,12 @@ class StructuredRequest:
     max_output_tokens: int = 16000
     timeout: float = 60.0
     max_retries: int = 1
+    metadata: Mapping[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class StructuredAnswer:
-    """Experimental. A provider's answer: the decoded JSON, its usage and the model that gave it."""
+    """A provider's answer: the decoded JSON, its usage and the model that gave it."""
 
     data: Any
     usage: Usage
@@ -90,7 +115,7 @@ class StructuredAnswer:
 
 
 class Provider(ABC):
-    """Experimental. A language model behind one API.
+    """A language model behind one API.
 
     Subclass it to use a provider Karni does not ship: give it a unique
     ``name``, implement :meth:`structured` (and :meth:`problems` when it needs
@@ -122,7 +147,7 @@ PROVIDER_SHORTCUTS: dict[str, str] = {
     "openai": "karni_ai.providers.openai.OpenAIProvider",
     "test": "karni_ai.providers.test.TestProvider",
 }
-"""Experimental. The names ``KARNI_AI_PROVIDER`` takes besides a dotted path."""
+"""The names ``KARNI_AI_PROVIDER`` takes besides a dotted path."""
 
 _cache: dict[str, Provider] = {}
 
@@ -133,7 +158,7 @@ def provider_spec() -> str:
 
 
 def get_provider(spec: str | None = None) -> Provider:
-    """Experimental. The provider ``KARNI_AI_PROVIDER`` names (or ``spec``), cached per value.
+    """The provider ``KARNI_AI_PROVIDER`` names (or ``spec``), cached per value.
 
     :raises KarniImproperlyConfigured: AI001 when nothing is set, AI002 when
         the value is neither a shortcut nor a ``Provider`` subclass.

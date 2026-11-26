@@ -14,7 +14,7 @@ export function formatNumberValue(field: Pick<FieldDef, "name">, value: number):
 const WRITTEN = /^(id|year|number)$|_(year|number)$/;
 
 /**
- * Experimental. The currency of a money field's value: its fixed currency, or
+ * The currency of a money field's value: its fixed currency, or
  * the row's `currencyField`. `undefined` when the field is not money or the
  * row does not say.
  */
@@ -30,7 +30,7 @@ export function moneyCurrency(
 }
 
 /**
- * Experimental. A money field's value as people read it (`$1,234.50`), or
+ * A money field's value as people read it (`$1,234.50`), or
  * `null` when the field is not money or its currency is not known.
  */
 export function formatMoneyValue(

@@ -27,14 +27,14 @@ export interface RelationRef {
   resource: string;
   many: boolean;
   /**
-   * Experimental. The field that names a row of the target (`class Karni: label`
+   * The field that names a row of the target (`class Karni: label`
    * on the server): a table cell and a detail show it instead of guessing.
    */
   label?: string;
 }
 
 /**
- * Experimental. A tree model, from the `x-karni-tree` vendor extension: the
+ * A tree model, from the `x-karni-tree` vendor extension: the
  * self-referencing parent field and whether siblings have an order
  * (`position`, set by the move action).
  */
@@ -45,7 +45,7 @@ export interface TreeRef {
   ordered: boolean;
 }
 
-/** Experimental. Which currency a money field is in: fixed, or another field of the row. */
+/** Which currency a money field is in: fixed, or another field of the row. */
 export interface MoneyRef {
   currency?: string;
   currencyField?: string;
@@ -79,7 +79,7 @@ export interface FieldDef {
   /** Present only when x-karni-relation was emitted (degrades gracefully). */
   relation?: RelationRef;
   /**
-   * Experimental. A relation to a person (the user model, `x-karni-user`): tables
+   * A relation to a person (the user model, `x-karni-user`): tables
    * and details expand it and show the person's name, never the id.
    */
   person?: true;
@@ -98,24 +98,24 @@ export interface FieldDef {
   /** The states a new row may start in (`x-karni-initial`), with `transitions`. */
   initial?: readonly string[];
   /**
-   * Experimental. An amount of money (`x-karni-money`, a MoneyField on the
+   * An amount of money (`x-karni-money`, a MoneyField on the
    * server): tables and details show it in its currency, which is fixed
    * (`currency`) or read from another field of the row (`currencyField`).
    */
   money?: MoneyRef;
   /**
-   * Experimental. Set on a relation whose target is a tree model
+   * Set on a relation whose target is a tree model
    * (`x-karni-tree`): ResourceForm edits it with TreeSelect.
    */
   tree?: TreeRef;
   /**
-   * Experimental. The key of a `class Karni: taxonomies` entry (`x-karni-taxonomy`),
+   * The key of a `class Karni: taxonomies` entry (`x-karni-taxonomy`),
    * set on its relation: the list filters `?<key>=` and `?<key>_descendants=`
    * and the `facets/` counts exist for it (FacetPanel).
    */
   taxonomy?: string;
   /**
-   * Experimental. True on a file or image field the storage module protects
+   * True on a file or image field the storage module protects
    * (`x-karni-storage` with `protected: true`): its value is a download path that
    * needs the caller's credentials, so a plain link to it answers 401 in token auth.
    */
@@ -164,7 +164,7 @@ export interface DashboardDef {
 }
 
 /**
- * Experimental. One reverse relation of a resource, from `x-karni-related` on
+ * One reverse relation of a resource, from `x-karni-related` on
  * its list operation: the rows of another resource that point at this one
  * (the deals of a company). ResourceDetail's `related` tabs read it.
  */
@@ -184,7 +184,7 @@ export interface RelatedDef {
 }
 
 /**
- * Experimental. One titled group of fields, from `x-karni-field-groups` (the
+ * One titled group of fields, from `x-karni-field-groups` (the
  * model's `Karni.field_groups`): a section or a tab of ResourceForm and
  * ResourceDetail.
  */
@@ -195,11 +195,11 @@ export interface FieldGroupDef {
   fields: readonly string[];
 }
 
-/** Experimental. How ResourceForm and ResourceDetail show the field groups. */
+/** How ResourceForm and ResourceDetail show the field groups. */
 export type FieldGroupLayout = "sections" | "tabs";
 
 /**
- * Experimental. A model's field groups as `x-karni-field-groups` publishes them,
+ * A model's field groups as `x-karni-field-groups` publishes them,
  * limited to the fields this role has. The fields in no group form a last
  * group, "Other".
  */
@@ -208,7 +208,7 @@ export interface FieldGroupsDef {
   groups: readonly FieldGroupDef[];
 }
 
-/** Experimental. One named column preset of ResourceTable, from `x-karni-column-sets`. */
+/** One named column preset of ResourceTable, from `x-karni-column-sets`. */
 export interface ColumnSetDef {
   /** Its name in the model's `Karni.column_sets` ("financial"), kept per user when chosen. */
   name: string;
@@ -218,7 +218,7 @@ export interface ColumnSetDef {
   columns: readonly string[];
 }
 
-/** Experimental. A model's column sets as `x-karni-column-sets` publishes them. */
+/** A model's column sets as `x-karni-column-sets` publishes them. */
 export interface ColumnSetsDef {
   /** The set shown first: the one named `default`, else the first. */
   default: string;
@@ -265,40 +265,40 @@ export interface ResourceSchema {
     export?: OperationDef;
     /** `POST /<resource>/import/`: the import flow (upload, preview, commit). */
     import?: OperationDef;
-    /** Experimental. `GET /<resource>/tree/`: nested nodes of a tree model. */
+    /** `GET /<resource>/tree/`: nested nodes of a tree model. */
     tree?: OperationDef;
-    /** Experimental. `GET /<resource>/<id>/children/`: a node's children, paginated. */
+    /** `GET /<resource>/<id>/children/`: a node's children, paginated. */
     children?: OperationDef;
-    /** Experimental. `GET /<resource>/<id>/ancestors/`: the path above a node, root first. */
+    /** `GET /<resource>/<id>/ancestors/`: the path above a node, root first. */
     ancestors?: OperationDef;
-    /** Experimental. `POST /<resource>/<id>/move/`: a new parent (and position) for a node. */
+    /** `POST /<resource>/<id>/move/`: a new parent (and position) for a node. */
     move?: OperationDef;
-    /** Experimental. `GET /<resource>/access/`: the requester's access forest (the `tree:<path>` scope). */
+    /** `GET /<resource>/access/`: the requester's access forest (the `tree:<path>` scope). */
     access?: OperationDef;
-    /** Experimental. `GET /<resource>/facets/`: rows per node of a taxonomy, under the list's filters. */
+    /** `GET /<resource>/facets/`: rows per node of a taxonomy, under the list's filters. */
     facets?: OperationDef;
   };
   /** Ordered by declaration. Unknown constructs land as kind "unknown". */
   fields: readonly FieldDef[];
   /** The model's dashboard declaration (`x-karni-dashboard`), when it opts in. */
   dashboard?: DashboardDef;
-  /** Experimental. Present when the resource is a tree model (`x-karni-tree`). */
+  /** Present when the resource is a tree model (`x-karni-tree`). */
   tree?: TreeRef;
-  /** Experimental. Its reverse relations (`x-karni-related`), when the backend publishes them. */
+  /** Its reverse relations (`x-karni-related`), when the backend publishes them. */
   related?: readonly RelatedDef[];
-  /** Experimental. Its field groups (`x-karni-field-groups`), when the model declares them. */
+  /** Its field groups (`x-karni-field-groups`), when the model declares them. */
   fieldGroups?: FieldGroupsDef;
-  /** Experimental. Its column presets (`x-karni-column-sets`), when the model declares them. */
+  /** Its column presets (`x-karni-column-sets`), when the model declares them. */
   columnSets?: ColumnSetsDef;
   /**
-   * Experimental. Its declared row actions (`x-karni-actions`, karni.yaml's
+   * Its declared row actions (`x-karni-actions`, karni.yaml's
    * `actions:`): `POST <resource>/<id>/<name>/`, by name.
    */
   rowActions?: Readonly<Record<string, RowActionDef>>;
 }
 
 /**
- * Experimental. One declared row action: the states it runs from, the state
+ * One declared row action: the states it runs from, the state
  * it moves to (`null`: the viewset's own method), the state field, who may
  * (an `x-karni-access` rule) and the fields the move requires.
  */

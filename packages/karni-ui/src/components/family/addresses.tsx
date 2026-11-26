@@ -1,5 +1,5 @@
 /**
- * Experimental. `<MyAddresses>`: the signed-in person's saved addresses
+ * `<MyAddresses>`: the signed-in person's saved addresses
  * (karni.people, `/people-addresses/`), for their account page: each one,
  * which is the default for shipping and billing, add one, and remove one.
  *
@@ -59,7 +59,7 @@ function errorsOf(error: unknown): Record<string, string> {
   return found;
 }
 
-/** Experimental. The signed-in person's addresses, to add and remove. */
+/** The signed-in person's addresses, to add and remove. */
 export function MyAddresses(): React.ReactElement {
   const client = useKarniClient();
   const queryClient = useQueryClient();

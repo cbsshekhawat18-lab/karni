@@ -9,7 +9,7 @@ import { CheckIcon } from "../../primitives/icons";
 import { Skeleton } from "../../primitives/skeleton";
 import type { ResourceNames } from "../resource-names";
 
-/** Experimental. What the `Node` slot receives: the content of one tree item. */
+/** What the `Node` slot receives: the content of one tree item. */
 export interface TreeViewNodeProps {
   /** The row behind the node (its fields, `has_children` and `children`). */
   node: Record<string, unknown>;
@@ -21,15 +21,15 @@ export interface TreeViewNodeProps {
   selected: boolean;
   /** Whether its branch is open. */
   expanded: boolean;
-  /** Experimental. The node's `countField` number, or null. */
+  /** The node's `countField` number, or null. */
   count?: number | null;
-  /** Experimental. What the count counts, for screen readers ("datasets"). */
+  /** What the count counts, for screen readers ("datasets"). */
   countNoun?: string | undefined;
-  /** Experimental. True for a node the search found (shown in bold), not one kept only as an ancestor. */
+  /** True for a node the search found (shown in bold), not one kept only as an ancestor. */
   matched?: boolean;
 }
 
-/** Experimental. What the `Empty` slot receives. */
+/** What the `Empty` slot receives. */
 export interface TreeViewEmptyProps {
   /** "none": the tree has no nodes. "no-match": the search found nothing. */
   reason: "none" | "no-match";
@@ -37,12 +37,12 @@ export interface TreeViewEmptyProps {
   names: ResourceNames;
 }
 
-/** Experimental. What the `Loading` slot receives. */
+/** What the `Loading` slot receives. */
 export interface TreeViewLoadingProps {
   rows: number;
 }
 
-/** Experimental. The replaceable parts of TreeView (`slots`). */
+/** The replaceable parts of TreeView (`slots`). */
 export interface TreeViewSlots {
   /** One node's content (the row around it carries the treeitem semantics and the toggle). */
   Node: React.ComponentType<TreeViewNodeProps>;
@@ -105,7 +105,7 @@ export function TreeViewError(props: ErrorSlotProps): React.ReactElement {
   return <ErrorState variant="inline" className="px-2 py-3" {...props} />;
 }
 
-/** Experimental. TreeView's own slot components, for wrapping rather than rewriting. */
+/** TreeView's own slot components, for wrapping rather than rewriting. */
 export const defaultTreeViewSlots: TreeViewSlots = {
   Node: TreeViewNode,
   Loading: TreeViewLoading,

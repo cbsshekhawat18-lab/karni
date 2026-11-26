@@ -1,4 +1,4 @@
-"""Experimental. The email of a move (``moves.<state>.notify`` in karni.yaml), as a message kind.
+"""The email of a move (``moves.<state>.notify`` in karni.yaml), as a message kind.
 
 While ``karni.notify`` is installed, each move that names a recipient is a
 declared message kind, ``<app_label>.<model>_<key>`` (``bookings.booking_confirmed``):
@@ -59,7 +59,7 @@ DEFAULT_TEMPLATE = "karni/email/move"
 
 
 def move_template(model: type[models.Model], key: str) -> str:
-    """Experimental. ``<app>/email/<model>_<key>`` when the project has it, else Karni's."""
+    """``<app>/email/<model>_<key>`` when the project has it, else Karni's."""
     meta = model._meta
     own = f"{meta.app_label}/email/{meta.model_name}_{key.replace(':', '_')}"
     try:
@@ -75,7 +75,7 @@ def _channels() -> tuple[str, ...]:
 
 
 def declare_move_kinds() -> None:
-    """Experimental. Declare each move's email as a message kind (a part's own declaration wins)."""
+    """Declare each move's email as a message kind (a part's own declaration wins)."""
     from karni.preferences.registry import move_email_name
     from karni.rules import rules_of
 
@@ -108,7 +108,7 @@ def declare_move_kinds() -> None:
 
 
 def move_context(instance: models.Model, key: str, recipient: Any) -> dict[str, Any]:
-    """Experimental. What a move's email renders with."""
+    """What a move's email renders with."""
     from karni.rules import rules_of
 
     move = next(item for item in rules_of(type(instance)).moves if item.key == key)
@@ -123,7 +123,7 @@ def move_context(instance: models.Model, key: str, recipient: Any) -> dict[str, 
 
 
 def render_move(instance: models.Model, key: str, context: dict[str, Any]) -> Rendered:
-    """Experimental. A move's email rendered: the text a business edited, else the files.
+    """A move's email rendered: the text a business edited, else the files.
 
     Each file is ``<app>/email/<model>_<key>_<part>``, else Karni's
     ``karni/email/move_<part>``, part by part, and the HTML part only from the
@@ -152,7 +152,7 @@ def render_move(instance: models.Model, key: str, context: dict[str, Any]) -> Re
 
 
 def send_move(instance: models.Model, key: str, recipient: Any) -> int:
-    """Experimental. Send the email of ``instance``'s move ``key`` to ``recipient`` (a user).
+    """Send the email of ``instance``'s move ``key`` to ``recipient`` (a user).
 
     Returns the emails sent. The inbox gets it too when the kind's channels
     name it, and the recipient's own switch for the kind holds.

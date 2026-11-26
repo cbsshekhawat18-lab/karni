@@ -21,8 +21,11 @@ Everything is read from this checkout, never typed from memory:
 - make targets: the scaffold's Makefile; procedures: karni.agent's
   procedures;
 - status: :data:`CAPABILITIES` below. A capability is ``stable`` only with
-  evidence (a reference-application file and a phrase in it), checked on
-  every run, so a claim cannot outlive the code that backs it.
+  evidence of real use: a file in the repository and a phrase in it (an
+  example, a recipe, the scaffold or a module), checked on every run so a
+  claim cannot outlive the code that backs it, or ``real_use``, a note that a
+  real project uses it, recorded without its name. ``experimental`` is the
+  experimental tier and nothing else (docs/stability.md#experimental-names).
 
 docs/features.md keeps hand-written prose; only the regions between
 ``<!-- generated:NAME -->`` and ``<!-- /generated:NAME -->`` are replaced
@@ -80,26 +83,47 @@ CONTENT_DOCS = ROOT / "docs" / "design-content.md"
 class Capability:
     """One thing Karni does, with the evidence that decides its status.
 
-    ``evidence`` is (file in a reference application, phrase in it). With
-    evidence the capability is ``stable``; without, ``experimental`` (shipped
-    and covered by Karni's own tests, not yet used by a reference
-    application); with ``planned`` (a docs link) it is ``planned``.
+    ``evidence`` is (file in the repository, phrase in it): an example, a
+    recipe, the scaffold or a module that uses the capability. ``real_use``
+    says that a real project built on Karni uses it, without naming the
+    project (:data:`REAL`). With either, the capability is ``stable``.
+    ``experimental`` holds why it is still in the experimental tier
+    (docs/stability.md's "Experimental now"): its names may change in a minor
+    release, whatever its evidence. Without evidence or real use it is
+    ``tested``: it keeps the promise and Karni's own tests cover it, but no
+    project or example uses it yet. With ``planned`` (a docs link) it is
+    ``planned``.
     """
 
     area: str
     text: str
     evidence: tuple[tuple[str, str], ...] = ()
     planned: str = ""
+    real_use: str = ""
+    experimental: str = ""
 
     @property
     def status(self) -> str:
         if self.planned:
             return "planned"
-        return "stable" if self.evidence else "experimental"
+        if self.experimental:
+            return "experimental"
+        return "stable" if self.evidence or self.real_use else "tested"
 
 
 EH = "examples/eventhub"
 SL = "examples/social-leads"
+MI = "examples/medintel"
+SD = "examples/shop-demo"
+HD = "examples/hybrid-demo"
+SCAFFOLD_DIR = "templates/project/{{cookiecutter.project_slug}}"
+RECIPES = "packages/karni-cli/karni_cli/recipes"
+#: How real use by a private project is recorded: never its name.
+REAL = "a real project (private)"
+#: Why a capability with no use yet stays in the experimental tier.
+UNUSED = "no project or example uses it yet"
+#: Why the family foundation of 0.6.0 stays in the experimental tier (docs/stability.md).
+FAMILY = "the family foundation: only Karni's own modules and recipes use it yet"
 
 #: Every capability the features page and the reference list, by area.
 CAPABILITIES: tuple[Capability, ...] = (
@@ -114,7 +138,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         "models",
         "`BigIntBaseModel`: the same base on a 64-bit integer key, chosen per model "
         "(`karni make model --pk bigint`, `KARNI_PK`), with legacy ids in imports and "
-        "`karni load`, and `karni.W530` for a public resource. Experimental tier",
+        "`karni load`, and `karni.W530` for a public resource",
+        (("modules/karni-ai/karni_ai/models.py", "from karni.models import BigIntBaseModel"),),
     ),
     Capability(
         "models",
@@ -124,6 +149,8 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         "models",
         "Real content from a JSON or YAML file, created or updated by natural key (`karni load`)",
+        ((f"{HD}/content/game.yaml", "karni load"),),
+        real_use=REAL,
     ),
     Capability(
         "models",
@@ -139,30 +166,47 @@ CAPABILITIES: tuple[Capability, ...] = (
         "models",
         "Family events with an outbox: `declare`, `publish` in the writer's transaction, "
         "`subscribe` by name, delivered after the commit with retries and a sweep "
-        "(`karni.outbox`). Experimental tier",
+        "(`karni.outbox`)",
+        (
+            ("modules/karni-commerce/karni_commerce/events.py", "from karni.events import"),
+            (f"{RECIPES}/booking/files/bookings/events.py", "from karni.events import declare"),
+        ),
+        experimental=FAMILY,
     ),
     Capability(
         "models",
         "Field-level change history (`class Karni: audit = True`)",
         ((f"{SL}/crm/models.py", "audit = True"),),
     ),
-    Capability("models", "Scheduled tasks (`<app>/schedules.py`, `karni schedule`)"),
+    Capability(
+        "models",
+        "Scheduled tasks (`<app>/schedules.py`, `karni schedule`)",
+        (
+            (
+                "modules/karni-impersonation/karni_impersonation/schedules.py",
+                "from karni.schedule import every",
+            ),
+        ),
+    ),
     Capability(
         "models",
         "External tables, SQL views and a second database as models Karni reads (`class Karni: "
-        "external`, `writable`, `database`, `karni make model --external`). Experimental tier",
+        "external`, `writable`, `database`, `karni make model --external`)",
+        experimental=UNUSED,
     ),
     Capability(
         "models",
         "Tree models: `TreeModel` and `OrderedTreeModel` with cycle-safe walks (`roots`, "
         "`children`, `ancestors`, `descendants`, `subtree_ids`), `move_to()` and "
-        "`delete_branch()`, and the tree changelist in the admin. Experimental tier",
+        "`delete_branch()`, and the tree changelist in the admin",
+        ((f"{MI}/intel/karni/models.py", "TreeModel"),),
     ),
     Capability(
         "models",
         "Taxonomy tagging: one declaration tags a model to tree models (`class Karni: "
         "taxonomies`), a generated or adopted many-to-many per key, import and export columns "
-        "by natural key, and the `tree:<key>` scope. Experimental tier",
+        "by natural key, and the `tree:<key>` scope",
+        ((f"{MI}/intel/karni/models.py", "taxonomies ="),),
     ),
     Capability(
         "models",
@@ -207,61 +251,73 @@ CAPABILITIES: tuple[Capability, ...] = (
         "api",
         "Rows of any resource read from text, a web page or a PDF by a language model, "
         "always through the import preview (`karni add ai`, `POST /api/ai/extract/`, usage, "
-        "costs and budgets). Experimental tier",
+        "costs and budgets)",
+        real_use=REAL,
     ),
     Capability(
         "api",
         "Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode "
-        "(`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier",
+        "(`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`)",
+        ((f"{MI}/config/settings.py", "KARNI_SOCIAL_TOKEN_PROVIDERS"),),
     ),
     Capability(
         "api",
         "Sign-in with a one-time code sent by email, in JWT and session mode "
-        "(`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier",
+        "(`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`)",
+        ((f"{SD}/config/settings.py", "KARNI_EMAIL_OTP = True"),),
     ),
     Capability(
         "api",
         "A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user "
-        "accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). "
-        "Experimental tier",
+        "accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`)",
+        ((f"{MI}/config/settings.py", "KARNI_TERMS = {"),),
     ),
     Capability(
         "api",
         "Demo mode (`karni.demo`): demo accounts with one login per role, a write rule that "
         "lets only those accounts write, a reset to a fixed seed every N hours under a lock, "
         "`manage.py karni_demo_boot` and `GET /api/demo/` (`KARNI_DEMO_MODE`, "
-        "`KARNI_DEMO_ACCOUNTS`, `karni.E950` to `E954`). Experimental tier",
+        "`KARNI_DEMO_ACCOUNTS`, `karni.E950` to `E954`)",
+        ((f"{SD}/config/settings.py", "KARNI_DEMO_ACCOUNTS"),),
     ),
     Capability(
         "api",
         "Tree endpoints on a tree model's viewset (`tree/`, `children/`, `ancestors/`, `move/`, "
         "`?parent=`, `?descendants_of=`, `DELETE ?branch=true`) and `x-karni-tree` in the "
-        "OpenAPI document. Experimental tier",
+        "OpenAPI document",
+        ((f"{MI}/frontend/src/components/CategoryTree.tsx", "<TreeView"),),
     ),
     Capability(
         "api",
         "Taxonomy filters and counts: `?<key>=` and `?<key>_descendants=` on the list, "
         "`facets/` (rows per node under the list's filters and access, rolled up on request) "
-        "and a tree node's `tagged/` per tagging model. Experimental tier",
+        "and a tree node's `tagged/` per tagging model",
     ),
     Capability(
         "api",
         "Search across models: one ranked `GET /api/search/` over every model that declares "
         "`class Karni: search`, each under its own list access, one query per model, with "
-        "the trigram indexes in its migrations (`karni.W590`). Experimental tier",
+        "the trigram indexes in its migrations (`karni.W590`)",
+        ((f"{MI}/karni.yaml", "global_search:"),),
     ),
     Capability(
         "api",
         "PDF reports of a row (the `reports` module): a template rendered in the background "
         "with WeasyPrint, cached by template and data, served only to users who may retrieve "
-        "the row (`/api/reports/<report>/<id>/`, `ReportButton`). Experimental tier",
+        "the row (`/api/reports/<report>/<id>/`, `ReportButton`)",
+        (
+            (
+                "modules/karni-commerce/karni_commerce/documents.py",
+                "from karni_reports import Report, register",
+            ),
+        ),
     ),
     Capability(
         "api",
         "Protected files (the `storage` module): kept in a private S3-compatible bucket or on "
         "disk, downloaded only through the row's own viewset by a signed URL, with direct "
-        "uploads and thumbnails (`ProtectedFileField`, `<resource>/<id>/files/<field>/`). "
-        "Experimental tier",
+        "uploads and thumbnails (`ProtectedFileField`, `<resource>/<id>/files/<field>/`)",
+        ((f"{RECIPES}/shop/files/shop/viewsets.py", "karni_storage"),),
     ),
     Capability(
         "api",
@@ -272,7 +328,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         "api",
         "Grouped counts and sums under the list's filters and access: `GET "
         "<resource>/aggregate/` from `class Karni: aggregate`, with date buckets, top N and "
-        "Other, a second dimension and numbers stored as text (`TextNumber`). Experimental tier",
+        "Other, a second dimension and numbers stored as text (`TextNumber`)",
+        ((f"{MI}/karni.yaml", "aggregate:"),),
     ),
     # admin
     Capability(
@@ -284,8 +341,14 @@ CAPABILITIES: tuple[Capability, ...] = (
         "admin",
         "Row scope from the roles' grants: a staff user sees and edits only the rows a "
         "grant allows",
+        real_use=REAL,
     ),
-    Capability("admin", "Field visibility, change history and the import and export screens"),
+    Capability(
+        "admin",
+        "Field visibility, change history and the import and export screens",
+        ((f"{SL}/crm/models.py", "audit = True"),),
+        real_use=REAL,
+    ),
     Capability("admin", "A permission matrix of every role against every model and action"),
     # ui
     Capability(
@@ -317,83 +380,102 @@ CAPABILITIES: tuple[Capability, ...] = (
         "Page building blocks: `Page`, `Layout`, `Stat`, `Modal`, `Toaster`, `EmptyState`",
         ((f"{EH}/frontend/src/pages/event-dashboard.tsx", "<Stat"),),
     ),
-    Capability("ui", "`ChangeHistory`, `DataChart` and `FileUpload`"),
     Capability(
         "ui",
-        "`useAggregate` and `DataChart`'s `aggregate` and `stacked`: a resource's aggregate, "
-        "read directly. Experimental tier",
+        "`ChangeHistory`, `DataChart` and `FileUpload`",
+        (
+            ("modules/karni-commerce/ui/src/StaffOrderPage.tsx", "ChangeHistory"),
+            ("modules/karni-charts/ui/src/SavedChart.tsx", "DataChart"),
+            ("modules/karni-storage/ui/src/ProtectedFileInput.tsx", "FileUpload"),
+        ),
     ),
     Capability(
         "ui",
-        "`SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own "
-        "SDK. Experimental tier",
+        "`useAggregate` and `DataChart`'s `aggregate` and `stacked`: a resource's aggregate, "
+        "read directly",
+        ((f"{MI}/frontend/src/pages/insights.tsx", "aggregate={"),),
+    ),
+    Capability(
+        "ui",
+        "`SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own SDK",
+        ((f"{MI}/frontend/src/pages/login.tsx", "<SocialButton"),),
     ),
     Capability(
         "ui",
         "`OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as "
-        "`LoginForm`'s `codeSignIn` switch. Experimental tier",
+        "`LoginForm`'s `codeSignIn` switch",
+        ((f"{MI}/frontend/src/pages/login.tsx", "<OtpLoginForm"),),
     ),
     Capability(
         "ui",
         "`GlobalSearch` and `useGlobalSearch`: a Cmd or Ctrl+K command palette over search "
         "across models, grouped per resource, each hit linking to its ResourceDetail page "
-        "(`<Layout search>`). Experimental tier",
+        "(`<Layout search>`)",
+        ((f"{MI}/frontend/src/pages/search.tsx", "useGlobalSearch"),),
     ),
     Capability(
         "ui",
         "`TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once "
-        "the user accepts the current terms. Experimental tier",
+        "the user accepts the current terms",
+        ((f"{MI}/frontend/src/App.tsx", "<TermsGate>"),),
     ),
     Capability(
         "ui",
         "`DemoNotice`, `DemoSignInPrompt` and `useDemo`: the demo accounts of a demo-mode "
-        "server above the sign-in form (`GET /api/demo/`). Experimental tier",
+        "server above the sign-in form (`GET /api/demo/`)",
+        ((f"{SD}/frontend/src/layout.tsx", "DemoSignInPrompt"),),
     ),
     Capability(
         "ui",
         "`TreeView`, `TreeSelect` (used by `ResourceForm` for a relation to a tree) and "
-        "`TreeBreadcrumb` (on `ResourceDetail` of a tree), with `useResourceTree`. "
-        "Experimental tier",
+        "`TreeBreadcrumb` (on `ResourceDetail` of a tree), with `useResourceTree`",
+        ((f"{MI}/frontend/src/components/CategoryTree.tsx", "<TreeView"),),
     ),
     Capability(
         "ui",
         '`Layout`\'s server menu (`navSource="server"`, `useNavigation`): collapsible groups, '
-        "icons by name and the current page marked. Experimental tier",
+        "icons by name and the current page marked",
+        ((f"{MI}/frontend/src/layout.tsx", 'navSource="server"'),),
     ),
     Capability(
         "ui",
         "`FacetPanel` and `ResourceTable`'s `facets`: rows per node of a taxonomy, and choosing "
-        "nodes filters the table, with `useResourceFacets`. Experimental tier",
+        "nodes filters the table, with `useResourceFacets`",
     ),
     Capability(
         "ui",
         "`karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or "
         "Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui "
         "components as Karni's primitives",
+        ((f"{MI}/frontend/src/index.css", "karni ui detect"),),
     ),
     Capability(
         "ui",
         "`Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s "
         "buttons for a `StateField`'s transitions",
+        ((f"{EH}/events/models.py", "dashboard = "),),
     ),
     Capability(
         "ui",
         "Page blocks beyond CRUD: `DashboardGrid`, `ChartCard`, `DataTable` (computed rows: "
         "sorting, a sticky header and first column, CSV and XLSX export, only the rows in view "
         "rendered), `ComparisonTable`, `Accordion`, `MarkdownView` (sanitized, loaded on first "
-        "use) and `useResourceCounts`. Experimental tier",
+        "use) and `useResourceCounts`",
+        ((f"{EH}/frontend/src/pages/venue-overview.tsx", "DashboardGrid"),),
     ),
     Capability(
         "ui",
         "`ResourceDetail`'s related tabs (`related`): a table per reverse relation, from the "
-        "`x-karni-related` extension of the OpenAPI schema. Experimental tier",
+        "`x-karni-related` extension of the OpenAPI schema",
+        ((f"{MI}/frontend/src/pages/karni/company-detail.tsx", "related={"),),
     ),
     Capability(
         "ui",
         "Wide models: `MarkdownField` (edited with a preview, shown sanitized), "
         "`class Karni: field_groups` (form and detail sections or tabs, admin fieldsets) and "
-        "`column_sets` (table presets kept per user), with `karni.E550` to `E553`. "
-        "Experimental tier",
+        "`column_sets` (table presets kept per user), with `karni.E550` to `E553`",
+        ((f"{MI}/intel/karni/models.py", "MarkdownField"),),
+        real_use=REAL,
     ),
     # permissions
     Capability(
@@ -424,51 +506,67 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         "permissions",
         "Per-user grants next to the role grants: a pattern and a scope for one user, with "
-        "targets and an expiry, in the admin and an API (`UserGrant`, `KARNI_USER_GRANTS`). "
-        "Experimental tier",
+        "targets and an expiry, in the admin and an API (`UserGrant`, `KARNI_USER_GRANTS`)",
+        ((f"{MI}/config/settings.py", "KARNI_USER_GRANTS = True"),),
     ),
     Capability(
         "permissions",
         "The tree scope: a grant on a node of a tree reaches every row under it (`tree:<path>` "
         "in `KARNI_ROLES` and user grants, one subtree subquery, the `access/` forest, "
-        "`TreeView`'s `access`). Experimental tier",
+        "`TreeView`'s `access`)",
+        ((f"{MI}/intel/seeds.py", "tree:conditions"),),
     ),
     Capability(
         "permissions",
         "Navigation from data: each user's menu from `KARNI_NAVIGATION` or a `NavItem` tree "
         "edited in the admin, opened by the same role and per-user grants as the API "
-        "(`GET /api/navigation/`). Experimental tier",
+        "(`GET /api/navigation/`)",
+        ((f"{MI}/config/settings.py", "KARNI_NAVIGATION = ["),),
     ),
     Capability(
         "models",
         "The people contract (`karni.people`, `KARNI_PEOPLE`): one person and one organisation "
         "record for every part of a project, `people.resolve` by account or email, the account "
         "linked once its email is verified, person facts in SQL, duplicates, merge with a "
-        "preview and hooks, erase on request, `/api/people/`. Experimental tier",
+        "preview and hooks, erase on request, `/api/people/`",
+        experimental=FAMILY,
     ),
     Capability(
         "models",
         "The timeline contract (`karni.timeline`): one stream of moments per person and per "
         "record, `timeline.record` by hand, entries from family events that declare "
         "`timeline=`, `GET /api/timeline/` with each entry checked against the row scope of "
-        "every record it is about, cursor paging, retention. Experimental tier",
+        "every record it is about, cursor paging, retention",
+        (("modules/karni-commerce/karni_commerce/events.py", "karni.timeline"),),
+        experimental=FAMILY,
     ),
     Capability(
         "models",
         "The preferences contract (`karni.preferences`): the business's details, one settings "
         "section per part as a Pydantic model, `preferences.value(path, default)` with a typed "
         "default, locks a deployment fixes, connections and email switches, audited changes, "
-        "`/api/preferences/` behind the Settings page. Experimental tier",
+        "`/api/preferences/` behind the Settings page",
+        (("modules/karni-commerce/karni_commerce/preferences.py", "karni.preferences"),),
+        experimental=FAMILY,
     ),
     Capability(
         "models",
         "The notifications contract (`karni.notify`): message kinds on `karni.mail` sent to an "
         "email, the inbox or both, `notify.send` to users, people or addresses, emails a "
         "business edits (`/api/email-templates/`), the inbox API with retention, each person's "
-        "switches, unsubscribing from marketing kinds by a signed link. Experimental tier",
+        "switches, unsubscribing from marketing kinds by a signed link",
+        (("modules/karni-commerce/karni_commerce/mail.py", "karni.notify"),),
+        experimental=FAMILY,
     ),
-    Capability("permissions", "Field visibility per role (`class Karni: field_roles`)"),
-    Capability("permissions", "Row scope in the admin, from the same grants as the API"),
+    Capability(
+        "permissions",
+        "Field visibility per role (`class Karni: field_roles`)",
+        (("modules/karni-storage/karni_storage/access.py", "field_roles"),),
+        real_use=REAL,
+    ),
+    Capability(
+        "permissions", "Row scope in the admin, from the same grants as the API", real_use=REAL
+    ),
     Capability(
         "permissions",
         "Change history: who changed which field, when, from what to what",
@@ -508,33 +606,45 @@ CAPABILITIES: tuple[Capability, ...] = (
         "The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` "
         "(every problem with its code and line), `karni spec export` (the spec of an "
         "existing project) and `karni plan` (what `karni build` would change, risky changes "
-        "with their row counts). Experimental tier",
+        "with their row counts)",
+        ((f"{MI}/karni.yaml", "apps:"), (f"{SD}/karni.yaml", "apps:")),
     ),
     Capability(
         "agents",
         "Clarifying questions: `karni plan --questions` lists the few gaps of `karni.yaml` worth "
         "asking the user (owners, access, the sign-up role, the kind, each module's and "
         "feature's asks), chosen by fixed rules, and `karni spec answer` writes an answer "
-        "keeping the file's comments. Experimental tier",
+        "keeping the file's comments",
+        experimental="no project was made through it yet",
     ),
     Capability(
         "agents",
         "`karni build`: the spec applied in one command, idempotently. Karni's code in files of "
         "its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit "
         "found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and "
-        "`karni check`. Experimental tier",
+        "`karni check`",
+        ((f"{MI}/config/settings.py", "karni build"), (f"{SD}/config/settings.py", "karni build")),
     ),
     Capability(
         "agents",
         "Spec pages beyond CRUD: a detail page's related tabs and dashboard pages of charts, "
-        "in `karni plan`, `karni build`, `karni spec export` and `karni make page`. "
-        "Experimental tier",
+        "in `karni plan`, `karni build`, `karni spec export` and `karni make page`",
+        ((f"{MI}/karni.yaml", "{detail: {related: [Trial, Brand]}}"),),
     ),
     Capability(
         "agents",
         "The module catalog: a manifest per module and built-in feature, `karni modules list` "
         "and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from "
-        "the manifest and `karni remove`, which never drops data. Experimental tier",
+        "the manifest",
+        (
+            ("modules/karni-site/karni_site/karni.module.toml", "status ="),
+            (f"{RECIPES}/compose.py", "[module]"),
+        ),
+    ),
+    Capability(
+        "agents",
+        "`karni remove`: a module taken out of a project, its wiring undone, never its data",
+        experimental="no project or example has taken a module out with it yet",
     ),
     Capability(
         "agents",
@@ -542,15 +652,17 @@ CAPABILITIES: tuple[Capability, ...] = (
         "list --match`, `show`, the `karni.recipes` entry points, the blank start), the "
         "`new-app` procedure and rule K311 in AGENTS.md, and the MCP tools `recipes`, "
         "`spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`, each returning "
-        "JSON with a published schema. Experimental tier",
+        "JSON with a published schema",
+        experimental="no project was made through it yet",
     ),
     Capability(
         "agents",
-        "Six recipes, `shop`, `booking`, `crm`, `lms`, `marketplace` and `data-portal`, and `karni new "
-        '"<Name>" --recipe <name>`: the recipe\'s karni.yaml, then `karni build`, which writes '
-        "the recipe's domain code, seeds and tests over its own stubs, never over the "
+        "Six recipes, `shop`, `booking`, `crm`, `lms`, `marketplace` and `data-portal`, and "
+        '`karni new "<Name>" --recipe <name>`: the recipe\'s karni.yaml, then `karni build`, which '
+        "writes the recipe's domain code, seeds and tests over its own stubs, never over the "
         "project's code, and runs the tests and `karni check`. Each is built from scratch in "
-        "CI. Experimental tier",
+        "CI",
+        experimental="each recipe is to grow into a full app, so its files and names will change",
     ),
     Capability(
         "agents",
@@ -558,13 +670,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         "a user, from the code that decides it",
     ),
     Capability(
-        "agents", "MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools"
+        "agents",
+        "MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools",
     ),
     Capability(
         "agents",
         "Large projects, one area at a time: `karni context --summary`, `--app`, `--model` and "
         "`--max-tokens`, and a `karni check` that skips unchanged files (a cache per check and "
-        "file, `--changed [REF]` for the files git reports). Experimental tier",
+        "file, `--changed [REF]` for the files git reports)",
+        (
+            ("scripts/benchmark/large_project.py", '"context", "--summary"'),
+            ("scripts/benchmark/large_project.py", '"--changed"'),
+        ),
     ),
     # testing
     Capability(
@@ -588,18 +705,24 @@ CAPABILITIES: tuple[Capability, ...] = (
         "Clients per role (`client_as`)",
         ((f"{EH}/events/tests/test_booking_flow.py", "client_as"),),
     ),
-    Capability("testing", "`query_budget` and `user_with_roles` helpers"),
+    Capability(
+        "testing",
+        "`query_budget` and `user_with_roles` helpers",
+        ((f"{SL}/crm/viewsets.py", "query_budget = Budget("),),
+        real_use=REAL,
+    ),
     Capability(
         "testing",
         "Performance at volume: `karni seed --volume` (bulk rows that keep their relations), "
         "scaling row counts and a time budget per viewset (`Scaling`), `karni queries --explain` "
-        "with the index a sequential scan wants (PostgreSQL), and a CI benchmark on 100 models. "
-        "Experimental tier",
+        "with the index a sequential scan wants (PostgreSQL), and a CI benchmark on 100 models",
+        experimental=UNUSED,
     ),
     Capability(
         "testing",
         "`assert_pages`: a public site's pages, their title, description, alt text and links, "
         "in one call",
+        real_use=REAL,
     ),
     Capability(
         "testing",
@@ -608,9 +731,23 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
 )
 
-#: The modules' capabilities: which reference application uses each.
+#: The modules' evidence: which example, recipe or module uses each.
 MODULE_EVIDENCE: dict[str, tuple[tuple[str, str], ...]] = {
     "payments": ((f"{EH}/config/settings.py", "karni_payments"),),
+    "charts": ((f"{MI}/config/settings.py", "karni_charts"),),
+    "commerce": ((f"{RECIPES}/shop/files/shop/dashboard.py", "karni_commerce"),),
+    "reports": (
+        ("modules/karni-commerce/karni_commerce/documents.py", "from karni_reports import"),
+    ),
+    "storage": ((f"{RECIPES}/shop/files/shop/viewsets.py", "karni_storage"),),
+    "game": ((f"{HD}/config/settings.py", "karni_game"),),
+}
+#: The modules a real project uses (recorded as :data:`REAL`, never by name).
+MODULE_REAL_USE: frozenset[str] = frozenset({"ai", "site"})
+#: The modules in the experimental tier, with why (docs/stability.md).
+MODULE_EXPERIMENTAL: dict[str, str] = {
+    "game": "the next milestones extend the game side, and no real project uses it yet",
+    "commerce": FAMILY,
 }
 MODULE_PLANNED: dict[str, str] = {
     "tenancy": "docs/models.md#scopes-the-filters-every-default-manager-applies",
@@ -627,13 +764,13 @@ AREAS: tuple[tuple[str, str], ...] = (
 )
 
 STATUS_NOTE = (
-    "`stable`: public under the [stability promise](stability.md) and used by a reference "
-    "application (EventHub or the social-leads example). `experimental`: public and "
-    "covered by Karni's own tests, but no reference application uses it yet, so expect "
-    "rough edges. A capability that also says *Experimental tier* has names that may change "
-    "in a minor release without the deprecation cycle "
-    "([experimental names](stability.md#experimental-names)). Every other capability keeps "
-    "the promise. `planned`: documented as coming, but not in the code."
+    "`stable`: under the [stability promise](stability.md) and used for real, by a real "
+    "project built on Karni (recorded without its name) or by an example, a recipe, the "
+    "scaffold or a module in the repository (the *Evidence* column). `tested`: under the "
+    "promise and covered by Karni's own tests, but no project or example uses it yet. "
+    "`experimental`: its names may change in a minor release without the deprecation "
+    "cycle ([the list and why](stability.md#experimental-names)). `planned`: documented as "
+    "coming, but not in the code."
 )
 
 
@@ -693,10 +830,15 @@ def rst(text: str) -> str:
     return text.replace("``", "`")
 
 
+#: The experimental mark an entry point's docstring opens with: a table row never shows it
+#: (docs/stability.md#where-the-mark-is-shown).
+MARK = "Experimental. "
+
+
 def first_paragraph(doc: str | None) -> str:
     if not doc:
         return ""
-    paragraph = inspect.cleandoc(doc).split("\n\n")[0]
+    paragraph = inspect.cleandoc(doc).removeprefix(MARK).split("\n\n")[0]
     return rst(" ".join(line.strip() for line in paragraph.splitlines()))
 
 
@@ -1158,7 +1300,12 @@ def modules() -> list[dict[str, str]]:
         ]
         short = module_dir.name.removeprefix("karni-")
         ui = module_dir / "ui" / "package.json"
-        status = "stable" if short in MODULE_EVIDENCE else "experimental"
+        if short in MODULE_EXPERIMENTAL:
+            status = "experimental"
+        elif short in MODULE_EVIDENCE or short in MODULE_REAL_USE:
+            status = "stable"
+        else:
+            status = "tested"
         found.append(
             {
                 "short": short,
@@ -1192,7 +1339,7 @@ def modules_section() -> list[str]:
             rows.append(
                 (
                     f"`{m['name']}`",
-                    "planned",
+                    "`planned`",
                     "",
                     "",
                     f"[documented]({m['path'].removeprefix('docs/')})",
@@ -1202,7 +1349,7 @@ def modules_section() -> list[str]:
         rows.append(
             (
                 f"[`{m['name']}`]({repo_link(m['path'], tree=True)})",
-                m["status"],
+                f"`{m['status']}`",
                 f"`karni add {m['short']}`",
                 f"`{m['ui']}`" if m["ui"] else "—",
                 m["description"],
@@ -1314,6 +1461,14 @@ def make_and_procedures_section() -> list[str]:
 # --- capabilities -----------------------------------------------------------------
 
 
+def evidence_text(evidence: tuple[tuple[str, str], ...], real_use: str) -> str:
+    """The *Evidence* cell: the files that use it, a real project, or Karni's own tests."""
+    proof = [f"[{Path(rel).name}]({repo_link(rel)})" for rel, _ in evidence]
+    if real_use:
+        proof.append(real_use)
+    return ", ".join(proof) or "Karni's own tests"
+
+
 def capabilities_section() -> list[str]:
     out = ["## Capabilities and status", "", STATUS_NOTE, ""]
     for area, title in AREAS:
@@ -1321,10 +1476,8 @@ def capabilities_section() -> list[str]:
         for c in capabilities(area):
             if c.planned:
                 proof = f"[documented]({c.planned.removeprefix('docs/')})"
-            elif c.evidence:
-                proof = ", ".join(f"[{Path(rel).name}]({repo_link(rel)})" for rel, _ in c.evidence)
             else:
-                proof = "Karni's own tests"
+                proof = evidence_text(c.evidence, c.real_use)
             rows.append((c.text, f"`{c.status}`", proof))
         out += [f"### {title}", ""]
         out += table(("Capability", "Status", "Evidence"), rows)
@@ -1472,9 +1625,7 @@ def check_links(readme: str, reference: str) -> list[str]:
     problems = []
     for anchor in re.findall(rf"{re.escape(REF_LINK)}#([\w-]+)", readme):
         if anchor not in defined:
-            problems.append(
-                f"docs/features.md links {REF_LINK}#{anchor}, which has no such anchor"
-            )
+            problems.append(f"docs/features.md links {REF_LINK}#{anchor}, which has no such anchor")
     return problems
 
 

@@ -1,10 +1,12 @@
 # @karni/reports-ui
 
+> **Experimental.** Its names may change in a minor release, with a CHANGELOG entry ([stability](https://cbsshekhawat18-lab.github.io/karni/stability/#experimental-names)).
+
 React components for the Karni reports module: ReportButton and its useReport hook.
 
 [![npm](https://img.shields.io/npm/v/@karni/reports-ui)](https://www.npmjs.com/package/@karni/reports-ui) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/reports/)
 
-Experimental. `ReportButton` requests the PDF report of one row from the [karni-reports](https://pypi.org/project/karni-reports/) module and downloads it when ready. `useReport` is the hook behind it.
+`ReportButton` requests the PDF report of one row from the [karni-reports](https://pypi.org/project/karni-reports/) module and downloads it when ready. `useReport` is the hook behind it.
 
 ```sh
 npm install @karni/reports-ui

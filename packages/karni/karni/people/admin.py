@@ -1,4 +1,4 @@
-"""Experimental. The people contract in the admin: people, organisations, merge and erase.
+"""The people contract in the admin: people, organisations, merge and erase.
 
 ``PersonAdmin`` and ``OrganisationAdmin`` list and edit the rows with their
 memberships and addresses inline. Two bulk actions:
@@ -94,7 +94,7 @@ class _MergeAdmin(KarniModelAdmin):
 
 
 class PersonAdmin(_MergeAdmin):
-    """Experimental. People with memberships and addresses inline, merge and erase."""
+    """People with memberships and addresses inline, merge and erase."""
 
     list_display: ClassVar[list[str]] = ["display_name", "email", "phone", "organisation", "user"]
     search_fields: ClassVar[list[str]] = ["display_name", "email", "phone"]
@@ -129,7 +129,7 @@ class PersonAdmin(_MergeAdmin):
 
 
 class OrganisationAdmin(_MergeAdmin):
-    """Experimental. Organisations with memberships and addresses inline, and merge."""
+    """Organisations with memberships and addresses inline, and merge."""
 
     list_display: ClassVar[list[str]] = ["name", "domain", "phone"]
     search_fields: ClassVar[list[str]] = ["name", "domain"]

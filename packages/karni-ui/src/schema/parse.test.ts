@@ -152,7 +152,7 @@ describe("parseOpenApi — handwritten fixture", () => {
     expect(tags.relationValueType).toBe("integer");
   });
 
-  it("marks a protected file field from x-karni-storage (experimental)", () => {
+  it("marks a protected file field from x-karni-storage", () => {
     const doc = structuredClone(openApiFixture) as unknown as {
       components: { schemas: Record<string, { properties?: Record<string, object> }> };
     };
@@ -376,7 +376,7 @@ describe.each(SNAPSHOTS)("parseOpenApi — generated testapp snapshot, $keys key
       expect(event.operations.list?.queryParams).not.toContain("id__gte");
       expect(event.operations.list?.queryParams).toContain("venue");
 
-      // x-karni-related (experimental): the venue's events, filtered by ?venue=.
+      // x-karni-related: the venue's events, filtered by ?venue=.
       expect(parsed.resources["venues"]?.related).toEqual([
         {
           name: "events",
@@ -543,7 +543,7 @@ describe("parseOpenApi — a StateField's lifecycle", () => {
   });
 });
 
-describe("parseOpenApi — wide models (experimental)", () => {
+describe("parseOpenApi — wide models", () => {
   // A MarkdownField, a blank email, and the list operation's layout extensions.
   const doc = {
     openapi: "3.0.3",

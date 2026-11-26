@@ -4,7 +4,7 @@ description: "The token benchmark: three apps built by a coding agent with and w
 
 # Token benchmark: the same apps with and without Karni
 
-!!! warning "Experimental"
+!!! note "Not public API"
     The benchmark harness is a script in the repository, not a public API. It may
     change in any release.
 

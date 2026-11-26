@@ -1,4 +1,4 @@
-"""Experimental. The checkout validator that checks an order's payment against the order.
+"""The checkout validator that checks an order's payment against the order.
 
 karni-payments calls ``KARNI_PAYMENTS_CHECKOUT_VALIDATOR`` before it creates
 any payment. Set it to :func:`checkout_validator`::

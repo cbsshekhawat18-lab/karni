@@ -1,5 +1,5 @@
 /**
- * TreeView's `access` mode (experimental) against the simulated backend: the
+ * TreeView's `access` mode against the simulated backend: the
  * requester's access forest from `access/`, granted nodes and the nodes below
  * them selectable, ancestors and other roots greyed.
  */

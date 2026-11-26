@@ -1,4 +1,4 @@
-"""Experimental. Signed server-to-server requests: a portal's callback, a realtime server's report.
+"""Signed server-to-server requests: a portal's callback, a realtime server's report.
 
 The sender puts two headers on the request::
 

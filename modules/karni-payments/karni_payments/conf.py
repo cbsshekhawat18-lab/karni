@@ -53,7 +53,7 @@ DEFAULTS: dict[str, Any] = {
     # Extra URLs whose origins are allowed as checkout success/cancel
     # redirects, on top of KARNI_FRONTEND_URL's origin.
     "KARNI_PAYMENTS_ALLOWED_REDIRECTS": env.list("KARNI_PAYMENTS_ALLOWED_REDIRECTS", default=[]),
-    # The test provider's checkout page (experimental): True serves it at
+    # The test provider's checkout page: True serves it at
     # payments/test-checkout/<session>/, where a person pays or declines a
     # test payment in the browser. None (the default) serves it while DEBUG
     # is on. False keeps the imaginary https://checkout.test/ address.

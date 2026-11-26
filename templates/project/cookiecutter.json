@@ -2,9 +2,10 @@
     "project_name": "My Project",
     "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_').replace('-', '_') }}",
     "domain": "example.com",
-    "karni_ui": "^0.7.0",
+    "karni_ui": "^0.8.0",
     "karni_ui_mount": "",
     "karni_baseline": "0.0.0",
+    "karni_range": "",
     "kind": "app",
     "staff_app": "yes"
 }

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://cbsshekhawat18-lab.github.io/karni/assets/karni-build.schema.json",
   "title": "karni build --json",
-  "description": "Experimental. The output of karni build --json.",
+  "description": "The output of karni build --json.",
   "$defs": {
     "_FileOut": {
       "additionalProperties": false,

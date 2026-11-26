@@ -1,4 +1,4 @@
-"""Experimental. Demo mode's settings, read on every call, and the demo accounts.
+"""Demo mode's settings, read on every call, and the demo accounts.
 
 Settings (all optional, ``KARNI_DEMO_MODE`` is off by default):
 

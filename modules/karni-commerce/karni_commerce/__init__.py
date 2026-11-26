@@ -1,4 +1,4 @@
-"""karni-commerce (experimental): one cart, checkout and order path for anything a project sells.
+"""Experimental. karni-commerce: one cart, checkout and order path for anything a project sells.
 
 A project's apps sell different things (a product, a booking, a course, a
 listing) through the same path: a cart line names a *kind* and an item,
@@ -16,7 +16,7 @@ from __future__ import annotations
 from importlib import metadata as _metadata
 
 #: The version of the commerce contract (the sellable adapter, the order path and the
-#: signals of :mod:`karni_commerce.events`). Experimental until six recipes use it.
+#: signals of :mod:`karni_commerce.events`).
 CONTRACT = 1
 
 try:

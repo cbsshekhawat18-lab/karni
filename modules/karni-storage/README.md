@@ -4,7 +4,7 @@ Protected files for Karni: files a row owns, in S3 or an S3-compatible service, 
 
 [![PyPI](https://img.shields.io/pypi/v/karni-storage)](https://pypi.org/project/karni-storage/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/storage/)
 
-Files are kept in S3 or an S3-compatible service (or on disk in development) and handed only to whoever may read their row. It is **experimental**: its names may change in a minor release, with a CHANGELOG entry.
+Files are kept in S3 or an S3-compatible service (or on disk in development) and handed only to whoever may read their row.
 
 The full guide is [docs/storage.md](https://cbsshekhawat18-lab.github.io/karni/storage/).
 

@@ -1,5 +1,5 @@
 /**
- * Experimental. The sections of the signed-in person's account page.
+ * The sections of the signed-in person's account page.
  *
  * Every installed part adds what it keeps for a person (orders, bookings,
  * courses) as a section, once at startup:
@@ -26,17 +26,17 @@ export interface AccountSection {
 
 const SECTIONS = new Map<string, AccountSection>();
 
-/** Experimental. Add (or replace) a section of the account page. */
+/** Add (or replace) a section of the account page. */
 export function registerAccountSection(section: AccountSection): void {
   SECTIONS.set(section.key, section);
 }
 
-/** Experimental. Take a section out (a project that shows something else there). */
+/** Take a section out (a project that shows something else there). */
 export function unregisterAccountSection(key: string): void {
   SECTIONS.delete(key);
 }
 
-/** Experimental. The registered sections, in their order. */
+/** The registered sections, in their order. */
 export function accountSections(): AccountSection[] {
   return [...SECTIONS.values()].sort(
     (a, b) => (a.order ?? 50) - (b.order ?? 50) || a.key.localeCompare(b.key),

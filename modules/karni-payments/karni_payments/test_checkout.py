@@ -1,4 +1,4 @@
-"""Experimental. The test provider's checkout page: pay or decline a test payment in a browser.
+"""The test provider's checkout page: pay or decline a test payment in a browser.
 
 With ``KARNI_PAYMENTS_PROVIDER = "test"``, a real gateway is never called,
 and in a project's development server or a demo there is no gateway page to
@@ -121,7 +121,7 @@ def settle(payment: Payment, outcome: str) -> WebhookEvent:
 
 
 def confirm_refund(payment: Payment) -> WebhookEvent:
-    """Experimental. The test provider's word that a refund of ``payment`` went through.
+    """The test provider's word that a refund of ``payment`` went through.
 
     While the test checkout page is served (:func:`enabled`), the test provider
     confirms each refund this way once its transaction commits, so a refund

@@ -4,7 +4,7 @@ Everything printed is derived from the live Django app registry and router at
 call time — nothing is hand-maintained. Override the skip list with the
 ``KARNI_CONTEXT_SKIP_APPS`` setting (list of app labels).
 
-Slices (experimental) let an agent read one area of a large project at a
+Slices let an agent read one area of a large project at a
 time: :func:`summary_context` prints one line per app,
 :func:`app_context` one app in full (every model, its relations in and
 out, its viewsets with their routes and access) and :func:`model_context`
@@ -246,8 +246,8 @@ def performance_section() -> str | None:
     """Declared performance exceptions (ADR 0001 §3.4), so an agent sees them first.
 
     Relaxed query budgets, unpaginated viewsets, cache opt-outs,
-    ``optimize = False`` and the scaling declarations (``query_scaling``,
-    experimental) — each with its reason or numbers. Omitted when there are none
+    ``optimize = False`` and the scaling declarations (``query_scaling``)
+    — each with its reason or numbers. Omitted when there are none
     (or the router cannot be built).
     """
     from karni.api.caching import Uncached
@@ -291,7 +291,7 @@ def modules_section() -> str | None:
 
 
 def features_section() -> str | None:
-    """Experimental. The built-in features that are on (``FEATURES: two_factor terms``).
+    """The built-in features that are on (``FEATURES: two_factor terms``).
 
     A feature is on when the setting its manifest names as the switch
     (:func:`karni.catalog.features`) holds a value. ``none`` when none is on,
@@ -361,7 +361,7 @@ VISIBILITY_CAP = 6
 def visibility_section(only: Iterable[type[models.Model]] | None = None) -> str | None:
     """Models with ``Karni.field_roles``: which fields only some roles see (ADR 0002, P3).
 
-    ``only`` (experimental) limits the line to those models.
+    ``only`` limits the line to those models.
     """
     from karni.meta import field_roles
 
@@ -383,7 +383,7 @@ def visibility_section(only: Iterable[type[models.Model]] | None = None) -> str 
 
 
 def api_section() -> str | None:
-    """Experimental. How a list answers: ``API: lists 50 a page as {count, next, ...}``.
+    """How a list answers: ``API: lists 50 a page as {count, next, ...}``.
 
     Read from the paginator ``REST_FRAMEWORK`` names, the page size and
     ``KARNI_MAX_PAGE_SIZE``, so a project that changes them sees its own values.
@@ -439,7 +439,7 @@ def build_context() -> str:
     return "\n".join(s for s in sections if s)
 
 
-# slices (experimental): one area of a large project at a time
+# slices: one area of a large project at a time
 
 #: Fields listed per model in an app slice (a model slice lists every field).
 APP_FIELD_CAP = 12
@@ -450,7 +450,7 @@ CHOICE_CAP = 6
 
 
 class ContextSliceError(KarniError):
-    """Experimental. ``--app`` or ``--model`` names nothing in the project (``E470``, ``E471``)."""
+    """``--app`` or ``--model`` names nothing in the project (``E470``, ``E471``)."""
 
 
 def _display_names() -> dict[type[models.Model], str]:
@@ -548,7 +548,7 @@ def _app_entries(label: str) -> list[tuple[str, type[models.Model]]]:
 
 
 def resolve_apps(labels: Iterable[str]) -> list[str]:
-    """Experimental. The app labels of ``labels``, each checked against the inventory.
+    """The app labels of ``labels``, each checked against the inventory.
 
     :raises ContextSliceError: ``E470`` for a label with no model in the inventory.
     """
@@ -569,7 +569,7 @@ def resolve_apps(labels: Iterable[str]) -> list[str]:
 
 
 def resolve_models(names: Iterable[str]) -> list[type[models.Model]]:
-    """Experimental. The models ``names`` mean: ``Name``, ``app_label.Name`` or a display name.
+    """The models ``names`` mean: ``Name``, ``app_label.Name`` or a display name.
 
     :raises ContextSliceError: ``E470`` for a name that matches no model,
         ``E471`` for a bare name two apps share.
@@ -603,7 +603,7 @@ def resolve_models(names: Iterable[str]) -> list[type[models.Model]]:
 
 
 def summary_context() -> str:
-    """Experimental. ``SUMMARY:`` with the totals, then one ``APP <label>:`` line per app.
+    """``SUMMARY:`` with the totals, then one ``APP <label>:`` line per app.
 
     Each app line has its model count and names (capped at
     :data:`SUMMARY_MODEL_CAP`), its viewset count and its page count (the
@@ -752,7 +752,7 @@ def _roles_for(chosen: list[type[models.Model]]) -> list[str]:
 
 
 def app_context(labels: Sequence[str]) -> str:
-    """Experimental. One area of the project: every model of ``labels`` and what touches them.
+    """One area of the project: every model of ``labels`` and what touches them.
 
     ``MODELS`` (up to :data:`APP_FIELD_CAP` fields each), ``KEYS``,
     ``RELATIONS`` (out of the apps, then ``in:`` from other apps),
@@ -804,7 +804,7 @@ def _pages_line(chosen: list[type[models.Model]]) -> str | None:
 
 
 def field_text(field: Any, names: dict[type[models.Model], str] | None = None) -> str:
-    """Experimental. A field in the spec's words: ``str:200``, ``fk:Category``, ``decimal:10,2?``.
+    """A field in the spec's words: ``str:200``, ``fk:Category``, ``decimal:10,2?``.
 
     ``?`` marks an optional field (null or blank), ``unique`` a unique one,
     ``choices(a,b)`` the stored values of a field with choices. ``names`` maps
@@ -878,7 +878,7 @@ def _source(model: type[models.Model]) -> str:
 
 
 def model_context(names: Sequence[str]) -> str:
-    """Experimental. One block per model: ``MODEL``, ``FIELDS``, ``RELATED``, ``VIEWSETS``, ...
+    """One block per model: ``MODEL``, ``FIELDS``, ``RELATED``, ``VIEWSETS``, ...
 
     ``MODEL`` names the label, the source file and line, the key type and the
     table. ``FIELDS`` lists every field (:func:`field_text`), ``RELATED`` the

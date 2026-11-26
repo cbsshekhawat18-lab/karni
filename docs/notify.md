@@ -1,5 +1,5 @@
 ---
-description: "The notifications contract in Karni (experimental): message kinds on karni.mail sent to an email, the recipient's inbox in the app or both, emails a business edits in the app, each person's own switches, unsubscribing from marketing emails by a signed link, and one sender from the business's details."
+description: "The notifications contract in Karni: message kinds on karni.mail sent to an email, the recipient's inbox in the app or both, emails a business edits in the app, each person's own switches, unsubscribing from marketing emails by a signed link, and one sender from the business's details."
 ---
 
 # Notifications

@@ -1,5 +1,5 @@
 /**
- * Wide models (experimental) against the backend's own OpenAPI document of a
+ * Wide models against the backend's own OpenAPI document of a
  * 120-field product (./wide-fixtures): a MarkdownField's editor and preview,
  * its sanitized detail, field groups as sections and tabs in ResourceForm and
  * ResourceDetail, column sets in ResourceTable, and the render budgets.

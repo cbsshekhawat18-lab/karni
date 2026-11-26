@@ -1,4 +1,4 @@
-"""Experimental. ``karni.mail``'s source that commerce once named (``KARNI_MAIL_SOURCE``).
+"""``karni.mail``'s source that commerce once named (``KARNI_MAIL_SOURCE``).
 
 The emails a business edits moved to the notifications contract: the table is
 :class:`karni.notify.models.EmailTemplate`, the API ``/api/email-templates/`` of
@@ -19,7 +19,7 @@ __all__ = ["MailSource"]
 
 
 class MailSource(NotifySource):
-    """Experimental. :class:`karni.notify.source.NotifySource` under the name commerce gave it.
+    """:class:`karni.notify.source.NotifySource` under the name commerce gave it.
 
     Remove ``KARNI_MAIL_SOURCE`` from the settings (the default is the same source).
     """

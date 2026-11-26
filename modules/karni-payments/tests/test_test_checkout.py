@@ -1,4 +1,4 @@
-"""The test provider's checkout page (experimental): pay or decline in a browser."""
+"""The test provider's checkout page: pay or decline in a browser."""
 
 from __future__ import annotations
 

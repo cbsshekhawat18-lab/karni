@@ -1,6 +1,5 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, type Browser, type Page } from "playwright";
@@ -14,7 +13,7 @@ const cache = join(root, "node_modules", ".cache");
 mkdirSync(cache, { recursive: true });
 const work = mkdtempSync(join(cache, "karni-game-scenes-ui-"));
 /** Screenshots of what a player sees, kept for a person to look at. */
-const shots = process.env.KARNI_SHOTS ?? join(homedir(), ".cache/karni-dev/g7ui-scratch/shots");
+const shots = process.env.KARNI_SHOTS ?? join(cache, "shots");
 mkdirSync(shots, { recursive: true });
 const axePath = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
 

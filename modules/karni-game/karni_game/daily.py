@@ -1,4 +1,4 @@
-"""Experimental. A game's daily content on the server's date: the seed, the streak, the rewards.
+"""A game's daily content on the server's date: the seed, the streak, the rewards.
 
 :func:`daily_seed` is the seed of a game's day: the same number for every
 player of the game that day, and unknown before it (it is derived from the

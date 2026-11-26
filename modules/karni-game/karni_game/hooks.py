@@ -1,4 +1,4 @@
-"""Experimental. What a project's code adds to a game: save migrations and run checks.
+"""What a project's code adds to a game: save migrations and run checks.
 
 Each installed app's ``game.py`` is imported at startup (``KarniGameConfig.ready``),
 the place for these registrations::

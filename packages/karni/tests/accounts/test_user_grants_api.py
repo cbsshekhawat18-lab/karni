@@ -1,4 +1,4 @@
-"""Per-user grants over HTTP (experimental): the admin API, and ``Granted()`` in both auth modes.
+"""Per-user grants over HTTP: the admin API, and ``Granted()`` in both auth modes.
 
 The URLconf is built in this module while ``KARNI_USER_GRANTS`` is on: the
 accounts routes (``permissions/grants/``) and a ``Granted()`` viewset over

@@ -1,4 +1,4 @@
-"""Named menus (experimental): ``KARNI_NAVIGATION`` as ``{"app": [...], "public": [...]}``.
+"""Named menus: ``KARNI_NAVIGATION`` as ``{"app": [...], "public": [...]}``.
 
 A list is the ``app`` menu, a mapping holds several, and ``GET
 /api/navigation/?menu=`` answers one. A name the project does not declare

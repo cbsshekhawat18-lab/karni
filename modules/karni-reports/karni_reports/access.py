@@ -19,7 +19,7 @@ __all__ = ["retrieve"]
 
 
 def retrieve(viewset_class: type[Any], request: Any, object_id: str) -> Any:
-    """Experimental. The row ``object_id`` as ``viewset_class``'s ``retrieve`` finds it.
+    """The row ``object_id`` as ``viewset_class``'s ``retrieve`` finds it.
 
     ``request`` is the caller's DRF request.
 

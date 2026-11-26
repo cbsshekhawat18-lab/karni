@@ -1,5 +1,5 @@
 /**
- * Experimental. DemoNotice: the demo accounts above a sign-in form, with what
+ * DemoNotice: the demo accounts above a sign-in form, with what
  * each one can do. It reads `GET /demo/` (`useDemo`) and renders nothing when
  * the server is not a demo, while it loads, or when the request fails, so the
  * same app runs as a demo and as the real thing without a flag.
@@ -21,7 +21,7 @@ import { useDemo, type DemoAccount, type DemoInfo } from "./useDemo";
 
 registerComponentRole("demo-notice", "DemoNotice");
 
-/** Experimental. What the `Notice` slot receives: the server's description of the demo. */
+/** What the `Notice` slot receives: the server's description of the demo. */
 export interface DemoNoticeBodyProps {
   demo: DemoInfo;
   /** Called with the account a visitor picks; the "Use" buttons show only when it is set. */
@@ -29,7 +29,7 @@ export interface DemoNoticeBodyProps {
   className?: string;
 }
 
-/** Experimental. The default body: a sentence, then one row per account. */
+/** The default body: a sentence, then one row per account. */
 export function DemoNoticeBody({
   demo,
   onPick,
@@ -90,7 +90,7 @@ export function DemoNoticeBody({
   );
 }
 
-/** Experimental. DemoNotice's props. */
+/** DemoNotice's props. */
 export interface DemoNoticeProps {
   /** Called with the account a visitor picks (shows a "Use" button on each). */
   onPick?: (account: DemoAccount) => void;
@@ -99,7 +99,7 @@ export interface DemoNoticeProps {
   className?: string;
 }
 
-/** Experimental. The demo accounts, or nothing when the server is not a demo. */
+/** The demo accounts, or nothing when the server is not a demo. */
 export function DemoNotice({
   onPick,
   Notice = DemoNoticeBody,
@@ -110,7 +110,7 @@ export function DemoNotice({
   return <Notice demo={data} onPick={onPick} className={className} />;
 }
 
-/** Experimental. An `Anonymous` slot for AuthGuard: DemoNotice above Karni's sign-in prompt. */
+/** An `Anonymous` slot for AuthGuard: DemoNotice above Karni's sign-in prompt. */
 export function createDemoSignInPrompt(
   props: DemoNoticeProps = {},
 ): React.ComponentType<AuthGuardAnonymousProps> {
@@ -125,6 +125,6 @@ export function createDemoSignInPrompt(
   };
 }
 
-/** Experimental. DemoNotice above Karni's sign-in prompt, as AuthGuard's `Anonymous` slot. */
+/** DemoNotice above Karni's sign-in prompt, as AuthGuard's `Anonymous` slot. */
 export const DemoSignInPrompt: React.ComponentType<AuthGuardAnonymousProps> =
   createDemoSignInPrompt();

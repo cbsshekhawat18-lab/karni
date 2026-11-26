@@ -23,16 +23,27 @@ permissions allow them. The sections below describe what each screen holds.
 
 ### The home page and the guide
 
-The home page lists the sections and models the user may open. Above the list
-sits a **Getting started** panel with three parts: the first steps (add your
-first record, invite a user, set roles, each with a link when the user may do
-it), a list of what each section is for (the one-line help of its models,
-below), and links to these docs. The panel has a **Dismiss** button. It stays
-dismissed for that user only, and the user menu (the name at the bottom of the
-sidebar) has **Show the getting started guide** to bring it back. The
-dismissal is one row in the `karni_admin_guidedismissal` table, so run
-`migrate` after upgrading. `KARNI_ADMIN_GUIDE = False` removes the panel and
-the menu entry.
+The home page lists the sections and models the user may open, in the side
+menu's groups when `KARNI_ADMIN_MENU` is set ([the side
+menu](#the-side-menu)). Above the list sits a **Getting started** panel with
+three parts: the first steps (add your first record, invite a user, set roles,
+each with a link when the user may do it), a list of what each section is for
+(the one-line help of its models, below), and links to these docs. The panel
+has a **Dismiss** button. It stays dismissed for that user only, and the user
+menu (the name at the bottom of the sidebar) has **Show the getting started
+guide** to bring it back. The dismissal is one row in the
+`karni_admin_guidedismissal` table, so run `migrate` after upgrading.
+`KARNI_ADMIN_GUIDE = False` removes the panel and the menu entry.
+
+*Add your first record* links the first model of the project's own apps that
+the user may add to, in the order of the home page. An app is the project's
+own when its code lives in the project folder (`BASE_DIR`) and not among the
+installed packages, so Django's groups, a Karni module's pages and a
+third-party app's tables are never the first record. A user who may add to
+none of the project's models gets the step without a link. Only a project with
+no model of its own links the first model the user may add to, whatever its
+app. To name another first step, override the panel's template,
+`karni_admin/includes/guide_panel.html` (`guide.steps` holds each step).
 
 ### The list of a model
 
@@ -151,7 +162,10 @@ and accepts `site=` for custom sites.
 
 `karni_settings()` places `unfold` before `django.contrib.admin` (validation
 enforces this even for a hand-written `INSTALLED_APPS`) and `karni.admin`
-last. Keep `karni.admin` last. An app listed *after* it whose `ready()`
+last. Every app's `admin.py` is imported before Karni derives anything, also
+when `karni.admin` is listed before `django.contrib.admin`: Karni then runs
+Django's admin autodiscovery itself first. Keep `karni.admin` last anyway. An
+app listed *after* it whose `ready()` (not its `admin.py`)
 registers admins will hit `AlreadyRegistered` against the auto-derived admin.
 Either keep such apps before `karni.admin` or exclude their models via
 `KARNI_ADMIN_EXCLUDE`. (`unfold.contrib.filters` is not installed in v0.1.
@@ -172,7 +186,7 @@ excluded from forms.
 | `readonly_fields` | audit fields present on the model + `AdminMeta.read_only` (shown in the collapsed Details section) | none |
 | `list_select_related` | FKs appearing in the derived `list_display` (no N+1 changelists) | none |
 | `autocomplete_fields` | FK/M2M whose target admin has search fields (second pass) | none |
-| `fieldsets` (experimental) | `Karni.field_groups`: a fieldset per group, the form's fields in no group last under Other ([field groups](ui.md#field-groups-and-column-sets-experimental)). `derive_fieldsets` is the hook | none |
+| `fieldsets` | `Karni.field_groups`: a fieldset per group, the form's fields in no group last under Other ([field groups](ui.md#field-groups-and-column-sets)). `derive_fieldsets` is the hook | none |
 
 Each rule is a pure function in `karni.admin.derive` and a classmethod hook
 on `KarniModelAdmin`. Override either one per project.
@@ -201,17 +215,120 @@ class Invoice(BaseModel):
 ```
 
 Other recognized attrs are `exclude = True` (skip registration),
-`inline_on = "fk_field"` and `register = True` (opt an `AbstractBaseUser`
-subclass in). `inline_on` goes on the child side and generates a
-`TabularInline` on the parent's admin. A list of FK names is allowed, and the
-child stays registered on its own too. A tabular inline names its columns
-only in the table head, so Karni gives each input of its rows an
-`aria-label` with the column's name (`karni.admin.inlines.label_tabular_fields`,
-which `KarniInlineMixin` calls for a tabular inline of your own too). `extra` is the catch-all escape hatch:
-it takes anything a `ModelAdmin` accepts.
+`inline_on = "fk_field"`, `can_add`, `can_delete` and `mixins` (below), and
+`register = True` (opt an `AbstractBaseUser` subclass in). `inline_on` goes
+on the child side and
+generates a `TabularInline` on the parent's admin. A list of FK names is
+allowed, and the child stays registered on its own too. A tabular inline
+names its columns only in the table head, so Karni gives each input of its
+rows an `aria-label` with the column's name
+(`karni.admin.inlines.label_tabular_fields`, which `KarniInlineMixin` calls
+for a tabular inline of your own too). `extra` is the catch-all escape hatch:
+it takes anything a `ModelAdmin` accepts, functions included (they become
+methods of the admin). `inlines` in `extra` replaces the ones `inline_on`
+declares.
 
-Precedence: explicit `admin.site.register` (project `admin.py`) >
-`AdminMeta` > derived defaults.
+Precedence: an admin registered by hand (project `admin.py`) is used instead
+of the derived one. Within any Karni admin, what its class sets (or a parent
+class or mixin of it) > `AdminMeta` > derived defaults.
+
+### Rows the system makes: `can_add` and `can_delete`
+
+For a model whose rows code makes (a table of translations, computed totals,
+an import's results), switch adding or deleting off in the admin:
+
+```python
+class Translation(BaseModel):
+    ...
+    class AdminMeta:
+        can_add = False     # no Add button, the add page is a 403, no import
+        can_delete = False  # no Delete button, the delete page is a 403, no bulk delete
+```
+
+With `can_add = False` the list and the home page have no Add button, the
+add page and *Save as new* answer 403 (Django's answer without the
+permission), and the *Import* button and page are gone, since an import adds
+rows. With `can_delete = False` the form and the list's rows have no Delete
+button, the delete page answers 403, and *Delete selected* and *Hard delete
+selected* are not offered. Changing a row, *Edit selected* and export stay.
+The model's inlines follow too: no blank row to add from, and no delete box.
+An admin registered by hand takes the two options like any other
+(`karni_can_add` and `karni_can_delete` on the class, which a subclass may set
+back to `True`).
+
+This is not a permission. [Role grants](#who-may-open-a-page) and Django's
+permissions say *who* may add or delete, and a superuser holds every grant.
+`can_add` and `can_delete` say that *nobody* adds or deletes that model's rows
+in the admin, superusers included, whatever the roles grant. They change the
+admin only: the API follows the model's `access` declaration, and code still
+creates and deletes rows.
+
+### Adding behaviour: `AdminMeta.mixins`
+
+To give the derived admin a method or a template of your own, list mixins on
+the model instead of registering an admin by hand. Each entry is a dotted
+path or a class. They go in front of the derived class, in the order written,
+so their methods run first and reach Karni's through `super()`:
+
+```python
+# shop/models.py
+class Invoice(BaseModel):
+    ...
+    class AdminMeta:
+        list_display = ["number", "customer", "total"]
+        mixins = ["shop.admin_mixins.TotalsPanel"]
+```
+
+```python
+# shop/admin_mixins.py
+class TotalsPanel:
+    change_form_after_template = "shop/totals_panel.html"  # a block under the form
+
+    def render_change_form(self, request, context, *args, **kwargs):
+        context["totals"] = totals_for(kwargs.get("obj"))
+        return super().render_change_form(request, context, *args, **kwargs)
+
+    def save_model(self, request, obj, form, change):
+        obj.recalculate()
+        super().save_model(request, obj, form, change)
+```
+
+The rest of `AdminMeta` still applies, and an attribute the mixin sets wins
+over it. A path that cannot be imported, an entry that is not a class, or
+mixins whose bases cannot be combined stop startup with
+[`E306`](errors.md#e306). Keep mixins in a module that registers no admin of
+its own, such as `admin_mixins.py`. Mixins are for the derived admin: an
+admin registered by hand names its mixins in its own bases.
+
+### A subclass registered by hand
+
+A `KarniModelAdmin` subclass you register yourself keeps the model's
+configuration. It takes each `AdminMeta` option it does not set itself
+(`list_display`, `per_page`, `read_only`, `extra`, ...) and the inlines other
+models declare with `inline_on`, and derives the rest. Here the columns, the
+rows per page and the inline of the invoice's lines still come from the
+models:
+
+```python
+# shop/admin.py
+from django.contrib import admin
+from karni.admin import KarniModelAdmin
+from shop.models import Invoice
+
+@admin.register(Invoice)
+class InvoiceAdmin(KarniModelAdmin):
+    actions = ["send_reminder"]  # its own: wins over AdminMeta.extra
+
+    @admin.action(description="Send a reminder")
+    def send_reminder(self, request, queryset): ...
+```
+
+An attribute counts as set when the class, a parent class or a mixin of it
+declares it. A class that sets `inlines` keeps exactly those, and
+`self.derive_inlines(self.model)` gives the declared ones to add in
+`get_inlines()`. The classmethods `admin_meta_options(model)` and
+`derive_inlines(model)` are the hooks: return `{}` or `[]` to keep one admin
+class off `AdminMeta` or `inline_on`.
 
 ## Who may open a page
 
@@ -232,7 +349,8 @@ KARNI_ROLES = {
 A person with staff status and the `front_desk` role sees Appointments and
 Patients on the admin index, opens and changes appointments, and reads
 patients. The index, the app pages and the sidebar list exactly the models
-the user may open. Every other page is a 403.
+the user may open ([the side menu](#the-side-menu) may list fewer). Every
+other page is a 403.
 
 - Signing in to the admin still needs `is_staff` (Django's own rule). A
   role alone never opens the admin.
@@ -258,6 +376,61 @@ class LedgerAdmin(KarniModelAdmin):
     def granted(self, request, action):
         return False  # Django's model permissions only, for this page
 ```
+
+## The side menu
+
+Without a setting, the side menu lists every app the user may open,
+alphabetical, as the home page does. `KARNI_ADMIN_MENU` puts it in groups of
+your own, in the order written:
+
+```python
+KARNI_ADMIN_MENU = [
+    {"title": "Catalogue", "icon": "inventory_2", "items": ["shop"]},
+    {"title": "Orders", "icon": "receipt_long", "items": ["sales.Order", "sales.Refund"]},
+    {"title": "People", "icon": "group", "items": ["karni_accounts.User", "karni_accounts.Role"]},
+]
+```
+
+- An item is an app label (every model of the app, in the home page's
+  order), a model label (`app_label.ModelName`, in any case) or `"@project"`:
+  every app whose code lives in the project folder, the rule the guide's
+  first step uses. A model goes to the first group that names it by its own
+  label, else to the first that names its app, else to the first
+  `"@project"`.
+- `icon` is optional, a [Material Symbols](https://fonts.google.com/icons)
+  name shown on each entry of the group.
+- Each user sees the entries they may open, the ones the home page lists for
+  them: a role's grant ([who may open a page](#who-may-open-a-page)) or a
+  Django permission. A group with none is left out.
+- What the menu does not name is hidden, except from superusers, who keep the
+  full list: the rest comes last, in a collapsed group *Other*, by app.
+- The home page and the guide's *What each section is for* follow the menu:
+  the same groups, in the same order, with the same entries the side menu
+  shows that user. A superuser's *Other* there lists each entry as
+  *App › Model*.
+- A label that names no installed app or model is the warning
+  [`karni.W301`](errors.md#w301), and a group of the wrong shape stops
+  startup with a message that says what is missing.
+
+The menu decides what is listed, and the grants decide what a user may open.
+Hiding an entry changes no permission: an entry the menu leaves out still
+opens from its address (a bookmark, a link) for a user who may open it, as
+before, and an entry the menu names stays hidden from a user who may not.
+
+A site project starts with karni-site's menu. Its settings say
+`KARNI_ADMIN_MENU = KARNI_SITE_ADMIN_MENU`: the project's apps (*Content*),
+karni-site's pages (*Site*), then users and roles (*People*). Task results,
+schedules, tokens and sign-in codes are not in it, so only superusers see
+them. A site project made before 0.8.0 adds that line to get it.
+
+`KARNI_ADMIN_MENU = None`, the default, keeps the list of every app, in the
+side menu and on the home page. The menu is unfold's `UNFOLD["SIDEBAR"]`,
+which `karni_settings()` sets to
+`{"navigation": "karni.admin.menu.sidebar_navigation", ...}` (a function that
+builds the groups for each request). A `SIDEBAR` of your own replaces it, the
+home page then keeps its list of every app, and
+[`karni.W302`](errors.md#w302) warns while `KARNI_ADMIN_MENU` is set as well.
+An `app_list` passed in the index's `extra_context` wins over the groups.
 
 ## Row scope
 
@@ -383,10 +556,6 @@ writable, or any admin read-only. A model on a second database
 
 ## Tree models
 
-!!! warning "Experimental"
-    The tree changelist (`karni.admin.tree`, `tree_changelist_max_rows`) is
-    [experimental](stability.md#experimental-names).
-
 A [tree model](models.md#tree-models)'s changelist lists the rows in tree
 order, a parent and then its branch, with the name indented by depth
 (the `tree_label` column, first in the derived columns). Filters and search
@@ -396,7 +565,7 @@ sorted by a column is flat, and so is one with more than
 tree order off.
 
 The menu of [navigation from data](navigation.md) (`KARNI_NAVIGATION =
-"db"`, experimental) is such a tree: *Navigation items* lists the entries in
+"db"`) is such a tree: *Navigation items* lists the entries in
 tree order, and its *Menu preview* button shows the menu one user gets.
 
 ## Soft-deleted models in the admin
@@ -429,6 +598,34 @@ Behavioural fine print (by design, see the `karni/models.py` docstrings):
   say that the rows that refer to it are kept. *Hard delete selected* still
   lists what the cascade removes and refuses a row that `PROTECT` keeps. A row
   the user may not delete is refused on both.
+
+## Languages
+
+The admin lists the project's languages in its user menu on every page, so
+every code in `LANGUAGES` must be one Django can describe: one of the codes of
+`django.conf.locale.LANG_INFO`, or a regional code whose language is (`de-at`
+is described as `de`). A code with a `locale/<code>/` folder passes Django's
+own check even when it is not, and the first admin page then answers `500`
+with `KeyError: 'Unknown language code fil.'`, whether or not
+`UNFOLD["SHOW_LANGUAGES"]` is on. `karni.E971` finds it at startup instead,
+once for each such code, with the entry to add to `settings.py`:
+
+```python
+from django.conf.locale import LANG_INFO
+
+LANG_INFO.update(
+    {
+        "fil": {"bidi": False, "code": "fil", "name": "Filipino", "name_local": "Filipino"},
+    }
+)
+```
+
+`name` is the language's English name and `name_local` its own name, `bidi`
+is `True` for a language written right to left, and `code` is the code in
+`LANGUAGES`. The other fix is to take the code out of `LANGUAGES`. In a
+project without `django.contrib.admin` only a template of the project that
+lists the languages can fail, so the same finding is the warning
+`karni.W971`.
 
 ## Theming
 
@@ -545,6 +742,14 @@ KARNI_ADMIN_LOGO = {"light": "img/mark.svg", "dark": "img/mark-dark.svg", "icon"
 Each value is passed to `static()`, and `dark` and `icon` fall back to
 `light`. `KARNI_ADMIN_LOGO = None` (the default, also the env value `""`)
 leaves the text header.
+
+Every admin page, the login page included, declares a favicon, so a browser
+never asks for `/favicon.ico` and gets a 404. It is the logo's `icon` when
+`KARNI_ADMIN_LOGO` is set (Karni's small mark for `"karni"`), else a neutral
+admin icon Karni ships (`karni/admin-icon.svg`, dark on a light tab bar and
+light on a dark one). `UNFOLD["SITE_FAVICONS"]` holds it: set your own list
+there (`[{"rel": "icon", "href": "/static/img/icon.png"}]`, an `href` may be
+a callable taking the request) or `[]` for none.
 
 The admin reads the setting on every request: `UNFOLD["SITE_LOGO"]` and
 `UNFOLD["SITE_ICON"]` hold `karni.conf.admin_logo.site_logo` and

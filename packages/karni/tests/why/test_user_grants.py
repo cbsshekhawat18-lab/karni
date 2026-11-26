@@ -1,4 +1,4 @@
-"""``karni why`` and ``karni why-empty`` with per-user grants (experimental).
+"""``karni why`` and ``karni why-empty`` with per-user grants.
 
 They say whether a role grant or a user grant decided, and name the user
 grant: its id, its reason and its expiry. ``world`` is tests/why's: alice and

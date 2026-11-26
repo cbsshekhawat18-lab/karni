@@ -1,4 +1,4 @@
-"""Experimental. ``GET /api/navigation/``: the menu the requesting user sees.
+"""``GET /api/navigation/``: the menu the requesting user sees.
 
 ``{"items": [{"label", "icon", "route", "children"}, ...]}``, siblings in
 order, built by :func:`karni.navigation.payload` from the active source
@@ -51,7 +51,7 @@ class _Children(serializers.ListField):  # type: ignore[type-arg]
 
 
 class NavigationItemSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. One menu entry. A group has ``route: null``, an item ``children: []``."""
+    """One menu entry. A group has ``route: null``, an item ``children: []``."""
 
     label = serializers.CharField()
     icon = serializers.CharField(allow_null=True, help_text="An icon name, or null.")
@@ -60,7 +60,7 @@ class NavigationItemSerializer(serializers.Serializer):  # type: ignore[type-arg
 
 
 class NavigationSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. The body of ``GET /api/navigation/``."""
+    """The body of ``GET /api/navigation/``."""
 
     items = NavigationItemSerializer(many=True)
 
@@ -74,7 +74,7 @@ def turned_off() -> Response:
 
 
 class NavigationView(APIView):
-    """Experimental. ``GET navigation/``: the menu for the requesting user, signed in or not.
+    """``GET navigation/``: the menu for the requesting user, signed in or not.
 
     Override / escape hatch: override :meth:`get_menu`.
     """
@@ -111,7 +111,7 @@ class NavigationView(APIView):
 
 
 def build_urlpatterns() -> list[URLPattern]:
-    """Experimental. The ``navigation/`` route while ``KARNI_NAVIGATION`` is set, else ``[]``."""
+    """The ``navigation/`` route while ``KARNI_NAVIGATION`` is set, else ``[]``."""
     if navigation.source() is None:
         return []
     return [path("navigation/", NavigationView.as_view(), name="karni-navigation")]

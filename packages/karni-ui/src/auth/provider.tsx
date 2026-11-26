@@ -26,7 +26,7 @@
  * provider invalidates the cached schema, so tables, forms and detail views
  * follow the new user's field set without any per-role component code.
  *
- * Terms acceptance (experimental): `terms`, `termsRequired` and
+ * Terms acceptance: `terms`, `termsRequired` and
  * `acceptTerms(client?)` mirror the engine. `termsRequired` comes from `/me/`
  * and from the terms gate's 403 (`E245`) on any request made through the
  * client, so terms bumped mid-session are caught. `TermsGate` uses them.
@@ -95,7 +95,7 @@ export interface AuthContextValue {
    */
   adoptTokens(access: string | null, refresh: string | null): Promise<void>;
   /**
-   * Experimental. Signs in with a provider's ID token (`POST
+   * Signs in with a provider's ID token (`POST
    * <authBasePath>/social/<provider>/`). Optional so a hand-built context
    * value (stories, tests) stays valid. `AuthProvider` always provides it.
    * Use it through `useSocialLogin` or `SocialButton`.
@@ -106,28 +106,28 @@ export interface AuthContextValue {
     options?: SocialSignInOptions,
   ) => Promise<SocialLoginResult>;
   /**
-   * Experimental. Asks the server to email a sign-in code (`POST
+   * Asks the server to email a sign-in code (`POST
    * <authBasePath>/otp/send/`). Optional like `socialLogin`. Use it through
    * `useOtpLogin` or `OtpLoginForm`.
    */
   otpSend?: (email: string) => Promise<OtpSendResult>;
   /**
-   * Experimental. Signs in with the emailed code (`POST
+   * Signs in with the emailed code (`POST
    * <authBasePath>/otp/verify/`). Optional like `socialLogin`.
    */
   otpVerify?: (email: string, code: string) => Promise<OtpLoginResult>;
   /**
-   * Experimental. The terms the server asks the signed-in user to accept
+   * The terms the server asks the signed-in user to accept
    * (`KARNI_TERMS`), or null when it asks for none. Optional like `socialLogin`.
    */
   terms?: AuthTerms | null;
   /**
-   * Experimental. True while the API refuses the user until they accept
+   * True while the API refuses the user until they accept
    * `terms`: from `/me/`, or from the terms gate's 403 (`E245`) on any request.
    */
   termsRequired?: boolean;
   /**
-   * Experimental. Accepts `terms.version` (`POST <authBasePath>/terms/accept/`),
+   * Accepts `terms.version` (`POST <authBasePath>/terms/accept/`),
    * with what the app says about itself as `client`. Use it through `TermsGate`.
    */
   acceptTerms?: (client?: TermsClientInfo) => Promise<AuthTerms>;

@@ -1,5 +1,5 @@
 /**
- * Experimental. `/signin`: sign in with a code sent by email (which also
+ * `/signin`: sign in with a code sent by email (which also
  * opens an account for a new address, when the project lets people sign up
  * that way: `KARNI_EMAIL_OTP_SIGNUP = "open"`), with a password, or open an
  * account with a password (`signUp`, `POST <authBasePath>/register/`).

@@ -20,7 +20,7 @@ only grow and are scanned by time range. A list of column names picks the
 columns instead. The trade-off: BRIN cannot serve ``ORDER BY created_at
 LIMIT n``, so do not declare it on a table listed newest-first.
 
-:class:`TrigramIndex` (experimental) is a GIN index with ``gin_trgm_ops`` on
+:class:`TrigramIndex` is a GIN index with ``gin_trgm_ops`` on
 every field: it serves ``ILIKE '%...%'`` and pg_trgm's ``%`` operator. It
 creates the ``pg_trgm`` extension first when it is missing, and is a no-op on
 another database like the indexes above. ``class Karni: search`` adds one per
@@ -92,7 +92,7 @@ class BrinIndex(_PostgresOnly, pg_indexes.BrinIndex):
 
 
 class TrigramIndex(GinIndex):
-    """Experimental. GIN with ``gin_trgm_ops`` on every field, on PostgreSQL; skipped elsewhere.
+    """GIN with ``gin_trgm_ops`` on every field, on PostgreSQL; skipped elsewhere.
 
     ``TrigramIndex(fields=["name"], name="catalog_product_name_trgm")`` serves
     ``name ILIKE '%lamp%'`` and ``name % 'lamp'`` (pg_trgm). Creating it

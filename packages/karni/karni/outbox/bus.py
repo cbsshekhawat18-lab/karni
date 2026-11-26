@@ -1,4 +1,4 @@
-"""Experimental. The family event bus: declare, publish and subscribe by name.
+"""The family event bus: declare, publish and subscribe by name.
 
 Imported through :mod:`karni.events`, which re-exports every public name
 here. A publisher declares its events in ``<app>/events.py``::
@@ -124,7 +124,7 @@ _MAX_VERSION: Final = 32767
 
 @dataclass(frozen=True)
 class Declaration:
-    """Experimental. One declared event: its name, version and payload fields.
+    """One declared event: its name, version and payload fields.
 
     ``fields`` maps each declared field to what it holds. ``person`` names
     where the person the event is about comes from: ``"person"`` (the
@@ -150,7 +150,7 @@ class Declaration:
 
 @dataclass(frozen=True)
 class Subscriber:
-    """Experimental. One subscriber: the event and version it hears, its name and function.
+    """One subscriber: the event and version it hears, its name and function.
 
     ``name`` identifies its deliveries in the outbox, so it must not change
     while events wait for it: the function's dotted path by default, or the
@@ -166,7 +166,7 @@ class Subscriber:
 
 @dataclass(frozen=True)
 class Event:
-    """Experimental. A published event, as a subscriber receives it.
+    """A published event, as a subscriber receives it.
 
     The common fields are attributes, the declared fields are read with
     ``event["field"]`` (or :meth:`get`). :attr:`payload` is the JSON stored in
@@ -231,7 +231,7 @@ class Event:
 
 
 class Registry:
-    """Experimental. The declared events and the subscribers of one process.
+    """The declared events and the subscribers of one process.
 
     Filled at startup by every app's ``events.py`` and ``listeners.py``
     (:func:`karni.events.autodiscover`). A declaration or subscriber made
@@ -627,7 +627,7 @@ def build(
     registry: Registry | None = None,
     **fields: Any,
 ) -> tuple[Event, Declaration]:
-    """Experimental. The event :func:`publish` would write, checked against its declaration.
+    """The event :func:`publish` would write, checked against its declaration.
 
     Nothing is written. Arguments as :func:`publish`. Returns the event and
     the declaration it matched.
@@ -732,7 +732,7 @@ def publish(
 
 
 def once(event: Event | str | uuid.UUID, key: str, *, using: str | None = None) -> bool:
-    """Experimental. True the first time ``(event, key)`` is seen, False every time after.
+    """True the first time ``(event, key)`` is seen, False every time after.
 
     For a subscriber whose work has no unique key of its own:
     ``if once(event, "welcome-email"): send()``. The mark is written in the

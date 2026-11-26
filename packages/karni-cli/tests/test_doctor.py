@@ -46,6 +46,7 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_ci: None) -> Pat
     # No real DNS lookup or connect: test_services covers the probes.
     monkeypatch.setattr(services, "resolves", lambda host, timeout=0: False)
     monkeypatch.setattr(services, "speaks", lambda *a, **k: None)
+    monkeypatch.setattr("karni_cli.pins.installed_in", lambda root: None)
     return root
 
 
@@ -84,6 +85,7 @@ def test_doctor_reports_the_environment(runner, project: Path) -> None:
         "redis",
         "node",
         "ui",
+        "versions",
         "adapters",
         "history",
         "suggestions",

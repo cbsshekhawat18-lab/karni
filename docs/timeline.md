@@ -1,5 +1,5 @@
 ---
-description: "The timeline contract in Karni (experimental): one stream of moments per person and per record, written by hand with timeline.record() or from family events that declare a title, read through GET /api/timeline/ where each entry shows only to callers who may read every record it is about."
+description: "The timeline contract in Karni: one stream of moments per person and per record, written by hand with timeline.record() or from family events that declare a title, read through GET /api/timeline/ where each entry shows only to callers who may read every record it is about."
 ---
 
 # Timeline

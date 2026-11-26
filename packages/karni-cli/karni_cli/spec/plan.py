@@ -1,4 +1,4 @@
-"""Experimental. ``karni plan``: what ``karni build`` would change, from a spec and the project.
+"""``karni plan``: what ``karni build`` would change, from a spec and the project.
 
 The plan compares two specs in the normal form of :mod:`karni_cli.spec.normal`:
 the spec written in ``karni.yaml``, and the spec the project has now, which
@@ -13,8 +13,8 @@ field that becomes required, a choice or state dropped, another kind), a
 relation pointed at another entity, a module removed, an entity's key type
 switched (out of scope for ``karni build``), an entity moved to another
 database, an entity made a tree or flat again or its siblings' order dropped
-(``tree``, experimental), a taxonomy removed or pointed at another tree (its
-tags go, experimental), and access widened (writes from a role to every signed-in user or
+(``tree``), a taxonomy removed or pointed at another tree (its
+tags go), and access widened (writes from a role to every signed-in user or
 to everyone, reads to everyone, a role's grant from its own rows to all).
 ``karni build`` (app-builder item A3) refuses them without
 ``--allow-destructive``. Each risky change names the rows it affects, as a
@@ -26,7 +26,7 @@ keeping its rows. A field removed and a field of the same type added to one
 entity, without ``was``, is shown as a removal with the hint that it is
 probably a rename.
 
-Volume (experimental): a ``seed`` count at the bulk threshold (the project's
+Volume: a ``seed`` count at the bulk threshold (the project's
 ``KARNI_SEED_BULK_THRESHOLD``, default :data:`SEED_BULK_THRESHOLD`) is
 seeded in bulk by ``karni build`` (``karni.bulk_seeding``), and its change
 says so with the expected time class: ``+ Booking: 200000, 200,000 rows in
@@ -82,9 +82,9 @@ __all__ = [
     "seed_time_class",
 ]
 
-#: Experimental. The version of the ``--json`` output. It moves only for a breaking change.
+#: The version of the ``--json`` output. It moves only for a breaking change.
 PLAN_VERSION: Final = 1
-#: Experimental. Where the JSON Schema of ``karni plan --json`` is published.
+#: Where the JSON Schema of ``karni plan --json`` is published.
 PLAN_SCHEMA_URL: Final = "https://cbsshekhawat18-lab.github.io/karni/assets/karni-plan.schema.json"
 Area = Literal[
     "app",
@@ -100,12 +100,12 @@ Area = Literal[
     "seed",
     "tests",
 ]
-#: Experimental. The areas of a plan, in the order it lists them.
+#: The areas of a plan, in the order it lists them.
 AREAS: Final[tuple[str, ...]] = get_args(Area)
-#: Experimental. What a change does, and its mark in the text output.
+#: What a change does, and its mark in the text output.
 ACTIONS: Final = {"add": "+", "change": "~", "rename": "~", "remove": "-"}
 RowStatus = Literal["counted", "offline", "unreachable", "not needed"]
-#: Experimental. The target of the menu's change in the pages area: the setting it writes.
+#: The target of the menu's change in the pages area: the setting it writes.
 MENU: Final = "KARNI_NAVIGATION"
 TILES: Final = "KARNI_DASHBOARD_TILES"
 
@@ -158,7 +158,7 @@ _OPTIONS: Final = (
 
 @dataclass(frozen=True)
 class Count:
-    """Experimental. Rows to count for a risky change: a request to ``manage.py karni_rows``.
+    """Rows to count for a risky change: a request to ``manage.py karni_rows``.
 
     ``kind`` is one of :data:`karni.facts.COUNT_KINDS`: ``all``, ``set``,
     ``empty``, ``longer`` (``arg``: the length) or ``in`` (``arg``: values).
@@ -180,7 +180,7 @@ class Count:
 
 @dataclass
 class Change:
-    """Experimental. One change of a plan (see the module docstring)."""
+    """One change of a plan (see the module docstring)."""
 
     area: str
     action: str
@@ -224,7 +224,7 @@ class Change:
 
 @dataclass(frozen=True)
 class Managed:
-    """Experimental. What karni build manages in a project, as ``.karni/build.json`` records it.
+    """What karni build manages in a project, as ``.karni/build.json`` records it.
 
     ``entities`` are the ``app.Entity`` labels whose code Karni writes,
     ``pages`` the pages it writes (``app.Entity:list``, ``about:blank``) and
@@ -244,7 +244,7 @@ class Managed:
 
 @dataclass
 class Plan:
-    """Experimental. What ``karni build`` would change, and how the row counts went."""
+    """What ``karni build`` would change, and how the row counts went."""
 
     file: str
     changes: list[Change] = field(default_factory=list)
@@ -373,7 +373,7 @@ class _RowCountsOut(_Out):
 
 
 class _PlanOut(_Out):
-    """Experimental. The output of karni plan --json."""
+    """The output of karni plan --json."""
 
     version: Literal[1] = Field(description="The version of this output: 1.")
     file: str = Field(description="The spec file, as given.")
@@ -385,7 +385,7 @@ class _PlanOut(_Out):
 
 
 def json_schema() -> dict[str, Any]:
-    """Experimental. The JSON Schema of ``karni plan --json``, as published at :data:`PLAN_SCHEMA_URL`."""
+    """The JSON Schema of ``karni plan --json``, as published at :data:`PLAN_SCHEMA_URL`."""
     from karni_cli.spec.schema import _tidy
 
     return {
@@ -393,7 +393,7 @@ def json_schema() -> dict[str, Any]:
         "$id": PLAN_SCHEMA_URL,
         "title": "karni plan --json",
         "description": (
-            "Experimental. What karni build would change. Generated by python -m "
+            "What karni build would change. Generated by python -m "
             "karni_cli.spec.plan. Never edit it by hand."
         ),
         **_tidy(_PlanOut.model_json_schema()),
@@ -806,7 +806,7 @@ def _roles(ctx: _Context) -> None:
 
 
 def tested(entity: dict[str, Any]) -> bool:
-    """Experimental. Whether karni build writes an API test for ``entity`` (in normal form).
+    """Whether karni build writes an API test for ``entity`` (in normal form).
 
     A table another system owns, or one on another database, gets none: the
     test database holds neither.
@@ -935,7 +935,7 @@ def _entities_and_fields(ctx: _Context) -> None:
 
 
 def _taxonomy_risk(old: Any, new: Any) -> str | None:
-    """Experimental. Why a ``taxonomies`` change loses tags, or ``None`` when it only adds keys.
+    """Why a ``taxonomies`` change loses tags, or ``None`` when it only adds keys.
 
     A key that goes away, or points at another tree, drops its many-to-many
     and every tag it holds.
@@ -948,7 +948,7 @@ def _taxonomy_risk(old: Any, new: Any) -> str | None:
 
 
 def _tree_risk(old: Any, new: Any, label: str) -> tuple[str | None, tuple[Count, ...]]:
-    """Experimental. ``(reason, counts)`` for a ``tree`` change. ``reason`` ``None``: not risky.
+    """``(reason, counts)`` for a ``tree`` change. ``reason`` ``None``: not risky.
 
     Making an entity a tree or flat again changes its table, its delete and
     its API, so both are risky. Between ``true`` and ``ordered`` only dropping
@@ -1213,7 +1213,7 @@ def _pages(ctx: _Context) -> None:
 
 
 def _navigation(ctx: _Context) -> None:
-    """The menu (experimental): ``KARNI_NAVIGATION`` as ``navigation:`` gives it, in the settings block."""
+    """The menu: ``KARNI_NAVIGATION`` as ``navigation:`` gives it, in the settings block."""
     old, new = ctx.current.get("navigation"), ctx.desired.get("navigation")
     if old == new:
         return
@@ -1229,7 +1229,7 @@ def _navigation(ctx: _Context) -> None:
 
 
 def _dashboard(ctx: _Context) -> None:
-    """The home tiles (experimental): ``KARNI_DASHBOARD_TILES`` as ``dashboard:`` gives them."""
+    """The home tiles: ``KARNI_DASHBOARD_TILES`` as ``dashboard:`` gives them."""
     old, new = ctx.current.get("dashboard"), ctx.desired.get("dashboard")
     if old == new:
         return
@@ -1268,15 +1268,15 @@ def _show_page(name: str, kinds: list[Any], counted: str) -> str:
     return ", ".join(shown) or "none"
 
 
-#: Experimental. Rows per entity from which ``karni seed`` inserts in bulk, unless the
+#: Rows per entity from which ``karni seed`` inserts in bulk, unless the
 #: project's facts say otherwise (mirrors ``karni.bulk_seeding.BULK_THRESHOLD``).
 SEED_BULK_THRESHOLD: Final = 1000
-#: Experimental. The bulk path's rows per second, for the time class (``karni.bulk_seeding``).
+#: The bulk path's rows per second, for the time class (``karni.bulk_seeding``).
 SEED_ROWS_PER_SECOND: Final = 4000
 
 
 def seed_time_class(rows: int) -> str:
-    """Experimental. How long seeding ``rows`` takes in words (``karni.bulk_seeding.time_class``)."""
+    """How long seeding ``rows`` takes in words (``karni.bulk_seeding.time_class``)."""
     seconds = rows / SEED_ROWS_PER_SECOND
     if seconds < 15:
         return "seconds"
@@ -1421,7 +1421,7 @@ def plan_project(
     file: str,
     managed: Managed | None = None,
 ) -> Plan:
-    """Experimental. The plan for ``spec`` against the project ``facts`` describe (no counts yet).
+    """The plan for ``spec`` against the project ``facts`` describe (no counts yet).
 
     ``managed``: what karni build manages (:class:`Managed`, from
     ``.karni/build.json``). Each change is then marked managed or not.
@@ -1484,7 +1484,7 @@ Counter = Callable[[list[dict[str, Any]]], dict[str, Any]]
 
 
 def manage_counter(root: Path, *, docker: bool | None = None, service: str = "django") -> Counter:
-    """Experimental. A counter that asks ``manage.py karni_rows`` in the project."""
+    """A counter that asks ``manage.py karni_rows`` in the project."""
 
     def count(requests: list[dict[str, Any]]) -> dict[str, Any]:
         proc = project_mod.run_manage(
@@ -1506,7 +1506,7 @@ def manage_counter(root: Path, *, docker: bool | None = None, service: str = "dj
 
 
 def apply_counts(plan: Plan, counter: Counter | None) -> Plan:
-    """Experimental. Fill each risky change's ``rows`` from ``counter`` (``None``: offline)."""
+    """Fill each risky change's ``rows`` from ``counter`` (``None``: offline)."""
     wanted = [change for change in plan.changes if change.risky and change.counts]
     if not wanted:
         plan.row_counts = "not needed"

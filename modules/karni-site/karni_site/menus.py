@@ -33,6 +33,13 @@ Saving a menu or an item clears every cached menu. So does saving a row of
 a model a menu points at (an item's row, or its ``children_from`` model),
 through :func:`model_changed`.
 
+A menu is cached per active language. On a site in several languages
+(``i18n_patterns``, :mod:`karni_site.languages`) its links are that language's
+addresses, a row's title is ``str(row)`` in that language, the current page is
+marked against those links, and a language's home page (``/fr/``) stands for no
+section. Its seed is read and followed in the default language only. An item's
+own title is one text, the same in every language.
+
 Override / escape hatch: ``KARNI_SITE_MENU_ROWS`` decides which rows a
 ``children_from`` item lists (default: the model's default manager, so its
 scopes apply), ``KARNI_SITE_MENU_ROWS_LIMIT`` how many, and
@@ -49,6 +56,7 @@ import logging
 import uuid
 from collections import defaultdict
 from collections.abc import Callable, Iterable
+from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from typing import Any, Final
@@ -57,12 +65,14 @@ from urllib.parse import urlsplit
 from django.core.exceptions import ValidationError
 from django.db import DatabaseError, IntegrityError, transaction
 from django.urls import NoReverseMatch, Resolver404, resolve, reverse
+from django.utils import translation
 from django.utils.module_loading import import_string
 from django.utils.translation import gettext as _
 from karni.audit.capture import unrecorded
 
 from karni_site import caching, conf
 from karni_site.blocks import SEEDING
+from karni_site.languages import default_language, in_addresses, is_language_root
 from karni_site.navigation import any_active
 
 __all__ = [
@@ -195,10 +205,15 @@ def _node(item: Any, children: dict[Any, list[Any]]) -> dict[str, Any] | None:
 
 
 def _section(url: str) -> str:
-    """The path whose pages an item stands for (``/services/``), or ``""`` (home, elsewhere)."""
+    """The path whose pages an item stands for (``/services/``), or ``""`` (home, elsewhere).
+
+    A language's home page (``/fr/`` under ``i18n_patterns``) is home too, never a section.
+    """
     parts = urlsplit(url)
     path = parts.path
     if parts.scheme or parts.netloc or not path.startswith("/") or path == "/":
+        return ""
+    if is_language_root(path):
         return ""
     return path if path.endswith("/") else ""
 
@@ -246,8 +261,11 @@ def _build(name: str) -> dict[str, Any]:
 
 
 def _cached(name: str) -> dict[str, Any]:
+    """Menu ``name`` as the cache keeps it for the active language: links, row titles and
+    the current-page patterns are built in it (``/fr/about/`` for French)."""
     store = caching.cache()
-    key = caching.key("menu", str(caching.version("menus")), name)
+    language = translation.get_language() or ""
+    key = caching.key("menu", str(caching.version("menus")), language, name)
     found: dict[str, Any] | None = store.get(key)
     if found is None or "seed" not in found:
         found = _build(name)
@@ -285,22 +303,38 @@ def entries(
 
     A menu seeded from ``source`` follows it: when the links ``seed()`` gives change,
     :func:`sync_menu` brings the items nobody changed in line with them.
+
+    On a site in several languages (:func:`karni_site.languages.in_addresses`) the seed
+    is rendered, stored and followed in the default language, whatever language the page
+    is in: the site keeps one menu, and a visitor of another language never makes it
+    follow the seed again. The items are then built in the page's language.
     """
     try:
         cached = _cached(name)
         found = cached["items"]
         if seed is not None and conf.get("KARNI_SITE_SEED_ON_RENDER"):
-            if found is None:
-                seed_menu(name, seed(), source=source)
+            changed = False
+            with _seed_language():
+                if found is None:
+                    seed_menu(name, seed(), source=source)
+                    changed = True
+                elif _follows(cached, source) and (markup := _rendered(seed, name)) is not None:
+                    if _digest(parse_links(markup)) != cached["digest"]:
+                        sync_menu(name, markup, source=source)
+                        changed = True
+            if changed:
                 found = tree(name)
-            elif _follows(cached, source) and (markup := _rendered(seed, name)) is not None:
-                if _digest(parse_links(markup)) != cached["digest"]:
-                    sync_menu(name, markup, source=source)
-                    found = tree(name)
     except DatabaseError:
         logger.exception("karni_site: menu %s could not be read", name)
         return []
     return [_entry(node, request) for node in found or []]
+
+
+def _seed_language() -> AbstractContextManager[Any]:
+    """The default language while a seed is read, on a site in several languages only."""
+    if in_addresses():
+        return translation.override(default_language())
+    return nullcontext()
 
 
 def _rendered(seed: Callable[[], str], name: str) -> str | None:

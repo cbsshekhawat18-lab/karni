@@ -1,4 +1,4 @@
-"""``manage.py karni_facts`` (experimental): the project as JSON facts, for ``karni spec export``.
+"""``manage.py karni_facts``: the project as JSON facts, for ``karni spec export``.
 
 Prints :func:`karni.facts.project_facts`: the project's models with each
 field's class and ``deconstruct()`` arguments, the routed viewsets with
@@ -20,7 +20,7 @@ from karni.facts import project_facts
 
 
 class Command(BaseCommand):
-    help = "Experimental. Print the project's models, viewsets, roles and modules as JSON."
+    help = "Print the project's models, viewsets, roles and modules as JSON."
     # The facts must print even when system checks fail: `karni check` owns checks.
     requires_system_checks: list[Any] = []
 

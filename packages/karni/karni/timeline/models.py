@@ -27,7 +27,7 @@ TITLE_LENGTH = 300
 
 
 class TimelineEntry(models.Model):
-    """Experimental. One moment on a person's or a record's timeline.
+    """One moment on a person's or a record's timeline.
 
     ``kind`` is the family event's name (``helpdesk.ticket.closed``) or a
     part's own kind (``crm.note``). ``source`` is the part that wrote it (the
@@ -89,7 +89,7 @@ class TimelineEntry(models.Model):
 
 
 class TimelineLink(models.Model):
-    """Experimental. A record an entry shows on: any model, by content type and id.
+    """A record an entry shows on: any model, by content type and id.
 
     ``object_id`` holds the record's primary key as text (``str(pk)``), so a
     UUID key and an integer key are both kept. A person merge moves these

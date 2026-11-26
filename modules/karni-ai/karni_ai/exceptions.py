@@ -19,7 +19,7 @@ __all__ = ["ExtractionRefused", "ProviderError"]
 
 
 class ExtractionRefused(KarniValueError):
-    """Experimental. An extraction refused with a code and the HTTP status it is answered with."""
+    """An extraction refused with a code and the HTTP status it is answered with."""
 
     status: int = 400
 
@@ -29,7 +29,7 @@ class ExtractionRefused(KarniValueError):
 
 
 class ProviderError(KarniValueError):
-    """Experimental. The provider call failed (AI006) or its answer cannot be used (AI007).
+    """The provider call failed (AI006) or its answer cannot be used (AI007).
 
     ``usage`` is what the provider billed for the call, when it said (a cut
     off or declined answer still costs its tokens), else zero.

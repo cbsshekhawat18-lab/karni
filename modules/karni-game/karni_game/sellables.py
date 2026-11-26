@@ -1,4 +1,4 @@
-"""Experimental. Real-money items through the cart of karni-commerce: the kind ``game_item``.
+"""Real-money items through the cart of karni-commerce: the kind ``game_item``.
 
 karni-commerce imports this module at startup when it is installed
 (``<app>/sellables.py``), and never otherwise, so karni-game does not need

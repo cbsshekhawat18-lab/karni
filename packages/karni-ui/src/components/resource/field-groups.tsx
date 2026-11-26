@@ -1,5 +1,5 @@
 /**
- * Field groups (experimental): the sections or tabs of ResourceForm and
+ * Field groups: the sections or tabs of ResourceForm and
  * ResourceDetail for a model with many fields.
  *
  * The backend publishes a model's `Karni.field_groups` as

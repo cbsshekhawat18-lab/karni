@@ -1,4 +1,4 @@
-"""Experimental. Sign in with a one-time code sent by email, in JWT and session mode.
+"""Sign in with a one-time code sent by email, in JWT and session mode.
 
 The user types an address and gets a short numeric code by email. They type
 the code back and are signed in, with no password:
@@ -89,19 +89,19 @@ __all__ = [
     "verify_code",
 ]
 
-#: Experimental. Seconds a code lives unless ``KARNI_EMAIL_OTP_TTL`` says otherwise.
+#: Seconds a code lives unless ``KARNI_EMAIL_OTP_TTL`` says otherwise.
 DEFAULT_TTL: Final = 600
-#: Experimental. Digits in a code unless ``KARNI_EMAIL_OTP_LENGTH`` says otherwise.
+#: Digits in a code unless ``KARNI_EMAIL_OTP_LENGTH`` says otherwise.
 DEFAULT_LENGTH: Final = 6
-#: Experimental. Guesses a code takes unless ``KARNI_EMAIL_OTP_MAX_ATTEMPTS`` says otherwise.
+#: Guesses a code takes unless ``KARNI_EMAIL_OTP_MAX_ATTEMPTS`` says otherwise.
 DEFAULT_MAX_ATTEMPTS: Final = 5
-#: Experimental. The lengths ``KARNI_EMAIL_OTP_LENGTH`` may take, inclusive.
+#: The lengths ``KARNI_EMAIL_OTP_LENGTH`` may take, inclusive.
 LENGTH_RANGE: Final = (4, 10)
-#: Experimental. The lifetimes ``KARNI_EMAIL_OTP_TTL`` may take, in seconds, inclusive.
+#: The lifetimes ``KARNI_EMAIL_OTP_TTL`` may take, in seconds, inclusive.
 TTL_RANGE: Final = (60, 3600)
-#: Experimental. The caps ``KARNI_EMAIL_OTP_MAX_ATTEMPTS`` may take, inclusive.
+#: The caps ``KARNI_EMAIL_OTP_MAX_ATTEMPTS`` may take, inclusive.
 MAX_ATTEMPTS_RANGE: Final = (1, 10)
-#: Experimental. The accounts email template stem: ``karni_accounts/email/login_code_*``.
+#: The accounts email template stem: ``karni_accounts/email/login_code_*``.
 EMAIL_TEMPLATE: Final = "login_code"
 
 #: Mixed into every HMAC so a code hash can never stand for another Karni value.
@@ -115,7 +115,7 @@ _GENERIC_DETAIL: Final = "The code is wrong or has expired. Ask for a new code."
 
 
 class LoginCodeRefused(KarniError):
-    """Experimental. A refused sign-in by code, with its code and the HTTP answer.
+    """A refused sign-in by code, with its code and the HTTP answer.
 
     ``code`` is ``E235`` for every failure of the code itself (and for an
     address that may not sign up), ``E226`` for an inactive account, ``E224``
@@ -148,7 +148,7 @@ class LoginCodeRefused(KarniError):
 
 
 def turned_off() -> LoginCodeRefused:
-    """Experimental. The ``E236`` refusal the routes answer while ``KARNI_EMAIL_OTP`` is false."""
+    """The ``E236`` refusal the routes answer while ``KARNI_EMAIL_OTP`` is false."""
     return LoginCodeRefused(
         "turned_off",
         "Sign-in with a code is turned off: KARNI_EMAIL_OTP is False.",
@@ -161,27 +161,27 @@ def turned_off() -> LoginCodeRefused:
 
 
 def enabled() -> bool:
-    """Experimental. Whether sign-in with a code is on (``KARNI_EMAIL_OTP``), read per request."""
+    """Whether sign-in with a code is on (``KARNI_EMAIL_OTP``), read per request."""
     return bool(getattr(settings, "KARNI_EMAIL_OTP", False))
 
 
 def code_ttl() -> int:
-    """Experimental. Seconds a new code lives (``KARNI_EMAIL_OTP_TTL``, default 600)."""
+    """Seconds a new code lives (``KARNI_EMAIL_OTP_TTL``, default 600)."""
     return int(getattr(settings, "KARNI_EMAIL_OTP_TTL", DEFAULT_TTL))
 
 
 def code_length() -> int:
-    """Experimental. Digits in a new code (``KARNI_EMAIL_OTP_LENGTH``, default 6)."""
+    """Digits in a new code (``KARNI_EMAIL_OTP_LENGTH``, default 6)."""
     return int(getattr(settings, "KARNI_EMAIL_OTP_LENGTH", DEFAULT_LENGTH))
 
 
 def max_attempts() -> int:
-    """Experimental. Guesses a code takes before it dies (``KARNI_EMAIL_OTP_MAX_ATTEMPTS``)."""
+    """Guesses a code takes before it dies (``KARNI_EMAIL_OTP_MAX_ATTEMPTS``)."""
     return int(getattr(settings, "KARNI_EMAIL_OTP_MAX_ATTEMPTS", DEFAULT_MAX_ATTEMPTS))
 
 
 def signup_policy() -> str:
-    """Experimental. ``KARNI_EMAIL_OTP_SIGNUP``: ``open``, ``approval`` or ``existing``.
+    """``KARNI_EMAIL_OTP_SIGNUP``: ``open``, ``approval`` or ``existing``.
 
     ``None`` follows ``KARNI_ACCOUNTS_REGISTRATION``, exactly as sign-in with
     an ID token does (:func:`karni.accounts.social_token.signup_policy`).
@@ -192,7 +192,7 @@ def signup_policy() -> str:
 
 
 def send_answer() -> dict[str, Any]:
-    """Experimental. The body ``otp/send/`` answers on every path, whatever the address.
+    """The body ``otp/send/`` answers on every path, whatever the address.
 
     ``length`` and ``expires_in`` come from the settings, never from the
     address, so a client can size its code input without learning anything.
@@ -208,12 +208,12 @@ def send_answer() -> dict[str, Any]:
 
 
 def normalize_address(email: str) -> str:
-    """Experimental. The form an address is stored, hashed and throttled in: trimmed, lower case."""
+    """The form an address is stored, hashed and throttled in: trimmed, lower case."""
     return email.strip().lower()
 
 
 def generate_code(length: int | None = None) -> str:
-    """Experimental. A new code: ``length`` digits, uniform, from :mod:`secrets`.
+    """A new code: ``length`` digits, uniform, from :mod:`secrets`.
 
     Leading zeros are kept, so every one of the ``10 ** length`` strings is
     equally likely.
@@ -223,7 +223,7 @@ def generate_code(length: int | None = None) -> str:
 
 
 def hash_code(address: str, code: str) -> str:
-    """Experimental. HMAC-SHA256, keyed by ``SECRET_KEY``, over the address and the code.
+    """HMAC-SHA256, keyed by ``SECRET_KEY``, over the address and the code.
 
     The only form a code is stored in. ``address`` is
     :func:`normalize_address`'s. Binding the address in means a hash says
@@ -237,7 +237,7 @@ def hash_code(address: str, code: str) -> str:
 
 
 def code_matches(stored_hash: str, address: str, code: str) -> bool:
-    """Experimental. Whether ``code`` is the one ``stored_hash`` was made from, in constant time."""
+    """Whether ``code`` is the one ``stored_hash`` was made from, in constant time."""
     return hmac.compare_digest(stored_hash, hash_code(address, code))
 
 
@@ -287,7 +287,7 @@ def _deliver(to: str, code: str, user: AbstractKarniUser | None, ttl: int) -> No
 
 
 def send_code(email: str) -> bool:
-    """Experimental. Store a new code for ``email`` and email it when the address may sign in.
+    """Store a new code for ``email`` and email it when the address may sign in.
 
     Every address gets the same work: the account lookup, a new code, its
     HMAC, the cleanup and one stored row (``user`` is ``None`` without an
@@ -348,7 +348,7 @@ def send_code(email: str) -> bool:
 
 @dataclass(frozen=True)
 class CodeSignIn:
-    """Experimental. What :func:`verify_code` decided.
+    """What :func:`verify_code` decided.
 
     ``user`` signs in unless ``awaiting_approval`` (a new, inactive account
     under the ``approval`` policy). ``created`` says whether this sign-in
@@ -427,7 +427,7 @@ def _sign_in(account: AbstractKarniUser, address: str) -> CodeSignIn:
 
 
 def verify_code(email: str, code: str) -> CodeSignIn:
-    """Experimental. Spend ``code`` on ``email`` and return the account it signs in.
+    """Spend ``code`` on ``email`` and return the account it signs in.
 
     Whitespace inside the code is ignored (``"123 456"``). Any failure of the
     code is the same :class:`LoginCodeRefused` (``E235``), with the precise
@@ -470,7 +470,7 @@ def verify_code(email: str, code: str) -> CodeSignIn:
 
 
 def flush_expired_codes() -> int:
-    """Experimental. Delete every code past its expiry. Returns how many rows went.
+    """Delete every code past its expiry. Returns how many rows went.
 
     ``karni.accounts.tasks.flush_login_codes`` runs it every hour while
     ``KARNI_EMAIL_OTP`` is on, and :func:`send_code` does the same on each send.

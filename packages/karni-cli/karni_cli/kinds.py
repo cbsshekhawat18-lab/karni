@@ -8,13 +8,13 @@ pyproject.toml, next to the ``baseline`` ``karni upgrade`` reads:
   (``frontend/``) is optional (``karni new --no-staff-app``).
 * ``app``: an API and a React staff app, what ``karni new`` always made.
 * ``site+app``: both.
-* ``game``: a game first (experimental). The game is the front door: its
+* ``game``: a game first. The game is the front door: its
   client in ``game/<slug>/``, served at ``/play/<slug>/``, on the karni-game
   module (players, saves, scores, a wallet), with a ``games`` app for the
   game's server hooks and the game declared in ``content/game.yaml``. The
   admin and the API are there as in every kind. The staff app is optional
   (``karni new --staff-app``) and left out by default.
-* ``app+game``: an app with a game in it (experimental), what ``--kind game``
+* ``app+game``: an app with a game in it, what ``--kind game``
   made in 0.6.0: the React app in ``frontend/`` hosts the game on a page.
 
 ``karni context`` prints it (``KIND:``) and the agent files state it with

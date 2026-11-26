@@ -8,7 +8,6 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
-import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, type Browser, type Page } from "playwright";
@@ -25,7 +24,7 @@ const example = join(root, "example", "block-hopper");
 const cache = join(root, "node_modules", ".cache");
 mkdirSync(cache, { recursive: true });
 const work = mkdtempSync(join(cache, "karni-game-assets-browser-"));
-const shots = process.env.KARNI_SHOTS ?? join(homedir(), ".cache/karni-dev/g7assets-scratch/shots");
+const shots = process.env.KARNI_SHOTS ?? join(cache, "shots");
 mkdirSync(shots, { recursive: true });
 const axePath = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
 

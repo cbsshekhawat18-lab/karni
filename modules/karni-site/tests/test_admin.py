@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from html.parser import HTMLParser
 from typing import Any
 
 import pytest
@@ -12,6 +13,7 @@ from karni.accounts.models import Role
 from karni.accounts.roles import declared_roles
 from pytest_django import Settings
 
+from karni_site.admin import BlockForm
 from karni_site.models import Block, Menu, MenuItem, PageSeo, Redirect, SiteSettings
 from tests.testapp.models import Enquiry, Service
 
@@ -269,3 +271,50 @@ def test_the_editor_needs_django_permissions_once_grants_stop_opening_pages(
     assert admin.get(url(Block, "changelist")).status_code == 200
     settings.KARNI_ADMIN_GRANTS_OPEN_PAGES = False
     assert admin.get(url(Block, "changelist")).status_code == 403
+
+
+class _Tags(HTMLParser):
+    """The open and close tags of a piece of HTML, so a test can see one left open."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.opened: list[str] = []
+        self.closed: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.opened.append(tag)
+
+    def handle_endtag(self, tag: str) -> None:
+        self.closed.append(tag)
+
+
+def _tags(html: str) -> _Tags:
+    parser = _Tags()
+    parser.feed(html)
+    parser.close()
+    return parser
+
+
+@pytest.mark.parametrize("marker", [True, False])
+def test_the_text_field_help_names_the_tags_without_opening_them(
+    owner: Any, settings: Settings, marker: bool
+) -> None:
+    """The admin prints a field's help as HTML: the kept tags are named, never left open.
+
+    An open <b>, <em> and <a href> in the help made the rest of the form (labels,
+    values, the buttons) bold, italic and a link.
+    """
+    if not marker:
+        settings.KARNI_SITE_HIGHLIGHT = {}
+    block = Block.objects.create(key="about.story", html="Opened in 1921.")
+    help_text = str(BlockForm(instance=block).fields["text"].help_text)
+    assert _tags(help_text).opened == []
+    assert "&lt;b&gt;, italic &lt;em&gt; and links &lt;a href&gt;" in help_text
+    assert ("==words==" in help_text) is marker
+
+    page = signed_in(owner).get(url(Block, "change", block.pk)).content.decode()
+    form = page[page.index("<form") : page.rindex("</form>")]
+    found = _tags(form)
+    for tag in ("b", "em", "i", "strong", "a"):
+        assert found.opened.count(tag) == found.closed.count(tag), tag
+    assert "Bold &lt;b&gt;, italic &lt;em&gt; and links &lt;a href&gt; are kept." in form

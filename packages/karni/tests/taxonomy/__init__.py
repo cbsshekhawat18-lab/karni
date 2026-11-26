@@ -1,1 +1,1 @@
-"""Taxonomy tagging (``class Karni: taxonomies``, experimental): ``tests.taxoapp`` over the API."""
+"""Taxonomy tagging (``class Karni: taxonomies``): ``tests.taxoapp`` over the API."""

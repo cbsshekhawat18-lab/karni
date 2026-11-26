@@ -92,7 +92,7 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # External tables, a SQL view and a second database (karni.db): viewsets
     # mounted by its own URLconf only.
     "tests.externalapp",
-    # The NavItem table of the database menu (experimental). KARNI_NAVIGATION stays
+    # The NavItem table of the database menu. KARNI_NAVIGATION stays
     # unset, so no navigation/ route exists unless a test sets it.
     "karni.navigation",
     # Taxonomy tagging (class Karni: taxonomies): viewsets mounted by tests.taxonomy.urls.
@@ -106,7 +106,7 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # A 120-field model with markdown sections, field groups and column sets
     # (karni.layout): viewsets mounted by its own URLconf only.
     "tests.wideapp",
-    # Family events (experimental): the outbox, a help desk that publishes and a
+    # Family events: the outbox, a help desk that publishes and a
     # notes app that subscribes without importing it (tests/test_family_events.py).
     "karni.outbox",
     "tests.deskapp",
@@ -139,6 +139,12 @@ if os.environ.get("KARNI_TEST_USER_PK") == "bigint":
 
     if importlib.util.find_spec("django_otp") is not None:
         INSTALLED_APPS += ["django_otp", "django_otp.plugins.otp_totp"]  # type: ignore[name-defined]  # noqa: F821
+
+# Karni's admin discovery before Django's: karni.admin listed before django.contrib.admin,
+# which tests/admin/test_admin_meta.py starts in a subprocess with this variable.
+if os.environ.get("KARNI_TEST_ADMIN_FIRST") == "1":
+    INSTALLED_APPS.remove("karni.admin")  # type: ignore[name-defined]  # noqa: F821
+    INSTALLED_APPS.insert(INSTALLED_APPS.index("django.contrib.admin"), "karni.admin")  # type: ignore[name-defined]  # noqa: F821
 
 # Demo mode's middlewares do nothing while KARNI_DEMO_MODE is off (tests/demo/).
 MIDDLEWARE += [  # type: ignore[name-defined]  # noqa: F821

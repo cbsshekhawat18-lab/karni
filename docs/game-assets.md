@@ -1,5 +1,5 @@
 ---
-description: "Assets in @karni/game/assets (experimental): a manifest of images, fonts, sounds and data files in named groups, loading with progress and retries, unloading to free memory, fonts before the first text, WebP copies made at build time, a size budget per group and no file from a host the build does not allow."
+description: "Assets in @karni/game/assets: a manifest of images, fonts, sounds and data files in named groups, loading with progress and retries, unloading to free memory, fonts before the first text, WebP copies made at build time, a size budget per group and no file from a host the build does not allow."
 ---
 
 # Assets (@karni/game/assets)

@@ -169,6 +169,13 @@ class NoStampEventViewSet(EventViewSet):
         serializer.save()
 
 
+class ForcedTitleEventViewSet(EventViewSet):
+    """Stores another title than the one sent (as a computed field would)."""
+
+    def perform_create(self, serializer: Any) -> None:
+        serializer.save(organizer=self.request.user, title="Computed title")
+
+
 class OwnerInBodySerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
@@ -257,6 +264,7 @@ ROUTES = {
     "broken-filtering-events": BrokenFilteringEventViewSet,
     "undocumented-venues": UndocumentedFieldVenueViewSet,
     "no-stamp-events": NoStampEventViewSet,
+    "forced-title-events": ForcedTitleEventViewSet,
     "owner-from-body-events": OwnerFromBodyEventViewSet,
     "refusing-events": RefusingEventViewSet,
     "undeclared-events": UndeclaredEventViewSet,

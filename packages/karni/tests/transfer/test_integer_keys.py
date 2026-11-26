@@ -1,4 +1,4 @@
-"""Imports and ``karni load`` on integer keys (BigIntBaseModel, experimental).
+"""Imports and ``karni load`` on integer keys (BigIntBaseModel).
 
 ``Part`` (an integer key and a natural key made of digits) and ``Reading``
 (an integer key, no natural key) are integer-keyed whatever ``KARNI_TEST_PK``

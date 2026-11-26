@@ -53,7 +53,7 @@ def _installed() -> bool:
 
 
 class AnthropicProvider(Provider):
-    """Experimental. Claude through the Anthropic Messages API (structured outputs)."""
+    """Claude through the Anthropic Messages API (structured outputs)."""
 
     name: ClassVar[str] = "anthropic"
 

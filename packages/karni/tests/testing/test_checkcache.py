@@ -1,4 +1,4 @@
-"""karni check's cache (experimental): a hit, a miss after an edit, --changed, invalidation."""
+"""karni check's cache: a hit, a miss after an edit, --changed, invalidation."""
 
 from __future__ import annotations
 

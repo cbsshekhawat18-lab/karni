@@ -1,4 +1,4 @@
-"""Sign-in with an ID token (experimental): the ``SocialIdentity`` table.
+"""Sign-in with an ID token: the ``SocialIdentity`` table.
 
 One row per provider identity linked to a user, unique per (provider,
 subject) among live rows, so a deleted link frees its subject. Nothing else

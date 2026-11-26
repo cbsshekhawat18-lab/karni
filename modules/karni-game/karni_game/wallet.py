@@ -1,4 +1,4 @@
-"""Experimental. Soft currencies: a balance per player and currency, and a ledger of every change.
+"""Soft currencies: a balance per player and currency, and a ledger of every change.
 
 :func:`change` is the one way a balance moves. In one transaction it locks
 the wallet's row, refuses to go below 0 (``409 GAME016``), credits up to the

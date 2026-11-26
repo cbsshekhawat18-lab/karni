@@ -1,4 +1,4 @@
-"""External tables, SQL views and a second database, as models Karni accepts (experimental).
+"""Experimental. External tables, SQL views and a second database, as models Karni accepts.
 
 Three keys of a model's ``class Karni`` (:mod:`karni.meta`)::
 
@@ -85,24 +85,24 @@ def _declaring(model: type[models.Model] | Any) -> Any:
 
 
 def is_external(model: type[models.Model] | Any) -> bool:
-    """Experimental. Whether ``class Karni: external = True``: another system owns the table."""
+    """Whether ``class Karni: external = True``: another system owns the table."""
     return bool(karni_option(_declaring(model), "external", False))
 
 
 def is_read_only(model: type[models.Model] | Any) -> bool:
-    """Experimental. Whether Karni only reads ``model``: external and not ``Karni.writable``."""
+    """Whether Karni only reads ``model``: external and not ``Karni.writable``."""
     declaring = _declaring(model)
     return is_external(declaring) and not bool(karni_option(declaring, "writable", False))
 
 
 def database_for(model: type[models.Model] | Any) -> str | None:
-    """Experimental. The ``DATABASES`` alias ``class Karni: database`` names, else ``None``."""
+    """The ``DATABASES`` alias ``class Karni: database`` names, else ``None``."""
     alias = karni_option(_declaring(model), "database", None)
     return alias if isinstance(alias, str) and alias else None
 
 
 def external_models() -> list[type[models.Model]]:
-    """Experimental. Every installed external model (proxies and abstract models aside)."""
+    """Every installed external model (proxies and abstract models aside)."""
     return [
         model
         for model in apps.get_models()
@@ -111,7 +111,7 @@ def external_models() -> list[type[models.Model]]:
 
 
 def routed_aliases() -> frozenset[str]:
-    """Experimental. The aliases other than ``default`` that some model's ``Karni.database`` names.
+    """The aliases other than ``default`` that some model's ``Karni.database`` names.
 
     Only the models routed there migrate on such an alias.
     """
@@ -123,7 +123,7 @@ def routed_aliases() -> frozenset[str]:
 
 
 def split_table(db_table: str) -> tuple[str | None, str]:
-    """Experimental. ``(schema, table)`` from a ``Meta.db_table``: ``'reporting"."sales'``.
+    """``(schema, table)`` from a ``Meta.db_table``: ``'reporting"."sales'``.
 
     The schema is ``None`` for a plain name. Django quotes ``db_table`` as one
     identifier, so ``'reporting"."sales'`` becomes ``"reporting"."sales"`` in
@@ -143,7 +143,7 @@ def _registered(app_label: str, model_name: str | None) -> type[models.Model] | 
 
 
 class DatabaseRouter:
-    """Experimental. Routes each model to the alias its ``class Karni: database`` names.
+    """Routes each model to the alias its ``class Karni: database`` names.
 
     ``karni_settings()`` lists it in ``DATABASE_ROUTERS``, after any router the
     project listed first. A project with one database is unaffected: every

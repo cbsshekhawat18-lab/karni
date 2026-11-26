@@ -4,7 +4,7 @@ Structured extraction for Karni: rows for any resource read from text, a web pag
 
 [![PyPI](https://img.shields.io/pypi/v/karni-ai)](https://pypi.org/project/karni-ai/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/ai-extraction/)
 
-Experimental. A language model reads a source (text, a web page or a PDF) into rows of any of your resources. The rows always go through Karni's import preview: nothing is saved until a user confirms the preview through the import's own commit. Every call is logged with its tokens and cost, and monthly budgets cap the spending.
+A language model reads a source (text, a web page or a PDF) into rows of any of your resources. The rows always go through Karni's import preview: nothing is saved until a user confirms the preview through the import's own commit. Every call is logged with its tokens and cost, and monthly budgets cap the spending.
 
 The full guide is [AI extraction](https://cbsshekhawat18-lab.github.io/karni/ai-extraction/).
 
@@ -51,13 +51,28 @@ calls.
 | `KARNI_AI_MAX_SOURCE_CHARS` | same | `100000` | the longest source text. Longer is refused, never cut |
 | `KARNI_AI_MAX_UPLOAD_BYTES`, `KARNI_AI_MAX_PDF_PAGES` | same | `10 MB`, `50` | PDF limits |
 | `KARNI_AI_FETCH_TIMEOUT`, `KARNI_AI_FETCH_MAX_BYTES`, `KARNI_AI_FETCH_MAX_REDIRECTS`, `KARNI_AI_FETCH_PORTS` | same | `10`, `5 MB`, `3`, `[80, 443]` | URL fetch limits |
-| `KARNI_AI_PRICES` | | `{}` | `{"<model>": {"input": "1.00", "output": "4.00"}}`, per million tokens |
+| `KARNI_AI_PRICES` | | `{}` | `{"<model>": {"input": "1.00", "output": "4.00"}}`, per million tokens, or per million of the entry's `"unit"` (`"characters"`) |
 | `KARNI_AI_MONTHLY_TOKENS_PER_USER`, `KARNI_AI_MONTHLY_TOKENS` | same | `None` | monthly token budgets (AI013, AI014) |
 | `KARNI_AI_FETCHER`, `KARNI_AI_EXTRACTOR` | same | Karni's classes | escape hatches: dotted paths to subclasses |
 
 In karni.yaml, `modules: ai: {provider: anthropic}` sets the provider. The
 key and the model name are never options there: they stay in the
 environment.
+
+## Jobs other than extraction
+
+> **Experimental.** What this section names may change in a minor release, with a CHANGELOG entry ([stability](https://cbsshekhawat18-lab.github.io/karni/stability/#experimental-names)). The rest of karni-ai is stable.
+
+karni-ai ships one job, extraction. A job of your own, such as a plain
+translation service, uses the same parts: its own `Provider` subclass
+(`get_provider("<dotted path>")` loads it beside the extraction provider),
+its parameters in `StructuredRequest.metadata` (passed to the provider as
+given, never read by Karni), the unit its service bills in
+(`Usage(..., unit="characters")`), and its line in the usage log
+(`log_call(..., kind="translation")`, the `kind` and `unit` columns of
+`AICall`). A price in `KARNI_AI_PRICES` names its unit, and the token
+budgets count tokens only, so units never mix. Karni ships no such job. See
+[jobs other than extraction](https://cbsshekhawat18-lab.github.io/karni/ai-extraction/#jobs-other-than-extraction).
 
 ## Escape hatches
 

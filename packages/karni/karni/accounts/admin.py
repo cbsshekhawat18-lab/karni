@@ -8,23 +8,23 @@ here explicitly — ``karni.admin``'s autodiscover deliberately skips
 ``AbstractBaseUser`` subclasses (its amendment C5). Its change form carries
 the **Effective permissions** button (ADR 0002, P5).
 
-Sign-in with an ID token (experimental) links provider identities in
+Sign-in with an ID token links provider identities in
 ``SocialIdentity``: they are listed read-only on each user's change page (an
 inline) and in their own read-only changelist. Links are written only by the
 sign-in flow.
 
-Sign-in with a code (experimental) keeps each emailed code in ``LoginCode``,
+Sign-in with a code keeps each emailed code in ``LoginCode``,
 listed read-only under *Login codes* so support can see that a code went out,
 when it expires and how many guesses it took. The code itself is not there:
 only its HMAC is stored, and the admin does not show even that.
 
-Terms acceptance (experimental) records each user's acceptance of a version
+Terms acceptance records each user's acceptance of a version
 of ``KARNI_TERMS`` in ``TermsAcceptance``: listed read-only under *Terms
 acceptances*, filtered by version, exported with the changelist's *Export
 selected* actions (there is no import), and shown read-only on each user's
 change page while ``KARNI_TERMS`` is set. The table is append-only.
 
-Per-user grants (experimental) live in ``UserGrant``. While
+Per-user grants live in ``UserGrant``. While
 ``KARNI_USER_GRANTS`` is on, each user's change page lists their grants in
 an editable inline (add, edit, expire with *Expire now*, delete), and *User
 grants* lists every grant, with *Expire selected* and the History tab. Both
@@ -136,7 +136,7 @@ _IDENTITY_FIELDS = ("provider", "subject", "email_at_link", "created_at", "last_
 
 
 def _build_identity_inline() -> type[Any]:
-    """The read-only list of a user's linked provider identities (experimental)."""
+    """The read-only list of a user's linked provider identities."""
     from karni.accounts.models import SocialIdentity
 
     class SocialIdentityInline(_unfold_tabular_inline()):  # type: ignore[misc]
@@ -168,7 +168,7 @@ _ACCEPTANCE_FIELDS = ("version", "accepted_at", "ip", "user_agent", "client")
 
 
 def _build_acceptance_inline() -> type[Any]:
-    """The read-only list of a user's terms acceptances (experimental)."""
+    """The read-only list of a user's terms acceptances."""
     from karni.accounts.models import TermsAcceptance
 
     class TermsAcceptanceInline(_unfold_tabular_inline()):  # type: ignore[misc]
@@ -201,7 +201,7 @@ _GRANT_SHOWN = ("status", "granted_by", "created_at")
 
 
 def grant_form(operator: Any) -> type[Any]:
-    """Experimental. The admin's ``UserGrant`` form for ``operator``.
+    """The admin's ``UserGrant`` form for ``operator``.
 
     ``targets`` is a comma-separated text field. *Expire now* sets
     ``expires_at`` to now. A new grant, or a change that gives more, is
@@ -292,7 +292,7 @@ def _grant_status(obj: Any) -> str:
 
 
 def _build_grant_inline() -> type[Any]:
-    """The editable list of one user's grants on their change page (experimental)."""
+    """The editable list of one user's grants on their change page."""
     from karni.accounts.models import UserGrant
 
     class UserGrantInline(_unfold_tabular_inline()):  # type: ignore[misc]
@@ -333,7 +333,7 @@ def _build_grant_inline() -> type[Any]:
 
 
 def _build_grant_admin() -> type[Any]:
-    """``UserGrantAdmin``: every per-user grant, editable, with *Expire selected* (experimental)."""
+    """``UserGrantAdmin``: every per-user grant, editable, with *Expire selected*."""
     from karni.admin import KarniModelAdmin
 
     class StatusFilter(admin.SimpleListFilter):
@@ -506,7 +506,7 @@ def _build_user_admin() -> type[Any]:
 
         def get_inlines(self, request: Any, obj: Any = None) -> Any:
             """The acceptances inline while ``KARNI_TERMS`` is set, the grants inline while
-            ``KARNI_USER_GRANTS`` is on (both experimental)."""
+            ``KARNI_USER_GRANTS`` is on."""
             from karni.accounts import grants, terms
 
             found = list(super().get_inlines(request, obj))
@@ -541,7 +541,7 @@ def _build_user_admin() -> type[Any]:
 
 
 def _build_identity_admin() -> type[Any]:
-    """``SocialIdentityAdmin``: every linked provider identity, read-only (experimental)."""
+    """``SocialIdentityAdmin``: every linked provider identity, read-only."""
     from karni.admin import KarniModelAdmin
 
     class SocialIdentityAdmin(KarniModelAdmin):
@@ -567,7 +567,7 @@ def _build_identity_admin() -> type[Any]:
 
 
 def _build_login_code_admin() -> type[Any]:
-    """``LoginCodeAdmin``: every stored sign-in code, read-only, without its hash (experimental)."""
+    """``LoginCodeAdmin``: every stored sign-in code, read-only, without its hash."""
     from karni.admin import KarniModelAdmin
 
     shown = ("email", "user", "created_at", "expires_at", "attempts", "used_at")
@@ -594,7 +594,7 @@ def _build_login_code_admin() -> type[Any]:
 
 
 def _build_acceptance_admin() -> type[Any]:
-    """``TermsAcceptanceAdmin``: every terms acceptance, read-only, exportable (experimental)."""
+    """``TermsAcceptanceAdmin``: every terms acceptance, read-only, exportable."""
     from karni.admin import KarniModelAdmin
 
     class TermsAcceptanceAdmin(KarniModelAdmin):

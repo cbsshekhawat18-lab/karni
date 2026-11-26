@@ -1,4 +1,4 @@
-/** useNavigation (experimental): the menu from GET /navigation/, cached per signed-in user. */
+/** useNavigation: the menu from GET /navigation/, cached per signed-in user. */
 import { QueryClient } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";

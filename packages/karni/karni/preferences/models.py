@@ -1,4 +1,4 @@
-"""Experimental. The preferences tables: the project's details, section values and switches.
+"""The preferences tables: the project's details, section values and switches.
 
 * :class:`Details`: one row, the business's own details (name, address,
   phone, emails, sender, logo, time zone, language, currency display).
@@ -69,7 +69,7 @@ def validate_time_zone(value: str) -> None:
 
 
 class Details(models.Model):
-    """Experimental. The business's own details: one row (``id`` 1) for the whole project.
+    """The business's own details: one row (``id`` 1) for the whole project.
 
     A blank field reads as the deployment's default (``KARNI_PREFERENCES_DEFAULTS``)
     or Django's (``TIME_ZONE``, ``LANGUAGE_CODE``), so a new project shows sensible
@@ -150,7 +150,7 @@ class Details(models.Model):
 
 
 class SectionValue(models.Model):
-    """Experimental. The changed values of one settings section, validated by its model.
+    """The changed values of one settings section, validated by its model.
 
     ``values`` holds only what someone changed: a field left out reads as its
     declared default. ``version`` is the section's version when they were saved.
@@ -193,7 +193,7 @@ class SectionValue(models.Model):
 
 
 class Switch(models.Model):
-    """Experimental. A connection or an email kind someone switched on or off.
+    """A connection or an email kind someone switched on or off.
 
     Without a row the declared default holds. ``KARNI_PREFERENCES_LOCKED``
     wins over a row.

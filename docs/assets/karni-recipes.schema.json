@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://cbsshekhawat18-lab.github.io/karni/assets/karni-recipes.schema.json",
   "title": "karni recipes list|show --json",
-  "description": "Experimental. The output of karni recipes list|show --json.",
+  "description": "The output of karni recipes list|show --json.",
   "$defs": {
     "_BlankOut": {
       "additionalProperties": false,
@@ -81,17 +81,17 @@
               "type": "null"
             }
           ],
-          "description": "Experimental. Its recipe.toml version. null when it has none."
+          "description": "Its recipe.toml version. null when it has none."
         },
         "requires": {
-          "description": "Experimental. The core contracts and modules it needs, with version ranges.",
+          "description": "The core contracts and modules it needs, with version ranges.",
           "items": {
             "type": "string"
           },
           "type": "array"
         },
         "conflicts": {
-          "description": "Experimental. The recipes and modules it cannot share a project with.",
+          "description": "The recipes and modules it cannot share a project with.",
           "items": {
             "type": "string"
           },

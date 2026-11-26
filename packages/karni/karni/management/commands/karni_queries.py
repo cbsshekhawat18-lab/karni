@@ -6,8 +6,8 @@ every SQL statement with the stack that issued it, the repeated ones grouped
 by cause with the optimiser's reason and the fix. ``--json`` for agents,
 ``--explain`` adds the plans: on PostgreSQL ``EXPLAIN ANALYZE`` of every
 statement, rolled back with the request, with the sequential scans on large
-tables and the index each one wants (:mod:`karni.api.explain`,
-experimental), elsewhere plain ``EXPLAIN`` of the slowest. ``--all`` lists
+tables and the index each one wants (:mod:`karni.api.explain`),
+elsewhere plain ``EXPLAIN`` of the slowest. ``--all`` lists
 every statement.
 
 Override / escape hatch: call :func:`karni.api.diagnose.run` from your own

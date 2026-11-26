@@ -1,5 +1,5 @@
 /**
- * Experimental. useSocialLogin: sign in with a Google, Microsoft or Apple ID token.
+ * useSocialLogin: sign in with a Google, Microsoft or Apple ID token.
  *
  * The app gets the ID token from the provider's own SDK (Google Identity
  * Services, MSAL, Sign in with Apple JS). Karni bundles none. `signIn` posts
@@ -13,14 +13,14 @@ import { useAuth } from "./provider";
 import type { SocialLoginResult, SocialSignInOptions } from "./types";
 
 /**
- * Experimental. Where a sign-in stands: `idle`, `pending` while the request
+ * Where a sign-in stands: `idle`, `pending` while the request
  * runs, `success`, `requires-2fa` (finish with the 2FA step), `awaiting-approval`
  * (the account exists, an administrator must activate it) or `error`.
  */
 export type SocialLoginStatus =
   "idle" | "pending" | "success" | "requires-2fa" | "awaiting-approval" | "error";
 
-/** Experimental. What `useSocialLogin` returns. */
+/** What `useSocialLogin` returns. */
 export interface UseSocialLoginResult {
   /**
    * Posts the ID token. Resolves with the result (and sets `status`), or
@@ -42,7 +42,7 @@ function statusOf(result: SocialLoginResult): SocialLoginStatus {
 }
 
 /**
- * Experimental. Sign in with a provider's ID token: `{ signIn, status, error, reset }`.
+ * Sign in with a provider's ID token: `{ signIn, status, error, reset }`.
  *
  * Render inside `AuthProvider`. `provider` is the name in the backend's
  * `KARNI_SOCIAL_TOKEN_PROVIDERS` (`"google"`, `"microsoft"`, `"apple"` or the

@@ -6,7 +6,7 @@ statement with the stack that issued it, the repeated ones grouped by cause
 (the serializer field, the relation, why the optimiser did not fetch it) and
 the fix. ``--json`` for agents. ``--explain`` adds the plans: on PostgreSQL
 ``EXPLAIN ANALYZE`` of every query and the sequential scans to fix
-(:mod:`karni.api.explain`, experimental).
+(:mod:`karni.api.explain`).
 """
 
 from __future__ import annotations

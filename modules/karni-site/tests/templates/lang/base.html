@@ -1,0 +1,13 @@
+{% load static karni_site i18n %}{% get_current_language as lang %}{% site_defaults name="Tide Notes" %}<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  {% karni_seo %}<title>{{ title }}</title>
+  <meta name="description" content="{{ description }}">{% endkarni_seo %}
+</head>
+<body>
+  {% get_menu "main" seed="lang/menu.html" as items %}<nav>{% for item in items %}[{{ item.title }}|{{ item.url }}{% if item.current %}|current{% endif %}{% if item.active %}|active{% endif %}{% for child in item.children %}({{ child.title }}|{{ child.url }}{% if child.current %}|current{% endif %}){% endfor %}]{% endfor %}</nav>
+  <p class="languages">{% for code, address in switch %}<a href="{{ address }}" hreflang="{{ code }}">{{ code }}</a> {% endfor %}</p>
+  <main><h1>{{ title }}</h1></main>
+</body>
+</html>

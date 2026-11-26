@@ -1,4 +1,4 @@
-"""Experimental. The people contract's tables: Person, Organisation, Membership, Address.
+"""The people contract's tables: Person, Organisation, Membership, Address.
 
 A :class:`Person` is the one record of a human the business deals with, in
 every part of a project: a shop's buyer, a CRM contact, a booking guest and a
@@ -61,12 +61,12 @@ ERASED = "Erased person"
 
 
 def normalize_email(value: Any) -> str:
-    """Experimental. ``value`` stripped and lower case: the form ``Person.email`` is kept in."""
+    """``value`` stripped and lower case: the form ``Person.email`` is kept in."""
     return str(value or "").strip().lower()
 
 
 def normalize_domain(value: Any) -> str:
-    """Experimental. A domain without scheme, path, ``www.`` or a trailing dot, lower case."""
+    """A domain without scheme, path, ``www.`` or a trailing dot, lower case."""
     text = str(value or "").strip().lower()
     text = re.sub(r"^[a-z][a-z0-9+.-]*://", "", text)
     text = text.split("/", 1)[0].split("?", 1)[0].rstrip(".")
@@ -83,7 +83,7 @@ def _refuse(field: str, message: str, code: str) -> ValidationError:
 
 
 class PersonQuerySet(BaseQuerySet):
-    """Experimental. ``Person.objects``'s queryset: soft delete aware, with the person facts."""
+    """``Person.objects``'s queryset: soft delete aware, with the person facts."""
 
     def with_facts(self, *names: str) -> PersonQuerySet:
         """Annotate the person facts ``names`` (none: every registered fact).
@@ -98,11 +98,11 @@ class PersonQuerySet(BaseQuerySet):
 
 
 class PersonManager(ScopedManagerMixin, models.Manager.from_queryset(PersonQuerySet)):  # type: ignore[misc]
-    """Experimental. ``Person.objects``: :class:`karni.managers.BaseManager` with ``with_facts``."""
+    """``Person.objects``: :class:`karni.managers.BaseManager` with ``with_facts``."""
 
 
 class Organisation(BaseModel):
-    """Experimental. A company, a school, a club: one row per organisation, in every part.
+    """A company, a school, a club: one row per organisation, in every part.
 
     ``domain`` is kept lower case without scheme or ``www.``. ``merged_into``
     points at the organisation this one was merged into (``people.merge``).
@@ -155,7 +155,7 @@ class Organisation(BaseModel):
 
 
 class Person(BaseModel):
-    """Experimental. A human the business deals with: one row per person, in every part.
+    """A human the business deals with: one row per person, in every part.
 
     ``display_name`` is what every screen shows. Left blank, or still the
     name the given and family names made, it follows them; written by hand,
@@ -343,7 +343,7 @@ class Person(BaseModel):
 
 
 class Membership(BaseModel):
-    """Experimental. A person belongs to an organisation, with a title (``Head of sales``)."""
+    """A person belongs to an organisation, with a title (``Head of sales``)."""
 
     person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="memberships")
     organisation = models.ForeignKey(
@@ -387,7 +387,7 @@ class Membership(BaseModel):
 
 
 class Address(BaseModel):
-    """Experimental. A postal address of a person or of an organisation.
+    """A postal address of a person or of an organisation.
 
     Exactly one of ``person`` and ``organisation`` is set (a CHECK in the
     database). ``is_default_billing`` and ``is_default_shipping`` mark the

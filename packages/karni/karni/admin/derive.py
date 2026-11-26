@@ -73,6 +73,106 @@ def admin_meta(model: type[models.Model]) -> type | None:
     return meta if isinstance(meta, type) else None
 
 
+#: ``AdminMeta`` options that become the ``ModelAdmin`` attribute of the same name.
+ADMIN_META_PASSTHROUGH = (
+    "list_display",
+    "list_filter",
+    "search_fields",
+    "date_hierarchy",
+    "ordering",
+)
+
+
+def admin_meta_options(model: type[models.Model]) -> dict[str, Any]:
+    """The ``ModelAdmin`` attributes the model's ``AdminMeta`` sets, by name.
+
+    ``list_display``, ``list_filter``, ``search_fields``, ``date_hierarchy`` and
+    ``ordering`` as they are, ``read_only`` as ``karni_read_only`` (it extends
+    the derived ``readonly_fields``), ``per_page`` as ``list_per_page``,
+    ``per_page_choices`` as ``karni_per_page_choices``, ``can_add`` and
+    ``can_delete`` as ``karni_can_add`` and ``karni_can_delete``, then every
+    entry of ``extra``, which wins over the others. ``exclude``, ``register``,
+    ``inline_on`` and ``mixins`` are not admin attributes and are not here.
+
+    Every Karni admin applies this when it is built, the derived one and a
+    subclass registered by hand alike
+    (:meth:`karni.admin.base.KarniAdminMixin.admin_meta_options`).
+    """
+    meta = admin_meta(model)
+    if meta is None:
+        return {}
+    options: dict[str, Any] = {
+        name: getattr(meta, name) for name in ADMIN_META_PASSTHROUGH if hasattr(meta, name)
+    }
+    if hasattr(meta, "read_only"):
+        options["karni_read_only"] = tuple(meta.read_only or ())
+    per_page = getattr(meta, "per_page", None)
+    if per_page is not None:
+        options["list_per_page"] = int(per_page)
+    choices = getattr(meta, "per_page_choices", None)
+    if choices:
+        options["karni_per_page_choices"] = tuple(int(n) for n in choices)
+    for action in ("add", "delete"):
+        if hasattr(meta, f"can_{action}"):
+            options[f"karni_can_{action}"] = bool(getattr(meta, f"can_{action}"))
+    options.update(dict(getattr(meta, "extra", None) or {}))
+    return options
+
+
+def admin_meta_allows(model: type[models.Model], action: str) -> bool:
+    """``False`` when the model's ``AdminMeta`` sets ``can_add`` or ``can_delete`` to ``False``.
+
+    ``action`` is ``"add"`` or ``"delete"``. The inlines of the model read it
+    (:class:`karni.admin.inlines.KarniInlineMixin`), as its own admin reads
+    ``karni_can_add`` and ``karni_can_delete``.
+    """
+    return bool(getattr(admin_meta(model), f"can_{action}", True))
+
+
+def admin_meta_mixins(model: type[models.Model]) -> tuple[type, ...]:
+    """The classes ``AdminMeta.mixins`` names, in order: dotted paths imported, classes kept.
+
+    The derived admin puts them in front of its own class
+    (:func:`karni.admin.base.build_model_admin`). A path that cannot be
+    imported, a value that is not a class, or ``mixins`` that is not a list
+    raises ``E306`` with the model and the entry.
+    """
+    from django.utils.module_loading import import_string
+
+    from karni.exceptions import KarniImproperlyConfigured
+
+    meta = admin_meta(model)
+    declared = getattr(meta, "mixins", None) if meta is not None else None
+    if not declared:
+        return ()
+    label = model._meta.label
+    if isinstance(declared, str) or not isinstance(declared, list | tuple):
+        raise KarniImproperlyConfigured(
+            f"{label}.AdminMeta.mixins is {declared!r}, and it must be a list of classes or "
+            f"dotted paths: mixins = [{declared!r}].",
+            code="E306",
+        )
+    found: list[type] = []
+    for entry in declared:
+        value = entry
+        if isinstance(entry, str):
+            try:
+                value = import_string(entry)
+            except ImportError as exc:
+                raise KarniImproperlyConfigured(
+                    f"{label}.AdminMeta.mixins names {entry!r}, which cannot be imported: {exc}",
+                    code="E306",
+                ) from exc
+        if not isinstance(value, type):
+            raise KarniImproperlyConfigured(
+                f"{label}.AdminMeta.mixins names {entry!r}, which is not a class "
+                f"(it is a {type(value).__name__}).",
+                code="E306",
+            )
+        found.append(value)
+    return tuple(found)
+
+
 def is_password_field(field: models.Field) -> bool:
     """True for password-ish fields, which are never displayed or searched.
 

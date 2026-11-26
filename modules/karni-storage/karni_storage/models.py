@@ -20,7 +20,7 @@ __all__ = ["Thumbnail"]
 
 
 class Thumbnail(BaseModel):
-    """Experimental. One thumbnail of one protected image."""
+    """One thumbnail of one protected image."""
 
     source = models.CharField(max_length=500, db_index=True)
     size = models.CharField(max_length=40)

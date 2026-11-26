@@ -1,4 +1,4 @@
-## Reports (karni-reports, experimental)
+## Reports (karni-reports)
 - A PDF of one row is a report. Never call WeasyPrint or write a PDF view by hand.
   Declare it in `<app>/reports.py`: `@register class ProductSheet(Report)` with
   `model`, `template` (extends `karni_reports/base.html`) and `get_context(obj)`.

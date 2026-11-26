@@ -7,7 +7,7 @@ why``: an access decision explained by the code that makes it), ``trace``,
 ``replay`` and ``explain_failure`` (the development capture under ``.karni/``),
 ``explain_text`` (``karni explain -`` on a pasted traceback or log line) and
 ``queries`` (``karni queries``: one endpoint's queries grouped by cause). For
-the app-builder flow (experimental, :mod:`karni_cli.agent_tools`), tools that
+the app-builder flow (:mod:`karni_cli.agent_tools`), tools that
 return JSON: ``recipes``, ``spec_validate``, ``questions``, ``answer``,
 ``plan``, ``build`` and ``modules``. The tool functions are plain functions so they are
 testable without a client; :func:`build_server` registers them on the
@@ -250,7 +250,7 @@ def queries_tool(
 TOOLS |= {"explain_text": explain_text_tool, "queries": queries_tool}
 
 
-# the app-builder flow (experimental): karni.yaml to a running app, as JSON
+# the app-builder flow: karni.yaml to a running app, as JSON
 # (karni_cli.agent_tools, docs/assets/karni-mcp.schema.json)
 
 

@@ -1,5 +1,5 @@
 /**
- * Experimental. The staff's pages for what checkout charges: coupons, shipping
+ * The staff's pages for what checkout charges: coupons, shipping
  * zones with their methods, and tax rates. Each is @karni/ui's ResourceTable
  * with New and Edit in a dialog (ResourceForm), so the roles' grants decide
  * who may see and change them, and a project's extra fields show up too.
@@ -354,7 +354,7 @@ export interface SettingsPageProps {
   title?: string;
 }
 
-/** Experimental. Coupons: percent, amount or free shipping, with their rules and limits. */
+/** Coupons: percent, amount or free shipping, with their rules and limits. */
 export function CouponsPage({ title = "Coupons" }: SettingsPageProps) {
   const state = useCouponLimits();
   return (
@@ -397,7 +397,7 @@ const METHOD_COLUMNS: ReadonlyArray<ResourceColumn> = [
   { field: "active" },
 ];
 
-/** Experimental. Shipping zones (where) and each zone's methods (how, and for how much). */
+/** Shipping zones (where) and each zone's methods (how, and for how much). */
 export function ShippingPage({ title = "Shipping" }: SettingsPageProps) {
   const [zone, setZone] = useState<{ id: string; name: string } | null>(null);
   return (
@@ -442,7 +442,7 @@ const RATE_COLUMNS: ReadonlyArray<ResourceColumn> = [
   { field: "shipping", header: "On shipping" },
 ];
 
-/** Experimental. Tax rates by country and region. The most specific rate wins. */
+/** Tax rates by country and region. The most specific rate wins. */
 export function TaxRatesPage({ title = "Tax rates" }: SettingsPageProps) {
   return (
     <Page

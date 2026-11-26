@@ -1,4 +1,4 @@
-"""Experimental. ``.karni/build.json``: what ``karni build`` owns, and how a hand edit is found.
+"""``.karni/build.json``: what ``karni build`` owns, and how a hand edit is found.
 
 The record is committed with the project. It holds a sha256 of every
 Karni-owned file and block as ``karni build`` last wrote it, the entities
@@ -64,20 +64,20 @@ __all__ = [
     "save_pending",
 ]
 
-#: Experimental. The version of ``.karni/build.json``. It moves only for a breaking change.
+#: The version of ``.karni/build.json``. It moves only for a breaking change.
 RECORD_VERSION: Final = 1
 #: The most diff lines a hand edit shows.
 _DIFF_LINES: Final = 12
 
 
 def digest(text: str) -> str:
-    """Experimental. The sha256 ``karni build`` records for a file or a block."""
+    """The sha256 ``karni build`` records for a file or a block."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 @dataclass
 class Record:
-    """Experimental. ``.karni/build.json`` (see the module docstring)."""
+    """``.karni/build.json`` (see the module docstring)."""
 
     spec: str = ""
     entities: list[str] = field(default_factory=list)
@@ -85,14 +85,14 @@ class Record:
     files: dict[str, str] = field(default_factory=dict)
     blocks: dict[str, str] = field(default_factory=dict)
     adopted: list[str] = field(default_factory=list)
-    #: Experimental. The recipes whose own files the next build writes, in order.
+    #: The recipes whose own files the next build writes, in order.
     recipes: list[str] = field(default_factory=list)
-    #: Experimental. The sha256 of each file ``karni new`` wrote where a recipe has its own.
+    #: The sha256 of each file ``karni new`` wrote where a recipe has its own.
     scaffold: dict[str, str] = field(default_factory=dict)
 
     @property
     def recipe(self) -> str:
-        """Experimental. The first recipe the next build writes (empty: none). Read-only."""
+        """The first recipe the next build writes (empty: none). Read-only."""
         return self.recipes[0] if self.recipes else ""
 
     @property
@@ -149,7 +149,7 @@ class Record:
 
 
 def load(root: Path) -> Record:
-    """Experimental. The project's record, or an empty one when there is none."""
+    """The project's record, or an empty one when there is none."""
     path = root / layout.RECORD
     if not path.is_file():
         return Record()
@@ -192,7 +192,7 @@ def load(root: Path) -> Record:
 
 @dataclass(frozen=True)
 class HandEdit:
-    """Experimental. A Karni-owned file or block whose content is not what karni build wrote."""
+    """A Karni-owned file or block whose content is not what karni build wrote."""
 
     #: The file (or block, ``config/settings.py``) as the record names it.
     name: str
@@ -218,7 +218,7 @@ class HandEdit:
 
 
 def hand_edit(name: str, on_disk: str, expected: str, *, unrecorded: bool = False) -> HandEdit:
-    """Experimental. The :class:`HandEdit` of ``on_disk``, against what karni build writes now."""
+    """The :class:`HandEdit` of ``on_disk``, against what karni build writes now."""
     a, b = expected.splitlines(), on_disk.splitlines()
     lines: list[int] = []
     for tag, _i1, _i2, j1, j2 in difflib.SequenceMatcher(a=a, b=b, autojunk=False).get_opcodes():
@@ -240,13 +240,13 @@ def hand_edit(name: str, on_disk: str, expected: str, *, unrecorded: bool = Fals
 
 
 def pending(root: Path) -> dict[str, Any]:
-    """Experimental. The steps a build that stopped early still has to run (empty: none)."""
+    """The steps a build that stopped early still has to run (empty: none)."""
     found = local_state.read_state(root).get("build")
     return dict(found) if isinstance(found, dict) else {}
 
 
 def save_pending(root: Path, state: dict[str, Any] | None) -> None:
-    """Experimental. Remember (or, with ``None``, forget) the steps still to run."""
+    """Remember (or, with ``None``, forget) the steps still to run."""
     data = local_state.read_state(root)
     if state:
         data["build"] = state

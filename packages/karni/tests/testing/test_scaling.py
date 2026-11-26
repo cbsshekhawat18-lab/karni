@@ -240,7 +240,7 @@ def test_scaling_cases_carry_an_expanded_list_case(monkeypatch: pytest.MonkeyPat
     assert any(case_id.startswith("EventViewSet.list?expand=") for case_id in ids), ids
 
 
-# the aggregate action (karni.aggregation, experimental)
+# the aggregate action (karni.aggregation)
 
 
 @pytest.mark.django_db
@@ -281,7 +281,7 @@ def test_an_aggregate_that_reads_every_row_grows() -> None:
     assert result.grows, (result.small, result.large)
 
 
-# configurable rows and the time budget (experimental)
+# configurable rows and the time budget
 
 
 @pytest.mark.django_db

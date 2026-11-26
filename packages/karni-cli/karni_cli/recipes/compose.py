@@ -78,7 +78,7 @@ __all__ = [
     "unmerge",
 ]
 
-#: Experimental. The core contracts a recipe may require, and the version this release has.
+#: The core contracts a recipe may require, and the version this release has.
 #: ``features.<name>`` switches each one on.
 CONTRACTS: Final[dict[str, int]] = {
     "people": 1,
@@ -87,9 +87,9 @@ CONTRACTS: Final[dict[str, int]] = {
     "preferences": 1,
     "notify": 1,
 }
-#: Experimental. The roles every part shares. Every other role is ``<prefix>-<role>``.
+#: The roles every part shares. Every other role is ``<prefix>-<role>``.
 FAMILY_ROLES: Final = ("admin", "customer")
-#: Experimental. Pages that belong to the family (core and commerce), never to a part.
+#: Pages that belong to the family (core and commerce), never to a part.
 FAMILY_PAGES: Final[dict[str, str]] = {
     "home": "/",
     "signin": "/signin",
@@ -102,19 +102,19 @@ FAMILY_PAGES: Final[dict[str, str]] = {
     "checkout": "/checkout",
     "orders": "/orders",
 }
-#: Experimental. The routes of :data:`FAMILY_PAGES`: no part's base may take one.
+#: The routes of :data:`FAMILY_PAGES`: no part's base may take one.
 FAMILY_ROUTES: Final = frozenset(FAMILY_PAGES.values())
-#: Experimental. The grants ``admin`` gets when a contract is on: the explicit actions ``"*"``
+#: The grants ``admin`` gets when a contract is on: the explicit actions ``"*"``
 #: does not reach.
 ADMIN_CONTRACT_GRANTS: Final[dict[str, dict[str, str]]] = {
     "people": {"people.*:merge": "all", "people.person:erase": "all"},
 }
-#: Experimental. The grants ``customer`` gets when a contract is on: what the family's own
+#: The grants ``customer`` gets when a contract is on: what the family's own
 #: account sections need (``people``: "Your addresses" lists and edits the person's own).
 CUSTOMER_CONTRACT_GRANTS: Final[dict[str, dict[str, str]]] = {
     "people": {"people.address": "own"},
 }
-#: Experimental. The module options that follow ``app.currency`` (a project has one).
+#: The module options that follow ``app.currency`` (a project has one).
 CURRENCY_OPTIONS: Final[dict[str, str]] = {"payments": "currency"}
 _REQUIREMENT: Final = re.compile(
     r"^\s*(?P<name>[a-z][a-z0-9_-]*)\s*(?P<rest>(?:(?:>=|<=|==|!=|>|<)\s*\d+(?:\.\d+)*\s*,?\s*)*)$"
@@ -125,7 +125,7 @@ _MONEY: Final = re.compile(r"^money:([A-Za-z]{3})(?=$|[:?])")
 
 @dataclass(frozen=True)
 class Requirement:
-    """Experimental. One entry of recipe.toml's ``requires``: a name and its version range."""
+    """One entry of recipe.toml's ``requires``: a name and its version range."""
 
     name: str
     constraints: tuple[tuple[str, tuple[int, ...]], ...] = ()
@@ -155,7 +155,7 @@ class Requirement:
 
 
 def parse_requirement(text: str) -> Requirement:
-    """Experimental. ``"events>=1"``, ``"people>=1,<2"`` or ``"storage"`` as a :class:`Requirement`.
+    """``"events>=1"``, ``"people>=1,<2"`` or ``"storage"`` as a :class:`Requirement`.
 
     :raises ValueError: for anything else.
     """
@@ -174,7 +174,7 @@ def parse_requirement(text: str) -> Requirement:
 
 @dataclass
 class Merged:
-    """Experimental. The project's spec data after a merge, and what the merge did."""
+    """The project's spec data after a merge, and what the merge did."""
 
     data: dict[str, Any]
     #: One line per thing the merge did that a person should know (a value kept, a grant added).
@@ -203,7 +203,7 @@ def _part(recipe: Any) -> _Part:
 
 
 def installed(data: Mapping[str, Any]) -> list[str]:
-    """Experimental. The parts a spec's data lists: ``app.recipes``, or the old ``app.recipe``."""
+    """The parts a spec's data lists: ``app.recipes``, or the old ``app.recipe``."""
     app = data.get("app") or {}
     listed = app.get("recipes")
     if isinstance(listed, list):
@@ -213,7 +213,7 @@ def installed(data: Mapping[str, Any]) -> list[str]:
 
 
 def part_route(label: str, app: Mapping[str, Any] | None = None) -> str:
-    """Experimental. The base a part's pages are mounted under: its ``route``, else ``/<label>``."""
+    """The base a part's pages are mounted under: its ``route``, else ``/<label>``."""
     route = (app or {}).get("route") if isinstance(app, Mapping) else None
     return str(route) if route else f"/{label}"
 
@@ -920,7 +920,7 @@ def merge(
     parts: Mapping[str, Any] | None = None,
     modules: Mapping[str, Any] | None = None,
 ) -> Merged:
-    """Experimental. ``project``'s spec data with the part ``recipe`` merged in, by the rules above.
+    """``project``'s spec data with the part ``recipe`` merged in, by the rules above.
 
     ``fragment`` is the recipe's karni.yaml as data. ``bases`` maps each
     installed part to the fragment it was added with (``.karni/recipes/<name>/
@@ -1014,7 +1014,7 @@ def _first_money(fragment: Mapping[str, Any]) -> str | None:
 
 
 def unmerge(project: Mapping[str, Any], name: str, base: Mapping[str, Any]) -> Merged:
-    """Experimental. ``project``'s spec data with the part ``name`` taken out.
+    """``project``'s spec data with the part ``name`` taken out.
 
     Its apps, its roles (a family role loses the grants only it added), its
     pages, navigation group, seed counts and own home tiles go. Modules,

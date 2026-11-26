@@ -1,4 +1,4 @@
-"""Experimental. The shop owner's reports: tables of what sold, by date, item, coupon.
+"""The shop owner's reports: tables of what sold, by date, item, coupon.
 
 A report is a function that answers a table for a date range: its columns,
 its rows and the totals. Commerce gives the ones every seller has (sales by
@@ -74,7 +74,7 @@ BUCKETS = {"day": TruncDay, "week": TruncWeek, "month": TruncMonth}
 
 @dataclass(frozen=True)
 class Column:
-    """Experimental. One column: its key in each row, its heading and how it shows."""
+    """One column: its key in each row, its heading and how it shows."""
 
     key: str
     label: str
@@ -86,7 +86,7 @@ class Column:
 
 @dataclass(frozen=True)
 class ReportQuery:
-    """Experimental. What a report is asked for: a range of days and how to split it."""
+    """What a report is asked for: a range of days and how to split it."""
 
     start: date
     end: date
@@ -107,7 +107,7 @@ Source = Callable[[ReportQuery], Mapping[str, Any]]
 
 @dataclass(frozen=True)
 class Report:
-    """Experimental. A registered report: who may run it and the function that answers it."""
+    """A registered report: who may run it and the function that answers it."""
 
     key: str
     title: str
@@ -137,7 +137,7 @@ def register_report(
     dated: bool = True,
     order: int = 100,
 ) -> Callable[[Source], Source]:
-    """Experimental. Register the decorated function as the report ``key``."""
+    """Register the decorated function as the report ``key``."""
 
     def wrap(source: Source) -> Source:
         _REPORTS[key] = Report(
@@ -179,7 +179,7 @@ def find_report(key: str) -> Report | None:
 
 
 def reports_for(user: Any) -> list[Report]:
-    """Experimental. The reports ``user`` may run, in order."""
+    """The reports ``user`` may run, in order."""
     _discover()
     found = [report for report in _REPORTS.values() if report.visible_to(user)]
     return sorted(found, key=lambda report: (report.order, report.title))
@@ -196,7 +196,7 @@ def _plain(value: Any) -> Any:
 
 
 def run(report: Report, query: ReportQuery) -> dict[str, Any]:
-    """Experimental. The report's answer: columns, rows and totals, as plain values."""
+    """The report's answer: columns, rows and totals, as plain values."""
     found = dict(report.source(query))
     columns = [
         column.as_dict() if isinstance(column, Column) else dict(column)
@@ -220,7 +220,7 @@ def run(report: Report, query: ReportQuery) -> dict[str, Any]:
 
 
 def as_csv(answer: Mapping[str, Any]) -> str:
-    """Experimental. A report's answer as CSV: a heading row, the rows, then the totals."""
+    """A report's answer as CSV: a heading row, the rows, then the totals."""
     columns = list(answer["columns"])
     out = io.StringIO()
     writer = csv.writer(out)
@@ -257,7 +257,7 @@ def _number(text: str) -> bool:
 
 
 def paid_orders(query: ReportQuery) -> QuerySet[Order]:
-    """Experimental. The orders paid in the range (some may be refunded since)."""
+    """The orders paid in the range (some may be refunded since)."""
     return Order.objects.filter(status__in=PAID, paid_at__gte=query.since, paid_at__lt=query.until)
 
 

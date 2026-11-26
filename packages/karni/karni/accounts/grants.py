@@ -1,4 +1,4 @@
-"""Experimental. Per-user grants: access given to one user, alongside the grants of their roles.
+"""Per-user grants: access given to one user, alongside the grants of their roles.
 
 A role grant reaches everyone who holds the role. A large app also grants
 access user by user: this customer sees these regions, that analyst sees
@@ -18,7 +18,7 @@ and a request pays no query for it.
 Targets: a ``related:<key>`` grant reaches the rows whose
 ``Karni.scope_paths[key]`` equals ``user.<key>``. With targets it reaches the
 rows whose scope path is one of the targets instead. A ``tree:<path>`` grant
-(experimental, :mod:`karni.accounts.tree_scope`) reaches the rows under its
+(:mod:`karni.accounts.tree_scope`) reaches the rows under its
 target nodes, or under ``user.<path>`` without targets. A scope that points
 at no row (``all``, ``own``, ``custom:<name>``) takes no targets
 (:data:`TARGETED_SCOPES`).
@@ -111,12 +111,12 @@ _GRANTS_ATTR: Final = "_karni_grants"
 
 
 def enabled() -> bool:
-    """Experimental. Whether ``KARNI_USER_GRANTS`` is on."""
+    """Whether ``KARNI_USER_GRANTS`` is on."""
     return bool(getattr(settings, SETTING, False))
 
 
 def forget(user: Any) -> None:
-    """Experimental. Drop the grants cached on ``user``, so its next check reads them again."""
+    """Drop the grants cached on ``user``, so its next check reads them again."""
     if user is None:
         return
     from karni.accounts.tree_scope import CACHE_ATTR
@@ -135,7 +135,7 @@ def scope_label(kind: str, path: str = "") -> str:
 
 
 def normalise_targets(targets: Any) -> tuple[str, ...]:
-    """Experimental. ``targets`` as text ids, in order, without repeats.
+    """``targets`` as text ids, in order, without repeats.
 
     Accepts a list (or tuple) of strings, integers or UUIDs. Raises
     :class:`~karni.exceptions.KarniValueError` (``E362``, a ``ValueError``)
@@ -158,7 +158,7 @@ def normalise_targets(targets: Any) -> tuple[str, ...]:
 
 @dataclass(frozen=True)
 class Checked:
-    """Experimental. A grant :func:`check` accepted: its parts and the permissions it reaches."""
+    """A grant :func:`check` accepted: its parts and the permissions it reaches."""
 
     permission: str
     scope: str
@@ -248,7 +248,7 @@ def check(
     *,
     keys: dict[str, type[models.Model]] | None = None,
 ) -> Checked:
-    """Experimental. Accept a grant's pattern, scope and targets, or raise why not.
+    """Accept a grant's pattern, scope and targets, or raise why not.
 
     The pattern must match a permission (``E360``). The scope must be one a
     role grant takes, registered when it is ``custom:<name>``, and fit the
@@ -331,7 +331,7 @@ def check(
 
 
 def live_rows(user: Any) -> list[UserGrant]:
-    """Experimental. ``user``'s live grants (not deleted, not expired): one query, then cached."""
+    """``user``'s live grants (not deleted, not expired): one query, then cached."""
     if user is None or not getattr(user, "is_authenticated", False) or user.pk is None:
         return []
     cached = getattr(user, _ROWS_ATTR, None)
@@ -370,7 +370,7 @@ def _reach(row: UserGrant, keys: dict[str, type[models.Model]] | None) -> list[G
 
 
 def user_grants(user: Any) -> list[Grant]:
-    """Experimental. The grants ``user``'s live user grants give, one per permission they reach.
+    """The grants ``user``'s live user grants give, one per permission they reach.
 
     Each :class:`~karni.accounts.roles.Grant` carries its ``targets`` and the
     row's id (``grant_id``). Reads :func:`live_rows`, so one query per user
@@ -404,7 +404,7 @@ def _source(row: UserGrant, key: str) -> GrantSource:
 
 
 def sources(user: Any, key: str) -> list[GrantSource]:
-    """Experimental. The user grants behind ``user``'s ``key``: id, reason, expiry, targets."""
+    """The user grants behind ``user``'s ``key``: id, reason, expiry, targets."""
     by_id = {str(row.pk): row for row in live_rows(user)}
     seen: list[str] = []
     for grant in user_grants(user):
@@ -415,7 +415,7 @@ def sources(user: Any, key: str) -> list[GrantSource]:
 
 @dataclass(frozen=True)
 class TargetGrant:
-    """Experimental. One target id a user reaches under a scope, and the grant that gives it.
+    """One target id a user reaches under a scope, and the grant that gives it.
 
     ``target`` is the id as text, ``permission`` the ``app.model:action`` the
     grant covers, and ``source`` the role or user grant
@@ -442,7 +442,7 @@ class TargetGrant:
 
 
 def user_key(kind: str, path: str) -> str:
-    """Experimental. The user attribute a grant of ``<kind>:<path>`` without targets reaches.
+    """The user attribute a grant of ``<kind>:<path>`` without targets reaches.
 
     ``related:<key>`` reads ``user.<key>``. ``tree:<path>`` reads the path's
     last step: ``tree:region`` and ``tree:store__region`` both read
@@ -469,7 +469,7 @@ def _wanted(key: str, permission: str | None) -> bool:
 
 
 def scope_targets(user: Any, scope: str, *, permission: str | None = None) -> list[TargetGrant]:
-    """Experimental. The target ids ``user`` holds under ``scope``, and which grant gives each.
+    """The target ids ``user`` holds under ``scope``, and which grant gives each.
 
     ``scope`` is a scope that points at rows, as a grant writes it
     (``"related:region"``, ``"tree:region"``). A role grant of that scope gives
@@ -535,7 +535,7 @@ def scope_targets(user: Any, scope: str, *, permission: str | None = None) -> li
 
 
 class GrantRefused(KarniValueError):
-    """Experimental. A grant the operator may not give (``E363``). ``reasons`` says why."""
+    """A grant the operator may not give (``E363``). ``reasons`` says why."""
 
     code = "E363"
 
@@ -578,7 +578,7 @@ def _tree_covered(key: str, path: str, held: set[str], cache: dict[Any, set[str]
 
 
 def refusals(operator: Any, checked: Checked) -> list[str]:
-    """Experimental. Why ``operator`` may not give ``checked``: nothing for a superuser or ``None``.
+    """Why ``operator`` may not give ``checked``: nothing for a superuser or ``None``.
 
     The permission matrix's rail, for one user: the operator must hold every
     permission the pattern reaches, at scope ``all`` or at the same scope.
@@ -636,7 +636,7 @@ def grant(
     expires_at: Any = None,
     reason: str = "",
 ) -> UserGrant:
-    """Experimental. Give ``user`` one grant, checked (``E360`` to ``E362``) and allowed (``E363``).
+    """Give ``user`` one grant, checked (``E360`` to ``E362``) and allowed (``E363``).
 
     ``operator`` becomes ``granted_by`` and the actor of the history entry.
     """
@@ -661,7 +661,7 @@ def bulk_grant(
     expires_at: Any = None,
     reason: str = "",
 ) -> list[UserGrant]:
-    """Experimental. Give every user in ``users`` the same grant: all of them or none.
+    """Give every user in ``users`` the same grant: all of them or none.
 
     One check and one refusal test for the whole batch, then one row (and one
     history entry) per user, in one transaction.
@@ -695,7 +695,7 @@ CHANGEABLE: Final = ("permission", "scope", "targets", "expires_at", "reason")
 
 
 def widens(row: UserGrant, fields: dict[str, Any]) -> bool:
-    """Experimental. Whether setting ``fields`` on ``row`` gives more than it gives now.
+    """Whether setting ``fields`` on ``row`` gives more than it gives now.
 
     Another permission, scope or targets, or a later expiry (or none) gives
     more. An earlier expiry and a new reason do not.
@@ -709,7 +709,7 @@ def widens(row: UserGrant, fields: dict[str, Any]) -> bool:
 
 
 def change(operator: Any, row: UserGrant, **fields: Any) -> UserGrant:
-    """Experimental. Change a grant's permission, scope, targets, expiry or reason.
+    """Change a grant's permission, scope, targets, expiry or reason.
 
     A change that gives more (another permission, scope or targets, a later
     expiry or none) is checked and refused like a new grant, and makes the
@@ -744,14 +744,14 @@ def change(operator: Any, row: UserGrant, **fields: Any) -> UserGrant:
 
 
 def expire(operator: Any, row: UserGrant, at: Any = None) -> UserGrant:
-    """Experimental. End a grant at ``at`` (default now). The row and its history stay."""
+    """End a grant at ``at`` (default now). The row and its history stay."""
     from django.utils import timezone
 
     return change(operator, row, expires_at=at if at is not None else timezone.now())
 
 
 def revoke(operator: Any, row: UserGrant) -> None:
-    """Experimental. Delete a grant: a soft delete, recorded with ``operator`` as the actor."""
+    """Delete a grant: a soft delete, recorded with ``operator`` as the actor."""
     with current_user(operator):
         row.delete()
     _forget_grantee(row)

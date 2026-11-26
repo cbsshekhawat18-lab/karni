@@ -1,4 +1,4 @@
-"""``karni plan --questions`` and ``karni spec answer`` (experimental): the questions before a build.
+"""``karni plan --questions`` and ``karni spec answer``: the questions before a build.
 
 Every kind of gap, every module's and feature's ask, the order, the cap,
 determinism, answers written back with the file's comments kept, a hand edit

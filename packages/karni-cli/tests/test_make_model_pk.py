@@ -1,7 +1,7 @@
 """``karni make model --pk`` and ``KARNI_PK``: the key type shows in the model's class line.
 
-``uuid`` writes ``BaseModel`` and ``bigint`` writes ``BigIntBaseModel``
-(experimental). ``KARNI_PK`` in config/settings.py picks the default, read
+``uuid`` writes ``BaseModel`` and ``bigint`` writes ``BigIntBaseModel``.
+``KARNI_PK`` in config/settings.py picks the default, read
 statically like ``KARNI_ROLES``, and ``--pk`` overrides it for one model.
 """
 

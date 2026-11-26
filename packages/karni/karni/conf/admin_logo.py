@@ -1,8 +1,12 @@
-"""``KARNI_ADMIN_LOGO`` → the ``UNFOLD`` logo entries, resolved on every admin request.
+"""``KARNI_ADMIN_LOGO`` → the ``UNFOLD`` logo and favicon entries, resolved on every admin request.
 
 The admin carries no logo unless a project asks for one: ``"karni"`` uses
 the mark shipped in ``karni.admin``'s static files, a mapping names the
-project's own static paths.
+project's own static paths. Every admin page, the login page included,
+declares a favicon (``UNFOLD["SITE_FAVICONS"]``, :func:`site_favicon`): the
+logo's icon when ``KARNI_ADMIN_LOGO`` is set, else :data:`DEFAULT_ICON`, a
+neutral icon shipped with Karni, so no browser asks for ``/favicon.ico`` and
+gets a 404.
 
 ``karni_settings()`` sets ``UNFOLD["SITE_LOGO"]`` and ``UNFOLD["SITE_ICON"]``
 to :func:`site_logo` and :func:`site_icon`. Unfold calls them with the request
@@ -14,7 +18,9 @@ storage is configured. The login screen shows the same logo
 
 Override / escape hatch: assign ``UNFOLD["SITE_LOGO"]`` / ``UNFOLD["SITE_ICON"]``
 yourself (a URL, a ``{"light": ..., "dark": ...}`` mapping or a callable
-taking the request) and unfold uses yours instead.
+taking the request) and unfold uses yours instead. ``UNFOLD["SITE_FAVICONS"]``
+of your own (a list of ``{"rel", "href", "type", "sizes"}``) replaces the
+favicon, and ``[]`` declares none.
 """
 
 from __future__ import annotations
@@ -29,6 +35,11 @@ KARNI_MARK: Final[dict[str, str]] = {
     "dark": "karni/brand/karni-mark-light.svg",
     "icon": "karni/brand/karni-mark-simple.svg",
 }
+
+#: The admin's favicon when ``KARNI_ADMIN_LOGO`` is not set: a neutral icon (no
+#: Karni brand, the admin is the project's) that follows the browser's light or
+#: dark scheme.
+DEFAULT_ICON: Final = "karni/admin-icon.svg"
 
 
 def _static(path: str) -> Callable[[Any], str]:
@@ -104,3 +115,16 @@ def site_icon(request: Any) -> dict[str, str] | None:
         return None
     icon = static(paths["icon"])
     return {"light": icon, "dark": icon}
+
+
+def site_favicon(request: Any) -> str:
+    """The admin's favicon URL: ``KARNI_ADMIN_LOGO``'s icon now, else :data:`DEFAULT_ICON`."""
+    from django.templatetags.static import static
+
+    paths = _current_paths()
+    return static(paths["icon"] if paths is not None else DEFAULT_ICON)
+
+
+def site_favicons() -> list[dict[str, Any]]:
+    """``UNFOLD["SITE_FAVICONS"]`` as ``karni_settings()`` sets it: :func:`site_favicon`."""
+    return [{"rel": "icon", "href": site_favicon}]

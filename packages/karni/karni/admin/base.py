@@ -22,15 +22,20 @@ Override / escape hatches, weakest to strongest:
 * ``KARNI_ADMIN_BASE``: a dotted path to any ``ModelAdmin`` subclass (it must
   not itself derive from ``KarniModelAdmin`` — that would be circular); its
   behaviour sits *under* the mixin, whose overrides all call ``super()``.
-* per model: ``class AdminMeta`` attributes, applied by
-  :func:`build_model_admin` and always beating derivation.
+* per model: ``class AdminMeta`` attributes, applied by every
+  ``KarniModelAdmin`` when it is built and always beating derivation, and
+  ``AdminMeta.mixins``, classes :func:`build_model_admin` puts in front of the
+  derived admin.
 * per project: subclass ``KarniModelAdmin``, override any ``derive_*``
   classmethod hook or plain ``ModelAdmin`` method, and register by hand
-  (optionally with ``KARNI_ADMIN_AUTODISCOVER = False``).
+  (optionally with ``KARNI_ADMIN_AUTODISCOVER = False``). The subclass still
+  takes each ``AdminMeta`` option and ``inline_on`` inline it does not set
+  itself (``admin_meta_options`` and ``derive_inlines`` are the hooks).
 """
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Sequence
 from typing import Any, ClassVar
 
@@ -50,7 +55,8 @@ from django.utils.translation import gettext_lazy as _lazy
 
 from karni.admin.bulk import BulkEditAdminMixin
 from karni.admin.derive import (
-    admin_meta,
+    admin_meta_mixins,
+    admin_meta_options,
     derive_date_hierarchy,
     derive_help,
     derive_list_display,
@@ -102,15 +108,6 @@ _STOCK_DEFAULTS: dict[str, Any] = {
     "list_select_related": False,
 }
 
-#: ``AdminMeta`` attributes copied verbatim onto the generated admin class.
-_ADMIN_META_PASSTHROUGH = (
-    "list_display",
-    "list_filter",
-    "search_fields",
-    "date_hierarchy",
-    "ordering",
-)
-
 _REQUEST_OBJ_ATTR = "_karni_admin_obj"
 
 _LIST_CLASSES: dict[type, type] = {}
@@ -157,11 +154,13 @@ def resolve_admin_base() -> type[admin.ModelAdmin]:
 class KarniAdminMixin(admin.ModelAdmin):
     """Every Karni admin behaviour, as cooperative ``ModelAdmin`` overrides.
 
-    * ``__init__`` fills each attribute still holding its stock default from
-      the matching ``derive_*`` classmethod hook (which delegates to the pure
-      functions in :mod:`karni.admin.derive`) — explicit class attributes, and
-      anything :func:`build_model_admin` marked explicit from ``AdminMeta``,
-      are never touched.
+    * ``__init__`` gives the admin each ``AdminMeta`` option and each
+      ``inline_on`` inline its class does not set itself (the derived admin
+      and a subclass registered by hand alike), then fills each attribute
+      still holding its stock default from the matching ``derive_*``
+      classmethod hook (which delegates to the pure functions in
+      :mod:`karni.admin.derive`). Explicit class attributes and ``AdminMeta``
+      options are never derived.
     * ``get_exclude`` keeps password-named fields out of derived forms
       (amendment C5) — unless the admin declares them itself via ``fields`` /
       ``fieldsets`` (the ``KarniUserAdmin`` pattern), in which case the
@@ -183,11 +182,11 @@ class KarniAdminMixin(admin.ModelAdmin):
       choices are limited to target rows the user may view.
       ``scope_exempt = True`` with a ``scope_exempt_reason`` turns the row
       scope off for one admin (``karni check`` lists every exemption).
-    * **Read-only external models** (experimental): a model with ``class
+    * **Read-only external models**: a model with ``class
       Karni: external = True`` and no ``writable = True`` has no add, change
       or delete permission here, so the admin lists it and shows its rows
       read-only (:meth:`is_read_only`).
-    * **Tree models** (experimental): a :class:`karni.models.TreeModel`'s
+    * **Tree models**: a :class:`karni.models.TreeModel`'s
       changelist lists the rows in tree order with the name indented by
       depth (:mod:`karni.admin.tree`, ``tree_changelist_max_rows``).
     * **Import and export** (ADR 0002, P6) come from
@@ -210,17 +209,32 @@ class KarniAdminMixin(admin.ModelAdmin):
     _karni_generated: ClassVar[bool] = False
     """True only on classes built by :func:`build_model_admin`."""
 
-    _karni_autocomplete_managed: ClassVar[bool] = False
+    _karni_autocomplete_managed: bool = False
     """Whether ``autodiscover()``'s second pass may assign ``autocomplete_fields``."""
 
-    _karni_explicit: ClassVar[frozenset[str]] = frozenset()
-    """Attribute names ``AdminMeta`` set explicitly — never derived, even when
-    their value happens to equal the stock default (e.g. ``date_hierarchy =
-    None`` to disable the drilldown). Hand-written subclasses may set this too.
+    _karni_explicit: frozenset[str] = frozenset()
+    """Attribute names never derived, even when their value happens to equal the
+    stock default (e.g. ``date_hierarchy = None`` to disable the drilldown).
+    Each instance adds the ``AdminMeta`` options it took. Hand-written
+    subclasses may set this too.
     """
 
+    inlines: Sequence[Any]
+    """Django's ``inlines``. Unset here: those the model's children declare with
+    ``AdminMeta.inline_on`` are added per instance (:meth:`derive_inlines`)."""
+
     tree_changelist_max_rows: ClassVar[int] = 10000
-    """Experimental. The most rows a tree model's changelist puts in tree order (0: never)."""
+    """The most rows a tree model's changelist puts in tree order (0: never)."""
+
+    karni_can_add: bool = True
+    """``False`` (``AdminMeta.can_add = False``): nobody adds a row here, superusers and
+    every role included. No Add button, the add page is a 403, and no import (an import
+    adds rows). For a model whose rows code makes."""
+
+    karni_can_delete: bool = True
+    """``False`` (``AdminMeta.can_delete = False``): nobody deletes a row here, superusers
+    and every role included. No Delete button, the delete page is a 403, and no bulk
+    delete (soft or hard)."""
 
     karni_read_only: ClassVar[tuple[str, ...]] = ()
     """``AdminMeta.read_only`` entries, appended to the *derived*
@@ -255,11 +269,18 @@ class KarniAdminMixin(admin.ModelAdmin):
     def __init__(self, model: type[models.Model], admin_site: admin.AdminSite) -> None:
         """Instantiate and fill underived attributes from the ``derive_*`` hooks.
 
+        First the model's ``AdminMeta`` and the inlines other models declare
+        with ``inline_on`` fill what the admin's class does not set itself
+        (:meth:`_karni_adopt_admin_meta`), the same for the derived admin and a
+        subclass registered by hand. Then each attribute still holding its
+        stock default is derived.
+
         Derivation is per *instance* (Django registers one admin instance per
         model/site pair), so the shared class attributes and Django's stock
         defaults are never mutated, and ``override_settings`` on the caps
         affects freshly built admins only.
         """
+        self._karni_adopt_admin_meta(model)
         super().__init__(model, admin_site)
         cls = type(self)
         if self.list_per_page is None:
@@ -293,6 +314,80 @@ class KarniAdminMixin(admin.ModelAdmin):
             related = cls.derive_list_select_related(model, display)
             if related:
                 self.list_select_related = list(related)
+
+    # -- AdminMeta and inline_on: what the class does not set itself ----------
+
+    @classmethod
+    def admin_meta_options(cls, model: type[models.Model]) -> dict[str, Any]:
+        """The attributes the model's ``AdminMeta`` gives this admin.
+
+        Hook for :func:`karni.admin.derive.admin_meta_options`. Override and
+        return ``{}`` to keep one admin class off ``AdminMeta``.
+        """
+        return admin_meta_options(model)
+
+    @classmethod
+    def derive_inlines(cls, model: type[models.Model]) -> list[type[Any]]:
+        """The inlines the children of ``model`` declare with ``AdminMeta.inline_on``.
+
+        One :func:`karni.admin.inlines.build_inline` per ``(child, fk_name)``
+        that :func:`karni.admin.inlines.collect_inlines` finds among the
+        installed models. Override to return other inlines (``[]`` for none).
+        """
+        from django.apps import apps
+
+        from karni.admin.inlines import build_inline, collect_inlines
+
+        found = collect_inlines(apps.get_models()).get(model, [])
+        return [build_inline(child, fk_name) for child, fk_name in found]
+
+    def _karni_declares(self, name: str) -> bool:
+        """Whether a class of this admin above Karni's own sets ``name`` itself.
+
+        Looks at the admin's class and every class before ``KarniModelAdmin``
+        (or ``KarniAdminMixin``) in its MRO: the class a project registers, its
+        parents and its mixins, ``AdminMeta.mixins`` among them. Karni's
+        ``SoftDeleteAdminMixin`` and the classes under Karni (the
+        ``KARNI_ADMIN_BASE``, unfold, Django) hold defaults and do not count.
+        """
+        for klass in type(self).__mro__:
+            if klass is KarniModelAdmin or klass is KarniAdminMixin:
+                return False
+            if klass is SoftDeleteAdminMixin:
+                continue
+            if name in vars(klass):
+                return True
+        return False
+
+    def _karni_adopt_admin_meta(self, model: type[models.Model]) -> None:
+        """Give this admin the ``AdminMeta`` options and inlines its class does not set itself.
+
+        Each option of :meth:`admin_meta_options` the class does not set
+        itself (:meth:`_karni_declares`) becomes an attribute of this
+        instance, a function of ``AdminMeta.extra`` a method of it, and is
+        never derived afterwards (``_karni_explicit``). ``inlines`` the class
+        and ``AdminMeta.extra`` leave unset come from :meth:`derive_inlines`.
+        It runs before Django's ``ModelAdmin.__init__``, which sees these
+        values as it would see class attributes (``formfield_overrides`` is
+        merged with Django's defaults).
+        """
+        cls = type(self)
+        adopted: set[str] = set()
+        for name, value in cls.admin_meta_options(model).items():
+            if self._karni_declares(name):
+                continue
+            if isinstance(value, staticmethod | classmethod) or inspect.isfunction(value):
+                value = value.__get__(self, cls)
+            setattr(self, name, value)
+            adopted.add(name)
+        if "inlines" not in adopted and not self._karni_declares("inlines"):
+            inlines = cls.derive_inlines(model)
+            if inlines:
+                self.inlines = inlines
+        if adopted:
+            self._karni_explicit = cls._karni_explicit | adopted
+        if "autocomplete_fields" in adopted or self._karni_declares("autocomplete_fields"):
+            self._karni_autocomplete_managed = False
 
     # -- derivation hooks (one per rule; see karni.admin.derive) -------------
 
@@ -426,7 +521,7 @@ class KarniAdminMixin(admin.ModelAdmin):
         )
 
     def is_read_only(self) -> bool:
-        """Experimental. Whether this admin only shows rows (:func:`karni.db.is_read_only`).
+        """Whether this admin only shows rows (:func:`karni.db.is_read_only`).
 
         True for a model with ``class Karni: external = True`` that does not
         declare ``writable = True``: no add, change or delete, the import
@@ -440,7 +535,12 @@ class KarniAdminMixin(admin.ModelAdmin):
         return is_read_only(self.model)
 
     def has_add_permission(self, request: HttpRequest) -> bool:
-        """An add grant (else Django's permission), unless a veto or read-only refuses it."""
+        """An add grant (else Django's permission), unless a veto or read-only refuses it.
+
+        ``karni_can_add = False`` (``AdminMeta.can_add``) refuses it to everyone.
+        """
+        if not self.karni_can_add:
+            return False
         opened = self.granted(request, "add") or super().has_add_permission(request)
         return opened and not self.is_read_only() and self.vetoed(request, "add") is None
 
@@ -455,7 +555,12 @@ class KarniAdminMixin(admin.ModelAdmin):
         )
 
     def has_delete_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
-        """A delete grant (else Django's permission), the row in scope, and no veto."""
+        """A delete grant (else Django's permission), the row in scope, and no veto.
+
+        ``karni_can_delete = False`` (``AdminMeta.can_delete``) refuses it to everyone.
+        """
+        if not self.karni_can_delete:
+            return False
         opened = self.granted(request, "delete") or super().has_delete_permission(request, obj)
         return (
             not self.is_read_only()
@@ -705,7 +810,7 @@ class KarniAdminMixin(admin.ModelAdmin):
     def derive_fieldsets(
         self, request: HttpRequest, obj: models.Model | None = None
     ) -> list[tuple[str | None, dict[str, Any]]] | None:
-        """The fieldsets ``Karni.field_groups`` gives (experimental), or ``None`` without groups.
+        """The fieldsets ``Karni.field_groups`` gives, or ``None`` without groups.
 
         A malformed declaration also gives ``None`` (Django's single fieldset):
         ``karni check`` reports it (E550 to E552). Override to group otherwise.
@@ -948,7 +1053,7 @@ class KarniModelAdmin(KarniAdminMixin, BulkEditAdminMixin, TransferAdminMixin, _
 
         @admin.register(Invoice)
         class InvoiceAdmin(KarniModelAdmin):
-            # anything not set here is derived from the model
+            # anything not set here comes from Invoice.AdminMeta, else is derived
             list_per_page = 25
 
     Override / escape hatch: any stock ``ModelAdmin`` attribute or method, the
@@ -960,59 +1065,52 @@ class KarniModelAdmin(KarniAdminMixin, BulkEditAdminMixin, TransferAdminMixin, _
 def build_model_admin(
     model: type[models.Model],
     *,
-    inlines: Sequence[type[admin.options.InlineModelAdmin]] = (),
+    inlines: Sequence[type[admin.options.InlineModelAdmin]] | None = None,
 ) -> type[KarniModelAdmin]:
     """Build the admin class :func:`karni.admin.autodiscover` registers for ``model``.
 
-    ``AdminMeta`` attributes become explicit class attributes (and are marked
-    so derivation leaves them alone — including explicit ``None`` /
-    empty values); ``AdminMeta.read_only`` extends the derived
-    ``readonly_fields``; ``AdminMeta.extra`` is applied last and may set *any*
-    ``ModelAdmin`` attribute, including callables. Soft-delete models get
-    :class:`karni.admin.soft_delete.SoftDeleteAdminMixin` in front.
+    The class is ``KarniModelAdmin`` with the model's ``AdminMeta.mixins`` in
+    front (dotted paths or classes, :func:`karni.admin.derive.admin_meta_mixins`)
+    and, for a soft-delete model,
+    :class:`karni.admin.soft_delete.SoftDeleteAdminMixin`. Everything else is
+    what every ``KarniModelAdmin`` does when it is built: ``AdminMeta``'s
+    options become attributes that derivation leaves alone (``AdminMeta.read_only``
+    extends the derived ``readonly_fields``, ``AdminMeta.extra`` is applied last
+    and may set any ``ModelAdmin`` attribute, functions included), and the
+    ``inline_on`` inlines of the model's children are added. A mixin's own
+    attributes win over ``AdminMeta``, as a subclass's do.
 
     The generated class carries ``_karni_generated = True`` (so the
     autocomplete second pass, and nothing else, may touch it later) and
     ``_karni_autocomplete_managed`` unless ``extra`` pinned
     ``autocomplete_fields`` itself.
 
+    Mixins that cannot be imported, are not classes, or cannot be combined
+    into one class raise ``E306``.
+
     Override / escape hatch: register the model yourself before autodiscovery
-    runs — this factory is only used for models nothing else registered — or
-    call it directly with your own ``inlines`` when hand-registering.
+    runs (this factory is only used for models nothing else registered), or
+    call it with your own ``inlines``, which then replace the declared ones.
     """
-    meta = admin_meta(model)
+    mixins = admin_meta_mixins(model)
     attrs: dict[str, Any] = {
         "__module__": __name__,
         "__qualname__": f"{model.__name__}Admin",
         "_karni_generated": True,
+        "_karni_autocomplete_managed": True,
     }
-    explicit: set[str] = set()
-    if meta is not None:
-        for name in _ADMIN_META_PASSTHROUGH:
-            if hasattr(meta, name):
-                attrs[name] = getattr(meta, name)
-                explicit.add(name)
-        if hasattr(meta, "read_only"):
-            attrs["karni_read_only"] = tuple(meta.read_only or ())
-        per_page = getattr(meta, "per_page", None)
-        if per_page is not None:
-            attrs["list_per_page"] = int(per_page)
-        choices = getattr(meta, "per_page_choices", None)
-        if choices:
-            attrs["karni_per_page_choices"] = tuple(int(n) for n in choices)
-        extra = dict(getattr(meta, "extra", None) or {})
-        attrs.update(extra)
-        explicit.update(extra)
-    if inlines:
+    if inlines is not None:
         attrs["inlines"] = list(inlines)
-    attrs["_karni_explicit"] = frozenset(explicit)
-    attrs["_karni_autocomplete_managed"] = "autocomplete_fields" not in attrs
-    bases: tuple[type, ...]
-    if issubclass(model, SoftDeleteModel):
-        bases = (SoftDeleteAdminMixin, KarniModelAdmin)
-    else:
-        bases = (KarniModelAdmin,)
-    return type(f"{model.__name__}Admin", bases, attrs)
+    soft = (SoftDeleteAdminMixin,) if issubclass(model, SoftDeleteModel) else ()
+    try:
+        return type(f"{model.__name__}Admin", (*mixins, *soft, KarniModelAdmin), attrs)
+    except TypeError as exc:
+        names = ", ".join(mixin.__qualname__ for mixin in mixins)
+        raise KarniImproperlyConfigured(
+            f"{model._meta.label}.AdminMeta.mixins ({names}) cannot be combined with "
+            f"KarniModelAdmin into one admin class: {exc}",
+            code="E306",
+        ) from exc
 
 
 def _row_button(tag: str, url: str, kind: str, text: str, name: str) -> Any:

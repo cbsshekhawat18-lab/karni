@@ -4,7 +4,7 @@ name = "reports"
 kind = "module"
 title = "Reports (PDF)"
 purpose = "A row printed to PDF from a template, in the background, and cached."
-status = "experimental"
+status = "stable"
 use_when = [
     "PDF reports",
     "a PDF of a record",

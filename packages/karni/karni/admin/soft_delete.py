@@ -302,12 +302,12 @@ class SoftDeleteAdminMixin(admin.ModelAdmin):
         return HttpResponseRedirect(back)
 
     def has_hard_delete_permission(self, request: HttpRequest) -> bool:
-        """Gate ``hard_delete_selected``: superusers only.
+        """Gate ``hard_delete_selected``: superusers, unless ``AdminMeta.can_delete = False``.
 
         Override / escape hatch: relax or tighten per project by overriding
         this method (via a ``KarniModelAdmin`` subclass or ``AdminMeta.extra``).
         """
-        return request.user.is_superuser
+        return bool(request.user.is_superuser) and getattr(self, "karni_can_delete", True)
 
     @admin.action(
         description=gettext_lazy("Restore selected %(verbose_name_plural)s"),

@@ -1,5 +1,5 @@
 ---
-description: "The preferences contract in Karni (experimental): the business's details, one settings section per part as a Pydantic model, values a deployment locks, connections that switch on when what they need is installed, email switches, and the API behind the Settings page."
+description: "The preferences contract in Karni: the business's details, one settings section per part as a Pydantic model, values a deployment locks, connections that switch on when what they need is installed, email switches, and the API behind the Settings page."
 ---
 
 # Preferences

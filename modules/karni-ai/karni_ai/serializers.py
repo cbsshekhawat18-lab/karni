@@ -10,7 +10,7 @@ __all__ = ["ExtractSerializer"]
 
 
 class ExtractSerializer(serializers.Serializer[Any]):
-    """Experimental. ``resource`` (a router prefix) and exactly one of ``text``, ``url``, ``file``.
+    """``resource`` (a router prefix) and exactly one of ``text``, ``url``, ``file``.
 
     ``file`` is a PDF upload (multipart). Which one is given, and its limits,
     are checked by :func:`karni_ai.sources.read_source` (AI010).

@@ -17,12 +17,12 @@ Three layers, all on by default in a Karni project's test run:
    ``BaseViewSet`` (an external model's aside, :mod:`karni.db`), ``list`` is
    measured with 2 and with 12 rows and ``retrieve`` with 2 and with 12
    related rows per to-many relation the serializer renders; the query count
-   must not grow. A viewset with an aggregation (:mod:`karni.aggregation`,
-   experimental) has its ``aggregate`` action measured at the same row counts
+   must not grow. A viewset with an aggregation (:mod:`karni.aggregation`)
+   has its ``aggregate`` action measured at the same row counts
    too, grouped by its first declared group, with ``top=1`` and, when it
    declares a second group, ``stack``. The row counts are
    ``KARNI_SCALING_ROWS`` and, per viewset, ``query_scaling = Scaling(rows=(5,
-   500), seconds=0.3)`` (experimental, :class:`karni.performance.Scaling`),
+   500), seconds=0.3)`` (:class:`karni.performance.Scaling`),
    whose ``seconds`` is a time budget for the request at the large count
    (``E476``). An absolute budget cannot see an N+1 in a one-row test — this
    can. Rows come from
@@ -124,7 +124,7 @@ class ScalingCase:
 class ScalingResult:
     """Query counts at the small and the large row count, plus the large run's report.
 
-    ``rows`` are the row counts compared (experimental), ``seconds`` the time
+    ``rows`` are the row counts compared, ``seconds`` the time
     of the request at the large count and ``budget`` the viewset's time
     budget (``Scaling(seconds=...)``), ``None`` without one.
     """
@@ -145,11 +145,11 @@ class ScalingResult:
 
     @property
     def too_slow(self) -> bool:
-        """Experimental. The request at the large row count took longer than the time budget."""
+        """The request at the large row count took longer than the time budget."""
         return self.budget is not None and self.seconds > self.budget
 
     def slow_message(self) -> str:
-        """Experimental. What a failed time budget says: the endpoint, rows, time and queries."""
+        """What a failed time budget says: the endpoint, rows, time and queries."""
         where = f" ({self.endpoint})" if self.endpoint else ""
         return (
             f"{self.case.id}{where}: {self.rows[1]} rows took {self.seconds:.3f}s against a time "
@@ -258,7 +258,7 @@ def aggregate_query(viewset: type[Any]) -> dict[str, str]:
 
 
 def _serves_external(viewset: type[Any]) -> bool:
-    """A viewset over an external table or view (``karni.db``, experimental): not measured.
+    """A viewset over an external table or view (``karni.db``): not measured.
 
     Another system fills that table, so the check cannot seed rows the way
     the table really holds them.

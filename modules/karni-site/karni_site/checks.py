@@ -7,6 +7,11 @@ SITE005: the redirect middleware is installed.
 SITE008: one block key is not given two different defaults.
 
 SITE020: every form a ``{% karni_form %}`` names exists (:mod:`karni_site.form_checks`).
+SITE026: every grant ``KARNI_SITE_EDITOR_GRANTS`` adds can be given, and the editor role it
+adds to is the module's (:func:`karni_site.roles.check_grants`).
+
+SITE025 is a warning, printed and never a failure: blocks no template names any
+more (:mod:`karni_site.orphans`), read from the database when it answers.
 
 Every check is skipped when ``karni_site`` is not in ``INSTALLED_APPS``.
 """
@@ -14,6 +19,7 @@ Every check is skipped when ``karni_site`` is not in ``INSTALLED_APPS``.
 from __future__ import annotations
 
 import re
+import sys
 import sysconfig
 from collections.abc import Iterator
 from fnmatch import fnmatchcase
@@ -187,4 +193,12 @@ def run_checks() -> list[str]:
     from karni_site.form_checks import unknown_forms  # SITE020: each {% karni_form %} name
 
     failures.extend(unknown_forms())
+    from karni_site.roles import check_grants  # SITE026: KARNI_SITE_EDITOR_GRANTS
+
+    failures.extend(check_grants())
+    from karni_site.orphans import warning  # SITE025: printed, never a failure
+
+    found = warning()
+    if found:
+        sys.stdout.write(f"site: {found}\n")
     return failures

@@ -11,8 +11,8 @@ vendor extensions the ``@karni/ui`` frontend consumes:
   every relation field of a generated serializer whose target model has a
   registered route (omitted silently otherwise), with ``"label"`` (the
   field that names a row, ``class Karni: label``) when the target declares
-  it (experimental);
-* ``x-karni-user: true`` on a relation to the user model (experimental):
+  it;
+* ``x-karni-user: true`` on a relation to the user model:
   @karni/ui expands it and shows the person's name, never the id;
 * ``x-karni-access`` on every ``BaseViewSet`` operation: the access
   predicate governing that operation (ADR 0001 Decision 2), e.g.
@@ -28,22 +28,22 @@ vendor extensions the ``@karni/ui`` frontend consumes:
 * ``x-karni-honeypot: "homepage"`` on a public ``create`` with a honeypot
   field (:mod:`karni.api.honeypot`). The field is not in the request body,
   so it is never required. ``@karni/ui``'s form renders it hidden.
-* ``x-karni-tree: {"parent": "parent", "ordered": bool}`` (experimental) on
+* ``x-karni-tree: {"parent": "parent", "ordered": bool}`` on
   the component schema of a tree model (:class:`karni.models.TreeModel`)
   and on every relation field that points at one, so a client shows a tree
   where it would show a list (:mod:`karni.api.tree`).
-* ``x-karni-taxonomy: "<key>"`` (experimental) on the relation field of a
+* ``x-karni-taxonomy: "<key>"`` on the relation field of a
   ``class Karni: taxonomies`` key, so a client knows the field has list
   filters and ``facets/`` counts (:mod:`karni.api.taxonomy`).
 * ``x-karni-aggregate: {"group_by": [...], "values": [...], "metrics": [...]}``
   on the ``aggregate`` operation of a resource that declares an aggregation
-  (:mod:`karni.aggregation`, experimental). Without a declaration the
+  (:mod:`karni.aggregation`). Without a declaration the
   operation is left out.
-* ``x-karni-actions`` (experimental) on the list and retrieve operations of a
+* ``x-karni-actions`` on the list and retrieve operations of a
   viewset that declares ``row_actions``: each action's ``from``, ``to``,
   ``field``, ``by`` and ``requires`` (:mod:`karni.api.actions`); each
   action's own operation carries its entry as ``x-karni-action``.
-* ``x-karni-related`` (experimental) on the list operation: the model's
+* ``x-karni-related`` on the list operation: the model's
   reverse relations whose model has a route, each
   ``{"name", "resource", "field", "param", "key", "label"}``: the relation's
   name on this model (``deals``, or Django's ``deal_set``), the related
@@ -52,7 +52,7 @@ vendor extensions the ``@karni/ui`` frontend consumes:
   this model whose value the parameter takes, and the related rows in words.
   ``@karni/ui``'s ResourceDetail builds its related tabs from it
   (:meth:`KarniAutoSchema.get_karni_related`).
-* ``x-karni-field-groups`` and ``x-karni-column-sets`` (experimental) on the
+* ``x-karni-field-groups`` and ``x-karni-column-sets`` on the
   list operation of a model that declares ``Karni.field_groups`` /
   ``Karni.column_sets`` (:mod:`karni.layout`): the groups ResourceForm and
   ResourceDetail show and the column presets ResourceTable offers, limited
@@ -230,7 +230,7 @@ class KarniAutoSchema(AutoSchema):
             return None
 
     def get_karni_related(self) -> list[dict[str, Any]]:
-        """Experimental. The list operation's ``x-karni-related``: the model's reverse relations.
+        """The list operation's ``x-karni-related``: the model's reverse relations.
 
         One entry per reverse foreign key or many-to-many relation whose model
         has a route, in the model's field order (see the module docstring for
@@ -277,7 +277,7 @@ class KarniAutoSchema(AutoSchema):
         return entries
 
     def get_karni_field_groups(self) -> dict[str, Any] | None:
-        """Experimental. The list operation's ``x-karni-field-groups``: ``Karni.field_groups``.
+        """The list operation's ``x-karni-field-groups``: ``Karni.field_groups``.
 
         ``{"layout": "sections" | "tabs", "groups": [{"label", "fields"}]}``,
         each group limited to the fields this request's serializer has (a
@@ -306,7 +306,7 @@ class KarniAutoSchema(AutoSchema):
         return {"layout": layout, "groups": shown} if shown else None
 
     def get_karni_column_sets(self) -> dict[str, Any] | None:
-        """Experimental. The list operation's ``x-karni-column-sets``: ``Karni.column_sets``.
+        """The list operation's ``x-karni-column-sets``: ``Karni.column_sets``.
 
         ``{"default": "<name>", "sets": [{"name", "label", "columns"}]}``, each
         set limited to the fields this request's serializer has and a set
@@ -396,7 +396,7 @@ class KarniAutoSchema(AutoSchema):
         """History answers with change-log entries; export and import with files and job states.
 
         ``tree/`` answers with the nested tree, ``ancestors/`` with a list of
-        tree nodes and ``access/`` with the access forest (experimental).
+        tree nodes and ``access/`` with the access forest.
         """
         action = self._karni_action()
         view = self._karni_view()
@@ -935,7 +935,7 @@ def add_auth_mode(result: dict, generator: object, request: object, public: bool
 
 
 def add_api_versions(result: dict, generator: object, request: object, public: bool) -> dict:
-    """Experimental. drf-spectacular postprocessing hook: list the API versions.
+    """drf-spectacular postprocessing hook: list the API versions.
 
     While versions are mounted the document gets a root-level ``x-karni-api-versions``, a list
     of ``{"name", "current", "deprecated", "sunset", "notes"}`` (the last two when set), and

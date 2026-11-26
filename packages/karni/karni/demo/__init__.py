@@ -1,4 +1,4 @@
-"""Experimental. Demo mode: what makes a project safe to put online for anyone to try.
+"""Demo mode: what makes a project safe to put online for anyone to try.
 
 One public demo has the same rules whatever the project is, so they live here
 and a project only names its accounts. Demo mode is core and not a module

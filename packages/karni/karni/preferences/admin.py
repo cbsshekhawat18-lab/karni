@@ -1,4 +1,4 @@
-"""Experimental. Preferences in the admin: the details, section values and switches.
+"""Preferences in the admin: the details, section values and switches.
 
 The details are one row: the list opens it, and it cannot be added twice or
 deleted. Section values are checked against their section's model before

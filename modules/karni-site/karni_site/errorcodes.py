@@ -188,7 +188,9 @@ SEO_CODES: Final[tuple[ErrorCode, ...]] = (
         why=(
             "Search engines treat pages with the same title as copies of one another and may "
             "show only one. Visitors cannot tell the results apart either. It usually means a "
-            "template's title was written once for every page of a kind."
+            "template's title was written once for every page of a kind. On a site in several "
+            "languages (i18n_patterns) pages are compared within one language: /en/contact/ "
+            'and /fr/contact/ may both be "Contact".'
         ),
         fix=(
             "Give each page its own title. For pages of one view, let the row name it "
@@ -221,7 +223,8 @@ SEO_CODES: Final[tuple[ErrorCode, ...]] = (
         why=(
             "A description shared by several pages says nothing about any one of them, and "
             "search engines may ignore it. A detail page that repeats its card's text, or a "
-            "layout's default left in place, is the usual cause."
+            "layout's default left in place, is the usual cause. On a site in several languages "
+            "(i18n_patterns) pages are compared within one language."
         ),
         fix=(
             "Write a description per page, or let each row give its own "
@@ -300,13 +303,18 @@ SEO_CODES: Final[tuple[ErrorCode, ...]] = (
         why=(
             "sitemap.xml tells search engines which pages exist. A page the site links to that "
             "the sitemap leaves out is found late or not at all, and an address in the sitemap "
-            "that does not answer 200 (or asks not to be indexed) wastes the crawl."
+            "that does not answer 200 (or asks not to be indexed) wastes the crawl. On a site "
+            "in several languages (i18n_patterns) karni_site's sections list every language's "
+            "address, and each language's pages are checked against them."
         ),
         fix=(
             'Include karni_site\'s URLs (path("", include("karni_site.urls")) in config/urls.py, '
             "which karni make site writes). Give a model's rows get_absolute_url() and the "
-            "public filter they need (class Karni: sitemap), and leave out an address that is "
-            "not a page with KARNI_SITE_SITEMAP_EXCLUDE."
+            "public filter they need (class Karni: sitemap), name the URL pattern of a page, and "
+            "leave out an address that is not a page with KARNI_SITE_SITEMAP_EXCLUDE. A sitemap "
+            "section of your own (KARNI_SITE_SITEMAPS) on a site in several languages needs "
+            "i18n = True, and its rows a get_absolute_url() built with reverse(). The message "
+            "says which applies."
         ),
     ),
     ErrorCode(
@@ -347,4 +355,47 @@ DEPLOY_CODES: Final[tuple[ErrorCode, ...]] = (
     ),
 )
 
-CODES = (*CODES, *SEO_CODES, *DEPLOY_CODES)  # type: ignore[misc]  # CODES is Final: extended once, here
+#: What the client edits: blocks no template names any more.
+CONTENT_CODES: Final[tuple[ErrorCode, ...]] = (
+    ErrorCode(
+        code="SITE025",
+        title="Blocks no template shows any more",
+        kind="warning",
+        source=f"{_SOURCE}.orphans (karni check)",
+        why=(
+            "A block is stored the first time a page renders its {% editable %} or "
+            "{% editable_image %}. When the tag leaves the template, the row stays, and the "
+            "admin's Page content still lists it, so a client can edit text that no page shows. "
+            "karni check reads the templates and prints the blocks whose key no template names. "
+            "It is a warning: it never fails the run."
+        ),
+        fix=(
+            "List them with `python manage.py karni_site_orphans` and remove them with --delete "
+            "(--include-edited for the ones someone edited). A key that code of your own stores "
+            "through karni_site.blocks.text() or image() goes in KARNI_SITE_CODE_BLOCKS."
+        ),
+    ),
+    ErrorCode(
+        code="SITE026",
+        title="KARNI_SITE_EDITOR_GRANTS adds a grant the editor role cannot give",
+        kind="check",
+        source=f"{_SOURCE}.roles.check_grants",
+        why=(
+            "KARNI_SITE_EDITOR_GRANTS adds grants to the editor role karni-site declares. An "
+            "entry whose model or action the project does not have (a typo, a model renamed or "
+            "removed), or whose scope the model cannot carry ('own' without an owner field), "
+            "is left out of the role so that the roles still sync after migrate, and the editor "
+            "does not get it. The setting also adds nothing when KARNI_SITE_EDITOR_ROLE is None, "
+            "or when KARNI_ROLES names the editor role, which replaces the module's whole role."
+        ),
+        fix=(
+            "Write each grant as 'app_label.model:action' (the model's label as the admin's "
+            "addresses show it, /admin/website/article/ is 'website.article', an action the "
+            "model has, '*' for either part) with a scope "
+            "('all', 'own', 'related:<key>', 'custom:<name>', 'tree:<path>'). When KARNI_ROLES "
+            "has the editor role, put the grants there, or take the role out of KARNI_ROLES."
+        ),
+    ),
+)
+
+CODES = (*CODES, *SEO_CODES, *DEPLOY_CODES, *CONTENT_CODES)  # type: ignore[misc]  # CODES is Final: extended once, here

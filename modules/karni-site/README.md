@@ -225,6 +225,47 @@ A page's blocks are one cache entry, read once per request: a page with
 fifty blocks costs one cache read, and saving a block clears its page's
 entry. When the database cannot be read, the template's default is shown.
 
+### Blocks no template shows any more
+
+A block stays in the database when its `{% editable %}` leaves the
+template. *Page content* marks it: its *in a template* column says no, the
+filter of the same name lists such blocks, and the block's form says that a
+change there changes nothing visitors see. `karni check` prints them
+(`SITE025`, a warning that never fails the run), and a command lists and
+removes them:
+
+```sh
+python manage.py karni_site_orphans                             # lists them: nothing changes
+python manage.py karni_site_orphans --delete                    # deletes those nobody edited
+python manage.py karni_site_orphans --delete --include-edited   # and the edited ones too
+```
+
+Listing is the default, a dry run: the scan cannot see everything (below),
+and a command in a deploy script must not delete content unless asked. An
+orphan someone edited is named and kept until `--include-edited` asks for
+it, because their text would be gone if the key came back to a template. A
+delete is a soft delete, as in the admin.
+
+The admin, the command and the check read the templates and never render a
+page (`karni_site.orphans`). They read the folders of each Django template
+engine (its `DIRS` and every installed app's `templates/`, Django's own
+left out), again only when a file changed. A block is *in a template* when
+its key is written in quotes in a tag (`{% editable "home.title" %}`, a tag
+of your own around `karni_site.blocks.text()`,
+`{% include "partials/cta.html" with key="home.cta" %}`), when it is under
+the `editable="..."` of a `{% karni_form %}`, or when
+`KARNI_SITE_CODE_BLOCKS` names it. It is *not seen*, and never called an
+orphan, when a key the scan cannot read could be it: an `{% editable %}`
+whose key is a variable or built with a filter (`"team."|add:member.slug`
+makes every `team.*` key unsure, a bare variable every key), or when no
+template has a block tag at all. A commented-out tag is not a use.
+
+What the scan cannot see: keys your own Python code passes to
+`karni_site.blocks.text()` or `image()` (a view, a middleware, a tag of your
+own given a variable), and templates that do not come from a folder (a
+loader of your own, another template engine). Name such keys in
+`KARNI_SITE_CODE_BLOCKS`, shell wildcards allowed (`["promo.*"]`).
+
 ### `{% get_menu %}`: menus in the design's own markup
 
 ```django
@@ -279,6 +320,27 @@ are exactly one model's detail pages.
 
 A menu's tree is cached. Saving a menu or an item clears it, and so does
 saving a row of a model an item points at.
+
+### A site in several languages
+
+Under `i18n_patterns`, with two languages or more in `LANGUAGES` and
+`LocaleMiddleware`:
+
+- a menu is cached per language, its links are that language's addresses
+  (`/fr/about/`), a row's title is `str(row)` in that language, and the
+  current page is marked against those links. A language's home page
+  (`/fr/`) is home, never a section. The seed is read and followed in the
+  default language (`LANGUAGE_CODE`) only, so a visitor of another language
+  never makes the menu follow it again. An item's own title is one text, the
+  same in every language;
+- sitemap.xml lists every language's address of each page and row
+  ([below](#sitemapxml-and-robotstxt));
+- `karni check --seo` compares titles and descriptions within one language:
+  `/en/contact/` and `/fr/contact/` may both be "Contact".
+
+Blocks, page titles and the site's details hold one text each, the same in
+every language. A one-language site, or one without `i18n_patterns`, works
+as before.
 
 ### Redirects
 
@@ -380,7 +442,7 @@ leaves a model out.
 
 A view behind a capture with a known set of addresses and no model
 (`/topics/<slug:slug>/` for a few topics) declares them, and they join the
-`pages` section and the page test (experimental):
+`pages` section and the page test:
 
 ```python
 from karni_site.sitemaps import pages
@@ -399,6 +461,15 @@ probes and the welcome page) are never listed, here or in the menu item's
 `KARNI_SITE_TECHNICAL_ROUTES`. `lastmod` is `updated_at` by default. Past
 50,000 addresses in a section, sitemap.xml becomes an index of
 `/sitemap-<section>.xml?p=<page>`.
+
+On a site in several languages (`i18n_patterns`) each section lists every
+language's address of each page and row (Django's `Sitemap.i18n`): a page's
+address is reversed in that language, a row's is its `get_absolute_url()` in
+it. A page hidden in the admin by its path, or excluded by a path in
+`KARNI_SITE_SITEMAP_EXCLUDE`, is left out in that language only. An address
+that does not change with the language is listed once. A section of your own
+(`KARNI_SITE_SITEMAPS`) built on `karni_site.sitemaps.SiteSitemap` does the
+same, and `i18n = False` on it lists one language.
 
 `/robots.txt` closes the site to every crawler unless indexing is allowed:
 by default only where `DJANGO_ENV` is `prod`, so a development or staging
@@ -471,14 +542,14 @@ as a first visit would. It reports:
 | Code | Finding |
 | --- | --- |
 | `SITE010` | a page without a title |
-| `SITE011` | a title two pages search engines may index share |
+| `SITE011` | a title two pages search engines may index share (within one language on a site in several) |
 | `SITE012` | a page without a description |
-| `SITE013` | a description two such pages share |
+| `SITE013` | a description two such pages share (within one language too) |
 | `SITE014` | an `<img>` without `alt` |
 | `SITE015` | an `<img>` without `width` and `height` |
 | `SITE016` | an image without smaller copies that is wider than `KARNI_SITE_SEO_PIXEL_RATIO` times its `width`, wider than the widest copy, or heavier than `KARNI_SITE_SEO_IMAGE_BYTES` |
 | `SITE017` | a link, image, stylesheet or script of the site that answers an error |
-| `SITE018` | no sitemap.xml, a page the site links to that it leaves out, or an address in it that does not answer 200 or asks not to be indexed |
+| `SITE018` | no sitemap.xml, a page the site links to that it leaves out (the message says why: a row without `get_absolute_url()`, a pattern without a name, a section of your own that lists one language), or an address in it that does not answer 200 or asks not to be indexed |
 | `SITE007` | a menu item whose page, row or model is gone (a view renamed or replaced since the menu was seeded), which the menu leaves out |
 
 An upload a page shows without its smaller copies gets them first, made in
@@ -505,6 +576,31 @@ enquiries, users, roles, redirects or project models. `karni sync-roles`
 Karni's admin pages open for whoever the roles' grants admit, so no
 Django permission needs ticking, and the permission matrix changes the
 role's grants without a deploy.
+
+To let an editor change the project's own content too, add grants with
+`KARNI_SITE_EDITOR_GRANTS` in settings.py:
+
+```python
+KARNI_SITE_EDITOR_GRANTS = {
+    "website.article:*": "all",       # every action on the articles
+    "website.gallery:view": "all",
+    "website.gallery:change": "all",
+}
+```
+
+They are merged over the role's own grants (`karni_site.roles.editor_grants()`),
+when the role is built, so the setting is plain data and settings.py imports
+nothing for it. A grant is written as in `KARNI_ROLES`: a pattern
+`"app_label.model:action"` (the model's label as the admin's addresses show
+it, `/admin/website/article/` is `website.article`, and an action the model
+has: `view`, `add`, `change`, `delete` or one of its `class Karni: actions`,
+`*` for either part) and a scope (`"all"`, `"own"`, `"related:<key>"`,
+`"custom:<name>"` or `"tree:<path>"`). A grant the role cannot give (a model
+or an action the project does not have, a scope the model cannot carry) is
+left out of the role, so the roles still sync after `migrate`, and `karni
+check` names it (`SITE026`), with the label it may have meant. A role of the
+same slug in `KARNI_ROLES` still replaces the module's whole role, this
+setting included, and `karni check` says so while the setting is set.
 
 ### `{% ifactive %}`: the current page in a menu
 
@@ -700,6 +796,7 @@ environment.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
+| `KARNI_SITE_ADMIN_MENU` | *Content* (`"@project"`), *Site* (`"karni_site"`), *People* (users, roles) | The admin's side menu a site project starts with: its settings say `KARNI_ADMIN_MENU = KARNI_SITE_ADMIN_MENU`. Technical apps (task results, schedules, tokens) show to superusers only. See Karni's [side menu](https://cbsshekhawat18-lab.github.io/karni/admin/#the-side-menu). |
 | `KARNI_SITE_IS_ACTIVE` | `"karni_site.navigation.is_active"` | The `(request, pattern) -> bool` function `{% ifactive %}` and menu items ask for each pattern. |
 | `KARNI_SITE_NOT_FOUND_TEMPLATES` | `["404.html", "karni_site/404.html"]` | The templates `page_not_found` tries, in order. |
 | `KARNI_SITE_SERVER_ERROR_TEMPLATES` | `["500.html", "karni_site/500.html"]` | The templates `server_error` tries, in order. |
@@ -712,12 +809,14 @@ environment.
 | `KARNI_SITE_CACHE` | `"default"` | The cache alias blocks, menus, redirects, page SEO entries and the settings are kept in. |
 | `KARNI_SITE_CACHE_TIMEOUT` | `3600` | Seconds a cached entry lives. Every save clears what it changed, so this is a backstop. |
 | `KARNI_SITE_SEED_ON_RENDER` | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). `manage.py karni_site_seed` stores them whatever this says. |
+| `KARNI_SITE_CODE_BLOCKS` | `[]` | Block keys your own code stores through `karni_site.blocks.text()` or `image()`, which no template names (shell wildcards: `"promo.*"`). They are never orphans. |
 | `KARNI_SITE_MENU_ROWS` | `"karni_site.menus.menu_rows"` | The `(model, item) -> rows` function a *children from* item lists. The default is the model's default manager, so its scopes apply. |
 | `KARNI_SITE_MENU_ROWS_LIMIT` | `100` | At most this many rows per *children from* item. |
 | `KARNI_SITE_MENU_SECTIONS` | `True` | Whether a menu item is active on every page under its own path too (`/services/` on `/services/web/`). The home page never is. |
 | `KARNI_SITE_MENU_FOLLOW_SEED` | `True` | Whether a menu seeded from a template follows it: the items nobody changed take the seed's new links. `False` seeds it once. |
 | `KARNI_SITE_REDIRECTS_BEFORE_VIEWS` | `False` | `True` looks every request up before its view, so a redirect also replaces a page that exists. |
 | `KARNI_SITE_EDITOR_ROLE` | `"editor"` | The slug of the role this module declares, or `None` for none. |
+| `KARNI_SITE_EDITOR_GRANTS` | `{}` | Grants merged over the editor role's own: `{"website.article:*": "all"}`, written as in `KARNI_ROLES`. `karni check` names one the role cannot give (`SITE026`). |
 | `KARNI_SITE_FORMS` | `{}` | Form name to a viewset's dotted path or a model label, for a name that is not a model's. |
 | `KARNI_SITE_FORM_CLASS` | `"karni_site.forms.SiteForm"` | The class that describes, renders and submits a form. |
 | `KARNI_SITE_FORM_TEMPLATE` | `"karni_site/forms/form.html"` | The form's template. Each field renders `karni_site/forms/field.html`, or `karni_site/forms/<form>/<field>.html` or `karni_site/forms/<form>/field.html` when one exists. |
@@ -769,6 +868,13 @@ environment.
   template and an image in another), which would store the block again on
   every render.
 - `SITE020`: every form a `{% karni_form %}` names exists.
+- `SITE026`: every grant `KARNI_SITE_EDITOR_GRANTS` adds can be given, and
+  the editor role it adds to is the module's.
+
+It also prints `SITE025`, a warning that never fails the run, for the
+blocks no template names any more
+([above](#blocks-no-template-shows-any-more)). It reads them from the
+database when the database answers, and prints nothing otherwise.
 
 `karni check --seo` runs `SITE010` to `SITE018` (see above). A tag written
 wrongly fails when the template compiles, with `SITE003` (`SITE021` for
@@ -789,11 +895,17 @@ fails while `manage.py karni_site_seed` renders it stops that command with
 - `KARNI_SITE_SEED_ON_RENDER = False`: nothing is written while a page
   renders. Store the defaults with `manage.py karni_site_seed` in the
   deploy, or load blocks, menus and settings with `karni load`.
+- `KARNI_SITE_CODE_BLOCKS`: the block keys your own code stores, which are
+  never orphans. `karni_site.orphans.scan()` and `classify()` tell orphans
+  apart for code of your own.
 - `KARNI_SITE_MENU_ROWS`: which rows a *children from* item lists.
 - `KARNI_SITE_MENU_FOLLOW_SEED = False`: a seeded menu never follows its seed,
   and `karni_site.menus.sync_menu()` follows one when you choose.
-- `KARNI_SITE_EDITOR_ROLE`, a role of that slug in `KARNI_ROLES`, or the
-  permission matrix: the editor's grants.
+- `KARNI_SITE_EDITOR_GRANTS` adds grants to the editor role,
+  `KARNI_SITE_EDITOR_ROLE` names it (or turns it off), a role of that slug in
+  `KARNI_ROLES` replaces it, and the permission matrix changes its grants.
+- `KARNI_ADMIN_MENU`: groups of your own in the admin's side menu, or `None`
+  for the list of every app, instead of `KARNI_SITE_ADMIN_MENU`.
 - Unregister any of this module's admins and register your own subclass.
   Every Karni admin page opens for a grant, so your own models' pages do
   too (`KARNI_ADMIN_GRANTS_OPEN_PAGES`, [admin](https://cbsshekhawat18-lab.github.io/karni/admin/#who-may-open-a-page)).

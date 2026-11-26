@@ -41,10 +41,10 @@ import {
 
 registerComponentRole("tree-view", "TreeView");
 
-/** Experimental. A tree's selection: one id, several, or none. */
+/** A tree's selection: one id, several, or none. */
 export type TreeValue = string | number | ReadonlyArray<string | number> | null;
 
-/** Experimental. The props of TreeView. */
+/** The props of TreeView. */
 export interface TreeViewProps {
   /** The tree resource (a Karni `TreeModel` viewset's router prefix): "regions". */
   resource: string;
@@ -61,7 +61,7 @@ export interface TreeViewProps {
   /** Called when a node is activated (Enter, or a click). */
   onActivate?: (node: Node) => void;
   /**
-   * Experimental. Show the requester's access forest (`GET /<resource>/access/`)
+   * Show the requester's access forest (`GET /<resource>/access/`)
    * instead of the whole tree: the nodes their `tree:<path>` grants name, and
    * every node below them, can be chosen; their ancestors and the other roots
    * are shown greyed (`aria-disabled`) for navigation. `{ permission }` keeps
@@ -79,14 +79,14 @@ export interface TreeViewProps {
   /** Show the search field. Default true. */
   searchable?: boolean;
   /**
-   * Experimental. Show a search result under its ancestors, in place, instead
+   * Show a search result under its ancestors, in place, instead
    * of the matches flat: the path from the root to each match, every branch
    * on it open, the matches in bold. The server's search finds the matches
    * and `ancestors/` gives each one's path (for the first 20 matches).
    */
   searchKeepsAncestors?: boolean;
   /**
-   * Experimental. A field of each node holding a count (`dataset_count`):
+   * A field of each node holding a count (`dataset_count`):
    * shown at the end of the row. A node without a number shows none.
    */
   countField?: string;
@@ -135,7 +135,7 @@ function asLeaf(row: Record<string, unknown>): Node {
 }
 
 /**
- * Experimental. A tree resource as an expandable, keyboard-driven tree.
+ * A tree resource as an expandable, keyboard-driven tree.
  *
  * It loads `depth` levels from `GET /<resource>/tree/` and each deeper
  * branch when it is opened (`?root=<id>`), so a tree of any size costs one

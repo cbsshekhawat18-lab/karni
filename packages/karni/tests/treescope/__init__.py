@@ -1,4 +1,4 @@
-"""The tree scope (``tree:<path>``, experimental): resources and roles for ``tests/treescope/``.
+"""The tree scope (``tree:<path>``): resources and roles for ``tests/treescope/``.
 
 The trees are the test app's: ``Category`` (ordered) and ``Region``.
 ``Product`` points at a category (a foreign key) and at regions (a

@@ -1,4 +1,4 @@
-"""Experimental. The database menu in the admin: the ``NavItem`` tree, and a preview per user.
+"""The database menu in the admin: the ``NavItem`` tree, and a preview per user.
 
 ``NavItemAdmin`` lists the entries in tree order, each label indented by its
 depth (the tree changelist of :mod:`karni.admin.tree`), and edits them like
@@ -93,7 +93,7 @@ def preview_view(model_admin: Any, request: HttpRequest) -> HttpResponse:
 
 
 class NavItemAdmin(KarniModelAdmin):
-    """Experimental. The menu's entries in tree order, with the *Menu preview* button."""
+    """The menu's entries in tree order, with the *Menu preview* button."""
 
     list_display = ("tree_label", "route", "requires", "icon")
     search_fields = ("label", "route", "requires")

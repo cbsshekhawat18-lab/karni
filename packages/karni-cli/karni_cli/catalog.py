@@ -1,4 +1,4 @@
-"""Experimental. The module catalog as the CLI sees it: every module and built-in feature.
+"""The module catalog as the CLI sees it: every module and built-in feature.
 
 Where the manifests come from (see :mod:`karni.catalog` for the format):
 
@@ -204,7 +204,7 @@ def added_apps(project: Path) -> list[str]:
 
 @dataclass
 class Catalog:
-    """Experimental. Every module and feature the CLI knows, with each module's state."""
+    """Every module and feature the CLI knows, with each module's state."""
 
     entries: dict[str, Manifest]
     #: Names of the modules whose app is in the ``# karni:apps`` block.
@@ -245,7 +245,7 @@ class Catalog:
 
 
 def load(project: Path | None = None, *, ask_project: bool = True) -> Catalog:
-    """Experimental. The catalog, with the project's state when ``project`` is given.
+    """The catalog, with the project's state when ``project`` is given.
 
     ``ask_project`` runs ``python -m karni.catalog`` in the project's
     interpreter for the modules installed there. Without it, only the

@@ -38,7 +38,7 @@ testpaths = ["tests", "*/tests"]
 [tool.karni]
 # The Karni release this project was generated for. `karni upgrade` starts
 # from here (or from the installed karni, whichever is newer).
-baseline = "0.7.0"
+baseline = "0.8.0"
 # What the project is: site (a public website), app (an API and a React app),
 # site+app, game (a game first) or app+game (an app with a game in it). `karni
 # context` and the agent files state it with its stack, and `karni add game`

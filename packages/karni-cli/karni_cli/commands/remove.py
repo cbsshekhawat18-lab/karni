@@ -1,4 +1,4 @@
-"""``karni remove <module>`` (experimental): take out what ``karni add`` wired, never the data.
+"""``karni remove <module>``: take out what ``karni add`` wired, never the data.
 
 What it takes out, from the module's manifest (:mod:`karni_cli.catalog`):
 the dependency in ``pyproject.toml``, its apps in the ``# karni:apps``
@@ -129,7 +129,7 @@ def remove_include(text: str, app: str) -> tuple[str | None, bool]:
 
 @dataclass
 class Removal:
-    """Experimental. What ``karni remove`` changes: new file texts, deletions, and why."""
+    """What ``karni remove`` changes: new file texts, deletions, and why."""
 
     texts: dict[Path, str] = field(default_factory=dict)
     deletes: list[Path] = field(default_factory=list)
@@ -147,7 +147,7 @@ def _owned(entry: str, apps: list[str], paths: set[str]) -> bool:
 
 
 def plan_removal(project: Path, name: str, manifest: Manifest | None) -> Removal:
-    """Experimental. Every change that takes the module out of ``project``, nothing written."""
+    """Every change that takes the module out of ``project``, nothing written."""
     from karni_cli import kinds
 
     app = manifest.app if manifest else f"karni_{name.replace('-', '_')}"
@@ -328,7 +328,7 @@ def remove(
         help="Take the module out although its tables exist: they stay in the database.",
     ),
 ) -> None:
-    """Experimental. Take out what karni add wired. Never drops data.
+    """Take out what karni add wired. Never drops data.
 
     It takes the dependency out of pyproject.toml, the module's apps,
     middleware and context processors out of config/settings.py, its include

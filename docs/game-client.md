@@ -1,5 +1,5 @@
 ---
-description: "@karni/game (experimental): the browser side of the Karni game add-on. Portal and ad adapters, a canvas loop with a fixed step, input, audio, local saves with migrations, a seeded random generator, an offline-first data client, per-portal builds with checks, engine adapters and a browser smoke harness."
+description: "@karni/game: the browser side of the Karni game add-on. Portal and ad adapters, a canvas loop with a fixed step, input, audio, local saves with migrations, a seeded random generator, an offline-first data client, per-portal builds with checks, engine adapters and a browser smoke harness."
 ---
 
 # Games in the browser (@karni/game)

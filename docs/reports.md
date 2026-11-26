@@ -4,12 +4,6 @@ description: "PDF reports with the karni-reports module: a row printed from an H
 
 # Reports (PDF)
 
-!!! warning "Experimental"
-    The `karni-reports` module, `karni_reports` (`Report`, `register`, the
-    renderers, `GeneratedReport`), its settings, its endpoints, `manage.py
-    karni_pregenerate` and `@karni/reports-ui` are
-    [experimental](stability.md#experimental-names).
-
 Projects keep writing the same PDF code: a view that renders a template,
 calls a PDF library, holds a worker for seconds, and forgets to check who
 asked. `karni-reports` does it once. A report prints one row of a model from
@@ -223,6 +217,11 @@ and downloads, `60/min` for status checks. Change a rate under its scope,
 `reports.download_report`, in `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]`.
 
 ## In React
+
+!!! warning "Experimental"
+    `@karni/reports-ui` (`ReportButton`, `useReport`) is
+    [experimental](stability.md#experimental-names): a name may change in a minor
+    release, with a CHANGELOG entry.
 
 `@karni/reports-ui` has a button and the hook behind it:
 

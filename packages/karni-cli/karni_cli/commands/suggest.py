@@ -1,4 +1,4 @@
-"""``karni suggest`` (experimental): what Karni could do that the project does by hand.
+"""``karni suggest``: what Karni could do that the project does by hand.
 
     karni suggest             the suggestions, with the file, line and fix of each
     karni suggest --json      {version, enabled, suggestions: [...]}
@@ -29,7 +29,7 @@ def suggest(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Experimental. Print what Karni could do that the project does by hand.
+    """Print what Karni could do that the project does by hand.
 
     Each suggestion has a stable code (SUG001 to SUG007, karni explain SUG001),
     names the file and line, and gives the exact command or change: a tree

@@ -76,7 +76,7 @@ Source = Callable[[Any], Mapping[str, Any] | None]
 
 @dataclass(frozen=True)
 class Tile:
-    """Experimental. One tile: who sees it, what kind, and where its figures come from.
+    """One tile: who sees it, what kind, and where its figures come from.
 
     ``source`` (a code tile) returns the tile's data for a request, or
     ``None`` to leave the tile out for it. ``resource`` and ``filters`` (a
@@ -198,7 +198,7 @@ def register(
     description: str = "",
     link: str = "",
 ) -> Any:
-    """Experimental. Register a code tile, as ``@register`` or ``@register(key=..., ...)``.
+    """Register a code tile, as ``@register`` or ``@register(key=..., ...)``.
 
     The key defaults to ``<module's app>.<function name>``, the title to the
     function's name in words. Registering a key again replaces the tile.
@@ -226,12 +226,12 @@ def register(
 
 
 def unregister(key: str) -> None:
-    """Experimental. Take the code tile ``key`` out."""
+    """Take the code tile ``key`` out."""
     _REGISTRY.pop(key, None)
 
 
 def autodiscover() -> None:
-    """Experimental. Import ``<app>/dashboard.py`` of every installed app (startup)."""
+    """Import ``<app>/dashboard.py`` of every installed app (startup)."""
     autodiscover_modules("dashboard")
 
 
@@ -273,7 +273,7 @@ def _from_setting(entry: Mapping[str, Any], known: Mapping[str, Tile]) -> Tile:
 
 
 def all_tiles() -> list[Tile]:
-    """Experimental. Every tile: the code tiles, with the setting's entries over them."""
+    """Every tile: the code tiles, with the setting's entries over them."""
     found = dict(_REGISTRY)
     for entry in getattr(settings, SETTING, None) or []:
         tile = _from_setting(entry, found)
@@ -282,7 +282,7 @@ def all_tiles() -> list[Tile]:
 
 
 def tiles_for(request: Any) -> list[dict[str, Any]]:
-    """Experimental. The tiles the person of ``request`` sees, in order, with their data."""
+    """The tiles the person of ``request`` sees, in order, with their data."""
     user = getattr(request, "user", None)
     shown = []
     for tile in all_tiles():

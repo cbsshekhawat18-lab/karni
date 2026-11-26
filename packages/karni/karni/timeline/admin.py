@@ -1,4 +1,4 @@
-"""Experimental. The timeline in the admin: entries, newest first, with the records they show on.
+"""The timeline in the admin: entries, newest first, with the records they show on.
 
 Entries are written by parts and by family events, never by hand here: the
 list is read only. Deleting an entry is allowed, for a wrong one.

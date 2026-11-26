@@ -1,4 +1,4 @@
-"""Experimental. The people contract's receivers, connected by ``PeopleConfig.ready()``.
+"""The people contract's receivers, connected by ``PeopleConfig.ready()``.
 
 * A user saved with a verified email (``email_verified``) is linked to the
   live person with that email, when there is one: every flow that

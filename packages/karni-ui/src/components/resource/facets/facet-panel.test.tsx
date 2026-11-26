@@ -1,5 +1,5 @@
 /**
- * FacetPanel and ResourceTable's `facets` (experimental), through the real
+ * FacetPanel and ResourceTable's `facets`, through the real
  * schema pipeline and the simulated catalog backend (msw): `regions` is a
  * taxonomy of `products` (`x-karni-taxonomy`), with `facets/` and the list
  * filters `?regions=` and `?regions_descendants=`.

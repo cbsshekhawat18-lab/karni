@@ -1,5 +1,5 @@
 /**
- * ResourceTable's column set selector (experimental): a menu button named
+ * ResourceTable's column set selector: a menu button named
  * after the set shown, with one choice per preset of the model's
  * `Karni.column_sets`. The choice is
  * remembered per user and table (see ./preferences). A Radix dropdown with

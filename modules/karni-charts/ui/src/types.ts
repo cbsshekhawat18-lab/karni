@@ -1,12 +1,12 @@
 /**
- * The charts API's shapes (karni-charts, experimental).
+ * The charts API's shapes (karni-charts).
  *
  * `GET /charts/<slug>/data/` answers `{ chart, data }`: the saved definition
  * and the source resource's aggregate, which `@karni/ui`'s `DataChart` reads.
  */
 import type { AggregateMetric, AggregateResult } from "@karni/ui";
 
-/** Experimental. One saved chart, as the admin defines it. */
+/** One saved chart, as the admin defines it. */
 export interface SavedChartDefinition {
   id: string;
   name: string;
@@ -31,7 +31,7 @@ export interface SavedChartDefinition {
   position: number;
 }
 
-/** Experimental. The answer of `GET /charts/<slug>/data/`. */
+/** The answer of `GET /charts/<slug>/data/`. */
 export interface SavedChartData {
   chart: SavedChartDefinition;
   data: AggregateResult;

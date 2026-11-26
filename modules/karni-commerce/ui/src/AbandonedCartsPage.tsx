@@ -1,5 +1,5 @@
 /**
- * Experimental. Carts with items that nobody touched for a while
+ * Carts with items that nobody touched for a while
  * (`GET /carts/abandoned/`), so the shop can write to the people it has an
  * email for. How long counts as a while is a setting of the shop.
  */

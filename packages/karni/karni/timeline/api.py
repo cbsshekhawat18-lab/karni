@@ -1,4 +1,4 @@
-"""Experimental. ``GET /api/timeline/``: a person's, an organisation's or a record's timeline.
+"""``GET /api/timeline/``: a person's, an organisation's or a record's timeline.
 
 ::
 
@@ -76,7 +76,7 @@ MAX_ROUNDS: Final = 4
 
 
 class TimelineLinkSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. A record an entry shows on."""
+    """A record an entry shows on."""
 
     model = serializers.CharField(help_text="app_label.model")
     id = serializers.CharField()
@@ -86,7 +86,7 @@ class TimelineLinkSerializer(serializers.Serializer):  # type: ignore[type-arg]
 
 
 class TimelineEntrySerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. One timeline entry."""
+    """One timeline entry."""
 
     id = serializers.CharField()
     occurred_at = serializers.DateTimeField()
@@ -103,20 +103,20 @@ class TimelineEntrySerializer(serializers.Serializer):  # type: ignore[type-arg]
 
 
 class TimelinePageSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. One page of a timeline, newest first."""
+    """One page of a timeline, newest first."""
 
     results = TimelineEntrySerializer(many=True)
     next = serializers.CharField(allow_null=True, help_text="The cursor of the next page.")
 
 
 def encode_cursor(entry: TimelineEntry) -> str:
-    """Experimental. The cursor of the page that starts after ``entry``."""
+    """The cursor of the page that starts after ``entry``."""
     raw = f"{entry.occurred_at.isoformat()}|{entry.pk}"
     return base64.urlsafe_b64encode(raw.encode()).decode().rstrip("=")
 
 
 def decode_cursor(cursor: str) -> tuple[dt.datetime, str]:
-    """Experimental. ``(occurred_at, id)`` of a cursor (E463 when it is not one)."""
+    """``(occurred_at, id)`` of a cursor (E463 when it is not one)."""
     try:
         padded = cursor + "=" * (-len(cursor) % 4)
         stamp, key = base64.urlsafe_b64decode(padded.encode()).decode().split("|", 1)
@@ -135,7 +135,7 @@ def _refused(message: str) -> Response:
 
 
 class TimelineView(APIView):
-    """Experimental. ``GET /api/timeline/`` (see the module docstring).
+    """``GET /api/timeline/`` (see the module docstring).
 
     Open to signed-in callers. What each one sees is what the records'
     own list endpoints show them.
@@ -147,7 +147,7 @@ class TimelineView(APIView):
         operation_id="timeline_list",
         tags=["timeline"],
         description=(
-            "Experimental. The timeline of one person, organisation or record, newest first. "
+            "The timeline of one person, organisation or record, newest first. "
             "An entry shows only when the caller may read its person and every linked record."
         ),
         parameters=[
@@ -376,7 +376,7 @@ def _name(user: Any) -> str:
 
 
 def build_urlpatterns() -> list[Any]:
-    """Experimental. The ``timeline/`` route while ``KARNI_TIMELINE_API`` is on, else ``[]``."""
+    """The ``timeline/`` route while ``KARNI_TIMELINE_API`` is on, else ``[]``."""
     from django.urls import path
 
     if not getattr(settings, "KARNI_TIMELINE_API", True):

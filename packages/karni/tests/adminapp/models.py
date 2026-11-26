@@ -340,3 +340,74 @@ class Gizmo(BaseModel):
 
     def __str__(self) -> str:
         return self.name
+
+
+class Handmade(BaseModel):
+    """Registered by hand in ``tests/adminapp/admin.py`` with a bare ``KarniModelAdmin`` subclass.
+
+    The subclass sets none of these options, so the model's ``AdminMeta`` and
+    the ``inline_on`` of :class:`HandmadePart` must still apply to it.
+    """
+
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=20, blank=True)
+    stock = models.IntegerField(default=0)
+
+    class AdminMeta:
+        list_display = ["name", "code"]
+        search_fields = ["name"]
+        per_page = 50
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class HandmadePart(BaseModel):
+    """Inlined on the hand-registered :class:`Handmade` admin via ``inline_on``."""
+
+    handmade = models.ForeignKey(Handmade, on_delete=models.CASCADE, related_name="parts")
+    label = models.CharField(max_length=100)
+
+    class AdminMeta:
+        inline_on = "handmade"
+
+    def __str__(self) -> str:
+        return self.label
+
+
+class Stamped(BaseModel):
+    """Its derived admin takes a mixin from ``AdminMeta.mixins`` (a dotted path)."""
+
+    title = models.CharField(max_length=100)
+    stamp = models.CharField(max_length=100, blank=True)
+
+    class AdminMeta:
+        mixins = ["tests.adminapp.admin_mixins.StampMixin"]
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class Survey(BaseModel):
+    """The parent whose change form carries the inline of :class:`SurveyScore`."""
+
+    name = models.CharField(max_length=100)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class SurveyScore(BaseModel):
+    """Rows the system makes: nobody adds or deletes one in the admin, superusers included."""
+
+    survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name="scores")
+    label = models.CharField(max_length=100)
+    value = models.IntegerField(default=0)
+
+    class AdminMeta:
+        inline_on = "survey"
+        can_add = False
+        can_delete = False
+
+    def __str__(self) -> str:
+        return self.label

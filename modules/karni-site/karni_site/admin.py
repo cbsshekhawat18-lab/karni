@@ -8,7 +8,8 @@
   highlight marker (:func:`karni_site.sanitize.to_editing`), and saved
   cleaned. An image block takes an upload and its alternative text. The
   History tab has every change. *Reset to the template's text* hands a
-  block back to the template.
+  block back to the template. *in a template* marks a block no template
+  names any more, which no page shows (:mod:`karni_site.orphans`).
 * **Menus** edit their items as rows: where each goes (one of the site's
   pages, a row's page, or an address), under which item, in which order.
 * **Redirects** and **Page titles and descriptions**.
@@ -33,7 +34,7 @@ from django.db import models
 from django.db.models import QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
-from django.utils.html import format_html
+from django.utils.html import escape, format_html
 from django.utils.text import Truncator
 from django.utils.translation import gettext_lazy as _
 from karni.admin import KarniInlineMixin, KarniModelAdmin
@@ -46,6 +47,7 @@ from karni_site.sitesettings import settings_model
 
 __all__ = [
     "BlockAdmin",
+    "InTemplateFilter",
     "MenuAdmin",
     "PageSeoAdmin",
     "RedirectAdmin",
@@ -197,12 +199,7 @@ class BlockForm(forms.ModelForm):
     """A text block as the text a client reads, an image block as an upload and its alt."""
 
     text = forms.CharField(
-        label=_("text"),
-        required=False,
-        widget=forms.Textarea(attrs={"rows": 4}),
-        help_text=_(
-            "A new line is a line break. Bold <b>, italic <em> and links <a href> are kept."
-        ),
+        label=_("text"), required=False, widget=forms.Textarea(attrs={"rows": 4})
     )
 
     class Meta:
@@ -212,14 +209,28 @@ class BlockForm(forms.ModelForm):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.fields["text"].initial = to_editing(self.instance.html or "")
+        self.fields["text"].help_text = self.text_help()
+
+    def text_help(self) -> str:
+        """The text field's help: line breaks, the highlight marker and the tags a client types.
+
+        The admin prints a field's help as HTML, so the tag names are escaped and show as
+        a client types them (left as markup, an open ``<b>`` made the rest of the form
+        bold). Override it to say something else, and escape what is not markup.
+        """
         from karni_site.sanitize import highlight
 
         mark = highlight()
         if mark.marker and mark.tag:
-            self.fields["text"].help_text = _(
+            text = _(
                 "A new line is a line break. Put %(marker)s around words to highlight them: "
                 "%(marker)swords%(marker)s. Bold <b>, italic <em> and links <a href> are kept."
             ) % {"marker": mark.marker}
+        else:
+            text = str(
+                _("A new line is a line break. Bold <b>, italic <em> and links <a href> are kept.")
+            )
+        return escape(text)
 
     def save(self, commit: bool = True) -> Any:
         block = self.instance
@@ -232,17 +243,93 @@ class BlockForm(forms.ModelForm):
         return super().save(commit)
 
 
+#: The query value of each status of :func:`karni_site.orphans.classify`.
+_IN_TEMPLATE = {"yes": True, "no": False, "unseen": None}
+
+
+class InTemplateFilter(admin.SimpleListFilter):
+    """Blocks by whether a template still names them (:mod:`karni_site.orphans`)."""
+
+    title = _("in a template")
+    parameter_name = "in_template"
+
+    def lookups(self, request: HttpRequest, model_admin: Any) -> list[tuple[str, Any]]:
+        return [
+            ("yes", _("Yes")),
+            ("no", _("No: no page shows it")),
+            ("unseen", _("Not seen: a key built at run time may be it")),
+        ]
+
+    def queryset(self, request: HttpRequest | None, queryset: QuerySet[Any]) -> QuerySet[Any]:
+        value = self.value()
+        if value not in _IN_TEMPLATE:
+            return queryset
+        if _IN_TEMPLATE[value] is None:
+            return queryset.filter(in_template__isnull=True)
+        return queryset.filter(in_template=_IN_TEMPLATE[value])
+
+
 class BlockAdmin(SiteAdmin):
-    """Every editable piece of the site's pages, grouped by page."""
+    """Every editable piece of the site's pages, grouped by page.
+
+    *in a template* marks a block whose key no template names any more (an
+    orphan: no page shows it) and one the template scan cannot judge (not
+    seen), and filters on it (:mod:`karni_site.orphans`). The form of an
+    orphan says that an edit changes nothing on the site.
+    """
 
     form = BlockForm
-    list_display = ("key", "kind", "shows", "changed", "updated_at")
+    list_display = ("key", "kind", "in_template", "shows", "changed", "updated_at")
     list_display_links = ("key",)
-    list_filter = ("page", "kind")
+    list_filter = ("page", "kind", InTemplateFilter)
     search_fields = ("key", "html", "alt")
     ordering = ("page", "position", "key")
     readonly_fields = ("key", "page", "shows", "template_default")
     actions = ("reset_to_template",)
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Any]:
+        """The blocks, each with ``in_template``: ``True``, ``False`` (an orphan) or ``None``."""
+        from django.db.models import BooleanField, Case, Value, When
+
+        from karni_site.orphans import classify
+
+        queryset = super().get_queryset(request)
+        statuses = classify(queryset.values_list("key", flat=True))
+        orphans = [key for key, status in statuses.items() if status is False]
+        unseen = [key for key, status in statuses.items() if status is None]
+        return queryset.annotate(
+            in_template=Case(
+                When(key__in=orphans, then=Value(False)),
+                When(key__in=unseen, then=Value(None)),
+                default=Value(True),
+                output_field=BooleanField(null=True),
+            )
+        )
+
+    @admin.display(description=_("in a template"), boolean=True, ordering="in_template")
+    def in_template(self, obj: Block) -> bool | None:
+        found: bool | None = getattr(obj, "in_template", None)
+        return found
+
+    def render_change_form(
+        self,
+        request: HttpRequest,
+        context: dict[str, Any],
+        add: bool = False,
+        change: bool = False,
+        form_url: str = "",
+        obj: Any = None,
+    ) -> Any:
+        if obj is not None and getattr(obj, "in_template", True) is False:
+            self.message_user(
+                request,
+                _(
+                    "No page shows this block: no template names its key any more, so a change "
+                    "here changes nothing visitors see."
+                ),
+                messages.WARNING,
+            )
+        return super().render_change_form(request, context, add, change, form_url, obj)
 
     def get_fields(self, request: HttpRequest, obj: Any = None) -> Any:
         if obj is not None and obj.kind == Block.Kind.IMAGE:

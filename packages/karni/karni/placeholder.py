@@ -1,4 +1,4 @@
-"""Experimental. Drawn placeholder images for demo data: no photo, no download, no paid service.
+"""Drawn placeholder images for demo data: no photo, no download, no paid service.
 
 Demo rows with an image field look empty without a picture, and a picture
 fetched from the web is somebody's work, needs a network and changes. A
@@ -53,7 +53,7 @@ def _rgb(hue: float, lightness: float, saturation: float) -> tuple[int, int, int
 
 
 def initials(label: str, *, most: int = 2) -> str:
-    """Experimental. The first letters of ``label``'s first words: ``Brass Desk Lamp`` is ``BD``."""
+    """The first letters of ``label``'s first words: ``Brass Desk Lamp`` is ``BD``."""
     words = re.findall(r"[^\W_]+", label)
     return "".join(word[0] for word in words[:most]).upper() or "?"
 
@@ -65,7 +65,7 @@ def _font(size: int) -> Any:
 
 
 def draw(label: str, *, key: str | None = None, size: tuple[int, int] = (800, 800)) -> Any:
-    """Experimental. The placeholder as a Pillow ``Image`` (see the module docstring)."""
+    """The placeholder as a Pillow ``Image`` (see the module docstring)."""
     try:
         from PIL import Image, ImageDraw
     except ImportError:  # pragma: no cover - Pillow ships with karni[images]
@@ -125,7 +125,7 @@ def placeholder_image(
     size: tuple[int, int] = (800, 800),
     name: str | None = None,
 ) -> ContentFile[bytes]:
-    """Experimental. A drawn PNG for ``label`` in ``key``'s colours (see the module docstring)."""
+    """A drawn PNG for ``label`` in ``key``'s colours (see the module docstring)."""
     buffer = io.BytesIO()
     draw(label, key=key, size=size).save(buffer, format="PNG")
     stem = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-") or "placeholder"

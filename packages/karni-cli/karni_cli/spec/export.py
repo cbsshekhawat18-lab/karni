@@ -1,4 +1,4 @@
-"""Experimental. ``karni spec export``: the spec of an existing project, from its code.
+"""``karni spec export``: the spec of an existing project, from its code.
 
 The backend facts come from ``manage.py karni_facts`` through the project's
 interpreter (the CLI never imports project code): each model's fields with
@@ -6,7 +6,7 @@ their class and ``deconstruct()`` arguments, ``Meta.ordering``, ``class
 Karni`` and ``AdminMeta``, each viewset's access, search fields and
 response caching, the settings behind roles and features, the installed modules' settings and the
 seeders. The pages come from ``frontend/src/routes.tsx`` and the page files
-it imports, read as text. ``navigation`` (experimental) comes from a
+it imports, read as text. ``navigation`` comes from a
 ``KARNI_NAVIGATION`` list: each item names the page whose route it links to
 (:func:`karni_cli.spec.navigation.entries_from_setting`).
 
@@ -195,7 +195,7 @@ _RELATED: Final = re.compile(r"""\brelated=\{\[([^\]]*)\]\}""")
 
 @dataclass
 class Exported:
-    """Experimental. The exported spec's data and what it leaves to the code."""
+    """The exported spec's data and what it leaves to the code."""
 
     data: dict[str, Any]
     #: What the spec does not carry, one line each ("events.Event.search: ...").
@@ -204,7 +204,7 @@ class Exported:
     def text(self) -> str:
         header = [
             f"yaml-language-server: $schema={schema.SCHEMA_URL}",
-            "Written by karni spec export (experimental). Check it: karni spec validate.",
+            "Written by karni spec export. Check it: karni spec validate.",
         ]
         if self.left_out:
             header += ["", "Not in this spec, kept in the project's code:"]
@@ -220,7 +220,7 @@ def read_facts(
     command: str = "karni spec export",
     code: str = "C245",
 ) -> Any:
-    """Experimental. ``manage.py karni_facts`` through the project's interpreter, parsed.
+    """``manage.py karni_facts`` through the project's interpreter, parsed.
 
     ``command`` and ``code`` name the command that reads the project in the
     error (``karni plan`` passes its own, ``C250``).
@@ -251,7 +251,7 @@ def _unreadable(message: str, code: str) -> CliError:
 
 
 def export_project(root: Path, *, docker: bool | None = None, service: str = "django") -> Exported:
-    """Experimental. The spec of the project at ``root``."""
+    """The spec of the project at ``root``."""
     return build(read_facts(root, docker=docker, service=service), root)
 
 
@@ -269,7 +269,7 @@ class _Ctx:
 
 
 def is_entity(model: dict[str, Any]) -> bool:
-    """Experimental. Whether a model's facts make it an entity (see the module docstring)."""
+    """Whether a model's facts make it an entity (see the module docstring)."""
     if model.get("proxy"):
         return False
     karni = model.get("karni") or {}
@@ -279,7 +279,7 @@ def is_entity(model: dict[str, Any]) -> bool:
 
 
 def spec_table(db_table: str) -> str:
-    """Experimental. ``Meta.db_table`` as the spec's ``table``: ``reporting.sales`` for ``reporting"."sales``."""
+    """``Meta.db_table`` as the spec's ``table``: ``reporting.sales`` for ``reporting"."sales``."""
     return db_table.replace('"."', ".")
 
 
@@ -567,7 +567,7 @@ def _grant_ok(pattern: str, apps: dict[str, Any], modules: set[str]) -> bool:
 
 
 def build(facts: dict[str, Any], root: Path) -> Exported:
-    """Experimental. The spec data of a project from its facts (see the module docstring)."""
+    """The spec data of a project from its facts (see the module docstring)."""
     left_out: list[str] = []
     kind = project_kind(root)
     app_info: dict[str, Any] = {"name": _project_name(root), "kind": kind.kind if kind else "app"}
@@ -795,7 +795,7 @@ def _build_search_document(fact: dict[str, Any], searched: list[str]) -> bool:
 
 
 def _taxonomies(model: dict[str, Any], ctx: _Ctx) -> dict[str, str]:
-    """Experimental. The facts' taxonomies as the spec's: key -> how the spec names the tree.
+    """The facts' taxonomies as the spec's: key -> how the spec names the tree.
 
     A tree model the spec does not know is left out with a note.
     """
@@ -810,7 +810,7 @@ def _taxonomies(model: dict[str, Any], ctx: _Ctx) -> dict[str, str]:
 
 
 def aggregate_of(declared: Any) -> dict[str, Any] | None:
-    """Experimental. ``class Karni: aggregate`` (as the facts carry it) in the spec's form.
+    """``class Karni: aggregate`` (as the facts carry it) in the spec's form.
 
     ``None`` when the spec cannot express it: expressions (``TextNumber`` and
     the project's own stay in code), or anything but a dict of name lists.
@@ -1057,7 +1057,7 @@ def _roles(
 def roles_of(
     facts: dict[str, Any], declared: dict[str, Any], defaults: list[str], apps: dict[str, Any]
 ) -> dict[str, Any]:
-    """Experimental. ``declared`` (a ``KARNI_ROLES``) in the spec's form, whatever it holds.
+    """``declared`` (a ``KARNI_ROLES``) in the spec's form, whatever it holds.
 
     ``karni plan`` reads the project's roles this way, also when they are the
     shipped ones (which the export leaves out).

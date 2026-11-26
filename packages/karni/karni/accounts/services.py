@@ -133,7 +133,7 @@ def blacklist_user_refresh_tokens(user: AbstractKarniUser) -> int:
 
 
 def prove_address(user: AbstractKarniUser) -> bool:
-    """Experimental. Mark ``user``'s address verified: a sign-in just proved its owner controls it.
+    """Mark ``user``'s address verified: a sign-in just proved its owner controls it.
 
     Sign-in with an ID token (a provider that verified the address) and
     sign-in with a code sent by email both call this. An account whose address

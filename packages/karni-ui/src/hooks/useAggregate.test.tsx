@@ -1,5 +1,5 @@
 /**
- * useAggregate (experimental): the request it builds, the cache key it uses and
+ * useAggregate: the request it builds, the cache key it uses and
  * the invalidation it shares with the resource, through the real KarniClient
  * against msw.
  */

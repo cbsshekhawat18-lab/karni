@@ -1,4 +1,4 @@
-"""Sign-in with a code sent by email (experimental): the ``LoginCode`` table.
+"""Sign-in with a code sent by email: the ``LoginCode`` table.
 
 One row per code sent, holding the address, the account that had it (if
 any), an HMAC of the code, its expiry, its attempt count and when it was

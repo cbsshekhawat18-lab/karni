@@ -1,4 +1,4 @@
-"""Experimental. What happens to a cart or an order, as signals any app can receive.
+"""What happens to a cart or an order, as signals any app can receive.
 
 An app reacts to an order without importing the app that sold it::
 

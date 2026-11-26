@@ -51,8 +51,8 @@ karni new "Reading Club" --kind app+game                # an app with a game in 
 | `site` | the site app `website` at `/` on the [`karni-site` module](#the-karni-site-module), the admin as the place the client edits every text, image, menu and page title, registration off (`KARNI_ACCOUNTS_REGISTRATION = False`, staff create the accounts), the roles `staff` and `editor`, and the staff app in `frontend/` for staff (`--no-staff-app` leaves it out, and staff work in the admin) |
 | `app` | the API and the React app in `frontend/` for signed-in users, as `karni new` always made |
 | `site+app` | both: the site app and karni-site, and the app with its registration and roles |
-| `game` (experimental) | a game first: the game in `game/<slug>/` on [`@karni/game`](game-client.md), served at `/play/<slug>/` and at `/`, [karni-game](game.md) wired with the game declared in `content/game.yaml`, the API and the admin, and no staff app unless `--staff-app` ([apps and games](apps-and-games.md)) |
-| `app+game` (experimental) | an app with a game in it, what `--kind game` made in 0.6.0: karni-game wired, a small game you can play at `/game` in the app, and its portal build in `frontend/portal/` ([a new game project](game.md#a-new-game-project)) |
+| `game` | a game first: the game in `game/<slug>/` on [`@karni/game`](game-client.md), served at `/play/<slug>/` and at `/`, [karni-game](game.md) wired with the game declared in `content/game.yaml`, the API and the admin, and no staff app unless `--staff-app` ([apps and games](apps-and-games.md)) |
+| `app+game` | an app with a game in it, what `--kind game` made in 0.6.0: karni-game wired, a small game you can play at `/game` in the app, and its portal build in `frontend/portal/` ([a new game project](game.md#a-new-game-project)) |
 
 Every kind has the same security defaults (the
 [Content-Security-Policy and headers](security.md#security-headers), the
@@ -356,6 +356,14 @@ tags work in a template written by hand:
   the client uploads their own.
 - **Redirects** for old addresses, and **page titles and descriptions** per
   page.
+- **Blocks no page shows any more.** A block stays when its tag leaves the
+  template. *Page content* marks it (*in a template*: no) and filters on it,
+  and `python manage.py karni_site_orphans` lists such blocks (`--delete`
+  removes those nobody edited). They are found by reading the templates, so
+  a key built while the page renders is *not seen*, never called an orphan,
+  and a key your own Python code stores goes in `KARNI_SITE_CODE_BLOCKS`
+  ([the module's README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site#blocks-no-template-shows-any-more)
+  says what the scan reads).
 
 What the import marks:
 
@@ -417,7 +425,8 @@ description, which are the page's [SEO entry](#seo-by-default).
 The client needs the admin and a role. The module declares `editor`:
 staff status and the role let a person change the site's content, menus,
 details and page titles, and nothing else (no enquiries, users, settings
-or redirects). The [module's README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
+or redirects). `KARNI_SITE_EDITOR_GRANTS = {"website.article:*": "all"}` in
+settings.py adds the project's own content to the role. The [module's README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
 has the settings and every escape hatch.
 
 ## The karni-site module
@@ -451,6 +460,11 @@ The module also gives a site:
   ([everything the client edits](#everything-the-client-edits)).
 - the redirect middleware, which answers the admin's redirects where the
   site has no page.
+- the admin's side menu, `KARNI_SITE_ADMIN_MENU`: the project's apps, the
+  site's pages, then users and roles, with the technical apps for
+  superusers only. A site project's settings say `KARNI_ADMIN_MENU =
+  KARNI_SITE_ADMIN_MENU`, and a project made before 0.8.0 adds that line
+  ([the side menu](admin.md#the-side-menu)).
 - `karni_site.views.page_not_found` and `server_error`, which `karni make
   site` sets as `handler404` and `handler500`: they render the site's own
   `404.html` and `500.html` with the request, so the layout's links, menu
@@ -533,9 +547,6 @@ and create that content in the test first, or declare the view's pages
 ([below](#pages-behind-a-capture-without-a-model-experimental)).
 
 ### Pages behind a capture without a model (experimental)
-
-*Experimental: `karni_site.sitemaps.pages` and `declared_pages` may change
-in a minor release ([stability](stability.md#experimental-names)).*
 
 A view behind a capture with a known, small set of addresses and no model,
 such as `/topics/<slug:slug>/` for three topics a dict holds, has no rows
@@ -671,6 +682,13 @@ search engines without project code:
 - **sitemap.xml** lists the site's pages and every model's rows that have a
   page, honouring scopes, soft deletes and a published flag (`class Karni:
   sitemap = {"filter": {...}}` to choose).
+- **A site in several languages** (`i18n_patterns`, two languages or more in
+  `LANGUAGES`): sitemap.xml lists every language's address of each page and
+  row, a menu is built and marked in the page's language, and `karni check
+  --seo` compares titles and descriptions within one language. Blocks, menu
+  item titles and page titles hold one text each, the same in every
+  language. The [module's README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site#a-site-in-several-languages)
+  says what changes.
 - **robots.txt** closes the site outside production (`DJANGO_ENV` other
   than `prod`) and names the sitemap in production.
   `KARNI_SITE_ALLOW_INDEXING` decides otherwise. A closed site also says
@@ -861,7 +879,8 @@ site app like any other app, runs `karni-site`'s checks (`SITE001`: the
 templates get the request, `SITE002`: every `{% ifactive %}` names a URL
 that exists, `SITE004`: the templates get `site`, `SITE005`: the redirect
 middleware is installed, `SITE008`: no block key has two defaults, `SITE020`:
-every `{% karni_form %}` names a form that exists), and `karni test` runs its
-page test and each form's test. `karni check --seo` renders every page
+every `{% karni_form %}` names a form that exists), prints `SITE025` for the
+blocks no template names any more (a warning, never a failure), and `karni
+test` runs its page test and each form's test. `karni check --seo` renders every page
 and checks what search engines read ([SEO by default](#seo-by-default)), and
 names a menu item whose page is gone (`SITE007`).

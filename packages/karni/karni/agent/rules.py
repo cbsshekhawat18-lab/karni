@@ -76,7 +76,7 @@ class Procedure:
     steps: tuple[str, ...]
     outro: str = ""
     rules: tuple[str, ...] = field(default=())
-    #: Experimental. Facts the steps need, printed after them under :data:`REFERENCE_HEADING`,
+    #: Facts the steps need, printed after them under :data:`REFERENCE_HEADING`,
     #: one bullet each.
     reference: tuple[str, ...] = field(default=())
 
@@ -88,13 +88,13 @@ class Procedure:
         return data
 
 
-#: Experimental. The heading of a procedure's ``reference`` bullets.
+#: The heading of a procedure's ``reference`` bullets.
 REFERENCE_HEADING = "Reference:"
 
 
 @dataclass(frozen=True)
 class Topic:
-    """Experimental. A reference an agent looks up by name: ``karni explain <name>``."""
+    """A reference an agent looks up by name: ``karni explain <name>``."""
 
     name: str
     title: str
@@ -616,7 +616,7 @@ RULES: tuple[Rule, ...] = (
             "model should not have all four (e.g. an append-only log: "
             "`UUIDModel, TimestampedModel`). Declare `APIMeta` / `AdminMeta` only for "
             "fields that must be hidden, read-only or write-only. "
-            "`BigIntBaseModel` (experimental) is the same with an integer `id`, chosen per "
+            "`BigIntBaseModel` is the same with an integer `id`, chosen per "
             "model in its class line; `karni context` shows each model's key type."
         ),
         rationale=(
@@ -624,7 +624,7 @@ RULES: tuple[Rule, ...] = (
             "`BigIntBaseModel`), timestamps, soft delete, audit stamping and the "
             "managers the derived API/admin rely on. The exception is a table or view another "
             "system owns: a plain `models.Model` with `class Meta: managed = False` and `class "
-            "Karni: external = True` (experimental, `karni make model <Name> --external "
+            "Karni: external = True` (`karni make model <Name> --external "
             "--table <table>`), which Karni only reads unless `writable = True`."
         ),
         fix="Inherit karni.models.BaseModel or BigIntBaseModel (or compose its mixins).",
@@ -824,10 +824,15 @@ RULES: tuple[Rule, ...] = (
         summary="No ModelAdmin. Use AdminMeta.",
         rule=(
             "Do not register a plain `ModelAdmin`. Declare `AdminMeta` on the model (the "
-            "admin is derived), or subclass `karni.admin.KarniModelAdmin`."
+            "admin is derived, and `AdminMeta.mixins` adds methods or templates to it), or "
+            "subclass `karni.admin.KarniModelAdmin` (it keeps the model's `AdminMeta` for "
+            "what it does not set)."
         ),
         rationale="The derived admin stays consistent with the model and the API.",
-        fix="Delete the admin class and use AdminMeta, or subclass KarniModelAdmin.",
+        fix=(
+            "Delete the admin class and use AdminMeta (put added behaviour in a mixin listed "
+            "in AdminMeta.mixins), or subclass KarniModelAdmin."
+        ),
         enforced_by=("admin-convention",),
     ),
     Rule(
@@ -1009,7 +1014,7 @@ RULES: tuple[Rule, ...] = (
 )
 
 
-#: Experimental. karni.yaml's access words and the rules most apps need (``karni explain
+#: karni.yaml's access words and the rules most apps need (``karni explain
 #: access``). The new-app procedure's reference sums them up in one bullet.
 ACCESS_LINES: tuple[str, ...] = (
     "Per entity in karni.yaml: access: {read: WHO, write: WHO, create: WHO}.",
@@ -1056,7 +1061,7 @@ ACCESS_LINES: tuple[str, ...] = (
     "control).",
 )
 
-#: Experimental. The references ``karni explain <name>`` prints.
+#: The references ``karni explain <name>`` prints.
 TOPICS: tuple[Topic, ...] = (
     Topic(
         name="access",
@@ -1342,7 +1347,7 @@ def procedures_by_name() -> dict[str, Procedure]:
 
 
 def topics_by_name() -> dict[str, Topic]:
-    """Experimental. :data:`TOPICS` by name."""
+    """:data:`TOPICS` by name."""
     return {topic.name: topic for topic in TOPICS}
 
 

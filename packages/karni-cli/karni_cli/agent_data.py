@@ -70,11 +70,11 @@ class AgentData:
 
     @property
     def topics(self) -> list[dict[str, Any]]:
-        """Experimental. ``karni explain <name>``'s references (none from an older karni)."""
+        """``karni explain <name>``'s references (none from an older karni)."""
         return list(self.raw.get("topics") or [])
 
     def topic(self, name: str) -> dict[str, Any] | None:
-        """Experimental. The reference called ``name`` (any case), or ``None``."""
+        """The reference called ``name`` (any case), or ``None``."""
         wanted = name.strip().lower()
         return next((t for t in self.topics if t["name"] == wanted), None)
 

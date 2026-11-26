@@ -12,16 +12,26 @@ __all__ = ["AICall"]
 
 
 class AICall(BigIntBaseModel):
-    """Experimental. One provider call: who, for which resource, which model, its tokens and cost.
+    """One provider call: who, for which resource, which model, its tokens and cost.
 
     Written by :mod:`karni_ai.usage` for every call, the failed ones included
     (``status`` failed, ``error_code`` AI006 or AI007, with the tokens the
     provider still billed). ``cost`` is computed from ``KARNI_AI_PRICES`` at
     the time of the call, and is empty for a model the table does not name.
-    The monthly budgets sum ``input_tokens + output_tokens`` of these rows.
-    The admin shows them read-only. The table grows with use, hence the
-    integer key.
+    The monthly budgets sum ``input_tokens + output_tokens`` of the rows
+    counted in tokens. The admin shows them read-only. The table grows with
+    use, hence the integer key.
+
+    ``kind`` is the job: ``"extraction"`` for karni-ai's own, any other word for
+    a job of the project's own (``"translation"``). ``source`` stays one of the
+    three kinds of source an extraction reads. ``unit`` is what
+    ``input_tokens`` and ``output_tokens`` count: ``"tokens"``, or the unit the
+    provider named (``"characters"``). Rows written before these two fields
+    existed are extractions counted in tokens.
     """
+
+    #: The ``kind`` of karni-ai's own calls.
+    EXTRACTION = "extraction"
 
     class Source(models.TextChoices):
         TEXT = "text", "Text"
@@ -42,9 +52,11 @@ class AICall(BigIntBaseModel):
     provider = models.CharField(max_length=50)
     model = models.CharField(max_length=200, blank=True, default="")
     resource = models.CharField(max_length=100)
+    kind = models.CharField(max_length=50, default=EXTRACTION, db_index=True)
     source = models.CharField(max_length=10, choices=Source.choices)
     input_tokens = models.PositiveIntegerField(default=0)
     output_tokens = models.PositiveIntegerField(default=0)
+    unit = models.CharField(max_length=20, default="tokens")
     cost = models.DecimalField(max_digits=14, decimal_places=6, null=True, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.OK)
     error_code = models.CharField(max_length=10, blank=True, default="")
@@ -71,9 +83,11 @@ class AICall(BigIntBaseModel):
             "provider",
             "model",
             "resource",
+            "kind",
             "source",
             "input_tokens",
             "output_tokens",
+            "unit",
             "cost",
             "status",
             "error_code",

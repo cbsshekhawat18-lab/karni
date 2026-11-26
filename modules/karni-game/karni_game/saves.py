@@ -1,4 +1,4 @@
-"""Experimental. Cloud saves: versioned JSON per player, game and slot.
+"""Cloud saves: versioned JSON per player, game and slot.
 
 * :func:`write` stores a save only when the client's ``base_version`` is the
   server's version (``0`` for an empty slot), and makes the version one

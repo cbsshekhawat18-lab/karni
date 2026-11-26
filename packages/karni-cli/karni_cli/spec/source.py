@@ -1,4 +1,4 @@
-"""Experimental. ``karni.yaml`` read into plain data, with the line of every key and value.
+"""``karni.yaml`` read into plain data, with the line of every key and value.
 
 PyYAML composes the document into nodes, which carry their marks. The data
 is rebuilt from those nodes so every key and value keeps its line, which is
@@ -25,7 +25,7 @@ Loc = tuple[str | int, ...]
 
 
 class YamlError(Exception):
-    """Experimental. The text is not valid YAML. ``line`` is 1-based, ``None`` when unknown."""
+    """The text is not valid YAML. ``line`` is 1-based, ``None`` when unknown."""
 
     def __init__(self, message: str, line: int | None) -> None:
         super().__init__(message)
@@ -35,7 +35,7 @@ class YamlError(Exception):
 
 @dataclass
 class Source:
-    """Experimental. The document's data, and where each part of it is written."""
+    """The document's data, and where each part of it is written."""
 
     data: Any
     #: path -> line of the value (for a mapping entry, the line of its value).
@@ -61,7 +61,7 @@ class Source:
 
 
 def load(text: str) -> Source:
-    """Experimental. The data of ``text`` with its lines. Raises :class:`YamlError` on a syntax error."""
+    """The data of ``text`` with its lines. Raises :class:`YamlError` on a syntax error."""
     loader = yaml.SafeLoader(text)
     try:
         node = loader.get_single_node()

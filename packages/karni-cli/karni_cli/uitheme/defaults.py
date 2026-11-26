@@ -25,7 +25,7 @@ MAIN_TOKENS: tuple[str, ...] = (
     "--karni-shadow-md",
     "--karni-shadow-lg",
 )
-#: Experimental. The tokens @karni/ui's components read beyond colours and type: each with
+#: The tokens @karni/ui's components read beyond colours and type: each with
 #: the components that read it. ``karni ui detect`` lists them in its report and among the
 #: commented defaults.
 COMPONENT_TOKENS: dict[str, str] = {
@@ -78,7 +78,7 @@ def default_values(text: str) -> dict[Scheme, list[tuple[str, str]]]:
 
 
 def component_tokens(frontend: Frontend) -> list[dict[str, str]]:
-    """Experimental. ``[{token, value, used_by}]``: the components' own tokens and their defaults."""
+    """``[{token, value, used_by}]``: the components' own tokens and their defaults."""
     found = styles_source(frontend)
     light = css.parse(found[0]).variables(":root") if found is not None else {}
     return [

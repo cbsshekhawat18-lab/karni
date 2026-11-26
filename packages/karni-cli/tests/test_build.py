@@ -1,4 +1,4 @@
-"""``karni build`` (experimental): the spec applied to a real project, idempotently.
+"""``karni build``: the spec applied to a real project, idempotently.
 
 One project is built once per module from an empty ``karni new`` render and
 the A1 fixture (``harbour-yoga.yaml``), with every step real: migrations,
@@ -353,7 +353,7 @@ def test_a_feature_turned_on_is_planned_and_written_to_the_settings_block(copy: 
 
 
 def test_a_relation_to_people_turns_the_contract_on_and_migrates(copy: Path) -> None:
-    """``fk:people.Person`` (experimental): KARNI_PEOPLE, the app's tables, and no drift."""
+    """``fk:people.Person``: KARNI_PEOPLE, the app's tables, and no drift."""
     _edit(
         copy / "karni.yaml",
         (
@@ -375,7 +375,7 @@ def test_a_relation_to_people_turns_the_contract_on_and_migrates(copy: Path) -> 
 
 
 def test_navigation_is_written_to_the_settings_block_and_reads_back(copy: Path) -> None:
-    """The menu (experimental): planned, written as KARNI_NAVIGATION, exported as the spec."""
+    """The menu: planned, written as KARNI_NAVIGATION, exported as the spec."""
     spec = copy / "karni.yaml"
     text = spec.read_text()
     spec.write_text(
@@ -759,7 +759,7 @@ def test_response_caching_from_the_spec(copy: Path) -> None:
 
 
 def test_related_tabs_and_a_dashboard_page_are_built(copy: Path) -> None:
-    """Experimental (page blocks): related tabs on a detail page, and a dashboard page."""
+    """Page blocks: related tabs on a detail page, and a dashboard page."""
     _edit(
         copy / "karni.yaml",
         (
@@ -792,7 +792,7 @@ def test_related_tabs_and_a_dashboard_page_are_built(copy: Path) -> None:
 
 
 def test_markdown_field_groups_and_column_sets_are_built(copy: Path) -> None:
-    """Experimental (wide models): a markdown field, groups and column sets, in the model base."""
+    """Wide models: a markdown field, groups and column sets, in the model base."""
     _edit(
         copy / "karni.yaml",
         (
@@ -1205,7 +1205,7 @@ def test_seeding_skips_a_table_that_holds_rows(copy: Path) -> None:
     )
 
 
-# a large seed count (experimental): the plan shows its volume, the build seeds it in bulk
+# a large seed count: the plan shows its volume, the build seeds it in bulk
 
 
 def test_a_large_seed_count_is_planned_with_its_time_and_seeded_in_bulk(copy: Path) -> None:

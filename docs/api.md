@@ -51,7 +51,7 @@ Declarative attributes (all optional except `model` and `access`):
 | `query_budget` | `None` (`KARNI_QUERY_BUDGET`) | `Budget(list=25, reason=...)` |
 | `pagination` | `None` (`pagination_class`) | `Unpaginated(max_rows=N, reason=...)`, the only way to return plain lists |
 | `cache` | `None` (`KARNI_API_CACHE`) | `Uncached(reason=...)` or `Cache(ttl=..., depends_on=[...])` |
-| `aggregation` | `None` (`class Karni: aggregate`) | Experimental. What `GET <resource>/aggregate/` may group and sum. See [aggregations](aggregations.md) |
+| `aggregation` | `None` (`class Karni: aggregate`) | What `GET <resource>/aggregate/` may group and sum. See [aggregations](aggregations.md) |
 
 Default ordering: model `Meta.ordering`, else `-created_at` when the field
 exists, else `-pk`. Every normal DRF hook (`get_queryset`,
@@ -133,7 +133,7 @@ row-level answer:
 | `Owned("organizer")` | authenticated users | `organizer = request.user`. Traversals (`"event__organizer"`) and to-many paths (`"members"`, automatic `distinct()`) work. On the user model, use `Owned("pk")` |
 | `Owned("user", bypass=HasRole("x"))` | same as `Owned("user") \| HasRole("x")` | |
 | `Where(lambda request: Q(...))` | passes (or the function returns a `bool` for both) | the returned `Q` |
-| `Where(Matching(published=True))` (experimental) | passes, anonymous included | the rows whose fields hold the values. With `\|` it shows rows on a flag to everyone and every row to the others: `Where(Matching(published=True)) \| Owned("author") \| HasRole("staff")` (karni.yaml: `where:published`) |
+| `Where(Matching(published=True))` | passes, anonymous included | the rows whose fields hold the values. With `\|` it shows rows on a flag to everyone and every row to the others: `Where(Matching(published=True)) \| Owned("author") \| HasRole("staff")` (karni.yaml: `where:published`) |
 | `a \| b`, `a & b` | any / all | OR / AND of the row filters |
 | `Can("events.event:approve")` | holds a grant for any of the permissions (`app_label.model:action`, roles as data, one query per request) | the union of the grants' scopes: `all`, `own` (`Karni.owner_field = user`), `related:<key>`, `custom:<name>` (see [roles as data](accounts.md#roles-as-data)). The permission must name the viewset's model |
 
@@ -150,13 +150,13 @@ Which predicate governs which action:
 | `retrieve`, safe custom `@action` | `read` | **404** (the message names the read scope, and there is no existence oracle) |
 | `create` | `create` (default: `write`) | 401/403 at the gate |
 | `update` / `partial_update`, unsafe custom `@action` | `write`, row looked up through `read` | unreadable → **404**, readable but not writable → **403** |
-| `destroy` | `delete` (default: `write`, experimental), row looked up through `read` | as above |
+| `destroy` | `delete` (default: `write`), row looked up through `read` | as above |
 | `@action(detail=True, methods=["post"], access=HasRole("x"))`, or a [row action](#row-actions-experimental)'s `by` | that predicate, and the lookup still goes through `read` | as above |
 
 Owner fields: a direct FK to the user model named by `Owned` in `write` or
 `create` is stamped from `request.user` on create (`perform_create`) and is
 read-only in the generated serializer. The body never chooses the owner,
-unless `assign` says who may (experimental):
+unless `assign` says who may:
 
 ```python
 access = Access(
@@ -172,7 +172,7 @@ caller; set to someone else by a caller `assign` does not admit, the request
 is refused with a **403** (`E135`), on create and on update (a manager
 reassigning a deal passes, a salesperson handing it on does not).
 
-**The written row stays in scope** (experimental). A create or an update is
+**The written row stays in scope**. A create or an update is
 saved and then checked against its own predicate's rows in one transaction:
 a row the caller could not change afterwards is refused with a **403**
 (`E134`) and nothing is saved. With `write=Owned("seller__user")`, a listing
@@ -450,9 +450,6 @@ override it to serve writes from one viewset.
 
 ## Tree models
 
-!!! warning "Experimental"
-    The tree endpoints and filters are [experimental](stability.md#experimental-names).
-
 A viewset whose model is a [tree model](models.md#tree-models) also serves
 `tree/` (nested, a few levels at a time), `<id>/children/`,
 `<id>/ancestors/`, `<id>/move/` and `access/` (the requester's access forest,
@@ -464,9 +461,6 @@ and `tree_max_depth` bound `tree/`. See
 [the API of tree models](models.md#the-api).
 
 ## Taxonomies
-
-!!! warning "Experimental"
-    The taxonomy filters and endpoints are [experimental](stability.md#experimental-names).
 
 A viewset whose model declares [`class Karni: taxonomies`](models.md#taxonomies)
 takes `?<key>=<id>,<id>` and `?<key>_descendants=true` on its list and serves
@@ -597,7 +591,7 @@ class ReadingViewSet(BaseViewSet):
     filterset_fields = {"id": ["exact", "gte", "lte"], "sensor": ["exact"]}
 ```
 
-`karni.api.filters.IntegerFilter` (experimental) is an exact filter that
+`karni.api.filters.IntegerFilter` is an exact filter that
 takes whole numbers only, so `?sensor=1.5` is refused (400) instead of
 matching row 1, and the schema documents an integer. The
 type→lookups map is the overridable `lookup_map` class attribute on
@@ -766,7 +760,11 @@ karni.testing.query_budget(n): ...`.
 `MIDDLEWARE` and is on when `KARNI_QUERY_LOG` is (the dev profile). It logs
 every request that ran SQL on the `karni.queries` logger: query count,
 duplicated count, SQL time and total time, plus one line per repeated
-statement with what rendered it. The level is `WARNING` when anything
+statement with what rendered it: the serializer field, else the closest
+project or Karni frame to the database call (`karni.admin.listing:94 in
+table_rows`), which is the code that ran the statement. A project frame that
+only calls `get_response` (a pass-through middleware) is on the stack but did
+not run it, so it is never the one named. The level is `WARNING` when anything
 repeated, `INFO` otherwise. When it is off, it removes itself from the chain
 at startup.
 
@@ -778,7 +776,7 @@ Every list is paginated by a `karni.pagination.KarniPagination` subclass:
 A page holds the rows in the model's ordering (`Meta.ordering`, karni.yaml's
 `order`), else newest first, so a row just created is on the first page only
 when the order puts it there. `karni context` states the project's own values
-on its `API:` line (experimental): `API: lists answer {count, next, previous,
+on its `API:` line: `API: lists answer {count, next, previous,
 results}, 50 rows a page (?page=, ?page_size= up to 100), in the model's
 ordering, else newest first`.
 
@@ -938,8 +936,7 @@ on: rows a test wrote roll back, the cache would keep them.
 ## Search
 
 This is the search of one list. One search over every model that opts in,
-`GET /api/search/`, is [search across models](global-search.md)
-(experimental).
+`GET /api/search/`, is [search across models](global-search.md).
 
 `?search=` delegates to the provider named by `KARNI_SEARCH_PROVIDER`:
 
@@ -1039,11 +1036,6 @@ KARNI_API_ROUTER = "myproject.api.get_router"
 ```
 
 ## API versions
-
-!!! warning "Experimental"
-    API versions are in the [experimental tier](stability.md#experimental-names).
-    The settings and `karni.api.versions` can change in a minor release, with a
-    CHANGELOG entry.
 
 A web app ships with its API, so the two change together. A mobile app does
 not: the build a user installed last year still calls the API. A version prefix
@@ -1263,7 +1255,7 @@ nullable, required from blank/default) and adds:
   `"matching": {...}` for `Where(Matching(...))`),
   `{"any": [...]}`/`{"all": [...]}`, `{"unscoped": "<reason>"}`,
   `{"deny": ...}`. These are display hints only, and the server enforces.
-  `x-karni-actions` (experimental) is on the list and retrieve operations of
+  `x-karni-actions` is on the list and retrieve operations of
   a viewset with [row actions](#row-actions-experimental), and
   `x-karni-action` on each action's operation.
   `x-karni-throttle` (`"10/hour"`) is on an operation whose action the
@@ -1275,9 +1267,9 @@ nullable, required from blank/default) and adds:
   and `x-karni-dashboard` on the list operation of a model that declares
   [`Karni.dashboard`](#the-staff-dashboard). `x-karni-aggregate` is on the
   `aggregate` operation of a resource that declares an
-  [aggregation](aggregations.md) (experimental): the groups, values and
+  [aggregation](aggregations.md): the groups, values and
   metrics it takes.
-- `x-karni-related` (experimental) on the list operation: the model's
+- `x-karni-related` on the list operation: the model's
   reverse relations (a reverse fk or many-to-many) whose model has a route,
   each `{"name", "resource", "field", "param", "key", "label"}`. `name` is
   the relation's name on this model (`deals`, or Django's `deal_set`),
@@ -1287,7 +1279,7 @@ nullable, required from blank/default) and adds:
   `key` the field of this model whose value the parameter takes (its primary
   key), and `label` the related rows in words. A one-to-one and a hidden
   relation (`related_name="+"`) are left out. `@karni/ui`'s
-  [ResourceDetail](ui.md#page-blocks-experimental) builds its `related` tabs
+  [ResourceDetail](ui.md#page-blocks) builds its `related` tabs
   from it. Override `KarniAutoSchema.get_karni_related()` to drop or relabel
   an entry.
 
@@ -1296,7 +1288,7 @@ nullable, required from blank/default) and adds:
     {"name": "events", "resource": "events", "field": "venue", "param": "venue", "key": "id", "label": "Events"}
   ]
   ```
-- `x-karni-field-groups` and `x-karni-column-sets` (experimental) on the list
+- `x-karni-field-groups` and `x-karni-column-sets` on the list
   operation of a model that declares `Karni.field_groups` or
   `Karni.column_sets`: `{"layout": "sections" | "tabs", "groups": [{"label",
   "fields"}]}` and `{"default": "<set>", "sets": [{"name", "label",
@@ -1304,7 +1296,7 @@ nullable, required from blank/default) and adds:
   serializer has, so a field `Karni.field_roles` hides is never named, and
   one left empty is dropped. `@karni/ui` lays out ResourceForm,
   ResourceDetail and ResourceTable with them
-  ([field groups and column sets](ui.md#field-groups-and-column-sets-experimental)).
+  ([field groups and column sets](ui.md#field-groups-and-column-sets)).
   Override `KarniAutoSchema.get_karni_field_groups()` or
   `get_karni_column_sets()` to publish others.
 - A `MarkdownField`'s property carries `"format": "markdown"`

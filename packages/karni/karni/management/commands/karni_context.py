@@ -3,7 +3,7 @@
 Deterministic, sorted, sections omitted when empty; consumed by AI agents via
 the ``karni context`` CLI, so stdout carries data only (warnings go to stderr).
 
-Slices (experimental), for a project too large to read at once: ``--summary``
+Slices, for a project too large to read at once: ``--summary``
 prints one line per app, ``--app LABEL`` one app in full and ``--model NAME``
 (repeatable) one model in depth (:mod:`karni.introspect`). ``--app`` and
 ``--model`` combine: the app slices first, then each model. An unknown name
@@ -37,19 +37,19 @@ class Command(BaseCommand):
             action="append",
             default=[],
             metavar="LABEL",
-            help="Only this app, in full (repeatable). Experimental.",
+            help="Only this app, in full (repeatable).",
         )
         parser.add_argument(
             "--model",
             action="append",
             default=[],
             metavar="NAME",
-            help="One model in depth: Name or app_label.Name (repeatable). Experimental.",
+            help="One model in depth: Name or app_label.Name (repeatable).",
         )
         parser.add_argument(
             "--summary",
             action="store_true",
-            help="One line per app: its models and viewsets. Experimental.",
+            help="One line per app: its models and viewsets.",
         )
 
     def handle(self, *args: Any, **options: Any) -> None:

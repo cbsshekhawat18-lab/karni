@@ -1,4 +1,4 @@
-"""Experimental. The sellable adapter: how commerce sells something it does not know.
+"""The sellable adapter: how commerce sells something it does not know.
 
 An app makes a model sellable by registering an adapter in its own
 ``<app>/sellables.py``, which karni-commerce imports at startup::
@@ -72,7 +72,7 @@ _REGISTRY: dict[str, Sellable] = {}
 
 @dataclass(frozen=True)
 class Price:
-    """Experimental. What one item costs now: the unit price, and the price it is compared with.
+    """What one item costs now: the unit price, and the price it is compared with.
 
     ``compare_at`` is the regular price a sale is shown against (``None``
     when there is no sale). ``tax_class`` names the tax rule a later tax step
@@ -85,12 +85,12 @@ class Price:
 
 
 def refuse(message: str, field: str = "item") -> ValidationError:
-    """Experimental. The error an adapter raises to refuse a line: ``raise refuse("Sold out.")``."""
+    """The error an adapter raises to refuse a line: ``raise refuse("Sold out.")``."""
     return ValidationError({field: [message]})
 
 
 class Sellable:
-    """Experimental. The adapter of one kind of thing for sale. Subclass it and register it.
+    """The adapter of one kind of thing for sale. Subclass it and register it.
 
     Set :attr:`kind` (a short name, unique in the project: ``product``,
     ``booking``) and :attr:`model` (the model, or ``"app.Model"``), and
@@ -314,7 +314,7 @@ class Sellable:
 
 
 def hold_of(adapter: Sellable, item: Any, options: Mapping[str, Any]) -> int | None:
-    """Experimental. ``adapter.hold_minutes(item, options)``, checked: ``None`` or 1 and up.
+    """``adapter.hold_minutes(item, options)``, checked: ``None`` or 1 and up.
 
     :raises KarniImproperlyConfigured: ``COM003`` for anything else.
     """
@@ -333,7 +333,7 @@ def hold_of(adapter: Sellable, item: Any, options: Mapping[str, Any]) -> int | N
 
 
 def register[S: type[Sellable]](adapter: S) -> S:
-    """Experimental. Register ``adapter`` (a :class:`Sellable` subclass) under its ``kind``.
+    """Register ``adapter`` (a :class:`Sellable` subclass) under its ``kind``.
 
     Usable as a class decorator. Registering a kind again replaces it.
 
@@ -357,7 +357,7 @@ def register[S: type[Sellable]](adapter: S) -> S:
 
 
 def unregister(kind: str) -> None:
-    """Experimental. Forget the adapter of ``kind`` (tests, a project that replaces a kind)."""
+    """Forget the adapter of ``kind`` (tests, a project that replaces a kind)."""
     _REGISTRY.pop(kind, None)
 
 
@@ -372,12 +372,12 @@ def _configured() -> dict[str, Sellable]:
 
 
 def kinds() -> dict[str, Sellable]:
-    """Experimental. Every adapter by kind: the registered ones, then the configured ones."""
+    """Every adapter by kind: the registered ones, then the configured ones."""
     return {**_REGISTRY, **_configured()}
 
 
 def adapter_for(kind: str) -> Sellable:
-    """Experimental. The adapter of ``kind``.
+    """The adapter of ``kind``.
 
     :raises ValidationError: when no installed app sells that kind.
     """
@@ -388,5 +388,5 @@ def adapter_for(kind: str) -> Sellable:
 
 
 def autodiscover() -> None:
-    """Experimental. Import ``<app>/sellables.py`` of every installed app (startup)."""
+    """Import ``<app>/sellables.py`` of every installed app (startup)."""
     autodiscover_modules("sellables")

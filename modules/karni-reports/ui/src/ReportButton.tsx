@@ -1,7 +1,7 @@
 /**
  * <ReportButton>: one click requests the PDF report of a row and downloads it when ready.
  *
- * Experimental. Click → `useReport().request()`. A file ready at the current
+ * Click → `useReport().request()`. A file ready at the current
  * cache key downloads at once. Otherwise the button says it is preparing the
  * file, follows the status, and downloads it as soon as it is ready. A
  * failed render or a refused request (404 for a row the user may not see)
@@ -50,7 +50,7 @@ const DEFAULT_LABELS: ReportButtonLabels = {
   failed: "Try again",
 };
 
-/** Experimental. A button that requests the report of one row and downloads it when ready. */
+/** A button that requests the report of one row and downloads it when ready. */
 export function ReportButton(props: ReportButtonProps): ReactElement {
   const {
     report,

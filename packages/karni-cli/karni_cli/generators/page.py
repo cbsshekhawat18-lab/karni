@@ -7,11 +7,11 @@ Kinds (``--resource R --kind ...``), with routes under a base path
 * ``detail`` → ``<base>/$id``: ``<ResourceDetail resource=R id={id} />``
 * ``form``   → ``<base>/new`` and ``<base>/$id/edit``: ``<ResourceForm />``
 * ``blank``  → ``/<name>``: the bare page (``--kind blank``, no ``--resource``)
-* ``dashboard`` (experimental) → ``/<name>``: a ``DashboardGrid`` with a
+* ``dashboard`` → ``/<name>``: a ``DashboardGrid`` with a
   ``ChartCard`` of the rows of each resource (``--count``, default: every
   resource the project routes), counted by ``useResourceCounts``
 
-A detail page takes ``--related <name>`` (experimental, repeatable): a tab
+A detail page takes ``--related <name>`` (repeatable): a tab
 per reverse relation, each a table of the related rows filtered to the
 record (ResourceDetail's ``related``). Each tab must be backed by a fk of the
 related model to the page's model, by the rule ``karni spec validate``
@@ -77,9 +77,9 @@ class PageSpec:
     title: str
     #: Relation fields a detail page asks the API to expand (labels, not raw ids).
     expand: tuple[str, ...] = ()
-    #: Experimental. A detail page's related tabs (ResourceDetail's ``related``).
+    #: A detail page's related tabs (ResourceDetail's ``related``).
     related: tuple[str, ...] = ()
-    #: Experimental. The resources a dashboard counts, in chart order.
+    #: The resources a dashboard counts, in chart order.
     counts: tuple[str, ...] = ()
 
     @property
@@ -567,7 +567,7 @@ def command(
         None,
         "--kind",
         help="With --resource: list (default), detail or form. A login page needs no resource, "
-        "a dashboard (experimental) counts resources (--count), and blank is the bare page.",
+        "a dashboard counts resources (--count), and blank is the bare page.",
     ),
     path: str | None = typer.Option(
         None,
@@ -578,13 +578,13 @@ def command(
     related: list[str] = typer.Option(
         [],
         "--related",
-        help="Experimental. With --kind detail: a related tab (deals, or deals.partner), a "
+        help="With --kind detail: a related tab (deals, or deals.partner), a "
         "resource whose model has a fk to this one (C561 otherwise). Repeat it.",
     ),
     count: list[str] = typer.Option(
         [],
         "--count",
-        help="Experimental. With --kind dashboard: a resource to count. Repeat it (default: "
+        help="With --kind dashboard: a resource to count. Repeat it (default: "
         "every resource the project routes).",
     ),
     no_route: bool = typer.Option(

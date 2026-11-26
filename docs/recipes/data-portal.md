@@ -94,8 +94,8 @@ Declared in `karni.yaml` ([rules](../rules.md)), so a rebuild keeps them:
 | [Aggregations](../aggregations.md) | `GET /api/indicators/aggregate/?group_by=year&metric=avg&value=value`, grouped by year, region, continent (`region__parent`), sector and dataset, under the caller's scope |
 | [Saved charts](../charts.md) | the seeded chart over that aggregate, drawn by `SavedChart` |
 | [Search across models](../global-search.md) | `global_search` on Dataset and Indicator: `GET /api/search/?q=life` finds both, inside the caller's scope |
-| [Markdown fields and field groups](../ui.md#field-groups-and-column-sets-experimental) | `summary` and `method`, and the groups of the dataset form and detail page |
-| [Column sets](../ui.md#field-groups-and-column-sets-experimental) | the presets of the Dataset and Indicator tables |
+| [Markdown fields and field groups](../ui.md#field-groups-and-column-sets) | `summary` and `method`, and the groups of the dataset form and detail page |
+| [Column sets](../ui.md#field-groups-and-column-sets) | the presets of the Dataset and Indicator tables |
 | [Related tabs and dashboard pages](../app-spec.md#related-tabs-and-dashboard-pages) | the dataset and region pages show an Indicators tab, and `overview` is a dashboard page |
 | [Navigation](../navigation.md) | the menu of `karni.yaml`: Home, Overview, Data (Datasets, Indicators) and Browse (Regions, Sectors) |
 | [Import and export](../import-export.md) | each list exports and imports with a preview, and the keys (`slug`, `label`) make a row an update |

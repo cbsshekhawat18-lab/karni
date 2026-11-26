@@ -1,4 +1,4 @@
-"""Experimental. The walks behind tree models: recursive SQL that never loops.
+"""The walks behind tree models: recursive SQL that never loops.
 
 :class:`karni.models.TreeModel` stores a hierarchy as a ``parent`` foreign key
 to the same table. Reading a branch, the path to a node or the order of a
@@ -56,7 +56,7 @@ _CTE = "karni_tree"
 
 
 class TreeCycleError(KarniValueError):
-    """Experimental. The new parent is the node itself or one of its descendants (``E340``)."""
+    """The new parent is the node itself or one of its descendants (``E340``)."""
 
     code = "E340"
 
@@ -66,14 +66,14 @@ class TreeCycleError(KarniValueError):
 
 
 class TreeHasChildren(KarniConflict):
-    """Experimental. A node with live children cannot be deleted alone (``E341``, HTTP 409)."""
+    """A node with live children cannot be deleted alone (``E341``, HTTP 409)."""
 
     code = "E341"
 
 
 @dataclass(frozen=True)
 class TreeSpec:
-    """Experimental. What makes a model a tree: its parent field and whether siblings are ordered.
+    """What makes a model a tree: its parent field and whether siblings are ordered.
 
     ``parent`` is the self-referencing foreign key and ``position`` the sibling
     order field (``None`` for an unordered tree). The OpenAPI document
@@ -93,7 +93,7 @@ class TreeSpec:
 
 
 def is_tree_model(model: Any) -> bool:
-    """Experimental. Whether ``model`` is a :class:`karni.models.TreeModel` (a class or a row)."""
+    """Whether ``model`` is a :class:`karni.models.TreeModel` (a class or a row)."""
     from karni.models import TreeModel
 
     cls = model if isinstance(model, type) else type(model)
@@ -101,7 +101,7 @@ def is_tree_model(model: Any) -> bool:
 
 
 def tree_spec(model: Any) -> TreeSpec | None:
-    """Experimental. The :class:`TreeSpec` of a tree model, else ``None``."""
+    """The :class:`TreeSpec` of a tree model, else ``None``."""
     if not is_tree_model(model):
         return None
     from karni.models import OrderedTreeModel
@@ -151,7 +151,7 @@ def _pk_params(model: type[models.Model], values: Iterable[Any], connection: Any
 
 @dataclass(frozen=True)
 class Restriction:
-    """Experimental. The rows a walk may enter: a condition on the table, or a subquery of keys.
+    """The rows a walk may enter: a condition on the table, or a subquery of keys.
 
     ``inline`` is true for a condition over the model's own table only (the
     default manager's ``deleted_at IS NULL``, a ``Where`` on the row): the walk
@@ -216,7 +216,7 @@ def walk_sql(
     order_limit: str = "",
     origin: bool = False,
 ) -> tuple[str, list[Any]]:
-    """Experimental. One cycle-safe recursive walk over ``model``'s table, as SQL and params.
+    """One cycle-safe recursive walk over ``model``'s table, as SQL and params.
 
     ``start`` is the SQL of the starting keys (``"%s, %s"`` with its params, or
     a subquery selecting keys). The walk goes to the children (``up=False``)
@@ -340,7 +340,7 @@ def start_from(
 
 
 def tree_order(rows: Sequence[tuple[Any, Any]]) -> list[tuple[Any, int]]:
-    """Experimental. ``(key, parent key)`` pairs in depth-first order, each with its depth.
+    """``(key, parent key)`` pairs in depth-first order, each with its depth.
 
     ``rows`` come in sibling order (the order a node's children are shown).
     A row whose parent is not among them starts a branch at depth 0, so a

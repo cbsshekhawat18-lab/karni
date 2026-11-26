@@ -1,5 +1,5 @@
 /**
- * Experimental. `/search`: one search over every installed part (`GET
+ * `/search`: one search over every installed part (`GET
  * /search/`, cross-model search), the results part by part.
  *
  * Keyboard first: the box has focus when the page opens, Enter searches (and
@@ -23,7 +23,7 @@ import { Input } from "../primitives/input";
 import { recordHref } from "../resource/record-links";
 
 /**
- * Experimental. Where a record of `resource` opens: its record link (`registerRecordLink`,
+ * Where a record of `resource` opens: its record link (`registerRecordLink`,
  * which gets `row`), else the app's route that ends with `/<resource>/$id`, else `null`.
  */
 export function routeHref(
@@ -39,7 +39,7 @@ export function routeHref(
   return route !== undefined ? route.replace("$id", encodeURIComponent(String(id))) : null;
 }
 
-/** Experimental. Where a search hit opens: its record link, a route of the app, or `/<resource>/<id>`. */
+/** Where a search hit opens: its record link, a route of the app, or `/<resource>/<id>`. */
 export function searchHitHref(hit: GlobalSearchHit, routes: readonly string[] = []): string {
   return (
     routeHref(hit.resource, hit.id, routes, { ...hit }) ??
@@ -67,7 +67,7 @@ export interface SearchPageProps {
 const RESULT =
   "block rounded-md px-3 py-2 text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-/** Experimental. `/search`: every part's results for one query, part by part. */
+/** `/search`: every part's results for one query, part by part. */
 export function SearchPage({
   query = "",
   onQueryChange,

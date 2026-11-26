@@ -42,9 +42,9 @@ The table is `PYTHON_PACKAGES` and `NPM_PACKAGES` in
 workflows and the release check to it. A new package goes into that list
 first.
 
-Lockstep keeps "which @karni/ui goes with karni 0.7?" from ever being a
-question. A module's range on core (`karni>=0.7,<0.8` and `"@karni/ui":
-"^0.7.0"` in 0.7) moves with every minor release.
+Lockstep keeps "which @karni/ui goes with karni 0.8?" from ever being a
+question. A module's range on core (`karni>=0.8,<0.9` and `"@karni/ui":
+"^0.8.0"` in 0.8) moves with every minor release.
 
 ## Cutting a release
 

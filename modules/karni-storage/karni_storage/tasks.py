@@ -17,7 +17,7 @@ __all__ = ["make_thumbnails"]
 
 @shared_task(name="karni_storage.make_thumbnails", ignore_result=True)
 def make_thumbnails(source: str) -> dict[str, str]:
-    """Experimental. Make the missing thumbnails of the protected image ``source``."""
+    """Make the missing thumbnails of the protected image ``source``."""
     from karni_storage.thumbnails import make
 
     return make(source)

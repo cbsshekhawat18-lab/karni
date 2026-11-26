@@ -81,10 +81,6 @@ its default on create). Rows whose update changes nothing count as
 
 ### Ids
 
-!!! warning "Experimental"
-    The `match_ids` and `keep_ids` options are
-    [experimental](stability.md#experimental-names).
-
 An import has two id options, both off by default. Send them with the
 preview (`POST …/import/<job>/preview/` with `{"mapping": …, "match_ids":
 true}`) or tick them on the admin's map step. The job remembers them for the

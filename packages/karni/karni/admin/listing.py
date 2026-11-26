@@ -13,7 +13,9 @@ are plain classes the admin wires in (:class:`KarniPaginator` as the admin's
 * **A count that stays cheap.** On PostgreSQL, once a table holds more than
   ``KARNI_ADMIN_COUNT_ESTIMATE_ABOVE`` rows (100000, ``0`` turns it off), the
   planner's estimate stands in for ``COUNT(*)`` and the list says "about".
-  A list the estimate puts under the threshold is still counted exactly.
+  A list the estimate puts under the threshold is still counted exactly. The
+  table's size is read from ``pg_class`` once per list screen (the filtered rows
+  and the total share it), never kept between requests.
 * **Chips.** Each active filter is a chip with a remove link, and the search
   term has one too, with ``Clear all`` (:meth:`KarniChangeListMixin.karni_chips`).
 
@@ -24,6 +26,9 @@ override ``get_changelist`` for another change list, or change a setting.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any
 
 from django.conf import settings
@@ -47,6 +52,8 @@ __all__ = [
     "KarniPaginator",
     "count_rows",
     "count_estimate_above",
+    "remembered_sizes",
+    "table_rows",
     "per_page_default",
 ]
 
@@ -73,6 +80,57 @@ def count_estimate_above() -> int:
     return max(int(getattr(settings, "KARNI_ADMIN_COUNT_ESTIMATE_ABOVE", COUNT_ESTIMATE_ABOVE)), 0)
 
 
+_SIZES: ContextVar[dict[tuple[str, str], int | None] | None] = ContextVar(
+    "karni_table_sizes", default=None
+)
+
+
+@contextmanager
+def remembered_sizes() -> Iterator[None]:
+    """Within the block, :func:`table_rows` asks PostgreSQL once per table (nested blocks share).
+
+    A list screen counts twice, the filtered rows and the unfiltered total, and each
+    count asked ``pg_class`` for the same table. :class:`KarniChangeListMixin` opens
+    this block around loading the results, so the answer lives as long as the screen
+    does: nothing is kept between requests, and a test that creates or drops a table
+    never reads an old size.
+    """
+    if _SIZES.get() is not None:
+        yield
+        return
+    token = _SIZES.set({})
+    try:
+        yield
+    finally:
+        _SIZES.reset(token)
+
+
+def table_rows(connection: Any, named: str) -> int | None:
+    """PostgreSQL's row estimate (``reltuples``) of the table ``named``, ``None`` without one.
+
+    The estimate is remembered inside :func:`remembered_sizes` and asked again outside it.
+    A database error gives ``None`` (the exact count is the fallback, never an error page).
+    """
+    sizes = _SIZES.get()
+    key = (connection.alias, named)
+    if sizes is not None and key in sizes:
+        return sizes[key]
+    rows: int | None = None
+    try:
+        with transaction.atomic(using=connection.alias), connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT reltuples::bigint FROM pg_class WHERE oid = to_regclass(%s)", [named]
+            )
+            row = cursor.fetchone()
+        if row is not None and row[0] is not None:
+            rows = int(row[0])
+    except DatabaseError:
+        rows = None
+    if sizes is not None:
+        sizes[key] = rows
+    return rows
+
+
 def _plan_rows(queryset: QuerySet[Any], threshold: int) -> int | None:
     """The planner's row estimate when it is above ``threshold``, else ``None`` (count exactly).
 
@@ -88,14 +146,11 @@ def _plan_rows(queryset: QuerySet[Any], threshold: int) -> int | None:
         sql, params = queryset.order_by().query.sql_with_params()
     except EmptyResultSet:
         return None
+    rows = table_rows(connection, named)
+    if rows is None or rows <= threshold:
+        return None  # a small or never analysed table: counting is cheap or the only truth
     try:
         with transaction.atomic(using=queryset.db), connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT reltuples::bigint FROM pg_class WHERE oid = to_regclass(%s)", [named]
-            )
-            row = cursor.fetchone()
-            if row is None or row[0] is None or row[0] <= threshold:
-                return None  # a small or never analysed table: counting is cheap or the only truth
             cursor.execute(f"EXPLAIN (FORMAT JSON) {sql}", params)
             plan = cursor.fetchone()
     except DatabaseError:
@@ -183,7 +238,8 @@ class KarniChangeListMixin:
         original = self.root_queryset
         self.root_queryset = _RootCount(original)
         try:
-            super().get_results(request)  # type: ignore[misc]
+            with remembered_sizes():  # the filtered count and the total ask pg_class once
+                super().get_results(request)  # type: ignore[misc]
         finally:
             self.root_queryset = original
 

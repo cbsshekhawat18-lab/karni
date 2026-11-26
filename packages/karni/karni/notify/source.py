@@ -1,4 +1,4 @@
-"""Experimental. ``karni.mail``'s default source (``KARNI_MAIL_SOURCE``): notifications.
+"""``karni.mail``'s default source (``KARNI_MAIL_SOURCE``): notifications.
 
 :class:`NotifySource` answers ``karni.mail`` while ``karni.notify`` is installed:
 
@@ -34,7 +34,7 @@ __all__ = ["NotifySource"]
 
 
 class NotifySource(DefaultSource):
-    """Experimental. Edited emails, each person's switches and the inbox (see the module)."""
+    """Edited emails, each person's switches and the inbox (see the module)."""
 
     @staticmethod
     def _installed() -> bool:

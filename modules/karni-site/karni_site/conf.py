@@ -26,6 +26,19 @@ from django.conf import settings
 env = environ.Env()
 
 DEFAULTS: dict[str, Any] = {
+    # The admin's side menu a site project starts with (its settings say
+    # KARNI_ADMIN_MENU = KARNI_SITE_ADMIN_MENU): the project's own apps, then this
+    # module's pages, then the people. The rest (task results, schedules, tokens)
+    # shows to superusers only, in a last group. See Karni's docs/admin.md.
+    "KARNI_SITE_ADMIN_MENU": [
+        {"title": "Content", "icon": "article", "items": ["@project"]},
+        {"title": "Site", "icon": "web", "items": ["karni_site"]},
+        {
+            "title": "People",
+            "icon": "group",
+            "items": ["karni_accounts.User", "karni_accounts.Role"],
+        },
+    ],
     # The function {% ifactive %} asks whether a pattern names the current page:
     # (request, pattern) -> bool. A dotted path, so a project can swap the rule.
     "KARNI_SITE_IS_ACTIVE": "karni_site.navigation.is_active",
@@ -67,6 +80,10 @@ DEFAULTS: dict[str, Any] = {
     # Whether the first render of a template stores its defaults (blocks, a menu's
     # seed, the site's details). False: nothing is written while a page renders.
     "KARNI_SITE_SEED_ON_RENDER": env.bool("KARNI_SITE_SEED_ON_RENDER", default=True),
+    # Block keys code of your own stores through karni_site.blocks.text() or image() (a view,
+    # a tag of your own given a variable), which no template names. Shell wildcards: "promo.*".
+    # They are never orphans (karni_site.orphans, manage.py karni_site_orphans, SITE025).
+    "KARNI_SITE_CODE_BLOCKS": [],
     # The rows a menu item's "children from" model contributes: (model, item) ->
     # iterable of rows with get_absolute_url(). A dotted path.
     "KARNI_SITE_MENU_ROWS": "karni_site.menus.menu_rows",
@@ -87,6 +104,12 @@ DEFAULTS: dict[str, Any] = {
     # The slug of the content editor role this module declares (karni.roles), or None
     # to declare none. A role of the same slug in KARNI_ROLES replaces it.
     "KARNI_SITE_EDITOR_ROLE": "editor",
+    # Grants added to the editor role, merged over its own (karni_site.roles.editor_grants()):
+    # {"website.article:*": "all"}. Plain data: "app_label.model:action" ("*" for either part)
+    # -> a scope ("all", "own", "related:<key>", "custom:<name>", "tree:<path>"), as in
+    # KARNI_ROLES. An entry the role cannot grant is left out and karni check names it
+    # (SITE026). A role of the same slug in KARNI_ROLES still replaces the whole role.
+    "KARNI_SITE_EDITOR_GRANTS": {},
 }
 
 

@@ -1,5 +1,5 @@
 /**
- * Experimental. How the buyer pays, when the order allows a deposit: the whole
+ * How the buyer pays, when the order allows a deposit: the whole
  * total now, or the deposit now and the rest later by the order's link. It shows
  * only when the quote offers a deposit (every line allows one, a booking's).
  * Checkout and an order staff place by hand use it, and send `pay` with the choice.

@@ -222,13 +222,13 @@
      lets the page scroll instead. */
   --karni-table-max-height: 70vh;
 
-  /* TreeView (and TreeSelect's popover, experimental): the indent of each
+  /* TreeView (and TreeSelect's popover): the indent of each
      level, and how tall the tree grows before it scrolls. */
   --karni-tree-indent: 1.25rem;
   --karni-tree-max-height: 20rem;
-  /* ResourceBoard (experimental): how tall a column grows before it scrolls. */
+  /* ResourceBoard: how tall a column grows before it scrolls. */
   --karni-board-max-height: 40rem;
-  /* ResourceCalendar (experimental): the height of one hour in the day and
+  /* ResourceCalendar: the height of one hour in the day and
      week views, how tall they grow before they scroll, and the narrowest the
      month grid gets before it scrolls sideways. */
   --karni-calendar-hour-height: 3rem;
@@ -240,7 +240,7 @@
   /* FamilyLayout's storefront: how wide its header, page and footer grow. */
   --karni-storefront-width: 72rem;
   --karni-search-max-height: 60vh;
-  /* Page blocks (experimental). DashboardGrid's space between cards, and the
+  /* Page blocks. DashboardGrid's space between cards, and the
      box DataTable and ComparisonTable scroll inside. DataTable renders only
      the rows in view past 100 rows, so keep its height a length, not `none`.
      Its rows are this tall. */

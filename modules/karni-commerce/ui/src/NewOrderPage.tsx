@@ -1,5 +1,5 @@
 /**
- * Experimental. An order staff place by hand, for a buyer who called: find
+ * An order staff place by hand, for a buyer who called: find
  * the items of any kind the project sells (a product, a booking, a course: a
  * kind filter shows when there are several), set how many, type who it is for
  * and where it goes, a coupon, the way to send it and, when every line allows

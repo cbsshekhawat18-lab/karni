@@ -1,4 +1,4 @@
-"""Experimental. The demo data reset: back to ``karni seed --reset`` every N hours.
+"""The demo data reset: back to ``karni seed --reset`` every N hours.
 
 When it runs:
 

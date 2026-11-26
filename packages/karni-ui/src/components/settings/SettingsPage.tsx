@@ -1,5 +1,5 @@
 /**
- * Experimental. The one Settings page of a project, built on the preferences
+ * The one Settings page of a project, built on the preferences
  * contract's `GET /preferences/` (karni.preferences): the details of the
  * business, one tab for each settings section a part declares, the emails the
  * project sends (each with its switch, and an editor for the ones the business

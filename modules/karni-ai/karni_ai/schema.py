@@ -49,7 +49,7 @@ _DROPPED: Final = frozenset({"readOnly", "writeOnly", "nullable", "default", "ex
 
 @dataclass(frozen=True)
 class Problem:
-    """Experimental. One thing wrong with one proposed row: its position from 1, the field, why.
+    """One thing wrong with one proposed row: its position from 1, the field, why.
 
     ``source`` is ``"schema"`` (the answer did not fit the schema) or
     ``"preview"`` (the import's dry run refused it).
@@ -71,7 +71,7 @@ class Problem:
 
 @dataclass(frozen=True)
 class ResourceSchema:
-    """Experimental. What an extraction into one resource asks for.
+    """What an extraction into one resource asks for.
 
     ``component`` is the OpenAPI component the fields come from, ``row`` the
     JSON Schema of one row, ``fields`` the row's properties in order (the
@@ -105,7 +105,7 @@ class ResourceSchema:
 
 
 def resource_component(view: Any, prefix: str) -> tuple[str, dict[str, Any], dict[str, Any]]:
-    """Experimental. ``(name, schema, components)`` of the create body, as ``/api/schema/``.
+    """``(name, schema, components)`` of the create body, as ``/api/schema/``.
 
     ``view`` is a request-bound instance of the resource's viewset with
     ``action = "create"``. ``components`` holds the other components the
@@ -151,7 +151,7 @@ def _plain(schema: Any, components: dict[str, Any], depth: int = 0) -> Any:
 
 
 def resource_schema(view: Any, prefix: str, specs: Iterable[Any]) -> ResourceSchema:
-    """Experimental. The schema of one row of ``prefix``, for the user behind ``view.request``.
+    """The schema of one row of ``prefix``, for the user behind ``view.request``.
 
     ``specs`` are the import's importable columns for that user
     (:meth:`karni.transfer.imports.Importer.importable`).
@@ -256,7 +256,7 @@ def _message(error: ValidationError) -> str:
 def validate_rows(
     schema: ResourceSchema, answer: Any, max_rows: int
 ) -> tuple[list[dict[str, Any]], list[Problem]] | None:
-    """Experimental. The rows an answer proposes and the problems the schema finds.
+    """The rows an answer proposes and the problems the schema finds.
 
     ``None`` when the answer is not ``{"rows": [...]}`` at all. Each row keeps
     the values that fit the schema. A value that does not is left out with a

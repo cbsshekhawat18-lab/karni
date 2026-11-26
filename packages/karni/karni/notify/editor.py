@@ -1,4 +1,4 @@
-"""Experimental. The emails a business edits in the app (``/api/email-templates/``).
+"""The emails a business edits in the app (``/api/email-templates/``).
 
 Each declared message kind (:func:`karni.mail.kinds`) shows its merge fields, its
 switch and its text now: the edited one (:class:`~karni.notify.models.EmailTemplate`)
@@ -35,7 +35,7 @@ __all__ = ["describe", "file_source", "preview", "sample_values", "save"]
 
 
 def file_source(stem: str, part: str) -> str:
-    """Experimental. The text of a template file as a project has it (its own copy first)."""
+    """The text of a template file as a project has it (its own copy first)."""
     try:
         template = get_template(f"{stem}_{part}.txt")
     except TemplateDoesNotExist:
@@ -45,7 +45,7 @@ def file_source(stem: str, part: str) -> str:
 
 
 def describe(kind: MessageKind, row: EmailTemplate | None) -> dict[str, Any]:
-    """Experimental. One email as the editor shows it."""
+    """One email as the editor shows it."""
     return {
         "kind": kind.name,
         "title": kind.title,
@@ -66,7 +66,7 @@ def describe(kind: MessageKind, row: EmailTemplate | None) -> dict[str, Any]:
 
 
 def save(kind: MessageKind, subject: str, text: str) -> EmailTemplate:
-    """Experimental. Keep an edited email, once the restricted engine accepts it."""
+    """Keep an edited email, once the restricted engine accepts it."""
     problems = check_edited(subject, text)
     if problems:
         raise ValidationError({part: [problem] for part, problem in problems.items()})
@@ -77,13 +77,13 @@ def save(kind: MessageKind, subject: str, text: str) -> EmailTemplate:
 
 
 def sample_values(kind: MessageKind) -> dict[str, Any]:
-    """Experimental. The values a preview renders with: real ones
+    """The values a preview renders with: real ones
     (:func:`karni.mail.sample_context`), read through the kind's merge fields."""
     return merge_values(kind.fields, sample_context(kind))
 
 
 def preview(kind: MessageKind, subject: str, text: str) -> dict[str, Any]:
-    """Experimental. A draft rendered with :func:`sample_values` (or its problems)."""
+    """A draft rendered with :func:`sample_values` (or its problems)."""
     problems = check_edited(subject, text)
     if problems:
         raise ValidationError({part: [problem] for part, problem in problems.items()})

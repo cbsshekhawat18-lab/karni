@@ -1,7 +1,7 @@
 /**
  * <ChartCard>: a DashboardCard around a DataChart.
  *
- * Experimental. The card's title names the chart too (its SVG title, label
+ * The card's title names the chart too (its SVG title, label
  * and the caption of its hidden data table), so a screen reader hears the
  * same name a sighted user reads. While `loading`, a placeholder of the
  * chart's proportions stands in. With no plottable value the card says so
@@ -67,7 +67,7 @@ function ChartLoading({ title }: DashboardCardLoadingProps): React.ReactElement 
   return <DataChart kind="bar" title={title} loading />;
 }
 
-/** Experimental. A dashboard card holding one DataChart, with loading, empty and error states. */
+/** A dashboard card holding one DataChart, with loading, empty and error states. */
 export function ChartCard(props: ChartCardProps): React.ReactElement {
   const {
     title,

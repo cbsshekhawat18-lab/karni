@@ -1,5 +1,5 @@
 ---
-description: "Simulation and replay in @karni/game/sim (experimental): write a game's rules as pure state and a step over fixed ticks, record a run as a seed and inputs, replay it, hash the state, send the run with a score, and test the rules with determinism, fuzz and purity checks."
+description: "Simulation and replay in @karni/game/sim: write a game's rules as pure state and a step over fixed ticks, record a run as a seed and inputs, replay it, hash the state, send the run with a score, and test the rules with determinism, fuzz and purity checks."
 ---
 
 # Simulation and replay (@karni/game/sim)

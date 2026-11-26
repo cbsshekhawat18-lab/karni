@@ -1,10 +1,12 @@
 # karni-game
 
+> **Experimental.** Its names may change in a minor release, with a CHANGELOG entry ([stability](https://cbsshekhawat18-lab.github.io/karni/stability/#experimental-names)).
+
 Games for Karni: guest players, cloud saves, leaderboards, a soft-currency wallet, daily content and achievements, with a realtime server contract.
 
 [![PyPI](https://img.shields.io/pypi/v/karni-game)](https://pypi.org/project/karni-game/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/game/)
 
-The server side of a game, for any game a project hosts. The server decides every reward, every price and every balance: a client only reports and asks. It is **experimental**: its names may change in a minor release, with a CHANGELOG entry.
+The server side of a game, for any game a project hosts. The server decides every reward, every price and every balance: a client only reports and asks.
 
 The guide is [docs/game.md](https://cbsshekhawat18-lab.github.io/karni/game/), and the HTTP contract a client, a realtime server and a portal code against is [docs/game-api.md](https://cbsshekhawat18-lab.github.io/karni/game-api/).
 

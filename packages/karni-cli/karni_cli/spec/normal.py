@@ -1,4 +1,4 @@
-"""Experimental. One canonical form per meaning, so two specs compare by what they say.
+"""One canonical form per meaning, so two specs compare by what they say.
 
 Two specs that build the same project normalise to the same data: defaults
 written out, ``own:<field>`` read as ``own``, access rules sorted and their
@@ -9,7 +9,7 @@ entity's key type written out (``pk``: the project's ``KARNI_PK`` when the
 spec does not say, none for an external entity), ``database: default`` as
 no database, an entity's pages in list, detail, form order (a detail
 page's related tabs each as ``app.Entity.field``), a taxonomy's tree entity as
-``app.Name`` (experimental), the site module listed whenever the kind has a
+``app.Name``, the site module listed whenever the kind has a
 site, ``navigation`` as the ``KARNI_NAVIGATION`` list it gives (``None``
 without it), an ``aggregate`` with every metric written out when it lists
 none, ``global_search`` as its full mapping (fields from ``search``, the
@@ -55,12 +55,12 @@ _ENTITY_PAGES = ("list", "detail", "form")
 
 
 def role_name(slug: str) -> str:
-    """Experimental. Karni's name for a role declared without one (``karni.accounts.roles``)."""
+    """Karni's name for a role declared without one (``karni.accounts.roles``)."""
     return slug.replace("_", " ").replace("-", " ").title()
 
 
 def canonical_field(name: str, token: str) -> str:
-    """Experimental. ``token`` in its canonical spelling (unchanged when it does not parse)."""
+    """``token`` in its canonical spelling (unchanged when it does not parse)."""
     try:
         spec = parse_field(f"{name}:{token}")
     except CliError:
@@ -140,7 +140,7 @@ def _aggregate(declared: dict[str, Any]) -> dict[str, Any]:
 
 
 def global_search(value: Any, search: list[str]) -> dict[str, Any] | None:
-    """Experimental. ``global_search`` with every default written out, or ``None`` when off.
+    """``global_search`` with every default written out, or ``None`` when off.
 
     ``value`` is the dumped key (``False``, ``True`` or its mapping) and
     ``search`` the entity's ``search`` list, where the fields default to.
@@ -182,7 +182,7 @@ def _fks(label: str, target: str, apps: dict[str, Any]) -> list[str]:
 
 
 def related_tab(ref: str, page: str, apps: dict[str, Any]) -> str:
-    """Experimental. What ResourceDetail's ``related`` takes for ``ref``.
+    """What ResourceDetail's ``related`` takes for ``ref``.
 
     The related entity's resource (``deals``), or ``resource.field``
     (``deals.partner``) when that entity has more than one fk to ``page``.
@@ -197,7 +197,7 @@ def related_tab(ref: str, page: str, apps: dict[str, Any]) -> str:
 
 
 def related_ref(ref: str, page: str, apps: dict[str, Any]) -> str:
-    """Experimental. A related tab as ``app.Entity.field`` (unchanged when it names none).
+    """A related tab as ``app.Entity.field`` (unchanged when it names none).
 
     ``page`` is the detail page's entity (``Name`` or ``app.Name``). A tab that names an
     entity alone takes its one fk to that entity.
@@ -230,7 +230,7 @@ def _entity_page(kind: str, kinds: list[Any], page: str, apps: dict[str, Any]) -
 
 
 def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
-    """Experimental. The canonical data of ``spec`` (see the module docstring).
+    """The canonical data of ``spec`` (see the module docstring).
 
     ``pk``: the key type of an entity that does not say (the project's ``KARNI_PK``).
     """

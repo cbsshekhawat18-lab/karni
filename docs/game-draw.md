@@ -1,5 +1,5 @@
 ---
-description: "@karni/game/draw (experimental): a light 2D layer on Canvas 2D for browser games. Layers drawn in order, a camera with follow, dead zone, bounds, shake and zoom, shapes, text with a layout cache, sprites and frame animation, tweens and easing, pooled particles, an object pool, and time scale and hit-stop on the loop."
+description: "@karni/game/draw: a light 2D layer on Canvas 2D for browser games. Layers drawn in order, a camera with follow, dead zone, bounds, shake and zoom, shapes, text with a layout cache, sprites and frame animation, tweens and easing, pooled particles, an object pool, and time scale and hit-stop on the loop."
 ---
 
 # Drawing (@karni/game/draw)

@@ -1,4 +1,4 @@
-"""Experimental. Remote config and feature flags per game, and the analytics a game may send.
+"""Remote config and feature flags per game, and the analytics a game may send.
 
 :func:`values` gives a game's config (any JSON) and its flags, worked out
 for a player: a flag with a rollout below 100 is on for that share of

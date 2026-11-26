@@ -1,4 +1,4 @@
-"""Per-user grants (experimental): ``UserGrant`` rows join the role grants while the switch is on.
+"""Per-user grants: ``UserGrant`` rows join the role grants while the switch is on.
 
 The project is ``tests.testapp``: ``Event`` is owned by its ``organizer`` and
 has the scope path ``venue``, so ``related:venue`` with targets reaches the

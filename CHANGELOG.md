@@ -9,6 +9,252 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
+## 0.8.0 (unreleased)
+
+- **Fixed (experimental): changing a `SearchField`'s sources no longer breaks `migrate`.**
+  `makemigrations` (and so `karni make migration`) wrote an `AlterField` for a generated
+  field whose definition changed, and Django refuses to run one ("Modifying GeneratedFields
+  is not supported"). Karni's `makemigrations` and `migrate` commands now use
+  `karni.migration_autodetector.KarniAutodetector`, which writes `RemoveField` then
+  `AddField` when the expression, output field or `db_persist` of a generated field
+  changes. The index or constraint that names the column (the GIN index of a `SearchField`)
+  is removed first and added back after. A `unique_together` entry that names the field is
+  set aside and restored the same way (without it SQLite refused to drop the column and
+  PostgreSQL dropped the unique constraint for good). A change to `verbose_name` or
+  `help_text` stays an `AlterField` and keeps the column. `karni_makemigrations --renames`
+  now also drops and re-adds that index with the column. Escape hatch: `autodetector` on
+  the command class, see [fields](docs/fields.md#changing-a-generated-field).
+
+- **Fixed: a `KarniModelAdmin` subclass registered by hand keeps the model's `AdminMeta`.**
+  Rule K103 says to use `AdminMeta` or subclass `KarniModelAdmin`, but only the derived
+  admin read `AdminMeta`, and only it got the inlines other models declare with
+  `inline_on`. Now every Karni admin takes them when it is built: each `AdminMeta` option
+  (`list_display`, `per_page`, `read_only`, `extra`, ...) and the `inline_on` inlines the
+  class does not set itself, where a parent class or a mixin of it counts as the class.
+  The classmethods `admin_meta_options(model)` and `derive_inlines(model)` are the hooks
+  (return `{}` or `[]` to keep an admin class off them). Every derived admin is configured
+  as before. Admins that change: karni-charts' saved charts list the columns and search
+  the fields `Chart.AdminMeta` names. `inlines` in `AdminMeta.extra` now replaces the
+  `inline_on` ones, as `karni.admin.inlines` always said, and `build_model_admin()` without
+  `inlines` adds the declared ones. The class `build_model_admin()` returns no longer
+  holds the `AdminMeta` values as class attributes: its admins do.
+
+- **Added: `AdminMeta.mixins`**, classes or dotted paths put in front of the derived admin,
+  so a model adds methods or templates to its admin (a block under the form, its own
+  `save_model`) without registering one by hand. A path that cannot be imported, an entry
+  that is not a class, or mixins that cannot be combined stop startup with `E306`. See
+  [the admin](docs/admin.md#adding-behaviour-adminmetamixins).
+
+- **Fixed: `karni.admin` listed before `django.contrib.admin` no longer fails startup**
+  with `AlreadyRegistered`. Karni runs Django's admin autodiscovery first in that order,
+  so every app's `admin.py` registers before Karni derives the rest.
+
+- **Fixed: the admin guide's first step names a model of the project.** *Add your first
+  record* linked the first model in the home page's order the user could add to, which on
+  a site project is auth's Groups. It now links the first such model of the project's own
+  apps, the apps whose code lives in the project folder, so never Django's, Karni's or a
+  module's, or a third-party app's. A user who may add to none of the project's models
+  gets the step without a link, and a project with no model of its own keeps the old
+  choice.
+
+- **Changed: a new project holds karni and its modules at one version line,
+  and a check says when they drift.** `karni new` wrote `karni`, `karni-site` and every
+  module bare, so installing an extra for `karni-ai` in a 0.5 project moved karni to 0.6,
+  and a server installing from the same `pyproject.toml` got whatever was newest that day.
+  The template now writes `karni>=0.8,<0.9` (the line of the karni-cli that made the
+  project, as the packages' own ranges do, taken from the CLI's version when the project is
+  made and never written in the template). `karni add <module>` writes the module at the
+  range the project holds karni at, says so, and when the newest release is on a later line
+  says to run `karni upgrade` (it never upgrades karni itself). A project that lists them
+  bare keeps working: `karni add` uses the line of its `[tool.karni] baseline`, `karni
+  doctor` has a `versions` line that says how to pin, and `karni upgrade` writes the range
+  of the release it moves to for karni and every module (also when it has no code change to
+  make). New check `karni.W521`: karni, karni-cli (when installed) and every first-party
+  module must be on one line, each one off it is named. A checkout installed in editable
+  mode, or a `.dev` or `+local` version, is not compared. Silence it with
+  `SILENCED_SYSTEM_CHECKS`. See [stability](docs/stability.md#holding-a-project-on-a-version-line).
+
+- **Fixed: the admin list asked PostgreSQL for the table's size twice per request, and the
+  query warning blamed a middleware for it.** On PostgreSQL every admin list screen ran
+  `SELECT reltuples::bigint FROM pg_class WHERE oid = to_regclass(%s)` twice, once for the
+  filtered count and once for the unfiltered total (`karni.admin.listing`, both inside
+  `ChangeList.get_results`). The size is now read once per list screen
+  (`karni.admin.listing.remembered_sizes`) and kept only that long, so nothing is stale
+  between requests or tests. The dev query log (`karni.queries`) named the innermost project
+  frame, which on an admin request was a project middleware that only calls `get_response`.
+  It now names the frame that ran the query: the closest project or Karni frame to the
+  database call, such as `karni.admin.listing:94 in table_rows`. A project frame that called
+  Karni code is still named when it is not a pass-through, and a serializer field still wins.
+
+- **Added: blocks no template shows any more are marked, listed and removed
+  (karni-site).** A block whose `{% editable %}` or `{% editable_image %}` left the
+  templates stayed in the admin's *Page content* like a live block, so a client could edit
+  text no page shows. The list now has an *in a template* column and filter, and an
+  orphan's form says that a change there changes nothing visitors see. `python manage.py
+  karni_site_orphans` lists them (a dry run by default), `--delete` removes those nobody
+  edited and `--include-edited` the edited ones too. `karni check` prints `SITE025`, a
+  warning that never fails the run. Orphans are found by reading the templates
+  (`karni_site.orphans`), never by rendering a page: a key a template builds while its page
+  renders is *not seen* and never called an orphan, and `KARNI_SITE_CODE_BLOCKS` names the
+  keys your own code stores.
+
+- **Added: `karni.E971` and `karni.W971` find a `LANGUAGES` code Django cannot
+  describe at startup.** A code with a `locale/<code>/` folder but no entry in
+  `django.conf.locale.LANG_INFO` (`fil`, for one) makes django-unfold's user menu raise
+  `KeyError: 'Unknown language code fil.'`, and the menu is on every admin page, whether or
+  not `UNFOLD["SHOW_LANGUAGES"]` is on: each admin page answered 500. The check asks Django
+  itself (`get_language_info`, with its fallback of `de-at` to `de`) for each code and names
+  each one it cannot describe, with the `LANG_INFO` entry to add. It is an error
+  (`karni.E971`) when `django.contrib.admin` is installed, because the admin breaks, and a
+  warning (`karni.W971`) otherwise. See [admin](docs/admin.md#languages).
+
+- **Fixed: every admin page has a favicon.** No admin page declared an icon, so browsers
+  asked for `/favicon.ico` and got a 404 on every page. `karni_settings()` now sets
+  `UNFOLD["SITE_FAVICONS"]`: the icon of `KARNI_ADMIN_LOGO` when it is set, else a neutral
+  admin icon Karni ships (`karni/admin-icon.svg`, which follows the browser's light or dark
+  scheme), on the login page too. A project's own `UNFOLD["SITE_FAVICONS"]` wins, and `[]`
+  declares none.
+
+- **Fixed: menus, sitemap.xml and `karni check --seo` on a site in several languages
+  (karni-site).** Under `i18n_patterns`, `{% get_menu %}` cached one menu with the links of
+  whichever language asked first and marked the current page against them. A seeded menu
+  followed its seed again each time a visitor of another language came (a write and a
+  cache flush per request, its titles flipping between languages), and a language's home
+  page (`/fr/`) counted as a section, so it was marked active on every page of that
+  language. A menu is now cached per language, its links, row titles and current page are
+  that language's, the language's home is home, and the seed is read and followed in the
+  default language only. sitemap.xml listed the default language's addresses only, so
+  `karni check --seo` failed every translated page with `SITE018` and advised
+  `get_absolute_url()`: every section now lists each language's address (Django's
+  `Sitemap.i18n`), and the advice names the cause it finds. `SITE011` and `SITE013` compared
+  titles and descriptions across languages: they compare within one language. A
+  one-language site, or one without `i18n_patterns`, is unchanged. Blocks, menu item titles
+  and page titles still hold one text each, the same in every language, and neither the
+  pages nor the sitemap carry hreflang alternates.
+
+- **Added: `KARNI_ADMIN_MENU`, the admin's side menu in groups.** Each group has a title,
+  an optional icon and items: app labels, model labels or `"@project"` (the project's own
+  apps), in the order written. Each user sees the entries they may open, role grants
+  included, and no empty group. What the menu does not name is hidden, except from
+  superusers, who find it in a last group, *Other*. A label that names nothing is the
+  warning `karni.W301`, and a project's own `UNFOLD["SIDEBAR"]` still wins (`karni.W302`
+  says so while the setting is set). `None`, the default, keeps the list of every app. See
+  [the side menu](docs/admin.md#the-side-menu).
+
+- **Added: karni-site's `KARNI_SITE_ADMIN_MENU`, and a new site project uses it.** The
+  project's apps (*Content*), the site's pages (*Site*), then users and roles (*People*), so
+  a client no longer sees task results, schedules or tokens beside the content: those show
+  to superusers only. `karni new --kind site` writes `KARNI_ADMIN_MENU =
+  KARNI_SITE_ADMIN_MENU` in the settings, and an existing site project adds that line.
+
+- **Added: `AdminMeta.can_add = False` and `can_delete = False`**, for a model whose rows
+  code makes. Nobody adds or deletes its rows in the admin, superusers and every role
+  included: no Add button, the add page is a 403 and there is no import, no Delete button,
+  the delete page is a 403 and there is no bulk delete (soft or hard). Its inlines follow:
+  no blank row to add from and no delete box. Changing rows and export stay, and the API
+  is unchanged. Unlike a role grant, which says who may, these say that nobody does. An
+  admin class may set `karni_can_add` or `karni_can_delete` back to `True`. See
+  [rows the system makes](docs/admin.md#rows-the-system-makes-can_add-and-can_delete).
+
+- **Added: `KARNI_SITE_EDITOR_GRANTS` extends the editor role (karni-site).** Letting
+  karni-site's `editor` change the project's own content meant replacing the whole role in
+  `KARNI_ROLES` and copying its grants, because `karni_site.roles.editor_grants()` reads a
+  model and cannot be called while settings load. The new setting is plain data,
+  `{"website.article:*": "all"}`, merged over the role's own grants when the role is built.
+  A grant the role cannot give (a model or an action the project does not have, a scope the
+  model cannot carry) is left out, so the roles still sync after `migrate`, and `karni
+  check` names it with `SITE026`, as it does a setting that adds nothing because
+  `KARNI_ROLES` replaces the role (which still wins) or `KARNI_SITE_EDITOR_ROLE` is `None`.
+
+- **Added (experimental): karni-ai's providers and usage log for jobs other than
+  extraction.** karni-ai ships one job, extraction, but a project's own job (a plain
+  translation service) had no place for its parameters, could not log its calls under its
+  own name, and could only report tokens. `StructuredRequest.metadata` carries a job's
+  parameters to its provider, passed as given and never read by Karni (the shipped
+  providers ignore it). `AICall.kind` names the job (`extraction` for karni-ai's own,
+  `log_call(kind=...)` for yours) beside the three kinds of source, and `Usage.unit` (with
+  `AICall.unit`) says what the counts are: `tokens` by default, `characters` or any unit the
+  provider names. A price in `KARNI_AI_PRICES` prices one unit (`"unit"`, tokens by
+  default), and the token budgets count tokens only (`spent(unit=...)` counts another). The
+  migration `karni_ai.0002_call_kind_and_unit` adds both columns: earlier calls are
+  extractions counted in tokens. The extraction endpoint's answer is unchanged.
+
+- **Changed: `assert_crud`'s "sent X but stored Y" failure says what to do.** A field the model
+  computes (in `save()`, a property or a signal) should be `editable=False`, so the API does
+  not take it as input and the check does not send it. The message also names the other causes:
+  a serializer or `perform_create` / `perform_update` that sets the field, and a signal handler
+  that writes it after the save. The OpenAPI snapshot failure (`E608`) already says how to
+  accept the change (`KARNI_UPDATE_SNAPSHOTS=1 karni test` or `pytest --karni-update-snapshots`)
+  and has since the testing utilities were added, so only a test now pins that. See
+  [testing](docs/testing.md#a-value-that-comes-back-different).
+
+- **Fixed: the block form no longer turns the rest of the admin page bold and italic
+  (karni-site).** The help under a block's text field named the tags a client may type as
+  markup (`<b>`, `<em>`, `<a href>`), and the admin prints help as HTML, so the three tags
+  stayed open: the labels, the values and the buttons below rendered bold, italic and as
+  a link. The help now shows the tag names as text. `BlockForm.text_help()` returns it,
+  for a form of your own to say something else.
+
+- **Changed: with `KARNI_ADMIN_MENU`, the admin's home page and the guide show the side
+  menu's groups.** The side menu hid the technical tables from a client, but the home page
+  below it and the guide's *What each section is for* still listed every app the user
+  may open. Both now show the same groups, in the same order, with the same entries as
+  the side menu shows that user, and a superuser keeps everything, the rest under
+  *Other*. One function builds the groups for all three
+  (`karni.admin.menu.grouped_app_list`). Hiding an entry changes no permission: its pages
+  open from their addresses as before. Without `KARNI_ADMIN_MENU`, or with an
+  `UNFOLD["SIDEBAR"]` of the project's own, the home page is unchanged. See
+  [the side menu](docs/admin.md#the-side-menu).
+
+- **Changed: a name is stable once it is used for real, and the experimental mark
+  is shown once per feature** ([stability](docs/stability.md#experimental-names)).
+  Real use counts: a real project built on Karni (recorded without its name) or an
+  example, a recipe, the scaffold or a module in this repository. The mark is in three
+  places only: the feature's line in `docs/stability.md`, one note at the top of each
+  docs section that describes it, and the docstring of its public entry points. It is
+  no longer on helpers, settings, CLI help, error texts or table rows, and the OpenAPI
+  descriptions, the reference and the generated pages no longer print it.
+  `scripts/check_experimental.py` (with `scripts/experimental.toml`) checks the rule,
+  in CI and in karni-cli's tests. No name changes, no behaviour changes.
+- **Stable now: the features used for real.** The promise covers them from this
+  release on: sign-in with an ID token, sign-in with a code sent by email, terms
+  acceptance, demo mode, integer primary keys (with the `API:` and `KEYS:` lines of
+  `karni context`), per-user grants, search across models, the app spec and `karni
+  build`, aggregations, saved charts (karni-charts), page blocks, field groups and
+  column sets, names, links and rights on resource pages, AI extraction (karni-ai;
+  `@karni/ai-ui` stays experimental), `karni.mail`, `karni.placeholder`, the module
+  catalog (`karni remove` stays experimental), tree models and the tree scope,
+  navigation from data (named menus stay experimental), taxonomies, suggestions from
+  code, context slices and the check cache, karni-reports and karni-storage (their
+  React packages stay experimental), karni-payments' test checkout page, API
+  versions, health checks (`/healthz`, `/readyz`) and `manage.py karni_publish_web`.
+  The manifests of karni-ai, karni-charts, karni-reports and karni-storage and the
+  built-in feature manifests say `stable`. The full list with each name is in
+  [stability](docs/stability.md#experimental-names), under "Stable since 0.8.0".
+- **Stays experimental, each with its reason in the list:** the game side, the
+  built-in recipes, the family and its screens, the /new-app flow, clarifying
+  questions, external tables and a second database, pages behind a capture without a
+  model, the 0.6.0 family foundation (family events, timeline, notifications,
+  preferences, people), karni-commerce and `@karni/commerce-ui`, home tiles per role,
+  row rules and row actions, catalogues, money and page titles, karni-payments'
+  signals, volume seeding, the scaling settings, query plans, `@karni/ai-ui`,
+  `@karni/reports-ui`, `@karni/storage-ui`, `ResourceBoard`, `ResourceCalendar` and
+  `karni remove`.
+- **Changed: the reference's statuses.** `experimental` means one thing, the
+  experimental tier. A capability that keeps the promise but that no project or
+  example uses yet is `tested`. A capability used by a private project shows "a real
+  project (private)" as its evidence.
+- **Fixed: docs/stability.md listed several experimental features under "Stable
+  since 0.4.1".** Suggestions from code, the tooling for large projects, karni-reports,
+  karni-storage, karni-commerce, karni-game, `@karni/game`, API versions and health
+  checks had been added below that heading by mistake. Each is now where it belongs.
+- **Fixed: karni declares `packaging`, which `karni.versions` imports.** It was
+  installed only because another dependency brings it, so a change there could have
+  broken `karni check` at start-up.
+- **Fixed: the browser tests of `@karni/game` keep their screenshots in the package's
+  own cache folder** (`node_modules/.cache/shots`, or `KARNI_SHOTS`), not in a folder
+  under the home directory.
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web

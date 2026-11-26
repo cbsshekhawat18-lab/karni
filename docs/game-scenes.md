@@ -1,5 +1,5 @@
 ---
-description: "Scenes in @karni/game/scenes (experimental): a scene stack with push, pop and replace, overlays that pause what is below, fade transitions that respect reduced motion, an entity list with tags and safe removal, and a store for settings and progress on the save layer."
+description: "Scenes in @karni/game/scenes: a scene stack with push, pop and replace, overlays that pause what is below, fade transitions that respect reduced motion, an entity list with tags and safe removal, and a store for settings and progress on the save layer."
 ---
 
 # Scenes (@karni/game/scenes)

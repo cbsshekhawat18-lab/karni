@@ -1,4 +1,4 @@
-"""Experimental. The emails commerce sends, each under a stable kind name.
+"""The emails commerce sends, each under a stable kind name.
 
 * ``commerce.order_paid``, to the buyer: the order is paid (the confirmation).
 * ``commerce.new_order``, to the addresses in ``KARNI_COMMERCE_STAFF_EMAILS``:
@@ -239,13 +239,13 @@ _LATEST: dict[str, Callable[[], tuple[Order, dict[str, Any]] | None]] = {
 }
 
 
-#: Experimental. Who can receive a kind that is not the buyer's: a person's own switches list
+#: Who can receive a kind that is not the buyer's: a person's own switches list
 #: it only to who holds this (karni.mail ``requires``).
 REQUIRES: dict[str, str] = {"commerce.new_order": "karni_commerce.order:view"}
 
 
 def latest(kind: str) -> Callable[[], dict[str, Any] | None]:
-    """Experimental. The context ``kind`` would be sent with, for the latest matching order
+    """The context ``kind`` would be sent with, for the latest matching order
     (``None`` while there is none): what the email editor's preview shows."""
 
     def sample() -> dict[str, Any] | None:
@@ -286,7 +286,7 @@ def _recipients(order: Order, audience: str) -> list[str]:
 
 
 def context(order: Order, more: Mapping[str, Any] | None = None) -> dict[str, Any]:
-    """Experimental. What an order's email renders with: the business, the order, its
+    """What an order's email renders with: the business, the order, its
     lines, its page, and ``more`` (the refund, the note)."""
     from karni_commerce.services import order_link
 
@@ -300,7 +300,7 @@ def context(order: Order, more: Mapping[str, Any] | None = None) -> dict[str, An
 
 
 def send(kind: str, order: Order, more: Mapping[str, Any] | None = None) -> int:
-    """Experimental. Send the email of ``kind`` about ``order``. Returns how many went out."""
+    """Send the email of ``kind`` about ``order``. Returns how many went out."""
     template, audience = KINDS[kind]
     values = context(order, more)
     return send_templated(template, to=_recipients(order, audience), context=values, kind=kind)

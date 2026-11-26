@@ -1,4 +1,4 @@
-"""Experimental. The API of taxonomy tagging (:mod:`karni.taxonomy`), with no declaration.
+"""The API of taxonomy tagging (:mod:`karni.taxonomy`), with no declaration.
 
 A ``BaseViewSet`` whose model declares ``class Karni: taxonomies`` gets, for
 each key (``region`` below):
@@ -114,7 +114,7 @@ def readable_nodes(taxonomy: Taxonomy, request: Any) -> models.QuerySet[Any]:
 
 @extend_schema_field(OpenApiTypes.STR)
 class TaxonomyFilter(django_filters.CharFilter):
-    """Experimental. ``?<key>=<node>,<node>``: the rows tagged with any of those nodes.
+    """``?<key>=<node>,<node>``: the rows tagged with any of those nodes.
 
     The key may also repeat (``?region=1&region=2``). With
     ``?<key>_descendants=true`` it also reads the rows tagged with any node
@@ -141,7 +141,7 @@ class TaxonomyFilter(django_filters.CharFilter):
 
 
 class TaxonomyDescendantsFilter(BooleanFilter):
-    """Experimental. ``?<key>_descendants=true``: read by :class:`TaxonomyFilter`, filters nothing.
+    """``?<key>_descendants=true``: read by :class:`TaxonomyFilter`, filters nothing.
 
     Its ``field_name`` is the taxonomy key, so a field ``Karni.field_roles``
     hides takes its two filters with it.
@@ -183,7 +183,7 @@ def _key_field(model: type[models.Model], **kwargs: Any) -> serializers.Field[An
 
 
 def facets_serializer(model: type[models.Model]) -> type[serializers.Serializer[Any]]:
-    """Experimental. The ``facets/`` answer of ``model``: ``{taxonomy, rollup, results}``.
+    """The ``facets/`` answer of ``model``: ``{taxonomy, rollup, results}``.
 
     The serializers describe the answer in the OpenAPI document (components
     ``<Stem>FacetNode`` and ``<Stem>Facets``). The node key is typed after the
@@ -270,7 +270,7 @@ def facets_response(view: Any, request: Request) -> Response:
 
 
 def tagged_serializer(model: type[models.Model]) -> type[serializers.Serializer[Any]]:
-    """Experimental. The ``tagged/`` answer of a tree: ``{id, descendants, results}``."""
+    """The ``tagged/`` answer of a tree: ``{id, descendants, results}``."""
     cached = _TAGGED_CACHE.get(model)
     if cached is not None:
         return cached

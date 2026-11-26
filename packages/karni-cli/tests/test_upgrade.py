@@ -68,7 +68,7 @@ def test_the_shipped_0_2_entries() -> None:
     assert by_id["all-objects"].codemod == "v1_0.all_objects_to_without"
     assert by_id["agent-guidance-files"].codemod == "v0_2.agent_guidance"
     assert by_id["mandatory-access"].mechanical is False
-    assert changelog.newest_release(by_id.values()) == "0.7.0"
+    assert changelog.newest_release(by_id.values()) == "0.8.0"
     assert by_id["frontend-npm-floor"].codemod == "v0_6.frontend_npm_floor"
     assert by_id["urls-marker"].codemod == "v0_5.urls_marker" and by_id["urls-marker"].mechanical
     assert by_id["public-read-writes-need-a-role"].release == "0.5.0"
@@ -98,6 +98,7 @@ def test_selection_between_versions() -> None:
     in_0_4_1 = {change.id for change in changelog.load() if change.release == "0.5.0"}
     in_0_6_0 = {change.id for change in changelog.load() if change.release == "0.6.0"}
     in_0_7_0 = {change.id for change in changelog.load() if change.release == "0.7.0"}
+    in_0_8_0 = {change.id for change in changelog.load() if change.release == "0.8.0"}
     from_0_1 = _ids("0.1.0", "0.2.0")
     assert sorted(from_0_1) == sorted(every)
     # What breaks in 0.2 runs first, then what breaks in 1.0.
@@ -107,7 +108,7 @@ def test_selection_between_versions() -> None:
     assert deprecations <= set(_ids("0.2.0", "0.2.0"))
     assert "mandatory-access" not in _ids("0.2.0", "1.0")
     assert set(_ids("0.2.0", "1.0")) == (
-        set(_ids("0.2.0", "0.2.0")) | in_0_3 | in_0_4 | in_0_4_1 | in_0_6_0 | in_0_7_0
+        set(_ids("0.2.0", "0.2.0")) | in_0_3 | in_0_4 | in_0_4_1 | in_0_6_0 | in_0_7_0 | in_0_8_0
     )
     assert in_0_3 <= set(_ids("0.2.0", "0.3.0"))
     assert not in_0_3 & set(_ids("0.1.0", "0.2.0"))  # a 0.2 target never sees 0.3 changes
@@ -197,6 +198,17 @@ def test_selection_between_versions() -> None:
     assert in_0_7_0 == {"game-kind-game-first"}
     assert in_0_7_0 <= set(_ids("0.6.0", "0.7.0"))
     assert not in_0_7_0 & set(_ids("0.5.1", "0.6.0"))
+    # 0.8.0's changes, every one a manual step: the version ranges, the site's side menu,
+    # Karni's makemigrations and migrate, AdminMeta on an admin registered by hand, E971.
+    assert in_0_8_0 == {
+        "karni-version-ranges",
+        "site-admin-menu",
+        "karni-makemigrations-migrate",
+        "admin-subclass-adminmeta",
+        "languages-lang-info-check",
+    }
+    assert in_0_8_0 <= set(_ids("0.7.0", "0.8.0"))
+    assert not in_0_8_0 & set(_ids("0.6.0", "0.7.0"))
     assert _ids("1.0.0", "1.1") == []
     assert _ids("0.1.0", "0.1.9") == []  # replacements do not exist before 0.2
     assert set(_ids("0.2.0.dev3", "0.2.0")) == set(every)  # pre-releases count as before
@@ -298,7 +310,7 @@ def test_list_needs_no_project(runner, tmp_path: Path, monkeypatch: pytest.Monke
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(app, ["upgrade", "--list"])
     assert result.exit_code == 0, result.output
-    assert "default --to: 0.7.0" in result.output
+    assert "default --to: 0.8.0" in result.output
     assert "all-objects  [api-change, codemod v1_0.all_objects_to_without, removed in 1.0]" in (
         result.output
     )
@@ -309,7 +321,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     result = runner.invoke(app, ["upgrade"])
     assert result.exit_code == 0, result.output
     out = result.output
-    assert "karni 0.1.0 -> 0.7.0: 106 change(s), 8 mechanical, 98 manual" in out
+    assert "karni 0.1.0 -> 0.8.0: 111 change(s), 8 mechanical, 103 manual" in out
 
     views = (git_project / "library" / "views.py").read_text()
     assert (
@@ -340,7 +352,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     assert "agent-guidance-files: nothing to change" in out
     assert "django-5-2: Django" in manual
     assert "urls-marker: nothing to change" in out  # this project has no config/urls.py
-    assert "Next: review `git diff`, pin karni to 0.7.0" in out
+    assert "Next: review `git diff`, reinstall" in out
     assert "frontend-npm-floor: nothing to change" in out  # no frontend/package.json
     assert "public-read-writes-need-a-role: karni make --access public-read" in manual
     assert "migrations/0.5/#public-read-viewsets-review-who-may-write" in manual

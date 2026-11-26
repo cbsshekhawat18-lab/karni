@@ -61,6 +61,11 @@ KARNI_ACCOUNTS_REGISTRATION = env.bool(  # noqa: F821
 # Staff, and the editor role karni-site declares. The roles an app gives the
 # people who sign up (user, customer) are left out.
 KARNI_ROLES = {"staff": KARNI_ROLES["staff"]}  # noqa: F821
+# The admin's side menu: this project's apps, the site's pages, then people.
+# Superusers also see the rest (task results, schedules, tokens) in a last
+# group. Write groups of your own (docs/admin.md, "The side menu"), or set
+# None for the list of every app.
+KARNI_ADMIN_MENU = KARNI_SITE_ADMIN_MENU  # noqa: F821
 {%- endif %}
 {%- if cookiecutter.staff_app == "no" %}
 

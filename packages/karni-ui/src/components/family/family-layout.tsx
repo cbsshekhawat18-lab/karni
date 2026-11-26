@@ -1,5 +1,5 @@
 /**
- * Experimental. `<FamilyLayout>`: the one app shell of a project of parts.
+ * `<FamilyLayout>`: the one app shell of a project of parts.
  *
  * A project that holds a shop, a CRM and a booking app has one layout, not
  * one per part. Each page shows in one of two frames:
@@ -51,7 +51,7 @@ import { searchHitHref } from "./search";
 
 registerComponentRole("family-layout", "FamilyLayout");
 
-/** Experimental. What both frames receive. */
+/** What both frames receive. */
 export interface FamilyFrameProps {
   pathname: string;
   navigate: (to: string) => void;
@@ -73,7 +73,7 @@ export interface FamilyFrameProps {
   children: React.ReactNode;
 }
 
-/** Experimental. The frames a project can replace. */
+/** The frames a project can replace. */
 export interface FamilyLayoutSlots {
   Storefront: React.ComponentType<FamilyFrameProps>;
   BackOffice: React.ComponentType<FamilyFrameProps>;
@@ -112,7 +112,7 @@ export interface FamilyLayoutProps {
   children?: React.ReactNode;
 }
 
-/** Experimental. The entries of a named menu the signed-in person sees (empty while loading). */
+/** The entries of a named menu the signed-in person sees (empty while loading). */
 export function useMenu(menu: string): NavigationItem[] {
   const query = useNavigation({ menu });
   return query.data?.items ?? [];
@@ -222,7 +222,7 @@ function AccountLinks({
   );
 }
 
-/** Experimental. The storefront's frame: the site's header (public and account menus) and footer. */
+/** The storefront's frame: the site's header (public and account menus) and footer. */
 export function Storefront({
   pathname,
   navigate,
@@ -329,7 +329,7 @@ function AccountMenu({ navigate }: { navigate: (to: string) => void }): React.Re
   );
 }
 
-/** Experimental. The back office's frame: the app menu, search, the inbox bell and the account menu. */
+/** The back office's frame: the app menu, search, the inbox bell and the account menu. */
 export function BackOffice({
   pathname,
   navigate,

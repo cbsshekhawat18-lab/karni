@@ -17,10 +17,10 @@ import {
 
 type Row = Readonly<Record<string, unknown>>;
 
-/** Experimental. The views of ResourceCalendar. */
+/** The views of ResourceCalendar. */
 export type CalendarView = "day" | "week" | "month" | "list";
 
-/** Experimental. Which fields of a row hold how many it takes and how many are taken. */
+/** Which fields of a row hold how many it takes and how many are taken. */
 export interface CalendarCapacity {
   /** The field with how many it holds (a number). */
   capacity: string;

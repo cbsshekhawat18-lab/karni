@@ -1,6 +1,6 @@
 """``manage.py karni_inspect <[schema.]table> [--database <alias>]``: a table's columns as fields.
 
-Experimental. It backs ``karni make model <Name> --external --table
+It backs ``karni make model <Name> --external --table
 <[schema.]table>``, which runs it in the project's interpreter and writes the
 model from what it prints: one line, :data:`MARKER` followed by JSON.
 
@@ -42,7 +42,7 @@ def db_table_for(name: str) -> str:
 
 class Command(BaseCommand):
     help = (
-        "Experimental. Print a table's or view's columns as Django model fields, in JSON "
+        "Print a table's or view's columns as Django model fields, in JSON "
         "(karni make model --external)."
     )
     requires_system_checks: list[Any] = []

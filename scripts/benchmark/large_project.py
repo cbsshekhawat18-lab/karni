@@ -1,4 +1,4 @@
-"""Experimental. A large Karni project, timed: does the tooling still scale?
+"""A large Karni project, timed: does the tooling still scale?
 
 It makes a project the way a user does (``karni new``, then a ``karni.yaml``
 with N entities spread over apps, then ``karni build``) and times what an

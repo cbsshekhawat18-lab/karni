@@ -36,8 +36,8 @@ Field                  Column, constraint, index                     Backends
 =====================  ============================================  ==============
 
 ``LiveUniqueConstraint`` declares uniqueness over live rows of a
-soft-deletable model; ``GinIndex``/``GistIndex``/``BrinIndex`` (and the
-experimental ``TrigramIndex``) are PostgreSQL indexes that are a no-op
+soft-deletable model; ``GinIndex``/``GistIndex``/``BrinIndex`` (and
+``TrigramIndex``) are PostgreSQL indexes that are a no-op
 elsewhere; ``CreateExtension`` creates a PostgreSQL extension from a
 migration. ``karni schema`` lists what each
 declaration created and why; ``docs/fields.md`` has the full reference.

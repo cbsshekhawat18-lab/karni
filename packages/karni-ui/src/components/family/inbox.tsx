@@ -1,5 +1,5 @@
 /**
- * Experimental. The signed-in person's inbox (karni.notify, `/inbox/`):
+ * The signed-in person's inbox (karni.notify, `/inbox/`):
  *
  * - `<InboxBell>`: a button with the unread count (`GET /inbox/unread/`,
  *   read again every minute and when the window gets focus), for the layout.
@@ -28,7 +28,7 @@ import { Skeleton } from "../primitives/skeleton";
 import { Switch } from "../primitives/switch";
 import { useToast } from "../toast/use-toast";
 
-/** Experimental. One notification. */
+/** One notification. */
 export interface InboxNotification {
   id: number;
   kind: string;
@@ -40,7 +40,7 @@ export interface InboxNotification {
   created_at: string;
 }
 
-/** Experimental. One page of `GET /inbox/`. */
+/** One page of `GET /inbox/`. */
 export interface InboxPageBody {
   count: number;
   unread: number;
@@ -48,7 +48,7 @@ export interface InboxPageBody {
   results: InboxNotification[];
 }
 
-/** Experimental. A kind the person may switch, as `GET /inbox/choices/` answers it. */
+/** A kind the person may switch, as `GET /inbox/choices/` answers it. */
 export interface InboxChoice {
   kind: string;
   title: string;
@@ -67,7 +67,7 @@ function useUser(): string | null {
   return status === "authenticated" && user ? String(user.id) : null;
 }
 
-/** Experimental. How many notifications the signed-in person has not read (null: unknown or off). */
+/** How many notifications the signed-in person has not read (null: unknown or off). */
 export function useInboxUnread(pollMs = 60_000): number | null {
   const client = useKarniClient();
   const user = useUser();
@@ -111,7 +111,7 @@ export interface InboxBellProps {
   className?: string;
 }
 
-/** Experimental. The bell in the layout: the unread count, a link to the inbox. Hidden when off. */
+/** The bell in the layout: the unread count, a link to the inbox. Hidden when off. */
 export function InboxBell({
   navigate,
   href = "/inbox",
@@ -165,7 +165,7 @@ export interface InboxPageProps {
   pageSize?: number;
 }
 
-/** Experimental. `/inbox`: the person's notifications, with the unread filter and the read marks. */
+/** `/inbox`: the person's notifications, with the unread filter and the read marks. */
 export function InboxPage({
   title = "Inbox",
   siteName,
@@ -395,7 +395,7 @@ function ChoiceRow({ choice }: { choice: InboxChoice }): React.ReactElement {
   );
 }
 
-/** Experimental. The person's own switches: which messages reach them by email and in the inbox. */
+/** The person's own switches: which messages reach them by email and in the inbox. */
 export function EmailChoices(): React.ReactElement {
   const client = useKarniClient();
   const user = useUser();

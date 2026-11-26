@@ -143,6 +143,7 @@ class KarniSettingsModel(BaseModel):
     KARNI_NOTIFY_UNSUBSCRIBE_PATH: str = "/api/notify/unsubscribe/?token={token}"
     KARNI_NOTIFY_MOVE_CHANNELS: list[_Channel] = Field(default_factory=_both_channels)
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)
+    KARNI_ADMIN_MENU: Any = None
     KARNI_ADMIN_GRANTS_OPEN_PAGES: bool = True
     KARNI_MATRIX_EXCLUDE: list[Any] = Field(default_factory=list)
     KARNI_IMPORT_INLINE_ROWS: int = Field(default=500, ge=0)
@@ -467,7 +468,7 @@ class KarniSettingsModel(BaseModel):
         return errors
 
     def _check_social_token(self) -> list[str]:
-        """Sign-in with an ID token (experimental): the providers and their knobs."""
+        """Sign-in with an ID token: the providers and their knobs."""
         errors: list[str] = []
         signup = self.KARNI_SOCIAL_TOKEN_SIGNUP
         if signup is not None and signup not in ("open", "approval", "existing"):
@@ -556,13 +557,13 @@ class KarniSettingsModel(BaseModel):
         return errors
 
     def _check_user_grants(self) -> list[str]:
-        """Per-user grants (experimental): the switch is a boolean."""
+        """Per-user grants: the switch is a boolean."""
         if not isinstance(self.KARNI_USER_GRANTS, bool):
             return [f"KARNI_USER_GRANTS = {self.KARNI_USER_GRANTS!r} must be True or False"]
         return []
 
     def _check_navigation(self) -> list[str]:
-        """Navigation from data (experimental): the menu's items, and the app for ``"db"``."""
+        """Navigation from data: the menu's items, and the app for ``"db"``."""
         from karni.navigation import settings_problems
 
         errors = settings_problems(self.KARNI_NAVIGATION, self.INSTALLED_APPS)
@@ -575,7 +576,7 @@ class KarniSettingsModel(BaseModel):
         return errors
 
     def _check_email_otp(self) -> list[str]:
-        """Sign-in with a code sent by email (experimental): the switch, the code and the policy."""
+        """Sign-in with a code sent by email: the switch, the code and the policy."""
         from karni.accounts.otp import LENGTH_RANGE, MAX_ATTEMPTS_RANGE, TTL_RANGE
         from karni.accounts.social_token import SIGNUP_POLICIES
 
@@ -603,7 +604,7 @@ class KarniSettingsModel(BaseModel):
         return errors
 
     def _check_pk(self) -> list[str]:
-        """The key type ``karni make model`` writes (experimental): ``uuid`` or ``bigint``."""
+        """The key type ``karni make model`` writes: ``uuid`` or ``bigint``."""
         if self.KARNI_PK in ("uuid", "bigint"):
             return []
         return [
@@ -612,7 +613,7 @@ class KarniSettingsModel(BaseModel):
         ]
 
     def _check_terms(self) -> list[str]:
-        """Terms acceptance (experimental): ``KARNI_TERMS`` is None or a dict of known keys."""
+        """Terms acceptance: ``KARNI_TERMS`` is None or a dict of known keys."""
         from karni.accounts.terms import KNOWN_KEYS, VERSION_MAX_LENGTH
 
         value = self.KARNI_TERMS
@@ -739,6 +740,10 @@ class KarniSettingsModel(BaseModel):
                     f"KARNI_MATRIX_EXCLUDE entry {entry!r} must be a string "
                     "(an app_label or 'app_label.ModelName')"
                 )
+        # The side menu's shape (karni.admin.menu); its labels are a system check (W301).
+        from karni.admin.menu import menu_problems
+
+        errors.extend(menu_problems(self.KARNI_ADMIN_MENU))
         # Read per request by the admin, so a bad value set after the call is caught here.
         from karni.conf.admin_logo import logo_paths
 

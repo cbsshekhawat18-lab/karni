@@ -391,7 +391,7 @@
         "type": "object"
       },
       "DuplicateGroup": {
-        "description": "Experimental. People one duplicate rule groups together, oldest first.",
+        "description": "People one duplicate rule groups together, oldest first.",
         "properties": {
           "people": {
             "items": {
@@ -461,7 +461,7 @@
         "type": "object"
       },
       "Fact": {
-        "description": "Experimental. One registered person fact.",
+        "description": "One registered person fact.",
         "properties": {
           "description": {
             "type": "string"
@@ -489,7 +489,7 @@
         "type": "object"
       },
       "GlobalSearchError": {
-        "description": "Experimental. A refused request: E431 and the resources search covers.",
+        "description": "A refused request: E431 and the resources search covers.",
         "properties": {
           "code": {
             "type": "string"
@@ -512,7 +512,7 @@
         "type": "object"
       },
       "GlobalSearchGroup": {
-        "description": "Experimental. The hits of one resource, best first.",
+        "description": "The hits of one resource, best first.",
         "properties": {
           "hits": {
             "items": {
@@ -546,7 +546,7 @@
         "type": "object"
       },
       "GlobalSearchHit": {
-        "description": "Experimental. One hit: a row of one resource, ready to link to its page.",
+        "description": "One hit: a row of one resource, ready to link to its page.",
         "properties": {
           "id": {
             "description": "The row's primary key: its page is /<resource>/<id>.",
@@ -586,7 +586,7 @@
         "type": "object"
       },
       "GlobalSearchResult": {
-        "description": "Experimental. The answer of GET /api/search/: groups ordered by their best hit.",
+        "description": "The answer of GET /api/search/: groups ordered by their best hit.",
         "properties": {
           "groups": {
             "items": {
@@ -2953,7 +2953,7 @@
         "type": "object"
       },
       "Me": {
-        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` (experimental) lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
+        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -2988,7 +2988,7 @@
             "type": "string"
           },
           "permissions": {
-            "description": "Experimental. The permission keys the user holds (``app.model:action``), sorted.",
+            "description": "The permission keys the user holds (``app.model:action``), sorted.",
             "items": {
               "type": "string"
             },
@@ -3022,7 +3022,7 @@
         "type": "object"
       },
       "MergeInputRequest": {
-        "description": "Experimental. The body of a merge: the record merged into this one.",
+        "description": "The body of a merge: the record merged into this one.",
         "properties": {
           "drop": {
             "description": "The id of the record merged into this one.",
@@ -3036,7 +3036,7 @@
         "type": "object"
       },
       "MergePlan": {
-        "description": "Experimental. What a merge moves, fills and refuses (``people.merge_plan``).",
+        "description": "What a merge moves, fills and refuses (``people.merge_plan``).",
         "properties": {
           "allowed": {
             "type": "boolean"
@@ -4405,7 +4405,7 @@
         "type": "object"
       },
       "PatchedMeRequest": {
-        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` (experimental) lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
+        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
         "properties": {
           "first_name": {
             "maxLength": 150,
@@ -4605,7 +4605,7 @@
         "type": "object"
       },
       "PatchedPersonSelfRequest": {
-        "description": "Experimental. What a person reads and changes of their own row (``/api/people/me/``).",
+        "description": "What a person reads and changes of their own row (``/api/people/me/``).",
         "properties": {
           "display_name": {
             "description": "What screens show. Blank: the full name, else the email.",
@@ -5366,7 +5366,7 @@
         "type": "string"
       },
       "PersonCan": {
-        "description": "Experimental. What the caller may do with one person beyond reading and changing it.",
+        "description": "What the caller may do with one person beyond reading and changing it.",
         "properties": {
           "erase": {
             "description": "The caller holds people.person:erase.",
@@ -5384,7 +5384,7 @@
         "type": "object"
       },
       "PersonSelf": {
-        "description": "Experimental. What a person reads and changes of their own row (``/api/people/me/``).",
+        "description": "What a person reads and changes of their own row (``/api/people/me/``).",
         "properties": {
           "display_name": {
             "description": "What screens show. Blank: the full name, else the email.",
@@ -5758,7 +5758,7 @@
         "type": "string"
       },
       "Tile": {
-        "description": "Experimental. One home tile.",
+        "description": "One home tile.",
         "properties": {
           "columns": {
             "items": {
@@ -7431,7 +7431,7 @@
     },
     "/api/dashboard/": {
       "get": {
-        "description": "Experimental. The home tiles of the requesting person.",
+        "description": "The home tiles of the requesting person.",
         "operationId": "dashboard_tiles",
         "responses": {
           "200": {
@@ -21186,7 +21186,7 @@
     },
     "/api/organisations/": {
       "get": {
-        "description": "Experimental. ``/api/organisations/``: the organisations, with merge.",
+        "description": "``/api/organisations/``: the organisations, with merge.",
         "operationId": "organisations_list",
         "parameters": [
           {
@@ -21427,7 +21427,7 @@
         "x-karni-resource": "organisations"
       },
       "post": {
-        "description": "Experimental. ``/api/organisations/``: the organisations, with merge.",
+        "description": "``/api/organisations/``: the organisations, with merge.",
         "operationId": "organisations_create",
         "requestBody": {
           "content": {
@@ -21864,7 +21864,7 @@
     },
     "/api/organisations/{id}/": {
       "delete": {
-        "description": "Experimental. ``/api/organisations/``: the organisations, with merge.",
+        "description": "``/api/organisations/``: the organisations, with merge.",
         "operationId": "organisations_destroy",
         "parameters": [
           {
@@ -21901,7 +21901,7 @@
         }
       },
       "get": {
-        "description": "Experimental. ``/api/organisations/``: the organisations, with merge.",
+        "description": "``/api/organisations/``: the organisations, with merge.",
         "operationId": "organisations_retrieve",
         "parameters": [
           {
@@ -21961,7 +21961,7 @@
         }
       },
       "patch": {
-        "description": "Experimental. ``/api/organisations/``: the organisations, with merge.",
+        "description": "``/api/organisations/``: the organisations, with merge.",
         "operationId": "organisations_partial_update",
         "parameters": [
           {
@@ -22024,7 +22024,7 @@
         }
       },
       "put": {
-        "description": "Experimental. ``/api/organisations/``: the organisations, with merge.",
+        "description": "``/api/organisations/``: the organisations, with merge.",
         "operationId": "organisations_update",
         "parameters": [
           {
@@ -22421,7 +22421,7 @@
     },
     "/api/people-addresses/": {
       "get": {
-        "description": "Experimental. ``/api/people-addresses/``: addresses of people and organisations.",
+        "description": "``/api/people-addresses/``: addresses of people and organisations.",
         "operationId": "people_addresses_list",
         "parameters": [
           {
@@ -22946,7 +22946,7 @@
         "x-karni-resource": "people-addresses"
       },
       "post": {
-        "description": "Experimental. ``/api/people-addresses/``: addresses of people and organisations.",
+        "description": "``/api/people-addresses/``: addresses of people and organisations.",
         "operationId": "people_addresses_create",
         "requestBody": {
           "content": {
@@ -23383,7 +23383,7 @@
     },
     "/api/people-addresses/{id}/": {
       "delete": {
-        "description": "Experimental. ``/api/people-addresses/``: addresses of people and organisations.",
+        "description": "``/api/people-addresses/``: addresses of people and organisations.",
         "operationId": "people_addresses_destroy",
         "parameters": [
           {
@@ -23420,7 +23420,7 @@
         }
       },
       "get": {
-        "description": "Experimental. ``/api/people-addresses/``: addresses of people and organisations.",
+        "description": "``/api/people-addresses/``: addresses of people and organisations.",
         "operationId": "people_addresses_retrieve",
         "parameters": [
           {
@@ -23481,7 +23481,7 @@
         }
       },
       "patch": {
-        "description": "Experimental. ``/api/people-addresses/``: addresses of people and organisations.",
+        "description": "``/api/people-addresses/``: addresses of people and organisations.",
         "operationId": "people_addresses_partial_update",
         "parameters": [
           {
@@ -23544,7 +23544,7 @@
         }
       },
       "put": {
-        "description": "Experimental. ``/api/people-addresses/``: addresses of people and organisations.",
+        "description": "``/api/people-addresses/``: addresses of people and organisations.",
         "operationId": "people_addresses_update",
         "parameters": [
           {
@@ -24129,7 +24129,7 @@
     },
     "/api/people-memberships/": {
       "get": {
-        "description": "Experimental. ``/api/people-memberships/``: who belongs to which organisation.",
+        "description": "``/api/people-memberships/``: who belongs to which organisation.",
         "operationId": "people_memberships_list",
         "parameters": [
           {
@@ -24311,7 +24311,7 @@
         "x-karni-resource": "people-memberships"
       },
       "post": {
-        "description": "Experimental. ``/api/people-memberships/``: who belongs to which organisation.",
+        "description": "``/api/people-memberships/``: who belongs to which organisation.",
         "operationId": "people_memberships_create",
         "requestBody": {
           "content": {
@@ -24748,7 +24748,7 @@
     },
     "/api/people-memberships/{id}/": {
       "delete": {
-        "description": "Experimental. ``/api/people-memberships/``: who belongs to which organisation.",
+        "description": "``/api/people-memberships/``: who belongs to which organisation.",
         "operationId": "people_memberships_destroy",
         "parameters": [
           {
@@ -24785,7 +24785,7 @@
         }
       },
       "get": {
-        "description": "Experimental. ``/api/people-memberships/``: who belongs to which organisation.",
+        "description": "``/api/people-memberships/``: who belongs to which organisation.",
         "operationId": "people_memberships_retrieve",
         "parameters": [
           {
@@ -24846,7 +24846,7 @@
         }
       },
       "patch": {
-        "description": "Experimental. ``/api/people-memberships/``: who belongs to which organisation.",
+        "description": "``/api/people-memberships/``: who belongs to which organisation.",
         "operationId": "people_memberships_partial_update",
         "parameters": [
           {
@@ -24909,7 +24909,7 @@
         }
       },
       "put": {
-        "description": "Experimental. ``/api/people-memberships/``: who belongs to which organisation.",
+        "description": "``/api/people-memberships/``: who belongs to which organisation.",
         "operationId": "people_memberships_update",
         "parameters": [
           {
@@ -25151,7 +25151,7 @@
     },
     "/api/people/": {
       "get": {
-        "description": "Experimental. ``/api/people/``: the people, with facts, merge, duplicates and erase.",
+        "description": "``/api/people/``: the people, with facts, merge, duplicates and erase.",
         "operationId": "people_list",
         "parameters": [
           {
@@ -25482,7 +25482,7 @@
         "x-karni-resource": "people"
       },
       "post": {
-        "description": "Experimental. ``/api/people/``: the people, with facts, merge, duplicates and erase.",
+        "description": "``/api/people/``: the people, with facts, merge, duplicates and erase.",
         "operationId": "people_create",
         "requestBody": {
           "content": {
@@ -26569,7 +26569,7 @@
     },
     "/api/people/{id}/": {
       "delete": {
-        "description": "Experimental. ``/api/people/``: the people, with facts, merge, duplicates and erase.",
+        "description": "``/api/people/``: the people, with facts, merge, duplicates and erase.",
         "operationId": "people_destroy",
         "parameters": [
           {
@@ -26606,7 +26606,7 @@
         }
       },
       "get": {
-        "description": "Experimental. ``/api/people/``: the people, with facts, merge, duplicates and erase.",
+        "description": "``/api/people/``: the people, with facts, merge, duplicates and erase.",
         "operationId": "people_retrieve",
         "parameters": [
           {
@@ -26668,7 +26668,7 @@
         }
       },
       "patch": {
-        "description": "Experimental. ``/api/people/``: the people, with facts, merge, duplicates and erase.",
+        "description": "``/api/people/``: the people, with facts, merge, duplicates and erase.",
         "operationId": "people_partial_update",
         "parameters": [
           {
@@ -26731,7 +26731,7 @@
         }
       },
       "put": {
-        "description": "Experimental. ``/api/people/``: the people, with facts, merge, duplicates and erase.",
+        "description": "``/api/people/``: the people, with facts, merge, duplicates and erase.",
         "operationId": "people_update",
         "parameters": [
           {
@@ -27262,7 +27262,7 @@
     },
     "/api/search/": {
       "get": {
-        "description": "Experimental. Search every model that declares class Karni: search, each through its list endpoint's access for this request. Results are grouped per resource, best first.",
+        "description": "Search every model that declares class Karni: search, each through its list endpoint's access for this request. Results are grouped per resource, best first.",
         "operationId": "global_search",
         "parameters": [
           {

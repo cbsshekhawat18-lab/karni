@@ -1,4 +1,4 @@
-"""Sign-in with a code sent by email (karni.accounts.otp, experimental).
+"""Sign-in with a code sent by email (karni.accounts.otp).
 
 The codes go through the in-memory accounts email backend, so each test reads
 the code a user would type from the outbox. ``on_commit`` callbacks run
@@ -937,7 +937,8 @@ def test_each_setting_reads_its_environment_variable() -> None:
         "KARNI_EMAIL_OTP_SIGNUP",
     ):
         assert rows[name].env == name
-        assert rows[name].description.startswith("Experimental. ")
+        # The mark is on the feature's docs section, never on a setting (docs/stability.md).
+        assert "xperimental" not in rows[name].description
 
 
 def test_off_by_default(make_settings: Callable[..., Any]) -> None:

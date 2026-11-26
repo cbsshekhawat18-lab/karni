@@ -51,7 +51,7 @@ class ChartForm(forms.ModelForm):
 
 
 def preview(chart: Chart, request: HttpRequest) -> dict[str, Any]:
-    """Experimental. What the change form shows: rows and series, or ``{"error": ...}``."""
+    """What the change form shows: rows and series, or ``{"error": ...}``."""
     try:
         answer = run_chart(chart, request, chart_filters(chart, {}))
     except ChartError as exc:
@@ -69,7 +69,7 @@ def preview(chart: Chart, request: HttpRequest) -> dict[str, Any]:
 
 @admin.register(Chart)
 class ChartAdmin(KarniModelAdmin):
-    """Experimental. Saved charts: the definition in groups, and a preview of its data."""
+    """Saved charts: the definition in groups, and a preview of its data."""
 
     form = ChartForm
     change_form_template = "karni_charts/admin/chart_change_form.html"

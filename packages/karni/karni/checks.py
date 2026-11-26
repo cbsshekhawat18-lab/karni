@@ -364,7 +364,7 @@ REDUNDANT_SERIALIZER_RULE = "redundant-serializer"
 
 @checks.register(checks.Tags.urls)
 def check_public_integer_keys(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
-    """karni.W530 (experimental): anyone may read a resource whose ids can be guessed.
+    """karni.W530: anyone may read a resource whose ids can be guessed.
 
     Reported for every routed :class:`~karni.api.viewsets.BaseViewSet`
     whose model has an integer primary key (``BigIntBaseModel``, an
@@ -664,7 +664,7 @@ def check_global_search_routes(app_configs: Any = None, **kwargs: Any) -> list[c
 
 @checks.register(checks.Tags.urls)
 def check_aggregations(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
-    """karni.E380 / W570 / E280: every aggregation declaration (experimental) fits its model.
+    """karni.E380 / W570 / E280: every aggregation declaration fits its model.
 
     A model's ``class Karni: aggregate`` and a routed viewset's ``aggregation``
     must name fields, relation paths or declared expressions, with buckets
@@ -720,7 +720,7 @@ def check_aggregations(app_configs: Any = None, **kwargs: Any) -> list[checks.Ch
 
 @checks.register(checks.Tags.models)
 def check_layouts(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
-    """karni.E550 to E553: every ``Karni.field_groups`` and ``Karni.column_sets`` (experimental).
+    """karni.E550 to E553: every ``Karni.field_groups`` and ``Karni.column_sets``.
 
     A malformed declaration, a group or column set naming a field the model
     does not have, and a field in two groups, each reported with the model,
@@ -791,6 +791,42 @@ def check_admin_scope(app_configs: Any = None, **kwargs: Any) -> list[checks.Che
                 "without a scope_exempt_reason.",
                 hint=_fix("E210"),
                 obj=type(model_admin),
+            )
+        )
+    return messages
+
+
+@checks.register(checks.Tags.admin)
+def check_admin_menu(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.W301 / W302: ``KARNI_ADMIN_MENU`` names what is not installed, or is not used.
+
+    A label that matches no installed app or model shows nothing, which a typo
+    otherwise hides. An ``UNFOLD["SIDEBAR"]`` of the project's own replaces the
+    menu Karni builds, so the setting would change nothing.
+    """
+    from django.conf import settings
+
+    from karni.admin.menu import karni_sidebar, unknown_labels
+
+    declared = getattr(settings, "KARNI_ADMIN_MENU", None)
+    if not declared:
+        return []
+    messages: list[checks.CheckMessage] = [
+        check_warning(
+            "W301",
+            f"KARNI_ADMIN_MENU names {label!r}, which is no installed app label or model "
+            "label ('app_label.ModelName'), so the admin's side menu shows nothing for it.",
+            hint=_fix("W301"),
+        )
+        for label in unknown_labels(declared)
+    ]
+    if not karni_sidebar():
+        messages.append(
+            check_warning(
+                "W302",
+                "KARNI_ADMIN_MENU is set, but UNFOLD['SIDEBAR'] has a navigation of the "
+                "project's own, which replaces the menu Karni builds from it.",
+                hint=_fix("W302"),
             )
         )
     return messages
@@ -1137,7 +1173,7 @@ def check_tree_scopes(app_configs: Any = None, **kwargs: Any) -> list[checks.Che
     key names, or from any model a wildcard matches. W620 is a role grant
     whose members get no node: the user model has no attribute named after
     the path's last step, the node a role grant of the scope reaches
-    (experimental, :mod:`karni.accounts.tree_scope`).
+    (:mod:`karni.accounts.tree_scope`).
     """
     from django.conf import settings
     from django.contrib.auth import get_user_model
@@ -1214,6 +1250,12 @@ def _stand_in_user(user_model: Any) -> Any:
 # and the typed field layer, E960-E970 / W964-W967 (karni.fields.checks).
 from karni import guard_checks as _guard_checks  # noqa: E402,F401
 
+# A LANGUAGES code Django cannot describe, E971 / W971 (karni.languages).
+from karni import languages as _languages  # noqa: E402,F401
+
+# One version line for karni, karni-cli and the modules, W521 (karni.versions).
+from karni import versions as _versions  # noqa: E402,F401
+
 # External tables, SQL views and a second database, E270-E276 / W541 / W542 (karni.db.checks).
 from karni.db import checks as _db_checks  # noqa: E402,F401
 from karni.fields import checks as _field_checks  # noqa: E402,F401
@@ -1229,7 +1271,7 @@ def check_taxonomies(app_configs: Any = None, **kwargs: Any) -> list[checks.Chec
     E571 is a ``class Karni: taxonomies`` key whose many-to-many points at a
     model that is not a :class:`karni.models.TreeModel`. E572 is a key the
     model adopts (it declares a field of that name) whose field is not a
-    many-to-many to the declared target (experimental, :mod:`karni.taxonomy`).
+    many-to-many to the declared target (:mod:`karni.taxonomy`).
     """
     from karni.taxonomy import taxonomies
 
@@ -1249,7 +1291,7 @@ def check_taxonomies(app_configs: Any = None, **kwargs: Any) -> list[checks.Chec
 
 @checks.register(checks.Tags.urls)
 def check_api_versions(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
-    """karni.E590 / E591 / W660: the API version settings (experimental).
+    """karni.E590 / E591 / W660: the API version settings.
 
     E590 is a bad ``KARNI_API_VERSION`` or ``KARNI_API_VERSIONS``, E591 a bad
     ``KARNI_API_UNVERSIONED``, and W660 a version past its sunset date.

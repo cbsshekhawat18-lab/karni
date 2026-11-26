@@ -81,7 +81,7 @@ if TYPE_CHECKING:
         value,
     )
 
-#: Experimental. The version of the preferences contract. A breaking change raises it.
+#: The version of the preferences contract. A breaking change raises it.
 CONTRACT: Final = 1
 
 __all__ = [

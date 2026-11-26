@@ -4,7 +4,7 @@ name = "storage"
 kind = "module"
 title = "Protected files (S3)"
 purpose = "Files a row owns, in a private S3-compatible bucket, for its readers only."
-status = "experimental"
+status = "stable"
 use_when = [
     "private files",
     "protected uploads",

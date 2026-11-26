@@ -1,4 +1,4 @@
-"""``karni make model --external``: a model over an existing table or view (experimental).
+"""``karni make model --external``: a model over an existing table or view.
 
 The project's ``manage.py karni_inspect`` reads the columns; here it is
 replaced by answers it gives on SQLite and on PostgreSQL (packages/karni's

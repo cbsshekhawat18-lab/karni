@@ -1085,6 +1085,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Point KARNI_ADMIN_BASE at an importable django.contrib.admin.ModelAdmin subclass (default 'unfold.admin.ModelAdmin').
 
+<a id="w301"></a>
+
+#### W301: KARNI_ADMIN_MENU names something that is not installed
+
+*system check (warning)* · from `karni.checks.check_admin_menu`
+
+**Why Karni objects.** Each item of a group is an installed app label, a model label or '@project'. A label that matches nothing shows nothing, so a typo would silently drop a section from the menu.
+
+**Fix.** Fix the label: an app's label (its AppConfig.label, usually the app's folder name) or 'app_label.ModelName'. Remove it if the app is gone.
+
 <a id="e302"></a>
 
 #### E302: AdminMeta.inline_on is invalid
@@ -1094,6 +1104,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** inline_on names the foreign key under whose parent the model is shown inline.
 
 **Fix.** Name a ForeignKey field of the model: class AdminMeta: inline_on = 'event'.
+
+<a id="w302"></a>
+
+#### W302: KARNI_ADMIN_MENU is set, but UNFOLD['SIDEBAR'] replaces it
+
+*system check (warning)* · from `karni.checks.check_admin_menu`
+
+**Why Karni objects.** Karni draws the menu through UNFOLD['SIDEBAR']['navigation']. A SIDEBAR of the project's own wins, so the setting changes nothing.
+
+**Fix.** Keep one of the two: delete KARNI_ADMIN_MENU, or drop the project's UNFOLD['SIDEBAR'] (or set its 'navigation' to 'karni.admin.menu.sidebar_navigation').
 
 <a id="e303"></a>
 
@@ -1124,6 +1144,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A rename migration follows the app's latest migration. Two migrations that both claim to be latest (two branches) leave no single one to follow.
 
 **Fix.** Run manage.py makemigrations --merge for the app, then karni build again.
+
+<a id="e306"></a>
+
+#### E306: AdminMeta.mixins names something that is not a usable class
+
+*exception* · from `karni.admin.derive.admin_meta_mixins`
+
+**Why Karni objects.** The derived admin is built with these classes in front of it, so each entry must import to a class, and together they must combine with KarniModelAdmin into one class.
+
+**Fix.** List classes or dotted paths to classes: class AdminMeta: mixins = ['shop.admin_mixins.TotalsPanel']. Keep the mixins in a module that imports without errors, and give two mixins no base classes that conflict.
 
 <a id="e310"></a>
 
@@ -2058,6 +2088,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A backup that fails quietly is found missing on the day it is needed, so the backup service reports the failure in its log, and its health check turns unhealthy until a backup succeeds.
 
 **Fix.** Read the line after E521: it names the step (pg_dump, pg_restore, psql, the media archive, S3) and its error. Check DATABASE_URL, that the client tools match the database's major version (the backup image's POSTGRES_VERSION), the free space in KARNI_BACKUP_DIR and, with KARNI_BACKUP_S3_BUCKET, the AWS_* credentials. Then run `docker compose -f docker-compose.prod.yml exec backup karni-backup run`.
+
+<a id="w521"></a>
+
+#### W521: karni, karni-cli and the modules are not on one version line
+
+*system check (warning)* · from `karni.versions.check_version_line`
+
+**Why Karni objects.** Karni's packages are released together, and a module's range on karni is its own minor. An install that left karni on 0.7 and a module on 0.6 (a bare name in pyproject.toml takes whatever is newest that day) runs code written for another release. The message names each package that is off karni's line. A checkout installed in editable mode, and a version with a .dev or +local part, are not compared.
+
+**Fix.** Install each package named at the range the message gives, and pin karni and the modules with that range in pyproject.toml so an install cannot drift (karni new writes it, karni upgrade writes it for a project that lists them bare). To move to a newer line, run karni upgrade. Add 'karni.W521' to SILENCED_SYSTEM_CHECKS where the mix is deliberate.
 
 <a id="w530"></a>
 
@@ -3026,6 +3066,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** Opt-outs need a reason per field so the next reader knows the choice was deliberate. append_only names columns that only grow.
 
 **Fix.** Write <code>not_money = {"field": "&lt;what it is&gt;"}</code>, <code>cascade = {"field": "&lt;why&gt;"}</code>, `append_only = True` or a list of existing timestamp columns.
+
+<a id="e971"></a>
+
+#### E971: LANGUAGES names a language Django has no LANG_INFO entry for
+
+*system check (error)* · from `karni.languages.check_languages`
+
+**Why Karni objects.** Django describes a language (its name, its name in that language, its direction) only for the codes of django.conf.locale.LANG_INFO. Any other code in LANGUAGES, even one with a locale/&lt;code>/ folder, makes {% get_language_info_list %} raise KeyError 'Unknown language code &lt;code>.'. The admin's user menu does it on every page, whether or not its language switch is on, so each admin page answers 500. The check names each such code.
+
+**Fix.** Register the language in settings.py: from django.conf.locale import LANG_INFO, then LANG_INFO.update({'fil': {'bidi': False, 'code': 'fil', 'name': 'Filipino', 'name_local': 'Filipino'}}) (bidi is True for a language written right to left). Or take the code out of LANGUAGES. The message shows the entry for the code.
+
+<a id="w971"></a>
+
+#### W971: LANGUAGES names a language Django has no LANG_INFO entry for, and there is no admin
+
+*system check (warning)* · from `karni.languages.check_languages`
+
+**Why Karni objects.** The same as karni.E971, in a project without django.contrib.admin: only a template of the project that lists the languages (get_language_info, get_language_info_list) raises KeyError 'Unknown language code &lt;code>.'.
+
+**Fix.** Register the language (the entry karni.E971 shows) or take the code out of LANGUAGES. Add 'karni.W971' to SILENCED_SYSTEM_CHECKS when no template describes the languages.
 
 <a id="e980"></a>
 
@@ -4365,7 +4425,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni_site.checks_seo`
 
-**Why Karni objects.** Search engines treat pages with the same title as copies of one another and may show only one. Visitors cannot tell the results apart either. It usually means a template's title was written once for every page of a kind.
+**Why Karni objects.** Search engines treat pages with the same title as copies of one another and may show only one. Visitors cannot tell the results apart either. It usually means a template's title was written once for every page of a kind. On a site in several languages (i18n_patterns) pages are compared within one language: /en/contact/ and /fr/contact/ may both be "Contact".
 
 **Fix.** Give each page its own title. For pages of one view, let the row name it (class Karni: seo = {"title": "name"}, or {% block title %}{{ object.title }}{% endblock %}), or set it per page in the admin.
 
@@ -4385,7 +4445,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni_site.checks_seo`
 
-**Why Karni objects.** A description shared by several pages says nothing about any one of them, and search engines may ignore it. A detail page that repeats its card's text, or a layout's default left in place, is the usual cause.
+**Why Karni objects.** A description shared by several pages says nothing about any one of them, and search engines may ignore it. A detail page that repeats its card's text, or a layout's default left in place, is the usual cause. On a site in several languages (i18n_patterns) pages are compared within one language.
 
 **Fix.** Write a description per page, or let each row give its own (class Karni: seo = {"description": "intro"}).
 
@@ -4435,9 +4495,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni_site.checks_seo`
 
-**Why Karni objects.** sitemap.xml tells search engines which pages exist. A page the site links to that the sitemap leaves out is found late or not at all, and an address in the sitemap that does not answer 200 (or asks not to be indexed) wastes the crawl.
+**Why Karni objects.** sitemap.xml tells search engines which pages exist. A page the site links to that the sitemap leaves out is found late or not at all, and an address in the sitemap that does not answer 200 (or asks not to be indexed) wastes the crawl. On a site in several languages (i18n_patterns) karni_site's sections list every language's address, and each language's pages are checked against them.
 
-**Fix.** Include karni_site's URLs (path("", include("karni_site.urls")) in config/urls.py, which karni make site writes). Give a model's rows get_absolute_url() and the public filter they need (class Karni: sitemap), and leave out an address that is not a page with KARNI_SITE_SITEMAP_EXCLUDE.
+**Fix.** Include karni_site's URLs (path("", include("karni_site.urls")) in config/urls.py, which karni make site writes). Give a model's rows get_absolute_url() and the public filter they need (class Karni: sitemap), name the URL pattern of a page, and leave out an address that is not a page with KARNI_SITE_SITEMAP_EXCLUDE. A sitemap section of your own (KARNI_SITE_SITEMAPS) on a site in several languages needs i18n = True, and its rows a get_absolute_url() built with reverse(). The message says which applies.
 
 <a id="site019"></a>
 
@@ -4498,6 +4558,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** manage.py karni_site_seed renders every page of the site once, in a deploy, so the blocks, menus and site details its templates give are stored before the first visitor. A page that answers a server error (500) with the new code and the migrated database would fail for every visitor too, and its defaults are not stored.
 
 **Fix.** Open the page the message names with `karni serve` (or read the error the command printed) and fix the view or the template. --keep-going reports the failing pages without failing the run.
+
+<a id="site025"></a>
+
+### SITE025: Blocks no template shows any more
+
+*system check (warning)* · from `karni_site.orphans (karni check)`
+
+**Why Karni objects.** A block is stored the first time a page renders its {% editable %} or {% editable_image %}. When the tag leaves the template, the row stays, and the admin's Page content still lists it, so a client can edit text that no page shows. karni check reads the templates and prints the blocks whose key no template names. It is a warning: it never fails the run.
+
+**Fix.** List them with `python manage.py karni_site_orphans` and remove them with --delete (--include-edited for the ones someone edited). A key that code of your own stores through karni_site.blocks.text() or image() goes in KARNI_SITE_CODE_BLOCKS.
+
+<a id="site026"></a>
+
+### SITE026: KARNI_SITE_EDITOR_GRANTS adds a grant the editor role cannot give
+
+*system check (error)* · from `karni_site.roles.check_grants`
+
+**Why Karni objects.** KARNI_SITE_EDITOR_GRANTS adds grants to the editor role karni-site declares. An entry whose model or action the project does not have (a typo, a model renamed or removed), or whose scope the model cannot carry ('own' without an owner field), is left out of the role so that the roles still sync after migrate, and the editor does not get it. The setting also adds nothing when KARNI_SITE_EDITOR_ROLE is None, or when KARNI_ROLES names the editor role, which replaces the module's whole role.
+
+**Fix.** Write each grant as 'app_label.model:action' (the model's label as the admin's addresses show it, /admin/website/article/ is 'website.article', an action the model has, '*' for either part) with a scope ('all', 'own', 'related:&lt;key>', 'custom:&lt;name>', 'tree:&lt;path>'). When KARNI_ROLES has the editor role, put the grants there, or take the role out of KARNI_ROLES.
 
 ## STORE (`STORE`)
 
@@ -6691,9 +6771,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `model-base`
 
-**Rule.** Models inherit `karni.models.BaseModel` (= `UUIDModel` + `TimestampedModel` + `SoftDeleteModel` + `AuditedModel`), or compose those mixins directly when a model should not have all four (e.g. an append-only log: `UUIDModel, TimestampedModel`). Declare `APIMeta` / `AdminMeta` only for fields that must be hidden, read-only or write-only. `BigIntBaseModel` (experimental) is the same with an integer `id`, chosen per model in its class line; `karni context` shows each model's key type.
+**Rule.** Models inherit `karni.models.BaseModel` (= `UUIDModel` + `TimestampedModel` + `SoftDeleteModel` + `AuditedModel`), or compose those mixins directly when a model should not have all four (e.g. an append-only log: `UUIDModel, TimestampedModel`). Declare `APIMeta` / `AdminMeta` only for fields that must be hidden, read-only or write-only. `BigIntBaseModel` is the same with an integer `id`, chosen per model in its class line; `karni context` shows each model's key type.
 
-**Why Karni objects.** The mixins supply the primary key (a UUID, or an integer with `BigIntBaseModel`), timestamps, soft delete, audit stamping and the managers the derived API/admin rely on. The exception is a table or view another system owns: a plain `models.Model` with `class Meta: managed = False` and `class Karni: external = True` (experimental, <code>karni make model &lt;Name&gt; --external --table &lt;table&gt;</code>), which Karni only reads unless `writable = True`.
+**Why Karni objects.** The mixins supply the primary key (a UUID, or an integer with `BigIntBaseModel`), timestamps, soft delete, audit stamping and the managers the derived API/admin rely on. The exception is a table or view another system owns: a plain `models.Model` with `class Meta: managed = False` and `class Karni: external = True` (<code>karni make model &lt;Name&gt; --external --table &lt;table&gt;</code>), which Karni only reads unless `writable = True`.
 
 **Fix.** Inherit karni.models.BaseModel or BigIntBaseModel (or compose its mixins).
 
@@ -6715,11 +6795,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `admin-convention`
 
-**Rule.** Do not register a plain `ModelAdmin`. Declare `AdminMeta` on the model (the admin is derived), or subclass `karni.admin.KarniModelAdmin`.
+**Rule.** Do not register a plain `ModelAdmin`. Declare `AdminMeta` on the model (the admin is derived, and `AdminMeta.mixins` adds methods or templates to it), or subclass `karni.admin.KarniModelAdmin` (it keeps the model's `AdminMeta` for what it does not set).
 
 **Why Karni objects.** The derived admin stays consistent with the model and the API.
 
-**Fix.** Delete the admin class and use AdminMeta, or subclass KarniModelAdmin.
+**Fix.** Delete the admin class and use AdminMeta (put added behaviour in a mixin listed in AdminMeta.mixins), or subclass KarniModelAdmin.
 
 <a id="k104"></a>
 

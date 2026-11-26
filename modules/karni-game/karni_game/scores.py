@@ -1,4 +1,4 @@
-"""Experimental. Scores and leaderboards: one best per player, board and period.
+"""Scores and leaderboards: one best per player, board and period.
 
 :func:`submit` checks a score before it counts: the player is not banned
 (``GAME029``), the value is in the board's plausible range (``GAME013``), the
