@@ -514,6 +514,34 @@ Behavioural fine print (by design, see the `karni/models.py` docstrings):
   lists what the cascade removes and refuses a row that `PROTECT` keeps. A row
   the user may not delete is refused on both.
 
+## Languages
+
+The admin lists the project's languages in its user menu on every page, so
+every code in `LANGUAGES` must be one Django can describe: one of the codes of
+`django.conf.locale.LANG_INFO`, or a regional code whose language is (`de-at`
+is described as `de`). A code with a `locale/<code>/` folder passes Django's
+own check even when it is not, and the first admin page then answers `500`
+with `KeyError: 'Unknown language code fil.'`, whether or not
+`UNFOLD["SHOW_LANGUAGES"]` is on. `karni.E971` finds it at startup instead,
+once for each such code, with the entry to add to `settings.py`:
+
+```python
+from django.conf.locale import LANG_INFO
+
+LANG_INFO.update(
+    {
+        "fil": {"bidi": False, "code": "fil", "name": "Filipino", "name_local": "Filipino"},
+    }
+)
+```
+
+`name` is the language's English name and `name_local` its own name, `bidi`
+is `True` for a language written right to left, and `code` is the code in
+`LANGUAGES`. The other fix is to take the code out of `LANGUAGES`. In a
+project without `django.contrib.admin` only a template of the project that
+lists the languages can fail, so the same finding is the warning
+`karni.W971`.
+
 ## Theming
 
 The admin, the welcome page and `@karni/ui` are one product: the same

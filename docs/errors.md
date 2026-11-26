@@ -3047,6 +3047,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write <code>not_money = {"field": "&lt;what it is&gt;"}</code>, <code>cascade = {"field": "&lt;why&gt;"}</code>, `append_only = True` or a list of existing timestamp columns.
 
+<a id="e971"></a>
+
+#### E971: LANGUAGES names a language Django has no LANG_INFO entry for
+
+*system check (error)* · from `karni.languages.check_languages`
+
+**Why Karni objects.** Django describes a language (its name, its name in that language, its direction) only for the codes of django.conf.locale.LANG_INFO. Any other code in LANGUAGES, even one with a locale/&lt;code>/ folder, makes {% get_language_info_list %} raise KeyError 'Unknown language code &lt;code>.'. The admin's user menu does it on every page, whether or not its language switch is on, so each admin page answers 500. The check names each such code.
+
+**Fix.** Register the language in settings.py: from django.conf.locale import LANG_INFO, then LANG_INFO.update({'fil': {'bidi': False, 'code': 'fil', 'name': 'Filipino', 'name_local': 'Filipino'}}) (bidi is True for a language written right to left). Or take the code out of LANGUAGES. The message shows the entry for the code.
+
+<a id="w971"></a>
+
+#### W971: LANGUAGES names a language Django has no LANG_INFO entry for, and there is no admin
+
+*system check (warning)* · from `karni.languages.check_languages`
+
+**Why Karni objects.** The same as karni.E971, in a project without django.contrib.admin: only a template of the project that lists the languages (get_language_info, get_language_info_list) raises KeyError 'Unknown language code &lt;code>.'.
+
+**Fix.** Register the language (the entry karni.E971 shows) or take the code out of LANGUAGES. Add 'karni.W971' to SILENCED_SYSTEM_CHECKS when no template describes the languages.
+
 <a id="e980"></a>
 
 #### E980: A StateField change the declared lifecycle does not allow

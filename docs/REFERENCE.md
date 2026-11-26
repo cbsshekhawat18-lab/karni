@@ -2934,6 +2934,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E968`](errors.md#e968) | check | LiveUniqueConstraint on a model without soft delete |
 | [`E969`](errors.md#e969) | exception | karni schema was given an unknown app or model |
 | [`E970`](errors.md#e970) | check | A field-layer Karni option is malformed |
+| [`E971`](errors.md#e971) | check | LANGUAGES names a language Django has no LANG_INFO entry for |
+| [`W971`](errors.md#w971) | warning | LANGUAGES names a language Django has no LANG_INFO entry for, and there is no admin |
 | [`E980`](errors.md#e980) | exception | A StateField change the declared lifecycle does not allow |
 | [`W980`](errors.md#w980) | warning | no_overlap is not enforced on this database |
 | [`E981`](errors.md#e981) | exception | The row's state changed since it was loaded |

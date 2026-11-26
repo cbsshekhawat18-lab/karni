@@ -2620,6 +2620,34 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "newer line, run karni upgrade. Add 'karni.W521' to SILENCED_SYSTEM_CHECKS where the "
         "mix is deliberate.",
     ),
+    # E971 / W971 a language Django cannot describe (karni.languages, experimental)
+    _e(
+        "E971",
+        "LANGUAGES names a language Django has no LANG_INFO entry for",
+        "check",
+        "karni.languages.check_languages",
+        "Django describes a language (its name, its name in that language, its direction) only "
+        "for the codes of django.conf.locale.LANG_INFO. Any other code in LANGUAGES, even one "
+        "with a locale/<code>/ folder, makes {% get_language_info_list %} raise KeyError "
+        "'Unknown language code <code>.'. The admin's user menu does it on every page, whether "
+        "or not its language switch is on, so each admin page answers 500. The check names "
+        "each such code.",
+        "Register the language in settings.py: from django.conf.locale import LANG_INFO, then "
+        "LANG_INFO.update({'fil': {'bidi': False, 'code': 'fil', 'name': 'Filipino', "
+        "'name_local': 'Filipino'}}) (bidi is True for a language written right to left). "
+        "Or take the code out of LANGUAGES. The message shows the entry for the code.",
+    ),
+    _e(
+        "W971",
+        "LANGUAGES names a language Django has no LANG_INFO entry for, and there is no admin",
+        "warning",
+        "karni.languages.check_languages",
+        "The same as karni.E971, in a project without django.contrib.admin: only a template "
+        "of the project that lists the languages (get_language_info, get_language_info_list) "
+        "raises KeyError 'Unknown language code <code>.'.",
+        "Register the language (the entry karni.E971 shows) or take the code out of LANGUAGES. "
+        "Add 'karni.W971' to SILENCED_SYSTEM_CHECKS when no template describes the languages.",
+    ),
     # E530-E549 / W630-W639 navigation from data (karni.navigation, experimental)
     _e(
         "E530",

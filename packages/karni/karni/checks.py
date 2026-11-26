@@ -1214,6 +1214,8 @@ def _stand_in_user(user_model: Any) -> Any:
 # and the typed field layer, E960-E970 / W964-W967 (karni.fields.checks).
 from karni import guard_checks as _guard_checks  # noqa: E402,F401
 
+# A LANGUAGES code Django cannot describe, E971 / W971 (karni.languages).
+from karni import languages as _languages  # noqa: E402,F401
 
 # One version line for karni, karni-cli and the modules, W521 (karni.versions).
 from karni import versions as _versions  # noqa: E402,F401

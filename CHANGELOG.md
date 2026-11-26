@@ -98,6 +98,16 @@ apply codemods and list the manual steps. This file is the human summary.
   renders is *not seen* and never called an orphan, and `KARNI_SITE_CODE_BLOCKS` names the
   keys your own code stores.
 
+- **Added (experimental): `karni.E971` and `karni.W971` find a `LANGUAGES` code Django cannot
+  describe at startup.** A code with a `locale/<code>/` folder but no entry in
+  `django.conf.locale.LANG_INFO` (`fil`, for one) makes django-unfold's user menu raise
+  `KeyError: 'Unknown language code fil.'`, and the menu is on every admin page, whether or
+  not `UNFOLD["SHOW_LANGUAGES"]` is on: each admin page answered 500. The check asks Django
+  itself (`get_language_info`, with its fallback of `de-at` to `de`) for each code and names
+  each one it cannot describe, with the `LANG_INFO` entry to add. It is an error
+  (`karni.E971`) when `django.contrib.admin` is installed, because the admin breaks, and a
+  warning (`karni.W971`) otherwise. See [admin](docs/admin.md#languages).
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web
