@@ -34,6 +34,16 @@ dismissal is one row in the `karni_admin_guidedismissal` table, so run
 `migrate` after upgrading. `KARNI_ADMIN_GUIDE = False` removes the panel and
 the menu entry.
 
+*Add your first record* links the first model of the project's own apps that
+the user may add to, in the order of the home page. An app is the project's
+own when its code lives in the project folder (`BASE_DIR`) and not among the
+installed packages, so Django's groups, a Karni module's pages and a
+third-party app's tables are never the first record. A user who may add to
+none of the project's models gets the step without a link. Only a project with
+no model of its own links the first model the user may add to, whatever its
+app. To name another first step, override the panel's template,
+`karni_admin/includes/guide_panel.html` (`guide.steps` holds each step).
+
 ### The list of a model
 
 - The top right has a primary **Add \<model\>** button, and **Import** beside

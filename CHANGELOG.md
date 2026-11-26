@@ -49,6 +49,14 @@ apply codemods and list the manual steps. This file is the human summary.
   with `AlreadyRegistered`. Karni runs Django's admin autodiscovery first in that order,
   so every app's `admin.py` registers before Karni derives the rest.
 
+- **Fixed: the admin guide's first step names a model of the project.** *Add your first
+  record* linked the first model in the home page's order the user could add to, which on
+  a site project is auth's Groups. It now links the first such model of the project's own
+  apps, the apps whose code lives in the project folder, so never Django's, Karni's or a
+  module's, or a third-party app's. A user who may add to none of the project's models
+  gets the step without a link, and a project with no model of its own keeps the old
+  choice.
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web
