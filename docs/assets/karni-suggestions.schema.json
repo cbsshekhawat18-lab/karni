@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://cbsshekhawat18-lab.github.io/karni/assets/karni-suggestions.schema.json",
   "title": "karni suggest --json",
-  "description": "Experimental. The output of karni suggest --json.",
+  "description": "The output of karni suggest --json.",
   "$defs": {
     "_SuggestionOut": {
       "additionalProperties": false,

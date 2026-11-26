@@ -21,18 +21,18 @@ is a few lines that compose them (see the [tutorial](tutorial.md)).
 - `ResourceSelect` (role `async-select`)
 - `ChangeHistory` (role `change-history`)
 - `ResourceImport` (role `resource-import`)
-- `ResourceGrid` (role `resource-grid`, experimental)
-- `ResourceBoard` (role `resource-board`, experimental)
-- `ResourceCalendar` (role `resource-calendar`, experimental)
-- `TreeView` (role `tree-view`, experimental)
-- `TreeSelect` (role `tree-select`, experimental)
-- `TreeBreadcrumb` (role `tree-breadcrumb`, experimental)
-- `FacetPanel` (role `facet-panel`, experimental)
+- `ResourceGrid` (role `resource-grid`)
+- `ResourceBoard` (role `resource-board`)
+- `ResourceCalendar` (role `resource-calendar`)
+- `TreeView` (role `tree-view`)
+- `TreeSelect` (role `tree-select`)
+- `TreeBreadcrumb` (role `tree-breadcrumb`)
+- `FacetPanel` (role `facet-panel`)
 
 ## App shell and pages
 
 - `Layout` (role `layout-shell`)
-- `GlobalSearch` (role `global-search`, experimental)
+- `GlobalSearch` (role `global-search`)
 - `Page` (role `page-shell`)
 - `EmptyState` (role `empty-state`)
 - `Modal` (role `modal`)
@@ -47,41 +47,38 @@ is a few lines that compose them (see the [tutorial](tutorial.md)).
 
 ## The family screens (one layout, home, people, inbox and search for every part)
 
-- `FamilyLayout` (role `family-layout`, experimental)
-- `Storefront` (experimental)
-- `BackOffice` (experimental)
-- `FamilyHome` (experimental)
-- `FamilyEmptyHome` (experimental)
-- `PeoplePage` (experimental)
-- `PersonPage` (experimental)
-- `Timeline` (experimental)
-- `InboxBell` (experimental)
-- `InboxPage` (experimental)
-- `EmailChoices` (experimental)
-- `MyAddresses` (experimental)
-- `SearchPage` (experimental)
-- `AccountPage` (experimental)
-- `SignInPage` (experimental)
-- `SignUpForm` (experimental)
-- `SettingsPage` (experimental)
+- `FamilyLayout` (role `family-layout`)
+- `Storefront`
+- `BackOffice`
+- `FamilyHome`
+- `FamilyEmptyHome`
+- `PeoplePage`
+- `PersonPage`
+- `Timeline`
+- `InboxBell`
+- `InboxPage`
+- `EmailChoices`
+- `MyAddresses`
+- `SearchPage`
+- `AccountPage`
+- `SignInPage`
+- `SignUpForm`
+- `SettingsPage`
 
 ## Auth
 
 - `AuthProvider`
 - `AuthGuard` (role `auth-guard`)
 - `LoginForm` (role `login-form`)
-- `SocialButton` (role `social-sign-in`, experimental)
-- `OtpLoginForm` (role `code-sign-in`, experimental)
-- `TermsGate` (role `terms-gate`, experimental)
-- `DemoNotice` (role `demo-notice`, experimental)
+- `SocialButton` (role `social-sign-in`)
+- `OtpLoginForm` (role `code-sign-in`)
+- `TermsGate` (role `terms-gate`)
+- `DemoNotice` (role `demo-notice`)
 - `KarniProvider`
 
-## Page blocks (experimental)
+<a id="page-blocks-experimental"></a>
 
-!!! warning "Experimental"
-    The page blocks, `useResourceCounts` and ResourceDetail's `related` prop are
-    [experimental](stability.md#experimental-names): they may change in a minor
-    release, and each change is in the CHANGELOG.
+## Page blocks
 
 Pages for large apps are dashboards, comparisons and reports, not only resource
 tables. These components keep such a page within the 50-line cap
@@ -158,15 +155,9 @@ export default function VenueOverviewPage() {
 }
 ```
 
-## Field groups and column sets (experimental)
+<a id="field-groups-and-column-sets-experimental"></a>
 
-!!! warning "Experimental"
-    `Karni.field_groups`, `field_group_layout` and `column_sets`, their
-    `x-karni-field-groups` and `x-karni-column-sets` extensions, the `fieldGroups` and
-    `groupLayout` props of ResourceForm and ResourceDetail, ResourceTable's `columnSets`,
-    `columnSet` and `onColumnSetChange`, and the `FieldGroupDef`, `FieldGroupLayout`,
-    `FieldGroupsDef`, `ColumnSetDef` and `ColumnSetsDef` types are
-    [experimental](stability.md#experimental-names).
+## Field groups and column sets
 
 A model with a hundred columns and a dozen long markdown sections makes a generated form
 or detail page one endless list, and its table a hundred columns. Declare the layout on
@@ -230,7 +221,9 @@ A 120-field test model with twelve markdown sections keeps these budgets: a list
 ResourceForm under 1,000 ms and ResourceDetail under 600 ms to render in jsdom (the UI
 suite).
 
-## Names, links and rights on resource pages (experimental)
+<a id="names-links-and-rights-on-resource-pages-experimental"></a>
+
+## Names, links and rights on resource pages
 
 ### How a related row is named
 
@@ -269,7 +262,7 @@ button for those who may create rows: it opens ResourceImport above the table
 commit), and the table reads its rows again afterwards. `importable={false}`
 hides it.
 
-`bulkEdit={["price", "stock", "active"]}` (experimental) adds a "Select rows,
+`bulkEdit={["price", "stock", "active"]}` adds a "Select rows,
 then set … to …" line above the table and a bulk action that saves that value
 on every selected row, each through the row's own update, so its rules and
 history apply and a row the server refuses is marked with the reason. It
@@ -283,45 +276,45 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 
 ## Hooks
 
-- `useAggregate`: Experimental. Grouped counts and sums of a resource (`GET /<resource>/aggregate/`): `{ groupBy, metric, value, top, stack, series, filters, search }` → `{ categories, series }`, which `<DataChart aggregate>` reads directly.
-- `useAudience`: Experimental. Who is looking: `loading`, `visitor`, `customer` (only the family's `customer` role) or `staff` (any other role).
-- `useAuth`: `{ user, status, login(email, password), logout, refresh }` from `AuthProvider`, and (experimental) `{ terms, termsRequired, acceptTerms(client) }` for terms acceptance.
-- `useBusiness`: Experimental. The business's public details (`GET /preferences/public/`): name, address, phone, email, currency, logo.
+- `useAggregate`: Grouped counts and sums of a resource (`GET /<resource>/aggregate/`): `{ groupBy, metric, value, top, stack, series, filters, search }` → `{ categories, series }`, which `<DataChart aggregate>` reads directly.
+- `useAudience`: Who is looking: `loading`, `visitor`, `customer` (only the family's `customer` role) or `staff` (any other role).
+- `useAuth`: `{ user, status, login(email, password), logout, refresh }` from `AuthProvider`, and `{ terms, termsRequired, acceptTerms(client) }` for terms acceptance.
+- `useBusiness`: The business's public details (`GET /preferences/public/`): name, address, phone, email, currency, logo.
 - `useChangeHistory`: One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).
 - `useDashboardTiles`: See the package README.
 - `useDelayedFlag`: See the package README.
 - `useDemo`: See the package README.
-- `useGlobalSearch`: Experimental. `{ q, models, limit }` → `{ query, groups: [{ resource, label, hits: [{ resource, id, title, subtitle, score }] }] }`: cross-model search (`GET /search/`), each model under its own list access. A query under `minLength` (2) sends nothing.
+- `useGlobalSearch`: `{ q, models, limit }` → `{ query, groups: [{ resource, label, hits: [{ resource, id, title, subtitle, score }] }] }`: cross-model search (`GET /search/`), each model under its own list access. A query under `minLength` (2) sends nothing.
 - `useImportActions`: `upload`, `preview` (the dry run) and `commit` mutations of an import.
 - `useImportDescribe`: The importable fields of a resource and the user's remembered column mapping.
 - `useImportJob`: One import job's state. It polls while the backend previews or commits it.
-- `useInboxUnread`: Experimental. The signed-in person's unread count (`GET /inbox/unread/`), read again every minute; `null` while the inbox is off.
+- `useInboxUnread`: The signed-in person's unread count (`GET /inbox/unread/`), read again every minute; `null` while the inbox is off.
 - `useKarniClient`: The `KarniClient` behind every hook, with `client.request(path, { method, body, query })` for custom actions.
 - `useKarniPrimitives`: See the package README.
-- `useMenu`: Experimental. The entries of one named menu (`GET /navigation/?menu=public`) the signed-in person sees.
-- `useNavigation`: Experimental. The menu the signed-in user gets (`GET /navigation/`, Django's `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `{ menu: "public" }` reads a named menu. `<Layout navSource="server">` renders it.
+- `useMenu`: The entries of one named menu (`GET /navigation/?menu=public`) the signed-in person sees.
+- `useNavigation`: The menu the signed-in user gets (`GET /navigation/`, Django's `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `{ menu: "public" }` reads a named menu. `<Layout navSource="server">` renders it.
 - `useOnlineStatus`: See the package README.
-- `useOtpLogin`: Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).
+- `useOtpLogin`: `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).
 - `usePageMeta`: See the package README.
 - `usePermission`: `{ hasRole(...names), isAuthenticated }` for gating UI on roles.
-- `usePersonFacts`: Experimental. The person facts the installed parts contribute (`GET /people/facts/`): `[{ name, label, kind, source }]`.
-- `useResourceAccessForest`: Experimental. The requester's access forest of a tree resource (`GET /<resource>/access/?permission=`): `{ results, all, truncated }`, the granted nodes with their ancestors and every other root, each with `granted`. `TreeView`'s `access` shows it.
-- `useResourceAncestors`: Experimental. The nodes above a tree node, root first (`GET /<resource>/<id>/ancestors/`).
-- `useResourceChildren`: Experimental. One page of a tree node's children (`GET /<resource>/<id>/children/`).
-- `useResourceCounts`: Experimental. `{ data, loading, error, refetch }`: the rows of each resource the user can read, as chart points (one list request each with `page_size=1`).
-- `useResourceFacets`: Experimental. Rows per node of one taxonomy under the list's filters (`GET /<resource>/facets/?taxonomy=&rollup=`): `{ taxonomy, rollup, results }`, each node `{ id, label, parent, count }`. `FacetPanel` shows it.
+- `usePersonFacts`: The person facts the installed parts contribute (`GET /people/facts/`): `[{ name, label, kind, source }]`.
+- `useResourceAccessForest`: The requester's access forest of a tree resource (`GET /<resource>/access/?permission=`): `{ results, all, truncated }`, the granted nodes with their ancestors and every other root, each with `granted`. `TreeView`'s `access` shows it.
+- `useResourceAncestors`: The nodes above a tree node, root first (`GET /<resource>/<id>/ancestors/`).
+- `useResourceChildren`: One page of a tree node's children (`GET /<resource>/<id>/children/`).
+- `useResourceCounts`: `{ data, loading, error, refetch }`: the rows of each resource the user can read, as chart points (one list request each with `page_size=1`).
+- `useResourceFacets`: Rows per node of one taxonomy under the list's filters (`GET /<resource>/facets/?taxonomy=&rollup=`): `{ taxonomy, rollup, results }`, each node `{ id, label, parent, count }`. `FacetPanel` shows it.
 - `useResourceItem`: One row by id, optionally expanded.
 - `useResourceList`: A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.
 - `useResourceMutations`: `create`, `update` and `remove` for a resource. On success they invalidate the resource's queries.
-- `useResourceSchemaIfKnown`: Experimental. One resource's parsed schema when it is known, else `undefined`: never throws, and reads nothing outside a `KarniProvider`.
-- `useResourceTree`: Experimental. The nested nodes of a tree resource (`GET /<resource>/tree/?root=&depth=`): `{ results, truncated }`, each node with `has_children` and `children` (`null` until loaded).
+- `useResourceSchemaIfKnown`: One resource's parsed schema when it is known, else `undefined`: never throws, and reads nothing outside a `KarniProvider`.
+- `useResourceTree`: The nested nodes of a tree resource (`GET /<resource>/tree/?root=&depth=`): `{ results, truncated }`, each node with `has_children` and `children` (`null` until loaded).
 - `useSchema`: The parsed OpenAPI schema of one resource (fields, operations, access).
-- `useSiteName`: Experimental. The business's name from Settings, Details, else the page title the app started with.
-- `useSocialLogin`: Experimental. `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).
+- `useSiteName`: The business's name from Settings, Details, else the page title the app started with.
+- `useSocialLogin`: `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).
 - `useTheme`: See the package README.
-- `useTimeline`: Experimental. One timeline a page at a time (`GET /timeline/?person=` or `?subject=`, cursor paging, `kinds`).
+- `useTimeline`: One timeline a page at a time (`GET /timeline/?person=` or `?subject=`, cursor paging, `kinds`).
 - `useToast`: Show a toast through the mounted `Toaster`.
-- `useTreeMutations`: Experimental. `move({ id, parent, position })` (`POST /<resource>/<id>/move/`) and `removeBranch(id)` (`DELETE ?branch=true`) for a tree resource.
+- `useTreeMutations`: `move({ id, parent, position })` (`POST /<resource>/<id>/move/`) and `removeBranch(id)` (`DELETE ?branch=true`) for a tree resource.
 - `useUnsavedChangesGuard`: `{ dirty, setDirty, isDirty, shouldBlock }` for warning before leaving a dirty form. Give `shouldBlock` to your router's blocker and `setDirty` to ResourceForm's `onDirtyChange`.
 
 ## Component roles

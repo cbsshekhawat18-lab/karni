@@ -2,11 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json",
   "title": "karni.yaml",
-  "description": "Experimental. A whole ``karni.yaml``.",
+  "description": "A whole ``karni.yaml``.",
   "$defs": {
     "Access": {
       "additionalProperties": false,
-      "description": "Experimental. ``access:`` of an entity: the viewset's ``Access(...)``.\n\nEach slot takes ``public``, ``authenticated``, ``granted``,\n``role:<slug>``, ``owned:<field>``, ``where:<field>[=<value>]``, or a\nlist of them (any of them admits). ``read`` and ``write`` default to\n``granted``, ``create`` and ``delete`` to ``write``; ``assign`` (who may\nset the owner to another user) to nobody.",
+      "description": "``access:`` of an entity: the viewset's ``Access(...)``.\n\nEach slot takes ``public``, ``authenticated``, ``granted``,\n``role:<slug>``, ``owned:<field>``, ``where:<field>[=<value>]``, or a\nlist of them (any of them admits). ``read`` and ``write`` default to\n``granted``, ``create`` and ``delete`` to ``write``; ``assign`` (who may\nset the owner to another user) to nobody.",
       "patternProperties": {
         "^x-": {}
       },
@@ -71,7 +71,7 @@
               "type": "null"
             }
           ],
-          "description": "Experimental. Who deletes which rows (default: write)."
+          "description": "Who deletes which rows (default: write)."
         },
         "assign": {
           "anyOf": [
@@ -88,14 +88,14 @@
               "type": "null"
             }
           ],
-          "description": "Experimental. Who may set the owner field (owned:<field> in write or create) to another user. Default: nobody, the owner is the signed-in user."
+          "description": "Who may set the owner field (owned:<field> in write or create) to another user. Default: nobody, the owner is the signed-in user."
         }
       },
       "type": "object"
     },
     "ActionRule": {
       "additionalProperties": false,
-      "description": "Experimental. One ``actions:`` entry: a row action (the viewset's row_actions).",
+      "description": "One ``actions:`` entry: a row action (the viewset's row_actions).",
       "patternProperties": {
         "^x-": {}
       },
@@ -158,7 +158,7 @@
     },
     "Aggregate": {
       "additionalProperties": false,
-      "description": "Experimental. ``aggregate:`` of an entity: ``class Karni: aggregate``.\n\nWhat ``GET <resource>/aggregate/`` may group by and sum (docs/aggregations.md).\nExpressions (``TextNumber`` and your own) stay in the project's code.",
+      "description": "``aggregate:`` of an entity: ``class Karni: aggregate``.\n\nWhat ``GET <resource>/aggregate/`` may group by and sum (docs/aggregations.md).\nExpressions (``TextNumber`` and your own) stay in the project's code.",
       "patternProperties": {
         "^x-": {}
       },
@@ -216,7 +216,7 @@
     },
     "ApiCache": {
       "additionalProperties": false,
-      "description": "Experimental. ``features.api_cache`` as a mapping: on, with its lifetime.",
+      "description": "``features.api_cache`` as a mapping: on, with its lifetime.",
       "patternProperties": {
         "^x-": {}
       },
@@ -233,7 +233,7 @@
     },
     "App": {
       "additionalProperties": false,
-      "description": "Experimental. One Django app of ``apps:`` and its entities.",
+      "description": "One Django app of ``apps:`` and its entities.",
       "patternProperties": {
         "^x-": {}
       },
@@ -248,7 +248,7 @@
               "type": "null"
             }
           ],
-          "description": "Experimental. The base path its entity pages are mounted under (/bookings: the resources list is /bookings/resources). Default: none, each page at /<route>. karni recipes add sets /<label> for a recipe's app."
+          "description": "The base path its entity pages are mounted under (/bookings: the resources list is /bookings/resources). Default: none, each page at /<route>. karni recipes add sets /<label> for a recipe's app."
         },
         "entities": {
           "additionalProperties": {
@@ -265,7 +265,7 @@
     },
     "AppInfo": {
       "additionalProperties": false,
-      "description": "Experimental. ``app:``: what the project is.",
+      "description": "``app:``: what the project is.",
       "patternProperties": {
         "^x-": {}
       },
@@ -296,7 +296,7 @@
           "description": "Deprecated: write recipes: [<name>]. Read as a list of one until Karni 1.0, with a deprecation warning."
         },
         "recipes": {
-          "description": "Experimental. The recipes this project holds, in the order they were added. karni recipes add and remove keep it, and karni build writes a new one's files.",
+          "description": "The recipes this project holds, in the order they were added. karni recipes add and remove keep it, and karni build writes a new one's files.",
           "items": {
             "type": "string"
           },
@@ -312,7 +312,7 @@
               "type": "null"
             }
           ],
-          "description": "Experimental. The project's currency, an ISO 4217 code (EUR). A money field without a currency of its own is in it, and the payments module's currency follows it."
+          "description": "The project's currency, an ISO 4217 code (EUR). A money field without a currency of its own is in it, and the payments module's currency follows it."
         },
         "api_version": {
           "anyOf": [
@@ -334,7 +334,7 @@
     },
     "Bound": {
       "additionalProperties": false,
-      "description": "Experimental. One field's ``bounds``: its lowest and highest value.",
+      "description": "One field's ``bounds``: its lowest and highest value.",
       "patternProperties": {
         "^x-": {}
       },
@@ -378,7 +378,7 @@
     },
     "DashboardTile": {
       "additionalProperties": false,
-      "description": "Experimental. One ``dashboard:`` tile: a box on the home page of the roles it names.\n\nA tile with ``entity`` counts (``stat``) or lists (``list``) that entity's\nrows matching ``filters``, through its list endpoint. A tile whose\n``key`` names a tile an app declares in code (``<app>/dashboard.py``:\n``commerce.revenue``) places it: its title, order, size and who sees it,\nor ``hidden: true``.",
+      "description": "One ``dashboard:`` tile: a box on the home page of the roles it names.\n\nA tile with ``entity`` counts (``stat``) or lists (``list``) that entity's\nrows matching ``filters``, through its list endpoint. A tile whose\n``key`` names a tile an app declares in code (``<app>/dashboard.py``:\n``commerce.revenue``) places it: its title, order, size and who sees it,\nor ``hidden: true``.",
       "patternProperties": {
         "^x-": {}
       },
@@ -577,7 +577,7 @@
     },
     "DeleteRule": {
       "additionalProperties": false,
-      "description": "Experimental. ``delete:`` of an entity: when a row may be deleted (class Karni: delete).",
+      "description": "``delete:`` of an entity: when a row may be deleted (class Karni: delete).",
       "patternProperties": {
         "^x-": {}
       },
@@ -624,7 +624,7 @@
     },
     "DetailOptions": {
       "additionalProperties": false,
-      "description": "Experimental. What a detail page shows besides the record: ``{related: [Deal, Person]}``.",
+      "description": "What a detail page shows besides the record: ``{related: [Deal, Person]}``.",
       "patternProperties": {
         "^x-": {}
       },
@@ -648,7 +648,7 @@
     },
     "DetailPage": {
       "additionalProperties": false,
-      "description": "Experimental. An entity's detail page with options: ``{detail: {related: [Deal]}}``.",
+      "description": "An entity's detail page with options: ``{detail: {related: [Deal]}}``.",
       "patternProperties": {
         "^x-": {}
       },
@@ -665,7 +665,7 @@
     },
     "Entity": {
       "additionalProperties": false,
-      "description": "Experimental. One entity: a model on BaseModel or BigIntBaseModel, its viewset and options.",
+      "description": "One entity: a model on BaseModel or BigIntBaseModel, its viewset and options.",
       "patternProperties": {
         "^x-": {}
       },
@@ -747,7 +747,7 @@
         },
         "tree": {
           "default": false,
-          "description": "Experimental. A hierarchy: true inherits TreeModel (a parent field and the tree endpoints), ordered inherits OrderedTreeModel (also a position among siblings).",
+          "description": "A hierarchy: true inherits TreeModel (a parent field and the tree endpoints), ordered inherits OrderedTreeModel (also a position among siblings).",
           "oneOf": [
             {
               "type": "boolean"
@@ -762,7 +762,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Experimental. Tag the entity to tree entities: key -> tree entity (Name or app.Name). Each key is a many-to-many of that name, with the list filters ?<key>= and ?<key>_descendants=, the facets/ counts and the tree:<key> scope (class Karni: taxonomies).",
+          "description": "Tag the entity to tree entities: key -> tree entity (Name or app.Name). Each key is a many-to-many of that name, with the list filters ?<key>= and ?<key>_descendants=, the facets/ counts and the tree:<key> scope (class Karni: taxonomies).",
           "propertyNames": {
             "pattern": "^(?:x-.*|[a-z][a-z0-9_]*)$"
           },
@@ -931,11 +931,11 @@
           "additionalProperties": {
             "$ref": "#/$defs/Bound"
           },
-          "description": "Experimental. Field -> {min, max}: the lowest and highest value of a number, date or datetime ($now and $today for dates). class Karni: bounds.",
+          "description": "Field -> {min, max}: the lowest and highest value of a number, date or datetime ($now and $today for dates). class Karni: bounds.",
           "type": "object"
         },
         "unique": {
-          "description": "Experimental. Fields unique together among the live rows: a list of fields, or {fields, where} with a row filter. A partial unique index (class Karni: unique).",
+          "description": "Fields unique together among the live rows: a list of fields, or {fields, where} with a row filter. A partial unique index (class Karni: unique).",
           "items": {
             "oneOf": [
               {
@@ -956,7 +956,7 @@
             "additionalProperties": true,
             "type": "object"
           },
-          "description": "Experimental. Foreign key -> a row filter the row it points at must match ($me, $now, $today, $<field>). class Karni: targets.",
+          "description": "Foreign key -> a row filter the row it points at must match ($me, $now, $today, $<field>). class Karni: targets.",
           "type": "object"
         },
         "frozen": {
@@ -971,7 +971,7 @@
               }
             ]
           },
-          "description": "Experimental. Field -> true (never changes after create) or a row filter (cannot change while the row matches it). class Karni: frozen.",
+          "description": "Field -> true (never changes after create) or a row filter (cannot change while the row matches it). class Karni: frozen.",
           "type": "object"
         },
         "delete": {
@@ -983,20 +983,20 @@
               "type": "null"
             }
           ],
-          "description": "Experimental. When a row may be deleted: {when, blocked_by} (class Karni: delete). Who may delete is access.delete."
+          "description": "When a row may be deleted: {when, blocked_by} (class Karni: delete). Who may delete is access.delete."
         },
         "moves": {
           "additionalProperties": {
             "$ref": "#/$defs/MoveRule"
           },
-          "description": "Experimental. State (or boolean field becoming true) -> {requires, needs, stamps} (class Karni: moves).",
+          "description": "State (or boolean field becoming true) -> {requires, needs, stamps} (class Karni: moves).",
           "type": "object"
         },
         "actions": {
           "additionalProperties": {
             "$ref": "#/$defs/ActionRule"
           },
-          "description": "Experimental. Row actions: name -> {from, to, by, field}, POST <resource>/<id>/<name>/ (the viewset's row_actions, x-karni-actions).",
+          "description": "Row actions: name -> {from, to, by, field}, POST <resource>/<id>/<name>/ (the viewset's row_actions, x-karni-actions).",
           "propertyNames": {
             "pattern": "^(?:x-.*|[a-z][a-z0-9_]*)$"
           },
@@ -1007,7 +1007,7 @@
     },
     "Features": {
       "additionalProperties": false,
-      "description": "Experimental. ``features:``: built-in options, each switched by a setting.",
+      "description": "``features:``: built-in options, each switched by a setting.",
       "patternProperties": {
         "^x-": {}
       },
@@ -1049,27 +1049,27 @@
         },
         "people": {
           "default": false,
-          "description": "Experimental. KARNI_PEOPLE: the people contract (karni.people). A relation to people.Person switches it on too.",
+          "description": "KARNI_PEOPLE: the people contract (karni.people). A relation to people.Person switches it on too.",
           "type": "boolean"
         },
         "events": {
           "default": false,
-          "description": "Experimental. Family events: karni.outbox in INSTALLED_APPS.",
+          "description": "Family events: karni.outbox in INSTALLED_APPS.",
           "type": "boolean"
         },
         "preferences": {
           "default": false,
-          "description": "Experimental. The preferences contract: karni.preferences in INSTALLED_APPS, the business's details, one settings section per part, connections and email switches behind the Settings page.",
+          "description": "The preferences contract: karni.preferences in INSTALLED_APPS, the business's details, one settings section per part, connections and email switches behind the Settings page.",
           "type": "boolean"
         },
         "timeline": {
           "default": false,
-          "description": "Experimental. The timeline contract: karni.timeline in INSTALLED_APPS. It needs people and events, which it switches on too.",
+          "description": "The timeline contract: karni.timeline in INSTALLED_APPS. It needs people and events, which it switches on too.",
           "type": "boolean"
         },
         "notify": {
           "default": false,
-          "description": "Experimental. The notifications contract: karni.notify in INSTALLED_APPS, the emails a business edits in the app, the inbox, each person's switches and unsubscribing from marketing emails.",
+          "description": "The notifications contract: karni.notify in INSTALLED_APPS, the emails a business edits in the app, the inbox, each person's switches and unsubscribing from marketing emails.",
           "type": "boolean"
         },
         "user_grants": {
@@ -1094,7 +1094,7 @@
     },
     "FieldEntry": {
       "additionalProperties": false,
-      "description": "Experimental. A field written as a mapping, to say what it was called before.\n\n``title: {type: \"str:200\", was: name}`` is the field ``title`` of type\n``str:200``, which ``karni plan`` and ``karni build`` treat as the field\n``name`` renamed: the column keeps its rows.",
+      "description": "A field written as a mapping, to say what it was called before.\n\n``title: {type: \"str:200\", was: name}`` is the field ``title`` of type\n``str:200``, which ``karni plan`` and ``karni build`` treat as the field\n``name`` renamed: the column keeps its rows.",
       "patternProperties": {
         "^x-": {}
       },
@@ -1122,7 +1122,7 @@
     },
     "GlobalSearch": {
       "additionalProperties": false,
-      "description": "Experimental. ``global_search:`` of an entity as a mapping: ``class Karni: search``.\n\nEvery key is optional. ``fields`` defaults to the entity's ``search``\nlist, ``title`` to the first field, ``weight`` to 1.",
+      "description": "``global_search:`` of an entity as a mapping: ``class Karni: search``.\n\nEvery key is optional. ``fields`` defaults to the entity's ``search``\nlist, ``title`` to the first field, ``weight`` to 1.",
       "patternProperties": {
         "^x-": {}
       },
@@ -1184,7 +1184,7 @@
     },
     "MoveRule": {
       "additionalProperties": false,
-      "description": "Experimental. One ``moves:`` entry: what a move into a state needs (class Karni: moves).",
+      "description": "One ``moves:`` entry: what a move into a state needs (class Karni: moves).",
       "patternProperties": {
         "^x-": {}
       },
@@ -1272,7 +1272,7 @@
     },
     "NavigationOptions": {
       "additionalProperties": false,
-      "description": "Experimental. A ``navigation:`` entry written as a mapping's value: a page's or a group's options.\n\nA page takes ``label``, ``icon`` and ``requires``. A group takes\n``items`` (its entries), ``icon`` and ``requires``.",
+      "description": "A ``navigation:`` entry written as a mapping's value: a page's or a group's options.\n\nA page takes ``label``, ``icon`` and ``requires``. A group takes\n``items`` (its entries), ``icon`` and ``requires``.",
       "patternProperties": {
         "^x-": {}
       },
@@ -1329,7 +1329,7 @@
     },
     "Role": {
       "additionalProperties": false,
-      "description": "Experimental. One role of ``roles:``: an entry of ``KARNI_ROLES``.",
+      "description": "One role of ``roles:``: an entry of ``KARNI_ROLES``.",
       "patternProperties": {
         "^x-": {}
       },
@@ -1364,7 +1364,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Permission pattern -> scope. Patterns: \"*\", app.entity, app.entity:action, with * for a part. Scopes: all, own, own:<owner field>, related:<scope path key>, custom:<registered name>, tree:<path to a tree entity> (experimental).",
+          "description": "Permission pattern -> scope. Patterns: \"*\", app.entity, app.entity:action, with * for a part. Scopes: all, own, own:<owner field>, related:<scope path key>, custom:<registered name>, tree:<path to a tree entity>.",
           "type": "object"
         }
       },
@@ -1372,7 +1372,7 @@
     },
     "Terms": {
       "additionalProperties": false,
-      "description": "Experimental. ``features.terms``: ``KARNI_TERMS``.",
+      "description": "``features.terms``: ``KARNI_TERMS``.",
       "patternProperties": {
         "^x-": {}
       },
@@ -1427,7 +1427,7 @@
     },
     "UniqueEntry": {
       "additionalProperties": false,
-      "description": "Experimental. One ``unique`` entry written as a mapping: its fields and a row filter.",
+      "description": "One ``unique`` entry written as a mapping: its fields and a row filter.",
       "patternProperties": {
         "^x-": {}
       },
@@ -1562,7 +1562,7 @@
     },
     "navigation": {
       "default": false,
-      "description": "Experimental. The menu karni build writes to KARNI_NAVIGATION: true for every page of pages in their order, or a list of pages (by their key) and groups ({label: [entries]}), each page with optional {label, icon, requires}, or named menus ({app: [...], public: [...], account: [...]}), each such a list.",
+      "description": "The menu karni build writes to KARNI_NAVIGATION: true for every page of pages in their order, or a list of pages (by their key) and groups ({label: [entries]}), each page with optional {label, icon, requires}, or named menus ({app: [...], public: [...], account: [...]}), each such a list.",
       "oneOf": [
         {
           "type": "boolean"
@@ -1587,7 +1587,7 @@
       ]
     },
     "dashboard": {
-      "description": "Experimental. The home tiles karni build writes to KARNI_DASHBOARD_TILES: each counts or lists an entity's rows for the roles it names, or places a tile an app declares in code.",
+      "description": "The home tiles karni build writes to KARNI_DASHBOARD_TILES: each counts or lists an entity's rows for the roles it names, or places a tile an app declares in code.",
       "items": {
         "$ref": "#/$defs/DashboardTile"
       },

@@ -30,7 +30,7 @@
         "type": "object"
       },
       "AggregateCategory": {
-        "description": "Experimental. One group of the first dimension (a bar, a point on the x axis).",
+        "description": "One group of the first dimension (a bar, a point on the x axis).",
         "properties": {
           "key": {
             "description": "The group's key: a value, a related row's key, or a date bucket (2024-Q1). null for rows with no value, and for Other.",
@@ -53,7 +53,7 @@
         "type": "object"
       },
       "AggregateResult": {
-        "description": "Experimental. The response of ``GET <resource>/aggregate/``.",
+        "description": "The response of ``GET <resource>/aggregate/``.",
         "properties": {
           "categories": {
             "items": {
@@ -104,7 +104,7 @@
         "type": "object"
       },
       "AggregateSeries": {
-        "description": "Experimental. One series: a value per category, in the categories' order.",
+        "description": "One series: a value per category, in the categories' order.",
         "properties": {
           "key": {
             "description": "The second dimension's key, null without one.",
@@ -543,7 +543,7 @@
         "type": "object"
       },
       "GlobalSearchError": {
-        "description": "Experimental. A refused request: E431 and the resources search covers.",
+        "description": "A refused request: E431 and the resources search covers.",
         "properties": {
           "code": {
             "type": "string"
@@ -566,7 +566,7 @@
         "type": "object"
       },
       "GlobalSearchGroup": {
-        "description": "Experimental. The hits of one resource, best first.",
+        "description": "The hits of one resource, best first.",
         "properties": {
           "hits": {
             "items": {
@@ -600,7 +600,7 @@
         "type": "object"
       },
       "GlobalSearchHit": {
-        "description": "Experimental. One hit: a row of one resource, ready to link to its page.",
+        "description": "One hit: a row of one resource, ready to link to its page.",
         "properties": {
           "id": {
             "description": "The row's primary key: its page is /<resource>/<id>.",
@@ -640,7 +640,7 @@
         "type": "object"
       },
       "GlobalSearchResult": {
-        "description": "Experimental. The answer of GET /api/search/: groups ordered by their best hit.",
+        "description": "The answer of GET /api/search/: groups ordered by their best hit.",
         "properties": {
           "groups": {
             "items": {
@@ -3172,7 +3172,7 @@
         "type": "object"
       },
       "Me": {
-        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` (experimental) lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
+        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -3207,7 +3207,7 @@
             "type": "string"
           },
           "permissions": {
-            "description": "Experimental. The permission keys the user holds (``app.model:action``), sorted.",
+            "description": "The permission keys the user holds (``app.model:action``), sorted.",
             "items": {
               "type": "string"
             },
@@ -3250,7 +3250,7 @@
         "type": "object"
       },
       "MeTerms": {
-        "description": "Experimental. The ``terms`` of ``me/`` while ``KARNI_TERMS`` is set.\n\n``required`` and ``accepted`` together say whether the API will refuse the\nuser (``E245``) until they accept ``version``, which is at ``url``.",
+        "description": "The ``terms`` of ``me/`` while ``KARNI_TERMS`` is set.\n\n``required`` and ``accepted`` together say whether the API will refuse the\nuser (``E245``) until they accept ``version``, which is at ``url``.",
         "properties": {
           "accepted": {
             "readOnly": true,
@@ -3290,7 +3290,7 @@
         "type": "string"
       },
       "Navigation": {
-        "description": "Experimental. The body of ``GET /api/navigation/``.",
+        "description": "The body of ``GET /api/navigation/``.",
         "properties": {
           "items": {
             "items": {
@@ -3305,7 +3305,7 @@
         "type": "object"
       },
       "NavigationItem": {
-        "description": "Experimental. One menu entry. A group has ``route: null``, an item ``children: []``.",
+        "description": "One menu entry. A group has ``route: null``, an item ``children: []``.",
         "properties": {
           "children": {
             "items": {
@@ -3350,7 +3350,7 @@
         "type": "object"
       },
       "OtpSendRequest": {
-        "description": "Experimental. Request body of ``otp/send/``: the address to send a sign-in code to.",
+        "description": "Request body of ``otp/send/``: the address to send a sign-in code to.",
         "properties": {
           "email": {
             "format": "email",
@@ -3364,7 +3364,7 @@
         "type": "object"
       },
       "OtpVerifyRequest": {
-        "description": "Experimental. Request body of ``otp/verify/``: the address and the code it received.\n\nWhitespace inside the code is ignored, so ``\"123 456\"`` is ``\"123456\"``.",
+        "description": "Request body of ``otp/verify/``: the address and the code it received.\n\nWhitespace inside the code is ignored, so ``\"123 456\"`` is ``\"123456\"``.",
         "properties": {
           "code": {
             "maxLength": 32,
@@ -4316,7 +4316,7 @@
         "type": "object"
       },
       "PatchedMeRequest": {
-        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` (experimental) lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
+        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
         "properties": {
           "first_name": {
             "maxLength": 150,
@@ -4441,7 +4441,7 @@
         "type": "string"
       },
       "SocialNameRequest": {
-        "description": "Experimental. The optional ``name`` of ``social/<provider>/``: Apple's first sign-in.",
+        "description": "The optional ``name`` of ``social/<provider>/``: Apple's first sign-in.",
         "properties": {
           "first_name": {
             "maxLength": 150,
@@ -4455,7 +4455,7 @@
         "type": "object"
       },
       "SocialTokenLoginRequest": {
-        "description": "Experimental. Request body of ``social/<provider>/``: the ID token, a nonce and a name.\n\n``nonce`` is the raw value the app generated for this sign-in (the token\ncarries it, or its SHA-256 hex digest). ``name`` is used only when the\ntoken creates an account and carries no name itself, which is what Apple\ndoes: it sends the name to the app once, on the first sign-in.",
+        "description": "Request body of ``social/<provider>/``: the ID token, a nonce and a name.\n\n``nonce`` is the raw value the app generated for this sign-in (the token\ncarries it, or its SHA-256 hex digest). ``name`` is used only when the\ntoken creates an account and carries no name itself, which is what Apple\ndoes: it sends the name to the app once, on the first sign-in.",
         "properties": {
           "id_token": {
             "maxLength": 16384,
@@ -4491,7 +4491,7 @@
         "type": "string"
       },
       "TermsAcceptRequest": {
-        "description": "Experimental. Request body of ``terms/accept/``: the version shown, and the client.\n\n``version`` is the version the user read and accepted. ``client`` is an\noptional JSON object the app sends about itself (a mobile app's device,\nplatform and app version, for example), stored with the acceptance. It\nmay be at most ``CLIENT_MAX_BYTES`` bytes of JSON.",
+        "description": "Request body of ``terms/accept/``: the version shown, and the client.\n\n``version`` is the version the user read and accepted. ``client`` is an\noptional JSON object the app sends about itself (a mobile app's device,\nplatform and app version, for example), stored with the acceptance. It\nmay be at most ``CLIENT_MAX_BYTES`` bytes of JSON.",
         "properties": {
           "client": {
             "nullable": true
@@ -4508,7 +4508,7 @@
         "type": "object"
       },
       "TermsStatus": {
-        "description": "Experimental. The answer of ``terms/`` and ``terms/accept/``.\n\n``accepted_at`` is when the user accepted ``version``, ``null`` when they\nhave not. While ``required`` is true and ``accepted`` false, the API\nrefuses the user with ``E245``.",
+        "description": "The answer of ``terms/`` and ``terms/accept/``.\n\n``accepted_at`` is when the user accepted ``version``, ``null`` when they\nhave not. While ``required`` is true and ``accepted`` false, the API\nrefuses the user with ``E245``.",
         "properties": {
           "accepted": {
             "readOnly": true,
@@ -4543,7 +4543,7 @@
         "type": "object"
       },
       "Tile": {
-        "description": "Experimental. One home tile.",
+        "description": "One home tile.",
         "properties": {
           "columns": {
             "items": {
@@ -5146,7 +5146,7 @@
     },
     "/api/auth/otp/send/": {
       "post": {
-        "description": "Experimental. ``POST otp/send/`` ``{email}``: email a sign-in code, enumeration-silent.\n\nAlways the same 200 and the same body (:func:`karni.accounts.otp.send_answer`:\n``{\"detail\", \"length\", \"expires_in\"}``), whether the address has an\naccount, is inactive, or may not sign up. :func:`karni.accounts.otp.send_code`\ndoes the same work on every path and sends the email after the\ntransaction commits. A malformed address is a plain 400. While\n``KARNI_EMAIL_OTP`` is off the route is not mounted, and a URLconf built\nearlier answers 404 ``E236``.\n\nThrottled per IP (``auth.otp_send``) and per address\n(``auth.otp_send_email``). Override / escape hatch: subclass and declare\n``path(\"api/auth/otp/send/\", ...)`` before the include, or change\n``throttle_classes`` / ``throttle_scope``.",
+        "description": "``POST otp/send/`` ``{email}``: email a sign-in code, enumeration-silent.\n\nAlways the same 200 and the same body (:func:`karni.accounts.otp.send_answer`:\n``{\"detail\", \"length\", \"expires_in\"}``), whether the address has an\naccount, is inactive, or may not sign up. :func:`karni.accounts.otp.send_code`\ndoes the same work on every path and sends the email after the\ntransaction commits. A malformed address is a plain 400. While\n``KARNI_EMAIL_OTP`` is off the route is not mounted, and a URLconf built\nearlier answers 404 ``E236``.\n\nThrottled per IP (``auth.otp_send``) and per address\n(``auth.otp_send_email``). Override / escape hatch: subclass and declare\n``path(\"api/auth/otp/send/\", ...)`` before the include, or change\n``throttle_classes`` / ``throttle_scope``.",
         "operationId": "auth_otp_send_create",
         "requestBody": {
           "content": {
@@ -5197,7 +5197,7 @@
     },
     "/api/auth/otp/verify/": {
       "post": {
-        "description": "Experimental. ``POST otp/verify/`` ``{email, code}``: sign in with the emailed code.\n\nThe answer is the one ``login/`` gives: ``{\"access\", \"refresh\", \"user\"}``\nin JWT mode, a session plus ``{\"user\"}`` in session mode, or the 2FA gate\npayload (:func:`_twofa_gate_payload`). When the code verified an address\nthat was never verified, it also removed the account's password, and the\nanswer adds ``\"password_removed\": true`` so the app can say so. A refused code is a 401 ``E235``\nwhatever went wrong (wrong, expired, used, locked, or an address nobody\nsent a code to), an inactive account a 401 ``E226`` after a right code,\nand a new account under the ``approval`` policy a 202 ``E224`` with no\ncredentials. Refusals are returned, not raised, so a guess spent on a\nwrong code stays spent even with ``ATOMIC_REQUESTS``.\n\nThrottled per IP (``auth.otp_verify``), on top of the attempt cap of each\ncode. Override / escape hatch: subclass and declare\n``path(\"api/auth/otp/verify/\", ...)`` before the include.",
+        "description": "``POST otp/verify/`` ``{email, code}``: sign in with the emailed code.\n\nThe answer is the one ``login/`` gives: ``{\"access\", \"refresh\", \"user\"}``\nin JWT mode, a session plus ``{\"user\"}`` in session mode, or the 2FA gate\npayload (:func:`_twofa_gate_payload`). When the code verified an address\nthat was never verified, it also removed the account's password, and the\nanswer adds ``\"password_removed\": true`` so the app can say so. A refused code is a 401 ``E235``\nwhatever went wrong (wrong, expired, used, locked, or an address nobody\nsent a code to), an inactive account a 401 ``E226`` after a right code,\nand a new account under the ``approval`` policy a 202 ``E224`` with no\ncredentials. Refusals are returned, not raised, so a guess spent on a\nwrong code stays spent even with ``ATOMIC_REQUESTS``.\n\nThrottled per IP (``auth.otp_verify``), on top of the attempt cap of each\ncode. Override / escape hatch: subclass and declare\n``path(\"api/auth/otp/verify/\", ...)`` before the include.",
         "operationId": "auth_otp_verify_create",
         "requestBody": {
           "content": {
@@ -5913,7 +5913,7 @@
     },
     "/api/auth/social/google/": {
       "post": {
-        "description": "Experimental. ``POST social/<provider>/``: sign in with a provider's ID token (both modes).\n\nThe body is ``{\"id_token\", \"nonce\"?, \"name\"?}`` (see\n:class:`SocialTokenLoginSerializer`). The token is verified offline by\n:func:`karni.accounts.social_token.verify_id_token` and the account\nchosen by :func:`karni.accounts.social_token.sign_in`. The answer is the\none ``login/`` gives: ``{\"access\", \"refresh\", \"user\"}`` in JWT mode, a\nsession plus ``{\"user\"}`` in session mode, or the 2FA gate payload. A\nrefusal is ``{\"code\", \"detail\"}`` with a 400 or 401 (404 ``E225`` for a\nprovider that is not configured, 503 ``E219`` when its keys cannot be\nfetched), and a new account awaiting approval is a 202 with ``E224`` and\nno credentials.\n\n``karni.accounts.urls`` mounts one route per configured provider and\npasses its name as ``provider``. Override / escape hatch: subclass and\ndeclare ``path(\"api/auth/social/<provider>/\", ...)`` before the include,\nor set ``throttle_classes`` / ``throttle_scope`` (``auth.social``).",
+        "description": "``POST social/<provider>/``: sign in with a provider's ID token (both modes).\n\nThe body is ``{\"id_token\", \"nonce\"?, \"name\"?}`` (see\n:class:`SocialTokenLoginSerializer`). The token is verified offline by\n:func:`karni.accounts.social_token.verify_id_token` and the account\nchosen by :func:`karni.accounts.social_token.sign_in`. The answer is the\none ``login/`` gives: ``{\"access\", \"refresh\", \"user\"}`` in JWT mode, a\nsession plus ``{\"user\"}`` in session mode, or the 2FA gate payload. A\nrefusal is ``{\"code\", \"detail\"}`` with a 400 or 401 (404 ``E225`` for a\nprovider that is not configured, 503 ``E219`` when its keys cannot be\nfetched), and a new account awaiting approval is a 202 with ``E224`` and\nno credentials.\n\n``karni.accounts.urls`` mounts one route per configured provider and\npasses its name as ``provider``. Override / escape hatch: subclass and\ndeclare ``path(\"api/auth/social/<provider>/\", ...)`` before the include,\nor set ``throttle_classes`` / ``throttle_scope`` (``auth.social``).",
         "operationId": "auth_social_google_create",
         "requestBody": {
           "content": {
@@ -5975,7 +5975,7 @@
     },
     "/api/auth/terms/": {
       "get": {
-        "description": "Experimental. ``GET terms/``: the current terms, and whether the user accepted them.\n\n``{\"version\", \"url\", \"required\", \"accepted\", \"accepted_at\"}``\n(:func:`karni.accounts.terms.status`). 401 without a signed-in user. The\nroute exists while ``KARNI_TERMS`` is set, and a URLconf built earlier\nanswers 404 ``E249`` once it is unset. The terms gate never refuses it.\n\nOverride / escape hatch: subclass and declare ``path(\"api/auth/terms/\",\n...)`` before the include.",
+        "description": "``GET terms/``: the current terms, and whether the user accepted them.\n\n``{\"version\", \"url\", \"required\", \"accepted\", \"accepted_at\"}``\n(:func:`karni.accounts.terms.status`). 401 without a signed-in user. The\nroute exists while ``KARNI_TERMS`` is set, and a URLconf built earlier\nanswers 404 ``E249`` once it is unset. The terms gate never refuses it.\n\nOverride / escape hatch: subclass and declare ``path(\"api/auth/terms/\",\n...)`` before the include.",
         "operationId": "auth_terms_retrieve",
         "responses": {
           "200": {
@@ -6015,7 +6015,7 @@
     },
     "/api/auth/terms/accept/": {
       "post": {
-        "description": "Experimental. ``POST terms/accept/`` ``{version, client?}``: accept the current terms.\n\nRecords the acceptance (:func:`karni.accounts.terms.accept`) with the\nclient's IP (read like the throttles read it, honouring ``NUM_PROXIES``),\nits ``User-Agent`` and the optional ``client`` object, and answers 201\nwith the ``terms/`` body. The same version again answers 200 and changes\nnothing. Another version is a 400 ``E246`` carrying the current\n``version`` and ``url``, and nothing is recorded. 401 without a signed-in\nuser, 404 ``E249`` from a URLconf built while ``KARNI_TERMS`` was set.\n\nOverride / escape hatch: subclass and declare\n``path(\"api/auth/terms/accept/\", ...)`` before the include, or call\n:func:`karni.accounts.terms.accept` from a view of your own.",
+        "description": "``POST terms/accept/`` ``{version, client?}``: accept the current terms.\n\nRecords the acceptance (:func:`karni.accounts.terms.accept`) with the\nclient's IP (read like the throttles read it, honouring ``NUM_PROXIES``),\nits ``User-Agent`` and the optional ``client`` object, and answers 201\nwith the ``terms/`` body. The same version again answers 200 and changes\nnothing. Another version is a 400 ``E246`` carrying the current\n``version`` and ``url``, and nothing is recorded. 401 without a signed-in\nuser, 404 ``E249`` from a URLconf built while ``KARNI_TERMS`` was set.\n\nOverride / escape hatch: subclass and declare\n``path(\"api/auth/terms/accept/\", ...)`` before the include, or call\n:func:`karni.accounts.terms.accept` from a view of your own.",
         "operationId": "auth_terms_accept_create",
         "requestBody": {
           "content": {
@@ -6398,7 +6398,7 @@
     },
     "/api/brands/facets/": {
       "get": {
-        "description": "``GET /<resource>/facets/?taxonomy=&rollup=``: rows per node, under the list's filters.\n\nExperimental. How many of the rows the list shows for this request are\ntagged with each node of one taxonomy (class Karni: taxonomies),\nrolled up to the ancestors with rollup=true (karni.api.taxonomy).",
+        "description": "``GET /<resource>/facets/?taxonomy=&rollup=``: rows per node, under the list's filters.\n\nHow many of the rows the list shows for this request are\ntagged with each node of one taxonomy (class Karni: taxonomies),\nrolled up to the ancestors with rollup=true (karni.api.taxonomy).",
         "operationId": "brands_facets_retrieve",
         "parameters": [
           {
@@ -7124,7 +7124,7 @@
     },
     "/api/charts/": {
       "get": {
-        "description": "Experimental. Read-only: the definitions, and each chart's data through its source.",
+        "description": "Read-only: the definitions, and each chart's data through its source.",
         "operationId": "charts_list",
         "parameters": [
           {
@@ -7663,7 +7663,7 @@
     },
     "/api/charts/{slug}/": {
       "get": {
-        "description": "Experimental. Read-only: the definitions, and each chart's data through its source.",
+        "description": "Read-only: the definitions, and each chart's data through its source.",
         "operationId": "charts_retrieve",
         "parameters": [
           {
@@ -7705,7 +7705,7 @@
     },
     "/api/charts/{slug}/data/": {
       "get": {
-        "description": "Experimental. The chart's definition and its data, read through the source's aggregate.\n\nThe chart's ``default_filters`` always apply, and the viewer may add the\nlist filters its ``allowed_filters`` names (any other is a 400,\n``CHART002``). The data follows the source's access: a viewer the\nsource refuses gets the source's answer.",
+        "description": "The chart's definition and its data, read through the source's aggregate.\n\nThe chart's ``default_filters`` always apply, and the viewer may add the\nlist filters its ``allowed_filters`` names (any other is a 400,\n``CHART002``). The data follows the source's access: a viewer the\nsource refuses gets the source's answer.",
         "operationId": "charts_data_retrieve",
         "parameters": [
           {
@@ -8316,7 +8316,7 @@
     },
     "/api/companies/aggregate/": {
       "get": {
-        "description": "Experimental. Grouped counts, sums, averages, minimums and maximums of the list's rows.\n\n``group_by`` names a declared field, relation path or expression (a date\ntakes ``:year``, ``:quarter`` or ``:month``), ``metric`` one of count, sum,\navg, min, max and distinct_count, ``value`` the declared field it reads,\n``top`` keeps the largest groups and puts the rest in Other, and ``stack``\nor ``series`` adds a second dimension. Every list filter and ``search``\napply, after access.",
+        "description": "Grouped counts, sums, averages, minimums and maximums of the list's rows.\n\n``group_by`` names a declared field, relation path or expression (a date\ntakes ``:year``, ``:quarter`` or ``:month``), ``metric`` one of count, sum,\navg, min, max and distinct_count, ``value`` the declared field it reads,\n``top`` keeps the largest groups and puts the rest in Other, and ``stack``\nor ``series`` adds a second dimension. Every list filter and ``search``\napply, after access.",
         "operationId": "companies_aggregate_retrieve",
         "parameters": [
           {
@@ -8846,7 +8846,7 @@
     },
     "/api/companies/facets/": {
       "get": {
-        "description": "``GET /<resource>/facets/?taxonomy=&rollup=``: rows per node, under the list's filters.\n\nExperimental. How many of the rows the list shows for this request are\ntagged with each node of one taxonomy (class Karni: taxonomies),\nrolled up to the ancestors with rollup=true (karni.api.taxonomy).",
+        "description": "``GET /<resource>/facets/?taxonomy=&rollup=``: rows per node, under the list's filters.\n\nHow many of the rows the list shows for this request are\ntagged with each node of one taxonomy (class Karni: taxonomies),\nrolled up to the ancestors with rollup=true (karni.api.taxonomy).",
         "operationId": "companies_facets_retrieve",
         "parameters": [
           {
@@ -10539,7 +10539,7 @@
     },
     "/api/conditions/access/": {
       "get": {
-        "description": "``GET /<resource>/access/?permission=``: the requester's granted nodes and their paths.\n\nExperimental. The nodes the requester's tree:<path> grants name, their\nancestors and every other root. Any signed-in user may ask about their\nown grants (karni.accounts.tree_scope).",
+        "description": "``GET /<resource>/access/?permission=``: the requester's granted nodes and their paths.\n\nThe nodes the requester's tree:<path> grants name, their\nancestors and every other root. Any signed-in user may ask about their\nown grants (karni.accounts.tree_scope).",
         "operationId": "conditions_access_retrieve",
         "parameters": [
           {
@@ -11417,7 +11417,7 @@
     },
     "/api/conditions/{id}/tagged/": {
       "get": {
-        "description": "``GET /<resource>/<id>/tagged/?descendants=``: the rows tagged with the node, per model.\n\nExperimental. For each model whose taxonomy points at this tree, how\nmany of its rows the requester may read are tagged with the node\n(or, with descendants=true, with the node or a node below it).",
+        "description": "``GET /<resource>/<id>/tagged/?descendants=``: the rows tagged with the node, per model.\n\nFor each model whose taxonomy points at this tree, how\nmany of its rows the requester may read are tagged with the node\n(or, with descendants=true, with the node or a node below it).",
         "operationId": "conditions_tagged_retrieve",
         "parameters": [
           {
@@ -11469,7 +11469,7 @@
     },
     "/api/dashboard/": {
       "get": {
-        "description": "Experimental. The home tiles of the requesting person.",
+        "description": "The home tiles of the requesting person.",
         "operationId": "dashboard_tiles",
         "responses": {
           "200": {
@@ -11802,7 +11802,7 @@
     },
     "/api/deals/aggregate/": {
       "get": {
-        "description": "Experimental. Grouped counts, sums, averages, minimums and maximums of the list's rows.\n\n``group_by`` names a declared field, relation path or expression (a date\ntakes ``:year``, ``:quarter`` or ``:month``), ``metric`` one of count, sum,\navg, min, max and distinct_count, ``value`` the declared field it reads,\n``top`` keeps the largest groups and puts the rest in Other, and ``stack``\nor ``series`` adds a second dimension. Every list filter and ``search``\napply, after access.",
+        "description": "Grouped counts, sums, averages, minimums and maximums of the list's rows.\n\n``group_by`` names a declared field, relation path or expression (a date\ntakes ``:year``, ``:quarter`` or ``:month``), ``metric`` one of count, sum,\navg, min, max and distinct_count, ``value`` the declared field it reads,\n``top`` keeps the largest groups and puts the rest in Other, and ``stack``\nor ``series`` adds a second dimension. Every list filter and ``search``\napply, after access.",
         "operationId": "deals_aggregate_retrieve",
         "parameters": [
           {
@@ -12131,7 +12131,7 @@
     },
     "/api/deals/facets/": {
       "get": {
-        "description": "``GET /<resource>/facets/?taxonomy=&rollup=``: rows per node, under the list's filters.\n\nExperimental. How many of the rows the list shows for this request are\ntagged with each node of one taxonomy (class Karni: taxonomies),\nrolled up to the ancestors with rollup=true (karni.api.taxonomy).",
+        "description": "``GET /<resource>/facets/?taxonomy=&rollup=``: rows per node, under the list's filters.\n\nHow many of the rows the list shows for this request are\ntagged with each node of one taxonomy (class Karni: taxonomies),\nrolled up to the ancestors with rollup=true (karni.api.taxonomy).",
         "operationId": "deals_facets_retrieve",
         "parameters": [
           {
@@ -13413,7 +13413,7 @@
     },
     "/api/interventions/access/": {
       "get": {
-        "description": "``GET /<resource>/access/?permission=``: the requester's granted nodes and their paths.\n\nExperimental. The nodes the requester's tree:<path> grants name, their\nancestors and every other root. Any signed-in user may ask about their\nown grants (karni.accounts.tree_scope).",
+        "description": "``GET /<resource>/access/?permission=``: the requester's granted nodes and their paths.\n\nThe nodes the requester's tree:<path> grants name, their\nancestors and every other root. Any signed-in user may ask about their\nown grants (karni.accounts.tree_scope).",
         "operationId": "interventions_access_retrieve",
         "parameters": [
           {
@@ -14291,7 +14291,7 @@
     },
     "/api/interventions/{id}/tagged/": {
       "get": {
-        "description": "``GET /<resource>/<id>/tagged/?descendants=``: the rows tagged with the node, per model.\n\nExperimental. For each model whose taxonomy points at this tree, how\nmany of its rows the requester may read are tagged with the node\n(or, with descendants=true, with the node or a node below it).",
+        "description": "``GET /<resource>/<id>/tagged/?descendants=``: the rows tagged with the node, per model.\n\nFor each model whose taxonomy points at this tree, how\nmany of its rows the requester may read are tagged with the node\n(or, with descendants=true, with the node or a node below it).",
         "operationId": "interventions_tagged_retrieve",
         "parameters": [
           {
@@ -14343,7 +14343,7 @@
     },
     "/api/navigation/": {
       "get": {
-        "description": "Experimental. ``GET navigation/``: the menu for the requesting user, signed in or not.\n\nOverride / escape hatch: override :meth:`get_menu`.",
+        "description": "``GET navigation/``: the menu for the requesting user, signed in or not.\n\nOverride / escape hatch: override :meth:`get_menu`.",
         "operationId": "navigation",
         "parameters": [
           {
@@ -15268,7 +15268,7 @@
     },
     "/api/search/": {
       "get": {
-        "description": "Experimental. Search every model that declares class Karni: search, each through its list endpoint's access for this request. Results are grouped per resource, best first.",
+        "description": "Search every model that declares class Karni: search, each through its list endpoint's access for this request. Results are grouped per resource, best first.",
         "operationId": "global_search",
         "parameters": [
           {
@@ -15774,7 +15774,7 @@
     },
     "/api/trials/aggregate/": {
       "get": {
-        "description": "Experimental. Grouped counts, sums, averages, minimums and maximums of the list's rows.\n\n``group_by`` names a declared field, relation path or expression (a date\ntakes ``:year``, ``:quarter`` or ``:month``), ``metric`` one of count, sum,\navg, min, max and distinct_count, ``value`` the declared field it reads,\n``top`` keeps the largest groups and puts the rest in Other, and ``stack``\nor ``series`` adds a second dimension. Every list filter and ``search``\napply, after access.",
+        "description": "Grouped counts, sums, averages, minimums and maximums of the list's rows.\n\n``group_by`` names a declared field, relation path or expression (a date\ntakes ``:year``, ``:quarter`` or ``:month``), ``metric`` one of count, sum,\navg, min, max and distinct_count, ``value`` the declared field it reads,\n``top`` keeps the largest groups and puts the rest in Other, and ``stack``\nor ``series`` adds a second dimension. Every list filter and ``search``\napply, after access.",
         "operationId": "trials_aggregate_retrieve",
         "parameters": [
           {
@@ -16167,7 +16167,7 @@
     },
     "/api/trials/facets/": {
       "get": {
-        "description": "``GET /<resource>/facets/?taxonomy=&rollup=``: rows per node, under the list's filters.\n\nExperimental. How many of the rows the list shows for this request are\ntagged with each node of one taxonomy (class Karni: taxonomies),\nrolled up to the ancestors with rollup=true (karni.api.taxonomy).",
+        "description": "``GET /<resource>/facets/?taxonomy=&rollup=``: rows per node, under the list's filters.\n\nHow many of the rows the list shows for this request are\ntagged with each node of one taxonomy (class Karni: taxonomies),\nrolled up to the ancestors with rollup=true (karni.api.taxonomy).",
         "operationId": "trials_facets_retrieve",
         "parameters": [
           {
