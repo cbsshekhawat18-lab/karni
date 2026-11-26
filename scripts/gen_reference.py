@@ -657,9 +657,9 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "agents",
-        "Six recipes, `shop`, `booking`, `crm`, `lms`, `marketplace` and `data-portal`, and `karni new "
-        '"<Name>" --recipe <name>`: the recipe\'s karni.yaml, then `karni build`, which writes '
-        "the recipe's domain code, seeds and tests over its own stubs, never over the "
+        "Six recipes, `shop`, `booking`, `crm`, `lms`, `marketplace` and `data-portal`, and "
+        '`karni new "<Name>" --recipe <name>`: the recipe\'s karni.yaml, then `karni build`, which '
+        "writes the recipe's domain code, seeds and tests over its own stubs, never over the "
         "project's code, and runs the tests and `karni check`. Each is built from scratch in "
         "CI",
         experimental="each recipe is to grow into a full app, so its files and names will change",

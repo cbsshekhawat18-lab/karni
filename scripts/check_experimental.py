@@ -250,7 +250,9 @@ def problems(root: Path = ROOT, config: Config | None = None) -> list[str]:
     for feature in config.features:
         first = feature.docs[0].removeprefix("docs/")
         if not re.search(rf"\]\((?:[^)\s]*/)?{re.escape(first)}\)", listed):
-            found.append(f"{feature.name}: no line in {STABILITY}'s 'Experimental now' links {first}")
+            found.append(
+                f"{feature.name}: no line in {STABILITY}'s 'Experimental now' links {first}"
+            )
         for ref in feature.docs:
             lines, problem = section_notes(root, ref)
             if problem:
