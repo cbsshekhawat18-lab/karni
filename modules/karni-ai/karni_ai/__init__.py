@@ -1,6 +1,6 @@
 """karni-ai: structured extraction with a language model, into any resource's import preview.
 
-Experimental. A source (text, a URL or a PDF) is read by a language model
+A source (text, a URL or a PDF) is read by a language model
 into rows that follow the target resource's own JSON Schema, and the rows go
 through Karni's import preview. Nothing is written until a user confirms the
 preview through the import's commit. Every call is logged with its tokens

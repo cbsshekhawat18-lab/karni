@@ -106,7 +106,7 @@ def _api_filterable_names(model: type[models.Model]) -> frozenset[str]:
 
 @extend_schema_field(OpenApiTypes.INT)
 class IntegerFilter(django_filters.NumberFilter):
-    """Experimental. An exact filter that takes whole numbers only (``?venue=12``).
+    """An exact filter that takes whole numbers only (``?venue=12``).
 
     ``NumberFilter`` parses a ``Decimal``, so ``?venue=1.5`` would match row
     1. This one refuses it (400), and the schema documents an integer. The
@@ -174,10 +174,10 @@ class KarniFilterBackend(DjangoFilterBackend):
     * everything else — Text, JSON, File/Image, binary, M2M — is skipped, as
       is any field outside the model's ``APIMeta`` policy (see
       :func:`_api_filterable_names`);
-    * a tree model (experimental) gets ``?parent=<key>`` / ``?parent=null``
+    * a tree model gets ``?parent=<key>`` / ``?parent=null``
       and ``?descendants_of=<key>`` instead of the plain ``parent`` filter
       (:mod:`karni.api.tree`);
-    * each key of ``class Karni: taxonomies`` (experimental) gets
+    * each key of ``class Karni: taxonomies`` gets
       ``?<key>=<node>,<node>`` and ``?<key>_descendants=true``
       (:mod:`karni.api.taxonomy`).
 

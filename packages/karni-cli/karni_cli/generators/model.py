@@ -8,7 +8,7 @@ factory and a seeder. ``-a/--all`` chains viewset, page and test — factories
 and seeders are overrides of what Karni already generates, so they are only
 written when asked for.
 
-``--external --table <[schema.]table>`` (experimental) writes a model over a
+``--external --table <[schema.]table>`` writes a model over a
 table or view another system owns, from its columns instead of a field DSL
 (:mod:`karni_cli.generators.external`), and always the viewset with it.
 """
@@ -346,7 +346,7 @@ def command(
     external: bool = typer.Option(
         False,
         "--external",
-        help="Experimental. A model over a table or view another system owns, written from "
+        help="A model over a table or view another system owns, written from "
         "the columns of --table (Meta.managed = False, class Karni: external = True), with "
         "its viewset. It reads the database, which must be reachable.",
     ),
@@ -380,7 +380,7 @@ def command(
     pk: str | None = typer.Option(
         None,
         "--pk",
-        help="The primary key: uuid (BaseModel) or bigint (BigIntBaseModel, experimental). "
+        help="The primary key: uuid (BaseModel) or bigint (BigIntBaseModel). "
         "Default: KARNI_PK in config/settings.py, else uuid.",
     ),
     app: str | None = APP_OPTION,
@@ -393,7 +393,7 @@ def command(
     "status:choice:draft|live" organizer:fk:User 'venue:fk:Venue?' -a
     --access owned:organizer
 
-    Experimental: karni make model Sale --external --table reporting.sales
+    karni make model Sale --external --table reporting.sales
     [--database warehouse] [--writable] writes a plain models.Model over that
     existing table or view from its columns (Meta.managed = False, class Karni:
     external = True), and its viewset. The database must be reachable.

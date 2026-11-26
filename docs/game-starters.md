@@ -1,5 +1,5 @@
 ---
-description: "Game starters (experimental): karni new --kind game --genre runner writes a complete small game, Sky Dash, on every layer of @karni/game and karni-game, with its tests; karni starters list --match ranks the starters for a one-line request; what a starter holds, the colour-safe palette, and how to add a starter of your own."
+description: "Game starters: karni new --kind game --genre runner writes a complete small game, Sky Dash, on every layer of @karni/game and karni-game, with its tests; karni starters list --match ranks the starters for a one-line request; what a starter holds, the colour-safe palette, and how to add a starter of your own."
 ---
 
 # Game starters

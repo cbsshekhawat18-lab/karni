@@ -1,4 +1,4 @@
-"""Experimental. The outbox's health check: failed deliveries and deliveries stuck waiting.
+"""The outbox's health check: failed deliveries and deliveries stuck waiting.
 
 Add it to the checks ``/health/ready/`` runs::
 

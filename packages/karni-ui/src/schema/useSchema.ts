@@ -72,7 +72,7 @@ export function useSchema(resource: string): UseSchemaResult {
 }
 
 /**
- * Experimental. One resource's parsed schema when it is known, else `undefined`:
+ * One resource's parsed schema when it is known, else `undefined`:
  * never throws, and outside a <KarniProvider> it reads nothing. For a component
  * that reads better with the schema (labels, money, states) and works without it.
  */

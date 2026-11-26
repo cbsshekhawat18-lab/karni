@@ -6,8 +6,6 @@
  * plain link opens it, but a token sent in a header cannot ride on an `<a>` or
  * an `<img>`. These components ask the path for a short-lived signed link
  * (`useProtectedFileLink`) and open or show that instead.
- *
- * Experimental: may change in a minor release, with a CHANGELOG entry.
  */
 import { cn, useKarniClient } from "@karni/ui";
 import * as React from "react";
@@ -34,7 +32,7 @@ function lastSegment(path: string): string {
 }
 
 /**
- * Experimental. A link to a protected file: on click it asks the download path
+ * A link to a protected file: on click it asks the download path
  * for a signed link and opens it. Nothing is fetched before the click.
  */
 export function ProtectedFileLink({
@@ -106,7 +104,7 @@ export interface ProtectedImageProps extends Omit<
   fallback?: React.ReactNode;
 }
 
-/** Experimental. A protected image (or one of its thumbnails) through a signed link. */
+/** A protected image (or one of its thumbnails) through a signed link. */
 export function ProtectedImage({
   src,
   size,

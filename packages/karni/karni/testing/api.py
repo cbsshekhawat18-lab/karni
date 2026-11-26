@@ -58,7 +58,7 @@ required relation points at a model the requester may reference no row of,
 no create body can be valid: the create and the PUT are not sent, and the
 report's ``skipped`` and a warning name the field and the target's access.
 
-**Read-only resources** (experimental). ``read_only=True`` checks a resource
+**Read-only resources**. ``read_only=True`` checks a resource
 that only reads: ``list`` and ``retrieve`` as above, and ``POST``, ``PATCH``,
 ``PUT`` and ``DELETE`` answer 405 to the requester, to anonymous callers and
 to a user without the role, change nothing, and are absent from the OpenAPI
@@ -420,7 +420,7 @@ def _overlaps(one: str, other: str) -> bool:
 # what the declaration promises
 
 
-#: Experimental. Why a refusal the access declaration does not promise fails the test.
+#: Why a refusal the access declaration does not promise fails the test.
 REFUSED_HINT = (
     ". The access declaration admits this request, so something else refused it (a "
     "perform_create or a check in code). Say who may in access instead (karni.yaml: create: "
@@ -430,7 +430,7 @@ REFUSED_HINT = (
 
 
 def refused_hint(status: int, expected: Expectation) -> str:
-    """Experimental. :data:`REFUSED_HINT` for a 403 where ``expected`` promised a success."""
+    """:data:`REFUSED_HINT` for a 403 where ``expected`` promised a success."""
     if status == 403 and expected.allowed and all(code < 400 for code in expected.statuses):
         return REFUSED_HINT
     return ""
@@ -1252,7 +1252,7 @@ class _Crud:
         if after.status_code != 404:
             self.fail(f"delete: GET {url} after the delete answered {after.status_code}, not 404")
 
-    # a read-only resource (experimental)
+    # a read-only resource
 
     def refused_writers(self) -> list[tuple[str, Any]]:
         """Who must get 405 for every write: the requester, anonymous, a user without the role."""
@@ -1621,7 +1621,7 @@ def assert_crud(
     :param expect: pin the requester's status per action (``list``, ``retrieve``,
         ``create``, ``update``, ``partial_update``, ``destroy``).
     :param skip: checks to leave out (:data:`CHECKS`).
-    :param read_only: experimental. ``True`` checks that every write answers 405 and
+    :param read_only: ``True`` checks that every write answers 405 and
         changes nothing, ``False`` that writes work as ``access`` says. ``None``
         (the default) picks ``True`` for an external model that is not writable
         (:func:`karni.db.is_read_only`).

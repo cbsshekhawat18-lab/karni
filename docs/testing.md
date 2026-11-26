@@ -15,7 +15,7 @@ wires it in so that it runs without project code:
 | [`assert_row_hidden`, `assert_admin_row_hidden`](#hidden-rows-the-row-scope-check) | one line proving a row outside a client's row scope behaves as "does not exist" on every API surface, and in the admin |
 | [`assert_pages`](#public-pages-assert_pages) | every page of a public site answers, has a title, a description and alt text, and links only to URLs that exist |
 | [`assert_schema_snapshot`](#schema-snapshot) | an accidental API break fails CI |
-| [`assert_module_manifest`](modules.md#checking-a-manifest) | a module's `karni.module.toml` matches its entry point, settings and models (experimental) |
+| [`assert_module_manifest`](modules.md#checking-a-manifest) | a module's `karni.module.toml` matches its entry point, settings and models |
 | [`karni.testing.factories`](#automatic-factories-karnitestingfactories) | a valid factory-boy factory for any model, with realistic values. `<app>/factories.py` overrides it |
 | [`karni.testing.performance`](#query-budgets-and-n1-karnitestingperformance) | the `query_budget` fixture, per-endpoint budgets that raise, the N+1 scaling check |
 | the `karni` pytest plugin | loaded automatically (`pytest11` entry point) wherever `karni` is installed |
@@ -182,9 +182,6 @@ or `tags:m2m:Tag?` in `karni make model`), pass the related rows in
 `payload=`, or run as a role that may reference them.
 
 ### A read-only resource
-
-!!! warning "Experimental"
-    `assert_crud`'s `read_only` argument is [experimental](stability.md#experimental-names).
 
 For an [external model](models.md#external-tables-views-and-a-second-database)
 that is not writable (`class Karni: external = True` without `writable =
@@ -768,6 +765,12 @@ The same context manager is importable as `karni.testing.query_budget(n,
 
 ### 3. The scaling check
 
+!!! warning "Experimental"
+    The scaling settings are [experimental](stability.md#experimental-names):
+    `KARNI_SCALING_ROWS`, `karni.performance.Scaling`, `query_scaling` and the
+    time fields of `ScalingResult` may change in a minor release, with a
+    CHANGELOG entry.
+
 A budget cannot see an N+1 in a test with one row. The scaling check can: for
 every routed project `BaseViewSet` it measures
 
@@ -775,7 +778,7 @@ every routed project `BaseViewSet` it measures
 - `retrieve` of a row with **2** related rows per to-many relation the
   serializer renders, and of one with **12**,
 - `aggregate`, for a viewset with an [aggregation](aggregations.md)
-  (experimental), with **2** rows and with **12**, grouped by its first
+ , with **2** rows and with **12**, grouped by its first
   declared group with `top=1`, stacked by the second one when there is one,
 
 and fails if the query count grows. Rows come from the automatic factories
@@ -817,8 +820,8 @@ Outcomes other than pass/fail are explicit:
       ...
   ```
 
-The row counts move, and a viewset can carry a time budget (experimental:
-`KARNI_SCALING_ROWS`, `karni.performance.Scaling` and `query_scaling`):
+The row counts move, and a viewset can carry a time budget
+(`KARNI_SCALING_ROWS`, `karni.performance.Scaling` and `query_scaling`):
 
 ```python
 # config/settings.py: every viewset compares 2 rows with 50
@@ -851,7 +854,7 @@ number of seconds is [E477](errors.md#e477). `karni context` lists every
 
 The pieces are public for project tests: `scaling_cases()` (the
 `ScalingCase`s found), `check_scaling(case) -> ScalingResult` (`small`,
-`large`, `grows`, `skipped`, `message()`, and experimental `rows`,
+`large`, `grows`, `skipped`, `message()`, and `rows`,
 `seconds`, `budget`, `endpoint`, `too_slow`, `slow_message()`), and the
 constants `SCALING_SMALL = 2`, `SCALING_LARGE = 12` (the defaults).
 

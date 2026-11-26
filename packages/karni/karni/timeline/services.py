@@ -1,4 +1,4 @@
-"""Experimental. Writing the timeline: ``record()`` by hand, entries from family events, pruning.
+"""Writing the timeline: ``record()`` by hand, entries from family events, pruning.
 
 Two writers fill the timeline:
 
@@ -94,7 +94,7 @@ _ELLIPSIS: Final = "..."
 
 
 def installed() -> bool:
-    """Experimental. Whether ``karni.timeline`` is in ``INSTALLED_APPS``."""
+    """Whether ``karni.timeline`` is in ``INSTALLED_APPS``."""
     return apps.is_installed(APP)
 
 
@@ -103,7 +103,7 @@ def installed() -> bool:
 
 @dataclass(frozen=True)
 class TimelineOption:
-    """Experimental. A declaration's ``timeline=`` option, checked: what its entries say."""
+    """A declaration's ``timeline=`` option, checked: what its entries say."""
 
     title: str
     body: str = ""
@@ -139,7 +139,7 @@ def _placeholders(template: str, where: str) -> list[str]:
 
 
 def parse_option(declaration: Declaration) -> TimelineOption | None:
-    """Experimental. ``declaration.timeline`` checked against its fields, or None when unset.
+    """``declaration.timeline`` checked against its fields, or None when unset.
 
     :raises KarniValueError: E460, the option is malformed or names a field
         the event does not declare.
@@ -252,7 +252,7 @@ def _text(value: Any) -> str:
 
 
 def render(template: str, values: Mapping[str, Any]) -> str:
-    """Experimental. ``template`` with each ``{field}`` replaced by ``values[field]`` as text.
+    """``template`` with each ``{field}`` replaced by ``values[field]`` as text.
 
     A missing or null value is empty. Only plain names are read (E460 for
     anything else).
@@ -268,7 +268,7 @@ def render(template: str, values: Mapping[str, Any]) -> str:
 
 
 def money_text(amount: Any, currency: Any) -> tuple[str, str, str] | None:
-    """Experimental. ``(text, amount, CODE)``: ``("127.54 USD", "127.54", "USD")``.
+    """``(text, amount, CODE)``: ``("127.54 USD", "127.54", "USD")``.
 
     The amount at the currency's places (ISO 4217), the code in capitals.
     ``None`` when the amount is not a number or the currency not a code.
@@ -313,7 +313,7 @@ _SKIPS: dict[str, list[Any]] = {}
 
 
 def skip_when(name: str, check: Any) -> None:
-    """Experimental. Leave out the timeline entry of ``name`` for an event ``check(event)`` is
+    """Leave out the timeline entry of ``name`` for an event ``check(event)`` is
     true for: an app that covers that moment with an entry of its own.
 
     karni-commerce leaves out ``payments.payment.succeeded`` for a payment of
@@ -323,7 +323,7 @@ def skip_when(name: str, check: Any) -> None:
 
 
 def unskip(name: str, check: Any = None) -> None:
-    """Experimental. Take back a :func:`skip_when` check (every check of ``name`` without one)."""
+    """Take back a :func:`skip_when` check (every check of ``name`` without one)."""
     if check is None:
         _SKIPS.pop(name, None)
     elif check in _SKIPS.get(name, []):
@@ -331,7 +331,7 @@ def unskip(name: str, check: Any = None) -> None:
 
 
 def skipped(event: Event) -> bool:
-    """Experimental. Whether an app's :func:`skip_when` check leaves ``event``'s entry out."""
+    """Whether an app's :func:`skip_when` check leaves ``event``'s entry out."""
     for check in _SKIPS.get(event.name, []):
         try:
             if check(event):
@@ -468,7 +468,7 @@ def record(
     event_id: str | uuid.UUID | None = None,
     using: str | None = None,
 ) -> TimelineEntry | None:
-    """Experimental. Write one entry on the timeline of ``person`` and of each subject.
+    """Write one entry on the timeline of ``person`` and of each subject.
 
     For what is not a family event: a call a CRM logs, a note, a meeting.
     Call it inside the transaction of the change it reports. Returns the
@@ -616,7 +616,7 @@ def live_person(person_id: Any, *, using: str | None = None) -> Any:
 
 
 def write_from_event(event: Event, declaration: Declaration) -> TimelineEntry | None:
-    """Experimental. The entry ``event`` writes, as its declaration's ``timeline=`` says.
+    """The entry ``event`` writes, as its declaration's ``timeline=`` says.
 
     Written on the timeline of the event's person (followed through merges)
     and its subject, and of each record ``subjects`` names. An event with
@@ -686,7 +686,7 @@ def retention_days() -> int | None:
 def prune(
     days: int | None = None, *, kinds: Iterable[str] | None = None, using: str | None = None
 ) -> int:
-    """Experimental. Delete entries older than ``days`` (``KARNI_TIMELINE_RETENTION_DAYS``).
+    """Delete entries older than ``days`` (``KARNI_TIMELINE_RETENTION_DAYS``).
 
     ``kinds`` limits it to those kinds. Returns the number of entries
     deleted, 0 while retention is ``None``.

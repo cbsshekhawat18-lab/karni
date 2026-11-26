@@ -1,4 +1,4 @@
-"""``karni starters`` (experimental): ready games a new game project starts from.
+"""``karni starters``: ready games a new game project starts from.
 
     karni starters list [--json]                  every starter, and the blank start
     karni starters list --match "<request>"       the best few for a one-line request
@@ -23,7 +23,7 @@ from karni_cli import starters as starters_mod
 
 starters_app = typer.Typer(
     help=(
-        "Game starters (experimental): ready games karni new --kind game --genre <genre> "
+        "Game starters: ready games karni new --kind game --genre <genre> "
         "writes, matched to a one-line request (list, show)."
     ),
     no_args_is_help=True,
@@ -78,7 +78,7 @@ def list_(
         False, "--json", help="Print {version, request, starters, blank, missing, problems}."
     ),
 ) -> None:
-    """Experimental. Every starter, or with --match the best few for a request, and the blank start."""
+    """Every starter, or with --match the best few for a request, and the blank start."""
     loaded = _load()
     if match is None:
         entries = [
@@ -129,7 +129,7 @@ def show(
     genre: str = typer.Argument(..., help="A starter's name (karni starters list), or blank."),
     as_json: bool = typer.Option(False, "--json", help="Print the starter and its files as JSON."),
 ) -> None:
-    """Experimental. One starter: what it is, what people usually change, and the files it writes."""
+    """One starter: what it is, what people usually change, and the files it writes."""
     loaded = _load()
     starter = loaded.require(genre)
     data = _entry(starter)

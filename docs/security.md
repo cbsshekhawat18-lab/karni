@@ -71,15 +71,15 @@ tokens are short-lived JWTs (15 minutes) with refresh rotation and
 blacklisting on logout and password reset. Cookie sessions with the CSRF
 bootstrap are the alternative. One-time tokens are stored hashed, single-use,
 per purpose, with TTLs. There is an email-verification gate, plus optional
-TOTP 2FA, social login, and (experimental) [sign-in with a Google, Microsoft
+TOTP 2FA, social login, and [sign-in with a Google, Microsoft
 or Apple ID token](accounts.md#sign-in-with-an-id-token-google-microsoft-apple),
-verified offline against the audience, issuer, nonce and verified email. Also
-experimental, [sign-in with a code sent by
+verified offline against the audience, issuer, nonce and verified email. Also,
+[sign-in with a code sent by
 email](accounts.md#sign-in-with-a-code-sent-by-email) stores only an HMAC of
 each code, keyed by `SECRET_KEY`, and kills a code after one use, its TTL or
 `KARNI_EMAIL_OTP_MAX_ATTEMPTS` wrong guesses. See [accounts](accounts.md).
 
-**Terms acceptance.** With `KARNI_TERMS` (experimental), the API refuses every
+**Terms acceptance.** With `KARNI_TERMS`, the API refuses every
 signed-in user, staff and superusers included, with a 403 (`E245`) until
 they accept the current version of the terms
 ([terms acceptance](accounts.md#terms-acceptance)). The record is

@@ -52,7 +52,7 @@ def _price(value: Any) -> Decimal | None:
 
 
 def cost_of(model: str, usage: Usage) -> Decimal | None:
-    """Experimental. What ``usage`` cost on ``model``, by ``KARNI_AI_PRICES`` (or ``None``).
+    """What ``usage`` cost on ``model``, by ``KARNI_AI_PRICES`` (or ``None``).
 
     The entry's ``unit`` (``"tokens"`` when it names none) must be the usage's: a
     price per million tokens never prices characters.
@@ -71,13 +71,13 @@ def cost_of(model: str, usage: Usage) -> Decimal | None:
 
 
 def month_start(now: datetime | None = None) -> datetime:
-    """Experimental. The start of the current calendar month in the project's time zone."""
+    """The start of the current calendar month in the project's time zone."""
     local = timezone.localtime(now or timezone.now())
     return local.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
 def spent(user: Any = None, *, since: datetime | None = None, unit: str = TOKENS) -> int:
-    """Experimental. Tokens (or ``unit``) spent since ``since`` (this month), by ``user`` or all."""
+    """Tokens (or ``unit``) spent since ``since`` (this month), by ``user`` or everyone."""
     calls = AICall.objects.filter(created_at__gte=since or month_start(), unit=unit)
     if user is not None:
         calls = calls.filter(user=user)
@@ -93,7 +93,7 @@ def _budget(name: str) -> int | None:
 
 
 def check_budget(user: Any) -> None:
-    """Experimental. Refuse the next call when a monthly budget is spent (AI013, AI014)."""
+    """Refuse the next call when a monthly budget is spent (AI013, AI014)."""
     per_user = _budget("KARNI_AI_MONTHLY_TOKENS_PER_USER")
     if per_user is not None and getattr(user, "is_authenticated", False):
         used = spent(user)
@@ -127,7 +127,7 @@ def log_call(
     error_code: str = "",
     kind: str = AICall.EXTRACTION,
 ) -> AICall:
-    """Experimental. Write one provider call to the usage log, with its cost.
+    """Write one provider call to the usage log, with its cost.
 
     ``kind`` is the job (``"extraction"``, or a word of the project's own, such as
     ``"translation"``), and the usage's unit is stored with its counts.

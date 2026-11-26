@@ -196,7 +196,7 @@ The [benchmark report](benchmarks/tokens.md) has every figure with its range, th
     [MCP server](agents.md#mcp), [`karni check`](enforcement.md) and the
     [debugging commands](debugging/why.md).
 
--   **Build games** (experimental)
+-   **Build games**
 
     ---
 

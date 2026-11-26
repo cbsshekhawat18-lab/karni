@@ -1,5 +1,5 @@
 /**
- * Experimental. The facet counts of a resource tagged to a tree
+ * The facet counts of a resource tagged to a tree
  * (`class Karni: taxonomies`): `GET /<resource>/facets/?taxonomy=&rollup=`
  * with the list's filters and search, so the counts are those of the rows
  * the list shows.
@@ -14,7 +14,7 @@ import { useKarniClient } from "../schema/provider";
 import { karniKeys } from "./keys";
 import { listPath } from "./params";
 
-/** Experimental. One node of a facet: its id, label, parent id and how many rows it counts. */
+/** One node of a facet: its id, label, parent id and how many rows it counts. */
 export interface FacetNode {
   id: string | number;
   label: string;
@@ -23,14 +23,14 @@ export interface FacetNode {
   count: number;
 }
 
-/** Experimental. The `facets/` answer: the counted nodes in the tree's order, depth first. */
+/** The `facets/` answer: the counted nodes in the tree's order, depth first. */
 export interface FacetsResponse {
   taxonomy: string;
   rollup: boolean;
   results: FacetNode[];
 }
 
-/** Experimental. What `useResourceFacets` asks for. */
+/** What `useResourceFacets` asks for. */
 export interface ResourceFacetsParams {
   /** The taxonomy key ("region"). May be left out when the resource has one. */
   taxonomy?: string;
@@ -55,7 +55,7 @@ export function facetsQuery(params?: ResourceFacetsParams): Record<string, Karni
   return query;
 }
 
-/** Experimental. Rows per node of one taxonomy, under the list's filters (`GET /<resource>/facets/`). */
+/** Rows per node of one taxonomy, under the list's filters (`GET /<resource>/facets/`). */
 export function useResourceFacets(
   resource: string,
   params?: ResourceFacetsParams,

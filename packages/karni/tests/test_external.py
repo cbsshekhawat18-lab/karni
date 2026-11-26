@@ -1,4 +1,4 @@
-"""External tables, SQL views and a second database (karni.db, experimental).
+"""External tables, SQL views and a second database (karni.db).
 
 The models live in :mod:`tests.externalapp`. Every test that touches the
 ``second`` database asks for it (``databases=["default", "second"]``), so

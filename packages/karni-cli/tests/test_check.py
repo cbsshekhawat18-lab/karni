@@ -191,7 +191,7 @@ def test_the_build_check_step_agrees_with_karni_check(runner, tmp_path, monkeypa
     assert not passed and "--no-frontend" in output
 
 
-# the check cache and --changed (experimental)
+# the check cache and --changed
 
 
 def _git(repo: Path, *args: str) -> None:

@@ -1,4 +1,4 @@
-"""``makemigrations`` that re-creates a generated field whose definition changed (experimental).
+"""Experimental. ``makemigrations`` that re-creates a generated field whose definition changed.
 
 Django cannot alter a ``GeneratedField`` in place: changing its expression,
 its output field or ``db_persist`` makes ``migrate`` fail with "Modifying
@@ -82,7 +82,7 @@ def _together_names(operation: migrations.AlterUniqueTogether, name: str) -> boo
 
 
 class KarniAutodetector(MigrationAutodetector):
-    """Experimental. Django's detector, re-creating a generated field whose definition changed."""
+    """Django's detector, re-creating a generated field whose definition changed."""
 
     # The generated fields re-created in this run, and the unique_together each of their
     # models gets back once they are added again (set in generate_removed_altered_unique_together).

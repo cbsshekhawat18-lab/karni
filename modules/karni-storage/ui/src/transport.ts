@@ -8,7 +8,7 @@
  * `useProtectedUpload` (a service worker, a resumable uploader, a test fake).
  */
 
-/** Experimental. One request to the bucket. */
+/** One request to the bucket. */
 export interface BucketRequest {
   method: "POST" | "PUT";
   url: string;
@@ -18,10 +18,10 @@ export interface BucketRequest {
   signal?: AbortSignal;
 }
 
-/** Experimental. Sends one request to the bucket; resolves when the bucket accepted it. */
+/** Sends one request to the bucket; resolves when the bucket accepted it. */
 export type BucketTransport = (request: BucketRequest) => Promise<void>;
 
-/** Experimental. The bucket refused the file (or could not be reached: status 0). */
+/** The bucket refused the file (or could not be reached: status 0). */
 export class BucketUploadError extends Error {
   readonly status: number;
   readonly body: string;
@@ -38,7 +38,7 @@ export class BucketUploadError extends Error {
   }
 }
 
-/** Experimental. The default transport: XMLHttpRequest, for its upload progress events. */
+/** The default transport: XMLHttpRequest, for its upload progress events. */
 export const xhrTransport: BucketTransport = (request) =>
   new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();

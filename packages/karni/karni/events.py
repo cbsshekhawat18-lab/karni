@@ -59,7 +59,7 @@ Custom events are plain :class:`django.dispatch.Signal` objects declared in
 ``<app>/events.py`` (autodiscovered with the listeners) and received in
 ``<app>/listeners.py`` with ``@receiver`` — see ``docs/events.md``.
 
-Family events (experimental, :mod:`karni.outbox`) are how one part reacts to
+Family events (:mod:`karni.outbox`) are how one part reacts to
 another without importing it: :func:`declare` in ``<app>/events.py``,
 :func:`publish` inside the writer's transaction (an outbox row, delivered
 after commit, retried, at least once), and :func:`subscribe` by name in
@@ -91,7 +91,7 @@ from django.utils.module_loading import autodiscover_modules
 from karni.celery import resolve_task
 from karni.exceptions import KarniImproperlyConfigured, KarniTypeError
 
-# Family events (experimental): the API of the karni.outbox app, re-exported here.
+# Family events: the API of the karni.outbox app, re-exported here.
 from karni.outbox.bus import (
     CONTRACT,
     Declaration,

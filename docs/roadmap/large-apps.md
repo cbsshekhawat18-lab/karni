@@ -101,10 +101,10 @@ Every item meets all of these before it counts as done.
   hatch for every abstraction, and no abstraction without three real uses.
 - **New public names start as experimental.** They follow the
   [experimental tier](../stability.md#experimental-names) of the stability
-  promise: marked `Experimental.` in the docstring, by an *Experimental*
-  note in the docs and by *Experimental tier* in the reference, free to
-  change in a minor release with a CHANGELOG entry, and stable once a
-  reference application uses them.
+  promise: a line in its list, one note at the top of their docs section and
+  `Experimental.` on their entry points' docstrings, free to change in a
+  minor release with a CHANGELOG entry, and stable once a real project or an
+  example uses them.
 - **It is tested.** Unit and integration tests, plus an `assert_*` helper or a
   `karni check` rule wherever there is a misuse to catch.
 - **It is documented.** A docs page or section, `docs/REFERENCE.md`

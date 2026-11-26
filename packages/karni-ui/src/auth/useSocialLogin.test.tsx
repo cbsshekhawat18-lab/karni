@@ -1,5 +1,5 @@
 /**
- * useSocialLogin (experimental) through the real AuthProvider against msw: the
+ * useSocialLogin through the real AuthProvider against msw: the
  * request body, JWT adoption, the session re-sync, the 2FA step, an account
  * awaiting approval and refusals, with `status` and `error` following along.
  */

@@ -1,4 +1,4 @@
-"""``karni recipes`` (experimental): the recipe format, the loader, --match and the blank start.
+"""``karni recipes``: the recipe format, the loader, --match and the blank start.
 
 The built-in recipes are package data of karni-cli. These tests also install
 a recipe of their own through a temporary ``karni.recipes`` entry point (a

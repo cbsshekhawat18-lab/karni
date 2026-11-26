@@ -190,7 +190,7 @@ def effective_view(model_admin: Any, request: HttpRequest, user: Any = None) -> 
 
 
 def _user_grants_url(model_admin: Any, user: Any) -> str:
-    """The user grants changelist for ``user`` (experimental), while the switch is on."""
+    """The user grants changelist for ``user``, while the switch is on."""
     if user is None or not grants.enabled():
         return ""
     try:

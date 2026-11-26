@@ -1,4 +1,4 @@
-"""``karni recipes`` (experimental): ready-made app specs a new app starts from.
+"""``karni recipes``: ready-made app specs a new app starts from.
 
     karni recipes list [--json]                   every recipe, and the blank start
     karni recipes list --match "<request>"        the best few for a one-line request
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 recipes_app = typer.Typer(
     help=(
-        "Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to "
+        "Recipes: ready-made karni.yaml files a new app starts from, matched to "
         "a one-line request (list, show), and the parts of a project (add, remove, upgrade)."
     ),
     no_args_is_help=True,
@@ -79,7 +79,7 @@ def list_(
     ),
     as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
-    """Experimental. Every recipe, or with --match the best few for a request, and the blank start.
+    """Every recipe, or with --match the best few for a request, and the blank start.
 
     --match compares the words of the request with each recipe's use_when
     and purpose, after lowercasing, making plurals singular and leaving out
@@ -160,7 +160,7 @@ def show(
     ),
     as_json: bool = typer.Option(False, "--json", help=_JSON_HELP),
 ) -> None:
-    """Experimental. One recipe: what it is for, what people usually change, its files and spec.
+    """One recipe: what it is for, what people usually change, its files and spec.
 
     blank shows the blank start: karni.yaml with the version and the app's
     name, nothing else, where an app starts when no recipe fits. --files prints
@@ -248,7 +248,7 @@ def add(
     name: str = typer.Argument(..., help="The recipe to add (karni recipes list)."),
     no_build: bool = typer.Option(False, "--no-build", help=_NO_BUILD_HELP),
 ) -> None:
-    """Experimental. Add a recipe to this project as a part, then karni build.
+    """Add a recipe to this project as a part, then karni build.
 
     The recipe's karni.yaml is merged into the project's (docs/family.md has
     the rules): its app under its own route, its roles named <prefix>-<role>,
@@ -290,7 +290,7 @@ def remove(
     ),
     no_build: bool = typer.Option(False, "--no-build", help=_NO_BUILD_HELP),
 ) -> None:
-    """Experimental. Take a part out of this project, then karni build.
+    """Take a part out of this project, then karni build.
 
     Its apps, roles, pages, menu group and seed counts leave karni.yaml, and
     its record leaves .karni/recipes/. Dropping its tables is a risky change:
@@ -317,7 +317,7 @@ def upgrade(
     name: str | None = typer.Argument(None, help="One part (default: every part)."),
     no_build: bool = typer.Option(False, "--no-build", help=_NO_BUILD_HELP),
 ) -> None:
-    """Experimental. Bring each part to the recipe karni-cli has now, then karni build.
+    """Bring each part to the recipe karni-cli has now, then karni build.
 
     A file of the part's the project never changed (its recorded sha256) is
     replaced. A file it changed is kept, and the recipe's new file is written

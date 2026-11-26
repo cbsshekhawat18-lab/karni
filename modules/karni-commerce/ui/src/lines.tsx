@@ -1,5 +1,5 @@
 /**
- * Experimental. How a line of a cart or an order reads, per kind.
+ * How a line of a cart or an order reads, per kind.
  *
  * Commerce sells what every part registers (a product, a booking, a
  * course), and each kind reads differently on a line: a product shows its
@@ -25,7 +25,7 @@ import { CommerceLink } from "./routes";
 import { LineDetails } from "./Totals";
 import type { LineDetail } from "./types";
 
-/** Experimental. What a renderer gets of a line: the fields a cart line and an order line share. */
+/** What a renderer gets of a line: the fields a cart line and an order line share. */
 export interface LineView {
   id: string;
   kind: string;
@@ -40,10 +40,10 @@ export interface LineView {
   sku?: string;
 }
 
-/** Experimental. Where a line shows. */
+/** Where a line shows. */
 export type LinePlace = "cart" | "checkout" | "order" | "staff";
 
-/** Experimental. What a line renderer receives. */
+/** What a line renderer receives. */
 export interface LineRendererProps {
   line: LineView;
   place: LinePlace;
@@ -51,7 +51,7 @@ export interface LineRendererProps {
 
 const RENDERERS = new Map<string, ComponentType<LineRendererProps>>();
 
-/** Experimental. Draw the lines of `kind` with `Component` (the same kind replaces it). */
+/** Draw the lines of `kind` with `Component` (the same kind replaces it). */
 export function registerLineRenderer(
   kind: string,
   Component: ComponentType<LineRendererProps>,
@@ -59,17 +59,17 @@ export function registerLineRenderer(
   RENDERERS.set(kind, Component);
 }
 
-/** Experimental. Forget the renderer of `kind`. */
+/** Forget the renderer of `kind`. */
 export function unregisterLineRenderer(kind: string): void {
   RENDERERS.delete(kind);
 }
 
-/** Experimental. The renderer of `kind`, or undefined for the default. */
+/** The renderer of `kind`, or undefined for the default. */
 export function lineRenderer(kind: string): ComponentType<LineRendererProps> | undefined {
   return RENDERERS.get(kind);
 }
 
-/** Experimental. The default line: its name (linked where the buyer may follow it), options, SKU. */
+/** The default line: its name (linked where the buyer may follow it), options, SKU. */
 export function DefaultLine({ line, place }: LineRendererProps) {
   const linked = line.url !== "" && (place === "cart" || place === "order");
   return (
@@ -89,7 +89,7 @@ export function DefaultLine({ line, place }: LineRendererProps) {
   );
 }
 
-/** Experimental. One line as the commerce pages draw it: its kind's renderer, else the default. */
+/** One line as the commerce pages draw it: its kind's renderer, else the default. */
 export function LineDescription({ line, place }: LineRendererProps) {
   const Own = RENDERERS.get(line.kind) ?? DefaultLine;
   return <Own line={line} place={place} />;

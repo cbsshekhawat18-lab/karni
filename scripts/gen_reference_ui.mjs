@@ -41,10 +41,13 @@ const typeText = (type) =>
     .replace(/import\("[^"]+"\)\./g, "")
     .replace(/\s+/g, " ");
 
-/** The experimental tier's mark: a JSDoc that starts with it (docs/stability.md#experimental-names). */
+/**
+ * The experimental mark an entry point's JSDoc opens with. A table row never shows it
+ * (docs/stability.md#where-the-mark-is-shown): the summary starts after it.
+ */
 const EXPERIMENTAL_MARK = "Experimental. ";
 
-/** The first sentence of a symbol's JSDoc, or "". The experimental mark is kept in front of it. */
+/** The first sentence of a symbol's JSDoc, or "", without the experimental mark. */
 function summary(symbol) {
   const text = ts
     .displayPartsToString(symbol.getDocumentationComment(checker))
@@ -54,11 +57,11 @@ function summary(symbol) {
     .split(/\n\s*\n/)[0]
     .replace(/\s+/g, " ")
     .trim();
-  const marked = paragraph.startsWith(EXPERIMENTAL_MARK);
-  const rest = marked ? paragraph.slice(EXPERIMENTAL_MARK.length) : paragraph;
+  const rest = paragraph.startsWith(EXPERIMENTAL_MARK)
+    ? paragraph.slice(EXPERIMENTAL_MARK.length)
+    : paragraph;
   const sentence = rest.match(/^(.+?[.!?])(\s|$)/);
-  const first = sentence ? sentence[1] : rest;
-  return marked ? `${EXPERIMENTAL_MARK}${first}` : first;
+  return sentence ? sentence[1] : rest;
 }
 
 function declarationFile(symbol) {

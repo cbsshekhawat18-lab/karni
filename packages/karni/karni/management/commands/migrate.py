@@ -1,4 +1,4 @@
-"""``manage.py migrate`` (experimental): Django's, with the autodetector ``makemigrations`` uses.
+"""Experimental. ``manage.py migrate``: Django's, with the autodetector ``makemigrations`` uses.
 
 Django's check ``commands.E001`` asks the two commands to share one
 autodetector, since ``migrate`` uses it to say that models have changes that

@@ -1,4 +1,4 @@
-"""Experimental. A versioned terms (EULA) acceptance gate, in JWT and session mode.
+"""A versioned terms (EULA) acceptance gate, in JWT and session mode.
 
 ``KARNI_TERMS = {"version": "2026-11", "url": "/terms/", "required": True}``
 asks every signed-in user to accept version ``2026-11`` of the terms found at
@@ -84,17 +84,17 @@ __all__ = [
     "wrong_version",
 ]
 
-#: Experimental. The URL prefixes the gate covers unless ``KARNI_TERMS["paths"]`` says otherwise.
+#: The URL prefixes the gate covers unless ``KARNI_TERMS["paths"]`` says otherwise.
 DEFAULT_PATHS: Final = ("/api/",)
-#: Experimental. The keys ``KARNI_TERMS`` may have.
+#: The keys ``KARNI_TERMS`` may have.
 KNOWN_KEYS: Final = frozenset({"version", "url", "required", "paths", "exempt"})
-#: Experimental. The longest ``KARNI_TERMS["version"]`` (the column's length).
+#: The longest ``KARNI_TERMS["version"]`` (the column's length).
 VERSION_MAX_LENGTH: Final = 100
-#: Experimental. ``User-Agent`` headers are stored up to this many characters.
+#: ``User-Agent`` headers are stored up to this many characters.
 USER_AGENT_MAX_LENGTH: Final = 1024
-#: Experimental. Seconds the cache keeps "this user accepted this version".
+#: Seconds the cache keeps "this user accepted this version".
 ACCEPTED_TTL: Final = 7 * 24 * 60 * 60
-#: Experimental. Seconds the cache keeps "this user has not accepted this version".
+#: Seconds the cache keeps "this user has not accepted this version".
 NOT_ACCEPTED_TTL: Final = 60
 
 _CACHE_PREFIX: Final = "karni:terms"
@@ -105,7 +105,7 @@ _AUTH_MOUNT_ROUTE: Final = "karni-accounts-login"
 
 
 class TermsRefused(KarniError):
-    """Experimental. A refusal of the terms flow, with its code and the HTTP answer.
+    """A refusal of the terms flow, with its code and the HTTP answer.
 
     ``E245`` (403) from the gate for a user who has not accepted the current
     version, ``E246`` (400) from :func:`accept` for another version, ``E249``
@@ -131,7 +131,7 @@ class TermsRefused(KarniError):
 
 
 class PermanentRecordError(KarniError):
-    """Experimental. A write that would rewrite a ``TermsAcceptance`` row (``E247``).
+    """A write that would rewrite a ``TermsAcceptance`` row (``E247``).
 
     Raised by saving an existing row, by ``delete()``, ``hard_delete()`` and
     ``restore()``, and by ``update()`` or ``delete()`` on a queryset of them.
@@ -141,7 +141,7 @@ class PermanentRecordError(KarniError):
 
 
 def not_accepted(terms: TermsConfig, accept_path: str = "terms/accept/") -> TermsRefused:
-    """Experimental. The gate's ``E245`` (403): the current terms are not accepted.
+    """The gate's ``E245`` (403): the current terms are not accepted.
 
     ``accept_path`` is where the client accepts them, named in the message.
     """
@@ -157,7 +157,7 @@ def not_accepted(terms: TermsConfig, accept_path: str = "terms/accept/") -> Term
 
 
 def wrong_version(terms: TermsConfig, sent: str) -> TermsRefused:
-    """Experimental. :func:`accept`'s ``E246`` (400): ``sent`` is not the current version."""
+    """:func:`accept`'s ``E246`` (400): ``sent`` is not the current version."""
     return TermsRefused(
         f"Version {sent!r} is not the current terms. The current version is "
         f"{terms.version!r}: show the terms at {terms.url or 'the url in this answer'} and "
@@ -170,7 +170,7 @@ def wrong_version(terms: TermsConfig, sent: str) -> TermsRefused:
 
 
 def turned_off() -> TermsRefused:
-    """Experimental. The ``E249`` (404) the routes answer while ``KARNI_TERMS`` is unset."""
+    """The ``E249`` (404) the routes answer while ``KARNI_TERMS`` is unset."""
     return TermsRefused(
         "Terms acceptance is turned off: KARNI_TERMS is not set.", code="E249", status=404
     )
@@ -181,7 +181,7 @@ def turned_off() -> TermsRefused:
 
 @dataclass(frozen=True)
 class TermsConfig:
-    """Experimental. ``KARNI_TERMS`` as read: the terms to accept, and where the gate applies."""
+    """``KARNI_TERMS`` as read: the terms to accept, and where the gate applies."""
 
     #: The version every signed-in user must accept, e.g. ``"2026-11"``.
     version: str
@@ -204,7 +204,7 @@ def _prefixes(value: Any, default: tuple[str, ...]) -> tuple[str, ...]:
 
 
 def config() -> TermsConfig | None:
-    """Experimental. ``KARNI_TERMS`` as a :class:`TermsConfig`, or ``None`` while it is unset.
+    """``KARNI_TERMS`` as a :class:`TermsConfig`, or ``None`` while it is unset.
 
     Read on every call, so ``override_settings`` works. Startup validation
     (``E504``) refuses a malformed value, so this never guesses.
@@ -222,12 +222,12 @@ def config() -> TermsConfig | None:
 
 
 def configured() -> bool:
-    """Experimental. Whether ``KARNI_TERMS`` is set: the routes exist and ``me/`` has ``terms``."""
+    """Whether ``KARNI_TERMS`` is set: the routes exist and ``me/`` has ``terms``."""
     return config() is not None
 
 
 def gate_on() -> bool:
-    """Experimental. Whether ``KARNI_TERMS`` is set and requires acceptance: the gate runs."""
+    """Whether ``KARNI_TERMS`` is set and requires acceptance: the gate runs."""
     terms = config()
     return terms is not None and terms.required
 
@@ -236,13 +236,13 @@ def gate_on() -> bool:
 
 
 def cache_key(user_pk: Any, version: str) -> str:
-    """Experimental. The default-cache key of "did this user accept this version"."""
+    """The default-cache key of "did this user accept this version"."""
     digest = hashlib.sha256(version.encode("utf-8")).hexdigest()[:16]
     return f"{_CACHE_PREFIX}:{digest}:{user_pk}"
 
 
 def has_accepted(user_pk: Any, version: str) -> bool:
-    """Experimental. Whether the user with this primary key accepted ``version``.
+    """Whether the user with this primary key accepted ``version``.
 
     The answer is cached per (user, version): ``ACCEPTED_TTL`` seconds for
     yes, ``NOT_ACCEPTED_TTL`` for no. Only a cache miss runs a query.
@@ -259,7 +259,7 @@ def has_accepted(user_pk: Any, version: str) -> bool:
 
 
 def remember_acceptance(user_pk: Any, version: str, *, using: str | None = None) -> None:
-    """Experimental. A new acceptance: clear the cached answer now, store yes on commit.
+    """A new acceptance: clear the cached answer now, store yes on commit.
 
     Clearing at once means the next request reads the row (also inside the
     transaction that wrote it). Storing on commit means a rolled-back
@@ -278,7 +278,7 @@ def _valid_ip(value: Any) -> str | None:
 
 
 def client_ip(request: Any) -> str | None:
-    """Experimental. The caller's IP address the way Karni's throttles read it, or ``None``.
+    """The caller's IP address the way Karni's throttles read it, or ``None``.
 
     DRF's ``get_ident`` honours ``NUM_PROXIES`` (``KARNI_NUM_PROXIES``): with
     a proxy in front, the address it appended to ``X-Forwarded-For``.
@@ -302,7 +302,7 @@ def accept(
     user_agent: str = "",
     client: Any = None,
 ) -> tuple[TermsAcceptance, bool]:
-    """Experimental. Record that ``user`` accepted ``version``: ``(row, created)``.
+    """Record that ``user`` accepted ``version``: ``(row, created)``.
 
     ``version`` must be the current ``KARNI_TERMS["version"]``, else
     :class:`TermsRefused` ``E246``. A version the user already accepted
@@ -340,7 +340,7 @@ def accept(
 
 
 def status(user: AbstractBaseUser) -> dict[str, Any]:
-    """Experimental. The ``terms/`` answer for ``user``: the terms, and whether they accepted them.
+    """The ``terms/`` answer for ``user``: the terms, and whether they accepted them.
 
     ``{"version", "url", "required", "accepted", "accepted_at"}`` with
     ``accepted_at`` ``None`` when they have not. Needs ``KARNI_TERMS`` set
@@ -364,7 +364,7 @@ def status(user: AbstractBaseUser) -> dict[str, Any]:
 
 
 def me_status(user: AbstractBaseUser) -> dict[str, Any] | None:
-    """Experimental. The ``terms`` of ``me/``: ``{"required", "version", "url", "accepted"}``.
+    """The ``terms`` of ``me/``: ``{"required", "version", "url", "accepted"}``.
 
     ``None`` while ``KARNI_TERMS`` is unset. ``accepted`` comes from the same
     cache as the gate, so it costs no query once the gate has answered.
@@ -400,7 +400,7 @@ def _mount(urlconf: Any, script_prefix: str) -> str | None:
 
 
 def auth_mount(urlconf: Any = None) -> str | None:
-    """Experimental. Where ``karni.accounts.urls`` is mounted (``"/api/auth/"``), or ``None``.
+    """Where ``karni.accounts.urls`` is mounted (``"/api/auth/"``), or ``None``.
 
     Found by reversing ``login/``, so it follows the project's URLconf. The
     gate leaves every path under it open. ``None`` when the accounts URLs
@@ -470,7 +470,7 @@ def _token_user_pk(authenticator: Any, token: Any) -> Any | None:
 
 
 class TermsGateMiddleware:
-    """Experimental. Refuses a signed-in user who has not accepted the current terms (403 ``E245``).
+    """Refuses a signed-in user who has not accepted the current terms (403 ``E245``).
 
     ``karni_settings()`` lists it in ``MIDDLEWARE`` after Django's
     ``AuthenticationMiddleware``. It removes itself from the chain at startup

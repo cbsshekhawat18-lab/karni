@@ -704,7 +704,7 @@ def test_defaults_come_from_the_ui_package_stylesheet() -> None:
 
 
 def test_the_component_tokens_are_listed(tmp_path: Path) -> None:
-    """Experimental: the page blocks' tokens, in the report and among the commented defaults."""
+    """The page blocks' tokens, in the report and among the commented defaults."""
     from karni_cli.uitheme.defaults import COMPONENT_TOKENS
 
     root = project(tmp_path, "tailwind4")

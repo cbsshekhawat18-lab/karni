@@ -6771,9 +6771,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `model-base`
 
-**Rule.** Models inherit `karni.models.BaseModel` (= `UUIDModel` + `TimestampedModel` + `SoftDeleteModel` + `AuditedModel`), or compose those mixins directly when a model should not have all four (e.g. an append-only log: `UUIDModel, TimestampedModel`). Declare `APIMeta` / `AdminMeta` only for fields that must be hidden, read-only or write-only. `BigIntBaseModel` (experimental) is the same with an integer `id`, chosen per model in its class line; `karni context` shows each model's key type.
+**Rule.** Models inherit `karni.models.BaseModel` (= `UUIDModel` + `TimestampedModel` + `SoftDeleteModel` + `AuditedModel`), or compose those mixins directly when a model should not have all four (e.g. an append-only log: `UUIDModel, TimestampedModel`). Declare `APIMeta` / `AdminMeta` only for fields that must be hidden, read-only or write-only. `BigIntBaseModel` is the same with an integer `id`, chosen per model in its class line; `karni context` shows each model's key type.
 
-**Why Karni objects.** The mixins supply the primary key (a UUID, or an integer with `BigIntBaseModel`), timestamps, soft delete, audit stamping and the managers the derived API/admin rely on. The exception is a table or view another system owns: a plain `models.Model` with `class Meta: managed = False` and `class Karni: external = True` (experimental, <code>karni make model &lt;Name&gt; --external --table &lt;table&gt;</code>), which Karni only reads unless `writable = True`.
+**Why Karni objects.** The mixins supply the primary key (a UUID, or an integer with `BigIntBaseModel`), timestamps, soft delete, audit stamping and the managers the derived API/admin rely on. The exception is a table or view another system owns: a plain `models.Model` with `class Meta: managed = False` and `class Karni: external = True` (<code>karni make model &lt;Name&gt; --external --table &lt;table&gt;</code>), which Karni only reads unless `writable = True`.
 
 **Fix.** Inherit karni.models.BaseModel or BigIntBaseModel (or compose its mixins).
 

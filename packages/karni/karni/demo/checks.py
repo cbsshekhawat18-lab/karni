@@ -1,4 +1,4 @@
-"""Experimental. System checks for demo mode (``karni check``, ``manage.py check``).
+"""System checks for demo mode (``karni check``, ``manage.py check``).
 
 * ``E950``: ``KARNI_DEMO_ACCOUNTS`` is malformed (a bad entry, an unknown key,
   a login listed twice).

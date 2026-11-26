@@ -1,5 +1,5 @@
 /**
- * Experimental. TermsGate: the app behind it renders only once the signed-in
+ * TermsGate: the app behind it renders only once the signed-in
  * user has accepted the current terms.
  *
  * While the server sets `KARNI_TERMS` and the user has not accepted its
@@ -30,7 +30,7 @@ import type { AuthTerms, TermsClientInfo } from "./types";
 
 registerComponentRole("terms-gate", "TermsGate");
 
-/** Experimental. What the `Panel` slot receives: the terms, and the way to accept them. */
+/** What the `Panel` slot receives: the terms, and the way to accept them. */
 export interface TermsGatePanelProps {
   /** The terms to accept: `version`, `url`. */
   terms: AuthTerms;
@@ -53,7 +53,7 @@ export interface TermsGatePanelProps {
   className?: string;
 }
 
-/** Experimental. The replaceable parts of TermsGate. `defaultTermsGateSlots` holds Karni's own. */
+/** The replaceable parts of TermsGate. `defaultTermsGateSlots` holds Karni's own. */
 export interface TermsGateSlots {
   /** The terms and the accept button, rendered in place of the children. */
   Panel: React.ComponentType<TermsGatePanelProps>;
@@ -204,13 +204,13 @@ function DefaultTermsPanel({
   return page ? <main className="px-4 py-10">{panel}</main> : panel;
 }
 
-/** Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. */
+/** Karni's own slots, exported so a project can wrap one instead of rewriting it. */
 export const defaultTermsGateSlots: TermsGateSlots = {
   Panel: DefaultTermsPanel,
 };
 
 /**
- * Experimental. Renders its children once the signed-in user has accepted the
+ * Renders its children once the signed-in user has accepted the
  * current terms, and the terms with an accept button until then.
  *
  * Accessible: the panel is a labelled region, the terms link says it opens a

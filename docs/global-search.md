@@ -4,16 +4,6 @@ description: "Search across models in Karni: class Karni: search, GET /api/searc
 
 # Search across models
 
-!!! warning "Experimental"
-    Everything on this page is [experimental](stability.md#experimental-names):
-    the `class Karni` option `search`, `karni.global_search`,
-    `karni.api.global_search` (with `GlobalSearchView` and `search_queryset`),
-    `BaseViewSet.global_search_queryset`, `karni.fields.TrigramIndex`, the
-    `KARNI_GLOBAL_SEARCH_*` settings, the `x-karni-search` schema extension,
-    the `global_search` key of `karni.yaml`, `SearchResource` in
-    `karni types`, and `GlobalSearch`, `useGlobalSearch` and `Layout`'s
-    `search` in `@karni/ui`.
-
 One search box finds rows of every kind at once: products, suppliers, people,
 documents. Each model opts in, each one is searched under its own access
 rules, and each hit links to the row's page.

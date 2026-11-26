@@ -49,7 +49,7 @@ function refusal(status: number, code: string): () => Response {
 const meta = {
   title: "Auth/OtpLoginForm",
   component: OtpLoginForm,
-  tags: ["autodocs", "experimental"],
+  tags: ["autodocs"],
   args: { description: "We email you a code. No password needed." },
   parameters: {
     msw: {

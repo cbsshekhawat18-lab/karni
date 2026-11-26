@@ -63,7 +63,7 @@ if TYPE_CHECKING:
         unsubscribed,
     )
 
-#: Experimental. The version of the notifications contract. A breaking change raises it.
+#: The version of the notifications contract. A breaking change raises it.
 CONTRACT: Final = 1
 
 __all__ = [

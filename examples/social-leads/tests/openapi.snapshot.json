@@ -736,7 +736,7 @@
         "type": "object"
       },
       "GlobalSearchError": {
-        "description": "Experimental. A refused request: E431 and the resources search covers.",
+        "description": "A refused request: E431 and the resources search covers.",
         "properties": {
           "code": {
             "type": "string"
@@ -759,7 +759,7 @@
         "type": "object"
       },
       "GlobalSearchGroup": {
-        "description": "Experimental. The hits of one resource, best first.",
+        "description": "The hits of one resource, best first.",
         "properties": {
           "hits": {
             "items": {
@@ -793,7 +793,7 @@
         "type": "object"
       },
       "GlobalSearchHit": {
-        "description": "Experimental. One hit: a row of one resource, ready to link to its page.",
+        "description": "One hit: a row of one resource, ready to link to its page.",
         "properties": {
           "id": {
             "description": "The row's primary key: its page is /<resource>/<id>.",
@@ -833,7 +833,7 @@
         "type": "object"
       },
       "GlobalSearchResult": {
-        "description": "Experimental. The answer of GET /api/search/: groups ordered by their best hit.",
+        "description": "The answer of GET /api/search/: groups ordered by their best hit.",
         "properties": {
           "groups": {
             "items": {
@@ -1195,7 +1195,7 @@
         "type": "object"
       },
       "Me": {
-        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` (experimental) lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
+        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -1230,7 +1230,7 @@
             "type": "string"
           },
           "permissions": {
-            "description": "Experimental. The permission keys the user holds (``app.model:action``), sorted.",
+            "description": "The permission keys the user holds (``app.model:action``), sorted.",
             "items": {
               "type": "string"
             },
@@ -1712,7 +1712,7 @@
         "type": "object"
       },
       "PatchedMeRequest": {
-        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` (experimental) lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
+        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
         "properties": {
           "first_name": {
             "maxLength": 150,
@@ -1800,7 +1800,7 @@
         "type": "string"
       },
       "Tile": {
-        "description": "Experimental. One home tile.",
+        "description": "One home tile.",
         "properties": {
           "columns": {
             "items": {
@@ -3506,7 +3506,7 @@
     },
     "/api/dashboard/": {
       "get": {
-        "description": "Experimental. The home tiles of the requesting person.",
+        "description": "The home tiles of the requesting person.",
         "operationId": "dashboard_tiles",
         "responses": {
           "200": {
@@ -6442,7 +6442,7 @@
     },
     "/api/search/": {
       "get": {
-        "description": "Experimental. Search every model that declares class Karni: search, each through its list endpoint's access for this request. Results are grouped per resource, best first.",
+        "description": "Search every model that declares class Karni: search, each through its list endpoint's access for this request. Results are grouped per resource, best first.",
         "operationId": "global_search",
         "parameters": [
           {

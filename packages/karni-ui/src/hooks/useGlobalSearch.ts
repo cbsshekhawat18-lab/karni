@@ -1,5 +1,5 @@
 /**
- * Experimental. Cross-model search (`GET /search/`) as a TanStack query.
+ * Cross-model search (`GET /search/`) as a TanStack query.
  *
  * `useGlobalSearch({ q: "lamp" })` asks the endpoint every model with
  * `class Karni: search` answers through, and returns its groups: one per
@@ -24,7 +24,7 @@ import {
 import { useKarniClient } from "../schema/provider";
 import { karniKeys } from "./keys";
 
-/** Experimental. What `GET /search/` is asked. */
+/** What `GET /search/` is asked. */
 export interface GlobalSearchParams<R extends string = string> {
   /** The query (`q`). Leading and trailing spaces are dropped. */
   q: string;
@@ -34,7 +34,7 @@ export interface GlobalSearchParams<R extends string = string> {
   limit?: number;
 }
 
-/** Experimental. One hit: a row of one resource, with what links it to its page. */
+/** One hit: a row of one resource, with what links it to its page. */
 export interface GlobalSearchHit<R extends string = string> {
   /** The resource (router prefix) the row belongs to. */
   resource: R;
@@ -46,7 +46,7 @@ export interface GlobalSearchHit<R extends string = string> {
   score: number;
 }
 
-/** Experimental. The hits of one resource, best first. */
+/** The hits of one resource, best first. */
 export interface GlobalSearchGroup<R extends string = string> {
   resource: R;
   /** The model's plural name, for a heading. */
@@ -58,13 +58,13 @@ export interface GlobalSearchGroup<R extends string = string> {
   hits: Array<GlobalSearchHit<R>>;
 }
 
-/** Experimental. The answer of `GET /search/`: groups ordered by their best hit. */
+/** The answer of `GET /search/`: groups ordered by their best hit. */
 export interface GlobalSearchResult<R extends string = string> {
   query: string;
   groups: Array<GlobalSearchGroup<R>>;
 }
 
-/** Experimental. TanStack Query options, plus the shortest query that sends a request. */
+/** TanStack Query options, plus the shortest query that sends a request. */
 export interface UseGlobalSearchOptions<R extends string = string> extends Omit<
   UseQueryOptions<GlobalSearchResult<R>>,
   "queryKey" | "queryFn"
@@ -73,10 +73,10 @@ export interface UseGlobalSearchOptions<R extends string = string> extends Omit<
   minLength?: number;
 }
 
-/** Experimental. The search path, relative to the client's base URL. */
+/** The search path, relative to the client's base URL. */
 export const GLOBAL_SEARCH_PATH = "/search/";
 
-/** Experimental. The query string `GET /search/` is sent. */
+/** The query string `GET /search/` is sent. */
 export function globalSearchQuery<R extends string>(
   params: GlobalSearchParams<R>,
 ): Record<string, string> {
@@ -88,7 +88,7 @@ export function globalSearchQuery<R extends string>(
   return query;
 }
 
-/** Experimental. Searches every model that opts in (`GET /search/?q=`), grouped per resource. */
+/** Searches every model that opts in (`GET /search/?q=`), grouped per resource. */
 export function useGlobalSearch<R extends string = string>(
   params: GlobalSearchParams<R>,
   options?: UseGlobalSearchOptions<R>,

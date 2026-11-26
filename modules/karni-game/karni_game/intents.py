@@ -1,4 +1,4 @@
-"""Experimental. Retries that never count twice: a write's ``intent``.
+"""Retries that never count twice: a write's ``intent``.
 
 A client makes one ``intent`` per action (a score, a claim, a purchase, a
 progress report) and sends it again on every retry. :func:`once` runs the

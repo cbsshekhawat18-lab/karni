@@ -1,5 +1,5 @@
 /**
- * Experimental. OtpLoginForm: sign in with a one-time code sent by email.
+ * OtpLoginForm: sign in with a one-time code sent by email.
  *
  * Two steps on `useOtpLogin`. The email step asks for the address and sends
  * the code. The code step has one input for the whole code (filled by the
@@ -26,14 +26,14 @@ import { useOtpLogin } from "./useOtpLogin";
 
 registerComponentRole("code-sign-in", "OtpLoginForm");
 
-/** Experimental. What the `Error` slot receives: the failure, already worded for this form. */
+/** What the `Error` slot receives: the failure, already worded for this form. */
 export interface OtpLoginFormErrorProps extends ErrorSlotProps {
   /** Put this id on the message's root: the input's `aria-describedby` points at it. */
   id: string;
   described: KarniErrorDescription;
 }
 
-/** Experimental. What the `Approval` slot receives when the new account waits for an administrator. */
+/** What the `Approval` slot receives when the new account waits for an administrator. */
 export interface OtpLoginFormApprovalProps {
   /** Put this id on the message's root. */
   id: string;
@@ -41,7 +41,7 @@ export interface OtpLoginFormApprovalProps {
   detail: string;
 }
 
-/** Experimental. The replaceable parts of OtpLoginForm. `defaultOtpLoginFormSlots` holds Karni's own. */
+/** The replaceable parts of OtpLoginForm. `defaultOtpLoginFormSlots` holds Karni's own. */
 export interface OtpLoginFormSlots {
   Error: React.ComponentType<OtpLoginFormErrorProps>;
   Approval: React.ComponentType<OtpLoginFormApprovalProps>;
@@ -141,7 +141,7 @@ function described(
 }
 
 /**
- * Experimental. A sign-in-by-code failure in plain words, from the Karni code
+ * A sign-in-by-code failure in plain words, from the Karni code
  * of the refusal (E235, E226, E236), never a status code. Exported for a
  * project's own form.
  */
@@ -253,7 +253,7 @@ function DefaultOtpApproval({ id }: OtpLoginFormApprovalProps): React.ReactEleme
   );
 }
 
-/** Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. */
+/** Karni's own slots, exported so a project can wrap one instead of rewriting it. */
 export const defaultOtpLoginFormSlots: OtpLoginFormSlots = {
   Error: DefaultOtpError,
   Approval: DefaultOtpApproval,
@@ -265,7 +265,7 @@ function minutes(seconds: number): string {
 }
 
 /**
- * Experimental. Passwordless sign-in: an email step, then a code step with one input for the code.
+ * Passwordless sign-in: an email step, then a code step with one input for the code.
  *
  * Accessible: labelled fields, the code input sized to the server's code
  * length (`inputMode="numeric"`, `autocomplete="one-time-code"`), refusals

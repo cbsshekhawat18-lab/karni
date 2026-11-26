@@ -62,7 +62,7 @@ IN_FLIGHT = (Status.PENDING, Status.RENDERING)
 
 @dataclass(frozen=True)
 class Key:
-    """Experimental. The cache key of one report of one row."""
+    """The cache key of one report of one row."""
 
     report: str
     content_type: ContentType
@@ -120,7 +120,7 @@ def _stuck(row: GeneratedReport) -> bool:
 
 
 def request(report: Report, obj: Any, *, queue: bool = True) -> GeneratedReport:
-    """Experimental. The report of ``obj`` at its current key: ready, or queued to render.
+    """The report of ``obj`` at its current key: ready, or queued to render.
 
     A ready row is returned as it is, without rendering. A new key gets a
     pending row and a render queued on commit. A failed row, or one pending
@@ -176,7 +176,7 @@ def render_queued(pk: str) -> GeneratedReport | None:
 def render(
     row: GeneratedReport, *, report: Report | None = None, obj: Any = None
 ) -> GeneratedReport:
-    """Experimental. Render ``row`` now and store the file. Returns the row that holds it.
+    """Render ``row`` now and store the file. Returns the row that holds it.
 
     The context is read again, so the file holds the row as it is now. When
     the row changed since the request, the stored key follows the data the

@@ -1,4 +1,4 @@
-"""karni.mail (experimental): an email from a project's own templates."""
+"""karni.mail: an email from a project's own templates."""
 
 from __future__ import annotations
 

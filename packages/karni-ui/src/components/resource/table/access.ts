@@ -96,7 +96,7 @@ export function evaluateAccess(
 
 /**
  * `{"can": ["shop.product:add"]}`: whether the user holds every key, from
- * `/me/`'s `permissions` (experimental). A server that does not send them
+ * `/me/`'s `permissions`. A server that does not send them
  * leaves it to the server (`undefined`).
  */
 function holds(can: unknown, identity: AccessIdentity): boolean | undefined {

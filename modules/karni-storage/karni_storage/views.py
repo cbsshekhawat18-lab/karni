@@ -116,7 +116,7 @@ class _Limited(APIView):
 
 
 class FileView(_Limited):
-    """Experimental. ``GET <resource>/<id>/files/<field>/``: one row's protected file."""
+    """``GET <resource>/<id>/files/<field>/``: one row's protected file."""
 
     throttle_action = "download"
 
@@ -283,7 +283,7 @@ def _storage_name(target: Target, filename: str) -> str:
 
 
 class UploadView(_Limited):
-    """Experimental. ``POST <resource>/files/<field>/upload/``: where the browser sends a file."""
+    """``POST <resource>/files/<field>/upload/``: where the browser sends a file."""
 
     throttle_action = "upload"
 
@@ -350,7 +350,7 @@ class UploadView(_Limited):
 
 
 class ConfirmView(_Limited):
-    """Experimental. ``POST <resource>/files/<field>/confirm/``: check a direct upload."""
+    """``POST <resource>/files/<field>/confirm/``: check a direct upload."""
 
     throttle_action = "confirm"
 
@@ -435,7 +435,7 @@ def _head(client: Any, bucket: str, key: str) -> dict[str, Any] | None:
 
 
 def serve(name: str, *, attachment: bool = True, filename: str = "") -> Any:
-    """Experimental. The protected file stored as ``name``, for code that decided itself
+    """The protected file stored as ``name``, for code that decided itself
     who may have it (a download a buyer paid for, a ticket with a link).
 
     A short-lived signed URL in the bucket (a redirect) with S3, else the file

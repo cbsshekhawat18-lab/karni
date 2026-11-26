@@ -1,4 +1,4 @@
-"""``karni plan`` (experimental): what ``karni build`` would change, writing nothing.
+"""``karni plan``: what ``karni build`` would change, writing nothing.
 
     karni plan                       karni.yaml against this project
     karni plan --spec other.yaml --json
@@ -54,7 +54,7 @@ def plan(
         show_default=False,
     ),
 ) -> None:
-    """Experimental. Compare karni.yaml with the project and print what karni build would change.
+    """Compare karni.yaml with the project and print what karni build would change.
 
     It validates the spec (karni spec validate's codes), reads the project the
     way karni spec export does (manage.py karni_facts), compares both in one

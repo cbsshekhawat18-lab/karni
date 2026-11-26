@@ -1,8 +1,10 @@
 # @karni/game
 
+> **Experimental.** Its names may change in a minor release, with a CHANGELOG entry ([stability](https://cbsshekhawat18-lab.github.io/karni/stability/#experimental-names)).
+
 The browser side of the Karni game add-on: portal and ad adapters, a canvas loop, input, audio,
 local saves, a seeded random generator, an offline-first data client, per-portal builds, and a
-light 2D layer for drawing and collision on plain canvas. Experimental.
+light 2D layer for drawing and collision on plain canvas.
 
 [![npm](https://img.shields.io/npm/v/@karni/game)](https://www.npmjs.com/package/@karni/game) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/game-client/)
 

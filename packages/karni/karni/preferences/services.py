@@ -1,4 +1,4 @@
-"""Experimental. Reading and changing preferences: one call to read, the locks always win.
+"""Reading and changing preferences: one call to read, the locks always win.
 
 Reading, from any part, whether or not ``karni.preferences`` is installed::
 
@@ -86,7 +86,7 @@ _OVERRIDES: ContextVar[dict[str, dict[str, Any]] | None] = ContextVar(
 
 
 class PreferenceRefused(KarniValueError):
-    """Experimental. A change was refused: ``code`` says why, ``errors`` maps fields to messages."""
+    """A change was refused: ``code`` says why, ``errors`` maps fields to messages."""
 
     def __init__(self, message: str, *, code: str, errors: Mapping[str, str] | None = None) -> None:
         super().__init__(message, code=code)
@@ -189,7 +189,7 @@ def _switches() -> dict[tuple[str, str], bool]:
 
 @dataclass(frozen=True)
 class DetailsView:
-    """Experimental. The project's details as they read now (locks and defaults applied)."""
+    """The project's details as they read now (locks and defaults applied)."""
 
     name: str
     legal_name: str
@@ -221,7 +221,7 @@ def _fallback(name: str) -> str:
 
 
 def details() -> DetailsView:
-    """Experimental. The project's details: lock, then saved value, then the defaults."""
+    """The project's details: lock, then saved value, then the defaults."""
     from karni.preferences.models import DETAIL_FIELDS
 
     row = _details_row() if installed() else None
@@ -250,7 +250,7 @@ def details() -> DetailsView:
 
 
 def sender() -> str | None:
-    """Experimental. The ``From`` of the project's emails: ``"Name <address>"``, or ``None``.
+    """The ``From`` of the project's emails: ``"Name <address>"``, or ``None``.
 
     ``None`` (no sender email in the details) leaves Django's ``DEFAULT_FROM_EMAIL``.
     """
@@ -266,7 +266,7 @@ def sender() -> str | None:
 
 
 def validate_section_values(key: str, values: Mapping[str, Any]) -> Section:
-    """Experimental. ``values`` over the section's defaults, validated: the section, or E323."""
+    """``values`` over the section's defaults, validated: the section, or E323."""
     spec = _spec(key)
     try:
         return spec.model.model_validate({**spec.defaults(), **dict(values)})
@@ -333,7 +333,7 @@ def get[S: Section](section: type[S]) -> S: ...
 @overload
 def get(section: str) -> Section: ...
 def get(section: str | type[Section]) -> Section:
-    """Experimental. The whole section as it reads now: its Pydantic model.
+    """The whole section as it reads now: its Pydantic model.
 
     :param section: the key (``"bookings"``) or the registered class.
     :raises KarniLookupError: E325, no such section is registered.
@@ -358,7 +358,7 @@ def _class_key(model: type[Section]) -> str:
 
 
 def switch_position(kind: str, name: str, default: bool) -> bool:
-    """Experimental. A switch as it reads now: override, lock, saved, deployment default."""
+    """A switch as it reads now: override, lock, saved, deployment default."""
     group = "connections" if kind == "connection" else "emails"
     over = _over(group)
     if name in over:
@@ -377,7 +377,7 @@ def switch_position(kind: str, name: str, default: bool) -> bool:
 
 
 def active(name: str) -> bool:
-    """Experimental. Is the connection ``name`` on: declared, what it needs installed, switched on?
+    """Is the connection ``name`` on: declared, what it needs installed, switched on?
 
     A connection nobody declared is never active, so a part may ask about its
     own connection whether or not its ``connections.py`` was imported.
@@ -389,7 +389,7 @@ def active(name: str) -> bool:
 
 
 def email_on(name: str, default: bool = True) -> bool:
-    """Experimental. Does the email kind ``name`` go out? Its switch, else its declared default.
+    """Does the email kind ``name`` go out? Its switch, else its declared default.
 
     A message :func:`karni.mail.register_kind` declared not ``switchable`` (a
     sign-in code) always goes out.
@@ -409,7 +409,7 @@ def email_on(name: str, default: bool = True) -> bool:
 
 
 def value[T](path: str, default: T) -> T:
-    """Experimental. One value, as the type of ``default``: ``value("bookings.max_seats", 4)``.
+    """One value, as the type of ``default``: ``value("bookings.max_seats", 4)``.
 
     ``path`` is ``"details.<field>"``, ``"<section>.<field>"``,
     ``"connections.<name>"`` (the connection is active) or
@@ -467,7 +467,7 @@ def _typed[T](found: Any, default: T, path: str) -> T:
 
 
 def can_change(user: Any, target: str) -> bool:
-    """Experimental. May ``user`` change ``target``: ``details``, ``connections``, ``emails``
+    """May ``user`` change ``target``: ``details``, ``connections``, ``emails``
     or a section key?
 
     A section opens to holders of ``preferences.sectionvalue:change`` (every
@@ -532,7 +532,7 @@ def _require_installed(what: str) -> None:
 def save_details(
     values: Mapping[str, Any], *, user: Any = None, logo: Any = None, clear_logo: bool = False
 ) -> Any:
-    """Experimental. Change some of the details, audited: the saved ``Details`` row.
+    """Change some of the details, audited: the saved ``Details`` row.
 
     :param values: field names to new values. A blank value goes back to the default.
     :param logo: an uploaded file for the logo, or ``None`` to keep it.
@@ -581,7 +581,7 @@ def save_details(
 
 
 def save_section(key: str, values: Mapping[str, Any], *, user: Any = None) -> Section:
-    """Experimental. Change some fields of a section, audited: the section as it now reads.
+    """Change some fields of a section, audited: the section as it now reads.
 
     A field given as ``None`` goes back to its default.
 
@@ -625,7 +625,7 @@ def save_section(key: str, values: Mapping[str, Any], *, user: Any = None) -> Se
 
 
 def switch(kind: str, name: str, on: bool | None, *, user: Any = None) -> bool:
-    """Experimental. Switch a connection or an email kind on or off (``None``: back to default).
+    """Switch a connection or an email kind on or off (``None``: back to default).
 
     :param kind: ``"connection"`` or ``"email"``.
     :returns: the switch's position now.
@@ -678,7 +678,7 @@ def switch(kind: str, name: str, on: bool | None, *, user: Any = None) -> bool:
 
 @contextmanager
 def override(**groups: Mapping[str, Any]) -> Iterator[None]:
-    """Experimental. Set values for a block, over locks and saved values: for tests.
+    """Set values for a block, over locks and saved values: for tests.
 
     ``with override(bookings={"refund_notice_hours": 48}, connections={"crm.deal_timeline":
     False}): ...``. Keys are the groups of :func:`value` (``details``, a section key,

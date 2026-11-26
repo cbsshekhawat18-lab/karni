@@ -1,4 +1,4 @@
-"""Experimental. The game API a client calls (docs/game-api.md), mounted by ``karni_game.urls``.
+"""The game API a client calls (docs/game-api.md), mounted by ``karni_game.urls``.
 
 Every view finds its player from the request alone (:class:`GameView`): a
 signed-in account, else the guest token in ``X-Player-Token``. None takes a

@@ -248,7 +248,7 @@ fails `karni check` ([`E290`](errors.md#e290)). Scopes:
 | `own` | rows whose `Karni.owner_field` is the user (`created_by` by default). The field may be a path, through foreign keys and many-to-manys |
 | `related:<key>` | rows whose `Karni.scope_paths[key]` equals `user.<key>` (`user.venue` → `event.venue`) |
 | `custom:<name>` | the `Q` a scope registered with `karni.accounts.roles.register_scope(name, fn)` returns |
-| `tree:<path>` | rows whose `<path>` (a relation to a tree model) is a node the user holds or a node below it ([the tree scope](#the-tree-scope), experimental) |
+| `tree:<path>` | rows whose `<path>` (a relation to a tree model) is a node the user holds or a node below it ([the tree scope](#the-tree-scope)) |
 
 The model side lives in `class Karni`, next to `Meta` and `APIMeta`:
 
@@ -459,16 +459,6 @@ roles without a second request.
 
 ## Per-user grants
 
-!!! warning "Experimental"
-    Everything in this section is [experimental](stability.md#experimental-names):
-    the `KARNI_USER_GRANTS` setting, the `UserGrant` model, `karni.accounts.grants`,
-    the `targets` and `grant_id` of `karni.accounts.roles.Grant`, the user-grant
-    fields of `GrantSource` and of the effective permissions, the
-    `permissions/grants/` endpoints, the grants inline and admin, and
-    `features: user_grants` in `karni.yaml`. They may change in a minor
-    release, and each change is in the CHANGELOG. The error codes keep their
-    meaning.
-
 A role grant reaches everyone who holds the role. Many apps also give access
 user by user: this customer sees these regions, this analyst sees these
 report sections until the end of the quarter. Written by hand, each such need
@@ -659,15 +649,6 @@ the grants count again when it is back on. To stop using the feature, revoke
 the grants first, then turn it off.
 
 ## The tree scope
-
-!!! warning "Experimental"
-    Everything in this section is [experimental](stability.md#experimental-names):
-    the `tree:<path>` scope, `karni.accounts.tree_scope`, the `access/`
-    endpoint of a tree resource, the matrix's `tree:<field>` options, the
-    `tree` entry of `karni why --json`, `tree:<path>` in `karni.yaml`, and
-    `useResourceAccessForest` and `TreeView`'s `access` in `@karni/ui`. They
-    may change in a minor release, and each change is in the CHANGELOG. The
-    error codes keep their meaning.
 
 Large apps grant access node by node in a hierarchy: this buyer sees the
 products of the Food category, that analyst the orders of Europe. A row is
@@ -949,14 +930,6 @@ both modes and needs neither `KARNI_SOCIAL_AUTH` nor allauth.
 
 ## Sign in with an ID token (Google, Microsoft, Apple)
 
-!!! warning "Experimental"
-    Everything in this section is [experimental](stability.md#experimental-names):
-    the `social/<provider>/` endpoint, the `KARNI_SOCIAL_TOKEN_*` settings,
-    `karni.accounts.social_token`, the `SocialIdentity` model, and
-    `useSocialLogin` and `SocialButton` in `@karni/ui`. They may change in a
-    minor release, and each change is in the CHANGELOG. The error codes keep
-    their meaning.
-
 The app signs the user in with the provider's own SDK (Google Identity
 Services, MSAL, Sign in with Apple) and gets an OpenID Connect ID token. It
 posts the token to Karni, which verifies it offline against the provider's
@@ -1168,15 +1141,6 @@ separate, and neither reads the other's links.
 
 ## Sign in with a code sent by email
 
-!!! warning "Experimental"
-    Everything in this section is [experimental](stability.md#experimental-names):
-    the `otp/send/` and `otp/verify/` endpoints, the `KARNI_EMAIL_OTP*`
-    settings, the `auth.otp_*` throttle scopes, `karni.accounts.otp`, the
-    `LoginCode` model, `karni.accounts.services.prove_address`, and
-    `useOtpLogin`, `OtpLoginForm` and `LoginForm`'s `codeSignIn` in
-    `@karni/ui`. They may change in a minor release, and each change is in the
-    CHANGELOG. The error codes keep their meaning.
-
 The user types an address and gets a short numeric code by email. They type
 the code back and are signed in, with no password. Karni answers exactly like
 `login/`: a token pair in JWT mode, a session in session mode, or the 2FA
@@ -1383,15 +1347,6 @@ change the answer: the user asks for a new code.
   email fingerprint or the user id, never the address or the code.
 
 ## Terms acceptance
-
-!!! warning "Experimental"
-    Everything in this section is [experimental](stability.md#experimental-names):
-    the `terms/` and `terms/accept/` endpoints, the `KARNI_TERMS` setting,
-    `karni.accounts.terms` (with `TermsGateMiddleware`), the `TermsAcceptance`
-    model, the `terms` field of `me/`, and `TermsGate` and `useAuth()`'s
-    `terms`, `termsRequired` and `acceptTerms` in `@karni/ui`. They may change
-    in a minor release, and each change is in the CHANGELOG. The error codes
-    keep their meaning.
 
 Ask every signed-in user to accept the current version of your terms (terms
 of service, an end-user licence agreement) before they use the API. Until they

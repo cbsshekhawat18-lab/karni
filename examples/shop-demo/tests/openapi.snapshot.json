@@ -194,7 +194,7 @@
         "type": "object"
       },
       "GlobalSearchError": {
-        "description": "Experimental. A refused request: E431 and the resources search covers.",
+        "description": "A refused request: E431 and the resources search covers.",
         "properties": {
           "code": {
             "type": "string"
@@ -217,7 +217,7 @@
         "type": "object"
       },
       "GlobalSearchGroup": {
-        "description": "Experimental. The hits of one resource, best first.",
+        "description": "The hits of one resource, best first.",
         "properties": {
           "hits": {
             "items": {
@@ -251,7 +251,7 @@
         "type": "object"
       },
       "GlobalSearchHit": {
-        "description": "Experimental. One hit: a row of one resource, ready to link to its page.",
+        "description": "One hit: a row of one resource, ready to link to its page.",
         "properties": {
           "id": {
             "description": "The row's primary key: its page is /<resource>/<id>.",
@@ -291,7 +291,7 @@
         "type": "object"
       },
       "GlobalSearchResult": {
-        "description": "Experimental. The answer of GET /api/search/: groups ordered by their best hit.",
+        "description": "The answer of GET /api/search/: groups ordered by their best hit.",
         "properties": {
           "groups": {
             "items": {
@@ -834,7 +834,7 @@
         "type": "object"
       },
       "Me": {
-        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` (experimental) lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
+        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -869,7 +869,7 @@
             "type": "string"
           },
           "permissions": {
-            "description": "Experimental. The permission keys the user holds (``app.model:action``), sorted.",
+            "description": "The permission keys the user holds (``app.model:action``), sorted.",
             "items": {
               "type": "string"
             },
@@ -912,7 +912,7 @@
         "type": "object"
       },
       "MeTerms": {
-        "description": "Experimental. The ``terms`` of ``me/`` while ``KARNI_TERMS`` is set.\n\n``required`` and ``accepted`` together say whether the API will refuse the\nuser (``E245``) until they accept ``version``, which is at ``url``.",
+        "description": "The ``terms`` of ``me/`` while ``KARNI_TERMS`` is set.\n\n``required`` and ``accepted`` together say whether the API will refuse the\nuser (``E245``) until they accept ``version``, which is at ``url``.",
         "properties": {
           "accepted": {
             "readOnly": true,
@@ -966,7 +966,7 @@
         "type": "string"
       },
       "OtpSendRequest": {
-        "description": "Experimental. Request body of ``otp/send/``: the address to send a sign-in code to.",
+        "description": "Request body of ``otp/send/``: the address to send a sign-in code to.",
         "properties": {
           "email": {
             "format": "email",
@@ -980,7 +980,7 @@
         "type": "object"
       },
       "OtpVerifyRequest": {
-        "description": "Experimental. Request body of ``otp/verify/``: the address and the code it received.\n\nWhitespace inside the code is ignored, so ``\"123 456\"`` is ``\"123456\"``.",
+        "description": "Request body of ``otp/verify/``: the address and the code it received.\n\nWhitespace inside the code is ignored, so ``\"123 456\"`` is ``\"123456\"``.",
         "properties": {
           "code": {
             "maxLength": 32,
@@ -1363,7 +1363,7 @@
         "type": "object"
       },
       "PatchedMeRequest": {
-        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` (experimental) lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
+        "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it. ``permissions`` lists\nthe permission keys the user's roles and grants hold\n(``shop.product:add``), so the UI offers New, Edit and Delete only to\nthose who may: the server checks every write again.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
         "properties": {
           "first_name": {
             "maxLength": 150,
@@ -2340,7 +2340,7 @@
         "type": "string"
       },
       "TermsAcceptRequest": {
-        "description": "Experimental. Request body of ``terms/accept/``: the version shown, and the client.\n\n``version`` is the version the user read and accepted. ``client`` is an\noptional JSON object the app sends about itself (a mobile app's device,\nplatform and app version, for example), stored with the acceptance. It\nmay be at most ``CLIENT_MAX_BYTES`` bytes of JSON.",
+        "description": "Request body of ``terms/accept/``: the version shown, and the client.\n\n``version`` is the version the user read and accepted. ``client`` is an\noptional JSON object the app sends about itself (a mobile app's device,\nplatform and app version, for example), stored with the acceptance. It\nmay be at most ``CLIENT_MAX_BYTES`` bytes of JSON.",
         "properties": {
           "client": {
             "nullable": true
@@ -2357,7 +2357,7 @@
         "type": "object"
       },
       "TermsStatus": {
-        "description": "Experimental. The answer of ``terms/`` and ``terms/accept/``.\n\n``accepted_at`` is when the user accepted ``version``, ``null`` when they\nhave not. While ``required`` is true and ``accepted`` false, the API\nrefuses the user with ``E245``.",
+        "description": "The answer of ``terms/`` and ``terms/accept/``.\n\n``accepted_at`` is when the user accepted ``version``, ``null`` when they\nhave not. While ``required`` is true and ``accepted`` false, the API\nrefuses the user with ``E245``.",
         "properties": {
           "accepted": {
             "readOnly": true,
@@ -2392,7 +2392,7 @@
         "type": "object"
       },
       "Tile": {
-        "description": "Experimental. One home tile.",
+        "description": "One home tile.",
         "properties": {
           "columns": {
             "items": {
@@ -2852,7 +2852,7 @@
     },
     "/api/auth/otp/send/": {
       "post": {
-        "description": "Experimental. ``POST otp/send/`` ``{email}``: email a sign-in code, enumeration-silent.\n\nAlways the same 200 and the same body (:func:`karni.accounts.otp.send_answer`:\n``{\"detail\", \"length\", \"expires_in\"}``), whether the address has an\naccount, is inactive, or may not sign up. :func:`karni.accounts.otp.send_code`\ndoes the same work on every path and sends the email after the\ntransaction commits. A malformed address is a plain 400. While\n``KARNI_EMAIL_OTP`` is off the route is not mounted, and a URLconf built\nearlier answers 404 ``E236``.\n\nThrottled per IP (``auth.otp_send``) and per address\n(``auth.otp_send_email``). Override / escape hatch: subclass and declare\n``path(\"api/auth/otp/send/\", ...)`` before the include, or change\n``throttle_classes`` / ``throttle_scope``.",
+        "description": "``POST otp/send/`` ``{email}``: email a sign-in code, enumeration-silent.\n\nAlways the same 200 and the same body (:func:`karni.accounts.otp.send_answer`:\n``{\"detail\", \"length\", \"expires_in\"}``), whether the address has an\naccount, is inactive, or may not sign up. :func:`karni.accounts.otp.send_code`\ndoes the same work on every path and sends the email after the\ntransaction commits. A malformed address is a plain 400. While\n``KARNI_EMAIL_OTP`` is off the route is not mounted, and a URLconf built\nearlier answers 404 ``E236``.\n\nThrottled per IP (``auth.otp_send``) and per address\n(``auth.otp_send_email``). Override / escape hatch: subclass and declare\n``path(\"api/auth/otp/send/\", ...)`` before the include, or change\n``throttle_classes`` / ``throttle_scope``.",
         "operationId": "auth_otp_send_create",
         "requestBody": {
           "content": {
@@ -2903,7 +2903,7 @@
     },
     "/api/auth/otp/verify/": {
       "post": {
-        "description": "Experimental. ``POST otp/verify/`` ``{email, code}``: sign in with the emailed code.\n\nThe answer is the one ``login/`` gives: ``{\"access\", \"refresh\", \"user\"}``\nin JWT mode, a session plus ``{\"user\"}`` in session mode, or the 2FA gate\npayload (:func:`_twofa_gate_payload`). When the code verified an address\nthat was never verified, it also removed the account's password, and the\nanswer adds ``\"password_removed\": true`` so the app can say so. A refused code is a 401 ``E235``\nwhatever went wrong (wrong, expired, used, locked, or an address nobody\nsent a code to), an inactive account a 401 ``E226`` after a right code,\nand a new account under the ``approval`` policy a 202 ``E224`` with no\ncredentials. Refusals are returned, not raised, so a guess spent on a\nwrong code stays spent even with ``ATOMIC_REQUESTS``.\n\nThrottled per IP (``auth.otp_verify``), on top of the attempt cap of each\ncode. Override / escape hatch: subclass and declare\n``path(\"api/auth/otp/verify/\", ...)`` before the include.",
+        "description": "``POST otp/verify/`` ``{email, code}``: sign in with the emailed code.\n\nThe answer is the one ``login/`` gives: ``{\"access\", \"refresh\", \"user\"}``\nin JWT mode, a session plus ``{\"user\"}`` in session mode, or the 2FA gate\npayload (:func:`_twofa_gate_payload`). When the code verified an address\nthat was never verified, it also removed the account's password, and the\nanswer adds ``\"password_removed\": true`` so the app can say so. A refused code is a 401 ``E235``\nwhatever went wrong (wrong, expired, used, locked, or an address nobody\nsent a code to), an inactive account a 401 ``E226`` after a right code,\nand a new account under the ``approval`` policy a 202 ``E224`` with no\ncredentials. Refusals are returned, not raised, so a guess spent on a\nwrong code stays spent even with ``ATOMIC_REQUESTS``.\n\nThrottled per IP (``auth.otp_verify``), on top of the attempt cap of each\ncode. Override / escape hatch: subclass and declare\n``path(\"api/auth/otp/verify/\", ...)`` before the include.",
         "operationId": "auth_otp_verify_create",
         "requestBody": {
           "content": {
@@ -3337,7 +3337,7 @@
     },
     "/api/auth/terms/": {
       "get": {
-        "description": "Experimental. ``GET terms/``: the current terms, and whether the user accepted them.\n\n``{\"version\", \"url\", \"required\", \"accepted\", \"accepted_at\"}``\n(:func:`karni.accounts.terms.status`). 401 without a signed-in user. The\nroute exists while ``KARNI_TERMS`` is set, and a URLconf built earlier\nanswers 404 ``E249`` once it is unset. The terms gate never refuses it.\n\nOverride / escape hatch: subclass and declare ``path(\"api/auth/terms/\",\n...)`` before the include.",
+        "description": "``GET terms/``: the current terms, and whether the user accepted them.\n\n``{\"version\", \"url\", \"required\", \"accepted\", \"accepted_at\"}``\n(:func:`karni.accounts.terms.status`). 401 without a signed-in user. The\nroute exists while ``KARNI_TERMS`` is set, and a URLconf built earlier\nanswers 404 ``E249`` once it is unset. The terms gate never refuses it.\n\nOverride / escape hatch: subclass and declare ``path(\"api/auth/terms/\",\n...)`` before the include.",
         "operationId": "auth_terms_retrieve",
         "responses": {
           "200": {
@@ -3377,7 +3377,7 @@
     },
     "/api/auth/terms/accept/": {
       "post": {
-        "description": "Experimental. ``POST terms/accept/`` ``{version, client?}``: accept the current terms.\n\nRecords the acceptance (:func:`karni.accounts.terms.accept`) with the\nclient's IP (read like the throttles read it, honouring ``NUM_PROXIES``),\nits ``User-Agent`` and the optional ``client`` object, and answers 201\nwith the ``terms/`` body. The same version again answers 200 and changes\nnothing. Another version is a 400 ``E246`` carrying the current\n``version`` and ``url``, and nothing is recorded. 401 without a signed-in\nuser, 404 ``E249`` from a URLconf built while ``KARNI_TERMS`` was set.\n\nOverride / escape hatch: subclass and declare\n``path(\"api/auth/terms/accept/\", ...)`` before the include, or call\n:func:`karni.accounts.terms.accept` from a view of your own.",
+        "description": "``POST terms/accept/`` ``{version, client?}``: accept the current terms.\n\nRecords the acceptance (:func:`karni.accounts.terms.accept`) with the\nclient's IP (read like the throttles read it, honouring ``NUM_PROXIES``),\nits ``User-Agent`` and the optional ``client`` object, and answers 201\nwith the ``terms/`` body. The same version again answers 200 and changes\nnothing. Another version is a 400 ``E246`` carrying the current\n``version`` and ``url``, and nothing is recorded. 401 without a signed-in\nuser, 404 ``E249`` from a URLconf built while ``KARNI_TERMS`` was set.\n\nOverride / escape hatch: subclass and declare\n``path(\"api/auth/terms/accept/\", ...)`` before the include, or call\n:func:`karni.accounts.terms.accept` from a view of your own.",
         "operationId": "auth_terms_accept_create",
         "requestBody": {
           "content": {
@@ -5854,7 +5854,7 @@
     },
     "/api/dashboard/": {
       "get": {
-        "description": "Experimental. The home tiles of the requesting person.",
+        "description": "The home tiles of the requesting person.",
         "operationId": "dashboard_tiles",
         "responses": {
           "200": {
@@ -10629,7 +10629,7 @@
     },
     "/api/search/": {
       "get": {
-        "description": "Experimental. Search every model that declares class Karni: search, each through its list endpoint's access for this request. Results are grouped per resource, best first.",
+        "description": "Search every model that declares class Karni: search, each through its list endpoint's access for this request. Results are grouped per resource, best first.",
         "operationId": "global_search",
         "parameters": [
           {

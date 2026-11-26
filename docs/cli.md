@@ -41,11 +41,11 @@ Create a project: a public website, an app, both, or a game.
 
 Every kind has the API, the admin, PostgreSQL, Redis, Celery, the security defaults and the production stack. A site (--kind site) also has a site app at / on the karni-site module, where the client edits every text, image, menu and page title in the admin, registration off and the roles staff and editor. An app (--kind app) has the React app in frontend/. A site+app has both.
 
-A game (--kind game, experimental) is the game first: the game in game/&lt;slug&gt;/ on @karni/game, served at /play/&lt;slug&gt;/, its server on karni-game, and no staff app unless --staff-app. An app+game (--kind app+game) is an app with the game on one of its pages.
+A game (--kind game) is the game first: the game in game/&lt;slug&gt;/ on @karni/game, served at /play/&lt;slug&gt;/, its server on karni-game, and no staff app unless --staff-app. An app+game (--kind app+game) is an app with the game on one of its pages.
 
 With --design, the site is built from a designer's pages, and the next steps say what is left: the models, the real content and the loops (karni rules --procedure site-from-design).
 
-With --recipe (experimental), the app starts from a recipe's karni.yaml, and karni build makes it: the models and the API, the recipe's own domain code, seeds and tests, the migrations, demo data, the tests and karni check.
+With --recipe, the app starts from a recipe's karni.yaml, and karni build makes it: the models and the API, the recipe's own domain code, seeds and tests, the migrations, demo data, the tests and karni check.
 
 Example:
 
@@ -92,14 +92,14 @@ karni new [OPTIONS] NAME
 | `NAME` (required) |  | Project name (slug is derived from it) |
 | `--output-dir`, `-o` PATH | `.` |  |
 | `--domain` TEXT | `example.com` | Production domain for Caddy |
-| `--kind` TEXT |  | What the project is: site (a public website the client edits in the admin), app (an API and a React app for signed-in users), site+app, game (experimental: a game first, in game/&lt;slug&gt;/ and served at /play/&lt;slug&gt;/, on karni-game and @karni/game, with the admin and no staff app), or app+game (experimental: an app with a game on one of its pages). Asked when run in a terminal, else app (site with --design). |
+| `--kind` TEXT |  | What the project is: site (a public website the client edits in the admin), app (an API and a React app for signed-in users), site+app, game (a game first, in game/&lt;slug&gt;/ and served at /play/&lt;slug&gt;/, on karni-game and @karni/game, with the admin and no staff app), or app+game (an app with a game on one of its pages). Asked when run in a terminal, else app (site with --design). |
 | `--design` PATH |  | A designer's folder of static pages (index.html, css/, img/): the site is built from it (karni design analyze, karni import design --editable), and the next steps are the rest of the site-from-design procedure. Implies a kind with a site. |
 | `--staff-app/--no-staff-app` |  | The React staff app in frontend/. An app always has it. A site has it unless --no-staff-app, and then staff work in the admin. A game has it only with --staff-app. |
 | `--site-app` TEXT | `website` | The label of the site app a kind with a site gets. |
 | `--here` |  | Write the project into the current folder, which must be empty (version control and editor files may be there), instead of a new folder under it. |
 | `--git/--no-git` | on | Make the project a git repository with a first commit of what karni new wrote. Skipped inside an existing repository and when git is not installed. |
-| `--genre` TEXT |  | Experimental, with --kind game: start the game from a starter (karni starters list): runner, a one-tap endless runner with a daily run, a cosmetics shop and an ad continue, from karni-game. blank (the default) is the small game --kind game writes on its own. |
-| `--recipe` TEXT (repeatable) |  | Experimental. Start the app from a recipe (karni recipes list, or blank): its karni.yaml with this name, then karni build, which also writes the recipe's own domain code, seeds and tests and runs the tests and karni check. Repeat it for several recipes in one project (--recipe booking --recipe crm): each one after the first is merged as karni recipes add does. Without the project's interpreter or database it stops after karni.yaml: run karni build next. |
+| `--genre` TEXT |  | With --kind game: start the game from a starter (karni starters list): runner, a one-tap endless runner with a daily run, a cosmetics shop and an ad continue, from karni-game. blank (the default) is the small game --kind game writes on its own. |
+| `--recipe` TEXT (repeatable) |  | Start the app from a recipe (karni recipes list, or blank): its karni.yaml with this name, then karni build, which also writes the recipe's own domain code, seeds and tests and runs the tests and karni check. Repeat it for several recipes in one project (--recipe booking --recipe crm): each one after the first is merged as karni recipes add does. Without the project's interpreter or database it stops after karni.yaml: run karni build next. |
 
 ### `karni add`
 
@@ -129,7 +129,7 @@ karni remove [OPTIONS] MODULE
 
 ### `karni modules`
 
-The module catalog (experimental): every module and built-in feature, added or not, with what it provides and the questions to ask (list, show).
+The module catalog: every module and built-in feature, added or not, with what it provides and the questions to ask (list, show).
 
 ```
 karni modules COMMAND [ARGS]...
@@ -137,7 +137,7 @@ karni modules COMMAND [ARGS]...
 
 #### `karni modules list`
 
-Experimental. Every module and built-in feature: kind, status, state, purpose, questions.
+Every module and built-in feature: kind, status, state, purpose, questions.
 
 Modules first, then features. A module is added (in the # karni:apps block), installed (the project's interpreter has it) or available. Each question names the setting its answer goes to.
 
@@ -151,7 +151,7 @@ karni modules list [OPTIONS]
 
 #### `karni modules show`
 
-Experimental. One module or feature: what it provides, the questions, the wiring.
+One module or feature: what it provides, the questions, the wiring.
 
 For a module: what karni add writes (apps, middleware, context processors, the kind) and prints (the URL include, extras), which karni remove takes out again. For a feature: the setting that turns it on and the extra it needs.
 
@@ -304,10 +304,10 @@ karni context [OPTIONS] [PATH]
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 | `--manifest` PATH |  | Explicit manifest.json path |
-| `--app` TEXT (repeatable) |  | Only this app, in full: every model with its fields, the relations in and out, its viewsets with route and access, its roles and pages (repeatable). Experimental. |
-| `--model` TEXT (repeatable) |  | One model in depth: Name or app_label.Name. Every field, the relations that point at it, its viewsets and pages (repeatable). Experimental. |
-| `--summary` |  | One line per app: its models, viewsets and pages, with their counts. Experimental. |
-| `--max-tokens` INT RANGE |  | Cut the output at whole sections to about N tokens (4 characters each). The last line names what was left out and the command that prints it. Experimental. |
+| `--app` TEXT (repeatable) |  | Only this app, in full: every model with its fields, the relations in and out, its viewsets with route and access, its roles and pages (repeatable). |
+| `--model` TEXT (repeatable) |  | One model in depth: Name or app_label.Name. Every field, the relations that point at it, its viewsets and pages (repeatable). |
+| `--summary` |  | One line per app: its models, viewsets and pages, with their counts. |
+| `--max-tokens` INT RANGE |  | Cut the output at whole sections to about N tokens (4 characters each). The last line names what was left out and the command that prints it. |
 
 ### `karni rules`
 
@@ -363,8 +363,8 @@ karni check [OPTIONS] [REF]
 | `--verbose`, `-v` |  | Print the frontend tools' own output (ESLint, jscpd's report) when they pass too. By default only a failure prints their output. |
 | `--deploy` |  | Also run the deploy checks (DEBUG, SECRET_KEY, hosts, HSTS, cookies, admin path, CORS, CSP) and fail on warnings. Run it with the production environment. |
 | `--seo` |  | Also run the SEO checks: every page of the public site rendered, and missing or shared titles and descriptions, images without alt, size or smaller copies, broken links and pages missing from the sitemap reported (karni-site, SITE010 to SITE018). |
-| `--changed` |  | Only the files git reports as changed: the working tree and the index against HEAD (or REF), and untracked files. The checks that read the whole project still run. Experimental. |
-| `--no-cache` |  | Check every file again: do not read or write the check cache (.karni/local/check-cache.json) or ESLint's. Experimental. |
+| `--changed` |  | Only the files git reports as changed: the working tree and the index against HEAD (or REF), and untracked files. The checks that read the whole project still run. |
+| `--no-cache` |  | Check every file again: do not read or write the check cache (.karni/local/check-cache.json) or ESLint's. |
 
 ### `karni suggest`
 
@@ -629,7 +629,7 @@ Values come from field names and types (an `email` gets an email, `price` money,
 
 It first prints the models it will write to, and refuses when one of their tables already holds rows (users aside), because demo rows would mix with real content. Pass --reset to wipe the tables first or --force to add rows on top. Real content belongs in `karni load`.
 
---volume N (experimental) writes N rows per model in bulk, for performance work: relation targets first, foreign keys drawn from existing rows, in batches (--batch-size), with the rows and the time per model. It refuses when a table holds rows no seed run left there, unless --reset or --force. A model whose seed count reaches KARNI_SEED_BULK_THRESHOLD takes the bulk path in a plain run too.
+--volume N writes N rows per model in bulk, for performance work: relation targets first, foreign keys drawn from existing rows, in batches (--batch-size), with the rows and the time per model. It refuses when a table holds rows no seed run left there, unless --reset or --force. A model whose seed count reaches KARNI_SEED_BULK_THRESHOLD takes the bulk path in a plain run too.
 
 Example:
 
@@ -844,7 +844,7 @@ Field DSL for `karni make model NAME [FIELD...]`:
 | `meta:json[:queried]` | JSONField(default=dict), and queried adds a GIN index |
 | `tags:array:str[:len]` | ArrayField(models.CharField(...)) with a GIN index, PostgreSQL only |
 | `doc:file / photo:image` | FileField / ImageField with `upload_to="<app>/<model>/"`. An image field makes pyproject.toml depend on `karni[images]` (Pillow) |
-| `doc:file:protected / photo:image:protected` | ProtectedFileField / ProtectedImageField (karni-storage, experimental): stored privately, downloaded only through the row's viewset. Needs `karni add storage` |
+| `doc:file:protected / photo:image:protected` | ProtectedFileField / ProtectedImageField (karni-storage): stored privately, downloaded only through the row's viewset. Needs `karni add storage` |
 | `ref:uuid` | UUIDField(default=uuid.uuid4) |
 | `status:choice:draft\|live` | a TextChoices class + CharField(choices=..., default=first) |
 | `status:state:draft,confirmed,cancelled` | StateField(states=[...], transitions={...}): each state moves to the next (edit the dict), or declare the moves with &gt;: 'status:state:draft&gt;confirmed\|draft&gt;cancelled' |
@@ -881,7 +881,7 @@ Example:
 karni make model Event title:str:200 starts_at:datetime "status:choice:draft|live" organizer:fk:User 'venue:fk:Venue?' -a --access owned:organizer
 ```
 
-Experimental: karni make model Sale --external --table reporting.sales [--database warehouse] [--writable] writes a plain models.Model over that existing table or view from its columns (Meta.managed = False, class Karni: external = True), and its viewset. The database must be reachable.
+karni make model Sale --external --table reporting.sales [--database warehouse] [--writable] writes a plain models.Model over that existing table or view from its columns (Meta.managed = False, class Karni: external = True), and its viewset. The database must be reachable.
 
 ```
 karni make model [OPTIONS] NAME [FIELDS...]
@@ -895,14 +895,14 @@ karni make model [OPTIONS] NAME [FIELDS...]
 | `--all`, `-a` |  | Also generate the viewset, the pages and the API test. |
 | `--access` TEXT |  | With viewset: granted\|authenticated\|public-read[:&lt;role&gt;]\|public-create[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. public-create: anyone creates (a public form), only that role reads and writes. |
 | `--search` TEXT (repeatable) |  | With viewset: search_fields (comma-separated). |
-| `--external` |  | Experimental. A model over a table or view another system owns, written from the columns of --table (Meta.managed = False, class Karni: external = True), with its viewset. It reads the database, which must be reachable. |
+| `--external` |  | A model over a table or view another system owns, written from the columns of --table (Meta.managed = False, class Karni: external = True), with its viewset. It reads the database, which must be reachable. |
 | `--table` TEXT |  | With --external: the table or view, e.g. sales or reporting.sales. |
 | `--database` TEXT |  | With --external: the DATABASES alias the table lives in (class Karni: database). |
 | `--writable` |  | With --external: let the API and the admin write it (class Karni: writable). |
 | `--migrate` |  | Run `karni make migration` for the app afterwards. |
 | `--order` TEXT |  | Order rows by this field (Meta.ordering), e.g. position or -created_at. |
 | `--key` TEXT |  | The field karni load and imports match rows on (Karni.import_key). Rows nested under a parent are matched on the parent plus this field, e.g. position. |
-| `--pk` TEXT |  | The primary key: uuid (BaseModel) or bigint (BigIntBaseModel, experimental). Default: KARNI_PK in config/settings.py, else uuid. |
+| `--pk` TEXT |  | The primary key: uuid (BaseModel) or bigint (BigIntBaseModel). Default: KARNI_PK in config/settings.py, else uuid. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
@@ -1147,11 +1147,11 @@ karni make page [OPTIONS] NAME
 | --- | --- | --- |
 | `NAME` (required) |  | Page file name, kebab-case (e.g. events). |
 | `--resource` TEXT |  | API resource (router prefix, e.g. events). |
-| `--kind` TEXT |  | With --resource: list (default), detail or form. A login page needs no resource, a dashboard (experimental) counts resources (--count), and blank is the bare page. |
+| `--kind` TEXT |  | With --resource: list (default), detail or form. A login page needs no resource, a dashboard counts resources (--count), and blank is the bare page. |
 | `--path` TEXT |  | Route path. For resource pages it is the base (default `/<resource>`). |
 | `--title` TEXT |  | Page title (default: from the name). |
-| `--related` TEXT (repeatable) |  | Experimental. With --kind detail: a related tab (deals, or deals.partner), a resource whose model has a fk to this one (C561 otherwise). Repeat it. |
-| `--count` TEXT (repeatable) |  | Experimental. With --kind dashboard: a resource to count. Repeat it (default: every resource the project routes). |
+| `--related` TEXT (repeatable) |  | With --kind detail: a related tab (deals, or deals.partner), a resource whose model has a fk to this one (C561 otherwise). Repeat it. |
+| `--count` TEXT (repeatable) |  | With --kind dashboard: a resource to count. Repeat it (default: every resource the project routes). |
 | `--no-route` |  | Do not register the route in frontend/src/routes.tsx. |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
@@ -1384,7 +1384,7 @@ karni design extract [OPTIONS] DIRECTORY
 
 ### `karni spec`
 
-The app spec, karni.yaml (experimental): check it (validate), write it from an existing project (export), or answer a question of karni plan --questions (answer).
+The app spec, karni.yaml: check it (validate), write it from an existing project (export), or answer a question of karni plan --questions (answer).
 
 ```
 karni spec COMMAND [ARGS]...
@@ -1392,7 +1392,7 @@ karni spec COMMAND [ARGS]...
 
 #### `karni spec validate`
 
-Experimental. Check a karni.yaml: every problem with its code, line and fix.
+Check a karni.yaml: every problem with its code, line and fix.
 
 It checks the YAML, every key and value (unknown keys are errors, keys that start with x- are kept and ignored), each field through karni make model's own parser, and every reference: relations, roles named in access, grants, pages, modules, field groups, keys and owners. Codes are C211 to C242 (karni explain &lt;code&gt;). Exit status 1 when there is a problem.
 
@@ -1407,7 +1407,7 @@ karni spec validate [OPTIONS]
 
 #### `karni spec export`
 
-Experimental. Write the spec of this project from its code (manage.py karni_facts).
+Write the spec of this project from its code (manage.py karni_facts).
 
 The models become entities (each field in the field syntax when its type makes the same column), the viewsets their access and search, KARNI_ROLES the roles, the settings the features, the installed modules and their changed settings the modules, frontend/src/routes.tsx the pages, and the seeders the seed counts. What the spec cannot express is listed, and kept as comments at the top of the file. The file starts with a yaml-language-server line naming the JSON Schema, for editors.
 
@@ -1424,7 +1424,7 @@ karni spec export [OPTIONS]
 
 #### `karni spec answer`
 
-Experimental. Write the answer to a question of karni plan --questions into karni.yaml.
+Write the answer to a question of karni plan --questions into karni.yaml.
 
 The answer goes to the key the question names, and every other line of the file stays as it was: comments, order and layout. The question is then settled and karni plan --questions no longer asks it. Editing the file by hand settles it the same way. An id that is not an open question (C400) and a value the question does not take (C401) are refused, and so is an answer that cannot be written without changing anything else (C402): nothing is written then.
 
@@ -1517,7 +1517,7 @@ karni replay [OPTIONS] REQUEST_ID
 
 ### `karni recipes`
 
-Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show), and the parts of a project (add, remove, upgrade).
+Recipes: ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show), and the parts of a project (add, remove, upgrade).
 
 ```
 karni recipes COMMAND [ARGS]...
@@ -1525,7 +1525,7 @@ karni recipes COMMAND [ARGS]...
 
 #### `karni recipes list`
 
-Experimental. Every recipe, or with --match the best few for a request, and the blank start.
+Every recipe, or with --match the best few for a request, and the blank start.
 
 --match compares the words of the request with each recipe's use_when and purpose, after lowercasing, making plurals singular and leaving out words that name no app (a, the, app, with ...). A recipe scores 2 for each word one of its use_when phrases has and 1 for each word only its purpose has. A word that is the recipe's own noun (its name, or a use_when phrase of that one word) scores 4. The recipes that score 2 or more come back, best first, at most 3. When none does, start from the blank start: karni.yaml with the version and the app's name, nothing else.
 
@@ -1540,7 +1540,7 @@ karni recipes list [OPTIONS]
 
 #### `karni recipes show`
 
-Experimental. One recipe: what it is for, what people usually change, its files and spec.
+One recipe: what it is for, what people usually change, its files and spec.
 
 blank shows the blank start: karni.yaml with the version and the app's name, nothing else, where an app starts when no recipe fits. --files prints the recipe's own model methods, actions, seeders and tests, which only karni new --recipe writes into a project.
 
@@ -1556,7 +1556,7 @@ karni recipes show [OPTIONS] NAME
 
 #### `karni recipes add`
 
-Experimental. Add a recipe to this project as a part, then karni build.
+Add a recipe to this project as a part, then karni build.
 
 The recipe's karni.yaml is merged into the project's (docs/family.md has the rules): its app under its own route, its roles named &lt;prefix&gt;-&lt;role&gt;, the family roles admin and customer adding up, what it requires switched on. A conflict stops it before anything is written (C442 to C447). The fragment is kept in .karni/recipes/&lt;name&gt;/, and karni build writes the recipe's own files by the stub rule, migrates and seeds only its new tables.
 
@@ -1571,7 +1571,7 @@ karni recipes add [OPTIONS] NAME
 
 #### `karni recipes remove`
 
-Experimental. Take a part out of this project, then karni build.
+Take a part out of this project, then karni build.
 
 Its apps, roles, pages, menu group and seed counts leave karni.yaml, and its record leaves .karni/recipes/. Dropping its tables is a risky change: pass --allow-destructive. Its files the project never changed are deleted, and the ones it changed stay on disk, each one listed.
 
@@ -1587,7 +1587,7 @@ karni recipes remove [OPTIONS] NAME
 
 #### `karni recipes upgrade`
 
-Experimental. Bring each part to the recipe karni-cli has now, then karni build.
+Bring each part to the recipe karni-cli has now, then karni build.
 
 A file of the part's the project never changed (its recorded sha256) is replaced. A file it changed is kept, and the recipe's new file is written beside it as &lt;file&gt;.recipe-&lt;version&gt;. In karni.yaml, each of the part's entities and roles the project left as added is updated, and each one it changed is reported.
 
@@ -1602,7 +1602,7 @@ karni recipes upgrade [OPTIONS] [NAME]
 
 ### `karni starters`
 
-Game starters (experimental): ready games karni new --kind game --genre &lt;genre&gt; writes, matched to a one-line request (list, show).
+Game starters: ready games karni new --kind game --genre &lt;genre&gt; writes, matched to a one-line request (list, show).
 
 ```
 karni starters COMMAND [ARGS]...
@@ -1610,7 +1610,7 @@ karni starters COMMAND [ARGS]...
 
 #### `karni starters list`
 
-Experimental. Every starter, or with --match the best few for a request, and the blank start.
+Every starter, or with --match the best few for a request, and the blank start.
 
 ```
 karni starters list [OPTIONS]
@@ -1623,7 +1623,7 @@ karni starters list [OPTIONS]
 
 #### `karni starters show`
 
-Experimental. One starter: what it is, what people usually change, and the files it writes.
+One starter: what it is, what people usually change, and the files it writes.
 
 ```
 karni starters show [OPTIONS] GENRE

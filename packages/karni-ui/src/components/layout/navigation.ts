@@ -1,5 +1,5 @@
 /**
- * Experimental. The server's menu (`useNavigation`) as Layout entries: links
+ * The server's menu (`useNavigation`) as Layout entries: links
  * and collapsible groups, icons by name, the current page marked.
  *
  * The current page is the item whose route is the path, else the item with
@@ -16,7 +16,7 @@ import type { NavigationItem } from "../../hooks/useNavigation";
 import type { LayoutNavEntry } from "./layout";
 import { navIcon } from "./nav-icons";
 
-/** Experimental. What `navigationEntries` needs besides the items. */
+/** What `navigationEntries` needs besides the items. */
 export interface NavigationEntriesOptions {
   /** The current location's path: marks the current page. */
   pathname: string;
@@ -35,7 +35,7 @@ function routes(items: readonly NavigationItem[]): string[] {
   );
 }
 
-/** Experimental. The route of the current page among `items`, or null: exact first, then the longest prefix. */
+/** The route of the current page among `items`, or null: exact first, then the longest prefix. */
 export function activeRoute(items: readonly NavigationItem[], pathname: string): string | null {
   const here = normal(pathname);
   const all = routes(items);
@@ -53,7 +53,7 @@ export function activeRoute(items: readonly NavigationItem[], pathname: string):
   return best;
 }
 
-/** Experimental. Layout entries for the server's menu, with the current page marked. */
+/** Layout entries for the server's menu, with the current page marked. */
 export function navigationEntries(
   items: readonly NavigationItem[],
   options: NavigationEntriesOptions,

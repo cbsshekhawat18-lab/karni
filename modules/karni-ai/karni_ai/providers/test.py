@@ -73,7 +73,7 @@ def _convert(value: str, part: dict[str, Any]) -> Any:
 
 
 class TestProvider(Provider):
-    """Experimental. Answers from the source's ``field: value`` lines, or from a queue."""
+    """Answers from the source's ``field: value`` lines, or from a queue."""
 
     __test__ = False  # not a pytest test class
 

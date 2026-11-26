@@ -7,7 +7,7 @@
  * its code step (`POST <authBasePath>/2fa/login/`). Without a handler the
  * form explains that a code is required. Render it inside `AuthProvider`,
  * e.g. as `AuthGuard`'s `fallback`. With `codeSignIn`, a "Sign in with a
- * code" switch shows OtpLoginForm in its place (experimental).
+ * code" switch shows OtpLoginForm in its place.
  */
 import * as React from "react";
 import { cn } from "../lib/cn";
@@ -64,7 +64,7 @@ export interface LoginFormProps {
   /** Replace parts of the form: Error. */
   slots?: Partial<LoginFormSlots>;
   /**
-   * Experimental. Show a "Sign in with a code" switch that swaps the password
+   * Show a "Sign in with a code" switch that swaps the password
    * fields for OtpLoginForm (the backend needs `KARNI_EMAIL_OTP`). Default
    * false. For more control, render OtpLoginForm yourself.
    */

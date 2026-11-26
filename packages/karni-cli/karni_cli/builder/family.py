@@ -1,4 +1,4 @@
-"""Experimental. The family's frontend that ``karni build`` writes for a project of parts.
+"""The family's frontend that ``karni build`` writes for a project of parts.
 
 A project that holds parts (``app.recipes``) gets, in ``frontend/src/karni/``
 (Karni-owned, rewritten on every build like ``parts.ts``):
@@ -74,7 +74,7 @@ _HEADER: Final = "Written by karni build from karni.yaml. Do not edit it: karni 
 
 @dataclass(frozen=True)
 class FamilyPage:
-    """Experimental. One family page: its file, its component, its routes and their data."""
+    """One family page: its file, its component, its routes and their data."""
 
     #: The family page it belongs to (a key of ``FAMILY_PAGES``: ``orders``).
     family: str
@@ -129,7 +129,7 @@ _SITE = 'import { useSiteName } from "@karni/ui";'
 
 
 def family_pages(spec: schema.Spec) -> list[FamilyPage]:
-    """Experimental. The family pages of ``spec``: those whose provider the project holds."""
+    """The family pages of ``spec``: those whose provider the project holds."""
     have = {name for name, provider in nav.FAMILY_PROVIDERS.items() if nav.provided(spec, provider)}
     found: list[FamilyPage] = []
     if "signin" in have:
@@ -380,7 +380,7 @@ def _commerce_pages() -> list[FamilyPage]:
 
 
 def router_text() -> str:
-    """Experimental. ``frontend/src/karni/router.ts``: the hooks the family pages share."""
+    """``frontend/src/karni/router.ts``: the hooks the family pages share."""
     return f"""// {_HEADER}
 // The router's glue the family pages share (TanStack Router).
 import {{ useRouter, useRouterState }} from "@tanstack/react-router";
@@ -416,7 +416,7 @@ export function useParam(name: string): string {{
 
 
 def layout_text(spec: schema.Spec) -> str:
-    """Experimental. ``frontend/src/karni/layout.tsx``: the project's one layout."""
+    """``frontend/src/karni/layout.tsx``: the project's one layout."""
     commerce = "commerce" in spec.modules
     notify = nav.provided(spec, "features.notify")
     terms = spec.features.terms
@@ -519,7 +519,7 @@ def layout_text(spec: schema.Spec) -> str:
 
 
 def home_text() -> str:
-    """Experimental. ``frontend/src/karni/home.tsx``: the project's one home."""
+    """``frontend/src/karni/home.tsx``: the project's one home."""
     return f"""// {_HEADER}
 // The home (@karni/ui's FamilyHome): each staff role's tiles from every part, the public
 // home a part registers for visitors and customers, and what to do when nothing is in.
@@ -534,7 +534,7 @@ export default function KarniHome() {{
 
 
 def parts_lines(spec: schema.Spec) -> tuple[list[str], list[str]]:
-    """Experimental. What ``parts.ts`` adds for the family: its imports, and its calls (before
+    """What ``parts.ts`` adds for the family: its imports, and its calls (before
     each part's own ``register()``, so a part may replace what the family registered)."""
     imports = ['import { registerFamily } from "@karni/ui";']
     people = nav.provided(spec, "features.people")
@@ -552,7 +552,7 @@ def parts_lines(spec: schema.Spec) -> tuple[list[str], list[str]]:
 
 
 def reexport_text(rel: str) -> str:
-    """Experimental. The scaffold file ``rel`` as a re-export of the family's."""
+    """The scaffold file ``rel`` as a re-export of the family's."""
     if rel == SCAFFOLD_LAYOUT:
         return (
             "// The app shell is the family's (frontend/src/karni/layout.tsx), which karni build\n"
@@ -567,7 +567,7 @@ def reexport_text(rel: str) -> str:
 
 
 def scaffold_text(rel: str, project_name: str) -> str | None:
-    """Experimental. What ``karni new`` wrote at ``rel`` for a project named ``project_name``,
+    """What ``karni new`` wrote at ``rel`` for a project named ``project_name``,
     from the project template (``None`` when the template is not found)."""
     from karni_cli.project import CliError
     from karni_cli.scaffold import resolve_template
@@ -584,5 +584,5 @@ def scaffold_text(rel: str, project_name: str) -> str | None:
 
 
 def digest(text: str) -> str:
-    """Experimental. The sha256 the record keeps for a file."""
+    """The sha256 the record keeps for a file."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()

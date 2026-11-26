@@ -1,4 +1,4 @@
-"""Experimental. The people contract's operations: resolve, link, duplicates, merge, erase.
+"""The people contract's operations: resolve, link, duplicates, merge, erase.
 
 ``people.resolve(...)`` is the one call a part makes when it meets someone:
 a checkout, a booking, a web-to-lead form, an enrolment. It finds the person
@@ -73,7 +73,7 @@ _NEVER_MOVED: Final = frozenset({"karni_audit", "admin"})
 
 
 class MergeRefused(KarniConflict):
-    """Experimental. A merge Karni will not do (HTTP 409): ``E250`` to ``E252``."""
+    """A merge Karni will not do (HTTP 409): ``E250`` to ``E252``."""
 
 
 # resolve and link -------------------------------------------------------------------------
@@ -101,7 +101,7 @@ def _split_name(name: str) -> tuple[str, str]:
 
 
 class Resolver:
-    """Experimental. How a part finds or creates the person it meets (``people.resolve``).
+    """How a part finds or creates the person it meets (``people.resolve``).
 
     Override / escape hatch: subclass it, override :meth:`find`,
     :meth:`create` or :meth:`fill`, and set ``KARNI_PEOPLE_RESOLVER`` to its
@@ -259,7 +259,7 @@ class Resolver:
 
 
 def get_resolver() -> Resolver:
-    """Experimental. The :class:`Resolver` ``KARNI_PEOPLE_RESOLVER`` names (a class or a path)."""
+    """The :class:`Resolver` ``KARNI_PEOPLE_RESOLVER`` names (a class or a path)."""
     value = getattr(settings, "KARNI_PEOPLE_RESOLVER", DEFAULT_RESOLVER) or DEFAULT_RESOLVER
     resolver = import_setting("KARNI_PEOPLE_RESOLVER", value) if isinstance(value, str) else value
     if isinstance(resolver, type):
@@ -284,7 +284,7 @@ def resolve(
     given_name: str | None = None,
     family_name: str | None = None,
 ) -> Any:
-    """Experimental. Find or create the person a part meets (see :meth:`Resolver.resolve`).
+    """Find or create the person a part meets (see :meth:`Resolver.resolve`).
 
     ``source`` records the part that created a new person (its app label).
     """
@@ -301,7 +301,7 @@ def resolve(
 
 
 def link_account(user: Any, *, person: Any = None, strict: bool = True, create: bool = True) -> Any:
-    """Experimental. Link ``user`` to its person once its email is verified; returns the person.
+    """Link ``user`` to its person once its email is verified; returns the person.
 
     ``person`` defaults to the live person with the account's email; with
     ``create`` one is made when there is none, else nothing is linked and
@@ -361,7 +361,7 @@ def link_account(user: Any, *, person: Any = None, strict: bool = True, create: 
 
 @dataclass(frozen=True)
 class DuplicateGroup:
-    """Experimental. People one rule says may be the same human, oldest first."""
+    """People one rule says may be the same human, oldest first."""
 
     rule: str
     people: tuple[Any, ...]
@@ -405,7 +405,7 @@ def duplicates_by_name(people: Any) -> list[list[Any]]:
 def duplicates(
     people: Any = None, *, rules: Sequence[str] | None = None, person: Any = None
 ) -> list[DuplicateGroup]:
-    """Experimental. Groups of live people that may be the same human, by each rule.
+    """Groups of live people that may be the same human, by each rule.
 
     Email is the identity, so two live people never share one: the rules
     look for what an email check misses (``email_tag``,
@@ -447,7 +447,7 @@ def duplicates(
 
 @dataclass(frozen=True)
 class Move:
-    """Experimental. Rows a merge moves from the dropped record to the kept one.
+    """Rows a merge moves from the dropped record to the kept one.
 
     ``kind`` is ``"foreign_key"``, ``"one_to_one"``, ``"generic"`` or
     ``"hook"`` (a merge hook decides). ``rows`` counts the rows that point
@@ -465,7 +465,7 @@ class Move:
 
 @dataclass(frozen=True)
 class Refusal:
-    """Experimental. Why a merge cannot happen: a code and a sentence."""
+    """Why a merge cannot happen: a code and a sentence."""
 
     code: str
     message: str
@@ -476,7 +476,7 @@ class Refusal:
 
 @dataclass
 class MergePlan:
-    """Experimental. What :func:`merge` would do: the preview a merge screen shows."""
+    """What :func:`merge` would do: the preview a merge screen shows."""
 
     keep: Any
     drop: Any
@@ -571,7 +571,7 @@ _FILLED: Final[dict[str, tuple[str, ...]]] = {
 
 
 def merge_plan(keep: Any, drop: Any) -> MergePlan:
-    """Experimental. What merging ``drop`` into ``keep`` would do, without doing it.
+    """What merging ``drop`` into ``keep`` would do, without doing it.
 
     ``keep`` and ``drop`` are two people or two organisations. The plan lists
     the rows that would move, by model and field, the blank fields ``keep``
@@ -696,7 +696,7 @@ def _move(model: type[models.Model], rows: Any, name: str, keep: Any, drop: Any)
 
 
 def merge(keep: Any, drop: Any) -> MergePlan:
-    """Experimental. Merge ``drop`` into ``keep`` (two people, or two organisations).
+    """Merge ``drop`` into ``keep`` (two people, or two organisations).
 
     In one transaction, with both rows locked: the plan is made again and
     refused with :class:`MergeRefused` (``E250`` to ``E252``, HTTP 409) when
@@ -813,7 +813,7 @@ def merge_addresses(keep: Any, drop: Any) -> None:
 def redact_history(
     model: type[models.Model], ids: Iterable[Any], *, fields: Sequence[str] | None = None
 ) -> int:
-    """Experimental. Replace values in the change history of ``model``'s rows ``ids``.
+    """Replace values in the change history of ``model``'s rows ``ids``.
 
     Every old and new value of ``fields`` (``None``: every field) becomes
     ``[erased]``. Returns the number of entries changed. What erase hooks
@@ -873,7 +873,7 @@ _ERASED_ADDRESS: Final[dict[str, Any]] = {
 
 
 def erase(person: Any) -> Any:
-    """Experimental. Erase a person's data on their request; returns the erased person.
+    """Erase a person's data on their request; returns the erased person.
 
     In one transaction: every registered erase hook runs (each part
     anonymises its rows: an order keeps its amounts and loses the name);

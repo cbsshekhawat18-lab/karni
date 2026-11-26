@@ -1,4 +1,4 @@
-"""Experimental. Rewards the server declares and grants: daily, ad, mission, match, staff.
+"""Rewards the server declares and grants: daily, ad, mission, match, staff.
 
 A client never names an amount: it asks for a reward by its key, and
 :func:`claim` checks what the reward allows. An ``ad`` reward says who vouches

@@ -452,7 +452,7 @@ const stackedAggregate: AggregateResult = {
   ],
 };
 
-describe("DataChart reads an aggregate (experimental)", () => {
+describe("DataChart reads an aggregate", () => {
   it("turns categories and series into chart series, skipping null values", () => {
     expect(aggregateSeries(stackedAggregate)).toEqual([
       {

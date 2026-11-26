@@ -1,4 +1,4 @@
-## AI extraction (karni-ai, experimental)
+## AI extraction (karni-ai)
 - `POST /api/ai/extract/` with `resource` (a router prefix) and one of `text`, `url`, `file` (PDF)
   answers the import preview of the rows a language model read. It writes nothing: the user
   confirms with `POST /api/<resource>/import/<id>/commit/`. Never save extracted rows another way.

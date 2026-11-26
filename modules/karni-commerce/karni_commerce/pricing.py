@@ -1,4 +1,4 @@
-"""Experimental. What an order costs: its lines, a coupon, shipping and tax, worked out once.
+"""What an order costs: its lines, a coupon, shipping and tax, worked out once.
 
 :func:`quote` is the one place totals are computed. The cart's page, the
 checkout page (``POST carts/current/quote/``) and checkout itself call it, so
@@ -291,7 +291,7 @@ def _apply_coupon(coupon: Coupon, lines: Sequence[QuoteLine]) -> None:
 
 
 class ZoneShipping:
-    """Experimental. The shipping methods of the zone that covers the address.
+    """The shipping methods of the zone that covers the address.
 
     Override / escape hatch: subclass it, change :meth:`methods`, and name it
     in ``KARNI_COMMERCE_SHIPPING``.
@@ -342,7 +342,7 @@ class ZoneShipping:
 
 
 class RateTax:
-    """Experimental. The tax rates of :class:`~karni_commerce.models.TaxRate`, most specific first.
+    """The tax rates of :class:`~karni_commerce.models.TaxRate`, most specific first.
 
     Override / escape hatch: subclass it, change :meth:`rate`, and name it in
     ``KARNI_COMMERCE_TAX``.

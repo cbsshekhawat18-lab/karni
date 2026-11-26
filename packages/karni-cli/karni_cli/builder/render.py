@@ -1,4 +1,4 @@
-"""Experimental. The code ``karni build`` writes, rendered from the spec.
+"""The code ``karni build`` writes, rendered from the spec.
 
 Every Karni-owned file and block (:mod:`karni_cli.builder.layout`) is a
 function of the spec, the project's ``KARNI_PK``, the project's own routes
@@ -84,9 +84,9 @@ __all__ = [
     "settings_block",
 ]
 
-#: Experimental. The first line of every Karni-owned Python file and page.
+#: The first line of every Karni-owned Python file and page.
 HEADER: Final = "Written by karni build from karni.yaml. Do not edit it: karni build rewrites it."
-#: Experimental. The markers of the settings block (Python) and the routes blocks (``//``).
+#: The markers of the settings block (Python) and the routes blocks (``//``).
 BLOCK_START: Final = "karni:spec start"
 BLOCK_END: Final = "karni:spec end"
 _ROUTE_BLOCKS: Final = {
@@ -100,7 +100,7 @@ _PREDICATES: Final = {
 }
 #: The body of a class build appends to a project file: the line build recognises as its own.
 STUB: Final = "The base class comes from karni.yaml (karni build). Add your own code here."
-#: Experimental. The line a stub class's body is.
+#: The line a stub class's body is.
 STUB_LINE: Final = f'    """{STUB}"""'
 #: What build writes in the project's viewset for ``access: code``: a start the project changes.
 _ACCESS_STUB: Final = [
@@ -112,7 +112,7 @@ _ACCESS_STUB: Final = [
 
 @dataclass
 class Inputs:
-    """Experimental. What a render reads besides the files themselves."""
+    """What a render reads besides the files themselves."""
 
     spec: schema.Spec
     #: The project's ``KARNI_PK``: the key type of an entity that does not say.
@@ -133,7 +133,7 @@ class Inputs:
 
 @dataclass
 class Output:
-    """Experimental. A render: every file in the workspace, and the Karni-owned ones by name."""
+    """A render: every file in the workspace, and the Karni-owned ones by name."""
 
     ws: Workspace
     #: Karni-owned file -> its content (adopted files left out).
@@ -206,7 +206,7 @@ def _base(entity: schema.Entity, pk: str) -> tuple[str, list[str], str]:
     """``(class bases, names to import from karni.models, Meta's base)``.
 
     A tree lists ``TreeModel`` (or ``OrderedTreeModel``) first, so its
-    ``objects`` is the tree manager (experimental).
+    ``objects`` is the tree manager.
     """
     if entity.external:
         return "models.Model", [], ""
@@ -353,7 +353,7 @@ def _bare(value: Any) -> Any:
 
 
 def rule_options(entity: schema.Entity) -> list[tuple[str, Any]]:
-    """Experimental. ``class Karni`` options of the rules (karni.rules), the spec's data as written."""
+    """``class Karni`` options of the rules (karni.rules), the spec's data as written."""
     options: list[tuple[str, Any]] = []
     for key in ("bounds", "unique", "targets", "frozen", "delete", "moves"):
         value = getattr(entity, key)
@@ -447,7 +447,7 @@ def _module(ws: Workspace, rel: str, purpose: str, imports: list[Import], blocks
 
 
 def where_value(arg: str) -> tuple[str, Any]:
-    """Experimental. ``where:<field>[=<value>]`` as ``(field, value)``: ``true`` when bare.
+    """``where:<field>[=<value>]`` as ``(field, value)``: ``true`` when bare.
 
     ``true`` / ``false`` are booleans, a whole number an int, anything else text.
     """
@@ -462,7 +462,7 @@ def where_value(arg: str) -> tuple[str, Any]:
 
 
 def access_expression(items: list[str]) -> tuple[str, list[str]]:
-    """Experimental. ``(predicate expression, names to import)`` for one access slot of the spec."""
+    """``(predicate expression, names to import)`` for one access slot of the spec."""
     parts: list[str] = []
     names: list[str] = []
     for item in items:
@@ -670,7 +670,7 @@ def _is_stub(node: ast.ClassDef) -> bool:
 
 
 def is_stub_file(rel: str, text: str) -> bool:
-    """Experimental. Whether the project file ``rel`` still holds only what build writes in it.
+    """Whether the project file ``rel`` still holds only what build writes in it.
 
     ``rel`` is one of the files build creates for an app (``<app>/models.py``,
     ``viewsets.py``, ``seeds.py``), and ``text`` is the docstring build gives
@@ -790,7 +790,7 @@ def _project_file(
 
 
 def settings_block(spec: schema.Spec, line: int) -> str:
-    """Experimental. The ``# karni:spec`` block: roles, features, module options, the menu
+    """The ``# karni:spec`` block: roles, features, module options, the menu
     and the home tiles."""
     rows: list[str] = [
         "# Roles, features and module options from karni.yaml. Change them there and run",
@@ -861,7 +861,7 @@ def settings_block(spec: schema.Spec, line: int) -> str:
 
 
 def contract_settings(spec: schema.Spec) -> list[str]:
-    """Experimental. The settings of the core contracts the spec's relations point at.
+    """The settings of the core contracts the spec's relations point at.
 
     ``fk:people.Person`` (an app the spec does not define itself) needs the
     people contract, so the build writes ``KARNI_PEOPLE = True``.
@@ -898,7 +898,7 @@ def _role_name(slug: str) -> str:
 def splice(
     text: str, start: str, end: str, block: str, *, before: str, prefix: str, gap: bool = False
 ) -> str:
-    """Experimental. ``text`` with ``block`` between ``start`` and ``end`` (inserted before ``before``).
+    """``text`` with ``block`` between ``start`` and ``end`` (inserted before ``before``).
 
     ``gap`` leaves a blank line between a newly inserted block and ``before``.
     """
@@ -925,7 +925,7 @@ def splice(
 
 
 def block_of(text: str, start: str, end: str, prefix: str) -> str | None:
-    """Experimental. The lines between the markers (``None``: no such block), unindented."""
+    """The lines between the markers (``None``: no such block), unindented."""
     lines = text.splitlines()
     starts = [i for i, ln in enumerate(lines) if ln.strip() == f"{prefix} {start}"]
     ends = [i for i, ln in enumerate(lines) if ln.strip() == f"{prefix} {end}"]
@@ -936,7 +936,7 @@ def block_of(text: str, start: str, end: str, prefix: str) -> str | None:
 
 
 def read_block(text: str | None, name: str) -> str | None:
-    """Experimental. The content of the block ``name`` (a record name) in ``text``."""
+    """The content of the block ``name`` (a record name) in ``text``."""
     if text is None:
         return None
     if name == layout.SETTINGS_BLOCK:
@@ -1047,7 +1047,7 @@ def _ordered(pages: list[_Page], spec: schema.Spec) -> list[_Page]:
 
 
 def page_text(spec: page_gen.PageSpec, routes: set[str]) -> str:
-    """Experimental. A page Karni writes: karni make page's, with the header line."""
+    """A page Karni writes: karni make page's, with the header line."""
     return f"// {HEADER}\n{page_gen.render(spec, routes)}"
 
 
@@ -1055,7 +1055,7 @@ def page_text(spec: page_gen.PageSpec, routes: set[str]) -> str:
 
 
 def render(ws: Workspace, inputs: Inputs) -> Output:
-    """Experimental. Plan every Karni-owned file, block and project file into ``ws``."""
+    """Plan every Karni-owned file, block and project file into ``ws``."""
     out = Output(ws)
     spec = inputs.spec
     entities = _entities(spec)
@@ -1092,14 +1092,14 @@ def render(ws: Workspace, inputs: Inputs) -> Output:
     return out
 
 
-#: Experimental. The file that registers each part's frontend (``app.recipes``), Karni's.
+#: The file that registers each part's frontend (``app.recipes``), Karni's.
 PARTS_FILE: Final = "frontend/src/karni/parts.ts"
 #: The line routes.tsx's import block gets when the project holds parts.
 PARTS_IMPORT: Final = 'import "./karni/parts";'
 
 
 def parts_text(ws: Workspace, spec: schema.Spec) -> str:
-    """Experimental. ``frontend/src/karni/parts.ts``: each part's ``register()``, in order.
+    """``frontend/src/karni/parts.ts``: each part's ``register()``, in order.
 
     A part with a frontend has ``frontend/src/<app label>/index.ts`` exporting
     ``register()``. The file imports and calls each one, so a part adds its
@@ -1131,7 +1131,7 @@ def parts_text(ws: Workspace, spec: schema.Spec) -> str:
 
 
 def render_parts(ws: Workspace, out: Output, inputs: Inputs) -> None:
-    """Experimental. Write ``parts.ts`` once the parts' own files are in ``ws``, and point the
+    """Write ``parts.ts`` once the parts' own files are in ``ws``, and point the
     scaffold's layout and home at the family's."""
     if inputs.spec.app.recipes and ws.read(page_gen.ROUTES) is not None:
         _owned(out, inputs, PARTS_FILE, parts_text(ws, inputs.spec))
@@ -1319,7 +1319,7 @@ def _render_settings(ws: Workspace, out: Output, inputs: Inputs) -> None:
     ws.write(SETTINGS, updated)
 
 
-#: Experimental. The app each core contract switched on by a feature adds to INSTALLED_APPS,
+#: The app each core contract switched on by a feature adds to INSTALLED_APPS,
 #: when no setting installs it (``features.events``: the family events outbox,
 #: ``features.timeline``: the timeline, ``features.preferences``: the Settings page's store,
 #: ``features.notify``: notifications, the inbox and the emails a business edits).
@@ -1332,7 +1332,7 @@ CONTRACT_APPS: Final[dict[str, str]] = {
 
 
 def features_on(spec: schema.Spec) -> list[str]:
-    """Experimental. The contracts ``features`` switches on, with the ones they need.
+    """The contracts ``features`` switches on, with the ones they need.
 
     ``features.timeline`` needs people and events (``catalog.CONTRACT_NEEDS``), so
     it switches them on too. A listed module switches on the contracts it needs
@@ -1349,7 +1349,7 @@ def features_on(spec: schema.Spec) -> list[str]:
 
 
 def contract_apps(spec: schema.Spec) -> list[str]:
-    """Experimental. The apps of the contracts ``features`` switches on, needs first."""
+    """The apps of the contracts ``features`` switches on, needs first."""
     on = features_on(spec)
     return [CONTRACT_APPS[name] for name in on if name in CONTRACT_APPS]
 

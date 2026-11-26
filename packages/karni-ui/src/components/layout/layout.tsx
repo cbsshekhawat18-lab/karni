@@ -86,7 +86,7 @@ export interface LayoutNavItem {
 }
 
 /**
- * Experimental. A collapsible group of the sidebar nav: a label and the
+ * A collapsible group of the sidebar nav: a label and the
  * entries under it (links and further groups), with no link of its own.
  */
 export interface LayoutNavGroup {
@@ -102,15 +102,15 @@ export interface LayoutNavGroup {
   key?: string;
 }
 
-/** A sidebar nav entry: a link (`LayoutNavItem`) or, experimental, a group (`LayoutNavGroup`). */
+/** A sidebar nav entry: a link (`LayoutNavItem`) or, a group (`LayoutNavGroup`). */
 export type LayoutNavEntry = LayoutNavItem | LayoutNavGroup;
 
-/** Experimental. Whether a nav entry is a group (it has `children`). */
+/** Whether a nav entry is a group (it has `children`). */
 export function isNavGroup(entry: LayoutNavEntry): entry is LayoutNavGroup {
   return "children" in entry && Array.isArray(entry.children);
 }
 
-/** Experimental. What the `NavGroup` slot receives. */
+/** What the `NavGroup` slot receives. */
 export interface LayoutNavGroupProps {
   group: LayoutNavGroup;
   /** Whether the entries show. */
@@ -190,15 +190,15 @@ export interface LayoutSlots {
   MobileDrawer: React.ComponentType<LayoutMobileDrawerProps>;
   /** "Skip to content", visible only while focused. `() => null` removes it. */
   SkipLink: React.ComponentType<LayoutSkipLinkProps>;
-  /** Experimental. A collapsible group of the nav: its button and its entries. */
+  /** A collapsible group of the nav: its button and its entries. */
   NavGroup?: React.ComponentType<LayoutNavGroupProps>;
 }
 
 export interface LayoutProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Entries of the derived sidebar nav: links, and (experimental) collapsible groups. */
+  /** Entries of the derived sidebar nav: links, and collapsible groups. */
   navItems?: readonly LayoutNavEntry[];
   /**
-   * Experimental. Where the nav comes from. `"static"` (the default) renders
+   * Where the nav comes from. `"static"` (the default) renders
    * `navItems`. `"server"` renders the menu `useNavigation()` reads from
    * `GET /navigation/` (Django's `KARNI_NAVIGATION`), filtered by the
    * user's grants, with `navItems` shown if that request fails. It needs
@@ -206,12 +206,12 @@ export interface LayoutProps extends React.HTMLAttributes<HTMLDivElement> {
    */
   navSource?: "static" | "server";
   /**
-   * Experimental. The current route's path: marks the current page of the
+   * The current route's path: marks the current page of the
    * server menu. Default: `window.location.pathname`. Pass your router's
    * pathname so the mark follows client-side navigation.
    */
   pathname?: string;
-  /** Experimental. Icons by name for the server menu, over `defaultNavIcons`. */
+  /** Icons by name for the server menu, over `defaultNavIcons`. */
   icons?: Readonly<Record<string, React.ReactNode>>;
   /**
    * Wraps or replaces the default link of one item. `defaultNode` is the
@@ -235,7 +235,7 @@ export interface LayoutProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Header slot, rendered in the top bar next to the mobile menu button. */
   header?: React.ReactNode;
   /**
-   * Experimental. Mounts the GlobalSearch command palette in the top bar,
+   * Mounts the GlobalSearch command palette in the top bar,
    * before `header`: `true` with its defaults (Cmd or Ctrl+K opens it), or
    * its props (`{ onSelect, hrefFor, models }`). Default: none.
    */
@@ -510,13 +510,13 @@ export const defaultLayoutSlots: LayoutSlots = {
  * around your router's outlet, so it sees the route change.
  *
  * The nav is `navItems` (links and collapsible groups), or with
- * `navSource="server"` (experimental) the menu the server gives the
+ * `navSource="server"` the menu the server gives the
  * signed-in user (`useNavigation`, Django's `KARNI_NAVIGATION`): groups
  * collapse with a button (Enter or Space), icons come by name (`icons`
  * over `defaultNavIcons`) and the current page is marked from `pathname`.
  *
  * `search` mounts the GlobalSearch command palette in the top bar
- * (experimental).
+ *.
  *
  * Escape hatches: `slots` replaces the Header, Sidebar, NavLink, NavGroup,
  * MobileDrawer or SkipLink. `renderNavItem` wraps each derived link.

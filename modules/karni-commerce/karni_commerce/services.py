@@ -1,4 +1,4 @@
-"""Experimental. The order path: the cart, checkout, the settlement, cancelling and refunds.
+"""The order path: the cart, checkout, the settlement, cancelling and refunds.
 
 Every change goes through these functions, each in one transaction, and
 every price and total is computed here from the sellable adapters

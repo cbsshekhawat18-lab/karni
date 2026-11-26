@@ -48,7 +48,7 @@ _CHUNK: Final = 64 * 1024
 
 @dataclass(frozen=True)
 class Target:
-    """Experimental. One checked URL: what to connect to and what to ask for."""
+    """One checked URL: what to connect to and what to ask for."""
 
     url: str
     scheme: str
@@ -59,7 +59,7 @@ class Target:
 
 @dataclass(frozen=True)
 class Fetched:
-    """Experimental. A fetched response: the final URL, its media type, charset and body."""
+    """A fetched response: the final URL, its media type, charset and body."""
 
     url: str
     content_type: str
@@ -68,7 +68,7 @@ class Fetched:
 
 
 def public_address(address: str) -> bool:
-    """Experimental. Whether ``address`` is public unicast (IPv4 inside IPv6 unwrapped)."""
+    """Whether ``address`` is public unicast (IPv4 inside IPv6 unwrapped)."""
     try:
         ip: Any = ipaddress.ip_address(address.split("%", 1)[0])
     except ValueError:
@@ -107,7 +107,7 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
 
 
 class Fetcher:
-    """Experimental. Fetches one public ``http`` or ``https`` URL within the limits in settings."""
+    """Fetches one public ``http`` or ``https`` URL within the limits in settings."""
 
     schemes: ClassVar[tuple[str, ...]] = ("http", "https")
     user_agent: ClassVar[str] = "karni-ai/0.4 (structured extraction)"

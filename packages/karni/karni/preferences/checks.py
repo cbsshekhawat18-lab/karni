@@ -1,4 +1,4 @@
-"""Experimental. System checks of the preferences: the deployment's locks and defaults.
+"""System checks of the preferences: the deployment's locks and defaults.
 
 * ``karni.E320``: ``KARNI_PREFERENCES_LOCKED`` or ``KARNI_PREFERENCES_DEFAULTS``
   is not ``{group: {name: value}}``, names a section, field, connection or email
@@ -49,7 +49,7 @@ def check_preferences(app_configs: Any = None, **kwargs: Any) -> list[checks.Che
 
 
 def setting_problems(found: Any) -> list[str]:
-    """Experimental. What is wrong with a locks or defaults mapping, one line each."""
+    """What is wrong with a locks or defaults mapping, one line each."""
     from karni.preferences.models import DETAIL_FIELDS
     from karni.preferences.registry import (
         find_connection,

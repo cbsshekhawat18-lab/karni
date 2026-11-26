@@ -1,4 +1,4 @@
-"""Experimental. The build: ``karni plan``'s changes applied, idempotently, in a fixed order.
+"""The build: ``karni plan``'s changes applied, idempotently, in a fixed order.
 
 1. **The plan.** The spec is validated and planned exactly as ``karni plan``
    does (:func:`karni_cli.spec.plan.plan_project`), with what
@@ -60,7 +60,7 @@ _TAIL: Final = 15
 
 @dataclass(frozen=True)
 class Options:
-    """Experimental. ``karni build``'s options."""
+    """``karni build``'s options."""
 
     dry_run: bool = False
     allow_destructive: bool = False
@@ -72,7 +72,7 @@ class Options:
 
 @dataclass
 class Step:
-    """Experimental. One step and how it went."""
+    """One step and how it went."""
 
     name: str
     status: str = "pending"
@@ -84,7 +84,7 @@ class Step:
 
 @dataclass
 class Result:
-    """Experimental. What a build did (its text and ``--json`` output)."""
+    """What a build did (its text and ``--json`` output)."""
 
     file: str
     status: str = "built"
@@ -197,7 +197,7 @@ class Stop(Exception):
 
 
 def build(root: Path, spec: schema.Spec, facts: dict[str, Any], file: str, opts: Options) -> Result:
-    """Experimental. Build ``spec`` into the project at ``root`` (the spec is valid)."""
+    """Build ``spec`` into the project at ``root`` (the spec is valid)."""
     result = Result(file)
     try:
         rec = record.load(root)
@@ -1029,7 +1029,7 @@ def _seed(root: Path, state: dict[str, Any], opts: Options) -> str:
     seeded = re.findall(
         r"^\s+(\S+\.\S+)\s+(\d+)(?:\s+\(bulk, ([\d.]+)s)?", proc.stdout or "", re.MULTILINE
     )
-    # a large seed count went in bulk (karni.bulk_seeding, experimental): say so, with its time
+    # a large seed count went in bulk (karni.bulk_seeding): say so, with its time
     shown = ", ".join(
         f"{label.split('.', 1)[1]} {count}" + (f" in bulk ({seconds}s)" if seconds else "")
         for label, count, seconds in seeded
@@ -1123,7 +1123,7 @@ def _check(root: Path, state: dict[str, Any], opts: Options) -> str:
     return "ok"
 
 
-#: Experimental. Each step after the files, by name: ``(root, state, options) -> summary``.
+#: Each step after the files, by name: ``(root, state, options) -> summary``.
 #: A summary that starts with ``skipped: `` marks the step skipped.
 STEP_RUNNERS: dict[str, Callable[[Path, dict[str, Any], Options], str]] = {
     "migrations": _migrations,

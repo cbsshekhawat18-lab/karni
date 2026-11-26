@@ -1,4 +1,4 @@
-"""``karni queries --explain`` (experimental): EXPLAIN ANALYZE, rolled back, and the scans to fix.
+"""``karni queries --explain``: EXPLAIN ANALYZE, rolled back, and the scans to fix.
 
 The analysis runs on PostgreSQL only (CI's PostgreSQL step). On SQLite the
 command keeps its plain EXPLAIN and says so (W610).

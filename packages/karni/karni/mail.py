@@ -1,4 +1,4 @@
-"""Experimental. An email from a project's own templates: the order confirmation, the reminder.
+"""An email from a project's own templates: the order confirmation, the reminder.
 
 A business app sends mail at its own moments: an order is confirmed, a
 booking is tomorrow, a refund went through. :func:`send_templated` renders
@@ -131,7 +131,7 @@ CHANNELS: tuple[str, ...] = ("email", "inbox")
 
 @dataclass(frozen=True)
 class Rendered:
-    """Experimental. One message, rendered: its subject, its text and its HTML (or ``None``)."""
+    """One message, rendered: its subject, its text and its HTML (or ``None``)."""
 
     subject: str
     text: str
@@ -140,7 +140,7 @@ class Rendered:
 
 @dataclass(frozen=True)
 class MessageKind:
-    """Experimental. One email a part sends, as a Settings screen lists it.
+    """One email a part sends, as a Settings screen lists it.
 
     ``fields`` maps each merge field (a dotted path into the context the sender
     passes: ``order.number``, ``lines.name`` for each line) to what it means.
@@ -179,13 +179,13 @@ class MessageKind:
 
     @property
     def marketing(self) -> bool:
-        """Experimental. A message a person may unsubscribe from (not ``transactional``)."""
+        """A message a person may unsubscribe from (not ``transactional``)."""
         return not self.transactional
 
 
 @dataclass(frozen=True)
 class EditedTemplate:
-    """Experimental. A message a business changed in the app: a subject and a text body."""
+    """A message a business changed in the app: a subject and a text body."""
 
     subject: str
     text: str
@@ -211,7 +211,7 @@ def register_kind(
     replace: bool = True,
     requires: str = "authenticated",
 ) -> MessageKind:
-    """Experimental. Declare the email ``name`` (registering it again replaces it).
+    """Declare the email ``name`` (registering it again replaces it).
 
     ``sample`` and ``samples`` feed the editor's preview (:func:`sample_context`).
     ``channels`` names where it goes: ``"email"``, ``"inbox"`` or both.
@@ -251,7 +251,7 @@ def register_kind(
 
 
 def unregister_kind(name: str) -> None:
-    """Experimental. Take the email ``name`` out of the list."""
+    """Take the email ``name`` out of the list."""
     _KINDS.pop(name, None)
 
 
@@ -271,19 +271,19 @@ def _discover() -> None:
 
 
 def kinds() -> list[MessageKind]:
-    """Experimental. Every declared email, by name (each app's ``messages.py`` first)."""
+    """Every declared email, by name (each app's ``messages.py`` first)."""
     _discover()
     return sorted(_KINDS.values(), key=lambda kind: kind.name)
 
 
 def find_kind(name: str) -> MessageKind | None:
-    """Experimental. The declared email ``name``, or ``None``."""
+    """The declared email ``name``, or ``None``."""
     _discover()
     return _KINDS.get(name)
 
 
 class DefaultSource:
-    """Experimental. What a project without ``KARNI_MAIL_SOURCE`` has: the template files,
+    """What a project without ``KARNI_MAIL_SOURCE`` has: the template files,
     and the switches and the sender of the preferences contract (Settings, Emails and
     Details) while ``karni.preferences`` is installed, else every email on and
     ``DEFAULT_FROM_EMAIL``. A source of your own may subclass it and add
@@ -322,7 +322,7 @@ default_source = DefaultSource()
 
 
 def mail_source() -> Any:
-    """Experimental. The object ``KARNI_MAIL_SOURCE`` names (an instance of a class)."""
+    """The object ``KARNI_MAIL_SOURCE`` names (an instance of a class)."""
     path = str(getattr(settings, "KARNI_MAIL_SOURCE", "") or "")
     if not path:
         return default_source
@@ -336,7 +336,7 @@ def _import(path: str) -> Any:
 
 
 def sender() -> str | None:
-    """Experimental. The ``From`` of the project's emails: the source's, else ``None``."""
+    """The ``From`` of the project's emails: the source's, else ``None``."""
     ask = getattr(mail_source(), "sender", None)
     found = ask() if callable(ask) else None
     return str(found) if found else None
@@ -436,7 +436,7 @@ def _merge(left: Any, right: Any) -> Any:
 
 
 def merge_values(fields: Iterable[str], context: Mapping[str, Any]) -> dict[str, Any]:
-    """Experimental. The declared merge ``fields`` read from ``context``, as plain values.
+    """The declared merge ``fields`` read from ``context``, as plain values.
 
     ``"order.number"`` gives ``{"order": {"number": ...}}``, and a path through
     a list (or a related manager) gives one entry per row: ``"lines.name"``
@@ -481,7 +481,7 @@ def _business() -> dict[str, Any]:
 
 
 def sample_context(kind: MessageKind | str) -> dict[str, Any]:
-    """Experimental. What a preview of the email ``kind`` renders with: real values.
+    """What a preview of the email ``kind`` renders with: real values.
 
     In this order, each over the one before: each merge field as ``[path]``,
     the kind's declared ``samples``, the business's details as ``business``
@@ -505,7 +505,7 @@ def sample_context(kind: MessageKind | str) -> dict[str, Any]:
 
 
 def check_edited(subject: str, text: str) -> dict[str, str]:
-    """Experimental. What is wrong with an edited message, by part (empty when nothing)."""
+    """What is wrong with an edited message, by part (empty when nothing)."""
     problems: dict[str, str] = {}
     for part, source in (("subject", subject), ("text", text)):
         try:
@@ -520,7 +520,7 @@ def check_edited(subject: str, text: str) -> dict[str, str]:
 
 
 def render_edited(edited: EditedTemplate, values: Mapping[str, Any]) -> Rendered:
-    """Experimental. An edited message rendered with the restricted engine.
+    """An edited message rendered with the restricted engine.
 
     ``values`` are plain (:func:`merge_values`). The HTML part is the text with
     its paragraphs and links.
@@ -533,7 +533,7 @@ def render_edited(edited: EditedTemplate, values: Mapping[str, Any]) -> Rendered
 
 
 def base_context() -> dict[str, Any]:
-    """Experimental. What every template gets besides the caller's context."""
+    """What every template gets besides the caller's context."""
     return {"frontend_url": str(getattr(settings, "KARNI_FRONTEND_URL", "") or "").rstrip("/")}
 
 
@@ -550,7 +550,7 @@ def _speak() -> None:
 
 @contextmanager
 def silenced() -> Iterator[None]:
-    """Experimental. Send nothing inside the block, nor from what it queues for the commit.
+    """Send nothing inside the block, nor from what it queues for the commit.
 
     The silence also covers the ``transaction.on_commit`` callbacks queued
     inside the block: one callback queued first starts it again at the commit,
@@ -566,12 +566,12 @@ def silenced() -> Iterator[None]:
 
 
 def is_silenced() -> bool:
-    """Experimental. Whether a :func:`silenced` block holds now: nothing is sent."""
+    """Whether a :func:`silenced` block holds now: nothing is sent."""
     return bool(_SILENCE[0])
 
 
 def kind_enabled(kind: str | None) -> bool:
-    """Experimental. Whether ``kind`` goes out: not listed in ``KARNI_MAIL_DISABLED_KINDS``,
+    """Whether ``kind`` goes out: not listed in ``KARNI_MAIL_DISABLED_KINDS``,
     and not switched off by ``KARNI_MAIL_SOURCE`` (an email declared not
     ``switchable`` always goes, whatever the source says)."""
     if not kind:
@@ -586,7 +586,7 @@ def kind_enabled(kind: str | None) -> bool:
 
 
 def edited_template(kind: str | None) -> EditedTemplate | None:
-    """Experimental. The message ``kind`` as a business edited it, or ``None``."""
+    """The message ``kind`` as a business edited it, or ``None``."""
     if not kind:
         return None
     ask = getattr(mail_source(), "template", None)
@@ -597,7 +597,7 @@ def edited_template(kind: str | None) -> EditedTemplate | None:
 def render_templated(
     template: str, context: Mapping[str, Any] | None = None, *, kind: str | None = None
 ) -> Rendered:
-    """Experimental. ``<template>_subject.txt``, ``_body.txt`` and ``_body.html`` rendered.
+    """``<template>_subject.txt``, ``_body.txt`` and ``_body.html`` rendered.
 
     With a ``kind`` whose message a business edited (``KARNI_MAIL_SOURCE``),
     that message wins, rendered by :func:`render_edited` with the kind's
@@ -631,7 +631,7 @@ def send_templated(
     bcc: Iterable[str] | None = None,
     kind: str | None = None,
 ) -> int:
-    """Experimental. Render ``template`` (see the module docstring) and send it to ``to``.
+    """Render ``template`` (see the module docstring) and send it to ``to``.
 
     Returns the number of messages sent: ``0`` when ``to`` holds no address,
     so a row without an email address never fails the code that saves it, and
@@ -687,7 +687,7 @@ def deliver(
     headers: Mapping[str, str] | None = None,
     rendered: Rendered | None = None,
 ) -> int:
-    """Experimental. Render and send one message now, with no switch asked.
+    """Render and send one message now, with no switch asked.
 
     What :func:`send_templated` does once it decided the message goes out, for a
     mail source's ``send()``: ``rendered`` skips the rendering, ``headers`` are

@@ -149,7 +149,7 @@ def _nested_constant(cls: ast.ClassDef, nested: str, name: str) -> object:
 
 
 def _is_external(cls: ast.ClassDef) -> bool:
-    """An external table or view (``karni.db``, experimental): model-base accepts it.
+    """An external table or view (``karni.db``): model-base accepts it.
 
     Both declarations are needed: ``class Karni: external = True`` and
     ``class Meta: managed = False``.

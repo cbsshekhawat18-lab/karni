@@ -1,4 +1,4 @@
-"""``GET <resource>/aggregate/`` (karni.aggregation, experimental).
+"""``GET <resource>/aggregate/`` (karni.aggregation).
 
 The catalog lives in :mod:`tests.aggregateapp`: ``Product`` declares its
 aggregation in ``class Karni``. The suite runs on SQLite and PostgreSQL

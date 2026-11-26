@@ -1,4 +1,4 @@
-"""Context slices (experimental): ``manage.py karni_context --summary / --app / --model``."""
+"""Context slices: ``manage.py karni_context --summary / --app / --model``."""
 
 from __future__ import annotations
 

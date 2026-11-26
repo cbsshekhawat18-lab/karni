@@ -1,4 +1,4 @@
-"""``karni suggest`` and the suggestions in ``karni check`` and ``karni doctor`` (experimental)."""
+"""``karni suggest`` and the suggestions in ``karni check`` and ``karni doctor``."""
 
 from __future__ import annotations
 

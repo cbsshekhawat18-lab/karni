@@ -42,7 +42,7 @@ def _refused(code: str, detail: str, status: int) -> Response:
 
 
 class AICallViewSet(BaseViewSet):
-    """Experimental. The usage log, each user reading their own calls, and the extract action."""
+    """The usage log, each user reading their own calls, and the extract action."""
 
     model = AICall
     route = "ai"
@@ -76,7 +76,7 @@ class AICallViewSet(BaseViewSet):
         parser_classes=[JSONParser, MultiPartParser, FormParser],
     )
     def extract(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Experimental. Rows of a resource read from a source, as the import's preview."""
+        """Rows of a resource read from a source, as the import's preview."""
         body = ExtractSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data

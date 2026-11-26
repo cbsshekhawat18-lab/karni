@@ -1,4 +1,4 @@
-"""Experimental. Commerce's own settings section: how people buy, and the invoices.
+"""Commerce's own settings section: how people buy, and the invoices.
 
 Read with ``preferences.value("commerce.guest_checkout", True)`` (``karni.preferences``).
 The values are changed on the Settings page by whoever may change every section

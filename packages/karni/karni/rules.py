@@ -1,4 +1,4 @@
-"""Rules a model declares in ``class Karni`` and Karni keeps on every write (experimental).
+"""Experimental. Rules a model declares in ``class Karni`` and Karni keeps on every write.
 
 A business rule written as hand code in each project (a price above zero, one
 booking per member and slot, a lesson only in my own course, no delete while
@@ -748,7 +748,7 @@ def _norm(found: Any, value: Any) -> Any:
 
 
 class UniqueRule(LiveUniqueConstraint):
-    """A ``LiveUniqueConstraint`` made from ``class Karni: unique`` (experimental).
+    """A ``LiveUniqueConstraint`` made from ``class Karni: unique``.
 
     It migrates as a ``LiveUniqueConstraint``; Karni checks it before the
     write (``E991``, 400) instead of DRF, and names it when the database

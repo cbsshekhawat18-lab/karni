@@ -1,4 +1,4 @@
-"""``karni spec`` (experimental): the karni.yaml format, validation, the JSON Schema and export.
+"""``karni spec``: the karni.yaml format, validation, the JSON Schema and export.
 
 The export of both examples and the round trip (a project built with
 ``karni make`` from a spec's entities, exported and compared with the spec)
@@ -262,7 +262,7 @@ INVALID: list[tuple[str, str, int | None]] = [
      "        global_search: {fields: [name], subtitle: maker__name}\n", 8),
     ("C542", SHOP + "        fields: {name: str, sku: str}\n"
      "        global_search: {fields: [name], title: sku__code}\n", 8),
-    # page blocks (experimental): a detail page's related tabs
+    # page blocks: a detail page's related tabs
     ("C212", SHOP + "        fields: {name: str}\npages:\n  - Product: [{detail: {tabs: [Note]}}]\n", 9),
     ("C220", SHOP + "        fields: {name: str}\npages:\n  - about: {detail: {related: [Product]}}\n", 9),
     ("C560", SHOP + "        fields: {name: str}\npages:\n  - Product: [{detail: {related: [Ghost]}}]\n", 9),
@@ -274,7 +274,7 @@ INVALID: list[tuple[str, str, int | None]] = [
      "pages:\n  - Product: [{detail: {related: [Swap]}}]\n", 10),
     ("C563", SHOP + "        fields: {name: str}\n      Review: {fields: {product: fk:Product}}\n"
      "pages:\n  - Product: [{detail: {related: [Review, Review.product]}}]\n", 10),
-    # wide models (experimental): column sets
+    # wide models: column sets
     ("C680", SHOP + "        fields: {name: str}\n        column_sets: {default: [name, prcie]}\n", 8),
     ("C680", SHOP + "        fields: {name: str}\n        column_sets: {default: [name, name]}\n", 8),
     ("C681", SHOP + "        fields: {name: str}\n        column_sets: {default: []}\n", 8),
@@ -1355,7 +1355,7 @@ def test_was_pk_and_database_in_the_normal_form() -> None:
     assert [issue.code for issue in found] == ["C252"]
 
 
-# app.api_version (experimental): the API's current version
+# app.api_version: the API's current version
 
 
 def test_api_version_is_valid_for_a_version_name_and_refused_otherwise() -> None:

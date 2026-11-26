@@ -1,19 +1,8 @@
 ---
-description: "Karni aggregations (experimental): declare what a resource may be grouped and summed by, then GET <resource>/aggregate/ returns counts, sums, averages, minimums and maximums by category, relation or date bucket, with top N and Other, a second dimension, every list filter and the list's access. useAggregate and DataChart read the result."
+description: "Karni aggregations: declare what a resource may be grouped and summed by, then GET <resource>/aggregate/ returns counts, sums, averages, minimums and maximums by category, relation or date bucket, with top N and Other, a second dimension, every list filter and the list's access. useAggregate and DataChart read the result."
 ---
 
 # Aggregations
-
-!!! warning "Experimental"
-    Everything on this page is [experimental](stability.md#experimental-names):
-    `class Karni: aggregate`, the viewset's `aggregation`, `get_aggregation()`
-    and `aggregate_queryset()`, the `aggregate` action and its response,
-    `karni.aggregation` (with `Aggregation` and `TextNumber`),
-    `karni.api.aggregate`, `x-karni-aggregate`, the
-    `KARNI_AGGREGATE_MAX_GROUPS` setting, and `useAggregate`,
-    `aggregateSeries` and DataChart's `aggregate` and `stacked` in `@karni/ui`.
-    They may change in a minor release, with a CHANGELOG entry. The error
-    codes keep their meaning.
 
 A data app's charts are counts and sums grouped by something: products per
 category, revenue per quarter, the five largest regions and the rest as

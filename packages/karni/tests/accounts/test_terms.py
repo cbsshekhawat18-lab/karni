@@ -1,4 +1,4 @@
-"""Terms acceptance (karni.accounts.terms, experimental): the routes, the record and the gate.
+"""Terms acceptance (karni.accounts.terms): the routes, the record and the gate.
 
 Every test runs against a URLconf built for it: ``karni.accounts.urls``
 builds its list once, at import, and the gate is only in the middleware chain

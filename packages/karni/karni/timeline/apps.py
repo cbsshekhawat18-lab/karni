@@ -6,7 +6,7 @@ from django.apps import AppConfig
 
 
 class TimelineConfig(AppConfig):
-    """Experimental. ``karni.timeline`` (label ``timeline``): TimelineEntry and TimelineLink.
+    """``karni.timeline`` (label ``timeline``): TimelineEntry and TimelineLink.
 
     Add ``"karni.timeline"`` to ``INSTALLED_APPS`` next to ``karni.people``
     (its entries point at a person, ``karni.E461`` without it) and

@@ -1,5 +1,5 @@
 /**
- * Experimental. `/account`: the signed-in person's own page. Their details
+ * `/account`: the signed-in person's own page. Their details
  * (name, email) first, then the sections the installed parts registered
  * (`registerAccountSection`): orders, bookings, courses. With nothing
  * registered it is still a working profile page.

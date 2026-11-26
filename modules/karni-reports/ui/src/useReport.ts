@@ -1,7 +1,7 @@
 /**
  * useReport: request, follow and download the PDF report of one row.
  *
- * Experimental. `request()` posts `/reports/<report>/<id>/`. A file ready at
+ * `request()` posts `/reports/<report>/<id>/`. A file ready at
  * the current cache key comes back at once; otherwise the hook polls
  * `.../status/` every `pollInterval` milliseconds until the file is ready or
  * failed. `download()` fetches `.../download/` with the client's auth and
@@ -44,12 +44,12 @@ export interface UseReportResult {
 
 const DEFAULT_POLL_INTERVAL = 1500;
 
-/** Experimental. The query key of one report of one row. */
+/** The query key of one report of one row. */
 export function reportKey(report: string, objectId: string | number): readonly unknown[] {
   return [...karniKeys.resource("reports"), report, String(objectId)];
 }
 
-/** Experimental. The API path of one report of one row: `/reports/<report>/<id>/`. */
+/** The API path of one report of one row: `/reports/<report>/<id>/`. */
 export function reportPath(report: string, objectId: string | number): string {
   return `/reports/${encodeURIComponent(report)}/${encodeURIComponent(String(objectId))}/`;
 }
@@ -74,7 +74,7 @@ export function saveBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-/** Experimental. Request, follow and download the report `report` of the row `objectId`. */
+/** Request, follow and download the report `report` of the row `objectId`. */
 export function useReport(
   report: string,
   objectId: string | number,

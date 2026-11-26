@@ -1,7 +1,7 @@
 /**
  * <Accordion>: sections that open and close, after the WAI-ARIA accordion pattern.
  *
- * Experimental. Each item is a heading holding a button and a region the
+ * Each item is a heading holding a button and a region the
  * button controls. The button says whether its region is open
  * (`aria-expanded`), and the region is named by its heading. Enter and Space
  * open and close (the native button), Down and Up move between the headers,
@@ -95,7 +95,7 @@ export function toggleAccordion(
   return isOpen ? current.filter((value) => value !== id) : [...current, id];
 }
 
-/** Experimental. Sections that open and close (the WAI-ARIA accordion pattern). */
+/** Sections that open and close (the WAI-ARIA accordion pattern). */
 export const Accordion = React.forwardRef<HTMLDivElement, AccordionProps>(
   (
     {

@@ -1,4 +1,4 @@
-"""``manage.py makemigrations`` (experimental): Django's, with Karni's autodetector.
+"""Experimental. ``manage.py makemigrations``: Django's, with Karni's autodetector.
 
 The one difference is :class:`karni.migration_autodetector.KarniAutodetector`:
 a generated field whose definition changed (``SearchField(sources=[...])``
@@ -19,7 +19,7 @@ from karni.migration_autodetector import KarniAutodetector
 
 class Command(django_makemigrations.Command):
     help = (
-        "Experimental. makemigrations, writing RemoveField + AddField for a generated field "
+        "makemigrations, writing RemoveField + AddField for a generated field "
         "whose definition changed (Django cannot alter one in place)."
     )
     autodetector = KarniAutodetector

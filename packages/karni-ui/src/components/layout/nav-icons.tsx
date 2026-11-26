@@ -1,5 +1,5 @@
 /**
- * Experimental. Icons by name for the server's menu (`NavigationItem.icon`).
+ * Icons by name for the server's menu (`NavigationItem.icon`).
  *
  * The server sends a name (`"home"`, `"bar-chart"`). Layout looks it up in
  * `defaultNavIcons`, merged under its `icons` prop, so a project adds names
@@ -51,7 +51,7 @@ const sliders = (
   </>
 );
 
-/** Experimental. The icons Layout knows by name. Spread it to add or replace names. */
+/** The icons Layout knows by name. Spread it to add or replace names. */
 export const defaultNavIcons: Readonly<Record<string, React.ReactNode>> = {
   home: icon(
     "home",
@@ -143,7 +143,7 @@ export const defaultNavIcons: Readonly<Record<string, React.ReactNode>> = {
   ),
 };
 
-/** Experimental. The icon for `name`: from `icons`, else `defaultNavIcons`, else none. */
+/** The icon for `name`: from `icons`, else `defaultNavIcons`, else none. */
 export function navIcon(
   name: string | null | undefined,
   icons?: Readonly<Record<string, React.ReactNode>>,

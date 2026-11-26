@@ -1,4 +1,4 @@
-"""Experimental. Who may read a timeline entry: whoever may read every record it is about.
+"""Who may read a timeline entry: whoever may read every record it is about.
 
 An entry's title was written about its person and its subjects (the order,
 the ticket, the deal), so it shows only to a caller who may read each of
@@ -35,7 +35,7 @@ DEFAULT = "karni.timeline.access.Visibility"
 
 
 class Visibility:
-    """Experimental. The records one request may read, asked one model at a time."""
+    """The records one request may read, asked one model at a time."""
 
     def __init__(self, request: Request, router: Any | None = None) -> None:
         from karni.api.routers import resolve_router

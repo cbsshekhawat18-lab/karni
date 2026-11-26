@@ -1,5 +1,5 @@
 /**
- * Experimental. The reports a person may run (`GET /orders/reports/`): pick
+ * The reports a person may run (`GET /orders/reports/`): pick
  * one, set the days and how to group them for a dated report, read the table
  * with its totals and download it as a CSV file. The chosen report is kept in
  * the `report` search value, so a reload keeps it.

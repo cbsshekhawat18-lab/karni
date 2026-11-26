@@ -472,7 +472,7 @@ replaces any part: `Section`, `Counts`, `Count`, `Recent`, `Empty`, `Loading`,
 `Error`. The declaration's keys are in the backend docs
 ([api.md: the staff dashboard](https://github.com/cbsshekhawat18-lab/karni/blob/main/docs/api.md#the-staff-dashboard)).
 
-### Page blocks: dashboards, comparisons and reports (experimental)
+### Page blocks: dashboards, comparisons and reports
 
 Pages beyond CRUD compose these, so a dashboard stays under the 50-line page
 cap: `DashboardGrid` and `DashboardCard` (a responsive grid of titled cards
@@ -497,9 +497,9 @@ marked), `Accordion` (the WAI-ARIA accordion pattern) and `MarkdownView`
 relation, each a `ResourceTable` of the related rows filtered to the record,
 from the `x-karni-related` extension the backend publishes. Every component,
 when to use it and an example page are in
-[docs/ui.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/docs/ui.md#page-blocks-experimental).
+[docs/ui.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/docs/ui.md#page-blocks).
 
-### Wide models: markdown, field groups and column sets (experimental)
+### Wide models: markdown, field groups and column sets
 
 A model with a hundred fields and long markdown sections stays usable
 without any page code. A `MarkdownField` (`format: "markdown"` in the schema)
@@ -518,7 +518,7 @@ and table. Each screen can override them:
 <ResourceTable resource="products" columnSet="financial" onColumnSetChange={save} />
 ```
 
-See [docs/ui.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/docs/ui.md#field-groups-and-column-sets-experimental).
+See [docs/ui.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/docs/ui.md#field-groups-and-column-sets).
 
 ### ResourceTable in every state
 
@@ -750,7 +750,7 @@ guards a form of your own.
   `slots` replaces `Option`, `Chip`, `Loading`, `Empty` and `Error`
   (`defaultResourceSelectSlots`).
 
-### Tree models (experimental)
+### Tree models
 
 A resource whose model is a Karni `TreeModel` carries `x-karni-tree` in the
 schema, and so does every FK or M2M that points at one. The components read
@@ -785,7 +785,7 @@ it, so a tree needs no code of its own:
   the next node whose label starts with the typed text.
 - `reveal` opens the path to a node, `root` starts below one, `slots` replaces
   `Node`, `Loading`, `Empty` and `Error` (`defaultTreeViewSlots`).
-- `access` (experimental) shows the requester's access forest instead
+- `access` shows the requester's access forest instead
   (`GET /<resource>/access/`, the `tree:<path>` scope): granted nodes and the
   nodes below them can be chosen, their ancestors and the other roots are
   greyed (`aria-disabled`). `access={{ permission: "shop.order:view" }}`
@@ -795,7 +795,7 @@ it, so a tree needs no code of its own:
   are the hooks underneath.
   `--karni-tree-indent` and `--karni-tree-max-height` theme it.
 
-### Trees: counts and search with ancestors (experimental)
+### Trees: counts and search with ancestors
 
 `TreeView` takes two more props for a tree that people browse, such as
 regions, topics or categories:
@@ -1082,7 +1082,7 @@ and a dropped connection. The message is announced. Both fields point at it
 email stays after a failure, and wrong credentials clear and focus the password.
 The email field takes focus on mount (`autoFocus={false}` turns that off).
 
-### Sign-in with an ID token (experimental)
+### Sign-in with an ID token
 
 `SocialButton` signs in with a Google, Microsoft or Apple ID token, against
 the backend's `POST <authBasePath>/social/<provider>/` ([accounts: sign-in with
@@ -1109,9 +1109,8 @@ own state (`onAwaitingApproval`). For a button of your own, use the hook:
 { nonce, name })` adopts the token pair in JWT mode, re-syncs the session
 user in session mode, and resolves `{ ok, user }`, `{ requires2fa,
 ephemeralToken }` (LoginForm's 2FA step) or `{ awaitingApproval, detail }`.
-Both names are experimental: they may change in a minor release.
 
-### Sign-in with a code sent by email (experimental)
+### Sign-in with a code sent by email
 
 `OtpLoginForm` signs in without a password, against the backend's `POST
 <authBasePath>/otp/send/` and `otp/verify/` ([accounts: sign in with a code
@@ -1147,10 +1146,9 @@ For a form of your own, use the hook: `const { step, send, verify, resend,
 back, status, error, cooldown, length } = useOtpLogin({ resendCooldown: 30 })`.
 `verify(code)` adopts the token pair in JWT mode, re-syncs the session user
 in session mode, and resolves `{ ok, user }`, `{ requires2fa, ephemeralToken }`
-or `{ awaitingApproval, detail }`, like `useSocialLogin`. These names are
-experimental: they may change in a minor release.
+or `{ awaitingApproval, detail }`, like `useSocialLogin`.
 
-### Terms acceptance (experimental)
+### Terms acceptance
 
 `TermsGate` renders its children only once the signed-in user has accepted
 the current terms, against the backend's `KARNI_TERMS` ([accounts: terms
@@ -1174,9 +1172,9 @@ object (or a function that returns it), then the children render. `useAuth()` ca
 gate's 403 (`E245`) on any request made through the client, so terms bumped
 mid-session bring the gate back. If the version changed again before the user
 accepts (`E246`), the gate shows the new one. The `Panel` slot replaces the
-whole panel. These names are experimental: they may change in a minor release.
+whole panel.
 
-### Demo accounts (experimental)
+### Demo accounts
 
 A server in [demo mode](https://cbsshekhawat18-lab.github.io/karni/demo-mode/)
 answers `GET /api/demo/` with its demo accounts, what each can do and the reset
@@ -1192,8 +1190,7 @@ above Karni's sign-in prompt:
 
 `DemoNotice`'s `onPick` adds a "Use" button per account, and its `Notice` prop
 replaces the body. `createDemoSignInPrompt(props)` builds the slot with your
-props, and `useDemo()` gives the data to a notice of your own. These names are
-experimental: they may change in a minor release.
+props, and `useDemo()` gives the data to a notice of your own.
 
 In JWT mode the refresh token is stored through a pluggable `TokenStorage`.
 The default is `localStorage`, which is simple but readable by any XSS on your
@@ -1330,7 +1327,7 @@ is signed in. `label`, `hidden` and `signIn` replace each rule. The scaffold's
 `layout.tsx` uses it, with `<AuthGuard explain>` around every page but the
 sign-in page.
 
-Navigation from data (experimental): `navItems` also takes groups,
+Navigation from data: `navItems` also takes groups,
 `{ label, icon, children: [...] }`, which collapse behind a button (Enter or
 Space) and open while they hold the current page. `<Layout navSource="server"
 pathname={pathname} />` renders the menu the server gives the signed-in user
@@ -1341,7 +1338,7 @@ the request fails. `navigationEntries(items, { pathname, icons })` is the
 conversion on its own. See
 [navigation](https://cbsshekhawat18-lab.github.io/karni/navigation/).
 
-### GlobalSearch: one search box over every model (experimental)
+### GlobalSearch: one search box over every model
 
 `<GlobalSearch />` is a command palette over cross-model search
 (`GET /api/search/`, every model with `class Karni: search`). Cmd+K on macOS,
@@ -1382,7 +1379,9 @@ Other additions: `Layout` takes `mobileNavOpen`, `defaultMobileNavOpen` and
 
 ## Settings page
 
-Experimental. `SettingsPage` is the one Settings page of a project. It reads
+> **Experimental.** Part of [the family](https://cbsshekhawat18-lab.github.io/karni/family/), which may change in a minor release.
+
+`SettingsPage` is the one Settings page of a project. It reads
 `GET /preferences/` and shows a Details tab, one tab for each settings section
 a part declares (its form is built from the section's schema), and an Emails tab
 with a switch for each email and an editor for its subject and text. Only the

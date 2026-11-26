@@ -1,4 +1,4 @@
-"""Wide models (experimental): MarkdownField, field groups, column sets and their budgets.
+"""Wide models: MarkdownField, field groups, column sets and their budgets.
 
 A 120-field product (``tests.wideapp``) with twelve markdown sections, five
 field groups and three column sets: the field's schema format, search over a

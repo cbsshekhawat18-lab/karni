@@ -10,7 +10,7 @@ under ``frontend/src/pages/``, and SITE, the routes of every local urls.py
 that config/urls.py includes (the public site, webhooks), and DESIGN, the
 designer's pages ``karni import design`` imported (``.karni/design.json``), and CATALOG,
 a line per module and built-in feature with whether the project has it
-(:func:`catalog_lines`, experimental). Together with
+(:func:`catalog_lines`). Together with
 ``karni rules`` this is enough for an agent to start work without reading
 files.
 
@@ -19,7 +19,7 @@ provider that detects a store (``karni.agent.history``), capped at ~300
 tokens; with no store the output is byte-identical to plain ``karni context``.
 stdout stays machine-clean in every mode: no tips, no warnings.
 
-Slices (experimental), for a project too large to read at once:
+Slices, for a project too large to read at once:
 ``--summary`` prints one line per app (models, viewsets, pages and their
 counts), ``--app LABEL`` one app in full and ``--model NAME`` one model in
 depth (``manage.py karni_context`` with the same flags, :mod:`karni.introspect`).
@@ -160,7 +160,7 @@ def design_line(project: Path) -> str | None:
 
 
 def catalog_lines(project: Path, backend_output: str = "") -> list[str]:
-    """Experimental. The ``CATALOG:`` block: one line per module and built-in feature.
+    """The ``CATALOG:`` block: one line per module and built-in feature.
 
     Each line names the entry, whether the project has it (a module is
     added when its app is in the ``# karni:apps`` block, a feature is on
@@ -238,18 +238,18 @@ def build_context_text(
     return "\n".join(line for line in (kind, apps, text) if line)
 
 
-#: Experimental. Characters per token in the ``--max-tokens`` estimate (as the history cap).
+#: Characters per token in the ``--max-tokens`` estimate (as the history cap).
 CHARS_PER_TOKEN = 4
 _UNRECOGNIZED = "unrecognized arguments"
 
 
 def estimate_tokens(text: str) -> int:
-    """Experimental. About how many tokens ``text`` takes: one per :data:`CHARS_PER_TOKEN`."""
+    """About how many tokens ``text`` takes: one per :data:`CHARS_PER_TOKEN`."""
     return math.ceil(len(text) / CHARS_PER_TOKEN)
 
 
 def split_sections(text: str) -> list[str]:
-    """Experimental. ``text`` as sections: a line, with the indented lines under it."""
+    """``text`` as sections: a line, with the indented lines under it."""
     sections: list[str] = []
     for line in text.split("\n"):
         if sections and (not line or line[:1].isspace()):
@@ -267,7 +267,7 @@ def _section_name(section: str) -> str:
 
 
 def cut_sections(text: str, max_tokens: int, command: str) -> str:
-    """Experimental. ``text`` cut at whole sections to about ``max_tokens`` tokens.
+    """``text`` cut at whole sections to about ``max_tokens`` tokens.
 
     The sections are kept in order while they fit, with room for a last
     ``LEFT OUT:`` line that names each section cut, their tokens and
@@ -324,7 +324,7 @@ def build_slice_text(
     docker: bool | None = None,
     service: str = "django",
 ) -> str:
-    """Experimental. ``KIND``, the ``APPS`` line cut to the slice, then the backend's slice.
+    """``KIND``, the ``APPS`` line cut to the slice, then the backend's slice.
 
     Raises :class:`CliError` ``C580`` when the project's karni predates the
     slices, ``C009`` when the backend command fails (an unknown name: its
@@ -387,7 +387,7 @@ def context(
         "--app",
         metavar="LABEL",
         help="Only this app, in full: every model with its fields, the relations in and out, "
-        "its viewsets with route and access, its roles and pages (repeatable). Experimental.",
+        "its viewsets with route and access, its roles and pages (repeatable).",
         show_default=False,
     ),
     models: list[str] = typer.Option(
@@ -395,13 +395,13 @@ def context(
         "--model",
         metavar="NAME",
         help="One model in depth: Name or app_label.Name. Every field, the relations that "
-        "point at it, its viewsets and pages (repeatable). Experimental.",
+        "point at it, its viewsets and pages (repeatable).",
         show_default=False,
     ),
     summary: bool = typer.Option(
         False,
         "--summary",
-        help="One line per app: its models, viewsets and pages, with their counts. Experimental.",
+        help="One line per app: its models, viewsets and pages, with their counts.",
     ),
     max_tokens: int | None = typer.Option(
         None,
@@ -409,7 +409,7 @@ def context(
         min=1,
         metavar="N",
         help="Cut the output at whole sections to about N tokens (4 characters each). The last "
-        "line names what was left out and the command that prints it. Experimental.",
+        "line names what was left out and the command that prints it.",
         show_default=False,
     ),
 ) -> None:

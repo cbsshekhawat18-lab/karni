@@ -1,4 +1,4 @@
-"""Experimental. A game's own settings (``Game.settings``), checked by a Pydantic model.
+"""A game's own settings (``Game.settings``), checked by a Pydantic model.
 
 Staff edit them as JSON in the admin or ``/api/games/``. Every field has a
 default, so ``{}`` is a valid game. A value the model refuses is ``GAME026``

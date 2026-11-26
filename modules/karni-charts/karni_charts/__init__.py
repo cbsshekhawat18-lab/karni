@@ -9,7 +9,7 @@ the data, fetched through the source's own ``aggregate`` action as the
 requesting user, so the access is the source's (:mod:`karni_charts.services`).
 ``@karni/charts-ui``'s ``SavedChart`` draws it.
 
-Experimental, like the aggregations it builds on (docs/charts.md).
+See docs/charts.md.
 """
 
 from __future__ import annotations

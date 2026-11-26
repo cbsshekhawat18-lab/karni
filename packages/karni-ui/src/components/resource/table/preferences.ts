@@ -1,7 +1,7 @@
 /**
  * Per-user table preferences kept in localStorage: row density (one choice
  * per user, for every table), the columns a user hid (per table) and the
- * column set a user chose (per table, experimental). The key
+ * column set a user chose (per table). The key
  * carries the signed-in user's id when an AuthProvider knows it, so people
  * sharing a browser keep their own. Without one it is "anonymous".
  *

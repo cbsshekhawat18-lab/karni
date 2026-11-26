@@ -94,7 +94,7 @@ export function historyFieldLabel(fields: readonly FieldDef[] | undefined, name:
 }
 
 /**
- * Experimental. One value of a history entry as people read it: money in its
+ * One value of a history entry as people read it: money in its
  * currency (`$52.00`), a state or a choice by its label ("Part refunded"), yes
  * or no, a date in the browser's words. `null` is an empty value.
  */
@@ -123,7 +123,7 @@ export function historyValueText(
 }
 
 /**
- * Experimental. What an entry says happened, in words: "Created", "Changed",
+ * What an entry says happened, in words: "Created", "Changed",
  * and for a move along a state field "Status changed from Paid to Part refunded".
  */
 export function historyHeadline(

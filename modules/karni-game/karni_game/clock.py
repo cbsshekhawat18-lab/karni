@@ -1,4 +1,4 @@
-"""Experimental. The server's clock of a game: its day, its week, when the day resets.
+"""The server's clock of a game: its day, its week, when the day resets.
 
 A game's day is a date on the game's own time zone (``timezone`` in its
 settings, UTC by default), never the device's. A week starts on Monday.

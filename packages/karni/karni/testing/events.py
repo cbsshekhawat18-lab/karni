@@ -1,4 +1,4 @@
-"""Experimental. Test helpers for family events: what was published, delivered now, declared.
+"""Test helpers for family events: what was published, delivered now, declared.
 
 ::
 
@@ -59,7 +59,7 @@ def _show(events: list[Event]) -> str:
 
 @dataclass
 class PublishedEvents:
-    """Experimental. The events published inside :func:`capture_events`, in order."""
+    """The events published inside :func:`capture_events`, in order."""
 
     events: list[Event] = field(default_factory=list)
 
@@ -127,7 +127,7 @@ class PublishedEvents:
 
 @contextmanager
 def capture_events() -> Iterator[PublishedEvents]:
-    """Experimental. Collect every family event published inside the block."""
+    """Collect every family event published inside the block."""
     from karni.outbox.bus import capturing
 
     with capturing() as found:
@@ -135,7 +135,7 @@ def capture_events() -> Iterator[PublishedEvents]:
 
 
 def deliver_now(*, event: Event | str | None = None, using: str | None = None) -> Any:
-    """Experimental. Run every pending delivery now (or those of ``event``), backoff ignored.
+    """Run every pending delivery now (or those of ``event``), backoff ignored.
 
     Each pending delivery runs once per call. Events its subscribers publish
     are delivered in the same call. Returns the
@@ -202,7 +202,7 @@ def _published_names(path: Path) -> list[tuple[str, int | None, int]]:
 
 
 def assert_events_declared(app_label: str) -> list[str]:
-    """Experimental. Every ``publish("<name>")`` in the app's code names a declared event.
+    """Every ``publish("<name>")`` in the app's code names a declared event.
 
     Reads the app's Python files (not its tests or migrations). A name passed
     as a variable is not checked. Returns the event names the app publishes.

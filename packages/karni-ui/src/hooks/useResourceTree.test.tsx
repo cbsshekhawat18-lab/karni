@@ -1,5 +1,5 @@
 /**
- * The tree hooks (experimental) against the simulated tree backend: the
+ * The tree hooks against the simulated tree backend: the
  * requests they send, the shapes they return and the refresh after a write.
  */
 import { QueryClient } from "@tanstack/react-query";

@@ -64,7 +64,7 @@ FIELD_DOCS: tuple[tuple[str, str], ...] = (
     (
         "doc:file:protected / photo:image:protected",
         (
-            "ProtectedFileField / ProtectedImageField (karni-storage, experimental): stored "
+            "ProtectedFileField / ProtectedImageField (karni-storage): stored "
             "privately, downloaded only through the row's viewset. Needs `karni add storage`"
         ),
     ),
@@ -303,7 +303,7 @@ def parse_fields(tokens: list[str]) -> list[FieldSpec]:
     return specs
 
 
-#: Experimental. How many arguments each type takes after it, with an example. A field that
+#: How many arguments each type takes after it, with an example. A field that
 #: writes more is refused (C104): an argument is never dropped without a word. ``choice`` and
 #: ``state`` read the rest as their values, and the range and capacity types check their own.
 ARG_SHAPES: dict[str, tuple[int, str]] = {
@@ -340,12 +340,12 @@ ARG_SHAPES: dict[str, tuple[int, str]] = {
     },
 }
 
-#: Experimental. The types a ``:unique`` after the type means a unique value for.
+#: The types a ``:unique`` after the type means a unique value for.
 _UNIQUE_TEXT = frozenset({"str", "url", "text", "int", "phone", "uuid"})
 
 
 def refuse_extra_args(spec: FieldSpec) -> None:
-    """Experimental. Refuse an argument ``spec``'s type does not take (C104), never drop it.
+    """Refuse an argument ``spec``'s type does not take (C104), never drop it.
 
     ``title:str:200:unique`` is refused with the way to a unique value: a
     ``LiveUniqueConstraint`` in the Meta of the project's class.
@@ -581,7 +581,7 @@ PROTECTED_MODULE = "karni_storage.fields"
 
 
 def is_protected(spec: FieldSpec) -> bool:
-    """Experimental. True for ``file:protected`` / ``image:protected`` (karni-storage).
+    """True for ``file:protected`` / ``image:protected`` (karni-storage).
 
     :raises CliError: ``C104`` for any other argument of a file or image field, so
         a misspelt ``protected`` never leaves a file public without a word.

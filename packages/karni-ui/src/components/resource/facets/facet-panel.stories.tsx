@@ -6,7 +6,7 @@ import { TreeStoryProviders, treeStoryBackend } from "../tree/tree-stories-suppo
 import { FacetPanel, type FacetPanelProps } from "./FacetPanel";
 
 /**
- * FacetPanel (experimental) holding its choice like a page would, against
+ * FacetPanel holding its choice like a page would, against
  * msw handlers that simulate a product catalog tagged to a region tree
  * (`class Karni: taxonomies`).
  */

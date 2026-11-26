@@ -277,7 +277,7 @@ def test_per_user_grants_with_integer_users(settings: Settings) -> None:
 
 
 def test_the_menu_with_integer_users(settings: Settings) -> None:
-    """Navigation (experimental): a user grant opens an item, and the admin previews by id."""
+    """Navigation: a user grant opens an item, and the admin previews by id."""
     from django.contrib.auth.models import Permission
     from django.test import Client
 

@@ -18,8 +18,8 @@ either part) to a **scope** — which rows the action reaches:
                         attribute of the same name (``user.branch`` → ``order.branch``)
 ``custom:<name>``       a callable registered with :func:`register_scope`
 ``tree:<path>``         rows whose ``<path>`` (a relation to a tree model) is a
-                        node the user holds or a node below it (experimental,
-                        :mod:`karni.accounts.tree_scope`)
+                        node the user holds or a node below it
+                        (:mod:`karni.accounts.tree_scope`)
 ======================  =====================================================
 
 A wildcard never reaches an action the model lists in
@@ -44,7 +44,7 @@ the user instance, so once per request); :func:`user_can` answers the gate
 and :func:`rows_for` compiles the scopes into a ``Q`` for the row filter.
 Nothing here compares a role to a literal: ``staff``/``user``/``customer``
 are only the default *value* of ``KARNI_ROLES``, in ``karni.conf.base``.
-While ``KARNI_USER_GRANTS`` is on (experimental), a user's per-user grants
+While ``KARNI_USER_GRANTS`` is on, a user's per-user grants
 (:mod:`karni.accounts.grants`) join their role grants in :func:`grants_for`.
 
 An installed module may declare roles of its own through the ``karni.roles``
@@ -137,7 +137,7 @@ class Grant:
     """One resolved grant: ``permission`` (``app.model:action``) reached with ``scope``.
 
     A role grant leaves ``targets`` and ``grant_id`` empty. A per-user grant
-    (:mod:`karni.accounts.grants`, experimental) carries the row ids its scope
+    (:mod:`karni.accounts.grants`) carries the row ids its scope
     points at in ``targets`` and its ``UserGrant`` id in ``grant_id``.
     """
 
@@ -613,8 +613,8 @@ def grant_rows(user: Any, model: type[models.Model], grant: Grant) -> Q | bool:
     ``all`` → every row; ``own`` → ``Karni.owner_field`` is the user;
     ``related:<key>`` → ``Karni.scope_paths[key]`` equals ``user.<key>`` (no
     value on the user: no row); ``custom:<name>`` → the registered callable;
-    ``tree:<path>`` → ``<path>`` is under the grant's nodes (experimental,
-    :mod:`karni.accounts.tree_scope`; no node: no row). A per-user grant with
+    ``tree:<path>`` → ``<path>`` is under the grant's nodes
+    (:mod:`karni.accounts.tree_scope`; no node: no row). A per-user grant with
     ``targets`` reaches the rows whose scope path is one of them instead.
     :func:`rows_for` unions these, and ``karni why`` shows each one.
     """
@@ -690,7 +690,7 @@ class GrantSource:
     for a user grant), ``origin`` is ``"declared"`` (``KARNI_ROLES``),
     ``"matrix"`` (the permission matrix), ``"superuser"`` or ``"user_grant"``,
     and ``scope`` ``"none"`` is a declared grant the matrix revoked, which
-    grants nothing. A per-user grant (experimental) is described by
+    grants nothing. A per-user grant is described by
     ``grant_id``, ``reason``, ``expires_at`` and ``targets``.
     """
 

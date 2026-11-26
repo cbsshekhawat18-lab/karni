@@ -54,11 +54,11 @@ __all__ = [
     "spec_validate",
 ]
 
-#: Experimental. The version of the results that are not another command's output.
+#: The version of the results that are not another command's output.
 MCP_VERSION: Final = 1
-#: Experimental. Where the JSON Schema of the tools' results is published.
+#: Where the JSON Schema of the tools' results is published.
 MCP_SCHEMA_URL: Final = "https://cbsshekhawat18-lab.github.io/karni/assets/karni-mcp.schema.json"
-#: Experimental. The tools, in the order of the flow.
+#: The tools, in the order of the flow.
 TOOLS: Final = (
     "recipes",
     "spec_validate",
@@ -72,7 +72,7 @@ _SPEC: Final = "karni.yaml"
 
 
 def run(call: Callable[[], dict[str, Any]]) -> dict[str, Any]:
-    """Experimental. ``call()``'s result, or ``{"error": {"code", "message"}}`` for a CliError.
+    """``call()``'s result, or ``{"error": {"code", "message"}}`` for a CliError.
 
     Anything printed meanwhile goes to stderr: on ``karni mcp``, stdout is the
     protocol.
@@ -109,7 +109,7 @@ def _require(root: Path | None) -> Path:
 
 
 def spec_validate(root: Path | None, path: str = "") -> dict[str, Any]:
-    """Experimental. ``karni spec validate --json``: ``{file, valid, issues}``."""
+    """``karni spec validate --json``: ``{file, valid, issues}``."""
     from karni_cli.spec.validate import validate_text
 
     found, shown = _spec_path(root, path)
@@ -135,7 +135,7 @@ def _facts_and_report(root: Path, path: Path, command: str) -> tuple[Any, Any]:
 
 
 def plan(root: Path | None, spec: str = "") -> dict[str, Any]:
-    """Experimental. ``karni plan --json``: what karni build would change. Writes nothing."""
+    """``karni plan --json``: what karni build would change. Writes nothing."""
     from karni_cli.builder import record as build_record
     from karni_cli.spec import plan as plan_mod
 
@@ -151,7 +151,7 @@ def plan(root: Path | None, spec: str = "") -> dict[str, Any]:
 
 
 def questions(root: Path | None, spec: str = "", limit: int = 5) -> dict[str, Any]:
-    """Experimental. ``karni plan --questions --json``: the questions for the user, at most ``limit``.
+    """``karni plan --questions --json``: the questions for the user, at most ``limit``.
 
     ``limit`` 0 returns them all. Reads only the spec.
     """
@@ -168,7 +168,7 @@ def questions(root: Path | None, spec: str = "", limit: int = 5) -> dict[str, An
 
 
 def answer(root: Path | None, question_id: str, value: str, spec: str = "") -> dict[str, Any]:
-    """Experimental. ``karni spec answer``: the answer written into the spec, every other line kept.
+    """``karni spec answer``: the answer written into the spec, every other line kept.
 
     Returns ``{version, file, valid, issues, id, keys, open, next}``. An id
     that is not open (C400), a value the question does not take (C401) and an
@@ -225,7 +225,7 @@ _ASK_THE_USER: Final = (
 def build(
     root: Path | None, spec: str = "", dry_run: bool = False, allow_destructive: bool = False
 ) -> dict[str, Any]:
-    """Experimental. ``karni build --json``: the project made to match the spec.
+    """``karni build --json``: the project made to match the spec.
 
     Never ``--force`` or ``--adopt``: a Karni-owned file edited by hand stops
     the build with ``C273``, and ``next`` tells the agent to ask the user
@@ -248,7 +248,7 @@ def build(
 
 
 def modules(root: Path | None, name: str = "") -> dict[str, Any]:
-    """Experimental. The module catalog: a line per module and feature, or ``name`` in full.
+    """The module catalog: a line per module and feature, or ``name`` in full.
 
     Without ``name``: ``{version, modules: [{name, kind, status, state, purpose,
     use_when}], problems}``. With it: ``{version, module, problems}``, the
@@ -284,7 +284,7 @@ def modules(root: Path | None, name: str = "") -> dict[str, Any]:
 
 
 def recipes(root: Path | None, match: str = "", name: str = "") -> dict[str, Any]:
-    """Experimental. ``karni recipes``: every recipe, the best few for ``match``, or ``name``.
+    """``karni recipes``: every recipe, the best few for ``match``, or ``name``.
 
     ``name`` ``blank`` is the blank start. C420 when there is no such recipe, C421 when it
     cannot be used.
@@ -456,7 +456,7 @@ def _published() -> dict[str, str]:
 
 
 def json_schema() -> dict[str, Any]:
-    """Experimental. The JSON Schema of the tools' results: ``$defs/<tool>`` for each tool."""
+    """The JSON Schema of the tools' results: ``$defs/<tool>`` for each tool."""
     from karni_cli.spec.schema import _tidy
 
     models = [model for group in _MODELS.values() for model in group] + [_ErrorOut]
@@ -477,7 +477,7 @@ def json_schema() -> dict[str, Any]:
         "$id": MCP_SCHEMA_URL,
         "title": "karni mcp: the app-builder tools' results",
         "description": (
-            "Experimental. What the MCP tools " + ", ".join(TOOLS) + " return: $defs/<tool> "
+            "What the MCP tools " + ", ".join(TOOLS) + " return: $defs/<tool> "
             "for each. plan, questions, build and recipes return their command's --json "
             "output, whose schema is published beside this one. Generated by python -m "
             "karni_cli.agent_tools. Never edit it by hand."
@@ -488,7 +488,7 @@ def json_schema() -> dict[str, Any]:
 
 
 def checked(tool: str, data: dict[str, Any]) -> dict[str, Any]:
-    """Experimental. ``data`` checked against the models of ``tool``'s result (raises on a mismatch).
+    """``data`` checked against the models of ``tool``'s result (raises on a mismatch).
 
     Keys the data leaves out (a feature's ``wiring``) stay out.
     """

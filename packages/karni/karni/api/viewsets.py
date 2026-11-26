@@ -38,24 +38,24 @@ usual):
 * ``expandable_fields`` — restrict/alias what ``?expand=`` may name.
 * ``expand_depth`` — per-viewset override of ``KARNI_API_MAX_EXPAND_DEPTH``.
 * ``auto_register`` / ``route`` — steer (or opt out of) router autodiscovery.
-* ``is_read_only()`` / ``read_only_refused_actions`` (experimental) — a
+* ``is_read_only()`` / ``read_only_refused_actions`` — a
   viewset over an external model (``class Karni: external = True``,
   :mod:`karni.db`) answers its writes with 405 unless the model is
   ``writable``; override to decide per viewset.
 * ``filter_backends`` / ``filterset_fields`` / ``search_fields`` /
   ``ordering_fields`` — standard DRF/django-filter attributes.
 * ``tree_max_nodes`` / ``tree_default_depth`` / ``tree_max_depth`` /
-  ``tree_top_level()`` (experimental) — the tree endpoints a viewset gets
+  ``tree_top_level()`` — the tree endpoints a viewset gets
   when its model is a ``TreeModel`` (:mod:`karni.api.tree`).
 * ``aggregation`` / ``get_aggregation()`` / ``aggregate_queryset()``
-  (experimental): what ``GET <resource>/aggregate/`` may group and sum
+ : what ``GET <resource>/aggregate/`` may group and sum
   (:mod:`karni.aggregation`). The model's ``class Karni: aggregate`` is the
   default.
 * ``row_actions = {"ship": RowAction(from_="paid", to="shipped", by=...)}``
-  (experimental): named actions with the states and roles where each is
+ : named actions with the states and roles where each is
   legal (:mod:`karni.api.actions`); ``run_row_action()`` is what a generated
   one does.
-* ``check_written_row()`` (experimental): a create or an update must leave
+* ``check_written_row()``: a create or an update must leave
   the row inside its own predicate's rows (``E134``); override it to skip or
   widen the check. ``Access(assign=...)`` names who may set an owner field
   to another user (``E135``).
@@ -279,7 +279,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     select_related: ClassVar[Sequence[str]] = ()
     prefetch_related: ClassVar[Sequence[str | Prefetch]] = ()
     query_budget: ClassVar[Budget | None] = None
-    #: Experimental. ``Scaling(rows=(5, 500), seconds=0.3)``: the scaling check's row counts
+    #: ``Scaling(rows=(5, 500), seconds=0.3)``: the scaling check's row counts
     #: and a time budget at the large count (:class:`karni.performance.Scaling`).
     query_scaling: ClassVar[Scaling | None] = None
     pagination: ClassVar[Unpaginated | None] = None
@@ -295,15 +295,15 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     action_throttle_class: ClassVar[type[ActionRateThrottle]] = ActionRateThrottle
     scope_exempt: ClassVar[bool] = False
     scope_exempt_reason: ClassVar[str] = ""
-    #: Experimental. What ``GET <resource>/aggregate/`` may group by and sum: an
+    #: What ``GET <resource>/aggregate/`` may group by and sum: an
     #: ``Aggregation(...)`` or its dict (:mod:`karni.aggregation`). ``None`` uses the
     #: model's ``class Karni: aggregate``. Override / escape hatch: :meth:`get_aggregation`.
     aggregation: ClassVar[Aggregation | Mapping[str, Any] | None] = None
-    #: Experimental. Named row actions: ``{"ship": RowAction(from_="paid", to="shipped",
+    #: Named row actions: ``{"ship": RowAction(from_="paid", to="shipped",
     #: by=Owned("listing__seller__user"))}`` (:mod:`karni.api.actions`).
     row_actions: ClassVar[Mapping[str, Any]] = {}
 
-    #: Experimental. The actions a viewset answers with 405 while :meth:`is_read_only` (a
+    #: The actions a viewset answers with 405 while :meth:`is_read_only` (a
     #: model with ``class Karni: external = True`` and no ``writable = True``): the writes
     #: and the import screens. The OpenAPI document leaves them out. Override / escape
     #: hatch: a subclass narrows or widens the set.
@@ -322,19 +322,19 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         }
     )
 
-    #: Experimental. The actions a viewset serves only when its model is a
+    #: The actions a viewset serves only when its model is a
     #: :class:`karni.models.TreeModel` (:mod:`karni.api.tree`).
     tree_actions: ClassVar[frozenset[str]] = frozenset(
         {"tree", "children", "ancestors", "move", "access_forest"}
     )
-    #: Experimental. The most nodes one ``tree/`` answer holds.
+    #: The most nodes one ``tree/`` answer holds.
     tree_max_nodes: ClassVar[int] = 1000
-    #: Experimental. The levels ``tree/`` returns without ``?depth=``.
+    #: The levels ``tree/`` returns without ``?depth=``.
     tree_default_depth: ClassVar[int] = 2
-    #: Experimental. The most levels ``?depth=`` may ask for.
+    #: The most levels ``?depth=`` may ask for.
     tree_max_depth: ClassVar[int] = 10
 
-    #: Experimental. The taxonomy actions (:mod:`karni.api.taxonomy`): ``facets`` is served
+    #: The taxonomy actions (:mod:`karni.api.taxonomy`): ``facets`` is served
     #: when the model declares ``class Karni: taxonomies``, ``tagged`` when a taxonomy of
     #: another model points at this tree model.
     taxonomy_actions: ClassVar[frozenset[str]] = frozenset({"facets", "tagged"})
@@ -429,7 +429,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
 
     @classmethod
     def serves_tree(cls) -> bool:
-        """Experimental. Whether the viewset's model is a :class:`karni.models.TreeModel`."""
+        """Whether the viewset's model is a :class:`karni.models.TreeModel`."""
         model = cls._served_model()
         if model is None:
             return False
@@ -439,7 +439,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
 
     @classmethod
     def serves_facets(cls) -> bool:
-        """Experimental. Whether the model declares taxonomies, so ``facets/`` is routed."""
+        """Whether the model declares taxonomies, so ``facets/`` is routed."""
         if "facets" not in cls.taxonomy_actions:
             return False
         from karni.api.taxonomy import serves_facets
@@ -448,7 +448,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
 
     @classmethod
     def serves_tagged(cls) -> bool:
-        """Experimental. Whether a taxonomy points at the model, so ``<key>/tagged/`` is routed."""
+        """Whether a taxonomy points at the model, so ``<key>/tagged/`` is routed."""
         if "tagged" not in cls.taxonomy_actions:
             return False
         from karni.api.taxonomy import serves_tagged
@@ -476,7 +476,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         )
 
     def is_read_only(self) -> bool:
-        """Experimental. Whether this viewset only reads (:func:`karni.db.is_read_only`).
+        """Whether this viewset only reads (:func:`karni.db.is_read_only`).
 
         True for a model with ``class Karni: external = True`` that does not
         declare ``writable = True``: :attr:`read_only_refused_actions` then
@@ -494,7 +494,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         return is_read_only(model)
 
     def refuses_read_only(self, action: str | None) -> bool:
-        """Experimental. Whether ``action`` answers 405 here because the viewset only reads."""
+        """Whether ``action`` answers 405 here because the viewset only reads."""
         return action in self.read_only_refused_actions and self.is_read_only()
 
     def initial(self, request: Request, *args: Any, **kwargs: Any) -> None:
@@ -734,7 +734,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     def global_search_queryset(
         self, queryset: QuerySet[Any], query: str, declaration: SearchDeclaration
     ) -> QuerySet[Any]:
-        """Experimental. The rows of this model that cross-model search finds for ``query``.
+        """The rows of this model that cross-model search finds for ``query``.
 
         ``queryset`` is this viewset's ``list`` queryset for the request
         (access applied); ``declaration`` is the model's ``Karni.search``.
@@ -808,10 +808,10 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         response: Response = self.get_paginated_response(serializer.data)
         return response
 
-    # aggregations (experimental, karni.aggregation)
+    # aggregations (karni.aggregation)
 
     def get_aggregation(self) -> Aggregation | None:
-        """Experimental. What this resource may be aggregated by, or ``None``.
+        """What this resource may be aggregated by, or ``None``.
 
         The viewset's ``aggregation`` when declared, else the model's ``class
         Karni: aggregate``. Override / escape hatch: return a declaration
@@ -828,7 +828,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         return aggregation_of(model)
 
     def aggregate_queryset(self) -> QuerySet[Any]:
-        """Experimental. The rows an aggregate counts: the list's, with the request's filters.
+        """The rows an aggregate counts: the list's, with the request's filters.
 
         :meth:`get_queryset` (the access read scope, model scopes) then
         :meth:`filter_queryset` (filters and ``?search=``), with the aggregate's
@@ -851,7 +851,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="aggregate")
     def aggregate(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Experimental. Grouped counts, sums, averages, minimums and maximums of the list's rows.
+        """Grouped counts, sums, averages, minimums and maximums of the list's rows.
 
         ``group_by`` names a declared field, relation path or expression (a date
         takes ``:year``, ``:quarter`` or ``:month``), ``metric`` one of count, sum,
@@ -1057,7 +1057,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             return self._refused(exc)
         return Response(job_state(started, request))
 
-    # trees (experimental, karni.api.tree): routed only when the model is a TreeModel
+    # trees (karni.api.tree): routed only when the model is a TreeModel
 
     @action(detail=False, methods=["get"], url_path="tree")
     def tree(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -1094,7 +1094,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     def access_forest(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """``GET /<resource>/access/?permission=``: the requester's granted nodes and their paths.
 
-        Experimental. The nodes the requester's tree:<path> grants name, their
+        The nodes the requester's tree:<path> grants name, their
         ancestors and every other root. Any signed-in user may ask about their
         own grants (karni.accounts.tree_scope).
         """
@@ -1103,7 +1103,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         return access_forest_response(self, request)
 
     def tree_top_level(self, readable: QuerySet[Any], filtered: bool, base: QuerySet[Any]) -> Any:
-        """Experimental. The top level of ``tree/`` without ``?root=`` .
+        """The top level of ``tree/`` without ``?root=`` .
 
         ``readable`` is the read-scoped queryset, ``filtered`` whether the
         read scope narrowed it, ``base`` the queryset before the read scope.
@@ -1114,18 +1114,18 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         return top_level(self, readable, filtered, base)
 
     def get_tree_node_serializer_class(self) -> type[BaseSerializer[Any]]:
-        """Experimental. A tree node's serializer: the row's, ``has_children`` and ``children``."""
+        """A tree node's serializer: the row's, ``has_children`` and ``children``."""
         from karni.api.tree import tree_node_serializer
 
         return tree_node_serializer(self._row_serializer_class())
 
-    # taxonomies (experimental, karni.api.taxonomy): routed only when the model uses them
+    # taxonomies (karni.api.taxonomy): routed only when the model uses them
 
     @action(detail=False, methods=["get"], url_path="facets")
     def facets(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """``GET /<resource>/facets/?taxonomy=&rollup=``: rows per node, under the list's filters.
 
-        Experimental. How many of the rows the list shows for this request are
+        How many of the rows the list shows for this request are
         tagged with each node of one taxonomy (class Karni: taxonomies),
         rolled up to the ancestors with rollup=true (karni.api.taxonomy).
         """
@@ -1137,7 +1137,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     def tagged(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """``GET /<resource>/<id>/tagged/?descendants=``: the rows tagged with the node, per model.
 
-        Experimental. For each model whose taxonomy points at this tree, how
+        For each model whose taxonomy points at this tree, how
         many of its rows the requester may read are tagged with the node
         (or, with descendants=true, with the node or a node below it).
         """
@@ -1146,7 +1146,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         return tagged_response(self, request)
 
     def facet_queryset(self) -> QuerySet[Any]:
-        """Experimental. The rows ``facets/`` counts: the list's, filters and search applied.
+        """The rows ``facets/`` counts: the list's, filters and search applied.
 
         Override / escape hatch: return another queryset of the model (for
         example without one filter, so a facet keeps counting its own options).
@@ -1307,14 +1307,14 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             raise deferred
 
     def may_assign(self) -> bool:
-        """Experimental. Whether the caller may set an owner field to another user."""
+        """Whether the caller may set an owner field to another user."""
         declaration = self.get_access()
         if not isinstance(declaration, Access) or declaration.assign is None:
             return False
         return bool(declaration.assign.bind(self).allows(self.request))
 
     def check_assigned(self, names: Sequence[str]) -> None:
-        """Experimental. ``E135`` (403) when the request sets ``names`` without ``assign``."""
+        """``E135`` (403) when the request sets ``names`` without ``assign``."""
         if not names or self.may_assign():
             return
         from rest_framework.exceptions import PermissionDenied
@@ -1337,7 +1337,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         )
 
     def check_written_row(self, instance: Any) -> None:
-        """Experimental. ``E134`` (403) when the saved row is outside the action's predicate.
+        """``E134`` (403) when the saved row is outside the action's predicate.
 
         ``Owned("seller__user")`` in ``write`` limits the rows a caller may
         change, so a create or an update that leaves the row outside it (a
@@ -1387,7 +1387,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         return isinstance(declaration, Access) and declaration.assign is not None
 
     def run_row_action(self, name: str, request: Request) -> Response:
-        """Experimental. What a generated row action does (:func:`karni.api.actions.run`)."""
+        """What a generated row action does (:func:`karni.api.actions.run`)."""
         from karni.api.actions import run
 
         return run(self, name, request)

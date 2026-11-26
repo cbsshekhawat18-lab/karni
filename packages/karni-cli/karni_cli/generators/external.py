@@ -1,6 +1,6 @@
 """``karni make model <Name> --external --table <[schema.]table>``: a model over an existing table.
 
-Experimental. The table or view belongs to another system, so the model's
+The table or view belongs to another system, so the model's
 fields come from its columns: the project's ``manage.py karni_inspect``
 reads them with Django's ``inspectdb`` machinery (field types, ``null``,
 ``max_length``, the primary key) and prints them as JSON, and this module

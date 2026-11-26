@@ -20,7 +20,7 @@
  * Below `cardBreakpoint` (its container's width, not the viewport's) rows
  * render as cards. Wide tables scroll inside their box with a sticky header
  * and a frozen first column. Density and hidden columns are remembered per
- * user. A model with `Karni.column_sets` (experimental) gets a column set
+ * user. A model with `Karni.column_sets` gets a column set
  * menu that switches between its presets, the choice remembered per user
  * and table. A MarkdownField's long text is no default column. In the
  * table layout the rows are a WAI-ARIA grid: the whole table is one Tab
@@ -163,7 +163,7 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   enableDelete?: boolean;
   bulkActions?: ReadonlyArray<BulkAction>;
   /**
-   * Experimental. Fields staff may set on many rows at once (`["price",
+   * Fields staff may set on many rows at once (`["price",
    * "stock", "active"]`): a "Set … to …" line above the table and a bulk
    * action that saves that value on every selected row, each through the
    * row's own update (its rules and history), with the rows that failed
@@ -199,7 +199,7 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
    */
   filters?: readonly string[] | false;
   /**
-   * Experimental. Facet panels for the resource's taxonomies (`class Karni:
+   * Facet panels for the resource's taxonomies (`class Karni:
    * taxonomies`, fields with `x-karni-taxonomy`): `true` for each one, or the
    * keys to show. Each panel counts the rows per node under the table's other
    * filters and search, and choosing nodes filters the table to the rows
@@ -222,7 +222,7 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
    */
   exportFormats?: readonly ExportFormat[] | false;
   /**
-   * Experimental. An Import button that opens ResourceImport above the table
+   * An Import button that opens ResourceImport above the table
    * (upload, preview with each row's problems, commit), when the resource
    * serves `POST /<resource>/import/` and the user may create its rows.
    * Default true. `false` hides it.
@@ -274,14 +274,14 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   /** The "View" menu (density, column visibility). Default true. */
   viewOptions?: boolean;
   /**
-   * Experimental. Column presets, offered in a column set menu whose choice is
+   * Column presets, offered in a column set menu whose choice is
    * remembered per user and table. Default: the model's `Karni.column_sets`
    * (`x-karni-column-sets`). `false` offers none (every derived column shows).
    */
   columnSets?: false | readonly ColumnSetDef[];
-  /** Experimental. The preset shown, controlled. Uncontrolled, the user's choice, else the default. */
+  /** The preset shown, controlled. Uncontrolled, the user's choice, else the default. */
   columnSet?: string;
-  /** Experimental. Called with the preset the user picks. */
+  /** Called with the preset the user picks. */
   onColumnSetChange?: (name: string) => void;
   /** Below this container width (px) rows render as cards. Default 640, and 0 means never. */
   cardBreakpoint?: number;
@@ -529,7 +529,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     ].slice(0, MAX_DERIVED_FILTERS);
   }, [filters, pinned, schema, showAuditFields]);
 
-  // facet panels (experimental): one per taxonomy the table shows
+  // facet panels: one per taxonomy the table shows
   const facetFields = React.useMemo<readonly FieldDef[]>(() => {
     if (facets === undefined || facets === false || schema?.operations.facets === undefined) {
       return [];
@@ -756,7 +756,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     serializeColumnList,
   );
 
-  // column sets (experimental): the presets, the one shown, the user's choice
+  // column sets: the presets, the one shown, the user's choice
   const presets: readonly ColumnSetDef[] =
     columnSetsProp === false ? [] : (columnSetsProp ?? schema?.columnSets?.sets ?? []);
   const [storedSet, setStoredSet] = useStoredPreference(
@@ -814,7 +814,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     (canCreate ??
       (schema?.operations.create !== undefined && evaluateAccess(createRule, identity) !== false));
   const createText = createLabel ?? `New ${one}`;
-  // bulk edit: one field, one value, every selected row (experimental)
+  // bulk edit: one field, one value, every selected row
   const { update: updateRow } = useResourceMutations(resource);
   const editable = React.useMemo<FieldDef[]>(() => {
     if (bulkEdit === undefined || schema === undefined) return [];

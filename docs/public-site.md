@@ -51,8 +51,8 @@ karni new "Reading Club" --kind app+game                # an app with a game in 
 | `site` | the site app `website` at `/` on the [`karni-site` module](#the-karni-site-module), the admin as the place the client edits every text, image, menu and page title, registration off (`KARNI_ACCOUNTS_REGISTRATION = False`, staff create the accounts), the roles `staff` and `editor`, and the staff app in `frontend/` for staff (`--no-staff-app` leaves it out, and staff work in the admin) |
 | `app` | the API and the React app in `frontend/` for signed-in users, as `karni new` always made |
 | `site+app` | both: the site app and karni-site, and the app with its registration and roles |
-| `game` (experimental) | a game first: the game in `game/<slug>/` on [`@karni/game`](game-client.md), served at `/play/<slug>/` and at `/`, [karni-game](game.md) wired with the game declared in `content/game.yaml`, the API and the admin, and no staff app unless `--staff-app` ([apps and games](apps-and-games.md)) |
-| `app+game` (experimental) | an app with a game in it, what `--kind game` made in 0.6.0: karni-game wired, a small game you can play at `/game` in the app, and its portal build in `frontend/portal/` ([a new game project](game.md#a-new-game-project)) |
+| `game` | a game first: the game in `game/<slug>/` on [`@karni/game`](game-client.md), served at `/play/<slug>/` and at `/`, [karni-game](game.md) wired with the game declared in `content/game.yaml`, the API and the admin, and no staff app unless `--staff-app` ([apps and games](apps-and-games.md)) |
+| `app+game` | an app with a game in it, what `--kind game` made in 0.6.0: karni-game wired, a small game you can play at `/game` in the app, and its portal build in `frontend/portal/` ([a new game project](game.md#a-new-game-project)) |
 
 Every kind has the same security defaults (the
 [Content-Security-Policy and headers](security.md#security-headers), the
@@ -547,9 +547,6 @@ and create that content in the test first, or declare the view's pages
 ([below](#pages-behind-a-capture-without-a-model-experimental)).
 
 ### Pages behind a capture without a model (experimental)
-
-*Experimental: `karni_site.sitemaps.pages` and `declared_pages` may change
-in a minor release ([stability](stability.md#experimental-names)).*
 
 A view behind a capture with a known, small set of addresses and no model,
 such as `/topics/<slug:slug>/` for three topics a dict holds, has no rows

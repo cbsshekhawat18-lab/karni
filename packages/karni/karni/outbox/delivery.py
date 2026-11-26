@@ -1,4 +1,4 @@
-"""Experimental. Writing family events to the outbox and delivering them to subscribers.
+"""Writing family events to the outbox and delivering them to subscribers.
 
 * :func:`store` runs inside :func:`karni.events.publish`: one
   :class:`~karni.outbox.models.OutboxEvent` row and one
@@ -186,7 +186,7 @@ def dispatch(event_id: str, *, countdown: float = 0) -> None:
 
 @dataclass
 class DeliveryReport:
-    """Experimental. What one run of :func:`deliver_event` (or :func:`sweep`) did."""
+    """What one run of :func:`deliver_event` (or :func:`sweep`) did."""
 
     delivered: list[str] = field(default_factory=list)
     retrying: list[str] = field(default_factory=list)

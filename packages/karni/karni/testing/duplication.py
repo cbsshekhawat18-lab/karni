@@ -13,7 +13,7 @@ Config: ``KARNI_ARCHITECTURE["dup"] = {"min_statements": 8,
 "exclude": ["*/migrations/*"]}``.
 
 Each file's fingerprints are kept in ``karni check``'s cache
-(:mod:`karni.testing.checkcache`, experimental), so an unchanged file, and
+(:mod:`karni.testing.checkcache`), so an unchanged file, and
 Karni's own source, are not parsed again. With ``--changed`` a clone is
 reported only when one side is in a changed file.
 """

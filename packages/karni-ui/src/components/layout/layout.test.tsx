@@ -300,7 +300,7 @@ const groupItems: readonly LayoutNavEntry[] = [
   },
 ];
 
-describe("Layout nav groups (experimental)", () => {
+describe("Layout nav groups", () => {
   it("renders a group as a button that controls its entries, closed by default", () => {
     render(<Layout navItems={groupItems}>content</Layout>);
     const nav = screen.getByRole("navigation", { name: "Main" });
@@ -413,7 +413,7 @@ const SERVER_MENU: NavigationMenu = {
   ],
 };
 
-describe("Layout server menu (experimental)", () => {
+describe("Layout server menu", () => {
   it("renders the server's menu with the current page from pathname", async () => {
     renderServer(SERVER_MENU, { pathname: "/products/42" });
     const products = await screen.findByRole("link", { name: "Products" });

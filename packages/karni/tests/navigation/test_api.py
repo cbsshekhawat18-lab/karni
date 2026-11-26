@@ -1,4 +1,4 @@
-"""``GET /api/navigation/`` (experimental): the menu over HTTP, in both auth modes, and its schema.
+"""``GET /api/navigation/``: the menu over HTTP, in both auth modes, and its schema.
 
 The URLconf is built in this module after ``KARNI_NAVIGATION`` is set, the
 way ``karni.api.urls`` builds it at import. Clients sign in for real (a JWT

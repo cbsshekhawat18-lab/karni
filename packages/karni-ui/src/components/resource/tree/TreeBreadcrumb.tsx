@@ -9,7 +9,7 @@ import { resourceNames, type ResourceLabel } from "../resource-names";
 
 registerComponentRole("tree-breadcrumb", "TreeBreadcrumb");
 
-/** Experimental. The props of TreeBreadcrumb. */
+/** The props of TreeBreadcrumb. */
 export interface TreeBreadcrumbProps {
   /** The tree resource: "regions". */
   resource: string;
@@ -33,7 +33,7 @@ function capitalised(text: string): string {
 }
 
 /**
- * Experimental. The path from the root to one node of a tree resource, as a
+ * The path from the root to one node of a tree resource, as a
  * breadcrumb (`GET /<resource>/<id>/ancestors/`).
  *
  * A `<nav>` with an ordered list: each ancestor (a link with `href`, a

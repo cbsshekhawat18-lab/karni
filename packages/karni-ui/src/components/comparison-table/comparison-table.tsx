@@ -1,7 +1,7 @@
 /**
  * <ComparisonTable>: entities side by side, one column each, one row per metric.
  *
- * Experimental. For "compare these three plans, regions or products": the
+ * For "compare these three plans, regions or products": the
  * metric names head the rows (and stay in view while the table scrolls
  * sideways), the entity names head the columns (and stay in view while it
  * scrolls down). A metric that declares `better: "higher"` or `"lower"`
@@ -148,7 +148,7 @@ export const defaultComparisonTableSlots: ComparisonTableSlots = {
   Error: ErrorState,
 };
 
-/** Experimental. Entities side by side: metrics as rows, entities as columns, the best value marked. */
+/** Entities side by side: metrics as rows, entities as columns, the best value marked. */
 export function ComparisonTable<T>(props: ComparisonTableProps<T>): React.ReactElement {
   const {
     caption,

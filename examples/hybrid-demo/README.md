@@ -65,7 +65,7 @@ Anything you assign after the call wins.
 
 ## What this project is
 
-An app with a game in it (`kind = "app+game"` in pyproject.toml), experimental:
+An app with a game in it (`kind = "app+game"` in pyproject.toml):
 a REST API and the React app in `frontend/` for signed-in users, whose pages
 host the game (`frontend/src/game/`, on @karni/game). Its server side is the
 karni-game module at `/api/game/`, declared in `content/game.yaml`.

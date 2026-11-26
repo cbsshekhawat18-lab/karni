@@ -1,5 +1,5 @@
 ---
-description: "Several recipes in one Karni project (experimental): app.recipes, karni recipes add, remove and upgrade, how a part's karni.yaml is merged into the project's, what a part may and may not do, and the refusals C442 to C449."
+description: "Several recipes in one Karni project: app.recipes, karni recipes add, remove and upgrade, how a part's karni.yaml is merged into the project's, what a part may and may not do, and the refusals C442 to C449."
 ---
 
 # The family: several recipes in one project

@@ -1,4 +1,4 @@
-"""Experimental. System checks of the timeline: its people app, its option, its outbox.
+"""System checks of the timeline: its people app, its option, its outbox.
 
 * ``karni.E461``: ``karni.timeline`` is installed without ``karni.people``.
 * ``karni.E460``: a declared event's ``timeline=`` option is malformed or

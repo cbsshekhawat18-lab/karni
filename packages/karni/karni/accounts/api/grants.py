@@ -1,4 +1,4 @@
-"""Experimental. Per-user grants as an API: list, add, change, revoke and bulk-grant.
+"""Per-user grants as an API: list, add, change, revoke and bulk-grant.
 
 The functions of :mod:`karni.accounts.grants` over HTTP, for a project's own
 screen, a support tool or a provisioning script. Mounted under the accounts

@@ -1,4 +1,4 @@
-"""Experimental. Write spec data as YAML that reads like a hand-written ``karni.yaml``.
+"""Write spec data as YAML that reads like a hand-written ``karni.yaml``.
 
 Block style for the structure, flow style (``[list, detail]``, ``{name: Staff}``)
 for a short list or mapping of plain values that fits on its line, and each
@@ -101,18 +101,18 @@ def _entry(head: str, item: Any, indent: int, name: str) -> list[str]:
 
 
 def entry(key: str, value: Any, indent: int = 0) -> list[str]:
-    """Experimental. The lines of one ``key: value`` entry at ``indent``, as :func:`dump` writes it."""
+    """The lines of one ``key: value`` entry at ``indent``, as :func:`dump` writes it."""
     return _entry(f"{' ' * indent}{_key(key)}:", value, indent, key)
 
 
 def flow(value: Any) -> str:
-    """Experimental. ``value`` in flow style, as :func:`dump` writes it inside ``{...}``."""
+    """``value`` in flow style, as :func:`dump` writes it inside ``{...}``."""
     written = _flow(value)
     return json.dumps(value, ensure_ascii=False) if written is None else written
 
 
 def dump(data: dict[str, Any], *, header: list[str] | None = None) -> str:
-    """Experimental. ``data`` as YAML text, with ``header`` lines as comments on top."""
+    """``data`` as YAML text, with ``header`` lines as comments on top."""
     lines = [f"# {line}" if line else "#" for line in header or []]
     body = _lines(data, 0, None)
     text = "\n".join([*lines, *body]) + "\n"

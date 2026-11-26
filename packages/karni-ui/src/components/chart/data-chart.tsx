@@ -88,13 +88,13 @@ export interface DataChartProps {
   /** Multi-series data. Series cycle through --karni-chart-1..5. */
   series?: readonly DataChartSeries[];
   /**
-   * Experimental. The response of `useAggregate` (`GET <resource>/aggregate/`), read
+   * The response of `useAggregate` (`GET <resource>/aggregate/`), read
    * directly: its categories are the x axis and its series the series. Wins over
    * `data` and `series`.
    */
   aggregate?: AggregateResult;
   /**
-   * Experimental. Stack the series' bars on top of each other (bars only). Default:
+   * Stack the series' bars on top of each other (bars only). Default:
    * the aggregate's `stacked` (a `stack=` request), else false.
    */
   stacked?: boolean;
@@ -197,7 +197,7 @@ function niceTicks(min: number, max: number, count: number): number[] {
 }
 
 /**
- * Experimental. Every how many categories an x-axis label is drawn so the labels
+ * Every how many categories an x-axis label is drawn so the labels
  * never run into each other: 1 draws every label, 2 every other one, and so on.
  * `labels` are the texts as drawn, `bandWidth` the room of one category and
  * `fontSize` the label size, both in viewBox units. A label is taken as about
@@ -249,7 +249,7 @@ function normalize(
 }
 
 /**
- * Experimental. An aggregate response as DataChart series: one per series of the
+ * An aggregate response as DataChart series: one per series of the
  * response, a point per category. A label two categories share gets " (2)", " (3)"
  * so each stays its own point.
  */

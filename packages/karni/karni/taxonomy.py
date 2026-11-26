@@ -1,4 +1,4 @@
-"""Experimental. Taxonomy tagging: one declaration tags a model to tree models.
+"""Taxonomy tagging: one declaration tags a model to tree models.
 
 Many models are tagged to the same hierarchies: products, articles and
 suppliers to a region tree and a category tree. Each tag needs the same
@@ -105,7 +105,7 @@ def _malformed(model: type[models.Model], why: str) -> KarniImproperlyConfigured
 
 
 def declared_taxonomies(model: type[models.Model]) -> dict[str, str]:
-    """Experimental. ``Karni.taxonomies`` as key -> the target as written (``E570`` if malformed).
+    """``Karni.taxonomies`` as key -> the target as written (``E570`` if malformed).
 
     A target given as a class comes back as its ``app_label.Model`` label.
     A key is a field name that does not start with ``_``, holds no ``__`` and
@@ -178,7 +178,7 @@ class_prepared.connect(contribute_taxonomies, dispatch_uid="karni.taxonomy.contr
 
 @dataclass(frozen=True)
 class Taxonomy:
-    """Experimental. One key of ``class Karni: taxonomies`` on one model.
+    """One key of ``class Karni: taxonomies`` on one model.
 
     ``target`` is the tree model as declared. The other attributes read the
     model's field of that name: :attr:`field` (the many-to-many), :attr:`tree`
@@ -294,7 +294,7 @@ _BY_TREE: dict[type[models.Model], list[Taxonomy]] = {}
 
 
 def taxonomies(model: type[models.Model]) -> dict[str, Taxonomy]:
-    """Experimental. The taxonomies of ``model``, by key, in declaration order (cached)."""
+    """The taxonomies of ``model``, by key, in declaration order (cached)."""
     cached = _BY_MODEL.get(model)
     if cached is None:
         cached = {
@@ -305,12 +305,12 @@ def taxonomies(model: type[models.Model]) -> dict[str, Taxonomy]:
 
 
 def get_taxonomy(model: type[models.Model], key: str) -> Taxonomy | None:
-    """Experimental. ``model``'s taxonomy ``key``, else ``None``."""
+    """``model``'s taxonomy ``key``, else ``None``."""
     return taxonomies(model).get(key)
 
 
 def tagging(tree: type[models.Model]) -> list[Taxonomy]:
-    """Experimental. Every taxonomy of an installed model that points at ``tree`` (cached).
+    """Every taxonomy of an installed model that points at ``tree`` (cached).
 
     Proxy models are left out: they share their concrete model's rows. A
     taxonomy whose field is broken (``karni check`` reports it) is left out too.
@@ -362,7 +362,7 @@ def tagged_rows(
     descendants: bool = False,
     within: models.QuerySet[Any] | None = None,
 ) -> Q:
-    """Experimental. The rows tagged with one of ``nodes``, as one ``Q`` on the key.
+    """The rows tagged with one of ``nodes``, as one ``Q`` on the key.
 
     ``nodes`` are rows or keys of the tree. ``descendants=True`` also takes the
     rows tagged with any node below them (one cycle-safe walk). ``within``
@@ -460,7 +460,7 @@ def facet_counts(
     rollup: bool = False,
     nodes: models.QuerySet[Any] | None = None,
 ) -> dict[Any, int]:
-    """Experimental. How many of ``rows`` each node counts: node key -> rows. One query.
+    """How many of ``rows`` each node counts: node key -> rows. One query.
 
     Without ``rollup`` a node counts the rows tagged with it. With
     ``rollup=True`` it counts the rows tagged with it or with any node below
@@ -484,7 +484,7 @@ def _run_counts(taxonomy: Taxonomy, found: _FacetSQL, db: str) -> dict[Any, int]
 
 @dataclass(frozen=True)
 class FacetNode:
-    """Experimental. One node of a facet: its key, label (``str()``), parent and row count."""
+    """One node of a facet: its key, label (``str()``), parent and row count."""
 
     key: Any
     label: str
@@ -502,7 +502,7 @@ def facets(
     rollup: bool = False,
     nodes: models.QuerySet[Any] | None = None,
 ) -> list[FacetNode]:
-    """Experimental. :func:`facet_counts` with each node's label and parent, depth first.
+    """:func:`facet_counts` with each node's label and parent, depth first.
 
     Two queries whatever the number of nodes: the counts, then the counted
     nodes (``str(node)`` is the label, so a ``__str__`` that reads a relation

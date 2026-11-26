@@ -1,4 +1,4 @@
-"""``navigation:`` of ``karni.yaml`` (experimental): the menu karni build writes to KARNI_NAVIGATION.
+"""``navigation:`` of ``karni.yaml``: the menu karni build writes to KARNI_NAVIGATION.
 
 A product catalog: products anyone may read, categories for signed-in
 users, regions behind a role (their view permission), and two named pages.

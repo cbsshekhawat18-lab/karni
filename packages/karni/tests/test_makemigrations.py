@@ -1,4 +1,4 @@
-"""``manage.py karni_makemigrations`` (experimental): renames first, empty tables need no value."""
+"""``manage.py karni_makemigrations``: renames first, empty tables need no value."""
 
 from __future__ import annotations
 

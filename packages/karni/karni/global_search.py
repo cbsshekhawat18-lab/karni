@@ -1,4 +1,4 @@
-"""Experimental. ``Karni.search``: the models one search box finds, and how a hit reads.
+"""``Karni.search``: the models one search box finds, and how a hit reads.
 
 A model opts in next to its other Karni options::
 
@@ -71,7 +71,7 @@ SEARCH_KEYS: Final[frozenset[str]] = frozenset({"fields", "title", "subtitle", "
 
 @dataclass(frozen=True)
 class SearchDeclaration:
-    """Experimental. A model's ``Karni.search``, validated and with its defaults filled in."""
+    """A model's ``Karni.search``, validated and with its defaults filled in."""
 
     #: Text fields the query is matched with and ranked by.
     fields: tuple[str, ...]
@@ -151,7 +151,7 @@ def _shown_field(model: type[models.Model], key: str, path: Any) -> str:
 
 
 def search_declaration(model: type[models.Model]) -> SearchDeclaration | None:
-    """Experimental. ``model``'s validated ``Karni.search``, or ``None`` when it does not opt in.
+    """``model``'s validated ``Karni.search``, or ``None`` when it does not opt in.
 
     Raises :class:`~karni.exceptions.KarniImproperlyConfigured` (``E430``) for
     a declaration that cannot work: an unknown key, a missing or empty
@@ -194,7 +194,7 @@ def search_declaration(model: type[models.Model]) -> SearchDeclaration | None:
 
 
 def searchable_models() -> list[type[models.Model]]:
-    """Experimental. Every installed model that declares ``Karni.search``, in app order."""
+    """Every installed model that declares ``Karni.search``, in app order."""
     found: list[type[models.Model]] = []
     for model in apps.get_models():
         if model._meta.proxy:
@@ -206,7 +206,7 @@ def searchable_models() -> list[type[models.Model]]:
 
 
 def indexed_fields(model: type[models.Model]) -> list[str]:
-    """Experimental. The declared fields of ``model`` its own table holds, each a text column.
+    """The declared fields of ``model`` its own table holds, each a text column.
 
     The fields a trigram index is added for. Unknown names, and fields of a
     parent model's table, are left to ``E430`` and to the parent.
@@ -293,7 +293,7 @@ def _fix(model: type[models.Model], field: Any) -> str:
 def check_search_indexes(
     search_models: Iterable[type[models.Model]] | None = None,
 ) -> list[checks.CheckMessage]:
-    """Experimental. ``W590`` for each searched field whose table has no trigram index.
+    """``W590`` for each searched field whose table has no trigram index.
 
     Only on PostgreSQL, and only for tables that exist (before ``migrate``
     there is nothing to compare). A database that does not answer is skipped:
@@ -345,7 +345,7 @@ def check_search_indexes(
 def search_index_failures(
     search_models: Iterable[type[models.Model]] | None = None,
 ) -> list[str]:
-    """Experimental. :func:`check_search_indexes`, rendered one line each for ``karni check``."""
+    """:func:`check_search_indexes`, rendered one line each for ``karni check``."""
     lines: list[str] = []
     for message in check_search_indexes(search_models):
         text = f"{message.id}: {message.msg}"

@@ -1,4 +1,4 @@
-"""Experimental. What the selling apps report about an order's goods, for its buyer's page.
+"""What the selling apps report about an order's goods, for its buyer's page.
 
 An order holds the money. What happens to the goods (a parcel shipped, a
 booking confirmed) is the selling app's own record, so commerce asks the
@@ -40,20 +40,20 @@ _REPORTERS: list[Reporter] = []
 
 
 def register_reporter(reporter: Reporter) -> Reporter:
-    """Experimental. Add ``reporter`` (usable as a decorator). Registering it twice is a no-op."""
+    """Add ``reporter`` (usable as a decorator). Registering it twice is a no-op."""
     if reporter not in _REPORTERS:
         _REPORTERS.append(reporter)
     return reporter
 
 
 def unregister_reporter(reporter: Reporter) -> None:
-    """Experimental. Take ``reporter`` out."""
+    """Take ``reporter`` out."""
     if reporter in _REPORTERS:
         _REPORTERS.remove(reporter)
 
 
 def report(order: Order) -> list[dict[str, Any]]:
-    """Experimental. Every reporter's entries for ``order``, in registration order."""
+    """Every reporter's entries for ``order``, in registration order."""
     found: list[dict[str, Any]] = []
     for reporter in _REPORTERS:
         for entry in reporter(order):

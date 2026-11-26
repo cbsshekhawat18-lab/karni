@@ -51,7 +51,7 @@ def _parse(raw: Any) -> dict[str, tuple[int, int]]:
 
 
 def sizes() -> dict[str, tuple[int, int]]:
-    """Experimental. The thumbnail sizes, by name: ``KARNI_STORAGE_THUMBNAIL_SIZES``, checked."""
+    """The thumbnail sizes, by name: ``KARNI_STORAGE_THUMBNAIL_SIZES``, checked."""
     return _parse(conf.get("KARNI_STORAGE_THUMBNAIL_SIZES"))
 
 
@@ -65,14 +65,14 @@ def size_problems() -> list[str]:
 
 
 def find(source: str, size: str) -> str | None:
-    """Experimental. The stored name of ``source``'s thumbnail of ``size``, or ``None``."""
+    """The stored name of ``source``'s thumbnail of ``size``, or ``None``."""
     from karni_storage.models import Thumbnail
 
     return Thumbnail.objects.filter(source=source, size=size).values_list("name", flat=True).first()
 
 
 def make(source: str) -> dict[str, str]:
-    """Experimental. Make the missing thumbnails of the protected image ``source``.
+    """Make the missing thumbnails of the protected image ``source``.
 
     Returns ``{size name: stored name}`` for the ones made by this call.
 

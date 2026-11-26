@@ -60,7 +60,7 @@ class TokenError(ValueError):
 
 @dataclass(frozen=True)
 class Upload:
-    """Experimental. What an upload or confirmed token says."""
+    """What an upload or confirmed token says."""
 
     name: str
     model: str
@@ -76,7 +76,7 @@ def _user(user: Any) -> str | None:
 
 
 def upload_token(upload: Upload) -> str:
-    """Experimental. The token the upload step answers with."""
+    """The token the upload step answers with."""
     return signing.dumps(
         {
             "n": upload.name,
@@ -91,7 +91,7 @@ def upload_token(upload: Upload) -> str:
 
 
 def confirmed_token(upload: Upload) -> str:
-    """Experimental. The token confirm answers with, which a row's create or update takes."""
+    """The token confirm answers with, which a row's create or update takes."""
     return signing.dumps(
         {"n": upload.name, "m": upload.model, "f": upload.field, "u": upload.user},
         salt=_CONFIRMED_SALT,
@@ -127,7 +127,7 @@ def _check(data: dict[str, Any], model: str, field: str, user: Any, what: str) -
 
 
 def read_upload(token: str, *, model: str, field: str, user: Any) -> Upload:
-    """Experimental. The upload ``token`` says, checked for ``model``, ``field`` and ``user``.
+    """The upload ``token`` says, checked for ``model``, ``field`` and ``user``.
 
     :raises TokenError: ``STORE013``.
     """
@@ -136,7 +136,7 @@ def read_upload(token: str, *, model: str, field: str, user: Any) -> Upload:
 
 
 def read_confirmed(token: str, *, model: str, field: str, user: Any) -> Upload:
-    """Experimental. The confirmed upload ``token`` says, checked like :func:`read_upload`.
+    """The confirmed upload ``token`` says, checked like :func:`read_upload`.
 
     :raises TokenError: ``STORE013``.
     """
@@ -145,19 +145,19 @@ def read_confirmed(token: str, *, model: str, field: str, user: Any) -> Upload:
 
 
 def user_key(user: Any) -> str | None:
-    """Experimental. How a token names ``user``: the primary key, ``None`` for anonymous."""
+    """How a token names ``user``: the primary key, ``None`` for anonymous."""
     return _user(user)
 
 
 def download_token(*, model: str, pk: Any, field: str, size: str, name: str) -> str:
-    """Experimental. The ``?sig=`` of a local-storage download link."""
+    """The ``?sig=`` of a local-storage download link."""
     return signing.dumps(
         {"m": model, "p": str(pk), "f": field, "z": size, "n": name}, salt=_DOWNLOAD_SALT
     )
 
 
 def read_download(token: str, *, model: str, pk: Any, field: str, size: str, name: str) -> None:
-    """Experimental. Check a ``?sig=`` against the row, field, size and current file name.
+    """Check a ``?sig=`` against the row, field, size and current file name.
 
     :raises TokenError: ``STORE019``.
     """

@@ -1,5 +1,5 @@
 ---
-description: "The HTTP contract of karni-game (experimental): every endpoint a game client, a realtime game server and a portal call, with paths, methods, request and response bodies, how a player is identified, the error codes and the rate limits."
+description: "The HTTP contract of karni-game: every endpoint a game client, a realtime game server and a portal call, with paths, methods, request and response bodies, how a player is identified, the error codes and the rate limits."
 ---
 
 # The game API (karni-game)

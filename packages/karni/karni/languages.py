@@ -1,4 +1,4 @@
-"""``karni.E971`` / ``karni.W971``: a language Django cannot describe (experimental).
+"""``karni.E971`` / ``karni.W971``: a language Django cannot describe.
 
 ``LANGUAGES`` may name any code that has a ``locale/<code>/`` folder, but
 Django describes a language (its name, its own name, its direction) only for

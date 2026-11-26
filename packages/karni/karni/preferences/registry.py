@@ -1,4 +1,4 @@
-"""Experimental. What parts declare: settings sections, connections and email kinds.
+"""What parts declare: settings sections, connections and email kinds.
 
 A part declares, in its own ``<app>/preferences.py`` and ``<app>/connections.py``
 (imported at startup by :func:`autodiscover`)::
@@ -81,7 +81,7 @@ S = TypeVar("S", bound="Section")
 
 
 class Section(BaseModel):
-    """Experimental. The base of a part's settings section: a Pydantic model with defaults.
+    """The base of a part's settings section: a Pydantic model with defaults.
 
     Every field needs a default, so a project that never opens Settings gets
     sensible values. A field's ``description`` is the help line on the
@@ -98,7 +98,7 @@ class Section(BaseModel):
 
 @dataclass(frozen=True)
 class SectionSpec:
-    """Experimental. One registered section: its key, title, model and who may change it.
+    """One registered section: its key, title, model and who may change it.
 
     ``change`` is a permission key (``"bookings.resource:change"``) or a role
     (``"role:bookings-manager"``) the user must hold. ``version`` is the
@@ -124,7 +124,7 @@ class SectionSpec:
 
 @dataclass(frozen=True)
 class Connection:
-    """Experimental. Something that happens because what it ``needs`` is installed.
+    """Something that happens because what it ``needs`` is installed.
 
     ``name`` is ``<prefix>.<what>`` (``crm.deal_timeline``). ``needs`` names
     core contracts (``people``, ``events``, ``timeline``, ``preferences``) and
@@ -151,7 +151,7 @@ class Connection:
 
 @dataclass(frozen=True)
 class EmailKind:
-    """Experimental. A message the project sends, which Settings, Emails can switch off.
+    """A message the project sends, which Settings, Emails can switch off.
 
     ``name`` is ``<prefix>.<message>`` (``bookings.booking_confirmed``).
     ``transactional`` messages (a receipt, a confirmation) are on by
@@ -211,7 +211,7 @@ def section(
     version: int = 1,
     replace: bool = False,
 ) -> Callable[[type[S]], type[S]]:
-    """Experimental. Register a :class:`Section` subclass as the settings section ``key``.
+    """Register a :class:`Section` subclass as the settings section ``key``.
 
     :param key: the section's key, the part's prefix (``"bookings"``).
     :param title: the tab's title on the Settings page (default: the key).
@@ -296,7 +296,7 @@ def connection(
     title: str = "",
     replace: bool = False,
 ) -> Connection:
-    """Experimental. Declare a connection, in a part's ``connections.py``.
+    """Declare a connection, in a part's ``connections.py``.
 
     :param name: ``<prefix>.<what>``, for example ``"crm.deal_timeline"``.
     :param needs: the contracts and modules it works against. It is active
@@ -365,7 +365,7 @@ def email(
     transactional: bool = True,
     replace: bool = False,
 ) -> EmailKind:
-    """Experimental. Declare an email kind that Settings, Emails lists with its switch.
+    """Declare an email kind that Settings, Emails lists with its switch.
 
     A move's email (``moves.<state>.notify`` in karni.yaml) is listed without
     a declaration. :func:`karni.preferences.email_on` answers whether a kind
@@ -396,19 +396,19 @@ def email(
 
 
 def sections() -> list[SectionSpec]:
-    """Experimental. Every registered section, in key order."""
+    """Every registered section, in key order."""
     ensure_discovered()
     return [_registry.sections[key] for key in sorted(_registry.sections)]
 
 
 def connections() -> list[Connection]:
-    """Experimental. Every declared connection, in name order (installed or not)."""
+    """Every declared connection, in name order (installed or not)."""
     ensure_discovered()
     return [_registry.connections[name] for name in sorted(_registry.connections)]
 
 
 def emails() -> list[EmailKind]:
-    """Experimental. Every email kind, by name: the declared ones, each move's email and
+    """Every email kind, by name: the declared ones, each move's email and
     each message a part declared with :func:`karni.mail.register_kind`."""
     ensure_discovered()
     found = dict(_registry.emails)
@@ -473,30 +473,30 @@ def _move_emails() -> Iterable[EmailKind]:
 
 
 def move_email_name(model: Any, key: str) -> str:
-    """Experimental. The email kind of a move's email: ``<app_label>.<model>_<key>``."""
+    """The email kind of a move's email: ``<app_label>.<model>_<key>``."""
     meta = model._meta
     return f"{meta.app_label}.{meta.model_name}_{key.replace(':', '_')}".lower()
 
 
 def find_section(key: str) -> SectionSpec | None:
-    """Experimental. The section registered as ``key``, or ``None``."""
+    """The section registered as ``key``, or ``None``."""
     ensure_discovered()
     return _registry.sections.get(key)
 
 
 def find_connection(name: str) -> Connection | None:
-    """Experimental. The connection declared as ``name``, or ``None``."""
+    """The connection declared as ``name``, or ``None``."""
     ensure_discovered()
     return _registry.connections.get(name)
 
 
 def find_email(name: str) -> EmailKind | None:
-    """Experimental. The email kind ``name`` (declared, or a move's), or ``None``."""
+    """The email kind ``name`` (declared, or a move's), or ``None``."""
     return next((kind for kind in emails() if kind.name == name), None)
 
 
 def unregister(*, section: str | None = None, connection: str | None = None) -> None:
-    """Experimental. Remove a section or a connection (a project replaces a part's)."""
+    """Remove a section or a connection (a project replaces a part's)."""
     if section is not None:
         found = _registry.sections.pop(section, None)
         if found is not None:
@@ -522,7 +522,7 @@ def autodiscover() -> None:
 
 
 def ensure_discovered() -> None:
-    """Experimental. :func:`autodiscover` once the app registry is ready, if not done yet."""
+    """:func:`autodiscover` once the app registry is ready, if not done yet."""
     from django.apps import apps
     from django.conf import settings
 

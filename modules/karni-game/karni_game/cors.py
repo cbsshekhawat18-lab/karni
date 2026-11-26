@@ -1,4 +1,4 @@
-"""Experimental. The game API from other origins: a game built for a portal runs on its domain.
+"""The game API from other origins: a game built for a portal runs on its domain.
 
 A portal build of a game calls ``/api/game/`` from the portal's own domain.
 :func:`allow_game_origin` is a receiver of django-cors-headers'

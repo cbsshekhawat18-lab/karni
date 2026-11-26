@@ -1,4 +1,4 @@
-"""Experimental. What a user waits for with Karni, timed: does making an app stay fast?
+"""What a user waits for with Karni, timed: does making an app stay fast?
 
 ``large_project.py`` times the tooling on a big project. This script times
 what a person does on a small one, from the first command to a running

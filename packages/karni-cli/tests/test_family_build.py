@@ -1,4 +1,4 @@
-"""The family test project (experimental): parts built alone and together, every step real.
+"""The family test project: parts built alone and together, every step real.
 
 ``pytest -m recipes tests/test_family_build.py`` runs these, and CI's family job
 runs them on every push. One part alone: ``karni new --recipe visits`` (a tiny

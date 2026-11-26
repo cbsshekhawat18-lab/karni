@@ -1,4 +1,4 @@
-"""Experimental. Who may write to a demo: demo accounts only, and never to their own account.
+"""Who may write to a demo: demo accounts only, and never to their own account.
 
 The rule, for every request whose method is not GET, HEAD, OPTIONS or TRACE:
 

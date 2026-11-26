@@ -27,7 +27,7 @@ run, so a pipeline that forgot ``npm ci`` never passes unchecked.
 Outside CI, a clean run may end with one tip on stderr (:mod:`karni_cli.tips`,
 at most once per project); ``-q`` suppresses it.
 
-Incremental runs (experimental): the backend's file checks keep their
+Incremental runs: the backend's file checks keep their
 results in ``.karni/local/check-cache.json`` (:mod:`karni.testing.checkcache`)
 and ESLint keeps its own cache in ``.karni/local/eslintcache``, so an
 unchanged file is not checked again. ``--no-cache`` turns both off.
@@ -115,13 +115,13 @@ def _frontend_duplication(project: Path, capture: list[str] | None = None) -> in
     return _run([str(jscpd), "--config", ".jscpd.json"], frontend, capture)
 
 
-#: Experimental. ESLint's cache, next to the backend's check cache (never committed).
+#: ESLint's cache, next to the backend's check cache (never committed).
 ESLINT_CACHE = local_state.LOCAL_DIR / "eslintcache"
 _LINTED = (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs")
 
 
 def eslint_args(project: Path, *, cache: bool = True, files: list[str] | None = None) -> list[str]:
-    """Experimental. ESLint's arguments: every file, or ``files``, with or without its cache."""
+    """ESLint's arguments: every file, or ``files``, with or without its cache."""
     args = list(files) if files is not None else ["."]
     args += ["--max-warnings", "0"]
     if cache:
@@ -171,7 +171,7 @@ def _git(project: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
 
 
 def changed_files(project: Path, ref: str | None = None) -> list[str]:
-    """Experimental. The project's files git reports as changed, relative to the project.
+    """The project's files git reports as changed, relative to the project.
 
     Against ``ref`` when given, else the working tree and the index against
     ``HEAD`` (the index alone in a repository without a commit), plus the
@@ -325,14 +325,13 @@ def check(
         False,
         "--changed",
         help="Only the files git reports as changed: the working tree and the index against "
-        "HEAD (or REF), and untracked files. The checks that read the whole project still run. "
-        "Experimental.",
+        "HEAD (or REF), and untracked files. The checks that read the whole project still run.",
     ),
     no_cache: bool = typer.Option(
         False,
         "--no-cache",
         help="Check every file again: do not read or write the check cache "
-        "(.karni/local/check-cache.json) or ESLint's. Experimental.",
+        "(.karni/local/check-cache.json) or ESLint's.",
     ),
 ) -> None:
     """Run architecture and system checks.

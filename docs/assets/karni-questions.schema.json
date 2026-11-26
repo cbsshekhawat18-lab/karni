@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://cbsshekhawat18-lab.github.io/karni/assets/karni-questions.schema.json",
   "title": "karni plan --questions --json",
-  "description": "Experimental. The output of karni plan --questions --json.",
+  "description": "The output of karni plan --questions --json.",
   "$defs": {
     "_IssueOut": {
       "additionalProperties": false,

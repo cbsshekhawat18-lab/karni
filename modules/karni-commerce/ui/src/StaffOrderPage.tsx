@@ -1,5 +1,5 @@
 /**
- * Experimental. One order as staff run it: where the money stands, the buyer,
+ * One order as staff run it: where the money stands, the buyer,
  * the lines, the payments and refunds, the panels the selling parts add (the
  * shop's parcel, `registerOrderPanel`, each with its kinds' lines), the notes
  * and the history, with the moves the order allows now: cancel, refund all or

@@ -130,7 +130,7 @@ GRANTED_ACTIONS: Final[dict[str, str]] = {
     "update": "change",
     "partial_update": "change",
     "destroy": "delete",
-    # A tree node's move/ (experimental) changes its parent: an update.
+    # A tree node's move/ changes its parent: an update.
     "move": "change",
 }
 _METHOD_ACTIONS: Final[dict[str, str]] = {
@@ -900,10 +900,10 @@ class Access:
     :param write: who may change which (readable) rows — ``update``,
         ``partial_update``, ``destroy`` and unsafe custom actions.
     :param create: who may create; defaults to ``write``'s request gate.
-    :param delete: who may delete which (readable) rows (experimental);
+    :param delete: who may delete which (readable) rows;
         defaults to ``write``.
     :param assign: who may set an owner field (``Owned`` in ``write`` or
-        ``create``) to another user (experimental). ``None``, the default:
+        ``create``) to another user. ``None``, the default:
         nobody, the owner is always the caller and the field is read-only.
         Declared, the field is writable and optional: left out it is the
         caller, set to someone else by a caller ``assign`` does not admit it

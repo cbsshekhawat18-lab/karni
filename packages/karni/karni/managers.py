@@ -221,7 +221,7 @@ class BaseQuerySet(TimestampedQuerySet, SoftDeleteQuerySet, AuditedQuerySet):
 
 
 class TreeQuerySet(BaseQuerySet):
-    """Experimental. :class:`BaseQuerySet` plus the walks of a :class:`karni.models.TreeModel`.
+    """:class:`BaseQuerySet` plus the walks of a :class:`karni.models.TreeModel`.
 
     ``roots()`` and ``children(node)`` are plain filters. ``descendants()``,
     ``ancestors()`` and ``subtree_ids()`` each run one cycle-safe recursive
@@ -451,7 +451,7 @@ class BaseManager(ScopedManagerMixin, models.Manager.from_queryset(BaseQuerySet)
 
 
 class TreeManager(ScopedManagerMixin, models.Manager.from_queryset(TreeQuerySet)):  # type: ignore[misc]
-    """Experimental. Default manager of :class:`karni.models.TreeModel` (:class:`TreeQuerySet`)."""
+    """Default manager of :class:`karni.models.TreeModel` (:class:`TreeQuerySet`)."""
 
 
 # deprecated aliases (removed in 1.0)

@@ -1,4 +1,4 @@
-"""Experimental. Cosmetics: the shop, the items a player owns, what each slot has equipped.
+"""Cosmetics: the shop, the items a player owns, what each slot has equipped.
 
 :func:`buy` spends the item's price from the player's wallet and gives the
 item, in one transaction: a player never pays without getting it, nor gets

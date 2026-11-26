@@ -1,4 +1,4 @@
-"""One version line for karni, karni-cli and the first-party modules (experimental).
+"""One version line for karni, karni-cli and the first-party modules.
 
 Karni's packages are released in lockstep: ``karni``, ``karni-cli`` and every
 module of this repository carry one version, and a module's range on karni is

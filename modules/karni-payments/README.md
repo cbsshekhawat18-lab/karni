@@ -57,7 +57,7 @@ then `make migrate`. Register `https://<host>/payments/webhook/stripe/` (or
 | `KARNI_PAYMENTS_CHECKOUT_VALIDATOR` | pass-through | dotted path called with `(user=, amount=, currency=, metadata=)` **before** a Payment exists. Set it, and never trust client amounts |
 | `KARNI_PAYMENTS_EVENT_HANDLER` | `karni_payments.services.apply_event` | dotted path the webhook task calls (the state-machine escape hatch) |
 | `KARNI_PAYMENTS_ALLOWED_REDIRECTS` | `[]` | extra origins allowed for checkout redirect URLs (on top of `KARNI_FRONTEND_URL`) |
-| `KARNI_PAYMENTS_TEST_CHECKOUT_PAGE` | `None` | experimental: the test provider's checkout page. `None` serves it while `DEBUG` is on, `True` always, `False` never |
+| `KARNI_PAYMENTS_TEST_CHECKOUT_PAGE` | `None` | the test provider's checkout page. `None` serves it while `DEBUG` is on, `True` always, `False` never |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | `""` | validated lazily at provider use |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` / `RAZORPAY_WEBHOOK_SECRET` | `""` | validated lazily at provider use |
 
@@ -96,7 +96,7 @@ receiver that raises undoes the change, and the webhook task retries. A
 project that replaces the state machine sends them with
 `karni_payments.events.announce(row, source)`.
 
-## Trying a checkout in the browser (experimental)
+## Trying a checkout in the browser
 
 With `KARNI_PAYMENTS_PROVIDER = "test"` and `DEBUG` on, a checkout started in
 a request points at `/payments/test-checkout/<session>/` on that host

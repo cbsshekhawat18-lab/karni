@@ -1,5 +1,5 @@
 /**
- * Experimental. The staff side of "one person" (karni.people):
+ * The staff side of "one person" (karni.people):
  *
  * - `<PeoplePage>`: `/people`, every person the caller's grants reach, with
  *   search, sorting, paging and a column per person fact the installed
@@ -42,7 +42,7 @@ import { useBusiness } from "./audience";
 import { personTabs, type PersonTab } from "./registry";
 import { Timeline } from "./timeline";
 
-/** Experimental. One person fact a part contributes (`GET /people/facts/`). */
+/** One person fact a part contributes (`GET /people/facts/`). */
 export interface PersonFact {
   name: string;
   label: string;
@@ -52,7 +52,7 @@ export interface PersonFact {
   description: string;
 }
 
-/** Experimental. The person facts the installed parts contribute. */
+/** The person facts the installed parts contribute. */
 export function usePersonFacts() {
   const client = useKarniClient();
   return useQuery<PersonFact[]>({
@@ -63,7 +63,7 @@ export function usePersonFacts() {
   });
 }
 
-/** Experimental. A fact's value in words, by its kind (money in the business's currency). */
+/** A fact's value in words, by its kind (money in the business's currency). */
 export function factText(fact: PersonFact, value: unknown, currency: string): string {
   if (value === null || value === undefined || value === "") return "–";
   switch (fact.kind) {
@@ -118,7 +118,7 @@ export interface PeoplePageProps {
   siteName?: string;
 }
 
-/** Experimental. `/people`: the people the caller may read, with the facts of every installed part. */
+/** `/people`: the people the caller may read, with the facts of every installed part. */
 export function PeoplePage({
   label = "People",
   description,
@@ -527,7 +527,7 @@ export interface PersonPageProps {
   siteName?: string;
 }
 
-/** Experimental. `/people/<id>`: one person across every installed part. */
+/** `/people/<id>`: one person across every installed part. */
 export function PersonPage({
   id,
   navigate,

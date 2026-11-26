@@ -57,7 +57,7 @@ apply codemods and list the manual steps. This file is the human summary.
   gets the step without a link, and a project with no model of its own keeps the old
   choice.
 
-- **Changed (experimental): a new project holds karni and its modules at one version line,
+- **Changed: a new project holds karni and its modules at one version line,
   and a check says when they drift.** `karni new` wrote `karni`, `karni-site` and every
   module bare, so installing an extra for `karni-ai` in a 0.5 project moved karni to 0.6,
   and a server installing from the same `pyproject.toml` got whatever was newest that day.
@@ -98,7 +98,7 @@ apply codemods and list the manual steps. This file is the human summary.
   renders is *not seen* and never called an orphan, and `KARNI_SITE_CODE_BLOCKS` names the
   keys your own code stores.
 
-- **Added (experimental): `karni.E971` and `karni.W971` find a `LANGUAGES` code Django cannot
+- **Added: `karni.E971` and `karni.W971` find a `LANGUAGES` code Django cannot
   describe at startup.** A code with a `locale/<code>/` folder but no entry in
   `django.conf.locale.LANG_INFO` (`fil`, for one) makes django-unfold's user menu raise
   `KeyError: 'Unknown language code fil.'`, and the menu is on every admin page, whether or
@@ -205,6 +205,49 @@ apply codemods and list the manual steps. This file is the human summary.
   open from their addresses as before. Without `KARNI_ADMIN_MENU`, or with an
   `UNFOLD["SIDEBAR"]` of the project's own, the home page is unchanged. See
   [the side menu](docs/admin.md#the-side-menu).
+
+- **Changed: a name is stable once it is used for real, and the experimental mark
+  is shown once per feature** ([stability](docs/stability.md#experimental-names)).
+  Real use counts: a real project built on Karni (recorded without its name) or an
+  example, a recipe, the scaffold or a module in this repository. The mark is in three
+  places only: the feature's line in `docs/stability.md`, one note at the top of each
+  docs section that describes it, and the docstring of its public entry points. It is
+  no longer on helpers, settings, CLI help, error texts or table rows, and the OpenAPI
+  descriptions, the reference and the generated pages no longer print it.
+  `scripts/check_experimental.py` (with `scripts/experimental.toml`) checks the rule,
+  in CI and in karni-cli's tests. No name changes, no behaviour changes.
+- **Stable now: the features used for real.** The promise covers them from this
+  release on: sign-in with an ID token, sign-in with a code sent by email, terms
+  acceptance, demo mode, integer primary keys (with the `API:` and `KEYS:` lines of
+  `karni context`), per-user grants, search across models, the app spec and `karni
+  build`, aggregations, saved charts (karni-charts), page blocks, field groups and
+  column sets, names, links and rights on resource pages, AI extraction (karni-ai;
+  `@karni/ai-ui` stays experimental), `karni.mail`, `karni.placeholder`, the module
+  catalog (`karni remove` stays experimental), tree models and the tree scope,
+  navigation from data (named menus stay experimental), taxonomies, suggestions from
+  code, context slices and the check cache, karni-reports and karni-storage (their
+  React packages stay experimental), karni-payments' test checkout page, API
+  versions, health checks (`/healthz`, `/readyz`) and `manage.py karni_publish_web`.
+  The manifests of karni-ai, karni-charts, karni-reports and karni-storage and the
+  built-in feature manifests say `stable`. The full list with each name is in
+  [stability](docs/stability.md#experimental-names), under "Stable since 0.7.1".
+- **Stays experimental, each with its reason in the list:** the game side, the
+  built-in recipes, the family and its screens, the /new-app flow, clarifying
+  questions, external tables and a second database, pages behind a capture without a
+  model, the 0.6.0 family foundation (family events, timeline, notifications,
+  preferences, people), karni-commerce and `@karni/commerce-ui`, home tiles per role,
+  row rules and row actions, catalogues, money and page titles, karni-payments'
+  signals, volume seeding, the scaling settings, query plans, `@karni/ai-ui`,
+  `@karni/reports-ui`, `@karni/storage-ui`, `ResourceBoard`, `ResourceCalendar` and
+  `karni remove`.
+- **Changed: the reference's statuses.** `experimental` means one thing, the
+  experimental tier. A capability that keeps the promise but that no project or
+  example uses yet is `tested`. A capability used by a private project shows "a real
+  project (private)" as its evidence.
+- **Fixed: docs/stability.md listed several experimental features under "Stable
+  since 0.4.1".** Suggestions from code, the tooling for large projects, karni-reports,
+  karni-storage, karni-commerce, karni-game, `@karni/game`, API versions and health
+  checks had been added below that heading by mistake. Each is now where it belongs.
 
 ## 0.7.0 (2026-11-26)
 

@@ -32,7 +32,7 @@ function SearchIcon(props: IconProps): React.ReactElement {
   );
 }
 
-/** Experimental. What the `Trigger` slot (the button that opens the palette) receives. */
+/** What the `Trigger` slot (the button that opens the palette) receives. */
 export interface GlobalSearchTriggerProps {
   onClick: () => void;
   /** The shortcut as shown ("⌘K", "Ctrl K"), or null when it is off. */
@@ -41,7 +41,7 @@ export interface GlobalSearchTriggerProps {
   label: string;
 }
 
-/** Experimental. What the `ResultLink` slot (one hit, a listbox option) receives. */
+/** What the `ResultLink` slot (one hit, a listbox option) receives. */
 export interface GlobalSearchResultLinkProps<R extends string = string> {
   hit: GlobalSearchHit<R>;
   href: string;
@@ -56,7 +56,7 @@ export interface GlobalSearchResultLinkProps<R extends string = string> {
   children: React.ReactNode;
 }
 
-/** Experimental. The parts of the palette a project can replace. */
+/** The parts of the palette a project can replace. */
 export interface GlobalSearchSlots<R extends string = string> {
   /** The button in the header. `() => null` keeps only the shortcut. */
   Trigger: React.ComponentType<GlobalSearchTriggerProps>;
@@ -64,7 +64,7 @@ export interface GlobalSearchSlots<R extends string = string> {
   ResultLink: React.ComponentType<GlobalSearchResultLinkProps<R>>;
 }
 
-/** Experimental. The props of GlobalSearch. */
+/** The props of GlobalSearch. */
 export interface GlobalSearchProps<R extends string = string> {
   /** Controlled open state (pair with onOpenChange). */
   open?: boolean;
@@ -95,17 +95,17 @@ export interface GlobalSearchProps<R extends string = string> {
   /** Replaces the Trigger or the ResultLink. See GlobalSearchSlots. */
   slots?: Partial<GlobalSearchSlots<R>>;
   /**
-   * Experimental. The page of every result for a query (`(q) => "/search?q=" + q`):
+   * The page of every result for a query (`(q) => "/search?q=" + q`):
    * the palette then ends with a "See every result" link.
    */
   allResultsHref?: (query: string) => string;
-  /** Experimental. Follows the "See every result" link with your router (default: a page load). */
+  /** Follows the "See every result" link with your router (default: a page load). */
   navigate?: (to: string) => void;
   /** Extra classes for the trigger's wrapper. */
   className?: string;
 }
 
-/** Experimental. The groups of one part (a part's app label, its name, its resources' groups). */
+/** The groups of one part (a part's app label, its name, its resources' groups). */
 export interface GlobalSearchPart<R extends string = string> {
   part: string;
   label: string;
@@ -113,7 +113,7 @@ export interface GlobalSearchPart<R extends string = string> {
 }
 
 /**
- * Experimental. The groups of a search, part by part: each part where its
+ * The groups of a search, part by part: each part where its
  * best group came, its groups in the server's order (best hit first). A
  * server that does not name parts gives one part with every group.
  */
@@ -173,13 +173,13 @@ function DefaultResultLink<R extends string>(
   );
 }
 
-/** Experimental. The default pieces of the palette, for wrapping one. */
+/** The default pieces of the palette, for wrapping one. */
 export const defaultGlobalSearchSlots: GlobalSearchSlots = {
   Trigger: DefaultTrigger,
   ResultLink: DefaultResultLink,
 };
 
-/** Experimental. The default link of a hit: `/<resource>/<id>`. */
+/** The default link of a hit: `/<resource>/<id>`. */
 export function defaultHitHref(hit: GlobalSearchHit): string {
   return `/${hit.resource}/${encodeURIComponent(String(hit.id))}`;
 }
@@ -192,7 +192,7 @@ interface Option<R extends string> {
 const NO_GROUPS: never[] = [];
 
 /**
- * Experimental. A command palette over cross-model search (`GET /search/`).
+ * A command palette over cross-model search (`GET /search/`).
  *
  * Cmd+K (macOS) or Ctrl+K opens it, as does the trigger button. Typing
  * searches every model that declares `class Karni: search`, after a short

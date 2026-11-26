@@ -1,5 +1,5 @@
 /**
- * Experimental. Who the signed-in person is to a project of parts, and what
+ * Who the signed-in person is to a project of parts, and what
  * the business says about itself.
  *
  * The family has two roles of its own: `admin` and `customer`, the one
@@ -18,13 +18,13 @@ import { useContext } from "react";
 import { AuthContext } from "../../auth/provider";
 import { useKarniClient } from "../../schema/provider";
 
-/** Experimental. Who is looking: not known yet, not signed in, a buyer, or the business. */
+/** Who is looking: not known yet, not signed in, a buyer, or the business. */
 export type Audience = "loading" | "visitor" | "customer" | "staff";
 
-/** Experimental. The roles that keep a signed-in person a customer: the family's `customer`. */
+/** The roles that keep a signed-in person a customer: the family's `customer`. */
 export const CUSTOMER_ROLES: readonly string[] = ["customer"];
 
-/** Experimental. The audience of a session: `staff` once a role beyond `customerRoles` is held. */
+/** The audience of a session: `staff` once a role beyond `customerRoles` is held. */
 export function audienceOf(
   status: "loading" | "authenticated" | "anonymous" | undefined,
   roles: readonly string[],
@@ -35,14 +35,14 @@ export function audienceOf(
   return roles.some((role) => !customerRoles.includes(role)) ? "staff" : "customer";
 }
 
-/** Experimental. The audience of the signed-in person (`visitor` outside `AuthProvider`). */
+/** The audience of the signed-in person (`visitor` outside `AuthProvider`). */
 export function useAudience(customerRoles: readonly string[] = CUSTOMER_ROLES): Audience {
   const auth = useContext(AuthContext);
   if (auth === null) return "visitor";
   return audienceOf(auth.status, auth.roles, customerRoles);
 }
 
-/** Experimental. What `GET /preferences/public/` says about the business, open to visitors. */
+/** What `GET /preferences/public/` says about the business, open to visitors. */
 export interface BusinessDetails {
   name: string;
   legal_name: string;
@@ -58,11 +58,11 @@ export interface BusinessDetails {
   tax_number?: string;
 }
 
-/** Experimental. The cache key of the business's public details. */
+/** The cache key of the business's public details. */
 export const BUSINESS_QUERY_KEY = ["karni", "$business"] as const;
 
 /**
- * Experimental. The business's public details (karni.preferences), read once
+ * The business's public details (karni.preferences), read once
  * and kept for 5 minutes. A failure is not retried: a project without the
  * preferences contract answers 404, and the screens keep their defaults.
  */
@@ -80,7 +80,7 @@ export function useBusiness(): UseQueryResult<BusinessDetails> {
 const STARTING_TITLE = typeof document === "undefined" ? "" : document.title;
 
 /**
- * Experimental. The business's name as Settings, Details has it, else
+ * The business's name as Settings, Details has it, else
  * `fallback`, else the page's title when the app started (the project's
  * name, which `karni new` writes into index.html).
  */

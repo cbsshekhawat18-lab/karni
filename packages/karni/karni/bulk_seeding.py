@@ -101,24 +101,24 @@ ROWS_PER_SECOND: Final = 4000
 
 
 def bulk_threshold() -> int:
-    """Experimental. ``KARNI_SEED_BULK_THRESHOLD``, else :data:`BULK_THRESHOLD`."""
+    """``KARNI_SEED_BULK_THRESHOLD``, else :data:`BULK_THRESHOLD`."""
     value = getattr(settings, "KARNI_SEED_BULK_THRESHOLD", None)
     return int(value) if value else BULK_THRESHOLD
 
 
 def batch_size() -> int:
-    """Experimental. ``KARNI_SEED_BATCH_SIZE``, else :data:`DEFAULT_BATCH_SIZE`."""
+    """``KARNI_SEED_BATCH_SIZE``, else :data:`DEFAULT_BATCH_SIZE`."""
     value = getattr(settings, "KARNI_SEED_BATCH_SIZE", None)
     return int(value) if value else DEFAULT_BATCH_SIZE
 
 
 def volume_users(volume: int) -> int:
-    """Experimental. Users a volume run makes: one per hundred rows, at least three."""
+    """Users a volume run makes: one per hundred rows, at least three."""
     return max(3, math.ceil(volume / 100))
 
 
 def time_class(rows: int) -> str:
-    """Experimental. How long seeding ``rows`` takes in words: ``seconds``, ``minutes``, ..."""
+    """How long seeding ``rows`` takes in words: ``seconds``, ``minutes``, ..."""
     seconds = rows / ROWS_PER_SECOND
     if seconds < 15:
         return "seconds"
@@ -133,7 +133,7 @@ def time_class(rows: int) -> str:
 
 
 class Ledger:
-    """Experimental. How many rows each table held when a seed run finished, per database.
+    """How many rows each table held when a seed run finished, per database.
 
     ``.karni/local/seeded.json`` (machine-local, never committed). A table
     whose row count differs from the recorded one holds rows the seeder did
@@ -258,7 +258,7 @@ class _Pooled(BaseDeclaration):
 
 
 class BulkSeeder:
-    """Experimental. Builds a model's rows with the run's factory and writes them in batches.
+    """Builds a model's rows with the run's factory and writes them in batches.
 
     One per run (:class:`karni.seeding._Run` makes it). Override any method
     and pass ``bulk=YourBulkSeeder`` to :func:`karni.seeding.seed`.

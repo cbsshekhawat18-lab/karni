@@ -1,4 +1,4 @@
-"""``KARNI_NAVIGATION`` at startup (experimental): one error lists every problem and its code."""
+"""``KARNI_NAVIGATION`` at startup: one error lists every problem and its code."""
 
 from __future__ import annotations
 

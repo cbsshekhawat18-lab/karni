@@ -1,5 +1,5 @@
 /**
- * Experimental. How a protected file field (`x-karni-storage` with `protected:
+ * How a protected file field (`x-karni-storage` with `protected:
  * true`) is shown by ResourceDetail and ResourceTable. @karni/ui knows nothing
  * of buckets or signed links: the storage module's package (@karni/storage-ui)
  * registers its `ProtectedFileLink` when it is imported, and the screens then
@@ -20,7 +20,7 @@ export interface ProtectedFileLinkRenderProps {
 let registered: React.ComponentType<ProtectedFileLinkRenderProps> | null = null;
 
 /**
- * Experimental. Sets the component that shows a protected file field. Called by
+ * Sets the component that shows a protected file field. Called by
  * @karni/storage-ui when it is imported. A project may call it with its own link
  * (e.g. one that opens the file in a viewer). Pass `null` to remove it.
  */

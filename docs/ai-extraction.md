@@ -4,11 +4,6 @@ description: "karni-ai, an optional Karni module: a language model reads text, a
 
 # AI extraction (karni-ai)
 
-!!! warning "Experimental"
-    The karni-ai module and `@karni/ai-ui` are
-    [experimental](stability.md#experimental-names): their names may change
-    in a minor release, with a CHANGELOG entry.
-
 karni-ai turns a source into rows of one of your resources. The source is a
 text, a web page or a PDF. A language model reads it and answers JSON that
 follows the resource's own schema. Karni validates the answer and hands the
@@ -267,6 +262,12 @@ REST_FRAMEWORK = {
 
 ## Jobs other than extraction
 
+!!! warning "Experimental"
+    `StructuredRequest.metadata`, `Usage.unit`, `AICall.kind` and `AICall.unit`,
+    a price's `unit`, `spent(unit=)` and `log_call(kind=)` are
+    [experimental](stability.md#experimental-names): a name may change in a
+    minor release, with a CHANGELOG entry. The rest of karni-ai is stable.
+
 Does karni-ai support providers for other jobs, such as a translation
 service? **Yes, as parts to build on, not as features.** karni-ai ships one
 job, extraction: its endpoint, its prompt and its `Extractor`. What that job
@@ -318,6 +319,10 @@ and the checks `AI001` to `AI005` look at the extraction provider only.
 Calls logged before these fields existed are extractions counted in tokens.
 
 ## React
+
+!!! warning "Experimental"
+    `@karni/ai-ui` is [experimental](stability.md#experimental-names): a name may
+    change in a minor release, with a CHANGELOG entry.
 
 `@karni/ai-ui` has `ExtractButton`: a button that opens a dialog with a
 form per source, shows the preview (the proposed rows, the problems, the

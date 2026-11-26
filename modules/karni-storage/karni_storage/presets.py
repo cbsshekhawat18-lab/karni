@@ -52,7 +52,7 @@ SETTING_CODE: Final = "STORE005"
 
 @dataclass(frozen=True)
 class Preset:
-    """Experimental. What one S3-compatible service needs from core's S3 backend.
+    """What one S3-compatible service needs from core's S3 backend.
 
     ``endpoint`` is a template with ``{region}`` or ``{account_id}``, empty for
     AWS's own endpoint, or ``"setting"`` when the endpoint is the project's
@@ -108,7 +108,7 @@ PRESETS: Final[dict[str, Preset]] = {
         ),
     )
 }
-"""Experimental. Every preset, by the name ``KARNI_STORAGE_PROVIDER`` takes."""
+"""Every preset, by the name ``KARNI_STORAGE_PROVIDER`` takes."""
 
 #: Environment variables that say boto3 finds the credentials itself (a role, a profile).
 _CHAIN_MARKERS: Final = (
@@ -174,7 +174,7 @@ def upload_method(found: Preset | None = None) -> str:
 
 
 def s3_options() -> dict[str, Any]:
-    """Experimental. The keyword arguments core's S3 backend takes for protected files.
+    """The keyword arguments core's S3 backend takes for protected files.
 
     The preset's endpoint, region and addressing style, SigV4 signing (every
     preset signs that way), the bucket and key prefix of protected files,
@@ -205,7 +205,7 @@ def _has_chain_credentials() -> bool:
 
 
 def problems() -> list[str]:
-    """Experimental. What stops the preset from working, each message starting with its code.
+    """What stops the preset from working, each message starting with its code.
 
     Empty when protected files stay on local storage (``KARNI_STORAGE`` is
     not ``"s3"``) except for an unknown preset name or upload method, which

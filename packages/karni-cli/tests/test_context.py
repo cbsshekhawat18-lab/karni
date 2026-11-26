@@ -235,7 +235,7 @@ def test_routes_read_calls_that_span_lines() -> None:
     assert add_route(added, entry, filename="urls.py", manual="") is None
 
 
-# slices (experimental): --summary, --app, --model, --max-tokens
+# slices: --summary, --app, --model, --max-tokens
 
 SUMMARY = (
     "SUMMARY: 2 apps, 3 models, 2 viewsets. One app: karni context --app <label>. One model: "

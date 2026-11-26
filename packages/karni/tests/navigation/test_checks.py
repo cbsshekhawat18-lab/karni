@@ -1,4 +1,4 @@
-"""``karni check`` on the menu (experimental): each route has a page, each requirement a permission.
+"""``karni check`` on the menu: each route has a page, each requirement a permission.
 
 The frontend is a ``routes.tsx`` written to a temporary directory and named
 in ``KARNI_NAVIGATION_PAGES``, the way a scaffold registers its pages.

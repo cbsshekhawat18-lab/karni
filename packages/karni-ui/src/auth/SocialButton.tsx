@@ -1,5 +1,5 @@
 /**
- * Experimental. SocialButton: "Continue with Google" (or Microsoft, Apple, ...) for Karni.
+ * SocialButton: "Continue with Google" (or Microsoft, Apple, ...) for Karni.
  *
  * `getIdToken` is the app's own call into the provider's SDK (Google Identity
  * Services, MSAL, Sign in with Apple JS) and resolves with the ID token, and
@@ -23,19 +23,19 @@ import { useSocialLogin } from "./useSocialLogin";
 
 registerComponentRole("social-sign-in", "SocialButton");
 
-/** Experimental. What `getIdToken` resolves with: the token, or the token with its nonce and name. */
+/** What `getIdToken` resolves with: the token, or the token with its nonce and name. */
 export interface SocialIdToken extends SocialSignInOptions {
   idToken: string;
 }
 
-/** Experimental. What the `Error` slot receives: the failure, already worded for this provider. */
+/** What the `Error` slot receives: the failure, already worded for this provider. */
 export interface SocialButtonErrorProps extends ErrorSlotProps {
   /** Put this id on the message's root: the button's `aria-describedby` points at it. */
   id: string;
   described: KarniErrorDescription;
 }
 
-/** Experimental. What the `Approval` slot receives when the new account waits for an administrator. */
+/** What the `Approval` slot receives when the new account waits for an administrator. */
 export interface SocialButtonApprovalProps {
   /** Put this id on the message's root: the button's `aria-describedby` points at it. */
   id: string;
@@ -45,7 +45,7 @@ export interface SocialButtonApprovalProps {
   detail: string;
 }
 
-/** Experimental. The replaceable parts of SocialButton. `defaultSocialButtonSlots` holds Karni's own. */
+/** The replaceable parts of SocialButton. `defaultSocialButtonSlots` holds Karni's own. */
 export interface SocialButtonSlots {
   Error: React.ComponentType<SocialButtonErrorProps>;
   Approval: React.ComponentType<SocialButtonApprovalProps>;
@@ -116,7 +116,7 @@ function refused(
 }
 
 /**
- * Experimental. A SocialButton failure in plain words, from the Karni code of the refusal
+ * A SocialButton failure in plain words, from the Karni code of the refusal
  * (E215 to E227), never a status code. Exported for a project's own button.
  */
 export function describeSocialError(error: unknown, providerName: string): KarniErrorDescription {
@@ -251,14 +251,14 @@ function DefaultSocialApproval({ id }: SocialButtonApprovalProps): React.ReactEl
   );
 }
 
-/** Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. */
+/** Karni's own slots, exported so a project can wrap one instead of rewriting it. */
 export const defaultSocialButtonSlots: SocialButtonSlots = {
   Error: DefaultSocialError,
   Approval: DefaultSocialApproval,
 };
 
 /**
- * Experimental. A "Continue with <provider>" button that signs in with the provider's ID token.
+ * A "Continue with <provider>" button that signs in with the provider's ID token.
  *
  * Accessible: a real button whose name is the label, `aria-busy` and a
  * spoken "Signing in with Google…" while pending, and the outcome (a refusal

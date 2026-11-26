@@ -1,4 +1,5 @@
-"""Row actions: named ``POST <resource>/<id>/<name>/`` steps, legal in some states and roles.
+"""Experimental. Row actions: named ``POST <resource>/<id>/<name>/`` steps, legal in
+some states and roles.
 
 A lifecycle is moved by named actions (pay, ship, cancel, refund), not by a
 free ``PATCH`` of its state. A viewset declares them once::

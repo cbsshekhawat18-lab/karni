@@ -20,10 +20,10 @@ import { karniKeys } from "./keys";
 import { buildListQuery, listPath, normalizeParams } from "./params";
 import type { FilterValue } from "./types";
 
-/** Experimental. What an aggregate computes per group. */
+/** What an aggregate computes per group. */
 export type AggregateMetric = "count" | "sum" | "avg" | "min" | "max" | "distinct_count";
 
-/** Experimental. The query of `useAggregate`: the action's parameters plus the list's filters. */
+/** The query of `useAggregate`: the action's parameters plus the list's filters. */
 export interface AggregateParams {
   /** A declared field, relation path or expression. A date takes `:year`, `:quarter` or `:month`. */
   groupBy: string;
@@ -43,10 +43,10 @@ export interface AggregateParams {
   search?: string;
 }
 
-/** Experimental. A JSON key: a value, a related row's key, or a date bucket (`2024-Q1`). */
+/** A JSON key: a value, a related row's key, or a date bucket (`2024-Q1`). */
 export type AggregateKey = string | number | boolean | null;
 
-/** Experimental. One group of the first dimension. */
+/** One group of the first dimension. */
 export interface AggregateCategory {
   key: AggregateKey;
   label: string;
@@ -54,14 +54,14 @@ export interface AggregateCategory {
   other: boolean;
 }
 
-/** Experimental. One series: a value per category, in the categories' order. */
+/** One series: a value per category, in the categories' order. */
 export interface AggregateSeries {
   key: AggregateKey;
   label: string;
   values: ReadonlyArray<number | null>;
 }
 
-/** Experimental. The response of `GET <resource>/aggregate/`. */
+/** The response of `GET <resource>/aggregate/`. */
 export interface AggregateResult {
   group_by: string;
   metric: AggregateMetric;
@@ -75,7 +75,7 @@ export interface AggregateResult {
   series: readonly AggregateSeries[];
 }
 
-/** Experimental. `params` as the query string the aggregate action reads. */
+/** `params` as the query string the aggregate action reads. */
 export function buildAggregateQuery(
   params: AggregateParams,
 ): Record<string, string | readonly string[]> {
@@ -89,7 +89,7 @@ export function buildAggregateQuery(
   return query;
 }
 
-/** Experimental. The query key of one aggregate (under the resource's invalidation root). */
+/** The query key of one aggregate (under the resource's invalidation root). */
 export function aggregateKey(resource: string, params: AggregateParams): readonly unknown[] {
   return [
     ...karniKeys.resource(resource),
@@ -98,7 +98,7 @@ export function aggregateKey(resource: string, params: AggregateParams): readonl
   ] as const;
 }
 
-/** Experimental. Fetches grouped counts and sums of a resource (`GET /<resource>/aggregate/`). */
+/** Fetches grouped counts and sums of a resource (`GET /<resource>/aggregate/`). */
 export function useAggregate(
   resource: string,
   params: AggregateParams,

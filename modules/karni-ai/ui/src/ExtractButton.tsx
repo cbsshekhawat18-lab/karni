@@ -1,5 +1,5 @@
 /**
- * <ExtractButton>: read rows of a resource from a text, a web page or a PDF. Experimental.
+ * <ExtractButton>: read rows of a resource from a text, a web page or a PDF.
  *
  * The button opens a dialog with one form per source. Extract posts it to
  * `POST /api/ai/extract/` (`useExtract`) and the dialog then shows the
@@ -37,7 +37,7 @@ import { ExtractPreview, type ExtractPreviewSlots } from "./ExtractPreview";
 import { extractRefusal, useExtract } from "./hooks";
 import type { ExtractInput, ExtractResult, ExtractSourceKind } from "./types";
 
-/** Experimental. What the `Error` slot receives: why the extraction was refused or failed. */
+/** What the `Error` slot receives: why the extraction was refused or failed. */
 export interface ExtractErrorProps {
   error: unknown;
   resourceLabel: string;
@@ -215,7 +215,7 @@ function SourceForm({ sources, pending, onSubmit }: SourceFormProps): React.Reac
   );
 }
 
-/** Experimental. A button that reads rows from a source into the import preview. */
+/** A button that reads rows from a source into the import preview. */
 export function ExtractButton(props: ExtractButtonProps): React.ReactElement {
   const {
     resource,

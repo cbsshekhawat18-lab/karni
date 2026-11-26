@@ -1,4 +1,4 @@
-"""Experimental. Notifications in the admin: edited emails, the inboxes, switches, unsubscribes.
+"""Notifications in the admin: edited emails, the inboxes, switches, unsubscribes.
 
 An edited email is checked by the restricted engine before it is saved, as the
 Settings page checks it. Notifications are written by parts, never by hand: the

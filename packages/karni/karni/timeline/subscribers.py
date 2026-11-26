@@ -1,4 +1,4 @@
-"""Experimental. The core subscriber that turns declared family events into timeline entries.
+"""The core subscriber that turns declared family events into timeline entries.
 
 :func:`connect` subscribes once to every declared event (each version) whose
 declaration names a timeline title (``declare(..., timeline=...)``). Each

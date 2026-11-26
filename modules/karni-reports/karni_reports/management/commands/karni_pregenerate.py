@@ -1,4 +1,4 @@
-"""``manage.py karni_pregenerate <report>`` (experimental): render a report ahead of requests.
+"""``manage.py karni_pregenerate <report>``: render a report ahead of requests.
 
 Renders the report for every row its ``get_queryset()`` returns, for the
 rows ``--ids`` names, or with ``--stale`` only for the rows whose last file
@@ -50,7 +50,7 @@ class Counts:
 
 class Command(BaseCommand):
     help = (
-        "Experimental. Render a report ahead of requests: for every row, given ids, or only "
+        "Render a report ahead of requests: for every row, given ids, or only "
         "stale ones, in batches, with counts and times."
     )
 

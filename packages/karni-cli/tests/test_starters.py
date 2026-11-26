@@ -1,4 +1,4 @@
-"""Game starters (experimental): karni starters list and show, karni new --genre.
+"""Game starters: karni starters list and show, karni new --genre.
 
 The starters are the blank start built into karni-cli and the karni.starters
 entry points (karni-game ships the runner). These tests write projects and read

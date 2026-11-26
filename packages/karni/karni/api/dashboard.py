@@ -1,4 +1,4 @@
-"""Experimental. ``GET /api/dashboard/``: the home tiles the requesting person sees.
+"""``GET /api/dashboard/``: the home tiles the requesting person sees.
 
 ``{"tiles": [{"key", "title", "kind", "size", "order", "description", "link",
 "resource", "filters", "columns", "limit", "data"}, ...]}`` in order
@@ -29,7 +29,7 @@ __all__ = ["DashboardSerializer", "DashboardView", "TileSerializer"]
 
 
 class TileSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. One home tile."""
+    """One home tile."""
 
     key = serializers.CharField()
     title = serializers.CharField()
@@ -50,7 +50,7 @@ class DashboardSerializer(serializers.Serializer):  # type: ignore[type-arg]
 
 
 class DashboardView(APIView):
-    """Experimental. The home tiles of the requesting person."""
+    """The home tiles of the requesting person."""
 
     permission_classes = [AllowAny]
 

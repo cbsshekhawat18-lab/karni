@@ -53,7 +53,7 @@ cannot work at all.
 | `PhoneField` | `varchar(32)` | `CHECK` E.164 (regex on PostgreSQL, `GLOB` on SQLite) | - | PostgreSQL, SQLite (others: no CHECK, W964) | `models.CharField(max_length=32)` |
 | `CountryField` | `varchar(2)` | `CHECK (col IN (...ISO 3166-1 alpha-2...))` | - | all | `models.CharField(max_length=2, choices=...)` |
 | `CurrencyField` | `varchar(3)` | `CHECK (col IN (...ISO 4217...))` | - | all | `models.CharField(max_length=3, choices=...)` |
-| `MarkdownField` (experimental) | `text` | - | - | all | `models.TextField()` |
+| `MarkdownField` | `text` | - | - | all | `models.TextField()` |
 | `JSONField(queried=True)` | `jsonb` | - | GIN when `queried=True` | GIN on PostgreSQL only (W964) | `models.JSONField` + `GinIndex` |
 | `SearchField(sources=[...])` | generated `tsvector` | - | GIN | PostgreSQL, and elsewhere a plain-text column and portable search (W964) | `GeneratedField(SearchVector(...))` + `GinIndex` |
 | `ArrayField(base_field)` | `type[]` | - | GIN unless `indexed=False` | PostgreSQL only (E964 elsewhere) | `django.contrib.postgres.fields.ArrayField` |
@@ -161,11 +161,6 @@ and each field records the list's `iso_revision`.
 
 ### MarkdownField
 
-!!! warning "Experimental"
-    `MarkdownField`, its `format: markdown` in the OpenAPI schema
-    (`karni.api.formats`) and the `markdown` type of `karni make model` and
-    the spec are [experimental](stability.md#experimental-names).
-
 Long-form text written in markdown: a product's description, a policy, the
 sections of a report. The column is a plain `text` column and the API sends
 and takes the markdown source as written: nothing is rendered on the server.
@@ -187,7 +182,7 @@ class Product(BaseModel):
 - **ResourceDetail** shows it formatted and sanitized, across the width: raw
   HTML in the source shows as text, and no script, event handler or
   `javascript:` link ever reaches the page
-  ([page blocks](ui.md#page-blocks-experimental)).
+  ([page blocks](ui.md#page-blocks)).
 - **ResourceTable** leaves it out of its default columns (long text is no
   column). A column set or a `columns` entry can name it, and it shows a
   one-line excerpt without the markdown marks.
@@ -226,6 +221,12 @@ carries it into the schema the same way.
   and PostgreSQL to migrate. Use `JSONField` for a portable list.
 
 #### Changing a generated field
+
+!!! warning "Experimental"
+    Karni's `makemigrations` and `migrate` commands and
+    `karni.migration_autodetector` are
+    [experimental](stability.md#experimental-names): a name may change in a
+    minor release, with a CHANGELOG entry.
 
 Django cannot alter a generated column in place: changing the `sources`,
 `config` or `weights` of a `SearchField` (or the expression, output field or
@@ -330,7 +331,7 @@ newest first.
 `django.contrib.postgres` indexes with one difference: on another database
 creating them is a commented no-op instead of a syntax error, so one
 migration runs everywhere.
-`TrigramIndex` (experimental) is a `GinIndex` with `gin_trgm_ops` on every
+`TrigramIndex` is a `GinIndex` with `gin_trgm_ops` on every
 field, which serves `ILIKE '%...%'` and pg_trgm's `%`. It creates `pg_trgm`
 first when the database lacks it, and it names itself when added with
 `contribute_index`. `class Karni: search` adds one per searched field

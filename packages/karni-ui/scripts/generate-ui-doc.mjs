@@ -89,40 +89,7 @@ const GROUPS = [
   ],
 ];
 
-/** Components and hooks under the experimental tier (docs/stability.md#experimental-names). */
-const EXPERIMENTAL = new Set([
-  "ResourceGrid",
-  "ResourceBoard",
-  "ResourceCalendar",
-  "SocialButton",
-  "OtpLoginForm",
-  "TermsGate",
-  "DemoNotice",
-  "TreeView",
-  "TreeSelect",
-  "TreeBreadcrumb",
-  "FacetPanel",
-  "GlobalSearch",
-  "FamilyLayout",
-  "Storefront",
-  "BackOffice",
-  "FamilyHome",
-  "FamilyEmptyHome",
-  "PeoplePage",
-  "PersonPage",
-  "Timeline",
-  "InboxBell",
-  "InboxPage",
-  "EmailChoices",
-  "MyAddresses",
-  "SearchPage",
-  "AccountPage",
-  "SignInPage",
-  "SignUpForm",
-  "SettingsPage",
-]);
-
-/** The page blocks (experimental), each with when to use it. */
+/** The page blocks, each with when to use it. */
 const PAGE_BLOCKS = [
   [
     "DashboardGrid",
@@ -172,12 +139,10 @@ function pageBlocks(manifest) {
   const role = (name) =>
     Object.entries(manifest.roles).find(([, component]) => component === name)?.[0];
   const lines = [
-    "## Page blocks (experimental)",
+    // Each heading keeps the anchor of its old title, so old links still land on it.
+    '<a id="page-blocks-experimental"></a>',
     "",
-    '!!! warning "Experimental"',
-    "    The page blocks, `useResourceCounts` and ResourceDetail's `related` prop are",
-    "    [experimental](stability.md#experimental-names): they may change in a minor",
-    "    release, and each change is in the CHANGELOG.",
+    "## Page blocks",
     "",
     "Pages for large apps are dashboards, comparisons and reports, not only resource",
     "tables. These components keep such a page within the 50-line cap",
@@ -221,7 +186,9 @@ function pageBlocks(manifest) {
 /** Related rows by name, record links, buttons by rights, import and bulk edit (shop M2). */
 function namesAndRights() {
   return [
-    "## Names, links and rights on resource pages (experimental)",
+    '<a id="names-links-and-rights-on-resource-pages-experimental"></a>',
+    "",
+    "## Names, links and rights on resource pages",
     "",
     "### How a related row is named",
     "",
@@ -260,7 +227,7 @@ function namesAndRights() {
     "commit), and the table reads its rows again afterwards. `importable={false}`",
     "hides it.",
     "",
-    '`bulkEdit={["price", "stock", "active"]}` (experimental) adds a "Select rows,',
+    '`bulkEdit={["price", "stock", "active"]}` adds a "Select rows,',
     'then set \u2026 to \u2026" line above the table and a bulk action that saves that value',
     "on every selected row, each through the row's own update, so its rules and",
     "history apply and a row the server refuses is marked with the reason. It",
@@ -272,15 +239,9 @@ function namesAndRights() {
 /** Field groups, column sets and MarkdownField: a model with many fields (item 12). */
 function wideModels() {
   return [
-    "## Field groups and column sets (experimental)",
+    '<a id="field-groups-and-column-sets-experimental"></a>',
     "",
-    '!!! warning "Experimental"',
-    "    `Karni.field_groups`, `field_group_layout` and `column_sets`, their",
-    "    `x-karni-field-groups` and `x-karni-column-sets` extensions, the `fieldGroups` and",
-    "    `groupLayout` props of ResourceForm and ResourceDetail, ResourceTable's `columnSets`,",
-    "    `columnSet` and `onColumnSetChange`, and the `FieldGroupDef`, `FieldGroupLayout`,",
-    "    `FieldGroupsDef`, `ColumnSetDef` and `ColumnSetsDef` types are",
-    "    [experimental](stability.md#experimental-names).",
+    "## Field groups and column sets",
     "",
     "A model with a hundred columns and a dozen long markdown sections makes a generated form",
     "or detail page one endless list, and its table a hundred columns. Declare the layout on",
@@ -352,23 +313,22 @@ const HOOKS = {
     "A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.",
   useResourceItem: "One row by id, optionally expanded.",
   useResourceSchemaIfKnown:
-    "Experimental. One resource's parsed schema when it is known, else `undefined`: never throws, and reads nothing outside a `KarniProvider`.",
+    "One resource's parsed schema when it is known, else `undefined`: never throws, and reads nothing outside a `KarniProvider`.",
   useResourceTree:
-    "Experimental. The nested nodes of a tree resource (`GET /<resource>/tree/?root=&depth=`): `{ results, truncated }`, each node with `has_children` and `children` (`null` until loaded).",
-  useResourceChildren:
-    "Experimental. One page of a tree node's children (`GET /<resource>/<id>/children/`).",
+    "The nested nodes of a tree resource (`GET /<resource>/tree/?root=&depth=`): `{ results, truncated }`, each node with `has_children` and `children` (`null` until loaded).",
+  useResourceChildren: "One page of a tree node's children (`GET /<resource>/<id>/children/`).",
   useResourceAncestors:
-    "Experimental. The nodes above a tree node, root first (`GET /<resource>/<id>/ancestors/`).",
+    "The nodes above a tree node, root first (`GET /<resource>/<id>/ancestors/`).",
   useResourceAccessForest:
-    "Experimental. The requester's access forest of a tree resource (`GET /<resource>/access/?permission=`): `{ results, all, truncated }`, the granted nodes with their ancestors and every other root, each with `granted`. `TreeView`'s `access` shows it.",
+    "The requester's access forest of a tree resource (`GET /<resource>/access/?permission=`): `{ results, all, truncated }`, the granted nodes with their ancestors and every other root, each with `granted`. `TreeView`'s `access` shows it.",
   useTreeMutations:
-    "Experimental. `move({ id, parent, position })` (`POST /<resource>/<id>/move/`) and `removeBranch(id)` (`DELETE ?branch=true`) for a tree resource.",
+    "`move({ id, parent, position })` (`POST /<resource>/<id>/move/`) and `removeBranch(id)` (`DELETE ?branch=true`) for a tree resource.",
   useResourceFacets:
-    "Experimental. Rows per node of one taxonomy under the list's filters (`GET /<resource>/facets/?taxonomy=&rollup=`): `{ taxonomy, rollup, results }`, each node `{ id, label, parent, count }`. `FacetPanel` shows it.",
+    "Rows per node of one taxonomy under the list's filters (`GET /<resource>/facets/?taxonomy=&rollup=`): `{ taxonomy, rollup, results }`, each node `{ id, label, parent, count }`. `FacetPanel` shows it.",
   useChangeHistory:
     "One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).",
   useAggregate:
-    "Experimental. Grouped counts and sums of a resource (`GET /<resource>/aggregate/`): `{ groupBy, metric, value, top, stack, series, filters, search }` → `{ categories, series }`, which `<DataChart aggregate>` reads directly.",
+    "Grouped counts and sums of a resource (`GET /<resource>/aggregate/`): `{ groupBy, metric, value, top, stack, series, filters, search }` → `{ categories, series }`, which `<DataChart aggregate>` reads directly.",
   useImportDescribe:
     "The importable fields of a resource and the user's remembered column mapping.",
   useImportJob: "One import job's state. It polls while the backend previews or commits it.",
@@ -379,33 +339,33 @@ const HOOKS = {
   useKarniClient:
     "The `KarniClient` behind every hook, with `client.request(path, { method, body, query })` for custom actions.",
   useAuth:
-    "`{ user, status, login(email, password), logout, refresh }` from `AuthProvider`, and (experimental) `{ terms, termsRequired, acceptTerms(client) }` for terms acceptance.",
+    "`{ user, status, login(email, password), logout, refresh }` from `AuthProvider`, and `{ terms, termsRequired, acceptTerms(client) }` for terms acceptance.",
   usePermission: "`{ hasRole(...names), isAuthenticated }` for gating UI on roles.",
   useOtpLogin:
-    "Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).",
+    "`{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).",
   useSocialLogin:
-    "Experimental. `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).",
+    "`{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).",
   useNavigation:
-    'Experimental. The menu the signed-in user gets (`GET /navigation/`, Django\'s `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `{ menu: "public" }` reads a named menu. `<Layout navSource="server">` renders it.',
+    'The menu the signed-in user gets (`GET /navigation/`, Django\'s `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `{ menu: "public" }` reads a named menu. `<Layout navSource="server">` renders it.',
   useGlobalSearch:
-    "Experimental. `{ q, models, limit }` → `{ query, groups: [{ resource, label, hits: [{ resource, id, title, subtitle, score }] }] }`: cross-model search (`GET /search/`), each model under its own list access. A query under `minLength` (2) sends nothing.",
+    "`{ q, models, limit }` → `{ query, groups: [{ resource, label, hits: [{ resource, id, title, subtitle, score }] }] }`: cross-model search (`GET /search/`), each model under its own list access. A query under `minLength` (2) sends nothing.",
   useToast: "Show a toast through the mounted `Toaster`.",
   useAudience:
-    "Experimental. Who is looking: `loading`, `visitor`, `customer` (only the family's `customer` role) or `staff` (any other role).",
+    "Who is looking: `loading`, `visitor`, `customer` (only the family's `customer` role) or `staff` (any other role).",
   useBusiness:
-    "Experimental. The business's public details (`GET /preferences/public/`): name, address, phone, email, currency, logo.",
+    "The business's public details (`GET /preferences/public/`): name, address, phone, email, currency, logo.",
   useSiteName:
-    "Experimental. The business's name from Settings, Details, else the page title the app started with.",
+    "The business's name from Settings, Details, else the page title the app started with.",
   useInboxUnread:
-    "Experimental. The signed-in person's unread count (`GET /inbox/unread/`), read again every minute; `null` while the inbox is off.",
+    "The signed-in person's unread count (`GET /inbox/unread/`), read again every minute; `null` while the inbox is off.",
   usePersonFacts:
-    "Experimental. The person facts the installed parts contribute (`GET /people/facts/`): `[{ name, label, kind, source }]`.",
+    "The person facts the installed parts contribute (`GET /people/facts/`): `[{ name, label, kind, source }]`.",
   useTimeline:
-    "Experimental. One timeline a page at a time (`GET /timeline/?person=` or `?subject=`, cursor paging, `kinds`).",
+    "One timeline a page at a time (`GET /timeline/?person=` or `?subject=`, cursor paging, `kinds`).",
   useMenu:
-    "Experimental. The entries of one named menu (`GET /navigation/?menu=public`) the signed-in person sees.",
+    "The entries of one named menu (`GET /navigation/?menu=public`) the signed-in person sees.",
   useResourceCounts:
-    "Experimental. `{ data, loading, error, refetch }`: the rows of each resource the user can read, as chart points (one list request each with `page_size=1`).",
+    "`{ data, loading, error, refetch }`: the rows of each resource the user can read, as chart points (one list request each with `page_size=1`).",
   useUnsavedChangesGuard:
     "`{ dirty, setDirty, isDirty, shouldBlock }` for warning before leaving a dirty form. Give `shouldBlock` to your router's blocker and `setDirty` to ResourceForm's `onDirtyChange`.",
 };
@@ -436,10 +396,7 @@ export function render(manifest) {
     for (const name of present) {
       placed.add(name);
       const role = Object.entries(manifest.roles).find(([, component]) => component === name)?.[0];
-      const notes = [role ? `role \`${role}\`` : "", EXPERIMENTAL.has(name) ? "experimental" : ""]
-        .filter(Boolean)
-        .join(", ");
-      lines.push(`- \`${name}\`${notes ? ` (${notes})` : ""}`);
+      lines.push(`- \`${name}\`${role ? ` (role \`${role}\`)` : ""}`);
     }
     lines.push("");
   }

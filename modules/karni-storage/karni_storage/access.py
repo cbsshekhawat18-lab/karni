@@ -32,7 +32,7 @@ __all__ = ["Target", "may_upload", "resolve", "retrieve", "route_for_model"]
 
 @dataclass(frozen=True)
 class Target:
-    """Experimental. A resource of the API and one of its protected fields."""
+    """A resource of the API and one of its protected fields."""
 
     resource: str
     viewset: type[Any]
@@ -49,7 +49,7 @@ def _registry() -> list[tuple[str, type[Any], str]]:
 
 
 def route_for_model(model: type[Any]) -> str | None:
-    """Experimental. The API prefix the first viewset serving ``model`` is routed at."""
+    """The API prefix the first viewset serving ``model`` is routed at."""
     from karni.api.routers import serves_model
 
     for prefix, viewset, _basename in _registry():
@@ -70,7 +70,7 @@ def _not_found(message: str) -> NotFound:
 
 
 def resolve(resource: str, field: str) -> Target:
-    """Experimental. The viewset at ``resource`` and its protected field ``field``.
+    """The viewset at ``resource`` and its protected field ``field``.
 
     :raises rest_framework.exceptions.NotFound: ``STORE010`` when no viewset is
         routed at ``resource`` or ``field`` is not one of its model's protected fields.
@@ -108,7 +108,7 @@ def _hidden(target: Target, request: Any) -> bool:
 
 
 def retrieve(target: Target, request: Any, pk: str) -> Any:
-    """Experimental. The row ``pk`` exactly as the viewset's ``retrieve`` finds it for ``request``.
+    """The row ``pk`` exactly as the viewset's ``retrieve`` finds it for ``request``.
 
     :raises rest_framework.exceptions.NotAuthenticated: or ``PermissionDenied``
         when the viewset's gate refuses the caller.
@@ -124,7 +124,7 @@ def retrieve(target: Target, request: Any, pk: str) -> Any:
 
 
 def may_upload(target: Target, request: Any) -> None:
-    """Experimental. Refuse unless the caller may create or change rows of ``target``.
+    """Refuse unless the caller may create or change rows of ``target``.
 
     The viewset's gate for ``create`` is asked first, then for
     ``partial_update``: a caller allowed either may upload. The row-level

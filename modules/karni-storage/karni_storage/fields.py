@@ -49,7 +49,7 @@ IMAGE_CONTENT_TYPES: Final[tuple[str, ...]] = ("image/jpeg", "image/png", "image
 
 
 def download_path(instance: Any, field_name: str) -> str:
-    """Experimental. ``<prefix>/<resource>/<id>/files/<field>/`` for one row's protected file.
+    """``<prefix>/<resource>/<id>/files/<field>/`` for one row's protected file.
 
     :raises karni.exceptions.KarniImproperlyConfigured: ``STORE020`` when the
         model has no viewset on the API or ``karni_storage.urls`` is not included.
@@ -82,7 +82,7 @@ def download_path(instance: Any, field_name: str) -> str:
 
 
 class ProtectedFieldFile(FieldFile):
-    """Experimental. A protected file's value: its ``url`` is the row's download path.
+    """A protected file's value: its ``url`` is the row's download path.
 
     Override / escape hatch: subclass it and set ``attr_class`` on a field
     subclass to give the file another ``url``.
@@ -95,11 +95,11 @@ class ProtectedFieldFile(FieldFile):
 
 
 class ProtectedImageFieldFile(ImageFieldFile, ProtectedFieldFile):
-    """Experimental. A protected image's value: dimensions, and the download path as ``url``."""
+    """A protected image's value: dimensions, and the download path as ``url``."""
 
 
 class ProtectedFieldMixin:
-    """Experimental. What both protected fields share: the storage, the limits, the deconstruction.
+    """What both protected fields share: the storage, the limits, the deconstruction.
 
     ``isinstance(field, ProtectedFieldMixin)`` is how Karni tells a protected
     field. Override / escape hatch: a field of your own mixes it in first.
@@ -150,7 +150,7 @@ class ProtectedFieldMixin:
 
 
 class ProtectedFileField(ProtectedFieldMixin, models.FileField):
-    """Experimental. A ``FileField`` whose files only the row's readers can download.
+    """A ``FileField`` whose files only the row's readers can download.
 
     Override / escape hatch: ``storage=`` for another backend, ``max_size``
     and ``content_types`` for the limits, ``attr_class`` for the file's ``url``.
@@ -179,7 +179,7 @@ class ProtectedFileField(ProtectedFieldMixin, models.FileField):
 
 
 class ProtectedImageField(ProtectedFieldMixin, models.ImageField):
-    """Experimental. An ``ImageField`` of protected images, with thumbnails.
+    """An ``ImageField`` of protected images, with thumbnails.
 
     Saving a row with a new image queues :func:`karni_storage.tasks.make_thumbnails`
     after the transaction commits, in the sizes ``KARNI_STORAGE_THUMBNAIL_SIZES``
@@ -248,5 +248,5 @@ class ProtectedImageField(ProtectedFieldMixin, models.ImageField):
 
 
 def protected_fields(model: type[Any]) -> list[Any]:
-    """Experimental. The protected file fields of ``model``, in declaration order."""
+    """The protected file fields of ``model``, in declaration order."""
     return [field for field in model._meta.get_fields() if isinstance(field, ProtectedFieldMixin)]

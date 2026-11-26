@@ -27,7 +27,7 @@ TITLE_LENGTH = 300
 
 
 class EmailTemplate(BaseModel):
-    """Experimental. An email a business rewrote in the app: its subject and text, by kind.
+    """An email a business rewrote in the app: its subject and text, by kind.
 
     It wins over the template files (``karni.mail``'s ``KARNI_MAIL_SOURCE``), and
     renders with the restricted engine: the kind's merge fields only. Deleting
@@ -50,7 +50,7 @@ class EmailTemplate(BaseModel):
 
 
 class Notification(models.Model):
-    """Experimental. One message in one person's inbox.
+    """One message in one person's inbox.
 
     ``kind`` is the message kind it was sent as (``commerce.order_paid``),
     ``title`` and ``body`` the message as it was rendered, in plain text, and
@@ -90,7 +90,7 @@ class Notification(models.Model):
 
 
 class Choice(models.Model):
-    """Experimental. A person's own switch for one message kind: email and inbox, on or off.
+    """A person's own switch for one message kind: email and inbox, on or off.
 
     No row means both are on. A kind declared not ``switchable`` (a sign-in
     code) ignores it.
@@ -115,7 +115,7 @@ class Choice(models.Model):
 
 
 class Unsubscribe(models.Model):
-    """Experimental. An address that asked for no more of a marketing kind.
+    """An address that asked for no more of a marketing kind.
 
     ``address`` is lower-cased. A person who signs in turns the kind on again
     in their own switches (``PATCH /api/inbox/choices/<kind>/``), which deletes

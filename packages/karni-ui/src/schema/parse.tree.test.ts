@@ -1,5 +1,5 @@
 /**
- * x-karni-tree (experimental): a tree resource, its tree operations, and the
+ * x-karni-tree: a tree resource, its tree operations, and the
  * relations that point at a tree, parsed from the simulated tree backend's
  * document (drf-spectacular dialect).
  */

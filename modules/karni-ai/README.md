@@ -4,7 +4,7 @@ Structured extraction for Karni: rows for any resource read from text, a web pag
 
 [![PyPI](https://img.shields.io/pypi/v/karni-ai)](https://pypi.org/project/karni-ai/) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE) [![Docs](https://img.shields.io/badge/docs-online-FB5D08)](https://cbsshekhawat18-lab.github.io/karni/ai-extraction/)
 
-Experimental. A language model reads a source (text, a web page or a PDF) into rows of any of your resources. The rows always go through Karni's import preview: nothing is saved until a user confirms the preview through the import's own commit. Every call is logged with its tokens and cost, and monthly budgets cap the spending.
+A language model reads a source (text, a web page or a PDF) into rows of any of your resources. The rows always go through Karni's import preview: nothing is saved until a user confirms the preview through the import's own commit. Every call is logged with its tokens and cost, and monthly budgets cap the spending.
 
 The full guide is [AI extraction](https://cbsshekhawat18-lab.github.io/karni/ai-extraction/).
 
@@ -60,6 +60,8 @@ key and the model name are never options there: they stay in the
 environment.
 
 ## Jobs other than extraction
+
+> **Experimental.** What this section names may change in a minor release, with a CHANGELOG entry ([stability](https://cbsshekhawat18-lab.github.io/karni/stability/#experimental-names)). The rest of karni-ai is stable.
 
 karni-ai ships one job, extraction. A job of your own, such as a plain
 translation service, uses the same parts: its own `Provider` subclass

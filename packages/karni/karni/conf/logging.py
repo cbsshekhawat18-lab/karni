@@ -13,12 +13,12 @@ from typing import Any
 
 import structlog
 
-#: Experimental. Paths whose healthy requests the request log skips (``KARNI_LOG_QUIET_PATHS``).
+#: Paths whose healthy requests the request log skips (``KARNI_LOG_QUIET_PATHS``).
 DEFAULT_QUIET_PATHS: tuple[str, ...] = ("/healthz", "/readyz", "/health/")
 
 
 class QuietPaths:
-    """Experimental. A structlog processor that drops the request log lines of probe paths.
+    """A structlog processor that drops the request log lines of probe paths.
 
     django-structlog logs ``request_started`` and ``request_finished`` for every request, and
     a probe asked every few seconds fills the log. A request whose path is one of ``paths``

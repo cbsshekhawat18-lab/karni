@@ -1,4 +1,4 @@
-"""Game starters (experimental): ready games a new game project starts from.
+"""Experimental. Game starters: ready games a new game project starts from.
 
 ``karni new "<Name>" --kind game --genre <genre>`` writes one, and ``karni
 starters list`` lists them. karni-cli finds them through the

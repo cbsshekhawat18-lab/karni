@@ -1,4 +1,4 @@
-"""Experimental. The module catalog: a manifest per module and per built-in feature.
+"""The module catalog: a manifest per module and per built-in feature.
 
 A **module manifest** is ``karni.module.toml`` inside the module's Python
 package (package data), found through the ``karni.modules`` entry point
@@ -57,9 +57,9 @@ __all__ = [
     "parse_text",
 ]
 
-#: Experimental. The file a module ships inside its package.
+#: The file a module ships inside its package.
 MANIFEST_FILE: Final = "karni.module.toml"
-#: Experimental. The entry point group that names each module's package.
+#: The entry point group that names each module's package.
 ENTRY_POINT_GROUP: Final = "karni.modules"
 #: Where Karni's own feature manifests live.
 FEATURES_DIR: Final = Path(__file__).resolve().parent / "features"
@@ -77,7 +77,7 @@ _DOTTED = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$")
 _OBJECT = re.compile(r"^[A-Za-z_][A-Za-z0-9_.]*:[A-Za-z_][A-Za-z0-9_]*$")
 _EXTRA = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
-#: Experimental. Every key a manifest takes: ``(where, key) -> (kinds, required, what it holds)``.
+#: Every key a manifest takes: ``(where, key) -> (kinds, required, what it holds)``.
 #: ``where`` is ``""`` for the top level, else the table (``provides``, ``wiring``,
 #: ``asks``, ``wiring.middleware``). docs/modules.md documents each one.
 KEYS: Final[dict[tuple[str, str], tuple[tuple[str, ...], bool, str]]] = {
@@ -122,7 +122,7 @@ KEYS: Final[dict[tuple[str, str], tuple[tuple[str, ...], bool, str]]] = {
 
 
 class ManifestError(ValueError):
-    """Experimental. A manifest that does not follow :data:`KEYS`: every problem, one per line."""
+    """A manifest that does not follow :data:`KEYS`: every problem, one per line."""
 
     def __init__(self, source: str, problems: list[str]) -> None:
         super().__init__(f"{source}: " + "; ".join(problems))
@@ -132,7 +132,7 @@ class ManifestError(ValueError):
 
 @dataclass(frozen=True)
 class Ask:
-    """Experimental. One question to ask before adding a module or turning a feature on."""
+    """One question to ask before adding a module or turning a feature on."""
 
     question: str
     setting: str
@@ -152,7 +152,7 @@ class Ask:
 
 @dataclass(frozen=True)
 class Entry:
-    """Experimental. A middleware or context processor the module wires."""
+    """A middleware or context processor the module wires."""
 
     path: str
     why: str = ""
@@ -164,7 +164,7 @@ class Entry:
 
 @dataclass(frozen=True)
 class Provides:
-    """Experimental. What a module or feature adds."""
+    """What a module or feature adds."""
 
     models: tuple[str, ...] = ()
     endpoints: tuple[str, ...] = ()
@@ -184,7 +184,7 @@ class Provides:
 
 @dataclass(frozen=True)
 class Wiring:
-    """Experimental. What ``karni add`` writes for a module, and ``karni remove`` takes out."""
+    """What ``karni add`` writes for a module, and ``karni remove`` takes out."""
 
     apps: tuple[str, ...] = ()
     settings: str = ""
@@ -208,7 +208,7 @@ class Wiring:
 
 @dataclass(frozen=True)
 class Manifest:
-    """Experimental. One module or built-in feature, as its manifest describes it."""
+    """One module or built-in feature, as its manifest describes it."""
 
     name: str
     kind: str
@@ -439,7 +439,7 @@ def _wiring(reader: _Reader, data: dict[str, Any]) -> Wiring:
 
 
 def parse(data: dict[str, Any], source: str) -> Manifest:
-    """Experimental. The :class:`Manifest` in ``data`` (a parsed TOML table).
+    """The :class:`Manifest` in ``data`` (a parsed TOML table).
 
     :raises ManifestError: listing every problem, each with the key it is about.
     """
@@ -498,7 +498,7 @@ def parse(data: dict[str, Any], source: str) -> Manifest:
 
 
 def parse_text(text: str, source: str) -> Manifest:
-    """Experimental. :func:`parse` for TOML text, with a TOML error as a :class:`ManifestError`."""
+    """:func:`parse` for TOML text, with a TOML error as a :class:`ManifestError`."""
     try:
         data = tomllib.loads(text)
     except tomllib.TOMLDecodeError as exc:
@@ -510,7 +510,7 @@ def parse_text(text: str, source: str) -> Manifest:
 
 
 def features(directory: Path | None = None) -> list[Manifest]:
-    """Experimental. Karni's feature manifests, by name."""
+    """Karni's feature manifests, by name."""
     folder = directory or FEATURES_DIR
     found = [
         parse_text(path.read_text(encoding="utf-8"), str(path))
@@ -523,7 +523,7 @@ def features(directory: Path | None = None) -> list[Manifest]:
 
 
 def installed_texts() -> dict[str, tuple[str, str]]:
-    """Experimental. ``name -> (source, TOML text)`` for each ``karni.modules`` entry point here."""
+    """``name -> (source, TOML text)`` for each ``karni.modules`` entry point here."""
     found: dict[str, tuple[str, str]] = {}
     for point in entry_points(group=ENTRY_POINT_GROUP):
         package = point.value.split(":", 1)[0]
@@ -537,7 +537,7 @@ def installed_texts() -> dict[str, tuple[str, str]]:
 
 
 def installed() -> list[Manifest]:
-    """Experimental. The manifests of the modules installed in this environment.
+    """The manifests of the modules installed in this environment.
 
     :raises ManifestError: for a manifest that cannot be read, is invalid, or whose
         name is not its entry point's.
@@ -554,7 +554,7 @@ def installed() -> list[Manifest]:
 
 
 def check_catalog(manifests: list[Manifest]) -> list[str]:
-    """Experimental. Problems between manifests: unknown names, a feature that needs a module.
+    """Problems between manifests: unknown names, a feature that needs a module.
 
     Karni's core never depends on an optional module, so a feature's
     ``requires`` names features only.

@@ -1,4 +1,4 @@
-"""Experimental. What ``karni spec validate`` checks in an entity's rules (karni.rules in core).
+"""What ``karni spec validate`` checks in an entity's rules (karni.rules in core).
 
 ``bounds`` (``C760``), ``unique`` (``C761``), ``targets`` (``C762``),
 ``frozen`` (``C763``), ``delete`` (``C764``), ``moves`` (``C765``),
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 __all__ = ["CODES", "check"]
 
-#: Experimental. The codes this module reports.
+#: The codes this module reports.
 CODES: Final = ("C760", "C761", "C762", "C763", "C764", "C765", "C766", "C767")
 NUMBER_KINDS: Final = frozenset({"int", "float", "decimal", "money", "percent", "quantity"})
 DATE_KINDS: Final = frozenset({"date", "datetime"})

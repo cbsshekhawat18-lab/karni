@@ -32,13 +32,6 @@ class AccessLog(UUIDModel, TimestampedModel): ...
 
 ## Choosing the key type
 
-!!! warning "Experimental"
-    Everything in this section is [experimental](stability.md#experimental-names):
-    `karni.models.BigIntBaseModel`, `karni.models.IntegerKeyModel`, the
-    `KARNI_PK` setting, `karni make model --pk`, `karni.api.filters.IntegerFilter`,
-    the import options `match_ids` and `keep_ids`, and the `KEYS:` line of
-    `karni context`.
-
 `BaseModel` gives every row a random UUID. `BigIntBaseModel` is the same
 base with a 64-bit integer that the database counts up (`BigAutoField`):
 timestamps, soft delete, audit users, the guards, the managers and
@@ -317,13 +310,13 @@ page shows are in [API: the staff dashboard](api.md#the-staff-dashboard).
 ## Many fields: field groups and column sets
 
 A model with many fields lays out its screens next to its other `class
-Karni` options (experimental): `field_groups` splits the React form, the
+Karni` options: `field_groups` splits the React form, the
 detail page and the admin's change form into titled groups, shown as
 sections or, with `field_group_layout = "tabs"`, tabs, and `column_sets`
 gives the React table named column presets. Long text that a page shows
 formatted is a [`MarkdownField`](fields.md#markdownfield). The keys, the
 checks (`karni.E550` to `E553`) and what each screen does are in
-[UI: field groups and column sets](ui.md#field-groups-and-column-sets-experimental).
+[UI: field groups and column sets](ui.md#field-groups-and-column-sets).
 
 ## External tables, views and a second database
 
@@ -543,17 +536,6 @@ models)` does it by hand. See [testing](testing.md#external-tables).
 
 ## Tree models
 
-!!! warning "Experimental"
-    Everything in this section is [experimental](stability.md#experimental-names):
-    `karni.models.TreeModel` and `OrderedTreeModel`, `karni.managers.TreeQuerySet`
-    and `TreeManager`, `karni.tree`, the tree endpoints and filters of
-    `BaseViewSet` (`karni.api.tree`, `tree_max_nodes`, `tree_default_depth`,
-    `tree_max_depth`, `tree_top_level()`, `get_tree_node_serializer_class()`),
-    the `x-karni-tree` extension, the tree changelist (`karni.admin.tree`,
-    `tree_changelist_max_rows`), the `tree` key of `karni.yaml`, and
-    `TreeView`, `TreeSelect`, `TreeBreadcrumb` and the tree hooks in
-    `@karni/ui`. They may change in a minor release.
-
 A hierarchy (a region tree, product categories, organisation units, a menu)
 is one declaration. List `TreeModel` before the base:
 
@@ -710,16 +692,6 @@ list sorted by a column is flat, and so is one longer than
 | [E345](errors.md#e345) | `parent` is not a nullable foreign key to the model |
 
 ## Taxonomies
-
-!!! warning "Experimental"
-    Everything in this section is [experimental](stability.md#experimental-names):
-    `class Karni: taxonomies`, `karni.taxonomy`, `karni.api.taxonomy` (the
-    list filters, `facets/` and `tagged/`, `BaseViewSet.facet_queryset()`,
-    `taxonomy_actions`, `serves_facets()` and `serves_tagged()`), the
-    `x-karni-taxonomy` extension, `origin` of `karni.tree.walk_sql`, the
-    `taxonomies` fact, the `taxonomies` key of `karni.yaml`, and
-    `FacetPanel`, `useResourceFacets` and `ResourceTable`'s `facets` in
-    `@karni/ui`. They may change in a minor release.
 
 Many models are tagged to the same hierarchies: products, suppliers and
 articles to a region tree and a category tree. One declaration tags a model

@@ -1,4 +1,4 @@
-"""Experimental. ``/api/email-templates/``: the emails a business edits (Settings, Emails).
+"""``/api/email-templates/``: the emails a business edits (Settings, Emails).
 
 ``GET`` lists every declared message kind (``karni.mail`` kinds) with its merge
 fields, its switch, its channels and its text now (edited, else the files).
@@ -39,7 +39,7 @@ class EmailFieldSerializer(serializers.Serializer[Any]):
 
 
 class EmailTemplateSerializer(serializers.Serializer[Any]):
-    """Experimental. An email as its editor shows it: its text now, its merge fields, its switch."""
+    """An email as its editor shows it: its text now, its merge fields, its switch."""
 
     kind = serializers.CharField()
     title = serializers.CharField()
@@ -57,14 +57,14 @@ class EmailTemplateSerializer(serializers.Serializer[Any]):
 
 
 class EmailTemplateInputSerializer(serializers.Serializer[Any]):
-    """Experimental. An edited email: its subject and its text."""
+    """An edited email: its subject and its text."""
 
     subject = serializers.CharField(max_length=300, allow_blank=True)
     text = serializers.CharField(max_length=20000, allow_blank=True)
 
 
 class EmailTemplateViewSet(BaseViewSet):
-    """Experimental. The emails a business edits: ``/api/email-templates/`` (see the module)."""
+    """The emails a business edits: ``/api/email-templates/`` (see the module)."""
 
     model = EmailTemplate
     route = "email-templates"

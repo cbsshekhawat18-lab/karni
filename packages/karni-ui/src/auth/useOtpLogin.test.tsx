@@ -1,5 +1,5 @@
 /**
- * useOtpLogin (experimental) through the real AuthProvider against msw: the two
+ * useOtpLogin through the real AuthProvider against msw: the two
  * steps, the request bodies, JWT adoption, the session re-sync, the 2FA step,
  * an account awaiting approval, refusals, and the resend cooldown.
  */

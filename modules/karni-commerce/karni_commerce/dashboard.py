@@ -1,4 +1,4 @@
-"""Experimental. Commerce's home tiles (:mod:`karni.tiles`): revenue and the latest orders.
+"""Commerce's home tiles (:mod:`karni.tiles`): revenue and the latest orders.
 
 Every kind sold through commerce counts: a product, a booking, a course.
 

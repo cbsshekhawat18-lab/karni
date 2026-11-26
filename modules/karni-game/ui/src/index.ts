@@ -1,5 +1,5 @@
 /**
- * @karni/game: the browser side of the Karni game add-on. Every export is
+ * Experimental. @karni/game: the browser side of the Karni game add-on. Every export is
  * tree-shaken: a game bundles only what it imports.
  */
 export * from "./portal";

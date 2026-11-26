@@ -13,8 +13,6 @@
  * form's value becomes the reference file the server takes
  * (`useProtectedUpload`). On local storage the picked file itself is the
  * value and goes with the form, as for any file field.
- *
- * Experimental: may change in a minor release, with a CHANGELOG entry.
  */
 import { FileUpload, Label, cn } from "@karni/ui";
 import type { KarniFieldProps } from "@karni/ui";
@@ -41,7 +39,7 @@ function option<T>(props: Record<string, unknown> | undefined, key: string): T |
   return value === undefined ? undefined : (value as T);
 }
 
-/** Experimental. A protected file field for `<ResourceForm fields={...}>`. */
+/** A protected file field for `<ResourceForm fields={...}>`. */
 export function ProtectedFileInput({
   field,
   name,

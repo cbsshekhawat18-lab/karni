@@ -1,1 +1,1 @@
-"""Taxonomy tagging (``class Karni: taxonomies``, experimental): models for ``tests/taxonomy/``."""
+"""Taxonomy tagging (``class Karni: taxonomies``): models for ``tests/taxonomy/``."""

@@ -16,13 +16,13 @@ import { TreeView } from "./TreeView";
 
 registerComponentRole("tree-select", "TreeSelect");
 
-/** Experimental. TreeSelect's replaceable parts. */
+/** TreeSelect's replaceable parts. */
 export interface TreeSelectSlots {
   /** One selected value in `multiple` mode (ResourceSelect's chip by default). */
   Chip: React.ComponentType<ResourceSelectChipProps>;
 }
 
-/** Experimental. The props of TreeSelect (the same shape as ResourceSelect's). */
+/** The props of TreeSelect (the same shape as ResourceSelect's). */
 export interface TreeSelectProps {
   /** The tree resource the value points at: "regions". */
   resource: string;
@@ -36,9 +36,9 @@ export interface TreeSelectProps {
   getOptionLabel?: (item: Record<string, unknown>) => React.ReactNode;
   /** Levels the tree loads per request. Default 2. */
   depth?: number;
-  /** Experimental. A search result shows under its ancestors (see TreeView). */
+  /** A search result shows under its ancestors (see TreeView). */
   searchKeepsAncestors?: boolean;
-  /** Experimental. A field of each node with a count, shown at the end of its row (see TreeView). */
+  /** A field of each node with a count, shown at the end of its row (see TreeView). */
   countField?: string;
   /** Set false to hide the clear button (which emits null). Default true. */
   clearable?: boolean;
@@ -71,7 +71,7 @@ function shortId(id: string | number): string {
 }
 
 /**
- * Experimental. A picker for a relation that points at a tree resource.
+ * A picker for a relation that points at a tree resource.
  *
  * A button opens a popover (a non-modal dialog) with a TreeView (lazy
  * branches, search, the keyboard pattern), opened at the chosen node. Enter, Space or a click

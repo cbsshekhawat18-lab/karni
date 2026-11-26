@@ -1,4 +1,4 @@
-"""Each game starter built from scratch (experimental): karni new --genre, every check real.
+"""Each game starter built from scratch: karni new --genre, every check real.
 
 ``pytest -m starters`` runs these, and CI's starters job runs them, so a starter
 never rots. The test writes ``karni new "<Name>" --kind game --genre <genre>``,

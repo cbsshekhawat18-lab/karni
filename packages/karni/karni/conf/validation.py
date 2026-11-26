@@ -468,7 +468,7 @@ class KarniSettingsModel(BaseModel):
         return errors
 
     def _check_social_token(self) -> list[str]:
-        """Sign-in with an ID token (experimental): the providers and their knobs."""
+        """Sign-in with an ID token: the providers and their knobs."""
         errors: list[str] = []
         signup = self.KARNI_SOCIAL_TOKEN_SIGNUP
         if signup is not None and signup not in ("open", "approval", "existing"):
@@ -557,13 +557,13 @@ class KarniSettingsModel(BaseModel):
         return errors
 
     def _check_user_grants(self) -> list[str]:
-        """Per-user grants (experimental): the switch is a boolean."""
+        """Per-user grants: the switch is a boolean."""
         if not isinstance(self.KARNI_USER_GRANTS, bool):
             return [f"KARNI_USER_GRANTS = {self.KARNI_USER_GRANTS!r} must be True or False"]
         return []
 
     def _check_navigation(self) -> list[str]:
-        """Navigation from data (experimental): the menu's items, and the app for ``"db"``."""
+        """Navigation from data: the menu's items, and the app for ``"db"``."""
         from karni.navigation import settings_problems
 
         errors = settings_problems(self.KARNI_NAVIGATION, self.INSTALLED_APPS)
@@ -576,7 +576,7 @@ class KarniSettingsModel(BaseModel):
         return errors
 
     def _check_email_otp(self) -> list[str]:
-        """Sign-in with a code sent by email (experimental): the switch, the code and the policy."""
+        """Sign-in with a code sent by email: the switch, the code and the policy."""
         from karni.accounts.otp import LENGTH_RANGE, MAX_ATTEMPTS_RANGE, TTL_RANGE
         from karni.accounts.social_token import SIGNUP_POLICIES
 
@@ -604,7 +604,7 @@ class KarniSettingsModel(BaseModel):
         return errors
 
     def _check_pk(self) -> list[str]:
-        """The key type ``karni make model`` writes (experimental): ``uuid`` or ``bigint``."""
+        """The key type ``karni make model`` writes: ``uuid`` or ``bigint``."""
         if self.KARNI_PK in ("uuid", "bigint"):
             return []
         return [
@@ -613,7 +613,7 @@ class KarniSettingsModel(BaseModel):
         ]
 
     def _check_terms(self) -> list[str]:
-        """Terms acceptance (experimental): ``KARNI_TERMS`` is None or a dict of known keys."""
+        """Terms acceptance: ``KARNI_TERMS`` is None or a dict of known keys."""
         from karni.accounts.terms import KNOWN_KEYS, VERSION_MAX_LENGTH
 
         value = self.KARNI_TERMS

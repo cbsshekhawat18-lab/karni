@@ -11,7 +11,7 @@ __all__ = ["Delivery", "Handled", "OutboxEvent"]
 
 
 class OutboxEvent(models.Model):
-    """Experimental. One published family event, written in the publisher's transaction.
+    """One published family event, written in the publisher's transaction.
 
     ``id`` is the event's own id (the payload's ``id``). ``payload`` is the
     whole event as JSON. ``subject_model``, ``subject_id`` and ``person_id``
@@ -51,7 +51,7 @@ class OutboxEvent(models.Model):
 
 
 class Delivery(models.Model):
-    """Experimental. One subscriber's copy of one event: pending, delivered or failed.
+    """One subscriber's copy of one event: pending, delivered or failed.
 
     Created with the event, in the publisher's transaction. ``attempts``
     counts the runs, ``next_attempt_at`` is when the next one is due (the
@@ -102,7 +102,7 @@ class Delivery(models.Model):
 
 
 class Handled(models.Model):
-    """Experimental. A ``(event, key)`` pair :func:`karni.events.once` has already said yes to."""
+    """A ``(event, key)`` pair :func:`karni.events.once` has already said yes to."""
 
     event_id = models.UUIDField()
     key = models.CharField(max_length=200)

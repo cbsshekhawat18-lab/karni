@@ -74,7 +74,7 @@ class AccountsEmail:
     as the template stem for :class:`DjangoEmailBackend`. ``to`` is the
     recipient address and ``context`` the template context. The link flows
     always include ``user``, ``token`` and ``link``. ``login_code`` (sign-in
-    with a code, experimental) has ``code``, ``ttl_minutes`` and ``user``,
+    with a code) has ``code``, ``ttl_minutes`` and ``user``,
     which is ``None`` for an address without an account.
 
     Override / escape hatch: custom backends receive this object untouched,

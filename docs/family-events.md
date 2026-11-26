@@ -1,5 +1,5 @@
 ---
-description: "Family events in Karni (experimental): one app reacts to another without importing it. Declare an event, publish it inside the writer's transaction into an outbox, and subscribe by name. Delivery runs after the commit in a Celery worker, is retried with backoff and happens at least once."
+description: "Family events in Karni: one app reacts to another without importing it. Declare an event, publish it inside the writer's transaction into an outbox, and subscribe by name. Delivery runs after the commit in a Celery worker, is retried with backoff and happens at least once."
 ---
 
 # Family events

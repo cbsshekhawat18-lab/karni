@@ -1,5 +1,5 @@
 /**
- * Experimental. `<Timeline>`: one stream of what happened to a person or a
+ * `<Timeline>`: one stream of what happened to a person or a
  * record, in every installed part (karni.timeline, `GET /timeline/`).
  *
  *   <Timeline person={personId} history={{ resource: "people", id: personId }} />
@@ -39,7 +39,7 @@ import { timelineKind, timelineKindLabel, type TimelineEntry } from "./registry"
 
 export type { TimelineEntry } from "./registry";
 
-/** Experimental. Whose timeline: exactly one of them. */
+/** Whose timeline: exactly one of them. */
 export interface TimelineParams {
   /** A person's id. */
   person?: string;
@@ -58,7 +58,7 @@ interface TimelinePage {
   next: string | null;
 }
 
-/** Experimental. The cache key of one timeline. */
+/** The cache key of one timeline. */
 export function timelineKey(params: TimelineParams): readonly unknown[] {
   return [
     "karni",
@@ -71,7 +71,7 @@ export function timelineKey(params: TimelineParams): readonly unknown[] {
   ];
 }
 
-/** Experimental. One timeline, a page at a time (`GET /timeline/`, cursor paging). */
+/** One timeline, a page at a time (`GET /timeline/`, cursor paging). */
 export function useTimeline(params: TimelineParams): UseInfiniteQueryResult<{
   pages: TimelinePage[];
   pageParams: Array<string | null>;
@@ -125,7 +125,7 @@ interface EntryMoney {
 }
 
 /**
- * Experimental. `text` with each amount the server wrote as plain money ("127.54 USD", kept
+ * `text` with each amount the server wrote as plain money ("127.54 USD", kept
  * in the entry's `data["$money"]`) shown as the project's money ("$127.54").
  */
 export function timelineMoneyText(
@@ -307,7 +307,7 @@ function defaultHref(
   return recordHref(resource, row);
 }
 
-/** Experimental. The timeline of a person or a record, with a kind filter and paging. */
+/** The timeline of a person or a record, with a kind filter and paging. */
 export function Timeline({
   person,
   organisation,

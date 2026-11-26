@@ -2,7 +2,7 @@
  * useResourceCounts: how many rows of each resource the signed-in user can
  * read, as chart points (`{ label, value }`) for a ChartCard.
  *
- * Experimental. Each count is one list request with `page_size=1` (the API's
+ * Each count is one list request with `page_size=1` (the API's
  * `count`), under the list's own row scope, access rules and filters, the
  * way Dashboard counts. A resource the user may not list (403) is left out,
  * and any other failure is returned as `error` with a `refetch`. The
@@ -56,7 +56,7 @@ function forbidden(error: unknown): boolean {
   return error instanceof KarniApiError && error.status === 403;
 }
 
-/** Experimental. The row count of each resource (`page_size=1` list requests), as chart points. */
+/** The row count of each resource (`page_size=1` list requests), as chart points. */
 export function useResourceCounts(
   targets: ReadonlyArray<string | ResourceCountTarget>,
 ): ResourceCounts {

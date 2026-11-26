@@ -1,5 +1,5 @@
 /**
- * @karni/commerce-ui public barrel (experimental): the cart, checkout and
+ * Experimental. @karni/commerce-ui public barrel: the cart, checkout and
  * order screens of the karni-commerce module, for every kind of thing a
  * project sells. Explicit exports only, as @karni/ui's barrel.
  */

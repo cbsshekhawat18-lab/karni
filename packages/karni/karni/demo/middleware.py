@@ -1,4 +1,4 @@
-"""Experimental. Demo mode's two middlewares (list them after Karni's stack in ``MIDDLEWARE``).
+"""Demo mode's two middlewares (list them after Karni's stack in ``MIDDLEWARE``).
 
 Both do nothing while ``KARNI_DEMO_MODE`` is off, and read it on every request.
 ``DemoWriteGuardMiddleware`` should come after the authentication middleware

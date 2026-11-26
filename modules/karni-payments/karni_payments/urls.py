@@ -10,7 +10,7 @@ giving ``POST /payments/webhook/<provider>/`` (e.g.
 ``/payments/webhook/stripe/``) — the URL you register at the provider.
 
 With the test provider, ``GET|POST /payments/test-checkout/<session>/`` is
-the checkout page (experimental, :mod:`karni_payments.test_checkout`).
+the checkout page (:mod:`karni_payments.test_checkout`).
 """
 
 from __future__ import annotations

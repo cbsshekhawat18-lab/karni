@@ -1,4 +1,4 @@
-"""Experimental. The per-player rate limits of the game API (``KARNI_GAME_RATES``).
+"""The per-player rate limits of the game API (``KARNI_GAME_RATES``).
 
 Each limited view names a scope per method (``throttle_scopes = {"PUT": "save"}``).
 :class:`PlayerRateThrottle` counts per player: the account's or the guest's

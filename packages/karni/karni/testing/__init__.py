@@ -34,14 +34,14 @@ package stays free of test-only imports:
 * ``load_content`` (:mod:`karni.testing.content`): the project's real
   content (``content/site.json``) loaded as ``karni load`` does, its path
   read from the project root;
-* ``assert_module_manifest`` (:mod:`karni.testing.catalog`, experimental): a
+* ``assert_module_manifest`` (:mod:`karni.testing.catalog`): a
   module's ``karni.module.toml`` parses and matches its entry point, settings
   fragment and models;
 * ``query_budget`` (:mod:`karni.testing.performance`);
 * ``capture_events``, ``deliver_now`` and ``assert_events_declared``
-  (:mod:`karni.testing.events`, experimental): family events published in a
+  (:mod:`karni.testing.events`): family events published in a
   block, every pending delivery run now, an app's published events declared;
-* ``create_external_tables`` (:mod:`karni.testing.external`, experimental):
+* ``create_external_tables`` (:mod:`karni.testing.external`):
   tables for external models in a test database, which the pytest plugin
   creates by itself;
 * :mod:`karni.testing.factories` and :mod:`karni.testing.values` —

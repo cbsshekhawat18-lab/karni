@@ -1,4 +1,4 @@
-"""Experimental. Demo mode's routes.
+"""Demo mode's routes.
 
 * ``urlpatterns`` (``path("api/demo/", include("karni.demo.urls"))``): ``GET /api/demo/``.
 * :func:`app_urls`: the React app's routes, ``/`` and every path Django does not answer

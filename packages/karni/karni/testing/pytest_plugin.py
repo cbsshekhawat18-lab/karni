@@ -32,7 +32,7 @@ configured Django project it only reseeds factory randomness:
   every test starts with no cached API response
   (:func:`karni.api.caching.clear`): a test's rolled-back rows never come
   back from another test's cache entry.
-* **Tables for external models** (experimental). Once a test database is
+* **Tables for external models**. Once a test database is
   migrated, every external model routed to it (``class Karni: external =
   True``, :mod:`karni.db`) whose table or view is missing gets a table built
   from its fields, and on PostgreSQL the schema its ``db_table`` names

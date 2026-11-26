@@ -24,7 +24,7 @@ which needs nothing in ``INSTALLED_APPS`` here):
 
 A view behind a capture with a known, small set of addresses and no model
 (``/topics/<slug:slug>/`` for three topics) declares them with
-:func:`pages` (experimental), and they join the ``pages`` section:
+:func:`pages`, and they join the ``pages`` section:
 ``@pages({"slug": "tides"}, {"slug": "harbours"})``, or a function that
 returns them. :func:`declared_pages` lists their paths, for the page test.
 

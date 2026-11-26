@@ -6,7 +6,7 @@ from django.apps import AppConfig
 
 
 class KarniOutboxConfig(AppConfig):
-    """Experimental. ``karni.outbox`` (label ``karni_outbox``).
+    """``karni.outbox`` (label ``karni_outbox``).
 
     Add it to ``INSTALLED_APPS`` when a part publishes or subscribes to family
     events (:mod:`karni.events`): it brings the outbox, delivery and handled

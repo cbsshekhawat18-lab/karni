@@ -40,18 +40,18 @@ __all__ = ["EditError", "set_value", "set_values"]
 
 
 class EditError(Exception):
-    """Experimental. The key cannot be set in the text without changing anything else."""
+    """The key cannot be set in the text without changing anything else."""
 
 
 def set_values(text: str, writes: list[tuple[Loc, Any]]) -> str:
-    """Experimental. ``text`` with each ``(path, value)`` of ``writes`` set, in order."""
+    """``text`` with each ``(path, value)`` of ``writes`` set, in order."""
     for path, value in writes:
         text = set_value(text, path, value)
     return text
 
 
 def set_value(text: str, path: Loc, value: Any) -> str:
-    """Experimental. ``text`` with the key at ``path`` set to ``value``, every other line kept."""
+    """``text`` with the key at ``path`` set to ``value``, every other line kept."""
     if not path or not all(isinstance(part, str) for part in path):
         raise EditError(f"{path!r} is not a path of mapping keys.")
     try:

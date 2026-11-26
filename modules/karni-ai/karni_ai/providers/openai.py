@@ -58,7 +58,7 @@ def _installed() -> bool:
 
 
 def strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
-    """Experimental. ``schema`` as OpenAI's strict mode takes it.
+    """``schema`` as OpenAI's strict mode takes it.
 
     Every object lists all its properties as required and refuses others. A
     property that was optional may be null. Keywords outside the strict subset
@@ -95,7 +95,7 @@ def strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
 
 
 class OpenAIProvider(Provider):
-    """Experimental. OpenAI models through the Responses API (structured outputs)."""
+    """OpenAI models through the Responses API (structured outputs)."""
 
     name: ClassVar[str] = "openai"
 

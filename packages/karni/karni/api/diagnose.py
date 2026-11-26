@@ -510,7 +510,7 @@ class Report:
     causes: list[Cause]
     notes: list[str] = dataclasses.field(default_factory=list)
     plans: list[tuple[str, str]] = dataclasses.field(default_factory=list)
-    #: Experimental. The sequential scans on large tables ``--explain`` found (PostgreSQL).
+    #: The sequential scans on large tables ``--explain`` found (PostgreSQL).
     scans: list[Any] = dataclasses.field(default_factory=list)
 
     @property
@@ -1241,7 +1241,7 @@ def _explain_queries(
 
     On PostgreSQL every distinct ``SELECT`` is analysed in a savepoint and the
     sequential scans on large tables come back with the index that would
-    serve them (:mod:`karni.api.explain`, experimental). Elsewhere, the plain
+    serve them (:mod:`karni.api.explain`). Elsewhere, the plain
     ``EXPLAIN`` of the slowest statements and a note saying so (``W610``).
     """
     if connections["default"].vendor == "postgresql":

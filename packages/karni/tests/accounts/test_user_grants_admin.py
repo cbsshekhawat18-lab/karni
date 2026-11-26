@@ -1,4 +1,4 @@
-"""Per-user grants in the admin (experimental): the user's grants inline, the grants admin, why.
+"""Per-user grants in the admin: the user's grants inline, the grants admin, why.
 
 The inline is the per-user screen (add, edit, expire, delete, with
 ``granted_by`` filled in). *User grants* lists every grant with *Expire

@@ -1,4 +1,4 @@
-"""Experimental. The inbox, a person's own switches and the unsubscribe link, over HTTP.
+"""The inbox, a person's own switches and the unsubscribe link, over HTTP.
 
 Every route answers the signed-in person about their own notifications only::
 
@@ -64,7 +64,7 @@ __all__ = [
 
 
 class NotificationSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. One notification in the inbox."""
+    """One notification in the inbox."""
 
     id = serializers.IntegerField()
     kind = serializers.CharField()
@@ -77,7 +77,7 @@ class NotificationSerializer(serializers.Serializer):  # type: ignore[type-arg]
 
 
 class InboxPageSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. One page of the inbox, newest first."""
+    """One page of the inbox, newest first."""
 
     count = serializers.IntegerField(help_text="Notifications that match the filters.")
     unread = serializers.IntegerField(help_text="Unread notifications in the whole inbox.")
@@ -86,7 +86,7 @@ class InboxPageSerializer(serializers.Serializer):  # type: ignore[type-arg]
 
 
 class ChoiceSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. A kind a person may switch, and where it goes for them now."""
+    """A kind a person may switch, and where it goes for them now."""
 
     kind = serializers.CharField()
     title = serializers.CharField()
@@ -99,14 +99,14 @@ class ChoiceSerializer(serializers.Serializer):  # type: ignore[type-arg]
 
 
 class ChoiceInputSerializer(serializers.Serializer):  # type: ignore[type-arg]
-    """Experimental. A person's switch for one kind: either channel, or both."""
+    """A person's switch for one kind: either channel, or both."""
 
     email = serializers.BooleanField(required=False)
     inbox = serializers.BooleanField(required=False)
 
 
 def serialize(row: Notification) -> dict[str, Any]:
-    """Experimental. One notification as the API gives it."""
+    """One notification as the API gives it."""
     return {
         "id": row.pk,
         "kind": row.kind,
@@ -130,14 +130,14 @@ def _refused(code: str, message: str, status: int = 400) -> Response:
 
 
 class InboxView(APIView):
-    """Experimental. ``GET /api/inbox/``: the signed-in person's notifications, newest first."""
+    """``GET /api/inbox/``: the signed-in person's notifications, newest first."""
 
     permission_classes: ClassVar[list[type]] = [IsAuthenticated]
 
     @extend_schema(
         operation_id="inbox_list",
         tags=["inbox"],
-        description="Experimental. The signed-in person's notifications, newest first.",
+        description="The signed-in person's notifications, newest first.",
         parameters=[
             OpenApiParameter("unread", OpenApiTypes.BOOL, description="Only unread ones."),
             OpenApiParameter("kind", OpenApiTypes.STR, description="Kinds, comma-separated."),
@@ -190,7 +190,7 @@ class InboxView(APIView):
 
 
 class UnreadView(APIView):
-    """Experimental. ``GET /api/inbox/unread/``: how many are unread (the bell's number)."""
+    """``GET /api/inbox/unread/``: how many are unread (the bell's number)."""
 
     permission_classes: ClassVar[list[type]] = [IsAuthenticated]
 
@@ -198,14 +198,14 @@ class UnreadView(APIView):
         operation_id="inbox_unread",
         tags=["inbox"],
         responses={200: OpenApiTypes.OBJECT},
-        description="Experimental. How many of the signed-in person's notifications are unread.",
+        description="How many of the signed-in person's notifications are unread.",
     )
     def get(self, request: Request) -> Response:
         return Response({"count": services.unread_count(request.user)})
 
 
 class MarkView(APIView):
-    """Experimental. ``POST /api/inbox/<id>/read/`` and ``.../unread/``: one notification.
+    """``POST /api/inbox/<id>/read/`` and ``.../unread/``: one notification.
 
     :class:`MarkReadView` and :class:`MarkUnreadView` are the two routes.
     """
@@ -227,7 +227,7 @@ class MarkView(APIView):
 
 
 class MarkReadView(MarkView):
-    """Experimental. ``POST /api/inbox/<id>/read/``."""
+    """``POST /api/inbox/<id>/read/``."""
 
     read = True
 
@@ -236,14 +236,14 @@ class MarkReadView(MarkView):
         tags=["inbox"],
         request=None,
         responses={200: NotificationSerializer},
-        description="Experimental. Mark one of the caller's notifications read.",
+        description="Mark one of the caller's notifications read.",
     )
     def post(self, request: Request, pk: int) -> Response:
         return self.mark(request, pk)
 
 
 class MarkUnreadView(MarkView):
-    """Experimental. ``POST /api/inbox/<id>/unread/``."""
+    """``POST /api/inbox/<id>/unread/``."""
 
     read = False
 
@@ -252,14 +252,14 @@ class MarkUnreadView(MarkView):
         tags=["inbox"],
         request=None,
         responses={200: NotificationSerializer},
-        description="Experimental. Mark one of the caller's notifications unread again.",
+        description="Mark one of the caller's notifications unread again.",
     )
     def post(self, request: Request, pk: int) -> Response:
         return self.mark(request, pk)
 
 
 class MarkAllReadView(APIView):
-    """Experimental. ``POST /api/inbox/read-all/``: every unread notification, read."""
+    """``POST /api/inbox/read-all/``: every unread notification, read."""
 
     permission_classes: ClassVar[list[type]] = [IsAuthenticated]
 
@@ -268,14 +268,14 @@ class MarkAllReadView(APIView):
         tags=["inbox"],
         request=None,
         responses={200: OpenApiTypes.OBJECT},
-        description="Experimental. Mark every one of the caller's notifications read.",
+        description="Mark every one of the caller's notifications read.",
     )
     def post(self, request: Request) -> Response:
         return Response({"updated": services.mark_read(request.user)})
 
 
 class ChoicesView(APIView):
-    """Experimental. ``GET /api/inbox/choices/``: the kinds the caller may switch."""
+    """``GET /api/inbox/choices/``: the kinds the caller may switch."""
 
     permission_classes: ClassVar[list[type]] = [IsAuthenticated]
 
@@ -283,7 +283,7 @@ class ChoicesView(APIView):
         operation_id="inbox_choices",
         tags=["inbox"],
         responses={200: ChoiceSerializer(many=True)},
-        description="Experimental. Each message kind the caller may turn off, per channel.",
+        description="Each message kind the caller may turn off, per channel.",
     )
     def get(self, request: Request) -> Response:
         # karni: allow(unpaginated-action): the declared kinds, a few dozen at most
@@ -291,7 +291,7 @@ class ChoicesView(APIView):
 
 
 class ChoiceView(APIView):
-    """Experimental. ``PATCH /api/inbox/choices/<kind>/``: the caller switches one kind."""
+    """``PATCH /api/inbox/choices/<kind>/``: the caller switches one kind."""
 
     permission_classes: ClassVar[list[type]] = [IsAuthenticated]
 
@@ -300,7 +300,7 @@ class ChoiceView(APIView):
         tags=["inbox"],
         request=ChoiceInputSerializer,
         responses={200: ChoiceSerializer},
-        description="Experimental. Turn one kind on or off for the caller, by channel.",
+        description="Turn one kind on or off for the caller, by channel.",
     )
     def patch(self, request: Request, kind: str) -> Response:
         body = ChoiceInputSerializer(data=request.data)
@@ -319,7 +319,7 @@ class ChoiceView(APIView):
 
 @method_decorator(csrf_exempt, name="dispatch")
 class UnsubscribeView(View):
-    """Experimental. ``/api/notify/unsubscribe/?token=``: leave a marketing kind, no sign-in.
+    """``/api/notify/unsubscribe/?token=``: leave a marketing kind, no sign-in.
 
     ``GET`` describes what the link unsubscribes: a small page with a button in
     a browser (``karni/notify/unsubscribe.html``, which a project overrides in
@@ -385,7 +385,7 @@ class UnsubscribeView(View):
 
 
 def build_urlpatterns(*, force: bool = False) -> list[Any]:
-    """Experimental. The ``inbox/`` and ``notify/`` routes while ``KARNI_NOTIFY_API`` is on."""
+    """The ``inbox/`` and ``notify/`` routes while ``KARNI_NOTIFY_API`` is on."""
     from django.urls import path
 
     if not force and not getattr(settings, "KARNI_NOTIFY_API", True):

@@ -188,7 +188,7 @@ class OneTimeToken(BaseModel):
 
 
 class SocialIdentity(BaseModel):
-    """Experimental. One provider identity (Google, Microsoft, Apple, ...) linked to a user.
+    """One provider identity (Google, Microsoft, Apple, ...) linked to a user.
 
     Written by sign-in with an ID token (:mod:`karni.accounts.social_token`):
     ``subject`` is the provider's stable id for the person (the token's
@@ -232,7 +232,7 @@ class SocialIdentity(BaseModel):
 
 
 class LoginCode(BaseModel):
-    """Experimental. One sign-in code sent by email, stored as a keyed hash.
+    """One sign-in code sent by email, stored as a keyed hash.
 
     Written by sign-in with a code (:mod:`karni.accounts.otp`). ``email`` is
     the address the code was sent to, lower-cased, and ``user`` the account
@@ -289,7 +289,7 @@ def _permanent(operation: str) -> PermanentRecordError:
 
 
 class TermsAcceptanceQuerySet(BaseQuerySet):
-    """Experimental. The queryset of :class:`TermsAcceptance`: it reads, it never rewrites.
+    """The queryset of :class:`TermsAcceptance`: it reads, it never rewrites.
 
     ``update()``, ``delete()``, ``hard_delete()`` and ``restore()`` raise
     :class:`~karni.accounts.terms.PermanentRecordError` (``E247``), so a bulk
@@ -322,11 +322,11 @@ class TermsAcceptanceQuerySet(BaseQuerySet):
 
 
 class TermsAcceptanceManager(ScopedManagerMixin, Manager.from_queryset(TermsAcceptanceQuerySet)):  # type: ignore[misc]
-    """Experimental. The default manager of :class:`TermsAcceptance`: scoped, no rewrites."""
+    """The default manager of :class:`TermsAcceptance`: scoped, no rewrites."""
 
 
 class TermsAcceptance(BaseModel):
-    """Experimental. One user's acceptance of one version of the terms (``KARNI_TERMS``).
+    """One user's acceptance of one version of the terms (``KARNI_TERMS``).
 
     Written by :func:`karni.accounts.terms.accept` (``POST <auth
     mount>/terms/accept/``): ``version`` is the ``KARNI_TERMS["version"]``
@@ -485,7 +485,7 @@ class RolePermission(BaseModel):
     ``user.<scope_path>``), ``custom`` (``scope_path`` names a scope
     registered with :func:`karni.accounts.roles.register_scope`), ``tree``
     (``scope_path`` is a path to a tree model, and the rows under the user's
-    nodes are reached, experimental) or ``none``
+    nodes are reached) or ``none``
     — a declared grant the permission matrix revoked, kept as a row so the
     next ``karni sync-roles`` does not quietly restore it.
 
@@ -535,11 +535,11 @@ class RolePermission(BaseModel):
         return f"{self.role_id} may {self.permission_id} ({self.scope}{suffix})"
 
 
-# per-user grants (experimental, karni.accounts.grants)
+# per-user grants (karni.accounts.grants)
 
 
 class UserGrantQuerySet(BaseQuerySet):
-    """Experimental. The queryset of :class:`UserGrant`: live and expired grants."""
+    """The queryset of :class:`UserGrant`: live and expired grants."""
 
     def live(self, at: Any = None) -> UserGrantQuerySet:
         """The grants that apply at ``at`` (default now): no expiry, or an expiry after it."""
@@ -553,11 +553,11 @@ class UserGrantQuerySet(BaseQuerySet):
 
 
 class UserGrantManager(ScopedManagerMixin, Manager.from_queryset(UserGrantQuerySet)):  # type: ignore[misc]
-    """Experimental. The default manager of :class:`UserGrant`: scoped, with ``live()``."""
+    """The default manager of :class:`UserGrant`: scoped, with ``live()``."""
 
 
 class UserGrant(BaseModel):
-    """Experimental. A grant to one user, next to the grants of their roles.
+    """A grant to one user, next to the grants of their roles.
 
     ``permission`` is a pattern written as in ``KARNI_ROLES``
     (``app_label.model:action``, with ``*`` for either part, or ``*`` alone)

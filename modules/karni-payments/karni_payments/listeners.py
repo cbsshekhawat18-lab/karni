@@ -1,4 +1,4 @@
-"""Experimental. karni-payments' family events: declared here, published when a status moves.
+"""karni-payments' family events: declared here, published when a status moves.
 
 Any part reacts to a payment by name, without importing this module::
 

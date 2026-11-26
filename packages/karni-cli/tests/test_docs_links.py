@@ -53,9 +53,11 @@ def _prose(path: Path, *, spans: bool = False) -> list[str]:
 
 
 def _heading_text(markdown: str) -> str:
-    text = re.sub(r"`([^`]*)`", r"\1", markdown)
+    # A tag outside code is markup; inside a code span (`karni remove <x>`) it is text.
+    parts = markdown.split("`")
+    parts[::2] = [re.sub(r"<[^>]+>", "", part) for part in parts[::2]]
+    text = "".join(parts)
     text = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", text)
-    text = re.sub(r"<[^>]+>", "", text)
     return text.replace("*", "")  # emphasis. An underscore stays (snake_case names).
 
 
@@ -174,6 +176,7 @@ def test_the_slugs_match_what_mkdocs_and_github_write() -> None:
         "`object_permission_classes`",
         "Accounts & auth",
         "**Bold** step",
+        "Taking a module out (`karni remove <x>`)",
     ]
     page = markdown.Markdown(extensions=["toc"])
     page.convert("\n\n".join(f"## {heading}" for heading in headings))

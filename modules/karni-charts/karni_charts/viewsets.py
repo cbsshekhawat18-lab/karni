@@ -1,4 +1,4 @@
-"""The charts API: definitions and their data (experimental).
+"""The charts API: definitions and their data.
 
 ``GET /api/charts/`` and ``GET /api/charts/<slug>/`` list and read the
 definitions, for whoever ``KARNI_CHARTS_READ`` admits. ``GET
@@ -32,7 +32,7 @@ _READERS = {"authenticated": Authenticated, "public": Public}
 
 
 class ChartViewSet(BaseViewSet):
-    """Experimental. Read-only: the definitions, and each chart's data through its source."""
+    """Read-only: the definitions, and each chart's data through its source."""
 
     model = Chart
     lookup_field = "slug"
@@ -60,7 +60,7 @@ class ChartViewSet(BaseViewSet):
 
     @action(detail=True, methods=["get"], url_path="data")
     def data(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Experimental. The chart's definition and its data, read through the source's aggregate.
+        """The chart's definition and its data, read through the source's aggregate.
 
         The chart's ``default_filters`` always apply, and the viewer may add the
         list filters its ``allowed_filters`` names (any other is a 400,

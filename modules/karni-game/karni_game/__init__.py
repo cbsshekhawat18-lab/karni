@@ -1,4 +1,4 @@
-"""karni-game (experimental): the server side of a game, for any game a project hosts.
+"""Experimental. karni-game: the server side of a game, for any game a project hosts.
 
 A game's player is a person of the people contract (:mod:`karni.people`): a
 guest first, with a token the server issues, then an account, keeping the
@@ -20,7 +20,6 @@ from importlib import metadata as _metadata
 
 #: The version of the game contract (the HTTP API of docs/game-api.md, the hooks of
 #: :mod:`karni_game.hooks` and the family events of :mod:`karni_game.events`).
-#: Experimental.
 CONTRACT = 1
 
 try:

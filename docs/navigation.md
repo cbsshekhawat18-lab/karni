@@ -1,19 +1,8 @@
 ---
-description: "Navigation from data in Karni (experimental): each user's menu from KARNI_NAVIGATION or a NavItem tree edited in the admin, opened by the same role and per-user grants as the API, served at GET /api/navigation/ and rendered by @karni/ui's Layout."
+description: "Navigation from data in Karni: each user's menu from KARNI_NAVIGATION or a NavItem tree edited in the admin, opened by the same role and per-user grants as the API, served at GET /api/navigation/ and rendered by @karni/ui's Layout."
 ---
 
 # Navigation from data
-
-!!! warning "Experimental"
-    Everything on this page is [experimental](stability.md#experimental-names):
-    the `KARNI_NAVIGATION` and `KARNI_NAVIGATION_PAGES` settings,
-    `karni.navigation` (with `karni.navigation.api`, `karni.navigation.checks`
-    and `karni.navigation.admin`), the `NavItem` model, `GET
-    /api/navigation/`, the `navigation` key of `karni.yaml`, and `useNavigation`,
-    `navigationEntries`, `defaultNavIcons`, `LayoutNavGroup`, the `NavGroup`
-    slot and `Layout`'s `navSource`, `pathname` and `icons` in `@karni/ui`.
-    They may change in a minor release, and each change is in the CHANGELOG.
-    The error codes keep their meaning.
 
 A large app shows each customer a different set of modules and pages, and
 its admins change the menu without a deploy. Karni builds that menu from data

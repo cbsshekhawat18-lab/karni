@@ -47,7 +47,7 @@
  * `modeOverride` prop → cached parsed schema (`authMode`) → the schema
  * document's root `x-karni-auth-mode` (api B14) → "jwt".
  *
- * ## Terms (experimental)
+ * ## Terms
  * While the server sets `KARNI_TERMS`, `/me/` (and so login) carries
  * `terms: { required, version, url, accepted }`. The engine mirrors it as
  * `terms` and `termsRequired`. It also registers the client's `onError` hook:
@@ -98,9 +98,9 @@ export interface AuthSnapshot {
   readonly status: AuthStatus;
   readonly user: KarniUser | null;
   readonly mode: AuthMode | null;
-  /** Experimental. The terms the server asks the user to accept, or null when it asks for none. */
+  /** The terms the server asks the user to accept, or null when it asks for none. */
   readonly terms: AuthTerms | null;
-  /** Experimental. True while the API refuses the user until they accept `terms`. */
+  /** True while the API refuses the user until they accept `terms`. */
   readonly termsRequired: boolean;
 }
 
@@ -538,7 +538,7 @@ export class AuthEngine {
   }
 
   /**
-   * Experimental. Signs in with a provider's ID token: `POST
+   * Signs in with a provider's ID token: `POST
    * <authBasePath>/social/<provider>/`. JWT mode adopts the returned token
    * pair, the way `adoptTokens` does. Session mode re-syncs the session user
    * from `/me/`, which also proves the session cookie came back. A
@@ -571,7 +571,7 @@ export class AuthEngine {
   }
 
   /**
-   * Experimental. Asks the server to email a sign-in code: `POST
+   * Asks the server to email a sign-in code: `POST
    * <authBasePath>/otp/send/`. The answer is the same for every address, so
    * it never says whether a code went out. It carries the code's length and
    * lifetime. A malformed address, a throttled request or the feature turned
@@ -589,7 +589,7 @@ export class AuthEngine {
   }
 
   /**
-   * Experimental. Signs in with the code the server emailed: `POST
+   * Signs in with the code the server emailed: `POST
    * <authBasePath>/otp/verify/`. Exactly like `socialLogin`: JWT mode adopts
    * the returned token pair, session mode re-syncs the session user from
    * `/me/`, and a `requires_2fa` answer or a new account awaiting approval
@@ -665,7 +665,7 @@ export class AuthEngine {
   }
 
   /**
-   * Experimental. Accepts the terms the engine knows (`POST
+   * Accepts the terms the engine knows (`POST
    * <authBasePath>/terms/accept/` with their `version`), sending `client`
    * (what the app says about itself) along when given. Resolves with the
    * accepted terms, and `termsRequired` turns off. A refusal rejects with the

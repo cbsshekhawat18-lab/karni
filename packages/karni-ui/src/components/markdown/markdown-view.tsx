@@ -1,7 +1,7 @@
 /**
  * <MarkdownView>: markdown text shown as formatted, sanitized HTML.
  *
- * Experimental. The parser (marked) and the sanitizer (DOMPurify) load on the
+ * The parser (marked) and the sanitizer (DOMPurify) load on the
  * first MarkdownView a page renders, so a page without one never downloads
  * them. Raw HTML in the source shows as text unless `allowHtml`, and even
  * then it is sanitized: no script, no event handler, no `javascript:` link,
@@ -105,7 +105,7 @@ const PROSE = cn(
   "[&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2",
 );
 
-/** Experimental. Markdown shown as formatted, sanitized HTML (the parser loads on first use). */
+/** Markdown shown as formatted, sanitized HTML (the parser loads on first use). */
 export const MarkdownView = React.forwardRef<HTMLDivElement, MarkdownViewProps>(
   (
     {
@@ -195,7 +195,7 @@ export const MarkdownView = React.forwardRef<HTMLDivElement, MarkdownViewProps>(
 );
 MarkdownView.displayName = "MarkdownView";
 
-/** Experimental. Loads MarkdownView's renderer ahead of time (on hover of a link to a page that shows markdown, say). */
+/** Loads MarkdownView's renderer ahead of time (on hover of a link to a page that shows markdown, say). */
 export function preloadMarkdown(): Promise<void> {
   return loadRenderer().then(() => undefined);
 }

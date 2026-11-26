@@ -1,4 +1,4 @@
-"""The version range a project holds Karni and its modules at (experimental).
+"""The version range a project holds Karni and its modules at.
 
 Karni's packages are released in lockstep, and a module's own range on karni
 is its minor (``karni>=0.7,<0.8``). A project that lists them bare gets the

@@ -1,4 +1,4 @@
-"""Experimental. ``assert_module_manifest``: a module's catalog entry matches the module.
+"""``assert_module_manifest``: a module's catalog entry matches the module.
 
 ::
 
@@ -59,7 +59,7 @@ def _models(app: str) -> set[str] | None:
 
 
 def assert_module_manifest(package: str) -> Manifest:
-    """Experimental. Check ``<package>/karni.module.toml`` against the module; return it."""
+    """Check ``<package>/karni.module.toml`` against the module; return it."""
     source = f"{package}/{MANIFEST_FILE}"
     try:
         text = resources.files(package).joinpath(MANIFEST_FILE).read_text(encoding="utf-8")

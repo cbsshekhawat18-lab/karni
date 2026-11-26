@@ -1,4 +1,4 @@
-"""Experimental. ``NavItem``: the menu as a tree of rows, for ``KARNI_NAVIGATION = "db"``."""
+"""``NavItem``: the menu as a tree of rows, for ``KARNI_NAVIGATION = "db"``."""
 
 from __future__ import annotations
 
@@ -19,22 +19,22 @@ def _refuse(problem: str | None, code: str) -> None:
 
 
 def validate_route(value: Any) -> None:
-    """Experimental. An app path from ``/`` (``E530``). Empty is a group."""
+    """An app path from ``/`` (``E530``). Empty is a group."""
     _refuse(navigation.route_problem(value) if value else None, "E530")
 
 
 def validate_icon(value: Any) -> None:
-    """Experimental. An icon name such as ``home`` (``E530``)."""
+    """An icon name such as ``home`` (``E530``)."""
     _refuse(navigation.icon_problem(value), "E530")
 
 
 def validate_requirement(value: Any) -> None:
-    """Experimental. ``public``, ``authenticated`` or a permission pattern (``E532``)."""
+    """``public``, ``authenticated`` or a permission pattern (``E532``)."""
     _refuse(navigation.requirement_problem(value), "E532")
 
 
 class NavItem(OrderedTreeModel, BaseModel):
-    """Experimental. One entry of the database menu: an item with a route, or a group without one.
+    """One entry of the database menu: an item with a route, or a group without one.
 
     ``parent`` and ``position`` (:class:`~karni.models.OrderedTreeModel`) place
     it in the tree and among its siblings. ``requires`` is ``public``,

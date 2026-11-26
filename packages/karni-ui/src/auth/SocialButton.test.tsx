@@ -1,5 +1,5 @@
 /**
- * <SocialButton> (experimental) through the real AuthProvider against msw:
+ * <SocialButton> through the real AuthProvider against msw:
  * success, the 2FA step, an account awaiting approval, each refusal in plain
  * words, a closed provider window, and the button's accessible states.
  */

@@ -234,7 +234,7 @@ function relationFromExtension(schema: SchemaObject): RelationRef | undefined {
 }
 
 /**
- * Experimental. The `x-karni-tree` extension (`{"parent": "parent", "ordered": bool}`)
+ * The `x-karni-tree` extension (`{"parent": "parent", "ordered": bool}`)
  * of a tree model's component schema or of a relation pointing at one, when well formed.
  */
 export function parseTreeExtension(raw: unknown): TreeRef | undefined {
@@ -250,7 +250,7 @@ function stringList(value: unknown): string[] | undefined {
 }
 
 /**
- * Experimental. `x-karni-money` (`{"currency": "EUR"}` or `{"currency_field":
+ * `x-karni-money` (`{"currency": "EUR"}` or `{"currency_field":
  * "price_currency"}`), when well formed: the field is an amount of money.
  */
 export function parseMoneyExtension(raw: unknown): MoneyRef | undefined {
@@ -648,7 +648,7 @@ export function parseDashboard(raw: unknown): DashboardDef | undefined {
 // row actions (x-karni-actions)
 
 /**
- * Experimental. The `x-karni-actions` extension of a list operation: each
+ * The `x-karni-actions` extension of a list operation: each
  * declared row action's `from`, `to`, `field`, `by` and `requires`.
  */
 export function parseRowActions(raw: unknown): Record<string, RowActionDef> | undefined {
@@ -670,7 +670,7 @@ export function parseRowActions(raw: unknown): Record<string, RowActionDef> | un
 }
 
 /**
- * Experimental. Whether the declared row action `name` may run on `row` now:
+ * Whether the declared row action `name` may run on `row` now:
  * `true` or `false` from its `from` states, `undefined` when the schema
  * declares no such action (the caller then falls back on its own rule).
  */
@@ -688,7 +688,7 @@ export function rowActionOpen(
 // reverse relations (x-karni-related)
 
 /**
- * Experimental. The `x-karni-related` extension of a list operation: the
+ * The `x-karni-related` extension of a list operation: the
  * reverse relations whose rows ResourceDetail's `related` tabs list. A
  * malformed entry is dropped.
  */
@@ -716,7 +716,7 @@ export function parseRelated(raw: unknown): RelatedDef[] | undefined {
 // field groups and column sets (x-karni-field-groups, x-karni-column-sets)
 
 /**
- * Experimental. The `x-karni-field-groups` extension of a list operation. A
+ * The `x-karni-field-groups` extension of a list operation. A
  * group without a label or a field is dropped, and so is a field already in
  * an earlier group.
  */
@@ -735,7 +735,7 @@ export function parseFieldGroups(raw: unknown): FieldGroupsDef | undefined {
 }
 
 /**
- * Experimental. The `x-karni-column-sets` extension of a list operation. A set
+ * The `x-karni-column-sets` extension of a list operation. A set
  * without a name or a column is dropped. `default` falls back to the first set.
  */
 export function parseColumnSets(raw: unknown): ColumnSetsDef | undefined {
@@ -873,7 +873,7 @@ export function parseOpenApi(input: unknown): ParsedSchema {
     if (importOp !== undefined) {
       operations.import = operationDef(doc, `${path}import/`, "post", importOp);
     }
-    // Tree models (experimental): tree/ under the list path, the rest under the item path.
+    // Tree models: tree/ under the list path, the rest under the item path.
     const treeItem = paths[`${path}tree/`];
     if (isRecord(treeItem) && isRecord(treeItem.get)) {
       operations.tree = operationDef(doc, `${path}tree/`, "get", treeItem.get);
@@ -882,7 +882,7 @@ export function parseOpenApi(input: unknown): ParsedSchema {
     if (isRecord(accessItem) && isRecord(accessItem.get)) {
       operations.access = operationDef(doc, `${path}access/`, "get", accessItem.get);
     }
-    // Taxonomies (experimental): facets/ under the list path.
+    // Taxonomies: facets/ under the list path.
     const facetsItem = paths[`${path}facets/`];
     if (isRecord(facetsItem) && isRecord(facetsItem.get)) {
       operations.facets = operationDef(doc, `${path}facets/`, "get", facetsItem.get);

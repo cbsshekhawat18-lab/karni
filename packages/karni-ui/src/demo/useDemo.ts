@@ -1,5 +1,5 @@
 /**
- * Experimental. What a demo-mode server says about itself: `GET /demo/`
+ * What a demo-mode server says about itself: `GET /demo/`
  * (Django's `karni.demo`, mounted at `api/demo/`). The demo accounts with what
  * each can do, how often the data resets, and when the next reset is due.
  *
@@ -20,7 +20,7 @@ import { KarniApiError } from "../schema/client";
 import { useKarniClient } from "../schema/provider";
 import { karniKeys } from "../hooks/keys";
 
-/** Experimental. One demo account, as the server lists it. */
+/** One demo account, as the server lists it. */
 export interface DemoAccount {
   /** The login (an email) to sign in with. */
   login: string;
@@ -34,7 +34,7 @@ export interface DemoAccount {
   roles: string[];
 }
 
-/** Experimental. The body of `GET /demo/`. */
+/** The body of `GET /demo/`. */
 export interface DemoInfo {
   enabled: true;
   accounts: DemoAccount[];
@@ -46,10 +46,10 @@ export interface DemoInfo {
   admin_url: string | null;
 }
 
-/** Experimental. Where the demo's description comes from, relative to the client's `baseUrl`. */
+/** Where the demo's description comes from, relative to the client's `baseUrl`. */
 export const DEMO_PATH = "/demo/";
 
-/** Experimental. The demo accounts of the server (`GET /demo/`), cached for five minutes. */
+/** The demo accounts of the server (`GET /demo/`), cached for five minutes. */
 export function useDemo(
   options?: Omit<UseQueryOptions<DemoInfo>, "queryKey" | "queryFn">,
 ): UseQueryResult<DemoInfo> {

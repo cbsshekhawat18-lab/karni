@@ -1,8 +1,6 @@
 /**
  * The hooks of @karni/storage-ui: a direct upload with progress and its
  * confirm step, and the signed link of a protected file.
- *
- * Experimental: these may change in a minor release, with a CHANGELOG entry.
  */
 import { useKarniClient } from "@karni/ui";
 import { useQuery } from "@tanstack/react-query";
@@ -12,7 +10,7 @@ import type { BucketTransport } from "./transport";
 import { UPLOAD_REFERENCE_TYPE } from "./types";
 import type { ConfirmAnswer, FileLink, ProtectedUploadResult, UploadAnswer } from "./types";
 
-/** Experimental. Where one upload is. */
+/** Where one upload is. */
 export type ProtectedUploadStatus =
   "idle" | "preparing" | "uploading" | "confirming" | "done" | "error";
 
@@ -38,7 +36,7 @@ export interface UseProtectedUploadResult {
   uploading: boolean;
 }
 
-/** Experimental. The value a row's save takes for a confirmed upload: a file part carrying the token. */
+/** The value a row's save takes for a confirmed upload: a file part carrying the token. */
 export function uploadReference(token: string, name: string): File {
   return new File([token], name, { type: UPLOAD_REFERENCE_TYPE });
 }
@@ -64,7 +62,7 @@ function resourcePath(resource: string, field: string, step: "upload" | "confirm
 }
 
 /**
- * Experimental. A direct upload of one file to a protected field, with progress.
+ * A direct upload of one file to a protected field, with progress.
  *
  * 1. `POST <resource>/files/<field>/upload/` with the file's name, type and size.
  *    On local storage the answer is method "api": the value is the file itself,
@@ -184,7 +182,7 @@ export interface UseProtectedFileLinkOptions {
 }
 
 /**
- * Experimental. The signed link of a protected file: `GET` its download path
+ * The signed link of a protected file: `GET` its download path
  * with `Accept: application/json` (the client sends the session or token), so
  * the result opens in an `<img>`, a new tab or a download without credentials.
  *
