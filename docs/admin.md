@@ -658,6 +658,14 @@ Each value is passed to `static()`, and `dark` and `icon` fall back to
 `light`. `KARNI_ADMIN_LOGO = None` (the default, also the env value `""`)
 leaves the text header.
 
+Every admin page, the login page included, declares a favicon, so a browser
+never asks for `/favicon.ico` and gets a 404. It is the logo's `icon` when
+`KARNI_ADMIN_LOGO` is set (Karni's small mark for `"karni"`), else a neutral
+admin icon Karni ships (`karni/admin-icon.svg`, dark on a light tab bar and
+light on a dark one). `UNFOLD["SITE_FAVICONS"]` holds it: set your own list
+there (`[{"rel": "icon", "href": "/static/img/icon.png"}]`, an `href` may be
+a callable taking the request) or `[]` for none.
+
 The admin reads the setting on every request: `UNFOLD["SITE_LOGO"]` and
 `UNFOLD["SITE_ICON"]` hold `karni.conf.admin_logo.site_logo` and
 `site_icon`, which unfold calls with the request. So the setting works

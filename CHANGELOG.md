@@ -108,6 +108,13 @@ apply codemods and list the manual steps. This file is the human summary.
   (`karni.E971`) when `django.contrib.admin` is installed, because the admin breaks, and a
   warning (`karni.W971`) otherwise. See [admin](docs/admin.md#languages).
 
+- **Fixed: every admin page has a favicon.** No admin page declared an icon, so browsers
+  asked for `/favicon.ico` and got a 404 on every page. `karni_settings()` now sets
+  `UNFOLD["SITE_FAVICONS"]`: the icon of `KARNI_ADMIN_LOGO` when it is set, else a neutral
+  admin icon Karni ships (`karni/admin-icon.svg`, which follows the browser's light or dark
+  scheme), on the login page too. A project's own `UNFOLD["SITE_FAVICONS"]` wins, and `[]`
+  declares none.
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web

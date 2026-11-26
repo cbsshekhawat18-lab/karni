@@ -721,6 +721,7 @@ BASE: dict[str, Any] = {
     "KARNI_GENERATOR": env("KARNI_GENERATOR", default="Karni"),
     # Logo for the admin header and login screen: "" (none, the default),
     # "karni" (Karni's own mark) or {"light": <static path>, "dark": ..., "icon": ...}.
+    # Its icon is the favicon of every admin page (a neutral one without a logo).
     # Wired into UNFOLD by karni_settings(); see docs/admin.md#theming.
     "KARNI_ADMIN_LOGO": env("KARNI_ADMIN_LOGO", default="") or None,
     # The project's brand tokens, the file `karni ui detect` writes for the

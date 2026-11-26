@@ -1,5 +1,8 @@
 """``KARNI_ADMIN_LOGO``: no logo by default, Karni's mark on request, a project's own paths.
 
+Every admin page declares a favicon: the logo's icon, else a neutral icon Karni
+ships, so no browser asks for ``/favicon.ico`` and gets a 404 (site report 2, item 8).
+
 The admin reads the setting on every request, so a value assigned after
 ``karni_settings()`` (``override_settings`` here) shows in the header and on
 the login screen.
@@ -7,6 +10,7 @@ the login screen.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pytest
@@ -17,8 +21,10 @@ from django.test import Client, override_settings
 from karni.admin.apps import LOGIN_TEMPLATE, use_login_template
 from karni.conf import karni_settings
 from karni.conf.admin_logo import (
+    DEFAULT_ICON,
     KARNI_MARK,
     logo_paths,
+    site_favicon,
     site_icon,
     site_logo,
     unfold_logo_entries,
@@ -118,3 +124,65 @@ def test_the_header_shows_the_logo_assigned_after_the_call(admin_client: Client)
     with override_settings(KARNI_ADMIN_LOGO={"light": "img/ours.svg"}):
         page = admin_client.get("/admin/").content.decode()
     assert "/img/ours.svg" in page
+
+
+# -- the favicon (every admin page, the login page included) ---------------------------
+
+ICON_LINK = re.compile(r'<link\s+rel="icon"\s+href="([^"]+)"')
+
+
+def test_the_favicon_is_karnis_neutral_icon_without_a_logo() -> None:
+    (entry,) = _settings()["UNFOLD"]["SITE_FAVICONS"]
+    assert entry == {"rel": "icon", "href": site_favicon}
+    assert finders.find(DEFAULT_ICON)
+    assert site_favicon(None).endswith("/karni/admin-icon.svg")
+
+
+def test_the_favicon_is_the_logos_icon() -> None:
+    with override_settings(KARNI_ADMIN_LOGO="karni"):
+        assert site_favicon(None).endswith("/karni/brand/karni-mark-simple.svg")
+    with override_settings(KARNI_ADMIN_LOGO={"light": "img/mark.svg", "icon": "img/icon.png"}):
+        assert site_favicon(None).endswith("/img/icon.png")
+    with override_settings(KARNI_ADMIN_LOGO={"light": "img/mark.svg"}):
+        assert site_favicon(None).endswith("/img/mark.svg")  # the icon falls back to light
+
+
+def test_a_projects_own_favicons_win() -> None:
+    assert _settings(UNFOLD={"SITE_FAVICONS": []})["UNFOLD"]["SITE_FAVICONS"] == []
+    mine = [{"rel": "icon", "href": "/static/mine.ico"}]
+    assert _settings(UNFOLD={"SITE_FAVICONS": mine})["UNFOLD"]["SITE_FAVICONS"] == mine
+
+
+@pytest.mark.django_db
+def test_every_admin_page_declares_the_favicon(client: Client, admin_client: Client) -> None:
+    from django.urls import reverse
+
+    from tests.adminapp.models import Widget
+
+    widget = Widget.objects.create(name="Bolt")
+    pages = [
+        "admin:index",
+        ("admin:app_list", "adminapp"),
+        "admin:adminapp_widget_changelist",
+        "admin:adminapp_widget_add",
+        ("admin:adminapp_widget_change", widget.pk),
+        ("admin:adminapp_widget_delete", widget.pk),
+        ("admin:adminapp_widget_history", widget.pk),
+        "admin:adminapp_widget_import",
+        "admin:password_change",
+        "admin:karni_api_cache",
+        "admin:karni_accounts_rolepermission_permission_matrix",
+    ]
+    login = client.get(reverse("admin:login")).content.decode()
+    assert ICON_LINK.findall(login) == ["/static/karni/admin-icon.svg"], "login"
+    for page in pages:
+        name, *args = page if isinstance(page, tuple) else (page,)
+        response = admin_client.get(reverse(name, args=args))
+        assert response.status_code == 200, (name, response.status_code)
+        icons = ICON_LINK.findall(response.content.decode())
+        assert icons == ["/static/karni/admin-icon.svg"], (name, icons)
+    with override_settings(KARNI_ADMIN_LOGO="karni"):
+        index = admin_client.get(reverse("admin:index")).content.decode()
+        signed_out = client.get(reverse("admin:login")).content.decode()
+    for html in (index, signed_out):
+        assert ICON_LINK.findall(html) == ["/static/karni/brand/karni-mark-simple.svg"]

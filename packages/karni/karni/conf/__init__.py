@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from karni.conf.admin_logo import logo_paths, site_icon, site_logo
+from karni.conf.admin_logo import logo_paths, site_favicons, site_icon, site_logo
 from karni.conf.base import (
     ALLAUTH_MIDDLEWARE,
     BASE,
@@ -564,9 +564,11 @@ def karni_settings(
       a Celery worker. It sets the defaults :data:`SINGLE_PROCESS_SETTINGS`
       lists (the cache in memory, tasks in the process, the probes without the
       broker and the worker), each only where the project has no value of its own.
-    * ``KARNI_ADMIN_LOGO``: ``UNFOLD["SITE_LOGO"]`` and ``["SITE_ICON"]``
-      default to resolvers that read the setting on every admin request, so
-      it works wherever it is assigned. A bad value raises ``E303`` here.
+    * ``KARNI_ADMIN_LOGO``: ``UNFOLD["SITE_LOGO"]``, ``["SITE_ICON"]`` and
+      ``["SITE_FAVICONS"]`` default to resolvers that read the setting on
+      every admin request, so it works wherever it is assigned. A bad value
+      raises ``E303`` here. Without it the favicon is Karni's neutral admin
+      icon.
 
     The settings in :data:`CALL_TIME_SETTINGS` are read during the call.
     Assigning one after the call cannot change what was computed from it, so
@@ -706,6 +708,8 @@ def karni_settings(
     if isinstance(unfold, dict):
         unfold.setdefault("SITE_LOGO", site_logo)
         unfold.setdefault("SITE_ICON", site_icon)
+        # A favicon on every admin page: the logo's icon, else Karni's neutral one.
+        unfold.setdefault("SITE_FAVICONS", site_favicons())
         # The admin is light only: a project's own UNFOLD dict gets it too.
         unfold.setdefault("THEME", "light")
         # The user menu: Change password and "Show the getting started guide".
