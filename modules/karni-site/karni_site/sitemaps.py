@@ -32,10 +32,20 @@ Addresses are absolute: on ``KARNI_SITE_URL`` when it is set, else on the
 request's host. One request reads each section's rows once (a section keeps
 its paginator) and the admin's hidden pages once for every section.
 
+On a site in several languages (its pages under ``i18n_patterns``,
+:func:`karni_site.languages.in_addresses`) every section lists each language's
+address of each page and row (Django's ``Sitemap.i18n``): a page's address is
+reversed in that language, a row's is its ``get_absolute_url()`` in it. The
+admin's hidden pages and ``KARNI_SITE_SITEMAP_EXCLUDE`` are checked against
+each language's address, and an address that does not change with the
+language is listed once.
+
 Override / escape hatch: ``KARNI_SITE_SITEMAP_EXCLUDE``,
 ``KARNI_SITE_PUBLISHED_FIELDS``, ``class Karni: sitemap``, :func:`pages`, or
 ``KARNI_SITE_SITEMAPS`` naming your own ``() -> {name: Sitemap}`` function
-(which can call this one and add to it).
+(which can call this one and add to it). ``i18n = False`` on a section of your
+own lists one language there, and Django's ``languages`` and
+``get_languages_for_item()`` choose them.
 """
 
 from __future__ import annotations
@@ -50,13 +60,14 @@ from django.core.exceptions import FieldDoesNotExist
 from django.core.paginator import Paginator
 from django.db import models
 from django.urls import NoReverseMatch, Resolver404, resolve, reverse
-from django.utils import timezone
+from django.utils import timezone, translation
 from django.utils.functional import cached_property
 from django.views.generic.base import RedirectView
 from karni.exceptions import KarniImproperlyConfigured
 from karni.meta import karni_option
 
 from karni_site import conf
+from karni_site.languages import in_addresses
 
 __all__ = [
     "HiddenPages",
@@ -95,11 +106,38 @@ class SiteSitemap(Sitemap):
     It keeps its paginator, so the rows are counted and read once however
     often the view asks how many pages the section has. Django's own builds a
     new one, and queries again, each time.
+
+    ``i18n`` is on when the site's addresses carry the language
+    (:func:`karni_site.languages.in_addresses`): each language's address is
+    listed, an address that does not change with the language once. Setting
+    ``i18n`` (on the class or the instance) decides instead.
     """
+
+    _i18n: bool | None = None
+
+    @property
+    def i18n(self) -> bool:
+        return in_addresses() if self._i18n is None else self._i18n
+
+    @i18n.setter
+    def i18n(self, value: bool) -> None:
+        self._i18n = value
 
     @cached_property
     def paginator(self) -> Paginator:
         return Paginator(self._items(), self.limit)
+
+    def get_urls(self, page: Any = 1, site: Any = None, protocol: Any = None) -> Any:
+        urls = super().get_urls(page, site, protocol)
+        if not self.i18n:
+            return urls
+        seen: set[str] = set()
+        unique = []
+        for url in urls:
+            if url["location"] not in seen:
+                seen.add(url["location"])
+                unique.append(url)
+        return unique
 
     def _configured(self) -> Any:
         url = conf.get("KARNI_SITE_URL")
@@ -120,6 +158,19 @@ def excluded(name: str, path: str) -> bool:
     """Whether ``KARNI_SITE_SITEMAP_EXCLUDE`` names this URL name or path."""
     patterns = [str(p) for p in conf.get("KARNI_SITE_SITEMAP_EXCLUDE") or ()]
     return any(fnmatchcase(name, p) or fnmatchcase(path, p) for p in patterns)
+
+
+def _translated(path: str, language: str | None) -> str:
+    """``path``, written in ``language``, as the active language writes that page's address."""
+    with translation.override(language):
+        try:
+            match = resolve(path)
+        except Resolver404:
+            return path
+    try:
+        return reverse(match.view_name, args=match.args, kwargs=match.kwargs)
+    except NoReverseMatch:
+        return path
 
 
 def _is_redirect(path: str) -> bool:
@@ -241,24 +292,44 @@ class PagesSitemap(SiteSitemap):
 
     def __init__(self, hidden: HiddenPages | None = None) -> None:
         self.hidden = hidden or HiddenPages()
+        #: The language :meth:`items` wrote the paths in, and each path's URL name.
+        self._language: str | None = None
+        self._names: dict[str, str] = {}
 
     def items(self) -> list[str]:
         from karni_site.routes import site_pages
 
+        self._language = translation.get_language()
         hidden_routes, hidden_paths = self.hidden.get()
         found: list[str] = []
         for name, path in [*site_pages(), *declared_items()]:
-            if name.startswith(_OWN_NAMESPACES) or path in found:
+            if name.startswith(_OWN_NAMESPACES) or path in found or name in hidden_routes:
                 continue
-            if name in hidden_routes or path in hidden_paths or excluded(name, path):
+            # With languages, each language's address is checked on its own (below).
+            if not self.i18n and (path in hidden_paths or excluded(name, path)):
                 continue
             if _is_redirect(path):
                 continue
             found.append(path)
+            self._names[path] = name
         return found
 
     def location(self, item: str) -> str:
-        return item
+        """The page's path, in the active language when the addresses carry it."""
+        if not self.i18n:
+            return item
+        return _translated(item, self._language)
+
+    def get_languages_for_item(self, item: str) -> list[str]:
+        """The languages whose address of the page is neither hidden in the admin nor excluded."""
+        _hidden_routes, hidden_paths = self.hidden.get()
+        shown: list[str] = []
+        for language in super().get_languages_for_item(item):
+            with translation.override(language):
+                path = self.location(item)
+            if path not in hidden_paths and not excluded(self._names.get(item, ""), path):
+                shown.append(language)
+        return shown
 
 
 def model_spec(model: type[models.Model]) -> dict[str, Any] | None:
@@ -354,12 +425,25 @@ class ModelSitemap(SiteSitemap):
     def items(self) -> Any:
         rows = public_rows(self.model, self.spec)
         hidden_routes, hidden_paths = self.hidden.get()
-        if not hidden_routes and not hidden_paths:
-            return rows
+        if (not hidden_routes and not hidden_paths) or self.i18n:
+            return rows  # with languages, each language's address is checked on its own
         return [row for row in rows if not _hidden_row(row, hidden_routes, hidden_paths)]
 
     def location(self, item: Any) -> str:
         return str(item.get_absolute_url())
+
+    def get_languages_for_item(self, item: Any) -> list[str]:
+        """The languages whose address of the row the admin does not hide."""
+        languages = list(super().get_languages_for_item(item))
+        hidden_routes, hidden_paths = self.hidden.get()
+        if not hidden_routes and not hidden_paths:
+            return languages
+        shown: list[str] = []
+        for language in languages:
+            with translation.override(language):
+                if not _hidden_row(item, hidden_routes, hidden_paths):
+                    shown.append(language)
+        return shown
 
     def lastmod(self, item: Any) -> Any:
         return getattr(item, self._lastmod, None) if self._lastmod else None

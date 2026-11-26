@@ -679,6 +679,13 @@ search engines without project code:
 - **sitemap.xml** lists the site's pages and every model's rows that have a
   page, honouring scopes, soft deletes and a published flag (`class Karni:
   sitemap = {"filter": {...}}` to choose).
+- **A site in several languages** (`i18n_patterns`, two languages or more in
+  `LANGUAGES`): sitemap.xml lists every language's address of each page and
+  row, a menu is built and marked in the page's language, and `karni check
+  --seo` compares titles and descriptions within one language. Blocks, menu
+  item titles and page titles hold one text each, the same in every
+  language. The [module's README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site#a-site-in-several-languages)
+  says what changes.
 - **robots.txt** closes the site outside production (`DJANGO_ENV` other
   than `prod`) and names the sitemap in production.
   `KARNI_SITE_ALLOW_INDEXING` decides otherwise. A closed site also says

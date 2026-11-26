@@ -37,7 +37,13 @@ Findings, one line each:
   without a word.
 
 Duplicates are counted among the pages search engines may index (no
-``noindex``, a canonical link to themselves). The run requests the pages as an
+``noindex``, a canonical link to themselves), and on a site in several
+languages (``i18n_patterns``, :mod:`karni_site.languages`) within one language:
+``/en/contact/`` and ``/fr/contact/`` may both be "Contact". There the sitemap
+lists every language's address, so ``SITE018`` checks each language's pages
+against it, and its advice names the cause it finds: a pattern without a name,
+a section of your own that lists one language, a row without
+``get_absolute_url()``. The run requests the pages as an
 open site serves them (``KARNI_SITE_ALLOW_INDEXING = True`` while it runs), so
 a development copy, closed to search engines on every page, is checked as
 production will be.
@@ -69,15 +75,18 @@ import sys
 import xml.etree.ElementTree as ElementTree
 from collections import deque
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import unquote, urljoin, urlsplit
 
 from django.conf import settings
+from django.urls import NoReverseMatch, reverse
+from django.utils import translation
 from karni.testing.pages import PageParser
 
 from karni_site import conf, imagesize, renditions
+from karni_site.languages import default_language, language_of
 
 __all__ = [
     "PLACEHOLDER_DESCRIPTION",
@@ -434,12 +443,13 @@ class SeoCrawl:
             (SAME_TITLE_CODE, "title", "title"),
             (SAME_DESCRIPTION_CODE, "description", "description"),
         ):
-            groups: dict[str, list[str]] = {}
+            # Within one language: /en/contact/ and /fr/contact/ may both say "Contact".
+            groups: dict[tuple[str, str], list[str]] = {}
             for page in indexable:
                 value = " ".join(str(getattr(page, attribute) or "").split())
                 if value and not (attribute == "description" and _placeholder(value)):
-                    groups.setdefault(value, []).append(page.path)
-            for value, paths in groups.items():
+                    groups.setdefault((language_of(page.path), value), []).append(page.path)
+            for (_language, value), paths in groups.items():
                 if len(paths) > 1:
                     self.fail(
                         code,
@@ -515,18 +525,46 @@ class SeoCrawl:
         for path, page in self.pages.items():
             if not page.indexable or path in listed or "?" in path:
                 continue
-            try:
-                name = resolve(urlsplit(path).path).view_name
-            except Resolver404:
-                name = ""
-            if excluded(name, path):
+            language = language_of(path)
+            with translation.override(language) if language else nullcontext():
+                try:
+                    match: Any = resolve(urlsplit(path).path)
+                except Resolver404:
+                    match = None
+            if excluded(match.view_name if match is not None else "", path):
                 continue
-            self.fail(
-                SITEMAP_CODE,
-                f"{path} is a page of the site that sitemap.xml leaves out. Give its row "
-                "get_absolute_url() and a public filter (class Karni: sitemap), or list it in "
-                "KARNI_SITE_SITEMAP_EXCLUDE when it should stay out.",
+            self.fail(SITEMAP_CODE, self.left_out(path, match, listed))
+
+    def left_out(self, path: str, match: Any, listed: set[str]) -> str:
+        """``SITE018`` for a page the sitemap leaves out, with the advice that fits its cause."""
+        start = f"{path} is a page of the site that sitemap.xml leaves out."
+        stay = "or list it in KARNI_SITE_SITEMAP_EXCLUDE when it should stay out."
+        if match is None or not match.url_name:
+            return f"{start} Its URL pattern has no name, so no section lists it: name it, {stay}"
+        language, default = language_of(path), default_language()
+        if language and language != default:
+            with translation.override(default):
+                try:
+                    twin = reverse(match.view_name, args=match.args, kwargs=match.kwargs)
+                except NoReverseMatch:
+                    twin = ""
+            if twin in listed:
+                return (
+                    f"{start} Its address in the default language, {twin}, is listed: the section "
+                    "that lists it gives one language only. karni_site's own sections list every "
+                    "language's address. A section of your own (KARNI_SITE_SITEMAPS) needs "
+                    f"i18n = True, and a get_absolute_url() built with reverse(), {stay}"
+                )
+        if match.args or match.kwargs:
+            return (
+                f"{start} Give its row get_absolute_url() and a public filter "
+                f"(class Karni: sitemap), {stay}"
             )
+        return (
+            f"{start} A named page without arguments is in the pages section unless the admin "
+            "hides it or KARNI_SITE_SITEMAP_EXCLUDE names it, so a section list of your own "
+            f"(KARNI_SITE_SITEMAPS) leaves it out: add it there, {stay}"
+        )
 
     # the run
 

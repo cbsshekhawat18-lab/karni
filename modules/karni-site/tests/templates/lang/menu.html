@@ -1,0 +1,7 @@
+{% load i18n %}{% get_current_language as lang %}<ul>
+  <li><a href="{% url 'website:home' %}">{% if lang == "fr" %}Accueil{% else %}Home{% endif %}</a></li>
+  <li><a href="{% url 'website:about' %}">{% if lang == "fr" %}À propos{% else %}About us{% endif %}</a>
+    <ul data-karni-children-from="testapp.Service"><li><a href="#">A service</a></li></ul>
+  </li>
+  <li><a href="{% url 'website:contact' %}">Contact</a></li>
+</ul>

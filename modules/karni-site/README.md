@@ -321,6 +321,27 @@ are exactly one model's detail pages.
 A menu's tree is cached. Saving a menu or an item clears it, and so does
 saving a row of a model an item points at.
 
+### A site in several languages
+
+Under `i18n_patterns`, with two languages or more in `LANGUAGES` and
+`LocaleMiddleware`:
+
+- a menu is cached per language, its links are that language's addresses
+  (`/fr/about/`), a row's title is `str(row)` in that language, and the
+  current page is marked against those links. A language's home page
+  (`/fr/`) is home, never a section. The seed is read and followed in the
+  default language (`LANGUAGE_CODE`) only, so a visitor of another language
+  never makes the menu follow it again. An item's own title is one text, the
+  same in every language;
+- sitemap.xml lists every language's address of each page and row
+  ([below](#sitemapxml-and-robotstxt));
+- `karni check --seo` compares titles and descriptions within one language:
+  `/en/contact/` and `/fr/contact/` may both be "Contact".
+
+Blocks, page titles and the site's details hold one text each, the same in
+every language. A one-language site, or one without `i18n_patterns`, works
+as before.
+
 ### Redirects
 
 `karni_site.middleware.RedirectMiddleware` answers the redirects of the
@@ -441,6 +462,15 @@ probes and the welcome page) are never listed, here or in the menu item's
 50,000 addresses in a section, sitemap.xml becomes an index of
 `/sitemap-<section>.xml?p=<page>`.
 
+On a site in several languages (`i18n_patterns`) each section lists every
+language's address of each page and row (Django's `Sitemap.i18n`): a page's
+address is reversed in that language, a row's is its `get_absolute_url()` in
+it. A page hidden in the admin by its path, or excluded by a path in
+`KARNI_SITE_SITEMAP_EXCLUDE`, is left out in that language only. An address
+that does not change with the language is listed once. A section of your own
+(`KARNI_SITE_SITEMAPS`) built on `karni_site.sitemaps.SiteSitemap` does the
+same, and `i18n = False` on it lists one language.
+
 `/robots.txt` closes the site to every crawler unless indexing is allowed:
 by default only where `DJANGO_ENV` is `prod`, so a development or staging
 copy is never indexed. `KARNI_SITE_ALLOW_INDEXING = True` or `False`
@@ -512,14 +542,14 @@ as a first visit would. It reports:
 | Code | Finding |
 | --- | --- |
 | `SITE010` | a page without a title |
-| `SITE011` | a title two pages search engines may index share |
+| `SITE011` | a title two pages search engines may index share (within one language on a site in several) |
 | `SITE012` | a page without a description |
-| `SITE013` | a description two such pages share |
+| `SITE013` | a description two such pages share (within one language too) |
 | `SITE014` | an `<img>` without `alt` |
 | `SITE015` | an `<img>` without `width` and `height` |
 | `SITE016` | an image without smaller copies that is wider than `KARNI_SITE_SEO_PIXEL_RATIO` times its `width`, wider than the widest copy, or heavier than `KARNI_SITE_SEO_IMAGE_BYTES` |
 | `SITE017` | a link, image, stylesheet or script of the site that answers an error |
-| `SITE018` | no sitemap.xml, a page the site links to that it leaves out, or an address in it that does not answer 200 or asks not to be indexed |
+| `SITE018` | no sitemap.xml, a page the site links to that it leaves out (the message says why: a row without `get_absolute_url()`, a pattern without a name, a section of your own that lists one language), or an address in it that does not answer 200 or asks not to be indexed |
 | `SITE007` | a menu item whose page, row or model is gone (a view renamed or replaced since the menu was seeded), which the menu leaves out |
 
 An upload a page shows without its smaller copies gets them first, made in

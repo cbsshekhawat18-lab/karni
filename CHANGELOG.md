@@ -115,6 +115,23 @@ apply codemods and list the manual steps. This file is the human summary.
   scheme), on the login page too. A project's own `UNFOLD["SITE_FAVICONS"]` wins, and `[]`
   declares none.
 
+- **Fixed: menus, sitemap.xml and `karni check --seo` on a site in several languages
+  (karni-site).** Under `i18n_patterns`, `{% get_menu %}` cached one menu with the links of
+  whichever language asked first and marked the current page against them. A seeded menu
+  followed its seed again each time a visitor of another language came (a write and a
+  cache flush per request, its titles flipping between languages), and a language's home
+  page (`/fr/`) counted as a section, so it was marked active on every page of that
+  language. A menu is now cached per language, its links, row titles and current page are
+  that language's, the language's home is home, and the seed is read and followed in the
+  default language only. sitemap.xml listed the default language's addresses only, so
+  `karni check --seo` failed every translated page with `SITE018` and advised
+  `get_absolute_url()`: every section now lists each language's address (Django's
+  `Sitemap.i18n`), and the advice names the cause it finds. `SITE011` and `SITE013` compared
+  titles and descriptions across languages: they compare within one language. A
+  one-language site, or one without `i18n_patterns`, is unchanged. Blocks, menu item titles
+  and page titles still hold one text each, the same in every language, and neither the
+  pages nor the sitemap carry hreflang alternates.
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web

@@ -4405,7 +4405,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni_site.checks_seo`
 
-**Why Karni objects.** Search engines treat pages with the same title as copies of one another and may show only one. Visitors cannot tell the results apart either. It usually means a template's title was written once for every page of a kind.
+**Why Karni objects.** Search engines treat pages with the same title as copies of one another and may show only one. Visitors cannot tell the results apart either. It usually means a template's title was written once for every page of a kind. On a site in several languages (i18n_patterns) pages are compared within one language: /en/contact/ and /fr/contact/ may both be "Contact".
 
 **Fix.** Give each page its own title. For pages of one view, let the row name it (class Karni: seo = {"title": "name"}, or {% block title %}{{ object.title }}{% endblock %}), or set it per page in the admin.
 
@@ -4425,7 +4425,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni_site.checks_seo`
 
-**Why Karni objects.** A description shared by several pages says nothing about any one of them, and search engines may ignore it. A detail page that repeats its card's text, or a layout's default left in place, is the usual cause.
+**Why Karni objects.** A description shared by several pages says nothing about any one of them, and search engines may ignore it. A detail page that repeats its card's text, or a layout's default left in place, is the usual cause. On a site in several languages (i18n_patterns) pages are compared within one language.
 
 **Fix.** Write a description per page, or let each row give its own (class Karni: seo = {"description": "intro"}).
 
@@ -4475,9 +4475,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *system check (error)* · from `karni_site.checks_seo`
 
-**Why Karni objects.** sitemap.xml tells search engines which pages exist. A page the site links to that the sitemap leaves out is found late or not at all, and an address in the sitemap that does not answer 200 (or asks not to be indexed) wastes the crawl.
+**Why Karni objects.** sitemap.xml tells search engines which pages exist. A page the site links to that the sitemap leaves out is found late or not at all, and an address in the sitemap that does not answer 200 (or asks not to be indexed) wastes the crawl. On a site in several languages (i18n_patterns) karni_site's sections list every language's address, and each language's pages are checked against them.
 
-**Fix.** Include karni_site's URLs (path("", include("karni_site.urls")) in config/urls.py, which karni make site writes). Give a model's rows get_absolute_url() and the public filter they need (class Karni: sitemap), and leave out an address that is not a page with KARNI_SITE_SITEMAP_EXCLUDE.
+**Fix.** Include karni_site's URLs (path("", include("karni_site.urls")) in config/urls.py, which karni make site writes). Give a model's rows get_absolute_url() and the public filter they need (class Karni: sitemap), name the URL pattern of a page, and leave out an address that is not a page with KARNI_SITE_SITEMAP_EXCLUDE. A sitemap section of your own (KARNI_SITE_SITEMAPS) on a site in several languages needs i18n = True, and its rows a get_absolute_url() built with reverse(). The message says which applies.
 
 <a id="site019"></a>
 
