@@ -188,6 +188,13 @@ apply codemods and list the manual steps. This file is the human summary.
   and has since the testing utilities were added, so only a test now pins that. See
   [testing](docs/testing.md#a-value-that-comes-back-different).
 
+- **Fixed: the block form no longer turns the rest of the admin page bold and italic
+  (karni-site).** The help under a block's text field named the tags a client may type as
+  markup (`<b>`, `<em>`, `<a href>`), and the admin prints help as HTML, so the three tags
+  stayed open: the labels, the values and the buttons below rendered bold, italic and as
+  a link. The help now shows the tag names as text. `BlockForm.text_help()` returns it,
+  for a form of your own to say something else.
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web

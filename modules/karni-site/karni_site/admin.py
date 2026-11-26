@@ -34,7 +34,7 @@ from django.db import models
 from django.db.models import QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
-from django.utils.html import format_html
+from django.utils.html import escape, format_html
 from django.utils.text import Truncator
 from django.utils.translation import gettext_lazy as _
 from karni.admin import KarniInlineMixin, KarniModelAdmin
@@ -199,12 +199,7 @@ class BlockForm(forms.ModelForm):
     """A text block as the text a client reads, an image block as an upload and its alt."""
 
     text = forms.CharField(
-        label=_("text"),
-        required=False,
-        widget=forms.Textarea(attrs={"rows": 4}),
-        help_text=_(
-            "A new line is a line break. Bold <b>, italic <em> and links <a href> are kept."
-        ),
+        label=_("text"), required=False, widget=forms.Textarea(attrs={"rows": 4})
     )
 
     class Meta:
@@ -214,14 +209,28 @@ class BlockForm(forms.ModelForm):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.fields["text"].initial = to_editing(self.instance.html or "")
+        self.fields["text"].help_text = self.text_help()
+
+    def text_help(self) -> str:
+        """The text field's help: line breaks, the highlight marker and the tags a client types.
+
+        The admin prints a field's help as HTML, so the tag names are escaped and show as
+        a client types them (left as markup, an open ``<b>`` made the rest of the form
+        bold). Override it to say something else, and escape what is not markup.
+        """
         from karni_site.sanitize import highlight
 
         mark = highlight()
         if mark.marker and mark.tag:
-            self.fields["text"].help_text = _(
+            text = _(
                 "A new line is a line break. Put %(marker)s around words to highlight them: "
                 "%(marker)swords%(marker)s. Bold <b>, italic <em> and links <a href> are kept."
             ) % {"marker": mark.marker}
+        else:
+            text = str(
+                _("A new line is a line break. Bold <b>, italic <em> and links <a href> are kept.")
+            )
+        return escape(text)
 
     def save(self, commit: bool = True) -> Any:
         block = self.instance
