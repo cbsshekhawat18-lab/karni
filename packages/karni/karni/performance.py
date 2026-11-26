@@ -247,25 +247,55 @@ def _field_label(frame: FrameType) -> str:
     return field_label(field) if field is not None else ""
 
 
+def _karni_frame(frame: FrameType) -> bool:
+    """True for a frame of Karni's own code: ``karni`` and the ``karni_*`` modules."""
+    name = frame.f_globals.get("__name__", "")
+    if not isinstance(name, str) or name == __name__:  # the recorder is not what ran the query
+        return False
+    return name == "karni" or name.startswith(("karni.", "karni_"))
+
+
+def _hands_on(frame: FrameType) -> bool:
+    """True for a frame that only passes the request on: a middleware calling ``get_response``."""
+    return "get_response" in frame.f_code.co_names
+
+
+def _frame_label(frame: FrameType) -> str:
+    code = frame.f_code
+    if _karni_frame(frame):
+        return f"{frame.f_globals['__name__']}:{frame.f_lineno} in {code.co_name}"
+    return f"{short_path(code.co_filename)}:{frame.f_lineno} in {code.co_name}"
+
+
 def query_origin() -> str:
     """Where the statement being executed comes from, as one short string.
 
     Walks outward from the database call: the innermost DRF field that was
     rendering (``EventSerializer.tags``) and any project frame *inside* it
     (a ``SerializerMethodField`` method, a model property). Without a field,
-    the innermost project frame (a view, a service).
+    the closest project or Karni frame: the one that issued the query.
+
+    When that is Karni's own code (the admin's list counting, a helper), the
+    project frame that called it is named instead, because that is the code a
+    person can change, unless it only passes the request on (a middleware that
+    calls ``get_response``): that frame is on the stack, it did not issue the
+    query, so the Karni frame is named.
     """
     frame: FrameType | None = sys._getframe(1)
     inner_project = ""
+    issuer = ""
     while frame is not None:
         label = _field_label(frame)
         if label:
             return f"{label} ({inner_project})" if inner_project else label
-        if not inner_project and is_project_frame(frame):
-            code = frame.f_code
-            inner_project = f"{short_path(code.co_filename)}:{frame.f_lineno} in {code.co_name}"
+        if not inner_project:
+            if is_project_frame(frame):
+                if not issuer or not _hands_on(frame):
+                    inner_project = _frame_label(frame)
+            elif not issuer and _karni_frame(frame):
+                issuer = _frame_label(frame)
         frame = frame.f_back
-    return inner_project
+    return inner_project or issuer
 
 
 # reporting

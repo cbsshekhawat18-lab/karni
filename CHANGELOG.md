@@ -74,6 +74,18 @@ apply codemods and list the manual steps. This file is the human summary.
   mode, or a `.dev` or `+local` version, is not compared. Silence it with
   `SILENCED_SYSTEM_CHECKS`. See [stability](docs/stability.md#holding-a-project-on-a-version-line).
 
+- **Fixed: the admin list asked PostgreSQL for the table's size twice per request, and the
+  query warning blamed a middleware for it.** On PostgreSQL every admin list screen ran
+  `SELECT reltuples::bigint FROM pg_class WHERE oid = to_regclass(%s)` twice, once for the
+  filtered count and once for the unfiltered total (`karni.admin.listing`, both inside
+  `ChangeList.get_results`). The size is now read once per list screen
+  (`karni.admin.listing.remembered_sizes`) and kept only that long, so nothing is stale
+  between requests or tests. The dev query log (`karni.queries`) named the innermost project
+  frame, which on an admin request was a project middleware that only calls `get_response`.
+  It now names the frame that ran the query: the closest project or Karni frame to the
+  database call, such as `karni.admin.listing:94 in table_rows`. A project frame that called
+  Karni code is still named when it is not a pass-through, and a serializer field still wins.
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web

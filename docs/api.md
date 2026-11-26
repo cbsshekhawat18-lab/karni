@@ -766,7 +766,11 @@ karni.testing.query_budget(n): ...`.
 `MIDDLEWARE` and is on when `KARNI_QUERY_LOG` is (the dev profile). It logs
 every request that ran SQL on the `karni.queries` logger: query count,
 duplicated count, SQL time and total time, plus one line per repeated
-statement with what rendered it. The level is `WARNING` when anything
+statement with what rendered it: the serializer field, else the closest
+project or Karni frame to the database call (`karni.admin.listing:94 in
+table_rows`), which is the code that ran the statement. A project frame that
+only calls `get_response` (a pass-through middleware) is on the stack but did
+not run it, so it is never the one named. The level is `WARNING` when anything
 repeated, `INFO` otherwise. When it is off, it removes itself from the chain
 at startup.
 
