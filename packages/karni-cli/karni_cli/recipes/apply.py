@@ -1,4 +1,4 @@
-"""A recipe's own files written into a project, over the stubs of ``karni build``.
+"""Experimental. A recipe's own files written into a project, over the stubs of ``karni build``.
 
 ``karni new "<Name>" --recipe <name>`` writes the recipe's ``karni.yaml``
 and names the recipe in ``.karni/build.json``. The first ``karni build``

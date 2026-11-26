@@ -937,7 +937,8 @@ def test_each_setting_reads_its_environment_variable() -> None:
         "KARNI_EMAIL_OTP_SIGNUP",
     ):
         assert rows[name].env == name
-        assert rows[name].description.startswith("")
+        # The mark is on the feature's docs section, never on a setting (docs/stability.md).
+        assert "xperimental" not in rows[name].description
 
 
 def test_off_by_default(make_settings: Callable[..., Any]) -> None:
