@@ -226,6 +226,16 @@ class KarniAdminMixin(admin.ModelAdmin):
     tree_changelist_max_rows: ClassVar[int] = 10000
     """Experimental. The most rows a tree model's changelist puts in tree order (0: never)."""
 
+    karni_can_add: bool = True
+    """``False`` (``AdminMeta.can_add = False``): nobody adds a row here, superusers and
+    every role included. No Add button, the add page is a 403, and no import (an import
+    adds rows). For a model whose rows code makes."""
+
+    karni_can_delete: bool = True
+    """``False`` (``AdminMeta.can_delete = False``): nobody deletes a row here, superusers
+    and every role included. No Delete button, the delete page is a 403, and no bulk
+    delete (soft or hard)."""
+
     karni_read_only: ClassVar[tuple[str, ...]] = ()
     """``AdminMeta.read_only`` entries, appended to the *derived*
     ``readonly_fields`` (an explicit ``readonly_fields`` wins outright)."""
@@ -525,7 +535,12 @@ class KarniAdminMixin(admin.ModelAdmin):
         return is_read_only(self.model)
 
     def has_add_permission(self, request: HttpRequest) -> bool:
-        """An add grant (else Django's permission), unless a veto or read-only refuses it."""
+        """An add grant (else Django's permission), unless a veto or read-only refuses it.
+
+        ``karni_can_add = False`` (``AdminMeta.can_add``) refuses it to everyone.
+        """
+        if not self.karni_can_add:
+            return False
         opened = self.granted(request, "add") or super().has_add_permission(request)
         return opened and not self.is_read_only() and self.vetoed(request, "add") is None
 
@@ -540,7 +555,12 @@ class KarniAdminMixin(admin.ModelAdmin):
         )
 
     def has_delete_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
-        """A delete grant (else Django's permission), the row in scope, and no veto."""
+        """A delete grant (else Django's permission), the row in scope, and no veto.
+
+        ``karni_can_delete = False`` (``AdminMeta.can_delete``) refuses it to everyone.
+        """
+        if not self.karni_can_delete:
+            return False
         opened = self.granted(request, "delete") or super().has_delete_permission(request, obj)
         return (
             not self.is_read_only()

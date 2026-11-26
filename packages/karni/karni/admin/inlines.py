@@ -45,7 +45,7 @@ from django.http import HttpRequest
 from django.utils.text import capfirst
 from unfold.admin import TabularInline
 
-from karni.admin.derive import admin_meta, password_field_names
+from karni.admin.derive import admin_meta, admin_meta_allows, password_field_names
 from karni.db import is_read_only
 from karni.exceptions import KarniImproperlyConfigured
 
@@ -104,8 +104,12 @@ class KarniInlineMixin(InlineModelAdmin):  # type: ignore[type-arg]
     (``KARNI_ADMIN_GRANTS_OPEN_PAGES = False``). Mix it in front of any
     inline class: ``class LineInline(KarniInlineMixin, TabularInline)``.
 
-    Override / escape hatch: override :meth:`granted`, or leave the mixin out
-    to keep an inline on Django's permissions only.
+    ``AdminMeta.can_add = False`` or ``can_delete = False`` on the inline's
+    model refuses adding or deleting its rows here too, to everyone.
+
+    Override / escape hatch: override :meth:`granted` (or the
+    ``has_*_permission`` methods), or leave the mixin out to keep an inline on
+    Django's permissions only.
     """
 
     def granted(self, request: HttpRequest, action: str) -> bool:
@@ -134,12 +138,16 @@ class KarniInlineMixin(InlineModelAdmin):  # type: ignore[type-arg]
         )
 
     def has_add_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        if not admin_meta_allows(self.model, "add"):
+            return False  # AdminMeta.can_add = False on the inline's model
         return self.granted(request, "add") or super().has_add_permission(request, obj)
 
     def has_change_permission(self, request: HttpRequest, obj: Any = None) -> bool:
         return self.granted(request, "change") or super().has_change_permission(request, obj)
 
     def has_delete_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        if not admin_meta_allows(self.model, "delete"):
+            return False  # AdminMeta.can_delete = False on the inline's model
         return self.granted(request, "delete") or super().has_delete_permission(request, obj)
 
 

@@ -214,8 +214,9 @@ class Invoice(BaseModel):
 ```
 
 Other recognized attrs are `exclude = True` (skip registration),
-`inline_on = "fk_field"`, `mixins` (below) and `register = True` (opt an
-`AbstractBaseUser` subclass in). `inline_on` goes on the child side and
+`inline_on = "fk_field"`, `can_add`, `can_delete` and `mixins` (below), and
+`register = True` (opt an `AbstractBaseUser` subclass in). `inline_on` goes
+on the child side and
 generates a `TabularInline` on the parent's admin. A list of FK names is
 allowed, and the child stays registered on its own too. A tabular inline
 names its columns only in the table head, so Karni gives each input of its
@@ -229,6 +230,37 @@ declares.
 Precedence: an admin registered by hand (project `admin.py`) is used instead
 of the derived one. Within any Karni admin, what its class sets (or a parent
 class or mixin of it) > `AdminMeta` > derived defaults.
+
+### Rows the system makes: `can_add` and `can_delete`
+
+For a model whose rows code makes (a table of translations, computed totals,
+an import's results), switch adding or deleting off in the admin:
+
+```python
+class Translation(BaseModel):
+    ...
+    class AdminMeta:
+        can_add = False     # no Add button, the add page is a 403, no import
+        can_delete = False  # no Delete button, the delete page is a 403, no bulk delete
+```
+
+With `can_add = False` the list and the home page have no Add button, the
+add page and *Save as new* answer 403 (Django's answer without the
+permission), and the *Import* button and page are gone, since an import adds
+rows. With `can_delete = False` the form and the list's rows have no Delete
+button, the delete page answers 403, and *Delete selected* and *Hard delete
+selected* are not offered. Changing a row, *Edit selected* and export stay.
+The model's inlines follow too: no blank row to add from, and no delete box.
+An admin registered by hand takes the two options like any other
+(`karni_can_add` and `karni_can_delete` on the class, which a subclass may set
+back to `True`).
+
+This is not a permission. [Role grants](#who-may-open-a-page) and Django's
+permissions say *who* may add or delete, and a superuser holds every grant.
+`can_add` and `can_delete` say that *nobody* adds or deletes that model's rows
+in the admin, superusers included, whatever the roles grant. They change the
+admin only: the API follows the model's `access` declaration, and code still
+creates and deletes rows.
 
 ### Adding behaviour: `AdminMeta.mixins`
 

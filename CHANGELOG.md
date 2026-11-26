@@ -147,6 +147,15 @@ apply codemods and list the manual steps. This file is the human summary.
   to superusers only. `karni new --kind site` writes `KARNI_ADMIN_MENU =
   KARNI_SITE_ADMIN_MENU` in the settings, and an existing site project adds that line.
 
+- **Added: `AdminMeta.can_add = False` and `can_delete = False`**, for a model whose rows
+  code makes. Nobody adds or deletes its rows in the admin, superusers and every role
+  included: no Add button, the add page is a 403 and there is no import, no Delete button,
+  the delete page is a 403 and there is no bulk delete (soft or hard). Its inlines follow:
+  no blank row to add from and no delete box. Changing rows and export stay, and the API
+  is unchanged. Unlike a role grant, which says who may, these say that nobody does. An
+  admin class may set `karni_can_add` or `karni_can_delete` back to `True`. See
+  [rows the system makes](docs/admin.md#rows-the-system-makes-can_add-and-can_delete).
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web

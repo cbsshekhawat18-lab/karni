@@ -169,6 +169,8 @@ class TransferAdminMixin(admin.ModelAdmin):
         return Importer(self.model, request)
 
     def _may_import(self, request: HttpRequest) -> bool:
+        if not getattr(self, "karni_can_add", True):
+            return False  # AdminMeta.can_add = False: an import adds rows
         if not (self.has_add_permission(request) or self.has_change_permission(request)):
             return False
         vetoed = getattr(self, "vetoed", None)

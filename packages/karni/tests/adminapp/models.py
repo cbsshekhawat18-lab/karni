@@ -386,3 +386,28 @@ class Stamped(BaseModel):
 
     def __str__(self) -> str:
         return self.title
+
+
+class Survey(BaseModel):
+    """The parent whose change form carries the inline of :class:`SurveyScore`."""
+
+    name = models.CharField(max_length=100)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class SurveyScore(BaseModel):
+    """Rows the system makes: nobody adds or deletes one in the admin, superusers included."""
+
+    survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name="scores")
+    label = models.CharField(max_length=100)
+    value = models.IntegerField(default=0)
+
+    class AdminMeta:
+        inline_on = "survey"
+        can_add = False
+        can_delete = False
+
+    def __str__(self) -> str:
+        return self.label

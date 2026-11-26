@@ -20,8 +20,9 @@ Override / escape hatches, weakest to strongest:
 * per model: an inner ``class AdminMeta`` (mirrors ``APIMeta``) with any of
   ``exclude``, ``register``, ``list_display``, ``list_filter``,
   ``search_fields``, ``read_only``, ``date_hierarchy``, ``ordering``,
-  ``per_page``, ``inline_on``, ``mixins`` (classes put in front of the derived
-  admin) and the catch-all ``extra`` dict of ``ModelAdmin`` attributes.
+  ``per_page``, ``inline_on``, ``can_add`` and ``can_delete`` (``False``: nobody
+  adds or deletes rows in the admin), ``mixins`` (classes put in front of the
+  derived admin) and the catch-all ``extra`` dict of ``ModelAdmin`` attributes.
 * per project: register the model yourself in an ``admin.py`` — autodiscover
   never touches an already-registered model — or subclass ``KarniModelAdmin``
   and override its ``derive_*`` hooks. A ``KarniModelAdmin`` subclass still

@@ -89,8 +89,9 @@ def admin_meta_options(model: type[models.Model]) -> dict[str, Any]:
     ``list_display``, ``list_filter``, ``search_fields``, ``date_hierarchy`` and
     ``ordering`` as they are, ``read_only`` as ``karni_read_only`` (it extends
     the derived ``readonly_fields``), ``per_page`` as ``list_per_page``,
-    ``per_page_choices`` as ``karni_per_page_choices``, then every entry of
-    ``extra``, which wins over the others. ``exclude``, ``register``,
+    ``per_page_choices`` as ``karni_per_page_choices``, ``can_add`` and
+    ``can_delete`` as ``karni_can_add`` and ``karni_can_delete``, then every
+    entry of ``extra``, which wins over the others. ``exclude``, ``register``,
     ``inline_on`` and ``mixins`` are not admin attributes and are not here.
 
     Every Karni admin applies this when it is built, the derived one and a
@@ -111,8 +112,21 @@ def admin_meta_options(model: type[models.Model]) -> dict[str, Any]:
     choices = getattr(meta, "per_page_choices", None)
     if choices:
         options["karni_per_page_choices"] = tuple(int(n) for n in choices)
+    for action in ("add", "delete"):
+        if hasattr(meta, f"can_{action}"):
+            options[f"karni_can_{action}"] = bool(getattr(meta, f"can_{action}"))
     options.update(dict(getattr(meta, "extra", None) or {}))
     return options
+
+
+def admin_meta_allows(model: type[models.Model], action: str) -> bool:
+    """``False`` when the model's ``AdminMeta`` sets ``can_add`` or ``can_delete`` to ``False``.
+
+    ``action`` is ``"add"`` or ``"delete"``. The inlines of the model read it
+    (:class:`karni.admin.inlines.KarniInlineMixin`), as its own admin reads
+    ``karni_can_add`` and ``karni_can_delete``.
+    """
+    return bool(getattr(admin_meta(model), f"can_{action}", True))
 
 
 def admin_meta_mixins(model: type[models.Model]) -> tuple[type, ...]:
