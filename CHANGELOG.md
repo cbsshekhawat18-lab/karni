@@ -9,6 +9,22 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
+## 0.7.1 (unreleased)
+
+- **Fixed (experimental): changing a `SearchField`'s sources no longer breaks `migrate`.**
+  `makemigrations` (and so `karni make migration`) wrote an `AlterField` for a generated
+  field whose definition changed, and Django refuses to run one ("Modifying GeneratedFields
+  is not supported"). Karni's `makemigrations` and `migrate` commands now use
+  `karni.migration_autodetector.KarniAutodetector`, which writes `RemoveField` then
+  `AddField` when the expression, output field or `db_persist` of a generated field
+  changes. The index or constraint that names the column (the GIN index of a `SearchField`)
+  is removed first and added back after. A `unique_together` entry that names the field is
+  set aside and restored the same way (without it SQLite refused to drop the column and
+  PostgreSQL dropped the unique constraint for good). A change to `verbose_name` or
+  `help_text` stays an `AlterField` and keeps the column. `karni_makemigrations --renames`
+  now also drops and re-adds that index with the column. Escape hatch: `autodetector` on
+  the command class, see [fields](docs/fields.md#changing-a-generated-field).
+
 ## 0.7.0 (2026-11-26)
 
 - **Changed (experimental): `karni new --kind game` makes a game first.** Karni makes web

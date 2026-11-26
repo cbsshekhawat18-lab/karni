@@ -225,6 +225,27 @@ carries it into the schema the same way.
   `contains`/`overlap`/`contained_by`. It needs a PostgreSQL driver to import
   and PostgreSQL to migrate. Use `JSONField` for a portable list.
 
+#### Changing a generated field
+
+Django cannot alter a generated column in place: changing the `sources`,
+`config` or `weights` of a `SearchField` (or the expression, output field or
+`db_persist` of any `GeneratedField`) and running `migrate` fails with
+"Modifying GeneratedFields is not supported". Karni's `makemigrations`
+(`karni make migration` runs it) writes `RemoveField` then `AddField` for such
+a change, so the migration runs. The database computes the column again from
+the source fields, so no data is lost, and a large table is rewritten once.
+An index or a constraint that names the column (the GIN index of a
+`SearchField`) is removed before the column and added back after it, and so is
+a `unique_together` entry that names it. A change
+that is not a change to the column, such as `verbose_name` or `help_text`,
+stays an `AlterField` and the column is not touched. The reverse migration
+drops and re-adds the column the same way.
+
+To go back to Django's own detector, set `autodetector` on a subclass of
+`karni.management.commands.makemigrations.Command` (and of the `migrate`
+command, since Django wants both to agree), or put a `makemigrations` command
+of your own in an app listed before `karni`.
+
 ## Uniqueness that respects soft delete
 
 A soft-deleted row stays in its table, so a plain unique index keeps its

@@ -67,7 +67,8 @@ def test_a_generated_column_reading_a_renamed_field_is_dropped_first(
     package = _migrations(tmp_path, monkeypatch)
     (package / "0001_initial.py").write_text(
         "from django.db import migrations, models\n"
-        "from karni.fields import SearchField\n\n\n"
+        "from karni.fields import SearchField\n"
+        "from karni.fields.indexes import GinIndex\n\n\n"
         "class Migration(migrations.Migration):\n"
         "    initial = True\n"
         "    operations = [\n"
@@ -79,6 +80,7 @@ def test_a_generated_column_reading_a_renamed_field_is_dropped_first(
         '                ("code", models.CharField(max_length=10)),\n'
         '                ("search", SearchField(sources=["title"])),\n'
         "            ],\n"
+        '            options={"indexes": [GinIndex(fields=["search"], name="shelf_search_gin")]},\n'
         "        ),\n"
         "    ]\n"
     )
@@ -96,6 +98,9 @@ def test_a_generated_column_reading_a_renamed_field_is_dropped_first(
     removed = text.index("migrations.RemoveField(")
     assert "name='search'" in text[removed : removed + 120]
     assert removed < text.index("old_name='title'")
+    # the GIN index goes with the column (the database drops it too) and comes back with it
+    assert text.index("migrations.RemoveIndex(") < removed
+    assert "name='shelf_search_gin'" in text
     for loaded in [name for name in sys.modules if name.startswith("renames_migrations")]:
         sys.modules.pop(loaded)
 

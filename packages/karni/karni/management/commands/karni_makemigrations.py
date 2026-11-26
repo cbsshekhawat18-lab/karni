@@ -12,7 +12,8 @@ cannot give alone:
   A generated column that reads a renamed field (the ``SearchField`` karni
   build writes for ``search``) is dropped before the rename: makemigrations
   then adds it back over the new name, since a generated column cannot
-  follow a rename of its source.
+  follow a rename of its source. Its index and constraints are dropped with
+  it, and added back with it.
 * **A required field added to an empty table.** Django asks for a one-off
   value to fill the rows of a new column that cannot be empty. A table
   without rows has nothing to fill, so the column is added without one. A
@@ -39,6 +40,7 @@ from django.db.migrations.questioner import NonInteractiveMigrationQuestioner
 from django.db.migrations.writer import MigrationWriter
 
 from karni.exceptions import KarniCommandError
+from karni.migration_autodetector import attached_to_field
 
 
 class EmptyTableQuestioner(NonInteractiveMigrationQuestioner):
@@ -104,9 +106,15 @@ def write_renames(renames: dict[str, Any]) -> list[str]:
         for generated in _generated_reading(state, app_label, before, old):
             if (app_label, str(model), generated) not in dropped:
                 dropped.add((app_label, str(model), generated))
-                by_app.setdefault(app_label, []).append(
-                    migrations.RemoveField(str(model).lower(), generated)
-                )
+                operations = by_app.setdefault(app_label, [])
+                # what hangs on the column goes first: makemigrations adds it back with the field
+                options = state.models[(app_label, before.lower())].options
+                indexes, constraints = attached_to_field(options, generated)
+                operations += [migrations.RemoveIndex(str(model).lower(), i.name) for i in indexes]
+                operations += [
+                    migrations.RemoveConstraint(str(model).lower(), c.name) for c in constraints
+                ]
+                operations.append(migrations.RemoveField(str(model).lower(), generated))
         by_app.setdefault(app_label, []).append(
             migrations.RenameField(str(model).lower(), old, new)
         )
