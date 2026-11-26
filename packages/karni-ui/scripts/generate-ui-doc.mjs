@@ -316,8 +316,7 @@ const HOOKS = {
     "One resource's parsed schema when it is known, else `undefined`: never throws, and reads nothing outside a `KarniProvider`.",
   useResourceTree:
     "The nested nodes of a tree resource (`GET /<resource>/tree/?root=&depth=`): `{ results, truncated }`, each node with `has_children` and `children` (`null` until loaded).",
-  useResourceChildren:
-    "One page of a tree node's children (`GET /<resource>/<id>/children/`).",
+  useResourceChildren: "One page of a tree node's children (`GET /<resource>/<id>/children/`).",
   useResourceAncestors:
     "The nodes above a tree node, root first (`GET /<resource>/<id>/ancestors/`).",
   useResourceAccessForest:
