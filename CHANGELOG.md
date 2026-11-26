@@ -248,6 +248,12 @@ apply codemods and list the manual steps. This file is the human summary.
   since 0.4.1".** Suggestions from code, the tooling for large projects, karni-reports,
   karni-storage, karni-commerce, karni-game, `@karni/game`, API versions and health
   checks had been added below that heading by mistake. Each is now where it belongs.
+- **Fixed: karni declares `packaging`, which `karni.versions` imports.** It was
+  installed only because another dependency brings it, so a change there could have
+  broken `karni check` at start-up.
+- **Fixed: the browser tests of `@karni/game` keep their screenshots in the package's
+  own cache folder** (`node_modules/.cache/shots`, or `KARNI_SHOTS`), not in a folder
+  under the home directory.
 
 ## 0.7.0 (2026-11-26)
 

@@ -65,6 +65,8 @@ dependencies = [
     "django-cors-headers>=4.4",
     "structlog>=24.1",
     "django-structlog>=8.0",
+    # karni.versions compares installed versions with the project's ranges.
+    "packaging>=24.0",
     # karni.transfer: XLSX import, export and templates (pure Python, no service).
     "openpyxl>=3.1",
     # karni.testing.factories (test data, the N+1 scaling check, seeding).
