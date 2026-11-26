@@ -26,8 +26,8 @@ React package (when it has one) at the same version
 
 A patch release only fixes bugs, so a project can take every patch of its
 line and nothing more. Karni's own packages already do this between each
-other (a module asks for `karni>=0.7,<0.8`), and a project does the same:
-`karni new` writes `karni>=0.7,<0.8` (the line of the karni-cli that made
+other (a module asks for `karni>=0.8,<0.9`), and a project does the same:
+`karni new` writes `karni>=0.8,<0.9` (the line of the karni-cli that made
 it), and `karni add <module>` writes the module at the range the project
 holds karni at, so adding a module never moves karni. From 1.0 on a line is a
 major (`>=1.2,<2`). Moving to the next line is `karni upgrade`, which writes
@@ -360,14 +360,14 @@ Experimental now:
   the two commands Karni puts in place of Django's
   (`karni.management.commands.makemigrations` and `migrate`) and
   `karni.migration_autodetector` (`KarniAutodetector`, `attached_to_field`).
-  New in 0.7.1, they replace Django's commands.
+  New in 0.8.0, they replace Django's commands.
 - [karni-ai for jobs other than extraction](ai-extraction.md#jobs-other-than-extraction):
   `StructuredRequest.metadata`, `Usage.unit` and `karni_ai.providers.base.TOKENS`,
   `AICall.kind` and `AICall.unit`, the `unit` of a `KARNI_AI_PRICES` entry,
   `spent(unit=)` and `log_call(kind=)`. No project uses a provider for another
   job yet.
 
-Stable since 0.7.1. These were experimental and are now used for real, so the
+Stable since 0.8.0. These were experimental and are now used for real, so the
 promise above covers them:
 
 - [Sign-in with an ID token (Google, Microsoft, Apple)](accounts.md#sign-in-with-an-id-token-google-microsoft-apple):

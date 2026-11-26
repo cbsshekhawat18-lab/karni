@@ -115,11 +115,11 @@ def test_new_with_genre_runner_writes_the_starter_as_the_projects_own_files(
     project = tmp_path / "sky_dash"
     assert 'kind = "game"' in (project / "pyproject.toml").read_text()  # --genre is a game first
     game = project / "game" / "sky-dash"
-    written = runner.render(starters.GAME_DIR, slug="sky-dash", title="Sky Dash", spec="^0.7.0")
+    written = runner.render(starters.GAME_DIR, slug="sky-dash", title="Sky Dash", spec="^0.8.0")
     for rel, text in written.items():
         assert (game / rel).read_text() == text, rel
     package = json.loads((game / "package.json").read_text())
-    assert package["name"] == "sky-dash" and package["dependencies"] == {"@karni/game": "^0.7.0"}
+    assert package["name"] == "sky-dash" and package["dependencies"] == {"@karni/game": "^0.8.0"}
     assert "author" not in package
     assert 'export const GAME = "sky-dash";' in (game / "src" / "game.ts").read_text()
     # The server side is the starter's: its boards, its run check, its tests.

@@ -309,7 +309,7 @@ Django command. Install a third-party module first, then add it.
 
 1. Adds the distribution (`karni-<x>`) to `[project].dependencies` in the
    project's `pyproject.toml` (idempotent, parsed, never string-matched), at the
-   range the project holds karni at (`karni-<x>>=0.7,<0.8`) and says so. A
+   range the project holds karni at (`karni-<x>>=0.8,<0.9`) and says so. A
    project that lists karni without a range gets the line of its
    `[tool.karni] baseline`. When the newest release is on a later line than
    the project's, it says so and names `karni upgrade`, which moves karni and
@@ -324,7 +324,7 @@ Django command. Install a third-party module first, then add it.
    app project becomes a site+app.
    When the module has a UI package (`provides.ui`) and the project has
    `frontend/package.json`, it also adds that package to `dependencies` at the
-   release's range (`^0.7.0`) and says to run `npm install` in `frontend/`. A
+   release's range (`^0.8.0`) and says to run `npm install` in `frontend/`. A
    project without a frontend is left alone. `karni remove` takes the entry out
    again.
 4. Records `AGENTS.fragment.md` as `.karni/modules/<x>.md` and refreshes

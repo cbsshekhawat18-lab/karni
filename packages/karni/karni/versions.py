@@ -2,7 +2,7 @@
 
 Karni's packages are released in lockstep: ``karni``, ``karni-cli`` and every
 module of this repository carry one version, and a module's range on karni is
-its own minor (``karni>=0.7,<0.8``). A project that installs them unpinned
+its own minor (``karni>=0.8,<0.9``). A project that installs them unpinned
 can end up with ``karni`` on 0.7 and ``karni-site`` on 0.6 after one
 ``pip install -U``. ``karni.W521`` names each package that is not on the
 line karni itself is on.
@@ -61,7 +61,7 @@ def line(version: str) -> tuple[int, int] | None:
 
 
 def range_for(version: str) -> str | None:
-    """The range that keeps a project on the line of ``version``: ``>=0.7,<0.8``, ``>=1.2,<2``."""
+    """The range that keeps a project on the line of ``version``: ``>=0.8,<0.9``, ``>=1.2,<2``."""
     found = line(version)
     if found is None:
         return None

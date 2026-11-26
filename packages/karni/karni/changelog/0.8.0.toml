@@ -1,0 +1,67 @@
+# Karni 0.8.0: what changed since 0.7.0 that a project may notice.
+# Schema and rules: karni/changelog/__init__.py. Migration notes: docs/migrations/0.8.md.
+version = "0.8.0"
+
+[[change]]
+id = "karni-version-ranges"
+kind = "project-files"
+symbol = "pyproject.toml [project] dependencies: karni and the Karni modules"
+replacement = 'karni>=0.8,<0.9'
+summary = """\
+karni new writes karni and every Karni module with the range of its release \
+(karni>=0.8,<0.9), and karni add writes a module at the range karni has. A \
+project made with 0.7.0 lists them bare, so an install takes the newest of \
+each: karni upgrade writes the ranges, and karni.W521 warns at start-up when \
+the installed packages are not on one line."""
+mechanical = false
+migration = "migrations/0.8.md#karni-and-its-modules-are-held-at-one-version-line"
+
+[[change]]
+id = "site-admin-menu"
+kind = "project-files"
+symbol = "config/settings.py: KARNI_ADMIN_MENU"
+replacement = "KARNI_ADMIN_MENU = KARNI_SITE_ADMIN_MENU"
+summary = """\
+A site project made with 0.8.0 sets KARNI_ADMIN_MENU = KARNI_SITE_ADMIN_MENU: \
+the admin's side menu, home page and guide show the project's apps, the \
+site's pages and the people, and the technical apps to superusers only. A \
+site project made with 0.7.0 keeps the list of every app until it adds the \
+line."""
+mechanical = false
+migration = "migrations/0.8.md#the-side-menu-of-a-site-project"
+
+[[change]]
+id = "karni-makemigrations-migrate"
+kind = "behaviour"
+symbol = "manage.py makemigrations, manage.py migrate"
+summary = """\
+Karni's own makemigrations and migrate commands replace Django's. A changed \
+generated field (a SearchField's sources) is written as RemoveField and \
+AddField, where Django wrote an AlterField that migrate refused. A 0.7.0 \
+migration with such an AlterField is deleted and written again."""
+mechanical = false
+migration = "migrations/0.8.md#karnis-makemigrations-and-migrate"
+
+[[change]]
+id = "admin-subclass-adminmeta"
+kind = "behaviour"
+symbol = "karni.admin.KarniModelAdmin"
+summary = """\
+A KarniModelAdmin subclass registered by hand takes the model's AdminMeta and \
+the inline_on inlines for every option it does not set itself, as the derived \
+admin always did. Such an admin can show other columns, filters or inlines: \
+set the option on the subclass to keep it."""
+mechanical = false
+migration = "migrations/0.8.md#an-admin-registered-by-hand-takes-adminmeta"
+
+[[change]]
+id = "languages-lang-info-check"
+kind = "behaviour"
+symbol = "karni.E971"
+summary = """\
+A LANGUAGES code Django has no LANG_INFO entry for stops the project at \
+start-up when django.contrib.admin is installed (karni.E971), where 0.7.0 \
+answered 500 on every admin change form. Register the language's LANG_INFO \
+entry or take the code out of LANGUAGES."""
+mechanical = false
+migration = "migrations/0.8.md#new-checks-that-can-stop-a-project"

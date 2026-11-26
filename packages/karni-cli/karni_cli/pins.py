@@ -1,7 +1,7 @@
 """The version range a project holds Karni and its modules at.
 
 Karni's packages are released in lockstep, and a module's own range on karni
-is its minor (``karni>=0.7,<0.8``). A project that lists them bare gets the
+is its minor (``karni>=0.8,<0.9``). A project that lists them bare gets the
 newest of each on every install, so one ``pip install -U`` for a module's extra
 can move karni itself. This module writes the same range into a project:
 
@@ -97,7 +97,7 @@ def first_party() -> frozenset[str]:
 
 
 def spec_text(spec: SpecifierSet) -> str:
-    """A range as the packages write theirs: the floor first (``>=0.7,<0.8``)."""
+    """A range as the packages write theirs: the floor first (``>=0.8,<0.9``)."""
     return ",".join(sorted((str(item) for item in spec), key=lambda text: (text[0] == "<", text)))
 
 
@@ -258,7 +258,7 @@ def doctor_lines(project: Path) -> list[str]:
     except OSError:
         bare = []
     if bare:
-        floor = own.range() if own is not None else ">=0.7,<0.8"
+        floor = own.range() if own is not None else ">=0.8,<0.9"
         lines.append(
             f"pyproject.toml lists {', '.join(bare)} without a range, so an install takes the "
             f"newest of each. Pin them (karni{floor}) or run `karni upgrade`, which writes it"

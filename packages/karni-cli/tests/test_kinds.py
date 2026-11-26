@@ -203,7 +203,7 @@ def test_an_app_with_a_game(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
         assert (project / rel).is_file(), rel
     assert "slug: block-hopper" in (project / "content" / "game.yaml").read_text()
     package = json.loads((project / "frontend" / "package.json").read_text())
-    assert package["dependencies"]["@karni/game"] == "^0.7.0"
+    assert package["dependencies"]["@karni/game"] == "^0.8.0"
     assert package["scripts"]["game:package"].startswith("karni-game package --root portal")
     # The game is the project's own code: its rules, its canvas, its session, its page.
     frontend = project / "frontend"
@@ -282,7 +282,7 @@ def test_a_game_first(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
             assert mark not in text, (rel, mark)
     package = json.loads((folder / "package.json").read_text())
     assert package["name"] == "block-hopper" and package["private"] is True
-    assert package["dependencies"] == {"@karni/game": "^0.7.0"}
+    assert package["dependencies"] == {"@karni/game": "^0.8.0"}
     assert set(package["devDependencies"]) == {"typescript", "vite", "vitest"}
     assert "author" not in package and "contributors" not in package  # no names of people
     assert package["scripts"]["package"].startswith("karni-game package --portal web")

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni"
-version = "0.7.0"
+version = "0.8.0"
 description = "Karni is an open-source Django + React framework for building web apps and web games with AI coding agents. Your agent writes only your domain or your game. The API, admin, permissions, React screens and game engine come from packages you upgrade. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"

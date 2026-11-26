@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni-storage"
-version = "0.7.0"
+version = "0.8.0"
 description = "Protected files for Karni: files a row owns, in S3 or an S3-compatible service, served only to whoever may read that row, with direct uploads and thumbnails. Karni is an open-source Django + React framework for building web apps and web games with AI coding agents. Your agent writes only your domain or your game. The API, admin, permissions, React screens and game engine come from packages you upgrade. One rule set covers every coding agent. The build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -29,7 +29,7 @@ classifiers = [
 ]
 # Range-pinned per the module contract (docs/modules.md). The s3 extra brings
 # django-storages and boto3: core's S3 backend is what the presets configure.
-dependencies = ["karni[s3]>=0.7,<0.8"]
+dependencies = ["karni[s3]>=0.8,<0.9"]
 
 [project.urls]
 Homepage = "https://github.com/cbsshekhawat18-lab/karni"
@@ -40,7 +40,7 @@ Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migratio
 
 [project.optional-dependencies]
 # Pillow, for protected image fields and their thumbnails.
-images = ["karni[images]>=0.7,<0.8"]
+images = ["karni[images]>=0.8,<0.9"]
 
 # The catalog entry, karni_storage/karni.module.toml: `karni modules`, `karni add`
 # and `karni remove` read it.

@@ -9,7 +9,7 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
-## 0.7.1 (unreleased)
+## 0.8.0 (unreleased)
 
 - **Fixed (experimental): changing a `SearchField`'s sources no longer breaks `migrate`.**
   `makemigrations` (and so `karni make migration`) wrote an `AlterField` for a generated
@@ -61,7 +61,7 @@ apply codemods and list the manual steps. This file is the human summary.
   and a check says when they drift.** `karni new` wrote `karni`, `karni-site` and every
   module bare, so installing an extra for `karni-ai` in a 0.5 project moved karni to 0.6,
   and a server installing from the same `pyproject.toml` got whatever was newest that day.
-  The template now writes `karni>=0.7,<0.8` (the line of the karni-cli that made the
+  The template now writes `karni>=0.8,<0.9` (the line of the karni-cli that made the
   project, as the packages' own ranges do, taken from the CLI's version when the project is
   made and never written in the template). `karni add <module>` writes the module at the
   range the project holds karni at, says so, and when the newest release is on a later line
@@ -230,7 +230,7 @@ apply codemods and list the manual steps. This file is the human summary.
   versions, health checks (`/healthz`, `/readyz`) and `manage.py karni_publish_web`.
   The manifests of karni-ai, karni-charts, karni-reports and karni-storage and the
   built-in feature manifests say `stable`. The full list with each name is in
-  [stability](docs/stability.md#experimental-names), under "Stable since 0.7.1".
+  [stability](docs/stability.md#experimental-names), under "Stable since 0.8.0".
 - **Stays experimental, each with its reason in the list:** the game side, the
   built-in recipes, the family and its screens, the /new-app flow, clarifying
   questions, external tables and a second database, pages behind a capture without a

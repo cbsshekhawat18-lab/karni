@@ -421,7 +421,7 @@ A site project starts with karni-site's menu. Its settings say
 `KARNI_ADMIN_MENU = KARNI_SITE_ADMIN_MENU`: the project's apps (*Content*),
 karni-site's pages (*Site*), then users and roles (*People*). Task results,
 schedules, tokens and sign-in codes are not in it, so only superusers see
-them. A site project made before 0.7.1 adds that line to get it.
+them. A site project made before 0.8.0 adds that line to get it.
 
 `KARNI_ADMIN_MENU = None`, the default, keeps the list of every app, in the
 side menu and on the home page. The menu is unfold's `UNFOLD["SIDEBAR"]`,
